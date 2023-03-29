@@ -1,2 +1,3 @@
 # OpenAPT
 Open Astrophotography Terminal
+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

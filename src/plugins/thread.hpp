@@ -38,11 +38,13 @@ Description: Thread Manager
 #include <string>
 #include <vector>
 #include <functional>
+#include <condition_variable>
 
 namespace OpenAPT {
 
     class ThreadManager {
         public:
+            ThreadManager(int maxThreads = 10) : m_maxThreads(maxThreads) {}
             ~ThreadManager();
             // 添加线程并启动
             void addThread(std::function<void()> func, const std::string& name);
@@ -61,6 +63,8 @@ namespace OpenAPT {
                 return std::find(m_threadNames.begin(), m_threadNames.end(), name) != m_threadNames.end();
             }
 
+            int m_maxThreads;
+            std::condition_variable m_cv;
             std::vector<std::unique_ptr<std::thread>> m_threads; // 线程容器
             std::vector<std::string> m_threadNames; // 线程名称容器
             std::vector<bool> m_sleepFlags; // 睡眠标志容器

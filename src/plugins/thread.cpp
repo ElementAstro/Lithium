@@ -41,77 +41,84 @@ namespace OpenAPT {
             joinAllThreads();
     }
 
-    // 添加一个新线程，并指定线程名称
-    // func：要执行的函数
-    // name：线程名称
     void ThreadManager::addThread(std::function<void()> func, const std::string& name) {
-        std::lock_guard<std::mutex> lock(m_mtx); // 线程锁
-        m_threads.emplace_back(std::make_unique<std::thread>([this, func]() { // 添加线程
-            try {
-                func(); // 执行函数
-            } catch (...) {
-                spdlog::error("Unhandled exception in thread"); // 异常处理
-            }
-        }));
-        m_threadNames.emplace_back(name); // 添加线程名
-        m_sleepFlags.push_back(false); // 初始化睡眠标志
-        m_stopFlag = false;
-        spdlog::info("Added thread: {}", name); // 日志输出
-    }
-
-    // 等待所有线程完成并销毁 ThreadManager 对象
-    void ThreadManager::joinAllThreads() {
-        m_stopFlag = true; // 设置停止标志
-        if (m_threads.empty()) { // 如果 m_threads 为空
+        std::unique_lock<std::mutex> lock(m_mtx); // 使用 unique_lock 方便后续的等待和唤醒操作
+        m_cv.wait(lock, [this] { return m_threads.size() < m_maxThreads || m_stopFlag; }); // 等待直到可以新建线程或者线程管理器被停止
+        if (m_stopFlag) { // 如果线程管理器已经被停止，直接返回
+            spdlog::warn("Thread manager has stopped, cannot add new thread");
             return;
         }
-        for (size_t i = 0; i < m_threads.size(); ++i) {
+        m_threads.emplace_back(std::make_unique<std::thread>([this, func]() {
+            try {
+                func();
+            } catch (...) {
+                spdlog::error("Unhandled exception in thread");
+            }
+        }));
+        m_threadNames.emplace_back(name);
+        m_sleepFlags.push_back(false);
+        m_stopFlag = false;
+        spdlog::info("Added thread: {}", name);
+        m_cv.notify_one(); // 唤醒等待的线程
+    }
+
+    void ThreadManager::joinAllThreads() {
+        if (m_threads.empty()) {
+            return;
+        }
+        m_stopFlag = true;
+        std::lock_guard<std::mutex> lock(m_mtx);
+        size_t i = 0;
+        while (i < m_threads.size()) {
             if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
                 spdlog::error("Index out of range!");
+                ++i;
                 continue;
             }
-            if (auto& t = m_threads[i]; t) {
+            if (auto* t = m_threads[i].get(); t) {
                 t->join();
                 m_threads.erase(m_threads.begin() + i);
                 m_threadNames.erase(m_threadNames.begin() + i);
                 m_sleepFlags.erase(m_sleepFlags.begin() + i);
-                spdlog::info("Thread {} joined", m_threadNames[i]); // 日志输出
-                --i;
+                spdlog::info("Thread {} joined", m_threadNames[i]);
+            } else {
+                spdlog::warn("Thread {} has already joined", m_threadNames[i]);
+                ++i;
             }
         }
         m_threads.clear();
         m_threadNames.clear();
         m_sleepFlags.clear();
-        spdlog::info("All threads joined"); // 日志输出
+        spdlog::info("All threads joined");
     }
 
     // 等待指定名称的线程完成，并从 ThreadManager 中移除该线程
     // name：线程名称
     void ThreadManager::joinThreadByName(const std::string& name) {
-        if (m_threads.empty()) { // 如果 m_threads 为空
-            spdlog::warn("Thread {} not found", name); // 日志输出
+        if (m_threads.empty()) {
+            spdlog::warn("Thread {} not found", name);
             return;
         }
-        std::lock_guard<std::mutex> lock(m_mtx); // 线程锁
+        std::lock_guard<std::mutex> lock(m_mtx);
         for (size_t i = 0; i < m_threads.size(); ++i) {
             if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
                 spdlog::error("Index out of range!");
                 continue;
             }
-            if (m_threadNames[i] == name) { // 找到要加入的线程
+            if (m_threadNames[i] == name) {
                 if (auto& t = m_threads[i]; t) {
-                    t->join(); // 加入线程
-                    m_threads.erase(m_threads.begin() + i); // 从容器中移除线程
-                    m_threadNames.erase(m_threadNames.begin() + i); // 从容器中移除线程名称
-                    m_sleepFlags.erase(m_sleepFlags.begin() + i); // 从容器中移除睡眠标志
-                    spdlog::info("Thread {} joined", name); // 日志输出
+                    t->join();
+                    m_threads.erase(m_threads.begin() + i);
+                    m_threadNames.erase(m_threadNames.begin() + i);
+                    m_sleepFlags.erase(m_sleepFlags.begin() + i);
+                    spdlog::info("Thread {} joined", name);
                 } else {
-                    spdlog::warn("Thread {} has already joined", name); // 日志输出
+                    spdlog::warn("Thread {} has already joined", name);
                 }
                 return;
             }
         }
-        spdlog::warn("Thread {} not found", name); // 日志输出
+        spdlog::warn("Thread {} not found", name);
     }
 
     // 让指定名称的线程休眠指定时间
@@ -119,30 +126,28 @@ namespace OpenAPT {
     // seconds：休眠时间（秒）
     // 返回值：如果找到了该线程，则返回 true；否则返回 false
     bool ThreadManager::sleepThreadByName(const std::string& name, int seconds) {
-        if (m_threads.empty()) { // 如果 m_threads 为空
-            spdlog::warn("Thread {} not found", name); // 日志输出
+        if (m_threads.empty()) {
+            spdlog::warn("Thread {} not found", name);
             return false;
         }
-        std::lock_guard<std::mutex> lock(m_mtx); // 线程锁
-        for (size_t i = 0; i < m_threads.size(); ++i) {
+        std::lock_guard<std::mutex> lock(m_mtx);
+        size_t i = 0;
+        while (i < m_threads.size()) {
             if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
                 spdlog::error("Index out of range!");
+                ++i;
                 continue;
             }
-            if (m_threadNames[i] == name) { // 找到要加入的线程
-                if (auto& t = m_threads[i]; t) {
-                    t->join(); // 加入线程
-                    m_threads.erase(m_threads.begin() + i); // 从容器中移除线程
-                    m_threadNames.erase(m_threadNames.begin() + i); // 从容器中移除线程名称
-                    m_sleepFlags.erase(m_sleepFlags.begin() + i); // 从容器中移除睡眠标志
-                    spdlog::info("Thread {} joined", name); // 日志输出
-                } else {
-                    spdlog::warn("Thread {} has already joined", name); // 日志输出
-                }
+            if (m_threadNames[i] == name) {
+                m_sleepFlags[i] = true; // 设置线程为睡眠状态
+                std::this_thread::sleep_for(std::chrono::seconds(seconds)); // 线程休眠
+                m_sleepFlags[i] = false; // 设置线程为非睡眠状态
                 return true;
+            } else {
+                ++i;
             }
         }
-        spdlog::warn("Thread {} not found", name); // 日志输出
+        spdlog::warn("Thread {} not found", name);
         return false;
     }
 
@@ -150,21 +155,20 @@ namespace OpenAPT {
     // name：线程名称
     // 返回值：如果找到了该线程，则返回 true，表示该线程在运行；否则返回 false，表示该线程未找到
     bool ThreadManager::isThreadRunning(const std::string& name) {
-        if (m_threads.empty()) { // 如果 m_threads 为空
-            spdlog::warn("Thread {} not found", name); // 日志输出
+        if (m_threads.empty()) {
+            spdlog::warn("Thread {} not found", name);
             return false;
         }
-        std::lock_guard<std::mutex> lock(m_mtx); // 线程锁
-        for (size_t i = 0; i < m_threads.size(); ++i) {
-            if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
-                spdlog::error("Index out of range!");
-                continue;
-            }
-            if (m_threadNames[i] == name) { // 找到要检查的线程
-                return !m_sleepFlags[i]; // 返回线程是否在运行
+        std::lock_guard<std::mutex> lock(m_mtx);
+        size_t i = 0;
+        while (i < m_threads.size() && i < m_threadNames.size() && i < m_sleepFlags.size()) {
+            if (m_threadNames[i] == name) {
+                return !m_sleepFlags[i]; // 如果线程不在睡眠状态，则表示线程在运行
+            } else {
+                ++i;
             }
         }
-        spdlog::warn("Thread {} not found", name); // 日志输出
+        spdlog::warn("Thread {} not found", name);
         return false;
     }
 }

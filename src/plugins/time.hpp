@@ -1,5 +1,5 @@
 /*
- * openapt.hpp
+ * time.hpp
  * 
  * Copyright (C) 2023 Max Qian <lightapt.com>
  * 
@@ -23,27 +23,17 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
  
-Date: 2023-3-27
+Date: 2023-3-31
  
-Description: Main 
+Description: Time
  
 **************************************************/
 
-#ifndef _OPENAPT_HPP_
-#define _OPENAPT_HPP_
+namespace OpenAPT::Time {
 
-#include "crow.h"
+    std::time_t getSystemTime();
+    void setSystemTime(int year, int month, int day, int hour, int minute, int second);
+    bool set_system_timezone(const std::string& timezone);
+    bool SyncTimeFromRTC();
 
-#include "plugins/thread.hpp"
-#include "task/define.hpp"
-#include "device/manager.hpp"
-
-extern crow::SimpleApp app;
-
-extern OpenAPT::ThreadManager m_ThreadManager;
-extern OpenAPT::TaskManager m_TaskManager;
-extern OpenAPT::DeviceManager m_DeviceManager;
-
-extern bool DEBUG;
-
-#endif
+}

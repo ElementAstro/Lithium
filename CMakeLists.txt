@@ -53,6 +53,15 @@ set(plugins_SRC
 
     ${openapt_src_dir}/src/plugins/file.cpp
     ${openapt_src_dir}/src/plugins/file.hpp
+
+    ${openapt_src_dir}/src/plugins/process.cpp
+    ${openapt_src_dir}/src/plugins/process.hpp
+
+    ${openapt_src_dir}/src/plugins/compress.cpp
+    ${openapt_src_dir}/src/plugins/compress.hpp
+
+    ${openapt_src_dir}/src/plugins/time.cpp
+    ${openapt_src_dir}/src/plugins/time.hpp
 )
 
 set(openapt_SRC
@@ -80,6 +89,8 @@ if(UNIX)
    )
 
   target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
+
+  find_package(ZLIB REQUIRED)
 
   # 查找 Python 库
   find_package(Python REQUIRED COMPONENTS Development)
@@ -111,6 +122,8 @@ if(UNIX)
 
   find_package(spdlog REQUIRED)
   target_link_libraries(openapt spdlog::spdlog_header_only)
+
+  target_link_libraries(openapt ${ZLIB_LIBRARIES})
 
   set_target_properties(
     openapt

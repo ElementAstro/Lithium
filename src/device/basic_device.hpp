@@ -53,6 +53,8 @@ namespace OpenAPT {
         Disconnected
     };
 
+    class Device;
+
     class Camera;
     class Telescope;
     class Focuser;

@@ -44,14 +44,41 @@ crow::SimpleApp app;
 #include <string>
 #include <cstdlib>
 #include <functional>
+#include <exception>
 
 #include "nlohmann/json.hpp"
+
+#include "device/basic_device.hpp"
 
 using json = nlohmann::json;
 
 OpenAPT::ThreadManager m_ThreadManager;
 OpenAPT::TaskManager m_TaskManager;
 OpenAPT::DeviceManager m_DeviceManager;
+
+bool DEBUG = true;
+
+void parse_args(int argc, char* argv[]) {
+    std::vector<std::string> argList;
+    for (int i = 1; i < argc; i++) { // 从第二个参数开始遍历
+        argList.push_back(argv[i]); // 保存命令行参数到vector中
+    }
+
+    try {
+        // 解析命令行参数
+        for (int i = 0; i < argList.size(); i++) {
+            if (argList[i] == "-d" || argList[i] == "--debug") {
+                spdlog::info("DEBUG Mode is enabled by command line argument");
+                DEBUG = true;
+            }
+            else {
+                throw std::invalid_argument("Invalid argument"); // 抛出异常: 无效参数
+            }
+        }
+    } catch (std::invalid_argument& e) {
+        spdlog::error(e.what()); // 记录错误日志
+    }
+}
 
 void LoadUrl() {
     CROW_ROUTE(app, "/")
@@ -65,9 +92,7 @@ void LoadUrl() {
     });
 }
 
-int main() {
-
-    LoadUrl();
+void TestAll() {
 
     std::shared_ptr<OpenAPT::ConditionalTask> conditionalTask(new OpenAPT::ConditionalTask(
         []() { spdlog::info("conditional task executed!"); },
@@ -82,6 +107,38 @@ int main() {
     m_TaskManager.addTask(conditionalTask);
 
     m_TaskManager.executeAllTasks();
+
+    m_DeviceManager.addDevice(OpenAPT::DeviceType::Camera, "Camera1");
+
+    auto cameraList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Camera);
+    std::cout << "相机列表: ";
+    for (auto& name : cameraList) {
+        std::cout << name << " ";
+    }
+    std::cout << std::endl;
+
+    auto telescopeList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Telescope);
+    std::cout << "望远镜列表: ";
+    for (auto& name : telescopeList) {
+        std::cout << name << " ";
+    }
+    std::cout << std::endl;
+}
+
+int main(int argc, char* argv[]) {
+
+    parse_args(argc, argv);
+
+    LoadUrl();
+
+    if (DEBUG) {
+        spdlog::set_level(spdlog::level::debug);
+        app.loglevel(crow::LogLevel::DEBUG);
+        TestAll();
+    } else {
+        spdlog::set_level(spdlog::level::info);
+        app.loglevel(crow::LogLevel::ERROR);
+    }
 
     CROW_WEBSOCKET_ROUTE(app, "/app")
       .onopen([&](crow::websocket::connection& conn) {

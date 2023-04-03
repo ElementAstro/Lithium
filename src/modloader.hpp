@@ -34,6 +34,8 @@ Description: C++ and Python Modules Loader
 
 #include "openapt.hpp"
 
+extern OpenAPT::ThreadManager m_ThreadManager;
+
 #include <Python.h>
 
 #include <vector>
@@ -44,17 +46,20 @@ Description: C++ and Python Modules Loader
     // Windows平台
     #define MODULE_HANDLE HMODULE
     #define LOAD_LIBRARY(p) LoadLibrary(p)
+    #define LOAD_ERROR() GetLastError()
     #include <windows.h>
 #elif defined(__APPLE__)
     // macOS平台
     #define MODULE_HANDLE void*
     #define LOAD_LIBRARY(p) dlopen_ext(p, RTLD_NOW, (const char*[]){ "-undefined", "dynamic_lookup", NULL })
+    #define LOAD_ERROR() dlerror()
     #include <dlfcn.h>
 #else
     // Linux和其他类UNIX平台
     #define MODULE_HANDLE void*
     #define LOAD_LIBRARY(p) dlopen(p, RTLD_NOW | RTLD_GLOBAL)
     #define UNLOAD_LIBRARY(p) dlclose(p)
+    #define LOAD_ERROR() dlerror()
     #include <dlfcn.h>
     #include <dirent.h>
     #include <unistd.h>
@@ -65,7 +70,7 @@ Description: C++ and Python Modules Loader
 #include "plugins/thread.hpp"
 #include "nlohmann/json.hpp"
 
-namespace OpenAPT{
+namespace OpenAPT {
 
     nlohmann::json iterator_modules_dir();
     

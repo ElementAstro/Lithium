@@ -34,7 +34,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 set(USE_FOLDERS TRUE)
-set(BUILD_SHARED_LIBS On)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 #################################################################################
@@ -44,6 +44,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 project(openapt)
 
 add_subdirectory(libs/)
+add_subdirectory(libs/pugixml)
+
 include_directories(${CMAKE_SOURCE_DIR}/libs/crow)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 
@@ -62,11 +64,32 @@ set(plugins_SRC
 
     ${openapt_src_dir}/src/plugins/time.cpp
     ${openapt_src_dir}/src/plugins/time.hpp
+
+    ${openapt_src_dir}/src/plugins/io.cpp
+    ${openapt_src_dir}/src/plugins/io.hpp
+
+    ${openapt_src_dir}/src/plugins/xmlreader.cpp
+    ${openapt_src_dir}/src/plugins/xmlreader.hpp
+)
+
+set(image_SRC
+    ${openapt_src_dir}/src/image/image.cpp
+)
+
+set(api_SRC
+    ${openapt_src_dir}/src/api/astap.cpp
+    ${openapt_src_dir}/src/api/astap.hpp
+
+    ${openapt_src_dir}/src/api/indiclient.cpp
+    ${openapt_src_dir}/src/api/indiclient.hpp
 )
 
 set(openapt_SRC
     ${openapt_src_dir}/src/modloader.cpp
     ${openapt_src_dir}/src/modloader.hpp
+
+    ${openapt_src_dir}/src/packageloader.cpp
+    ${openapt_src_dir}/src/packageloader.hpp
 
     ${openapt_src_dir}/src/task/define.hpp
 
@@ -85,6 +108,8 @@ if(UNIX)
   add_executable(
    openapt
    ${plugins_SRC}
+   ${image_SRC}
+   ${api_SRC}
    ${openapt_SRC}
    )
 
@@ -94,6 +119,16 @@ if(UNIX)
 
   # 查找 Python 库
   find_package(Python REQUIRED COMPONENTS Development)
+
+  find_package(CFITSIO REQUIRED)
+
+  target_link_libraries(openapt ${CFITSIO_LIBRARIES})
+
+  find_package(INDI 2.0.0 REQUIRED)
+
+  include_directories(${INDI_INCLUDE_DIR})
+
+  target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
 
   # 判断 Python 是否存在
   if(Python_FOUND)
@@ -124,6 +159,8 @@ if(UNIX)
   target_link_libraries(openapt spdlog::spdlog_header_only)
 
   target_link_libraries(openapt ${ZLIB_LIBRARIES})
+
+  target_link_libraries(openapt pugixml-static)
 
   set_target_properties(
     openapt

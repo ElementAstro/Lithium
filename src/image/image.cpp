@@ -6,7 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <fitsio.h>
 
-#include "CImg.h"
+#include "cimg/CImg.h"
 
 using namespace cimg_library;
 

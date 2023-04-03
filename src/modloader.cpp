@@ -119,7 +119,7 @@ namespace OpenAPT{
 
     ModuleLoader::~ModuleLoader(){
         for (auto& entry : handles_) {
-            dlclose(entry.second);
+            UNLOAD_LIBRARY(entry.second);
         }
 
         for (auto& [scriptName, moduleObj] : python_modules_) {
@@ -178,7 +178,7 @@ namespace OpenAPT{
         }
 
         if (!handle) {
-            spdlog::error("Failed to load library {}: {}", path, dlerror());
+            spdlog::error("Failed to load library {}: {}", path, LOAD_ERROR());
             return false;
         }
         // 将句柄保存到handles_中
@@ -197,16 +197,24 @@ namespace OpenAPT{
         auto it = handles_.find(filename);
         if (it != handles_.end()) {
             // 尝试卸载模块
-            if (UNLOAD_LIBRARY(it->second) == 0) {
+            int result;
+            #if defined(_WIN32) || defined(_WIN64)
+                result = FREE_LIBRARY(it->second);
+            #else
+                result = dlclose(it->second);
+            #endif
+            if (result == 0) {
                 // 卸载成功，移除句柄记录
                 spdlog::info("Unloaded module : {}", filename);
                 handles_.erase(it);
                 return true;
-            } else {
+            }
+            else {
                 spdlog::error("Failed to unload module : {}", filename);
                 return false;
             }
-        } else {
+        }
+        else {
             // 模块未加载
             spdlog::error("Module {} not loaded", filename);
             return false;
@@ -245,7 +253,7 @@ namespace OpenAPT{
         {
             if (strcmp(ent->d_name, "CMakeLists.txt") == 0)
             {
-                sprintf(cmake_path, "%s/%s", dir_path, ent->d_name);
+                snprintf(cmake_path, sizeof(cmake_path), "%s/%s", dir_path, ent->d_name);
                 break;
             }
         }
@@ -273,46 +281,100 @@ namespace OpenAPT{
             return false;
         }
 
+        // 检查动态库是否已存在，若已存在则直接复制
+        snprintf(lib_path, sizeof(lib_path), "%s/lib%s.so", build_path, lib_name);
+        if (access(lib_path, F_OK) == 0)
+        {
+            char cmd[1024];
+            snprintf(cmd, sizeof(cmd), "cp -av %s %s/", lib_path, out_path);
+            if (system(cmd) != 0)
+            {
+                spdlog::error("Failed to copy dynamic library");
+                ret = false;    // 执行命令失败，设置返回值为false
+            }
+
+            // 删除build目录
+            if (chdir(dir_path) == -1)
+            {
+                spdlog::error("Failed to change working directory to {}: {}", dir_path, strerror(errno));
+                return false;
+            }
+
+            char remove_cmd[512];
+            printf("\nDo you really want to remove build directory %s? (y/n): ", build_path);
+            fflush(stdout);
+            snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", build_path);
+            if (system(remove_cmd) != 0)
+            {
+                spdlog::error("Failed to remove build directory");
+                // 只是删除build目录失败，并不影响主逻辑，不需要退出
+            }
+            return true;
+        }
+
         // 执行cmake
         char cmd[1024];
-        sprintf(cmd, "cmake -DCMAKE_BUILD_TYPE=Release -D LIBRARY_NAME=%s ..", lib_name);
-        if (system(cmd) != 0) {
+        snprintf(cmd, sizeof(cmd), "cmake -DCMAKE_BUILD_TYPE=Release -D LIBRARY_NAME=%s ..", lib_name);
+        if (system(cmd) != 0)
+        {
             spdlog::error("Failed to run cmake");
             ret = false;    // 执行命令失败，设置返回值为false
         }
 
         // 执行make
-        if (system("make") != 0) {
+        if (system("make") != 0)
+        {
             spdlog::error("Failed to run make");
             ret = false;    // 执行命令失败，设置返回值为false
         }
 
         // 复制生成的动态库
-        sprintf(lib_path, "%s/lib%s.so", build_path, lib_name);
-        sprintf(cmd, "cp -av lib%s.so %s/", lib_name, out_path);
-        if (system(cmd) != 0) {
+        snprintf(cmd, sizeof(cmd), "cp -av lib%s.so %s/", lib_name, out_path);
+        if (system(cmd) != 0)
+        {
             spdlog::error("Failed to copy dynamic library");
             ret = false;    // 执行命令失败，设置返回值为false
         }
 
         // 删除build目录
-        int code = chdir(dir_path);
-        sprintf(cmd, "rm -rf %s", build_path);
-        if (system(cmd) != 0) {
+        if (chdir(dir_path) == -1)
+        {
+            spdlog::error("Failed to change working directory to {}: {}", dir_path, strerror(errno));
+            return false;
+        }
+
+        char remove_cmd[512];
+        printf("\nDo you really want to remove build directory %s? (y/n): ", build_path);
+        fflush(stdout);
+        snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", build_path);
+        if (system(remove_cmd) != 0) 
+        {
             spdlog::error("Failed to remove build directory");
-            ret = false;    // 执行命令失败，设置返回值为false
         }
 
         // 返回最终结果
         return ret;
     }
 
+    /**
+     * @brief 获取动态库中指定符号名的函数指针
+     * 
+     * @tparam T 函数指针类型
+     * @param module_name 动态库名称
+     * @param function_name 函数符号名
+     * @return T 函数指针
+     */
     template<typename T>
     T ModuleLoader::GetFunction(const std::string& module_name, const std::string& function_name) {
         // 获取动态库句柄
         auto handle = handles_[module_name];
         // 获取函数指针
-        void* func_ptr = dlsym(handle, function_name.c_str());
+        void* func_ptr;
+        #if defined(_WIN32) || defined(_WIN64)
+            func_ptr = reinterpret_cast<void*>(GetProcAddress(handle, function_name.c_str()));
+        #else
+            func_ptr = dlsym(handle, function_name.c_str());
+        #endif
         if (!func_ptr) {
             spdlog::error("Failed to get symbol {} from module {}", function_name, module_name);
             return nullptr; // 函数不存在，返回空指针

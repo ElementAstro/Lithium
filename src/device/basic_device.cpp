@@ -35,9 +35,148 @@ Description: Basic Device Definitions
 
 #include "basic_device.hpp"
 
+struct CameraFrame {
+    int X = 0;
+    int Y = 0;
+    double PixelX = 0;
+    double PixelY = 0;
+};
+
 namespace OpenAPT
 {
-    
+
+    class Device 
+    {
+        public:
+
+            explicit Device();
+            virtual ~Device();
+
+            virtual bool Connect();
+            virtual bool Disconnect();
+            virtual bool Reconnect();
+            virtual bool Scanning();
+
+            virtual bool GetSettings();
+            virtual bool SaveSettings();
+            virtual bool GetParameter();
+            virtual bool SetParameter();
+
+            virtual std::string GetName();
+            virtual bool SetName();
+            virtual int GetId();
+            virtual bool SetId();
+        
+        public:
+
+            int             id;
+            std::string     name;
+            std::string     description;
+
+            std::string     config_path;
+
+            std::string     hostname;
+            int             port;
+
+            bool            is_connected;
+            
+            std::vector<std::string> available_devices;
+    };
+
+    class Camera : public Device
+    {
+
+        public:
+
+            explicit Camera();
+            virtual ~Camera();
+
+            virtual bool StartExposure();
+            virtual bool StopExposure();
+            virtual bool WaitForExposure();
+            virtual bool ReadAfterExposure();
+
+            virtual bool StartVideoCapturing();
+            virtual bool StopVideoCapturing();
+            virtual bool ReadStreamFromCamera();
+
+            virtual bool IsCameraConnected();
+            virtual bool IsCameraExposuring();
+            virtual bool IsCameraVideo();
+            virtual bool IsCameraCooling();
+
+            virtual bool CanCameraGain();
+            virtual int CurrentCameraGain();
+            virtual int MaxCameraGain();
+            virtual int MinCameraGain();
+
+            virtual bool CanCameraOffset();
+            virtual int CurrentCameraOffset();
+            virtual int MaxCameraOffset();
+            virtual int MinCameraOffset();
+
+            virtual bool CanCameraBinningt();
+            virtual int CurrentCameraBinningt();
+            virtual int MaxCameraBinningt();
+            virtual int MinCameraBinningt();
+
+            virtual bool IsCameraHasShutter();
+            virtual bool IsCameraShutterClosed();
+
+            virtual bool IsCameraSubframe();
+            virtual bool CanCameraSubframe();
+
+            virtual int GetReadDelay();
+
+            virtual bool CanCameraCooling();
+            virtual double CurrentTemperature();
+            virtual double CurrentPower();
+
+            virtual CameraFrame GetCameraFrame();
+
+        public:
+
+            static const double UnknownPixelSize;
+
+            bool            is_exposuring;
+            bool            is_video;
+
+            bool            can_gain;
+            int             gain;
+            int             max_gain;
+            int             min_gain;
+
+            bool            can_offset;
+            int             offset;
+            int             max_offset;
+            int             min_offset;
+
+            bool            has_shutter;
+            bool            is_shutter_closed;          
+
+            bool            has_subframe;
+            bool            is_subframe;        
+
+            bool            can_binning;
+            int             binning;            
+            int             max_binning;
+            int             min_binning;
+
+            int             read_delay;
+
+            bool            can_cooling;
+            bool            is_cooling;
+            double          current_temperature;
+            double          current_power;
+
+            double          pixel_x;
+            double          pixel_y;
+            int             frame_x;
+            int             frame_y;
+
+            
+
+    };
 } // namespace OpenAPT
 
 /*

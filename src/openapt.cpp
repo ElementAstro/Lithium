@@ -29,7 +29,25 @@ Description: Main
  
 **************************************************/
 
+/*
+
+   ____                   ___    ____  ______
+  / __ \____  ___  ____  /   |  / __ \/_  __/
+ / / / / __ \/ _ \/ __ \/ /| | / /_/ / / /   
+/ /_/ / /_/ /  __/ / / / ___ |/ ____/ / /    
+\____/ .___/\___/_/ /_/_/  |_/_/     /_/     
+    /_/                                      
+
+    __  ___      __           ___         __                   __          __                               __             ______           _ __     
+   /  |/  /___ _/ /_____     /   |  _____/ /__________  ____  / /_  ____  / /_____  ____ __________ _____  / /_  __  __   / ____/___ ______(_) /_  __
+  / /|_/ / __ `/ //_/ _ \   / /| | / ___/ __/ ___/ __ \/ __ \/ __ \/ __ \/ __/ __ \/ __ `/ ___/ __ `/ __ \/ __ \/ / / /  / __/ / __ `/ ___/ / / / / /
+ / /  / / /_/ / ,< /  __/  / ___ |(__  ) /_/ /  / /_/ / /_/ / / / / /_/ / /_/ /_/ / /_/ / /  / /_/ / /_/ / / / / /_/ /  / /___/ /_/ (__  ) / / /_/ / 
+/_/  /_/\__,_/_/|_|\___/  /_/  |_/____/\__/_/   \____/ .___/_/ /_/\____/\__/\____/\__, /_/   \__,_/ .___/_/ /_/\__, /  /_____/\__,_/____/_/_/\__, /  
+                                                    /_/                          /____/          /_/          /____/                        /____/   
+*/
+
 #include "openapt.hpp"
+#include "plugins/crash.hpp"
 
 #include <spdlog/spdlog.h> // 引入 spdlog 日志库
 
@@ -68,6 +86,7 @@ crow::SimpleApp app;
 #include "nlohmann/json.hpp"
 
 #include "device/basic_device.hpp"
+#include "task/define.hpp"
 
 using json = nlohmann::json;
 
@@ -75,6 +94,7 @@ OpenAPT::ThreadManager m_ThreadManager;
 OpenAPT::TaskManager m_TaskManager;
 OpenAPT::DeviceManager m_DeviceManager;
 OpenAPT::ModuleLoader m_ModuleLoader;
+OpenAPT::ConfigManager m_ConfigManager;
 
 bool DEBUG = true;
 
@@ -461,6 +481,8 @@ void LoadUrl() {
 
 void TestAll() {
 
+    //测试任务管理器
+
     std::shared_ptr<OpenAPT::ConditionalTask> conditionalTask(new OpenAPT::ConditionalTask(
         []() { spdlog::info("conditional task executed!"); },
         {{"threshold", 10}},
@@ -473,7 +495,11 @@ void TestAll() {
 
     m_TaskManager.addTask(conditionalTask);
 
+    m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}}));
+
     m_TaskManager.executeAllTasks();
+
+    // 测试设备调度
 
     m_DeviceManager.addDevice(OpenAPT::DeviceType::Camera, "Camera1");
 
@@ -490,6 +516,13 @@ void TestAll() {
         std::cout << name << " ";
     }
     std::cout << std::endl;
+
+    // 测试配置管理器
+    m_ConfigManager.setValue("key1", "value1");
+    m_ConfigManager.setValue("key2/inner_key", 3.1415926);
+    spdlog::info("Get value of key2/inner_key: {}", m_ConfigManager.getValue("key2/inner_key").dump());
+    m_ConfigManager.printAllValues();
+
 }
 
 
@@ -499,61 +532,70 @@ void quit() {
 
 int main(int argc, char* argv[]) {
 
-    registerInterruptHandler();
+    try {
+        registerInterruptHandler();
 
-    parse_args(argc, argv);
+        parse_args(argc, argv);
 
-    check_duplicate_process(argv[0]);
+        check_duplicate_process(argv[0]);
 
-    LoadUrl();
+        LoadUrl();
 
-    if (DEBUG) {
-        spdlog::set_level(spdlog::level::debug);
-        app.loglevel(crow::LogLevel::DEBUG);
-        TestAll();
-    } else {
-        spdlog::set_level(spdlog::level::info);
-        app.loglevel(crow::LogLevel::ERROR);
-    }
-
-    bool ret = CheckAndKillProgramOnPort(8000);
-    if (!ret) {
-        quit();
-    }
-
-    CROW_WEBSOCKET_ROUTE(app, "/app")
-      .onopen([&](crow::websocket::connection& conn) {
-        spdlog::info("WebSocket connection opened.");
-      })
-      .onclose([&](crow::websocket::connection& conn, const std::string& reason) {
-        spdlog::warn("WebSocket connection closed. Reason: {}", reason);
-      })
-      .onmessage([&](crow::websocket::connection& /*conn*/, const std::string& data, bool is_binary) {
-        try {
-            auto j = json::parse(data); // 解析 JSON
-            std::string event = j["event"];
-            std::string message = j["message"];
-            std::string remote_event = j["remote_event"]; // 获取远程事件类型
-
-            if (event == "start_coroutine") {
-                spdlog::info("Starting coroutine...");
-                //co_await process_event_in_coroutine(message, remote_event);
-            } else if (event == "start_thread") {
-                spdlog::info("Starting thread...");
-                //std::thread t(process_event_in_thread, message);
-                //t.detach();
-            } else if (event == "start_process") {
-                spdlog::info("Starting process...");
-                //std::system("python my_script.py");
-            } else {
-                spdlog::error("Invalid event type: {}", event);
-            }
-        } catch (const json::exception &e) {
-            spdlog::error("Failed to parse JSON: {}", e.what());
+        if (DEBUG) {
+            spdlog::set_level(spdlog::level::debug);
+            app.loglevel(crow::LogLevel::DEBUG);
+            TestAll();
+        } else {
+            spdlog::set_level(spdlog::level::info);
+            app.loglevel(crow::LogLevel::ERROR);
         }
-      });
 
-    app.port(8000).multithreaded().run(); // 启动 Web 服务器
+        bool ret = CheckAndKillProgramOnPort(8000);
+        if (!ret) {
+            quit();
+        }
+
+        CROW_WEBSOCKET_ROUTE(app, "/app")
+        .onopen([&](crow::websocket::connection& conn) {
+            spdlog::info("WebSocket connection opened.");
+        })
+        .onclose([&](crow::websocket::connection& conn, const std::string& reason) {
+            spdlog::warn("WebSocket connection closed. Reason: {}", reason);
+        })
+        .onmessage([&](crow::websocket::connection& /*conn*/, const std::string& data, bool is_binary) {
+            try {
+                auto j = json::parse(data); // 解析 JSON
+                std::string event = j["event"];
+                std::string message = j["message"];
+                std::string remote_event = j["remote_event"]; // 获取远程事件类型
+
+                if (event == "start_coroutine") {
+                    spdlog::info("Starting coroutine...");
+                    //co_await process_event_in_coroutine(message, remote_event);
+                } else if (event == "start_thread") {
+                    spdlog::info("Starting thread...");
+                    //std::thread t(process_event_in_thread, message);
+                    //t.detach();
+                } else if (event == "start_process") {
+                    spdlog::info("Starting process...");
+                    //std::system("python my_script.py");
+                } else {
+                    spdlog::error("Invalid event type: {}", event);
+                }
+            } catch (const json::exception &e) {
+                spdlog::error("Failed to parse JSON: {}", e.what());
+            }
+        });
+
+        app.port(8000).multithreaded().run(); // 启动 Web 服务器
+
+    } catch (const std::exception& e) {
+			std::cerr << "Error: " << e.what() << std::endl;
+			// 保存崩溃日志到文件中
+			OpenAPT::CrashReport::saveCrashLog(e.what());
+			std::exit(EXIT_FAILURE);
+	}
+    
 
     return 0;
 }

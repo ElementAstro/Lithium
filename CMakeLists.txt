@@ -46,8 +46,11 @@ project(openapt)
 add_subdirectory(libs/)
 add_subdirectory(libs/pugixml)
 
+add_subdirectory(modules)
+
 include_directories(${CMAKE_SOURCE_DIR}/libs/crow)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 set(plugins_SRC
     ${openapt_src_dir}/src/plugins/thread.cpp
@@ -70,6 +73,9 @@ set(plugins_SRC
 
     ${openapt_src_dir}/src/plugins/xmlreader.cpp
     ${openapt_src_dir}/src/plugins/xmlreader.hpp
+
+    ${openapt_src_dir}/src/plugins/crash.cpp
+    ${openapt_src_dir}/src/plugins/crash.hpp
 )
 
 set(image_SRC
@@ -92,12 +98,17 @@ set(openapt_SRC
     ${openapt_src_dir}/src/packageloader.hpp
 
     ${openapt_src_dir}/src/task/define.hpp
+    ${openapt_src_dir}/src/task/runner.cpp
+    ${openapt_src_dir}/src/task/runner.hpp
 
     ${openapt_src_dir}/src/device/basic_device.cpp
     ${openapt_src_dir}/src/device/basic_device.hpp
 
     ${openapt_src_dir}/src/device/manager.cpp
     ${openapt_src_dir}/src/device/manager.hpp
+
+    ${openapt_src_dir}/src/config/configor.cpp
+    ${openapt_src_dir}/src/config/configor.hpp
 
     ${openapt_src_dir}/src/openapt.cpp
     ${openapt_src_dir}/src/openapt.hpp

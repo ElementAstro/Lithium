@@ -1,5 +1,5 @@
 /*
- * openapt.hpp
+ * crash.hpp
  * 
  * Copyright (C) 2023 Max Qian <lightapt.com>
  * 
@@ -23,31 +23,15 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
  
-Date: 2023-3-27
+Date: 2023-4-4
  
-Description: Main 
+Description: Crash Report
  
 **************************************************/
 
-#ifndef _OPENAPT_HPP_
-#define _OPENAPT_HPP_
+#include <string>
 
-#include "crow.h"
-
-#include "plugins/thread.hpp"
-#include "task/runner.hpp"
-#include "device/manager.hpp"
-#include "modloader.hpp"
-#include "config/configor.hpp"
-
-extern crow::SimpleApp app;
-
-extern OpenAPT::ThreadManager m_ThreadManager;
-extern OpenAPT::TaskManager m_TaskManager;
-extern OpenAPT::DeviceManager m_DeviceManager;
-extern OpenAPT::ModuleLoader m_ModuleLoader;
-extern OpenAPT::ConfigManager m_ConfigManager;
-
-extern bool DEBUG;
-
-#endif
+namespace OpenAPT::CrashReport
+{
+    void saveCrashLog(const std::string& error_msg);
+} // namespace OpenAPT::CrashReport

@@ -154,7 +154,7 @@ namespace OpenAPT {
             std::vector<std::string> getPythonFunctions(const std::string& scriptName);
 
             template<typename... Args>
-            bool runPythonFunction(const std::string& scriptName, const std::string& functionName, Args... args);
+            bool RunPythonFunction(const std::string& scriptName, const std::string& functionName, Args... args);
 
             template<typename F, typename... Args>
             void AysncRunPythonFunction(const std::string& scriptName, const std::string& functionName, ModuleLoader& scriptLoader, F&& callback, Args&&... args);

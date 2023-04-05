@@ -481,6 +481,21 @@ void LoadUrl() {
 
 void TestAll() {
 
+    // 测试模组管理器
+
+    spdlog::debug("The following output is just for debugging");
+
+    spdlog::debug("Test ModuleLoader and some important functions :");
+
+    spdlog::debug("Test Module Loading Functions : {}",m_ModuleLoader.LoadModule("modules/test/libmylib.so","mylib"));
+    
+    m_ModuleLoader.LoadAndRunFunction<void>("mylib","my_func","test",false);
+
+    // 严重bug
+    //spdlog::debug("Test Get all of the functions in modules {}",m_ModuleLoader.getFunctionList("mylib").dump());
+
+    spdlog::debug("Test HasModule Functions by looking for a none modules: {}",m_ModuleLoader.HasModule("fuckyou"));
+
     //测试任务管理器
 
     std::shared_ptr<OpenAPT::ConditionalTask> conditionalTask(new OpenAPT::ConditionalTask(
@@ -494,6 +509,10 @@ void TestAll() {
     ));
 
     m_TaskManager.addTask(conditionalTask);
+
+    m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTask","Just a test",{},"","Print"));
+
+    m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTaska","Just a test",{},"mylib","my_func"));
 
     m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}}));
 

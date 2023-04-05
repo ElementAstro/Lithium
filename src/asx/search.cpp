@@ -40,100 +40,102 @@ Description: AstroSearchX (ASX)
 using json = nlohmann::json;
 
 class Database {
-    private:
-    struct Data {
-        std::string Name = "";
-        std::string Type = "";
-        std::string RA = "";
-        std::string Dec = "";
-        std::string Const = "";
+private:
+    struct ObjectData {
+        std::string name = "";
+        std::string type = "";
+        std::string right_ascension = "";
+        std::string declination = "";
+        std::string constellation = "";
     };
+
 public:
-    Database(std::string db_name) : db(nullptr) {
-        int rc = sqlite3_open(db_name.c_str(), &db);
+    explicit Database(const std::string& db_name) : db_(nullptr) {
+        int rc = sqlite3_open(db_name.c_str(), &db_);
         if (rc != SQLITE_OK) {
-            spdlog::error("Cannot open database: {}", sqlite3_errmsg(db));
-            sqlite3_close(db);
+            spdlog::error("Cannot open database: {}", sqlite3_errmsg(db_));
+            sqlite3_close(db_);
             throw std::runtime_error("Cannot open database");
         }
     }
 
     ~Database() {
-        sqlite3_close(db);
+        sqlite3_close(db_);
     }
 
-    void read_from_database() {
-        char* errmsg = 0;
-
-        int rc = sqlite3_exec(db, "SELECT * FROM objects;", callback, &data, &errmsg);
+    void readObjectsFromDatabase() {
+        char* errmsg = nullptr;
+        int rc = sqlite3_exec(db_, "SELECT * FROM objects;", callback, &objects_data_, &errmsg);
         if (rc != SQLITE_OK) {
-            spdlog::error("Error reading from database: {}", errmsg);
+            spdlog::error("Error reading objects from database: {}", errmsg);
             sqlite3_free(errmsg);
-            throw std::runtime_error("Error reading from database");
+            throw std::runtime_error("Error reading objects from database");
+        } 
+    }
+
+    void insertObject(const ObjectData& data) {
+        objects_data_.push_back(data);
+        std::string sql = "INSERT INTO objects (Name, Type, RA, Dec, Constellation) VALUES (\"" +
+            data.name + "\", \"" + data.type + "\", \"" + data.right_ascension + "\", \"" +
+            data.declination + "\", \"" + data.constellation + "\");";
+
+        char* errmsg = nullptr;
+        int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errmsg);
+        if (rc != SQLITE_OK) {
+            spdlog::error("Error inserting object into database: {}", errmsg);
+            sqlite3_free(errmsg);
+            objects_data_.pop_back();
+            throw std::runtime_error("Error inserting object into database");
         }
     }
 
-    void insert_data(Data d) {
-        data.push_back(d);
-        std::string sql = "INSERT INTO objects (Name, Type, RA, Dec, Const) VALUES (\"" +
-            d.Name + "\", \"" + d.Type + "\", \"" + d.RA + "\", \"" + d.Dec + "\", \"" + d.Const + "\");";
-
-        char* errmsg;
-        int rc = sqlite3_exec(db, sql.c_str(), NULL, NULL, &errmsg);
-        if (rc != SQLITE_OK) {
-            spdlog::error("Error inserting data into database: {}", errmsg);
-            sqlite3_free(errmsg);
-            throw std::runtime_error("Error inserting data into database");
-        }
-    }
-
-    void delete_data(std::string name) {
-        auto it = std::remove_if(data.begin(), data.end(), [&](const Data& d) {
-            return d.Name == name;
+    void deleteObject(const std::string& name) {
+        auto it = std::remove_if(objects_data_.begin(), objects_data_.end(), [&](const ObjectData& data) {
+            return data.name == name;
         });
-        data.erase(it, data.end());
+        objects_data_.erase(it, objects_data_.end());
 
         std::string sql = "DELETE FROM objects WHERE Name = \"" + name + "\";";
 
-        char* errmsg;
-        int rc = sqlite3_exec(db, sql.c_str(), NULL, NULL, &errmsg);
+        char* errmsg = nullptr;
+        int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errmsg);
         if (rc != SQLITE_OK) {
-            spdlog::error("Error deleting data from database: {}", errmsg);
+            spdlog::error("Error deleting object from database: {}", errmsg);
             sqlite3_free(errmsg);
-            throw std::runtime_error("Error deleting data from database");
+            throw std::runtime_error("Error deleting object from database");
         }
     }
 
-    void sort_by_name() {
-        std::sort(data.begin(), data.end(), [](const Data& d1, const Data& d2) {
-            return d1.Name < d2.Name;
+    void sortByObjectName() {
+        std::sort(objects_data_.begin(), objects_data_.end(), [](const ObjectData& d1, const ObjectData& d2) {
+            return d1.name < d2.name;
         });
     }
 
-    std::vector<Data> filter_by(std::function<bool(const Data&)> filter) const {
-        std::vector<Data> result;
-        std::copy_if(data.begin(), data.end(), std::back_inserter(result), filter);
+    std::vector<ObjectData> filterObjectsBy(std::function<bool(const ObjectData&)> filter) const {
+        std::vector<ObjectData> result;
+        std::copy_if(objects_data_.begin(), objects_data_.end(), std::back_inserter(result), filter);
         return result;
     }
 
-    void optimize_database() {
-        sort_by_name();
-        // TODO: 实现其他优化
+    void optimizeDatabase() {
+        sortByObjectName();
+        // TODO: Implement other optimization methods
     }
 
-    void save_to_database() {
+    void saveObjectsToDatabase() {
         std::string sql = "BEGIN TRANSACTION; ";
-        for (auto& d : data) {
-            sql += "UPDATE objects SET Type = \"" + d.Type +
-                "\", RA = \"" + d.RA +
-                "\", Dec = \"" + d.Dec +
-                "\", Const = \"" + d.Const +
-                "\" WHERE Name = \"" + d.Name + "\"; ";
+        for (const auto& data : objects_data_) {
+            sql += "UPDATE objects SET Type = \"" + data.type +
+                "\", RA = \"" + data.right_ascension +
+                "\", Dec = \"" + data.declination +
+                "\", Constellation = \"" + data.constellation +
+                "\" WHERE Name = \"" + data.name + "\"; ";
         }
         sql += "COMMIT;";
 
-        char* errmsg;
-        int rc = sqlite3_exec(db, sql.c_str(), NULL, NULL, &errmsg);
+        char* errmsg = nullptr;
+        int rc = sqlite3_exec(db_, sql.c_str(), nullptr, nullptr, &errmsg);
         if (rc != SQLITE_OK) {
             spdlog::error("Error updating database: {}", errmsg);
             sqlite3_free(errmsg);
@@ -141,39 +143,39 @@ public:
         }
     }
 
-    std::vector<Data> search_by_name(std::string name) {
-        std::vector<Data> result;
-        for (auto& d : data) {
-            if (d.Name.find(name) != std::string::npos) {
-                result.push_back(d);
+    std::vector<ObjectData> searchObjectsByName(const std::string& name) const {
+        std::vector<ObjectData> result;
+        for (const auto& data : objects_data_) {
+            if (data.name.find(name) != std::string::npos) {
+                result.push_back(data);
             }
         }
         return result;
     }
 
-    std::vector<Data> search_by_ra_dec(std::string ra, std::string dec, double ra_range, double dec_range) {
-        std::vector<Data> result;
-        for (auto& d : data) {
-            double d_ra = to_decimal(d.RA);
-            double d_dec = to_decimal(d.Dec);
-            double input_ra = to_decimal(ra);
-            double input_dec = to_decimal(dec);
-            if (std::abs(input_ra - d_ra) <= ra_range && std::abs(input_dec - d_dec) <= dec_range) {
-                result.push_back(d);
+    std::vector<ObjectData> searchObjectsByRaDec(const std::string& ra, const std::string& dec, double ra_range, double dec_range) const {
+        std::vector<ObjectData> result;
+        for (const auto& data : objects_data_) {
+            double object_ra = toDecimal(data.right_ascension);
+            double object_dec = toDecimal(data.declination);
+            double input_ra = toDecimal(ra);
+            double input_dec = toDecimal(dec);
+            if (std::abs(input_ra - object_ra) <= ra_range && std::abs(input_dec - object_dec) <= dec_range) {
+                result.push_back(data);
             }
         }
         return result;
     }
 
-    void save_to_json(std::string filename) {
+    void saveObjectsToJsonFile(const std::string& filename) const {
         json j;
-        for (auto d : data) {
+        for (const auto& data : objects_data_) {
             j.push_back({
-                {"Name", d.Name},
-                {"Type", d.Type},
-                {"RA", d.RA},
-                {"Dec", d.Dec},
-                {"Const", d.Const}
+                {"Name", data.name},
+                {"Type", data.type},
+                {"RA", data.right_ascension},
+                {"Dec", data.declination},
+                {"Constellation", data.constellation}
             });
         }
         std::ofstream o(filename);
@@ -182,20 +184,18 @@ public:
 
 private:
     static int callback(void *pdata, [[maybe_unused]] int argc, char **argv, [[maybe_unused]] char **col_name) {
-        std::vector<Data>* d = static_cast<std::vector<Data>*>(data);
-        Data tmp;
-        tmp.Name = argv[0];
-        tmp.Type = argv[1];
-        tmp.RA = argv[2];
-        tmp.Dec = argv[3];
-        tmp.Const = argv[4];
-        data->push_back(tmp);
-
-        d->push_back(tmp);
+        auto* objects_data = static_cast<std::vector<ObjectData>*>(pdata);
+        ObjectData tmp;
+        tmp.name = argv[0];
+        tmp.type = argv[1];
+        tmp.right_ascension = argv[2];
+        tmp.declination = argv[3];
+        tmp.constellation = argv[4];
+        objects_data->push_back(tmp);
         return 0;
     }
 
-    double to_decimal(std::string str) {
+    double toDecimal(const std::string& str) const {
         double degree = 0.0;
         bool has_hour = false, has_minute = false, has_second = false;
         std::string delimiter = ":";
@@ -205,7 +205,7 @@ private:
         while ((pos = str.find(delimiter)) != std::string::npos) {
             token = str.substr(0, pos);
             if (!has_hour) {
-                degree += std::stod(token) * 15; // 如果是小时，则转换为度数
+                degree += std::stod(token) * 15; // If it's hours, convert to degrees
                 has_hour = true;
             } else if (!has_minute) {
                 degree += std::stod(token) / 4;
@@ -224,12 +224,9 @@ private:
         return degree;
     }
 
-
 private:
-    sqlite3* db;
-    std::vector<Data> data;
-
-
+    sqlite3* db_;
+    std::vector<ObjectData> objects_data_;
 };
 
 int main() {

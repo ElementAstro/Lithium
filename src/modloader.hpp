@@ -63,6 +63,7 @@ extern OpenAPT::ThreadManager m_ThreadManager;
     #include <dlfcn.h>
     #include <dirent.h>
     #include <unistd.h>
+    #include <elf.h>
 #endif
 
 #include <spdlog/spdlog.h>
@@ -86,20 +87,53 @@ namespace OpenAPT {
 
             template<typename T>
             T GetFunction(const std::string& module_name, const std::string& function_name);
-            /// @brief 从已加载的模块中加载函数并运行
-            /// @tparam T 函数类型
-            /// @tparam ...Args 函数所需参数 
-            /// @tparam class_type 类类型
-            /// @param module_name 模块名称
-            /// @param func_name 函数名称
-            /// @param thread_name 线程名称
-            /// @param instance 类实例
-            /// @param ...args 
-            /// @return 函数是否启动成功
+
+            template<typename T>
+            std::function<void(T)> GetFunctionObject(const std::string& module_name, const std::string& function_name)
+            {
+                // 获取动态库句柄
+                auto handle_it = handles_.find(module_name);
+                if (handle_it == handles_.end())
+                {
+                    spdlog::error("Failed to find module {}", module_name);
+                    return nullptr; // 动态库不存在，返回空指针
+                }
+                auto handle = handle_it->second;
+
+            #ifdef _WIN32
+                auto func_ptr = reinterpret_cast<void*>(GetProcAddress(handle, function_name.c_str()));
+            #else
+                auto func_ptr = dlsym(handle, function_name.c_str());
+            #endif
+
+                if (!func_ptr)
+                {
+                    // 获取出错，输出错误信息
+                    spdlog::error("Failed to get symbol {} from module {}: {}", function_name, module_name, dlerror());
+                    return nullptr; // 函数不存在，返回空指针
+                }
+
+                return *reinterpret_cast<std::function<void(T)>*>(&func_ptr);
+            }
+
+
+            /**
+             * @brief LoadAndRunFunction函数模板，用于在指定模块中动态加载并执行指定函数。
+             * 
+             * @tparam T 返回值类型
+             * @tparam class_type 类类型
+             * @tparam Args 可变参数模板，表示传入函数的参数列表
+             * @param module_name 模块名
+             * @param func_name 函数名
+             * @param thread_name 线程名
+             * @param instance 类实例指针，如果函数是类成员函数，则需要传入类实例指针，否则可以传入nullptr
+             * @param args 传入函数的实际参数列表
+             * @return typename std::enable_if<std::is_class<class_type>::value, bool>::type 如果加载并执行函数成功，则返回true；否则返回false
+             */
             template<typename T, typename class_type, typename... Args>
             typename std::enable_if<std::is_class<class_type>::value, bool>::type
             LoadAndRunFunction(const std::string& module_name, const std::string& func_name,
-                                const std::string& thread_name, class_type* instance, Args... args) {
+                const std::string& thread_name, bool runasync,class_type* instance, Args... args) {
                 typedef T (class_type::*MemberFunctionPtr)(Args...);
                 typedef T (*FunctionPtr)(Args...);
                 void* handle = GetHandle(module_name);
@@ -118,19 +152,19 @@ namespace OpenAPT {
             }
 
             /**
-             * @brief 从动态链接库中加载函数并执行，支持指定函数返回值类型和传入参数类型
+             * @brief LoadAndRunFunction函数模板，用于在指定模块中动态加载并执行指定函数。
              * 
-             * @tparam T 函数返回值的类型
-             * @tparam Args 函数传入参数的类型，可以是多个
-             * @param module_name 要加载的动态链接库的名称，不含后缀
-             * @param func_name 要加载的函数的名称
-             * @param thread_name 新开线程的名称
-             * @param args 要传入函数的参数列表
-             * @return T 执行函数的返回值
+             * @tparam T 返回值类型
+             * @tparam Args 可变参数模板，表示传入函数的参数列表
+             * @param module_name 模块名
+             * @param func_name 函数名
+             * @param thread_name 线程名
+             * @param args 传入函数的实际参数列表
+             * @return T 函数返回值
              */
             template<typename T, typename... Args>
             T LoadAndRunFunction(const std::string& module_name, const std::string& func_name,
-                                const std::string& thread_name, Args&&... args) {
+                                const std::string& thread_name,bool runasync, Args&&... args) {
                 // 定义函数指针类型
                 typedef T (*FunctionPtr)(Args...);
 
@@ -144,20 +178,27 @@ namespace OpenAPT {
                 }
                 FunctionPtr func_ptr = reinterpret_cast<FunctionPtr>(sym_ptr);
 
-                // 新建线程并执行函数
-                m_ThreadManager.addThread(std::bind(func_ptr, std::forward<Args>(args)...), thread_name);
+                if (runasync){
+                    m_ThreadManager.addThread(std::bind(func_ptr, std::forward<Args>(args)...), thread_name);
+                }
+                else {
+                    auto funcc = std::bind(func_ptr, std::forward<Args>(args)...);
+                    funcc();
+                }
 
                 // 返回函数返回值
                 return static_cast<T>(0);
             }
 
+            [[deprecated("This function is deprecated. Some problems had not been solved!")]]
+            nlohmann::json getFuncList(void* handle);
+            [[deprecated("This function is deprecated. Some problems had not been solved!")]]
+            nlohmann::json getFunctionList(const std::string& module_name);
+
             std::vector<std::string> getPythonFunctions(const std::string& scriptName);
 
             template<typename... Args>
             bool RunPythonFunction(const std::string& scriptName, const std::string& functionName, Args... args);
-
-            template<typename F, typename... Args>
-            void AysncRunPythonFunction(const std::string& scriptName, const std::string& functionName, ModuleLoader& scriptLoader, F&& callback, Args&&... args);
 
         public:
             void* GetHandle(const std::string& name) const {
@@ -167,9 +208,15 @@ namespace OpenAPT {
                 }
                 return it->second;
             }
+
+            bool HasModule(const std::string& name) const;
+
+            nlohmann::json getArgsDesc(void* handle, const std::string& functionName);
             
         private:
             std::unordered_map<std::string, void*> handles_;
+
+            std::vector<std::string> functionNames_;
 
             std::unordered_map<std::string, PyObject*> python_modules_;
     };

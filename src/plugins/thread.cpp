@@ -41,56 +41,48 @@ namespace OpenAPT {
             joinAllThreads();
     }
 
-    void ThreadManager::addThread(std::function<void()> func, const std::string& name) {
-        std::unique_lock<std::mutex> lock(m_mtx); // 使用 unique_lock 方便后续的等待和唤醒操作
-        m_cv.wait(lock, [this] { return m_threads.size() < m_maxThreads || m_stopFlag; }); // 等待直到可以新建线程或者线程管理器被停止
-        if (m_stopFlag) { // 如果线程管理器已经被停止，直接返回
+    void ThreadManager::addThread(std::function<void()> func, const std::string& name = "") {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        m_cv.wait(lock, [this]() { return m_threads.size() < m_maxThreads || m_stopFlag; });
+        if (m_stopFlag) {
             spdlog::warn("Thread manager has stopped, cannot add new thread");
             return;
         }
-        m_threads.emplace_back(std::make_unique<std::thread>([this, func]() {
+        m_threads.emplace_back(std::make_tuple(std::make_unique<std::thread>([this, func]() {
             try {
                 func();
-            } catch (...) {
-                spdlog::error("Unhandled exception in thread");
+            } catch (const std::exception& e) {
+                std::ostringstream ss;
+                ss << std::this_thread::get_id();
+                spdlog::error("Unhandled exception in thread {}: {}", ss.str(), e.what());
             }
-        }));
-        m_threadNames.emplace_back(name);
-        m_sleepFlags.push_back(false);
-        m_stopFlag = false;
+        }), name, false));
         spdlog::info("Added thread: {}", name);
-        m_cv.notify_one(); // 唤醒等待的线程
+        m_cv.notify_one();
     }
 
     void ThreadManager::joinAllThreads() {
-        if (m_threads.empty()) {
-            return;
-        }
-        m_stopFlag = true;
-        std::lock_guard<std::mutex> lock(m_mtx);
-        size_t i = 0;
-        while (i < m_threads.size()) {
-            if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
-                spdlog::error("Index out of range!");
-                ++i;
-                continue;
+        try {
+            if (m_threads.empty()) {
+                return;
             }
-            if (auto* t = m_threads[i].get(); t) {
-                t->join();
-                m_threads.erase(m_threads.begin() + i);
-                m_threadNames.erase(m_threadNames.begin() + i);
-                m_sleepFlags.erase(m_sleepFlags.begin() + i);
-                spdlog::info("Thread {} joined", m_threadNames[i]);
-            } else {
-                spdlog::warn("Thread {} has already joined", m_threadNames[i]);
-                ++i;
+            m_stopFlag = true;
+            std::unique_lock<std::mutex> lock(m_mtx);
+            m_cv.notify_all();
+            for (auto& t : m_threads) {
+                if (std::get<0>(t) && std::get<0>(t)->joinable()) {
+                    std::get<0>(t)->join();
+                    std::get<0>(t).reset(); // 使用 reset() 函数释放智能指针资源
+                }
             }
+            m_threads.clear();
+            spdlog::info("All threads joined");
+        } catch (const std::exception& e) {
+
         }
-        m_threads.clear();
-        m_threadNames.clear();
-        m_sleepFlags.clear();
-        spdlog::info("All threads joined");
+        
     }
+
 
     // 等待指定名称的线程完成，并从 ThreadManager 中移除该线程
     // name：线程名称
@@ -99,22 +91,14 @@ namespace OpenAPT {
             spdlog::warn("Thread {} not found", name);
             return;
         }
-        std::lock_guard<std::mutex> lock(m_mtx);
-        for (size_t i = 0; i < m_threads.size(); ++i) {
-            if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
-                spdlog::error("Index out of range!");
-                continue;
-            }
-            if (m_threadNames[i] == name) {
-                if (auto& t = m_threads[i]; t) {
-                    t->join();
-                    m_threads.erase(m_threads.begin() + i);
-                    m_threadNames.erase(m_threadNames.begin() + i);
-                    m_sleepFlags.erase(m_sleepFlags.begin() + i);
-                    spdlog::info("Thread {} joined", name);
-                } else {
-                    spdlog::warn("Thread {} has already joined", name);
+        std::unique_lock<std::mutex> lock(m_mtx);
+        for (auto it = m_threads.begin(); it != m_threads.end(); ++it) {
+            if (std::get<1>(*it) == name) {
+                if (std::get<0>(*it) && std::get<0>(*it)->joinable()) {
+                    std::get<0>(*it)->join();
                 }
+                spdlog::info("Thread {} joined", name);
+                m_threads.erase(it);
                 return;
             }
         }
@@ -130,21 +114,19 @@ namespace OpenAPT {
             spdlog::warn("Thread {} not found", name);
             return false;
         }
-        std::lock_guard<std::mutex> lock(m_mtx);
-        size_t i = 0;
-        while (i < m_threads.size()) {
-            if (i >= m_threads.size() || i >= m_threadNames.size() || i >= m_sleepFlags.size()) {
-                spdlog::error("Index out of range!");
-                ++i;
-                continue;
-            }
-            if (m_threadNames[i] == name) {
-                m_sleepFlags[i] = true; // 设置线程为睡眠状态
-                std::this_thread::sleep_for(std::chrono::seconds(seconds)); // 线程休眠
-                m_sleepFlags[i] = false; // 设置线程为非睡眠状态
+        std::unique_lock<std::mutex> lock(m_mtx);
+        for (auto& t : m_threads) {
+            if (std::get<1>(t) == name) {
+                if (std::get<2>(t)) {
+                    spdlog::warn("Thread {} is already sleeping", name);
+                    return true;
+                }
+                std::get<2>(t) = true;
+                lock.unlock();
+                std::this_thread::sleep_for(std::chrono::seconds(seconds));
+                lock.lock();
+                std::get<2>(t) = false;
                 return true;
-            } else {
-                ++i;
             }
         }
         spdlog::warn("Thread {} not found", name);
@@ -159,13 +141,10 @@ namespace OpenAPT {
             spdlog::warn("Thread {} not found", name);
             return false;
         }
-        std::lock_guard<std::mutex> lock(m_mtx);
-        size_t i = 0;
-        while (i < m_threads.size() && i < m_threadNames.size() && i < m_sleepFlags.size()) {
-            if (m_threadNames[i] == name) {
-                return !m_sleepFlags[i]; // 如果线程不在睡眠状态，则表示线程在运行
-            } else {
-                ++i;
+        std::unique_lock<std::mutex> lock(m_mtx);
+        for (auto& t : m_threads) {
+            if (std::get<1>(t) == name) {
+                return !std::get<2>(t);
             }
         }
         spdlog::warn("Thread {} not found", name);

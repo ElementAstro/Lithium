@@ -51,7 +51,9 @@ namespace OpenAPT
              * @return 生成的带执行时间和描述信息的基础任务指针
              * @details Generates a new simple task with the specified name, description, and parameters.
              */
-            std::shared_ptr<BasicTask> generateSimpleTask(const std::string& taskName, const std::string& description, const nlohmann::json& params);
+            std::shared_ptr<BasicTask> generateSimpleTask(const std::string& taskName, 
+            const std::string& description, const nlohmann::json& params, const std::string& module_name, 
+            const std::string& func_name);
 
             /**
              * @brief 生成一个条件判断任务

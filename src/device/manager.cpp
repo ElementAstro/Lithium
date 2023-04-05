@@ -320,114 +320,120 @@ namespace OpenAPT {
             }
     };
 
+    // Constructor
     DeviceManager::DeviceManager() {
-        for (int i = 0; i < DeviceTypeCount; ++i) {
-            m_devices[i] = std::vector<std::shared_ptr<Device>>();
+        for (auto& devices : m_devices) {
+            devices.emplace_back();
         }
     }
 
+    // Destructor
     DeviceManager::~DeviceManager() {
-        for (DeviceType type = DeviceType::Camera; type <= DeviceType::Guider; type = static_cast<DeviceType>(static_cast<int>(type) + 1)) { 
-            std::vector<std::shared_ptr<Device>> devices = m_devices[static_cast<int>(type)];
-            for (auto device : devices) {
-                device->disconnect(); // 断开设备连接
+        for (auto& devices : m_devices) {
+            for (auto& device : devices) {
+                device->disconnect();
             }
         }
     }
 
+    // Returns a list of device names of the specified type
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type) {
-                std::vector<std::string> deviceList;
-                for (auto& d : m_devices[static_cast<int>(type)]) {
-                    deviceList.push_back(d->getName());
-                }
-                return deviceList;
-            }
+        std::vector<std::string> deviceList;
+        for (auto& device : m_devices[static_cast<int>(type)]) {
+            deviceList.emplace_back(device->getName());
+        }
+        return deviceList;
+    }
 
-            bool DeviceManager::addDevice(DeviceType type, const std::string& name) {
-                assert(type >= DeviceType::Camera && type < DeviceType::NumDeviceTypes && "Invalid device type");
-                std::string newName = name;
-                int index = 1;
-                while (findDevice(type, newName) != -1) {
-                    newName = fmt::format("{}-{}", name, index++);
-                }
-                switch (type) {
-                    case DeviceType::Camera:
-                        m_devices[static_cast<int>(type)].push_back(std::make_shared<Camera>(newName));
-                        break;
-                    case DeviceType::Telescope:
-                        m_devices[static_cast<int>(type)].push_back(std::make_shared<Telescope>(newName));
-                        break;
-                    case DeviceType::Focuser:
-                        m_devices[static_cast<int>(type)].push_back(std::make_shared<Focuser>(newName));
-                        break;
-                    case DeviceType::FilterWheel:
-                        m_devices[static_cast<int>(type)].push_back(std::make_shared<FilterWheel>(newName));
-                        break;
-                    case DeviceType::Solver:
-                        m_devices[static_cast<int>(type)].push_back(std::make_shared<Solver>(newName));
-                        break;
-                    case DeviceType::Guider:
-                        m_devices[static_cast<int>(type)].push_back(std::make_shared<Guider>(newName));
-                        break;
-                    default:
-                        spdlog::error("错误的设备类型");
-                        return false;
-                }
+    // Adds a new device with the given name to the specified device type
+    bool DeviceManager::addDevice(DeviceType type, const std::string& name) {
+        assert(type >= DeviceType::Camera && type < DeviceType::NumDeviceTypes && "Invalid device type");
+        std::string newName = name;
+        int index = 1;
+        while (findDevice(type, newName) != -1) {
+            newName = fmt::format("{}-{}", name, index++);
+        }
+        switch (type) {
+            case DeviceType::Camera:
+                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Camera>(newName));
+                break;
+            case DeviceType::Telescope:
+                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+                break;
+            case DeviceType::Focuser:
+                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+                break;
+            case DeviceType::FilterWheel:
+                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<FilterWheel>(newName));
+                break;
+            case DeviceType::Solver:
+                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
+                break;
+            case DeviceType::Guider:
+                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
+                break;
+            default:
+                spdlog::error("Invalid device type");
+                return false;
+        }
+        return true;
+    }
+
+    // Removes a device with the given name from the specified device type
+    bool DeviceManager::removeDevice(DeviceType type, const std::string& name) {
+        auto& devices = m_devices[static_cast<int>(type)];
+        for (auto it = devices.begin(); it != devices.end(); ++it) {
+            if ((*it)->getName() == name) {
+                (*it)->disconnect();
+                devices.erase(it);
                 return true;
             }
+        }
+        spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
+        return false;
+    }
 
-            bool DeviceManager::removeDevice(DeviceType type, const std::string& name) {
-                auto it = std::find_if(m_devices[static_cast<int>(type)].begin(), m_devices[static_cast<int>(type)].end(),
-                        [&](std::shared_ptr<Device> device) { return device->getName() == name; });
+    // Removes all devices with the given name from all device types
+    void DeviceManager::removeDevicesByName(const std::string& name) {
+        for (auto& devices : m_devices) {
+            devices.erase(std::remove_if(devices.begin(), devices.end(),
+                        [&](std::shared_ptr<Device> device) { return device->getName() == name; }),
+                        devices.end());
+        }
+    }
 
-                if (it != m_devices[static_cast<int>(type)].end()) {
-                    m_devices[static_cast<int>(type)].erase(it);
-                    return true;
-                } else {
-                    spdlog::warn("未找到指定设备 {}-{}", static_cast<int>(type), name);
-                    return false;
+    // Returns a shared pointer to the device with the given name and type
+    std::shared_ptr<Device> DeviceManager::getDevice(DeviceType type, const std::string& name) {
+        int index = findDevice(type, name);
+        if (index != -1) {
+            return m_devices[static_cast<int>(type)][index];
+        } else {
+            spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
+            return nullptr;
+        }
+    }
+
+    // Returns the index of the device with the given name and type, or -1 if not found
+    int DeviceManager::findDevice(DeviceType type, const std::string& name) {
+        auto& devices = m_devices[static_cast<int>(type)];
+        for (size_t i = 0; i < devices.size(); ++i) {
+            if (devices[i]->getName() == name) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
+    // Returns a shared pointer to the device with the given name, or nullptr if not found
+    std::shared_ptr<Device> DeviceManager::findDeviceByName(const std::string& name) const {
+        for (auto& devices : m_devices) {
+            for (auto& device : devices) {
+                if (device->getName() == name) {
+                    return device;
                 }
             }
-            
-            void DeviceManager::removeDevicesByName(const std::string& name) {
-                for (int i = 0; i < static_cast<int>(DeviceTypeCount); ++i) {
-                    auto it = std::remove_if(m_devices[i].begin(), m_devices[i].end(),
-                                [&](std::shared_ptr<Device> device) { return device->getName() == name; });
-                    m_devices[i].erase(it, m_devices[i].end());
-                }
-            }
-
-            std::shared_ptr<Device> DeviceManager::getDevice(DeviceType type, const std::string& name) {
-                int index = findDevice(type, name);
-                if (index != -1) {
-                    return m_devices[static_cast<int>(type)][index];
-                } else {
-                    spdlog::warn("未找到指定设备 {}-{}", static_cast<int>(type), name);
-                    return nullptr;
-                }
-            }
-
-            int DeviceManager::findDevice(DeviceType type, const std::string& name) {
-                auto it = std::find_if(m_devices[static_cast<int>(type)].begin(), m_devices[static_cast<int>(type)].end(),
-                            [&](std::shared_ptr<Device> device) { return device->getName() == name; });
-
-                if (it != m_devices[static_cast<int>(type)].end()) {
-                    return static_cast<int>(std::distance(m_devices[static_cast<int>(type)].begin(), it));
-                } else {
-                    return -1;
-                }
-            }
-
-            std::shared_ptr<Device> DeviceManager::findDeviceByName(const std::string& name) const {
-                for (auto& devList : m_devices) {
-                    for (auto& device : devList) {
-                        if (device->getName() == name) {
-                            return device;
-                        }
-                    }
-                }
-                // 找不到则返回空指针
-                return nullptr;
-            }
+        }
+        return nullptr;
+    }
     
 }

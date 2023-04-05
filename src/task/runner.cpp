@@ -39,27 +39,77 @@ Description: Task Runner
 
 namespace OpenAPT {
 
-    std::shared_ptr<BasicTask> TaskGenerator::generateSimpleTask(const std::string& taskName, const std::string& description, const nlohmann::json& params) {
+    std::shared_ptr<BasicTask> TaskGenerator::generateSimpleTask(const std::string& taskName, 
+                const std::string& description, const nlohmann::json& params, const std::string& module_name, 
+                const std::string& func_name) {
         spdlog::debug("Generating simple task with task name {} and description {}", taskName, description);
-
-        auto func = [&](const json &j) { spdlog::info("Execute generated simple task with param {}", j.dump()); };
-
         std::shared_ptr<BasicTask> task;
-        try {
-            task = std::make_shared<SimpleTask>(func, params);
-        } catch (const std::exception& e) {
-            spdlog::error("Failed to create simple task: {}", e.what());
-            return nullptr;
+        // 定义字符串和任务处理函数之间的映射表
+        std::unordered_map<std::string, std::function<void(const nlohmann::json&)>> functionMap = {
+            {
+                "Print", [&](const nlohmann::json& j) {
+                    spdlog::info("Execute generated simple task with param {}", j.dump());
+                    spdlog::debug("Simple task is called");
+                }
+            }, 
+            {
+                "Sum", [&](const nlohmann::json& j) {
+                    int sum = 0;
+                    for (auto& v : j) {
+                        sum += v.get<int>();
+                    }
+                    spdlog::info("The sum of the array is {}", sum);
+                }
+            }, 
+            {
+                "Module", [&,module_name,func_name](const nlohmann::json& j) {
+                    spdlog::info("Execute generated simple task with param for modules {}", j.dump());
+                    spdlog::debug("Simple modules task is called");
+                    m_ModuleLoader.LoadAndRunFunction<void>(module_name,func_name,func_name,false);
+                }
+            }
+        };
+        // 根据字符串查找对应的任务处理函数
+        if (module_name.empty()) {
+            auto it = functionMap.find(func_name);
+            if (it == functionMap.end()) {
+                spdlog::error("Unsupported function type: {}", func_name);
+                return nullptr;
+            }
+            std::function<void(const nlohmann::json&)> taskFunction = it->second;
+            try {
+                task = std::make_shared<SimpleTask>(taskFunction, params);
+            }
+            catch (const std::exception& e) {
+                spdlog::error("Failed to create simple task: {}", e.what());
+                return nullptr;
+            }
         }
-
+        else {
+            auto it = functionMap.find("Module");
+            if (it == functionMap.end()) {
+                spdlog::error("Unsupported function type: {}", func_name);
+                return nullptr;
+            }
+            std::function<void(const nlohmann::json&)> taskFunction = it->second;
+            try {
+                task = std::make_shared<SimpleTask>(taskFunction, params);
+            }
+            catch (const std::exception& e) {
+                spdlog::error("Failed to create simple task: {}", e.what());
+                return nullptr;
+            }
+        }
+        
         if (task) {
             task->setName(taskName);
             task->setDescription(description);
             spdlog::info("Simple task created successfully: name={}, description={}", task->getName(), task->getDescription());
         }
-
         return task;
     }
+
+
 
     std::shared_ptr<BasicTask> TaskGenerator::generateConditionalTask(const std::string& taskName, const std::string& description, const nlohmann::json& params) {
         spdlog::debug("Generating conditional task with task name {} and description {}", taskName, description);
@@ -136,7 +186,7 @@ namespace OpenAPT {
 
             std::shared_ptr<BasicTask> task;
             if (type == "simple") {
-                task = generateSimpleTask(name, desc, params);
+                //task = generateSimpleTask(name, desc, params);
             } else if (type == "conditional") {
                 task = generateConditionalTask(name, desc, params);
             } else if (type == "loop") {

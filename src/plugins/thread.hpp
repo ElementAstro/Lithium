@@ -36,6 +36,7 @@ Description: Thread Manager
 #include <atomic>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -44,7 +45,9 @@ namespace OpenAPT {
 
     class ThreadManager {
         public:
-            ThreadManager(int maxThreads = 10) : m_maxThreads(maxThreads) {}
+            ThreadManager() : m_maxThreads(10), m_stopFlag(false) {}
+            ThreadManager(size_t maxThreads) : m_maxThreads(maxThreads), m_stopFlag(false) {}
+
             ~ThreadManager();
             // 添加线程并启动
             void addThread(std::function<void()> func, const std::string& name);
@@ -60,16 +63,15 @@ namespace OpenAPT {
         private:
 
             bool isThreadNameExist(const std::string& name) const {
-                return std::find(m_threadNames.begin(), m_threadNames.end(), name) != m_threadNames.end();
+                return std::any_of(m_threads.begin(), m_threads.end(),
+                    [&](const auto& t) { return std::get<1>(t) == name; });
             }
 
-            int m_maxThreads;
+            const size_t m_maxThreads;
+            bool m_stopFlag;
+            std::mutex m_mtx;
             std::condition_variable m_cv;
-            std::vector<std::unique_ptr<std::thread>> m_threads; // 线程容器
-            std::vector<std::string> m_threadNames; // 线程名称容器
-            std::vector<bool> m_sleepFlags; // 睡眠标志容器
-            std::mutex m_mtx; // 线程锁
-            bool m_stopFlag = false; // 停止标志
+            std::vector<std::tuple<std::unique_ptr<std::thread>, std::string, bool>> m_threads;
     };
 
 }

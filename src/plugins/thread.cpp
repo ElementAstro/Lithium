@@ -1,8 +1,8 @@
 /*
  * thread.cpp
- * 
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,139 +15,211 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
+
 Date: 2023-3-29
- 
+
 Description: Thread Manager
- 
+
 **************************************************/
 
 #include "thread.hpp"
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT {
+namespace OpenAPT
+{
 
     // 析构函数，停止所有线程并销毁 ThreadManager 对象
-    ThreadManager::~ThreadManager() {
-        if(!m_stopFlag)
-            joinAllThreads();
-    }
+    ThreadManager::ThreadManager(int maxThreads) : m_maxThreads(maxThreads) {}
 
-    void ThreadManager::addThread(std::function<void()> func, const std::string& name = "") {
-        std::unique_lock<std::mutex> lock(m_mtx);
-        m_cv.wait(lock, [this]() { return m_threads.size() < m_maxThreads || m_stopFlag; });
-        if (m_stopFlag) {
-            spdlog::warn("Thread manager has stopped, cannot add new thread");
-            return;
-        }
-        m_threads.emplace_back(std::make_tuple(std::make_unique<std::thread>([this, func]() {
-            try {
-                func();
-            } catch (const std::exception& e) {
-                std::ostringstream ss;
-                ss << std::this_thread::get_id();
-                spdlog::error("Unhandled exception in thread {}: {}", ss.str(), e.what());
-            }
-        }), name, false));
-        spdlog::info("Added thread: {}", name);
-        m_cv.notify_one();
-    }
-
-    void ThreadManager::joinAllThreads() {
-        try {
-            if (m_threads.empty()) {
-                return;
-            }
-            m_stopFlag = true;
+    ThreadManager::~ThreadManager()
+    {
+        try
+        {
             std::unique_lock<std::mutex> lock(m_mtx);
-            m_cv.notify_all();
-            for (auto& t : m_threads) {
-                if (std::get<0>(t) && std::get<0>(t)->joinable()) {
-                    std::get<0>(t)->join();
-                    std::get<0>(t).reset(); // 使用 reset() 函数释放智能指针资源
-                }
+            if (!m_stopFlag)
+            {
+                m_stopFlag = true;
+                m_cv.notify_all();
+            }
+            joinAllThreads();
+        }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to destroy ThreadManager: {}", e.what());
+        }
+    }
+
+    void ThreadManager::addThread(std::function<void()> func, const std::string &name)
+    {
+        try
+        {
+            std::unique_lock<std::mutex> lock(m_mtx);
+            m_cv.wait(lock, [this]()
+                      { return m_threads.size() < m_maxThreads || m_stopFlag; });
+            if (m_stopFlag)
+            {
+                throw std::runtime_error("Thread manager has stopped, cannot add new thread");
+            }
+                auto t = std::make_tuple(std::make_unique<std::thread>([this, func]() {
+                    try {
+                        func();
+                    } catch (const std::exception& e) {
+                        std::ostringstream ss;
+                        ss << std::this_thread::get_id();
+                        spdlog::error("Unhandled exception in thread {}: {}", ss.str(), e.what());
+                    }
+                    std::unique_lock<std::mutex> lock(m_mtx);
+                    //joinThread(lock, t);
+                }), name, false);
+
+            m_threads.emplace_back(std::move(t));
+            spdlog::info("Added thread: {}", name);
+            m_cv.notify_one();
+        }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to add thread {}: {}", name, e.what());
+        }
+    }
+
+    void ThreadManager::joinAllThreads()
+    {
+        try
+        {
+            std::unique_lock<std::mutex> lock(m_mtx);
+            m_cv.wait(lock, [this]()
+                      { return m_threads.empty(); });
+            for (auto &t : m_threads)
+            {
+                joinThread(lock, t);
             }
             m_threads.clear();
             spdlog::info("All threads joined");
-        } catch (const std::exception& e) {
-
         }
-        
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to join all threads: {}", e.what());
+        }
     }
 
-
-    // 等待指定名称的线程完成，并从 ThreadManager 中移除该线程
-    // name：线程名称
-    void ThreadManager::joinThreadByName(const std::string& name) {
-        if (m_threads.empty()) {
-            spdlog::warn("Thread {} not found", name);
-            return;
-        }
-        std::unique_lock<std::mutex> lock(m_mtx);
-        for (auto it = m_threads.begin(); it != m_threads.end(); ++it) {
-            if (std::get<1>(*it) == name) {
-                if (std::get<0>(*it) && std::get<0>(*it)->joinable()) {
-                    std::get<0>(*it)->join();
-                }
-                spdlog::info("Thread {} joined", name);
-                m_threads.erase(it);
+    void ThreadManager::joinThreadByName(const std::string &name)
+    {
+        try
+        {
+            if (m_threads.empty())
+            {
+                spdlog::warn("Thread {} not found", name);
                 return;
             }
+            std::unique_lock<std::mutex> lock(m_mtx);
+            for (auto &t : m_threads)
+            {
+                if (std::get<1>(t) == name)
+                {
+                    joinThread(lock, t);
+                    spdlog::info("Thread {} joined", name);
+                    m_threads.erase(std::remove_if(m_threads.begin(), m_threads.end(), [&](auto &x)
+                                                   { return !std::get<0>(x); }),
+                                    m_threads.end());
+                    return;
+                }
+            }
+            spdlog::warn("Thread {} not found", name);
         }
-        spdlog::warn("Thread {} not found", name);
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to join thread {}: {}", name, e.what());
+        }
     }
 
-    // 让指定名称的线程休眠指定时间
-    // name：线程名称
-    // seconds：休眠时间（秒）
-    // 返回值：如果找到了该线程，则返回 true；否则返回 false
-    bool ThreadManager::sleepThreadByName(const std::string& name, int seconds) {
-        if (m_threads.empty()) {
-            spdlog::warn("Thread {} not found", name);
-            return false;
-        }
-        std::unique_lock<std::mutex> lock(m_mtx);
-        for (auto& t : m_threads) {
-            if (std::get<1>(t) == name) {
-                if (std::get<2>(t)) {
-                    spdlog::warn("Thread {} is already sleeping", name);
+    bool ThreadManager::sleepThreadByName(const std::string &name, int seconds)
+    {
+        try
+        {
+            if (m_threads.empty())
+            {
+                spdlog::warn("Thread {} not found", name);
+                return false;
+            }
+            std::unique_lock<std::mutex> lock(m_mtx);
+            for (auto &t : m_threads)
+            {
+                if (std::get<1>(t) == name)
+                {
+                    if (std::get<2>(t))
+                    {
+                        spdlog::warn("Thread {} is already sleeping", name);
+                        return true;
+                    }
+                    std::get<2>(t) = true;
+                    m_cv.notify_all();
+                    lock.unlock();
+                    std::this_thread::sleep_for(std::chrono::seconds(seconds));
+                    lock.lock();
+                    std::get<2>(t) = false;
+                    m_cv.notify_all();
                     return true;
                 }
-                std::get<2>(t) = true;
-                lock.unlock();
-                std::this_thread::sleep_for(std::chrono::seconds(seconds));
-                lock.lock();
-                std::get<2>(t) = false;
-                return true;
             }
-        }
-        spdlog::warn("Thread {} not found", name);
-        return false;
-    }
-
-    // 检查指定名称的线程是否在运行
-    // name：线程名称
-    // 返回值：如果找到了该线程，则返回 true，表示该线程在运行；否则返回 false，表示该线程未找到
-    bool ThreadManager::isThreadRunning(const std::string& name) {
-        if (m_threads.empty()) {
             spdlog::warn("Thread {} not found", name);
             return false;
         }
-        std::unique_lock<std::mutex> lock(m_mtx);
-        for (auto& t : m_threads) {
-            if (std::get<1>(t) == name) {
-                return !std::get<2>(t);
-            }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to sleep thread {}: {}", name, e.what());
+            return false;
         }
-        spdlog::warn("Thread {} not found", name);
-        return false;
     }
+
+    bool ThreadManager::isThreadRunning(const std::string &name)
+    {
+        try
+        {
+            if (m_threads.empty())
+            {
+                spdlog::warn("Thread {} not found", name);
+                return false;
+            }
+            std::unique_lock<std::mutex> lock(m_mtx);
+            for (auto &t : m_threads)
+            {
+                if (std::get<1>(t) == name)
+                {
+                    return !std::get<2>(t);
+                }
+            }
+            spdlog::warn("Thread {} not found", name);
+            return false;
+        }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to check if thread {} is running: {}", name, e.what());
+            return false;
+        }
+    }
+
+    void ThreadManager::joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::thread>, std::string, bool> &t)
+    {
+        if (std::get<0>(t) && std::get<0>(t)->joinable())
+        {
+            std::get<0>(t)->join();
+            std::get<0>(t).reset();
+        }
+        std::get<2>(t) = true;
+        m_cv.notify_all();
+        lock.unlock();
+        std::get<0>(t).reset();
+        lock.lock();
+        std::get<2>(t) = false;
+        m_cv.notify_all();
+    }
+
 }

@@ -1,8 +1,8 @@
 /*
  * runner.hpp
- * 
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,18 +15,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
+
 Date: 2023-3-29
- 
+
 Description: Task Runner
- 
+
 **************************************************/
 
 #include <iostream>
@@ -37,71 +37,70 @@ Description: Task Runner
 #include "runner.hpp"
 #include "openapt.hpp"
 
-namespace OpenAPT {
+namespace OpenAPT
+{
 
-    std::shared_ptr<BasicTask> TaskGenerator::generateSimpleTask(const std::string& taskName, 
-                const std::string& description, const nlohmann::json& params, const std::string& module_name, 
-                const std::string& func_name) {
+    std::function<void(const nlohmann::json &)> getTaskFunction(const std::string &funcName, const std::string &moduleName, ModuleLoader &moduleLoader)
+    {
+        if (funcName == "Print")
+        {
+            return [](const nlohmann::json &j)
+            {
+                spdlog::info("Execute generated simple task with param {}", j.dump());
+                spdlog::debug("Simple task is called");
+            };
+        }
+        else if (funcName == "Sum")
+        {
+            return [](const nlohmann::json &j)
+            {
+                int sum = std::accumulate(j.begin(), j.end(), 0, [](int a, const nlohmann::json &b)
+                                          { return a + b.get<int>(); });
+                spdlog::info("The sum of the array is {}", sum);
+            };
+        }
+        else if (moduleName != "")
+        {
+            return [&, moduleName, funcName](const nlohmann::json &j)
+            {
+                spdlog::info("Execute generated simple task with param for modules {}", j.dump());
+                spdlog::debug("Simple modules task is called");
+                moduleLoader.LoadAndRunFunction<void>(moduleName, funcName, funcName, false);
+                spdlog::debug("Simple modules task is finished");
+            };
+        }
+        else
+        {
+            spdlog::error("Unsupported function type: {}", funcName);
+            return nullptr;
+        }
+    }
+
+    std::shared_ptr<BasicTask> TaskGenerator::generateSimpleTask(const std::string &taskName,
+                                                                 const std::string &description, const nlohmann::json &params, const std::string &moduleName,
+                                                                 const std::string &funcName)
+    {
         spdlog::debug("Generating simple task with task name {} and description {}", taskName, description);
+
+        std::function<void(const nlohmann::json &)> taskFunction = getTaskFunction(funcName, moduleName, m_ModuleLoader);
+        if (!taskFunction)
+        {
+            return nullptr;
+        }
+
         std::shared_ptr<BasicTask> task;
-        // 定义字符串和任务处理函数之间的映射表
-        std::unordered_map<std::string, std::function<void(const nlohmann::json&)>> functionMap = {
-            {
-                "Print", [&](const nlohmann::json& j) {
-                    spdlog::info("Execute generated simple task with param {}", j.dump());
-                    spdlog::debug("Simple task is called");
-                }
-            }, 
-            {
-                "Sum", [&](const nlohmann::json& j) {
-                    int sum = 0;
-                    for (auto& v : j) {
-                        sum += v.get<int>();
-                    }
-                    spdlog::info("The sum of the array is {}", sum);
-                }
-            }, 
-            {
-                "Module", [&,module_name,func_name](const nlohmann::json& j) {
-                    spdlog::info("Execute generated simple task with param for modules {}", j.dump());
-                    spdlog::debug("Simple modules task is called");
-                    m_ModuleLoader.LoadAndRunFunction<void>(module_name,func_name,func_name,false);
-                }
-            }
-        };
-        // 根据字符串查找对应的任务处理函数
-        if (module_name.empty()) {
-            auto it = functionMap.find(func_name);
-            if (it == functionMap.end()) {
-                spdlog::error("Unsupported function type: {}", func_name);
-                return nullptr;
-            }
-            std::function<void(const nlohmann::json&)> taskFunction = it->second;
-            try {
-                task = std::make_shared<SimpleTask>(taskFunction, params);
-            }
-            catch (const std::exception& e) {
-                spdlog::error("Failed to create simple task: {}", e.what());
-                return nullptr;
-            }
+        try
+        {
+            task = std::make_shared<SimpleTask>(taskFunction, params);
         }
-        else {
-            auto it = functionMap.find("Module");
-            if (it == functionMap.end()) {
-                spdlog::error("Unsupported function type: {}", func_name);
-                return nullptr;
-            }
-            std::function<void(const nlohmann::json&)> taskFunction = it->second;
-            try {
-                task = std::make_shared<SimpleTask>(taskFunction, params);
-            }
-            catch (const std::exception& e) {
-                spdlog::error("Failed to create simple task: {}", e.what());
-                return nullptr;
-            }
+        catch (const std::exception &e)
+        {
+            spdlog::error("Failed to create simple task: {}", e.what());
+            return nullptr;
         }
-        
-        if (task) {
+
+        if (task)
+        {
             task->setName(taskName);
             task->setDescription(description);
             spdlog::info("Simple task created successfully: name={}, description={}", task->getName(), task->getDescription());
@@ -109,23 +108,32 @@ namespace OpenAPT {
         return task;
     }
 
-
-
-    std::shared_ptr<BasicTask> TaskGenerator::generateConditionalTask(const std::string& taskName, const std::string& description, const nlohmann::json& params) {
+    std::shared_ptr<BasicTask> TaskGenerator::generateConditionalTask(const std::string &taskName, const std::string &description, const nlohmann::json &params)
+    {
         spdlog::debug("Generating conditional task with task name {} and description {}", taskName, description);
 
-        auto predicate = [](const json &j) { return j["status"].get<int>() == 1; };
-        auto func = [&]() { spdlog::info("Execute generated conditional task"); };
+        // 使用lambda表达式替代函数指针指向函数体，让代码更加清晰易读。
+        auto predicate = [](const json &j)
+        { return j.contains("status") && j["status"].get<int>() == 1; };
+        auto func = [&, taskName]()
+        {
+            spdlog::info("Execute generated conditional task: {}", taskName);
+            // 在任务执行前，增加一个日志输出，打印任务名称，方便查看哪个任务被执行了。
+        };
 
         std::shared_ptr<BasicTask> task;
-        try {
+        try
+        {
             task = std::make_shared<ConditionalTask>(func, params, predicate);
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             spdlog::error("Failed to create conditional task: {}", e.what());
             return nullptr;
         }
 
-        if (task) {
+        if (task)
+        {
             task->setName(taskName);
             task->setDescription(description);
             spdlog::info("Conditional task created successfully: name={}, description={}", task->getName(), task->getDescription());
@@ -134,20 +142,26 @@ namespace OpenAPT {
         return task;
     }
 
-    std::shared_ptr<BasicTask> TaskGenerator::generateLoopTask(const std::string& taskName, const std::string& description, const nlohmann::json& params) {
+    std::shared_ptr<BasicTask> TaskGenerator::generateLoopTask(const std::string &taskName, const std::string &description, const nlohmann::json &params)
+    {
         spdlog::debug("Generating loop task with task name {} and description {}", taskName, description);
 
-        auto func = [&](const json &j) { spdlog::info("Execute generated loop task with param {}", j.dump()); };
+        auto func = [&, params](const json &j)
+        { spdlog::info("Execute generated loop task with param {}", params.dump()); };
 
         std::shared_ptr<BasicTask> task;
-        try {
+        try
+        {
             task = std::make_shared<LoopTask>(func, params);
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             spdlog::error("Failed to create loop task: {}", e.what());
             return nullptr;
         }
 
-        if (task) {
+        if (task)
+        {
             task->setName(taskName);
             task->setDescription(description);
             spdlog::info("Loop task created successfully: name={}, description={}", task->getName(), task->getDescription());
@@ -157,46 +171,62 @@ namespace OpenAPT {
     }
 
     // 从 JSON 文件中加载任务
-    std::vector<std::shared_ptr<BasicTask>> TaskGenerator::generateTasksFromFile(const std::string& filePath) {
+    std::vector<std::shared_ptr<BasicTask>> TaskGenerator::generateTasksFromFile(const std::string &filePath)
+    {
         spdlog::info("Loading tasks from file {}", filePath);
 
         // 读取 JSON 文件
         std::ifstream file(filePath);
-        if (!file.is_open()) {
+        if (!file.is_open())
+        {
             spdlog::error("Failed to open file: {}", filePath);
             return {};
         }
 
-        // 解析 JSON 文件中的任务
         json tasksJson;
-        try {
+        try
+        {
+            // 解析 JSON 文件中的任务
             file >> tasksJson;
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             spdlog::error("Failed to parse JSON from file {}: {}", filePath, e.what());
             return {};
         }
 
         // 生成任务并存储在 vector 中
         std::vector<std::shared_ptr<BasicTask>> tasks;
-        for (const auto& taskJson : tasksJson["tasks"]) {
-            const std::string& type = taskJson["type"].get<std::string>();
-            const std::string& name = taskJson["name"].get<std::string>();
-            const std::string& desc = taskJson["description"].get<std::string>();
-            const json& params = taskJson["params"];
+        for (const auto &taskJson : tasksJson["tasks"])
+        {
+            const std::string &type = taskJson["type"].get<std::string>();
+            const std::string &name = taskJson["name"].get<std::string>();
+            const std::string &desc = taskJson["description"].get<std::string>();
+            const json &params = taskJson.value("params", json::array());
+            const std::string &moduleName = taskJson.value("module_name", "");
+            const std::string &funcName = taskJson.value("func_name", "");
 
             std::shared_ptr<BasicTask> task;
-            if (type == "simple") {
-                //task = generateSimpleTask(name, desc, params);
-            } else if (type == "conditional") {
+            if (type == "simple")
+            {
+                task = generateSimpleTask(name, desc, params, moduleName, funcName);
+            }
+            else if (type == "conditional")
+            {
                 task = generateConditionalTask(name, desc, params);
-            } else if (type == "loop") {
+            }
+            else if (type == "loop")
+            {
                 task = generateLoopTask(name, desc, params);
-            } else {
+            }
+            else
+            {
                 spdlog::error("Unknown task type: {}", type);
                 continue;
             }
 
-            if (task) {
+            if (task)
+            {
                 tasks.push_back(task);
             }
         }
@@ -205,157 +235,170 @@ namespace OpenAPT {
         return tasks;
     }
 
-    TaskManager::TaskManager(const std::string &fileName) {
+    TaskManager::TaskManager(const std::string &fileName)
+    {
         // 如果文件名不为空，则从文件中加载任务列表和进度
-        if (!fileName.empty()) {
-            loadTasksFromJson(fileName);
+        if (!fileName.empty())
+        {
+            // loadTasksFromJson(fileName);
         }
     }
 
-    void TaskManager::addTask(std::shared_ptr<BasicTask> task) {
+    void TaskManager::addTask(std::shared_ptr<BasicTask> task)
+    {
+        if (!task)
+        {
+            spdlog::error("Cannot add empty task!");
+            return;
+        }
+
         m_taskList.push_back(task);
-        spdlog::info("add task {} success", task->getName());
+        spdlog::info("Added task {} successfully", task->getName());
     }
 
-    void TaskManager::insertTask(int taskIndex, std::shared_ptr<BasicTask> task) {
-        if (taskIndex >= 0 && taskIndex <= m_taskList.size()) {
-            m_taskList.insert(m_taskList.begin() + taskIndex, task);
-            spdlog::info("insert task {} success", task->getName());
-        } else {
+    void TaskManager::insertTask(int taskIndex, std::shared_ptr<BasicTask> task)
+    {
+        if (!task)
+        {
+            spdlog::error("Cannot insert empty task!");
+            return;
+        }
+
+        if (taskIndex < 0 || taskIndex > m_taskList.size())
+        {
             spdlog::error("Insert position out of range!");
+            return;
         }
+
+        m_taskList.insert(m_taskList.begin() + taskIndex, task);
+        spdlog::info("Inserted task {} successfully", task->getName());
     }
 
-    void TaskManager::deleteTask(int taskIndex) {
-        if (taskIndex >= 0 && taskIndex < m_taskList.size()) {
-            const std::string taskName = m_taskList[taskIndex]->getName();
-            m_taskList.erase(m_taskList.begin() + taskIndex);
-            spdlog::info("delete task {} success", taskName);
-        } else {
+    void TaskManager::deleteTask(int taskIndex)
+    {
+        if (taskIndex < 0 || taskIndex >= m_taskList.size())
+        {
             spdlog::error("Task index out of range!");
+            return;
         }
+
+        const std::string taskName = m_taskList[taskIndex]->getName();
+        m_taskList.erase(m_taskList.begin() + taskIndex);
+        spdlog::info("Deleted task {} successfully", taskName);
     }
 
-    void TaskManager::deleteTaskByName(const std::string& name) {
-        for (auto iter = m_taskList.begin(); iter != m_taskList.end(); ++iter) {
-            if ((*iter)->getName() == name) {
-                const int index = std::distance(m_taskList.begin(), iter);
-                m_taskList.erase(iter);
-                spdlog::info("delete task {} success", name);
-                return;
-            }
+    void TaskManager::deleteTaskByName(const std::string &name)
+    {
+        auto iter = std::find_if(m_taskList.begin(), m_taskList.end(),
+                                 [&](const std::shared_ptr<BasicTask> &task)
+                                 { return task->getName() == name; });
+
+        if (iter == m_taskList.end())
+        {
+            spdlog::error("Task name not found!");
+            return;
         }
-        spdlog::error("Task name not found!");
+
+        const std::string taskName = (*iter)->getName();
+        m_taskList.erase(iter);
+        spdlog::info("Deleted task {} successfully", taskName);
     }
 
-    void TaskManager::modifyTask(int taskIndex, std::shared_ptr<BasicTask> task) {
-        if (taskIndex >= 0 && taskIndex < m_taskList.size()) {
-            m_taskList[taskIndex] = task;
-            spdlog::info("modify task {} success", task->getName());
-        } else {
+    void TaskManager::modifyTask(int taskIndex, std::shared_ptr<BasicTask> task)
+    {
+        if (!task)
+        {
+            spdlog::error("Cannot modify with empty task!");
+            return;
+        }
+
+        if (taskIndex < 0 || taskIndex >= m_taskList.size())
+        {
             spdlog::error("Task index out of range!");
+            return;
         }
+
+        m_taskList[taskIndex] = task;
+        spdlog::info("Modified task {} successfully", task->getName());
     }
 
-    void TaskManager::modifyTaskByName(const std::string& name, std::shared_ptr<BasicTask> task) {
-        for (auto& i : m_taskList) {
-            if(i->getName() == name) {
-                i = task;
-                spdlog::info("modify task {} success", name);
-                return;
-            }
+    void TaskManager::modifyTaskByName(const std::string &name, std::shared_ptr<BasicTask> task)
+    {
+        auto iter = std::find_if(m_taskList.begin(), m_taskList.end(),
+                                 [&](const std::shared_ptr<BasicTask> &t)
+                                 { return t->getName() == name; });
+
+        if (iter == m_taskList.end())
+        {
+            spdlog::error("Task name not found!");
+            return;
         }
-        spdlog::error("Task name not found!");
+
+        if (!task)
+        {
+            spdlog::error("Cannot modify with empty task!");
+            return;
+        }
+
+        (*iter) = task;
+        spdlog::info("Modified task {} successfully", name);
     }
 
-    void TaskManager::executeAllTasks() {
-        for (auto &task : m_taskList) {
-            if (!task->isDone()) {
+    void TaskManager::executeAllTasks()
+    {
+        for (auto &task : m_taskList)
+        {
+            if (!task->isDone())
+            {
+                spdlog::debug("Executing task {}", task->getName());
                 task->execute();
+                spdlog::debug("Finished task {}", task->getName());
             }
         }
     }
 
-    void TaskManager::loadTasksFromJson(const std::string& fileName) {
-        std::ifstream file(fileName);
-        json j;
-        file >> j;
-        for (auto& task_j : j["tasks"]) {
-            const std::string type = task_j["type"].get<std::string>();
-            const std::string name = task_j["name"].get<std::string>();
-            std::shared_ptr<BasicTask> task;
-            if(type == "conditional") {
-                const auto& condition = task_j["condition"];
-                auto func = [&]() {
-                    spdlog::info("Execute conditional task {}", name);
-                }
-                ;
-                task = std::make_shared<ConditionalTask>(func, condition, [](const json &j) {
-                    return j["status"].get<int>() == 1;
-                }
-                );
-            } else if (type == "loop") {
-                const auto& params = task_j["params"];
-                auto func = [&](const json &j) {
-                    spdlog::info("Execute loop task {} with param {}", name, j.dump());
-                }
-                ;
-                task = std::make_shared<LoopTask>(func, params);
-            } else {
-                const auto& params = task_j["params"];
-                auto func = [&](const json &j) {
-                    spdlog::info("Execute simple task {} with param {}", name, j.dump());
-                }
-                ;
-                task = std::make_shared<SimpleTask>(func, params);
-            }
-            task->setName(task_j["name"]);
-            addTask(task);
+    void TaskManager::queryTaskByName(const std::string &name)
+    {
+        auto iter = std::find_if(m_taskList.begin(), m_taskList.end(),
+                                 [&](const std::shared_ptr<BasicTask> &task)
+                                 { return task->getName() == name; });
+
+        if (iter == m_taskList.end())
+        {
+            spdlog::error("Task name not found!");
+            return;
         }
+
+        const std::shared_ptr<BasicTask> &task = (*iter);
+        spdlog::info("Found task {} with type {}, description: {}", task->getName(), typeid(*task.get()).name(), task->getDescription());
     }
 
-    void TaskManager::saveTasksToJson(const std::string &fileName) {
-        json j;
-        for (auto &task : m_taskList) {
-            if (!task->isDone()) {
-                j.push_back(task->toJson());
-            }
-        }
-        std::ofstream ofs(fileName);
-        ofs << j.dump(4);
-        spdlog::info("save tasks to json file {} success", fileName);
-    }
-
-    void TaskManager::queryTaskByName(const std::string& name) {
-        for (auto& i : m_taskList) {
-            if(i->getName() == name) {
-                spdlog::info("Task found. Type: {}, Name: {}, Description: {}", typeid(*i.get()).name(), i->getName(), i->getDescription());
-                return;
-            }
-        }
-        spdlog::error("Task name not found!");
-    }
 }
 
 /**
  * @brief 检查 JSON 文件是否格式正确
- * 
+ *
  * @param filename JSON 文件名
  * @return true JSON 格式正确
  * @return false JSON 格式错误或文件无法打开
  */
-bool check_json(const std::string& filename) {
+bool check_json(const std::string &filename)
+{
     // 打开 JSON 文件
     std::ifstream fin(filename);
-    if (!fin) {
+    if (!fin)
+    {
         spdlog::error("Failed to open {}", filename);
         return false;
     }
     // 读取 JSON 数据
     nlohmann::json j;
-    try {
+    try
+    {
         fin >> j;
-    } catch (nlohmann::json::parse_error& e) {
+    }
+    catch (nlohmann::json::parse_error &e)
+    {
         spdlog::error("JSON Format error : {}", e.what());
         return false;
     }
@@ -363,4 +406,3 @@ bool check_json(const std::string& filename) {
     spdlog::info("{} passed check", filename);
     return true;
 }
-

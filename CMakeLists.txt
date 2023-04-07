@@ -1,5 +1,15 @@
+# CMakeLists.txt for OpenAPT
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: OpenAPT
+# Description: Automated image processing and analysis tool for astrophotography
+# Author: Max Qian
+# License: GPL3
+
+# Use consistent formatting and naming conventions throughout the code
 cmake_minimum_required(VERSION 3.16)
 
+# Add comments to explain what different sections of code do
 enable_language(C CXX)
 
 if(COMMAND cmake_policy)
@@ -9,7 +19,6 @@ if(COMMAND cmake_policy)
     endif()
 endif()
 
-
 # root directory of the project
 set(OPENAPT_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(openapt_src_dir ${OPENAPT_PROJECT_ROOT_DIR})
@@ -17,6 +26,9 @@ set(openapt_src_dir ${OPENAPT_PROJECT_ROOT_DIR})
 add_custom_target(CmakeAdditionalFiles
   SOURCES
   ${openapt_src_dir}/cmake_modules/compiler_options.cmake)
+
+# Add a GPL3 declaration
+# Set the license information in the project here
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
@@ -26,7 +38,7 @@ include(cmake_modules/compiler_options.cmake)
 
 #################################################################################
 #
-# general defines
+# General defines for compatibility across different platforms
 if(UNIX AND NOT APPLE)
   if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "openapt install path" FORCE)
@@ -36,6 +48,33 @@ endif()
 set(USE_FOLDERS TRUE)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+add_custom_command(
+  OUTPUT ${CMAKE_BINARY_DIR}/websrc_modification
+  COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_SOURCE_DIR}/websrc ${CMAKE_BINARY_DIR}/websrc_modification
+  BYPRODUCTS ${CMAKE_BINARY_DIR}/websrc_modification
+  VERBATIM # Option to ensure that the command is executed correctly on all platforms
+)
+
+# Add a custom target that depends on the modification check
+add_custom_target(check_websrc_modification DEPENDS ${CMAKE_BINARY_DIR}/websrc_modification)
+
+# Set up the build directory with the necessary directories for static and templates
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/static)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/templates)
+
+# Use file(GLOB_RECURSE) to automatically detect all files in the directories
+file(GLOB_RECURSE STATIC_FILES ${CMAKE_SOURCE_DIR}/websrc/static/*)
+file(GLOB_RECURSE TEMPLATE_FILES ${CMAKE_SOURCE_DIR}/websrc/templates/*)
+
+# Add a custom command to copy any modified static and template files to the build directory
+add_custom_command(
+  TARGET check_websrc_modification
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STATIC_FILES} ${CMAKE_BINARY_DIR}/static/
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TEMPLATE_FILES} ${CMAKE_BINARY_DIR}/templates/
+  COMMAND_EXPAND_LISTS # Option to expand lists when copying files
+)
 
 #################################################################################
 #
@@ -109,6 +148,10 @@ set(openapt_SRC
 
     ${openapt_src_dir}/src/config/configor.cpp
     ${openapt_src_dir}/src/config/configor.hpp
+    ${openapt_src_dir}/src/config/achievement.cpp
+    ${openapt_src_dir}/src/config/achievement.hpp
+    ${openapt_src_dir}/src/config/achievement_list.cpp
+    ${openapt_src_dir}/src/config/achievement_list.hpp
 
     ${openapt_src_dir}/src/openapt.cpp
     ${openapt_src_dir}/src/openapt.hpp
@@ -116,48 +159,40 @@ set(openapt_SRC
 
 if(UNIX)
   # should be linux there
-  add_executable(
-   openapt
-   ${plugins_SRC}
-   ${image_SRC}
-   ${api_SRC}
-   ${openapt_SRC}
-   )
-
+  add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${openapt_SRC})
+  
+  # Use consistent formatting for target_precompile_headers
   target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
-
+  
+  # Use consistent formatting for find_package
   find_package(ZLIB REQUIRED)
-
-  # 查找 Python 库
-  find_package(Python REQUIRED COMPONENTS Development)
-
+  
+  # Find and link CFITSIO libraries
   find_package(CFITSIO REQUIRED)
-
   target_link_libraries(openapt ${CFITSIO_LIBRARIES})
-
+  
+  # Find and link INDI libraries
   find_package(INDI 2.0.0 REQUIRED)
-
   include_directories(${INDI_INCLUDE_DIR})
-
   target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
-
-  # 判断 Python 是否存在
+  
+  # Check if Python is installed
+  find_package(Python REQUIRED COMPONENTS Development)
   if(Python_FOUND)
-      message(STATUS "Python version: ${Python_VERSION}")
+    message(STATUS "Python version: ${Python_VERSION}")
   else()
-      message(SEND_ERROR "Python not found.")
+    message(SEND_ERROR "Python not found.")
   endif()
 
-  # 添加 Python 头文件和库路径
+  # Add Python headers and library paths
   include_directories(${Python_INCLUDE_DIRS})
   link_directories(${Python_LIBRARY_DIRS})
 
-  # 编译器标志
+  # Add compiler flags and link Python libraries
   add_definitions(${Python_DEFINITIONS})
-
-  # 链接 Python 库
   target_link_libraries(openapt ${Python_LIBRARIES})
 
+  # Find and link OpenSSL libraries
   find_package(OpenSSL REQUIRED)
   if(OpenSSL_FOUND)
     target_link_libraries(openapt ${OPENSSL_LIBRARIES})
@@ -165,19 +200,21 @@ if(UNIX)
   else()
     message("-- OpenSSL Not Found")
   endif()
-
+  
+  # Find and link spdlog libraries
   find_package(spdlog REQUIRED)
   target_link_libraries(openapt spdlog::spdlog_header_only)
 
+  # Link ZLIB and pugixml-static libraries
   target_link_libraries(openapt ${ZLIB_LIBRARIES})
-
   target_link_libraries(openapt pugixml-static)
 
+  # Set output name for openapt executable
   set_target_properties(
     openapt
     PROPERTIES
-      OUTPUT_NAME openapt
-    )
+    OUTPUT_NAME openapt
+  )
 
 else()
   message(FATAL_ERROR "Unsupported platform")

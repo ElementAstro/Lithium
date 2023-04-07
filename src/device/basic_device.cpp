@@ -45,43 +45,39 @@ struct CameraFrame {
 namespace OpenAPT
 {
 
-    class Device 
-    {
+    class Device {
         public:
-
             explicit Device();
             virtual ~Device();
 
-            virtual bool Connect();
-            virtual bool Disconnect();
-            virtual bool Reconnect();
-            virtual bool Scanning();
+            virtual bool connect();
+            virtual bool disconnect();
+            virtual bool reconnect();
+            virtual bool scanForAvailableDevices();
 
-            virtual bool GetSettings();
-            virtual bool SaveSettings();
-            virtual bool GetParameter();
-            virtual bool SetParameter();
+            virtual bool getSettings();
+            virtual bool saveSettings();
+            virtual bool getParameter(const std::string& paramName, std::string& paramValue);
+            virtual bool setParameter(const std::string& paramName, const std::string& paramValue);
 
-            virtual std::string GetName();
-            virtual bool SetName();
-            virtual int GetId();
-            virtual bool SetId();
-        
+            virtual std::string getName();
+            virtual bool setName(const std::string& name);
+            virtual int getId();
+            virtual bool setId(int id);
+
         public:
-
             int             id;
             std::string     name;
             std::string     description;
 
-            std::string     config_path;
+            std::string     configPath;
 
             std::string     hostname;
             int             port;
 
-            bool            is_connected;
-            
-            std::vector<std::string> available_devices;
+            bool            isConnected;    
     };
+
 
     class Camera : public Device
     {
@@ -91,48 +87,44 @@ namespace OpenAPT
             explicit Camera();
             virtual ~Camera();
 
-            virtual bool StartExposure();
-            virtual bool StopExposure();
-            virtual bool WaitForExposure();
-            virtual bool ReadAfterExposure();
+            virtual bool startExposure(int duration_ms);
+            virtual bool stopExposure();
+            virtual bool waitForExposureComplete();
+            //virtual bool readImage(Image& image);
 
-            virtual bool StartVideoCapturing();
-            virtual bool StopVideoCapturing();
-            virtual bool ReadStreamFromCamera();
+            virtual bool startLiveView();
+            virtual bool stopLiveView();
+            //virtual bool readLiveView(Image& image);
 
-            virtual bool IsCameraConnected();
-            virtual bool IsCameraExposuring();
-            virtual bool IsCameraVideo();
-            virtual bool IsCameraCooling();
+            virtual bool isCoolingAvailable() const;
+            virtual bool isCoolingOn() const;
+            virtual bool setCoolingOn(bool on);
+            virtual bool setTemperature(double temperature);
+            virtual double getTemperature() const;
 
-            virtual bool CanCameraGain();
-            virtual int CurrentCameraGain();
-            virtual int MaxCameraGain();
-            virtual int MinCameraGain();
+            virtual bool isShutterAvailable() const;
+            virtual bool isShutterOpen() const;
+            virtual bool setShutterOpen(bool open);
 
-            virtual bool CanCameraOffset();
-            virtual int CurrentCameraOffset();
-            virtual int MaxCameraOffset();
-            virtual int MinCameraOffset();
+            virtual bool isSubframeSupported() const;
+            virtual bool isSubframeEnabled() const;
+            virtual bool setSubframeEnabled(bool enabled);
+            //virtual bool setSubframe(const ImageRect& rect);
 
-            virtual bool CanCameraBinningt();
-            virtual int CurrentCameraBinningt();
-            virtual int MaxCameraBinningt();
-            virtual int MinCameraBinningt();
+            virtual bool isBinningSupported(int binning) const;
+            virtual int getMaxBinning() const;
+            virtual int getBinning() const;
+            virtual bool setBinning(int binning);
 
-            virtual bool IsCameraHasShutter();
-            virtual bool IsCameraShutterClosed();
+            virtual bool isGainSupported(int gain) const;
+            virtual int getMaxGain() const;
+            virtual int getGain() const;
+            virtual bool setGain(int gain);
 
-            virtual bool IsCameraSubframe();
-            virtual bool CanCameraSubframe();
-
-            virtual int GetReadDelay();
-
-            virtual bool CanCameraCooling();
-            virtual double CurrentTemperature();
-            virtual double CurrentPower();
-
-            virtual CameraFrame GetCameraFrame();
+            virtual bool isOffsetSupported(int offset) const;
+            virtual int getMaxOffset() const;
+            virtual int getOffset() const;
+            virtual bool setOffset(int offset);    
 
         public:
 

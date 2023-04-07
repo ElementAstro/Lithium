@@ -44,9 +44,11 @@ Description: Define All of the Tasks
 
 using json = nlohmann::json;
 
-namespace OpenAPT {
+namespace OpenAPT
+{
 
-    class BasicTask {
+    class BasicTask
+    {
     public:
         // Executes the task
         virtual void execute() {}
@@ -62,12 +64,12 @@ namespace OpenAPT {
         void setId(int id) { m_id = id; }
 
         // Accessor and mutator for the task name
-        const std::string& getName() const { return m_name; }
-        void setName(const std::string& name) { m_name = name; }
+        const std::string &getName() const { return m_name; }
+        void setName(const std::string &name) { m_name = name; }
 
         // Accessor and mutator for the task description
-        const std::string& getDescription() const { return m_description; }
-        void setDescription(const std::string& description) { m_description = description; }
+        const std::string &getDescription() const { return m_description; }
+        void setDescription(const std::string &description) { m_description = description; }
 
         // Accessor and mutator for the task priority
         void setPriority(int priority) { m_priority = priority; }
@@ -93,26 +95,29 @@ namespace OpenAPT {
         std::string m_description;
     };
 
-
     // Conditional task that executes a function based on a condition
-    class ConditionalTask : public BasicTask {
+    class ConditionalTask : public BasicTask
+    {
     public:
         // Constructor
         ConditionalTask(const std::function<void()> &func,
                         const nlohmann::json &params,
                         const std::function<bool(const nlohmann::json &)> &condition)
-                : m_func(func), m_params(params), m_condition(condition) {}
+            : m_func(func), m_params(params), m_condition(condition) {}
 
         // Executes the task
-        void execute() override {
-            if (m_condition(m_params)) {
+        void execute() override
+        {
+            if (m_condition(m_params))
+            {
                 m_func();
             }
             m_done = true;
         }
 
         // Serializes the task to a JSON object
-        nlohmann::json toJson() override {
+        nlohmann::json toJson() override
+        {
             nlohmann::json j;
             j["type"] = "conditional";
             j["name"] = m_name;
@@ -132,18 +137,21 @@ namespace OpenAPT {
         std::function<bool(const nlohmann::json &)> m_condition;
     };
 
-
     // Loop task that executes a function for each item in a list
-    class LoopTask : public BasicTask {
+    class LoopTask : public BasicTask
+    {
     public:
         // Constructor
         LoopTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params)
-                : m_func(func), m_params(params) {}
+            : m_func(func), m_params(params) {}
 
         // Executes the task
-        void execute() override {
-            for (int i = m_progress; i < m_params["total"].get<int>(); ++i) {
-                if (m_cancelled) {
+        void execute() override
+        {
+            for (int i = m_progress; i < m_params["total"].get<int>(); ++i)
+            {
+                if (m_cancelled)
+                {
                     break;
                 }
                 m_func(m_params["items"][i]);
@@ -157,7 +165,8 @@ namespace OpenAPT {
         void cancel() { m_cancelled = true; }
 
         // Serializes the task to a JSON object
-        nlohmann::json toJson() override {
+        nlohmann::json toJson() override
+        {
             nlohmann::json j;
             j["type"] = "loop";
             j["name"] = m_name;
@@ -181,22 +190,24 @@ namespace OpenAPT {
         bool m_cancelled = false;
     };
 
-
     // Simple task that executes a function with parameters
-    class SimpleTask : public BasicTask {
+    class SimpleTask : public BasicTask
+    {
     public:
         // Constructor
         SimpleTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params)
-                : m_func(func), m_params(params) {}
+            : m_func(func), m_params(params) {}
 
         // Executes the task
-        void execute() override {
+        void execute() override
+        {
             m_func(m_params);
             m_done = true;
         }
 
         // Serializes the task to a JSON object
-        nlohmann::json toJson() override {
+        nlohmann::json toJson() override
+        {
             nlohmann::json j;
             j["type"] = "simple";
             j["name"] = m_name;

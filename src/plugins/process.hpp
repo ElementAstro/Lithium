@@ -29,79 +29,84 @@ Description: Process Manager
  
 **************************************************/
 
-#include <map>
-#include <mutex>
-#include <memory>
-#include <sstream>
+#pragma once
+
 #include <string>
-#include <thread>
 #include <vector>
+#include <mutex>
+#include <thread>
+#include <map>
 #include <functional>
 
 namespace OpenAPT {
 
+    /**
+     * @brief A class for managing child and independent processes
+     */
     class ProcessManager {
         public:
             /**
-             * @brief 构造函数
+             * @brief Constructor
+             * @param maxProcesses Maximum number of concurrent processes allowed
              */
-            ProcessManager() : m_stop(false), maxProcesses(10) {}
+            ProcessManager(int maxProcesses);
 
             /**
-             * @brief 析构函数，停止所有进程以及销毁日志记录器
+             * @brief Destructor, stops all processes and shuts down logger
              */
             ~ProcessManager();
 
             /**
-             * @brief 启动一个子进程并运行指定的函数
-             * @param name 子进程的名称
-             * @param func 子进程要执行的函数
+             * @brief Starts a child process and runs the specified function
+             * @param name Name of the child process
+             * @param func Function to run in the child process
              */
             void startChildProcess(const std::string& name, std::function<void()> func);
 
             /**
-             * @brief 启动一个独立进程并运行指定的命令
-             * @param name 进程的名称
-             * @param command 要执行的命令
-             * @param args 命令参数
+             * @brief Starts an independent process and runs the specified command with arguments
+             * @param name Name of the process
+             * @param command Command to run
+             * @param args Arguments for the command
              */
             void startIndependentProcess(const std::string& name, const std::string& command, const std::vector<std::string>& args);
 
             /**
-             * @brief 终止指定的子进程
-             * @param name 要终止的子进程名称
+             * @brief Kills the specified child process
+             * @param name Name of the child process to kill
              */
             void killChildProcess(const std::string& name);
 
             /**
-             * @brief 终止指定的独立进程
-             * @param name 要终止的进程名称
+             * @brief Kills the specified independent process
+             * @param name Name of the process to kill
              */
             void killIndependentProcess(const std::string& name);
 
             /**
-             * @brief 停止所有进程
+             * @brief Stops all processes
              */
             void stopAllProcesses();
 
             /**
-             * @brief 列出所有正在运行的进程名称
-             * @return 所有正在运行的进程名称列表
+             * @brief Lists all currently running process names
+             * @return A vector of all currently running process names
              */
             std::vector<std::string> listProcesses();
 
             /**
-             * @brief 判断指定的进程是否正在运行
-             * @param name 要判断的进程名称
-             * @return 进程是否正在运行
+             * @brief Checks if the specified process is currently running
+             * @param name Name of the process to check
+             * @return True if the process is running, false otherwise
              */
             bool isProcessRunning(const std::string& name);
 
         private:
-            std::map<std::string, std::unique_ptr<std::thread>> m_processes; /**< 记录所有进程的线程 */
-            std::map<std::string, bool> m_processStatus; /**< 记录所有进程的运行状态 */
-            std::mutex m_mutex; /**< 用于保护进程列表和状态的互斥锁 */
-            bool m_stop; /**< 是否停止所有进程 */
-            size_t maxProcesses; /**< 最大进程数量限制 */
-        };
+            const int maxProcesses; // Maximum number of concurrent processes allowed
+            std::map<std::string, std::unique_ptr<std::thread>> m_processes; // Map of process names to thread pointers for child processes
+            std::map<std::string, bool> m_processStatus; // Map of process names to status for independent processes
+            bool m_stop = false; // Flag to stop all processes
+            std::mutex m_mutex; // Mutex for thread-safe access to process maps
+    };
 }
+

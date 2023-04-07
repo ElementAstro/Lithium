@@ -331,7 +331,9 @@ namespace OpenAPT {
     DeviceManager::~DeviceManager() {
         for (auto& devices : m_devices) {
             for (auto& device : devices) {
-                device->disconnect();
+                if (device) {
+                    device->disconnect();
+                }
             }
         }
     }
@@ -339,15 +341,25 @@ namespace OpenAPT {
     // Returns a list of device names of the specified type
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type) {
         std::vector<std::string> deviceList;
-        for (auto& device : m_devices[static_cast<int>(type)]) {
-            deviceList.emplace_back(device->getName());
+        auto& devices = m_devices[static_cast<int>(type)];
+        for (const auto& device : devices) {
+            if (device) {
+                deviceList.emplace_back(device->getName());
+            }
         }
         return deviceList;
     }
 
     // Adds a new device with the given name to the specified device type
     bool DeviceManager::addDevice(DeviceType type, const std::string& name) {
-        assert(type >= DeviceType::Camera && type < DeviceType::NumDeviceTypes && "Invalid device type");
+        assert(type >= DeviceType::Camera && type <= DeviceType::Guider && "Invalid device type");
+
+        // Check if a device with the same name already exists
+        if (findDeviceByName(name)) {
+            spdlog::warn("A device with name {} already exists, please choose a different name", name);
+            return false;
+        }
+
         std::string newName = name;
         int index = 1;
         while (findDevice(type, newName) != -1) {
@@ -383,7 +395,7 @@ namespace OpenAPT {
     bool DeviceManager::removeDevice(DeviceType type, const std::string& name) {
         auto& devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it) {
-            if ((*it)->getName() == name) {
+            if (*it && (*it)->getName() == name) {
                 (*it)->disconnect();
                 devices.erase(it);
                 return true;
@@ -397,7 +409,7 @@ namespace OpenAPT {
     void DeviceManager::removeDevicesByName(const std::string& name) {
         for (auto& devices : m_devices) {
             devices.erase(std::remove_if(devices.begin(), devices.end(),
-                        [&](std::shared_ptr<Device> device) { return device->getName() == name; }),
+                        [&](std::shared_ptr<Device> device) { return device && device->getName() == name; }),
                         devices.end());
         }
     }
@@ -417,7 +429,7 @@ namespace OpenAPT {
     int DeviceManager::findDevice(DeviceType type, const std::string& name) {
         auto& devices = m_devices[static_cast<int>(type)];
         for (size_t i = 0; i < devices.size(); ++i) {
-            if (devices[i]->getName() == name) {
+            if (devices[i] && devices[i]->getName() == name) {
                 return static_cast<int>(i);
             }
         }
@@ -426,9 +438,9 @@ namespace OpenAPT {
 
     // Returns a shared pointer to the device with the given name, or nullptr if not found
     std::shared_ptr<Device> DeviceManager::findDeviceByName(const std::string& name) const {
-        for (auto& devices : m_devices) {
-            for (auto& device : devices) {
-                if (device->getName() == name) {
+        for (const auto& devices : m_devices) {
+            for (const auto& device : devices) {
+                if (device && device->getName() == name) {
                     return device;
                 }
             }

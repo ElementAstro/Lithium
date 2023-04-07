@@ -184,6 +184,7 @@ namespace OpenAPT {
                 else {
                     auto funcc = std::bind(func_ptr, std::forward<Args>(args)...);
                     funcc();
+                    spdlog::debug("Simple not async function is executed successfully!");
                 }
 
                 // 返回函数返回值

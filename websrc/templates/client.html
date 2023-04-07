@@ -1,0 +1,1339 @@
+<!--
+
+   Copyright(c) 2022-2023 Max Qian  <lightapt.com>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+   
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport"
+        content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+
+    <title>设备</title>
+
+    <link rel="icon" sizes="16x16" type="image/icon" href="/static/textures/icon.ico">
+
+    <!-- -->
+    <link rel="stylesheet" href="/static/css/mdb.dark.min.css">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/static/css/fontawesome.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="/static/css/adminlte.min.css">
+
+    <!-- overlayScrollbars -->
+    <link rel="stylesheet" href="/static/css/plugins/OverlayScrollbars.min.css">
+    <!-- Loading animation -->
+    <link rel="stylesheet" href="/static/css/client/loading.css">
+    <!-- Bootstrap select -->
+    <link rel="stylesheet" href="/static/css/plugins/bootstrap-select.min.css">
+    <!-- Viewer -->
+    <link rel="stylesheet" href="/static/css/plugins/viewer.min.css">
+    <!-- Device -->
+    <link rel="stylesheet" href="/static/css/client/device.css">
+
+</head>
+<!-- Body Part -->
+
+<body class="dark-mode sidebar-collapse hold-transition layout-fixed" data-panel-auto-height-mode="height"
+    style="overflow:hidden">
+
+    <!-- loading开始 -->
+    <div id="loading-animation">
+        <div id="loading-animation-center">
+            <div id="loading-animation-center-absolute">
+                <div class="loading_object" id="loading_four"></div>
+                <div class="loading_object" id="loading_three"></div>
+                <div class="loading_object" id="loading_two"></div>
+                <div class="loading_object" id="loading_one"></div>
+            </div>
+        </div>
+    </div>
+    <script>!function () { function e() { setTimeout(() => { $("#loading-animation").fadeOut(540) }, 500) } window.jQuery ? $(document).ready(() => { e() }) : document.onreadystatechange = (() => { "interactive" === document.readyState && e() }) }();</script>
+    <!-- loading 结束 -->
+
+    <div class="wrapper">
+        <!-- Main Navbar -->
+        <nav class="main-header navbar navbar-expand navbar-dark">
+            <!-- Left navbar links -->
+            <ul class="navbar-nav">
+                <!-- Home -->
+                <li class="nav-item d-none d-sm-inline-block">
+                    <a href="#" class="nav-link">LightAPT WebUI</a>
+                </li>
+            </ul>
+
+            <!-- Right navbar links -->
+            <ul class="navbar-nav ml-auto nav nav-tabs text-white  mb-3">
+                <!-- Device Navbar -->
+                <li class="nav-item">
+                    <a class="nav-link active" id="tab-device-tab" data-toggle="pill" href="#tab-device" role="tab"
+                        aria-controls="tab-device" aria-selected="true">
+                        <i class="fas fa-plug"></i>设备</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-camera-tab" data-toggle="pill" href="#tab-camera" role="tab"
+                        aria-controls="tab-camera" aria-selected="false">
+                        <i class="fas fa-camera"></i>相机</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-telescope-tab" data-toggle="pill" href="#tab-telescope" role="tab"
+                        aria-controls="tab-telescope" aria-selected="false">
+                        <i class="fas fa-telescope"></i>赤道仪</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-focuser-tab" data-toggle="pill" href="#tab-focuser" role="tab"
+                        aria-controls="tab-focuser" aria-selected="false">
+                        <i class="fas fa-camera-viewfinder"></i>对焦</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-guider-tab" data-toggle="pill" href="#tab-guider" role="tab"
+                        aria-controls="tab-guider" aria-selected="false">
+                        <i class="fas fa-star"></i>导星</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" id="tab-solver-tab" data-toggle="pill" href="#tab-solver" role="tab"
+                        aria-controls="tab-solver" aria-selected="false">
+                        <i class="fas fa-globe"></i>解析</a>
+                </li>
+                <!-- /. Device Navbar -->
+                <!-- Fullscreen Toggle -->
+                <li class="nav-item">
+                    <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+                        <i class="fas fa-expand-arrows-alt"></i>全屏
+                    </a>
+                </li>
+                <!-- ./ Fullscreen Toggle -->
+                <li class="nav-item">
+                    <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
+                        <i class="fas fa-table"></i>UI自定义
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- /. Main Navbar -->
+        <!-- Content Wrapper. Contains page content -->
+        <div class="content-wrapper h-100">
+            <div class="container-fluid">
+
+                <div class="row">
+                    <div class="col-md-7 ">
+
+                        <div class="row">
+
+                            <div class="col-md-12 ">
+                                <div class="card card-primary">
+
+                                    <div class="card-body" id="info_container">
+                                        <div class="row d-flex">
+                                            <!-- 最新的图像 -->
+                                            <div class="col-sm-12">
+                                                <!-- Tabs navs -->
+                                                <ul class="nav nav-tabs mb-3" id="ex1" role="tablist">
+                                                    <li class="nav-item" role="presentation">
+                                                        <a class="nav-link active" id="ex1-tab-1" data-mdb-toggle="tab"
+                                                            href="#tab-image" role="tab" aria-controls="tab-image"
+                                                            aria-selected="true">
+                                                            <i class="fas fa-image"></i>
+                                                            图像
+                                                        </a>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <a class="nav-link" id="ex1-tab-3" data-mdb-toggle="tab"
+                                                            href="#tab-image-info" role="tab"
+                                                            aria-controls="tab-sequence" aria-selected="false">
+                                                            <i class="fas fa-info"></i>
+                                                            图像信息
+                                                        </a>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <a class="nav-link" id="ex1-tab-2" data-mdb-toggle="tab"
+                                                            href="#tab-guideline" role="tab"
+                                                            aria-controls="tab-guideline" aria-selected="false">
+                                                            <i class="fas fa-chart-line"></i>
+                                                            导星曲线
+                                                        </a>
+                                                    </li>
+                                                    <li class="nav-item" role="presentation">
+                                                        <a class="nav-link" id="ex1-tab-3" data-mdb-toggle="tab"
+                                                            href="#tab-sequence" role="tab" aria-controls="tab-sequence"
+                                                            aria-selected="false">
+                                                            <i class="fas fa-timer"></i>
+                                                            序列
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                                <!-- Tabs navs -->
+
+                                                <!-- Tabs content -->
+                                                <div class="tab-content" id="ex1-content">
+                                                    <div class="tab-pane fade show active" id="tab-image"
+                                                        role="tabpanel" aria-labelledby="ex1-tab-1">
+                                                        <div class="docs-galley mb-3">
+                                                            <ul class="docs-pictures clearfix">
+                                                                <li>
+                                                                    <img data-original="/static/textures/background.png"
+                                                                        src="/static/textures/background.png"
+                                                                        alt="LightAPT">
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                    <div class="tab-pane fade" id="tab-guideline" role="tabpanel"
+                                                        aria-labelledby="ex1-tab-2">
+
+                                                    </div>
+                                                    <div class="tab-pane fade" id="tab-sequence" role="tabpanel"
+                                                        aria-labelledby="ex1-tab-3">
+
+                                                        <div class="mt-3">
+                                                            <div
+                                                                class="text-center p-2 extraSmallText text-uppercase text-muted">
+                                                                单张信息
+                                                            </div>
+                                                            <ul class="list-group bg-dark text-small">
+                                                                <li class="list-group-item bg-dark mount-panel-item">
+                                                                    <div class="text-center shInField"
+                                                                        id="fileShotText"></div>
+                                                                </li>
+                                                                <li
+                                                                    class="list-group-item bg-dark d-flex mount-panel-item ">
+                                                                    <div class="col-4 p-0">
+                                                                        <div class="text-center text-muted ">
+                                                                            曝光时间</div>
+                                                                        <div class="text-center shInField"
+                                                                            id="expoText"></div>
+                                                                    </div>
+                                                                    <div class="col-4 p-0">
+                                                                        <div class="text-center text-muted ">
+                                                                            已花费</div>
+                                                                        <div class="text-center shInField text-muted"
+                                                                            id="elapsedText"></div>
+                                                                    </div>
+                                                                    <div class="col-4 p-0">
+                                                                        <div class="text-center text-muted ">
+                                                                            剩余</div>
+                                                                        <div class="text-center shInField"
+                                                                            id="remainText"></div>
+                                                                    </div>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                        <div class="mt-3">
+                                                            <div
+                                                                class="text-center p-2 extraSmallText text-uppercase text-muted">
+                                                                序列信息
+                                                            </div>
+
+                                                            <ul class="list-group bg-dark text-small">
+                                                                <li class="list-group-item bg-dark mount-panel-item">
+                                                                    <div class="text-center" id="runSeqText">
+                                                                    </div>
+                                                                </li>
+                                                                <li
+                                                                    class="list-group-item bg-dark d-flex mount-panel-item ">
+                                                                    <div class="col-4 p-0">
+                                                                        <div class="text-center text-muted ">
+                                                                            开始时间</div>
+                                                                        <div class="text-center" id="seqStartTime">
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-4 p-0">
+                                                                        <div class="text-center text-muted ">
+                                                                            剩余时间</div>
+                                                                        <div class="text-center" id="seqRemain">
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="col-4 p-0">
+                                                                        <div class="text-center text-muted ">
+                                                                            结束时间
+                                                                        </div>
+                                                                        <div class="text-center" id="seqEndTime"></div>
+                                                                    </div>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Tabs content -->
+
+
+                                            </div>
+                                        </div>
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+
+                        <div class="card card-primary">
+
+                            <div class="card-body">
+
+                                <div class="card card-info card-outline card-tabs p-0">
+                                    <div class="card-body">
+                                        <div class="tab-content" id="tabs-devices-tabContent">
+                                            <div class="tab-pane fade show active" id="tab-device" role="tabpanel"
+                                                aria-labelledby="tab-device-tab">
+
+
+
+                                                <!-- Device Connection -->
+                                                <div class="row">
+                                                    <div class="col-sm-6">
+                                                        <!-- Main Camera -->
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="camera"
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="相机">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <!-- /. Main Camera -->
+                                                    </div>
+
+                                                    <div class="col-sm-6">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="telescope"
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="赤道仪">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+
+                                                    <div class="col-sm-4">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="filterwheel"
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="滤镜轮">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-sm-4">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="focuser"
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="电调">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-sm-4">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="guider"
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="导星">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-sm-6">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="solver"
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="解析">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="col-sm-6">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="input-group input-group-sm">
+                                                                <select id="plugins" multiple
+                                                                    class="form-control form-control-sm selectpicker show-tick"
+                                                                    data-live-search="true" title="插件">
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <div class="form-group form-group-sm">
+                                                            <div class="row">
+                                                                <div class="col">
+                                                                    <button id="server_command"
+                                                                        class="btn btn-default btn-outline-info btn-sm btn-block">
+                                                                        <i class="fas fa-light-switch-on"></i>
+                                                                        启动
+                                                                    </button>
+                                                                </div>
+                                                                <div class="col">
+                                                                    <button id="client_command"
+                                                                        class="btn btn-default btn-outline-success btn-sm btn-block">
+                                                                        <i class="fas fa-user"></i>
+                                                                        连接
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <div id="server_notify" class="info">
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <div id="client_notify" class="warning">
+                                                            <p class="alert alert-warning">客户端未连接</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- /. Device Connection -->
+
+                                            </div>
+                                            <!-- Camera Tab -->
+                                            <div class="tab-pane fade" id="tab-camera" role="tabpanel"
+                                                aria-labelledby="tab-camera-tab">
+
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <div class="input-group d-flex">
+                                                            <div class="col m-1 p-0">
+                                                                <label for="timeShot" class="text-sm">曝光
+                                                                    (秒)</label>
+                                                                <input type="number"
+                                                                    class="form-control form-control-sm text-center text-white border-sx-blue"
+                                                                    id="exposure" value="1" placeholder="Exposure (s)">
+                                                            </div>
+                                                            <div class="col m-1 p-0">
+                                                                <label for="filterSelect" class="text-sm">滤镜</label>
+                                                                <select
+                                                                    class="browser-default custom-select custom-select-sm text-white border-sx-blue"
+                                                                    id="filter">
+                                                                    <option value="" selected="">Filter
+                                                                    </option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col m-1 p-0">
+                                                                <label for="binSelect" class="text-sm">像素合并</label>
+                                                                <select
+                                                                    class="browser-default custom-select custom-select-sm text-white border-sx-blue"
+                                                                    id="binning">
+                                                                    <option value="1" selected="">1x1</option>
+                                                                    <option value="2">2x2
+                                                                    </option>
+                                                                    <option value="4">4x4
+                                                                    </option>
+                                                                    <option value="8">8x8
+                                                                    </option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="input-group input-group-sm d-flex">
+                                                            <input type="number"
+                                                                class="form-control form-control-sm text-center text-white border-sx-blue m-1"
+                                                                id="gain" placeholder="增益">
+                                                            <input type="number"
+                                                                class="form-control form-control-sm text-center text-white border-sx-blue m-1"
+                                                                id="offset" placeholder="偏置">
+                                                        </div>
+                                                        <!-- Start & Abort Button -->
+                                                        <div class="d-flex">
+                                                            <button id="remoteShotBtn"
+                                                                class="btn btn-primary btn-sm m-1 btn-voy-item px-2 actBtn waves-effect waves-light">
+                                                                <i class="fas fa-camera"></i> 拍摄
+                                                            </button>
+                                                            <button id="remoteShotAbortBtn"
+                                                                class="btn btn-danger btn-sm m-1 btn-voy-item px-2 doubleConfirm waves-effect waves-light">
+                                                                <i class="fas fa-times"></i> 中断
+                                                            </button>
+                                                        </div>
+                                                        <!-- /. Start & Abort Button-->
+                                                        <div class="progress progress-xxs active">
+                                                            <div class="progress-bar bg-success progress-bar-striped"
+                                                                role="progressbar" aria-valuenow="0" aria-valuemin="0"
+                                                                aria-valuemax="100" style="width: 0%">
+                                                                <span class="sr-only">20%
+                                                                    Complete</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="divider"> </div>
+
+
+
+
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <div class="d-flex">
+                                                            <button class="btn btn-block btn-sm btn-light-blue px-2 m-1"
+                                                                type="button" data-bs-toggle="offcanvas"
+                                                                data-bs-target="#offcanvas-cooling"
+                                                                aria-controls="offcanvas-cooling">
+                                                                <i class="fas fa-snowflake"></i>
+                                                                制冷
+                                                            </button>
+                                                            <button class="btn btn-block btn-sm btn-orange px-2 m-1"
+                                                                type="button" data-bs-toggle="offcanvas"
+                                                                data-bs-target="#offcanvas-sequence"
+                                                                aria-controls="offcanvas-sequence">
+                                                                <i class="fas fa-bars"></i>
+                                                                计划拍摄
+                                                            </button>
+                                                        </div>
+
+
+                                                        <div class="offcanvas offcanvas-end" tabindex="-1"
+                                                            id="offcanvas-cooling"
+                                                            aria-labelledby="offcanvas-coolingLabel">
+
+                                                            <div class="offcanvas-body bg-dark">
+
+                                                                <div class="row">
+                                                                    <div class="col-md-12">
+                                                                        <div class="row">
+                                                                            <div class="col-md-12">
+                                                                                <ul class="list-group bg-dark mb-3">
+                                                                                    <li
+                                                                                        class="list-group-item bg-dark d-flex align-items-center justify-content-between">
+                                                                                        <span id="coolerStatusText"
+                                                                                            class="text-muted info-data-item">制冷状态</span>
+                                                                                        <span id="coolerStatus"
+                                                                                            class="info-data-item"></span>
+                                                                                    </li>
+                                                                                </ul>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="row">
+                                                                            <div class="col-md-12">
+                                                                                <div class="chart">
+                                                                                    <canvas id="cooling_line"
+                                                                                        style="min-height: 150px; height: 150px; max-height: 250px; max-width: 100%;"></canvas>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="row">
+                                                                            <div class="col-md-12">
+                                                                                <div class="input-group mt-3">
+                                                                                    <button
+                                                                                        class="btn btn-sm btn-primary m-1 flex-fill px-2"
+                                                                                        type="button" id="coolerOnBtn">
+                                                                                        <i
+                                                                                            class="fas fa-temperature-arrow-down"></i>
+                                                                                        开始制冷
+                                                                                    </button>
+                                                                                    <button
+                                                                                        class="btn btn-sm btn-danger m-1 flex-fill px-2"
+                                                                                        type="button" id="coolerOffBtn">
+                                                                                        <i
+                                                                                            class="fas fa-temperature-arrow-up"></i>
+                                                                                        停止制冷
+                                                                                    </button>
+                                                                                </div>
+                                                                                <div
+                                                                                    class="input-group d-flex input-group-sm">
+                                                                                    <input type="number"
+                                                                                        class="form-control form-control-sm text-center bg-dark text-white border-sx-blueVoy m-1"
+                                                                                        min="-60" max="40"
+                                                                                        id="cameraTemp"
+                                                                                        aria-describedby="timeShot"
+                                                                                        value="-15"
+                                                                                        placeholder="insert temp">
+                                                                                    <button
+                                                                                        class="btn btn-sm btn-outline-info m-1 flex-fill px-2"
+                                                                                        type="button" id="setTempBtn">
+                                                                                        <i
+                                                                                            class="fas fa-temperature-low"></i>
+                                                                                        设置温度 [C°]
+                                                                                    </button>
+                                                                                </div>
+                                                                                <div class="input-group d-flex">
+                                                                                    <button
+                                                                                        class="btn btn-sm btn-warning m-1 flex-fill px-2"
+                                                                                        type="button" id="warmupBtn">
+                                                                                        <i
+                                                                                            class="fas fa-temperature-up"></i>
+                                                                                        升温
+                                                                                    </button>
+                                                                                    <button
+                                                                                        class="btn btn-sm btn-info m-1 flex-fill px-2"
+                                                                                        type="button" id="coolDownBtn">
+                                                                                        <i
+                                                                                            class="fas fa-temperature-down"></i>
+                                                                                        降温
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+
+
+
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="offcanvas offcanvas-end bg-dark" tabindex="-1"
+                                                            id="offcanvas-sequence"
+                                                            aria-labelledby="offcanvas-sequenceLabel">
+
+                                                            <div class="offcanvas-body">
+
+                                                                <div class="row" id="SequencePrograssBar">
+                                                                    <div class="col-md-12">
+                                                                        <div class="row">
+                                                                            <div class="col-md-12">
+                                                                                <label>完成进度</label>
+                                                                                <div
+                                                                                    class="progress progress-sm active">
+                                                                                    <div class="progress-bar bg-success progress-bar-striped"
+                                                                                        role="progressbar"
+                                                                                        aria-valuenow="0"
+                                                                                        aria-valuemin="0"
+                                                                                        aria-valuemax="100"
+                                                                                        style="width: 0%">
+                                                                                        <span class="sr-only">20%
+                                                                                            Complete</span>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="row">
+                                                                            <div class="col-md-12">
+                                                                                <div class="contProgDetail mt-3">
+                                                                                    <div
+                                                                                        class="text-center p-2 extraSmallText text-muted">
+                                                                                        计划拍摄信息
+                                                                                    </div>
+
+                                                                                    <ul
+                                                                                        class="list-group bg-dark text-small">
+                                                                                        <li
+                                                                                            class="list-group-item bg-dark d-flex mount-panel-item ">
+                                                                                            <div class="col-4 p-0">
+                                                                                                <div
+                                                                                                    class="text-center text-muted ">
+                                                                                                    开始时间
+                                                                                                </div>
+                                                                                                <div class="text-center"
+                                                                                                    id="seqStartTime">
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-4 p-0">
+                                                                                                <div
+                                                                                                    class="text-center text-muted ">
+                                                                                                    剩余时间
+                                                                                                </div>
+                                                                                                <div class="text-center"
+                                                                                                    id="seqRemain">
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-4 p-0">
+                                                                                                <div
+                                                                                                    class="text-center text-muted ">
+                                                                                                    结束时间
+                                                                                                </div>
+                                                                                                <div class="text-center"
+                                                                                                    id="seqEndTime">
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </li>
+                                                                                        <li
+                                                                                            class="list-group-item bg-dark mount-panel-item">
+                                                                                            <div class="text-center"
+                                                                                                id="runSeqText">
+                                                                                            </div>
+                                                                                        </li>
+                                                                                    </ul>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="row">
+                                                                    <div class="col-md-12">
+                                                                        <div class="d-none" id="cont-seq-list">
+                                                                            <div
+                                                                                class="text-center p-2 text-small extraSmallText text-uppercase text-muted">
+                                                                                选择脚本
+                                                                            </div>
+                                                                            <ul class="list-group bg-dark d-flex scrollbar scrollbar-primary"
+                                                                                id="seqUl"></ul>
+                                                                        </div>
+                                                                        <div class="my-3">
+                                                                            <div
+                                                                                class="text-center p-2 text-small extraSmallText text-uppercase text-muted">
+                                                                                已选择的脚本
+                                                                            </div>
+                                                                            <div
+                                                                                class="list-group-item bg-dark text-center">
+                                                                                <span id="selectedSeq"></span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div class="input-group d-flex">
+                                                                            <button id="seqListtBtn"
+                                                                                class="btn btn-sm btn-info m-1 flex-fill px-2 lev1active"
+                                                                                type="button">
+                                                                                <i class="fas fa-list"></i>
+                                                                                获取列表
+                                                                            </button>
+                                                                            <button id="seqStartBtn"
+                                                                                class="btn btn-sm btn-primary m-1 flex-fill seq-btns px-2 actBtn"
+                                                                                type="button">
+                                                                                <i class="fas fa-try"></i>
+                                                                                开始
+                                                                            </button>
+                                                                            <button id="seqAbortBtn"
+                                                                                class="btn btn-sm btn-danger m-1 flex-fill lev1active px-2 doubleConfirm"
+                                                                                value="Sequence Abort" type="button">
+                                                                                <i class="fas fa-stop"></i>
+                                                                                停止
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                            <div class="tab-pane fade" id="tab-telescope" role="tabpanel"
+                                                aria-labelledby="tab-telescope-tab">
+
+                                                <div class="row">
+                                                    <div class="col-md-12">
+                                                        <!-- Goto -->
+                                                        <div class="row">
+                                                            <div class="col-md-12">
+                                                                <div class="input-group">
+                                                                    <div class="col">
+                                                                        <button id="goto_w_n"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-up-left"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <button id="goto_n"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-up"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <button id="goto_e_n"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-up-right"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-12">
+                                                                <div class="input-group mt-3">
+                                                                    <div class="col">
+                                                                        <button id="goto_w"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-left"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <button id="goto_stop"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-stop-circle"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <button id="goto_e"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-right"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="row">
+                                                            <div class="col-md-12">
+                                                                <div class="input-group mt-3">
+                                                                    <div class="col">
+                                                                        <button id="goto_w_s"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-down-left"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <button id="goto_s"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-down"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                    <div class="col">
+                                                                        <button id="goto_e_s"
+                                                                            class="btn btn-sm btn-primary btn-block"
+                                                                            type="button">
+                                                                            <i class="fas fa-arrow-down-right"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="divider"></div>
+                                                        <div class="input-group input-group-sm d-flex mt-0 pt-2">
+                                                            <div class="col">
+                                                                <input type="text" id="ra_search"
+                                                                    class="form-control form-control-sm text-white text-sm"
+                                                                    placeholder="RA" aria-label="RA"
+                                                                    aria-describedby="RA">
+                                                            </div>
+                                                            <div class="col mx-1">
+                                                                <input type="text" id="dec_search"
+                                                                    class="form-control form-control-sm text-white text-sm"
+                                                                    placeholder="DEC" aria-label="DEC"
+                                                                    aria-describedby="DEC">
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="form-group form-group-sm pt-2 d-flex">
+                                                            <div class="col">
+                                                                <button id="goto"
+                                                                    class="btn btn-outline-light-green btn-block mr-lg-1 form-control form-control-sm waves-effect"
+                                                                    type="button">
+                                                                    <i class="fas fa-crosshairs"></i>
+                                                                    Goto
+                                                                </button>
+                                                            </div>
+                                                            <div class="col mx-1">
+                                                                <button id="abort_goto"
+                                                                    class="btn btn-outline-amber btn-block mr-lg-1 form-control form-control-sm waves-effect"
+                                                                    type="button">
+                                                                    <i class="fas fa-cancel"></i>
+                                                                    停止
+                                                                </button>
+                                                            </div>
+
+                                                        </div>
+                                                        <!-- Setting -->
+
+                                                        <div class="card pt-2 card-outline card-green">
+                                                            <div class="card-header">
+                                                                <h3 class="card-title">
+                                                                    <i class="fa-solid fa-search"></i>
+                                                                    搜索
+                                                                </h3>
+                                                                <div class="card-tools">
+                                                                    <button type="button" class="btn btn-tool btn-sm"
+                                                                        data-card-widget="collapse">
+                                                                        <i class="fas fa-minus"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <!-- /.card-tools -->
+                                                            </div>
+                                                            <div class="card-body">
+                                                                <div class="row">
+                                                                    <div class="col-md-12">
+                                                                        <div class="input-group">
+                                                                            <input type="text"
+                                                                                class="form-control form-control-sm text-center text-white border-sx-blueVoy bg-dark"
+                                                                                id="nameToSearch"
+                                                                                aria-describedby="Name" value=""
+                                                                                placeholder="输入目标名称或编号">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="row">
+                                                                    <div class="col-md-12">
+                                                                        <div class="input-group mt-2">
+                                                                            <div class="col">
+                                                                                <button id="searchLocalBtn"
+                                                                                    class="btn btn-sm btn-outline-info btn-block"
+                                                                                    type="button">
+                                                                                    <i class="fas fa-search"></i>
+                                                                                    本地搜索
+                                                                                </button>
+                                                                            </div>
+                                                                            <div class="col">
+                                                                                <button id="searchOnlineBtn"
+                                                                                    class="btn btn-sm btn-outline-warning btn-block"
+                                                                                    type="button">
+                                                                                    <i class="fas fa-globe"></i>
+                                                                                    在线搜索
+                                                                                </button>
+                                                                            </div>
+
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="row pt-2">
+                                                                    <div class="col-md-12">
+                                                                        <div class="col">
+                                                                            <button id="suycBtn"
+                                                                                class="btn btn-sm btn-outline-success btn-block"
+                                                                                type="button">
+                                                                                <i class="fas fa-sync"></i>
+                                                                                同步
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div class="tab-pane fade" id="tab-focuser" role="tabpanel"
+                                                aria-labelledby="tab-focuser-tab">
+
+                                                <ul class="list-group bg-dark">
+                                                    <li
+                                                        class="list-group-item bg-dark d-flex align-items-center justify-content-between">
+                                                        <div class="statusLed" id="focuser_status"></div>
+                                                        <span id="focuserConnText">电调连接</span>
+                                                    </li>
+                                                </ul>
+
+                                                <ul class="list-group bg-dark text-small list-group-small">
+                                                    <li class="list-group-item bg-dark d-flex mount-panel-item p-0">
+                                                        <div class="col p-1 m-0">
+                                                            <div class="text-center text-muted">温度</div>
+                                                            <div class="text-center shInField" id="focuser_temperature">
+                                                            </div>
+                                                        </div>
+                                                        <div class="col p-1 m-0">
+                                                            <div class="text-center text-muted ">位置</div>
+                                                            <div class="text-center shInField" id="focuser_position">
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+
+
+                                                <div class="btn-group btn-group-sm w-100 mt-2" role="group"
+                                                    aria-label="Basic example">
+                                                    <button type="button" class="btn btn-orange btn-sm px-2\"
+                                                        data-param="-100" id="focuser_movein_100">-100</button>
+                                                    <button type="button" class="btn btn-light-blue btn-sm px-2"
+                                                        data-param="-10" id="focuser_movein_10">-10</button>
+                                                    <button type="button" class="btn btn-light-green btn-sm px-2 mr-1"
+                                                        data-param="-1" id="focuser_movein_1">-1</button>
+                                                    <button type="button" class="btn btn-light-green btn-sm px-2 ml-1"
+                                                        data-param="+1" id="focuser_moveout_1">+1</button>
+                                                    <button type="button" class="btn btn-light-blue btn-sm px-2"
+                                                        data-param="+10" id="focuser_moveout_10">+10</button>
+                                                    <button type="button" class="btn btn-orange btn-sm px-2"
+                                                        data-param="+100" id="focuser_moveout_100">+100</button>
+                                                </div>
+
+
+                                                <div class="input-group my-3 input-group-sm">
+                                                    <div class="input-group-prepend">
+                                                        <button class="btn btn-sm btn-outline-success" type="button"
+                                                            id="focuser_looping">
+                                                            <i class="fas fa-circle-arrow-up-right"></i>
+                                                            循环曝光
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-info" type="button"
+                                                            id="goto_target_position">
+                                                            <i class="fas fa-play"></i>
+                                                            前往
+                                                        </button>
+                                                    </div>
+                                                    <input type="number" min="0" max="100000000"
+                                                        class="form-control form-control-sm text-small text-center text-primary"
+                                                        placeholder="" aria-label="对焦位置" id="focuser_target_position"
+                                                        aria-describedby="focuser-position">
+                                                    <div class="input-group-append">
+                                                        <button class="btn btn-sm btn-outline-danger"
+                                                            data-bs-toggle="offcanvas"
+                                                            data-bs-target="#offcanvas-autofocus"
+                                                            aria-controls="offcanvas-autofocus" type="button"
+                                                            id="autofocus">
+                                                            <i class="fas fa-microchip-ai"></i>
+                                                            自动对焦
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="offcanvas offcanvas-end" tabindex="-1"
+                                                    id="offcanvas-autofocus" aria-labelledby="offcanvas-autofocusLabel">
+
+                                                    <div class="offcanvas-body bg-dark" id="autofocus_offcanvas_body">
+
+                                                        <div class="row">
+                                                            <div class="col-md-12">
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+
+                                            <div class="tab-pane fade" id="tab-guider" role="tabpanel"
+                                                aria-labelledby="tab-guider-tab">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <div class="card card-indigo">
+                                                            <div class="card-header">
+                                                                <div class="card-title">
+                                                                    导星
+                                                                </div>
+                                                            </div>
+                                                            <div class="card-body">
+
+
+
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="tab-pane fade" id="tab-solver" role="tabpanel"
+                                                aria-labelledby="tab-solver-tab">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <div class="card card-indigo">
+                                                            <div class="card-header">
+                                                                <div class="card-title">
+                                                                    解析
+                                                                </div>
+                                                            </div>
+                                                            <div class="card-body">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+                                        </div>
+                                    </div>
+                                    <!-- /.card -->
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <!-- Main content -->
+
+        <!-- Control Sidebar -->
+        <aside class="control-sidebar control-sidebar-dark">
+            <!-- Control sidebar content goes here -->
+        </aside>
+        <!-- /.control-sidebar -->
+    </div>
+
+    <div class="modal fade" id="ShowImageInfo" tabindex="-1" aria-labelledby="ShowImageInfoLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ShowImageInfoLabel">图像信息</h5>
+                    <button type="button" class="btn-close" data-mdb-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card card-primary">
+                                <div class="card-header">
+                                    <h3 class="card-title">
+                                        <i class="fas fa-image-polaroid"></i>
+                                        图像信息
+                                    </h3>
+                                    <div class="card-tools">
+                                        <button type="button" class="btn btn-tool" id="refresh_hfd_line">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-tool btn-sm" data-card-widget="collapse">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                    </div>
+                                    <!-- /.card-tools -->
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group bg-dark text-sm list-group-small">
+                                        <li class="list-group-item bg-dark d-flex mount-panel-item ">
+                                            <div class="col-2 p-0 text-muted text-left">
+                                                目标</div>
+                                            <div class="col-4 text-right" id="SequenceTarget"></div>
+                                            <div class="col-2 p-0 text-muted text-left" id="">
+                                                滤镜
+                                            </div>
+                                            <div class="col-4 text-right" id="Filter">
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item bg-dark d-flex mount-panel-item ">
+                                            <div class="col-2 p-0 text-muted text-left">
+                                                时间 (s)</div>
+                                            <div class="col-4 text-right" id="Expo">
+                                            </div>
+                                            <div class="col-2 p-0 text-muted text-left">
+                                                像素合并</div>
+                                            <div class="col-4 text-right" id="Bin">
+                                            </div>
+                                        </li>
+                                        <li class="list-group-item bg-dark d-flex mount-panel-item ">
+                                            <div class="col-2 p-0 text-muted text-left">
+                                                星点
+                                            </div>
+                                            <div class="col-4 text-right" id="StarIndex">
+                                            </div>
+                                            <div class="col-2 p-0 text-muted text-left">
+                                                HFD</div>
+                                            <div class="col-4 text-right" id="HFD">
+                                            </div>
+                                        </li>
+                                    </ul>
+                                    <canvas id="hfd_line"
+                                        style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal container -->
+    <div class="container">
+        <!-- Central Modal Medium Danger -->
+        <div class="modal fade" id="centralModalDanger" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-notify modal-danger" role="document">
+                <!--Content-->
+                <div class="modal-content">
+                    <!--Header-->
+                    <div class="modal-header">
+                        <p class="heading lead" id="errorModalTitle">错误信息</p>
+                        <button type="button" class="close modal-voy-btn" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true" class="white-text">&times;</span>
+                        </button>
+                    </div>
+                    <!--Body-->
+                    <div class="modal-body">
+                        <div class="text-center">
+                            <i class="fas fa-exclamation-triangle fa-4x mb-3 animated bounceIn"></i>
+                            <p id="errorMessage" class="note note-danger">
+                                未知错误
+                            </p>
+                            <p id="contactMessage" class="text-muted">
+                                <small>如果你有任何问题，请将详细细节告知开发者</small>
+                            </p>
+                        </div>
+                    </div>
+                    <!--Footer-->
+                    <div class="modal-footer justify-content-center">
+                        <a class="btn btn-outline-danger modal-voy-btn"
+                            href="mailto:astro_air@126.com,fran.dibiase@gmail.com">
+                            <i class="fas fa-envelope mr-1"></i>联系我们</a>
+                        <button type="button" class="btn btn-danger waves-effect modal-voy-btn" data-dismiss="modal">
+                            Ok
+                        </button>
+                    </div>
+                </div>
+                <!--/.Content-->
+            </div>
+        </div>
+    </div>
+    <!-- Modal container end -->
+
+    <div class="container">
+        <!-- Central Modal Medium Warning -->
+        <div class="modal fade" id="modalDoubleWarning" aria-hidden="true">
+            <div class="modal-dialog modal-notify modal-warning modal-lg" role="document">
+                <!--Content-->
+                <div class="modal-content">
+                    <!--Header-->
+                    <div class="modal-header">
+                        <p class="heading lead" id="modalWarnTit">确认操作?</p>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true" class="white-text">&times;</span>
+                        </button>
+                    </div>
+                    <!--Body-->
+                    <div class="modal-body">
+                        <div class="text-center">
+                            <i class="fas fa-question fa-4x mb-3 animated rotateIn text-danger"></i>
+                            <p id="contWarnModal" class="text-warning"></p>
+                            <p>你确定要执行这步操作吗?</p>
+                        </div>
+                    </div>
+                    <!--Footer-->
+                    <div class="modal-footer justify-content-center">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <a type="button" id="confirmDoubleWarn" class="btn btn-sm btn-warning btn-block">
+                                    确认
+                                    <i class="fas fa-check"></i>
+                                </a>
+                            </div>
+                            <div class="col-sm-6">
+                                <a type="button" class="btn btn-sm btn-outline-warning waves-effect btn-block"
+                                    data-dismiss="modal">
+                                    Nope
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--/.Content-->
+            </div>
+        </div>
+        <!-- Central Modal Medium Warning-->
+    </div>
+
+    <!-- Container Modal -->
+    <div class="container">
+        <!-- Central Modal Medium Generic info -->
+        <div class="modal fade" id="infoModalGeneric" tabindex="-1" role="dialog" aria-labelledby="myModalLabel2"
+            aria-hidden="true">
+            <div class="modal-dialog modal-notify modal-info" role="document">
+                <!--Content-->
+                <div class="modal-content">
+                    <!--Header-->
+                    <div class="modal-header">
+                        <p class="heading lead">信息</p>
+                        <button type="button" id="closeModalInfo" class="close modal-voy-btn" data-dismiss="modal"
+                            aria-label="Close">
+                            <span aria-hidden="true" class="white-text">&times;</span>
+                        </button>
+                    </div>
+
+                    <!--Body-->
+                    <div class="modal-body">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary m-5" role="status">
+                                <span class="sr-only">常规信息</span>
+                            </div>
+                            <p id="infoModalMessage" class="note note-info">
+                                常规消息...
+                            </p>
+                            <p id="genericMessageinfo" class="text-muted">
+                                <small></small>
+                            </p>
+                        </div>
+                    </div>
+                    <!--Footer-->
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-primary modal-voy-btn" data-dismiss="modal">
+                            Ok
+                        </button>
+                    </div>
+                </div>
+                <!--/.Content-->
+            </div>
+        </div>
+        <!-- Central Modal Medium Danger-->
+    </div>
+    <!-- Container Modal end -->
+
+    <!-- jQuery -->
+    <script src="/static/js/libs/jquery.min.js"></script>
+    <!-- Bootstrap 4 -->
+    <script src="/static/js/libs/bootstrap.bundle.min.js"></script>
+    <!-- AdminLTE App -->
+    <script src="/static/js/libs/adminlte.min.js"></script>
+
+    <!-- overlayScrollbars -->
+    <script src="/static/js/plugins/jquery.overlayScrollbars.min.js"></script>
+    <script>
+        $(function () {
+            $('#info_container').overlayScrollbars({});
+            $('#autofocus_offcanvas_body').overlayScrollbars({});
+        });
+    </script>
+
+    <!-- Bootstrap select -->
+    <script src="/static/js/plugins/bootstrap-select.min.js"></script>
+    <!-- Bootstrap select I18n -->
+    <script src="/static/js/plugins/bootstrap-select-zh_CN.min.js"></script>
+    <!-- Chart Js -->
+    <script src="/static/js/plugins/chart.min.js"></script>
+    <!-- Viewer -->
+    <script src="/static/js/plugins/viewer.min.js"></script>
+    <!-- Layer -->
+    <script src="/static/js/plugins/layer-3.5.1.min.js"></script>
+    <!-- MDB -->
+    <script src="/static/js/libs/mdb.min.js"></script>
+    <!-- Bootstrap5 -->
+    <script src="/static/js/libs/bootstrap5.bundle.min.js"></script>
+    <!-- Device JS -->
+    <script src="/static/js/client/devices.js"></script>
+    <!-- UI custom -->
+    <script src="/static/js/client/client.js"></script>
+
+    <script>
+        $(function () {
+            
+            $(".selectpicker").selectpicker({});
+        });
+    </script>
+
+</body>
+
+</html>

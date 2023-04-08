@@ -51,13 +51,18 @@ Description: Package Manager
 
 #include <spdlog/spdlog.h>
 
+#include "packageloader.hpp"
+
 using namespace std;
 
-class PackageManager
-{
-public:
-    // 更新软件包列表
-    bool update()
+namespace OpenAPT{
+
+    PackageManager::PackageManager()
+    {
+        spdlog::info("Package manager loaded successfully");
+    }
+
+    bool PackageManager::update()
     {
         string cmd_str = "";
         if (is_windows())
@@ -68,7 +73,8 @@ public:
         { // Linux 系统
             cmd_str = "sudo apt-get update";
         }
-        bool ret = execute_cmd(cmd_str);
+        std::vector<std::pair<std::string, std::string>> result;
+        bool ret = execute_cmd(cmd_str, &result);
         if (ret)
         {
             spdlog::info("Package list updated successfully.");
@@ -80,8 +86,7 @@ public:
         return ret;
     }
 
-    // 安装软件包
-    bool install(const string &package_name)
+    bool PackageManager::install(const string &package_name)
     {
         if (package_name.empty())
         {
@@ -98,7 +103,8 @@ public:
         { // Linux 系统
             cmd_str = "sudo apt-get install " + package_name;
         }
-        bool ret = execute_cmd(cmd_str);
+        std::vector<std::pair<std::string, std::string>> result;
+        bool ret = execute_cmd(cmd_str, &result);
         if (ret)
         {
             spdlog::info("Package {} installed successfully.", package_name);
@@ -110,8 +116,7 @@ public:
         return ret;
     }
 
-    // 卸载软件包
-    bool remove(const string &package_name)
+    bool PackageManager::remove(const string &package_name)
     {
         if (package_name.empty())
         {
@@ -128,7 +133,8 @@ public:
         { // Linux 系统
             cmd_str = "sudo apt-get remove " + package_name;
         }
-        bool ret = execute_cmd(cmd_str);
+        std::vector<std::pair<std::string, std::string>> result;
+        bool ret = execute_cmd(cmd_str, &result);
         if (ret)
         {
             spdlog::info("Package {} uninstalled successfully.", package_name);
@@ -140,8 +146,7 @@ public:
         return ret;
     }
 
-    // 搜索软件包
-    bool search(const string &keyword, vector<pair<string, string>> &result)
+    bool PackageManager::search(const string &keyword, vector<pair<string, string>> &result)
     {
         if (keyword.empty())
         {
@@ -174,16 +179,7 @@ public:
         return ret;
     }
 
-    // 安装 Windows exe
-    /**
-     * 在 Windows 上安装一个 exe 文件。支持从 URL 和本地文件路径中读取。
-     *
-     * @param url 需要下载的 exe 文件的 URL，可以为空字符串。
-     * @param local_file_path 本地 exe 文件的路径，可以为空字符串。
-     * @param local_exe_path 本地 exe 文件的完整路径，可以为空字符串。
-     * @return 如果安装成功，则返回 true；否则返回 false。
-     */
-    bool install_windows_exe(const string &url, const string &local_file_path = "", const string &local_exe_path = "")
+    bool PackageManager::install_windows_exe(const string &url, const string &local_file_path = "", const string &local_exe_path = "")
     {
         if (url.empty() && local_file_path.empty() && local_exe_path.empty())
         {
@@ -212,7 +208,8 @@ public:
                     cmd_str = "powershell -Command \"Invoke-WebRequest -UseBasicParsing -Uri '" + url + "' -OutFile 'temp.exe'\"";
                 }
             }
-            bool ret = execute_cmd(cmd_str); // 执行命令复制或下载 exe 文件。
+            std::vector<std::pair<std::string, std::string>> result;
+        bool ret = execute_cmd(cmd_str, &result); // 执行命令复制或下载 exe 文件。
             if (!ret)
             {
                 spdlog::error("Failed to copy or download exe file."); // 错误提示：复制或下载失败。
@@ -221,7 +218,7 @@ public:
 
             // 安装 exe 文件
             cmd_str = "temp.exe /S";    // 执行 temp.exe 安装命令。
-            ret = execute_cmd(cmd_str); // 执行安装命令。
+            ret = execute_cmd(cmd_str, &result); // 执行安装命令。
             if (ret)
             {
                 spdlog::info("Exe file installed successfully."); // 成功提示：exe 文件安装成功。
@@ -239,16 +236,7 @@ public:
         }
     }
 
-    /**
-     * 安装 Mac 应用程序
-     *
-     * 在 Mac 上使用 Homebrew 安装指定的应用程序。如果本地文件路径参数为空，则从 URL 下载应用程序并安装。
-     *
-     * @param url 应用程序的下载链接
-     * @param local_file_path 本地应用程序文件的路径
-     * @return 成功返回 true，失败返回 false
-     */
-    bool install_mac_app(const string &url, const string &local_file_path = "")
+    bool PackageManager::install_mac_app(const string &url, const string &local_file_path = "")
     {
         if (url.empty() && local_file_path.empty())
         {
@@ -268,12 +256,13 @@ public:
 
             // 检查是否已安装 Homebrew
             cmd_str = "which brew";
-            bool ret = execute_cmd(cmd_str);
+            std::vector<std::pair<std::string, std::string>> result;
+            bool ret = execute_cmd(cmd_str, &result);
             if (!ret)
             {
                 spdlog::info("Homebrew not detected. Installing Homebrew...");
                 cmd_str = "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"";
-                ret = execute_cmd(cmd_str);
+                ret = execute_cmd(cmd_str, &result);
                 if (!ret)
                 {
                     spdlog::error("Failed to install Homebrew.");
@@ -291,7 +280,7 @@ public:
             {
                 cmd_str = "brew install --cask " + url;
             }
-            ret = execute_cmd(cmd_str);
+            ret = execute_cmd(cmd_str, &result);
             if (ret)
             {
                 spdlog::info("Application installed successfully.");
@@ -309,9 +298,7 @@ public:
         }
     }
 
-private:
-    // 执行命令，并将结果存入 result 中
-    bool execute_cmd(const string &cmd_str, vector<pair<string, string>> *result = nullptr) const
+    bool PackageManager::execute_cmd(const string &cmd_str, vector<pair<string, string>> *result = nullptr) const
     {
         FILE *fp;
 #ifdef _WIN32
@@ -369,8 +356,7 @@ private:
         return success;
     }
 
-    // 判断包名是否合法
-    bool is_valid_package_name(const string &s) const
+    bool PackageManager::is_valid_package_name(const string &s) const
     {
         if (s.empty() || s.length() > 100)
         {
@@ -394,7 +380,7 @@ private:
     }
 
     // 判断关键词是否合法
-    bool is_valid_keyword(const string &s) const
+    bool PackageManager::is_valid_keyword(const string &s) const
     {
         if (s.empty() || s.length() > 100)
         {
@@ -413,7 +399,7 @@ private:
     }
 
     // 判断当前操作系统是否为 Windows
-    bool is_windows() const
+    bool PackageManager::is_windows() const
     {
 #ifdef _WIN32
         return true;
@@ -427,7 +413,7 @@ private:
      *
      * @return 如果当前操作系统为 macOS，则返回 true；否则返回 false。
      */
-    bool is_macos()
+    bool PackageManager::is_macos()
     {
 #ifdef __APPLE__
 #if TARGET_OS_MAC || TARGET_OS_IPHONE
@@ -436,7 +422,8 @@ private:
 #endif
         return false;
     }
-};
+}
+
 
 /*
 int main() {

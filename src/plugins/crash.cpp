@@ -429,7 +429,13 @@ namespace OpenAPT::CrashReport
 
                 // 写入日志文件
                 std::stringstream sss;
-                sss << "crash_" << std::put_time(std::localtime(&now), "%Y%m%d_%H%M%S") << ".log";
+                sss << "crash_report/crash_" << std::put_time(std::localtime(&now), "%Y%m%d_%H%M%S") << ".log";
+
+                // 检查目录是否存在，如果不存在则创建
+                std::filesystem::path dir_path("crash_report");
+                if (!std::filesystem::exists(dir_path)) {
+                    std::filesystem::create_directory(dir_path);
+                }
 
                 // 组装日志信息字符串
 

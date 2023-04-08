@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <spdlog/spdlog.h>
 
 namespace crow
 {
@@ -45,22 +46,21 @@ namespace crow
             switch (level)
             {
                 case LogLevel::Debug:
-                    prefix = "DEBUG   ";
+                    spdlog::debug("{}",message);
                     break;
                 case LogLevel::Info:
-                    prefix = "INFO    ";
+                    spdlog::info("{}",message);
                     break;
                 case LogLevel::Warning:
-                    prefix = "WARNING ";
+                    spdlog::warn("{}",message);
                     break;
                 case LogLevel::Error:
-                    prefix = "ERROR   ";
+                    spdlog::error("{}",message);
                     break;
                 case LogLevel::Critical:
-                    prefix = "CRITICAL";
+                    spdlog::critical("{}",message);
                     break;
-            }
-            std::cerr << std::string("(") + timestamp() + std::string(") [") + prefix + std::string("] ") + message << std::endl;
+            }  
         }
 
     private:

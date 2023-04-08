@@ -47,6 +47,9 @@ extern OpenAPT::ThreadManager m_ThreadManager;
     #define MODULE_HANDLE HMODULE
     #define LOAD_LIBRARY(p) LoadLibrary(p)
     #define LOAD_ERROR() GetLastError()
+    #define LOAD_SHARED_LIBRARY(file, size) LoadLibraryEx(reinterpret_cast<const char*>(file), NULL, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)
+    #define LOAD_FUNCTION(handle, name) GetProcAddress(static_cast<HMODULE>(handle), name)
+    #define CLOSE_SHARED_LIBRARY(handle) FreeLibrary(static_cast<HMODULE>(handle))
     #include <windows.h>
 #elif defined(__APPLE__)
     // macOS平台
@@ -58,8 +61,10 @@ extern OpenAPT::ThreadManager m_ThreadManager;
     // Linux和其他类UNIX平台
     #define MODULE_HANDLE void*
     #define LOAD_LIBRARY(p) dlopen(p, RTLD_NOW | RTLD_GLOBAL)
+    #define LOAD_SHARED_LIBRARY(file, size) dlopen(nullptr, RTLD_NOW | RTLD_GLOBAL)
     #define UNLOAD_LIBRARY(p) dlclose(p)
     #define LOAD_ERROR() dlerror()
+    #define LOAD_FUNCTION(handle, name) dlsym(handle, name)
     #include <dlfcn.h>
     #include <dirent.h>
     #include <unistd.h>
@@ -80,6 +85,7 @@ namespace OpenAPT {
             ModuleLoader();
             ~ModuleLoader();
             bool LoadModule(const std::string& path, const std::string& name);
+            bool LoadModule(const std::vector<char>& binary, const std::string& moduleName, const std::string& functionName);
             bool UnloadModule(const std::string& filename);
             bool LoadBinary(const char *dir_path, const char *out_path, const char *build_path, const char *lib_name);
             bool LoadPythonScript(const std::string& scriptName);
@@ -175,6 +181,7 @@ namespace OpenAPT {
                 auto sym_ptr = dlsym(handle, func_name.c_str());
                 if (!sym_ptr) {
                     spdlog::error("Failed to load symbol {}: {}", func_name, dlerror());
+                    return static_cast<T>(0);
                 }
                 FunctionPtr func_ptr = reinterpret_cast<FunctionPtr>(sym_ptr);
 

@@ -130,11 +130,14 @@ set(api_SRC
 )
 
 set(openapt_SRC
-    ${openapt_src_dir}/src/modloader.cpp
-    ${openapt_src_dir}/src/modloader.hpp
+    ${openapt_src_dir}/src/module/modloader.cpp
+    ${openapt_src_dir}/src/module/modloader.hpp
 
-    ${openapt_src_dir}/src/packageloader.cpp
-    ${openapt_src_dir}/src/packageloader.hpp
+    ${openapt_src_dir}/src/module/compiler.cpp
+    ${openapt_src_dir}/src/module/compiler.hpp
+
+    ${openapt_src_dir}/src/package/packageloader.cpp
+    ${openapt_src_dir}/src/package/packageloader.hpp
 
     ${openapt_src_dir}/src/task/define.hpp
     ${openapt_src_dir}/src/task/runner.cpp

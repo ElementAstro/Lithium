@@ -37,8 +37,9 @@ Description: Main
 #include "plugins/thread.hpp"
 #include "task/runner.hpp"
 #include "device/manager.hpp"
-#include "modloader.hpp"
+#include "module/modloader.hpp"
 #include "config/configor.hpp"
+#include "package/packageloader.hpp"
 
 extern crow::SimpleApp app;
 
@@ -47,6 +48,7 @@ extern OpenAPT::TaskManager m_TaskManager;
 extern OpenAPT::DeviceManager m_DeviceManager;
 extern OpenAPT::ModuleLoader m_ModuleLoader;
 extern OpenAPT::ConfigManager m_ConfigManager;
+extern OpenAPT::PackageManager m_PackageManager;
 
 extern bool DEBUG;
 

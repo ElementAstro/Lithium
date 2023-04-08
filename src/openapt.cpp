@@ -89,6 +89,7 @@ crow::SimpleApp app;
 #include "task/define.hpp"
 #include "config/achievement.hpp"
 #include "config/achievement_list.hpp"
+#include "module/compiler.hpp"
 
 using json = nlohmann::json;
 
@@ -97,6 +98,7 @@ OpenAPT::TaskManager m_TaskManager;
 OpenAPT::DeviceManager m_DeviceManager;
 OpenAPT::ModuleLoader m_ModuleLoader;
 OpenAPT::ConfigManager m_ConfigManager;
+OpenAPT::PackageManager m_PackageManager;
 
 bool DEBUG = true;
 
@@ -526,17 +528,6 @@ void is_network_connected()
     }
 }
 
-void LoadUrl()
-{
-    CROW_ROUTE(app, "/")
-    ([]
-     { return crow::mustache::load("index.html").render(); });
-
-    CROW_ROUTE(app, "/client")
-    ([]
-     { return crow::mustache::load("client.html").render(); });
-}
-
 void TestAll()
 {
 
@@ -618,6 +609,25 @@ void TestAll()
 
     achievements.completeAchievementByName("Astrophotography Apprentice");
     achievements.printAchievements();
+
+    Compiler compiler;
+
+    // Compile some C++ code into a module and save it to a library file
+    std::string code = R"""(
+    #include <iostream>
+    extern "C" void foo()
+    {aaaaa
+        std::cout << "Hello from foo()" << std::endl;
+    }
+    )""";
+    std::string moduleName = "MyModule";
+    std::string functionName = "foo";
+    bool success = compiler.CompileToSharedLibrary(code, moduleName, functionName);
+    if (!success)
+    {
+        std::cout << "Compilation failed" << std::endl;
+    }
+    m_ModuleLoader.LoadAndRunFunction<void>("MyModule", "foo", "foo", false);
 }
 
 void quit()
@@ -625,50 +635,50 @@ void quit()
     ::exit(1);
 }
 
-int main(int argc, char *argv[])
-{
+// 初始化应用程序
+void init_app(int argc, char* argv[], crow::SimpleApp& app) {
+    parse_args(argc, argv);
 
-    try
-    {
-        registerInterruptHandler();
+    // 设置日志级别
+    if (DEBUG) {
+        spdlog::set_level(spdlog::level::debug);
+        app.loglevel(crow::LogLevel::DEBUG);
+    } else {
+        spdlog::set_level(spdlog::level::info);
+        app.loglevel(crow::LogLevel::ERROR);
+    }
 
-        parse_args(argc, argv);
+    // 检查指定端口是否被占用
+    bool ret = CheckAndKillProgramOnPort(8000);
+    if (!ret) {
+        quit();
+    }
 
-        check_duplicate_process(argv[0]);
+    CROW_ROUTE(app, "/")
+    ([]
+     { return crow::mustache::load("index.html").render(); });
 
-        LoadUrl();
+    CROW_ROUTE(app, "/client")
+    ([]
+     { return crow::mustache::load("client.html").render(); });
 
-        if (DEBUG)
-        {
-            spdlog::set_level(spdlog::level::debug);
-            app.loglevel(crow::LogLevel::DEBUG);
-            TestAll();
-        }
-        else
-        {
-            spdlog::set_level(spdlog::level::info);
-            app.loglevel(crow::LogLevel::ERROR);
-        }
-
-        bool ret = CheckAndKillProgramOnPort(8000);
-        if (!ret)
-        {
-            quit();
-        }
-
-        CROW_WEBSOCKET_ROUTE(app, "/app")
-            .onopen([&](crow::websocket::connection &conn)
-                    { spdlog::info("WebSocket connection opened."); })
-            .onclose([&](crow::websocket::connection &conn, const std::string &reason)
-                     { spdlog::warn("WebSocket connection closed. Reason: {}", reason); })
-            .onmessage([&](crow::websocket::connection & /*conn*/, const std::string &data, bool is_binary)
-                       {
+    // 注册 WebSocket 回调函数
+    CROW_WEBSOCKET_ROUTE(app, "/app")
+        .onopen([](crow::websocket::connection& conn) {
+            spdlog::info("WebSocket connection opened.");
+        })
+        .onclose([](crow::websocket::connection& conn, const std::string& reason) {
+            spdlog::warn("WebSocket connection closed. Reason: {}", reason);
+        })
+        .onmessage([](crow::websocket::connection& /*conn*/, const std::string& data, bool is_binary) {
             try {
-                auto j = json::parse(data); // 解析 JSON
+                // 解析 JSON
+                auto j = json::parse(data);
                 std::string event = j["event"];
                 std::string message = j["message"];
-                std::string remote_event = j["remote_event"]; // 获取远程事件类型
+                std::string remote_event = j["remote_event"];
 
+                // 根据事件类型进行处理
                 if (event == "start_coroutine") {
                     spdlog::info("Starting coroutine...");
                     //co_await process_event_in_coroutine(message, remote_event);
@@ -682,14 +692,28 @@ int main(int argc, char *argv[])
                 } else {
                     spdlog::error("Invalid event type: {}", event);
                 }
-            } catch (const json::exception &e) {
+            } catch (const json::exception& e) {
                 spdlog::error("Failed to parse JSON: {}", e.what());
-            } });
+            }
+        });
+}
 
-        app.port(8000).multithreaded().run(); // 启动 Web 服务器
-    }
-    catch (const std::exception &e)
-    {
+// 启动 Web 服务器
+void start_server(int port, crow::SimpleApp& app) {
+    app.port(port).multithreaded().run();
+}
+
+// 主函数
+int main(int argc, char* argv[]) {
+    try {
+        registerInterruptHandler();
+
+        crow::SimpleApp app;
+
+        init_app(argc, argv, app);
+
+        start_server(8000, app);
+    } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         // 保存崩溃日志到文件中
         OpenAPT::CrashReport::saveCrashLog(e.what());

@@ -36,8 +36,6 @@ Description: C++ and Python Modules Loader
 
 extern OpenAPT::ThreadManager m_ThreadManager;
 
-#include <Python.h>
-
 #include <vector>
 #include <unordered_map>
 #include <cstdio>
@@ -85,11 +83,8 @@ namespace OpenAPT {
             ModuleLoader();
             ~ModuleLoader();
             bool LoadModule(const std::string& path, const std::string& name);
-            bool LoadModule(const std::vector<char>& binary, const std::string& moduleName, const std::string& functionName);
             bool UnloadModule(const std::string& filename);
             bool LoadBinary(const char *dir_path, const char *out_path, const char *build_path, const char *lib_name);
-            bool LoadPythonScript(const std::string& scriptName);
-            void UnloadPythonScript(const std::string& scriptName);
 
             template<typename T>
             T GetFunction(const std::string& module_name, const std::string& function_name);
@@ -198,16 +193,6 @@ namespace OpenAPT {
                 return static_cast<T>(0);
             }
 
-            [[deprecated("This function is deprecated. Some problems had not been solved!")]]
-            nlohmann::json getFuncList(void* handle);
-            [[deprecated("This function is deprecated. Some problems had not been solved!")]]
-            nlohmann::json getFunctionList(const std::string& module_name);
-
-            std::vector<std::string> getPythonFunctions(const std::string& scriptName);
-
-            template<typename... Args>
-            bool RunPythonFunction(const std::string& scriptName, const std::string& functionName, Args... args);
-
         public:
             void* GetHandle(const std::string& name) const {
                 auto it = handles_.find(name);
@@ -223,10 +208,6 @@ namespace OpenAPT {
             
         private:
             std::unordered_map<std::string, void*> handles_;
-
-            std::vector<std::string> functionNames_;
-
-            std::unordered_map<std::string, PyObject*> python_modules_;
     };
 }
 

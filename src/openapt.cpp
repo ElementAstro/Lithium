@@ -48,6 +48,7 @@ Description: Main
 
 #include "openapt.hpp"
 #include "plugins/crash.hpp"
+#include "plugins/terminal.hpp"
 
 #include <spdlog/spdlog.h> // 引入 spdlog 日志库
 
@@ -85,11 +86,14 @@ crow::SimpleApp app;
 
 #include "nlohmann/json.hpp"
 
+// 这些引用都只是为了测试用的
 #include "device/basic_device.hpp"
 #include "task/define.hpp"
 #include "config/achievement.hpp"
 #include "config/achievement_list.hpp"
 #include "module/compiler.hpp"
+#include "asx/search.hpp"
+#include "api/astrometry.hpp"
 
 using json = nlohmann::json;
 
@@ -99,6 +103,8 @@ OpenAPT::DeviceManager m_DeviceManager;
 OpenAPT::ModuleLoader m_ModuleLoader;
 OpenAPT::ConfigManager m_ConfigManager;
 OpenAPT::PackageManager m_PackageManager;
+OpenAPT::PyModuleLoader m_PythonLoader;
+OpenAPT::LuaScriptLoader m_LuaLoader;
 
 bool DEBUG = true;
 
@@ -528,26 +534,30 @@ void is_network_connected()
     }
 }
 
+int square(int n) { return n * n; }
+
 void TestAll()
 {
-
-    // 测试模组管理器
-
+    spdlog::debug("==========================================================================");
     spdlog::debug("The following output is just for debugging");
-
+    spdlog::debug("==========================================================================");
+    spdlog::debug("");
+    // 测试模组管理器
+    spdlog::debug("==========================================================================");
     spdlog::debug("Test ModuleLoader and some important functions :");
-
     spdlog::debug("Test Module Loading Functions : {}", m_ModuleLoader.LoadModule("modules/test/libmylib.so", "mylib"));
-
     m_ModuleLoader.LoadAndRunFunction<void>("mylib", "my_func", "test", false);
-
     // 严重bug
     // spdlog::debug("Test Get all of the functions in modules {}",m_ModuleLoader.getFunctionList("mylib").dump());
-
     spdlog::debug("Test HasModule Functions by looking for a none modules: {}", m_ModuleLoader.HasModule("fuckyou"));
+    spdlog::debug("Finished test ModuleLoader");
+    spdlog::debug("==========================================================================");
 
+    spdlog::debug("");
+
+    spdlog::debug("==========================================================================");
+    spdlog::debug("Test TaskManager and some important functions :");
     // 测试任务管理器
-
     std::shared_ptr<OpenAPT::ConditionalTask> conditionalTask(new OpenAPT::ConditionalTask(
         []()
         { spdlog::info("conditional task executed!"); },
@@ -557,50 +567,45 @@ void TestAll()
             spdlog::info("Conditon function was called!");
             return params["threshold"].get<int>() > 5;
         }));
-
     m_TaskManager.addTask(conditionalTask);
-
     m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print"));
-
     m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTaska", "Just a test", {}, "mylib", "my_func"));
-
     m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}}));
-
     m_TaskManager.executeAllTasks();
+    spdlog::debug("Finished testing TaskManager");
+    spdlog::debug("==========================================================================");
 
+    spdlog::debug("");
+
+    spdlog::debug("==========================================================================");
     spdlog::debug("Test DeviceManager and some important functions :");
-
     // 测试设备调度
-
     m_DeviceManager.addDevice(OpenAPT::DeviceType::Camera, "Camera1");
-
     auto cameraList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Camera);
-    std::cout << "相机列表: ";
     for (auto &name : cameraList)
-    {
-        std::cout << name << " ";
-    }
-    std::cout << std::endl;
+        spdlog::debug("Found Camera name {}",name);
+    spdlog::debug("Finished testing DeviceManager");
+    spdlog::debug("==========================================================================");
 
-    auto telescopeList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Telescope);
-    std::cout << "望远镜列表: ";
-    for (auto &name : telescopeList)
-    {
-        std::cout << name << " ";
-    }
-    std::cout << std::endl;
+    spdlog::debug("");
 
+    spdlog::debug("==========================================================================");
+    spdlog::debug("Test ConfigManager and some important functions :");
     // 测试配置管理器
     m_ConfigManager.setValue("key1", "value1");
     m_ConfigManager.setValue("key2/inner_key", 3.1415926);
     spdlog::info("Get value of key2/inner_key: {}", m_ConfigManager.getValue("key2/inner_key").dump());
     m_ConfigManager.printAllValues();
+    spdlog::debug("==========================================================================");
 
+    spdlog::debug("");
+
+    spdlog::debug("==========================================================================");
+    spdlog::debug("Test AchievementManager and some important functions :");
     auto achievement1 = std::make_shared<OpenAPT::AAchievement::Achievement>("Astronomy 101", "Complete an introductory astronomy course.");
     auto achievement2 = std::make_shared<OpenAPT::AAchievement::Achievement>("Astrophotography Apprentice", "Take your first astrophotograph.");
     auto achievement3 = std::make_shared<OpenAPT::AAchievement::Achievement>("Messier Marathon", "Observe all 110 Messier objects in one night.");
     auto achievement4 = std::make_shared<OpenAPT::AAchievement::Achievement>("Deep Sky Hunter", "Find and observe at least 100 deep sky objects.");
-
     OpenAPT::AAchievement::AchievementList achievements;
     achievements.addAchievement(achievement1);
     achievements.addAchievement(achievement2);
@@ -609,14 +614,18 @@ void TestAll()
 
     achievements.completeAchievementByName("Astrophotography Apprentice");
     achievements.printAchievements();
+    spdlog::debug("==========================================================================");
 
+    spdlog::debug("");
+
+    spdlog::debug("==========================================================================");
+    spdlog::debug("Test Compiler and some important functions :");
     Compiler compiler;
-
     // Compile some C++ code into a module and save it to a library file
     std::string code = R"""(
     #include <iostream>
     extern "C" void foo()
-    {aaaaa
+    {
         std::cout << "Hello from foo()" << std::endl;
     }
     )""";
@@ -628,6 +637,65 @@ void TestAll()
         std::cout << "Compilation failed" << std::endl;
     }
     m_ModuleLoader.LoadAndRunFunction<void>("MyModule", "foo", "foo", false);
+
+    spdlog::debug("==========================================================================");
+
+    spdlog::debug("");
+
+    spdlog::debug("==========================================================================");
+    spdlog::debug("Test Python Module Loader and some important functions :");
+    m_PythonLoader.load_local_module("mymodule");
+    m_PythonLoader.get_all_functions("mymodule");
+    m_PythonLoader.set_variable("mymodule", "my_var", 42);
+    /*
+    // 在Python中调用C++函数square
+    int cpp_result = m_PythonLoader.call_function<int>("mymodule", "square", 7);
+    std::cout << "C++ square result: " << cpp_result << std::endl;
+    spdlog::debug("call");
+    // 在Python中调用C++函数cpp_func
+    m_PythonLoader.set_variable("mymodule", "cpp_func", square);
+    auto py_call_cpp_func = m_PythonLoader.get_function<PyObject *(*)(PyObject *)>("mymodule", "call_cpp_func");
+    if (py_call_cpp_func)
+    {
+        PyObject *py_args = Py_BuildValue("i", 8);
+        PyObject *py_ret = py_call_cpp_func(py_args);
+        if (py_ret)
+        {
+            int py_func_result;
+            if (PyArg_Parse(py_ret, "i", &py_func_result))
+            { // 解析返回值并赋值给py_func_result
+                std::cout << "Python function call_cpp_func returned: " << py_func_result << std::endl;
+            }
+            else
+            {
+                std::cerr << "Failed to parse function return value" << std::endl;
+            }
+            Py_DECREF(py_ret);
+        }
+        else
+        {
+            PyErr_Print();
+            PyErr_Clear();
+        }
+        Py_DECREF(py_args);
+        Py_XDECREF(py_call_cpp_func);
+    }
+    else
+    {
+        m_PythonLoader.unload_module("mymodule");
+        return;
+    }
+    */
+    
+
+    m_PythonLoader.unload_module("mymodule");
+    spdlog::debug("==========================================================================");
+
+    spdlog::debug("");
+
+    spdlog::debug("==========================================================================");
+    nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
+    spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
 }
 
 void quit()
@@ -636,21 +704,27 @@ void quit()
 }
 
 // 初始化应用程序
-void init_app(int argc, char* argv[], crow::SimpleApp& app) {
+void init_app(int argc, char *argv[], crow::SimpleApp &app)
+{
     parse_args(argc, argv);
 
     // 设置日志级别
-    if (DEBUG) {
+    if (DEBUG)
+    {
         spdlog::set_level(spdlog::level::debug);
         app.loglevel(crow::LogLevel::DEBUG);
-    } else {
+        TestAll();
+    }
+    else
+    {
         spdlog::set_level(spdlog::level::info);
         app.loglevel(crow::LogLevel::ERROR);
     }
 
     // 检查指定端口是否被占用
     bool ret = CheckAndKillProgramOnPort(8000);
-    if (!ret) {
+    if (!ret)
+    {
         quit();
     }
 
@@ -664,13 +738,12 @@ void init_app(int argc, char* argv[], crow::SimpleApp& app) {
 
     // 注册 WebSocket 回调函数
     CROW_WEBSOCKET_ROUTE(app, "/app")
-        .onopen([](crow::websocket::connection& conn) {
-            spdlog::info("WebSocket connection opened.");
-        })
-        .onclose([](crow::websocket::connection& conn, const std::string& reason) {
-            spdlog::warn("WebSocket connection closed. Reason: {}", reason);
-        })
-        .onmessage([](crow::websocket::connection& /*conn*/, const std::string& data, bool is_binary) {
+        .onopen([](crow::websocket::connection &conn)
+                { spdlog::info("WebSocket connection opened."); })
+        .onclose([](crow::websocket::connection &conn, const std::string &reason)
+                 { spdlog::warn("WebSocket connection closed. Reason: {}", reason); })
+        .onmessage([](crow::websocket::connection & /*conn*/, const std::string &data, bool is_binary)
+                   {
             try {
                 // 解析 JSON
                 auto j = json::parse(data);
@@ -694,18 +767,20 @@ void init_app(int argc, char* argv[], crow::SimpleApp& app) {
                 }
             } catch (const json::exception& e) {
                 spdlog::error("Failed to parse JSON: {}", e.what());
-            }
-        });
+            } });
 }
 
 // 启动 Web 服务器
-void start_server(int port, crow::SimpleApp& app) {
+void start_server(int port, crow::SimpleApp &app)
+{
     app.port(port).multithreaded().run();
 }
 
 // 主函数
-int main(int argc, char* argv[]) {
-    try {
+int main(int argc, char *argv[])
+{
+    try
+    {
         registerInterruptHandler();
 
         crow::SimpleApp app;
@@ -713,7 +788,9 @@ int main(int argc, char* argv[]) {
         init_app(argc, argv, app);
 
         start_server(8000, app);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Error: " << e.what() << std::endl;
         // 保存崩溃日志到文件中
         OpenAPT::CrashReport::saveCrashLog(e.what());

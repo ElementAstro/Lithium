@@ -180,8 +180,6 @@ namespace OpenAPT
     ModuleLoader::ModuleLoader()
     {
         spdlog::info("C++ module manager loaded successfully.");
-        Py_Initialize();
-        spdlog::info("Python module manager loaded successfully.");
     }
 
     ModuleLoader::~ModuleLoader()
@@ -193,15 +191,6 @@ namespace OpenAPT
                 UNLOAD_LIBRARY(entry.second);
             }
         }
-
-        if (!python_modules_.empty())
-        {
-            for (auto &[scriptName, moduleObj] : python_modules_)
-            {
-                Py_DECREF(moduleObj);
-            }
-        }
-        Py_Finalize();
     }
 
     /**
@@ -514,98 +503,6 @@ namespace OpenAPT
         return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
     }
 
-    [[deprecated("This function is deprecated. Some problems had not been solved!")]] nlohmann::json ModuleLoader::getFuncList(void *handle)
-    {
-        Dl_info info;
-        if (!dladdr(handle, &info))
-        {
-            spdlog::error("Failed to get symbols for module: {}", dlerror());
-            return {};
-        }
-        auto symtab = reinterpret_cast<const Elf64_Sym *>(info.dli_saddr);
-        auto strtab = reinterpret_cast<const char *>(info.dli_fname);
-
-        nlohmann::json func_list;
-        for (auto i = 0u; symtab[i].st_name != 0; ++i)
-        {
-            auto sym_name = strtab + symtab[i].st_name;
-
-            // 使用 dlsym 获取函数指针并生成描述函数的 JSON 对象
-            auto sym_ptr = dlsym(handle, sym_name);
-            if (!sym_ptr)
-            {
-                spdlog::error("Failed to load symbol {}: {}", sym_name, dlerror());
-                continue;
-            }
-
-            nlohmann::json func_desc;
-            func_desc["name"] = sym_name;
-
-            spdlog::debug("Function name : {}", sym_name);
-
-            std::function<void()> func;
-            // 使用 std::function 和 lambda 表达式获取函数签名
-            if constexpr (std::is_same_v<decltype(sym_ptr), void (*)(int)>)
-            { // 支持 void 类型函数
-                func = [=]()
-                { reinterpret_cast<void (*)(int)>(sym_ptr)(0); };
-                func_desc["return_type"] = ""; // 空字符串表示返回值类型为空
-            }
-            else if constexpr (std::is_same_v<decltype(sym_ptr), int (*)(int)>)
-            { // 支持 int 类型函数
-                func = [=]()
-                { reinterpret_cast<int (*)(int)>(sym_ptr)(0); };
-                func_desc["return_type"] = "int";
-            }
-            else if constexpr (std::is_same_v<decltype(sym_ptr), double (*)(double)>)
-            { // 支持 double 类型函数
-                func = [=]()
-                { reinterpret_cast<double (*)(double)>(sym_ptr)(0.0); };
-                func_desc["return_type"] = "double";
-            }
-            else
-            {
-                spdlog::warn("Unsupported function type for {}", sym_name);
-                continue;
-            }
-
-            auto args_desc = getArgsDesc(handle, sym_name);
-
-            func_desc["args"] = args_desc;
-
-            func_list.push_back(std::move(func_desc));
-        }
-
-        nlohmann::json result;
-        result["functions"] = std::move(func_list);
-        return result;
-    }
-
-    /**
-     * @brief 获取指定模块中的所有函数及需要传入的参数类型
-     *
-     * @param module_name 要获取函数列表的模块名
-     * @return nlohmann::json 返回一个 JSON 对象，包含函数列表及参数类型
-     */
-    [[deprecated("This function is deprecated. Some problems had not been solved!")]] nlohmann::json ModuleLoader::getFunctionList(const std::string &module_name)
-    {
-        if (!HasModule(module_name))
-        {
-            if (LoadModule("modules/" + module_name + "/" + module_name + ".so", module_name))
-            {
-                spdlog::info("Loaded {}", module_name);
-            }
-            else
-            {
-                spdlog::error("Failed to load {}", module_name);
-                return {};
-            }
-        }
-
-        const auto &handle = GetHandle(module_name);
-        return getFuncList(handle);
-    }
-
     // 判断是否有该模块
     bool ModuleLoader::HasModule(const std::string &name) const
     {
@@ -666,137 +563,5 @@ namespace OpenAPT
             result.push_back(std::move(currentArgType));
         }
         return result;
-    }
-
-    /**
-     * @brief 加载Python脚本
-     *
-     * @param scriptName Python脚本的文件名
-     * @return true 加载成功
-     * @return false 加载失败
-     */
-    bool ModuleLoader::LoadPythonScript(const std::string &scriptName)
-    {
-        PyObject *pModule = PyImport_ImportModule(scriptName.c_str());
-        if (!pModule)
-        {
-            spdlog::error("Failed to load Python module: {}", scriptName);
-            PyErr_Print(); // 输出异常信息
-            return false;
-        }
-        python_modules_[scriptName] = pModule;
-        return true;
-    }
-
-    /**
-     * @brief 卸载Python脚本
-     *
-     * @param scriptName Python脚本的文件名
-     */
-    void ModuleLoader::UnloadPythonScript(const std::string &scriptName)
-    {
-        auto iter = python_modules_.find(scriptName);
-        if (iter != python_modules_.end())
-        {
-            Py_DECREF(iter->second);
-            python_modules_.erase(iter);
-        }
-    }
-
-    /**
-     * @brief 获取Python脚本中定义的所有函数名
-     *
-     * @param scriptName Python脚本的文件名
-     * @return std::vector<std::string> 所有函数名列表
-     */
-    std::vector<std::string> ModuleLoader::getPythonFunctions(const std::string &scriptName)
-    {
-        std::vector<std::string> result;
-
-        auto iter = python_modules_.find(scriptName);
-        if (iter == python_modules_.end())
-        {
-            spdlog::error("Script not found: {}", scriptName);
-            PyErr_Print(); // 输出异常信息
-            return result;
-        }
-
-        PyObject *pDict = PyModule_GetDict(iter->second);
-        if (!pDict)
-        {
-            spdlog::error("Failed to get dictionary of module: {}", scriptName);
-            PyErr_Print(); // 输出异常信息
-            return result;
-        }
-
-        PyObject *pKey, *pValue;
-        Py_ssize_t pos = 0;
-
-        while (PyDict_Next(pDict, &pos, &pKey, &pValue))
-        {
-            if (PyCallable_Check(pValue))
-            {
-                PyObject *pStr = PyObject_Str(pKey);
-                if (!pStr)
-                {
-                    PyErr_Print(); // 输出异常信息
-                    continue;
-                }
-                std::string functionName = PyUnicode_AsUTF8(pStr);
-                result.push_back(functionName);
-                Py_DECREF(pStr);
-            }
-        }
-
-        return result;
-    }
-
-    /**
-     * @brief 调用Python脚本中的函数
-     *
-     * @tparam Args 函数参数列表
-     * @param scriptName Python脚本的文件名
-     * @param functionName 函数名
-     * @param args 函数参数列表
-     * @return true 调用成功
-     * @return false 调用失败
-     */
-    template <typename... Args>
-    bool ModuleLoader::RunPythonFunction(const std::string &scriptName, const std::string &functionName, Args... args)
-    {
-        auto iter = python_modules_.find(scriptName);
-        if (iter == python_modules_.end())
-        {
-            spdlog::error("Error: Script not found: {}", scriptName);
-            return false;
-        }
-
-        PyObject *pModule = iter->second;
-        PyObject *pFunc = PyObject_GetAttrString(pModule, functionName.c_str());
-        if (!pFunc || !PyCallable_Check(pFunc))
-        {
-            spdlog::error("Error: Function not found: {}", functionName);
-            Py_XDECREF(pFunc);
-            return false;
-        }
-
-        PyObject *pArgs = PyTuple_New(sizeof...(args));
-        int i = 0;
-        (void)std::initializer_list<int>{(PyTuple_SetItem(pArgs, i++, Py_BuildValue("d", args)), 0)...};
-
-        PyObject *pResult = PyObject_CallObject(pFunc, pArgs);
-        if (!pResult)
-        {
-            PyErr_Print();
-            Py_XDECREF(pFunc);
-            Py_XDECREF(pArgs);
-            return false;
-        }
-
-        Py_XDECREF(pFunc);
-        Py_XDECREF(pArgs);
-        Py_XDECREF(pResult);
-
-        return true;
     }
 }

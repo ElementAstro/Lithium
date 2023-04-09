@@ -38,6 +38,8 @@ Description: Main
 #include "task/runner.hpp"
 #include "device/manager.hpp"
 #include "module/modloader.hpp"
+#include "module/lualoader.hpp"
+#include "module/pythonloader.hpp"
 #include "config/configor.hpp"
 #include "package/packageloader.hpp"
 
@@ -49,6 +51,8 @@ extern OpenAPT::DeviceManager m_DeviceManager;
 extern OpenAPT::ModuleLoader m_ModuleLoader;
 extern OpenAPT::ConfigManager m_ConfigManager;
 extern OpenAPT::PackageManager m_PackageManager;
+extern OpenAPT::PyModuleLoader m_PythonLoader;
+extern OpenAPT::LuaScriptLoader m_LuaLoader;
 
 extern bool DEBUG;
 

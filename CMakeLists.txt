@@ -84,6 +84,7 @@ project(openapt)
 
 add_subdirectory(libs/)
 add_subdirectory(libs/pugixml)
+add_subdirectory(libs/lua)
 
 add_subdirectory(modules)
 
@@ -115,23 +116,43 @@ set(plugins_SRC
 
     ${openapt_src_dir}/src/plugins/crash.cpp
     ${openapt_src_dir}/src/plugins/crash.hpp
+
+    ${openapt_src_dir}/src/plugins/terminal.cpp
+    ${openapt_src_dir}/src/plugins/terminal.hpp
 )
 
 set(image_SRC
     ${openapt_src_dir}/src/image/image.cpp
 )
 
+set(asx_SRC
+    ${openapt_src_dir}/src/asx/search.cpp
+    ${openapt_src_dir}/src/asx/search.hpp
+)
+
 set(api_SRC
     ${openapt_src_dir}/src/api/astap.cpp
     ${openapt_src_dir}/src/api/astap.hpp
+
+    ${openapt_src_dir}/src/api/astrometry.cpp
+    ${openapt_src_dir}/src/api/astrometry.hpp
 
     ${openapt_src_dir}/src/api/indiclient.cpp
     ${openapt_src_dir}/src/api/indiclient.hpp
 )
 
+set(indi_SRC
+)
+
 set(openapt_SRC
     ${openapt_src_dir}/src/module/modloader.cpp
     ${openapt_src_dir}/src/module/modloader.hpp
+
+    ${openapt_src_dir}/src/module/lualoader.cpp
+    ${openapt_src_dir}/src/module/lualoader.hpp
+
+    ${openapt_src_dir}/src/module/pythonloader.cpp
+    ${openapt_src_dir}/src/module/pythonloader.hpp
 
     ${openapt_src_dir}/src/module/compiler.cpp
     ${openapt_src_dir}/src/module/compiler.hpp
@@ -162,7 +183,7 @@ set(openapt_SRC
 
 if(UNIX)
   # should be linux there
-  add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${openapt_SRC})
+  add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
   
   # Use consistent formatting for target_precompile_headers
   target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
@@ -203,6 +224,9 @@ if(UNIX)
   else()
     message("-- OpenSSL Not Found")
   endif()
+
+  find_package(SQLite3 REQUIRED)
+  target_link_libraries(openapt sqlite3)
   
   # Find and link spdlog libraries
   find_package(spdlog REQUIRED)
@@ -211,6 +235,8 @@ if(UNIX)
   # Link ZLIB and pugixml-static libraries
   target_link_libraries(openapt ${ZLIB_LIBRARIES})
   target_link_libraries(openapt pugixml-static)
+
+  target_link_libraries(openapt lua)
 
   # Set output name for openapt executable
   set_target_properties(

@@ -56,7 +56,7 @@ namespace OpenAPT::AAchievement
     void AchievementList::addAchievement(const std::shared_ptr<Achievement> &achievement)
     {
         m_achievements.emplace_back(achievement);
-        spdlog::info("Achievement {} added to ", achievement->getName());
+        spdlog::debug("Achievement {} added to ", achievement->getName());
         writeToFile();
     }
 
@@ -70,7 +70,7 @@ namespace OpenAPT::AAchievement
         if (it != m_achievements.end())
         {
             m_achievements.erase(it);
-            spdlog::info("Achievement {} removed from ", name);
+            spdlog::debug("Achievement {} removed from ", name);
             writeToFile();
         }
     }
@@ -85,7 +85,7 @@ namespace OpenAPT::AAchievement
         if (it != m_achievements.end())
         {
             (*it) = achievement;
-            spdlog::info("Achievement {} modified.", name);
+            spdlog::debug("Achievement {} modified.", name);
             writeToFile();
         }
     }
@@ -117,11 +117,11 @@ namespace OpenAPT::AAchievement
 
     void AchievementList::printAchievements() const
     {
-        spdlog::info("Achievements:");
+        spdlog::debug("Achievements:");
         for (const auto &achievement : m_achievements)
         {
             std::string status = achievement->isCompleted() ? "Completed" : "Incomplete";
-            spdlog::info("\tName: {}, Description: {}, Status: {}", achievement->getName(), achievement->getDescription(), status);
+            spdlog::debug("\tName: {}, Description: {}, Status: {}", achievement->getName(), achievement->getDescription(), status);
         }
     }
 
@@ -166,7 +166,7 @@ namespace OpenAPT::AAchievement
             m_achievements.emplace_back(Achievement::from_json(item));
         }
 
-        spdlog::info("Achievements read from file {}.", m_filename);
+        spdlog::debug("Achievements read from file {}.", m_filename);
     }
 
 }

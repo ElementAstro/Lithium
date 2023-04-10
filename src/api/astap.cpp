@@ -101,7 +101,7 @@ namespace OpenAPT::API::ASTAP
         }
 #endif
 
-        spdlog::info("The file '{}' exists and is executable.", file_path.string());
+        spdlog::debug("The file '{}' exists and is executable.", file_path.string());
         return true;
     }
 

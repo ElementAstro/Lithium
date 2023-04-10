@@ -51,7 +51,7 @@ using json = nlohmann::json;
 
 bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string& moduleName, const std::string& functionName)
 {
-    spdlog::info("Compiling module {}::{}...", moduleName, functionName);
+    spdlog::debug("Compiling module {}::{}...", moduleName, functionName);
 
     // 参数校验
     if (code.empty() || moduleName.empty() || functionName.empty())
@@ -64,7 +64,7 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     auto cachedResult = cache_.find(moduleName + "::" + functionName);
     if (cachedResult != cache_.end())
     {
-        spdlog::info("Module {}::{} is already compiled, returning cached result.", moduleName, functionName);
+        spdlog::warn("Module {}::{} is already compiled, returning cached result.", moduleName, functionName);
         return true;
     }
 
@@ -72,7 +72,7 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     std::string outputDir = "modules/global/";
     if (!std::filesystem::exists(outputDir))
     {
-        spdlog::info("Output directory does not exist, creating it: {}", outputDir);
+        spdlog::warn("Output directory does not exist, creating it: {}", outputDir);
         if (!std::filesystem::create_directories(outputDir))
         {
             spdlog::error("Failed to create output directory.");

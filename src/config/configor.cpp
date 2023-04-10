@@ -165,7 +165,7 @@ namespace OpenAPT
     {
         if (value.is_object())
         {
-            spdlog::info("{}:", key);
+            spdlog::debug("{}:", key);
             for (auto &[sub_key, sub_value] : value.items())
             {
                 std::stringstream ss;
@@ -175,7 +175,7 @@ namespace OpenAPT
         }
         else
         {
-            spdlog::info("{}: {}", key, value.dump());
+            spdlog::debug("{}: {}", key, value.dump());
         }
     }
 
@@ -193,38 +193,3 @@ namespace OpenAPT
         return tokens;
     }
 }
-
-/*
-int main() {
-    // 初始化日志记录器
-    spdlog::info("Program starts.");
-
-    // 初始化配置管理器
-    ConfigManager config;
-
-    // 如果存在用户自定义配置文件夹，则读取其中所有配置文件，覆盖默认配置
-    if (fs::exists("custom_config")) {
-        if (fs::is_directory("custom_config")) {
-    spdlog::info("Loading custom configurations...");
-    config.loadFromDir("custom_config",true);
-        } else {
-    spdlog::error("custom_config is not a directory.");
-        }
-    }
-
-    // 添加或更新、获取及删除一些配置项
-    config.setValue("key1", "value1");
-    config.setValue("key2/inner_key", 3.1415926);
-    spdlog::info("Get value of key2/inner_key: {}", config.getValue("key2/inner_key").dump());
-    spdlog::info("Get value of key2/inner_key: {}", config.getValue("aaa/test/test/test").dump());
-
-    // 打印当前所有配置项
-    config.printAllValues();
-
-    // 保存配置到文件
-    config.saveToFile("config.json");
-
-    spdlog::info("Program ends.");
-    return 0;
-}
-*/

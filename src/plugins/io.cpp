@@ -45,7 +45,7 @@ namespace OpenAPT::File
         try
         {
             fs::create_directory(path);
-            spdlog::info("Directory created: {}", path);
+            spdlog::debug("Directory created: {}", path);
             return true;
         }
         catch (const std::exception &ex)
@@ -60,7 +60,7 @@ namespace OpenAPT::File
         try
         {
             fs::remove_all(path);
-            spdlog::info("Directory removed: {}", path);
+            spdlog::debug("Directory removed: {}", path);
             return true;
         }
         catch (const std::exception &ex)
@@ -75,7 +75,7 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            spdlog::info("Directory renamed from {} to {}", old_path, new_path);
+            spdlog::debug("Directory renamed from {} to {}", old_path, new_path);
             return true;
         }
         catch (const std::exception &ex)
@@ -90,7 +90,7 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            spdlog::info("Directory moved from {} to {}", old_path, new_path);
+            spdlog::debug("Directory moved from {} to {}", old_path, new_path);
             return true;
         }
         catch (const std::exception &ex)
@@ -105,7 +105,7 @@ namespace OpenAPT::File
         try
         {
             fs::copy_file(src_path, dst_path);
-            spdlog::info("File copied from {} to {}", src_path, dst_path);
+            spdlog::debug("File copied from {} to {}", src_path, dst_path);
             return true;
         }
         catch (const std::exception &ex)
@@ -120,7 +120,7 @@ namespace OpenAPT::File
         try
         {
             fs::rename(src_path, dst_path);
-            spdlog::info("File moved from {} to {}", src_path, dst_path);
+            spdlog::debug("File moved from {} to {}", src_path, dst_path);
             return true;
         }
         catch (const std::exception &ex)
@@ -135,7 +135,7 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            spdlog::info("File renamed from {} to {}", old_path, new_path);
+            spdlog::debug("File renamed from {} to {}", old_path, new_path);
             return true;
         }
         catch (const std::exception &ex)
@@ -150,7 +150,7 @@ namespace OpenAPT::File
         try
         {
             fs::remove(path);
-            spdlog::info("File removed: {}", path);
+            spdlog::debug("File removed: {}", path);
             return true;
         }
         catch (const std::exception &ex)
@@ -165,7 +165,7 @@ namespace OpenAPT::File
         try
         {
             fs::create_symlink(target_path, symlink_path);
-            spdlog::info("Symlink created from {} to {}", target_path, symlink_path);
+            spdlog::debug("Symlink created from {} to {}", target_path, symlink_path);
             return true;
         }
         catch (const std::exception &ex)
@@ -180,7 +180,7 @@ namespace OpenAPT::File
         try
         {
             fs::remove(path);
-            spdlog::info("Symlink removed: {}", path);
+            spdlog::debug("Symlink removed: {}", path);
             return true;
         }
         catch (const std::exception &ex)
@@ -211,11 +211,11 @@ namespace OpenAPT::File
             {
                 if (fs::is_directory(entry))
                 {
-                    spdlog::info("Directory: {}", entry.path().string());
+                    spdlog::debug("Directory: {}", entry.path().string());
                 }
                 else
                 {
-                    spdlog::info("File: {}", entry.path().string());
+                    spdlog::debug("File: {}", entry.path().string());
                 }
             }
         }

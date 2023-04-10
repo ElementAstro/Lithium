@@ -188,7 +188,7 @@ namespace OpenAPT::Image
     void crop_image(CImg<unsigned char> &img, int x, int y, int w, int h)
     {
         // 调用CImg库提供的crop()函数进行图像裁剪，并输出调试日志
-        spdlog::info("Crop the image to ({}, {}), width = {}, height = {}.", x, y, w, h);
+        spdlog::debug("Crop the image to ({}, {}), width = {}, height = {}.", x, y, w, h);
         img.crop(x, y, x + w - 1, y + h - 1);
     }
 
@@ -201,7 +201,7 @@ namespace OpenAPT::Image
     void rotate_image(CImg<unsigned char> &img, float angle)
     {
         // 调用CImg库提供的rotate()函数进行图像旋转，并输出调试日志
-        spdlog::info("Rotate the image by {} degrees.", angle);
+        spdlog::debug("Rotate the image by {} degrees.", angle);
         img.rotate(angle);
     }
 
@@ -246,7 +246,7 @@ namespace OpenAPT::Image
     std::vector<int> compute_histogram(CImg<unsigned char> &img)
     {
         // 使用vector<int>存储图像直方图，并输出调试日志
-        spdlog::info("Compute the histogram of the image.");
+        spdlog::debug("Compute the histogram of the image.");
         std::vector<int> hist(256, 0);
         cimg_forXY(img, x, y)
         {
@@ -269,7 +269,7 @@ namespace OpenAPT::Image
         CImg<unsigned char> new_img(new_width, new_height, 1, img.spectrum());
 
         // 对每个新像素点，计算与原图像对应的多个像素的平均值，并输出调试日志
-        spdlog::info("Compress the image with ratio {}.", compress_ratio);
+        spdlog::debug("Compress the image with ratio {}.", compress_ratio);
         cimg_forXY(new_img, x, y)
         {
             int sum_r = 0, sum_g = 0, sum_b = 0, count = 0;
@@ -311,7 +311,7 @@ namespace OpenAPT::Image
     {
         float kernel[9] = {1, 2, 1, 2, 4, 2, 1, 2, 1};
         CImg<float> filter(kernel, 3, 3);
-        spdlog::info("Apply Gaussian filter to the image.");
+        spdlog::debug("Apply Gaussian filter to the image.");
         return image.get_convolve(filter);
     }
 
@@ -325,7 +325,7 @@ namespace OpenAPT::Image
     {
         float kernel[9] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
         CImg<float> filter(kernel, 3, 3);
-        spdlog::info("Apply mean filter to the image.");
+        spdlog::debug("Apply mean filter to the image.");
         return image.get_convolve(filter);
     }
 
@@ -339,7 +339,7 @@ namespace OpenAPT::Image
     {
         float kernel[9] = {-1, -1, -1, -1, 9, -1, -1, -1, -1};
         CImg<float> filter(kernel, 3, 3);
-        spdlog::info("Apply sharpen filter to the image.");
+        spdlog::debug("Apply sharpen filter to the image.");
         return image.get_convolve(filter);
     }
 
@@ -376,7 +376,7 @@ namespace OpenAPT::Image
     void detect_stars(const char *filename, int threshold, int max_radius)
     {
         // 读取图像并记录日志
-        spdlog::info("Loading image: {}", filename);
+        spdlog::debug("Loading image: {}", filename);
         CImg<unsigned char> img(filename);
 
         // 转换成灰度图像
@@ -414,7 +414,7 @@ namespace OpenAPT::Image
                 }
             }
         }
-        spdlog::info("Finished detecting {} stars in image: {}", count, filename);
+        spdlog::debug("Finished detecting {} stars in image: {}", count, filename);
     }
 
     /**

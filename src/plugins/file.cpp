@@ -60,7 +60,7 @@ bool FileManager::createFile(const std::string &filename)
     }
     outfile.close();
     std::fclose(std::fopen(filename.c_str(), "a")); // create a link to the file
-    spdlog::info("Created file \"{}\"", filename);
+    spdlog::debug("Created file \"{}\"", filename);
     return true;
 }
 
@@ -78,7 +78,7 @@ bool FileManager::openFile(const std::string &filename)
         spdlog::error("Could not open file \"{}\"!", filename);
         return false;
     }
-    spdlog::info("Opened file \"{}\"", filename);
+    spdlog::debug("Opened file \"{}\"", filename);
     return true;
 }
 
@@ -92,7 +92,7 @@ bool FileManager::readFile(std::string &contents)
     std::stringstream buffer;
     buffer << m_file.rdbuf();
     contents = buffer.str();
-    spdlog::info("Read contents of file \"{}\"", m_filename);
+    spdlog::debug("Read contents of file \"{}\"", m_filename);
     return true;
 }
 
@@ -104,7 +104,7 @@ bool FileManager::writeFile(const std::string &contents)
         return false;
     }
     m_file << contents;
-    spdlog::info("Wrote contents to file \"{}\"", m_filename);
+    spdlog::debug("Wrote contents to file \"{}\"", m_filename);
     return true;
 }
 
@@ -126,7 +126,7 @@ bool FileManager::moveFile(const std::string &oldFilename, const std::string &ne
         spdlog::error("Could not move file \"{}\" to \"{}\"!", oldFilename, newFilename);
         return false;
     }
-    spdlog::info("Moved file from \"{}\" to \"{}\"", oldFilename, newFilename);
+    spdlog::debug("Moved file from \"{}\" to \"{}\"", oldFilename, newFilename);
     return true;
 }
 
@@ -142,7 +142,7 @@ bool FileManager::deleteFile(const std::string &filename)
         spdlog::error("Could not delete file \"{}\"!", filename);
         return false;
     }
-    spdlog::info("Deleted file \"{}\"", filename);
+    spdlog::debug("Deleted file \"{}\"", filename);
     return true;
 }
 
@@ -162,7 +162,7 @@ long FileManager::getFileSize()
     }
     else
     {
-        spdlog::info("File size of \"{}\" is {} bytes", m_filename, fileSize);
+        spdlog::debug("File size of \"{}\" is {} bytes", m_filename, fileSize);
     }
     return fileSize;
 }
@@ -188,7 +188,7 @@ std::string FileManager::calculateMD5()
     {
         md5Stream << std::setw(2) << static_cast<int>(buffer[i]);
     }
-    spdlog::info("MD5 value for file \"{}\" is {}", m_filename, md5Stream.str());
+    spdlog::debug("MD5 value for file \"{}\" is {}", m_filename, md5Stream.str());
     return md5Stream.str();
 }
 
@@ -203,7 +203,7 @@ std::string FileManager::getFileDirectory(const std::string &filename)
     else
     {
         std::string directory = filename.substr(0, pos);
-        spdlog::info("Directory of file \"{}\" is \"{}\"", filename, directory);
+        spdlog::debug("Directory of file \"{}\" is \"{}\"", filename, directory);
         return directory;
     }
 }

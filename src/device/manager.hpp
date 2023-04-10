@@ -35,25 +35,109 @@ Description: Device Manager
 
 #include <string>
 #include <vector>
+#include <mutex>
 #include <functional>
 
 namespace OpenAPT {
 
+    /**
+     * @brief The DeviceManager class manages a collection of devices and provides methods for device management.
+     *
+     * DeviceManager类管理一组设备，并提供了设备管理的方法。
+     */
     class DeviceManager {
-        public:
-            DeviceManager();
-            ~DeviceManager();
+    public:
+        /**
+         * @brief Constructs a DeviceManager object.
+         *
+         * 构造一个DeviceManager对象。
+         */
+        DeviceManager();
 
-            std::vector<std::string> getDeviceList(DeviceType type);
-            bool addDevice(DeviceType type, const std::string& name);
-            bool removeDevice(DeviceType type, const std::string& name);
-            void removeDevicesByName(const std::string& name);
-            std::shared_ptr<Device> getDevice(DeviceType type, const std::string& name);
-            int findDevice(DeviceType type, const std::string& name);
-            std::shared_ptr<Device> findDeviceByName(const std::string& name) const;
+        /**
+         * @brief Destroys the DeviceManager object.
+         *
+         * 销毁DeviceManager对象。
+         */
+        ~DeviceManager();
 
-        private:
-            std::vector<std::shared_ptr<Device>> m_devices[6];
+        /**
+         * @brief Gets a list of device names of the specified type.
+         *
+         * 获取指定类型的设备名称列表。
+         *
+         * @param type The type of the device to get the list of.
+         * @return A vector of device names of the specified type.
+         */
+        std::vector<std::string> getDeviceList(DeviceType type);
+
+        /**
+         * @brief Adds a new device of the specified type with the specified name.
+         *
+         * 添加指定名称和类型的新设备。
+         *
+         * @param type The type of the device to add.
+         * @param name The name of the device to add.
+         */
+        void addDevice(DeviceType type, const std::string& name);
+
+        /**
+         * @brief Removes the device with the specified name and type.
+         *
+         * 移除指定名称和类型的设备。
+         *
+         * @param type The type of the device to remove.
+         * @param name The name of the device to remove.
+         */
+        void removeDevice(DeviceType type, const std::string& name);
+
+        /**
+         * @brief Removes all devices with the specified name.
+         *
+         * 移除所有指定名称的设备。
+         *
+         * @param name The name of the devices to remove.
+         */
+        void removeDevicesByName(const std::string& name);
+
+        /**
+         * @brief Gets the device with the specified name and type.
+         *
+         * 获取指定名称和类型的设备。
+         *
+         * @param type The type of the device to get.
+         * @param name The name of the device to get.
+         * @return A shared pointer to the device with the specified name and type, or nullptr if not found.
+         */
+        std::shared_ptr<Device> getDevice(DeviceType type, const std::string& name);
+
+        /**
+         * @brief Finds the index of the device with the specified name and type.
+         *
+         * 查找指定名称和类型的设备索引。
+         *
+         * @param type The type of the device to find.
+         * @param name The name of the device to find.
+         * @return The index of the device with the specified name and type, or -1 if not found.
+         */
+        size_t findDevice(DeviceType type, const std::string& name);
+
+        /**
+         * @brief Finds the device with the specified name.
+         *
+         * 查找指定名称的设备。
+         *
+         * @param name The name of the device to find.
+         * @return A shared pointer to the device with the specified name, or nullptr if not found.
+         */
+        std::shared_ptr<Device> findDeviceByName(const std::string& name) const;
+
+        std::shared_ptr<Camera> getCamera(const std::string& name);
+
+    private:
+        std::vector<std::shared_ptr<Device>> m_devices[6]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.
+    
+        std::mutex m_mutex;
     };
 
 }

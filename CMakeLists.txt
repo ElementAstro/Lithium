@@ -142,6 +142,8 @@ set(api_SRC
 )
 
 set(indi_SRC
+    ${openapt_src_dir}/src/indi/indicamera.cpp
+    ${openapt_src_dir}/src/indi/indicamera.hpp
 )
 
 set(openapt_SRC
@@ -160,6 +162,8 @@ set(openapt_SRC
     ${openapt_src_dir}/src/package/packageloader.cpp
     ${openapt_src_dir}/src/package/packageloader.hpp
 
+    ${openapt_src_dir}/src/task/camera_task.cpp
+    ${openapt_src_dir}/src/task/camera_task.hpp
     ${openapt_src_dir}/src/task/define.hpp
     ${openapt_src_dir}/src/task/runner.cpp
     ${openapt_src_dir}/src/task/runner.hpp

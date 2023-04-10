@@ -94,6 +94,7 @@ crow::SimpleApp app;
 #include "module/compiler.hpp"
 #include "asx/search.hpp"
 #include "api/astrometry.hpp"
+#include "task/camera_task.hpp"
 
 using json = nlohmann::json;
 
@@ -264,7 +265,7 @@ bool CheckAndKillProgramOnPort(int port)
             // 如果获取到了 PID，则杀死该进程
             if (!pid_str.empty())
             {
-                spdlog::info("Killing the process on port({}): PID={}", port, pid_str);
+                spdlog::debug("Killing the process on port({}): PID={}", port, pid_str);
                 ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
                 if (ret != 0)
                 {
@@ -273,7 +274,7 @@ bool CheckAndKillProgramOnPort(int port)
                     WSACleanup();
                     return false;
                 }
-                spdlog::info("The process({}) is killed successfully", pid_str);
+                spdlog::debug("The process({}) is killed successfully", pid_str);
             }
             else
             {
@@ -339,7 +340,7 @@ bool CheckAndKillProgramOnPort(int port)
             // 如果获取到了 PID，则杀死该进程
             if (!pid_str.empty())
             {
-                spdlog::info("Killing the process on port({}): PID={}", port, pid_str);
+                spdlog::debug("Killing the process on port({}): PID={}", port, pid_str);
                 int ret = std::system(fmt::format("kill {}", pid_str).c_str());
                 if (ret != 0)
                 {
@@ -347,7 +348,7 @@ bool CheckAndKillProgramOnPort(int port)
                     close(sockfd);
                     return false;
                 }
-                spdlog::info("The process({}) is killed successfully", pid_str);
+                spdlog::debug("The process({}) is killed successfully", pid_str);
             }
             else
             {
@@ -388,7 +389,7 @@ void check_duplicate_process(const std::string &program_name)
         std::string name = pe.szExeFile;
         if (name == program_name)
         {
-            spdlog::info("Found duplicate {} process with PID {}", program_name, pe.th32ProcessID);
+            spdlog::warn("Found duplicate {} process with PID {}", program_name, pe.th32ProcessID);
             HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
             if (hProcess == NULL)
             {
@@ -449,7 +450,7 @@ void check_duplicate_process(const std::string &program_name)
 
     for (auto pid : pids)
     {
-        spdlog::info("Found duplicate {} process with PID {}", program_name, pid);
+        spdlog::warn("Found duplicate {} process with PID {}", program_name, pid);
         if (kill(pid, SIGTERM) != 0)
         {
             spdlog::error("kill failed: {}", strerror(errno));
@@ -560,13 +561,23 @@ void TestAll()
     // 测试任务管理器
     std::shared_ptr<OpenAPT::ConditionalTask> conditionalTask(new OpenAPT::ConditionalTask(
         []()
-        { spdlog::info("conditional task executed!"); },
+        { spdlog::debug("conditional task executed!"); },
         {{"threshold", 10}},
         [](const json &params) -> bool
         {
-            spdlog::info("Conditon function was called!");
+            spdlog::debug("Conditon function was called!");
             return params["threshold"].get<int>() > 5;
         }));
+    std::shared_ptr<OpenAPT::SingleShotTask> SingleShotT(new OpenAPT::SingleShotTask(
+        [](const nlohmann::json &params) 
+        { 
+            std::cout << "Single shot task is running." << std::endl;
+            std::cout << "The parameters are: " << params.dump() << std::endl;
+        }, 
+        {{"threshold", 10}}
+    ));
+
+    m_TaskManager.addTask(SingleShotT);
     m_TaskManager.addTask(conditionalTask);
     m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print"));
     m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTaska", "Just a test", {}, "mylib", "my_func"));
@@ -594,7 +605,7 @@ void TestAll()
     // 测试配置管理器
     m_ConfigManager.setValue("key1", "value1");
     m_ConfigManager.setValue("key2/inner_key", 3.1415926);
-    spdlog::info("Get value of key2/inner_key: {}", m_ConfigManager.getValue("key2/inner_key").dump());
+    spdlog::debug("Get value of key2/inner_key: {}", m_ConfigManager.getValue("key2/inner_key").dump());
     m_ConfigManager.printAllValues();
     spdlog::debug("==========================================================================");
 
@@ -694,8 +705,9 @@ void TestAll()
     spdlog::debug("");
 
     spdlog::debug("==========================================================================");
-    nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
-    spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
+    //nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
+    //spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
+
 }
 
 void quit()
@@ -739,7 +751,7 @@ void init_app(int argc, char *argv[], crow::SimpleApp &app)
     // 注册 WebSocket 回调函数
     CROW_WEBSOCKET_ROUTE(app, "/app")
         .onopen([](crow::websocket::connection &conn)
-                { spdlog::info("WebSocket connection opened."); })
+                { spdlog::debug("WebSocket connection opened."); })
         .onclose([](crow::websocket::connection &conn, const std::string &reason)
                  { spdlog::warn("WebSocket connection closed. Reason: {}", reason); })
         .onmessage([](crow::websocket::connection & /*conn*/, const std::string &data, bool is_binary)
@@ -751,20 +763,6 @@ void init_app(int argc, char *argv[], crow::SimpleApp &app)
                 std::string message = j["message"];
                 std::string remote_event = j["remote_event"];
 
-                // 根据事件类型进行处理
-                if (event == "start_coroutine") {
-                    spdlog::info("Starting coroutine...");
-                    //co_await process_event_in_coroutine(message, remote_event);
-                } else if (event == "start_thread") {
-                    spdlog::info("Starting thread...");
-                    //std::thread t(process_event_in_thread, message);
-                    //t.detach();
-                } else if (event == "start_process") {
-                    spdlog::info("Starting process...");
-                    //std::system("python my_script.py");
-                } else {
-                    spdlog::error("Invalid event type: {}", event);
-                }
             } catch (const json::exception& e) {
                 spdlog::error("Failed to parse JSON: {}", e.what());
             } });

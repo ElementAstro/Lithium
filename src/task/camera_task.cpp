@@ -1,8 +1,8 @@
 /*
- * basic_device.cpp
- * 
+ * camera_task.cpp
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,39 +15,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
-Date: 2023-3-29
- 
-Description: Basic Device Definitions
- 
+
+Date: 2023-3-28
+
+Description: Define All of the Camera Tasks
+
 **************************************************/
 
-#include <iostream>
-#include <vector>
-#include <string>
-
-#include "basic_device.hpp"
+#include "camera_task.hpp"
 
 namespace OpenAPT
-{   
-    Device::Device(const std::string& name) {
-        _name = name;
+{
+    SingleShotTask::SingleShotTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : SimpleTask(func, params)
+    {
+
     }
-
-    Device::~Device() {}
-
-    Camera::Camera(const std::string& name) : Device(name) {}
-
-    Camera::~Camera() {}
-
-    Telescope::Telescope(const std::string& name) : Device(name) {}
-
-    Telescope::~Telescope() {}
 } // namespace OpenAPT

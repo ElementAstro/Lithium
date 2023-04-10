@@ -75,6 +75,10 @@ namespace OpenAPT
         void setPriority(int priority) { m_priority = priority; }
         int getPriority() const { return m_priority; }
 
+        // Accessor and mutator for the canExecute flag
+        void setCanExecute(bool canExecute) { m_canExecute = canExecute; }
+        bool canExecute() const { return m_canExecute; }
+
     protected:
         // True if the task is completed
         bool m_done = false;
@@ -93,6 +97,9 @@ namespace OpenAPT
 
         // Task description
         std::string m_description;
+
+        // True if the task can be executed
+        bool m_canExecute = true;
     };
 
     // Conditional task that executes a function based on a condition

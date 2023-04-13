@@ -412,6 +412,41 @@ namespace OpenAPT {
     {
         return true;
     }
+
+    std::shared_ptr<OpenAPT::SimpleTask> INDICamera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    {
+        if (task_name == "SingleShot") {
+            spdlog::debug("SingleShot task with parameters : {}",params.dump());
+            return std::shared_ptr<OpenAPT::SimpleTask> (new OpenAPT::SimpleTask(
+                [](const nlohmann::json &tparams)
+                {
+                    spdlog::debug("INDI Camera SingleShot task is called");
+                },
+                {params}));
+        }
+        else if (task_name == "GetGain")
+        {
+            return std::shared_ptr<OpenAPT::SimpleTask> (new OpenAPT::SimpleTask(
+                [](const nlohmann::json &tparams)
+                {
+                    spdlog::debug("INDI Camera SingleShot task is called");
+                },
+                {params}));
+        }
+        
+        spdlog::error("Unknown type of the INDI Camera task : {}",task_name);
+        return nullptr;
+    }
+
+    std::shared_ptr<OpenAPT::ConditionalTask> INDICamera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    {
+        return nullptr;
+    }
+
+    std::shared_ptr<OpenAPT::LoopTask> INDICamera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    {
+        return nullptr;
+    }
 }
 
 #endif

@@ -88,7 +88,8 @@ std::vector<ProcessInfo> GetProcessList() {
         FILE* file = fopen(path, "r");
         if (!file) continue;
         char buf[kBufSize];
-        fgets(buf, sizeof(buf), file);
+        if (fgets(buf, sizeof(buf), file) == NULL) {
+        }
         fclose(file);
         std::string cmd(buf);
         auto pos = cmd.find('\0');

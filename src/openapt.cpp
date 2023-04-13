@@ -52,8 +52,6 @@ Description: Main
 
 #include <spdlog/spdlog.h> // 引入 spdlog 日志库
 
-crow::SimpleApp app;
-
 #include <fstream>
 #include <vector>
 #include <memory>
@@ -86,6 +84,8 @@ crow::SimpleApp app;
 
 #include "nlohmann/json.hpp"
 
+#include "webapi/http_api.hpp"
+
 // 这些引用都只是为了测试用的
 #include "device/basic_device.hpp"
 #include "task/define.hpp"
@@ -95,9 +95,12 @@ crow::SimpleApp app;
 #include "asx/search.hpp"
 #include "api/astrometry.hpp"
 #include "task/camera_task.hpp"
+#include "indi/indicamera.hpp"
+#include "asx/search.hpp"
 
 using json = nlohmann::json;
 
+crow::SimpleApp app;
 OpenAPT::ThreadManager m_ThreadManager;
 OpenAPT::TaskManager m_TaskManager;
 OpenAPT::DeviceManager m_DeviceManager;
@@ -431,7 +434,10 @@ void check_duplicate_process(const std::string &program_name)
         if (cmd_file)
         {
             char cmdline[1024];
-            fgets(cmdline, sizeof(cmdline), cmd_file);
+            if (fgets(cmdline, sizeof(cmdline), cmd_file) == NULL)
+            {
+                spdlog::error("Failed to get pids");
+            }
             fclose(cmd_file);
             std::string name = cmdline;
             if (name == program_name)
@@ -539,125 +545,157 @@ int square(int n) { return n * n; }
 
 void TestAll()
 {
-    spdlog::debug("==========================================================================");
-    spdlog::debug("The following output is just for debugging");
-    spdlog::debug("==========================================================================");
-    spdlog::debug("");
-    // 测试模组管理器
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test ModuleLoader and some important functions :");
-    spdlog::debug("Test Module Loading Functions : {}", m_ModuleLoader.LoadModule("modules/test/libmylib.so", "mylib"));
+    spdlog::debug("ModuleManager Testing");
+    spdlog::debug("--------------------------------------------------------------");
+
+    spdlog::debug("Testing ModuleLoader and some important functions:");
+    spdlog::debug("Load module: {}", m_ModuleLoader.LoadModule("modules/test/libmylib.so", "mylib"));
+
+    spdlog::debug("Load and run function: ");
     m_ModuleLoader.LoadAndRunFunction<void>("mylib", "my_func", "test", false);
+
     // 严重bug
-    // spdlog::debug("Test Get all of the functions in modules {}",m_ModuleLoader.getFunctionList("mylib").dump());
-    spdlog::debug("Test HasModule Functions by looking for a none modules: {}", m_ModuleLoader.HasModule("fuckyou"));
-    spdlog::debug("Finished test ModuleLoader");
-    spdlog::debug("==========================================================================");
+    // spdlog::debug("Get all of the functions in modules {}",m_ModuleLoader.getFunctionList("mylib").dump());
 
-    spdlog::debug("");
+    spdlog::debug("HasModule Testing: ");
+    spdlog::debug("Check if module 'fuckyou' exists: {}", m_ModuleLoader.HasModule("fuckyou"));
 
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test TaskManager and some important functions :");
-    // 测试任务管理器
-    std::shared_ptr<OpenAPT::ConditionalTask> conditionalTask(new OpenAPT::ConditionalTask(
-        []()
-        { spdlog::debug("conditional task executed!"); },
-        {{"threshold", 10}},
-        [](const json &params) -> bool
-        {
-            spdlog::debug("Conditon function was called!");
-            return params["threshold"].get<int>() > 5;
-        }));
-    std::shared_ptr<OpenAPT::SingleShotTask> SingleShotT(new OpenAPT::SingleShotTask(
-        [](const nlohmann::json &params) 
-        { 
-            std::cout << "Single shot task is running." << std::endl;
-            std::cout << "The parameters are: " << params.dump() << std::endl;
-        }, 
-        {{"threshold", 10}}
-    ));
+    spdlog::debug("Finished testing ModuleLoader");
+    spdlog::debug("--------------------------------------------------------------");
 
-    m_TaskManager.addTask(SingleShotT);
+    spdlog::debug("TaskManager Testing");
+    spdlog::debug("--------------------------------------------------------------");
+
+    spdlog::debug("Testing SimpleTask:");
+    auto simpleTask = m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print");
+    m_TaskManager.addTask(simpleTask);
+    spdlog::debug("SimpleTask added");
+
+    spdlog::debug("Testing ConditionalTask:");
+    auto conditionalTask = m_TaskManager.m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}});
     m_TaskManager.addTask(conditionalTask);
-    m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print"));
-    m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTaska", "Just a test", {}, "mylib", "my_func"));
-    m_TaskManager.addTask(m_TaskManager.m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}}));
+    spdlog::debug("ConditionalTask added");
+
+    spdlog::debug("Execute all tasks:");
     m_TaskManager.executeAllTasks();
+
     spdlog::debug("Finished testing TaskManager");
-    spdlog::debug("==========================================================================");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("");
+    spdlog::debug("DeviceManager Testing");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test DeviceManager and some important functions :");
-    // 测试设备调度
-    m_DeviceManager.addDevice(OpenAPT::DeviceType::Camera, "Camera1");
+    spdlog::debug("Testing addDevice and getDeviceList:");
+    m_DeviceManager.addDevice(OpenAPT::DeviceType::Camera, "CCD Simulator");
     auto cameraList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Camera);
     for (auto &name : cameraList)
-        spdlog::debug("Found Camera name {}",name);
+        spdlog::debug("Found Camera name {}", name);
+
+    spdlog::debug("Testing findDeviceByName:");
+    auto device1 = m_DeviceManager.findDeviceByName("CCD Simulator");
+
+    if (device1 != nullptr)
+    {
+        spdlog::debug("Connecting to device {}...", device1->getName());
+        auto connectResult = device1->connect("CCD Simulator");
+        if (true)
+        {
+            auto camera = std::dynamic_pointer_cast<OpenAPT::INDICamera>(device1);
+            if (camera)
+            {
+                spdlog::debug("Found device {} as a Camera", device1->getName());
+                spdlog::debug("Testing captureImage:");
+                m_TaskManager.addTask(camera->getSimpleTask("SingleShot", {}));
+                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "SingleShot"));
+                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "GetGain"));
+                m_TaskManager.executeAllTasks();
+            }
+            else
+            {
+                // 转换失败，设备不是 Camera 类型，无法调用 captureImage() 函数
+                spdlog::error("Device {} is not a Camera", device1->getName());
+            }
+        }
+        else
+        {
+            spdlog::error("Failed to connect to device {}", device1->getName());
+        }
+    }
+    else
+    {
+        spdlog::error("Can't find device CCD Simulator");
+    }
+
     spdlog::debug("Finished testing DeviceManager");
-    spdlog::debug("==========================================================================");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("");
+    spdlog::debug("ConfigManager Testing");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test ConfigManager and some important functions :");
-    // 测试配置管理器
+    spdlog::debug("Testing setValue and getValue:");
     m_ConfigManager.setValue("key1", "value1");
     m_ConfigManager.setValue("key2/inner_key", 3.1415926);
     spdlog::debug("Get value of key2/inner_key: {}", m_ConfigManager.getValue("key2/inner_key").dump());
+
+    spdlog::debug("Testing printAllValues:");
     m_ConfigManager.printAllValues();
-    spdlog::debug("==========================================================================");
 
-    spdlog::debug("");
+    spdlog::debug("Finished testing ConfigManager");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test AchievementManager and some important functions :");
-    auto achievement1 = std::make_shared<OpenAPT::AAchievement::Achievement>("Astronomy 101", "Complete an introductory astronomy course.");
-    auto achievement2 = std::make_shared<OpenAPT::AAchievement::Achievement>("Astrophotography Apprentice", "Take your first astrophotograph.");
-    auto achievement3 = std::make_shared<OpenAPT::AAchievement::Achievement>("Messier Marathon", "Observe all 110 Messier objects in one night.");
-    auto achievement4 = std::make_shared<OpenAPT::AAchievement::Achievement>("Deep Sky Hunter", "Find and observe at least 100 deep sky objects.");
-    OpenAPT::AAchievement::AchievementList achievements;
-    achievements.addAchievement(achievement1);
-    achievements.addAchievement(achievement2);
-    achievements.addAchievement(achievement3);
-    achievements.addAchievement(achievement4);
+    spdlog::debug("AchievementManager Testing");
+    spdlog::debug("--------------------------------------------------------------");
 
-    achievements.completeAchievementByName("Astrophotography Apprentice");
-    achievements.printAchievements();
-    spdlog::debug("==========================================================================");
+    spdlog::debug("Testing add and complete achievement:");
 
-    spdlog::debug("");
+    spdlog::debug("Printing all achievements:");
 
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test Compiler and some important functions :");
+    spdlog::debug("Finished testing AchievementManager");
+    spdlog::debug("--------------------------------------------------------------");
+
+    spdlog::debug("Compiler Testing");
+    spdlog::debug("--------------------------------------------------------------");
+
+    spdlog::debug("Testing CompileToSharedLibrary and LoadAndRunFunction:");
     Compiler compiler;
-    // Compile some C++ code into a module and save it to a library file
+
     std::string code = R"""(
     #include <iostream>
     extern "C" void foo()
     {
-        std::cout << "Hello from foo()" << std::endl;
+    std::cout << "Hello from foo()" << std::endl;
     }
     )""";
     std::string moduleName = "MyModule";
     std::string functionName = "foo";
     bool success = compiler.CompileToSharedLibrary(code, moduleName, functionName);
-    if (!success)
+    if (success)
     {
-        std::cout << "Compilation failed" << std::endl;
+        spdlog::debug("Compilation succeeded");
+        m_ModuleLoader.LoadAndRunFunction<void>("MyModule", "foo", "foo", false);
     }
-    m_ModuleLoader.LoadAndRunFunction<void>("MyModule", "foo", "foo", false);
+    else
+    {
+        spdlog::error("Compilation failed");
+    }
 
-    spdlog::debug("==========================================================================");
+    spdlog::debug("Finished testing Compiler");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("");
+    spdlog::debug("Python Module Loader Testing");
+    spdlog::debug("--------------------------------------------------------------");
 
-    spdlog::debug("==========================================================================");
-    spdlog::debug("Test Python Module Loader and some important functions :");
+    spdlog::debug("Testing load_local_module:");
     m_PythonLoader.load_local_module("mymodule");
+
+    spdlog::debug("Testing get_all_functions:");
     m_PythonLoader.get_all_functions("mymodule");
+
+    spdlog::debug("Testing set_variable:");
     m_PythonLoader.set_variable("mymodule", "my_var", 42);
+
+    spdlog::debug("Finished testing Python Module Loader");
+    spdlog::debug("--------------------------------------------------------------");
     /*
     // 在Python中调用C++函数square
     int cpp_result = m_PythonLoader.call_function<int>("mymodule", "square", 7);
@@ -697,16 +735,10 @@ void TestAll()
         return;
     }
     */
-    
 
     m_PythonLoader.unload_module("mymodule");
-    spdlog::debug("==========================================================================");
-
-    spdlog::debug("");
-
-    spdlog::debug("==========================================================================");
-    //nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
-    //spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
+    // nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
+    // spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
 
 }
 
@@ -740,13 +772,7 @@ void init_app(int argc, char *argv[], crow::SimpleApp &app)
         quit();
     }
 
-    CROW_ROUTE(app, "/")
-    ([]
-     { return crow::mustache::load("index.html").render(); });
-
-    CROW_ROUTE(app, "/client")
-    ([]
-     { return crow::mustache::load("client.html").render(); });
+    OpenAPT::init_handler(app);
 
     // 注册 WebSocket 回调函数
     CROW_WEBSOCKET_ROUTE(app, "/app")

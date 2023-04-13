@@ -45,41 +45,84 @@ namespace OpenAPT
         TaskGenerator() {}
 
         /**
-         * @brief 生成一个简单任务
+         * @brief 根据指定参数生成一个任务。
+         * @param taskType 任务类型（simple/conditional/loop）
          * @param taskName 任务名称
          * @param description 任务描述
          * @param params 任务参数
-         * @return 生成的带执行时间和描述信息的基础任务指针
-         * @details Generates a new simple task with the specified name, description, and parameters.
+         * @param moduleName 动态链接库名称（可选，默认为空）
+         * @param funcName 函数名称（可选，默认为空）
+         * @return 生成的带执行时间和描述信息的基础任务指针，如果生成失败则返回 nullptr。
+         * @details 根据指定的任务类型，生成对应的任务。如果指定的任务类型未知，则返回 nullptr。
          */
-        std::shared_ptr<BasicTask> generateSimpleTask(const std::string &taskName,
-                                                      const std::string &description, const nlohmann::json &params, const std::string &module_name,
-                                                      const std::string &func_name);
+        std::shared_ptr<BasicTask> generateTask(const std::string &taskType, const std::string &taskName, const std::string &description, const nlohmann::json &params, const std::string &moduleName, const std::string &funcName);
 
         /**
-         * @brief 生成一个条件判断任务
+         * @brief 生成一个简单任务。
          * @param taskName 任务名称
          * @param description 任务描述
          * @param params 任务参数
-         * @return 生成的带执行时间和描述信息的基础任务指针
-         * @details Generates a new conditional task with the specified name, description, and parameters.
+         * @param moduleName 动态链接库名称（可选，默认为空）
+         * @param funcName 函数名称（可选，默认为空）
+         * @return 生成的带执行时间和描述信息的基础任务指针，如果生成失败则返回 nullptr。
+         * @details 根据指定的参数，生成一个简单任务。如果生成失败，则返回 nullptr。
+         */
+        std::shared_ptr<BasicTask> generateSimpleTask(const std::string &taskName, const std::string &description, const nlohmann::json &params, const std::string &moduleName = "", const std::string &funcName = "");
+
+        /**
+         * @brief 生成一个条件判断任务。
+         * @param taskName 任务名称
+         * @param description 任务描述
+         * @param params 任务参数
+         * @return 生成的带执行时间和描述信息的基础任务指针，如果生成失败则返回 nullptr。
+         * @details 根据指定的参数，生成一个条件判断任务。如果生成失败，则返回 nullptr。
          */
         std::shared_ptr<BasicTask> generateConditionalTask(const std::string &taskName, const std::string &description, const nlohmann::json &params);
 
         /**
-         * @brief 生成一个循环任务
+         * @brief 生成一个循环任务。
          * @param taskName 任务名称
          * @param description 任务描述
          * @param params 任务参数
-         * @return 生成的带执行时间和描述信息的基础任务指针
-         * @details Generates a new loop task with the specified name, description, and parameters.
+         * @return 生成的带执行时间和描述信息的基础任务指针，如果生成失败则返回 nullptr。
+         * @details 根据指定的参数，生成一个循环任务。如果生成失败，则返回 nullptr。
          */
         std::shared_ptr<BasicTask> generateLoopTask(const std::string &taskName, const std::string &description, const nlohmann::json &params);
 
-        // 从 JSON 文件中加载任务
+        /**
+         * @brief 读取 JSON 文件。
+         * @param filePath 文件路径
+         * @param tasksJson 存储 JSON 数据的对象
+         * @return 如果成功读取文件，则返回 true，否则返回 false。
+         * @details 读取指定路径下的 JSON 文件，并将其解析成 json 对象。如果文件路径不存在或文件格式错误，则返回 false。
+         */
+        bool readJsonFile(const std::string &filePath, nlohmann::json &tasksJson);
+        
+        /**
+         * @brief 根据 JSON 字符串生成任务。
+         * @param tasksJson 存储任务 JSON 数据的对象
+         * @return 生成的基础任务指针列表
+         * @details 根据传入的 JSON 数据，生成对应的任务。如果生成失败，则返回空列表。
+         */
+        std::vector<std::shared_ptr<BasicTask>> generateTasksFromJson(const nlohmann::json &tasksJson);
+
+        /**
+         * @brief 从 JSON 文件中加载任务。
+         * @param filePath 文件路径
+         * @return 生成的基础任务指针列表
+         * @details 从指定的 JSON 文件中加载任务。如果文件路径不存在或文件格式错误，则返回空列表。
+         */
         std::vector<std::shared_ptr<BasicTask>> generateTasksFromFile(const std::string &filePath);
 
     private:
+
+        /**
+         * @brief 计算字符串的哈希值。
+         * @param str 字符串指针
+         * @param value 初始哈希值（可选，默认为0）
+         * @return 字符串的哈希值
+         * @details 计算输入字符串的哈希值，采用快速哈希算法（FNV-1a）。
+         */
         constexpr std::size_t hash(const char *str, std::size_t value = 0) const noexcept
         {
             return (str[0] == '\0') ? value : hash(&str[1], (value ^ std::size_t(str[0])) * 0x100000001b3);

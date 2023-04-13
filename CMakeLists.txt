@@ -88,6 +88,8 @@ add_subdirectory(libs/lua)
 
 add_subdirectory(modules)
 
+add_subdirectory(src/indi)
+
 include_directories(${CMAKE_SOURCE_DIR}/libs/crow)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_SOURCE_DIR}/src/)
@@ -119,6 +121,9 @@ set(plugins_SRC
 
     ${openapt_src_dir}/src/plugins/terminal.cpp
     ${openapt_src_dir}/src/plugins/terminal.hpp
+
+    ${openapt_src_dir}/src/plugins/sha256.hpp
+    ${openapt_src_dir}/src/plugins/glob.hpp
 )
 
 set(image_SRC
@@ -141,6 +146,11 @@ set(api_SRC
     ${openapt_src_dir}/src/api/indiclient.hpp
 )
 
+set(webapi_SRC
+    ${openapt_src_dir}/src/webapi/http_api.cpp
+    ${openapt_src_dir}/src/webapi/http_api.hpp
+)
+
 set(indi_SRC
     ${openapt_src_dir}/src/indi/indicamera.cpp
     ${openapt_src_dir}/src/indi/indicamera.hpp
@@ -158,6 +168,9 @@ set(openapt_SRC
 
     ${openapt_src_dir}/src/module/compiler.cpp
     ${openapt_src_dir}/src/module/compiler.hpp
+
+    ${openapt_src_dir}/src/package/downloader.cpp
+    ${openapt_src_dir}/src/package/downloader.hpp
 
     ${openapt_src_dir}/src/package/packageloader.cpp
     ${openapt_src_dir}/src/package/packageloader.hpp
@@ -187,7 +200,7 @@ set(openapt_SRC
 
 if(UNIX)
   # should be linux there
-  add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
+  add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
   
   # Use consistent formatting for target_precompile_headers
   target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
@@ -203,6 +216,10 @@ if(UNIX)
   find_package(INDI 2.0.0 REQUIRED)
   include_directories(${INDI_INCLUDE_DIR})
   target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
+
+  find_package(CURL REQUIRED)
+  target_link_libraries(openapt CURL::libcurl)
+
   
   # Check if Python is installed
   find_package(Python REQUIRED COMPONENTS Development)

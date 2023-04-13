@@ -40,20 +40,14 @@ namespace OpenAPT::ASX
 
     int Callback(void *data, int argc, char **argv, char **col_name)
     {
+        if (argc != 6) {
+            return SQLITE_OK;
+        }
         auto &result = *static_cast<std::vector<Data> *>(data);
 
-        for (int i = 0; i < argc; ++i)
-        {
-            if (argv[i] == nullptr)
-            {
-                return SQLITE_OK;
-            }
-        }
         result.emplace_back(Data{atoi(argv[0]), argv[1], argv[2], argv[3], argv[4],argv[5]});
         return SQLITE_OK;
     }
-
-
 
     sqlite3 *OpenDatabase(std::string db_name)
     {
@@ -72,54 +66,81 @@ namespace OpenAPT::ASX
     {
         std::vector<Data> data;
         std::string sql = "SELECT * FROM objects";
-        char *err_msg = nullptr;
-        int rc = sqlite3_exec(db, sql.c_str(), Callback, &data, &err_msg);
-        if (rc != SQLITE_OK)
-        {
-            spdlog::error("Failed to read from database: {}", err_msg);
+        sqlite3_stmt *stmt;
+        int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
+            return data;
         }
-        else
-        {
-            spdlog::debug("Read from database successfully");
+
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            int id = sqlite3_column_int(stmt, 0);
+            std::string name(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
+            std::string type(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2)));
+            std::string ra(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 3)));
+            std::string dec(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 4)));
+            std::string constellation(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 5)));
+            data.emplace_back(Data{id, name, type, ra, dec, constellation});
         }
+
+        sqlite3_finalize(stmt);
+
+        spdlog::debug("Read from database successfully");
         return data;
     }
 
     void InsertData(sqlite3 *db, const Data &d)
     {
-        std::string sql = "INSERT INTO objects (name, type, ra, dec, constellation) VALUES ('" +
-                          d.Name + "', '" + d.Type + "', '" + d.RA + "', '" + d.Dec + "', '" + d.Const + "')";
-        char *err_msg = nullptr;
-        int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
-        if (rc != SQLITE_OK)
-        {
-            spdlog::error("Failed to insert data into database: {}", err_msg);
+        sqlite3_stmt *stmt;
+        std::string sql = "INSERT INTO objects (name, type, ra, dec, constellation) VALUES (?, ?, ?, ?, ?)";
+        int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
+            return;
         }
-        else
-        {
+
+        sqlite3_bind_text(stmt, 1, d.Name.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 2, d.Type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 3, d.RA.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 4, d.Dec.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 5, d.Const.c_str(), -1, SQLITE_TRANSIENT);
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            spdlog::error("Failed to insert data into database: {}", sqlite3_errmsg(db));
+        } else {
             spdlog::debug("Inserted data into database successfully");
         }
+
+        sqlite3_finalize(stmt);
     }
 
     void DeleteData(sqlite3 *db, const std::string &name)
     {
-        std::string sql = "DELETE FROM objects WHERE name = '" + name + "'";
-        char *err_msg = nullptr;
-        int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
-        if (rc != SQLITE_OK)
-        {
-            spdlog::error("Failed to delete data from database: {}", err_msg);
+        sqlite3_stmt *stmt;
+        std::string sql = "DELETE FROM objects WHERE name = ?";
+        int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
+            return;
         }
-        else
-        {
+
+        sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            spdlog::error("Failed to delete data from database: {}", sqlite3_errmsg(db));
+        } else {
             spdlog::debug("Deleted data from database successfully");
         }
+
+        sqlite3_finalize(stmt);
     }
 
     void SortByName(std::vector<Data> &data)
     {
         std::sort(data.begin(), data.end(), [](const Data &a, const Data &b)
-                  { return a.Name < b.Name; });
+                { return a.Name < b.Name; });
     }
 
     std::vector<Data> FilterBy(const std::vector<Data> &data, std::function<bool(const Data &)> filter)
@@ -146,22 +167,55 @@ namespace OpenAPT::ASX
 
     bool SaveToDatabase(sqlite3 *db, const std::vector<Data> &data)
     {
+        sqlite3_stmt *stmt;
         std::string sql = "DELETE FROM objects";
-        char *err_msg = nullptr;
-        int rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
-        if (rc != SQLITE_OK)
-        {
-            spdlog::error("Failed to update database: {}", err_msg);
+        int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
             return false;
         }
-        else
-        {
+
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            spdlog::error("Failed to update database: {}", sqlite3_errmsg(db));
+            sqlite3_finalize(stmt);
+            return false;
+        } else {
             spdlog::debug("Updated database successfully");
         }
+
+        sqlite3_finalize(stmt);
+
+        sql = "INSERT INTO objects (name, type, ra, dec, constellation) VALUES (?, ?, ?, ?, ?)";
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
+        if (rc != SQLITE_OK) {
+            spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
+            return false;
+        }
+
         for (const auto &d : data)
         {
-            InsertData(db, d);
+            sqlite3_bind_text(stmt, 1, d.Name.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 2, d.Type.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 3, d.RA.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 4, d.Dec.c_str(), -1, SQLITE_TRANSIENT);
+            sqlite3_bind_text(stmt, 5, d.Const.c_str(), -1, SQLITE_TRANSIENT);
+
+            rc = sqlite3_step(stmt);
+            if (rc != SQLITE_DONE) {
+                spdlog::error("Failed to insert data into database: {}", sqlite3_errmsg(db));
+                sqlite3_finalize(stmt);
+                return false;
+            } else {
+                spdlog::debug("Inserted data into database successfully");
+            }
+
+            sqlite3_clear_bindings(stmt);
+            sqlite3_reset(stmt);
         }
+
+        sqlite3_finalize(stmt);
+
         return true;
     }
 
@@ -169,20 +223,30 @@ namespace OpenAPT::ASX
     {
         std::vector<Data> result;
         std::copy_if(data.begin(), data.end(), std::back_inserter(result), [&name](const Data &d)
-                     { return d.Name.find(name) != std::string::npos; });
+                    { return d.Name.find(name) != std::string::npos; });
         return result;
     }
 
     std::vector<Data> SearchByRaDec(const std::vector<Data> &data, std::string ra, std::string dec, double ra_range, double dec_range)
     {
+        double d_ra, d_dec, q_ra, q_dec;
+        try {
+            d_ra = ToDecimal(ra);
+            d_dec = ToDecimal(dec);
+            q_ra = std::stod(ra);
+            q_dec = std::stod(dec);
+        } catch (std::invalid_argument& e) {
+            spdlog::error("Invalid ra or dec format: {}", e.what());
+            return {};
+        }
+
         std::vector<Data> result;
         for (const auto &d : data)
         {
-            double d_ra = ToDecimal(d.RA);
-            double d_dec = ToDecimal(d.Dec);
-            double q_ra = ToDecimal(ra);
-            double q_dec = ToDecimal(dec);
-            if (std::abs(d_ra - q_ra) <= ra_range && std::abs(d_dec - q_dec) <= dec_range)
+            double obj_ra = ToDecimal(d.RA);
+            double obj_dec = ToDecimal(d.Dec);
+
+            if (std::abs(obj_ra - d_ra) <= ra_range && std::abs(obj_dec - d_dec) <= dec_range)
             {
                 result.push_back(d);
             }
@@ -210,10 +274,10 @@ namespace OpenAPT::ASX
         for (const auto &d : data)
         {
             j.push_back({{"name", d.Name},
-                         {"type", d.Type},
-                         {"ra", d.RA},
-                         {"dec", d.Dec},
-                         {"constellation", d.Const}});
+                        {"type", d.Type},
+                        {"ra", d.RA},
+                        {"dec", d.Dec},
+                        {"constellation", d.Const}});
         }
         std::ofstream file(filename);
         if (!file.is_open())

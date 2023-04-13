@@ -74,26 +74,47 @@ namespace OpenAPT
         }
     }
 
-    std::shared_ptr<BasicTask> TaskGenerator::generateSimpleTask(const std::string &taskName,
-                                                                 const std::string &description, const nlohmann::json &params, const std::string &moduleName,
-                                                                 const std::string &funcName)
+    std::shared_ptr<BasicTask> TaskGenerator::generateTask(const std::string &taskType, const std::string &taskName, const std::string &description, const nlohmann::json &params, const std::string &moduleName, const std::string &funcName)
     {
-        spdlog::debug("Generating simple task with task name {} and description {}", taskName, description);
+        spdlog::debug("Generating {} task with task name {} and description {}", taskType, taskName, description);
 
-        std::function<void(const nlohmann::json &)> taskFunction = getTaskFunction(funcName, moduleName, m_ModuleLoader);
-        if (!taskFunction)
+        std::function<void(const nlohmann::json &)> taskFunction;
+        if constexpr (std::is_same_v<decltype(taskFunction), decltype(getTaskFunction(funcName, moduleName, m_ModuleLoader))>)
         {
+            taskFunction = getTaskFunction(funcName, moduleName, m_ModuleLoader);
+        }
+        else
+        {
+            spdlog::error("Unknown task type: {}", taskType);
             return nullptr;
         }
 
         std::shared_ptr<BasicTask> task;
         try
         {
-            task = std::make_shared<SimpleTask>(taskFunction, params);
+            if (taskType == "simple")
+            {
+                task = std::make_shared<SimpleTask>(taskFunction, params);
+            }
+            else if (taskType == "conditional")
+            {
+                auto predicate = [](const json &j)
+                { return j.contains("status") && j["status"].get<int>() == 1; };
+                task = std::make_shared<ConditionalTask>(taskFunction, params, predicate);
+            }
+            else if (taskType == "loop")
+            {
+                task = std::make_shared<LoopTask>(taskFunction, params);
+            }
+            else
+            {
+                spdlog::error("Unknown task type: {}", taskType);
+                return nullptr;
+            }
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to create simple task: {}", e.what());
+            spdlog::error("Failed to create {} task: {}", taskType, e.what());
             return nullptr;
         }
 
@@ -101,99 +122,51 @@ namespace OpenAPT
         {
             task->setName(taskName);
             task->setDescription(description);
-            spdlog::info("Simple task created successfully: name={}, description={}", task->getName(), task->getDescription());
+            spdlog::info("{} task created successfully: name={}, description={}", taskType, task->getName(), task->getDescription());
         }
+
         return task;
+    }
+
+    std::shared_ptr<BasicTask> TaskGenerator::generateSimpleTask(const std::string &taskName, const std::string &description, const nlohmann::json &params, const std::string &moduleName, const std::string &funcName)
+    {
+        return generateTask("simple", taskName, description, params, moduleName, funcName);
     }
 
     std::shared_ptr<BasicTask> TaskGenerator::generateConditionalTask(const std::string &taskName, const std::string &description, const nlohmann::json &params)
     {
-        spdlog::debug("Generating conditional task with task name {} and description {}", taskName, description);
-
-        // 使用lambda表达式替代函数指针指向函数体，让代码更加清晰易读。
-        auto predicate = [](const json &j)
-        { return j.contains("status") && j["status"].get<int>() == 1; };
-        auto func = [&, taskName]()
-        {
-            spdlog::info("Execute generated conditional task: {}", taskName);
-            // 在任务执行前，增加一个日志输出，打印任务名称，方便查看哪个任务被执行了。
-        };
-
-        std::shared_ptr<BasicTask> task;
-        try
-        {
-            task = std::make_shared<ConditionalTask>(func, params, predicate);
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to create conditional task: {}", e.what());
-            return nullptr;
-        }
-
-        if (task)
-        {
-            task->setName(taskName);
-            task->setDescription(description);
-            spdlog::info("Conditional task created successfully: name={}, description={}", task->getName(), task->getDescription());
-        }
-
-        return task;
+        return generateTask("conditional", taskName, description, params, "", "");
     }
 
     std::shared_ptr<BasicTask> TaskGenerator::generateLoopTask(const std::string &taskName, const std::string &description, const nlohmann::json &params)
     {
-        spdlog::debug("Generating loop task with task name {} and description {}", taskName, description);
-
-        auto func = [&, params](const json &j)
-        { spdlog::info("Execute generated loop task with param {}", params.dump()); };
-
-        std::shared_ptr<BasicTask> task;
-        try
-        {
-            task = std::make_shared<LoopTask>(func, params);
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("Failed to create loop task: {}", e.what());
-            return nullptr;
-        }
-
-        if (task)
-        {
-            task->setName(taskName);
-            task->setDescription(description);
-            spdlog::info("Loop task created successfully: name={}, description={}", task->getName(), task->getDescription());
-        }
-
-        return task;
+        return generateTask("loop", taskName, description, params, "", "");
     }
 
-    // 从 JSON 文件中加载任务
-    std::vector<std::shared_ptr<BasicTask>> TaskGenerator::generateTasksFromFile(const std::string &filePath)
+    bool TaskGenerator::readJsonFile(const std::string &filePath, json &tasksJson)
     {
-        spdlog::info("Loading tasks from file {}", filePath);
-
-        // 读取 JSON 文件
         std::ifstream file(filePath);
         if (!file.is_open())
         {
             spdlog::error("Failed to open file: {}", filePath);
-            return {};
+            return false;
         }
 
-        json tasksJson;
         try
         {
-            // 解析 JSON 文件中的任务
             file >> tasksJson;
         }
         catch (const std::exception &e)
         {
             spdlog::error("Failed to parse JSON from file {}: {}", filePath, e.what());
-            return {};
+            return false;
         }
 
-        // 生成任务并存储在 vector 中
+        return true;
+    }
+
+    std::vector<std::shared_ptr<BasicTask>> TaskGenerator::generateTasksFromJson(const json &tasksJson)
+    {
         std::vector<std::shared_ptr<BasicTask>> tasks;
         for (const auto &taskJson : tasksJson["tasks"])
         {
@@ -204,34 +177,32 @@ namespace OpenAPT
             const std::string &moduleName = taskJson.value("module_name", "");
             const std::string &funcName = taskJson.value("func_name", "");
 
-            std::shared_ptr<BasicTask> task;
-            if (type == "simple")
-            {
-                task = generateSimpleTask(name, desc, params, moduleName, funcName);
-            }
-            else if (type == "conditional")
-            {
-                task = generateConditionalTask(name, desc, params);
-            }
-            else if (type == "loop")
-            {
-                task = generateLoopTask(name, desc, params);
-            }
-            else
-            {
-                spdlog::error("Unknown task type: {}", type);
-                continue;
-            }
-
+            std::shared_ptr<BasicTask> task = generateTask(type, name, desc, params, moduleName, funcName);
             if (task)
             {
                 tasks.push_back(task);
             }
         }
 
-        spdlog::info("Loaded {} tasks from file {}", tasks.size(), filePath);
         return tasks;
     }
+
+    std::vector<std::shared_ptr<BasicTask>> TaskGenerator::generateTasksFromFile(const std::string &filePath)
+    {
+        spdlog::info("Loading tasks from file {}", filePath);
+
+        json tasksJson;
+        if (!readJsonFile(filePath, tasksJson))
+        {
+            return {};
+        }
+
+        std::vector<std::shared_ptr<BasicTask>> tasks = generateTasksFromJson(tasksJson);
+        spdlog::info("Loaded {} tasks from file {}", tasks.size(), filePath);
+
+        return tasks;
+    }
+
 
     TaskManager::TaskManager(const std::string &fileName)
     {

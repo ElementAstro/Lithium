@@ -105,7 +105,9 @@ namespace OpenAPT::CrashReport
                 while (!feof(fp))
                 {
                     char line[256] = {0};
-                    fgets(line, sizeof(line), fp);
+                    if (fgets(line, sizeof(line), fp) == NULL) {
+                    }
+
                     if (strncmp(line, "ID=", 3) == 0)
                     {
                         strncpy(distro, line + 3, sizeof(distro) - 1);

@@ -29,119 +29,101 @@ Description: Lua Module Loader
 
 **************************************************/
 
-#ifndef LUASCRIPTLOADER_H
-#define LUASCRIPTLOADER_H
+#ifndef LUA_SCRIPT_LOADER_H
+#define LUA_SCRIPT_LOADER_H
 
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <fstream>
-#include <nlohmann/json.hpp>
-
-#include "spdlog/spdlog.h"
-
-extern "C" {
-    #include <lua/lua.h>
-    #include <lua/lualib.h>
-    #include <lua/lauxlib.h>
-}
+#include <sstream>
+#include <stdexcept>
+#include "nlohmann/json.hpp"
+#include "lua/lua.hpp"
 
 using json = nlohmann::json;
 
-namespace OpenAPT {
-    class LuaScriptLoader {
+namespace OpenAPT
+{
+    class LuaScriptLoader
+    {
     public:
-
-        /**
-         * @brief 构造函数, 创建一个新的Lua解释器，并打开所有标准库.
-         */
         LuaScriptLoader();
-
-        /**
-         * @brief 析构函数，关闭当前的LUA状态.
-         */
         ~LuaScriptLoader();
 
-        /**
-         * @brief LoadScript 函数用于从文件中加载LUA脚本代码并执行.
-         * 
-         * @throws std::runtime_error 如果加载或执行代码时发生错误, 将抛出异常.
-         * 
-         * @param path 要加载的文件路径.
-         * 
-         * @return true 如果成功加载并执行脚本; false 如果无法加载或执行脚本.
-         */
-        bool LoadScript(const std::string& path);
-
-        /**
-         * @brief CallFunction 函数用于调用LUA中的函数，并获取它的返回值.
-         * 
-         * @throws std::runtime_error 如果无法调用指定的函数或获取其返回值时发生错误，将抛出异常.
-         * 
-         * @tparam T 要返回的值的类型.
-         * @tparam Args 调用函数时传递的参数类型.
-         * 
-         * @param name 要调用的函数的名称.
-         * @param args 调用函数时传递的参数.
-         * 
-         * @return T 函数返回的值.
-         */
-        template<typename T, typename... Args>
-        T CallFunction(const std::string &name, Args&&... args);
-
-        /**
-         * @brief SetGlobal 函数用于在LUA中设置全局变量.
-         * 
-         * @tparam T 要设置的值的类型.
-         * 
-         * @param name 全局变量的名称.
-         * @param value 要设置的值.
-         */
-        template<typename T>
-        void SetGlobal(const std::string& name, const T& value);
-
-        /**
-         * @brief GetGlobal 函数用于从LUA中获取全局变量的值.
-         * 
-         * @tparam T 要返回的值的类型.
-         * 
-         * @throws std::runtime_error 如果无法获取指定全局变量的值, 将抛出异常.
-         * 
-         * @param name 要获取其值的全局变量的名称.
-         * 
-         * @return T 全局变量的值.
-         */
-        template<typename T>
-        T GetGlobal(const std::string& name);
-
-        /**
-         * @brief UnloadScript 函数用于卸载当前加载的LUA脚本.
-         */
-        void UnloadScript();
-
-        /**
-         * @brief InjectFunctions 函数用于将一组C/C++函数注入到LUA解释器中.
-         * 
-         * @param functions 要注入的函数的名称和指针的映射.
-         */
-        void InjectFunctions(const std::unordered_map<std::string, lua_CFunction>& functions);
-
-        /**
-         * @brief LoadFunctionsFromJsonFile 函数用于从JSON文件中读取字符串表示的LUA函数并注入到LUA解释器中.
-         * 
-         * @throws std::runtime_error 如果无法加载或解析指定的JSON文件时，将抛出异常.
-         * 
-         * @param file_path 要加载的JSON文件的路径.
-         */
-        void LoadFunctionsFromJsonFile(const std::string& file_path);
-
-    private:
-
+        bool LoadScript(const std::string &name, const std::string &path);
+        void UnloadScript(const std::string &name);
         void ClearFunctions();
 
-        lua_State* L; ///< 存储当前LUA状态的指针.
-        std::unordered_map<std::string, void*> functions_; ///< 存储已经注册的C/C++函数的名称和指针的映射.
-    };
-}
+        template <typename T, typename... Args>
+        bool CallFunction(const std::string &name, const std::string &scriptName, T &result, Args &&...args)
+        {
+            auto luaState = GetLuaState(scriptName);
 
-#endif // LUASCRIPTLOADER_H
+            lua_getglobal(luaState, name.c_str());
+            if (!lua_isfunction(luaState, -1))
+            {
+                lua_pop(luaState, 1);
+                spdlog::error("LuaScriptLoader: failed to call function '{}': Invalid function", name);
+                return false;
+            }
+
+            int nArgs = sizeof...(args);
+            int nResults = 1; // 默认返回值个数为1
+
+            // 压入函数参数
+            int index = 1;
+            (push(luaState, std::forward<Args>(args)), ...);
+
+            // 调用函数
+            if (lua_pcall(luaState, nArgs, nResults, 0) != 0)
+            {
+                const char *error = lua_tostring(luaState, -1);
+                spdlog::error("LuaScriptLoader: failed to call function '{}': {}", name, error);
+                lua_pop(luaState, 1); // 异常出现时，需要将栈顶元素弹出
+                return false;
+            }
+
+            // 获取返回值
+            result = to<T>(luaState, -1);
+            lua_pop(luaState, 1); // 弹出返回值
+            return true;
+        }
+
+        template <typename T>
+        void SetGlobal(const std::string &name, const std::string &scriptName, const T &value)
+        {
+            auto luaState = GetLuaState(scriptName);
+
+            push(luaState, value);
+            lua_setglobal(luaState, name.c_str());
+        }
+
+        template <typename T>
+        bool GetGlobal(const std::string &name, const std::string &scriptName, T &result)
+        {
+            auto luaState = GetLuaState(scriptName);
+
+            lua_getglobal(luaState, name.c_str());
+            if (!lua_isuserdata(luaState, -1))
+            {
+                lua_pop(luaState, 1);
+                spdlog::error("LuaScriptLoader: failed to get global variable '{}': Invalid global variable", name);
+                return false;
+            }
+            result = to<T>(luaState, -1);
+            lua_pop(luaState, 1);
+            return true;
+        }
+
+        void InjectFunctions(const std::unordered_map<std::string, lua_CFunction> &functions);
+
+        void LoadFunctionsFromJsonFile(const std::string &file_path);
+
+    private:
+        std::unordered_map<std::string, lua_State *> luaStates_{};
+
+        lua_State *GetLuaState(const std::string &scriptName);
+    };
+} // namespace OpenAPT
+
+#endif

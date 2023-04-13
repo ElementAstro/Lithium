@@ -38,6 +38,8 @@ Description: Define All of the Tasks
 #include <vector>
 #include <memory>
 #include <thread>
+#include <cstddef>
+#include <cstdint>
 
 #include "nlohmann/json.hpp"
 #include <spdlog/spdlog.h>
@@ -51,7 +53,7 @@ namespace OpenAPT
     {
     public:
         // Executes the task
-        virtual void execute() {}
+        virtual nlohmann::json execute() {}
 
         // Serializes the task to a JSON object
         virtual nlohmann::json toJson() { return nlohmann::json(); }
@@ -107,17 +109,17 @@ namespace OpenAPT
     {
     public:
         // Constructor
-        ConditionalTask(const std::function<void()> &func,
+        ConditionalTask(const std::function<void(const nlohmann::json &)> &func,
                         const nlohmann::json &params,
                         const std::function<bool(const nlohmann::json &)> &condition)
             : m_func(func), m_params(params), m_condition(condition) {}
 
         // Executes the task
-        void execute() override
+        nlohmann::json execute() override
         {
             if (m_condition(m_params))
             {
-                m_func();
+                m_func(m_params);
             }
             m_done = true;
         }
@@ -135,7 +137,7 @@ namespace OpenAPT
 
     private:
         // Function to execute
-        std::function<void()> m_func;
+        std::function<void(const nlohmann::json&)> m_func;
 
         // Parameters passed to the function
         nlohmann::json m_params;
@@ -153,7 +155,7 @@ namespace OpenAPT
             : m_func(func), m_params(params) {}
 
         // Executes the task
-        void execute() override
+        nlohmann::json execute() override
         {
             for (int i = m_progress; i < m_params["total"].get<int>(); ++i)
             {
@@ -206,7 +208,7 @@ namespace OpenAPT
             : m_func(func), m_params(params) {}
 
         // Executes the task
-        void execute() override
+        nlohmann::json execute() override
         {
             m_func(m_params);
             m_done = true;
@@ -230,6 +232,31 @@ namespace OpenAPT
         // Parameters passed to the function
         nlohmann::json m_params;
     };
+
+    using hash_t = std::uint64_t;
+    constexpr hash_t basis{0xcbf29ce484222325};
+    constexpr hash_t prime{0x100000001b3};
+
+    constexpr hash_t hash_compile_time(char const* str, hash_t last_value = basis)  
+    {  
+        return (*str) ? hash_compile_time(str + 1, (*str ^ last_value) * prime) : last_value;  
+    }  
+
+    constexpr hash_t hash_(char const* str)  
+    {  
+        hash_t ret{basis};  
+        while(*str){  
+            ret ^= *str;  
+            ret *= prime;  
+            str++;  
+        }  
+        return ret;  
+    }  
+
+    constexpr unsigned long long operator ""_hash(char const* p, std::size_t) noexcept
+    {
+        return hash_compile_time(p);
+    }
 
 }
 #endif

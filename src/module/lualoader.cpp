@@ -33,6 +33,7 @@ Description: Lua Module Loader
 
 namespace OpenAPT
 {
+
     template <typename T>
     void push(lua_State *L, const T &val) {}
 
@@ -68,7 +69,8 @@ namespace OpenAPT
     {
         if (!lua_isinteger(L, idx))
         {
-            throw std::runtime_error("Invalid integer value");
+            spdlog::error("LuaScriptLoader: failed to convert integer value");
+            return 0;
         }
         return static_cast<int>(lua_tointeger(L, idx));
     }
@@ -78,7 +80,8 @@ namespace OpenAPT
     {
         if (!lua_isnumber(L, idx))
         {
-            throw std::runtime_error("Invalid number value");
+            spdlog::error("LuaScriptLoader: failed to convert number value");
+            return 0.0;
         }
         return lua_tonumber(L, idx);
     }
@@ -88,117 +91,95 @@ namespace OpenAPT
     {
         if (!lua_isstring(L, idx))
         {
-            throw std::runtime_error("Invalid string value");
+            spdlog::error("LuaScriptLoader: failed to convert string value");
+            return "";
         }
         return lua_tostring(L, idx);
     }
-
+    
     LuaScriptLoader::LuaScriptLoader()
-        : L(luaL_newstate())
     {
-
         // 打开 Lua 库
-        luaL_openlibs(L);
+        luaL_openlibs(luaL_newstate());
     }
 
     LuaScriptLoader::~LuaScriptLoader()
     {
-        lua_close(L);
+        for (auto &[name, state] : luaStates_)
+        {
+            lua_close(state);
+        }
     }
 
-    bool LuaScriptLoader::LoadScript(const std::string &path)
+    bool LuaScriptLoader::LoadScript(const std::string &name, const std::string &path)
     {
-        // 加载脚本文件
-        if (luaL_loadfile(L, path.c_str()) || lua_pcall(L, 0, 0, 0))
+        if (luaStates_.count(name))
         {
-            const char *error = lua_tostring(L, -1);
-            throw std::runtime_error(error);
+            return true;
+        }
+
+        auto luaState = luaL_newstate();
+        if (!luaState)
+        {
+            return false;
+        }
+
+        luaStates_[name] = luaState;
+
+        // 加载脚本文件
+        if (luaL_loadfile(luaState, path.c_str()) || lua_pcall(luaState, 0, 0, 0))
+        {
+            const char *error = lua_tostring(luaState, -1);
+            spdlog::error("LuaScriptLoader: failed to load script '{}': {}", name, error);
+            lua_pop(luaState, 1);
+            return false;
         }
 
         return true;
     }
 
-    template <typename T, typename... Args>
-    T LuaScriptLoader::CallFunction(const std::string &name, Args &&...args)
+    void LuaScriptLoader::UnloadScript(const std::string &name)
     {
-        lua_getglobal(L, name.c_str());
-        if (!lua_isfunction(L, -1))
+        auto it = luaStates_.find(name);
+        if (it == luaStates_.end())
         {
-            throw std::runtime_error("Invalid function");
+            return;
         }
 
-        int nArgs = sizeof...(args);
-        int nResults = 1; // 默认返回值个数为1
-
-        // 压入函数参数
-        int index = 1;
-        (push(L, std::forward<Args>(args)), ...);
-
-        // 调用函数
-        if (lua_pcall(L, nArgs, nResults, 0) != 0)
-        {
-            const char *error = lua_tostring(L, -1);
-            lua_pop(L, 1); // 异常出现时，需要将栈顶元素弹出
-            spdlog::error("LuaScriptLoader: failed to call function '{}': {}", name, error);
-            throw std::runtime_error(error);
-        }
-
-        // 获取返回值
-        T result = to<T>(L, -1);
-        lua_pop(L, 1); // 弹出返回值
-        return result;
-    }
-
-    template <typename T>
-    void LuaScriptLoader::SetGlobal(const std::string &name, const T &value)
-    {
-        push(L, value);
-        lua_setglobal(L, name.c_str());
-    }
-
-    template <typename T>
-    T LuaScriptLoader::GetGlobal(const std::string &name)
-    {
-        lua_getglobal(L, name.c_str());
-        if (!lua_isuserdata(L, -1))
-        {
-            throw std::runtime_error("Invalid global variable");
-        }
-        T result = to<T>(L, -1);
-        lua_pop(L, 1);
-        return result;
-    }
-
-    void LuaScriptLoader::UnloadScript()
-    {
+        auto luaState = it->second;
         ClearFunctions();
+
+        lua_close(luaState);
+        luaStates_.erase(it);
     }
 
     void LuaScriptLoader::ClearFunctions()
     {
-        for (const auto &[name, ptr] : functions_)
+        for (const auto &[name, luaState] : luaStates_)
         {
-            lua_pushnil(L);
-            lua_setglobal(L, name.c_str());
+            lua_pushnil(luaState);
+            lua_setglobal(luaState, name.c_str());
         }
-        functions_.clear();
     }
 
     void LuaScriptLoader::InjectFunctions(const std::unordered_map<std::string, lua_CFunction> &functions)
     {
         for (const auto &[name, func] : functions)
         {
-            lua_register(L, name.c_str(), func);
+            for (const auto &[scriptName, luaState] : luaStates_)
+            {
+                lua_register(luaState, name.c_str(), func);
+            }
         }
     }
 
     void LuaScriptLoader::LoadFunctionsFromJsonFile(const std::string &file_path)
     {
         std::ifstream input(file_path);
-        if (input.fail())
+        if (!input)
         {
             spdlog::error("LuaScriptLoader: failed to load functions from JSON file '{}'", file_path);
-            throw std::runtime_error("Failed to load JSON file");
+            return;
         }
 
         json j;
@@ -209,20 +190,43 @@ namespace OpenAPT
         catch (json::parse_error &e)
         {
             spdlog::error("LuaScriptLoader: failed to parse JSON file '{}': {}", file_path, e.what());
-            throw std::runtime_error("Failed to parse JSON file");
+            return;
         }
 
         // 从 JSON 中读取函数并注入到 Lua 解释器中
         for (const auto &[name, body] : j.items())
         {
             std::string source = "-- function " + name + "\n" + body.get<std::string>();
-            if (luaL_loadstring(L, source.c_str()) || lua_pcall(L, 0, 0, 0))
+            for (const auto &[scriptName, luaState] : luaStates_)
             {
-                const char *error = lua_tostring(L, -1);
-                spdlog::error("LuaScriptLoader: failed to load function '{}': {}", name, error);
-                throw std::runtime_error(error);
+                if (luaL_loadstring(luaState, source.c_str()) || lua_pcall(luaState, 0, 0, 0))
+                {
+                    const char *error = lua_tostring(luaState, -1);
+                    spdlog::error("LuaScriptLoader: failed to load function '{}' in script '{}': {}", name, scriptName, error);
+                    lua_pop(luaState, 1);
+                    continue;
+                }
+                lua_pushcfunction(luaState, [](lua_State *L) -> int
+                                  {
+            lua_Debug ar;
+            lua_getstack(L, 1, &ar);
+            lua_getinfo(L, "Snl", &ar);
+            spdlog::warn("LuaScriptLoader: invalid function call at line {}: {}", ar.currentline, lua_tostring(L, -1));
+            lua_pop(L, 1);
+            return 0; });
+                lua_setglobal(luaState, name.c_str());
             }
         }
+    }
+
+    lua_State *LuaScriptLoader::GetLuaState(const std::string &scriptName)
+    {
+        auto it = luaStates_.find(scriptName);
+        if (it == luaStates_.end())
+        {
+            throw std::runtime_error("Failed to get Lua state for script: " + scriptName);
+        }
+        return it->second;
     }
 
 }

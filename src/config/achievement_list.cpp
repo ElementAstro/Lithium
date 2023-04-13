@@ -41,14 +41,13 @@ using namespace std;
 namespace OpenAPT::AAchievement
 {
 
-    AchievementList::AchievementList() 
+    AchievementList::AchievementList() : AchievementList("achievements.json")
     {
         addAstronomyPhotographyAchievements();
     }
 
-    // 默认构造函数
     AchievementList::AchievementList(const std::string &filename)
-        : m_filename(filename)
+        : m_filename{filename}, m_achievements{}
     {
         readFromFile();
     }
@@ -62,11 +61,8 @@ namespace OpenAPT::AAchievement
 
     void AchievementList::removeAchievementByName(const std::string &name)
     {
-        auto it = std::find_if(m_achievements.begin(), m_achievements.end(),
-                               [&](const auto &achievement)
-                               {
-                                   return achievement->getName() == name;
-                               });
+        const auto it = std::find_if(m_achievements.begin(), m_achievements.end(), [&](const auto &achievement)
+                                     { return achievement->getName() == name; });
         if (it != m_achievements.end())
         {
             m_achievements.erase(it);
@@ -77,14 +73,11 @@ namespace OpenAPT::AAchievement
 
     void AchievementList::modifyAchievementByName(const std::string &name, const std::shared_ptr<Achievement> &achievement)
     {
-        auto it = std::find_if(m_achievements.begin(), m_achievements.end(),
-                               [&](const auto &a)
-                               {
-                                   return a->getName() == name;
-                               });
+        const auto it = std::find_if(m_achievements.begin(), m_achievements.end(), [&](const auto &a)
+                                     { return a->getName() == name; });
         if (it != m_achievements.end())
         {
-            (*it) = achievement;
+            *it = achievement;
             spdlog::debug("Achievement {} modified.", name);
             writeToFile();
         }
@@ -92,21 +85,15 @@ namespace OpenAPT::AAchievement
 
     bool AchievementList::hasAchievement(const std::string &name) const
     {
-        auto it = std::find_if(m_achievements.begin(), m_achievements.end(),
-                               [&](const auto &achievement)
-                               {
-                                   return achievement->getName() == name;
-                               });
+        const auto it = std::find_if(m_achievements.begin(), m_achievements.end(), [&](const auto &achievement)
+                                     { return achievement->getName() == name; });
         return it != m_achievements.end();
     }
 
     void AchievementList::completeAchievementByName(const std::string &name)
     {
-        auto it = std::find_if(m_achievements.begin(), m_achievements.end(),
-                               [&](const auto &achievement)
-                               {
-                                   return achievement->getName() == name;
-                               });
+        const auto it = std::find_if(m_achievements.begin(), m_achievements.end(), [&](const auto &achievement)
+                                     { return achievement->getName() == name; });
         if (it != m_achievements.end())
         {
             (*it)->markAsCompleted();
@@ -120,7 +107,7 @@ namespace OpenAPT::AAchievement
         spdlog::debug("Achievements:");
         for (const auto &achievement : m_achievements)
         {
-            std::string status = achievement->isCompleted() ? "Completed" : "Incomplete";
+            const auto status = achievement->isCompleted() ? "Completed" : "Incomplete";
             spdlog::debug("\tName: {}, Description: {}, Status: {}", achievement->getName(), achievement->getDescription(), status);
         }
     }
@@ -133,8 +120,8 @@ namespace OpenAPT::AAchievement
             j.emplace_back(achievement->to_json());
         }
 
-        std::ofstream file(m_filename);
-        if (!file.is_open())
+        std::ofstream file{m_filename};
+        if (!file)
         {
             return;
         }
@@ -145,8 +132,8 @@ namespace OpenAPT::AAchievement
 
     void AchievementList::readFromFile()
     {
-        std::ifstream file(m_filename);
-        if (!file.is_open())
+        std::ifstream file{m_filename};
+        if (!file)
         {
             throw std::runtime_error("Failed to open file.");
         }
@@ -161,12 +148,15 @@ namespace OpenAPT::AAchievement
             throw std::runtime_error("Failed to parse JSON file.");
         }
 
-        for (const auto &item : j)
-        {
-            m_achievements.emplace_back(Achievement::from_json(item));
-        }
+        m_achievements.reserve(j.size());
+        std::transform(begin(j), end(j), std::back_inserter(m_achievements), Achievement::from_json);
 
         spdlog::debug("Achievements read from file {}.", m_filename);
+    }
+
+    void AchievementList::addAstronomyPhotographyAchievements()
+    {
+        // 添加一些天文摄影成就
     }
 
 }

@@ -47,6 +47,34 @@ namespace OpenAPT {
         NumDeviceTypes
     };
 
+    enum class CameraType {
+        INDICamera,
+        ASCOMCamera,
+        ASICamera,
+        QHYCamera,
+        NumCameraTypes
+    };
+
+    enum class TelescopeType {
+        INDITelescope,
+        ASCOMTelescope,
+        IOPTRONTelescope,
+        NumTelescopeTypes
+    };
+
+    enum class FocuserType {
+        INDIFocuser,
+        ASCOMFocuser,
+        NumFocuserTypes
+    };
+
+    enum class FilterwheelType {
+        INDIFilterwheel,
+        ASCOMFilterwheel,
+        NumFIlterwheelTypes
+    };
+
+
     static constexpr int DeviceTypeCount = 6;
 
     enum class DeviceStatus {
@@ -91,9 +119,9 @@ namespace OpenAPT {
                 id = id;
             }
 
-            virtual bool runSimpleTask(std::string task) {
-                return true;
-            }
+            std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string& task_name) {}
+            std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string& task_name) {}
+            std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string& task_name) {}
 
         public:
             std::string _name;
@@ -160,8 +188,6 @@ namespace OpenAPT {
             virtual bool getROIFrame() {}
             virtual bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) {}
 
-            std::shared_ptr<OpenAPT::SingleShotTask> SingleShotTask() {}
-
         public:
 
             static const double UnknownPixelSize;
@@ -217,5 +243,21 @@ namespace OpenAPT {
 
             Telescope(const std::string& name);
             ~Telescope();
+    };
+
+    class Focuser : public Device
+    {
+        public:
+
+            Focuser(const std::string& name);
+            ~Focuser();
+    };
+
+    class Filterwheel : public Device
+    {
+        public:
+
+            Filterwheel(const std::string& name);
+            ~Filterwheel();
     };
 } // namespace OpenAPT

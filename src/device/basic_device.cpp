@@ -50,4 +50,12 @@ namespace OpenAPT
     Telescope::Telescope(const std::string& name) : Device(name) {}
 
     Telescope::~Telescope() {}
+
+    Focuser::Focuser(const std::string& name) : Device(name) {}
+
+    Focuser::~Focuser() {}
+
+    Filterwheel::Filterwheel(const std::string& name) : Device(name) {}
+
+    Filterwheel::~Filterwheel() {}
 } // namespace OpenAPT

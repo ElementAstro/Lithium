@@ -31,7 +31,6 @@ Description: INDI Camera
 
 #pragma once
 
-
 #include "api/indiclient.hpp"
 #include "device/basic_device.hpp"
 #include "task/camera_task.hpp"
@@ -43,7 +42,8 @@ Description: INDI Camera
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT {
+namespace OpenAPT
+{
     class INDICamera : public Camera, public OpenAptIndiClient
     {
         // INDI Parameters
@@ -74,8 +74,7 @@ namespace OpenAPT {
         std::string indi_blob_name;
 
     public:
-
-        INDICamera(const std::string& name);
+        INDICamera(const std::string &name);
         ~INDICamera();
 
         bool connect(std::string name) override;
@@ -109,17 +108,11 @@ namespace OpenAPT {
         bool getROIFrame() override;
         bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) override;
 
-        std::shared_ptr<OpenAPT::SingleShotTask> SingleShotTask() {
-            std::shared_ptr<OpenAPT::SingleShotTask> SingleShotT(new OpenAPT::SingleShotTask(
-                [](const nlohmann::json &params) 
-                { 
-                    std::cout << "Single shot task is running." << std::endl;
-                    std::cout << "The parameters are: " << params.dump() << std::endl;
-                }, 
-                {{"threshold", 10}}
-            ));
-            return SingleShotT;
-        }
+        std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params);
+
+        std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params);
+
+        std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params);
 
     protected:
         void ClearStatus();

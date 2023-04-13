@@ -1,0 +1,39 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Images are binary
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+
+# Audio is binary
+*.mp3 binary
+*.wav binary
+
+# Video is binary
+*.mp4 binary
+
+# Fonts are binary
+*.ttf binary
+*.otf binary
+
+# C++ files
+*.cpp text
+*.hpp text
+*.h text
+*.cc text
+*.hh text
+
+# C files
+*.c text
+
+# Script files
+*.py text
+*.sh text
+*.bat text
+*.cmd text
+
+# Documentation files
+*.txt text
+*.md  text

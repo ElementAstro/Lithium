@@ -39,6 +39,10 @@ jobs:
         # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
 
     steps:
+
+    - name: Run install dependencies
+      run: sudo sh scripts/build_ci.sh
+      
     - name: Checkout repository
       uses: actions/checkout@v3
 

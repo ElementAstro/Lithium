@@ -57,100 +57,113 @@ namespace OpenAPT::API::Astrometry
      * @param no_tweak 是否关闭微调选项
      * @return json类型的结果，包含解决方案的相关信息如赤经、赤纬、视场大小等，若解决方案失败则返回对应错误信息
      */
-    json solve(const std::string &image, const std::string &ra , const std::string &dec, const double &radius, const int &downsample,
-            const std::vector<int> &depth, const double &scale_low, const double &scale_high, const int &width, const int &height,
-            const std::string &scale_units, const bool &overwrite, const bool &no_plot, const bool &verify,
-            const bool &debug, const int &timeout, const bool &resort , const bool &_continue, const bool &no_tweak)
+    json solve(const std::string& image, const std::string& ra, const std::string& dec, const double& radius, const int& downsample,
+           const std::vector<int>& depth, const double& scale_low, const double& scale_high, const int& width, const int& height,
+           const std::string& scale_units, const bool& overwrite, const bool& no_plot, const bool& verify,
+           const bool& debug, const int& timeout, const bool& resort, const bool& _continue, const bool& no_tweak)
     {
+        // 初始化返回值
         json ret_json;
+        ret_json["message"] = "unknown error";
 
-        // 判断图像文件是否为空
-        if (image.empty())
-        {
-            ret_json["message"] = "wrong image file type";
-            return ret_json;
-        }
+        try {
+            // 参数校验
+            assert(!image.empty() && "wrong image file type");
 
-        // 生成命令行指令
-        std::string command = "solve-field " + image;
+            // 生成命令行指令
+            std::string command = "solve-field " + image;
 
-        if (!ra.empty())
-            command += " --ra " + ra;
-        if (!dec.empty())
-            command += " --dec " + dec;
-        if (radius > 0)
-            command += " --radius " + std::to_string(radius);
-        if (downsample != 1)
-            command += " --downsample " + std::to_string(downsample);
-        if (!depth.empty())
-            command += " --depth " + std::to_string(depth[0]) + "," + std::to_string(depth[1]);
-        if (scale_low > 0)
-            command += " --scale-low " + std::to_string(scale_low);
-        if (scale_high > 0)
-            command += " --scale-high " + std::to_string(scale_high);
-        if (width > 0)
-            command += " --width " + std::to_string(width);
-        if (height > 0)
-            command += " --height " + std::to_string(height);
-        if (!scale_units.empty())
-            command += " --scale-units " + scale_units;
-        if (overwrite)
-            command += " --overwrite";
-        if (no_plot)
-            command += " --no-plot";
-        if (verify)
-            command += " --verify";
-        if (resort)
-            command += " --resort";
-        if (_continue)
-            command += " --continue";
-        if (no_tweak)
-            command += " --no-tweak";
+            if (!ra.empty())
+                command += " --ra " + ra;
+            if (!dec.empty())
+                command += " --dec " + dec;
+            if (radius > 0)
+                command += " --radius " + std::to_string(radius);
+            if (downsample != 1)
+                command += " --downsample " + std::to_string(downsample);
+            if (!depth.empty())
+                command += " --depth " + std::to_string(depth[0]) + "," + std::to_string(depth[1]);
+            if (scale_low > 0)
+                command += " --scale-low " + std::to_string(scale_low);
+            if (scale_high > 0)
+                command += " --scale-high " + std::to_string(scale_high);
+            if (width > 0)
+                command += " --width " + std::to_string(width);
+            if (height > 0)
+                command += " --height " + std::to_string(height);
+            if (!scale_units.empty())
+                command += " --scale-units " + scale_units;
+            if (overwrite)
+                command += " --overwrite";
+            if (no_plot)
+                command += " --no-plot";
+            if (verify)
+                command += " --verify";
+            if (resort)
+                command += " --resort";
+            if (_continue)
+                command += " --continue";
+            if (no_tweak)
+                command += " --no-tweak";
 
-        // 执行命令行指令
-        FILE *pipe = popen(command.c_str(), "r");
-        if (!pipe)
-        {
+            // 执行命令行指令
+            FILE* pipe = popen(command.c_str(), "r");
+            if (!pipe) {
+                ret_json["message"] = "failed to open pipe";
+                return ret_json;
+            }
+
+            char buffer[256];
+            while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                std::string item(buffer);
+
+                // 解析输出结果
+                size_t pos;
+                if ((pos = item.find("Field center: (RA H:M:S, Dec D:M:S) = ")) != std::string::npos) {
+                    std::string ra_dec = item.substr(pos + 41, 19);
+                    pos = ra_dec.find(",");
+                    if (pos == std::string::npos) {
+                        continue;
+                    }
+                    ret_json["ra"] = ra_dec.substr(0, pos);
+                    ret_json["dec"] = ra_dec.substr(pos + 2);
+                }
+                else if ((pos = item.find("Field size: ")) != std::string::npos) {
+                    std::string fov = item.substr(pos + 12);
+                    pos = fov.find("x");
+                    if (pos == std::string::npos) {
+                        continue;
+                    }
+                    ret_json["fov_x"] = fov.substr(0, pos);
+                    ret_json["fov_y"] = fov.substr(pos + 1);
+                }
+                else if ((pos = item.find("Field rotation angle: up is ")) != std::string::npos) {
+                    auto end_pos = item.rfind(" degrees");
+                    if (end_pos == std::string::npos) {
+                        continue;
+                    }
+                    ret_json["rotation"] = item.substr(pos + 29, end_pos - pos - 29);
+                }
+            }
+
+            pclose(pipe);
+
+            // 判断解析结果是否可用
+            if (ret_json.find("ra") == ret_json.end() || ret_json.find("dec") == ret_json.end()) {
+                ret_json["message"] = "Solve failed";
+            } else {
+                ret_json.erase("message");
+            }
+
+        } catch (const std::exception& e) {
+            ret_json["message"] = e.what();
+        } catch (...) {
             ret_json["message"] = "unpredictable error";
-            return ret_json;
-        }
-
-        char buffer[256];
-        while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
-        {
-            std::string item(buffer);
-
-            // 解析输出的结果
-            size_t pos;
-            if ((pos = item.find("Field center: (RA H:M:S, Dec D:M:S) = ")) != std::string::npos)
-            {
-                std::string ra_dec = item.substr(pos + 41, 19);
-                pos = ra_dec.find(",");
-                ret_json["ra"] = ra_dec.substr(0, pos);
-                ret_json["dec"] = ra_dec.substr(pos + 2);
-            }
-            else if ((pos = item.find("Field size: ")) != std::string::npos)
-            {
-                std::string fov = item.substr(pos + 12);
-                pos = fov.find("x");
-                ret_json["fov_x"] = fov.substr(0, pos);
-                ret_json["fov_y"] = fov.substr(pos + 1);
-            }
-            else if ((pos = item.find("Field rotation angle: up is ")) != std::string::npos)
-            {
-                ret_json["rotation"] = item.substr(pos + 29, item.rfind(" degrees") - pos - 29);
-            }
-        }
-
-        pclose(pipe);
-
-        if (ret_json.find("ra") == ret_json.end() || ret_json.find("dec") == ret_json.end())
-        {
-            ret_json["message"] = "Solve failed";
         }
 
         return ret_json;
     }
+
 } // namespace OpenAPT::API:Astrometry
 
 

@@ -765,12 +765,8 @@ void init_app(int argc, char *argv[], crow::SimpleApp &app)
         app.loglevel(crow::LogLevel::ERROR);
     }
 
-    // 检查指定端口是否被占用
-    bool ret = CheckAndKillProgramOnPort(8000);
-    if (!ret)
-    {
+    if (!CheckAndKillProgramOnPort(8000))
         quit();
-    }
 
     OpenAPT::init_handler(app);
 
@@ -806,8 +802,6 @@ int main(int argc, char *argv[])
     try
     {
         registerInterruptHandler();
-
-        crow::SimpleApp app;
 
         init_app(argc, argv, app);
 

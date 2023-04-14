@@ -29,7 +29,7 @@ Description: Image Processing
 
 **************************************************/
 
-namespace OpenAPT::Image
+namespace OpenAPT
 {
-    
-} // namespace OpenAPT::Image
+    int StarDrawing(const std::string& filename,const unsigned int outerHfdDiameter = 50);
+} // namespace OpenAPT

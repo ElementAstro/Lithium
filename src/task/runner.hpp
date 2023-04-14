@@ -34,6 +34,7 @@ Description: Task Runner
 #include <vector>
 #include <memory>
 
+#include "indicators/indicators.hpp"
 #include "nlohmann/json.hpp"
 
 namespace OpenAPT
@@ -197,6 +198,8 @@ namespace OpenAPT
          */
         void executeAllTasks();
 
+        void executeTaskByName(const std::string& name);
+
         /**
          * @brief 从指定文件中加载任务数据到任务列表
          * @param fileName 包含路径和扩展名的文件名
@@ -224,14 +227,18 @@ namespace OpenAPT
          */
         void cleanCompletedTasks();
 
-        int getCompletedTaskCount() const;
+        void sortTasksByPriority();
+
+        void setTaskPriority(const std::string& name, int priority);
 
         TaskGenerator m_TaskGenerator;
 
     private:
         std::vector<std::shared_ptr<BasicTask>> m_taskList;
-        int m_completedTaskCount = 0;
+        size_t m_completedTaskCount = 0;
         std::vector<int> skipList;
+
+        indicators::ProgressBar m_progressBar{indicators::option::PrefixText{"Progress"}};
     };
 
 } // namespace OpenAPT

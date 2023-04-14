@@ -48,4 +48,13 @@ namespace OpenAPT
             std::function<void(const nlohmann::json &)> m_func;
             nlohmann::json m_params;
     };
+
+    class ConditionalShotTask : public ConditionalTask
+    {
+        public:
+            ConditionalShotTask(const std::function<void(const nlohmann::json &)> &func,
+                        const nlohmann::json &params,
+                        const std::function<bool(const nlohmann::json &)> &condition);
+            ~ConditionalShotTask() {}
+    };
 } // namespace OpenAPT

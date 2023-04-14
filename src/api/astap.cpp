@@ -122,49 +122,117 @@ namespace OpenAPT::API::ASTAP
      * @param image 需要匹配的图像文件路径。如果不需要指定，请传入一个空字符串。
      * @return 如果执行成功，返回匹配结果的输出；否则返回一个空字符串。
      */
-    string execute_astap_command(string command, double ra = 0.0, double dec = 0.0, double fov = 0.0, int timeout = 30, bool update = true, string image = "")
+    string execute_command(const string &command)
     {
-        // 输出调试信息
-        spdlog::debug("Executing command '{}' with RA={}, DEC={}, FOV={}, timeout={}s, image='{}'.", command, ra, dec, fov, timeout, image);
+        array<char, 4096> buffer{};
+        FILE *pipe = popen(command.c_str(), "r");
+        if (!pipe)
+        {
+            spdlog::error("Error: failed to run command '{}'.", command);
+            return "";
+        }
+        string output = "";
+        while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
+        {
+            output += buffer.data();
+        }
+        pclose(pipe);
+        return output;
+    }
 
-        // 构造命令行字符串
-        if (ra != 0.0)
+    // 异步执行函数封装
+    template <typename Func, typename... Args>
+    future<typename result_of<Func(Args...)>::type> async_retry(Func &&func, int attempts_left, chrono::seconds delay, Args &&...args)
+    {
+        typedef typename result_of<Func(Args...)>::type result_type;
+
+        if (attempts_left < 1)
         {
-            command += " -ra " + to_string(ra);
+            spdlog::error("Exceeded maximum attempts");
+            throw runtime_error("Exceeded maximum attempts");
         }
-        if (dec != 0.0)
+
+        try
         {
-            command += " -spd " + to_string(dec + 90);
+            return async(launch::async, forward<Func>(func), forward<Args>(args)...);
         }
-        if (fov != 0.0)
+        catch (...)
         {
-            command += " -fov " + to_string(fov);
+            if (attempts_left == 1)
+            {
+                spdlog::error("Failed to execute function after multiple attempts");
+                throw;
+            }
+            else
+            {
+                --attempts_left;
+                this_thread::sleep_for(delay);
+                return async_retry(forward<Func>(func), attempts_left, delay, forward<Args>(args)...);
+            }
+        }
+    }
+
+    // 命令行执行函数
+    string execute_astap_command(const string &command, const double &ra = 0.0, const double &dec = 0.0, const double &fov = 0.0,
+                                 const int &timeout = 30, const bool &update = true, const string &image = "")
+    {
+        // 输入参数合法性检查
+        if (ra < 0.0 || ra > 360.0)
+        {
+            spdlog::error("RA should be within [0, 360]");
+            return "";
+        }
+        if (dec < -90.0 || dec > 90.0)
+        {
+            spdlog::error("DEC should be within [-90, 90]");
+            return "";
+        }
+        if (fov <= 0.0 || fov > 180.0)
+        {
+            spdlog::error("FOV should be within (0, 180]");
+            return "";
         }
         if (!image.empty())
         {
-            command += " -f " + image;
+            if (access(image.c_str(), F_OK) == -1)
+            {
+                spdlog::error("Error: image file '{}' does not exist.", image);
+                return "";
+            }
+            if (access(image.c_str(), R_OK | W_OK) == -1)
+            {
+                spdlog::error("Error: image file '{}' is not accessible.", image);
+                return "";
+            }
+        }
+
+        // 构造命令行字符串
+        string cmd = command;
+        if (ra != 0.0)
+        {
+            cmd += " -ra " + to_string(ra);
+        }
+        if (dec != 0.0)
+        {
+            cmd += " -spd " + to_string(dec + 90);
+        }
+        if (fov != 0.0)
+        {
+            cmd += " -fov " + to_string(fov);
+        }
+        if (!image.empty())
+        {
+            cmd += " -f " + image;
         }
         if (update)
         {
-            command += " -update ";
+            cmd += " -update ";
         }
-        // 执行命令并等待结果
-        array<char, 4096> buffer{};
-        future<string> result = async(launch::async, [&]() -> string
-                                      {
-            // 创建子进程
-            FILE *pipe = popen(command.c_str(), "r");
-            if (!pipe) {
-                throw runtime_error("Error: failed to run command '" + command + "'.");
-            }
-            // 读取子进程的输出
-            string output = "";
-            while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-                output += buffer.data();
-            }
-            // 关闭子进程并返回输出结果
-            pclose(pipe);
-            return output; });
+
+        // 执行命令行指令
+        auto result = async_retry([](const string &cmd)
+                                  { return execute_command(cmd); },
+                                  3, chrono::seconds(5), cmd);
 
         // 等待命令执行完成，或者超时
         auto start_time = chrono::system_clock::now();
@@ -173,13 +241,14 @@ namespace OpenAPT::API::ASTAP
             auto elapsed_time = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now() - start_time).count();
             if (elapsed_time > timeout)
             {
-                spdlog::error("Error: command '{}' timed out after {} seconds.", command, timeout);
+                spdlog::error("Error: command timed out after {} seconds.", to_string(timeout));
                 return "";
             }
         }
+
         // 返回命令执行结果，并输出调试信息
         auto output = result.get();
-        spdlog::debug("Command '{}' returned: {}", command, output);
+        spdlog::debug("Command '{}' returned: {}", cmd, output);
         return output;
     }
 
@@ -215,27 +284,35 @@ namespace OpenAPT::API::ASTAP
         char comment[FLEN_COMMENT];
 
         // 读取头信息中的关键字
+        status = 0;
         fits_read_key(fptr, TDOUBLE, "CRVAL1", &solved_ra, comment, &status);
-        fits_read_key(fptr, TDOUBLE, "CRVAL2", &solved_dec, comment, &status);
-        fits_read_key(fptr, TDOUBLE, "CDELT1", &x_pixel_arcsec, comment, &status);
-        fits_read_key(fptr, TDOUBLE, "CDELT2", &y_pixel_arcsec, comment, &status);
-        fits_read_key(fptr, TDOUBLE, "CROTA1", &rotation, comment, &status);
-        fits_read_key(fptr, TDOUBLE, "XPIXSZ", &x_pixel_size, comment, &status);
-        fits_read_key(fptr, TDOUBLE, "YPIXSZ", &y_pixel_size, comment, &status);
 
-        // 检查是否成功读取关键字
-        if (status == 0)
-        {
-            data_get_flag = true;
-        }
-        else
-        {
-            spdlog::warn("Warning: cannot read some FITS header keywords.");
-            status = 0;
-        }
+        status = 0;
+        fits_read_key(fptr, TDOUBLE, "CRVAL2", &solved_dec, comment, &status);
+
+        status = 0;
+        fits_read_key(fptr, TDOUBLE, "CDELT1", &x_pixel_arcsec, comment, &status);
+
+        status = 0;
+        fits_read_key(fptr, TDOUBLE, "CDELT2", &y_pixel_arcsec, comment, &status);
+
+        status = 0;
+        fits_read_key(fptr, TDOUBLE, "CROTA1", &rotation, comment, &status);
+
+        status = 0;
+        fits_read_key(fptr, TDOUBLE, "XPIXSZ", &x_pixel_size, comment, &status);
+
+        status = 0;
+        fits_read_key(fptr, TDOUBLE, "YPIXSZ", &y_pixel_size, comment, &status);
 
         // 关闭 FITS 文件
         fits_close_file(fptr, &status);
+        if (status != 0)
+        {
+            ret_struct["message"] = "Error: failed to close FITS file '" + image + "'.";
+            spdlog::error(ret_struct["message"]);
+            return ret_struct;
+        }
 
         // 构造返回结果
         if (data_get_flag)

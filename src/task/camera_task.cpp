@@ -37,4 +37,12 @@ namespace OpenAPT
     {
 
     }
+
+    ConditionalShotTask::ConditionalShotTask(const std::function<void(const nlohmann::json &)> &func,
+                        const nlohmann::json &params,
+                        const std::function<bool(const nlohmann::json &)> &condition)
+    : ConditionalTask(func,params,condition)
+    {
+
+    }
 } // namespace OpenAPT

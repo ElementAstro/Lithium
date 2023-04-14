@@ -124,10 +124,14 @@ set(plugins_SRC
 
     ${openapt_src_dir}/src/plugins/sha256.hpp
     ${openapt_src_dir}/src/plugins/glob.hpp
+    ${openapt_src_dir}/src/plugins/uuid.h
 )
 
 set(image_SRC
     ${openapt_src_dir}/src/image/image.cpp
+    ${openapt_src_dir}/src/image/image.hpp
+
+    ${openapt_src_dir}/src/image/draw.cpp
 )
 
 set(asx_SRC
@@ -169,6 +173,9 @@ set(openapt_SRC
     ${openapt_src_dir}/src/module/compiler.cpp
     ${openapt_src_dir}/src/module/compiler.hpp
 
+    ${openapt_src_dir}/src/module/sheller.cpp
+    ${openapt_src_dir}/src/module/sheller.hpp
+
     ${openapt_src_dir}/src/package/downloader.cpp
     ${openapt_src_dir}/src/package/downloader.hpp
 
@@ -187,6 +194,8 @@ set(openapt_SRC
     ${openapt_src_dir}/src/device/manager.cpp
     ${openapt_src_dir}/src/device/manager.hpp
 
+    ${openapt_src_dir}/src/config/logger.cpp
+    ${openapt_src_dir}/src/config/logger.hpp
     ${openapt_src_dir}/src/config/configor.cpp
     ${openapt_src_dir}/src/config/configor.hpp
     ${openapt_src_dir}/src/config/achievement.cpp
@@ -248,7 +257,10 @@ if(UNIX)
 
   find_package(SQLite3 REQUIRED)
   target_link_libraries(openapt sqlite3)
-  
+
+  find_package(GSL REQUIRED)
+  target_link_libraries(openapt ${GSL_LIBRARIES})
+
   # Find and link spdlog libraries
   find_package(spdlog REQUIRED)
   target_link_libraries(openapt spdlog::spdlog_header_only)

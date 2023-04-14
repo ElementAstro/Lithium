@@ -1,4 +1,4 @@
-sudo apt-add-repository ppa:mutlaqja/ppa
+sudo apt-add-repository ppa:mutlaqja/ppa -y
 
 sudo apt update && sudo apt upgrade -y
 

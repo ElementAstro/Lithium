@@ -41,8 +41,8 @@ jobs:
     steps:
 
     - name: Run install dependencies
-      run: sudo sh scripts/build_ci.sh
-      
+      run: ./scripts/build_ci.sh
+
     - name: Checkout repository
       uses: actions/checkout@v3
 

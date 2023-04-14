@@ -13,7 +13,7 @@ jobs:
     steps:
 
     - name: Run install dependencies
-      run: ./scripts/build_ci.sh
+      run: sudo sh scripts/build_ci.sh
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3

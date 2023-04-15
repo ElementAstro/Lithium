@@ -132,6 +132,9 @@ set(image_SRC
     ${openapt_src_dir}/src/image/image.hpp
 
     ${openapt_src_dir}/src/image/draw.cpp
+
+    ${openapt_src_dir}/src/image/cvimage.cpp
+    ${openapt_src_dir}/src/image/cvimage.hpp
 )
 
 set(asx_SRC
@@ -264,6 +267,10 @@ if(UNIX)
   # Find and link spdlog libraries
   find_package(spdlog REQUIRED)
   target_link_libraries(openapt spdlog::spdlog_header_only)
+
+  find_package(OpenCV REQUIRED)
+  include_directories(${OpenCV_INCLUDE_DIRS})
+  target_link_libraries(openapt ${OpenCV_LIBS})
 
   # Link ZLIB and pugixml-static libraries
   target_link_libraries(openapt ${ZLIB_LIBRARIES})

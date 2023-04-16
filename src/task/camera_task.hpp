@@ -49,6 +49,47 @@ namespace OpenAPT
             nlohmann::json m_params;
     };
 
+    class GetGainTask : public SimpleTask
+    {
+        public:
+            GetGainTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params);
+            ~GetGainTask() {}
+
+        private:
+            std::function<void(const nlohmann::json &)> m_func;
+            nlohmann::json m_params;
+    };
+
+    class SetGainTask : public SimpleTask
+    {
+        public:
+            SetGainTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params);
+            ~SetGainTask() {}
+        private:
+            std::function<void(const nlohmann::json &)> m_func;
+            nlohmann::json m_params;
+    };
+
+    class GetOffsetTask : public SimpleTask
+    {
+        public:
+            GetOffsetTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params);
+            ~GetOffsetTask() {}
+        private:
+            std::function<void(const nlohmann::json &)> m_func;
+            nlohmann::json m_params;
+    };
+
+    class SetOffsetTask : public SimpleTask
+    {
+        public:
+            SetOffsetTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params);
+            ~SetOffsetTask() {}
+        private:
+            std::function<void(const nlohmann::json &)> m_func;
+            nlohmann::json m_params;
+    };
+
     class ConditionalShotTask : public ConditionalTask
     {
         public:
@@ -56,5 +97,19 @@ namespace OpenAPT
                         const nlohmann::json &params,
                         const std::function<bool(const nlohmann::json &)> &condition);
             ~ConditionalShotTask() {}
+        private:
+            std::function<void(const nlohmann::json &)> m_func;
+            nlohmann::json m_params;
+            std::function<bool(const nlohmann::json &)> m_condition;
+    };
+
+    class LoopShotTask : public LoopTask
+    {
+        public:
+            LoopShotTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params);
+            ~LoopShotTask() {}
+        private:
+            std::function<void(const nlohmann::json &)> m_func;
+            nlohmann::json m_params;
     };
 } // namespace OpenAPT

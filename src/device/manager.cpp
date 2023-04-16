@@ -31,7 +31,10 @@ Description: Device Manager
 
 #include "manager.hpp"
 #include "basic_device.hpp"
+
 #include "indi/indicamera.hpp"
+#include "indi/indifocuser.hpp"
+#include "indi/inditelescope.hpp"
 
 #include <spdlog/spdlog.h>
 #include "nlohmann/json.hpp"
@@ -114,8 +117,12 @@ namespace OpenAPT
             // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
             break;
         case DeviceType::Focuser:
-            // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+        {
+            spdlog::debug("Trying to add a new Focuser instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDIFocuser>(newName));
+            spdlog::debug("Added new Focuser instance successfully");
             break;
+        }
         case DeviceType::FilterWheel:
             // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<FilterWheel>(newName));
             break;
@@ -221,7 +228,7 @@ namespace OpenAPT
         }
     }
 
-    std::shared_ptr<SimpleTask> DeviceManager::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name)
+    std::shared_ptr<SimpleTask> DeviceManager::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
@@ -234,9 +241,12 @@ namespace OpenAPT
             {
                 if (device_type == "INDI")
                 {
-                    
                     spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<OpenAPT::INDICamera>(device)->getSimpleTask(task_name,{});
+                    return std::dynamic_pointer_cast<OpenAPT::INDICamera>(device)->getSimpleTask(task_name,params);
+                }
+                else if (device_type == "ASCOM")
+                {
+                    spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
                 }
                 break;
             }
@@ -254,7 +264,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Focuser device: {} with driver: {}", device_name, device_type);
-                    //return std::dynamic_pointer_cast<OpenAPT::INDIFocuser>(device)->MoveToAbsolutePositionTask();
+                    return std::dynamic_pointer_cast<OpenAPT::INDIFocuser>(device)->getSimpleTask(task_name,params);
                 }
                 break;
             }
@@ -273,6 +283,11 @@ namespace OpenAPT
                 {
                     spdlog::debug("Found Solver: ASTAP");
                     //return std::make_shared<OpenAPT::ASTapSolverTask>();
+                }
+                if (device_type == "Astrometry")
+                {
+                    spdlog::debug("Found Solver: Astrometry");
+                    //return std::make_shared<OpenAPT::AstrometrySolverTask>();
                 }
                 break;
             }
@@ -294,6 +309,46 @@ namespace OpenAPT
         {
             spdlog::debug("Device {} not found", device_name);
         }
+        return nullptr;
+    }
+
+    std::shared_ptr<ConditionalTask> DeviceManager::getConditionalTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
+        auto device = m_DeviceManager.findDeviceByName(device_name);
+        if (device!= nullptr)
+        {
+            switch (type)
+            {
+                case DeviceType::Camera: {
+
+                }
+                case DeviceType::Telescope: {
+
+                }
+                case DeviceType::Focuser : {
+
+                }
+                case DeviceType::FilterWheel: {
+
+                }
+                case DeviceType::Solver: {
+
+                }
+                case DeviceType::Guider: {
+
+                }
+                default: 
+                    spdlog::error("Invalid device type");
+                    break;
+            }
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<LoopTask> DeviceManager::getLoopTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    {
         return nullptr;
     }
 

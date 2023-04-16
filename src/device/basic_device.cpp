@@ -58,4 +58,8 @@ namespace OpenAPT
     Filterwheel::Filterwheel(const std::string& name) : Device(name) {}
 
     Filterwheel::~Filterwheel() {}
+
+    Solver::Solver(const std::string& name) : Device(name) {} 
+
+    Solver::~Solver() {}
 } // namespace OpenAPT

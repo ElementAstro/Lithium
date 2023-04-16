@@ -2,7 +2,7 @@ import asyncio
 import traceback
 
 from pathlib import Path
-from ..misc import  # support_logger
+from ..misc import support_logger
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import Angle

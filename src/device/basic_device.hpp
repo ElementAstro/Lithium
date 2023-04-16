@@ -1,8 +1,8 @@
 /*
  * basic_device.hpp
- * 
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,18 +15,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
+
 Date: 2023-3-29
- 
+
 Description: Basic Device Definitions
- 
+
 **************************************************/
 
 #pragma once
@@ -35,9 +35,11 @@ Description: Basic Device Definitions
 
 #include "task/camera_task.hpp"
 
-namespace OpenAPT {
+namespace OpenAPT
+{
 
-    enum class DeviceType {
+    enum class DeviceType
+    {
         Camera,
         Telescope,
         Focuser,
@@ -47,7 +49,8 @@ namespace OpenAPT {
         NumDeviceTypes
     };
 
-    enum class CameraType {
+    enum class CameraType
+    {
         INDICamera,
         ASCOMCamera,
         ASICamera,
@@ -55,209 +58,680 @@ namespace OpenAPT {
         NumCameraTypes
     };
 
-    enum class TelescopeType {
+    enum class TelescopeType
+    {
         INDITelescope,
         ASCOMTelescope,
         IOPTRONTelescope,
         NumTelescopeTypes
     };
 
-    enum class FocuserType {
+    enum class FocuserType
+    {
         INDIFocuser,
         ASCOMFocuser,
         NumFocuserTypes
     };
 
-    enum class FilterwheelType {
+    enum class FilterwheelType
+    {
         INDIFilterwheel,
         ASCOMFilterwheel,
         NumFIlterwheelTypes
     };
 
-
     static constexpr int DeviceTypeCount = 6;
 
-    enum class DeviceStatus {
+    enum class DeviceStatus
+    {
         Unconnected,
         Connected,
         Disconnected
     };
 
-    struct CameraFrame {
+    struct CameraFrame
+    {
         int X = 0;
         int Y = 0;
         double PixelX = 0;
         double PixelY = 0;
     };
 
-    class Device {
-        public:
-    
-            explicit Device(const std::string& name);
-            virtual ~Device();
+    /**
+     * @brief 设备基类
+     */
+    class Device
+    {
+    public:
+        /**
+         * @brief 构造函数
+         *
+         * @param name 设备名称
+         */
+        explicit Device(const std::string &name);
 
-            virtual bool connect(std::string name) {}
-            virtual bool disconnect() {}
-            virtual bool reconnect() {}
-            virtual bool scanForAvailableDevices() {}
+        /**
+         * @brief 析构函数
+         */
+        virtual ~Device();
 
-            virtual bool getSettings() {}
-            virtual bool saveSettings() {}
-            virtual bool getParameter(const std::string& paramName, std::string& paramValue) {}
-            virtual bool setParameter(const std::string& paramName, const std::string& paramValue) {}
+        /**
+         * @brief 连接设备
+         *
+         * @param name 设备名称
+         * @return 连接设备是否成功
+         */
+        virtual bool connect(std::string name) {}
 
-            virtual std::string getName() const {
-                return _name;
-            }
-            virtual bool setName(const std::string& name) {
-                _name = name;
-            }
-            std::string getId() const {
-                return device_name;
-            }
-            virtual bool setId(int id) {
-                id = id;
-            }
+        /**
+         * @brief 断开设备连接
+         *
+         * @return 断开设备连接是否成功
+         */
+        virtual bool disconnect() {}
 
-            std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string& task_name) {}
-            std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string& task_name) {}
-            std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string& task_name) {}
+        /**
+         * @brief 重新连接设备
+         *
+         * @return 重新连接设备是否成功
+         */
+        virtual bool reconnect() {}
 
-        public:
-            std::string _name;
-            int             _id;
-            std::string     device_name;
-            std::string     description;
+        /**
+         * @brief 扫描可用设备
+         *
+         * @return 扫描可用设备是否成功
+         */
+        virtual bool scanForAvailableDevices() {}
 
-            std::string     configPath;
+        /**
+         * @brief 获取设备设置
+         *
+         * @return 获取设备设置是否成功
+         */
+        virtual bool getSettings() {}
 
-            std::string     hostname = "127.0.0.1";
-            int             port = 7624;
+        /**
+         * @brief 保存设备设置
+         *
+         * @return 保存设备设置是否成功
+         */
+        virtual bool saveSettings() {}
 
-            bool            is_connected;    
+        /**
+         * @brief 获取设备参数
+         *
+         * @param paramName 参数名称
+         * @param paramValue 参数值
+         * @return 获取设备参数是否成功
+         */
+        virtual bool getParameter(const std::string &paramName, std::string &paramValue) {}
+
+        /**
+         * @brief 设置设备参数
+         *
+         * @param paramName 参数名称
+         * @param paramValue 参数值
+         * @return 设置设备参数是否成功
+         */
+        virtual bool setParameter(const std::string &paramName, const std::string &paramValue) {}
+
+        /**
+         * @brief 获取设备名称
+         *
+         * @return 设备名称
+         */
+        virtual std::string getName() const
+        {
+            return _name;
+        }
+
+        /**
+         * @brief 设置设备名称
+         *
+         * @param name 设备名称
+         * @return 设置设备名称是否成功
+         */
+        virtual bool setName(const std::string &name)
+        {
+            _name = name;
+        }
+
+        std::string getId() const
+        {
+            return device_name;
+        }
+
+        /**
+         * @brief 设置设备ID
+         *
+         * @param id 设备ID
+         * @return 设置设备ID是否成功
+         */
+        virtual bool setId(int id)
+        {
+            id = id;
+        }
+
+        /**
+         * @brief 获取SimpleTask
+         *
+         * @param task_name 任务名
+         * @param params 参数
+         * @return SimpleTask指针
+         */
+        virtual std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) {}
+
+        /**
+         * @brief 获取ConditionalTask
+         *
+         * @param task_name 任务名
+         * @param params 参数
+         * @return ConditionalTask指针
+         */
+        virtual std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) {}
+
+        /**
+         * @brief 获取LoopTask
+         *
+         * @param task_name 任务名
+         * @param params 参数
+         * @return LoopTask指针
+         */
+        virtual std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) {}
+
+    public:
+        std::string _name;                  ///< 设备名称
+        int _id;                            ///< 设备ID
+        std::string device_name;            ///< 设备名称
+        std::string description;            ///< 设备描述信息
+        std::string configPath;             ///< 配置文件路径
+        std::string hostname = "127.0.0.1"; ///< 主机名
+        int port = 7624;                    ///< 端口号
+        bool is_connected;                  ///< 是否已连接
     };
 
-
+    /**
+     * @brief 相机设备类，继承自Device类
+     */
     class Camera : public Device
     {
+    public:
+        /**
+         * @brief 构造函数
+         *
+         * @param name 设备名称
+         */
+        Camera(const std::string &name);
 
-        public:
+        /**
+         * @brief 析构函数
+         */
+        ~Camera();
 
-            Camera(const std::string& name);
-            ~Camera();
+        /**
+         * @brief 启动曝光
+         *
+         * @param duration_ms 曝光时间（毫秒）
+         * @return 启动曝光是否成功
+         */
+        virtual bool startExposure(int duration_ms) {}
 
-            virtual bool startExposure(int duration_ms) {}
-            virtual bool stopExposure() {}
-            virtual bool waitForExposureComplete() {}
-            //virtual bool readImage(Image& image);
+        /**
+         * @brief 停止曝光
+         *
+         * @return 停止曝光是否成功
+         */
+        virtual bool stopExposure() {}
 
-            virtual bool startLiveView() {}
-            virtual bool stopLiveView() {}
-            //virtual bool readLiveView(Image& image);
+        /**
+         * @brief 等待曝光完成
+         *
+         * @return 曝光完成是否成功
+         */
+        virtual bool waitForExposureComplete() {}
 
-            bool isCoolingAvailable() { return can_cooling; }
-            bool isCoolingOn() { return is_cooling; }
-            virtual bool setCoolingOn(bool on) {}
-            virtual bool setTemperature(double temperature) {}
-            virtual double getTemperature() {}
+        // virtual bool readImage(Image& image);
 
-            bool isShutterAvailable() { return has_shutter; }
-            bool isShutterOpen() { return is_shutter_closed; }
-            virtual bool setShutterOpen(bool open) {}
+        /**
+         * @brief 获取当前曝光时间
+         *
+         * @return 当前曝光时间
+         */
+        double getExposureTime() const { return current_exposure_time; }
 
-            bool isSubframeEnabled() { return is_subframe; }
-            bool setSubframeEnabled(bool enabled) {}
-            //virtual bool setSubframe(const ImageRect& rect);
+        /**
+         * @brief 设置曝光时间
+         *
+         * @param time 曝光时间
+         * @return 设置曝光时间是否成功
+         */
+        virtual bool setExposureTime(double time) {}
 
-            bool isBinningSupported(int binning) { return can_binning; }
-            int getMaxBinning() { return max_binning; }
-            int getBinningX() { return binning_x; }
-            int getBinningY() { return binning_y; }
-            virtual bool setBinning(int binning) {}
+        /**
+         * @brief 启动实时预览
+         *
+         * @return 启动实时预览是否成功
+         */
+        virtual bool startLiveView() {}
 
-            bool isGainSupported(int gain) { return can_gain; }
-            int getMaxGain() { return max_gain; }
-            int getGain() { return gain; }
-            virtual bool setGain(int gain) {}
+        /**
+         * @brief 停止实时预览
+         *
+         * @return 停止实时预览是否成功
+         */
+        virtual bool stopLiveView() {}
 
-            bool isOffsetSupported(int offset) { return can_offset; }
-            int getMaxOffset() { return max_offset; }
-            int getOffset() { return offset; }
-            virtual bool setOffset(int offset) {}
+        // virtual bool readLiveView(Image& image);
 
-            virtual bool getROIFrame() {}
-            virtual bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) {}
+        /**
+         * @brief 检查是否有视频输出
+         *
+         * @return 是否有视频输出
+         */
+        virtual bool isVideoAvailable() const { return is_video_available; }
 
-        public:
+        /**
+         * @brief 检查是否可冷却
+         *
+         * @return 是否可冷却
+         */
+        bool isCoolingAvailable() { return can_cooling; }
 
-            static const double UnknownPixelSize;
+        /**
+         * @brief 检查是否正在冷却
+         *
+         * @return 是否正在冷却
+         */
+        bool isCoolingOn() { return is_cooling; }
 
-            bool            is_connected;
-            bool            is_exposuring;
-            bool            is_video;
-            bool            is_color;
+        /**
+         * @brief 控制冷却开关
+         *
+         * @param on 是否开启冷却
+         * @return 控制冷却开关是否成功
+         */
+        virtual bool setCoolingOn(bool on) {}
 
-            bool            can_gain;
-            int             gain;
-            int             max_gain;
+        /**
+         * @brief 设置目标温度
+         *
+         * @param temperature 目标温度
+         * @return 设置目标温度是否成功
+         */
+        virtual bool setTemperature(double temperature) {}
 
-            bool            can_offset;
-            int             offset;
-            int             max_offset;
+        /**
+         * @brief 获取当前温度
+         *
+         * @return 当前温度
+         */
+        virtual double getTemperature() {}
 
-            bool            has_shutter;
-            bool            is_shutter_closed;          
+        /**
+         * @brief 检查是否有快门
+         *
+         * @return 是否有快门
+         */
+        bool isShutterAvailable() { return has_shutter; }
 
-            bool            has_subframe;
-            bool            is_subframe;        
+        /**
+         * @brief 检查快门状态
+         *
+         * @return 快门是否关闭
+         */
+        bool isShutterOpen() { return is_shutter_closed; }
 
-            bool            can_binning;
-            int             binning_x;
-            int             binning_y;           
-            int             max_binning;
-            int             min_binning;
+        /**
+         * @brief 控制快门开关
+         *
+         * @param open 是否打开快门
+         * @return 控制快门开关是否成功
+         */
+        virtual bool setShutterOpen(bool open) {}
 
-            int             read_delay;
+        /**
+         * @brief 检查是否支持子帧
+         *
+         * @return 是否支持子帧
+         */
+        bool isSubframeEnabled() { return is_subframe; }
 
-            bool            can_cooling;
-            bool            is_cooling;
-            double          current_temperature;
-            double          current_power;
+        /**
+         * @brief 设置子帧是否启用
+         *
+         * @param enabled 是否启用子帧
+         * @return 设置子帧是否成功
+         */
+        bool setSubframeEnabled(bool enabled) {}
 
-            double          pixel;
-            double          pixel_x;
-            double          pixel_y;
-            int             pixel_depth;
-            int             frame_x;
-            int             frame_y;
-            int             max_frame_x;
-            int             max_frame_y;
-            int             start_x;
-            int             start_y;
+        // virtual bool setSubframe(const ImageRect& rect);
 
+        /**
+         * @brief 检查是否支持某种采样方式
+         *
+         * @param binning 采样率
+         * @return 是否支持该采样率
+         */
+        bool isBinningSupported(int binning) { return can_binning; }
+
+        /**
+         * @brief 获取最大采样率
+         *
+         * @return 最大采样率
+         */
+        int getMaxBinning() { return max_binning; }
+
+        /**
+         * @brief 获取横向采样率
+         *
+         * @return 横向采样率
+         */
+        int getBinningX() { return binning_x; }
+
+        /**
+         * @brief 设置采样率
+         *
+         * @param binning 采样率
+         * @return 设置采样率是否成功
+         */
+        virtual bool setBinning(int binning) {}
+
+        /**
+         * @brief 检查是否支持某种增益值
+         *
+         * @param gain 增益值
+         * @return 是否支持该增益值
+         */
+        bool isGainSupported(int gain) { return can_gain; }
+
+        /**
+         * @brief 获取最大增益值
+         *
+         * @return 最大增益值
+         */
+        int getMaxGain() { return max_gain; }
+
+        /**
+         * @brief 获取当前增益值
+         *
+         * @return 当前增益值
+         */
+        int getGain() { return gain; }
+
+        /**
+         * @brief 设置增益值
+         *
+         * @param gain 增益值
+         * @return 设置增益值是否成功
+         */
+        virtual bool setGain(int gain) {}
+
+        /**
+         * @brief 检查是否支持某种偏置值
+         *
+         * @param offset 偏置值
+         * @return 是否支持该偏置值
+         */
+        bool isOffsetSupported(int offset) { return can_offset; }
+
+        /**
+         * @brief 获取最大偏置值
+         *
+         * @return 最大偏置值
+         */
+        int getMaxOffset() { return max_offset; }
+
+        /**
+         * @brief 获取当前偏置值
+         *
+         * @return 当前偏置值
+         */
+        int getOffset() { return offset; }
+
+        /**
+         * @brief 设置偏置值
+         *
+         * @param offset 偏置值
+         * @return 设置偏置值是否成功
+         */
+        virtual bool setOffset(int offset) {}
+
+        // virtual bool getROIFrame() {}
+
+        /**
+         * @brief 设置ROI帧
+         *
+         * @param start_x X轴起始坐标
+         * @param start_y Y轴起始坐标
+         * @param frame_x 帧宽度
+         * @param frame_y 帧高度
+         * @return 设置ROI帧是否成功
+         */
+        virtual bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) {}
+
+    public:
+        static const double UnknownPixelSize;
+
+        bool is_connected;  ///< 是否已连接
+        bool is_exposuring; ///< 是否正在曝光
+        bool is_video;      ///< 是否有视频输出
+        bool is_color;      ///< 是否为彩色相机
+
+        double current_exposure_time; ///< 当前曝光时间
+        double max_exposure_time;     ///< 最大曝光时间
+        double min_exposure_time;     ///< 最小曝光时间
+
+        bool is_video_available; ///< 视频输出是否可用
+
+        bool can_gain; ///< 是否可调增益
+        int gain;      ///< 当前增益值
+        int max_gain;  ///< 最大增益值
+
+        bool can_offset; ///< 是否可调偏置值
+        int offset;      ///< 当前偏置值
+        int max_offset;  ///< 最大偏置值
+
+        bool has_shutter;       ///< 是否有快门
+        bool is_shutter_closed; ///< 快门是否关闭
+
+        bool has_subframe; ///< 是否支持子帧
+        bool is_subframe;  ///< 子帧是否启用
+
+        bool can_binning; ///< 是否支持采样率控制
+        int binning_x;    ///< 横向采样率
+        int binning_y;    ///< 纵向采样率
+        int max_binning;  ///< 最大采样率
+        int min_binning;  ///< 最小采样率
+
+        int read_delay; ///< 读取延迟
+
+        bool can_cooling;           ///< 是否可冷却
+        bool is_cooling;            ///< 是否正在冷却
+        double current_temperature; ///< 当前温度
+        double current_power;       ///< 当前功率
+
+        double pixel;    ///< 像素大小
+        double pixel_x;  ///< X轴像素大小
+        double pixel_y;  ///< Y轴像素大小
+        int pixel_depth; ///< 像素深度
+        int frame_x;     ///< 帧宽度
+        int frame_y;     ///< 帧高度
+        int max_frame_x; ///< 最大帧宽度
+        int max_frame_y; ///< 最大帧高度
+        int start_x;     ///< X轴起始坐标
+        int start_y;     ///< Y轴起始坐标
     };
 
     class Telescope : public Device
     {
-        public:
-
-            Telescope(const std::string& name);
-            ~Telescope();
+    public:
+        Telescope(const std::string &name);
+        ~Telescope();
     };
 
     class Focuser : public Device
     {
-        public:
+    public:
+        /**
+         * @brief 构造函数，创建一个名为 name 的电调对象
+         *
+         * @param name 电调名称
+         */
+        Focuser(const std::string &name);
 
-            Focuser(const std::string& name);
-            ~Focuser();
+        /**
+         * @brief 析构函数，释放资源
+         */
+        ~Focuser();
+
+        /**
+         * @brief 将电调移动到 position 位置
+         *
+         * @param position 相对移动的步数
+         * @return bool 移动是否成功
+         */
+        virtual bool moveTo(const int position) {}
+
+        /**
+         * @brief 将电调移动到绝对位置 position
+         *
+         * @param position 绝对位置步数
+         * @return bool 移动是否成功
+         */
+        virtual bool moveToAbsolute(const int position) {}
+
+        /**
+         * @brief 移动电调 step 个步长
+         *
+         * @param step 移动步数
+         * @return bool 移动是否成功
+         */
+        virtual bool moveStep(const int step) {}
+
+        /**
+         * @brief 移动电调至绝对步数位置
+         *
+         * @param step 绝对步数位置
+         * @return bool 移动是否成功
+         */
+        virtual bool moveStepAbsolute(const int step) {}
+
+        /**
+         * @brief 中止电调移动
+         *
+         * @return bool 操作是否成功
+         */
+        virtual bool AbortMove() {}
+
+        /**
+         * @brief 获取电调最大位置
+         *
+         * @return int 电调最大位置
+         */
+        virtual int getMaxPosition() {}
+
+        /**
+         * @brief 设置电调最大位置
+         *
+         * @param max_position 电调最大位置
+         * @return bool 操作是否成功
+         */
+        virtual bool setMaxPosition(int max_position) {}
+
+        /**
+         * @brief 判断是否支持获取温度功能
+         *
+         * @return bool 是否支持获取温度功能
+         */
+        bool isGetTemperatureAvailable() {}
+
+        /**
+         * @brief 获取电调当前温度
+         *
+         * @return double 当前温度
+         */
+        virtual double getTemperature() {}
+
+        /**
+         * @brief 判断是否支持绝对移动功能
+         *
+         * @return bool 是否支持绝对移动功能
+         */
+        bool isAbsoluteMoveAvailable() {}
+
+        /**
+         * @brief 判断是否支持手动移动功能
+         *
+         * @return bool 是否支持手动移动功能
+         */
+        bool isManualMoveAvailable() {}
+
+        /**
+         * @brief 获取电调当前位置
+         *
+         * @return int 当前位置
+         */
+        virtual int getCurrentPosition() {}
+
+        /**
+         * @brief 判断电调是否存在反向间隙
+         *
+         * @return bool 是否存在反向间隙
+         */
+        virtual bool haveBacklash() {}
+
+        /**
+         * @brief 设置电调反向间隙值
+         *
+         * @param value 反向间隙值
+         * @return bool 操作是否成功
+         */
+        virtual bool setBacklash(int value) {}
+
+    public:
+        bool is_moving; // 电调是否正在移动
+
+        int current_mode;     // 电调当前模式
+        int current_motion;   // 电调当前运动状态
+        double current_speed; // 电调当前速度
+
+        int current_position; // 电调当前位置
+        int max_position;     // 电调可移动的最大位置
+        int min_position;     // 电调可移动的最小位置
+        int max_step;         // 电调可移动的最大步长
+
+        bool can_get_temperature;   // 是否支持获取温度功能
+        double current_temperature; // 当前温度值
+
+        bool can_absolute_move; // 是否支持绝对移动功能
+        bool can_manual_move;   // 是否支持手动移动功能
+
+        int delay; // 电调延迟时间
+
+        bool has_backlash;
     };
 
     class Filterwheel : public Device
     {
-        public:
+    public:
+        Filterwheel(const std::string &name);
+        ~Filterwheel();
 
-            Filterwheel(const std::string& name);
-            ~Filterwheel();
+        virtual bool moveTo(const int position) {}
+
+    public:
+        int current_position;
+        int max_position;
+        int min_position;
+    };
+
+    class Solver : public Device
+    {
+    public:
+        Solver(const std::string &name);
+        ~Solver();
+
+    public:
     };
 } // namespace OpenAPT

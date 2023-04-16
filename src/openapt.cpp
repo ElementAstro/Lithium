@@ -606,8 +606,8 @@ void TestAll()
                 spdlog::debug("Found device {} as a Camera", device1->getName());
                 spdlog::debug("Testing captureImage:");
                 m_TaskManager.addTask(camera->getSimpleTask("SingleShot", {}));
-                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "SingleShot"));
-                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "GetGain"));
+                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "SingleShot",{}));
+                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "GetGain",{}));
                 m_TaskManager.executeAllTasks();
             }
             else
@@ -625,6 +625,20 @@ void TestAll()
     {
         spdlog::error("Can't find device CCD Simulator");
     }
+
+    m_DeviceManager.addDevice(OpenAPT::DeviceType::Focuser, "Focuser Simulator");
+    auto focuserList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Focuser);
+    for (auto &name : focuserList)
+        spdlog::debug("Found Focuser name {}", name);
+
+    spdlog::debug("Testing findDeviceByName:");
+    auto device2 = m_DeviceManager.findDeviceByName("Focuser Simulator");
+
+    if (device2 != nullptr)
+        device1->connect("CCD Simulator");
+        m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Focuser, "INDI", "Focuser Simulator", "MoveToAbsolute",{}));
+    else
+        spdlog::error("Can't find device Focuser Simulator");
 
     spdlog::debug("Finished testing DeviceManager");
     spdlog::debug("--------------------------------------------------------------");
@@ -739,7 +753,7 @@ void TestAll()
     m_PythonLoader.unload_module("mymodule");
     // nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
     // spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
-
+    m_TaskManager.executeAllTasks();
 }
 
 void quit()

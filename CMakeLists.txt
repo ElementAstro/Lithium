@@ -161,6 +161,9 @@ set(webapi_SRC
 set(indi_SRC
     ${openapt_src_dir}/src/indi/indicamera.cpp
     ${openapt_src_dir}/src/indi/indicamera.hpp
+
+    ${openapt_src_dir}/src/indi/indifocuser.cpp
+    ${openapt_src_dir}/src/indi/indifocuser.hpp
 )
 
 set(openapt_SRC

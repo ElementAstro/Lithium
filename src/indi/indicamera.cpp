@@ -37,8 +37,9 @@ Description: INDI Camera
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT {
-    
+namespace OpenAPT
+{
+
     void INDICamera::newDevice(INDI::BaseDevice *dp)
     {
         if (strcmp(dp->getDeviceName(), device_name.c_str()) == 0)
@@ -117,11 +118,13 @@ namespace OpenAPT {
             max_frame_x = IUFindNumber(ccdinfo_prop, "CCD_MAX_X")->value;
             max_frame_y = IUFindNumber(ccdinfo_prop, "CCD_MAX_Y")->value;
             pixel_depth = IUFindNumber(ccdinfo_prop, "CCD_BITSPERPIXEL")->value;
+            spdlog::debug("Camera pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}", pixel, pixel_x, pixel_y, max_frame_x, max_frame_y, pixel_depth);
         }
         else if (nvp == binning_prop)
         {
             binning_x = IUFindNumber(binning_prop, "HOR_BIN")->value;
             binning_y = IUFindNumber(binning_prop, "VER_BIN")->value;
+            spdlog::debug("Camera binning_x {} binning_y {}", binning_x, binning_y);
         }
         else if (nvp == frame_prop)
         {
@@ -146,7 +149,7 @@ namespace OpenAPT {
 
     void INDICamera::newText(ITextVectorProperty *tvp)
     {
-        spdlog::debug("INDI Camera Received Text: {} = {}\n", tvp->name, tvp->tp->text);
+        spdlog::debug("INDI Camera Received Text: {} = {}", tvp->name, tvp->tp->text);
     }
 
     void INDICamera::newBLOB(IBLOB *bp)
@@ -154,18 +157,17 @@ namespace OpenAPT {
         // we go here every time a new blob is available
         // this is normally the image from the camera
 
-        spdlog::debug("INDI Camera Received BLOB {} len = {} size = {}\n", bp->name, bp->bloblen, bp->size);
+        spdlog::debug("INDI Camera Received BLOB {} len = {} size = {}", bp->name, bp->bloblen, bp->size);
 
         if (expose_prop)
         {
             if (bp->name == indi_blob_name.c_str())
             {
-                //updateLastFrame(bp);
+                // updateLastFrame(bp);
             }
         }
         else if (video_prop)
         {
-
         }
     }
 
@@ -178,7 +180,7 @@ namespace OpenAPT {
 
         if (Proptype == INDI_BLOB)
         {
-            spdlog::debug("INDI Camera Found BLOB property for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found BLOB property for {} {}", property->getDeviceName(), PropName);
 
             if (PropName == indi_blob_name.c_str())
             {
@@ -186,20 +188,20 @@ namespace OpenAPT {
                 // set option to receive blob and messages for the selected CCD
                 setBLOBMode(B_ALSO, device_name.c_str(), indi_blob_name.c_str());
 
-    #ifdef INDI_SHARED_BLOB_SUPPORT
+#ifdef INDI_SHARED_BLOB_SUPPORT
                 // Allow faster mode provided we don't modify the blob content or free/realloc it
                 enableDirectBlobAccess(device_name.c_str(), indi_blob_name.c_str());
-    #endif
+#endif
             }
         }
         else if (PropName == indi_camera_cmd + "EXPOSURE" && Proptype == INDI_NUMBER)
         {
-            spdlog::debug("INDI Camera Found CCD_EXPOSURE for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found CCD_EXPOSURE for {} {}", property->getDeviceName(), PropName);
             expose_prop = property->getNumber();
         }
         else if (PropName == indi_camera_cmd + "FRAME" && Proptype == INDI_NUMBER)
         {
-            spdlog::debug("INDI Camera Found CCD_FRAME for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found CCD_FRAME for {} {}", property->getDeviceName(), PropName);
             frame_prop = property->getNumber();
             indi_frame_x = IUFindNumber(frame_prop, "X");
             indi_frame_y = IUFindNumber(frame_prop, "Y");
@@ -209,12 +211,12 @@ namespace OpenAPT {
         }
         else if (PropName == indi_camera_cmd + "FRAME_TYPE" && Proptype == INDI_SWITCH)
         {
-            spdlog::debug("INDI Camera Found CCD_FRAME_TYPE for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found CCD_FRAME_TYPE for {} {}", property->getDeviceName(), PropName);
             frame_type_prop = property->getSwitch();
         }
         else if (PropName == indi_camera_cmd + "BINNING" && Proptype == INDI_NUMBER)
         {
-            spdlog::debug("INDI Camera Found CCD_BINNING for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found CCD_BINNING for {} {}", property->getDeviceName(), PropName);
             binning_prop = property->getNumber();
             indi_binning_x = IUFindNumber(binning_prop, "HOR_BIN");
             indi_binning_y = IUFindNumber(binning_prop, "VER_BIN");
@@ -222,39 +224,48 @@ namespace OpenAPT {
         }
         else if (PropName == indi_camera_cmd + "CFA" && Proptype == INDI_TEXT)
         {
-            spdlog::debug("INDI Camera Found CCD_CFA for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found CCD_CFA for {} {}", property->getDeviceName(), PropName);
             ITextVectorProperty *cfa_prop = property->getText();
             IText *cfa_type = IUFindText(cfa_prop, "CFA_TYPE");
             if (cfa_type && cfa_type->text && *cfa_type->text)
             {
-                spdlog::debug("INDI Camera CFA_TYPE is {}\n", cfa_type->text);
+                spdlog::debug("INDI Camera CFA_TYPE is {}", cfa_type->text);
                 is_color = true;
             }
         }
         else if (PropName == indi_camera_cmd + "VIDEO_STREAM" && Proptype == INDI_SWITCH)
         {
-            spdlog::debug("INDI Camera Found Video {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found Video {} {}", property->getDeviceName(), PropName);
             video_prop = property->getSwitch();
         }
         else if (PropName == "VIDEO_STREAM" && Proptype == INDI_SWITCH)
         {
-            spdlog::debug("INDI Camera Found Video {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found Video {} {}", property->getDeviceName(), PropName);
             video_prop = property->getSwitch();
         }
         else if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
         {
-            spdlog::debug("INDI Camera Found device port for {} \n", property->getDeviceName());
+            spdlog::debug("INDI Camera Found device port for {} ", property->getDeviceName());
             camera_port = property->getText();
         }
         else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
         {
-            spdlog::debug("INDI Camera Found CONNECTION for {} {}\n", property->getDeviceName(), PropName);
+            spdlog::debug("INDI Camera Found CONNECTION for {} {}", property->getDeviceName(), PropName);
             connection_prop = property->getSwitch();
             ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
             is_connected = (connectswitch->s == ISS_ON);
+            if (!is_connected)
+            {
+                connection_prop->sp->s = ISS_ON;
+                sendNewSwitch(connection_prop);
+            }
+            spdlog::debug("INDI Camera Connected {}", is_connected);
         }
         else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
         {
+            device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
+            indi_camera_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
+            spdlog::debug("Camera Name : {} connected exec {}", device_name, indi_camera_exec);
         }
         else if (PropName == indi_camera_cmd + "INFO" && Proptype == INDI_NUMBER)
         {
@@ -298,26 +309,24 @@ namespace OpenAPT {
         camera_device = nullptr;
     }
 
-    INDICamera::INDICamera(const std::string& name) : Camera(name)
+    INDICamera::INDICamera(const std::string &name) : Camera(name)
     {
-
     }
 
     INDICamera::~INDICamera()
     {
-
     }
 
     bool INDICamera::connect(std::string name)
     {
         spdlog::debug("Trying to connect to {}", name);
-        setServer(hostname.c_str(),port);
+        setServer(hostname.c_str(), port);
         // Receive messages only for our camera.
         watchDevice(name.c_str());
         // Connect to server.
         if (connectServer())
         {
-            spdlog::debug("INDI Camera: connectServer done ready = {}\n", is_ready);
+            spdlog::debug("INDI Camera: connectServer done ready = {}", is_ready);
             connectDevice(name.c_str());
             return !is_ready;
         }
@@ -333,7 +342,6 @@ namespace OpenAPT {
     {
         return true;
     }
-
 
     bool INDICamera::scanForAvailableDevices()
     {
@@ -355,7 +363,7 @@ namespace OpenAPT {
         return true;
     }
 
-        // bool readImage(Image& image);
+    // bool readImage(Image& image);
 
     bool INDICamera::startLiveView()
     {
@@ -366,7 +374,7 @@ namespace OpenAPT {
     {
         return true;
     }
-        // bool readLiveView(Image& image);
+    // bool readLiveView(Image& image);
 
     bool INDICamera::setCoolingOn(bool on)
     {
@@ -403,11 +411,6 @@ namespace OpenAPT {
         return true;
     }
 
-    bool INDICamera::getROIFrame()
-    {
-        return true;
-    }
-
     bool INDICamera::setROIFrame(int start_x, int start_y, int frame_x, int frame_y)
     {
         return true;
@@ -415,9 +418,10 @@ namespace OpenAPT {
 
     std::shared_ptr<OpenAPT::SimpleTask> INDICamera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
-        if (task_name == "SingleShot") {
-            spdlog::debug("SingleShot task with parameters : {}",params.dump());
-            return std::shared_ptr<OpenAPT::SimpleTask> (new OpenAPT::SimpleTask(
+        if (task_name == "SingleShot")
+        {
+            spdlog::debug("SingleShot task with parameters : {}", params.dump());
+            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
                 [](const nlohmann::json &tparams)
                 {
                     spdlog::debug("INDI Camera SingleShot task is called");
@@ -426,15 +430,15 @@ namespace OpenAPT {
         }
         else if (task_name == "GetGain")
         {
-            return std::shared_ptr<OpenAPT::SimpleTask> (new OpenAPT::SimpleTask(
+            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
                 [](const nlohmann::json &tparams)
                 {
                     spdlog::debug("INDI Camera SingleShot task is called");
                 },
                 {params}));
         }
-        
-        spdlog::error("Unknown type of the INDI Camera task : {}",task_name);
+
+        spdlog::error("Unknown type of the INDI Camera task : {}", task_name);
         return nullptr;
     }
 

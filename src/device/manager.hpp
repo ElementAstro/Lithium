@@ -134,11 +134,11 @@ namespace OpenAPT {
 
         std::shared_ptr<Camera> getCamera(const std::string& name);
 
-        std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type,const std::string& device_type,const std::string& device_name,const std::string& task_name);
+        std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type,const std::string& device_type,const std::string& device_name,const std::string& task_name, const nlohmann::json &params);
 
-        std::shared_ptr<ConditionalTask> getConditionalTask(const std::string& device_name, const std::string& task_name);
+        std::shared_ptr<ConditionalTask> getConditionalTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
-        std::shared_ptr<LoopTask> getLoopTask(const std::string& device_name,const std::string task_name);
+        std::shared_ptr<LoopTask> getLoopTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
     private:
         std::vector<std::shared_ptr<Device>> m_devices[6]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.

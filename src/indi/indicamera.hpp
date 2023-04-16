@@ -48,88 +48,137 @@ namespace OpenAPT
     {
         // INDI Parameters
     private:
+        // 连接属性
         ISwitchVectorProperty *connection_prop;
+        // 曝光属性
         INumberVectorProperty *expose_prop;
+        // 帧属性
         INumberVectorProperty *frame_prop;
+        // 温度属性
         INumberVectorProperty *temperature_prop;
+        // 增益属性
         INumberVectorProperty *gain_prop;
+        // 偏移属性
         INumberVectorProperty *offset_prop;
+        // 帧区域参数
         INumber *indi_frame_x;
         INumber *indi_frame_y;
         INumber *indi_frame_width;
         INumber *indi_frame_height;
+        // 帧类型
         ISwitchVectorProperty *frame_type_prop;
+        // CCD 设备信息
         INumberVectorProperty *ccdinfo_prop;
+        // 二次取样属性
         INumberVectorProperty *binning_prop;
+        // 二次取样 X 轴
         INumber *indi_binning_x;
+        // 二次取样 Y 轴
         INumber *indi_binning_y;
+        // 视频属性
         ISwitchVectorProperty *video_prop;
+        // 相机端口
         ITextVectorProperty *camera_port;
+        // 相机设备
         INDI::BaseDevice *camera_device;
 
-        bool is_ready;
-        bool has_blob;
+        // 标志位
+        bool is_ready; // 是否就绪
+        bool has_blob; // 是否有 BLOB 数据
 
-        std::string indi_camera_cmd;
-        std::string indi_blob_name;
+        // INDI 指令
+        std::string indi_camera_cmd = "CCD_"; // INDI 控制命令前缀
+        std::string indi_blob_name; // BLOB 文件名
+        std::string indi_camera_exec = ""; // INDI 执行命令
 
     public:
+        // 构造函数
         INDICamera(const std::string &name);
+        // 析构函数
         ~INDICamera();
 
+        // 连接相机
         bool connect(std::string name) override;
+        // 断开连接
         bool disconnect() override;
+        // 重新连接
         bool reconnect() override;
+        // 搜索可用设备
         bool scanForAvailableDevices() override;
 
+        // 开始曝光
         bool startExposure(int duration_ms) override;
+        // 停止曝光
         bool stopExposure() override;
+        // 等待曝光完成
         bool waitForExposureComplete() override;
-        // bool readImage(Image& image);
 
+        // 开始实时预览
         bool startLiveView() override;
+        // 停止实时预览
         bool stopLiveView() override;
-        // bool readLiveView(Image& image);
 
+        // 设置制冷
         bool setCoolingOn(bool on) override;
+        // 设置温度
         bool setTemperature(double temperature) override;
+        // 获取当前温度
         double getTemperature();
 
+        // 设置快门开关
         bool setShutterOpen(bool open) override;
 
-        // bool setSubframe(const ImageRect& rect);
+        // 设置图像子区域
+        //bool setSubframe(const ImageRect& rect);
 
+        // 设置二次取样
         bool setBinning(int binning) override;
 
+        // 设置增益
         bool setGain(int gain) override;
 
+        // 设置偏移
         bool setOffset(int offset) override;
 
-        bool getROIFrame() override;
+        // 设置帧区域
         bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) override;
 
-        std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params);
-
-        std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params);
-
-        std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params);
+        // 获取简单任务
+        std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
+        // 获取条件任务
+        std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
+        // 获取循环任务
+        std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
 
     protected:
+        // 清空状态
         void ClearStatus();
 
         // INDI Client API
     protected:
+        // 新设备
         void newDevice(INDI::BaseDevice *dp) override;
+        // 删除设备
         void removeDevice(INDI::BaseDevice *dp) override;
+        // 新属性
         void newProperty(INDI::Property *property) override;
+        // 删除属性
         void removeProperty(INDI::Property *property) override {}
+        // 新 BLOB 数据
         void newBLOB(IBLOB *bp) override;
+        // 新开关属性
         void newSwitch(ISwitchVectorProperty *svp) override;
+        // 新数值属性
         void newNumber(INumberVectorProperty *nvp) override;
+        // 新消息
         void newMessage(INDI::BaseDevice *dp, int messageID) override;
+        // 新文本属性
         void newText(ITextVectorProperty *tvp) override;
+        // 新灯属性
         void newLight(ILightVectorProperty *lvp) override {}
+        // INDI 服务器连接成功
         void IndiServerConnected() override;
+        // INDI 服务器断开连接
         void IndiServerDisconnected(int exit_code) override;
     };
 }

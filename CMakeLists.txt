@@ -13,10 +13,10 @@ cmake_minimum_required(VERSION 3.16)
 enable_language(C CXX)
 
 if(COMMAND cmake_policy)
-    cmake_policy(SET CMP0003 NEW)
-    if(POLICY CMP0043)
-      cmake_policy(SET CMP0043 NEW)
-    endif()
+		cmake_policy(SET CMP0003 NEW)
+		if(POLICY CMP0043)
+			cmake_policy(SET CMP0043 NEW)
+		endif()
 endif()
 
 # root directory of the project
@@ -24,8 +24,8 @@ set(OPENAPT_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(openapt_src_dir ${OPENAPT_PROJECT_ROOT_DIR})
 
 add_custom_target(CmakeAdditionalFiles
-  SOURCES
-  ${openapt_src_dir}/cmake_modules/compiler_options.cmake)
+	SOURCES
+	${openapt_src_dir}/cmake_modules/compiler_options.cmake)
 
 # Add a GPL3 declaration
 # Set the license information in the project here
@@ -40,9 +40,9 @@ include(cmake_modules/compiler_options.cmake)
 #
 # General defines for compatibility across different platforms
 if(UNIX AND NOT APPLE)
-  if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "openapt install path" FORCE)
-  endif()
+	if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+		set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "openapt install path" FORCE)
+	endif()
 endif()
 
 set(USE_FOLDERS TRUE)
@@ -50,10 +50,10 @@ set(USE_FOLDERS TRUE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_custom_command(
-  OUTPUT ${CMAKE_BINARY_DIR}/websrc_modification
-  COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_SOURCE_DIR}/websrc ${CMAKE_BINARY_DIR}/websrc_modification
-  BYPRODUCTS ${CMAKE_BINARY_DIR}/websrc_modification
-  VERBATIM # Option to ensure that the command is executed correctly on all platforms
+	OUTPUT ${CMAKE_BINARY_DIR}/websrc_modification
+	COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_SOURCE_DIR}/websrc ${CMAKE_BINARY_DIR}/websrc_modification
+	BYPRODUCTS ${CMAKE_BINARY_DIR}/websrc_modification
+	VERBATIM # Option to ensure that the command is executed correctly on all platforms
 )
 
 # Add a custom target that depends on the modification check
@@ -69,11 +69,11 @@ file(GLOB_RECURSE TEMPLATE_FILES ${CMAKE_SOURCE_DIR}/websrc/templates/*)
 
 # Add a custom command to copy any modified static and template files to the build directory
 add_custom_command(
-  TARGET check_websrc_modification
-  POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STATIC_FILES} ${CMAKE_BINARY_DIR}/static/
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TEMPLATE_FILES} ${CMAKE_BINARY_DIR}/templates/
-  COMMAND_EXPAND_LISTS # Option to expand lists when copying files
+	TARGET check_websrc_modification
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STATIC_FILES} ${CMAKE_BINARY_DIR}/static/
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TEMPLATE_FILES} ${CMAKE_BINARY_DIR}/templates/
+	COMMAND_EXPAND_LISTS # Option to expand lists when copying files
 )
 
 #################################################################################
@@ -95,199 +95,205 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 set(plugins_SRC
-    ${openapt_src_dir}/src/plugins/thread.cpp
-    ${openapt_src_dir}/src/plugins/thread.hpp
+		${openapt_src_dir}/src/plugins/thread.cpp
+		${openapt_src_dir}/src/plugins/thread.hpp
 
-    ${openapt_src_dir}/src/plugins/file.cpp
-    ${openapt_src_dir}/src/plugins/file.hpp
+		${openapt_src_dir}/src/plugins/file.cpp
+		${openapt_src_dir}/src/plugins/file.hpp
 
-    ${openapt_src_dir}/src/plugins/process.cpp
-    ${openapt_src_dir}/src/plugins/process.hpp
+		${openapt_src_dir}/src/plugins/process.cpp
+		${openapt_src_dir}/src/plugins/process.hpp
 
-    ${openapt_src_dir}/src/plugins/compress.cpp
-    ${openapt_src_dir}/src/plugins/compress.hpp
+		${openapt_src_dir}/src/plugins/compress.cpp
+		${openapt_src_dir}/src/plugins/compress.hpp
 
-    ${openapt_src_dir}/src/plugins/time.cpp
-    ${openapt_src_dir}/src/plugins/time.hpp
+		${openapt_src_dir}/src/plugins/time.cpp
+		${openapt_src_dir}/src/plugins/time.hpp
 
-    ${openapt_src_dir}/src/plugins/io.cpp
-    ${openapt_src_dir}/src/plugins/io.hpp
+		${openapt_src_dir}/src/plugins/io.cpp
+		${openapt_src_dir}/src/plugins/io.hpp
 
-    ${openapt_src_dir}/src/plugins/xmlreader.cpp
-    ${openapt_src_dir}/src/plugins/xmlreader.hpp
+		${openapt_src_dir}/src/plugins/xmlreader.cpp
+		${openapt_src_dir}/src/plugins/xmlreader.hpp
 
-    ${openapt_src_dir}/src/plugins/crash.cpp
-    ${openapt_src_dir}/src/plugins/crash.hpp
+		${openapt_src_dir}/src/plugins/crash.cpp
+		${openapt_src_dir}/src/plugins/crash.hpp
 
-    ${openapt_src_dir}/src/plugins/terminal.cpp
-    ${openapt_src_dir}/src/plugins/terminal.hpp
+		${openapt_src_dir}/src/plugins/terminal.cpp
+		${openapt_src_dir}/src/plugins/terminal.hpp
 
-    ${openapt_src_dir}/src/plugins/sha256.hpp
-    ${openapt_src_dir}/src/plugins/glob.hpp
-    ${openapt_src_dir}/src/plugins/uuid.h
+		${openapt_src_dir}/src/plugins/sha256.hpp
+		${openapt_src_dir}/src/plugins/glob.hpp
+		${openapt_src_dir}/src/plugins/uuid.h
 )
 
 set(image_SRC
-    ${openapt_src_dir}/src/image/image.cpp
-    ${openapt_src_dir}/src/image/image.hpp
+		${openapt_src_dir}/src/image/image.cpp
+		${openapt_src_dir}/src/image/image.hpp
 
-    ${openapt_src_dir}/src/image/draw.cpp
+		${openapt_src_dir}/src/image/draw.cpp
 
-    ${openapt_src_dir}/src/image/cvimage.cpp
-    ${openapt_src_dir}/src/image/cvimage.hpp
+		${openapt_src_dir}/src/image/cvimage.cpp
+		${openapt_src_dir}/src/image/cvimage.hpp
 )
 
 set(asx_SRC
-    ${openapt_src_dir}/src/asx/search.cpp
-    ${openapt_src_dir}/src/asx/search.hpp
+		${openapt_src_dir}/src/asx/search.cpp
+		${openapt_src_dir}/src/asx/search.hpp
 )
 
 set(api_SRC
-    ${openapt_src_dir}/src/api/astap.cpp
-    ${openapt_src_dir}/src/api/astap.hpp
+		${openapt_src_dir}/src/api/astap.cpp
+		${openapt_src_dir}/src/api/astap.hpp
 
-    ${openapt_src_dir}/src/api/astrometry.cpp
-    ${openapt_src_dir}/src/api/astrometry.hpp
+		${openapt_src_dir}/src/api/astrometry.cpp
+		${openapt_src_dir}/src/api/astrometry.hpp
 
-    ${openapt_src_dir}/src/api/indiclient.cpp
-    ${openapt_src_dir}/src/api/indiclient.hpp
+		${openapt_src_dir}/src/api/indiclient.cpp
+		${openapt_src_dir}/src/api/indiclient.hpp
 )
 
 set(webapi_SRC
-    ${openapt_src_dir}/src/webapi/http_api.cpp
-    ${openapt_src_dir}/src/webapi/http_api.hpp
+		${openapt_src_dir}/src/webapi/http_api.cpp
+		${openapt_src_dir}/src/webapi/http_api.hpp
 )
 
 set(indi_SRC
-    ${openapt_src_dir}/src/indi/indicamera.cpp
-    ${openapt_src_dir}/src/indi/indicamera.hpp
+		${openapt_src_dir}/src/indi/indicamera.cpp
+		${openapt_src_dir}/src/indi/indicamera.hpp
 
-    ${openapt_src_dir}/src/indi/indifocuser.cpp
-    ${openapt_src_dir}/src/indi/indifocuser.hpp
+		${openapt_src_dir}/src/indi/indifocuser.cpp
+		${openapt_src_dir}/src/indi/indifocuser.hpp
+
+		${openapt_src_dir}/src/indi/inditelescope.cpp
+		${openapt_src_dir}/src/indi/inditelescope.hpp
+
+		${openapt_src_dir}/src/indi/indifilterwheel.cpp
+		${openapt_src_dir}/src/indi/indifilterwheel.hpp
 )
 
 set(openapt_SRC
-    ${openapt_src_dir}/src/module/modloader.cpp
-    ${openapt_src_dir}/src/module/modloader.hpp
+		${openapt_src_dir}/src/module/modloader.cpp
+		${openapt_src_dir}/src/module/modloader.hpp
 
-    ${openapt_src_dir}/src/module/lualoader.cpp
-    ${openapt_src_dir}/src/module/lualoader.hpp
+		${openapt_src_dir}/src/module/lualoader.cpp
+		${openapt_src_dir}/src/module/lualoader.hpp
 
-    ${openapt_src_dir}/src/module/pythonloader.cpp
-    ${openapt_src_dir}/src/module/pythonloader.hpp
+		${openapt_src_dir}/src/module/pythonloader.cpp
+		${openapt_src_dir}/src/module/pythonloader.hpp
 
-    ${openapt_src_dir}/src/module/compiler.cpp
-    ${openapt_src_dir}/src/module/compiler.hpp
+		${openapt_src_dir}/src/module/compiler.cpp
+		${openapt_src_dir}/src/module/compiler.hpp
 
-    ${openapt_src_dir}/src/module/sheller.cpp
-    ${openapt_src_dir}/src/module/sheller.hpp
+		${openapt_src_dir}/src/module/sheller.cpp
+		${openapt_src_dir}/src/module/sheller.hpp
 
-    ${openapt_src_dir}/src/package/downloader.cpp
-    ${openapt_src_dir}/src/package/downloader.hpp
+		${openapt_src_dir}/src/package/downloader.cpp
+		${openapt_src_dir}/src/package/downloader.hpp
 
-    ${openapt_src_dir}/src/package/packageloader.cpp
-    ${openapt_src_dir}/src/package/packageloader.hpp
+		${openapt_src_dir}/src/package/packageloader.cpp
+		${openapt_src_dir}/src/package/packageloader.hpp
 
-    ${openapt_src_dir}/src/task/camera_task.cpp
-    ${openapt_src_dir}/src/task/camera_task.hpp
-    ${openapt_src_dir}/src/task/define.hpp
-    ${openapt_src_dir}/src/task/runner.cpp
-    ${openapt_src_dir}/src/task/runner.hpp
+		${openapt_src_dir}/src/task/camera_task.cpp
+		${openapt_src_dir}/src/task/camera_task.hpp
+		${openapt_src_dir}/src/task/define.hpp
+		${openapt_src_dir}/src/task/runner.cpp
+		${openapt_src_dir}/src/task/runner.hpp
 
-    ${openapt_src_dir}/src/device/basic_device.cpp
-    ${openapt_src_dir}/src/device/basic_device.hpp
+		${openapt_src_dir}/src/device/basic_device.cpp
+		${openapt_src_dir}/src/device/basic_device.hpp
 
-    ${openapt_src_dir}/src/device/manager.cpp
-    ${openapt_src_dir}/src/device/manager.hpp
+		${openapt_src_dir}/src/device/manager.cpp
+		${openapt_src_dir}/src/device/manager.hpp
 
-    ${openapt_src_dir}/src/config/logger.cpp
-    ${openapt_src_dir}/src/config/logger.hpp
-    ${openapt_src_dir}/src/config/configor.cpp
-    ${openapt_src_dir}/src/config/configor.hpp
-    ${openapt_src_dir}/src/config/achievement.cpp
-    ${openapt_src_dir}/src/config/achievement.hpp
-    ${openapt_src_dir}/src/config/achievement_list.cpp
-    ${openapt_src_dir}/src/config/achievement_list.hpp
+		${openapt_src_dir}/src/config/logger.cpp
+		${openapt_src_dir}/src/config/logger.hpp
+		${openapt_src_dir}/src/config/configor.cpp
+		${openapt_src_dir}/src/config/configor.hpp
+		${openapt_src_dir}/src/config/achievement.cpp
+		${openapt_src_dir}/src/config/achievement.hpp
+		${openapt_src_dir}/src/config/achievement_list.cpp
+		${openapt_src_dir}/src/config/achievement_list.hpp
 
-    ${openapt_src_dir}/src/openapt.cpp
-    ${openapt_src_dir}/src/openapt.hpp
+		${openapt_src_dir}/src/openapt.cpp
+		${openapt_src_dir}/src/openapt.hpp
 )
 
 if(UNIX)
-  # should be linux there
-  add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
-  
-  # Use consistent formatting for target_precompile_headers
-  target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
-  
-  # Use consistent formatting for find_package
-  find_package(ZLIB REQUIRED)
-  
-  # Find and link CFITSIO libraries
-  find_package(CFITSIO REQUIRED)
-  target_link_libraries(openapt ${CFITSIO_LIBRARIES})
-  
-  # Find and link INDI libraries
-  find_package(INDI 2.0.0 REQUIRED)
-  include_directories(${INDI_INCLUDE_DIR})
-  target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
+	# should be linux there
+	add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
+	
+	# Use consistent formatting for target_precompile_headers
+	target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
+	
+	# Use consistent formatting for find_package
+	find_package(ZLIB REQUIRED)
+	
+	# Find and link CFITSIO libraries
+	find_package(CFITSIO REQUIRED)
+	target_link_libraries(openapt ${CFITSIO_LIBRARIES})
+	
+	# Find and link INDI libraries
+	find_package(INDI 2.0.0 REQUIRED)
+	include_directories(${INDI_INCLUDE_DIR})
+	target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
 
-  find_package(CURL REQUIRED)
-  target_link_libraries(openapt CURL::libcurl)
+	find_package(CURL REQUIRED)
+	target_link_libraries(openapt CURL::libcurl)
 
-  
-  # Check if Python is installed
-  find_package(Python REQUIRED COMPONENTS Development)
-  if(Python_FOUND)
-    message(STATUS "Python version: ${Python_VERSION}")
-  else()
-    message(SEND_ERROR "Python not found.")
-  endif()
+	
+	# Check if Python is installed
+	find_package(Python REQUIRED COMPONENTS Development)
+	if(Python_FOUND)
+		message(STATUS "Python version: ${Python_VERSION}")
+	else()
+		message(SEND_ERROR "Python not found.")
+	endif()
 
-  # Add Python headers and library paths
-  include_directories(${Python_INCLUDE_DIRS})
-  link_directories(${Python_LIBRARY_DIRS})
+	# Add Python headers and library paths
+	include_directories(${Python_INCLUDE_DIRS})
+	link_directories(${Python_LIBRARY_DIRS})
 
-  # Add compiler flags and link Python libraries
-  add_definitions(${Python_DEFINITIONS})
-  target_link_libraries(openapt ${Python_LIBRARIES})
+	# Add compiler flags and link Python libraries
+	add_definitions(${Python_DEFINITIONS})
+	target_link_libraries(openapt ${Python_LIBRARIES})
 
-  # Find and link OpenSSL libraries
-  find_package(OpenSSL REQUIRED)
-  if(OpenSSL_FOUND)
-    target_link_libraries(openapt ${OPENSSL_LIBRARIES})
-    message("-- Using OpenSSL ${OPENSSL_VERSION}")
-  else()
-    message("-- OpenSSL Not Found")
-  endif()
+	# Find and link OpenSSL libraries
+	find_package(OpenSSL REQUIRED)
+	if(OpenSSL_FOUND)
+		target_link_libraries(openapt ${OPENSSL_LIBRARIES})
+		message("-- Using OpenSSL ${OPENSSL_VERSION}")
+	else()
+		message("-- OpenSSL Not Found")
+	endif()
 
-  find_package(SQLite3 REQUIRED)
-  target_link_libraries(openapt sqlite3)
+	find_package(SQLite3 REQUIRED)
+	target_link_libraries(openapt sqlite3)
 
-  find_package(GSL REQUIRED)
-  target_link_libraries(openapt ${GSL_LIBRARIES})
+	find_package(GSL REQUIRED)
+	target_link_libraries(openapt ${GSL_LIBRARIES})
 
-  # Find and link spdlog libraries
-  find_package(spdlog REQUIRED)
-  target_link_libraries(openapt spdlog::spdlog_header_only)
+	# Find and link spdlog libraries
+	find_package(spdlog REQUIRED)
+	target_link_libraries(openapt spdlog::spdlog_header_only)
 
-  find_package(OpenCV REQUIRED)
-  include_directories(${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(openapt ${OpenCV_LIBS})
+	find_package(OpenCV REQUIRED)
+	include_directories(${OpenCV_INCLUDE_DIRS})
+	target_link_libraries(openapt ${OpenCV_LIBS})
 
-  # Link ZLIB and pugixml-static libraries
-  target_link_libraries(openapt ${ZLIB_LIBRARIES})
-  target_link_libraries(openapt pugixml-static)
+	# Link ZLIB and pugixml-static libraries
+	target_link_libraries(openapt ${ZLIB_LIBRARIES})
+	target_link_libraries(openapt pugixml-static)
 
-  target_link_libraries(openapt lua)
+	target_link_libraries(openapt lua)
 
-  # Set output name for openapt executable
-  set_target_properties(
-    openapt
-    PROPERTIES
-    OUTPUT_NAME openapt
-  )
+	# Set output name for openapt executable
+	set_target_properties(
+		openapt
+		PROPERTIES
+		OUTPUT_NAME openapt
+	)
 
 else()
-  message(FATAL_ERROR "Unsupported platform")
+	message(FATAL_ERROR "Unsupported platform")
 endif()

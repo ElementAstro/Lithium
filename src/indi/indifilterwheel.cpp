@@ -1,5 +1,5 @@
 /*
- * inditelescope.cpp
+ * indifilterwheel.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,25 +25,25 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Telescope
+Description: INDI Filterwheel
 
 **************************************************/
 
-#include "inditelescope.hpp"
+#include "indifilterwheel.hpp"
 
 #include <spdlog/spdlog.h>
 
 namespace OpenAPT
 {
-    void INDITelescope::newDevice(INDI::BaseDevice *dp)
+    void INDIFilterwheel::newDevice(INDI::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
-            telescope_device = dp;
+            filter_device = dp;
         }
     }
 
-    void INDITelescope::newSwitch(ISwitchVectorProperty *svp)
+    void INDIFilterwheel::newSwitch(ISwitchVectorProperty *svp)
     {
         std::string const connection_str{"CONNECTION"};
         std::string const baud_rate_str{"DEVICE_BAUD_RATE"};
@@ -75,23 +75,23 @@ namespace OpenAPT
             std::string const baud_230400{"230400"};
 
             if (IUFindSwitch(svp, "9600")->s == ISS_ON)
-                indi_telescope_rate = baud_9600;
+                indi_filter_rate = baud_9600;
             else if (IUFindSwitch(svp, "19200")->s == ISS_ON)
-                indi_telescope_rate = baud_19200;
+                indi_filter_rate = baud_19200;
             else if (IUFindSwitch(svp, "38400")->s == ISS_ON)
-                indi_telescope_rate = baud_38400;
+                indi_filter_rate = baud_38400;
             else if (IUFindSwitch(svp, "57600")->s == ISS_ON)
-                indi_telescope_rate = baud_57600;
+                indi_filter_rate = baud_57600;
             else if (IUFindSwitch(svp, "115200")->s == ISS_ON)
-                indi_telescope_rate = baud_115200;
+                indi_filter_rate = baud_115200;
             else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
-                indi_telescope_rate = baud_230400;
+                indi_filter_rate = baud_230400;
 
-            spdlog::debug("{} baud rate : {}", _name, indi_telescope_rate);
+            spdlog::debug("{} baud rate : {}", _name, indi_filter_rate);
         }
     }
 
-    void INDITelescope::newMessage(INDI::BaseDevice *dp, int messageID)
+    void INDIFilterwheel::newMessage(INDI::BaseDevice *dp, int messageID)
     {
         spdlog::debug("{} Received message: {}",_name, dp->messageQueue(messageID));
     }
@@ -112,7 +112,7 @@ namespace OpenAPT
         }
     }
 
-    void INDITelescope::newNumber(INumberVectorProperty *nvp)
+    void INDIFilterwheel::newNumber(INumberVectorProperty *nvp)
     {
         std::ostringstream os;
         for (int i = 0; i < nvp->nnp; i++)
@@ -123,23 +123,23 @@ namespace OpenAPT
         }
         spdlog::debug("{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
 
-        if (nvp == telescopeinfo_prop)
+        if (nvp == filterinfo_prop)
         {
             // do nothing
         }
     }
 
-    void INDITelescope::newText(ITextVectorProperty *tvp)
+    void INDIFilterwheel::newText(ITextVectorProperty *tvp)
     {
         spdlog::debug("{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
     }
 
-    void INDITelescope::newBLOB(IBLOB *bp)
+    void INDIFilterwheel::newBLOB(IBLOB *bp)
     {
         spdlog::debug("{} Received BLOB {} len = {} size = {}",_name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDITelescope::newProperty(INDI::Property *property)
+    void INDIFilterwheel::newProperty(INDI::Property *property)
     {
         std::string PropName(property->getName());
         INDI_PROPERTY_TYPE Proptype = property->getType();
@@ -149,7 +149,7 @@ namespace OpenAPT
         if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
         {
             spdlog::debug("{} Found device port for {} ",_name, property->getDeviceName());
-            telescope_port = property->getText();
+            filter_port = property->getText();
         }
         else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
         {
@@ -167,47 +167,47 @@ namespace OpenAPT
         else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
         {
             device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
-            indi_telescope_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
-            indi_telescope_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
-            indi_telescope_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-            spdlog::debug("{} Name : {} connected exec {}",_name, device_name, indi_telescope_exec);
+            indi_filter_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
+            indi_filter_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
+            indi_filter_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
+            spdlog::debug("{} Name : {} connected exec {}",_name, device_name, indi_filter_exec);
         }
-        else if (PropName == indi_telescope_cmd + "INFO" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_filter_cmd + "INFO" && Proptype == INDI_NUMBER)
         {
-            telescopeinfo_prop = property->getNumber();
-            newNumber(telescopeinfo_prop);
+            filterinfo_prop = property->getNumber();
+            newNumber(filterinfo_prop);
         }
-        else if (PropName == indi_telescope_cmd + "DEVICE_BAUD_RATE" && Proptype == INDI_SWITCH)
+        else if (PropName == indi_filter_cmd + "DEVICE_BAUD_RATE" && Proptype == INDI_SWITCH)
         {
             rate_prop = property->getSwitch();
             if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
-                indi_telescope_rate = "9600";
+                indi_filter_rate = "9600";
             else if (IUFindSwitch(rate_prop, "19200")->s == ISS_ON)
-                indi_telescope_rate = "19200";
+                indi_filter_rate = "19200";
             else if (IUFindSwitch(rate_prop, "38400")->s == ISS_ON)
-                indi_telescope_rate = "38400";
+                indi_filter_rate = "38400";
             else if (IUFindSwitch(rate_prop, "57600")->s == ISS_ON)
-                indi_telescope_rate = "57600";
+                indi_filter_rate = "57600";
             else if (IUFindSwitch(rate_prop, "115200")->s == ISS_ON)
-                indi_telescope_rate = "115200";
+                indi_filter_rate = "115200";
             else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
-                indi_telescope_rate = "230400";
-            spdlog::debug("{} baud rate : {}",_name, indi_telescope_rate);
+                indi_filter_rate = "230400";
+            spdlog::debug("{} baud rate : {}",_name, indi_filter_rate);
         }
-        else if (PropName == indi_telescope_cmd + "DEVICE_PORT" && Proptype == INDI_TEXT)
+        else if (PropName == indi_filter_cmd + "DEVICE_PORT" && Proptype == INDI_TEXT)
         {
-            indi_telescope_port = IUFindText(property->getText(), "PORT")->text;
-            spdlog::debug("{} USB Port : {}",_name, indi_telescope_port);
+            indi_filter_port = IUFindText(property->getText(), "PORT")->text;
+            spdlog::debug("{} USB Port : {}",_name, indi_filter_port);
         }
     }
 
-    void INDITelescope::IndiServerConnected()
+    void INDIFilterwheel::IndiServerConnected()
     {
         spdlog::debug("{} connection succeeded",_name);
         is_connected = true;
     }
 
-    void INDITelescope::IndiServerDisconnected(int exit_code)
+    void INDIFilterwheel::IndiServerDisconnected(int exit_code)
     {
         spdlog::debug("{}: serverDisconnected",_name);
         // after disconnection we reset the connection status and the properties pointers
@@ -217,34 +217,34 @@ namespace OpenAPT
             spdlog::debug("{} : INDI server disconnected",_name);
     }
 
-    void INDITelescope::removeDevice(INDI::BaseDevice *dp)
+    void INDIFilterwheel::removeDevice(INDI::BaseDevice *dp)
     {
         ClearStatus();
         spdlog::info("{} disconnected",_name);
     }
 
-    void INDITelescope::ClearStatus()
+    void INDIFilterwheel::ClearStatus()
     {
         connection_prop = nullptr;
-        telescope_port = nullptr;
-        telescope_device = nullptr;
+        filter_port = nullptr;
+        filter_device = nullptr;
         connection_prop = nullptr;
         rate_prop = nullptr;
-        telescopeinfo_prop = nullptr;
-        telescope_port = nullptr;
-        telescope_device = nullptr;
+        filterinfo_prop = nullptr;
+        filter_port = nullptr;
+        filter_device = nullptr;
     }
 
-    INDITelescope::INDITelescope(const std::string &name) : Telescope(name)
+    INDIFilterwheel::INDIFilterwheel(const std::string &name) : Filterwheel(name)
     {
-        spdlog::debug("INDI telescope {} init successfully",name);
+        spdlog::debug("INDI filterwheel {} init successfully",name);
     }
 
-    INDITelescope::~INDITelescope()
+    INDIFilterwheel::~INDIFilterwheel()
     {
     }
 
-    bool INDITelescope::connect(std::string name)
+    bool INDIFilterwheel::connect(std::string name)
     {
         spdlog::debug("Trying to connect to {}", name);
         if (is_connected) {
@@ -265,104 +265,36 @@ namespace OpenAPT
         return false;
     }
 
-    bool INDITelescope::disconnect()
+    bool INDIFilterwheel::disconnect()
     {
         return true;
     }
 
-    bool INDITelescope::reconnect()
+    bool INDIFilterwheel::reconnect()
     {
         disconnect();
         return connect(_name);
     }
 
-    bool INDITelescope::scanForAvailableDevices()
+    bool INDIFilterwheel::scanForAvailableDevices()
     {
         spdlog::warn("scanForAvailableDevices function not implemented");
         return false;
     }
 
-    bool INDITelescope::SlewTo(const std::string & ra,const std::string &dec,const bool j2000)
+    std::shared_ptr<OpenAPT::SimpleTask> INDIFilterwheel::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
-        spdlog::warn("SlewTo function not implemented");
-        return false;
-    }
-    
-    bool INDITelescope::Abort()
-    {
-        spdlog::warn("Abort function not implemented");
-        return false;
-    }
-
-    bool INDITelescope::StartTracking(const std::string &model,const std::string &speed)
-    {
-        spdlog::warn("StartTracking function not implemented");
-        return false;
-    }
-
-    bool INDITelescope::StopTracking()
-    {
-        return false;
-    }
-
-    bool INDITelescope::setTrackingMode(const std::string &mode)
-    {
-        return false;
-    }
-
-    bool INDITelescope::setTrackingSpeed(const std::string &speed)
-    {
-        return false;
-    }
-
-    bool INDITelescope::Home()
-    {
-        return false;
-    }
-
-    bool INDITelescope::isAtHome()
-    {
-        return false;
-    }
-
-    bool INDITelescope::setHomePosition()
-    {
-        return false;
-    }
-
-    bool INDITelescope::Park()
-    {
-        return false;
-    }
-
-    bool INDITelescope::Unpark()
-    {
-        return false;
-    }
-
-    bool INDITelescope::isAtPark()
-    {
-        return false;
-    }
-
-    bool INDITelescope::setParkPosition()
-    {
-        return false;
-    }
-
-    std::shared_ptr<OpenAPT::SimpleTask> INDITelescope::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
-    {
-        spdlog::error("Unknown type of the INDI telescope task: {}", task_name);
+        spdlog::error("Unknown type of the INDI filter task: {}", task_name);
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::ConditionalTask> INDITelescope::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<OpenAPT::ConditionalTask> INDIFilterwheel::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getCondtionalTask function not implemented");
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::LoopTask> INDITelescope::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<OpenAPT::LoopTask> INDIFilterwheel::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getLoopTask function not implemented");
         return nullptr;

@@ -1,13 +1,37 @@
-Version: 23w02b
+23w01a 
 
-Update log:
+update most of the codes , and there is still a long way to go!
 
-1. Added a Lua module loader with many useful functions, providing modders with more flexibility and extensibility when creating custom scripts for the astronomical equipment control software. This feature allows modders to write custom Lua scripts that can interact with the software's core functionality, leading to a more personalized user experience.
+23w01b 
 
-2. Added a Python script and module loader to the software, augmenting the game's scripting capabilities. Modders can now leverage Python scripts to create custom functionality for the software, opening up new opportunities for experimentation and innovation.
+-- Add Dear Imgui as the GUI library 
+-- Trying to create modules and improve the loader 
+-- Add crash report and some basic tools 
+-- Improve task manager
 
-3. Implemented a debug terminal similar to Python console, facilitating modders in writing, testing, and debugging their custom scripts. The debug terminal enables modders to execute Lua and Python commands directly within the software, without the need to switch between different programs.
+23w01c 
 
-4. Fixed several bugs in the astrometry solver command line interface, enhancing the software's accuracy and reliability. These improvements led to an augmented experience for users who depend on the software's astrometry functionality to track celestial bodies.
+-- Improve TaskManager and ModuleLoader 
+-- Tried to fix the bug of ThreadManager but still failed 
+-- Add more test
 
-In summary, this update focused on bolstering the software's scripting capabilities by adding two new script loaders and a debug terminal while also reinforcing its reliability by fixing bugs in the astrometry solver command line interface. These advances empower modders to build more sophisticated and engaging custom scripts, supporting greater creativity and customization.
+23w02a
+
+-- Cleaned up all files using clang-tidy to improve code quality and readability.
+-- Implemented an achievement system for players to track and earn in-game accomplishments.
+-- Added client web pages and prepared for future online features.
+
+23w02b
+
+-- Reorganized file directory.
+-- Added a feature to dynamically compile and load code. Currently does not support clang.
+-- Added default achievements.
+-- Added certificates to prevent copyright issues.
+
+23w03a 
+
+big update but not finished
+
+23w03b
+
+big update but not finished

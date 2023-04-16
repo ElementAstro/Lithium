@@ -1,5 +1,5 @@
 /*
- * indiTelescope.hpp
+ * indifilterwheel.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Telescope
+Description: INDI Filterwheel
 
 **************************************************/
 
@@ -43,53 +43,36 @@ Description: INDI Telescope
 
 namespace OpenAPT
 {
-    class INDITelescope : public Telescope, public OpenAptIndiClient
+    class INDIFilterwheel : public Filterwheel, public OpenAptIndiClient
     {
         // INDI Parameters
     private:
         ISwitchVectorProperty *connection_prop;
-        INumberVectorProperty *telescopeinfo_prop;
-        ITextVectorProperty *telescope_port;
+        INumberVectorProperty *filterinfo_prop;
+        ITextVectorProperty *filter_port;
         ISwitchVectorProperty *rate_prop;
-        INDI::BaseDevice *telescope_device;
+        INDI::BaseDevice *filter_device;
 
         bool is_ready;
         bool has_blob;
 
-        std::string indi_telescope_port = "";
-        std::string indi_telescope_rate = "";
+        std::string indi_filter_port = "";
+        std::string indi_filter_rate = "";
 
-        std::string indi_telescope_cmd;
-        std::string indi_telescope_exec = "";
-        std::string indi_telescope_version = "";
-        std::string indi_telescope_interface = "";
+        std::string indi_filter_cmd;
+        std::string indi_filter_exec = "";
+        std::string indi_filter_version = "";
+        std::string indi_filter_interface = "";
 
     public:
 
-        INDITelescope(const std::string &name);
-        ~INDITelescope();
+        INDIFilterwheel(const std::string &name);
+        ~INDIFilterwheel();
 
         bool connect(std::string name) override;
         bool disconnect() override;
         bool reconnect() override;
         bool scanForAvailableDevices() override;
-
-        bool SlewTo(const std::string & ra,const std::string &dec,const bool j2000 = false)  override;
-        bool Abort() override;
-
-        bool StartTracking(const std::string &model,const std::string &speed) override;
-        bool StopTracking() override;
-        bool setTrackingMode(const std::string &mode) override;
-        bool setTrackingSpeed(const std::string &speed) override;
-
-        bool Home() override;
-        bool isAtHome() override;
-        bool setHomePosition() override;
-
-        bool Park() override;
-        bool Unpark() override;
-        bool isAtPark() override;
-        bool setParkPosition() override;
 
         // 获取简单任务
         std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;

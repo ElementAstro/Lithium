@@ -35,6 +35,7 @@ Description: Device Manager
 #include "indi/indicamera.hpp"
 #include "indi/indifocuser.hpp"
 #include "indi/inditelescope.hpp"
+#include "indi/indifilterwheel.hpp"
 
 #include <spdlog/spdlog.h>
 #include "nlohmann/json.hpp"
@@ -114,18 +115,26 @@ namespace OpenAPT
             break;
         }
         case DeviceType::Telescope:
-            // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+        {
+            spdlog::debug("Trying to add a new camera instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDITelescope>(newName));
+            spdlog::debug("Added new telescope instance successfully");
             break;
+        }
         case DeviceType::Focuser:
         {
             spdlog::debug("Trying to add a new Focuser instance : {}", newName);
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDIFocuser>(newName));
-            spdlog::debug("Added new Focuser instance successfully");
+            spdlog::debug("Added new focuser instance successfully");
             break;
         }
         case DeviceType::FilterWheel:
-            // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<FilterWheel>(newName));
+        {
+            spdlog::debug("Trying to add a new camera instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDIFilterwheel>(newName));
+            spdlog::debug("Added new filterwheel instance successfully");
             break;
+        }
         case DeviceType::Solver:
             // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
             break;
@@ -242,7 +251,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<OpenAPT::INDICamera>(device)->getSimpleTask(task_name,params);
+                    return std::dynamic_pointer_cast<INDICamera>(device)->getSimpleTask(task_name,params);
                 }
                 else if (device_type == "ASCOM")
                 {
@@ -255,7 +264,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Telescope device: {} with driver: {}", device_name, device_type);
-                    //return std::dynamic_pointer_cast<OpenAPT::INDITelescope>(device)->SlewTask();
+                    return std::dynamic_pointer_cast<INDITelescope>(device)->getSimpleTask(task_name,params);
                 }
                 break;
             }
@@ -264,7 +273,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Focuser device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<OpenAPT::INDIFocuser>(device)->getSimpleTask(task_name,params);
+                    return std::dynamic_pointer_cast<INDIFocuser>(device)->getSimpleTask(task_name,params);
                 }
                 break;
             }
@@ -273,7 +282,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found FilterWheel device: {} with driver: {}", device_name, device_type);
-                    //return std::dynamic_pointer_cast<OpenAPT::INDIFilterWheel>(device)->SetFilterTask();
+                    return std::dynamic_pointer_cast<INDIFilterwheel>(device)->getSimpleTask(task_name,params);
                 }
                 break;
             }

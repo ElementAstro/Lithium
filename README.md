@@ -21,15 +21,35 @@ Our software also includes a modified version of PHD2, built in as the guide too
 
 We're also proud to be fully open source, based on GPL3. This means that you can customize our software to suit your own unique needs, and it's completely free to use. We believe in making astronomy accessible to everyone, and we're committed to opening up the cosmos to enthusiasts and professionals alike.
 
-Our OpenAPT system follows a unique approach that enables seamless communication between various astronomical devices and client processes. The OpenAPT clients use INET websockets to connect with the OpenAPT server, which acts as a central hub for exchanging data and instructions between the clients and drivers.
-
-Each OpenAPT client is associated with a specific driver that is responsible for managing the communication with the associated astronomical device. For example, OpenAPT Client 1 communicates with OpenAPT Driver A, which in turn communicates with device X. Similarly, OpenAPT Client 2 communicates with OpenAPT Driver B that controls device Y, and so on. The OpenAPT drivers are designed to handle all necessary low-level device-specific communication protocols, enabling the clients to interact with the devices at a higher level of abstraction.
-
-The OpenAPT server operates as the mediator between the clients and drivers, ensuring that incoming data from the clients is routed to the appropriate driver, and vice versa. The server also handles synchronization between the clients and drivers, ensuring that data is shared accurately and efficiently.
-
-Our system is highly modular, making it easy to add support for new devices or extend the functionality of existing drivers. All hardware devices are controlled through a common API interface implemented by the respective drivers, ensuring consistency and ease of use across different devices.
-
 With OpenAPT, astronomers can now easily manage and control multiple astronomical devices using a unified interface. Our system is designed to be intuitive, efficient, and highly adaptable to the changing needs of astronomers and astrophotographers.
+
+## How to build
+
+### Install dependencies
+
+```
+sudo apt-add-repository ppa:mutlaqja/ppa -y // Add INDI source
+sudo apt update && sudo apt upgrade -y 
+sudo apt install libspdlog-dev libboost-dev libgsl-dev libcfitsio-dev libz-dev python3-dev libssl-dev libsqlite3-dev libboost-system-dev && sudo apt-get install libindi1 indi-bin libindi-dev
+```
+
+or just run
+
+```
+sudo sh scripts/build_ci.sh
+```
+
+### Build the code
+
+```
+mkdir build && cd build
+cmake ..
+make -j4
+
+./openapt
+```
+
+Everything is very simple.
 
 ```
 Learning requires not mere imagination,

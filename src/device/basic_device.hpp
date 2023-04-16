@@ -49,37 +49,6 @@ namespace OpenAPT
         NumDeviceTypes
     };
 
-    enum class CameraType
-    {
-        INDICamera,
-        ASCOMCamera,
-        ASICamera,
-        QHYCamera,
-        NumCameraTypes
-    };
-
-    enum class TelescopeType
-    {
-        INDITelescope,
-        ASCOMTelescope,
-        IOPTRONTelescope,
-        NumTelescopeTypes
-    };
-
-    enum class FocuserType
-    {
-        INDIFocuser,
-        ASCOMFocuser,
-        NumFocuserTypes
-    };
-
-    enum class FilterwheelType
-    {
-        INDIFilterwheel,
-        ASCOMFilterwheel,
-        NumFIlterwheelTypes
-    };
-
     static constexpr int DeviceTypeCount = 6;
 
     enum class DeviceStatus
@@ -568,6 +537,63 @@ namespace OpenAPT
     public:
         Telescope(const std::string &name);
         ~Telescope();
+
+        virtual bool SlewTo(const std::string & ra,const std::string &dec,const bool j2000 = false) {}
+        virtual bool Abort() {}
+        bool isSlewing() { return is_slewing; }
+        std::string getCurrentRA() { return current_ra; }
+        std::string getCurrentDec() { return current_dec; }
+
+        virtual bool StartTracking(const std::string &model,const std::string &speed) {}
+        virtual bool StopTracking() {}
+        virtual bool setTrackingMode(const std::string &mode) {}
+        virtual bool setTrackingSpeed(const std::string &speed) {}
+        std::string getTrackingMode() { return current_tracking_mode; }
+        std::string getTrackingSpeed() { return current_tracking_speed; }
+
+
+        virtual bool Home() {}
+        virtual bool isAtHome() {}
+        virtual bool setHomePosition() {}
+        bool isHomeAvailable() { return can_home; }
+
+        virtual bool Park() {}
+        virtual bool Unpark() {}
+        virtual bool isAtPark() {}
+        virtual bool setParkPosition() {}
+        bool isParkAvailable() { return can_park; }
+
+    public:
+
+        std::string mount_type = "";
+
+        bool is_slewing = false;
+        bool is_tracking = false;
+
+
+        std::string current_ra;
+        std::string current_dec;
+        std::string current_az;
+        std::string current_alt;
+
+        std::string current_target_name;
+
+        std::string current_lat;
+        std::string current_lon;
+        std::string current_elevation;
+
+        std::string current_tracking_mode;  // sidereal | solar | lunar
+        std::string current_tracking_speed; // default is 1
+
+        bool is_home = false;
+        bool is_parked = false;
+
+        bool can_home = false;
+        bool can_park = false;
+        bool can_abort = true;
+        bool can_track_speed = false;
+        bool can_slew_speed = false;
+        bool can_guiding_speed = false;
     };
 
     class Focuser : public Device

@@ -634,11 +634,27 @@ void TestAll()
     spdlog::debug("Testing findDeviceByName:");
     auto device2 = m_DeviceManager.findDeviceByName("Focuser Simulator");
 
-    if (device2 != nullptr)
-        device1->connect("CCD Simulator");
+    if (device2 != nullptr) {
+        device2->connect("Focuser Simulator");
         m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Focuser, "INDI", "Focuser Simulator", "MoveToAbsolute",{}));
+    }
     else
         spdlog::error("Can't find device Focuser Simulator");
+
+    m_DeviceManager.addDevice(OpenAPT::DeviceType::FilterWheel, "Filter Simulator");
+    auto filterList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::FilterWheel);
+    for (auto &name : filterList)
+        spdlog::debug("Found Focuser name {}", name);
+
+    spdlog::debug("Testing findDeviceByName:");
+    auto device3 = m_DeviceManager.findDeviceByName("Filter Simulator");
+
+    if (device3 != nullptr) {
+        device3->connect("Filter Simulator");
+        //m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Filterwheel, "INDI", "Filter Simulator", "MoveToAbsolute",{}));
+    }
+    else
+        spdlog::error("Can't find device Filter Simulator");
 
     spdlog::debug("Finished testing DeviceManager");
     spdlog::debug("--------------------------------------------------------------");

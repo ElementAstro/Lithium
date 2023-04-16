@@ -45,26 +45,28 @@ namespace fs = std::filesystem;
 namespace OpenAPT
 {
 
-    void ConfigManager::loadFromFile(const std::string &file_path)
+    void ConfigManager::loadFromFile(const std::string &path)
     {
-        std::ifstream ifs(file_path);
+        std::ifstream ifs(path);
         if (!ifs.is_open())
         {
-            spdlog::error("Failed to open file: {}", file_path);
+            spdlog::error("Failed to open file: {}", path);
             return;
         }
         json j;
         try
         {
             ifs >> j;
-            const auto base_name = fs::path(file_path).stem().string();
+            // 获取文件名并去掉后缀
+            const std::string basename = path.substr(path.find_last_of("/\\") + 1);
+            const std::string name_without_ext = basename.substr(0, basename.find_last_of('.'));
             auto merged_j = json::object_t{};
-            merged_j[base_name] = j;
+            merged_j[name_without_ext] = j;
             mergeConfig(merged_j);
         }
         catch (const json::exception &e)
         {
-            spdlog::error("Failed to parse file: {}, error message: {}", file_path, e.what());
+            spdlog::error("Failed to parse file: {}, error message: {}", path, e.what());
         }
     }
 
@@ -72,46 +74,59 @@ namespace OpenAPT
     {
         for (const auto &file : fs::directory_iterator(dir_path))
         {
-            const auto &path_str = file.path().string();
-            if (file.is_directory() && recursive)
+            if (file.path().extension() == ".json")
             {
-                const auto &config_path = fs::path(path_str) / "config.json";
-                if (fs::exists(config_path))
-                {
-                    loadFromFile(config_path.string());
-                }
-                else
-                {
-                    loadFromDir(path_str, true);
-                }
+                loadFromFile(file.path().string());
             }
-            else if (file.path().extension() == ".json")
+            else if (recursive && file.is_directory())
             {
-                loadFromFile(path_str);
+                const std::string subdir_path = file.path().string();
+                const std::string basename = file.path().filename().string();
+                const std::string config_file_path = subdir_path + "/config.json";
+                if (fs::exists(config_file_path))
+                {
+                    json j;
+                    try
+                    {
+                        std::ifstream ifs(config_file_path);
+                        ifs >> j;
+                        auto merged_j = json::object_t{};
+                        merged_j[dir_path][basename] = j;
+                        mergeConfig(merged_j);
+                    }
+                    catch (const json::exception &e)
+                    {
+                        spdlog::error("Failed to parse file: {}, error message: {}", config_file_path, e.what());
+                    }
+                }
+                loadFromDir(subdir_path, true);
             }
         }
     }
 
     void ConfigManager::setValue(const std::string &key_path, const json &value)
     {
-        auto keys = split(key_path, "/");
-        auto p = &config_;
-        for (std::size_t i = 0; i < keys.size() - 1; ++i)
+        std::vector<std::string> keys = split(key_path, "/");
+        json *p = &config_;
+        for (int i = 0; i < keys.size() - 1; ++i)
         {
-            const auto &key = keys[i];
-            if (!p->contains(key))
+            if (p->contains(keys[i]))
             {
-                (*p)[key] = json::object();
+                p = &(*p)[keys[i]];
             }
-            p = &(*p)[key];
+            else
+            {
+                (*p)[keys[i]] = json();
+                p = &(*p)[keys[i]];
+            }
         }
         (*p)[keys.back()] = value;
     }
 
     json ConfigManager::getValue(const std::string &key_path) const
     {
-        auto keys = split(key_path, "/");
-        auto p = &config_;
+        std::vector<std::string> keys = split(key_path, "/");
+        const json *p = &config_;
         for (const auto &key : keys)
         {
             if (p->contains(key))
@@ -129,17 +144,19 @@ namespace OpenAPT
 
     void ConfigManager::deleteValue(const std::string &key_path)
     {
-        auto keys = split(key_path, "/");
-        auto p = &config_;
-        for (std::size_t i = 0; i < keys.size() - 1; ++i)
+        std::vector<std::string> keys = split(key_path, "/");
+        json *p = &config_;
+        for (int i = 0; i < keys.size() - 1; ++i)
         {
-            const auto &key = keys[i];
-            if (!p->contains(key))
+            if (p->contains(keys[i]))
+            {
+                p = &(*p)[keys[i]];
+            }
+            else
             {
                 spdlog::error("Key not found: {}", key_path);
                 return;
             }
-            p = &(*p)[key];
         }
         p->erase(keys.back());
     }
@@ -149,10 +166,11 @@ namespace OpenAPT
         if (value.is_object())
         {
             spdlog::debug("{}:", key);
-            for (const auto &[sub_key, sub_value] : value.items())
+            for (auto &[sub_key, sub_value] : value.items())
             {
-                const auto sub_key_path = key + "/" + sub_key;
-                printValue(sub_key_path, sub_value);
+                std::stringstream ss;
+                ss << key << "/" << sub_key;
+                printValue(ss.str(), sub_value);
             }
         }
         else
@@ -165,15 +183,13 @@ namespace OpenAPT
     {
         std::vector<std::string> tokens;
         std::size_t pos = 0;
-        std::string temp_str = s; // 使用临时变量
-        while ((pos = temp_str.find(delimiter)) != std::string::npos)
+        std::string tempStr = s; // 新增代码，使用临时变量存储字符串 s 的值
+        while ((pos = tempStr.find(delimiter)) != std::string::npos)
         {
-            const auto token = temp_str.substr(0, pos);
-            tokens.push_back(token);
-            temp_str = temp_str.substr(pos + delimiter.length());
+            tokens.push_back(tempStr.substr(0, pos));
+            tempStr = tempStr.substr(pos + delimiter.length());
         }
-        tokens.push_back(temp_str);
+        tokens.push_back(tempStr);
         return tokens;
     }
-
 }

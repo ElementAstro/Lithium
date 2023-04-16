@@ -55,7 +55,8 @@ Description: Package Manager
 
 using namespace std;
 
-namespace OpenAPT{
+namespace OpenAPT
+{
 
     PackageManager::PackageManager()
     {
@@ -209,7 +210,7 @@ namespace OpenAPT{
                 }
             }
             std::vector<std::pair<std::string, std::string>> result;
-        bool ret = execute_cmd(cmd_str, &result); // 执行命令复制或下载 exe 文件。
+            bool ret = execute_cmd(cmd_str, &result); // 执行命令复制或下载 exe 文件。
             if (!ret)
             {
                 spdlog::error("Failed to copy or download exe file."); // 错误提示：复制或下载失败。
@@ -217,7 +218,7 @@ namespace OpenAPT{
             }
 
             // 安装 exe 文件
-            cmd_str = "temp.exe /S";    // 执行 temp.exe 安装命令。
+            cmd_str = "temp.exe /S";             // 执行 temp.exe 安装命令。
             ret = execute_cmd(cmd_str, &result); // 执行安装命令。
             if (ret)
             {
@@ -423,7 +424,6 @@ namespace OpenAPT{
         return false;
     }
 }
-
 
 /*
 int main() {

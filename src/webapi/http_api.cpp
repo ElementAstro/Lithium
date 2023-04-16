@@ -34,18 +34,19 @@ Description: Main Http API
 
 namespace OpenAPT
 {
-    void init_handler(crow::SimpleApp& app) {
+    void init_handler(crow::SimpleApp &app)
+    {
         CROW_ROUTE(app, "/")
         ([]
-        { return crow::mustache::load("index.html").render(); });
+         { return crow::mustache::load("index.html").render(); });
 
         CROW_ROUTE(app, "/client")
         ([]
-        { return crow::mustache::load("client.html").render(); });
+         { return crow::mustache::load("client.html").render(); });
 
         CROW_ROUTE(app, "/greeting")
-        .methods("GET"_method)
-        ([](const crow::request& req) {
+            .methods("GET"_method)([](const crow::request &req)
+                                   {
             try {
                 // Get the 'name' parameter from the query string
                 std::string name = req.url_params.get("name");
@@ -64,12 +65,11 @@ namespace OpenAPT
                 nlohmann::json resJson;
                 resJson["error"] = e.what();
                 return crow::response{ 400, resJson.dump() };
-            }
-        });
+            } });
 
         CROW_ROUTE(app, "/json")
-            .methods("GET"_method, "POST"_method)
-            ([](const crow::request& req) {
+            .methods("GET"_method, "POST"_method)([](const crow::request &req)
+                                                  {
                 if (req.method == crow::HTTPMethod::Get) {
                     // Handle GET request
                     return crow::response{ "This is a GET request" };
@@ -86,9 +86,6 @@ namespace OpenAPT
                 } else {
                     // Handle other HTTP methods
                     return crow::response(405);
-                }
-            });
-
-
+                } });
     }
 } // namespace OpenAPT

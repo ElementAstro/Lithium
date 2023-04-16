@@ -65,7 +65,6 @@ namespace OpenAPT
         std::string indi_filter_interface = "";
 
     public:
-
         INDIFilterwheel(const std::string &name);
         ~INDIFilterwheel();
 

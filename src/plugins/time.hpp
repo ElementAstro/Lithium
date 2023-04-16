@@ -1,8 +1,8 @@
 /*
  * time.hpp
- * 
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,18 +15,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
+
 Date: 2023-3-31
- 
+
 Description: Time
- 
+
 **************************************************/
 
 #ifndef TIME_HPP
@@ -35,8 +35,10 @@ Description: Time
 #include <ctime>
 #include <string>
 
-namespace OpenAPT {
-    namespace Time {
+namespace OpenAPT
+{
+    namespace Time
+    {
 
         /**
          * @brief Gets the current system time in seconds since January 1, 1970 (Unix epoch).
@@ -69,7 +71,7 @@ namespace OpenAPT {
          * @note This function sets the system timezone to the specified timezone.
          * @note 该函数将系统时区设置为指定的时区。
          */
-        bool set_system_timezone(const std::string& timezone);
+        bool set_system_timezone(const std::string &timezone);
 
         /**
          * @brief Synchronizes the system time with an RTC (real-time clock) device.

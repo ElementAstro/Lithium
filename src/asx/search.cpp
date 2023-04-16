@@ -40,12 +40,13 @@ namespace OpenAPT::ASX
 
     int Callback(void *data, int argc, char **argv, char **col_name)
     {
-        if (argc != 6) {
+        if (argc != 6)
+        {
             return SQLITE_OK;
         }
         auto &result = *static_cast<std::vector<Data> *>(data);
 
-        result.emplace_back(Data{atoi(argv[0]), argv[1], argv[2], argv[3], argv[4],argv[5]});
+        result.emplace_back(Data{atoi(argv[0]), argv[1], argv[2], argv[3], argv[4], argv[5]});
         return SQLITE_OK;
     }
 
@@ -68,12 +69,14 @@ namespace OpenAPT::ASX
         std::string sql = "SELECT * FROM objects";
         sqlite3_stmt *stmt;
         int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK) {
+        if (rc != SQLITE_OK)
+        {
             spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
             return data;
         }
 
-        while (sqlite3_step(stmt) == SQLITE_ROW) {
+        while (sqlite3_step(stmt) == SQLITE_ROW)
+        {
             int id = sqlite3_column_int(stmt, 0);
             std::string name(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1)));
             std::string type(reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2)));
@@ -94,7 +97,8 @@ namespace OpenAPT::ASX
         sqlite3_stmt *stmt;
         std::string sql = "INSERT INTO objects (name, type, ra, dec, constellation) VALUES (?, ?, ?, ?, ?)";
         int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK) {
+        if (rc != SQLITE_OK)
+        {
             spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
             return;
         }
@@ -106,9 +110,12 @@ namespace OpenAPT::ASX
         sqlite3_bind_text(stmt, 5, d.Const.c_str(), -1, SQLITE_TRANSIENT);
 
         rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
+        if (rc != SQLITE_DONE)
+        {
             spdlog::error("Failed to insert data into database: {}", sqlite3_errmsg(db));
-        } else {
+        }
+        else
+        {
             spdlog::debug("Inserted data into database successfully");
         }
 
@@ -120,7 +127,8 @@ namespace OpenAPT::ASX
         sqlite3_stmt *stmt;
         std::string sql = "DELETE FROM objects WHERE name = ?";
         int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK) {
+        if (rc != SQLITE_OK)
+        {
             spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
             return;
         }
@@ -128,9 +136,12 @@ namespace OpenAPT::ASX
         sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
 
         rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
+        if (rc != SQLITE_DONE)
+        {
             spdlog::error("Failed to delete data from database: {}", sqlite3_errmsg(db));
-        } else {
+        }
+        else
+        {
             spdlog::debug("Deleted data from database successfully");
         }
 
@@ -140,7 +151,7 @@ namespace OpenAPT::ASX
     void SortByName(std::vector<Data> &data)
     {
         std::sort(data.begin(), data.end(), [](const Data &a, const Data &b)
-                { return a.Name < b.Name; });
+                  { return a.Name < b.Name; });
     }
 
     std::vector<Data> FilterBy(const std::vector<Data> &data, std::function<bool(const Data &)> filter)
@@ -170,17 +181,21 @@ namespace OpenAPT::ASX
         sqlite3_stmt *stmt;
         std::string sql = "DELETE FROM objects";
         int rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK) {
+        if (rc != SQLITE_OK)
+        {
             spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
             return false;
         }
 
         rc = sqlite3_step(stmt);
-        if (rc != SQLITE_DONE) {
+        if (rc != SQLITE_DONE)
+        {
             spdlog::error("Failed to update database: {}", sqlite3_errmsg(db));
             sqlite3_finalize(stmt);
             return false;
-        } else {
+        }
+        else
+        {
             spdlog::debug("Updated database successfully");
         }
 
@@ -188,7 +203,8 @@ namespace OpenAPT::ASX
 
         sql = "INSERT INTO objects (name, type, ra, dec, constellation) VALUES (?, ?, ?, ?, ?)";
         rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr);
-        if (rc != SQLITE_OK) {
+        if (rc != SQLITE_OK)
+        {
             spdlog::error("Failed to prepare statement: {}", sqlite3_errmsg(db));
             return false;
         }
@@ -202,11 +218,14 @@ namespace OpenAPT::ASX
             sqlite3_bind_text(stmt, 5, d.Const.c_str(), -1, SQLITE_TRANSIENT);
 
             rc = sqlite3_step(stmt);
-            if (rc != SQLITE_DONE) {
+            if (rc != SQLITE_DONE)
+            {
                 spdlog::error("Failed to insert data into database: {}", sqlite3_errmsg(db));
                 sqlite3_finalize(stmt);
                 return false;
-            } else {
+            }
+            else
+            {
                 spdlog::debug("Inserted data into database successfully");
             }
 
@@ -223,19 +242,22 @@ namespace OpenAPT::ASX
     {
         std::vector<Data> result;
         std::copy_if(data.begin(), data.end(), std::back_inserter(result), [&name](const Data &d)
-                    { return d.Name.find(name) != std::string::npos; });
+                     { return d.Name.find(name) != std::string::npos; });
         return result;
     }
 
     std::vector<Data> SearchByRaDec(const std::vector<Data> &data, std::string ra, std::string dec, double ra_range, double dec_range)
     {
         double d_ra, d_dec, q_ra, q_dec;
-        try {
+        try
+        {
             d_ra = ToDecimal(ra);
             d_dec = ToDecimal(dec);
             q_ra = std::stod(ra);
             q_dec = std::stod(dec);
-        } catch (std::invalid_argument& e) {
+        }
+        catch (std::invalid_argument &e)
+        {
             spdlog::error("Invalid ra or dec format: {}", e.what());
             return {};
         }
@@ -274,10 +296,10 @@ namespace OpenAPT::ASX
         for (const auto &d : data)
         {
             j.push_back({{"name", d.Name},
-                        {"type", d.Type},
-                        {"ra", d.RA},
-                        {"dec", d.Dec},
-                        {"constellation", d.Const}});
+                         {"type", d.Type},
+                         {"ra", d.RA},
+                         {"dec", d.Dec},
+                         {"constellation", d.Const}});
         }
         std::ofstream file(filename);
         if (!file.is_open())

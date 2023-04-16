@@ -32,8 +32,7 @@ Description: INDI CLient Interface
 #include "indiclient.hpp"
 
 OpenAptIndiClient::OpenAptIndiClient()
-    :
-    m_disconnecting(false)
+    : m_disconnecting(false)
 {
 }
 

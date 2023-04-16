@@ -1,8 +1,8 @@
 /*
  * manager.hpp
- * 
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,18 +15,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
+
 Date: 2023-3-29
- 
+
 Description: Device Manager
- 
+
 **************************************************/
 
 #pragma once
@@ -38,14 +38,16 @@ Description: Device Manager
 #include <mutex>
 #include <functional>
 
-namespace OpenAPT {
+namespace OpenAPT
+{
 
     /**
      * @brief The DeviceManager class manages a collection of devices and provides methods for device management.
      *
      * DeviceManager类管理一组设备，并提供了设备管理的方法。
      */
-    class DeviceManager {
+    class DeviceManager
+    {
     public:
         /**
          * @brief Constructs a DeviceManager object.
@@ -79,7 +81,7 @@ namespace OpenAPT {
          * @param type The type of the device to add.
          * @param name The name of the device to add.
          */
-        void addDevice(DeviceType type, const std::string& name);
+        void addDevice(DeviceType type, const std::string &name);
 
         /**
          * @brief Removes the device with the specified name and type.
@@ -89,7 +91,7 @@ namespace OpenAPT {
          * @param type The type of the device to remove.
          * @param name The name of the device to remove.
          */
-        void removeDevice(DeviceType type, const std::string& name);
+        void removeDevice(DeviceType type, const std::string &name);
 
         /**
          * @brief Removes all devices with the specified name.
@@ -98,7 +100,7 @@ namespace OpenAPT {
          *
          * @param name The name of the devices to remove.
          */
-        void removeDevicesByName(const std::string& name);
+        void removeDevicesByName(const std::string &name);
 
         /**
          * @brief Gets the device with the specified name and type.
@@ -109,7 +111,7 @@ namespace OpenAPT {
          * @param name The name of the device to get.
          * @return A shared pointer to the device with the specified name and type, or nullptr if not found.
          */
-        std::shared_ptr<Device> getDevice(DeviceType type, const std::string& name);
+        std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
 
         /**
          * @brief Finds the index of the device with the specified name and type.
@@ -120,7 +122,7 @@ namespace OpenAPT {
          * @param name The name of the device to find.
          * @return The index of the device with the specified name and type, or -1 if not found.
          */
-        size_t findDevice(DeviceType type, const std::string& name);
+        size_t findDevice(DeviceType type, const std::string &name);
 
         /**
          * @brief Finds the device with the specified name.
@@ -130,11 +132,11 @@ namespace OpenAPT {
          * @param name The name of the device to find.
          * @return A shared pointer to the device with the specified name, or nullptr if not found.
          */
-        std::shared_ptr<Device> findDeviceByName(const std::string& name) const;
+        std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
 
-        std::shared_ptr<Camera> getCamera(const std::string& name);
+        std::shared_ptr<Camera> getCamera(const std::string &name);
 
-        std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type,const std::string& device_type,const std::string& device_name,const std::string& task_name, const nlohmann::json &params);
+        std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
         std::shared_ptr<ConditionalTask> getConditionalTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
@@ -142,7 +144,7 @@ namespace OpenAPT {
 
     private:
         std::vector<std::shared_ptr<Device>> m_devices[6]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.
-    
+
         std::mutex m_mutex;
     };
 

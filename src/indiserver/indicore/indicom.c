@@ -86,7 +86,7 @@
 #include <sys/param.h>
 #define PARITY_NONE 0
 #define PARITY_EVEN 1
-#define PARITY_ODD  2
+#define PARITY_ODD 2
 #endif
 
 #include "userio.h"
@@ -209,21 +209,21 @@ int f_scansexa(const char *str0, /* input string */
 
     double a = 0, b = 0, c = 0;
     char str[128];
-    //char *neg;
-    uint8_t isNegative=0;
-    int r= 0;
+    // char *neg;
+    uint8_t isNegative = 0;
+    int r = 0;
 
     /* copy str0 so we can play with it */
     strncpy(str, str0, sizeof(str) - 1);
     str[sizeof(str) - 1] = '\0';
 
     /* remove any spaces */
-    char* i = str;
-    char* j = str;
-    while(*j != 0)
+    char *i = str;
+    char *j = str;
+    while (*j != 0)
     {
         *i = *j++;
-        if(*i != ' ')
+        if (*i != ' ')
             i++;
     }
     *i = 0;
@@ -261,12 +261,12 @@ void getSexComponents(double value, int *d, int *m, int *s)
     // to 60
     if (*s == 60)
     {
-        *s  = 0;
+        *s = 0;
         *m += 1;
     }
     if (*m == 60)
     {
-        *m  = 0;
+        *m = 0;
         *d += 1;
     }
 
@@ -295,11 +295,21 @@ int numberFormat(char *buf, const char *format, double value)
         /* INDI sexi format */
         switch (f)
         {
-        case 9:  s = 360000;  break;
-        case 8:  s = 36000;   break;
-        case 6:  s = 3600;    break;
-        case 5:  s = 600;     break;
-        default: s = 60;      break;
+        case 9:
+            s = 360000;
+            break;
+        case 8:
+            s = 36000;
+            break;
+        case 6:
+            s = 3600;
+            break;
+        case 5:
+            s = 600;
+            break;
+        default:
+            s = 60;
+            break;
         }
         return (fs_sexa(buf, value, w - f, s));
     }
@@ -339,9 +349,9 @@ double time_ns()
     ts.tv_sec = mts.tv_sec;
     ts.tv_nsec = mts.tv_nsec;
 #else
-    #error "Unsupported platform"
+#error "Unsupported platform"
 #endif
-    return (double)ts.tv_sec+(double)(ts.tv_nsec%1000000000)/1000000000.0;
+    return (double)ts.tv_sec + (double)(ts.tv_nsec % 1000000000) / 1000000000.0;
 }
 
 /* return current system time in message format */
@@ -384,12 +394,12 @@ int tty_timeout(int fd, int timeout)
 
 int tty_timeout_microseconds(int fd, long timeout_seconds, long timeout_microseconds)
 {
-    #if defined(_WIN32) || defined(ANDROID)
+#if defined(_WIN32) || defined(ANDROID)
     INDI_UNUSED(fd);
     INDI_UNUSED(timeout_seconds);
     INDI_UNUSED(timeout_microseconds);
     return TTY_ERRNO;
-    #else
+#else
 
     if (fd == -1)
         return TTY_ERRNO;
@@ -402,7 +412,7 @@ int tty_timeout_microseconds(int fd, long timeout_seconds, long timeout_microsec
     FD_SET(fd, &readout);
 
     /* wait for 'timeout' seconds + microseconds */
-    tv.tv_sec  = timeout_seconds;
+    tv.tv_sec = timeout_seconds;
     tv.tv_usec = timeout_microseconds;
 
     /* Wait till we have a change in the fd status */
@@ -418,7 +428,7 @@ int tty_timeout_microseconds(int fd, long timeout_seconds, long timeout_microsec
     else
         return TTY_TIME_OUT;
 
-    #endif
+#endif
 }
 
 int tty_write(int fd, const char *buf, int nbytes, int *nbytes_written)
@@ -426,12 +436,12 @@ int tty_write(int fd, const char *buf, int nbytes, int *nbytes_written)
 #ifdef _WIN32
     return TTY_ERRNO;
 #else
-    int geminiBuffer[66]={0};
+    int geminiBuffer[66] = {0};
     char *buffer = (char *)buf;
 
     if (tty_gemini_udp_format)
     {
-        buffer = (char*)geminiBuffer;
+        buffer = (char *)geminiBuffer;
         geminiBuffer[0] = ++tty_sequence_number;
         geminiBuffer[1] = 0;
         memcpy((char *)&geminiBuffer[2], buf, nbytes);
@@ -442,7 +452,7 @@ int tty_write(int fd, const char *buf, int nbytes, int *nbytes_written)
     if (fd == -1)
         return TTY_ERRNO;
 
-    int bytes_w     = 0;
+    int bytes_w = 0;
     *nbytes_written = 0;
 
     if (tty_debug)
@@ -493,10 +503,10 @@ int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long 
     if (fd == -1)
         return TTY_ERRNO;
 
-    int numBytesToRead =  nbytes;
+    int numBytesToRead = nbytes;
     int bytesRead = 0;
-    int err       = 0;
-    *nbytes_read  = 0;
+    int err = 0;
+    *nbytes_read = 0;
 
     if (nbytes <= 0)
         return TTY_PARAM_ERROR;
@@ -504,8 +514,8 @@ int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long 
     if (tty_debug)
         IDLog("%s: Request to read %d bytes with %ld s, %ld us timeout for fd %d\n", __FUNCTION__, nbytes, timeout_seconds, timeout_microseconds, fd);
 
-    char geminiBuffer[257]={0};
-    char* buffer = buf;
+    char geminiBuffer[257] = {0};
+    char *buffer = buf;
 
     if (tty_gemini_udp_format)
     {
@@ -536,14 +546,13 @@ int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long 
             if (tty_debug)
                 IDLog("%s: Cleared LF char left in buf\n", __FUNCTION__);
 
-            memcpy(buffer, buffer+1,bytesRead);
+            memcpy(buffer, buffer + 1, bytesRead);
             --bytesRead;
         }
 
         *nbytes_read += bytesRead;
         numBytesToRead -= bytesRead;
     }
-
 
     if (tty_gemini_udp_format)
     {
@@ -555,7 +564,7 @@ int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long 
         }
 
         *nbytes_read -= 8;
-        memcpy(buf, geminiBuffer+8, *nbytes_read);
+        memcpy(buf, geminiBuffer + 8, *nbytes_read);
     }
 
     return TTY_OK;
@@ -565,7 +574,7 @@ int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long 
 
 int tty_read_section(int fd, char *buf, char stop_char, int timeout, int *nbytes_read)
 {
-    return tty_read_section_expanded(fd, buf, stop_char, (long) timeout, (long) 0, nbytes_read);
+    return tty_read_section_expanded(fd, buf, stop_char, (long)timeout, (long)0, nbytes_read);
 }
 
 int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_seconds, long timeout_microseconds, int *nbytes_read)
@@ -574,14 +583,14 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
     return TTY_ERRNO;
 #else
 
-    char readBuffer[257]={0};
+    char readBuffer[257] = {0};
 
     if (fd == -1)
         return TTY_ERRNO;
 
     int bytesRead = 0;
-    int err       = TTY_OK;
-    *nbytes_read  = 0;
+    int err = TTY_OK;
+    *nbytes_read = 0;
 
     uint8_t *read_char = 0;
 
@@ -606,9 +615,9 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
         {
             (*nbytes_read)++;
 
-            if (*(readBuffer+index) == stop_char)
+            if (*(readBuffer + index) == stop_char)
             {
-                strncpy(buf, readBuffer+8, *nbytes_read);
+                strncpy(buf, readBuffer + 8, *nbytes_read);
                 return TTY_OK;
             }
         }
@@ -622,7 +631,7 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
         {
             (*nbytes_read)++;
 
-            if (*(readBuffer+index) == stop_char)
+            if (*(readBuffer + index) == stop_char)
             {
                 strncpy(buf, readBuffer, *nbytes_read);
                 return TTY_OK;
@@ -636,7 +645,7 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
             if ((err = tty_timeout_microseconds(fd, timeout_seconds, timeout_microseconds)))
                 return err;
 
-            read_char = (uint8_t*)(buf + *nbytes_read);
+            read_char = (uint8_t *)(buf + *nbytes_read);
             bytesRead = read(fd, read_char, 1);
 
             if (bytesRead < 0)
@@ -647,12 +656,14 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
 
             if (!(tty_clear_trailing_lf && *read_char == 0X0A && *nbytes_read == 0))
                 (*nbytes_read)++;
-            else {
+            else
+            {
                 if (tty_debug)
                     IDLog("%s: Cleared LF char left in buf\n", __FUNCTION__);
             }
 
-            if (*read_char == stop_char) {
+            if (*read_char == stop_char)
+            {
                 return TTY_OK;
             }
         }
@@ -677,8 +688,8 @@ int tty_nread_section(int fd, char *buf, int nsize, char stop_char, int timeout,
         return tty_read_section(fd, buf, stop_char, timeout, nbytes_read);
 
     int bytesRead = 0;
-    int err       = TTY_OK;
-    *nbytes_read  = 0;
+    int err = TTY_OK;
+    *nbytes_read = 0;
     uint8_t *read_char = 0;
     memset(buf, 0, nsize);
 
@@ -690,7 +701,7 @@ int tty_nread_section(int fd, char *buf, int nsize, char stop_char, int timeout,
         if ((err = tty_timeout(fd, timeout)))
             return err;
 
-        read_char = (uint8_t*)(buf + *nbytes_read);
+        read_char = (uint8_t *)(buf + *nbytes_read);
         bytesRead = read(fd, read_char, 1);
 
         if (bytesRead < 0)
@@ -701,7 +712,8 @@ int tty_nread_section(int fd, char *buf, int nsize, char stop_char, int timeout,
 
         if (!(tty_clear_trailing_lf && *read_char == 0X0A && *nbytes_read == 0))
             (*nbytes_read)++;
-        else {
+        else
+        {
             if (tty_debug)
                 IDLog("%s: Cleared LF char left in buf\n", __FUNCTION__);
         }
@@ -768,35 +780,79 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
     // See tcsetattr(4) ("man 4 tcsetattr") and termios(4) ("man 4 termios") for details.
 
     cfmakeraw(&tty_setting);
-    tty_setting.c_cc[VMIN]  = 1;
+    tty_setting.c_cc[VMIN] = 1;
     tty_setting.c_cc[VTIME] = 10;
 
     // The baud rate, word length, and handshake options can be set as follows:
     switch (bit_rate)
     {
-    case 0:      bps = B0;      break;
-    case 50:     bps = B50;     break;
-    case 75:     bps = B75;     break;
-    case 110:    bps = B110;    break;
-    case 134:    bps = B134;    break;
-    case 150:    bps = B150;    break;
-    case 200:    bps = B200;    break;
-    case 300:    bps = B300;    break;
-    case 600:    bps = B600;    break;
-    case 1200:   bps = B1200;   break;
-    case 1800:   bps = B1800;   break;
-    case 2400:   bps = B2400;   break;
-    case 4800:   bps = B4800;   break;
-    case 9600:   bps = B9600;   break;
-    case 19200:  bps = B19200;  break;
-    case 38400:  bps = B38400;  break;
-    case 57600:  bps = B57600;  break;
-    case 115200: bps = B115200; break;
-    case 230400: bps = B230400; break;
+    case 0:
+        bps = B0;
+        break;
+    case 50:
+        bps = B50;
+        break;
+    case 75:
+        bps = B75;
+        break;
+    case 110:
+        bps = B110;
+        break;
+    case 134:
+        bps = B134;
+        break;
+    case 150:
+        bps = B150;
+        break;
+    case 200:
+        bps = B200;
+        break;
+    case 300:
+        bps = B300;
+        break;
+    case 600:
+        bps = B600;
+        break;
+    case 1200:
+        bps = B1200;
+        break;
+    case 1800:
+        bps = B1800;
+        break;
+    case 2400:
+        bps = B2400;
+        break;
+    case 4800:
+        bps = B4800;
+        break;
+    case 9600:
+        bps = B9600;
+        break;
+    case 19200:
+        bps = B19200;
+        break;
+    case 38400:
+        bps = B38400;
+        break;
+    case 57600:
+        bps = B57600;
+        break;
+    case 115200:
+        bps = B115200;
+        break;
+    case 230400:
+        bps = B230400;
+        break;
 #if !defined(__APPLE__) && !defined(__FreeBSD__)
-    case 460800: bps = B460800; break;
-    case 576000: bps = B576000; break;
-    case 921600: bps = B921600; break;
+    case 460800:
+        bps = B460800;
+        break;
+    case 576000:
+        bps = B576000;
+        break;
+    case 921600:
+        bps = B921600;
+        break;
 #endif
     default:
         if (snprintf(msg, sizeof(msg), "tty_connect: %d is not a valid bit rate.", bit_rate) < 0)
@@ -810,10 +866,18 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
     /* word size */
     switch (word_size)
     {
-    case 5: tty_setting.c_cflag |= CS5; break;
-    case 6: tty_setting.c_cflag |= CS6; break;
-    case 7: tty_setting.c_cflag |= CS7; break;
-    case 8: tty_setting.c_cflag |= CS8; break;
+    case 5:
+        tty_setting.c_cflag |= CS5;
+        break;
+    case 6:
+        tty_setting.c_cflag |= CS6;
+        break;
+    case 7:
+        tty_setting.c_cflag |= CS7;
+        break;
+    case 8:
+        tty_setting.c_cflag |= CS8;
+        break;
     default:
         if (snprintf(msg, sizeof(msg), "tty_connect: %d is not a valid data bit count.", word_size) < 0)
             perror(NULL);
@@ -895,7 +959,7 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
 
     handshake = TIOCM_DTR | TIOCM_RTS | TIOCM_CTS | TIOCM_DSR;
     if (ioctl(t_fd, TIOCMSET, &handshake) == -1)
-        // Set the modem lines depending on the bits set in handshake
+    // Set the modem lines depending on the bits set in handshake
     {
         IDLog("Error setting handshake lines %s - %s(%d).\n", device, strerror(errno), errno);
     }
@@ -904,7 +968,7 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
     // See tty(4) ("man 4 tty") and ioctl(2) ("man 2 ioctl") for details.
 
     if (ioctl(t_fd, TIOCMGET, &handshake) == -1)
-        // Store the state of the modem lines in handshake
+    // Store the state of the modem lines in handshake
     {
         IDLog("Error getting handshake lines %s - %s(%d).\n", device, strerror(errno), errno);
     }
@@ -951,15 +1015,14 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
 #else
     int t_fd = -1;
     int i = 0;
-    char msg[128]={0};
+    char msg[128] = {0};
     int bps;
     struct termios tty_setting;
     // Check for bluetooth & virtualcom which can be shared
     int ignore_exclusive_close = strstr(device, "rfcomm") || strstr(device, "Bluetooth") || strstr(device, "virtualcom");
 
-
     // Open as Read/Write, no fnctl, and close on exclusive
-    for (i = 0 ; i < 3 ; i++)
+    for (i = 0; i < 3; i++)
     {
         // Do not use O_CLOEXEC when ignored
         t_fd = open(device, O_RDWR | O_NOCTTY | (ignore_exclusive_close ? 0 : O_CLOEXEC));
@@ -1004,28 +1067,72 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
     Set bps rate */
     switch (bit_rate)
     {
-    case 0:      bps = B0;      break;
-    case 50:     bps = B50;     break;
-    case 75:     bps = B75;     break;
-    case 110:    bps = B110;    break;
-    case 134:    bps = B134;    break;
-    case 150:    bps = B150;    break;
-    case 200:    bps = B200;    break;
-    case 300:    bps = B300;    break;
-    case 600:    bps = B600;    break;
-    case 1200:   bps = B1200;   break;
-    case 1800:   bps = B1800;   break;
-    case 2400:   bps = B2400;   break;
-    case 4800:   bps = B4800;   break;
-    case 9600:   bps = B9600;   break;
-    case 19200:  bps = B19200;  break;
-    case 38400:  bps = B38400;  break;
-    case 57600:  bps = B57600;  break;
-    case 115200: bps = B115200; break;
-    case 230400: bps = B230400; break;
-    case 460800: bps = B460800; break;
-    case 576000: bps = B576000; break;
-    case 921600: bps = B921600; break;
+    case 0:
+        bps = B0;
+        break;
+    case 50:
+        bps = B50;
+        break;
+    case 75:
+        bps = B75;
+        break;
+    case 110:
+        bps = B110;
+        break;
+    case 134:
+        bps = B134;
+        break;
+    case 150:
+        bps = B150;
+        break;
+    case 200:
+        bps = B200;
+        break;
+    case 300:
+        bps = B300;
+        break;
+    case 600:
+        bps = B600;
+        break;
+    case 1200:
+        bps = B1200;
+        break;
+    case 1800:
+        bps = B1800;
+        break;
+    case 2400:
+        bps = B2400;
+        break;
+    case 4800:
+        bps = B4800;
+        break;
+    case 9600:
+        bps = B9600;
+        break;
+    case 19200:
+        bps = B19200;
+        break;
+    case 38400:
+        bps = B38400;
+        break;
+    case 57600:
+        bps = B57600;
+        break;
+    case 115200:
+        bps = B115200;
+        break;
+    case 230400:
+        bps = B230400;
+        break;
+    case 460800:
+        bps = B460800;
+        break;
+    case 576000:
+        bps = B576000;
+        break;
+    case 921600:
+        bps = B921600;
+        break;
     default:
         if (snprintf(msg, sizeof(msg), "tty_connect: %d is not a valid bit rate.", bit_rate) < 0)
             perror(NULL);
@@ -1051,10 +1158,18 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
     /* word size */
     switch (word_size)
     {
-    case 5: tty_setting.c_cflag |= CS5; break;
-    case 6: tty_setting.c_cflag |= CS6; break;
-    case 7: tty_setting.c_cflag |= CS7; break;
-    case 8: tty_setting.c_cflag |= CS8; break;
+    case 5:
+        tty_setting.c_cflag |= CS5;
+        break;
+    case 6:
+        tty_setting.c_cflag |= CS6;
+        break;
+    case 7:
+        tty_setting.c_cflag |= CS7;
+        break;
+    case 8:
+        tty_setting.c_cflag |= CS8;
+        break;
     default:
 
         fprintf(stderr, "Default\n");
@@ -1124,7 +1239,7 @@ int tty_connect(const char *device, int bit_rate, int word_size, int parity, int
     tty_setting.c_lflag |= NOFLSH;
 
     /* blocking read until 1 char arrives */
-    tty_setting.c_cc[VMIN]  = 1;
+    tty_setting.c_cc[VMIN] = 1;
     tty_setting.c_cc[VTIME] = 0;
 
     /* now clear input and output buffers and activate the new terminal settings */
@@ -1296,14 +1411,14 @@ double get_local_hour_angle(double sideral_time, double ra)
     return rangeHA(HA);
 }
 
-void get_alt_az_coordinates(double Ha, double Dec, double Lat, double* Alt, double *Az)
+void get_alt_az_coordinates(double Ha, double Dec, double Lat, double *Alt, double *Az)
 {
     double alt, az;
     Ha *= M_PI / 180.0;
     Dec *= M_PI / 180.0;
     Lat *= M_PI / 180.0;
     alt = asin(sin(Dec) * sin(Lat) + cos(Dec) * cos(Lat) * cos(Ha));
-    az = acos((sin(Dec) - sin(alt)*sin(Lat)) / (cos(alt) * cos(Lat)));
+    az = acos((sin(Dec) - sin(alt) * sin(Lat)) / (cos(alt) * cos(Lat)));
     alt *= 180.0 / M_PI;
     az *= 180.0 / M_PI;
     if (sin(Ha) >= 0.0)
@@ -1333,21 +1448,21 @@ double estimate_field_rotation_rate(double Alt, double Az, double Lat)
 double estimate_field_rotation(double HA, double rate)
 {
     HA *= rate;
-    while(HA >= 360.0)
+    while (HA >= 360.0)
         HA -= 360.0;
-    while(HA < 0)
+    while (HA < 0)
         HA += 360.0;
     return HA;
 }
 
 double as2rad(double as)
 {
-    return as * M_PI / (60.0*60.0*12.0);
+    return as * M_PI / (60.0 * 60.0 * 12.0);
 }
 
 double rad2as(double rad)
 {
-    return rad * (60.0*60.0*12.0) / M_PI;
+    return rad * (60.0 * 60.0 * 12.0) / M_PI;
 }
 
 double estimate_distance(double parsecs, double parallax_radius)
@@ -1363,7 +1478,8 @@ double m2au(double m)
 double calc_delta_magnitude(double mag_ratio, double *spectrum, double *ref_spectrum, int spectrum_size)
 {
     double delta_mag = 0;
-    for(int l = 0; l < spectrum_size; l++) {
+    for (int l = 0; l < spectrum_size; l++)
+    {
         delta_mag += spectrum[l] * mag_ratio * ref_spectrum[l] / spectrum[l];
     }
     delta_mag /= spectrum_size;
@@ -1377,27 +1493,27 @@ double calc_star_mass(double delta_mag, double ref_size)
 
 double estimate_orbit_radius(double obs_lambda, double ref_lambda, double period)
 {
-    return M_PI*2*DOPPLER(REDSHIFT(obs_lambda, ref_lambda), LIGHTSPEED)/period;
+    return M_PI * 2 * DOPPLER(REDSHIFT(obs_lambda, ref_lambda), LIGHTSPEED) / period;
 }
 
 double estimate_secondary_mass(double star_mass, double star_drift, double orbit_radius)
 {
-    return orbit_radius*pow(star_drift*orbit_radius, 3)*3*star_mass;
+    return orbit_radius * pow(star_drift * orbit_radius, 3) * 3 * star_mass;
 }
 
 double estimate_secondary_size(double star_size, double dropoff_ratio)
 {
-    return pow(dropoff_ratio*pow(star_size, 2), 0.5);
+    return pow(dropoff_ratio * pow(star_size, 2), 0.5);
 }
 
 double calc_photon_flux(double rel_magnitude, double filter_bandwidth, double wavelength, double steradian)
 {
-    return pow(10, rel_magnitude*-0.4)*(LUMEN(wavelength)*steradian*filter_bandwidth);
+    return pow(10, rel_magnitude * -0.4) * (LUMEN(wavelength) * steradian * filter_bandwidth);
 }
 
 double calc_rel_magnitude(double photon_flux, double filter_bandwidth, double wavelength, double steradian)
 {
-    return pow(10, 1.0/(photon_flux/(LUMEN(wavelength)*steradian*filter_bandwidth)))/-0.4;
+    return pow(10, 1.0 / (photon_flux / (LUMEN(wavelength) * steradian * filter_bandwidth))) / -0.4;
 }
 
 double estimate_absolute_magnitude(double delta_dist, double delta_mag)

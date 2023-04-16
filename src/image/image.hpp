@@ -31,5 +31,5 @@ Description: Image Processing
 
 namespace OpenAPT
 {
-    int StarDrawing(const std::string& filename,const unsigned int outerHfdDiameter = 50);
+    int StarDrawing(const std::string &filename, const unsigned int outerHfdDiameter = 50);
 } // namespace OpenAPT

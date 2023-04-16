@@ -251,7 +251,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDICamera>(device)->getSimpleTask(task_name,params);
+                    return std::dynamic_pointer_cast<INDICamera>(device)->getSimpleTask(task_name, params);
                 }
                 else if (device_type == "ASCOM")
                 {
@@ -264,7 +264,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Telescope device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDITelescope>(device)->getSimpleTask(task_name,params);
+                    return std::dynamic_pointer_cast<INDITelescope>(device)->getSimpleTask(task_name, params);
                 }
                 break;
             }
@@ -273,7 +273,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found Focuser device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDIFocuser>(device)->getSimpleTask(task_name,params);
+                    return std::dynamic_pointer_cast<INDIFocuser>(device)->getSimpleTask(task_name, params);
                 }
                 break;
             }
@@ -282,7 +282,7 @@ namespace OpenAPT
                 if (device_type == "INDI")
                 {
                     spdlog::debug("Found FilterWheel device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDIFilterwheel>(device)->getSimpleTask(task_name,params);
+                    return std::dynamic_pointer_cast<INDIFilterwheel>(device)->getSimpleTask(task_name, params);
                 }
                 break;
             }
@@ -291,12 +291,12 @@ namespace OpenAPT
                 if (device_type == "ASTAP")
                 {
                     spdlog::debug("Found Solver: ASTAP");
-                    //return std::make_shared<OpenAPT::ASTapSolverTask>();
+                    // return std::make_shared<OpenAPT::ASTapSolverTask>();
                 }
                 if (device_type == "Astrometry")
                 {
                     spdlog::debug("Found Solver: Astrometry");
-                    //return std::make_shared<OpenAPT::AstrometrySolverTask>();
+                    // return std::make_shared<OpenAPT::AstrometrySolverTask>();
                 }
                 break;
             }
@@ -305,7 +305,7 @@ namespace OpenAPT
                 if (device_type == "PHD2")
                 {
                     spdlog::debug("Found Guider device: {} with driver: {}", device_name, device_type);
-                    //return std::make_shared<OpenAPT::PHD2GuiderTask>();
+                    // return std::make_shared<OpenAPT::PHD2GuiderTask>();
                 }
                 break;
             }
@@ -326,31 +326,31 @@ namespace OpenAPT
         std::lock_guard<std::mutex> lock(m_mutex);
         spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
         auto device = m_DeviceManager.findDeviceByName(device_name);
-        if (device!= nullptr)
+        if (device != nullptr)
         {
             switch (type)
             {
-                case DeviceType::Camera: {
-
-                }
-                case DeviceType::Telescope: {
-
-                }
-                case DeviceType::Focuser : {
-
-                }
-                case DeviceType::FilterWheel: {
-
-                }
-                case DeviceType::Solver: {
-
-                }
-                case DeviceType::Guider: {
-
-                }
-                default: 
-                    spdlog::error("Invalid device type");
-                    break;
+            case DeviceType::Camera:
+            {
+            }
+            case DeviceType::Telescope:
+            {
+            }
+            case DeviceType::Focuser:
+            {
+            }
+            case DeviceType::FilterWheel:
+            {
+            }
+            case DeviceType::Solver:
+            {
+            }
+            case DeviceType::Guider:
+            {
+            }
+            default:
+                spdlog::error("Invalid device type");
+                break;
             }
         }
         return nullptr;

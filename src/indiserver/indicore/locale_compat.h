@@ -24,38 +24,39 @@
 #include <locale.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-// C interface
-//
-// usage:
-//
-//     locale_char_t *save = indi_locale_C_numeric_push();
-//     ...
-//     indi_locale_C_numeric_pop(save);
-//
+    // C interface
+    //
+    // usage:
+    //
+    //     locale_char_t *save = indi_locale_C_numeric_push();
+    //     ...
+    //     indi_locale_C_numeric_pop(save);
+    //
 
 #if defined(_MSC_VER)
 
 #include <string.h>
 #include <malloc.h>
 
-typedef wchar_t locale_char_t;
-#define INDI_LOCALE(s) L""#s
+    typedef wchar_t locale_char_t;
+#define INDI_LOCALE(s) L"" #s
 
-__inline static locale_char_t *indi_setlocale(int category, const locale_char_t *locale)
-{
-    return _wcsdup(_wsetlocale(category, locale));
-}
+    __inline static locale_char_t *indi_setlocale(int category, const locale_char_t *locale)
+    {
+        return _wcsdup(_wsetlocale(category, locale));
+    }
 
-__inline static void indi_restore_locale(int category, locale_char_t *prev)
-{
-    _wsetlocale(category, prev);
-    free(prev);
-}
+    __inline static void indi_restore_locale(int category, locale_char_t *prev)
+    {
+        _wsetlocale(category, prev);
+        free(prev);
+    }
 
-# define _INDI_C_INLINE __inline
+#define _INDI_C_INLINE __inline
 
 #else // _MSC_VER
 
@@ -72,19 +73,19 @@ inline static void indi_restore_locale(int category, locale_char_t *prev)
     setlocale(category, prev);
 }
 
-# define _INDI_C_INLINE inline
+#define _INDI_C_INLINE inline
 
 #endif // _MSC_VER
 
-_INDI_C_INLINE static locale_char_t *indi_locale_C_numeric_push()
-{
-    return indi_setlocale(LC_NUMERIC, INDI_LOCALE("C"));
-}
+    _INDI_C_INLINE static locale_char_t *indi_locale_C_numeric_push()
+    {
+        return indi_setlocale(LC_NUMERIC, INDI_LOCALE("C"));
+    }
 
-_INDI_C_INLINE static void indi_locale_C_numeric_pop(locale_char_t *prev)
-{
-    indi_restore_locale(LC_NUMERIC, prev);
-}
+    _INDI_C_INLINE static void indi_locale_C_numeric_pop(locale_char_t *prev)
+    {
+        indi_restore_locale(LC_NUMERIC, prev);
+    }
 
 #undef _INDI_C_INLINE
 
@@ -104,38 +105,37 @@ _INDI_C_INLINE static void indi_locale_C_numeric_pop(locale_char_t *prev)
 
 class AutoLocale
 {
-        int m_category;
-        locale_char_t *m_orig;
+    int m_category;
+    locale_char_t *m_orig;
 
-    public:
+public:
+    AutoLocale(int category, const locale_char_t *locale)
+        : m_category(category)
+    {
+        m_orig = indi_setlocale(category, locale);
+    }
 
-        AutoLocale(int category, const locale_char_t *locale)
-            : m_category(category)
+    // method Restore can be used to restore the original locale
+    // before the object goes out of scope
+    void Restore()
+    {
+        if (m_orig)
         {
-            m_orig = indi_setlocale(category, locale);
+            indi_restore_locale(m_category, m_orig);
+            m_orig = nullptr;
         }
+    }
 
-        // method Restore can be used to restore the original locale
-        // before the object goes out of scope
-        void Restore()
-        {
-            if (m_orig)
-            {
-                indi_restore_locale(m_category, m_orig);
-                m_orig = nullptr;
-            }
-        }
-
-        ~AutoLocale()
-        {
-            Restore();
-        }
+    ~AutoLocale()
+    {
+        Restore();
+    }
 };
 
 class AutoCNumeric : public AutoLocale
 {
-    public:
-        AutoCNumeric() : AutoLocale(LC_NUMERIC, INDI_LOCALE("C")) { }
+public:
+    AutoCNumeric() : AutoLocale(LC_NUMERIC, INDI_LOCALE("C")) {}
 };
 
 #endif // __cplusplus

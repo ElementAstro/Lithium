@@ -105,7 +105,8 @@ namespace OpenAPT::CrashReport
                 while (!feof(fp))
                 {
                     char line[256] = {0};
-                    if (fgets(line, sizeof(line), fp) == NULL) {
+                    if (fgets(line, sizeof(line), fp) == NULL)
+                    {
                     }
 
                     if (strncmp(line, "ID=", 3) == 0)
@@ -435,7 +436,8 @@ namespace OpenAPT::CrashReport
 
                 // 检查目录是否存在，如果不存在则创建
                 std::filesystem::path dir_path("crash_report");
-                if (!std::filesystem::exists(dir_path)) {
+                if (!std::filesystem::exists(dir_path))
+                {
                     std::filesystem::create_directory(dir_path);
                 }
 

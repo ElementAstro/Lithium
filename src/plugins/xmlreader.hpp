@@ -49,7 +49,7 @@ namespace OpenAPT
          * @note This function reads an XML file from disk and returns its root node.
          * @note 该函数从磁盘读取XML文件并返回其根节点。
          */
-        pugi::xml_node read_xml(const std::string& filename);
+        pugi::xml_node read_xml(const std::string &filename);
 
         /**
          * @brief Modifies the value of a node based on its path.
@@ -61,7 +61,7 @@ namespace OpenAPT
          * @note This function modifies the value of an XML node based on its path.
          * @note 该函数基于路径修改XML节点的值。
          */
-        bool modify_node(pugi::xml_node& root, const std::string& path, const std::string& value);
+        bool modify_node(pugi::xml_node &root, const std::string &path, const std::string &value);
 
         /**
          * @brief Saves an XML file.
@@ -72,7 +72,7 @@ namespace OpenAPT
          * @note This function saves an XML file to disk.
          * @note 该函数将XML文件保存到磁盘上。
          */
-        bool write_xml(const std::string& filename, const pugi::xml_node& root);
+        bool write_xml(const std::string &filename, const pugi::xml_node &root);
 
         /**
          * @brief Validates an XML file.
@@ -82,7 +82,7 @@ namespace OpenAPT
          * @note This function validates an XML file against its DTD or schema.
          * @note 该函数根据DTD或模式验证XML文件。
          */
-        bool validate_xml(const std::string& filename);
+        bool validate_xml(const std::string &filename);
 
         /**
          * @brief Converts an XML node to a JSON string.
@@ -92,7 +92,7 @@ namespace OpenAPT
          * @note This function converts an XML node to a JSON string.
          * @note 该函数将XML节点转换为JSON字符串。
          */
-        std::string xml_to_json(const pugi::xml_node& root);
+        std::string xml_to_json(const pugi::xml_node &root);
 
     } // namespace XML
 } // namespace OpenAPT

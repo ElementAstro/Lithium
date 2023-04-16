@@ -4,10 +4,11 @@
 #pragma once
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-int shm_open_anon(void);
+    int shm_open_anon(void);
 
 #ifdef __cplusplus
 }

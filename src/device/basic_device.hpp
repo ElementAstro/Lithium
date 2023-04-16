@@ -535,65 +535,173 @@ namespace OpenAPT
     class Telescope : public Device
     {
     public:
+        /**
+         * @brief 构造函数
+         * @param name 望远镜名称
+         */
         Telescope(const std::string &name);
+
+        /**
+         * @brief 析构函数
+         */
         ~Telescope();
 
-        virtual bool SlewTo(const std::string & ra,const std::string &dec,const bool j2000 = false) {}
+        /**
+         * @brief 指向新目标
+         * @param ra 目标赤经
+         * @param dec 目标赤纬
+         * @param j2000 是否使用J2000坐标系，默认为false，表示使用本地坐标系
+         * @return 是否成功指向新目标
+         */
+        virtual bool SlewTo(const std::string &ra, const std::string &dec, const bool j2000 = false) {}
+
+        /**
+         * @brief 中止望远镜的指向
+         * @return 是否成功中止指向
+         */
         virtual bool Abort() {}
+
+        /**
+         * @brief 获取望远镜是否在指向新目标
+         * @return 返回 true 表示正在指向新目标，否则返回 false
+         */
         bool isSlewing() { return is_slewing; }
+
+        /**
+         * @brief 获取当前赤经位置
+         * @return 当前赤经位置
+         */
         std::string getCurrentRA() { return current_ra; }
+
+        /**
+         * @brief 获取当前赤纬位置
+         * @return 当前赤纬位置
+         */
         std::string getCurrentDec() { return current_dec; }
 
-        virtual bool StartTracking(const std::string &model,const std::string &speed) {}
+        /**
+         * @brief 开始跟踪运动目标
+         * @param model 跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+         * @param speed 跟踪速度，默认为1
+         * @return 是否成功开始跟踪运动目标
+         */
+        virtual bool StartTracking(const std::string &model, const std::string &speed) {}
+
+        /**
+         * @brief 停止跟踪运动目标
+         * @return 是否成功停止跟踪运动目标
+         */
         virtual bool StopTracking() {}
+
+        /**
+         * @brief 设置跟踪模式
+         * @param mode 跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+         * @return 是否成功设置跟踪模式
+         */
         virtual bool setTrackingMode(const std::string &mode) {}
+
+        /**
+         * @brief 设置跟踪速度
+         * @param speed 跟踪速度
+         * @return 是否成功设置跟踪速度
+         */
         virtual bool setTrackingSpeed(const std::string &speed) {}
+
+        /**
+         * @brief 获取当前跟踪模式
+         * @return 当前跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+         */
         std::string getTrackingMode() { return current_tracking_mode; }
+
+        /**
+         * @brief 获取当前跟踪速度
+         * @return 当前跟踪速度
+         */
         std::string getTrackingSpeed() { return current_tracking_speed; }
 
-
+        /**
+         * @brief 将望远镜回到家位置
+         * @return 是否成功将望远镜回到家位置
+         */
         virtual bool Home() {}
+
+        /**
+         * @brief 判断望远镜是否在家位置
+         * @return 返回 true 表示望远镜在家位置，否则返回 false
+         */
         virtual bool isAtHome() {}
+
+        /**
+         * @brief 设置家位置
+         * @return 是否成功设置家位置
+         */
         virtual bool setHomePosition() {}
+
+        /**
+         * @brief 获取望远镜是否可以回到家位置
+         * @return 返回 true 表示望远镜可以回到家位置，否则返回 false
+         */
         bool isHomeAvailable() { return can_home; }
 
+        /**
+         * @brief 停车
+         * @return 是否成功停车
+         */
         virtual bool Park() {}
+
+        /**
+         * @brief 解除停车状态
+         * @return 是否成功解除停车状态
+         */
         virtual bool Unpark() {}
+
+        /**
+         * @brief 判断望远镜是否在停车位置
+         * @return 返回 true 表示位于停车位置，否则返回 false
+         */
         virtual bool isAtPark() {}
+
+        /**
+         * @brief 设置停车位置
+         * @return 是否成功设置停车位置
+         */
         virtual bool setParkPosition() {}
+
+        /**
+         * @brief 获取望远镜是否可以停车
+         * @return 返回 true 表示望远镜可以停车，否则返回 false
+         */
         bool isParkAvailable() { return can_park; }
 
     public:
+        std::string mount_type = ""; // 望远镜安装类型
 
-        std::string mount_type = "";
+        bool is_slewing = false;  // 是否在指向新目标
+        bool is_tracking = false; // 是否正在跟踪运动目标
 
-        bool is_slewing = false;
-        bool is_tracking = false;
+        std::string current_ra;  // 当前赤经位置
+        std::string current_dec; // 当前赤纬位置
+        std::string current_az;  // 当前方位角位置
+        std::string current_alt; // 当前高度角位置
 
+        std::string current_target_name; // 当前指向的目标名称
 
-        std::string current_ra;
-        std::string current_dec;
-        std::string current_az;
-        std::string current_alt;
+        std::string current_lat;       // 当前望远镜所在位置的纬度
+        std::string current_lon;       // 当前望远镜所在位置的经度
+        std::string current_elevation; // 当前望远镜所在位置的海拔高度
 
-        std::string current_target_name;
+        std::string current_tracking_mode;  // 当前跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+        std::string current_tracking_speed; // 当前跟踪速度，默认为1
 
-        std::string current_lat;
-        std::string current_lon;
-        std::string current_elevation;
+        bool is_home = false;   // 是否在家位置
+        bool is_parked = false; // 是否处于停车状态
 
-        std::string current_tracking_mode;  // sidereal | solar | lunar
-        std::string current_tracking_speed; // default is 1
-
-        bool is_home = false;
-        bool is_parked = false;
-
-        bool can_home = false;
-        bool can_park = false;
-        bool can_abort = true;
-        bool can_track_speed = false;
-        bool can_slew_speed = false;
-        bool can_guiding_speed = false;
+        bool can_home = false;          // 是否可以回到家位置
+        bool can_park = false;          // 是否可以停车
+        bool can_abort = true;          // 是否可以中止指向
+        bool can_track_speed = false;   // 是否支持调整跟踪速度
+        bool can_slew_speed = false;    // 是否支持调整指向速度
+        bool can_guiding_speed = false; // 是否支持调整导星速度
     };
 
     class Focuser : public Device

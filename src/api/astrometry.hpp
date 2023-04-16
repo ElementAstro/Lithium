@@ -9,7 +9,7 @@ namespace OpenAPT::API::Astrometry
 {
     /**
      * @brief 利用 Astrometry.net 的 solve-field 工具对图像进行求解
-     * 
+     *
      * @param image 图像文件路径
      * @param ra 目标区域的赤经信息，格式为 HH:MM:SS（时：分：秒）
      * @param dec 目标区域的赤纬信息，格式为 DD:MM:SS（度：分：秒）
@@ -32,7 +32,7 @@ namespace OpenAPT::API::Astrometry
      * @return json类型的结果，包含解决方案的相关信息如赤经、赤纬、视场大小等，若解决方案失败则返回对应错误信息
      */
     json solve(const std::string &image, const std::string &ra = "", const std::string &dec = "", const double &radius = -1.0, const int &downsample = 1,
-            const std::vector<int> &depth = {}, const double &scale_low = -1.0, const double &scale_high = -1.0, const int &width = -1, const int &height = -1,
-            const std::string &scale_units = "degwidth", const bool &overwrite = true, const bool &no_plot = true, const bool &verify = false,
-            const bool &debug = false, const int &timeout = 30, const bool &resort = false, const bool &_continue = false, const bool &no_tweak = false);
+               const std::vector<int> &depth = {}, const double &scale_low = -1.0, const double &scale_high = -1.0, const int &width = -1, const int &height = -1,
+               const std::string &scale_units = "degwidth", const bool &overwrite = true, const bool &no_plot = true, const bool &verify = false,
+               const bool &debug = false, const int &timeout = 30, const bool &resort = false, const bool &_continue = false, const bool &no_tweak = false);
 } // namespace OpenAPT::API:Astrometry

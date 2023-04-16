@@ -68,17 +68,22 @@ namespace OpenAPT
             {
                 throw std::runtime_error("Thread manager has stopped, cannot add new thread");
             }
-                auto t = std::make_tuple(std::make_unique<std::thread>([this, func]() {
-                    try {
-                        func();
-                    } catch (const std::exception& e) {
-                        std::ostringstream ss;
-                        ss << std::this_thread::get_id();
-                        spdlog::error("Unhandled exception in thread {}: {}", ss.str(), e.what());
-                    }
-                    std::unique_lock<std::mutex> lock(m_mtx);
-                    //joinThread(lock, t);
-                }), name, false);
+            auto t = std::make_tuple(std::make_unique<std::thread>([this, func]()
+                                                                   {
+                                                                       try
+                                                                       {
+                                                                           func();
+                                                                       }
+                                                                       catch (const std::exception &e)
+                                                                       {
+                                                                           std::ostringstream ss;
+                                                                           ss << std::this_thread::get_id();
+                                                                           spdlog::error("Unhandled exception in thread {}: {}", ss.str(), e.what());
+                                                                       }
+                                                                       std::unique_lock<std::mutex> lock(m_mtx);
+                                                                       // joinThread(lock, t);
+                                                                   }),
+                                     name, false);
 
             m_threads.emplace_back(std::move(t));
             spdlog::info("Added thread: {}", name);

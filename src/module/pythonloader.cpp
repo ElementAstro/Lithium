@@ -139,97 +139,97 @@ namespace OpenAPT
     }
 
     bool PyModuleLoader::cache_py_module(const std::string &path)
-{
-    std::ifstream file(path);
-    if (!file.is_open())
     {
-        std::cerr << "Failed to open file " << path << std::endl;
-        return false;
-    }
-    
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string content = buffer.str();
-
-    PyCompilerFlags flags = {};
-    flags.cf_flags |= PyCF_ONLY_AST;
-    PyObject *py_ast = Py_CompileStringFlags(content.c_str(), path.c_str(), Py_file_input, &flags);
-
-    file.close();
-    if (!py_ast)
-    {
-        return false;
-    }
-
-    nlohmann::json cache;
-
-    // Cache all functions
-    PyObject *py_node_iter = PyObject_GetIter(py_ast);
-    PyObject *py_node;
-    while ((py_node = PyIter_Next(py_node_iter)))
-    {
-        const char *node_type = PyUnicode_AsUTF8(PyObject_GetAttrString(py_node, "kind"));
-        if (strcmp(node_type, "FunctionDef") == 0)
+        std::ifstream file(path);
+        if (!file.is_open())
         {
-            const char *func_name = PyUnicode_AsUTF8(PyObject_GetAttrString(py_node, "name"));
-            PyObject *py_args = PyObject_GetAttrString(py_node, "args");
-            PyObject *py_arg_list = PyObject_GetAttrString(py_args, "args");
-
-            std::vector<std::string> arg_types;
-            for (int i = 0; i < PyList_Size(py_arg_list); i++)
-            {
-                PyObject *py_arg = PyList_GetItem(py_arg_list, i);
-                const char *arg_name = PyUnicode_AsUTF8(PyObject_GetAttrString(py_arg, "arg"));
-                const char *arg_type = PyUnicode_AsUTF8(PyObject_GetAttrString(PyObject_GetAttrString(py_arg, "annotation"), "_name"));
-                arg_types.push_back(arg_type);
-            }
-
-            cache["functions"][func_name]["args"] = arg_types;
+            std::cerr << "Failed to open file " << path << std::endl;
+            return false;
         }
-        Py_DECREF(py_node);
-    }
-    Py_DECREF(py_node_iter);
 
-    // Cache all global variables
-    py_node_iter = PyObject_GetIter(py_ast);
-    while ((py_node = PyIter_Next(py_node_iter)))
-    {
-        const char *node_type = PyUnicode_AsUTF8(PyObject_GetAttrString(py_node, "kind"));
-        if (strcmp(node_type, "Assign") == 0)
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+
+        PyCompilerFlags flags = {};
+        flags.cf_flags |= PyCF_ONLY_AST;
+        PyObject *py_ast = Py_CompileStringFlags(content.c_str(), path.c_str(), Py_file_input, &flags);
+
+        file.close();
+        if (!py_ast)
         {
-            PyObject *py_targets = PyObject_GetAttrString(py_node, "targets");
-            PyObject *py_value = PyObject_GetAttrString(py_node, "value");
-
-            if (PyList_Size(py_targets) == 1)
-            {
-                const char *var_name = PyUnicode_AsUTF8(PyObject_GetAttrString(PyList_GetItem(py_targets, 0), "id"));
-                cache["globals"].push_back(var_name);
-            }
-
-            Py_DECREF(py_targets);
-            Py_DECREF(py_value);
+            return false;
         }
-        Py_DECREF(py_node);
-    }
-    Py_DECREF(py_node_iter);
 
-    // Save cache to file
-    std::ofstream cache_file(path + ".cache");
-    if (cache_file.is_open())
-    {
-        cache_file << cache.dump();
-        cache_file.close();
-    }
-    else
-    {
-        std::cerr << "Failed to open cache file " << path << ".cache" << std::endl;
-    }
+        nlohmann::json cache;
 
-    module_cache_[path] = cache;
+        // Cache all functions
+        PyObject *py_node_iter = PyObject_GetIter(py_ast);
+        PyObject *py_node;
+        while ((py_node = PyIter_Next(py_node_iter)))
+        {
+            const char *node_type = PyUnicode_AsUTF8(PyObject_GetAttrString(py_node, "kind"));
+            if (strcmp(node_type, "FunctionDef") == 0)
+            {
+                const char *func_name = PyUnicode_AsUTF8(PyObject_GetAttrString(py_node, "name"));
+                PyObject *py_args = PyObject_GetAttrString(py_node, "args");
+                PyObject *py_arg_list = PyObject_GetAttrString(py_args, "args");
 
-    Py_DECREF(py_ast);
-    return true;
-}
+                std::vector<std::string> arg_types;
+                for (int i = 0; i < PyList_Size(py_arg_list); i++)
+                {
+                    PyObject *py_arg = PyList_GetItem(py_arg_list, i);
+                    const char *arg_name = PyUnicode_AsUTF8(PyObject_GetAttrString(py_arg, "arg"));
+                    const char *arg_type = PyUnicode_AsUTF8(PyObject_GetAttrString(PyObject_GetAttrString(py_arg, "annotation"), "_name"));
+                    arg_types.push_back(arg_type);
+                }
+
+                cache["functions"][func_name]["args"] = arg_types;
+            }
+            Py_DECREF(py_node);
+        }
+        Py_DECREF(py_node_iter);
+
+        // Cache all global variables
+        py_node_iter = PyObject_GetIter(py_ast);
+        while ((py_node = PyIter_Next(py_node_iter)))
+        {
+            const char *node_type = PyUnicode_AsUTF8(PyObject_GetAttrString(py_node, "kind"));
+            if (strcmp(node_type, "Assign") == 0)
+            {
+                PyObject *py_targets = PyObject_GetAttrString(py_node, "targets");
+                PyObject *py_value = PyObject_GetAttrString(py_node, "value");
+
+                if (PyList_Size(py_targets) == 1)
+                {
+                    const char *var_name = PyUnicode_AsUTF8(PyObject_GetAttrString(PyList_GetItem(py_targets, 0), "id"));
+                    cache["globals"].push_back(var_name);
+                }
+
+                Py_DECREF(py_targets);
+                Py_DECREF(py_value);
+            }
+            Py_DECREF(py_node);
+        }
+        Py_DECREF(py_node_iter);
+
+        // Save cache to file
+        std::ofstream cache_file(path + ".cache");
+        if (cache_file.is_open())
+        {
+            cache_file << cache.dump();
+            cache_file.close();
+        }
+        else
+        {
+            std::cerr << "Failed to open cache file " << path << ".cache" << std::endl;
+        }
+
+        module_cache_[path] = cache;
+
+        Py_DECREF(py_ast);
+        return true;
+    }
 
     void PyModuleLoader::unload_module(const std::string &name)
     {
@@ -344,7 +344,6 @@ namespace OpenAPT
 
         return func_obj && PyCallable_Check(func_obj);
     }
-
 
     std::string get_function_signature(const std::string &module_name, const std::string &function_name)
     {

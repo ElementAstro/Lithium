@@ -1,8 +1,8 @@
 /*
  * io.hpp
- * 
+ *
  * Copyright (C) 2023 Max Qian <lightapt.com>
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,18 +15,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-/************************************************* 
- 
+/*************************************************
+
 Copyright: 2023 Max Qian. All rights reserved
- 
+
 Author: Max Qian
 
 E-mail: astro_air@126.com
- 
+
 Date: 2023-4-3
- 
+
 Description: IO
- 
+
 **************************************************/
 
 #include <string>
@@ -44,7 +44,7 @@ namespace OpenAPT::File
      * @param path 要创建的目录的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool create_directory(const std::string& path);
+    bool create_directory(const std::string &path);
 
     /**
      * @brief Removes an empty directory with the specified path.
@@ -57,7 +57,7 @@ namespace OpenAPT::File
      * @param path 要删除的目录的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool remove_directory(const std::string& path);
+    bool remove_directory(const std::string &path);
 
     /**
      * @brief Renames a directory with the specified old and new paths.
@@ -72,7 +72,7 @@ namespace OpenAPT::File
      * @param new_path 重命名后目录的新路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool rename_directory(const std::string& old_path, const std::string& new_path);
+    bool rename_directory(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Moves a directory from one path to another.
@@ -87,7 +87,7 @@ namespace OpenAPT::File
      * @param new_path 移动后目录的新路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool move_directory(const std::string& old_path, const std::string& new_path);
+    bool move_directory(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Copies a file from source path to destination path.
@@ -102,7 +102,7 @@ namespace OpenAPT::File
      * @param dst_path 复制后文件的目标路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool copy_file(const std::string& src_path, const std::string& dst_path);
+    bool copy_file(const std::string &src_path, const std::string &dst_path);
 
     /**
      * @brief Moves a file from source path to destination path.
@@ -117,7 +117,7 @@ namespace OpenAPT::File
      * @param dst_path 移动后文件的目标路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool move_file(const std::string& src_path, const std::string& dst_path);
+    bool move_file(const std::string &src_path, const std::string &dst_path);
 
     /**
      * @brief Renames a file with the specified old and new paths.
@@ -132,7 +132,7 @@ namespace OpenAPT::File
      * @param new_path 重命名后文件的新路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool rename_file(const std::string& old_path, const std::string& new_path);
+    bool rename_file(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Removes a file with the specified path.
@@ -145,7 +145,7 @@ namespace OpenAPT::File
      * @param path 要删除的文件的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool remove_file(const std::string& path);
+    bool remove_file(const std::string &path);
 
     /**
      * @brief Creates a symbolic link with the specified target and symlink paths.
@@ -160,7 +160,7 @@ namespace OpenAPT::File
      * @param symlink_path 要创建的符号链接的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool create_symlink(const std::string& target_path, const std::string& symlink_path);
+    bool create_symlink(const std::string &target_path, const std::string &symlink_path);
 
     /**
      * @brief Removes a symbolic link with the specified path.
@@ -173,7 +173,7 @@ namespace OpenAPT::File
      * @param path 要删除的符号链接的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool remove_symlink(const std::string& path);
+    bool remove_symlink(const std::string &path);
 
     /**
      * @brief Returns the size of a file in bytes.
@@ -186,7 +186,7 @@ namespace OpenAPT::File
      * @param path 要获取大小的文件的路径。
      * @return 文件的大小（以字节为单位），如果文件不存在或无法读取，则返回0。
      */
-    std::uintmax_t file_size(const std::string& path);
+    std::uintmax_t file_size(const std::string &path);
 
     /**
      * @brief Traverses a directory and prints the names of all files and directories within it.
@@ -197,7 +197,5 @@ namespace OpenAPT::File
      *
      * @param path 要遍历的目录的路径。
      */
-    void traverse_directory(const std::string& path);
+    void traverse_directory(const std::string &path);
 } // namespace OpenAPT::File
-
-

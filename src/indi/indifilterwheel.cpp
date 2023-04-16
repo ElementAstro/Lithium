@@ -93,22 +93,22 @@ namespace OpenAPT
 
     void INDIFilterwheel::newMessage(INDI::BaseDevice *dp, int messageID)
     {
-        spdlog::debug("{} Received message: {}",_name, dp->messageQueue(messageID));
+        spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
     }
 
     inline static const char *StateStr(IPState st)
     {
         switch (st)
         {
-            default:
-            case IPS_IDLE:
-                return "Idle";
-            case IPS_OK:
-                return "Ok";
-            case IPS_BUSY:
-                return "Busy";
-            case IPS_ALERT:
-                return "Alert";
+        default:
+        case IPS_IDLE:
+            return "Idle";
+        case IPS_OK:
+            return "Ok";
+        case IPS_BUSY:
+            return "Busy";
+        case IPS_ALERT:
+            return "Alert";
         }
     }
 
@@ -136,7 +136,7 @@ namespace OpenAPT
 
     void INDIFilterwheel::newBLOB(IBLOB *bp)
     {
-        spdlog::debug("{} Received BLOB {} len = {} size = {}",_name, bp->name, bp->bloblen, bp->size);
+        spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
     void INDIFilterwheel::newProperty(INDI::Property *property)
@@ -144,16 +144,16 @@ namespace OpenAPT
         std::string PropName(property->getName());
         INDI_PROPERTY_TYPE Proptype = property->getType();
 
-        spdlog::debug("{} Property: {}",_name, property->getName());
+        spdlog::debug("{} Property: {}", _name, property->getName());
 
         if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
         {
-            spdlog::debug("{} Found device port for {} ",_name, property->getDeviceName());
+            spdlog::debug("{} Found device port for {} ", _name, property->getDeviceName());
             filter_port = property->getText();
         }
         else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
         {
-            spdlog::debug("{} Found CONNECTION for {} {}",_name, property->getDeviceName(), PropName);
+            spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
             connection_prop = property->getSwitch();
             ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
             is_connected = (connectswitch->s == ISS_ON);
@@ -162,7 +162,7 @@ namespace OpenAPT
                 connection_prop->sp->s = ISS_ON;
                 sendNewSwitch(connection_prop);
             }
-            spdlog::debug("{} Connected {}",_name, is_connected);
+            spdlog::debug("{} Connected {}", _name, is_connected);
         }
         else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
         {
@@ -170,7 +170,7 @@ namespace OpenAPT
             indi_filter_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
             indi_filter_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
             indi_filter_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-            spdlog::debug("{} Name : {} connected exec {}",_name, device_name, indi_filter_exec);
+            spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_filter_exec);
         }
         else if (PropName == indi_filter_cmd + "INFO" && Proptype == INDI_NUMBER)
         {
@@ -192,35 +192,35 @@ namespace OpenAPT
                 indi_filter_rate = "115200";
             else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
                 indi_filter_rate = "230400";
-            spdlog::debug("{} baud rate : {}",_name, indi_filter_rate);
+            spdlog::debug("{} baud rate : {}", _name, indi_filter_rate);
         }
         else if (PropName == indi_filter_cmd + "DEVICE_PORT" && Proptype == INDI_TEXT)
         {
             indi_filter_port = IUFindText(property->getText(), "PORT")->text;
-            spdlog::debug("{} USB Port : {}",_name, indi_filter_port);
+            spdlog::debug("{} USB Port : {}", _name, indi_filter_port);
         }
     }
 
     void INDIFilterwheel::IndiServerConnected()
     {
-        spdlog::debug("{} connection succeeded",_name);
+        spdlog::debug("{} connection succeeded", _name);
         is_connected = true;
     }
 
     void INDIFilterwheel::IndiServerDisconnected(int exit_code)
     {
-        spdlog::debug("{}: serverDisconnected",_name);
+        spdlog::debug("{}: serverDisconnected", _name);
         // after disconnection we reset the connection status and the properties pointers
         ClearStatus();
         // in case the connection lost we must reset the client socket
         if (exit_code == -1)
-            spdlog::debug("{} : INDI server disconnected",_name);
+            spdlog::debug("{} : INDI server disconnected", _name);
     }
 
     void INDIFilterwheel::removeDevice(INDI::BaseDevice *dp)
     {
         ClearStatus();
-        spdlog::info("{} disconnected",_name);
+        spdlog::info("{} disconnected", _name);
     }
 
     void INDIFilterwheel::ClearStatus()
@@ -237,7 +237,7 @@ namespace OpenAPT
 
     INDIFilterwheel::INDIFilterwheel(const std::string &name) : Filterwheel(name)
     {
-        spdlog::debug("INDI filterwheel {} init successfully",name);
+        spdlog::debug("INDI filterwheel {} init successfully", name);
     }
 
     INDIFilterwheel::~INDIFilterwheel()
@@ -247,7 +247,8 @@ namespace OpenAPT
     bool INDIFilterwheel::connect(std::string name)
     {
         spdlog::debug("Trying to connect to {}", name);
-        if (is_connected) {
+        if (is_connected)
+        {
             spdlog::warn("{} is already connected", _name);
             return true;
         }
@@ -255,7 +256,8 @@ namespace OpenAPT
         // Receive messages only for our camera.
         watchDevice(name.c_str());
         // Connect to server.
-        if (connectServer()) {
+        if (connectServer())
+        {
             spdlog::debug("{}: connectServer done ready = {}", _name, is_ready);
             connectDevice(name.c_str());
             is_connected = true;

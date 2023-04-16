@@ -88,8 +88,8 @@ namespace OpenAPT
 
         // INDI 指令
         std::string indi_camera_cmd = "CCD_"; // INDI 控制命令前缀
-        std::string indi_blob_name; // BLOB 文件名
-        std::string indi_camera_exec = ""; // INDI 执行命令
+        std::string indi_blob_name;           // BLOB 文件名
+        std::string indi_camera_exec = "";    // INDI 执行命令
 
     public:
         // 构造函数
@@ -129,7 +129,7 @@ namespace OpenAPT
         bool setShutterOpen(bool open) override;
 
         // 设置图像子区域
-        //bool setSubframe(const ImageRect& rect);
+        // bool setSubframe(const ImageRect& rect);
 
         // 设置二次取样
         bool setBinning(int binning) override;

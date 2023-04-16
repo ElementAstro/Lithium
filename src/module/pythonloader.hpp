@@ -119,7 +119,6 @@ namespace OpenAPT
             return ret;
         }
 
-
         bool set_env(const std::string &name, const std::string &value);
 
         bool load_py_module(const std::string &name);

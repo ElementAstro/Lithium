@@ -33,5 +33,5 @@ Description: Main Http API
 
 namespace OpenAPT
 {
-    void init_handler(crow::SimpleApp& app);
+    void init_handler(crow::SimpleApp &app);
 } // namespace OpenAPT

@@ -17,7 +17,7 @@
 
 namespace fs = std::filesystem;
 
-ScriptManager::ScriptManager(const std::string& path)
+ScriptManager::ScriptManager(const std::string &path)
     : m_path(path), m_files(getScriptFiles()), m_scriptsJson(getScriptsJson(m_files))
 {
 }
@@ -25,7 +25,7 @@ ScriptManager::ScriptManager(const std::string& path)
 std::vector<std::string> ScriptManager::getScriptFiles() const
 {
     std::vector<std::string> files;
-    for (const auto& entry : fs::recursive_directory_iterator(m_path))
+    for (const auto &entry : fs::recursive_directory_iterator(m_path))
     {
         if (entry.is_regular_file() && (entry.path().extension() == ".sh" || entry.path().extension() == ".ps1"))
         {
@@ -35,14 +35,14 @@ std::vector<std::string> ScriptManager::getScriptFiles() const
     return files;
 }
 
-std::string ScriptManager::readScriptFromFile(const std::string& path) const
+std::string ScriptManager::readScriptFromFile(const std::string &path) const
 {
     std::ifstream input(path);
     std::string contents((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
     return contents;
 }
 
-bool ScriptManager::validateScript(const std::string& script, ScriptType scriptType) const
+bool ScriptManager::validateScript(const std::string &script, ScriptType scriptType) const
 {
     switch (scriptType)
     {
@@ -58,10 +58,10 @@ bool ScriptManager::validateScript(const std::string& script, ScriptType scriptT
     }
 }
 
-json ScriptManager::getScriptsJson(const std::vector<std::string>& files) const
+json ScriptManager::getScriptsJson(const std::vector<std::string> &files) const
 {
     json j;
-    for (const auto& file : files)
+    for (const auto &file : files)
     {
         std::string name = fs::path(file).stem();
         j[name]["path"] = file;
@@ -69,7 +69,7 @@ json ScriptManager::getScriptsJson(const std::vector<std::string>& files) const
     return j;
 }
 
-bool ScriptManager::runScript(const std::string& scriptName, bool async) const
+bool ScriptManager::runScript(const std::string &scriptName, bool async) const
 {
     if (m_scriptsJson.contains(scriptName))
     {
@@ -136,7 +136,7 @@ bool ScriptManager::runScript(const std::string& scriptName, bool async) const
     }
 }
 
-ScriptType ScriptManager::getScriptType(const std::string& path) const
+ScriptType ScriptManager::getScriptType(const std::string &path) const
 {
     std::string extension = fs::path(path).extension();
     if (extension == ".sh")
@@ -154,7 +154,7 @@ ScriptType ScriptManager::getScriptType(const std::string& path) const
     }
 }
 
-std::string ScriptManager::buildCommand(const std::string& scriptPath) const
+std::string ScriptManager::buildCommand(const std::string &scriptPath) const
 {
     std::stringstream ss;
 
@@ -168,13 +168,13 @@ std::string ScriptManager::buildCommand(const std::string& scriptPath) const
     return ss.str();
 }
 
-std::string ScriptManager::executeCommand(const std::string& command) const
+std::string ScriptManager::executeCommand(const std::string &command) const
 {
     std::array<char, 128> buffer;
     std::string result;
 
-    #ifdef _WIN32 // 如果是 Windows 系统
-    FILE* pipe = _popen(command.c_str(), "r");
+#ifdef _WIN32 // 如果是 Windows 系统
+    FILE *pipe = _popen(command.c_str(), "r");
     if (!pipe)
     {
         spdlog::error("Error: _popen failed");
@@ -185,8 +185,8 @@ std::string ScriptManager::executeCommand(const std::string& command) const
         result += buffer.data();
     }
     _pclose(pipe);
-    #else // 否则为 Linux 系统
-    FILE* pipe = popen(command.c_str(), "r");
+#else // 否则为 Linux 系统
+    FILE *pipe = popen(command.c_str(), "r");
     if (!pipe)
     {
         spdlog::error("Error: popen failed");
@@ -197,7 +197,7 @@ std::string ScriptManager::executeCommand(const std::string& command) const
         result += buffer.data();
     }
     pclose(pipe);
-    #endif
+#endif
 
     return result;
 }

@@ -44,8 +44,8 @@ void IUSaveText(IText *tp, const char *newtext)
 int IUSaveBLOB(IBLOB *bp, int size, int blobsize, char *blob, char *format)
 {
     bp->bloblen = blobsize;
-    bp->size    = size;
-    bp->blob    = blob;
+    bp->size = size;
+    bp->blob = blob;
     indi_strlcpy(bp->format, format, MAXINDIFORMAT);
     return 0;
 }
@@ -161,7 +161,7 @@ void IUFillSwitch(ISwitch *sp, const char *name, const char *label, ISState s)
 
     indi_strlcpy(sp->label, label[0] ? label : name, sizeof(sp->label));
 
-    sp->s   = s;
+    sp->s = s;
     sp->svp = NULL;
     sp->aux = NULL;
 }
@@ -172,7 +172,7 @@ void IUFillLight(ILight *lp, const char *name, const char *label, IPState s)
 
     indi_strlcpy(lp->label, label[0] ? label : name, sizeof(lp->label));
 
-    lp->s   = s;
+    lp->s = s;
     lp->lvp = NULL;
     lp->aux = NULL;
 }
@@ -186,13 +186,13 @@ void IUFillNumber(INumber *np, const char *name, const char *label, const char *
 
     indi_strlcpy(np->format, format, sizeof(np->format));
 
-    np->min   = min;
-    np->max   = max;
-    np->step  = step;
+    np->min = min;
+    np->max = max;
+    np->step = step;
     np->value = value;
-    np->nvp   = NULL;
-    np->aux0  = NULL;
-    np->aux1  = NULL;
+    np->nvp = NULL;
+    np->aux0 = NULL;
+    np->aux1 = NULL;
 }
 
 void IUFillText(IText *tp, const char *name, const char *label, const char *initialText)
@@ -205,7 +205,7 @@ void IUFillText(IText *tp, const char *name, const char *label, const char *init
         free(tp->text);
     tp->text = NULL;
 
-    tp->tvp  = NULL;
+    tp->tvp = NULL;
     tp->aux0 = NULL;
     tp->aux1 = NULL;
 
@@ -223,13 +223,13 @@ void IUFillBLOB(IBLOB *bp, const char *name, const char *label, const char *form
 
     indi_strlcpy(bp->format, format, sizeof(bp->format));
 
-    bp->blob    = 0;
+    bp->blob = 0;
     bp->bloblen = 0;
-    bp->size    = 0;
-    bp->bvp     = 0;
-    bp->aux0    = 0;
-    bp->aux1    = 0;
-    bp->aux2    = 0;
+    bp->size = 0;
+    bp->bvp = 0;
+    bp->aux0 = 0;
+    bp->aux1 = 0;
+    bp->aux2 = 0;
 }
 
 void IUFillSwitchVector(ISwitchVectorProperty *svp, ISwitch *sp, int nsp, const char *dev, const char *name,
@@ -244,12 +244,12 @@ void IUFillSwitchVector(ISwitchVectorProperty *svp, ISwitch *sp, int nsp, const 
     indi_strlcpy(svp->group, group, sizeof(svp->group));
     svp->timestamp[0] = '\0';
 
-    svp->p       = p;
-    svp->r       = r;
+    svp->p = p;
+    svp->r = r;
     svp->timeout = timeout;
-    svp->s       = s;
-    svp->sp      = sp;
-    svp->nsp     = nsp;
+    svp->s = s;
+    svp->sp = sp;
+    svp->nsp = nsp;
 }
 
 void IUFillLightVector(ILightVectorProperty *lvp, ILight *lp, int nlp, const char *dev, const char *name,
@@ -264,8 +264,8 @@ void IUFillLightVector(ILightVectorProperty *lvp, ILight *lp, int nlp, const cha
     indi_strlcpy(lvp->group, group, sizeof(lvp->group));
     lvp->timestamp[0] = '\0';
 
-    lvp->s   = s;
-    lvp->lp  = lp;
+    lvp->s = s;
+    lvp->lp = lp;
     lvp->nlp = nlp;
 }
 
@@ -281,11 +281,11 @@ void IUFillNumberVector(INumberVectorProperty *nvp, INumber *np, int nnp, const 
     indi_strlcpy(nvp->group, group, sizeof(nvp->group));
     nvp->timestamp[0] = '\0';
 
-    nvp->p       = p;
+    nvp->p = p;
     nvp->timeout = timeout;
-    nvp->s       = s;
-    nvp->np      = np;
-    nvp->nnp     = nnp;
+    nvp->s = s;
+    nvp->np = np;
+    nvp->nnp = nnp;
 }
 
 void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char *dev, const char *name,
@@ -300,11 +300,11 @@ void IUFillTextVector(ITextVectorProperty *tvp, IText *tp, int ntp, const char *
     indi_strlcpy(tvp->group, group, sizeof(tvp->group));
     tvp->timestamp[0] = '\0';
 
-    tvp->p       = p;
+    tvp->p = p;
     tvp->timeout = timeout;
-    tvp->s       = s;
-    tvp->tp      = tp;
-    tvp->ntp     = ntp;
+    tvp->s = s;
+    tvp->tp = tp;
+    tvp->ntp = ntp;
 }
 
 void IUFillBLOBVector(IBLOBVectorProperty *bvp, IBLOB *bp, int nbp, const char *dev, const char *name,
@@ -320,11 +320,11 @@ void IUFillBLOBVector(IBLOBVectorProperty *bvp, IBLOB *bp, int nbp, const char *
     indi_strlcpy(bvp->group, group, sizeof(bvp->group));
     bvp->timestamp[0] = '\0';
 
-    bvp->p       = p;
+    bvp->p = p;
     bvp->timeout = timeout;
-    bvp->s       = s;
-    bvp->bp      = bp;
-    bvp->nbp     = nbp;
+    bvp->s = s;
+    bvp->bp = bp;
+    bvp->nbp = nbp;
 }
 
 /** \section IUSnoop **/
@@ -531,7 +531,7 @@ int IUSnoopBLOB(XMLEle *root, IBLOBVectorProperty *bvp)
             XMLAtt *ec = findXMLAtt(ep, "enclen");
             if (fa && sa && ec)
             {
-                int enclen  = atoi(valuXMLAtt(ec));
+                int enclen = atoi(valuXMLAtt(ec));
                 assert_mem(bp->blob = realloc(bp->blob, 3 * enclen / 4));
                 bp->bloblen = from64tobits_fast(bp->blob, pcdataXMLEle(ep), enclen);
                 indi_strlcpy(bp->format, valuXMLAtt(fa), MAXINDIFORMAT);
@@ -629,17 +629,17 @@ const char *pstateStr(IPState s)
 {
     switch (s)
     {
-        case IPS_IDLE:
-            return "Idle";
-        case IPS_OK:
-            return "Ok";
-        case IPS_BUSY:
-            return "Busy";
-        case IPS_ALERT:
-            return "Alert";
-        default:
-            fprintf(stderr, "Impossible IPState %d\n", s);
-            return NULL;
+    case IPS_IDLE:
+        return "Idle";
+    case IPS_OK:
+        return "Ok";
+    case IPS_BUSY:
+        return "Busy";
+    case IPS_ALERT:
+        return "Alert";
+    default:
+        fprintf(stderr, "Impossible IPState %d\n", s);
+        return NULL;
     }
 }
 
@@ -647,13 +647,13 @@ const char *sstateStr(ISState s)
 {
     switch (s)
     {
-        case ISS_ON:
-            return "On";
-        case ISS_OFF:
-            return "Off";
-        default:
-            fprintf(stderr, "Impossible ISState %d\n", s);
-            return NULL;
+    case ISS_ON:
+        return "On";
+    case ISS_OFF:
+        return "Off";
+    default:
+        fprintf(stderr, "Impossible ISState %d\n", s);
+        return NULL;
     }
 }
 
@@ -661,15 +661,15 @@ const char *ruleStr(ISRule r)
 {
     switch (r)
     {
-        case ISR_1OFMANY:
-            return "OneOfMany";
-        case ISR_ATMOST1:
-            return "AtMostOne";
-        case ISR_NOFMANY:
-            return "AnyOfMany";
-        default:
-            fprintf(stderr, "Impossible ISRule %d\n", r);
-            return NULL;
+    case ISR_1OFMANY:
+        return "OneOfMany";
+    case ISR_ATMOST1:
+        return "AtMostOne";
+    case ISR_NOFMANY:
+        return "AnyOfMany";
+    default:
+        fprintf(stderr, "Impossible ISRule %d\n", r);
+        return NULL;
     }
 }
 
@@ -677,15 +677,15 @@ const char *permStr(IPerm p)
 {
     switch (p)
     {
-        case IP_RO:
-            return "ro";
-        case IP_WO:
-            return "wo";
-        case IP_RW:
-            return "rw";
-        default:
-            fprintf(stderr, "Impossible IPerm %d\n", p);
-            return NULL;
+    case IP_RO:
+        return "ro";
+    case IP_WO:
+        return "wo";
+    case IP_RW:
+        return "rw";
+    default:
+        fprintf(stderr, "Impossible IPerm %d\n", p);
+        return NULL;
     }
 }
 

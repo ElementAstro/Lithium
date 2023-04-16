@@ -35,29 +35,30 @@
 using namespace std;
 using namespace cimg_library;
 
-namespace OpenAPT {
+namespace OpenAPT
+{
 	typedef tuple<int
-				/*x*/
-				,
-				int
-				/*y*/
-				>
+				  /*x*/
+				  ,
+				  int
+				  /*y*/
+				  >
 		PixelPosT;
 	typedef set<PixelPosT> PixelPosSetT;
 	typedef list<PixelPosT> PixelPosListT;
 	typedef tuple<float, float> PixSubPosT;
 	typedef tuple<float
-				/*x1*/
-				,
-				float
-				/*y1*/
-				,
-				float
-				/*x2*/
-				,
-				float
-				/*y2*/
-				>
+				  /*x1*/
+				  ,
+				  float
+				  /*y1*/
+				  ,
+				  float
+				  /*x2*/
+				  ,
+				  float
+				  /*y2*/
+				  >
 		FrameT;
 	struct StarInfoT
 	{
@@ -78,16 +79,16 @@ namespace OpenAPT {
 	 * Algorithm: https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
 	 */
 	bool insideCircle(float inX
-					/*pos of x*/
-					,
-					float inY
-					/*pos of y*/
-					,
-					float inCenterX, float inCenterY, float inRadius)
+					  /*pos of x*/
+					  ,
+					  float inY
+					  /*pos of y*/
+					  ,
+					  float inCenterX, float inCenterY, float inRadius)
 	{
 		return (pow(inX - inCenterX, 2.0) + pow(inY - inCenterY, 2.0) <= pow(inRadius, 2.0));
 	}
-	#include <fitsio.h>
+#include <fitsio.h>
 	bool readFile(CImg<float> &inImg, const string &inFilename, int *outBitPix = 0)
 	{
 		int status = 0;
@@ -483,8 +484,8 @@ namespace OpenAPT {
 		typedef typename FitTraitsT::CurveParamsT CurveParamsT;
 		template <typename DataAccessorT>
 		static int fitGslLevenbergMarquart(const typename DataAccessorT::TypeT &inData,
-										typename CurveParamsT::TypeT *outResults,
-										double inEpsAbs, double inEpsRel, size_t inNumMaxIter = 500)
+										   typename CurveParamsT::TypeT *outResults,
+										   double inEpsAbs, double inEpsRel, size_t inNumMaxIter = 500)
 		{
 			// 添加调试日志
 			spdlog::debug("Fitting GSL Levenberg-Marquart");
@@ -530,7 +531,7 @@ namespace OpenAPT {
 				// 检查迭代误差
 				status = gsl_multifit_test_delta(solver->dx, solver->x, inEpsAbs, inEpsRel);
 				spdlog::debug("Iteration {}: dx norm = {}, x norm = {}, f norm = {}", i, gsl_blas_dnrm2(solver->dx),
-							gsl_blas_dnrm2(solver->x), gsl_blas_dnrm2(solver->f));
+							  gsl_blas_dnrm2(solver->x), gsl_blas_dnrm2(solver->f));
 			} while (status == GSL_CONTINUE && i < inNumMaxIter);
 			// 存储结果供用户返回（从gsl_vector复制到结果结构）
 			for (size_t i = 0; i < CurveParamsT::_Count; ++i)
@@ -681,7 +682,7 @@ namespace OpenAPT {
 		float y0 = std::get<1>(inFrame) - (fabs(height - L) / 2.0) - border;
 		return FrameT(x0, y0, x0 + L, y0 + L);
 	}
-	int StarDrawing(const std::string& filename,const unsigned int outerHfdDiameter)
+	int StarDrawing(const std::string &filename, const unsigned int outerHfdDiameter)
 	{
 		/* outerHfdDiameter depends on pixel size and focal length (and seeing...).
 		Later we may calculate it automatically wihth goven focal length and pixel
@@ -703,45 +704,45 @@ namespace OpenAPT {
 		}
 		// Create RGB image from fits file to paint boundaries and centroids (just for visualization)
 		CImg<unsigned char> rgbImg(img.width(), img.height(), 1
-								/*depth*/
-								,
-								3
-								/*3 channels - RGB*/
+								   /*depth*/
+								   ,
+								   3
+								   /*3 channels - RGB*/
 		);
 		float min = img.min(), mm = img.max() - min;
 		cimg_forXY(img, x, y)
 		{
 			int value = 255.0 * (img(x, y) - min) / mm;
 			rgbImg(x, y, 0
-				/*red*/
-				) = value;
+				   /*red*/
+				   ) = value;
 			rgbImg(x, y, 1
-				/*green*/
-				) = value;
+				   /*green*/
+				   ) = value;
 			rgbImg(x, y, 2
-				/*blue*/
-				) = value;
+				   /*blue*/
+				   ) = value;
 		}
 		CImg<float> &aiImg = img.blur_anisotropic(30.0f,
-												/*amplitude*/
-												0.5f,
-												/*sharpness*/
-												0.3f,
-												/*anisotropy*/
-												0.6f,
-												/*alpha*/
-												1.1f,
-												/*sigma*/
-												0.8f,
-												/*dl*/
-												30,
-												/*da*/
-												2,
-												/*gauss_prec*/
-												0,
-												/*interpolation_type*/
-												false
-												/*fast_approx*/
+												  /*amplitude*/
+												  0.5f,
+												  /*sharpness*/
+												  0.3f,
+												  /*anisotropy*/
+												  0.6f,
+												  /*alpha*/
+												  1.1f,
+												  /*sigma*/
+												  0.8f,
+												  /*dl*/
+												  30,
+												  /*da*/
+												  2,
+												  /*gauss_prec*/
+												  0,
+												  /*interpolation_type*/
+												  false
+												  /*fast_approx*/
 		);
 		// Thresholding (Otsu) --> In: Noise reduced image, Out: binary image
 		CImg<float> binImg;
@@ -845,8 +846,8 @@ namespace OpenAPT {
 			float &fwhmVert = curStarInfo->fwhmVert;
 			float &maxPixValue = curStarInfo->maxPixValue;
 			spdlog::info("cogCentroid=({},{}) maxPixValue: {} sat: {} hfd: {} fwhmHorz: {} fwhmVert: {}",
-						std::get<0>(curStarInfo->cogCentroid), std::get<1>(curStarInfo->cogCentroid),
-						maxPixValue, curStarInfo->saturated ? "Y" : "N", hfd, fwhmHorz, fwhmVert);
+						 std::get<0>(curStarInfo->cogCentroid), std::get<1>(curStarInfo->cogCentroid),
+						 maxPixValue, curStarInfo->saturated ? "Y" : "N", hfd, fwhmHorz, fwhmVert);
 			const FrameT &frame = curStarInfo->clusterFrame;
 			FrameT squareFrame(rectify(frame));
 			// Draw centroid crosses and centroid boundaries
@@ -854,19 +855,19 @@ namespace OpenAPT {
 			const FrameT &cogFrame = curStarInfo->cogFrame;
 			const FrameT &hfdFrame = curStarInfo->hfdFrame;
 			rgbResized.draw_line(floor(factor * (std::get<0>(subPos) - cCrossSize) + 0.5), floor(factor * std::get<1>(subPos) + 0.5),
-								floor(factor * (std::get<0>(subPos) + cCrossSize) + 0.5), floor(factor * std::get<1>(subPos) + 0.5), green, 1
-								/*opacity*/
+								 floor(factor * (std::get<0>(subPos) + cCrossSize) + 0.5), floor(factor * std::get<1>(subPos) + 0.5), green, 1
+								 /*opacity*/
 			);
 			rgbResized.draw_line(floor(factor * std::get<0>(subPos) + 0.5), floor(factor * (std::get<1>(subPos) - cCrossSize) + 0.5),
-								floor(factor * std::get<0>(subPos) + 0.5), floor(factor * (std::get<1>(subPos) + cCrossSize) + 0.5), green, 1
-								/*opacity*/
+								 floor(factor * std::get<0>(subPos) + 0.5), floor(factor * (std::get<1>(subPos) + cCrossSize) + 0.5), green, 1
+								 /*opacity*/
 			);
 			/*
-			*/
+			 */
 			rgbResized.draw_rectangle(floor(factor * std::get<0>(cogFrame) + 0.5), floor(factor * std::get<1>(cogFrame) + 0.5),
-									floor(factor * std::get<2>(cogFrame) + 0.5), floor(factor * std::get<3>(cogFrame) + 0.5),
-									green, 1,
-									~0);
+									  floor(factor * std::get<2>(cogFrame) + 0.5), floor(factor * std::get<3>(cogFrame) + 0.5),
+									  green, 1,
+									  ~0);
 			// Draw text
 			const bool &saturated = curStarInfo->saturated;
 			ostringstream oss;
@@ -877,16 +878,16 @@ namespace OpenAPT {
 				<< "MAX=" << (int)maxPixValue << endl
 				<< "SAT=" << (saturated ? "Y" : "N");
 			rgbImg.draw_text(floor(factor * std::get<0>(subPos) + 0.5), floor(factor * std::get<1>(subPos) + 0.5), oss.str().c_str(), white
-							/*fg color*/
-							,
-							black
-							/*bg color*/
-							,
-							0.7
-							/*opacity*/
-							,
-							9
-							/*font-size*/
+							 /*fg color*/
+							 ,
+							 black
+							 /*bg color*/
+							 ,
+							 0.7
+							 /*opacity*/
+							 ,
+							 9
+							 /*font-size*/
 			);
 		}
 		rgbResized.save_bmp("out.bmp");

@@ -40,23 +40,23 @@
 #include "base64_luts.h"
 #include <stdio.h>
 
-/* 
+/*
  * as byteswap.h is not available on macos, add macro here
  * Swap bytes in 16-bit value.
  */
-//#define bswap_16(x) __builtin_bswap16 (x);
-#define bswap_16(x) ((uint16_t) ((((x) >> 8) & 0xff) | (((x) & 0xff) << 8)))
+// #define bswap_16(x) __builtin_bswap16 (x);
+#define bswap_16(x) ((uint16_t)((((x) >> 8) & 0xff) | (((x)&0xff) << 8)))
 
 #ifdef _WIN32
 #define IS_BIG_ENDIAN (!*(unsigned char *)&(uint16_t){1})
 #else
 #include <arpa/inet.h>
-#define  IS_BIG_ENDIAN     (1 == htons(1))
+#define IS_BIG_ENDIAN (1 == htons(1))
 #endif
 
-#define  IS_LITTLE_ENDIAN  (!IS_BIG_ENDIAN)
+#define IS_LITTLE_ENDIAN (!IS_BIG_ENDIAN)
 
-/* convert inlen raw bytes at in to base64 string (NUL-terminated) at out. 
+/* convert inlen raw bytes at in to base64 string (NUL-terminated) at out.
  * out size should be at least 4*inlen/3 + 4.
  * return length of out (sans trailing NUL).
  */
@@ -64,7 +64,8 @@ int to64frombits_s(unsigned char *out, const unsigned char *in, int inlen, size_
 {
     size_t dlen = (((size_t)inlen + 2) / 3) * 4; /* 4/3, rounded up */
 
-    if (dlen > outlen) {
+    if (dlen > outlen)
+    {
         return 0;
     }
 
@@ -77,8 +78,8 @@ int to64frombits_s(unsigned char *out, const unsigned char *in, int inlen, size_
 int to64frombits(unsigned char *out, const unsigned char *in, int inlen)
 {
     uint16_t *b64lut = (uint16_t *)base64lut;
-    int dlen         = ((inlen + 2) / 3) * 4; /* 4/3, rounded up */
-    uint16_t *wbuf   = (uint16_t *)out;
+    int dlen = ((inlen + 2) / 3) * 4; /* 4/3, rounded up */
+    uint16_t *wbuf = (uint16_t *)out;
 
     for (; inlen > 2; inlen -= 3)
     {
@@ -95,7 +96,7 @@ int to64frombits(unsigned char *out, const unsigned char *in, int inlen)
     if (inlen > 0)
     {
         unsigned char fragment;
-        *out++   = base64digits[in[0] >> 2];
+        *out++ = base64digits[in[0] >> 2];
         fragment = (in[0] << 4) & 0x30;
         if (inlen > 1)
             fragment |= in[1] >> 4;
@@ -126,7 +127,7 @@ int from64tobits_fast(char *out, const char *in, int inlen)
     uint16_t s1, s2;
     uint32_t n32;
     int j;
-    int n         = (inlen / 4) - 1;
+    int n = (inlen / 4) - 1;
     uint16_t *inp = (uint16_t *)in;
 
     for (j = 0; j < n; j++)
@@ -135,10 +136,11 @@ int from64tobits_fast(char *out, const char *in, int inlen)
             in++;
         inp = (uint16_t *)in;
 
-        if IS_BIG_ENDIAN {
-         inp[0]=bswap_16(inp[0]);
-         inp[1]=bswap_16(inp[1]);
-       }
+        if IS_BIG_ENDIAN
+        {
+            inp[0] = bswap_16(inp[0]);
+            inp[1] = bswap_16(inp[1]);
+        }
         s1 = rbase64lut[inp[0]];
         s2 = rbase64lut[inp[1]];
 
@@ -163,9 +165,10 @@ int from64tobits_fast(char *out, const char *in, int inlen)
     if (in[0] == '\n')
         in++;
     inp = (uint16_t *)in;
-    if IS_BIG_ENDIAN {
-      inp[0]=bswap_16(inp[0]);
-      inp[1]=bswap_16(inp[1]);
+    if IS_BIG_ENDIAN
+    {
+        inp[0] = bswap_16(inp[0]);
+        inp[1] = bswap_16(inp[1]);
     }
 
     s1 = rbase64lut[inp[0]];
@@ -203,7 +206,7 @@ int from64tobits_fast_with_bug(char *out, const char *in, int inlen)
     uint16_t s1, s2;
     uint32_t n32;
     int j;
-    int n         = (inlen / 4) - 1;
+    int n = (inlen / 4) - 1;
     uint16_t *inp = (uint16_t *)in;
 
     for (j = 0; j < n; j++)
@@ -265,7 +268,6 @@ int from64tobits_fast_with_bug(char *out, const char *in, int inlen)
     return outlen;
 }
 
-
 #ifdef BASE64_PROGRAM
 /* standalone program that converts to/from base64.
  * cc -o base64 -DBASE64_PROGRAM base64.c
@@ -273,9 +275,9 @@ int from64tobits_fast_with_bug(char *out, const char *in, int inlen)
 
 #include <stdio.h>
 #include <stdlib.h>
-u#include <cstring>
+u#include<cstring>
 
-static void usage(char *me)
+    static void usage(char *me)
 {
     fprintf(stderr, "Purpose: convert stdin to/from base64 on stdout\n");
     fprintf(stderr, "Usage: %s {-t,-f}\n", me);
@@ -298,13 +300,13 @@ int main(int ac, char *av[])
         int i, n, nrawin, nb64;
 
         /* read raw on stdin until EOF */
-        rawin  = malloc(4096);
+        rawin = malloc(4096);
         nrawin = 0;
         while ((n = fread(rawin + nrawin, 1, 4096, stdin)) > 0)
             rawin = realloc(rawin, (nrawin += n) + 4096);
 
         /* convert to base64 */
-        b64  = malloc(4 * nrawin / 3 + 4);
+        b64 = malloc(4 * nrawin / 3 + 4);
         nb64 = to64frombits(b64, rawin, nrawin);
 
         size_t written = 0;
@@ -325,14 +327,14 @@ int main(int ac, char *av[])
         int n, nraw, nb64;
 
         /* read base64 on stdin until EOF */
-        b64  = malloc(4096);
+        b64 = malloc(4096);
         nb64 = 0;
         while ((n = fread(b64 + nb64, 1, 4096, stdin)) > 0)
             b64 = realloc(b64, (nb64 += n) + 4096);
         b64[nb64] = '\0';
 
         /* convert to raw */
-        raw  = malloc(3 * nb64 / 4);
+        raw = malloc(3 * nb64 / 4);
         nraw = from64tobits_fast(raw, b64, nb64);
         if (nraw < 0)
         {
@@ -364,17 +366,17 @@ int main(int ac, char *av[])
     int n, nrawin, nrawback, nb64;
 
     /* read raw on stdin until EOF */
-    rawin  = malloc(4096);
+    rawin = malloc(4096);
     nrawin = 0;
     while ((n = fread(rawin + nrawin, 1, 4096, stdin)) > 0)
         rawin = realloc(rawin, (nrawin += n) + 4096);
 
     /* convert to base64 */
-    b64  = malloc(4 * nrawin * 3 + 4);
+    b64 = malloc(4 * nrawin * 3 + 4);
     nb64 = to64frombits(b64, rawin, nrawin);
 
     /* convert back to raw */
-    rawback  = malloc(3 * nb64 / 4);
+    rawback = malloc(3 * nb64 / 4);
     nrawback = from64tobits_fast(rawback, b64, nrawin);
     if (nrawback < 0)
     {

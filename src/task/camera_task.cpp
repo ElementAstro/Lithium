@@ -35,39 +35,32 @@ namespace OpenAPT
 {
     SingleShotTask::SingleShotTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : SimpleTask(func, params)
     {
-
     }
 
-    GetGainTask::GetGainTask(const std::function<void(const nlohmann::json &)> & func, const nlohmann::json &params) : SimpleTask(func, params)
+    GetGainTask::GetGainTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : SimpleTask(func, params)
     {
-
     }
 
-    SetGainTask::SetGainTask(const std::function<void(const nlohmann::json &)> & func, const nlohmann::json &params) : SimpleTask(func, params)
+    SetGainTask::SetGainTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : SimpleTask(func, params)
     {
-
     }
 
-    GetOffsetTask::GetOffsetTask(const std::function<void(const nlohmann::json &)> & func, const nlohmann::json &params) : SimpleTask(func, params)
+    GetOffsetTask::GetOffsetTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : SimpleTask(func, params)
     {
-
     }
 
-    SetOffsetTask::SetOffsetTask(const std::function<void(const nlohmann::json &)> & func, const nlohmann::json &params) : SimpleTask(func, params)
+    SetOffsetTask::SetOffsetTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : SimpleTask(func, params)
     {
-
     }
 
     ConditionalShotTask::ConditionalShotTask(const std::function<void(const nlohmann::json &)> &func,
-                        const nlohmann::json &params,
-                        const std::function<bool(const nlohmann::json &)> &condition)
-    : ConditionalTask(func,params,condition)
+                                             const nlohmann::json &params,
+                                             const std::function<bool(const nlohmann::json &)> &condition)
+        : ConditionalTask(func, params, condition)
     {
-
     }
 
     LoopShotTask::LoopShotTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params) : LoopTask(func, params)
     {
-        
     }
 } // namespace OpenAPT

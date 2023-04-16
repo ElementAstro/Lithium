@@ -83,7 +83,8 @@ shm_unlink_or_close(const char *name, int fd)
 {
 	int save;
 
-	if (shm_unlink(name) == -1) {
+	if (shm_unlink(name) == -1)
+	{
 		save = errno;
 		close(fd);
 		errno = save;
@@ -94,8 +95,7 @@ shm_unlink_or_close(const char *name, int fd)
 #endif
 
 #ifdef IMPL_POSIX
-int
-shm_open_anon(void)
+int shm_open_anon(void)
 {
 	char name[16] = "/shm-";
 	struct timespec tv;
@@ -107,13 +107,14 @@ shm_open_anon(void)
 
 	*limit = 0;
 	start = name + strlen(name);
-	for (tries = 0; tries < 4; tries++) {
+	for (tries = 0; tries < 4; tries++)
+	{
 		clock_gettime(CLOCK_REALTIME, &tv);
 		r = (unsigned long)tv.tv_sec + (unsigned long)tv.tv_nsec;
 		for (fill = start; fill < limit; r /= 8)
 			*fill++ = '0' + (r % 8);
 		fd = shm_open(
-		  name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
+			name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
 		if (fd != -1)
 			return shm_unlink_or_close(name, fd);
 		if (errno != EEXIST)
@@ -124,8 +125,7 @@ shm_open_anon(void)
 #endif
 
 #ifdef IMPL_SHM_MKSTEMP
-int
-shm_open_anon(void)
+int shm_open_anon(void)
 {
 	char name[16] = "/shm-XXXXXXXXXX";
 	int fd;
@@ -137,18 +137,16 @@ shm_open_anon(void)
 #endif
 
 #ifdef IMPL_SHM_ANON
-int
-shm_open_anon(void)
+int shm_open_anon(void)
 {
 	return shm_open(SHM_ANON, O_RDWR, 0);
 }
 #endif
 
 #ifdef IMPL_MEMFD
-int
-shm_open_anon(void)
+int shm_open_anon(void)
 {
 	return syscall(
-	  __NR_memfd_create, "shm_anon", (unsigned int)(MFD_CLOEXEC));
+		__NR_memfd_create, "shm_anon", (unsigned int)(MFD_CLOEXEC));
 }
 #endif

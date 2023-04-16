@@ -39,79 +39,84 @@ class OpenAptIndiClient : public INDI::BaseClient
 {
     bool m_disconnecting;
 
-    public:
-        OpenAptIndiClient();
-        ~OpenAptIndiClient();
+public:
+    OpenAptIndiClient();
+    ~OpenAptIndiClient();
 
-    public:
-        bool connectServer()
-    #if INDI_VERSION_MAJOR >= 2 || (INDI_VERSION_MINOR == 9 && INDI_VERSION_RELEASE == 9)
+public:
+    bool connectServer()
+#if INDI_VERSION_MAJOR >= 2 || (INDI_VERSION_MINOR == 9 && INDI_VERSION_RELEASE == 9)
         override // use override since 1.9.9
-    #endif
+#endif
         ;
 
-    protected:
-        void serverConnected() final;
-        void serverDisconnected(int exit_code) final;
+protected:
+    void serverConnected() final;
+    void serverDisconnected(int exit_code) final;
 
-        virtual void IndiServerConnected() = 0;
-        virtual void IndiServerDisconnected(int exit_code) = 0;
+    virtual void IndiServerConnected() = 0;
+    virtual void IndiServerDisconnected(int exit_code) = 0;
 
-        // must use this in LGuider2 rather than BaseClient::disconnectServer()
-        bool DisconnectIndiServer();
+    // must use this in LGuider2 rather than BaseClient::disconnectServer()
+    bool DisconnectIndiServer();
 
-    #if INDI_VERSION_MAJOR >= 2
-    protected: // old deprecated interface INDI Version < 2.0.0
-        virtual void newDevice(INDI::BaseDevice *dp) = 0;
-        virtual void removeDevice(INDI::BaseDevice *dp) = 0;
-        virtual void newProperty(INDI::Property *property) = 0;
-        virtual void removeProperty(INDI::Property *property) = 0;
+#if INDI_VERSION_MAJOR >= 2
+protected: // old deprecated interface INDI Version < 2.0.0
+    virtual void newDevice(INDI::BaseDevice *dp) = 0;
+    virtual void removeDevice(INDI::BaseDevice *dp) = 0;
+    virtual void newProperty(INDI::Property *property) = 0;
+    virtual void removeProperty(INDI::Property *property) = 0;
 
-        virtual void newMessage(INDI::BaseDevice *dp, int messageID) = 0;
-        virtual void newBLOB(IBLOB *bp) = 0;
-        virtual void newSwitch(ISwitchVectorProperty *svp) = 0;
-        virtual void newNumber(INumberVectorProperty *nvp) = 0;
-        virtual void newText(ITextVectorProperty *tvp) = 0;
-        virtual void newLight(ILightVectorProperty *lvp) = 0;
+    virtual void newMessage(INDI::BaseDevice *dp, int messageID) = 0;
+    virtual void newBLOB(IBLOB *bp) = 0;
+    virtual void newSwitch(ISwitchVectorProperty *svp) = 0;
+    virtual void newNumber(INumberVectorProperty *nvp) = 0;
+    virtual void newText(ITextVectorProperty *tvp) = 0;
+    virtual void newLight(ILightVectorProperty *lvp) = 0;
 
-    protected: // new interface INDI Version >= 2.0.0
-        void newDevice(INDI::BaseDevice device) override
+protected: // new interface INDI Version >= 2.0.0
+    void newDevice(INDI::BaseDevice device) override
+    {
+        return newDevice((INDI::BaseDevice *)device);
+    }
+
+    void removeDevice(INDI::BaseDevice device) override
+    {
+        return removeDevice((INDI::BaseDevice *)device);
+    }
+
+    void newProperty(INDI::Property property) override
+    {
+        return newProperty((INDI::Property *)property);
+    }
+
+    void removeProperty(INDI::Property property) override
+    {
+        return removeProperty((INDI::Property *)property);
+    }
+
+    void updateProperty(INDI::Property property) override
+    {
+        switch (property.getType())
         {
-            return newDevice((INDI::BaseDevice *)device);
+        case INDI_NUMBER:
+            return newNumber((INumberVectorProperty *)property);
+        case INDI_SWITCH:
+            return newSwitch((ISwitchVectorProperty *)property);
+        case INDI_LIGHT:
+            return newLight((ILightVectorProperty *)property);
+        case INDI_BLOB:
+            return newBLOB((IBLOB *)INDI::PropertyBlob(property)[0].cast());
+        case INDI_TEXT:
+            return newText((ITextVectorProperty *)property);
         }
+    }
 
-        void removeDevice(INDI::BaseDevice device) override
-        {
-            return removeDevice((INDI::BaseDevice *)device);
-        }
-
-        void newProperty(INDI::Property property) override
-        {
-            return newProperty((INDI::Property *)property);
-        }
-
-        void removeProperty(INDI::Property property) override
-        {
-            return removeProperty((INDI::Property *)property);
-        }
-
-        void updateProperty(INDI::Property property) override
-        {
-            switch (property.getType())
-            {
-            case INDI_NUMBER: return newNumber((INumberVectorProperty *)property);
-            case INDI_SWITCH: return newSwitch((ISwitchVectorProperty *)property);
-            case INDI_LIGHT:  return newLight((ILightVectorProperty *)property);
-            case INDI_BLOB:   return newBLOB((IBLOB *)INDI::PropertyBlob(property)[0].cast());
-            case INDI_TEXT:   return newText((ITextVectorProperty *)property);
-            }
-        }
-
-        void newMessage(INDI::BaseDevice device, int messageID) override
-        {
-            return newMessage((INDI::BaseDevice *)device, messageID);
-        }
-    #endif
+    void newMessage(INDI::BaseDevice device, int messageID) override
+    {
+        return newMessage((INDI::BaseDevice *)device, messageID);
+    }
+#endif
 };
 
 #endif

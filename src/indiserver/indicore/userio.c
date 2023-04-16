@@ -20,12 +20,12 @@
 #include <stdio.h>
 #include <string.h>
 
-static ssize_t s_file_write(void *user, const void * ptr, size_t count)
+static ssize_t s_file_write(void *user, const void *ptr, size_t count)
 {
     return fwrite(ptr, 1, count, (FILE *)user);
 }
 
-static int s_file_printf(void *user, const char * format, va_list arg)
+static int s_file_printf(void *user, const char *format, va_list arg)
 {
     return vfprintf((FILE *)user, format, arg);
 }
@@ -41,7 +41,7 @@ const struct userio *userio_file()
     return &s_userio_file;
 }
 
-ssize_t userio_printf(const struct userio *io, void *user, const char * format, ...)
+ssize_t userio_printf(const struct userio *io, void *user, const char *format, ...)
 {
     int ret;
     va_list ap;
@@ -51,12 +51,12 @@ ssize_t userio_printf(const struct userio *io, void *user, const char * format, 
     return ret;
 }
 
-ssize_t userio_vprintf(const struct userio *io, void *user, const char * format, va_list arg)
+ssize_t userio_vprintf(const struct userio *io, void *user, const char *format, va_list arg)
 {
     return io->vprintf(user, format, arg);
 }
 
-ssize_t userio_write(const struct userio *io, void *user, const void * ptr, size_t count)
+ssize_t userio_write(const struct userio *io, void *user, const void *ptr, size_t count)
 {
     return io->write(user, ptr, count);
 }
@@ -78,16 +78,27 @@ size_t userio_xml_escape(const struct userio *io, void *user, const char *src)
     const char *ptr = src;
     const char *replacement;
 
-    for(; *ptr; ++ptr)
+    for (; *ptr; ++ptr)
     {
-        switch(*ptr)
+        switch (*ptr)
         {
-        case  '&': replacement = "&amp;";  break;
-        case '\'': replacement = "&apos;"; break;
-        case  '"': replacement = "&quot;"; break;
-        case  '<': replacement = "&lt;";   break;
-        case  '>': replacement = "&gt;";   break;
-        default:   replacement = NULL;
+        case '&':
+            replacement = "&amp;";
+            break;
+        case '\'':
+            replacement = "&apos;";
+            break;
+        case '"':
+            replacement = "&quot;";
+            break;
+        case '<':
+            replacement = "&lt;";
+            break;
+        case '>':
+            replacement = "&gt;";
+            break;
+        default:
+            replacement = NULL;
         }
 
         if (replacement != NULL)

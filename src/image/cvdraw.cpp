@@ -3,7 +3,8 @@
 #include <opencv2/opencv.hpp>
 #include <spdlog/spdlog.h>
 
-class IndiAllskyDetectLines {
+class IndiAllskyDetectLines
+{
 private:
     int canny_low_threshold = 15;
     int canny_high_threshold = 50;
@@ -18,16 +19,19 @@ private:
     cv::Mat _sqm_gradient_mask;
 
 public:
-    IndiAllskyDetectLines(const int bin_v, const cv::Mat& mask=nullptr) {
+    IndiAllskyDetectLines(const int bin_v, const cv::Mat &mask = nullptr)
+    {
         /* 构造函数 */
         this->bin_v = bin_v;
         this->_sqm_mask = mask;
-    } 
+    }
 
-    std::vector<cv::Vec4i> detectLines(cv::Mat original_img, const std::vector<int>& sqm_roi) {
+    std::vector<cv::Vec4i> detectLines(cv::Mat original_img, const std::vector<int> &sqm_roi)
+    {
         this->_generateSqmMask(original_img, sqm_roi);
 
-        if (this->_sqm_gradient_mask.empty()) {
+        if (this->_sqm_gradient_mask.empty())
+        {
             this->_generateSqmGradientMask(original_img);
         }
 
@@ -35,9 +39,12 @@ public:
         cv::multiply(original_img, this->_sqm_gradient_mask, masked_img);
 
         cv::Mat img_gray;
-        if (original_img.channels() == 1) {
+        if (original_img.channels() == 1)
+        {
             img_gray = masked_img;
-        } else {
+        }
+        else
+        {
             cv::cvtColor(masked_img, img_gray, cv::COLOR_BGR2GRAY);
         }
 
@@ -56,7 +63,8 @@ public:
 
         spdlog::info("Line detection in {} s", lines_elapsed_s);
 
-        if (lines.empty()) {
+        if (lines.empty())
+        {
             spdlog::info("Detected 0 lines");
             return lines;
         }
@@ -69,7 +77,8 @@ public:
     }
 
 private:
-    void _generateSqmMask(const cv::Mat& img, const std::vector<int>& sqm_roi) {
+    void _generateSqmMask(const cv::Mat &img, const std::vector<int> &sqm_roi)
+    {
         spdlog::info("Generating mask based on SQM_ROI");
 
         int image_height = img.rows;
@@ -78,12 +87,15 @@ private:
         cv::Mat mask = cv::Mat::zeros(image_height, image_width, CV_8UC1);
 
         cv::Point pt1, pt2;
-        try {
+        try
+        {
             pt1.x = sqm_roi[0] / this->bin_v;
             pt1.y = sqm_roi[1] / this->bin_v;
             pt2.x = sqm_roi[2] / this->bin_v;
             pt2.y = sqm_roi[3] / this->bin_v;
-        } catch(std::out_of_range& e) {
+        }
+        catch (std::out_of_range &e)
+        {
             spdlog::warn("Using central ROI for blob calculations");
             pt1.x = (image_width / 2) - (image_width / 3);
             pt1.y = (image_height / 2) - (image_height / 3);
@@ -98,11 +110,13 @@ private:
         this->_sqm_mask = blur_mask;
     }
 
-    void _generateSqmGradientMask(const cv::Mat& img) {
+    void _generateSqmGradientMask(const cv::Mat &img)
+    {
         int image_height = img.rows;
         int image_width = img.cols;
 
-        if (!this->_sqm_mask.empty() && config.type() == CV_32FC1 && config.at<int>("IMAGE_STACK_COUNT", 1) > 1 && config.at<bool>("IMAGE_STACK_SPLIT")) {
+        if (!this->_sqm_mask.empty() && config.type() == CV_32FC1 && config.at<int>("IMAGE_STACK_COUNT", 1) > 1 && config.at<bool>("IMAGE_STACK_SPLIT"))
+        {
             int half_width = image_width / 2;
             cv::line(this->_sqm_mask, cv::Point(half_width, 0), cv::Point(half_width, image_height), cv::Scalar(0), 71);
         }
@@ -111,19 +125,24 @@ private:
         cv::blur(this->_sqm_mask, blur_mask, cv::Size(this->mask_blur_kernel_size, this->mask_blur_kernel_size), cv::BORDER_DEFAULT);
 
         cv::Mat mask;
-        if (img.channels() == 1) {
+        if (img.channels() == 1)
+        {
             mask = blur_mask;
-        } else {
+        }
+        else
+        {
             cv::cvtColor(blur_mask, mask, cv::COLOR_GRAY2BGR);
         }
 
         mask.convertTo(this->_sqm_gradient_mask, CV_32FC3, 1.0 / 255.0);
     }
 
-    void _drawLines(cv::Mat img, const std::vector<cv::Vec4i>& lines) {
+    void _drawLines(cv::Mat img, const std::vector<cv::Vec4i> &lines)
+    {
         cv::Scalar color_bgr(0, 255, 0);
 
-        for (auto& line : lines) {
+        for (auto &line : lines)
+        {
             int x1 = line[0];
             int y1 = line[1];
             int x2 = line[2];
@@ -249,41 +268,43 @@ private:
     }
 
     void _drawCircles(cv::Mat &sep_data, const std::vector<cv::Point> &blob_list)
-{
-    int image_height = sep_data.rows;
-    int image_width = sep_data.cols;
-
-    cv::Scalar color_bgr(255, 255, 255);
-
-    // 使用 set 来去重
-    std::set<std::pair<int, int>> pos_set;
-
-    spdlog::info("Draw circles around objects");
-    for (const auto &blob : blob_list)
     {
-        int x = blob.x;
-        int y = blob.y;
+        int image_height = sep_data.rows;
+        int image_width = sep_data.cols;
 
-        auto pos_pair = std::make_pair(x, y);
-        if (pos_set.find(pos_pair) != pos_set.end()) {
-            continue; // 如果在 set 中已经存在，则跳过这个点
-        } else {
-            pos_set.insert(pos_pair); // 否则插入到 set 中
+        cv::Scalar color_bgr(255, 255, 255);
+
+        // 使用 set 来去重
+        std::set<std::pair<int, int>> pos_set;
+
+        spdlog::info("Draw circles around objects");
+        for (const auto &blob : blob_list)
+        {
+            int x = blob.x;
+            int y = blob.y;
+
+            auto pos_pair = std::make_pair(x, y);
+            if (pos_set.find(pos_pair) != pos_set.end())
+            {
+                continue; // 如果在 set 中已经存在，则跳过这个点
+            }
+            else
+            {
+                pos_set.insert(pos_pair); // 否则插入到 set 中
+            }
+
+            cv::Point center(x + (_star_template.cols / 2) + 1,
+                             y + (_star_template.rows / 2) + 1);
+
+            cv::circle(
+                sep_data,
+                center,
+                6,
+                color_bgr,
+                1);
         }
-
-        cv::Point center(x + (_star_template.cols / 2) + 1,
-                         y + (_star_template.rows / 2) + 1);
-
-        cv::circle(
-            sep_data,
-            center,
-            6,
-            color_bgr,
-            1);
+        cv::imwrite("testt.jpg", sep_data);
     }
-    cv::imwrite("testt.jpg", sep_data);
-}
-
 };
 
 int main()

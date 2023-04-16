@@ -98,7 +98,7 @@ namespace OpenAPT
          * @details 读取指定路径下的 JSON 文件，并将其解析成 json 对象。如果文件路径不存在或文件格式错误，则返回 false。
          */
         bool readJsonFile(const std::string &filePath, nlohmann::json &tasksJson);
-        
+
         /**
          * @brief 根据 JSON 字符串生成任务。
          * @param tasksJson 存储任务 JSON 数据的对象
@@ -116,7 +116,6 @@ namespace OpenAPT
         std::vector<std::shared_ptr<BasicTask>> generateTasksFromFile(const std::string &filePath);
 
     private:
-
         /**
          * @brief 计算字符串的哈希值。
          * @param str 字符串指针
@@ -198,7 +197,7 @@ namespace OpenAPT
          */
         void executeAllTasks();
 
-        void executeTaskByName(const std::string& name);
+        void executeTaskByName(const std::string &name);
 
         /**
          * @brief 从指定文件中加载任务数据到任务列表
@@ -229,7 +228,7 @@ namespace OpenAPT
 
         void sortTasksByPriority();
 
-        void setTaskPriority(const std::string& name, int priority);
+        void setTaskPriority(const std::string &name, int priority);
 
         TaskGenerator m_TaskGenerator;
 

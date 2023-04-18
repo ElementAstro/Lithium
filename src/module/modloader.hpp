@@ -34,39 +34,43 @@ Description: C++ and Python Modules Loader
 
 #include "openapt.hpp"
 
-extern OpenAPT::ThreadManager m_ThreadManager;
+class MyApp;
 
 #include <vector>
 #include <unordered_map>
 #include <cstdio>
+#include <functional>
 
 #if defined(WIN32)
 // Windows平台
+#include <windows.h>
 #define MODULE_HANDLE HMODULE
 #define LOAD_LIBRARY(p) LoadLibrary(p)
 #define LOAD_ERROR() GetLastError()
 #define LOAD_SHARED_LIBRARY(file, size) LoadLibraryEx(reinterpret_cast<const char *>(file), NULL, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)
 #define LOAD_FUNCTION(handle, name) GetProcAddress(static_cast<HMODULE>(handle), name)
 #define CLOSE_SHARED_LIBRARY(handle) FreeLibrary(static_cast<HMODULE>(handle))
-#include <windows.h>
+
 #elif defined(__APPLE__)
 // macOS平台
+#include <dlfcn.h>
 #define MODULE_HANDLE void *
 #define LOAD_LIBRARY(p) dlopen_ext(p, RTLD_NOW, (const char *[]){"-undefined", "dynamic_lookup", NULL})
 #define LOAD_ERROR() dlerror()
-#include <dlfcn.h>
+
 #else
 // Linux和其他类UNIX平台
+#include <dlfcn.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <elf.h>
 #define MODULE_HANDLE void *
 #define LOAD_LIBRARY(p) dlopen(p, RTLD_NOW | RTLD_GLOBAL)
 #define LOAD_SHARED_LIBRARY(file, size) dlopen(nullptr, RTLD_NOW | RTLD_GLOBAL)
 #define UNLOAD_LIBRARY(p) dlclose(p)
 #define LOAD_ERROR() dlerror()
 #define LOAD_FUNCTION(handle, name) dlsym(handle, name)
-#include <dlfcn.h>
-#include <dirent.h>
-#include <unistd.h>
-#include <elf.h>
+
 #endif
 
 #include <spdlog/spdlog.h>
@@ -82,7 +86,7 @@ namespace OpenAPT
     class ModuleLoader
     {
     public:
-        ModuleLoader();
+        ModuleLoader(MyApp* app);
         ~ModuleLoader();
         bool LoadModule(const std::string &path, const std::string &name);
         bool UnloadModule(const std::string &filename);
@@ -152,7 +156,7 @@ namespace OpenAPT
             {
                 member_func_ptr = reinterpret_cast<MemberFunctionPtr>(sym_ptr);
             }
-            m_ThreadManager.addThread(std::bind(member_func_ptr, instance, args...), std::bind(func_ptr, args...), thread_name);
+            m_App->GetThreadManager()->addThread(std::bind(member_func_ptr, instance, args...), std::bind(func_ptr, args...), thread_name);
             return true;
         }
 
@@ -188,7 +192,7 @@ namespace OpenAPT
 
             if (runasync)
             {
-                m_ThreadManager.addThread(std::bind(func_ptr, std::forward<Args>(args)...), thread_name);
+                m_App->GetThreadManager()->addThread(std::bind(func_ptr, std::forward<Args>(args)...), thread_name);
             }
             else
             {
@@ -218,6 +222,7 @@ namespace OpenAPT
 
     private:
         std::unordered_map<std::string, void *> handles_;
+        MyApp* m_App;
     };
 }
 

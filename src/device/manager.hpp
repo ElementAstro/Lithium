@@ -134,8 +134,6 @@ namespace OpenAPT
          */
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
 
-        std::shared_ptr<Camera> getCamera(const std::string &name);
-
         std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
         std::shared_ptr<ConditionalTask> getConditionalTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);

@@ -35,11 +35,15 @@ Description: Compiler
 #include <fstream>
 #include <sstream>
 #include <spdlog/spdlog.h>
-
 #include <nlohmann/json.hpp>
-using json = nlohmann::json;
+#include <filesystem>
 
-#ifdef _MSC_VER
+extern MyApp m_App;
+
+using json = nlohmann::json;
+namespace fs = std::filesystem;
+
+#ifdef _WIN32
 #define COMPILER "cl.exe"
 #define CMD_PREFIX ""
 #define CMD_SUFFIX ".dll"
@@ -49,33 +53,30 @@ using json = nlohmann::json;
 #define CMD_SUFFIX ".so"
 #endif
 
-bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string& moduleName, const std::string& functionName)
-{
+bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string& moduleName, const std::string& functionName) {
     spdlog::debug("Compiling module {}::{}...", moduleName, functionName);
 
     // 参数校验
-    if (code.empty() || moduleName.empty() || functionName.empty())
-    {
+    if (code.empty() || moduleName.empty() || functionName.empty()) {
         spdlog::error("Invalid parameters.");
         return false;
     }
 
     // Check if the module is already compiled and cached
     auto cachedResult = cache_.find(moduleName + "::" + functionName);
-    if (cachedResult != cache_.end())
-    {
+    if (cachedResult != cache_.end()) {
         spdlog::warn("Module {}::{} is already compiled, returning cached result.", moduleName, functionName);
         return true;
     }
 
     // Create output directory if it does not exist
-    std::string outputDir = "modules/global/";
-    if (!std::filesystem::exists(outputDir))
-    {
+    const std::string outputDir = "modules/global/";
+    if (!fs::exists(outputDir)) {
         spdlog::warn("Output directory does not exist, creating it: {}", outputDir);
-        if (!std::filesystem::create_directories(outputDir))
-        {
-            spdlog::error("Failed to create output directory.");
+        try {
+            fs::create_directories(outputDir);
+        } catch(const std::exception& e) {
+            spdlog::error("Failed to create output directory: {}", e.what());
             return false;
         }
     }
@@ -83,63 +84,64 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     // Read compile options from JSON file
     std::string compileOptions = "-shared -fPIC -x c++ ";
     std::ifstream compileOptionFile("compile_options.json");
-    if (compileOptionFile.is_open())
-    {
+    if (compileOptionFile.is_open()) {
         json compileOptionsJson;
-        try
-        {
+        try {
             compileOptionFile >> compileOptionsJson;
-            if (compileOptionsJson.contains("optimization_level") && compileOptionsJson.contains("cplus_version") && compileOptionsJson.contains("warnings"))
-            {
+            if (compileOptionsJson.contains("optimization_level") && compileOptionsJson.contains("cplus_version") && compileOptionsJson.contains("warnings")) {
                 compileOptions = compileOptionsJson["optimization_level"].get<std::string>() + " " +
                                   compileOptionsJson["cplus_version"].get<std::string>() + " " +
                                   compileOptionsJson["warnings"].get<std::string>() + " ";
-            }
-            else
-            {
+            } else {
                 spdlog::error("Invalid format in compile_options.json.");
                 return false;
             }
-        }
-        catch (const std::exception& e)
-        {
+        } catch (const std::exception& e) {
             spdlog::error("Error reading compile_options.json: {}", e.what());
             return false;
         }
     }
 
-    // Specify output file path and compiler command
-    std::string output = outputDir + moduleName + ".so";
-    std::string cmd = std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
-    spdlog::debug("{}",cmd);
+    // Specify output file path
+    std::string output = outputDir + moduleName + CMD_SUFFIX;
 
     // Syntax and semantic checking
     std::istringstream codeStream(code);
-    std::istringstream ccodeStream(code);
-    std::ostringstream outputStream;
-    
-    if (RunShellCommand(std::string(COMPILER) + " -fsyntax-only -x c++ -", ccodeStream, outputStream) != 0)
-    {
-        spdlog::error("Syntax error in C++ code: {}", outputStream.str());
+    std::stringstream syntaxCheckCmd;
+    syntaxCheckCmd << COMPILER << " -fsyntax-only -x c++ -";
+    std::ostringstream syntaxCheckOutput;
+    if (RunShellCommand(syntaxCheckCmd.str(), codeStream, syntaxCheckOutput) != 0) {
+        spdlog::error("Syntax error in C++ code: {}", syntaxCheckOutput.str());
         return false;
     }
 
-    int exitCode = RunShellCommand(cmd, codeStream, outputStream);
-    if (exitCode != 0)
-    {
-        spdlog::error("Failed to compile C++ code: {}", outputStream.str());
+    // Compile code
+    codeStream.clear(); // Clear code stream state
+    codeStream.seekg(0); // Reset code stream read pointer to beginning of stream
+
+    std::ostringstream compilationOutput;
+    std::string cmd = std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
+    spdlog::debug("{}", cmd);
+
+    int exitCode = RunShellCommand(cmd, codeStream, compilationOutput);
+    if (exitCode != 0) {
+        spdlog::error("Failed to compile C++ code: {}", compilationOutput.str());
         return false;
     }
 
+    // Cache compiled module
     cache_[moduleName + "::" + functionName] = output;
 
     // Load the compiled module
-    m_ModuleLoader.LoadModule(output, moduleName);
-
-    spdlog::info("Module {}::{} compiled successfully.", moduleName, functionName);
-
-    return true;
+    if(m_App.GetModuleLoader()->LoadModule(output, moduleName)) {
+        spdlog::info("Module {}::{} compiled successfully.", moduleName, functionName);
+        return true;
+    } else {
+        spdlog::error("Failed to load the compiled module: {}", output);
+        return false;
+    }
 }
+
 
 bool Compiler::CopyFile(const std::string& source, const std::string& destination)
 {

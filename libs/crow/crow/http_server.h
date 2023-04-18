@@ -23,24 +23,24 @@ namespace crow
 {
     using tcp = asio::ip::tcp;
 
-    template<typename Handler, typename Adaptor = SocketAdaptor, typename... Middlewares>
+    template <typename Handler, typename Adaptor = SocketAdaptor, typename... Middlewares>
     class Server
     {
     public:
-        Server(Handler* handler, std::string bindaddr, uint16_t port, std::string server_name = std::string("Crow/") + VERSION, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, uint8_t timeout = 5, typename Adaptor::context* adaptor_ctx = nullptr):
-          acceptor_(io_service_, tcp::endpoint(asio::ip::address::from_string(bindaddr), port)),
-          signals_(io_service_),
-          tick_timer_(io_service_),
-          handler_(handler),
-          concurrency_(concurrency),
-          timeout_(timeout),
-          server_name_(server_name),
-          port_(port),
-          bindaddr_(bindaddr),
-          task_queue_length_pool_(concurrency_ - 1),
-          middlewares_(middlewares),
-          adaptor_ctx_(adaptor_ctx)
-        {}
+        Server(Handler *handler, std::string bindaddr, uint16_t port, std::string server_name = std::string("Crow/") + VERSION, std::tuple<Middlewares...> *middlewares = nullptr, uint16_t concurrency = 1, uint8_t timeout = 5, typename Adaptor::context *adaptor_ctx = nullptr) : acceptor_(io_service_, tcp::endpoint(asio::ip::address::from_string(bindaddr), port)),
+                                                                                                                                                                                                                                                                                      signals_(io_service_),
+                                                                                                                                                                                                                                                                                      tick_timer_(io_service_),
+                                                                                                                                                                                                                                                                                      handler_(handler),
+                                                                                                                                                                                                                                                                                      concurrency_(concurrency),
+                                                                                                                                                                                                                                                                                      timeout_(timeout),
+                                                                                                                                                                                                                                                                                      server_name_(server_name),
+                                                                                                                                                                                                                                                                                      port_(port),
+                                                                                                                                                                                                                                                                                      bindaddr_(bindaddr),
+                                                                                                                                                                                                                                                                                      task_queue_length_pool_(concurrency_ - 1),
+                                                                                                                                                                                                                                                                                      middlewares_(middlewares),
+                                                                                                                                                                                                                                                                                      adaptor_ctx_(adaptor_ctx)
+        {
+        }
 
         void set_tick_function(std::chrono::milliseconds d, std::function<void()> f)
         {
@@ -52,11 +52,11 @@ namespace crow
         {
             tick_function_();
             tick_timer_.expires_after(std::chrono::milliseconds(tick_interval_.count()));
-            tick_timer_.async_wait([this](const asio::error_code& ec) {
+            tick_timer_.async_wait([this](const asio::error_code &ec)
+                                   {
                 if (ec)
                     return;
-                on_tick();
-            });
+                on_tick(); });
         }
 
         void run()
@@ -71,8 +71,9 @@ namespace crow
             std::atomic<int> init_count(0);
             for (uint16_t i = 0; i < worker_thread_count; i++)
                 v.push_back(
-                  std::async(
-                    std::launch::async, [this, i, &init_count] {
+                    std::async(
+                        std::launch::async, [this, i, &init_count]
+                        {
                         // thread local date string get function
                         auto last = std::chrono::steady_clock::now();
 
@@ -121,31 +122,31 @@ namespace crow
                             {
                                 CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
                             }
-                        }
-                    }));
+                        } }));
 
             if (tick_function_ && tick_interval_.count() > 0)
             {
                 tick_timer_.expires_after(std::chrono::milliseconds(tick_interval_.count()));
                 tick_timer_.async_wait(
-                  [this](const asio::error_code& ec) {
-                      if (ec)
-                          return;
-                      on_tick();
-                  });
+                    [this](const asio::error_code &ec)
+                    {
+                        if (ec)
+                            return;
+                        on_tick();
+                    });
             }
 
             port_ = acceptor_.local_endpoint().port();
             handler_->port(port_);
 
-
             CROW_LOG_INFO << server_name_ << " server is running at " << (handler_->ssl_used() ? "https://" : "http://") << bindaddr_ << ":" << acceptor_.local_endpoint().port() << " using " << concurrency_ << " threads";
             CROW_LOG_INFO << "Call `app.loglevel(crow::LogLevel::Warning)` to hide Info level logs.";
 
             signals_.async_wait(
-              [&](const asio::error_code& /*error*/, int /*signal_number*/) {
-                  stop();
-              });
+                [&](const asio::error_code & /*error*/, int /*signal_number*/)
+                {
+                    stop();
+                });
 
             while (worker_thread_count != init_count)
                 std::this_thread::yield();
@@ -153,18 +154,19 @@ namespace crow
             do_accept();
 
             std::thread(
-              [this] {
-                  notify_start();
-                  io_service_.run();
-                  CROW_LOG_INFO << "Exiting.";
-              })
-              .join();
+                [this]
+                {
+                    notify_start();
+                    io_service_.run();
+                    CROW_LOG_INFO << "Exiting.";
+                })
+                .join();
         }
 
         void stop()
         {
             shutting_down_ = true; // Prevent the acceptor from taking new connections
-            for (auto& io_service : io_service_pool_)
+            for (auto &io_service : io_service_pool_)
             {
                 if (io_service != nullptr)
                 {
@@ -217,32 +219,34 @@ namespace crow
             if (!shutting_down_)
             {
                 uint16_t service_idx = pick_io_service_idx();
-                asio::io_service& is = *io_service_pool_[service_idx];
+                asio::io_service &is = *io_service_pool_[service_idx];
                 task_queue_length_pool_[service_idx]++;
                 CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
 
                 auto p = new Connection<Adaptor, Handler, Middlewares...>(
-                  is, handler_, server_name_, middlewares_,
-                  get_cached_date_str_pool_[service_idx], *task_timer_pool_[service_idx], adaptor_ctx_, task_queue_length_pool_[service_idx]);
+                    is, handler_, server_name_, middlewares_,
+                    get_cached_date_str_pool_[service_idx], *task_timer_pool_[service_idx], adaptor_ctx_, task_queue_length_pool_[service_idx]);
 
                 acceptor_.async_accept(
-                  p->socket(),
-                  [this, p, &is, service_idx](asio::error_code ec) {
-                      if (!ec)
-                      {
-                          is.post(
-                            [p] {
-                                p->start();
-                            });
-                      }
-                      else
-                      {
-                          task_queue_length_pool_[service_idx]--;
-                          CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
-                          delete p;
-                      }
-                      do_accept();
-                  });
+                    p->socket(),
+                    [this, p, &is, service_idx](asio::error_code ec)
+                    {
+                        if (!ec)
+                        {
+                            is.post(
+                                [p]
+                                {
+                                    p->start();
+                                });
+                        }
+                        else
+                        {
+                            task_queue_length_pool_[service_idx]--;
+                            CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
+                            delete p;
+                        }
+                        do_accept();
+                    });
             }
         }
 
@@ -257,7 +261,7 @@ namespace crow
     private:
         asio::io_service io_service_;
         std::vector<std::unique_ptr<asio::io_service>> io_service_pool_;
-        std::vector<detail::task_timer*> task_timer_pool_;
+        std::vector<detail::task_timer *> task_timer_pool_;
         std::vector<std::function<std::string()>> get_cached_date_str_pool_;
         tcp::acceptor acceptor_;
         bool shutting_down_ = false;
@@ -268,7 +272,7 @@ namespace crow
 
         asio::basic_waitable_timer<std::chrono::high_resolution_clock> tick_timer_;
 
-        Handler* handler_;
+        Handler *handler_;
         uint16_t concurrency_{2};
         std::uint8_t timeout_;
         std::string server_name_;
@@ -279,8 +283,8 @@ namespace crow
         std::chrono::milliseconds tick_interval_;
         std::function<void()> tick_function_;
 
-        std::tuple<Middlewares...>* middlewares_;
+        std::tuple<Middlewares...> *middlewares_;
 
-        typename Adaptor::context* adaptor_ctx_;
+        typename Adaptor::context *adaptor_ctx_;
     };
 } // namespace crow

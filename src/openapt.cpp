@@ -100,212 +100,139 @@ Description: Main
 
 using json = nlohmann::json;
 
-crow::SimpleApp app;
-OpenAPT::ThreadManager m_ThreadManager;
-OpenAPT::TaskManager m_TaskManager;
-OpenAPT::DeviceManager m_DeviceManager;
-OpenAPT::ModuleLoader m_ModuleLoader;
-OpenAPT::ConfigManager m_ConfigManager;
-OpenAPT::PackageManager m_PackageManager;
-OpenAPT::PyModuleLoader m_PythonLoader;
-OpenAPT::LuaScriptLoader m_LuaLoader;
+MyApp m_App;
 
 bool DEBUG = true;
 
 void print_help(int argc, char *argv[])
 {
-    std::cout << "Usage: " << argv[0] << " [-d|--debug] [-p|--port PORT] [-c|--config CONFIG_FILE]\n"
-              << "Options:\n"
-              << "  -d, --debug                   Enable debug mode\n"
-              << "  -p, --port PORT               Specify listening port (default is 8080)\n"
-              << "  -c, --config CONFIG_FILE      Use custom config file (default is config.json)\n";
+    std::cout << "Usage: " << argv[0] << " [-d|--debug] [-p|--port PORT] [-s|--ssl] [-f|--certfile FILE] [-k|--keyfile FILE] [-c|--config CONFIG_FILE]\n"
+          << "Options:\n"
+          << " -d, --debug Enable debug mode\n"
+          << " -p, --port PORT Specify listening port (default is 8080)\n"
+          << " -s, --ssl Enable SSL mode\n"
+          << " -f, --certfile FILE Specify certificate file (default is cert.pem)\n"
+          << " -k, --keyfile FILE Specify key file (default is key.pem)\n"
+          << " -c, --config CONFIG_FILE Use custom config file (default is config.json)\n";
     exit(EXIT_SUCCESS);
 }
 
 void parse_args(int argc, char *argv[])
 {
-    int opt;                          // 存储选项字符值
-    int option_index = 0;             // 存储选项索引值
-    const char *short_opts = "dp:c:"; // 定义需要解析的单字符选项
-    const option long_opts[] = {      // 定义需要解析的长选项
-                                {"debug", no_argument, nullptr, 'd'},
-                                {"port", required_argument, nullptr, 'p'},
-                                {"config", required_argument, nullptr, 'c'},
-                                {nullptr, 0, nullptr, 0}};
+    int opt;
+    int option_index = 0;
+    const char *short_opts = "dp:sf:k:c:";
+    const option long_opts[] = {
+        {"debug", no_argument, nullptr, 'd'},
+        {"port", required_argument, nullptr, 'p'},
+        {"ssl", no_argument, nullptr, 's'},
+        {"certfile", required_argument, nullptr, 'f'},
+        {"keyfile", required_argument, nullptr, 'k'},
+        {"config", required_argument, nullptr, 'c'},
+        {nullptr, 0, nullptr, 0}};
 
     while ((opt = getopt_long(argc, argv, short_opts, long_opts, &option_index)) != -1)
-    { // 解析选项
+    {
         switch (opt)
         {
         case 'd':
             DEBUG = true;
+            m_App.GetConfigManager()->setValue("server/debug", true);
             spdlog::info("DEBUG Mode is enabled by command line argument");
             break;
         case 'p':
+            m_App.GetConfigManager()->setValue("server/port", atoi(optarg));
+            spdlog::info("Listening port is set to {}", optarg);
+            break;
+        case 's':
+            m_App.GetConfigManager()->setValue("server/ssl", true);
+            spdlog::info("SSL is enabled by command line argument");
+            break;
+        case 'f':
+            spdlog::info("Certificate file is set to {}", optarg);
+            break;
+        case 'k':
+            spdlog::info("Key file is set to {}", optarg);
             break;
         case 'c':
+            m_App.GetConfigManager()->setValue("server/config", optarg);
+            spdlog::info("Config file is set to {}", optarg);
             break;
-        case '?':                   // 处理未知选项
-            print_help(argc, argv); // 抛出异常并在主函数中处理
+        case '?':
+            print_help(argc, argv);
             break;
+
         default:
             break;
         }
     }
 
-    // 类似处理短选项的方式，处理剩余的非选项参数
-
     if (optind < argc)
     {
-        // 处理剩余的非选项参数
+        // process remaining non-option arguments
     }
 }
+
 
 void quit();
 
 #ifdef _WIN32
-// Define the signal handler function for Windows platform
-BOOL WINAPI interruptHandler(DWORD signalNumber)
-{
-    if (signalNumber == CTRL_C_EVENT)
+    // Define the signal handler function for Windows platform
+    BOOL WINAPI interruptHandler(DWORD signalNumber)
+    {
+        if (signalNumber == CTRL_C_EVENT)
+        {
+            spdlog::info("Keyboard interrupt received.");
+        }
+        return TRUE;
+    }
+
+#else
+    // Define the signal handler function
+    void interruptHandler(int signalNumber, siginfo_t *info, void *context)
     {
         spdlog::info("Keyboard interrupt received.");
+        quit();
     }
-    return TRUE;
-}
+#endif
 
-// Register the signal handler function to deal with Ctrl+C on Windows platform
 void registerInterruptHandler()
 {
+#ifdef _WIN32
+    // Register the signal handler function to deal with Ctrl+C on Windows platform
     SetConsoleCtrlHandler((PHANDLER_ROUTINE)interruptHandler, TRUE);
-}
 #else
-// Define the signal handler function
-void interruptHandler(int signalNumber, siginfo_t *info, void *context)
-{
-    spdlog::info("Keyboard interrupt received.");
-    quit();
-}
-
-// Register the signal handler function to deal with SIGINT on all platforms
-void registerInterruptHandler()
-{
+    // Register the signal handler function to deal with SIGINT on non-Windows platforms
     struct sigaction sa;
     sa.sa_sigaction = &interruptHandler;
     sa.sa_flags = SA_SIGINFO;
     sigemptyset(&sa.sa_mask);
     sigaddset(&sa.sa_mask, SIGINT);
     sigaction(SIGINT, &sa, NULL);
-}
 #endif
+}
 
-/**
- @brief 检查指定端口是否被占用，并杀死占用该端口的进程
- @param port 端口号
- @return true 端口未被占用，或者已经成功杀死占用该端口的进程
- @return false 端口已被占用，但无法杀死占用该端口的进程
- */
 bool CheckAndKillProgramOnPort(int port)
 {
-#ifdef _WIN32
+#ifdef OS_Windows
     // 初始化 Windows socket API
     WSADATA wsaData;
     int ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (ret != 0)
     {
-        spdlog::error("Failed to initialize Windows Socket API: {}", ret);
+        std::cerr << "Failed to initialize Windows Socket API: " << ret << std::endl;
         return false;
     }
+#endif
 
     // 创建一个新的套接字
-    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (sockfd == INVALID_SOCKET)
-    {
-        spdlog::error("Failed to create socket: {}", WSAGetLastError());
-        WSACleanup();
-        return false;
-    }
-
-    // 绑定到指定端口上
-    struct sockaddr_in addr;
-    std::memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(port);
-    if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) != 0)
-    {
-        if (WSAGetLastError() == WSAEADDRINUSE)
-        {
-            spdlog::warn("The port({}) is already in use", port);
-
-            // 获取占用端口的进程 ID
-            char cmd[1024];
-            std::snprintf(cmd, sizeof(cmd), "netstat -ano | find \"LISTENING\" | find \"%d\"", port);
-
-            FILE *fp = _popen(cmd, "r");
-            if (fp == nullptr)
-            {
-                spdlog::error("Failed to execute command: {}", cmd);
-                closesocket(sockfd);
-                WSACleanup();
-                return false;
-            }
-
-            char buf[1024];
-            std::string pid_str;
-            while (fgets(buf, 1024, fp) != nullptr)
-            {
-                char *p = strrchr(buf, ' ');
-                if (p != nullptr)
-                {
-                    pid_str = p + 1;
-                    break;
-                }
-            }
-            _pclose(fp);
-            pid_str.erase(pid_str.find_last_not_of("\n") + 1);
-
-            // 如果获取到了 PID，则杀死该进程
-            if (!pid_str.empty())
-            {
-                spdlog::debug("Killing the process on port({}): PID={}", port, pid_str);
-                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
-                if (ret != 0)
-                {
-                    spdlog::error("Failed to kill the process: {}", pid_str);
-                    closesocket(sockfd);
-                    WSACleanup();
-                    return false;
-                }
-                spdlog::debug("The process({}) is killed successfully", pid_str);
-            }
-            else
-            {
-                spdlog::error("Failed to get process ID on port({})", port);
-                closesocket(sockfd);
-                WSACleanup();
-                return false;
-            }
-        }
-        else
-        {
-            spdlog::error("Failed to bind socket: {}", WSAGetLastError());
-            closesocket(sockfd);
-            WSACleanup();
-            return false;
-        }
-    }
-
-    closesocket(sockfd);
-    WSACleanup();
-    return true;
-
-#else
-    // 创建一个新的套接字
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd < 0)
     {
-        spdlog::error("Failed to create socket: {}", std::strerror(errno));
+        std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
+#ifdef OS_Windows
+        WSACleanup();
+#endif
         return false;
     }
 
@@ -319,15 +246,24 @@ bool CheckAndKillProgramOnPort(int port)
     {
         if (errno == EADDRINUSE)
         {
-            spdlog::warn("The port({}) is already in use", port);
+            std::cerr << "The port(" << port << ") is already in use" << std::endl;
 
             // 获取占用端口的进程 ID
-            std::string cmd = fmt::format("lsof -i :{} -t", port);
+            std::string cmd;
+#ifdef OS_Windows
+            cmd = fmt::format("netstat -ano | find \"LISTENING\" | find \"{0}\"", port);
+#else
+            cmd = fmt::format("lsof -i :{} -t", port);
+#endif
+
             FILE *fp = popen(cmd.c_str(), "r");
             if (fp == nullptr)
             {
-                spdlog::error("Failed to execute command: {}", cmd);
+                std::cerr << "Failed to execute command: " << cmd << std::endl;
                 close(sockfd);
+#ifdef OS_Windows
+                WSACleanup();
+#endif
                 return false;
             }
 
@@ -343,34 +279,49 @@ bool CheckAndKillProgramOnPort(int port)
             // 如果获取到了 PID，则杀死该进程
             if (!pid_str.empty())
             {
-                spdlog::debug("Killing the process on port({}): PID={}", port, pid_str);
+                std::cout << "Killing the process on port(" << port << "): PID=" << pid_str << std::endl;
+#ifdef OS_Windows
+                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
+#else
                 int ret = std::system(fmt::format("kill {}", pid_str).c_str());
+#endif
                 if (ret != 0)
                 {
-                    spdlog::error("Failed to kill the process: {}", pid_str);
+                    std::cerr << "Failed to kill the process: " << pid_str << std::endl;
                     close(sockfd);
+#ifdef OS_Windows
+                    WSACleanup();
+#endif
                     return false;
                 }
-                spdlog::debug("The process({}) is killed successfully", pid_str);
+                std::cout << "The process(" << pid_str << ") is killed successfully" << std::endl;
             }
             else
             {
-                spdlog::error("Failed to get process ID on port({})", port);
+                std::cerr << "Failed to get process ID on port(" << port << ")" << std::endl;
                 close(sockfd);
+#ifdef OS_Windows
+                WSACleanup();
+#endif
                 return false;
             }
         }
         else
         {
-            spdlog::error("Failed to bind socket: {}", std::strerror(errno));
+            std::cerr << "Failed to bind socket: " << strerror(errno) << std::endl;
             close(sockfd);
+#ifdef OS_Windows
+            WSACleanup();
+#endif
             return false;
         }
     }
 
     close(sockfd);
-    return true;
+#ifdef OS_Windows
+    WSACleanup();
 #endif
+    return true;
 }
 
 // 判断是否有相同的程序在运行，并杀死前一个程序
@@ -467,7 +418,7 @@ void check_duplicate_process(const std::string &program_name)
 }
 
 // 判断是否连接网络
-void is_network_connected()
+bool is_network_connected()
 {
     try
     {
@@ -477,7 +428,7 @@ void is_network_connected()
         if (result != 0)
         {
             spdlog::error("WSAStartup failed: {}", result);
-            exit(EXIT_FAILURE);
+            return false;
         }
 
         SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -510,7 +461,7 @@ void is_network_connected()
         if (getaddrinfo("www.baidu.com", "http", &hint, &res) != 0)
         {
             spdlog::error("getaddrinfo failed: {}", strerror(errno));
-            return;
+            return false;
         }
 
         int sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -518,7 +469,7 @@ void is_network_connected()
         {
             spdlog::error("socket failed: {}", strerror(errno));
             freeaddrinfo(res);
-            return;
+            return false;
         }
 
         if (connect(sock, res->ai_addr, res->ai_addrlen) != 0)
@@ -526,19 +477,33 @@ void is_network_connected()
             spdlog::error("connect failed: {}", strerror(errno));
             close(sock);
             freeaddrinfo(res);
-            return;
+            return false;
         }
 
         close(sock);
         freeaddrinfo(res);
 
-        spdlog::info("Network checked , connected!");
+        spdlog::info("Network checked, connected!");
+        return true;
 #endif
     }
     catch (const std::exception &ex)
     {
         std::cerr << "Exception caught: " << ex.what() << std::endl;
+        return false;
     }
+}
+
+// 判断操作系统类型和平台，然后进行相应的检测
+void platform_check()
+{
+#ifdef _WIN32 // Windows平台
+    check_duplicate_process("openapt.exe");
+    is_network_connected();
+#else // Linux和macOS平台
+    check_duplicate_process("openapt");
+    is_network_connected();
+#endif
 }
 
 int square(int n) { return n * n; }
@@ -549,16 +514,16 @@ void TestAll()
     spdlog::debug("--------------------------------------------------------------");
 
     spdlog::debug("Testing ModuleLoader and some important functions:");
-    spdlog::debug("Load module: {}", m_ModuleLoader.LoadModule("modules/test/libmylib.so", "mylib"));
+    spdlog::debug("Load module: {}", m_App.GetModuleLoader()->LoadModule("modules/test/libmylib.so", "mylib"));
 
     spdlog::debug("Load and run function: ");
-    m_ModuleLoader.LoadAndRunFunction<void>("mylib", "my_func", "test", false);
+    m_App.GetModuleLoader()->LoadAndRunFunction<void>("mylib", "my_func", "test", false);
 
     // 严重bug
-    // spdlog::debug("Get all of the functions in modules {}",m_ModuleLoader.getFunctionList("mylib").dump());
+    // spdlog::debug("Get all of the functions in modules {}",m_App.GetModuleLoader()->getFunctionList("mylib").dump());
 
     spdlog::debug("HasModule Testing: ");
-    spdlog::debug("Check if module 'fuckyou' exists: {}", m_ModuleLoader.HasModule("fuckyou"));
+    spdlog::debug("Check if module 'fuckyou' exists: {}", m_App.GetModuleLoader()->HasModule("fuckyou"));
 
     spdlog::debug("Finished testing ModuleLoader");
     spdlog::debug("--------------------------------------------------------------");
@@ -567,17 +532,17 @@ void TestAll()
     spdlog::debug("--------------------------------------------------------------");
 
     spdlog::debug("Testing SimpleTask:");
-    auto simpleTask = m_TaskManager.m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print");
-    m_TaskManager.addTask(simpleTask);
+    auto simpleTask = m_App.GetTaskManager()->m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print");
+    m_App.GetTaskManager()->addTask(simpleTask);
     spdlog::debug("SimpleTask added");
 
     spdlog::debug("Testing ConditionalTask:");
-    auto conditionalTask = m_TaskManager.m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}});
-    m_TaskManager.addTask(conditionalTask);
+    auto conditionalTask = m_App.GetTaskManager()->m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}});
+    m_App.GetTaskManager()->addTask(conditionalTask);
     spdlog::debug("ConditionalTask added");
 
     spdlog::debug("Execute all tasks:");
-    m_TaskManager.executeAllTasks();
+    m_App.GetTaskManager()->executeAllTasks();
 
     spdlog::debug("Finished testing TaskManager");
     spdlog::debug("--------------------------------------------------------------");
@@ -586,13 +551,13 @@ void TestAll()
     spdlog::debug("--------------------------------------------------------------");
 
     spdlog::debug("Testing addDevice and getDeviceList:");
-    m_DeviceManager.addDevice(OpenAPT::DeviceType::Camera, "CCD Simulator");
-    auto cameraList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Camera);
+    m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::Camera, "CCD Simulator");
+    auto cameraList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::Camera);
     for (auto &name : cameraList)
         spdlog::debug("Found Camera name {}", name);
 
     spdlog::debug("Testing findDeviceByName:");
-    auto device1 = m_DeviceManager.findDeviceByName("CCD Simulator");
+    auto device1 = m_App.GetDeviceManager()->findDeviceByName("CCD Simulator");
 
     if (device1 != nullptr)
     {
@@ -605,10 +570,10 @@ void TestAll()
             {
                 spdlog::debug("Found device {} as a Camera", device1->getName());
                 spdlog::debug("Testing captureImage:");
-                m_TaskManager.addTask(camera->getSimpleTask("SingleShot", {}));
-                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "SingleShot",{}));
-                m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "GetGain",{}));
-                m_TaskManager.executeAllTasks();
+                m_App.GetTaskManager()->addTask(camera->getSimpleTask("SingleShot", {}));
+                m_App.GetTaskManager()->addTask(m_App.GetDeviceManager()->getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "SingleShot",{}));
+                m_App.GetTaskManager()->addTask(m_App.GetDeviceManager()->getSimpleTask(OpenAPT::DeviceType::Camera, "INDI", "CCD Simulator", "GetGain",{}));
+                m_App.GetTaskManager()->executeAllTasks();
             }
             else
             {
@@ -626,32 +591,32 @@ void TestAll()
         spdlog::error("Can't find device CCD Simulator");
     }
 
-    m_DeviceManager.addDevice(OpenAPT::DeviceType::Focuser, "Focuser Simulator");
-    auto focuserList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::Focuser);
+    m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::Focuser, "Focuser Simulator");
+    auto focuserList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::Focuser);
     for (auto &name : focuserList)
         spdlog::debug("Found Focuser name {}", name);
 
     spdlog::debug("Testing findDeviceByName:");
-    auto device2 = m_DeviceManager.findDeviceByName("Focuser Simulator");
+    auto device2 = m_App.GetDeviceManager()->findDeviceByName("Focuser Simulator");
 
     if (device2 != nullptr) {
         device2->connect("Focuser Simulator");
-        m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Focuser, "INDI", "Focuser Simulator", "MoveToAbsolute",{}));
+        m_App.GetTaskManager()->addTask(m_App.GetDeviceManager()->getSimpleTask(OpenAPT::DeviceType::Focuser, "INDI", "Focuser Simulator", "MoveToAbsolute",{}));
     }
     else
         spdlog::error("Can't find device Focuser Simulator");
 
-    m_DeviceManager.addDevice(OpenAPT::DeviceType::FilterWheel, "Filter Simulator");
-    auto filterList = m_DeviceManager.getDeviceList(OpenAPT::DeviceType::FilterWheel);
+    m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::FilterWheel, "Filter Simulator");
+    auto filterList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::FilterWheel);
     for (auto &name : filterList)
         spdlog::debug("Found Focuser name {}", name);
 
     spdlog::debug("Testing findDeviceByName:");
-    auto device3 = m_DeviceManager.findDeviceByName("Filter Simulator");
+    auto device3 = m_App.GetDeviceManager()->findDeviceByName("Filter Simulator");
 
     if (device3 != nullptr) {
         device3->connect("Filter Simulator");
-        //m_TaskManager.addTask(m_DeviceManager.getSimpleTask(OpenAPT::DeviceType::Filterwheel, "INDI", "Filter Simulator", "MoveToAbsolute",{}));
+        //m_App.GetTaskManager()->addTask(m_App.GetDeviceManager()->getSimpleTask(OpenAPT::DeviceType::Filterwheel, "INDI", "Filter Simulator", "MoveToAbsolute",{}));
     }
     else
         spdlog::error("Can't find device Filter Simulator");
@@ -663,12 +628,12 @@ void TestAll()
     spdlog::debug("--------------------------------------------------------------");
 
     spdlog::debug("Testing setValue and getValue:");
-    m_ConfigManager.setValue("key1", "value1");
-    m_ConfigManager.setValue("key2/inner_key", 3.1415926);
-    spdlog::debug("Get value of key2/inner_key: {}", m_ConfigManager.getValue("key2/inner_key").dump());
+    m_App.GetConfigManager()->setValue("key1", "value1");
+    m_App.GetConfigManager()->setValue("key2/inner_key", 3.1415926);
+    spdlog::debug("Get value of key2/inner_key: {}", m_App.GetConfigManager()->getValue("key2/inner_key").dump());
 
     spdlog::debug("Testing printAllValues:");
-    m_ConfigManager.printAllValues();
+    m_App.GetConfigManager()->printAllValues();
 
     spdlog::debug("Finished testing ConfigManager");
     spdlog::debug("--------------------------------------------------------------");
@@ -702,7 +667,7 @@ void TestAll()
     if (success)
     {
         spdlog::debug("Compilation succeeded");
-        m_ModuleLoader.LoadAndRunFunction<void>("MyModule", "foo", "foo", false);
+        m_App.GetModuleLoader()->LoadAndRunFunction<void>("MyModule", "foo", "foo", false);
     }
     else
     {
@@ -716,24 +681,24 @@ void TestAll()
     spdlog::debug("--------------------------------------------------------------");
 
     spdlog::debug("Testing load_local_module:");
-    m_PythonLoader.load_local_module("mymodule");
+    m_App.GetPythonLoader()->load_local_module("mymodule");
 
     spdlog::debug("Testing get_all_functions:");
-    m_PythonLoader.get_all_functions("mymodule");
+    m_App.GetPythonLoader()->get_all_functions("mymodule");
 
     spdlog::debug("Testing set_variable:");
-    m_PythonLoader.set_variable("mymodule", "my_var", 42);
+    m_App.GetPythonLoader()->set_variable("mymodule", "my_var", 42);
 
     spdlog::debug("Finished testing Python Module Loader");
     spdlog::debug("--------------------------------------------------------------");
     /*
     // 在Python中调用C++函数square
-    int cpp_result = m_PythonLoader.call_function<int>("mymodule", "square", 7);
+    int cpp_result = m_App.GetPythonLoader()->call_function<int>("mymodule", "square", 7);
     std::cout << "C++ square result: " << cpp_result << std::endl;
     spdlog::debug("call");
     // 在Python中调用C++函数cpp_func
-    m_PythonLoader.set_variable("mymodule", "cpp_func", square);
-    auto py_call_cpp_func = m_PythonLoader.get_function<PyObject *(*)(PyObject *)>("mymodule", "call_cpp_func");
+    m_App.GetPythonLoader()->set_variable("mymodule", "cpp_func", square);
+    auto py_call_cpp_func = m_App.GetPythonLoader()->get_function<PyObject *(*)(PyObject *)>("mymodule", "call_cpp_func");
     if (py_call_cpp_func)
     {
         PyObject *py_args = Py_BuildValue("i", 8);
@@ -761,15 +726,15 @@ void TestAll()
     }
     else
     {
-        m_PythonLoader.unload_module("mymodule");
+        m_App.GetPythonLoader()->unload_module("mymodule");
         return;
     }
     */
 
-    m_PythonLoader.unload_module("mymodule");
+    m_App.GetPythonLoader()->unload_module("mymodule");
     // nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
     // spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
-    m_TaskManager.executeAllTasks();
+    m_App.GetTaskManager()->executeAllTasks();
 }
 
 void quit()
@@ -778,8 +743,9 @@ void quit()
 }
 
 // 初始化应用程序
-void init_app(int argc, char *argv[], crow::SimpleApp &app)
+void init_app(int argc, char *argv[], crow::SimpleApp app)
 {
+    m_App.Initialize();
     parse_args(argc, argv);
 
     // 设置日志级别
@@ -794,6 +760,8 @@ void init_app(int argc, char *argv[], crow::SimpleApp &app)
         spdlog::set_level(spdlog::level::info);
         app.loglevel(crow::LogLevel::ERROR);
     }
+
+    platform_check();
 
     if (!CheckAndKillProgramOnPort(8000))
         quit();
@@ -820,8 +788,19 @@ void init_app(int argc, char *argv[], crow::SimpleApp &app)
             } });
 }
 
+void MyApp::Initialize() {
+        m_ThreadManager = new OpenAPT::ThreadManager();
+        m_TaskManager = new OpenAPT::TaskManager();
+        m_DeviceManager = new OpenAPT::DeviceManager();
+        m_ModuleLoader = new OpenAPT::ModuleLoader(&m_App);
+        m_ConfigManager = new OpenAPT::ConfigManager();
+        m_PackageManager = new OpenAPT::PackageManager();
+        m_PythonLoader = new OpenAPT::PyModuleLoader();
+        m_LuaLoader = OpenAPT::LuaScriptLoaderFactory::MakeLuaScriptLoader();
+    }
+
 // 启动 Web 服务器
-void start_server(int port, crow::SimpleApp &app)
+void start_server(int port, crow::SimpleApp app)
 {
     app.port(port).multithreaded().run();
 }
@@ -833,9 +812,9 @@ int main(int argc, char *argv[])
     {
         registerInterruptHandler();
 
-        init_app(argc, argv, app);
+        init_app(argc, argv, m_App.GetApp());
 
-        start_server(8000, app);
+        start_server(8000, m_App.GetApp());
     }
     catch (const std::exception &e)
     {

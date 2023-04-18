@@ -43,16 +43,79 @@ Description: Main
 #include "config/configor.hpp"
 #include "package/packageloader.hpp"
 
-extern crow::SimpleApp app;
+class MyApp {
+public:
+    MyApp() :
+        m_ThreadManager(nullptr),
+        m_TaskManager(nullptr),
+        m_DeviceManager(nullptr),
+        m_ModuleLoader(nullptr),
+        m_ConfigManager(nullptr),
+        m_PackageManager(nullptr),
+        m_PythonLoader(nullptr),
+        m_LuaLoader(nullptr) {}
 
-extern OpenAPT::ThreadManager m_ThreadManager;
-extern OpenAPT::TaskManager m_TaskManager;
-extern OpenAPT::DeviceManager m_DeviceManager;
-extern OpenAPT::ModuleLoader m_ModuleLoader;
-extern OpenAPT::ConfigManager m_ConfigManager;
-extern OpenAPT::PackageManager m_PackageManager;
-extern OpenAPT::PyModuleLoader m_PythonLoader;
-extern OpenAPT::LuaScriptLoader m_LuaLoader;
+    ~MyApp() {
+        delete m_ThreadManager;
+        delete m_TaskManager;
+        delete m_DeviceManager;
+        delete m_ModuleLoader;
+        delete m_ConfigManager;
+        delete m_PackageManager;
+        delete m_PythonLoader;
+        delete m_LuaLoader;
+    }
+
+    void Initialize();
+
+    crow::SimpleApp& GetApp() {
+        return app;
+    }
+
+    OpenAPT::ThreadManager* GetThreadManager() const {
+        return m_ThreadManager;
+    }
+
+    OpenAPT::TaskManager* GetTaskManager() const {
+        return m_TaskManager;
+    }
+
+    OpenAPT::DeviceManager* GetDeviceManager() const {
+        return m_DeviceManager;
+    }
+
+    OpenAPT::ModuleLoader* GetModuleLoader() const {
+        return m_ModuleLoader;
+    }
+
+    OpenAPT::ConfigManager* GetConfigManager() const {
+        return m_ConfigManager;
+    }
+
+    OpenAPT::PackageManager* GetPackageManager() const {
+        return m_PackageManager;
+    }
+
+    OpenAPT::PyModuleLoader* GetPythonLoader() const {
+        return m_PythonLoader;
+    }
+
+    OpenAPT::LuaScriptLoader* GetLuaLoader() const {
+        return m_LuaLoader;
+    }
+
+private:
+    crow::SimpleApp app;
+
+    OpenAPT::ThreadManager* m_ThreadManager;
+    OpenAPT::TaskManager* m_TaskManager;
+    OpenAPT::DeviceManager* m_DeviceManager;
+    OpenAPT::ModuleLoader* m_ModuleLoader;
+    OpenAPT::ConfigManager* m_ConfigManager;
+    OpenAPT::PackageManager* m_PackageManager;
+    OpenAPT::PyModuleLoader* m_PythonLoader;
+    OpenAPT::LuaScriptLoader* m_LuaLoader;
+};
 
 extern bool DEBUG;
 

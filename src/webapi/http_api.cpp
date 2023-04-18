@@ -36,40 +36,45 @@ namespace OpenAPT
 {
     void init_handler(crow::SimpleApp &app)
     {
+        // Route to load index.html
         CROW_ROUTE(app, "/")
         ([]
-         { return crow::mustache::load("index.html").render(); });
+        { return crow::mustache::load("index.html").render(); });
 
+        // Route to load client.html
         CROW_ROUTE(app, "/client")
         ([]
-         { return crow::mustache::load("client.html").render(); });
+        { return crow::mustache::load("client.html").render(); });
 
+        // Route to accept GET requests and return a greeting based on a query parameter
         CROW_ROUTE(app, "/greeting")
             .methods("GET"_method)([](const crow::request &req)
-                                   {
-            try {
-                // Get the 'name' parameter from the query string
-                std::string name = req.url_params.get("name");
+                                {
+                try {
+                    // Get the 'name' parameter from the query string
+                    std::string name = req.url_params.get("name");
 
-                // Do some processing on the parameter
-                if (name.empty()) {
-                    throw std::invalid_argument("'name' parameter is required");
+                    // Do some processing on the parameter
+                    if (name.empty()) {
+                        throw std::invalid_argument("'name' parameter is required");
+                    }
+
+                    // Construct a response with the greeting
+                    nlohmann::json resJson;
+                    resJson["message"] = "Hello, " + name + "!";
+                    return crow::response{ resJson.dump() };
+                } catch (const std::exception& e) {
+                    // Handle exceptions and return an error response
+                    nlohmann::json resJson;
+                    resJson["error"] = e.what();
+                    return crow::response{ 400, resJson.dump() };
                 }
+            });
 
-                // Construct a response with the greeting
-                nlohmann::json resJson;
-                resJson["message"] = "Hello, " + name + "!";
-                return crow::response{ resJson.dump() };
-            } catch (const std::exception& e) {
-                // Handle exceptions and return an error response
-                nlohmann::json resJson;
-                resJson["error"] = e.what();
-                return crow::response{ 400, resJson.dump() };
-            } });
-
+        // Route to accept GET and POST requests and return a greeting based on JSON data
         CROW_ROUTE(app, "/json")
             .methods("GET"_method, "POST"_method)([](const crow::request &req)
-                                                  {
+                                                {
                 if (req.method == crow::HTTPMethod::Get) {
                     // Handle GET request
                     return crow::response{ "This is a GET request" };
@@ -86,6 +91,8 @@ namespace OpenAPT
                 } else {
                     // Handle other HTTP methods
                     return crow::response(405);
-                } });
+                }
+            });
     }
+
 } // namespace OpenAPT

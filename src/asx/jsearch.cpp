@@ -4,11 +4,14 @@
 #include <iomanip>
 #include <iostream>
 
+#include <spdlog/spdlog.h>
+
 namespace OpenAPT::JASX
 {
     std::vector<Data> ReadFromJson(const std::string& filename) {
         std::ifstream file(filename);
         if (!file) {
+            spdlog::error("Error opening file for reading.");
             throw std::runtime_error("Error opening file for reading.");
         }
 
@@ -38,6 +41,7 @@ namespace OpenAPT::JASX
 
         std::ofstream out_file(filename);
         if (!out_file) {
+            spdlog::error("Error opening file for writing.");
             throw std::runtime_error("Error opening file for writing.");
         }
 

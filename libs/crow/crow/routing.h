@@ -28,11 +28,12 @@ namespace crow
         /// Typesafe wrapper for storing lists of middleware as their indices in the App
         struct middleware_indices
         {
-            template<typename App>
+            template <typename App>
             void push()
-            {}
+            {
+            }
 
-            template<typename App, typename MW, typename... Middlewares>
+            template <typename App, typename MW, typename... Middlewares>
             void push()
             {
                 using MwContainer = typename App::mw_container_t;
@@ -43,17 +44,17 @@ namespace crow
                 push<App, Middlewares...>();
             }
 
-            void merge_front(const detail::middleware_indices& other)
+            void merge_front(const detail::middleware_indices &other)
             {
                 indices_.insert(indices_.begin(), other.indices_.cbegin(), other.indices_.cend());
             }
 
-            void merge_back(const detail::middleware_indices& other)
+            void merge_back(const detail::middleware_indices &other)
             {
                 indices_.insert(indices_.end(), other.indices_.cbegin(), other.indices_.cend());
             }
 
-            void pop_back(const detail::middleware_indices& other)
+            void pop_back(const detail::middleware_indices &other)
             {
                 indices_.resize(indices_.size() - other.indices_.size());
             }
@@ -70,7 +71,7 @@ namespace crow
                 indices_.erase(std::unique(indices_.begin(), indices_.end()), indices_.end());
             }
 
-            const std::vector<int>& indices()
+            const std::vector<int> &indices()
             {
                 return indices_;
             }
@@ -88,12 +89,13 @@ namespace crow
     class BaseRule
     {
     public:
-        BaseRule(std::string rule):
-          rule_(std::move(rule))
-        {}
+        BaseRule(std::string rule) : rule_(std::move(rule))
+        {
+        }
 
         virtual ~BaseRule()
-        {}
+        {
+        }
 
         virtual void validate() = 0;
         std::unique_ptr<BaseRule> upgrade()
@@ -103,14 +105,14 @@ namespace crow
             return {};
         }
 
-        virtual void handle(request&, response&, const routing_params&) = 0;
-        virtual void handle_upgrade(const request&, response& res, SocketAdaptor&&)
+        virtual void handle(request &, response &, const routing_params &) = 0;
+        virtual void handle_upgrade(const request &, response &res, SocketAdaptor &&)
         {
             res = response(404);
             res.end();
         }
 #ifdef CROW_ENABLE_SSL
-        virtual void handle_upgrade(const request&, response& res, SSLAdaptor&&)
+        virtual void handle_upgrade(const request &, response &res, SSLAdaptor &&)
         {
             res = response(404);
             res.end();
@@ -122,7 +124,7 @@ namespace crow
             return methods_;
         }
 
-        template<typename F>
+        template <typename F>
         void foreach_method(F f)
         {
             for (uint32_t method = 0, method_bit = 1; method < static_cast<uint32_t>(HTTPMethod::InternalMethodCount); method++, method_bit <<= 1)
@@ -134,7 +136,7 @@ namespace crow
 
         std::string custom_templates_base;
 
-        const std::string& rule() { return rule_; }
+        const std::string &rule() { return rule_; }
 
     protected:
         uint32_t methods_{1 << static_cast<int>(HTTPMethod::Get)};
@@ -148,36 +150,36 @@ namespace crow
 
         friend class Router;
         friend class Blueprint;
-        template<typename T>
+        template <typename T>
         friend struct RuleParameterTraits;
     };
-
 
     namespace detail
     {
         namespace routing_handler_call_helper
         {
-            template<typename T, int Pos>
+            template <typename T, int Pos>
             struct call_pair
             {
                 using type = T;
                 static const int pos = Pos;
             };
 
-            template<typename H1>
+            template <typename H1>
             struct call_params
             {
-                H1& handler;
-                const routing_params& params;
-                request& req;
-                response& res;
+                H1 &handler;
+                const routing_params &params;
+                request &req;
+                response &res;
             };
 
-            template<typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2>
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2>
             struct call
-            {};
+            {
+            };
 
-            template<typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -187,7 +189,7 @@ namespace crow
                 }
             };
 
-            template<typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -197,7 +199,7 @@ namespace crow
                 }
             };
 
-            template<typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -207,7 +209,7 @@ namespace crow
                 }
             };
 
-            template<typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1, typename... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -217,45 +219,45 @@ namespace crow
                 }
             };
 
-            template<typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1>
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename... Args1>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
             {
                 void operator()(F cparams)
                 {
                     cparams.handler(
-                      cparams.req,
-                      cparams.res,
-                      cparams.params.template get<typename Args1::type>(Args1::pos)...);
+                        cparams.req,
+                        cparams.res,
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...);
                 }
             };
 
-            template<typename Func, typename... ArgsWrapped>
+            template <typename Func, typename... ArgsWrapped>
             struct Wrapped
             {
-                template<typename... Args>
-                void set_(Func f, typename std::enable_if<!std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value, int>::type = 0)
+                template <typename... Args>
+                void set_(Func f, typename std::enable_if<!std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request &>::value, int>::type = 0)
                 {
                     handler_ = (
 #ifdef CROW_CAN_USE_CPP14
-                      [f = std::move(f)]
+                        [f = std::move(f)]
 #else
-                      [f]
+                        [f]
 #endif
-                      (const request&, response& res, Args... args) {
-                          res = response(f(args...));
-                          res.end();
-                      });
+                        (const request &, response &res, Args... args)
+                        {
+                            res = response(f(args...));
+                            res.end();
+                        });
                 }
 
-                template<typename Req, typename... Args>
+                template <typename Req, typename... Args>
                 struct req_handler_wrapper
                 {
-                    req_handler_wrapper(Func f):
-                      f(std::move(f))
+                    req_handler_wrapper(Func f) : f(std::move(f))
                     {
                     }
 
-                    void operator()(const request& req, response& res, Args... args)
+                    void operator()(const request &req, response &res, Args... args)
                     {
                         res = response(f(req, args...));
                         res.end();
@@ -264,11 +266,11 @@ namespace crow
                     Func f;
                 };
 
-                template<typename... Args>
+                template <typename... Args>
                 void set_(Func f, typename std::enable_if<
-                                    std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
-                                      !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value,
-                                    int>::type = 0)
+                                      std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request &>::value &&
+                                          !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response &>::value,
+                                      int>::type = 0)
                 {
                     handler_ = req_handler_wrapper<Args...>(std::move(f));
                     /*handler_ = (
@@ -279,54 +281,53 @@ namespace crow
                         });*/
                 }
 
-                template<typename... Args>
+                template <typename... Args>
                 void set_(Func f, typename std::enable_if<
-                                    std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
-                                      std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value,
-                                    int>::type = 0)
+                                      std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request &>::value &&
+                                          std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response &>::value,
+                                      int>::type = 0)
                 {
                     handler_ = std::move(f);
                 }
 
-                template<typename... Args>
+                template <typename... Args>
                 struct handler_type_helper
                 {
-                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using type = std::function<void(const crow::request &, crow::response &, Args...)>;
                     using args_type = black_magic::S<typename black_magic::promote_t<Args>...>;
                 };
 
-                template<typename... Args>
-                struct handler_type_helper<const request&, Args...>
+                template <typename... Args>
+                struct handler_type_helper<const request &, Args...>
                 {
-                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using type = std::function<void(const crow::request &, crow::response &, Args...)>;
                     using args_type = black_magic::S<typename black_magic::promote_t<Args>...>;
                 };
 
-                template<typename... Args>
-                struct handler_type_helper<const request&, response&, Args...>
+                template <typename... Args>
+                struct handler_type_helper<const request &, response &, Args...>
                 {
-                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using type = std::function<void(const crow::request &, crow::response &, Args...)>;
                     using args_type = black_magic::S<typename black_magic::promote_t<Args>...>;
                 };
 
                 typename handler_type_helper<ArgsWrapped...>::type handler_;
 
-                void operator()(request& req, response& res, const routing_params& params)
+                void operator()(request &req, response &res, const routing_params &params)
                 {
                     detail::routing_handler_call_helper::call<
-                      detail::routing_handler_call_helper::call_params<
-                        decltype(handler_)>,
-                      0, 0, 0, 0,
-                      typename handler_type_helper<ArgsWrapped...>::args_type,
-                      black_magic::S<>>()(
-                      detail::routing_handler_call_helper::call_params<
-                        decltype(handler_)>{handler_, params, req, res});
+                        detail::routing_handler_call_helper::call_params<
+                            decltype(handler_)>,
+                        0, 0, 0, 0,
+                        typename handler_type_helper<ArgsWrapped...>::args_type,
+                        black_magic::S<>>()(
+                        detail::routing_handler_call_helper::call_params<
+                            decltype(handler_)>{handler_, params, req, res});
                 }
             };
 
         } // namespace routing_handler_call_helper
     }     // namespace detail
-
 
     class CatchallRule
     {
@@ -334,77 +335,80 @@ namespace crow
         /// @cond SKIP
         CatchallRule() {}
 
-        template<typename Func>
+        template <typename Func>
         typename std::enable_if<black_magic::CallHelper<Func, black_magic::S<>>::value, void>::type
-          operator()(Func&& f)
+        operator()(Func &&f)
         {
             static_assert(!std::is_same<void, decltype(f())>::value,
                           "Handler function cannot have void return type; valid return types: string, int, crow::response, crow::returnable");
 
             handler_ = (
 #ifdef CROW_CAN_USE_CPP14
-              [f = std::move(f)]
+                [f = std::move(f)]
 #else
-              [f]
+                [f]
 #endif
-              (const request&, response& res) {
-                  res = response(f());
-                  res.end();
-              });
+                (const request &, response &res)
+                {
+                    res = response(f());
+                    res.end();
+                });
         }
 
-        template<typename Func>
+        template <typename Func>
         typename std::enable_if<
-          !black_magic::CallHelper<Func, black_magic::S<>>::value &&
-            black_magic::CallHelper<Func, black_magic::S<crow::request>>::value,
-          void>::type
-          operator()(Func&& f)
+            !black_magic::CallHelper<Func, black_magic::S<>>::value &&
+                black_magic::CallHelper<Func, black_magic::S<crow::request>>::value,
+            void>::type
+        operator()(Func &&f)
         {
             static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>()))>::value,
                           "Handler function cannot have void return type; valid return types: string, int, crow::response, crow::returnable");
 
             handler_ = (
 #ifdef CROW_CAN_USE_CPP14
-              [f = std::move(f)]
+                [f = std::move(f)]
 #else
-              [f]
+                [f]
 #endif
-              (const crow::request& req, crow::response& res) {
-                  res = response(f(req));
-                  res.end();
-              });
+                (const crow::request &req, crow::response &res)
+                {
+                    res = response(f(req));
+                    res.end();
+                });
         }
 
-        template<typename Func>
+        template <typename Func>
         typename std::enable_if<
-          !black_magic::CallHelper<Func, black_magic::S<>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::request>>::value &&
-            black_magic::CallHelper<Func, black_magic::S<crow::response&>>::value,
-          void>::type
-          operator()(Func&& f)
+            !black_magic::CallHelper<Func, black_magic::S<>>::value &&
+                !black_magic::CallHelper<Func, black_magic::S<crow::request>>::value &&
+                black_magic::CallHelper<Func, black_magic::S<crow::response &>>::value,
+            void>::type
+        operator()(Func &&f)
         {
-            static_assert(std::is_same<void, decltype(f(std::declval<crow::response&>()))>::value,
+            static_assert(std::is_same<void, decltype(f(std::declval<crow::response &>()))>::value,
                           "Handler function with response argument should have void return type");
             handler_ = (
 #ifdef CROW_CAN_USE_CPP14
-              [f = std::move(f)]
+                [f = std::move(f)]
 #else
-              [f]
+                [f]
 #endif
-              (const crow::request&, crow::response& res) {
-                  f(res);
-              });
+                (const crow::request &, crow::response &res)
+                {
+                    f(res);
+                });
         }
 
-        template<typename Func>
+        template <typename Func>
         typename std::enable_if<
-          !black_magic::CallHelper<Func, black_magic::S<>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::request>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::response&>>::value,
-          void>::type
-          operator()(Func&& f)
+            !black_magic::CallHelper<Func, black_magic::S<>>::value &&
+                !black_magic::CallHelper<Func, black_magic::S<crow::request>>::value &&
+                !black_magic::CallHelper<Func, black_magic::S<crow::response &>>::value,
+            void>::type
+        operator()(Func &&f)
         {
-            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>()))>::value,
+            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response &>()))>::value,
                           "Handler function with response argument should have void return type");
 
             handler_ = std::move(f);
@@ -419,97 +423,97 @@ namespace crow
         friend class Router;
 
     private:
-        std::function<void(const crow::request&, crow::response&)> handler_;
+        std::function<void(const crow::request &, crow::response &)> handler_;
     };
-
 
     /// A rule dealing with websockets.
 
     ///
     /// Provides the interface for the user to put in the necessary handlers for a websocket to work.
-    template<typename App>
+    template <typename App>
     class WebSocketRule : public BaseRule
     {
         using self_t = WebSocketRule;
 
     public:
-        WebSocketRule(std::string rule, App* app):
-          BaseRule(std::move(rule)),
-          app_(app),
-          max_payload_(UINT64_MAX)
-        {}
+        WebSocketRule(std::string rule, App *app) : BaseRule(std::move(rule)),
+                                                    app_(app),
+                                                    max_payload_(UINT64_MAX)
+        {
+        }
 
         void validate() override
-        {}
+        {
+        }
 
-        void handle(request&, response& res, const routing_params&) override
+        void handle(request &, response &res, const routing_params &) override
         {
             res = response(404);
             res.end();
         }
 
-        void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override
+        void handle_upgrade(const request &req, response &, SocketAdaptor &&adaptor) override
         {
             max_payload_ = max_payload_override_ ? max_payload_ : app_->websocket_max_payload();
             new crow::websocket::Connection<SocketAdaptor, App>(req, std::move(adaptor), app_, max_payload_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
         }
 #ifdef CROW_ENABLE_SSL
-        void handle_upgrade(const request& req, response&, SSLAdaptor&& adaptor) override
+        void handle_upgrade(const request &req, response &, SSLAdaptor &&adaptor) override
         {
             new crow::websocket::Connection<SSLAdaptor, App>(req, std::move(adaptor), app_, max_payload_, open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
         }
 #endif
 
         /// Override the global payload limit for this single WebSocket rule
-        self_t& max_payload(uint64_t max_payload)
+        self_t &max_payload(uint64_t max_payload)
         {
             max_payload_ = max_payload;
             max_payload_override_ = true;
             return *this;
         }
 
-        template<typename Func>
-        self_t& onopen(Func f)
+        template <typename Func>
+        self_t &onopen(Func f)
         {
             open_handler_ = f;
             return *this;
         }
 
-        template<typename Func>
-        self_t& onmessage(Func f)
+        template <typename Func>
+        self_t &onmessage(Func f)
         {
             message_handler_ = f;
             return *this;
         }
 
-        template<typename Func>
-        self_t& onclose(Func f)
+        template <typename Func>
+        self_t &onclose(Func f)
         {
             close_handler_ = f;
             return *this;
         }
 
-        template<typename Func>
-        self_t& onerror(Func f)
+        template <typename Func>
+        self_t &onerror(Func f)
         {
             error_handler_ = f;
             return *this;
         }
 
-        template<typename Func>
-        self_t& onaccept(Func f)
+        template <typename Func>
+        self_t &onaccept(Func f)
         {
             accept_handler_ = f;
             return *this;
         }
 
     protected:
-        App* app_;
-        std::function<void(crow::websocket::connection&)> open_handler_;
-        std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
-        std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
-        std::function<void(crow::websocket::connection&, const std::string&)> error_handler_;
-        std::function<bool(const crow::request&, void**)> accept_handler_;
+        App *app_;
+        std::function<void(crow::websocket::connection &)> open_handler_;
+        std::function<void(crow::websocket::connection &, const std::string &, bool)> message_handler_;
+        std::function<void(crow::websocket::connection &, const std::string &)> close_handler_;
+        std::function<void(crow::websocket::connection &, const std::string &)> error_handler_;
+        std::function<bool(const crow::request &, void **)> accept_handler_;
         uint64_t max_payload_;
         bool max_payload_override_ = false;
     };
@@ -518,45 +522,45 @@ namespace crow
 
     ///
     /// `rule.name("name").methods(HTTPMethod::POST)`
-    template<typename T>
+    template <typename T>
     struct RuleParameterTraits
     {
         using self_t = T;
 
-        template<typename App>
-        WebSocketRule<App>& websocket(App* app)
+        template <typename App>
+        WebSocketRule<App> &websocket(App *app)
         {
-            auto p = new WebSocketRule<App>(static_cast<self_t*>(this)->rule_, app);
-            static_cast<self_t*>(this)->rule_to_upgrade_.reset(p);
+            auto p = new WebSocketRule<App>(static_cast<self_t *>(this)->rule_, app);
+            static_cast<self_t *>(this)->rule_to_upgrade_.reset(p);
             return *p;
         }
 
-        self_t& name(std::string name) noexcept
+        self_t &name(std::string name) noexcept
         {
-            static_cast<self_t*>(this)->name_ = std::move(name);
-            return static_cast<self_t&>(*this);
+            static_cast<self_t *>(this)->name_ = std::move(name);
+            return static_cast<self_t &>(*this);
         }
 
-        self_t& methods(HTTPMethod method)
+        self_t &methods(HTTPMethod method)
         {
-            static_cast<self_t*>(this)->methods_ = 1 << static_cast<int>(method);
-            return static_cast<self_t&>(*this);
+            static_cast<self_t *>(this)->methods_ = 1 << static_cast<int>(method);
+            return static_cast<self_t &>(*this);
         }
 
-        template<typename... MethodArgs>
-        self_t& methods(HTTPMethod method, MethodArgs... args_method)
+        template <typename... MethodArgs>
+        self_t &methods(HTTPMethod method, MethodArgs... args_method)
         {
             methods(args_method...);
-            static_cast<self_t*>(this)->methods_ |= 1 << static_cast<int>(method);
-            return static_cast<self_t&>(*this);
+            static_cast<self_t *>(this)->methods_ |= 1 << static_cast<int>(method);
+            return static_cast<self_t &>(*this);
         }
 
         /// Enable local middleware for this handler
-        template<typename App, typename... Middlewares>
-        self_t& middlewares()
+        template <typename App, typename... Middlewares>
+        self_t &middlewares()
         {
-            static_cast<self_t*>(this)->mw_indices_.template push<App, Middlewares...>();
-            return static_cast<self_t&>(*this);
+            static_cast<self_t *>(this)->mw_indices_.template push<App, Middlewares...>();
+            return static_cast<self_t &>(*this);
         }
     };
 
@@ -564,9 +568,9 @@ namespace crow
     class DynamicRule : public BaseRule, public RuleParameterTraits<DynamicRule>
     {
     public:
-        DynamicRule(std::string rule):
-          BaseRule(std::move(rule))
-        {}
+        DynamicRule(std::string rule) : BaseRule(std::move(rule))
+        {
+        }
 
         void validate() override
         {
@@ -576,7 +580,7 @@ namespace crow
             }
         }
 
-        void handle(request& req, response& res, const routing_params& params) override
+        void handle(request &req, response &res, const routing_params &params) override
         {
             if (!custom_templates_base.empty())
                 mustache::set_base(custom_templates_base);
@@ -585,7 +589,7 @@ namespace crow
             erased_handler_(req, res, params);
         }
 
-        template<typename Func>
+        template <typename Func>
         void operator()(Func f)
         {
 #ifdef CROW_MSVC_WORKAROUND
@@ -600,12 +604,12 @@ namespace crow
         // enable_if Arg1 == request && Arg2 != resposne
         // enable_if Arg1 != request
 #ifdef CROW_MSVC_WORKAROUND
-        template<typename Func, size_t... Indices>
+        template <typename Func, size_t... Indices>
 #else
-        template<typename Func, unsigned... Indices>
+        template <typename Func, unsigned... Indices>
 #endif
-        std::function<void(request&, response&, const routing_params&)>
-          wrap(Func f, black_magic::seq<Indices...>)
+        std::function<void(request &, response &, const routing_params &)>
+        wrap(Func f, black_magic::seq<Indices...>)
         {
 #ifdef CROW_MSVC_WORKAROUND
             using function_t = utility::function_traits<decltype(&Func::operator())>;
@@ -613,39 +617,39 @@ namespace crow
             using function_t = utility::function_traits<Func>;
 #endif
             if (!black_magic::is_parameter_tag_compatible(
-                  black_magic::get_parameter_tag_runtime(rule_.c_str()),
-                  black_magic::compute_parameter_tag_from_args_list<
-                    typename function_t::template arg<Indices>...>::value))
+                    black_magic::get_parameter_tag_runtime(rule_.c_str()),
+                    black_magic::compute_parameter_tag_from_args_list<
+                        typename function_t::template arg<Indices>...>::value))
             {
                 throw std::runtime_error("route_dynamic: Handler type is mismatched with URL parameters: " + rule_);
             }
             auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
             ret.template set_<
-              typename function_t::template arg<Indices>...>(std::move(f));
+                typename function_t::template arg<Indices>...>(std::move(f));
             return ret;
         }
 
-        template<typename Func>
-        void operator()(std::string name, Func&& f)
+        template <typename Func>
+        void operator()(std::string name, Func &&f)
         {
             name_ = std::move(name);
             (*this).template operator()<Func>(std::forward(f));
         }
 
     private:
-        std::function<void(request&, response&, const routing_params&)> erased_handler_;
+        std::function<void(request &, response &, const routing_params &)> erased_handler_;
     };
 
     /// Default rule created when CROW_ROUTE is called.
-    template<typename... Args>
+    template <typename... Args>
     class TaggedRule : public BaseRule, public RuleParameterTraits<TaggedRule<Args...>>
     {
     public:
         using self_t = TaggedRule<Args...>;
 
-        TaggedRule(std::string rule):
-          BaseRule(std::move(rule))
-        {}
+        TaggedRule(std::string rule) : BaseRule(std::move(rule))
+        {
+        }
 
         void validate() override
         {
@@ -655,28 +659,29 @@ namespace crow
             }
         }
 
-        template<typename Func>
-        void operator()(Func&& f)
+        template <typename Func>
+        void operator()(Func &&f)
         {
             handler_ = (
 #ifdef CROW_CAN_USE_CPP14
-              [f = std::move(f)]
+                [f = std::move(f)]
 #else
-              [f]
+                [f]
 #endif
-              (crow::request& req, crow::response& res, Args... args) {
-                  detail::wrapped_handler_call(req, res, f, std::forward<Args>(args)...);
-              });
+                (crow::request &req, crow::response &res, Args... args)
+                {
+                    detail::wrapped_handler_call(req, res, f, std::forward<Args>(args)...);
+                });
         }
 
-        template<typename Func>
-        void operator()(std::string name, Func&& f)
+        template <typename Func>
+        void operator()(std::string name, Func &&f)
         {
             name_ = std::move(name);
             (*this).template operator()<Func>(std::forward(f));
         }
 
-        void handle(request& req, response& res, const routing_params& params) override
+        void handle(request &req, response &res, const routing_params &params) override
         {
             if (!custom_templates_base.empty())
                 mustache::set_base(custom_templates_base);
@@ -684,19 +689,18 @@ namespace crow
                 mustache::set_base(mustache::detail::get_global_template_base_directory_ref());
 
             detail::routing_handler_call_helper::call<
-              detail::routing_handler_call_helper::call_params<decltype(handler_)>,
-              0, 0, 0, 0,
-              black_magic::S<Args...>,
-              black_magic::S<>>()(
-              detail::routing_handler_call_helper::call_params<decltype(handler_)>{handler_, params, req, res});
+                detail::routing_handler_call_helper::call_params<decltype(handler_)>,
+                0, 0, 0, 0,
+                black_magic::S<Args...>,
+                black_magic::S<>>()(
+                detail::routing_handler_call_helper::call_params<decltype(handler_)>{handler_, params, req, res});
         }
 
     private:
-        std::function<void(crow::request&, crow::response&, Args...)> handler_;
+        std::function<void(crow::request &, crow::response &, Args...)> handler_;
     };
 
     const int RULE_SPECIAL_REDIRECT_SLASH = 1;
-
 
     /// A search tree.
     class Trie
@@ -717,21 +721,20 @@ namespace crow
                        blueprint_index == INVALID_BP_ID &&
                        children.size() < 2 &&
                        param == ParamType::MAX &&
-                       std::all_of(std::begin(children), std::end(children), [](const Node& x) {
-                           return x.param == ParamType::MAX;
-                       });
+                       std::all_of(std::begin(children), std::end(children), [](const Node &x)
+                                   { return x.param == ParamType::MAX; });
             }
 
-            Node& add_child_node()
+            Node &add_child_node()
             {
                 children.emplace_back();
                 return children.back();
             }
         };
 
-
         Trie()
-        {}
+        {
+        }
 
         /// Check whether or not the trie is empty.
         bool is_empty()
@@ -741,22 +744,21 @@ namespace crow
 
         void optimize()
         {
-            for (auto& child : head_.children)
+            for (auto &child : head_.children)
             {
                 optimizeNode(child);
             }
         }
 
-
     private:
-        void optimizeNode(Node& node)
+        void optimizeNode(Node &node)
         {
             if (node.children.empty())
                 return;
             if (node.IsSimpleNode())
             {
                 auto children_temp = std::move(node.children);
-                auto& child_temp = children_temp[0];
+                auto &child_temp = children_temp[0];
                 node.key += child_temp.key;
                 node.rule_index = child_temp.rule_index;
                 node.blueprint_index = child_temp.blueprint_index;
@@ -765,49 +767,49 @@ namespace crow
             }
             else
             {
-                for (auto& child : node.children)
+                for (auto &child : node.children)
                 {
                     optimizeNode(child);
                 }
             }
         }
 
-        void debug_node_print(const Node& node, int level)
+        void debug_node_print(const Node &node, int level)
         {
             if (node.param != ParamType::MAX)
             {
                 switch (node.param)
                 {
-                    case ParamType::INT:
-                        CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
-                                       << "<int>";
-                        break;
-                    case ParamType::UINT:
-                        CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
-                                       << "<uint>";
-                        break;
-                    case ParamType::DOUBLE:
-                        CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
-                                       << "<double>";
-                        break;
-                    case ParamType::STRING:
-                        CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
-                                       << "<string>";
-                        break;
-                    case ParamType::PATH:
-                        CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
-                                       << "<path>";
-                        break;
-                    default:
-                        CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
-                                       << "<ERROR>";
-                        break;
+                case ParamType::INT:
+                    CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
+                                   << "<int>";
+                    break;
+                case ParamType::UINT:
+                    CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
+                                   << "<uint>";
+                    break;
+                case ParamType::DOUBLE:
+                    CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
+                                   << "<double>";
+                    break;
+                case ParamType::STRING:
+                    CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
+                                   << "<string>";
+                    break;
+                case ParamType::PATH:
+                    CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
+                                   << "<path>";
+                    break;
+                default:
+                    CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ "
+                                   << "<ERROR>";
+                    break;
                 }
             }
             else
                 CROW_LOG_DEBUG << std::string(3 * level, ' ') << "└➝ " << node.key;
 
-            for (const auto& child : node.children)
+            for (const auto &child : node.children)
             {
                 debug_node_print(child, level + 1);
             }
@@ -817,7 +819,7 @@ namespace crow
         void debug_print()
         {
             CROW_LOG_DEBUG << "└➙ ROOT";
-            for (const auto& child : head_.children)
+            for (const auto &child : head_.children)
                 debug_node_print(child, 1);
         }
 
@@ -828,23 +830,24 @@ namespace crow
             optimize();
         }
 
-        //Rule_index, Blueprint_index, routing_params
-        routing_handle_result find(const std::string& req_url, const Node& node, unsigned pos = 0, routing_params* params = nullptr, std::vector<uint16_t>* blueprints = nullptr) const
+        // Rule_index, Blueprint_index, routing_params
+        routing_handle_result find(const std::string &req_url, const Node &node, unsigned pos = 0, routing_params *params = nullptr, std::vector<uint16_t> *blueprints = nullptr) const
         {
-            //start params as an empty struct
+            // start params as an empty struct
             routing_params empty;
             if (params == nullptr)
                 params = &empty;
-            //same for blueprint vector
+            // same for blueprint vector
             std::vector<uint16_t> MT;
             if (blueprints == nullptr)
                 blueprints = &MT;
 
-            uint16_t found{};               //The rule index to be found
-            std::vector<uint16_t> found_BP; //The Blueprint indices to be found
-            routing_params match_params;    //supposedly the final matched parameters
+            uint16_t found{};               // The rule index to be found
+            std::vector<uint16_t> found_BP; // The Blueprint indices to be found
+            routing_params match_params;    // supposedly the final matched parameters
 
-            auto update_found = [&found, &found_BP, &match_params](routing_handle_result& ret) {
+            auto update_found = [&found, &found_BP, &match_params](routing_handle_result &ret)
+            {
                 found_BP = std::move(ret.blueprint_indices);
                 if (ret.rule_index && (!found || found > ret.rule_index))
                 {
@@ -853,7 +856,7 @@ namespace crow
                 }
             };
 
-            //if the function was called on a node at the end of the string (the last recursion), return the nodes rule index, and whatever params were passed to the function
+            // if the function was called on a node at the end of the string (the last recursion), return the nodes rule index, and whatever params were passed to the function
             if (pos == req_url.size())
             {
                 found_BP = std::move(*blueprints);
@@ -862,7 +865,7 @@ namespace crow
 
             bool found_fragment = false;
 
-            for (const auto& child : node.children)
+            for (const auto &child : node.children)
             {
                 if (child.param != ParamType::MAX)
                 {
@@ -871,18 +874,20 @@ namespace crow
                         char c = req_url[pos];
                         if ((c >= '0' && c <= '9') || c == '+' || c == '-')
                         {
-                            char* eptr;
+                            char *eptr;
                             errno = 0;
                             long long int value = strtoll(req_url.data() + pos, &eptr, 10);
                             if (errno != ERANGE && eptr != req_url.data() + pos)
                             {
                                 found_fragment = true;
                                 params->int_params.push_back(value);
-                                if (child.blueprint_index != INVALID_BP_ID) blueprints->push_back(child.blueprint_index);
+                                if (child.blueprint_index != INVALID_BP_ID)
+                                    blueprints->push_back(child.blueprint_index);
                                 auto ret = find(req_url, child, eptr - req_url.data(), params, blueprints);
                                 update_found(ret);
                                 params->int_params.pop_back();
-                                if (!blueprints->empty()) blueprints->pop_back();
+                                if (!blueprints->empty())
+                                    blueprints->pop_back();
                             }
                         }
                     }
@@ -892,18 +897,20 @@ namespace crow
                         char c = req_url[pos];
                         if ((c >= '0' && c <= '9') || c == '+')
                         {
-                            char* eptr;
+                            char *eptr;
                             errno = 0;
                             unsigned long long int value = strtoull(req_url.data() + pos, &eptr, 10);
                             if (errno != ERANGE && eptr != req_url.data() + pos)
                             {
                                 found_fragment = true;
                                 params->uint_params.push_back(value);
-                                if (child.blueprint_index != INVALID_BP_ID) blueprints->push_back(child.blueprint_index);
+                                if (child.blueprint_index != INVALID_BP_ID)
+                                    blueprints->push_back(child.blueprint_index);
                                 auto ret = find(req_url, child, eptr - req_url.data(), params, blueprints);
                                 update_found(ret);
                                 params->uint_params.pop_back();
-                                if (!blueprints->empty()) blueprints->pop_back();
+                                if (!blueprints->empty())
+                                    blueprints->pop_back();
                             }
                         }
                     }
@@ -913,18 +920,20 @@ namespace crow
                         char c = req_url[pos];
                         if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.')
                         {
-                            char* eptr;
+                            char *eptr;
                             errno = 0;
                             double value = strtod(req_url.data() + pos, &eptr);
                             if (errno != ERANGE && eptr != req_url.data() + pos)
                             {
                                 found_fragment = true;
                                 params->double_params.push_back(value);
-                                if (child.blueprint_index != INVALID_BP_ID) blueprints->push_back(child.blueprint_index);
+                                if (child.blueprint_index != INVALID_BP_ID)
+                                    blueprints->push_back(child.blueprint_index);
                                 auto ret = find(req_url, child, eptr - req_url.data(), params, blueprints);
                                 update_found(ret);
                                 params->double_params.pop_back();
-                                if (!blueprints->empty()) blueprints->pop_back();
+                                if (!blueprints->empty())
+                                    blueprints->pop_back();
                             }
                         }
                     }
@@ -942,11 +951,13 @@ namespace crow
                         {
                             found_fragment = true;
                             params->string_params.push_back(req_url.substr(pos, epos - pos));
-                            if (child.blueprint_index != INVALID_BP_ID) blueprints->push_back(child.blueprint_index);
+                            if (child.blueprint_index != INVALID_BP_ID)
+                                blueprints->push_back(child.blueprint_index);
                             auto ret = find(req_url, child, epos, params, blueprints);
                             update_found(ret);
                             params->string_params.pop_back();
-                            if (!blueprints->empty()) blueprints->pop_back();
+                            if (!blueprints->empty())
+                                blueprints->pop_back();
                         }
                     }
 
@@ -958,25 +969,29 @@ namespace crow
                         {
                             found_fragment = true;
                             params->string_params.push_back(req_url.substr(pos, epos - pos));
-                            if (child.blueprint_index != INVALID_BP_ID) blueprints->push_back(child.blueprint_index);
+                            if (child.blueprint_index != INVALID_BP_ID)
+                                blueprints->push_back(child.blueprint_index);
                             auto ret = find(req_url, child, epos, params, blueprints);
                             update_found(ret);
                             params->string_params.pop_back();
-                            if (!blueprints->empty()) blueprints->pop_back();
+                            if (!blueprints->empty())
+                                blueprints->pop_back();
                         }
                     }
                 }
 
                 else
                 {
-                    const std::string& fragment = child.key;
+                    const std::string &fragment = child.key;
                     if (req_url.compare(pos, fragment.size(), fragment) == 0)
                     {
                         found_fragment = true;
-                        if (child.blueprint_index != INVALID_BP_ID) blueprints->push_back(child.blueprint_index);
+                        if (child.blueprint_index != INVALID_BP_ID)
+                            blueprints->push_back(child.blueprint_index);
                         auto ret = find(req_url, child, pos + fragment.size(), params, blueprints);
                         update_found(ret);
-                        if (!blueprints->empty()) blueprints->pop_back();
+                        if (!blueprints->empty())
+                            blueprints->pop_back();
                     }
                 }
             }
@@ -984,16 +999,16 @@ namespace crow
             if (!found_fragment)
                 found_BP = std::move(*blueprints);
 
-            return routing_handle_result{found, found_BP, match_params}; //Called after all the recursions have been done
+            return routing_handle_result{found, found_BP, match_params}; // Called after all the recursions have been done
         }
 
-        routing_handle_result find(const std::string& req_url) const
+        routing_handle_result find(const std::string &req_url) const
         {
             return find(req_url, head_);
         }
 
-        //This functions assumes any blueprint info passed is valid
-        void add(const std::string& url, uint16_t rule_index, unsigned bp_prefix_length = 0, uint16_t blueprint_index = INVALID_BP_ID)
+        // This functions assumes any blueprint info passed is valid
+        void add(const std::string &url, uint16_t rule_index, unsigned bp_prefix_length = 0, uint16_t blueprint_index = INVALID_BP_ID)
         {
             auto idx = &head_;
 
@@ -1009,22 +1024,22 @@ namespace crow
                         ParamType type;
                         std::string name;
                     } paramTraits[] =
-                      {
-                        {ParamType::INT, "<int>"},
-                        {ParamType::UINT, "<uint>"},
-                        {ParamType::DOUBLE, "<float>"},
-                        {ParamType::DOUBLE, "<double>"},
-                        {ParamType::STRING, "<str>"},
-                        {ParamType::STRING, "<string>"},
-                        {ParamType::PATH, "<path>"},
-                      };
+                        {
+                            {ParamType::INT, "<int>"},
+                            {ParamType::UINT, "<uint>"},
+                            {ParamType::DOUBLE, "<float>"},
+                            {ParamType::DOUBLE, "<double>"},
+                            {ParamType::STRING, "<str>"},
+                            {ParamType::STRING, "<string>"},
+                            {ParamType::PATH, "<path>"},
+                        };
 
-                    for (const auto& x : paramTraits)
+                    for (const auto &x : paramTraits)
                     {
                         if (url.compare(i, x.name.size(), x.name) == 0)
                         {
                             bool found = false;
-                            for (auto& child : idx->children)
+                            for (auto &child : idx->children)
                             {
                                 if (child.param == x.type)
                                 {
@@ -1049,9 +1064,9 @@ namespace crow
                 }
                 else
                 {
-                    //This part assumes the tree is unoptimized (every node has a max 1 character key)
+                    // This part assumes the tree is unoptimized (every node has a max 1 character key)
                     bool piece_found = false;
-                    for (auto& child : idx->children)
+                    for (auto &child : idx->children)
                     {
                         if (child.key[0] == c)
                         {
@@ -1064,7 +1079,7 @@ namespace crow
                     {
                         auto new_node_idx = &idx->add_child_node();
                         new_node_idx->key = c;
-                        //The assumption here is that you'd only need to add a blueprint index if the tree didn't have the BP prefix.
+                        // The assumption here is that you'd only need to add a blueprint index if the tree didn't have the BP prefix.
                         if (has_blueprint && i == bp_prefix_length)
                             new_node_idx->blueprint_index = blueprint_index;
                         idx = new_node_idx;
@@ -1072,7 +1087,7 @@ namespace crow
                 }
             }
 
-            //check if the last node already has a value (exact url already in Trie)
+            // check if the last node already has a value (exact url already in Trie)
             if (idx->rule_index)
                 throw std::runtime_error("handler already exists for " + url);
             idx->rule_index = rule_index;
@@ -1090,14 +1105,11 @@ namespace crow
     class Blueprint
     {
     public:
-        Blueprint(const std::string& prefix):
-          prefix_(prefix){};
+        Blueprint(const std::string &prefix) : prefix_(prefix){};
 
-        Blueprint(const std::string& prefix, const std::string& static_dir):
-          prefix_(prefix), static_dir_(static_dir){};
+        Blueprint(const std::string &prefix, const std::string &static_dir) : prefix_(prefix), static_dir_(static_dir){};
 
-        Blueprint(const std::string& prefix, const std::string& static_dir, const std::string& templates_dir):
-          prefix_(prefix), static_dir_(static_dir), templates_dir_(templates_dir){};
+        Blueprint(const std::string &prefix, const std::string &static_dir, const std::string &templates_dir) : prefix_(prefix), static_dir_(static_dir), templates_dir_(templates_dir){};
 
         /*
         Blueprint(Blueprint& other)
@@ -1112,14 +1124,14 @@ namespace crow
             all_rules_ = other.all_rules_;
         }
 */
-        Blueprint(Blueprint&& value)
+        Blueprint(Blueprint &&value)
         {
             *this = std::move(value);
         }
 
-        Blueprint& operator=(const Blueprint& value) = delete;
+        Blueprint &operator=(const Blueprint &value) = delete;
 
-        Blueprint& operator=(Blueprint&& value) noexcept
+        Blueprint &operator=(Blueprint &&value) noexcept
         {
             prefix_ = std::move(value.prefix_);
             static_dir_ = std::move(value.static_dir_);
@@ -1131,12 +1143,12 @@ namespace crow
             return *this;
         }
 
-        bool operator==(const Blueprint& value)
+        bool operator==(const Blueprint &value)
         {
             return value.prefix() == prefix_;
         }
 
-        bool operator!=(const Blueprint& value)
+        bool operator!=(const Blueprint &value)
         {
             return value.prefix() != prefix_;
         }
@@ -1151,7 +1163,7 @@ namespace crow
             return static_dir_;
         }
 
-        DynamicRule& new_rule_dynamic(std::string&& rule)
+        DynamicRule &new_rule_dynamic(std::string &&rule)
         {
             std::string new_rule = std::move(rule);
             new_rule = '/' + prefix_ + new_rule;
@@ -1162,8 +1174,8 @@ namespace crow
             return *ruleObject;
         }
 
-        template<uint64_t N>
-        typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(std::string&& rule)
+        template <uint64_t N>
+        typename black_magic::arguments<N>::type::template rebind<TaggedRule> &new_rule_tagged(std::string &&rule)
         {
             std::string new_rule = std::move(rule);
             new_rule = '/' + prefix_ + new_rule;
@@ -1176,7 +1188,7 @@ namespace crow
             return *ruleObject;
         }
 
-        void register_blueprint(Blueprint& blueprint)
+        void register_blueprint(Blueprint &blueprint)
         {
             if (blueprints_.empty() || std::find(blueprints_.begin(), blueprints_.end(), &blueprint) == blueprints_.end())
             {
@@ -1187,33 +1199,32 @@ namespace crow
                 throw std::runtime_error("blueprint \"" + blueprint.prefix_ + "\" already exists in blueprint \"" + prefix_ + '\"');
         }
 
-
-        CatchallRule& catchall_rule()
+        CatchallRule &catchall_rule()
         {
             return catchall_rule_;
         }
 
-        template<typename App, typename... Middlewares>
+        template <typename App, typename... Middlewares>
         void middlewares()
         {
             mw_indices_.push<App, Middlewares...>();
         }
 
     private:
-        void apply_blueprint(Blueprint& blueprint)
+        void apply_blueprint(Blueprint &blueprint)
         {
 
             blueprint.prefix_ = prefix_ + '/' + blueprint.prefix_;
             blueprint.static_dir_ = static_dir_ + '/' + blueprint.static_dir_;
             blueprint.templates_dir_ = templates_dir_ + '/' + blueprint.templates_dir_;
-            for (auto& rule : blueprint.all_rules_)
+            for (auto &rule : blueprint.all_rules_)
             {
                 std::string new_rule = '/' + prefix_ + rule->rule_;
                 rule->rule_ = new_rule;
             }
-            for (Blueprint* bp_child : blueprint.blueprints_)
+            for (Blueprint *bp_child : blueprint.blueprints_)
             {
-                Blueprint& bp_ref = *bp_child;
+                Blueprint &bp_ref = *bp_child;
                 apply_blueprint(bp_ref);
             }
         }
@@ -1223,7 +1234,7 @@ namespace crow
         std::string templates_dir_;
         std::vector<std::unique_ptr<BaseRule>> all_rules_;
         CatchallRule catchall_rule_;
-        std::vector<Blueprint*> blueprints_;
+        std::vector<Blueprint *> blueprints_;
         detail::middleware_indices mw_indices_;
 
         friend class Router;
@@ -1234,9 +1245,10 @@ namespace crow
     {
     public:
         Router()
-        {}
+        {
+        }
 
-        DynamicRule& new_rule_dynamic(const std::string& rule)
+        DynamicRule &new_rule_dynamic(const std::string &rule)
         {
             auto ruleObject = new DynamicRule(rule);
             all_rules_.emplace_back(ruleObject);
@@ -1244,8 +1256,8 @@ namespace crow
             return *ruleObject;
         }
 
-        template<uint64_t N>
-        typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule)
+        template <uint64_t N>
+        typename black_magic::arguments<N>::type::template rebind<TaggedRule> &new_rule_tagged(const std::string &rule)
         {
             using RuleT = typename black_magic::arguments<N>::type::template rebind<TaggedRule>;
 
@@ -1255,12 +1267,12 @@ namespace crow
             return *ruleObject;
         }
 
-        CatchallRule& catchall_rule()
+        CatchallRule &catchall_rule()
         {
             return catchall_rule_;
         }
 
-        void internal_add_rule_object(const std::string& rule, BaseRule* ruleObject, const uint16_t& BP_index, std::vector<Blueprint*>& blueprints)
+        void internal_add_rule_object(const std::string &rule, BaseRule *ruleObject, const uint16_t &BP_index, std::vector<Blueprint *> &blueprints)
         {
             bool has_trailing_slash = false;
             std::string rule_without_trailing_slash;
@@ -1273,7 +1285,8 @@ namespace crow
 
             ruleObject->mw_indices_.pack();
 
-            ruleObject->foreach_method([&](int method) {
+            ruleObject->foreach_method([&](int method)
+                                       {
                 per_methods_[method].rules.emplace_back(ruleObject);
                 per_methods_[method].trie.add(rule, per_methods_[method].rules.size() - 1, BP_index != INVALID_BP_ID ? blueprints[BP_index]->prefix().length() : 0, BP_index);
 
@@ -1282,11 +1295,10 @@ namespace crow
                 if (has_trailing_slash)
                 {
                     per_methods_[method].trie.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH, BP_index != INVALID_BP_ID ? blueprints[BP_index]->prefix().length() : 0, BP_index);
-                }
-            });
+                } });
         }
 
-        void register_blueprint(Blueprint& blueprint)
+        void register_blueprint(Blueprint &blueprint)
         {
             if (std::find(blueprints_.begin(), blueprints_.end(), &blueprint) == blueprints_.end())
             {
@@ -1296,33 +1308,33 @@ namespace crow
                 throw std::runtime_error("blueprint \"" + blueprint.prefix_ + "\" already exists in router");
         }
 
-        void get_recursive_child_methods(Blueprint* blueprint, std::vector<HTTPMethod>& methods)
+        void get_recursive_child_methods(Blueprint *blueprint, std::vector<HTTPMethod> &methods)
         {
-            //we only need to deal with children if the blueprint has absolutely no methods (meaning its index won't be added to the trie)
+            // we only need to deal with children if the blueprint has absolutely no methods (meaning its index won't be added to the trie)
             if (blueprint->static_dir_.empty() && blueprint->all_rules_.empty())
             {
-                for (Blueprint* bp : blueprint->blueprints_)
+                for (Blueprint *bp : blueprint->blueprints_)
                 {
                     get_recursive_child_methods(bp, methods);
                 }
             }
             else if (!blueprint->static_dir_.empty())
                 methods.emplace_back(HTTPMethod::Get);
-            for (auto& rule : blueprint->all_rules_)
+            for (auto &rule : blueprint->all_rules_)
             {
-                rule->foreach_method([&methods](unsigned method) {
+                rule->foreach_method([&methods](unsigned method)
+                                     {
                     HTTPMethod method_final = static_cast<HTTPMethod>(method);
                     if (std::find(methods.begin(), methods.end(), method_final) == methods.end())
-                        methods.emplace_back(method_final);
-                });
+                        methods.emplace_back(method_final); });
             }
         }
 
-        void validate_bp(std::vector<Blueprint*> blueprints, detail::middleware_indices& current_mw)
+        void validate_bp(std::vector<Blueprint *> blueprints, detail::middleware_indices &current_mw)
         {
             for (unsigned i = 0; i < blueprints.size(); i++)
             {
-                Blueprint* blueprint = blueprints[i];
+                Blueprint *blueprint = blueprints[i];
                 if (blueprint->static_dir_ == "" && blueprint->all_rules_.empty())
                 {
                     std::vector<HTTPMethod> methods;
@@ -1335,7 +1347,7 @@ namespace crow
                 }
 
                 current_mw.merge_back(blueprint->mw_indices_);
-                for (auto& rule : blueprint->all_rules_)
+                for (auto &rule : blueprint->all_rules_)
                 {
                     if (rule)
                     {
@@ -1354,11 +1366,11 @@ namespace crow
 
         void validate()
         {
-            //Take all the routes from the registered blueprints and add them to `all_rules_` to be processed.
+            // Take all the routes from the registered blueprints and add them to `all_rules_` to be processed.
             detail::middleware_indices blueprint_mw;
             validate_bp(blueprints_, blueprint_mw);
 
-            for (auto& rule : all_rules_)
+            for (auto &rule : all_rules_)
             {
                 if (rule)
                 {
@@ -1369,26 +1381,26 @@ namespace crow
                     internal_add_rule_object(rule->rule(), rule.get(), INVALID_BP_ID, blueprints_);
                 }
             }
-            for (auto& per_method : per_methods_)
+            for (auto &per_method : per_methods_)
             {
                 per_method.trie.validate();
             }
         }
 
         // TODO maybe add actual_method
-        template<typename Adaptor>
-        void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
+        template <typename Adaptor>
+        void handle_upgrade(const request &req, response &res, Adaptor &&adaptor)
         {
             if (req.method >= HTTPMethod::InternalMethodCount)
                 return;
 
-            auto& per_method = per_methods_[static_cast<int>(req.method)];
-            auto& rules = per_method.rules;
+            auto &per_method = per_methods_[static_cast<int>(req.method)];
+            auto &rules = per_method.rules;
             unsigned rule_index = per_method.trie.find(req.url).rule_index;
 
             if (!rule_index)
             {
-                for (auto& per_method : per_methods_)
+                for (auto &per_method : per_methods_)
                 {
                     if (per_method.trie.find(req.url).rule_index)
                     {
@@ -1433,7 +1445,7 @@ namespace crow
             {
                 rules[rule_index]->handle_upgrade(req, res, std::move(adaptor));
             }
-            catch (std::exception& e)
+            catch (std::exception &e)
             {
                 CROW_LOG_ERROR << "An uncaught exception occurred: " << e.what();
                 res = response(500);
@@ -1449,7 +1461,7 @@ namespace crow
             }
         }
 
-        void get_found_bp(std::vector<uint16_t>& bp_i, std::vector<Blueprint*>& blueprints, std::vector<Blueprint*>& found_bps, uint16_t index = 0)
+        void get_found_bp(std::vector<uint16_t> &bp_i, std::vector<Blueprint *> &blueprints, std::vector<Blueprint *> &found_bps, uint16_t index = 0)
         {
             // This statement makes 3 assertions:
             // 1. The index is above 0.
@@ -1459,7 +1471,8 @@ namespace crow
             // This is done to prevent a blueprint that has a prefix of "bp_prefix2" to be assumed as a child of one that has "bp_prefix".
             //
             // If any of the assertions is untrue, we delete the last item added, and continue using the blueprint list of the blueprint found before, the topmost being the router's list
-            auto verify_prefix = [&bp_i, &index, &blueprints, &found_bps]() {
+            auto verify_prefix = [&bp_i, &index, &blueprints, &found_bps]()
+            {
                 return index > 0 &&
                        bp_i[index] < blueprints.size() &&
                        blueprints[bp_i[index]]->prefix().substr(0, found_bps[index - 1]->prefix().length() + 1).compare(std::string(found_bps[index - 1]->prefix() + '/')) == 0;
@@ -1482,7 +1495,7 @@ namespace crow
                     else
                     {
                         found_bps.pop_back();
-                        Blueprint* last_element = found_bps.back();
+                        Blueprint *last_element = found_bps.back();
                         found_bps.push_back(last_element->blueprints_[bp_i[index]]);
                     }
                     get_found_bp(bp_i, found_bps.back()->blueprints_, found_bps, ++index);
@@ -1491,10 +1504,10 @@ namespace crow
         }
 
         /// Is used to handle errors, you insert the error code, found route, request, and response. and it'll either call the appropriate catchall route (considering the blueprint system) and send you a status string (which is mainly used for debug messages), or just set the response code to the proper error code.
-        std::string get_error(unsigned short code, routing_handle_result& found, const request& req, response& res)
+        std::string get_error(unsigned short code, routing_handle_result &found, const request &req, response &res)
         {
             res.code = code;
-            std::vector<Blueprint*> bps_found;
+            std::vector<Blueprint *> bps_found;
             get_found_bp(found.blueprint_indices, blueprints_, bps_found);
             for (int i = bps_found.size() - 1; i > 0; i--)
             {
@@ -1521,16 +1534,16 @@ namespace crow
             return std::string();
         }
 
-        std::unique_ptr<routing_handle_result> handle_initial(request& req, response& res)
+        std::unique_ptr<routing_handle_result> handle_initial(request &req, response &res)
         {
             HTTPMethod method_actual = req.method;
 
             std::unique_ptr<routing_handle_result> found{
-              new routing_handle_result(
-                0,
-                std::vector<uint16_t>(),
-                routing_params(),
-                HTTPMethod::InternalMethodCount)}; // This is always returned to avoid a null pointer dereference.
+                new routing_handle_result(
+                    0,
+                    std::vector<uint16_t>(),
+                    routing_params(),
+                    HTTPMethod::InternalMethodCount)}; // This is always returned to avoid a null pointer dereference.
 
             // NOTE(EDev): This most likely will never run since the parser should handle this situation and close the connection before it gets here.
             if (CROW_UNLIKELY(req.method >= HTTPMethod::InternalMethodCount))
@@ -1546,7 +1559,7 @@ namespace crow
                     if (!found->rule_index) // If a route is still not found, return a 404 without executing the rest of the HEAD specific code.
                     {
                         CROW_LOG_DEBUG << "Cannot match rules " << req.url;
-                        res = response(404); //TODO(EDev): Should this redirect to catchall?
+                        res = response(404); // TODO(EDev): Should this redirect to catchall?
                         res.end();
                         return found;
                     }
@@ -1606,7 +1619,7 @@ namespace crow
                     else
                     {
                         CROW_LOG_DEBUG << "Cannot match rules " << req.url;
-                        res = response(404); //TODO(EDev): Should this redirect to catchall?
+                        res = response(404); // TODO(EDev): Should this redirect to catchall?
                         res.end();
                         return found;
                     }
@@ -1618,9 +1631,9 @@ namespace crow
                 // TODO(EDev): maybe ending the else here would allow the requests coming from above (after removing the return statement) to be checked on whether they actually point to a route
                 if (!found->rule_index)
                 {
-                    for (auto& per_method : per_methods_)
+                    for (auto &per_method : per_methods_)
                     {
-                        if (per_method.trie.find(req.url).rule_index) //Route found, but in another method
+                        if (per_method.trie.find(req.url).rule_index) // Route found, but in another method
                         {
                             const std::string error_message(get_error(405, *found, req, res));
                             CROW_LOG_DEBUG << "Cannot match method " << req.url << " " << method_name(method_actual) << ". " << error_message;
@@ -1628,7 +1641,7 @@ namespace crow
                             return found;
                         }
                     }
-                    //Route does not exist anywhere
+                    // Route does not exist anywhere
 
                     const std::string error_message(get_error(404, *found, req, res));
                     CROW_LOG_DEBUG << "Cannot match rules " << req.url << ". " << error_message;
@@ -1641,11 +1654,11 @@ namespace crow
             }
         }
 
-        template<typename App>
-        void handle(request& req, response& res, routing_handle_result found)
+        template <typename App>
+        void handle(request &req, response &res, routing_handle_result found)
         {
             HTTPMethod method_actual = found.method;
-            auto& rules = per_methods_[static_cast<int>(method_actual)].rules;
+            auto &rules = per_methods_[static_cast<int>(method_actual)].rules;
             unsigned rule_index = found.rule_index;
 
             if (rule_index >= rules.size())
@@ -1674,10 +1687,10 @@ namespace crow
             // any uncaught exceptions become 500s
             try
             {
-                auto& rule = rules[rule_index];
+                auto &rule = rules[rule_index];
                 handle_rule<App>(rule, req, res, found.r_params);
             }
-            catch (std::exception& e)
+            catch (std::exception &e)
             {
                 CROW_LOG_ERROR << "An uncaught exception occurred: " << e.what();
                 res = response(500);
@@ -1693,14 +1706,14 @@ namespace crow
             }
         }
 
-        template<typename App>
+        template <typename App>
         typename std::enable_if<std::tuple_size<typename App::mw_container_t>::value != 0, void>::type
-          handle_rule(BaseRule* rule, crow::request& req, crow::response& res, const crow::routing_params& rp)
+        handle_rule(BaseRule *rule, crow::request &req, crow::response &res, const crow::routing_params &rp)
         {
             if (!rule->mw_indices_.empty())
             {
-                auto& ctx = *reinterpret_cast<typename App::context_t*>(req.middleware_context);
-                auto& container = *reinterpret_cast<typename App::mw_container_t*>(req.middleware_container);
+                auto &ctx = *reinterpret_cast<typename App::context_t *>(req.middleware_context);
+                auto &container = *reinterpret_cast<typename App::mw_container_t *>(req.middleware_container);
                 detail::middleware_call_criteria_dynamic<false> crit_fwd(rule->mw_indices_.indices());
 
                 auto glob_completion_handler = std::move(res.complete_request_handler_);
@@ -1715,23 +1728,24 @@ namespace crow
                     return;
                 }
 
-                res.complete_request_handler_ = [&rule, &ctx, &container, &req, &res, &glob_completion_handler] {
+                res.complete_request_handler_ = [&rule, &ctx, &container, &req, &res, &glob_completion_handler]
+                {
                     detail::middleware_call_criteria_dynamic<true> crit_bwd(rule->mw_indices_.indices());
 
                     detail::after_handlers_call_helper<
-                      decltype(crit_bwd),
-                      std::tuple_size<typename App::mw_container_t>::value - 1,
-                      typename App::context_t,
-                      typename App::mw_container_t>(crit_bwd, container, ctx, req, res);
+                        decltype(crit_bwd),
+                        std::tuple_size<typename App::mw_container_t>::value - 1,
+                        typename App::context_t,
+                        typename App::mw_container_t>(crit_bwd, container, ctx, req, res);
                     glob_completion_handler();
                 };
             }
             rule->handle(req, res, rp);
         }
 
-        template<typename App>
+        template <typename App>
         typename std::enable_if<std::tuple_size<typename App::mw_container_t>::value == 0, void>::type
-          handle_rule(BaseRule* rule, crow::request& req, crow::response& res, const crow::routing_params& rp)
+        handle_rule(BaseRule *rule, crow::request &req, crow::response &res, const crow::routing_params &rp)
         {
             rule->handle(req, res, rp);
         }
@@ -1740,7 +1754,7 @@ namespace crow
         {
             for (int i = 0; i < static_cast<int>(HTTPMethod::InternalMethodCount); i++)
             {
-                Trie& trie_ = per_methods_[i].trie;
+                Trie &trie_ = per_methods_[i].trie;
                 if (!trie_.is_empty())
                 {
                     CROW_LOG_DEBUG << method_name(static_cast<HTTPMethod>(i));
@@ -1749,7 +1763,7 @@ namespace crow
             }
         }
 
-        std::vector<Blueprint*>& blueprints()
+        std::vector<Blueprint *> &blueprints()
         {
             return blueprints_;
         }
@@ -1759,15 +1773,14 @@ namespace crow
 
         struct PerMethod
         {
-            std::vector<BaseRule*> rules;
+            std::vector<BaseRule *> rules;
             Trie trie;
 
             // rule index 0, 1 has special meaning; preallocate it to avoid duplication.
-            PerMethod():
-              rules(2) {}
+            PerMethod() : rules(2) {}
         };
         std::array<PerMethod, static_cast<int>(HTTPMethod::InternalMethodCount)> per_methods_;
         std::vector<std::unique_ptr<BaseRule>> all_rules_;
-        std::vector<Blueprint*> blueprints_;
+        std::vector<Blueprint *> blueprints_;
     };
 } // namespace crow

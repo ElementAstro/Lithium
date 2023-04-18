@@ -45,22 +45,22 @@ namespace crow
             std::string prefix;
             switch (level)
             {
-                case LogLevel::Debug:
-                    spdlog::debug("{}",message);
-                    break;
-                case LogLevel::Info:
-                    spdlog::info("{}",message);
-                    break;
-                case LogLevel::Warning:
-                    spdlog::warn("{}",message);
-                    break;
-                case LogLevel::Error:
-                    spdlog::error("{}",message);
-                    break;
-                case LogLevel::Critical:
-                    spdlog::critical("{}",message);
-                    break;
-            }  
+            case LogLevel::Debug:
+                spdlog::debug("{}", message);
+                break;
+            case LogLevel::Info:
+                spdlog::info("{}", message);
+                break;
+            case LogLevel::Warning:
+                spdlog::warn("{}", message);
+                break;
+            case LogLevel::Error:
+                spdlog::error("{}", message);
+                break;
+            case LogLevel::Critical:
+                spdlog::critical("{}", message);
+                break;
+            }
         }
 
     private:
@@ -93,9 +93,9 @@ namespace crow
     class logger
     {
     public:
-        logger(LogLevel level):
-          level_(level)
-        {}
+        logger(LogLevel level) : level_(level)
+        {
+        }
         ~logger()
         {
 #ifdef CROW_ENABLE_LOGGING
@@ -107,8 +107,8 @@ namespace crow
         }
 
         //
-        template<typename T>
-        logger& operator<<(T const& value)
+        template <typename T>
+        logger &operator<<(T const &value)
         {
 #ifdef CROW_ENABLE_LOGGING
             if (level_ >= get_current_log_level())
@@ -122,21 +122,21 @@ namespace crow
         //
         static void setLogLevel(LogLevel level) { get_log_level_ref() = level; }
 
-        static void setHandler(ILogHandler* handler) { get_handler_ref() = handler; }
+        static void setHandler(ILogHandler *handler) { get_handler_ref() = handler; }
 
         static LogLevel get_current_log_level() { return get_log_level_ref(); }
 
     private:
         //
-        static LogLevel& get_log_level_ref()
+        static LogLevel &get_log_level_ref()
         {
             static LogLevel current_level = static_cast<LogLevel>(CROW_LOG_LEVEL);
             return current_level;
         }
-        static ILogHandler*& get_handler_ref()
+        static ILogHandler *&get_handler_ref()
         {
             static CerrLogHandler default_handler;
-            static ILogHandler* current_handler = &default_handler;
+            static ILogHandler *current_handler = &default_handler;
             return current_handler;
         }
 

@@ -37,10 +37,12 @@ Description: Task Runner
 #include "runner.hpp"
 #include "openapt.hpp"
 
+extern MyApp m_App;
+
 namespace OpenAPT
 {
 
-    std::function<void(const nlohmann::json &)> getTaskFunction(const std::string &funcName, const std::string &moduleName, ModuleLoader &moduleLoader)
+    std::function<void(const nlohmann::json &)> getTaskFunction(const std::string &funcName, const std::string &moduleName, const ModuleLoader *moduleLoader)
     {
         if (funcName == "Print")
         {
@@ -60,10 +62,10 @@ namespace OpenAPT
         }
         else if (moduleName != "")
         {
-            return [&, moduleName, funcName](const nlohmann::json &j)
+            return [moduleName, funcName](const nlohmann::json &j)
             {
                 spdlog::debug("Simple modules task is called");
-                moduleLoader.LoadAndRunFunction<void>(moduleName, funcName, funcName, false);
+                m_App.GetModuleLoader()->LoadAndRunFunction<void>(moduleName, funcName, funcName, false);
                 spdlog::debug("Simple modules task is finished");
             };
         }
@@ -79,9 +81,9 @@ namespace OpenAPT
         spdlog::debug("Generating {} task with task name {} and description {}", taskType, taskName, description);
 
         std::function<void(const nlohmann::json &)> taskFunction;
-        if constexpr (std::is_same_v<decltype(taskFunction), decltype(getTaskFunction(funcName, moduleName, m_ModuleLoader))>)
+        if constexpr (std::is_same_v<decltype(taskFunction), decltype(getTaskFunction(funcName, moduleName, m_App.GetModuleLoader()))>)
         {
-            taskFunction = getTaskFunction(funcName, moduleName, m_ModuleLoader);
+            taskFunction = getTaskFunction(funcName, moduleName, m_App.GetModuleLoader());
         }
         else
         {

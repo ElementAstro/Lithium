@@ -84,13 +84,13 @@ namespace OpenAPT
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        // 检查设备类型是否合法
+        // Check if device type is valid
         if (type < DeviceType::Camera || type > DeviceType::Guider)
         {
             throw std::invalid_argument("Invalid device type");
         }
 
-        // 检查设备名称是否重复
+        // Check if device name already exists
         if (findDeviceByName(name))
         {
             spdlog::warn("A device with name {} already exists, please choose a different name", name);
@@ -104,7 +104,7 @@ namespace OpenAPT
             newName = fmt::format("{}-{}", name, index++);
         }
 
-        // 创建新设备并添加到设备列表
+        // Create new device and add it to the device list
         switch (type)
         {
         case DeviceType::Camera:
@@ -116,7 +116,7 @@ namespace OpenAPT
         }
         case DeviceType::Telescope:
         {
-            spdlog::debug("Trying to add a new camera instance : {}", newName);
+            spdlog::debug("Trying to add a new telescope instance : {}", newName);
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDITelescope>(newName));
             spdlog::debug("Added new telescope instance successfully");
             break;
@@ -130,7 +130,7 @@ namespace OpenAPT
         }
         case DeviceType::FilterWheel:
         {
-            spdlog::debug("Trying to add a new camera instance : {}", newName);
+            spdlog::debug("Trying to add a new filterwheel instance : {}", newName);
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDIFilterwheel>(newName));
             spdlog::debug("Added new filterwheel instance successfully");
             break;
@@ -171,7 +171,7 @@ namespace OpenAPT
         for (auto &devices : m_devices)
         {
             devices.erase(std::remove_if(devices.begin(), devices.end(),
-                                         [&](std::shared_ptr<Device> device)
+                                         [&](const std::shared_ptr<Device> &device)
                                          { return device && device->getName() == name; }),
                           devices.end());
         }
@@ -221,27 +221,11 @@ namespace OpenAPT
         return nullptr;
     }
 
-    std::shared_ptr<Camera> DeviceManager::getCamera(const std::string &name)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-
-        size_t index = findDevice(DeviceType::Camera, name);
-        if (index != -1)
-        {
-            return std::dynamic_pointer_cast<Camera>(m_devices[static_cast<int>(DeviceType::Camera)][index]);
-        }
-        else
-        {
-            spdlog::warn("Could not find camera {}", name);
-            return nullptr;
-        }
-    }
-
     std::shared_ptr<SimpleTask> DeviceManager::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
-        auto device = m_DeviceManager.findDeviceByName(device_name);
+        auto device = findDeviceByName(device_name);
         if (device != nullptr)
         {
             switch (type)
@@ -325,7 +309,7 @@ namespace OpenAPT
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
-        auto device = m_DeviceManager.findDeviceByName(device_name);
+        auto device = findDeviceByName(device_name);
         if (device != nullptr)
         {
             switch (type)

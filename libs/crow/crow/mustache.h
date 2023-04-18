@@ -15,15 +15,15 @@ namespace crow
     {
         using context = json::wvalue;
 
-        template_t load(const std::string& filename);
+        template_t load(const std::string &filename);
 
         class invalid_template_exception : public std::exception
         {
         public:
-            invalid_template_exception(const std::string& msg):
-              msg("crow::mustache error: " + msg)
-            {}
-            virtual const char* what() const throw()
+            invalid_template_exception(const std::string &msg) : msg("crow::mustache error: " + msg)
+            {
+            }
+            virtual const char *what() const throw()
             {
                 return msg.c_str();
             }
@@ -32,11 +32,9 @@ namespace crow
 
         struct rendered_template : returnable
         {
-            rendered_template():
-              returnable("text/html") {}
+            rendered_template() : returnable("text/html") {}
 
-            rendered_template(std::string& body):
-              returnable("text/html"), body_(std::move(body)) {}
+            rendered_template(std::string &body) : returnable("text/html"), body_(std::move(body)) {}
 
             std::string body_;
 
@@ -63,8 +61,7 @@ namespace crow
             int end;
             int pos;
             ActionType t;
-            Action(ActionType t, size_t start, size_t end, size_t pos = 0):
-              start(static_cast<int>(start)), end(static_cast<int>(end)), pos(static_cast<int>(pos)), t(t)
+            Action(ActionType t, size_t start, size_t end, size_t pos = 0) : start(static_cast<int>(start)), end(static_cast<int>(end)), pos(static_cast<int>(pos)), t(t)
             {
             }
         };
@@ -73,19 +70,18 @@ namespace crow
         class template_t
         {
         public:
-            template_t(std::string body):
-              body_(std::move(body))
+            template_t(std::string body) : body_(std::move(body))
             {
                 // {{ {{# {{/ {{^ {{! {{> {{=
                 parse();
             }
 
         private:
-            std::string tag_name(const Action& action) const
+            std::string tag_name(const Action &action) const
             {
                 return body_.substr(action.start, action.end - action.start);
             }
-            auto find_context(const std::string& name, const std::vector<context*>& stack, bool shouldUseOnlyFirstStackValue = false) const -> std::pair<bool, context&>
+            auto find_context(const std::string &name, const std::vector<context *> &stack, bool shouldUseOnlyFirstStackValue = false) const -> std::pair<bool, context &>
             {
                 if (name == ".")
                 {
@@ -123,7 +119,7 @@ namespace crow
 
                     for (auto it = stack.rbegin(); it != stack.rend(); ++it)
                     {
-                        context* view = *it;
+                        context *view = *it;
                         bool found = true;
                         for (auto jt = names.begin(); jt != names.end(); ++jt)
                         {
@@ -150,34 +146,52 @@ namespace crow
                 return {false, empty_str};
             }
 
-            void escape(const std::string& in, std::string& out) const
+            void escape(const std::string &in, std::string &out) const
             {
                 out.reserve(out.size() + in.size());
                 for (auto it = in.begin(); it != in.end(); ++it)
                 {
                     switch (*it)
                     {
-                        case '&': out += "&amp;"; break;
-                        case '<': out += "&lt;"; break;
-                        case '>': out += "&gt;"; break;
-                        case '"': out += "&quot;"; break;
-                        case '\'': out += "&#39;"; break;
-                        case '/': out += "&#x2F;"; break;
-                        case '`': out += "&#x60;"; break;
-                        case '=': out += "&#x3D;"; break;
-                        default: out += *it; break;
+                    case '&':
+                        out += "&amp;";
+                        break;
+                    case '<':
+                        out += "&lt;";
+                        break;
+                    case '>':
+                        out += "&gt;";
+                        break;
+                    case '"':
+                        out += "&quot;";
+                        break;
+                    case '\'':
+                        out += "&#39;";
+                        break;
+                    case '/':
+                        out += "&#x2F;";
+                        break;
+                    case '`':
+                        out += "&#x60;";
+                        break;
+                    case '=':
+                        out += "&#x3D;";
+                        break;
+                    default:
+                        out += *it;
+                        break;
                     }
                 }
             }
 
-            bool isTagInsideObjectBlock(const int& current, const std::vector<context*>& stack) const
+            bool isTagInsideObjectBlock(const int &current, const std::vector<context *> &stack) const
             {
                 int openedBlock = 0;
                 int totalBlocksBefore = 0;
                 for (int i = current; i > 0; --i)
                 {
                     ++totalBlocksBefore;
-                    auto& action = actions_[i - 1];
+                    auto &action = actions_[i - 1];
 
                     if (action.t == ActionType::OpenBlock)
                     {
@@ -196,7 +210,7 @@ namespace crow
                 return false;
             }
 
-            void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out, int indent) const
+            void render_internal(int actionBegin, int actionEnd, std::vector<context *> &stack, std::string &out, int indent) const
             {
                 int current = actionBegin;
 
@@ -205,144 +219,144 @@ namespace crow
 
                 while (current < actionEnd)
                 {
-                    auto& fragment = fragments_[current];
-                    auto& action = actions_[current];
+                    auto &fragment = fragments_[current];
+                    auto &action = actions_[current];
                     render_fragment(fragment, indent, out);
                     switch (action.t)
                     {
-                        case ActionType::Ignore:
-                            // do nothing
+                    case ActionType::Ignore:
+                        // do nothing
+                        break;
+                    case ActionType::Partial:
+                    {
+                        std::string partial_name = tag_name(action);
+                        auto partial_templ = load(partial_name);
+                        int partial_indent = action.pos;
+                        partial_templ.render_internal(0, partial_templ.fragments_.size() - 1, stack, out, partial_indent ? indent + partial_indent : 0);
+                    }
+                    break;
+                    case ActionType::UnescapeTag:
+                    case ActionType::Tag:
+                    {
+                        bool shouldUseOnlyFirstStackValue = false;
+                        if (isTagInsideObjectBlock(current, stack))
+                        {
+                            shouldUseOnlyFirstStackValue = true;
+                        }
+                        auto optional_ctx = find_context(tag_name(action), stack, shouldUseOnlyFirstStackValue);
+                        auto &ctx = optional_ctx.second;
+                        switch (ctx.t())
+                        {
+                        case json::type::False:
+                        case json::type::True:
+                        case json::type::Number:
+                            out += ctx.dump();
                             break;
-                        case ActionType::Partial:
+                        case json::type::String:
+                            if (action.t == ActionType::Tag)
+                                escape(ctx.s, out);
+                            else
+                                out += ctx.s;
+                            break;
+                        case json::type::Function:
                         {
-                            std::string partial_name = tag_name(action);
-                            auto partial_templ = load(partial_name);
-                            int partial_indent = action.pos;
-                            partial_templ.render_internal(0, partial_templ.fragments_.size() - 1, stack, out, partial_indent ? indent + partial_indent : 0);
-                        }
-                        break;
-                        case ActionType::UnescapeTag:
-                        case ActionType::Tag:
-                        {
-                            bool shouldUseOnlyFirstStackValue = false;
-                            if (isTagInsideObjectBlock(current, stack))
+                            std::string execute_result = ctx.execute();
+                            while (execute_result.find("{{") != std::string::npos)
                             {
-                                shouldUseOnlyFirstStackValue = true;
-                            }
-                            auto optional_ctx = find_context(tag_name(action), stack, shouldUseOnlyFirstStackValue);
-                            auto& ctx = optional_ctx.second;
-                            switch (ctx.t())
-                            {
-                                case json::type::False:
-                                case json::type::True:
-                                case json::type::Number:
-                                    out += ctx.dump();
-                                    break;
-                                case json::type::String:
-                                    if (action.t == ActionType::Tag)
-                                        escape(ctx.s, out);
-                                    else
-                                        out += ctx.s;
-                                    break;
-                                case json::type::Function:
-                                {
-                                    std::string execute_result = ctx.execute();
-                                    while (execute_result.find("{{") != std::string::npos)
-                                    {
-                                        template_t result_plug(execute_result);
-                                        execute_result = result_plug.render_string(*(stack[0]));
-                                    }
-
-                                    if (action.t == ActionType::Tag)
-                                        escape(execute_result, out);
-                                    else
-                                        out += execute_result;
-                                }
-                                break;
-                                default:
-                                    throw std::runtime_error("not implemented tag type" + utility::lexical_cast<std::string>(static_cast<int>(ctx.t())));
-                            }
-                        }
-                        break;
-                        case ActionType::ElseBlock:
-                        {
-                            static context nullContext;
-                            auto optional_ctx = find_context(tag_name(action), stack);
-                            if (!optional_ctx.first)
-                            {
-                                stack.emplace_back(&nullContext);
-                                break;
+                                template_t result_plug(execute_result);
+                                execute_result = result_plug.render_string(*(stack[0]));
                             }
 
-                            auto& ctx = optional_ctx.second;
-                            switch (ctx.t())
-                            {
-                                case json::type::List:
-                                    if (ctx.l && !ctx.l->empty())
-                                        current = action.pos;
-                                    else
-                                        stack.emplace_back(&nullContext);
-                                    break;
-                                case json::type::False:
-                                case json::type::Null:
-                                    stack.emplace_back(&nullContext);
-                                    break;
-                                default:
-                                    current = action.pos;
-                                    break;
-                            }
+                            if (action.t == ActionType::Tag)
+                                escape(execute_result, out);
+                            else
+                                out += execute_result;
+                        }
+                        break;
+                        default:
+                            throw std::runtime_error("not implemented tag type" + utility::lexical_cast<std::string>(static_cast<int>(ctx.t())));
+                        }
+                    }
+                    break;
+                    case ActionType::ElseBlock:
+                    {
+                        static context nullContext;
+                        auto optional_ctx = find_context(tag_name(action), stack);
+                        if (!optional_ctx.first)
+                        {
+                            stack.emplace_back(&nullContext);
                             break;
                         }
-                        case ActionType::OpenBlock:
+
+                        auto &ctx = optional_ctx.second;
+                        switch (ctx.t())
                         {
-                            auto optional_ctx = find_context(tag_name(action), stack);
-                            if (!optional_ctx.first)
-                            {
+                        case json::type::List:
+                            if (ctx.l && !ctx.l->empty())
                                 current = action.pos;
-                                break;
-                            }
-
-                            auto& ctx = optional_ctx.second;
-                            switch (ctx.t())
-                            {
-                                case json::type::List:
-                                    if (ctx.l)
-                                        for (auto it = ctx.l->begin(); it != ctx.l->end(); ++it)
-                                        {
-                                            stack.push_back(&*it);
-                                            render_internal(current + 1, action.pos, stack, out, indent);
-                                            stack.pop_back();
-                                        }
-                                    current = action.pos;
-                                    break;
-                                case json::type::Number:
-                                case json::type::String:
-                                case json::type::Object:
-                                case json::type::True:
-                                    stack.push_back(&ctx);
-                                    break;
-                                case json::type::False:
-                                case json::type::Null:
-                                    current = action.pos;
-                                    break;
-                                default:
-                                    throw std::runtime_error("{{#: not implemented context type: " + utility::lexical_cast<std::string>(static_cast<int>(ctx.t())));
-                                    break;
-                            }
+                            else
+                                stack.emplace_back(&nullContext);
                             break;
-                        }
-                        case ActionType::CloseBlock:
-                            stack.pop_back();
+                        case json::type::False:
+                        case json::type::Null:
+                            stack.emplace_back(&nullContext);
                             break;
                         default:
-                            throw std::runtime_error("not implemented " + utility::lexical_cast<std::string>(static_cast<int>(action.t)));
+                            current = action.pos;
+                            break;
+                        }
+                        break;
+                    }
+                    case ActionType::OpenBlock:
+                    {
+                        auto optional_ctx = find_context(tag_name(action), stack);
+                        if (!optional_ctx.first)
+                        {
+                            current = action.pos;
+                            break;
+                        }
+
+                        auto &ctx = optional_ctx.second;
+                        switch (ctx.t())
+                        {
+                        case json::type::List:
+                            if (ctx.l)
+                                for (auto it = ctx.l->begin(); it != ctx.l->end(); ++it)
+                                {
+                                    stack.push_back(&*it);
+                                    render_internal(current + 1, action.pos, stack, out, indent);
+                                    stack.pop_back();
+                                }
+                            current = action.pos;
+                            break;
+                        case json::type::Number:
+                        case json::type::String:
+                        case json::type::Object:
+                        case json::type::True:
+                            stack.push_back(&ctx);
+                            break;
+                        case json::type::False:
+                        case json::type::Null:
+                            current = action.pos;
+                            break;
+                        default:
+                            throw std::runtime_error("{{#: not implemented context type: " + utility::lexical_cast<std::string>(static_cast<int>(ctx.t())));
+                            break;
+                        }
+                        break;
+                    }
+                    case ActionType::CloseBlock:
+                        stack.pop_back();
+                        break;
+                    default:
+                        throw std::runtime_error("not implemented " + utility::lexical_cast<std::string>(static_cast<int>(action.t)));
                     }
                     current++;
                 }
-                auto& fragment = fragments_[actionEnd];
+                auto &fragment = fragments_[actionEnd];
                 render_fragment(fragment, indent, out);
             }
-            void render_fragment(const std::pair<int, int> fragment, int indent, std::string& out) const
+            void render_fragment(const std::pair<int, int> fragment, int indent, std::string &out) const
             {
                 if (indent)
                 {
@@ -362,7 +376,7 @@ namespace crow
             rendered_template render() const
             {
                 context empty_ctx;
-                std::vector<context*> stack;
+                std::vector<context *> stack;
                 stack.emplace_back(&empty_ctx);
 
                 std::string ret;
@@ -371,9 +385,9 @@ namespace crow
             }
 
             /// Apply the values from the context provided and output a returnable template from this mustache template
-            rendered_template render(context& ctx) const
+            rendered_template render(context &ctx) const
             {
-                std::vector<context*> stack;
+                std::vector<context *> stack;
                 stack.emplace_back(&ctx);
 
                 std::string ret;
@@ -382,7 +396,7 @@ namespace crow
             }
 
             /// Apply the values from the context provided and output a returnable template from this mustache template
-            rendered_template render(context&& ctx) const
+            rendered_template render(context &&ctx) const
             {
                 return render(ctx);
             }
@@ -391,7 +405,7 @@ namespace crow
             std::string render_string() const
             {
                 context empty_ctx;
-                std::vector<context*> stack;
+                std::vector<context *> stack;
                 stack.emplace_back(&empty_ctx);
 
                 std::string ret;
@@ -400,9 +414,9 @@ namespace crow
             }
 
             /// Apply the values from the context provided and output a returnable template from this mustache template
-            std::string render_string(context& ctx) const
+            std::string render_string(context &ctx) const
             {
-                std::vector<context*> stack;
+                std::vector<context *> stack;
                 stack.emplace_back(&ctx);
 
                 std::string ret;
@@ -444,126 +458,126 @@ namespace crow
                     current = endIdx + tag_close.size();
                     switch (body_[idx])
                     {
-                        case '#':
+                    case '#':
+                        idx++;
+                        while (body_[idx] == ' ')
                             idx++;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            blockPositions.emplace_back(static_cast<int>(actions_.size()));
-                            actions_.emplace_back(ActionType::OpenBlock, idx, endIdx);
-                            break;
-                        case '/':
-                            idx++;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            {
-                                auto& matched = actions_[blockPositions.back()];
-                                if (body_.compare(idx, endIdx - idx,
-                                                  body_, matched.start, matched.end - matched.start) != 0)
-                                {
-                                    throw invalid_template_exception("not matched {{# {{/ pair: " +
-                                                                     body_.substr(matched.start, matched.end - matched.start) + ", " +
-                                                                     body_.substr(idx, endIdx - idx));
-                                }
-                                matched.pos = actions_.size();
-                            }
-                            actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
-                            blockPositions.pop_back();
-                            break;
-                        case '^':
-                            idx++;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            blockPositions.emplace_back(static_cast<int>(actions_.size()));
-                            actions_.emplace_back(ActionType::ElseBlock, idx, endIdx);
-                            break;
-                        case '!':
-                            // do nothing action
-                            actions_.emplace_back(ActionType::Ignore, idx + 1, endIdx);
-                            break;
-                        case '>': // partial
-                            idx++;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            actions_.emplace_back(ActionType::Partial, idx, endIdx);
-                            break;
-                        case '{':
-                            if (tag_open != "{{" || tag_close != "}}")
-                                throw invalid_template_exception("cannot use triple mustache when delimiter changed");
-
-                            idx++;
-                            if (body_[endIdx + 2] != '}')
-                            {
-                                throw invalid_template_exception("{{{: }}} not matched");
-                            }
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
-                            current++;
-                            break;
-                        case '&':
-                            idx++;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
-                            break;
-                        case '=':
-                            // tag itself is no-op
-                            idx++;
-                            actions_.emplace_back(ActionType::Ignore, idx, endIdx);
+                        while (body_[endIdx - 1] == ' ')
                             endIdx--;
-                            if (body_[endIdx] != '=')
-                                throw invalid_template_exception("{{=: not matching = tag: " + body_.substr(idx, endIdx - idx));
+                        blockPositions.emplace_back(static_cast<int>(actions_.size()));
+                        actions_.emplace_back(ActionType::OpenBlock, idx, endIdx);
+                        break;
+                    case '/':
+                        idx++;
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx - 1] == ' ')
                             endIdx--;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx] == ' ')
-                                endIdx--;
-                            endIdx++;
+                        {
+                            auto &matched = actions_[blockPositions.back()];
+                            if (body_.compare(idx, endIdx - idx,
+                                              body_, matched.start, matched.end - matched.start) != 0)
                             {
-                                bool succeeded = false;
-                                for (size_t i = idx; i < endIdx; i++)
-                                {
-                                    if (body_[i] == ' ')
-                                    {
-                                        tag_open = body_.substr(idx, i - idx);
-                                        while (body_[i] == ' ')
-                                            i++;
-                                        tag_close = body_.substr(i, endIdx - i);
-                                        if (tag_open.empty())
-                                            throw invalid_template_exception("{{=: empty open tag");
-                                        if (tag_close.empty())
-                                            throw invalid_template_exception("{{=: empty close tag");
-
-                                        if (tag_close.find(" ") != tag_close.npos)
-                                            throw invalid_template_exception("{{=: invalid open/close tag: " + tag_open + " " + tag_close);
-                                        succeeded = true;
-                                        break;
-                                    }
-                                }
-                                if (!succeeded)
-                                    throw invalid_template_exception("{{=: cannot find space between new open/close tags");
+                                throw invalid_template_exception("not matched {{# {{/ pair: " +
+                                                                 body_.substr(matched.start, matched.end - matched.start) + ", " +
+                                                                 body_.substr(idx, endIdx - idx));
                             }
-                            break;
-                        default:
-                            // normal tag case;
-                            while (body_[idx] == ' ')
-                                idx++;
-                            while (body_[endIdx - 1] == ' ')
-                                endIdx--;
-                            actions_.emplace_back(ActionType::Tag, idx, endIdx);
-                            break;
+                            matched.pos = actions_.size();
+                        }
+                        actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
+                        blockPositions.pop_back();
+                        break;
+                    case '^':
+                        idx++;
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx - 1] == ' ')
+                            endIdx--;
+                        blockPositions.emplace_back(static_cast<int>(actions_.size()));
+                        actions_.emplace_back(ActionType::ElseBlock, idx, endIdx);
+                        break;
+                    case '!':
+                        // do nothing action
+                        actions_.emplace_back(ActionType::Ignore, idx + 1, endIdx);
+                        break;
+                    case '>': // partial
+                        idx++;
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx - 1] == ' ')
+                            endIdx--;
+                        actions_.emplace_back(ActionType::Partial, idx, endIdx);
+                        break;
+                    case '{':
+                        if (tag_open != "{{" || tag_close != "}}")
+                            throw invalid_template_exception("cannot use triple mustache when delimiter changed");
+
+                        idx++;
+                        if (body_[endIdx + 2] != '}')
+                        {
+                            throw invalid_template_exception("{{{: }}} not matched");
+                        }
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx - 1] == ' ')
+                            endIdx--;
+                        actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
+                        current++;
+                        break;
+                    case '&':
+                        idx++;
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx - 1] == ' ')
+                            endIdx--;
+                        actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
+                        break;
+                    case '=':
+                        // tag itself is no-op
+                        idx++;
+                        actions_.emplace_back(ActionType::Ignore, idx, endIdx);
+                        endIdx--;
+                        if (body_[endIdx] != '=')
+                            throw invalid_template_exception("{{=: not matching = tag: " + body_.substr(idx, endIdx - idx));
+                        endIdx--;
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx] == ' ')
+                            endIdx--;
+                        endIdx++;
+                        {
+                            bool succeeded = false;
+                            for (size_t i = idx; i < endIdx; i++)
+                            {
+                                if (body_[i] == ' ')
+                                {
+                                    tag_open = body_.substr(idx, i - idx);
+                                    while (body_[i] == ' ')
+                                        i++;
+                                    tag_close = body_.substr(i, endIdx - i);
+                                    if (tag_open.empty())
+                                        throw invalid_template_exception("{{=: empty open tag");
+                                    if (tag_close.empty())
+                                        throw invalid_template_exception("{{=: empty close tag");
+
+                                    if (tag_close.find(" ") != tag_close.npos)
+                                        throw invalid_template_exception("{{=: invalid open/close tag: " + tag_open + " " + tag_close);
+                                    succeeded = true;
+                                    break;
+                                }
+                            }
+                            if (!succeeded)
+                                throw invalid_template_exception("{{=: cannot find space between new open/close tags");
+                        }
+                        break;
+                    default:
+                        // normal tag case;
+                        while (body_[idx] == ' ')
+                            idx++;
+                        while (body_[endIdx - 1] == ' ')
+                            endIdx--;
+                        actions_.emplace_back(ActionType::Tag, idx, endIdx);
+                        break;
                     }
                 }
 
@@ -572,8 +586,8 @@ namespace crow
                 {
                     if (actions_[i].t == ActionType::Tag || actions_[i].t == ActionType::UnescapeTag)
                         continue;
-                    auto& fragment_before = fragments_[i];
-                    auto& fragment_after = fragments_[i + 1];
+                    auto &fragment_before = fragments_[i];
+                    auto &fragment_after = fragments_[i + 1];
                     bool is_last_action = i == static_cast<int>(actions_.size()) - 2;
                     bool all_space_before = true;
                     int j, k;
@@ -602,10 +616,10 @@ namespace crow
                         continue;
                     if (!all_space_after &&
                         !(
-                          body_[k] == '\n' ||
-                          (body_[k] == '\r' &&
-                           k + 1 < static_cast<int>(body_.size()) &&
-                           body_[k + 1] == '\n')))
+                            body_[k] == '\n' ||
+                            (body_[k] == '\r' &&
+                             k + 1 < static_cast<int>(body_.size()) &&
+                             body_[k + 1] == '\n')))
                         continue;
                     if (actions_[i].t == ActionType::Partial)
                     {
@@ -628,27 +642,27 @@ namespace crow
             std::string body_;
         };
 
-        inline template_t compile(const std::string& body)
+        inline template_t compile(const std::string &body)
         {
             return template_t(body);
         }
         namespace detail
         {
-            inline std::string& get_template_base_directory_ref()
+            inline std::string &get_template_base_directory_ref()
             {
                 static std::string template_base_directory = "templates";
                 return template_base_directory;
             }
 
             /// A base directory not related to any blueprint
-            inline std::string& get_global_template_base_directory_ref()
+            inline std::string &get_global_template_base_directory_ref()
             {
                 static std::string template_base_directory = "templates";
                 return template_base_directory;
             }
         } // namespace detail
 
-        inline std::string default_loader(const std::string& filename)
+        inline std::string default_loader(const std::string &filename)
         {
             std::string path = detail::get_template_base_directory_ref();
             std::ifstream inf(utility::join_path(path, filename));
@@ -662,16 +676,16 @@ namespace crow
 
         namespace detail
         {
-            inline std::function<std::string(std::string)>& get_loader_ref()
+            inline std::function<std::string(std::string)> &get_loader_ref()
             {
                 static std::function<std::string(std::string)> loader = default_loader;
                 return loader;
             }
         } // namespace detail
 
-        inline void set_base(const std::string& path)
+        inline void set_base(const std::string &path)
         {
-            auto& base = detail::get_template_base_directory_ref();
+            auto &base = detail::get_template_base_directory_ref();
             base = path;
             if (base.back() != '\\' &&
                 base.back() != '/')
@@ -680,9 +694,9 @@ namespace crow
             }
         }
 
-        inline void set_global_base(const std::string& path)
+        inline void set_global_base(const std::string &path)
         {
-            auto& base = detail::get_global_template_base_directory_ref();
+            auto &base = detail::get_global_template_base_directory_ref();
             base = path;
             if (base.back() != '\\' &&
                 base.back() != '/')
@@ -696,26 +710,26 @@ namespace crow
             detail::get_loader_ref() = std::move(loader);
         }
 
-        inline std::string load_text(const std::string& filename)
+        inline std::string load_text(const std::string &filename)
         {
             std::string filename_sanitized(filename);
             utility::sanitize_filename(filename_sanitized);
             return detail::get_loader_ref()(filename_sanitized);
         }
 
-        inline std::string load_text_unsafe(const std::string& filename)
+        inline std::string load_text_unsafe(const std::string &filename)
         {
             return detail::get_loader_ref()(filename);
         }
 
-        inline template_t load(const std::string& filename)
+        inline template_t load(const std::string &filename)
         {
             std::string filename_sanitized(filename);
             utility::sanitize_filename(filename_sanitized);
             return compile(detail::get_loader_ref()(filename_sanitized));
         }
 
-        inline template_t load_unsafe(const std::string& filename)
+        inline template_t load_unsafe(const std::string &filename)
         {
             return compile(detail::get_loader_ref()(filename));
         }

@@ -41,31 +41,27 @@ Description: C++ and Python Modules Loader
 #include <cxxabi.h>
 #include <regex>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
-#include <curl/curl.h>
-
 namespace fs = std::filesystem;
-namespace pt = boost::property_tree;
+
+#ifdef _WIN32
+#define PATH_SEPARATOR "\\"
+#else
+#define PATH_SEPARATOR "/"
+#endif
+
 
 namespace OpenAPT
 {
-
-    // Function: read_config_file()
-    // Description: Read a JSON configuration file and return its content as a JSON object.
-    // Parameters:
-    // - file_path (const std::string&) : The path of the configuration file to be read.
-    // Return value: nlohmann::json - A JSON object containing the configuration information or an error message.
     /**
-     * @brief 读取一个 JSON 配置文件，将其内容以 JSON 对象的形式返回。
+     * @brief Read a JSON configuration file and return its content as a JSON object.
      *
-     * 该函数接收一个 JSON 配置文件的路径，打开文件流，读取文件内容到 JSON 对象中，然后关闭文件流并返回 JSON 对象。如果读取过程中出现任何异常，
-     * 则返回一个包含 "error" 字段和错误消息的 JSON 对象。
+     * This function reads a JSON configuration file, stores its content in a JSON object, and returns the object. If it fails to read
+     * the file or encounters any exception, it returns an error message as a JSON object.
      *
-     * @param file_path (const std::string&) : 要读取的配置文件路径。
-     * @return nlohmann::json - 包含配置信息或错误消息的 JSON 对象。
+     * @param file_path (const std::string&) : The path of the configuration file to be read.
+     * @return nlohmann::json - A JSON object containing the configuration information or an error message.
      */
-    nlohmann::json read_config_file(const std::string &file_path)
+    nlohmann::json read_config_file(const std::string& file_path)
     {
         try
         {
@@ -85,34 +81,32 @@ namespace OpenAPT
             file_stream.close();
             return config;
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             spdlog::error("Failed to read config file {}: {}", file_path, e.what());
             return {{"error", "Failed to read config file"}};
         }
     }
 
-    // Function: iterator_modules_dir()
-    // Description: Traverse the "modules" directory and create a JSON object containing the information of all modules.
-    // Return value: nlohmann::json - A JSON object containing the module information or an error message.
     /**
-     * @brief 遍历 "modules" 目录及其子目录，创建包含所有模块信息的 JSON 对象。
+     * @brief Traverse the "modules" directory and create a JSON object containing the information of all modules.
      *
-     * 该函数遍历 "modules" 目录及其子目录，在每个包含 "info.json" 配置文件的子目录中创建一个 JSON 对象，其中包含子目录的路径、配置文件的路径，
-     * 以及模块的名称、版本、作者、许可证和描述。如果没有找到任何模块，则返回一个包含消息指示没有模块的 JSON 对象。如果出现任何异常，
-     * 则返回一个包含 "error" 字段和错误消息的 JSON 对象。
+     * This function iterates through the "modules" directory and its subdirectories, creates a JSON object for each subdirectory that
+     * contains an "info.json" configuration file, and stores the module's name, version, author, license, description, path, and configuration
+     * file path in the JSON object. It returns a JSON object containing all module information, or an error message if it fails to iterate
+     * the directories or encounters any exception.
      *
-     * @return nlohmann::json - 包含所有模块信息或错误消息的 JSON 对象。
+     * @return nlohmann::json - A JSON object containing the module information or an error message.
      */
     nlohmann::json iterator_modules_dir()
     {
         // Define the modules directory path
         fs::path modules_dir;
-#ifdef _WIN32 // Windows OS
+    #ifdef _WIN32 // Windows OS
         modules_dir = fs::path(getenv("USERPROFILE")) / "Documents" / "modules";
-#else // Linux OS
+    #else // Linux OS
         modules_dir = "modules";
-#endif
+    #endif
 
         try
         {
@@ -123,7 +117,7 @@ namespace OpenAPT
                 fs::create_directory(modules_dir);
             }
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             spdlog::error("Failed to create modules directory: {}", e.what());
             return {{"error", "Failed to create modules directory"}};
@@ -135,7 +129,7 @@ namespace OpenAPT
         try
         {
             // Iterate through each subdirectory of the modules directory
-            for (auto &dir : fs::recursive_directory_iterator(modules_dir))
+            for (auto& dir : fs::recursive_directory_iterator(modules_dir))
             {
                 // Check if the current directory is indeed a subdirectory
                 if (fs::is_directory(dir))
@@ -153,15 +147,15 @@ namespace OpenAPT
                         config[dir.path().string()]["name"] = module_config["name"];
                         config[dir.path().string()]["version"] = module_config["version"];
                         config[dir.path().string()]["author"] = module_config["author"];
-                        config[dir.path().string()]["license"] = module_config["license"];
-                        config[dir.path().string()]["description"] = module_config["description"];
+                        config[dir.path().string()]["license"] = module_config.value("license", "");
+                        config[dir.path().string()]["description"] = module_config.value("description", "");
                         // Debug message
                         spdlog::debug("Module found: {}, config file: {}", dir.path().string(), info_file.string());
                     }
                 }
             }
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             spdlog::error("Failed to iterate modules directory: {}", e.what());
             return {{"error", "Failed to iterate modules directory"}};
@@ -177,7 +171,7 @@ namespace OpenAPT
         return config;
     }
 
-    ModuleLoader::ModuleLoader()
+    ModuleLoader::ModuleLoader(MyApp *app) : m_App(app)
     {
         spdlog::info("C++ module manager loaded successfully.");
     }
@@ -304,29 +298,6 @@ namespace OpenAPT
         }
     }
 
-/**
- * @brief 从指定目录中编译生成指定名称的动态库，并将其复制到指定路径中。
- *
- * @param dir_path [in] 动态库源码目录的绝对路径
- * @param out_path [in] 动态库输出目录的绝对路径
- * @param build_path [in] 编译过程中生成的临时文件目录的绝对路径
- * @param lib_name [in] 要生成的动态库的名称（不包括扩展名）
- * @return true 动态库生成并复制成功
- * @return false 动态库生成或复制失败
- */
-#ifdef _WIN32 // 判断操作系统，Windows下使用不同的路径分隔符
-#define PATH_SEPARATOR "\\"
-#else
-#define PATH_SEPARATOR "/"
-#endif
-
-    // Loads a binary library using CMake and Make
-    // Returns true if the library is successfully loaded, false otherwise
-    // Throws std::runtime_error on file I/O errors or library loading errors
-    // dir_path: the path of the directory containing the CMakeLists.txt file
-    // out_path: the path where the generated dynamic library will be copied to
-    // build_path: the path where the build files will be generated
-    // lib_name: the name of the dynamic library to build and copy
     bool ModuleLoader::LoadBinary(const char *dir_path, const char *out_path, const char *build_path, const char *lib_name)
     {
         DIR *dir;
@@ -340,7 +311,8 @@ namespace OpenAPT
         dir = opendir(dir_path);
         if (!dir)
         {
-            throw std::runtime_error("Failed to open directory " + std::string(dir_path) + ": " + strerror(errno));
+            spdlog::error("Failed to open directory {}: {}", dir_path, strerror(errno));
+            return false;
         }
 
         // Look for the CMakeLists.txt file
@@ -358,19 +330,22 @@ namespace OpenAPT
         // If CMakeLists.txt is not found, return error
         if (!ent)
         {
-            throw std::runtime_error("Could not find CMakeLists.txt in directory " + std::string(dir_path));
+            spdlog::error("Could not find CMakeLists.txt in directory {}", dir_path);
+            return false;
         }
 
         // Create the build directory and check for errors
         if (mkdir(build_path, 0777) == -1 && errno != EEXIST)
         {
-            throw std::runtime_error("Failed to create build directory: " + std::string(strerror(errno)));
+            spdlog::error("Failed to create build directory: {}", strerror(errno));
+            return false;
         }
 
         // Change the working directory to build and check for errors
         if (chdir(build_path) == -1)
         {
-            throw std::runtime_error("Failed to change working directory to " + std::string(build_path) + ": " + strerror(errno));
+            spdlog::error("Failed to change working directory to {}: {}", build_path, strerror(errno));
+            return false;
         }
 
         // Check if the dynamic library already exists, and copy it if it does
@@ -388,15 +363,16 @@ namespace OpenAPT
             // Remove the build directory
             if (chdir(dir_path) == -1)
             {
-                throw std::runtime_error("Failed to change working directory to " + std::string(dir_path) + ": " + strerror(errno));
+                spdlog::error("Failed to change working directory to {}: {}", dir_path, strerror(errno));
+                return false;
             }
 
             char remove_cmd[512];
-#ifndef _WIN32 // Windows下没有rm命令，使用del命令
+    #ifndef _WIN32
             snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", build_path);
-#else
+    #else
             snprintf(remove_cmd, sizeof(remove_cmd), "rmdir /s /q %s", build_path);
-#endif
+    #endif
             if (system(remove_cmd) != 0)
             {
                 spdlog::error("Failed to remove build directory");
@@ -411,39 +387,43 @@ namespace OpenAPT
             snprintf(cmd, sizeof(cmd), "cmake -DCMAKE_BUILD_TYPE=Release -D LIBRARY_NAME=%s ..", lib_name);
             if (system(cmd) != 0)
             {
-                throw std::runtime_error("Failed to run cmake");
+                spdlog::error("Failed to run cmake");
+                return false;
             }
 
             // Execute Make to build the dynamic library
-#ifdef _WIN32 // Windows下使用nmake命令
+    #ifdef _WIN32
             snprintf(cmd, sizeof(cmd), "nmake");
-#else
+    #else
             snprintf(cmd, sizeof(cmd), "make");
-#endif
+    #endif
             if (system(cmd) != 0)
             {
-                throw std::runtime_error("Failed to run make");
+                spdlog::error("Failed to run make");
+                return false;
             }
 
             // Copy the generated dynamic library to the output directory
             snprintf(cmd, sizeof(cmd), "cp -av lib%s.so %s%s", lib_name, out_path, PATH_SEPARATOR);
             if (system(cmd) != 0)
             {
-                throw std::runtime_error("Failed to copy dynamic library");
+                spdlog::error("Failed to copy dynamic library");
+                ret = false;
             }
 
             // Remove the build directory and check for errors
             if (chdir(dir_path) == -1)
             {
-                throw std::runtime_error("Failed to change working directory to " + std::string(dir_path) + ": " + strerror(errno));
+                spdlog::error("Failed to change working directory to {}: {}", dir_path, strerror(errno));
+                return false;
             }
 
             char remove_cmd[512];
-#ifndef _WIN32
+    #ifndef _WIN32
             snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", build_path);
-#else
+    #else
             snprintf(remove_cmd, sizeof(remove_cmd), "rmdir /s /q %s", build_path);
-#endif
+    #endif
             if (system(remove_cmd) != 0)
             {
                 spdlog::error("Failed to remove build directory");
@@ -459,109 +439,88 @@ namespace OpenAPT
         return ret;
     }
 
-    /**
-     * @brief 获取动态库中指定符号名的函数指针
-     *
-     * @tparam T 函数指针类型
-     * @param module_name 动态库名称
-     * @param function_name 函数符号名
-     * @return T 函数指针
-     */
     template <typename T>
-    T ModuleLoader::GetFunction(const std::string &module_name, const std::string &function_name)
+    T ModuleLoader::GetFunction(const std::string& module_name, const std::string& function_name)
     {
-        // 获取动态库句柄
         auto handle_it = handles_.find(module_name);
         if (handle_it == handles_.end())
         {
             spdlog::error("Failed to find module {}", module_name);
-            return nullptr; // 动态库不存在，返回空指针
+            return nullptr;
         }
-        auto handle = handle_it->second;
 
-#ifdef _WIN32
-        auto func_ptr = reinterpret_cast<void *>(GetProcAddress(handle, function_name.c_str()));
-#else
-        auto func_ptr = dlsym(handle, function_name.c_str());
-#endif
+    #ifdef _WIN32
+        auto func_ptr = reinterpret_cast<T>(GetProcAddress(handle_it->second, function_name.c_str()));
+    #else
+        auto func_ptr = reinterpret_cast<T>(dlsym(handle_it->second, function_name.c_str()));
+    #endif
 
         if (!func_ptr)
         {
-            // 获取出错，输出错误信息
             spdlog::error("Failed to get symbol {} from module {}: {}", function_name, module_name, dlerror());
-            return nullptr; // 函数不存在，返回空指针
+            return nullptr;
         }
-        return reinterpret_cast<T>(func_ptr);
+
+        return func_ptr;
     }
 
-    inline bool endsWith(std::string_view str, std::string_view suffix)
-    {
-        if (suffix.size() > str.size())
-        {
-            return false;
-        }
-        return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
-    }
-
-    // 判断是否有该模块
-    bool ModuleLoader::HasModule(const std::string &name) const
+    bool ModuleLoader::HasModule(const std::string& name) const
     {
         return handles_.count(name) > 0;
     }
 
-    /**
-     * @brief 获取指定函数的参数类型及名称
-     *
-     * @param handle 模块句柄
-     * @param functionName 要获取参数列表的函数名
-     * @return nlohmann::json 返回一个 JSON 对象，包含参数类型及名称
-     */
-    nlohmann::json ModuleLoader::getArgsDesc(void *handle, const std::string &functionName)
+    nlohmann::json ModuleLoader::getArgsDesc(void* handle, const std::string& functionName)
     {
-        nlohmann::json result;
-        result = nlohmann::json::array();
+        nlohmann::json result = nlohmann::json::array();
+
         if (!handle)
         {
             spdlog::error("Invalid handle passed to getArgsDesc()");
             return {};
         }
+
         auto sym_ptr = dlsym(handle, functionName.c_str());
+
         if (!sym_ptr)
         {
             spdlog::error("Failed to load symbol {}: {}", functionName, dlerror());
             return {};
         }
-        auto fptr = reinterpret_cast<const char *>(sym_ptr);
+
+        auto fptr = reinterpret_cast<const char*>(sym_ptr);
         size_t i = 0;
         bool foundParenthesis = false;
         std::string currentArgType;
-        while (fptr[i] != '\0')
+
+        while (fptr[i] != '\0' && !foundParenthesis)
         {
             if (fptr[i] == '(')
             {
                 foundParenthesis = true;
-                i++;
-                continue;
             }
-            else if (fptr[i] == ')')
-            {
-                break;
-            }
+            i++;
+        }
+
+        while (fptr[i] != '\0' && fptr[i] != ')')
+        {
             if (fptr[i] == ',')
             {
                 result.push_back(std::move(currentArgType));
                 currentArgType.clear();
             }
-            else if (foundParenthesis)
+            else
             {
                 currentArgType += fptr[i];
             }
             i++;
         }
+
         if (!currentArgType.empty())
         {
             result.push_back(std::move(currentArgType));
         }
+
         return result;
     }
+
 }

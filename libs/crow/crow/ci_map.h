@@ -9,7 +9,7 @@ namespace crow
     /// Hashing function for ci_map (unordered_multimap).
     struct ci_hash
     {
-        size_t operator()(const std::string& key) const
+        size_t operator()(const std::string &key) const
         {
             std::size_t seed = 0;
             std::locale locale;
@@ -21,7 +21,7 @@ namespace crow
         }
 
     private:
-        static inline void hash_combine(std::size_t& seed, char v)
+        static inline void hash_combine(std::size_t &seed, char v)
         {
             std::hash<char> hasher;
             seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
@@ -31,7 +31,7 @@ namespace crow
     /// Equals function for ci_map (unordered_multimap).
     struct ci_key_eq
     {
-        bool operator()(const std::string& l, const std::string& r) const
+        bool operator()(const std::string &l, const std::string &r) const
         {
             return utility::string_equals(l, r);
         }

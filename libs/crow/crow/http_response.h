@@ -21,10 +21,9 @@
 #include "crow/mime_types.h"
 #include "crow/returnable.h"
 
-
 namespace crow
 {
-    template<typename Adaptor, typename Handler, typename... Middlewares>
+    template <typename Adaptor, typename Handler, typename... Middlewares>
     class Connection;
 
     class Router;
@@ -32,7 +31,7 @@ namespace crow
     /// HTTP response
     struct response
     {
-        template<typename Adaptor, typename Handler, typename... Middlewares>
+        template <typename Adaptor, typename Handler, typename... Middlewares>
         friend class crow::Connection;
 
         friend class Router;
@@ -60,21 +59,21 @@ namespace crow
             headers.emplace(std::move(key), std::move(value));
         }
 
-        const std::string& get_header_value(const std::string& key)
+        const std::string &get_header_value(const std::string &key)
         {
             return crow::get_header_value(headers, key);
         }
 
         // naive validation of a mime-type string
-        static bool validate_mime_type(const std::string& candidate) noexcept
+        static bool validate_mime_type(const std::string &candidate) noexcept
         {
             // Here we simply check that the candidate type starts with
             // a valid parent type, and has at least one character afterwards.
             std::array<std::string, 10> valid_parent_types = {
-              "application/", "audio/", "font/", "example/",
-              "image/", "message/", "model/", "multipart/",
-              "text/", "video/"};
-            for (const std::string& parent : valid_parent_types)
+                "application/", "audio/", "font/", "example/",
+                "image/", "message/", "model/", "multipart/",
+                "text/", "video/"};
+            for (const std::string &parent : valid_parent_types)
             {
                 // ensure the candidate is *longer* than the parent,
                 // to avoid unnecessary string comparison and to
@@ -97,7 +96,7 @@ namespace crow
         // Find the mime type from the content type either by lookup,
         // or by the content type itself, if it is a valid a mime type.
         // Defaults to text/plain.
-        static std::string get_mime_type(const std::string& contentType)
+        static std::string get_mime_type(const std::string &contentType)
         {
             const auto mimeTypeIterator = mime_types.find(contentType);
             if (mimeTypeIterator != mime_types.end())
@@ -115,55 +114,50 @@ namespace crow
             }
         }
 
-
         // clang-format off
         response() {}
         explicit response(int code) : code(code) {}
         response(std::string body) : body(std::move(body)) {}
         response(int code, std::string body) : code(code), body(std::move(body)) {}
         // clang-format on
-        response(returnable&& value)
+        response(returnable &&value)
         {
             body = value.dump();
             set_header("Content-Type", value.content_type);
         }
-        response(returnable& value)
+        response(returnable &value)
         {
             body = value.dump();
             set_header("Content-Type", value.content_type);
         }
-        response(int code, returnable& value):
-          code(code)
+        response(int code, returnable &value) : code(code)
         {
             body = value.dump();
             set_header("Content-Type", value.content_type);
         }
-        response(int code, returnable&& value):
-          code(code), body(value.dump())
+        response(int code, returnable &&value) : code(code), body(value.dump())
         {
             set_header("Content-Type", std::move(value.content_type));
         }
 
-        response(response&& r)
+        response(response &&r)
         {
             *this = std::move(r);
         }
 
-        response(std::string contentType, std::string body):
-          body(std::move(body))
+        response(std::string contentType, std::string body) : body(std::move(body))
         {
             set_header("Content-Type", get_mime_type(contentType));
         }
 
-        response(int code, std::string contentType, std::string body):
-          code(code), body(std::move(body))
+        response(int code, std::string contentType, std::string body) : code(code), body(std::move(body))
         {
             set_header("Content-Type", get_mime_type(contentType));
         }
 
-        response& operator=(const response& r) = delete;
+        response &operator=(const response &r) = delete;
 
-        response& operator=(response&& r) noexcept
+        response &operator=(response &&r) noexcept
         {
             body = std::move(r.body);
             code = r.code;
@@ -192,7 +186,7 @@ namespace crow
 
         ///
         /// Location can either be a route or a full URL.
-        void redirect(const std::string& location)
+        void redirect(const std::string &location)
         {
             code = 307;
             set_header("Location", location);
@@ -202,7 +196,7 @@ namespace crow
 
         ///
         /// Location can either be a route or a full URL.
-        void redirect_perm(const std::string& location)
+        void redirect_perm(const std::string &location)
         {
             code = 308;
             set_header("Location", location);
@@ -212,7 +206,7 @@ namespace crow
 
         ///
         /// Location can either be a route or a full URL.
-        void moved(const std::string& location)
+        void moved(const std::string &location)
         {
             code = 302;
             set_header("Location", location);
@@ -222,13 +216,13 @@ namespace crow
 
         ///
         /// Location can either be a route or a full URL.
-        void moved_perm(const std::string& location)
+        void moved_perm(const std::string &location)
         {
             code = 301;
             set_header("Location", location);
         }
 
-        void write(const std::string& body_part)
+        void write(const std::string &body_part)
         {
             body += body_part;
         }
@@ -253,7 +247,7 @@ namespace crow
         }
 
         /// Same as end() except it adds a body part right before ending.
-        void end(const std::string& body_part)
+        void end(const std::string &body_part)
         {
             body += body_part;
             end();

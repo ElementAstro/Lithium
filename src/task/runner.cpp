@@ -207,7 +207,6 @@ namespace OpenAPT
 
     TaskManager::TaskManager(const std::string &fileName)
     {
-        // 如果文件名不为空，则从文件中加载任务列表和进度
         if (!fileName.empty())
         {
             // loadTasksFromJson(fileName);
@@ -222,13 +221,10 @@ namespace OpenAPT
             return;
         }
 
-        task->setCanExecute(canExecute); // 将 canExecute 的值赋给任务的 canExecute 变量
+        task->setCanExecute(canExecute);
 
         m_taskList.push_back(task);
         spdlog::info("Added task {} successfully", task->getName());
-
-        // 每次添加任务后都进行一次排序
-        sortTasksByPriority();
     }
 
     void TaskManager::insertTask(int taskIndex, std::shared_ptr<BasicTask> task, bool canExecute)
@@ -239,7 +235,7 @@ namespace OpenAPT
             return;
         }
 
-        task->setCanExecute(canExecute); // 将 canExecute 的值赋给任务的 canExecute 变量
+        task->setCanExecute(canExecute);
 
         if (taskIndex < 0 || taskIndex > m_taskList.size())
         {
@@ -249,31 +245,48 @@ namespace OpenAPT
 
         m_taskList.insert(m_taskList.begin() + taskIndex, task);
         spdlog::info("Inserted task {} successfully", task->getName());
-
-        // 每次插入任务后都进行一次排序
-        sortTasksByPriority();
     }
 
     void TaskManager::executeAllTasks()
     {
+        m_CurrentTask = nullptr; // Set m_CurrentTask to null before executing any task
+        m_StopFlag = false;
         for (auto &task : m_taskList)
         {
-            try
+            if(!m_StopFlag)
             {
-                if (!task->isDone() && task->canExecute()) // 判断任务是否可以执行
+                try
                 {
-                    spdlog::debug("Executing task {}", task->getName());
-                    task->execute();
-                    spdlog::debug("Finished task {}", task->getName());
-                    ++m_completedTaskCount;
-                    m_progressBar.set_progress(m_completedTaskCount);
+                    if (task->canExecute()) // 判断任务是否可以执行
+                    {
+                        m_CurrentTask = task; // Set m_CurrentTask to the current task being executed
+                        spdlog::debug("Executing task {}", task->getName());
+                        task->execute();
+                        spdlog::debug("Finished task {}", task->getName());
+                        ++m_completedTaskCount;
+                        m_progressBar.set_progress(m_completedTaskCount);
+                        m_CurrentTask = nullptr; // Reset m_CurrentTask to null after the task is finished
+                    }
+                }
+                catch (const std::exception &e) // 执行任务过程中出现异常
+                {
+                    spdlog::error("Task {} execution failed: {}", task->getName(), e.what());
+                    m_CurrentTask = nullptr; // Reset m_CurrentTask to null after an error occurs
                 }
             }
-            catch (const std::exception &e) // 执行任务过程中出现异常
-            {
-                spdlog::error("Task {} execution failed: {}", task->getName(), e.what());
-            }
         }
+    }
+
+    void TaskManager::stopTask()
+    {
+        m_StopFlag = true;
+        if (m_CurrentTask != nullptr) // If there is a current task running
+        {
+            spdlog::info("Stopping task {}", m_CurrentTask->getName());
+            m_CurrentTask->stop(); // Stop the current task
+            m_CurrentTask = nullptr; // Reset m_CurrentTask to null
+        }
+        return; // Return from the function to exit the current progress
     }
 
     // 执行指定任务
@@ -293,7 +306,7 @@ namespace OpenAPT
 
         try
         {
-            if (!task->isDone() && task->canExecute()) // 判断任务是否可以执行
+            if (task->canExecute()) // 判断任务是否可以执行
             {
                 spdlog::debug("Executing task {}", task->getName());
                 task->execute();
@@ -314,7 +327,7 @@ namespace OpenAPT
             return;
         }
 
-        task->setCanExecute(canExecute); // 将 canExecute 的值赋给任务的 canExecute 变量
+        task->setCanExecute(canExecute);
 
         if (taskIndex < 0 || taskIndex >= m_taskList.size())
         {
@@ -324,9 +337,6 @@ namespace OpenAPT
 
         m_taskList[taskIndex] = task;
         spdlog::info("Modified task {} successfully", task->getName());
-
-        // 每次修改任务后都进行一次排序
-        sortTasksByPriority();
     }
 
     void TaskManager::modifyTaskByName(const std::string &name, std::shared_ptr<BasicTask> task, bool canExecute)
@@ -347,13 +357,10 @@ namespace OpenAPT
             return;
         }
 
-        task->setCanExecute(canExecute); // 将 canExecute 的值赋给任务的 canExecute 变量
+        task->setCanExecute(canExecute);
 
         (*iter) = task;
         spdlog::info("Modified task {} successfully", name);
-
-        // 每次修改任务后都进行一次排序
-        sortTasksByPriority();
     }
 
     void TaskManager::deleteTask(int taskIndex)
@@ -374,36 +381,27 @@ namespace OpenAPT
         const std::string taskName = m_taskList[actualIndex]->getName();
         m_taskList.erase(m_taskList.begin() + actualIndex);
         spdlog::info("Deleted task {} successfully", taskName);
-
-        // 每次删除任务后都进行一次排序
-        sortTasksByPriority();
     }
 
-    void TaskManager::deleteTaskByName(const std::string &name)
+    void TaskManager::deleteTaskByName(const std::string& name)
     {
         auto iter = std::find_if(m_taskList.begin(), m_taskList.end(),
-                                 [&](const std::shared_ptr<BasicTask> &task)
-                                 { return task->getName() == name; });
-
+            [&](const std::shared_ptr<BasicTask>& task)
+            { return task->getName() == name; });
         if (iter == m_taskList.end())
         {
             spdlog::error("Task name not found!");
             return;
         }
-
         int actualIndex = iter - m_taskList.begin();
         auto iter1 = std::find(skipList.begin(), skipList.end(), actualIndex);
         if (iter1 != skipList.end()) // 如果要删除的任务在 skipList 中，则先将其从 skipList 中移除
         {
             skipList.erase(iter1);
         }
-
         const std::string taskName = (*iter)->getName();
         m_taskList.erase(iter);
         spdlog::info("Deleted task {} successfully", taskName);
-
-        // 每次删除任务后都进行一次排序
-        sortTasksByPriority();
     }
 
     void TaskManager::queryTaskByName(const std::string &name)
@@ -422,20 +420,9 @@ namespace OpenAPT
         spdlog::info("Found task {} with type {}, description: {}", task->getName(), typeid(*task.get()).name(), task->getDescription());
     }
 
-    void TaskManager::cleanCompletedTasks()
+    const std::vector<std::shared_ptr<BasicTask>>& TaskManager::getTaskList() const
     {
-        auto iter = m_taskList.begin();
-        while (iter != m_taskList.end())
-        {
-            if (true) // 判断任务是否完成
-            {
-                iter = m_taskList.erase(iter);
-            }
-            else
-            {
-                ++iter;
-            }
-        }
+        return m_taskList;
     }
 
     void TaskManager::saveTasksToJson(const std::string &fileName)
@@ -454,7 +441,6 @@ namespace OpenAPT
                 json jTask;
                 jTask["id"] = task->getId();
                 jTask["description"] = task->getDescription();
-                jTask["priority"] = task->getPriority();
                 j.push_back(jTask);
             }
             outFile << std::setw(4) << j << std::endl;
@@ -464,64 +450,5 @@ namespace OpenAPT
         {
             spdlog::error("Failed to save task into a json file : {}", e.what());
         }
-    }
-
-    void TaskManager::runFromJson(const std::vector<std::string> &jsonFileNames, bool traverseScriptsFolder)
-    {
-        // Load tasks from specified JSON files or all JSON files in the scripts folder
-        if (traverseScriptsFolder)
-        {
-            for (const auto &entry : std::filesystem::directory_iterator("scripts"))
-            {
-                if (entry.is_regular_file() && entry.path().extension() == ".json")
-                {
-                    std::ifstream ifs(entry.path());
-                    nlohmann::json json;
-                    ifs >> json;
-                    ifs.close();
-                }
-            }
-        }
-        else
-        {
-            for (const auto &jsonFileName : jsonFileNames)
-            {
-                std::ifstream ifs(jsonFileName);
-                nlohmann::json json;
-                ifs >> json;
-                ifs.close();
-
-                for (auto &elem : json)
-                {
-                }
-            }
-        }
-
-        // Execute the loaded tasks
-        executeAllTasks();
-    }
-
-    // 对任务列表按照优先级排序
-    void TaskManager::sortTasksByPriority()
-    {
-        std::sort(m_taskList.begin(), m_taskList.end(),
-                  [](const std::shared_ptr<BasicTask> &a, const std::shared_ptr<BasicTask> &b)
-                  { return a->getPriority() < b->getPriority(); });
-    }
-
-    // 设置任务优先级
-    void TaskManager::setTaskPriority(const std::string &name, int priority)
-    {
-        auto iter = std::find_if(m_taskList.begin(), m_taskList.end(),
-                                 [&](const std::shared_ptr<BasicTask> &task)
-                                 { return task->getName() == name; });
-
-        if (iter == m_taskList.end())
-        {
-            spdlog::error("Task name not found!");
-            return;
-        }
-
-        (*iter)->setPriority(priority);
     }
 }

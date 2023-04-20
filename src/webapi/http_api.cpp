@@ -36,22 +36,18 @@ namespace OpenAPT
 {
     void init_handler(crow::SimpleApp &app)
     {
-        // Route to load index.html
         CROW_ROUTE(app, "/")
         ([]
         { return crow::mustache::load("index.html").render(); });
 
-        // Route to load client.html
         CROW_ROUTE(app, "/client")
         ([]
         { return crow::mustache::load("client.html").render(); });
 
-        // Route to accept GET requests and return a greeting based on a query parameter
         CROW_ROUTE(app, "/greeting")
             .methods("GET"_method)([](const crow::request &req)
                                 {
                 try {
-                    // Get the 'name' parameter from the query string
                     std::string name = req.url_params.get("name");
 
                     // Do some processing on the parameter

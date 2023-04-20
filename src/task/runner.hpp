@@ -132,110 +132,58 @@ namespace OpenAPT
     class TaskManager
     {
     public:
-        /**
-         * @brief 无参构造函数，创建一个空的任务管理器
-         */
-        TaskManager() {}
+        TaskManager() {
+            m_TaskGenerator = nullptr;
+            m_CurrentTask = nullptr;
+        }
 
-        /**
-         * @brief 带文件名参数的构造函数，从文件中加载任务数据并创建一个任务管理器
-         * @param fileName 文件名，需要包含路径和扩展名
-         * @details Constructs a TaskManager object with the specified file name parameter. It loads task data from the file and creates a new task manager.
-         */
+        ~TaskManager()
+        {
+            delete m_TaskGenerator;
+            m_TaskGenerator = nullptr;
+            m_CurrentTask = nullptr;
+        }
+
         TaskManager(const std::string &fileName);
 
-        /**
-         * @brief 添加一个任务到任务列表末尾
-         * @param task 带执行时间和描述信息的基础任务指针
-         * @param canExecute 任务是否可以执行标志
-         * @details Adds a new task to the end of the task list with the specified execution time and description.
-         */
         void addTask(std::shared_ptr<BasicTask> task, bool canExecute = true);
 
-        /**
-         * @brief 在指定位置插入一个任务
-         * @param taskIndex 指定插入位置的下标
-         * @param task 带执行时间和描述信息的基础任务指针
-         * @param canExecute 任务是否可以执行标志
-         * @details Inserts a new task at the specified index in the task list with the specified execution time and description.
-         */
         void insertTask(int taskIndex, std::shared_ptr<BasicTask> task, bool canExecute = true);
 
-        /**
-         * @brief 根据下标删除一个任务
-         * @param taskIndex 待删除任务的下标
-         * @details Deletes the task at the specified index in the task list.
-         */
         void deleteTask(int taskIndex);
 
-        /**
-         * @brief 根据任务名称删除一个任务
-         * @param name 待删除任务的名称
-         * @details Deletes the task with the specified name from the task list.
-         */
         void deleteTaskByName(const std::string &name);
 
-        /**
-         * @brief 根据下标修改一个任务
-         * @param taskIndex 待修改任务的下标
-         * @param task 修改后的带执行时间和描述信息的基础任务指针
-         * @details Modifies the task at the specified index in the task list with the new execution time and description.
-         */
         void modifyTask(int taskIndex, std::shared_ptr<BasicTask> task, bool canExecute);
 
-        /**
-         * @brief 根据任务名称修改一个任务
-         * @param name 待修改任务的名称
-         * @param task 修改后的带执行时间和描述信息的基础任务指针
-         * @details Modifies the task with the specified name in the task list with the new execution time and description.
-         */
         void modifyTaskByName(const std::string &name, std::shared_ptr<BasicTask> task, bool canExecute);
 
-        /**
-         * @brief 执行所有未完成的任务
-         * @details Executes all tasks in the task list that have not yet been completed.
-         */
         void executeAllTasks();
 
         void executeTaskByName(const std::string &name);
 
-        /**
-         * @brief 从指定文件中加载任务数据到任务列表
-         * @param fileName 包含路径和扩展名的文件名
-         * @details Loads task data from the specified file into the task list.
-         */
-        void runFromJson(const std::vector<std::string> &jsonFileNames, bool traverseScriptsFolder);
+        void stopTask();
 
-        /**
-         * @brief 将任务列表中的数据保存到指定文件中
-         * @param fileName 包含路径和扩展名的文件名
-         * @details Saves task data from the task list to the specified file.
-         */
+        const std::vector<std::shared_ptr<BasicTask>>& getTaskList() const;
+
         void saveTasksToJson(const std::string &fileName);
 
-        /**
-         * @brief 根据任务名称查询任务信息
-         * @param name 待查询任务的名称
-         * @details Queries the task information for the task with the specified name in the task list.
-         */
         void queryTaskByName(const std::string &name);
 
-        /**
-         * @brief 定期清理已完成的任务
-         * @details Periodically removes completed tasks from the task list.
-         */
-        void cleanCompletedTasks();
-
-        void sortTasksByPriority();
-
-        void setTaskPriority(const std::string &name, int priority);
-
-        TaskGenerator m_TaskGenerator;
+        TaskGenerator *getGenerator()
+        {
+            return m_TaskGenerator;
+        }
 
     private:
         std::vector<std::shared_ptr<BasicTask>> m_taskList;
         size_t m_completedTaskCount = 0;
         std::vector<int> skipList;
+
+        TaskGenerator *m_TaskGenerator;
+
+        bool m_StopFlag = false;
+        std::shared_ptr<BasicTask> m_CurrentTask;
 
         indicators::ProgressBar m_progressBar{indicators::option::PrefixText{"Progress"}};
     };

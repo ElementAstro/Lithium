@@ -43,30 +43,15 @@ Description: Main
 #include "config/configor.hpp"
 #include "package/packageloader.hpp"
 
+#include "websocketpp/config/asio.hpp"
+#include "websocketpp/server.hpp"
+
 class MyApp {
 public:
-    MyApp() :
-        m_ThreadManager(nullptr),
-        m_TaskManager(nullptr),
-        m_DeviceManager(nullptr),
-        m_ModuleLoader(nullptr),
-        m_ConfigManager(nullptr),
-        m_PackageManager(nullptr),
-        m_PythonLoader(nullptr),
-        m_LuaLoader(nullptr) {}
+    MyApp();
+    ~MyApp();
 
-    ~MyApp() {
-        delete m_ThreadManager;
-        delete m_TaskManager;
-        delete m_DeviceManager;
-        delete m_ModuleLoader;
-        delete m_ConfigManager;
-        delete m_PackageManager;
-        delete m_PythonLoader;
-        delete m_LuaLoader;
-    }
-
-    void Initialize();
+    void Initialize(bool useSSL = false, const std::string& certPath = "");
 
     crow::SimpleApp& GetApp() {
         return app;
@@ -104,8 +89,13 @@ public:
         return m_LuaLoader;
     }
 
+    void sendJSONMessage(const nlohmann::json& msg);
+
 private:
     crow::SimpleApp app;
+
+    std::shared_ptr<websocketpp::server<websocketpp::config::asio_tls>> m_Server;
+    std::map<websocketpp::connection_hdl, std::string> m_Connections;
 
     OpenAPT::ThreadManager* m_ThreadManager;
     OpenAPT::TaskManager* m_TaskManager;
@@ -115,6 +105,13 @@ private:
     OpenAPT::PackageManager* m_PackageManager;
     OpenAPT::PyModuleLoader* m_PythonLoader;
     OpenAPT::LuaScriptLoader* m_LuaLoader;
+
+    bool m_UseSSL;
+    std::string m_CertPath;
+
+    void on_message(websocketpp::connection_hdl hdl, websocketpp::server<websocketpp::config::asio>::message_ptr msg);
+    void on_open(websocketpp::connection_hdl hdl);
+    void on_close(websocketpp::connection_hdl hdl);
 };
 
 extern bool DEBUG;

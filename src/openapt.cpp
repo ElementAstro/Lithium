@@ -512,53 +512,37 @@ void TestAll()
 {
     spdlog::debug("ModuleManager Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing ModuleLoader and some important functions:");
     spdlog::debug("Load module: {}", m_App.GetModuleLoader()->LoadModule("modules/test/libmylib.so", "mylib"));
-
     spdlog::debug("Load and run function: ");
     m_App.GetModuleLoader()->LoadAndRunFunction<void>("mylib", "my_func", "test", false);
-
-    // 严重bug
-    // spdlog::debug("Get all of the functions in modules {}",m_App.GetModuleLoader()->getFunctionList("mylib").dump());
-
     spdlog::debug("HasModule Testing: ");
     spdlog::debug("Check if module 'fuckyou' exists: {}", m_App.GetModuleLoader()->HasModule("fuckyou"));
-
     spdlog::debug("Finished testing ModuleLoader");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("TaskManager Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing SimpleTask:");
-    auto simpleTask = m_App.GetTaskManager()->m_TaskGenerator.generateSimpleTask("simpleTask", "Just a test", {}, "", "Print");
+    auto simpleTask = m_App.GetTaskManager()->getGenerator()->generateSimpleTask("simpleTask", "Just a test", {}, "", "Print");
     m_App.GetTaskManager()->addTask(simpleTask);
     spdlog::debug("SimpleTask added");
-
     spdlog::debug("Testing ConditionalTask:");
-    auto conditionalTask = m_App.GetTaskManager()->m_TaskGenerator.generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}});
+    auto conditionalTask = m_App.GetTaskManager()->getGenerator()->generateConditionalTask("conditionalTask", "A test conditional task", {{"status", 2}});
     m_App.GetTaskManager()->addTask(conditionalTask);
     spdlog::debug("ConditionalTask added");
-
     spdlog::debug("Execute all tasks:");
     m_App.GetTaskManager()->executeAllTasks();
-
     spdlog::debug("Finished testing TaskManager");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("DeviceManager Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing addDevice and getDeviceList:");
     m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::Camera, "CCD Simulator");
     auto cameraList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::Camera);
     for (auto &name : cameraList)
         spdlog::debug("Found Camera name {}", name);
-
     spdlog::debug("Testing findDeviceByName:");
     auto device1 = m_App.GetDeviceManager()->findDeviceByName("CCD Simulator");
-
     if (device1 != nullptr)
     {
         spdlog::debug("Connecting to device {}...", device1->getName());
@@ -577,7 +561,6 @@ void TestAll()
             }
             else
             {
-                // 转换失败，设备不是 Camera 类型，无法调用 captureImage() 函数
                 spdlog::error("Device {} is not a Camera", device1->getName());
             }
         }
@@ -590,70 +573,62 @@ void TestAll()
     {
         spdlog::error("Can't find device CCD Simulator");
     }
-
     m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::Focuser, "Focuser Simulator");
     auto focuserList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::Focuser);
     for (auto &name : focuserList)
         spdlog::debug("Found Focuser name {}", name);
-
     spdlog::debug("Testing findDeviceByName:");
     auto device2 = m_App.GetDeviceManager()->findDeviceByName("Focuser Simulator");
-
     if (device2 != nullptr) {
         device2->connect("Focuser Simulator");
         m_App.GetTaskManager()->addTask(m_App.GetDeviceManager()->getSimpleTask(OpenAPT::DeviceType::Focuser, "INDI", "Focuser Simulator", "MoveToAbsolute",{}));
     }
     else
         spdlog::error("Can't find device Focuser Simulator");
-
     m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::FilterWheel, "Filter Simulator");
     auto filterList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::FilterWheel);
     for (auto &name : filterList)
-        spdlog::debug("Found Focuser name {}", name);
-
+        spdlog::debug("Found Filterwheel name {}", name);
     spdlog::debug("Testing findDeviceByName:");
     auto device3 = m_App.GetDeviceManager()->findDeviceByName("Filter Simulator");
-
     if (device3 != nullptr) {
         device3->connect("Filter Simulator");
-        //m_App.GetTaskManager()->addTask(m_App.GetDeviceManager()->getSimpleTask(OpenAPT::DeviceType::Filterwheel, "INDI", "Filter Simulator", "MoveToAbsolute",{}));
     }
     else
         spdlog::error("Can't find device Filter Simulator");
-
+    m_App.GetDeviceManager()->addDevice(OpenAPT::DeviceType::Telescope, "Telescope Simulator");
+    auto telescopeList = m_App.GetDeviceManager()->getDeviceList(OpenAPT::DeviceType::Telescope);
+    for (auto &name : telescopeList)
+        spdlog::debug("Found Telescope name {}", name);
+    spdlog::debug("Testing findDeviceByName:");
+    auto device4 = m_App.GetDeviceManager()->findDeviceByName("Telescope Simulator");
+    if (device4 != nullptr) {
+        device4->connect("Telescope Simulator");
+    }
+    else
+        spdlog::error("Can't find device Filter Simulator");
     spdlog::debug("Finished testing DeviceManager");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("ConfigManager Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing setValue and getValue:");
     m_App.GetConfigManager()->setValue("key1", "value1");
     m_App.GetConfigManager()->setValue("key2/inner_key", 3.1415926);
     spdlog::debug("Get value of key2/inner_key: {}", m_App.GetConfigManager()->getValue("key2/inner_key").dump());
-
     spdlog::debug("Testing printAllValues:");
     m_App.GetConfigManager()->printAllValues();
-
     spdlog::debug("Finished testing ConfigManager");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("AchievementManager Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing add and complete achievement:");
-
     spdlog::debug("Printing all achievements:");
-
     spdlog::debug("Finished testing AchievementManager");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Compiler Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing CompileToSharedLibrary and LoadAndRunFunction:");
     Compiler compiler;
-
     std::string code = R"""(
     #include <iostream>
     extern "C" void foo()
@@ -673,64 +648,18 @@ void TestAll()
     {
         spdlog::error("Compilation failed");
     }
-
     spdlog::debug("Finished testing Compiler");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Python Module Loader Testing");
     spdlog::debug("--------------------------------------------------------------");
-
     spdlog::debug("Testing load_local_module:");
     m_App.GetPythonLoader()->load_local_module("mymodule");
-
     spdlog::debug("Testing get_all_functions:");
     m_App.GetPythonLoader()->get_all_functions("mymodule");
-
     spdlog::debug("Testing set_variable:");
     m_App.GetPythonLoader()->set_variable("mymodule", "my_var", 42);
-
     spdlog::debug("Finished testing Python Module Loader");
     spdlog::debug("--------------------------------------------------------------");
-    /*
-    // 在Python中调用C++函数square
-    int cpp_result = m_App.GetPythonLoader()->call_function<int>("mymodule", "square", 7);
-    std::cout << "C++ square result: " << cpp_result << std::endl;
-    spdlog::debug("call");
-    // 在Python中调用C++函数cpp_func
-    m_App.GetPythonLoader()->set_variable("mymodule", "cpp_func", square);
-    auto py_call_cpp_func = m_App.GetPythonLoader()->get_function<PyObject *(*)(PyObject *)>("mymodule", "call_cpp_func");
-    if (py_call_cpp_func)
-    {
-        PyObject *py_args = Py_BuildValue("i", 8);
-        PyObject *py_ret = py_call_cpp_func(py_args);
-        if (py_ret)
-        {
-            int py_func_result;
-            if (PyArg_Parse(py_ret, "i", &py_func_result))
-            { // 解析返回值并赋值给py_func_result
-                std::cout << "Python function call_cpp_func returned: " << py_func_result << std::endl;
-            }
-            else
-            {
-                std::cerr << "Failed to parse function return value" << std::endl;
-            }
-            Py_DECREF(py_ret);
-        }
-        else
-        {
-            PyErr_Print();
-            PyErr_Clear();
-        }
-        Py_DECREF(py_args);
-        Py_XDECREF(py_call_cpp_func);
-    }
-    else
-    {
-        m_App.GetPythonLoader()->unload_module("mymodule");
-        return;
-    }
-    */
-
     m_App.GetPythonLoader()->unload_module("mymodule");
     // nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
     // spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
@@ -767,37 +696,149 @@ void init_app(int argc, char *argv[], crow::SimpleApp app)
         quit();
 
     OpenAPT::init_handler(app);
-
-    // 注册 WebSocket 回调函数
-    CROW_WEBSOCKET_ROUTE(app, "/app")
-        .onopen([](crow::websocket::connection &conn)
-                { spdlog::debug("WebSocket connection opened."); })
-        .onclose([](crow::websocket::connection &conn, const std::string &reason)
-                 { spdlog::warn("WebSocket connection closed. Reason: {}", reason); })
-        .onmessage([](crow::websocket::connection & /*conn*/, const std::string &data, bool is_binary)
-                   {
-            try {
-                // 解析 JSON
-                auto j = json::parse(data);
-                std::string event = j["event"];
-                std::string message = j["message"];
-                std::string remote_event = j["remote_event"];
-
-            } catch (const json::exception& e) {
-                spdlog::error("Failed to parse JSON: {}", e.what());
-            } });
 }
 
-void MyApp::Initialize() {
-        m_ThreadManager = new OpenAPT::ThreadManager();
-        m_TaskManager = new OpenAPT::TaskManager();
-        m_DeviceManager = new OpenAPT::DeviceManager();
-        m_ModuleLoader = new OpenAPT::ModuleLoader(&m_App);
-        m_ConfigManager = new OpenAPT::ConfigManager();
-        m_PackageManager = new OpenAPT::PackageManager();
-        m_PythonLoader = new OpenAPT::PyModuleLoader();
-        m_LuaLoader = OpenAPT::LuaScriptLoaderFactory::MakeLuaScriptLoader();
+using namespace std;
+using json = nlohmann::json;
+typedef websocketpp::lib::shared_ptr<websocketpp::lib::asio::ssl::context> context_ptr;
+
+MyApp::MyApp() :
+    m_ThreadManager(nullptr),
+    m_TaskManager(nullptr),
+    m_DeviceManager(nullptr),
+    m_ModuleLoader(nullptr),
+    m_ConfigManager(nullptr),
+    m_PackageManager(nullptr),
+    m_PythonLoader(nullptr),
+    m_LuaLoader(nullptr),
+    m_UseSSL(false),
+    m_CertPath("")
+{}
+
+MyApp::~MyApp() {
+    delete m_ThreadManager;
+    delete m_TaskManager;
+    delete m_DeviceManager;
+    delete m_ModuleLoader;
+    delete m_ConfigManager;
+    delete m_PackageManager;
+    delete m_PythonLoader;
+}
+
+void MyApp::Initialize(bool useSSL, const std::string& certPath) {
+    // 使用智能指针代替 new 运算符
+    m_ThreadManager = new OpenAPT::ThreadManager();
+    m_TaskManager = new OpenAPT::TaskManager();
+    m_DeviceManager = new OpenAPT::DeviceManager();
+    m_ModuleLoader = new OpenAPT::ModuleLoader(&m_App);
+    m_ConfigManager = new OpenAPT::ConfigManager();
+    m_PackageManager = new OpenAPT::PackageManager();
+    m_PythonLoader = new OpenAPT::PyModuleLoader();
+    m_LuaLoader = OpenAPT::LuaScriptLoaderFactory::MakeLuaScriptLoader();
+
+    // 保存 SSL 相关设置
+    m_UseSSL = useSSL;
+    m_CertPath = certPath;
+
+    // 创建 Server 实例和连接映射表
+    m_Server = std::make_shared<websocketpp::server<websocketpp::config::asio_tls>>();
+    auto connections = std::make_shared<std::map<websocketpp::connection_hdl, std::string>>();
+
+    // 初始化 Server 的设置
+    m_Server->clear_access_channels(websocketpp::log::alevel::all);
+    m_Server->clear_error_channels(websocketpp::log::elevel::all);
+
+    m_Server->set_message_handler(std::bind(&MyApp::on_message, this, std::placeholders::_1, std::placeholders::_2));
+    m_Server->set_open_handler(std::bind(&MyApp::on_open, this, std::placeholders::_1));
+    m_Server->set_close_handler(std::bind(&MyApp::on_close, this, std::placeholders::_1));
+
+    m_Server->set_validate_handler([](websocketpp::connection_hdl) { return true; });
+    m_Server->set_fail_handler([](websocketpp::connection_hdl) {});
+    m_Server->set_http_handler([](websocketpp::connection_hdl) {});
+
+    m_Server->set_reuse_addr(true);
+
+    // 根据 SSL 设置监听 HTTP 或 HTTPS 端口
+    if (m_UseSSL) {
+        try {
+            // 创建 SSL 上下文对象
+            m_Server->set_tls_init_handler([this](websocketpp::connection_hdl) -> context_ptr {
+                auto ctx = std::make_shared<asio::ssl::context>(asio::ssl::context::sslv23);
+
+                ctx->set_options(asio::ssl::context::default_workarounds |
+                                 asio::ssl::context::no_sslv2 |
+                                 asio::ssl::context::no_sslv3 |
+                                 asio::ssl::context::single_dh_use);
+
+                // 指定证书路径和私钥
+                ctx->use_certificate_chain_file(m_CertPath);
+                ctx->use_private_key_file(m_CertPath, asio::ssl::context::pem);
+
+                return ctx;
+            });
+        } catch (const std::exception& ex) {
+            spdlog::error("Failed to initialize SSL: {}", ex.what());
+            // 释放已创建的对象以避免内存泄漏
+            m_Server->reset();
+            return;
+        }
+
+        spdlog::info("WebSocket server started with SSL on port {}", 9002);
+    } else {
+        m_Server->init_asio();
+        spdlog::info("WebSocket server started on port {}", 9001);
     }
+
+    try {
+        if (m_UseSSL) {
+            m_Server->listen(9002);
+        } else {
+            m_Server->listen(9001);
+        }
+
+        m_Server->start_accept();
+        m_Server->run();
+    } catch (const std::exception& ex) {
+        spdlog::error("Exception: {}", ex.what());
+        // 释放已创建的对象以避免内存泄漏
+        m_Server.reset();
+        return;
+    }
+
+    spdlog::info("WebSocket server stopped");
+}
+
+
+void MyApp::sendJSONMessage(const json& msg) {
+    if (!m_Connections.empty()) {
+        // Convert the JSON message to a string
+        std::string payload = msg.dump();
+
+        // Find a valid connection and send the message
+        for (auto it = m_Connections.begin(); it != m_Connections.end(); ++it) {
+            try {
+                m_Server->send(it->first, payload, websocketpp::frame::opcode::text);
+                break;
+            } catch (const std::exception& ex) {
+                spdlog::error("Failed to send message to client {}: {}", it->second, ex.what());
+            }
+        }
+    } else {
+        spdlog::warn("No WebSocket clients connected to this server!");
+    }
+}
+
+void MyApp::on_message(websocketpp::connection_hdl hdl, websocketpp::server<websocketpp::config::asio>::message_ptr msg) {
+    // Handle incoming messages from clients
+}
+
+void MyApp::on_open(websocketpp::connection_hdl hdl) {
+    // Handle new client connections
+}
+
+void MyApp::on_close(websocketpp::connection_hdl hdl) {
+    // Handle client disconnections
+}
 
 // 启动 Web 服务器
 void start_server(int port, crow::SimpleApp app)

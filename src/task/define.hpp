@@ -48,190 +48,193 @@ using json = nlohmann::json;
 
 namespace OpenAPT
 {
+class BasicTask {
+public:
+    // Constructor
+    BasicTask(const std::function<void()>& stopFunc = nullptr, bool stopFlag = false)
+        : m_stopFunc(stopFunc), m_canStop(stopFunc != nullptr), m_stopFlag(stopFlag) {}
 
-    class BasicTask
-    {
-    public:
-        // Executes the task
-        virtual nlohmann::json execute() {}
+    // Executes the task
+    virtual nlohmann::json execute() = 0;
 
-        // Serializes the task to a JSON object
-        virtual nlohmann::json toJson() { return nlohmann::json(); }
-
-        // Returns true if the task is completed
-        virtual bool isDone() const { return m_done; }
-
-        // Accessor and mutator for the task ID
-        int getId() const { return m_id; }
-        void setId(int id) { m_id = id; }
-
-        // Accessor and mutator for the task name
-        const std::string &getName() const { return m_name; }
-        void setName(const std::string &name) { m_name = name; }
-
-        // Accessor and mutator for the task description
-        const std::string &getDescription() const { return m_description; }
-        void setDescription(const std::string &description) { m_description = description; }
-
-        // Accessor and mutator for the task priority
-        void setPriority(int priority) { m_priority = priority; }
-        int getPriority() const { return m_priority; }
-
-        // Accessor and mutator for the canExecute flag
-        void setCanExecute(bool canExecute) { m_canExecute = canExecute; }
-        bool canExecute() const { return m_canExecute; }
-
-    protected:
-        // True if the task is completed
-        bool m_done = false;
-
-        // True if the task is saved
-        bool m_saved = false;
-
-        // Task ID
-        int m_id;
-
-        // Task priority
-        int m_priority = 0;
-
-        // Task name
-        std::string m_name;
-
-        // Task description
-        std::string m_description;
-
-        // True if the task can be executed
-        bool m_canExecute = true;
+    // Serializes the task to a JSON object
+    virtual nlohmann::json toJson() const {
+        return {
+            {"type", "basic"},
+            {"name", m_name},
+            {"id", m_id}
+        };
     };
 
-    // Conditional task that executes a function based on a condition
-    class ConditionalTask : public BasicTask
-    {
-    public:
-        // Constructor
-        ConditionalTask(const std::function<void(const nlohmann::json &)> &func,
-                        const nlohmann::json &params,
-                        const std::function<bool(const nlohmann::json &)> &condition)
-            : m_func(func), m_params(params), m_condition(condition) {}
+    // Accessor and mutator for the task ID
+    int getId() const { return m_id; }
+    void setId(int id) { m_id = id; }
 
-        // Executes the task
-        nlohmann::json execute() override
-        {
-            if (m_condition(m_params))
-            {
-                m_func(m_params);
-            }
-            m_done = true;
+    // Accessor and mutator for the task name
+    const std::string& getName() const { return m_name; }
+    void setName(const std::string& name) { m_name = name; }
+
+    const std::string &getDescription() const { return m_description; }
+    void setDescription(const std::string &description) { m_description = description; }
+
+    void setCanExecute(bool canExecute) { m_canExecute = canExecute; }
+    bool canExecute() const { return m_canExecute; }
+
+    // Set the stop function
+    void setStopFunction(const std::function<void()>& stopFunc) {
+        m_stopFunc = stopFunc;
+        m_canStop = true;
+    }
+
+    // Accessor and mutator for the stop flag
+    bool getStopFlag() const { return m_stopFlag; }
+    void setStopFlag(bool flag) { m_stopFlag = flag; }
+    
+    // Stops the task
+    virtual void stop() {
+        m_stopFlag = true;
+        if (m_stopFunc) {
+            m_stopFunc();
         }
+    }
+    
+protected:
+    // True if the task is completed
+    bool m_done = false;
 
-        // Serializes the task to a JSON object
-        nlohmann::json toJson() override
-        {
-            nlohmann::json j;
-            j["type"] = "conditional";
-            j["name"] = m_name;
-            j["condition"] = m_params;
-            j["priority"] = m_priority;
-            return j;
-        }
+    // Task ID
+    int m_id;
 
-    private:
-        // Function to execute
-        std::function<void(const nlohmann::json &)> m_func;
+    // Task name
+    std::string m_name;
 
-        // Parameters passed to the function
-        nlohmann::json m_params;
+    std::string m_description;
 
-        // Condition to check before executing the function
-        std::function<bool(const nlohmann::json &)> m_condition;
-    };
+    // True if the task can be stopped
+    bool m_canStop;
 
-    // Loop task that executes a function for each item in a list
-    class LoopTask : public BasicTask
-    {
-    public:
-        // Constructor
-        LoopTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params)
-            : m_func(func), m_params(params) {}
+    // Stop function
+    std::function<void()> m_stopFunc;
 
-        // Executes the task
-        nlohmann::json execute() override
-        {
-            for (int i = m_progress; i < m_params["total"].get<int>(); ++i)
-            {
-                if (m_cancelled)
-                {
-                    break;
-                }
-                m_func(m_params["items"][i]);
-                std::this_thread::sleep_for(std::chrono::seconds(1)); // Simulate task execution time
-                m_progress = i + 1;
-            }
-            m_done = true;
-        }
+    // Stop flag
+    bool m_stopFlag = false;
 
-        // Cancels the task
-        void cancel() { m_cancelled = true; }
+    bool m_canExecute = true;
+};
 
-        // Serializes the task to a JSON object
-        nlohmann::json toJson() override
-        {
-            nlohmann::json j;
-            j["type"] = "loop";
-            j["name"] = m_name;
-            j["params"] = m_params;
-            j["progress"] = m_progress;
-            j["priority"] = m_priority;
-            return j;
-        }
 
-    private:
-        // Function to execute for each item
-        std::function<void(const nlohmann::json &)> m_func;
+// Conditional task that executes a function based on a condition
+class ConditionalTask : public BasicTask {
+public:
+    // Constructor
+    ConditionalTask(const std::function<void(const nlohmann::json&)>& func,
+        const nlohmann::json& params,
+        const std::function<bool(const nlohmann::json&)>& condition,
+        const std::function<void()>& stopFunc = nullptr, bool stopFlag = false)
+        : m_func(func), m_params(params), m_condition(condition), BasicTask(stopFunc, stopFlag) {}
 
-        // List of items to loop over
-        nlohmann::json m_params;
-
-        // Current progress through the loop
-        int m_progress = 0;
-
-        // True if the task is cancelled
-        bool m_cancelled = false;
-    };
-
-    // Simple task that executes a function with parameters
-    class SimpleTask : public BasicTask
-    {
-    public:
-        // Constructor
-        SimpleTask(const std::function<void(const nlohmann::json &)> &func, const nlohmann::json &params)
-            : m_func(func), m_params(params) {}
-
-        // Executes the task
-        nlohmann::json execute() override
-        {
+    // Executes the task
+    nlohmann::json execute() override {
+        if (!m_stopFlag && m_condition(m_params)) {
             m_func(m_params);
-            m_done = true;
         }
+        m_done = true;
+        return toJson();
+    }
 
-        // Serializes the task to a JSON object
-        nlohmann::json toJson() override
-        {
-            nlohmann::json j;
-            j["type"] = "simple";
-            j["name"] = m_name;
-            j["params"] = m_params;
-            j["priority"] = m_priority;
-            return j;
+    // Serializes the task to a JSON object
+    nlohmann::json toJson() const override {
+        auto j = BasicTask::toJson();
+        j["type"] = "conditional";
+        j["condition"] = m_params;
+        return j;
+    }
+
+private:
+    // Function to execute
+    std::function<void(const nlohmann::json&)> m_func;
+
+    // Parameters passed to the function
+    nlohmann::json m_params;
+
+    // Condition to check before executing the function
+    std::function<bool(const nlohmann::json&)> m_condition;
+};
+
+// Loop task that executes a function for each item in a list
+class LoopTask : public BasicTask {
+public:
+    // Constructor
+    LoopTask(const std::function<void(const nlohmann::json&)>& func, const nlohmann::json& params,
+        const std::function<void()>& stopFunc = nullptr, bool stopFlag = false)
+        : m_func(func), m_params(params), BasicTask(stopFunc, stopFlag) {}
+
+    // Executes the task
+    nlohmann::json execute() override {
+        for (int i = m_progress; i < m_params["total"].get<int>(); ++i) {
+            if (m_stopFlag) {
+                break;
+            }
+            m_func(m_params["items"][i]);
+            std::this_thread::sleep_for(std::chrono::seconds(1)); // Simulate task execution time
+            m_progress = i + 1;
         }
+        m_done = true;
+        return toJson();
+    }
 
-    private:
-        // Function to execute
-        std::function<void(const nlohmann::json &)> m_func;
+    // Serializes the task to a JSON object
+    nlohmann::json toJson() const override {
+        auto j = BasicTask::toJson();
+        j["type"] = "loop";
+        j["params"] = m_params;
+        j["progress"] = m_progress;
+        return j;
+    }
 
-        // Parameters passed to the function
-        nlohmann::json m_params;
-    };
+private:
+    // Function to execute for each item
+    std::function<void(const nlohmann::json&)> m_func;
+
+    // List of items to loop over
+    nlohmann::json m_params;
+
+    // Current progress through the loop
+    int m_progress = 0;
+};
+
+// Simple task that executes a function with parameters
+class SimpleTask : public BasicTask {
+public:
+    // Constructor
+    SimpleTask(const std::function<void(const nlohmann::json&)>& func, const nlohmann::json& params,
+        const std::function<void()>& stopFunc = nullptr, bool stopFlag = false)
+        : m_func(func), m_params(params), BasicTask(stopFunc, stopFlag) {}
+
+    // Executes the task
+    nlohmann::json execute() override {
+        if (!m_stopFlag) {
+            m_func(m_params);
+        }
+        m_done = true;
+        return toJson();
+    }
+
+    // Serializes the task to a JSON object
+    nlohmann::json toJson() const override {
+        auto j = BasicTask::toJson();
+        j["type"] = "simple";
+        j["params"] = m_params;
+        return j;
+    }
+
+private:
+    // Function to execute
+    std::function<void(const nlohmann::json&)> m_func;
+
+    // Parameters passed to the function
+    nlohmann::json m_params;
+};
 
     using hash_t = std::uint64_t;
     constexpr hash_t basis{0xcbf29ce484222325};

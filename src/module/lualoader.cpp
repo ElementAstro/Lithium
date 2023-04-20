@@ -128,7 +128,12 @@ namespace OpenAPT
     class LuaScriptLoader
     {
     public:
-        LuaScriptLoader();
+        LuaScriptLoader()
+        {
+            // 打开 Lua 库
+            L_ = luaL_newstate();
+            luaL_openlibs(L_);
+        }
 
         ~LuaScriptLoader();
 
@@ -218,13 +223,6 @@ namespace OpenAPT
 
 namespace OpenAPT
 {
-    LuaScriptLoader::LuaScriptLoader()
-    {
-        // 打开 Lua 库
-        L_ = luaL_newstate();
-        luaL_openlibs(L_);
-    }
-
     LuaScriptLoader::~LuaScriptLoader()
     {
         for (auto &[name, state] : luaStates_)

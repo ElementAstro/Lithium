@@ -169,7 +169,6 @@ namespace OpenAPT
         }
         else if (name == "FLIP")
         {
-
         }
     }
 
@@ -196,13 +195,15 @@ namespace OpenAPT
 
     void INDICamera::newNumber(INumberVectorProperty *nvp)
     {
-        if (strcmp(nvp->name, "CCD_EXPOSURE") == 0)
+        using namespace std::string_literals;
+        const std::string name = nvp->name;
+        if (name == "CCD_EXPOSURE")
         {
-            double exposure = nvp->np->value;
+            const double exposure = nvp->np->value;
             camera_info["exposure"]["current"] = exposure;
             spdlog::debug("Current CCD_EXPOSURE for {} is {}", _name, exposure);
         }
-        else if (strcmp(nvp->name, "CCD_INFO") == 0)
+        else if (name == "CCD_INFO")
         {
             pixel = IUFindNumber(ccdinfo_prop, "CCD_PIXEL_SIZE")->value;
             pixel_x = IUFindNumber(ccdinfo_prop, "CCD_PIXEL_SIZE_X")->value;
@@ -210,76 +211,81 @@ namespace OpenAPT
             max_frame_x = IUFindNumber(ccdinfo_prop, "CCD_MAX_X")->value;
             max_frame_y = IUFindNumber(ccdinfo_prop, "CCD_MAX_Y")->value;
             pixel_depth = IUFindNumber(ccdinfo_prop, "CCD_BITSPERPIXEL")->value;
-            camera_info["frame"]["pixel_x"] = pixel_x;
-            camera_info["frame"]["pixel_y"] = pixel_y;
-            camera_info["frame"]["pixel_depth"] = pixel_depth;
-            camera_info["frame"]["max_frame_x"] = max_frame_x;
-            camera_info["frame"]["max_frame_y"] = max_frame_y;
+
+            camera_info["frame"] = {
+                {"pixel_x", pixel_x},
+                {"pixel_y", pixel_y},
+                {"pixel_depth", pixel_depth},
+                {"max_frame_x", max_frame_x},
+                {"max_frame_y", max_frame_y}};
             spdlog::debug("{} pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}", _name, pixel, pixel_x, pixel_y, max_frame_x, max_frame_y, pixel_depth);
         }
-        else if (strcmp(nvp->name, "BINNING") == 0)
+        else if (name == "BINNING")
         {
             indi_binning_x = IUFindNumber(nvp, "HOR_BIN");
             indi_binning_y = IUFindNumber(nvp, "VER_BIN");
-            camera_info["exposure"]["binning_x"] = indi_binning_x->value;
-            camera_info["exposure"]["binning_y"] = indi_binning_y->value;
+            camera_info["exposure"] = {
+                {"binning_x", indi_binning_x->value},
+                {"binning_y", indi_binning_y->value}};
             spdlog::debug("Current binning_x and y of {} are {} {}", _name, indi_binning_x->value, indi_binning_y->value);
         }
-        else if (strcmp(nvp->name, "FRAME") == 0)
+        else if (name == "FRAME")
         {
             indi_frame_x = IUFindNumber(nvp, "X");
             indi_frame_y = IUFindNumber(nvp, "Y");
             indi_frame_width = IUFindNumber(nvp, "WIDTH");
             indi_frame_height = IUFindNumber(nvp, "HEIGHT");
-            camera_info["frame"]["x"] = indi_frame_x->value;
-            camera_info["frame"]["y"] = indi_frame_y->value;
-            camera_info["frame"]["width"] = indi_frame_width->value;
-            camera_info["frame"]["height"] = indi_frame_height->value;
+
+            camera_info["frame"] = {
+                {"x", indi_frame_x->value},
+                {"y", indi_frame_y->value},
+                {"width", indi_frame_width->value},
+                {"height", indi_frame_height->value}};
             spdlog::debug("Current frame of {} are {} {} {} {}", _name, indi_frame_width->value, indi_frame_y->value, indi_frame_width->value, indi_frame_height->value);
         }
-        else if (strcmp(nvp->name, "CCD_TEMPERATURE") == 0)
+        else if (name == "CCD_TEMPERATURE")
         {
             current_temperature = IUFindNumber(nvp, "CCD_TEMPERATURE_VALUE")->value;
             camera_info["temperature"]["current"] = current_temperature;
             spdlog::debug("Current temperature of {} is {}", _name, current_temperature);
         }
-        else if (strcmp(nvp->name, "CCD_GAIN") == 0)
+        else if (name == "CCD_GAIN")
         {
             gain = IUFindNumber(nvp, "GAIN")->value;
             camera_info["exposure"]["gain"] = gain;
             spdlog::debug("Current camera gain of {} is {}", _name, gain);
         }
-        else if (strcmp(nvp->name, "CCD_OFFSET") == 0)
+        else if (name == "CCD_OFFSET")
         {
             offset = IUFindNumber(nvp, "OFFSET")->value;
             camera_info["exposure"]["offset"] = offset;
             spdlog::debug("Current camera offset of {} is {}", _name, offset);
         }
-        else if (strcmp(nvp->name, "POLLING_PERIOD") == 0)
+        else if (name == "POLLING_PERIOD")
         {
             camera_info["network"]["period"] = IUFindNumber(nvp, "PERIOD_MS")->value;
             spdlog::debug("Current period of {} is {}", _name, camera_info["network"]["period"].dump());
         }
-        else if (strcmp(nvp->name, "LIMITS") == 0)
+        else if (name == "LIMITS")
         {
             camera_info["limits"]["maxbuffer"] = IUFindNumber(nvp, "LIMITS_BUFFER_MAX")->value;
             spdlog::debug("Current max buffer of {} is {}", _name, camera_info["limits"]["maxbuffer"].dump());
             camera_info["limits"]["maxfps"] = IUFindNumber(nvp, "LIMITS_PREVIEW_FPS")->value;
             spdlog::debug("Current max fps of {} is {}", _name, camera_info["limits"]["maxfps"].dump());
         }
-        else if (strcmp(nvp->name, "STREAM_DELAY") == 0)
+        else if (name == "STREAM_DELAY")
         {
             camera_info["video"]["delay"] = IUFindNumber(nvp, "STREAM_DELAY_TIME")->value;
             spdlog::debug("Current stream delay of {} is {}", _name, camera_info["video"]["delay"].dump());
         }
-        else if (strcmp(nvp->name, "STREAMING_EXPOSURE") == 0)
+        else if (name == "STREAMING_EXPOSURE")
         {
             camera_info["video"]["exposure"] = IUFindNumber(nvp, "STREAMING_EXPOSURE_VALUE")->value;
             spdlog::debug("Current streaming exposure of {} is {}", _name, camera_info["video"]["exposure"].dump());
             camera_info["video"]["division"] = IUFindNumber(nvp, "STREAMING_DIVISOR_VALUE")->value;
             spdlog::debug("Current streaming division of {} is {}", _name, camera_info["video"]["division"].dump());
         }
-        else if (strcmp(nvp->name, "FPS") == 0)
+        else if (name == "FPS")
         {
             camera_info["video"]["fps"] = IUFindNumber(nvp, "EST_FPS")->value;
             spdlog::debug("Current fps of {} is {}", _name, camera_info["video"]["fps"].dump());
@@ -462,40 +468,31 @@ namespace OpenAPT
         }
         else if (PropName == "CCD_CONTROLS" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "CCD_CONTROLS_MODE" && Proptype == INDI_SWITCH)
         {
-
         }
         // The following properties are for Toup Camera
         else if (PropName == "TC_FAN_CONTROL" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "TC_FAN_Speed" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "TC_AUTO_WB" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "TC_HEAT_CONTROL" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "TC_HCG_CONTROL" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "TC_HGC_SET" && Proptype == INDI_NUMBER)
         {
-
         }
         else if (PropName == "TC_LOW_NOISE_CONTROL" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "SIMULATION" && Proptype == INDI_SWITCH)
         {
@@ -504,19 +501,15 @@ namespace OpenAPT
         }
         else if (PropName == "CCD_LEVEL_RANGE" && Proptype == INDI_NUMBER)
         {
-
         }
         else if (PropName == "CCD_BINNING_MODE" && Proptype == INDI_SWITCH)
         {
-
         }
         else if (PropName == "CCD_BLACK_BALANCE" && Proptype == INDI_NUMBER)
         {
-
         }
         else if (PropName == "Firmware" && Proptype == INDI_NUMBER)
         {
-
         }
     }
 
@@ -560,6 +553,19 @@ namespace OpenAPT
         image_upload_mode_prop = nullptr;
         fast_read_out_prop = nullptr;
         camera_limit_prop = nullptr;
+
+        toupcam_fan_control_prop = nullptr;
+        toupcam_heat_control_prop = nullptr;
+        toupcam_hcg_control_prop = nullptr;
+        toupcam_low_noise_control_prop = nullptr;
+        toupcam_simulation_prop = nullptr;
+        toupcam_binning_mode_prop = nullptr;
+
+        asi_image_flip_prop = nullptr;
+        asi_image_flip_hor_prop = nullptr;
+        asi_image_flip_ver_prop = nullptr;
+        asi_controls_prop = nullptr;
+        asi_controls_mode_prop = nullptr;
     }
 
     INDICamera::INDICamera(const std::string &name) : Camera(name)
@@ -731,7 +737,7 @@ namespace OpenAPT
                      spdlog::error("Failed to reconnect from camera {}", _name);
                  }
              }},
-             
+
             {"Scanning", [this](const nlohmann::json &tparams)
              {
                  if (!this->scanForAvailableDevices())

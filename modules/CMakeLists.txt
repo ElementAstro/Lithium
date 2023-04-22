@@ -1,3 +1,3 @@
 add_subdirectory(sshclient)
 
-add_subdirectory(process_manager)
+add_subdirectory(gui)

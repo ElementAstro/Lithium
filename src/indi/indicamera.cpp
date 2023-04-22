@@ -50,12 +50,13 @@ namespace OpenAPT
 
     void INDICamera::newSwitch(ISwitchVectorProperty *svp)
     {
-        spdlog::debug("{} Received Switch: {} = {}", _name, svp->name, svp->sp->s);
+        std::string name = svp->name;
 
-        if (strcmp(svp->name, "CONNECTION") == 0)
+        spdlog::debug("{} Received Switch: {}", _name, name);
+
+        if (name == "CONNECTION")
         {
-            ISwitch *connectswitch = IUFindSwitch(svp, "CONNECT");
-            if (connectswitch->s == ISS_ON)
+            if (auto connectswitch = IUFindSwitch(svp, "CONNECT"); connectswitch->s == ISS_ON)
             {
                 is_connected = true;
                 camera_info["connected"] = true;
@@ -71,10 +72,9 @@ namespace OpenAPT
                 }
             }
         }
-        else if (strcmp(svp->name, "DEBUG") == 0)
+        else if (name == "DEBUG")
         {
-            ISwitch *debugswitch = IUFindSwitch(svp, "ENABLE");
-            if (debugswitch->s == ISS_ON)
+            if (auto debugswitch = IUFindSwitch(svp, "ENABLE"); debugswitch->s == ISS_ON)
             {
                 is_debug = true;
                 camera_info["debug"] = true;
@@ -87,79 +87,89 @@ namespace OpenAPT
                 spdlog::info("DEBUG mode of {} is disabled", _name);
             }
         }
-        else if (strcmp(svp->name, "CCD_FRAME_TYPE") == 0)
+        else if (name == "CCD_FRAME_TYPE")
         {
-            if (IUFindSwitch(svp, "FRAME_LIGHT")->s == ISS_ON)
-                camera_info["frame"]["type"] = "Light";
-            else if (IUFindSwitch(svp, "FRAME_DARK")->s == ISS_ON)
-                camera_info["frame"]["type"] = "Dark";
-            else if (IUFindSwitch(svp, "FRAME_FLAT")->s == ISS_ON)
-                camera_info["frame"]["type"] = "Flat";
-            else if (IUFindSwitch(svp, "FRAME_BIAS")->s == ISS_ON)
-                camera_info["frame"]["type"] = "Bias";
+            std::string_view type;
+
+            if (auto lightswitch = IUFindSwitch(svp, "FRAME_LIGHT"); lightswitch->s == ISS_ON)
+                type = "Light";
+            else if (auto darkswitch = IUFindSwitch(svp, "FRAME_DARK"); darkswitch->s == ISS_ON)
+                type = "Dark";
+            else if (auto flatswitch = IUFindSwitch(svp, "FRAME_FLAT"); flatswitch->s == ISS_ON)
+                type = "Flat";
+            else if (auto biasswitch = IUFindSwitch(svp, "FRAME_BIAS"); biasswitch->s == ISS_ON)
+                type = "Bias";
+
+            camera_info["frame"]["type"] = type;
             spdlog::debug("Current frame type of {} is {}", _name, camera_info["frame"]["type"].dump());
         }
-        else if (strcmp(svp->name, "CCD_TRANSFER_FORMAT") == 0)
+        else if (name == "CCD_TRANSFER_FORMAT")
         {
-            if (IUFindSwitch(svp, "FORMAT_FITS")->s == ISS_ON)
-                camera_info["frame"]["format"] = "Fits";
-            else if (IUFindSwitch(svp, "FORMAT_NATIVE")->s == ISS_ON)
-                camera_info["frame"]["format"] = "Raw";
-            else if (IUFindSwitch(svp, "FORMAT_XISF")->s == ISS_ON)
-                camera_info["frame"]["format"] = "Xisf";
-            spdlog::debug("Current frame type of {} is {}", _name, camera_info["frame"]["foramt"].dump());
+            std::string_view format;
+
+            if (auto fitsswitch = IUFindSwitch(svp, "FORMAT_FITS"); fitsswitch->s == ISS_ON)
+                format = "Fits";
+            else if (auto natswitch = IUFindSwitch(svp, "FORMAT_NATIVE"); natswitch->s == ISS_ON)
+                format = "Raw";
+            else if (auto xisfswitch = IUFindSwitch(svp, "FORMAT_XISF"); xisfswitch->s == ISS_ON)
+                format = "Xisf";
+
+            camera_info["frame"]["format"] = format;
+            spdlog::debug("Current frame format of {} is {}", _name, camera_info["frame"]["format"].dump());
         }
-        else if (strcmp(svp->name, "CCD_ABORT_EXPOSURE") == 0)
+        else if (name == "CCD_ABORT_EXPOSURE")
         {
-            if (IUFindSwitch(svp, "ABORT_EXPOSURE")->s == ISS_ON)
+            if (auto abortswitch = IUFindSwitch(svp, "ABORT_EXPOSURE"); abortswitch->s == ISS_ON)
             {
                 camera_info["exposure"]["abort"] = true;
                 spdlog::debug("{} is stopped", _name);
                 is_exposuring = false;
             }
         }
-        else if (strcmp(svp->name, "UPLOAD_MODE") == 0)
+        else if (name == "UPLOAD_MODE")
         {
-            if (IUFindSwitch(svp, "UPLOAD_CLIENT")->s == ISS_ON)
-            {
-                camera_info["network"]["mode"] = "Client";
-            }
-            else if (IUFindSwitch(svp, "UPLOAD_LOCAL")->s == ISS_ON)
-            {
-                camera_info["network"]["mode"] = "Local";
-            }
-            else if (IUFindSwitch(svp, "UPLOAD_BOTH")->s == ISS_ON)
-            {
-                camera_info["network"]["mode"] = "Both";
-            }
+            std::string_view mode;
+
+            if (auto clientswitch = IUFindSwitch(svp, "UPLOAD_CLIENT"); clientswitch->s == ISS_ON)
+                mode = "Client";
+            else if (auto localswitch = IUFindSwitch(svp, "UPLOAD_LOCAL"); localswitch->s == ISS_ON)
+                mode = "Local";
+            else if (auto bothswitch = IUFindSwitch(svp, "UPLOAD_BOTH"); bothswitch->s == ISS_ON)
+                mode = "Both";
+
+            camera_info["network"]["mode"] = mode;
             spdlog::debug("Current upload mode of {} is {}", _name, camera_info["network"]["mode"].dump());
         }
-        else if (strcmp(svp->name, "CCD_FAST_TOGGLE") == 0)
+        else if (name == "CCD_FAST_TOGGLE")
         {
-            if (IUFindSwitch(svp, "INDI_ENABLED")->s == ISS_ON)
-            {
-                camera_info["frame"]["fast_read"] = true;
-            }
-            else if (IUFindSwitch(svp, "INDI_DISABLED")->s == ISS_ON)
-            {
-                camera_info["frame"]["fast_read"] = false;
-            }
+            bool mode;
+
+            if (auto enabledswitch = IUFindSwitch(svp, "INDI_ENABLED"); enabledswitch->s == ISS_ON)
+                mode = true;
+            else if (auto disabledswitch = IUFindSwitch(svp, "INDI_DISABLED"); disabledswitch->s == ISS_ON)
+                mode = false;
+
+            camera_info["frame"]["fast_read"] = mode;
             spdlog::debug("Current readout mode of {} is {}", _name, camera_info["frame"]["fast_read"].dump());
         }
-        else if (strcmp(svp->name, "CCD_VIDEO_STREAM") == 0)
+        else if (name == "CCD_VIDEO_STREAM")
         {
-            if (IUFindSwitch(svp, "STREAM_ON")->s == ISS_ON)
+            if (auto onswitch = IUFindSwitch(svp, "STREAM_ON"); onswitch->s == ISS_ON)
             {
                 camera_info["video"]["is_video"] = true;
                 is_video = true;
-                spdlog::debug("{} start video capture");
+                spdlog::debug("{} start video capture", _name);
             }
-            else if (IUFindSwitch(svp, "STREAM_OFF")->s == ISS_ON)
+            else if (auto offswitch = IUFindSwitch(svp, "STREAM_OFF"); offswitch->s == ISS_ON)
             {
                 camera_info["video"]["is_video"] = false;
                 is_video = false;
                 spdlog::debug("{} stop video capture", _name);
             }
+        }
+        else if (name == "FLIP")
+        {
+
         }
     }
 
@@ -443,6 +453,70 @@ namespace OpenAPT
         {
             camera_limit_prop = property->getNumber();
             newNumber(camera_limit_prop);
+        }
+        // The following properties are for ASI Camera
+        else if (PropName == "FLIP" && Proptype == INDI_SWITCH)
+        {
+            asi_image_flip_prop = property->getSwitch();
+            newSwitch(asi_image_flip_prop);
+        }
+        else if (PropName == "CCD_CONTROLS" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "CCD_CONTROLS_MODE" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        // The following properties are for Toup Camera
+        else if (PropName == "TC_FAN_CONTROL" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "TC_FAN_Speed" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "TC_AUTO_WB" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "TC_HEAT_CONTROL" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "TC_HCG_CONTROL" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "TC_HGC_SET" && Proptype == INDI_NUMBER)
+        {
+
+        }
+        else if (PropName == "TC_LOW_NOISE_CONTROL" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "SIMULATION" && Proptype == INDI_SWITCH)
+        {
+            toupcam_simulation_prop = property->getSwitch();
+            newSwitch(toupcam_simulation_prop);
+        }
+        else if (PropName == "CCD_LEVEL_RANGE" && Proptype == INDI_NUMBER)
+        {
+
+        }
+        else if (PropName == "CCD_BINNING_MODE" && Proptype == INDI_SWITCH)
+        {
+
+        }
+        else if (PropName == "CCD_BLACK_BALANCE" && Proptype == INDI_NUMBER)
+        {
+
+        }
+        else if (PropName == "Firmware" && Proptype == INDI_NUMBER)
+        {
+
         }
     }
 

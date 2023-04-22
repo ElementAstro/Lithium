@@ -118,6 +118,37 @@ namespace OpenAPT
 
         nlohmann::json camera_info;
 
+    private:
+
+        // For INDI Toupcamera
+
+        ISwitchVectorProperty *toupcam_fan_control_prop;
+
+        ISwitchVectorProperty *toupcam_heat_control_prop;
+
+        ISwitchVectorProperty *toupcam_hcg_control_prop;
+
+        ISwitchVectorProperty *toupcam_low_noise_control_prop;
+
+        ISwitchVectorProperty *toupcam_simulation_prop;
+
+        ISwitchVectorProperty *toupcam_binning_mode_prop;
+
+        // For INDI ZWOASI
+
+        // 图像翻转
+        ISwitchVectorProperty *asi_image_flip_prop;
+        // 图像翻转
+        ISwitchVectorProperty *asi_image_flip_hor_prop;
+        ISwitchVectorProperty *asi_image_flip_ver_prop;
+        // 控制模式
+        INumberVectorProperty *asi_controls_prop;
+        // 控制模式
+        ISwitchVectorProperty *asi_controls_mode_prop;
+
+
+        // For INDI QHYCCD
+
     public:
         // 构造函数
         INDICamera(const std::string &name);

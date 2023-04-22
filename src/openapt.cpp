@@ -97,6 +97,7 @@ Description: Main
 #include "task/camera_task.hpp"
 #include "indi/indicamera.hpp"
 #include "asx/search.hpp"
+#include "module/sheller.hpp"
 
 using json = nlohmann::json;
 
@@ -664,6 +665,21 @@ void TestAll()
     // nlohmann::json solve_result = OpenAPT::API::Astrometry::solve("apod3.jpg");
     // spdlog::debug("RA {} DEC {}",solve_result["ra"],solve_result["dec"]);
     m_App.GetTaskManager()->executeAllTasks();
+    spdlog::debug("--------------------------------------------------------------");
+    spdlog::debug("Shell Manager Testing");
+    spdlog::debug("--------------------------------------------------------------");
+    
+    // 获取脚本列表
+
+    // 运行脚本
+    std::string patha = "./scripts";
+    OpenAPT::ScriptManager scriptManager(patha);
+    success = scriptManager.runScript("script1");
+    if (success) {
+        spdlog::info("Script executed successfully");
+    } else {
+        spdlog::error("Failed to execute script");
+    }
 }
 
 void quit()

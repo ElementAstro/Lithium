@@ -41,6 +41,7 @@ Description: INDI Camera
 #include <string>
 
 #include <spdlog/spdlog.h>
+#include "nlohmann/json.hpp"
 
 namespace OpenAPT
 {
@@ -67,6 +68,8 @@ namespace OpenAPT
         INumber *indi_frame_height;
         // 帧类型
         ISwitchVectorProperty *frame_type_prop;
+        // 图像类型
+        ISwitchVectorProperty *image_type_prop;
         // CCD 设备信息
         INumberVectorProperty *ccdinfo_prop;
         // 二次取样属性
@@ -77,10 +80,30 @@ namespace OpenAPT
         INumber *indi_binning_y;
         // 视频属性
         ISwitchVectorProperty *video_prop;
+        // 视频延迟
+        INumberVectorProperty *video_delay_prop;
+        // 视频曝光时间
+        INumberVectorProperty *video_exposure_prop;
+        // 视频帧率
+        INumberVectorProperty *video_fps_prop;
         // 相机端口
         ITextVectorProperty *camera_port;
         // 相机设备
         INDI::BaseDevice *camera_device;
+        // 调试模式
+        ISwitchVectorProperty *debug_prop;
+        // 信息刷新间隔
+        INumberVectorProperty *polling_prop;
+        // 已连接的辅助设备
+        ITextVectorProperty * active_device_prop;
+        //是否压缩
+        ISwitchVectorProperty *compression_prop;
+        // 图像上传模式
+        ISwitchVectorProperty *image_upload_mode_prop;
+        // 快速读出模式
+        ISwitchVectorProperty *fast_read_out_prop;
+        // 相机限制
+        INumberVectorProperty *camera_limit_prop;
 
         // 标志位
         bool is_ready; // 是否就绪
@@ -90,6 +113,10 @@ namespace OpenAPT
         std::string indi_camera_cmd = "CCD_"; // INDI 控制命令前缀
         std::string indi_blob_name;           // BLOB 文件名
         std::string indi_camera_exec = "";    // INDI 执行命令
+        std::string indi_camera_version;
+        std::string indi_camera_interface;
+
+        nlohmann::json camera_info;
 
     public:
         // 构造函数
@@ -105,6 +132,10 @@ namespace OpenAPT
         bool reconnect() override;
         // 搜索可用设备
         bool scanForAvailableDevices() override;
+
+        bool getParameter(const std::string &paramName) override;
+
+        bool setParameter(const std::string &paramName, const std::string &paramValue) override;
 
         // 开始曝光
         bool startExposure(int duration_ms) override;

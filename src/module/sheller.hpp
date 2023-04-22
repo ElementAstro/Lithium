@@ -29,93 +29,44 @@ Description: Shell Manager
 
 **************************************************/
 
-#pragma once
+#ifndef SHELLER_HPP
+#define SHELLER_HPP
 
+#include <iostream>
 #include <vector>
-#include <string>
-#include "nlohmann/json.hpp"
+#include <filesystem>
+#include <sstream>
 
-using json = nlohmann::json;
+#include "nlohmann/json.hpp"
+#include "spdlog/spdlog.h"
 
 namespace OpenAPT
 {
-
     enum class ScriptType
     {
-        Sh, // Shell 脚本
-        Ps  // PowerShell 脚本
+        Sh,
+        Ps
     };
 
     class ScriptManager
     {
     public:
-        /**
-         * @brief 构造函数
-         * @param path 脚本文件所在的目录
-         */
-        explicit ScriptManager(const std::string &path);
-
-        /**
-         * @brief 遍历给定目录下所有的脚本文件，包括子文件夹
-         * @return 所有脚本文件的路径
-         */
-        std::vector<std::string> getScriptFiles() const;
-
-        /**
-         * @brief 从脚本文件中读取脚本内容
-         * @param path 脚本文件的路径
-         * @return 脚本内容
-         */
-        std::string readScriptFromFile(const std::string &path) const;
-
-        /**
-         * @brief 校验脚本是否正确
-         * @param script 脚本内容
-         * @param scriptType 脚本类型
-         * @return 如果脚本正确返回 true，否则返回 false
-         */
-        bool validateScript(const std::string &script, ScriptType scriptType) const;
-
-        /**
-         * @brief 将脚本名字和路径存储到 JSON 变量中
-         * @param files 所有脚本文件的路径
-         * @return 存储脚本名字和路径的 JSON 变量
-         */
-        json getScriptsJson(const std::vector<std::string> &files) const;
-
-        /**
-         * @brief 通过名字获取脚本并校验，然后执行该脚本
-         * @param scriptName 脚本的名字
-         * @param async 是否异步执行，默认为 false（同步执行）
-         * @return 如果执行成功返回 true，否则返回 false
-         */
+        ScriptManager(const std::string &path);
         bool runScript(const std::string &scriptName, bool async = false) const;
 
     private:
-        const std::string m_path;               // 脚本文件所在的目录
-        const std::vector<std::string> m_files; // 所有脚本文件的路径
-        const json m_scriptsJson;               // 存储脚本名字和路径的 JSON 变量
+        std::vector<std::string> m_files;
+        json m_scriptsJson;
+        std::string m_path = "scripts";
 
-        /**
-         * @brief 根据文件扩展名判断脚本类型
-         * @param path 脚本文件的路径
-         * @return 脚本类型
-         */
+        std::vector<std::string> getScriptFiles() const;
+        std::string readScriptFromFile(const std::string &path) const;
+        bool validateScript(const std::string &script, ScriptType scriptType) const;
         ScriptType getScriptType(const std::string &path) const;
-
-        /**
-         * @brief 根据操作系统不同构建执行脚本的命令
-         * @param scriptPath 脚本文件的路径
-         * @return 执行脚本的命令
-         */
+        json getScriptsJson(const std::vector<std::string> &files) const;
         std::string buildCommand(const std::string &scriptPath) const;
-
-        /**
-         * @brief 执行命令并获取输出
-         * @param command 要执行的命令
-         * @return 命令执行的输出
-         */
         std::string executeCommand(const std::string &command) const;
     };
-
 }
+
+#endif // SHELLER_HPP

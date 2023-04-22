@@ -31,32 +31,30 @@ Description: Shell Manager
 
 #include "sheller.hpp"
 
-#include <iostream>
 #include <fstream>
-#include <sstream>
-#include <filesystem>
-#include <sstream>
 #include <cstdlib>
 #include <array>
+#include <unordered_map>
 
-#include <spdlog/spdlog.h>
 #ifdef _WIN32
 #include <Windows.h>
 #else
 #include <cstdio>
+#include <thread>
 #endif
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-#ifndef _WIN32 // 如果是 Linux 系统
-FILE *popen(const char *command, const char *type);
-int pclose(FILE *stream);
-#endif
-
 namespace OpenAPT
 {
-    ScriptManager::ScriptManager(const std::string &path) : m_path(path), m_files(getScriptFiles()), m_scriptsJson(getScriptsJson(m_files)) {}
+    ScriptManager::ScriptManager(const std::string &scriptPath)
+    {
+    std::string path = std::filesystem::path(scriptPath).parent_path().string();
+    m_path = std::filesystem::absolute(path);
+    m_files = getScriptFiles();
+    m_scriptsJson = getScriptsJson(m_files);
+    }
 
     std::vector<std::string> ScriptManager::getScriptFiles() const
     {
@@ -65,9 +63,12 @@ namespace OpenAPT
         {
             if (entry.is_regular_file() && (entry.path().extension() == ".sh" || entry.path().extension() == ".ps1"))
             {
-                files.push_back(entry.path().string());
+                std::string filePath = entry.path().string();
+                std::string relativePath = std::filesystem::relative(filePath, m_path).generic_string();
+                files.push_back(relativePath);
             }
         }
+
         return files;
     }
 
@@ -83,10 +84,32 @@ namespace OpenAPT
         switch (scriptType)
         {
         case ScriptType::Sh:
-            // 在这里实现 Shell 脚本校验逻辑
+            // 检查 Shell 脚本是否以正确的 shebang 开头（#!/bin/bash 或 #!/bin/sh）
+            if (script.substr(0, 2) != "#!")
+            {
+                spdlog::error("Invalid script: missing shebang");
+                return false;
+            }
+            if (script.find("#!/bin/bash") == std::string::npos && script.find("#!/bin/sh") == std::string::npos)
+            {
+                spdlog::error("Unsupported script: wrong shebang");
+                return false;
+            }
             return true;
         case ScriptType::Ps:
-            // 在这里实现 PowerShell 脚本校验逻辑
+            // 检查 PowerShell 脚本代码是否符合语法规范
+            // 使用 PowerShell 的系统命令 "$ErrorActionPreference = 'Stop'; $null = & {" + scriptContent + "}"
+            // 如果脚本有语法错误，则会抛出异常，因此使用 try-catch 捕获异常来判断脚本是否有效
+            try
+            {
+                std::string command = "powershell.exe -Command \"$ErrorActionPreference = 'Stop'; $null = & {" + script + "}\"";
+                executeCommand(command);
+            }
+            catch (const std::runtime_error &e)
+            {
+                spdlog::error("Invalid script: {}", e.what());
+                return false;
+            }
             return true;
         default:
             spdlog::error("Unsupported script type");
@@ -107,81 +130,81 @@ namespace OpenAPT
 
     bool ScriptManager::runScript(const std::string &scriptName, bool async) const
     {
-        if (m_scriptsJson.contains(scriptName))
+        if (!m_scriptsJson.contains(scriptName))
         {
-            std::string scriptPath = m_scriptsJson[scriptName]["path"];
-            spdlog::debug("Found script \"{}\" at \"{}\"", scriptName, scriptPath);
+            spdlog::error("Script \"{}\" not found", scriptName);
+            return false;
+        }
 
-            std::string scriptContent = readScriptFromFile(scriptPath);
-            ScriptType scriptType = getScriptType(scriptPath);
+        std::string scriptPath = m_scriptsJson[scriptName]["path"];
+        spdlog::debug("Found script \"{}\" at \"{}\"", scriptName, scriptPath);
 
-            if (!validateScript(scriptContent, scriptType))
+        std::string scriptContent = readScriptFromFile(scriptPath);
+        ScriptType scriptType = getScriptType(scriptPath);
+
+        if (!validateScript(scriptContent, scriptType))
+        {
+            spdlog::error("Script \"{}\" is invalid", scriptName);
+            return false;
+        }
+
+        std::string command = buildCommand(scriptPath);
+        spdlog::debug("Executing command \"{}\"", command);
+
+        if (async)
+        {
+#ifdef _WIN32
+            STARTUPINFO si;
+            PROCESS_INFORMATION pi;
+            ZeroMemory(&si, sizeof(si));
+            si.cb = sizeof(si);
+            ZeroMemory(&pi, sizeof(pi));
+            if (!CreateProcess(NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
             {
-                spdlog::error("Script \"{}\" is invalid", scriptName);
+                spdlog::error("Error: CreateProcess failed ({})", GetLastError());
                 return false;
             }
-
-            std::string command = buildCommand(scriptPath);
-            spdlog::debug("Executing command \"{}\"", command);
-
-            if (async)
-            {
-#ifdef _WIN32
-                STARTUPINFO si;
-                PROCESS_INFORMATION pi;
-                ZeroMemory(&si, sizeof(si));
-                si.cb = sizeof(si);
-                ZeroMemory(&pi, sizeof(pi));
-                if (!CreateProcess(NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
-                {
-                    spdlog::error("Error: CreateProcess failed ({})", GetLastError());
-                    return false;
-                }
 #else
+            std::thread t([=](){
                 int ret = std::system(command.c_str());
                 if (ret != 0)
                 {
                     spdlog::error("Error: command failed ({})", ret);
                     return false;
                 }
+                return true;
+            });
+            t.detach();
 #endif
-            }
-            else
-            {
-#ifdef _WIN32
-                std::string output = executeCommand(command);
-                spdlog::debug("Script \"{}\" output: \n{}", scriptName, output);
-#else
-                // 在 Linux 中直接调用 shell 脚本的内容
-                spdlog::debug("Script \"{}\" output: ", scriptName);
-                int ret = std::system(scriptContent.c_str());
-                if (ret != 0)
-                {
-                    spdlog::error("Error: command failed ({})", ret);
-                    return false;
-                }
-#endif
-            }
-
-            return true;
         }
         else
         {
-            spdlog::error("Script \"{}\" not found", scriptName);
-            return false;
+#ifdef _WIN32
+            std::string output = executeCommand(command);
+            spdlog::debug("Script \"{}\" output: \n{}", scriptName, output);
+#else
+            // 在 Linux 中直接调用 shell 脚本的内容
+            spdlog::debug("Script \"{}\" output: ", scriptName);
+            int ret = std::system(scriptContent.c_str());
+            if (ret != 0)
+            {
+                spdlog::error("Error: command failed ({})", ret);
+                return false;
+            }
+#endif
         }
+
+        return true;
     }
 
     ScriptType ScriptManager::getScriptType(const std::string &path) const
     {
-        std::string extension = fs::path(path).extension();
-        if (extension == ".sh")
+        static const std::unordered_map<std::string, ScriptType> suffixMap = {{"sh", ScriptType::Sh}, {"ps1", ScriptType::Ps}};
+        std::string extension = std::filesystem::path(path).extension().string().substr(1);
+        auto it = suffixMap.find(extension);
+        if (it != suffixMap.end())
         {
-            return ScriptType::Sh;
-        }
-        else if (extension == ".ps1")
-        {
-            return ScriptType::Ps;
+            return it->second;
         }
         else
         {

@@ -131,10 +131,9 @@ namespace OpenAPT
          * @brief 获取设备参数
          *
          * @param paramName 参数名称
-         * @param paramValue 参数值
          * @return 获取设备参数是否成功
          */
-        virtual bool getParameter(const std::string &paramName, std::string &paramValue) {}
+        virtual bool getParameter(const std::string &paramName) {}
 
         /**
          * @brief 设置设备参数
@@ -218,6 +217,7 @@ namespace OpenAPT
         std::string hostname = "127.0.0.1"; ///< 主机名
         int port = 7624;                    ///< 端口号
         bool is_connected;                  ///< 是否已连接
+        bool is_debug;                      ///< 调试模式
     };
 
     /**

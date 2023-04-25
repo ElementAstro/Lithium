@@ -34,7 +34,6 @@ Description: Task Runner
 #include <vector>
 #include <memory>
 
-#include "indicators/indicators.hpp"
 #include "nlohmann/json.hpp"
 
 namespace OpenAPT
@@ -184,8 +183,6 @@ namespace OpenAPT
 
         bool m_StopFlag = false;
         std::shared_ptr<BasicTask> m_CurrentTask;
-
-        indicators::ProgressBar m_progressBar{indicators::option::PrefixText{"Progress"}};
     };
 
 } // namespace OpenAPT

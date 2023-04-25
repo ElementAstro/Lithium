@@ -38,7 +38,6 @@ Description: Main
 #include "task/runner.hpp"
 #include "device/manager.hpp"
 #include "module/modloader.hpp"
-#include "module/lualoader.hpp"
 #include "module/pythonloader.hpp"
 #include "config/configor.hpp"
 #include "package/packageloader.hpp"
@@ -85,10 +84,6 @@ public:
         return m_PythonLoader;
     }
 
-    OpenAPT::LuaScriptLoader* GetLuaLoader() const {
-        return m_LuaLoader;
-    }
-
     void sendJSONMessage(const nlohmann::json& msg);
 
 private:
@@ -104,7 +99,6 @@ private:
     OpenAPT::ConfigManager* m_ConfigManager;
     OpenAPT::PackageManager* m_PackageManager;
     OpenAPT::PyModuleLoader* m_PythonLoader;
-    OpenAPT::LuaScriptLoader* m_LuaLoader;
 
     bool m_UseSSL;
     std::string m_CertPath;

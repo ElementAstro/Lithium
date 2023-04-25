@@ -1,11 +1,6 @@
 #pragma once
 
-#ifndef ASIO_STANDALONE
-#define ASIO_STANDALONE
-#endif
-#include <asio.hpp>
-#include <asio/basic_waitable_timer.hpp>
-
+#include <boost/asio.hpp>
 #include <chrono>
 #include <functional>
 #include <map>
@@ -30,14 +25,15 @@ namespace crow
             using time_type = clock_type::time_point;
 
         public:
-            task_timer(asio::io_service &io_service) : io_service_(io_service), timer_(io_service_)
+            task_timer(boost::asio::io_service& io_service):
+              io_service_(io_service), deadline_timer_(io_service_)
             {
-                timer_.expires_after(std::chrono::seconds(1));
-                timer_.async_wait(
-                    std::bind(&task_timer::tick_handler, this, std::placeholders::_1));
+                deadline_timer_.expires_from_now(boost::posix_time::seconds(1));
+                deadline_timer_.async_wait(
+                  std::bind(&task_timer::tick_handler, this, std::placeholders::_1));
             }
 
-            ~task_timer() { timer_.cancel(); }
+            ~task_timer() { deadline_timer_.cancel(); }
 
             void cancel(identifier_type id)
             {
@@ -52,12 +48,12 @@ namespace crow
             /// It is not bound to this task_timer instance and in some cases could lead to
             /// undefined behavior if used with other task_timer objects or after the task
             /// has been successfully executed.
-            identifier_type schedule(const task_type &task)
+            identifier_type schedule(const task_type& task)
             {
                 tasks_.insert(
-                    {++highest_id_,
-                     {clock_type::now() + std::chrono::seconds(get_default_timeout()),
-                      task}});
+                  {++highest_id_,
+                   {clock_type::now() + std::chrono::seconds(get_default_timeout()),
+                    task}});
                 CROW_LOG_DEBUG << "task_timer scheduled: " << this << ' ' << highest_id_;
                 return highest_id_;
             }
@@ -71,7 +67,7 @@ namespace crow
             /// It is not bound to this task_timer instance and in some cases could lead to
             /// undefined behavior if used with other task_timer objects or after the task
             /// has been successfully executed.
-            identifier_type schedule(const task_type &task, std::uint8_t timeout)
+            identifier_type schedule(const task_type& task, std::uint8_t timeout)
             {
                 tasks_.insert({++highest_id_,
                                {clock_type::now() + std::chrono::seconds(timeout), task}});
@@ -94,7 +90,7 @@ namespace crow
                 time_type current_time = clock_type::now();
                 std::vector<identifier_type> finished_tasks;
 
-                for (const auto &task : tasks_)
+                for (const auto& task : tasks_)
                 {
                     if (task.second.first < current_time)
                     {
@@ -104,30 +100,28 @@ namespace crow
                     }
                 }
 
-                for (const auto &task : finished_tasks)
+                for (const auto& task : finished_tasks)
                     tasks_.erase(task);
 
                 // If no task is currently scheduled, reset the issued ids back to 0.
-                if (tasks_.empty())
-                    highest_id_ = 0;
+                if (tasks_.empty()) highest_id_ = 0;
             }
 
-            void tick_handler(const asio::error_code &ec)
+            void tick_handler(const boost::system::error_code& ec)
             {
-                if (ec)
-                    return;
+                if (ec) return;
 
                 process_tasks();
 
-                timer_.expires_after(std::chrono::seconds(1));
-                timer_.async_wait(
-                    std::bind(&task_timer::tick_handler, this, std::placeholders::_1));
+                deadline_timer_.expires_from_now(boost::posix_time::seconds(1));
+                deadline_timer_.async_wait(
+                  std::bind(&task_timer::tick_handler, this, std::placeholders::_1));
             }
 
         private:
             std::uint8_t default_timeout_{5};
-            asio::io_service &io_service_;
-            asio::basic_waitable_timer<clock_type> timer_;
+            boost::asio::io_service& io_service_;
+            boost::asio::deadline_timer deadline_timer_;
             std::map<identifier_type, std::pair<time_type, task_type>> tasks_;
 
             // A continuosly increasing number to be issued to threads to identify them.

@@ -264,7 +264,6 @@ namespace OpenAPT
                         task->execute();
                         spdlog::debug("Finished task {}", task->getName());
                         ++m_completedTaskCount;
-                        m_progressBar.set_progress(m_completedTaskCount);
                         m_CurrentTask = nullptr; // Reset m_CurrentTask to null after the task is finished
                     }
                 }

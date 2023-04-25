@@ -84,9 +84,6 @@ project(openapt)
 
 add_subdirectory(libs/)
 add_subdirectory(libs/pugixml)
-add_subdirectory(libs/lua)
-
-add_subdirectory(modules)
 
 add_subdirectory(src/indiserver)
 
@@ -192,9 +189,6 @@ set(indiserver_SRC
 set(openapt_SRC
 		${openapt_src_dir}/src/module/modloader.cpp
 		${openapt_src_dir}/src/module/modloader.hpp
-
-		${openapt_src_dir}/src/module/lualoader.cpp
-		${openapt_src_dir}/src/module/lualoader.hpp
 
 		${openapt_src_dir}/src/module/pythonloader.cpp
 		${openapt_src_dir}/src/module/pythonloader.hpp

@@ -102,54 +102,56 @@ namespace crow
 
         Source,
 
+
         InternalMethodCount,
         // should not add an item below this line: used for array count
     };
 
-    constexpr const char *method_strings[] =
-        {
-            "DELETE",
-            "GET",
-            "HEAD",
-            "POST",
-            "PUT",
+    constexpr const char* method_strings[] =
+      {
+        "DELETE",
+        "GET",
+        "HEAD",
+        "POST",
+        "PUT",
 
-            "CONNECT",
-            "OPTIONS",
-            "TRACE",
+        "CONNECT",
+        "OPTIONS",
+        "TRACE",
 
-            "PATCH",
-            "PURGE",
+        "PATCH",
+        "PURGE",
 
-            "COPY",
-            "LOCK",
-            "MKCOL",
-            "MOVE",
-            "PROPFIND",
-            "PROPPATCH",
-            "SEARCH",
-            "UNLOCK",
-            "BIND",
-            "REBIND",
-            "UNBIND",
-            "ACL",
+        "COPY",
+        "LOCK",
+        "MKCOL",
+        "MOVE",
+        "PROPFIND",
+        "PROPPATCH",
+        "SEARCH",
+        "UNLOCK",
+        "BIND",
+        "REBIND",
+        "UNBIND",
+        "ACL",
 
-            "REPORT",
-            "MKACTIVITY",
-            "CHECKOUT",
-            "MERGE",
+        "REPORT",
+        "MKACTIVITY",
+        "CHECKOUT",
+        "MERGE",
 
-            "M-SEARCH",
-            "NOTIFY",
-            "SUBSCRIBE",
-            "UNSUBSCRIBE",
+        "M-SEARCH",
+        "NOTIFY",
+        "SUBSCRIBE",
+        "UNSUBSCRIBE",
 
-            "MKCALENDAR",
+        "MKCALENDAR",
 
-            "LINK",
-            "UNLINK",
+        "LINK",
+        "UNLINK",
 
-            "SOURCE"};
+        "SOURCE"};
+
 
     inline std::string method_name(HTTPMethod method)
     {
@@ -240,58 +242,39 @@ namespace crow
             for (auto i : double_params)
                 std::cerr << i << ", ";
             std::cerr << std::endl;
-            for (auto &i : string_params)
+            for (auto& i : string_params)
                 std::cerr << i << ", ";
             std::cerr << std::endl;
         }
 
-        template <typename T>
+        template<typename T>
         T get(unsigned) const;
     };
 
-    template <>
+    template<>
     inline int64_t routing_params::get<int64_t>(unsigned index) const
     {
         return int_params[index];
     }
 
-    template <>
+    template<>
     inline uint64_t routing_params::get<uint64_t>(unsigned index) const
     {
         return uint_params[index];
     }
 
-    template <>
+    template<>
     inline double routing_params::get<double>(unsigned index) const
     {
         return double_params[index];
     }
 
-    template <>
+    template<>
     inline std::string routing_params::get<std::string>(unsigned index) const
     {
         return string_params[index];
     }
     /// @endcond
-
-    struct routing_handle_result
-    {
-        uint16_t rule_index;
-        std::vector<uint16_t> blueprint_indices;
-        routing_params r_params;
-        HTTPMethod method;
-
-        routing_handle_result() {}
-
-        routing_handle_result(uint16_t rule_index_, std::vector<uint16_t> blueprint_indices_, routing_params r_params_) : rule_index(rule_index_),
-                                                                                                                          blueprint_indices(blueprint_indices_),
-                                                                                                                          r_params(r_params_) {}
-
-        routing_handle_result(uint16_t rule_index_, std::vector<uint16_t> blueprint_indices_, routing_params r_params_, HTTPMethod method_) : rule_index(rule_index_),
-                                                                                                                                              blueprint_indices(blueprint_indices_),
-                                                                                                                                              r_params(r_params_),
-                                                                                                                                              method(method_) {}
-    };
 } // namespace crow
 
 // clang-format off

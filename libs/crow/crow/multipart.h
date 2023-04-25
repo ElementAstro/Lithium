@@ -31,8 +31,8 @@ namespace crow
         using mph_map = std::unordered_multimap<std::string, header, ci_hash, ci_key_eq>;
 
         /// Find and return the value object associated with the key. (returns an empty class if nothing is found)
-        template <typename O, typename T>
-        inline const O &get_header_value_object(const T &headers, const std::string &key)
+        template<typename O, typename T>
+        inline const O& get_header_value_object(const T& headers, const std::string& key)
         {
             if (headers.count(key))
             {
@@ -43,13 +43,13 @@ namespace crow
         }
 
         /// Same as \ref get_header_value_object() but for \ref multipart.header
-        template <typename T>
-        inline const header &get_header_object(const T &headers, const std::string &key)
+        template<typename T>
+        inline const header& get_header_object(const T& headers, const std::string& key)
         {
             return get_header_value_object<header>(headers, key);
         }
 
-        /// One part of the multipart message
+        ///One part of the multipart message
 
         ///
         /// It is usually separated from other sections by a `boundary`
@@ -61,7 +61,7 @@ namespace crow
             operator int() const { return std::stoi(body); }    ///< Returns \ref body as integer
             operator double() const { return std::stod(body); } ///< Returns \ref body as double
 
-            const header &get_header_object(const std::string &key) const
+            const header& get_header_object(const std::string& key) const
             {
                 return multipart::get_header_object(headers, key);
             }
@@ -78,18 +78,14 @@ namespace crow
             std::vector<part> parts; ///< The individual parts of the message
             mp_map part_map;         ///< The individual parts of the message, organized in a map with the `name` header parameter being the key
 
-            const std::string &get_header_value(const std::string &key) const
+            const std::string& get_header_value(const std::string& key) const
             {
                 return crow::get_header_value(headers, key);
             }
 
-            part get_part_by_name(const std::string &name)
+            part get_part_by_name(const std::string& name)
             {
-                mp_map::iterator result = part_map.find(name);
-                if (result != part_map.end())
-                    return result->second;
-                else
-                    return {};
+                return part_map.find(name)->second;
             }
 
             /// Represent all parts as a string (**does not include message headers**)
@@ -112,10 +108,10 @@ namespace crow
             {
                 std::stringstream str;
                 part item = parts[part_];
-                for (auto &item_h : item.headers)
+                for (auto& item_h : item.headers)
                 {
                     str << item_h.first << ": " << item_h.second.value;
-                    for (auto &it : item_h.second.params)
+                    for (auto& it : item_h.second.params)
                     {
                         str << "; " << it.first << '=' << pad(it.second);
                     }
@@ -127,22 +123,24 @@ namespace crow
             }
 
             /// Default constructor using default values
-            message(const ci_map &headers, const std::string &boundary, const std::vector<part> &sections) : returnable("multipart/form-data; boundary=CROW-BOUNDARY"), headers(headers), boundary(boundary), parts(sections)
+            message(const ci_map& headers, const std::string& boundary, const std::vector<part>& sections):
+              returnable("multipart/form-data; boundary=CROW-BOUNDARY"), headers(headers), boundary(boundary), parts(sections)
             {
                 if (!boundary.empty())
                     content_type = "multipart/form-data; boundary=" + boundary;
-                for (auto &item : parts)
+                for (auto& item : parts)
                 {
                     part_map.emplace(
-                        (get_header_object(item.headers, "Content-Disposition").params.find("name")->second),
-                        item);
+                      (get_header_object(item.headers, "Content-Disposition").params.find("name")->second),
+                      item);
                 }
             }
 
             /// Create a multipart message from a request data
-            message(const request &req) : returnable("multipart/form-data; boundary=CROW-BOUNDARY"),
-                                          headers(req.headers),
-                                          boundary(get_boundary(get_header_value("Content-Type")))
+            message(const request& req):
+              returnable("multipart/form-data; boundary=CROW-BOUNDARY"),
+              headers(req.headers),
+              boundary(get_boundary(get_header_value("Content-Type")))
             {
                 if (!boundary.empty())
                     content_type = "multipart/form-data; boundary=" + boundary;
@@ -150,11 +148,11 @@ namespace crow
             }
 
         private:
-            std::string get_boundary(const std::string &header) const
+            std::string get_boundary(const std::string& header) const
             {
                 constexpr char boundary_text[] = "boundary=";
                 size_t found = header.find(boundary_text);
-                if (found != std::string::npos)
+                if (found)
                 {
                     std::string to_return(header.substr(found + strlen(boundary_text)));
                     if (to_return[0] == '\"')
@@ -166,7 +164,7 @@ namespace crow
                 return std::string();
             }
 
-            void parse_body(std::string body, std::vector<part> &sections, mp_map &part_map)
+            void parse_body(std::string body, std::vector<part>& sections, mp_map& part_map)
             {
 
                 std::string delimiter = dd + boundary;
@@ -175,11 +173,6 @@ namespace crow
                 while (body != (crlf))
                 {
                     size_t found = body.find(delimiter);
-                    if (found == std::string::npos)
-                    {
-                        // did not find delimiter; probably an ill-formed body; ignore the rest
-                        break;
-                    }
                     std::string section = body.substr(0, found);
 
                     // +2 is the CRLF.
@@ -189,14 +182,14 @@ namespace crow
                     {
                         part parsed_section(parse_section(section));
                         part_map.emplace(
-                            (get_header_object(parsed_section.headers, "Content-Disposition").params.find("name")->second),
-                            parsed_section);
+                          (get_header_object(parsed_section.headers, "Content-Disposition").params.find("name")->second),
+                          parsed_section);
                         sections.push_back(std::move(parsed_section));
                     }
                 }
             }
 
-            part parse_section(std::string &section)
+            part parse_section(std::string& section)
             {
                 struct part to_return;
 
@@ -209,7 +202,7 @@ namespace crow
                 return to_return;
             }
 
-            void parse_section_head(std::string &lines, part &part)
+            void parse_section_head(std::string& lines, part& part)
             {
                 while (!lines.empty())
                 {
@@ -255,14 +248,14 @@ namespace crow
                 }
             }
 
-            inline std::string trim(std::string &string, const char &excess = '"') const
+            inline std::string trim(std::string& string, const char& excess = '"') const
             {
                 if (string.length() > 1 && string[0] == excess && string[string.length() - 1] == excess)
                     return string.substr(1, string.length() - 2);
                 return string;
             }
 
-            inline std::string pad(std::string &string, const char &padding = '"') const
+            inline std::string pad(std::string& string, const char& padding = '"') const
             {
                 return (padding + string + padding);
             }

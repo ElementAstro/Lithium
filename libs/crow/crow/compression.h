@@ -19,7 +19,7 @@ namespace crow
             GZIP = 15 | 16,
         };
 
-        inline std::string compress_string(std::string const &str, algorithm algo)
+        inline std::string compress_string(std::string const& str, algorithm algo)
         {
             std::string compressed_str;
             z_stream stream{};
@@ -30,13 +30,13 @@ namespace crow
 
                 stream.avail_in = str.size();
                 // zlib does not take a const pointer. The data is not altered.
-                stream.next_in = const_cast<Bytef *>(reinterpret_cast<const Bytef *>(str.c_str()));
+                stream.next_in = const_cast<Bytef*>(reinterpret_cast<const Bytef*>(str.c_str()));
 
                 int code = Z_OK;
                 do
                 {
                     stream.avail_out = sizeof(buffer);
-                    stream.next_out = reinterpret_cast<Bytef *>(&buffer[0]);
+                    stream.next_out = reinterpret_cast<Bytef*>(&buffer[0]);
 
                     code = ::deflate(&stream, Z_FINISH);
                     // Successful and non-fatal error code returned by deflate when used with Z_FINISH flush
@@ -56,7 +56,7 @@ namespace crow
             return compressed_str;
         }
 
-        inline std::string decompress_string(std::string const &deflated_string)
+        inline std::string decompress_string(std::string const& deflated_string)
         {
             std::string inflated_string;
             Bytef tmp[8192];
@@ -64,7 +64,7 @@ namespace crow
             z_stream zstream{};
             zstream.avail_in = deflated_string.size();
             // Nasty const_cast but zlib won't alter its contents
-            zstream.next_in = const_cast<Bytef *>(reinterpret_cast<Bytef const *>(deflated_string.c_str()));
+            zstream.next_in = const_cast<Bytef*>(reinterpret_cast<Bytef const*>(deflated_string.c_str()));
             // Initialize with automatic header detection, for gzip support
             if (::inflateInit2(&zstream, MAX_WBITS | 32) == Z_OK)
             {

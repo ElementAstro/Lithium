@@ -1,12 +1,10 @@
 #pragma once
 
 #include <chrono>
-#ifndef ASIO_STANDALONE
-#define ASIO_STANDALONE
-#endif
-#include <asio.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/asio.hpp>
 #ifdef CROW_ENABLE_SSL
-#include <asio/ssl.hpp>
+#include <boost/asio/ssl.hpp>
 #endif
 #include <cstdint>
 #include <atomic>
@@ -21,26 +19,27 @@
 
 namespace crow
 {
+    using namespace boost;
     using tcp = asio::ip::tcp;
 
-    template <typename Handler, typename Adaptor = SocketAdaptor, typename... Middlewares>
+    template<typename Handler, typename Adaptor = SocketAdaptor, typename... Middlewares>
     class Server
     {
     public:
-        Server(Handler *handler, std::string bindaddr, uint16_t port, std::string server_name = std::string("Crow/") + VERSION, std::tuple<Middlewares...> *middlewares = nullptr, uint16_t concurrency = 1, uint8_t timeout = 5, typename Adaptor::context *adaptor_ctx = nullptr) : acceptor_(io_service_, tcp::endpoint(asio::ip::address::from_string(bindaddr), port)),
-                                                                                                                                                                                                                                                                                      signals_(io_service_),
-                                                                                                                                                                                                                                                                                      tick_timer_(io_service_),
-                                                                                                                                                                                                                                                                                      handler_(handler),
-                                                                                                                                                                                                                                                                                      concurrency_(concurrency),
-                                                                                                                                                                                                                                                                                      timeout_(timeout),
-                                                                                                                                                                                                                                                                                      server_name_(server_name),
-                                                                                                                                                                                                                                                                                      port_(port),
-                                                                                                                                                                                                                                                                                      bindaddr_(bindaddr),
-                                                                                                                                                                                                                                                                                      task_queue_length_pool_(concurrency_ - 1),
-                                                                                                                                                                                                                                                                                      middlewares_(middlewares),
-                                                                                                                                                                                                                                                                                      adaptor_ctx_(adaptor_ctx)
-        {
-        }
+        Server(Handler* handler, std::string bindaddr, uint16_t port, std::string server_name = std::string("Crow/") + VERSION, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, uint8_t timeout = 5, typename Adaptor::context* adaptor_ctx = nullptr):
+          acceptor_(io_service_, tcp::endpoint(boost::asio::ip::address::from_string(bindaddr), port)),
+          signals_(io_service_),
+          tick_timer_(io_service_),
+          handler_(handler),
+          concurrency_(concurrency),
+          timeout_(timeout),
+          server_name_(server_name),
+          port_(port),
+          bindaddr_(bindaddr),
+          task_queue_length_pool_(concurrency_ - 1),
+          middlewares_(middlewares),
+          adaptor_ctx_(adaptor_ctx)
+        {}
 
         void set_tick_function(std::chrono::milliseconds d, std::function<void()> f)
         {
@@ -51,19 +50,19 @@ namespace crow
         void on_tick()
         {
             tick_function_();
-            tick_timer_.expires_after(std::chrono::milliseconds(tick_interval_.count()));
-            tick_timer_.async_wait([this](const asio::error_code &ec)
-                                   {
+            tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
+            tick_timer_.async_wait([this](const boost::system::error_code& ec) {
                 if (ec)
                     return;
-                on_tick(); });
+                on_tick();
+            });
         }
 
         void run()
         {
             uint16_t worker_thread_count = concurrency_ - 1;
             for (int i = 0; i < worker_thread_count; i++)
-                io_service_pool_.emplace_back(new asio::io_service());
+                io_service_pool_.emplace_back(new boost::asio::io_service());
             get_cached_date_str_pool_.resize(worker_thread_count);
             task_timer_pool_.resize(worker_thread_count);
 
@@ -71,9 +70,8 @@ namespace crow
             std::atomic<int> init_count(0);
             for (uint16_t i = 0; i < worker_thread_count; i++)
                 v.push_back(
-                    std::async(
-                        std::launch::async, [this, i, &init_count]
-                        {
+                  std::async(
+                    std::launch::async, [this, i, &init_count] {
                         // thread local date string get function
                         auto last = std::chrono::steady_clock::now();
 
@@ -122,31 +120,31 @@ namespace crow
                             {
                                 CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
                             }
-                        } }));
+                        }
+                    }));
 
             if (tick_function_ && tick_interval_.count() > 0)
             {
-                tick_timer_.expires_after(std::chrono::milliseconds(tick_interval_.count()));
+                tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
                 tick_timer_.async_wait(
-                    [this](const asio::error_code &ec)
-                    {
-                        if (ec)
-                            return;
-                        on_tick();
-                    });
+                  [this](const boost::system::error_code& ec) {
+                      if (ec)
+                          return;
+                      on_tick();
+                  });
             }
 
             port_ = acceptor_.local_endpoint().port();
             handler_->port(port_);
 
+
             CROW_LOG_INFO << server_name_ << " server is running at " << (handler_->ssl_used() ? "https://" : "http://") << bindaddr_ << ":" << acceptor_.local_endpoint().port() << " using " << concurrency_ << " threads";
             CROW_LOG_INFO << "Call `app.loglevel(crow::LogLevel::Warning)` to hide Info level logs.";
 
             signals_.async_wait(
-                [&](const asio::error_code & /*error*/, int /*signal_number*/)
-                {
-                    stop();
-                });
+              [&](const boost::system::error_code& /*error*/, int /*signal_number*/) {
+                  stop();
+              });
 
             while (worker_thread_count != init_count)
                 std::this_thread::yield();
@@ -154,37 +152,18 @@ namespace crow
             do_accept();
 
             std::thread(
-                [this]
-                {
-                    notify_start();
-                    io_service_.run();
-                    CROW_LOG_INFO << "Exiting.";
-                })
-                .join();
+              [this] {
+                  io_service_.run();
+                  CROW_LOG_INFO << "Exiting.";
+              })
+              .join();
         }
 
         void stop()
         {
-            shutting_down_ = true; // Prevent the acceptor from taking new connections
-            for (auto &io_service : io_service_pool_)
-            {
-                if (io_service != nullptr)
-                {
-                    CROW_LOG_INFO << "Closing IO service " << &io_service;
-                    io_service->stop(); // Close all io_services (and HTTP connections)
-                }
-            }
-
-            CROW_LOG_INFO << "Closing main IO service (" << &io_service_ << ')';
-            io_service_.stop(); // Close main io_service
-        }
-
-        /// Wait until the server has properly started
-        void wait_for_start()
-        {
-            std::unique_lock<std::mutex> lock(start_mutex_);
-            if (!server_started_)
-                cv_started_.wait(lock);
+            io_service_.stop();
+            for (auto& io_service : io_service_pool_)
+                io_service->stop();
         }
 
         void signal_clear()
@@ -203,9 +182,7 @@ namespace crow
             uint16_t min_queue_idx = 0;
 
             // TODO improve load balancing
-            // size_t is used here to avoid the security issue https://codeql.github.com/codeql-query-help/cpp/cpp-comparison-with-wider-type/
-            // even though the max value of this can be only uint16_t as concurrency is uint16_t.
-            for (size_t i = 1; i < task_queue_length_pool_.size() && task_queue_length_pool_[min_queue_idx] > 0; i++)
+            for (uint16_t i = 1; i < task_queue_length_pool_.size() && task_queue_length_pool_[min_queue_idx] > 0; i++)
             // No need to check other io_services if the current one has no tasks
             {
                 if (task_queue_length_pool_[i] < task_queue_length_pool_[min_queue_idx])
@@ -216,63 +193,45 @@ namespace crow
 
         void do_accept()
         {
-            if (!shutting_down_)
-            {
-                uint16_t service_idx = pick_io_service_idx();
-                asio::io_service &is = *io_service_pool_[service_idx];
-                task_queue_length_pool_[service_idx]++;
-                CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
+            uint16_t service_idx = pick_io_service_idx();
+            asio::io_service& is = *io_service_pool_[service_idx];
+            task_queue_length_pool_[service_idx]++;
+            CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
 
-                auto p = new Connection<Adaptor, Handler, Middlewares...>(
-                    is, handler_, server_name_, middlewares_,
-                    get_cached_date_str_pool_[service_idx], *task_timer_pool_[service_idx], adaptor_ctx_, task_queue_length_pool_[service_idx]);
+            auto p = new Connection<Adaptor, Handler, Middlewares...>(
+              is, handler_, server_name_, middlewares_,
+              get_cached_date_str_pool_[service_idx], *task_timer_pool_[service_idx], adaptor_ctx_, task_queue_length_pool_[service_idx]);
 
-                acceptor_.async_accept(
-                    p->socket(),
-                    [this, p, &is, service_idx](asio::error_code ec)
-                    {
-                        if (!ec)
-                        {
-                            is.post(
-                                [p]
-                                {
-                                    p->start();
-                                });
-                        }
-                        else
-                        {
-                            task_queue_length_pool_[service_idx]--;
-                            CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
-                            delete p;
-                        }
-                        do_accept();
-                    });
-            }
-        }
-
-        /// Notify anything using `wait_for_start()` to proceed
-        void notify_start()
-        {
-            std::unique_lock<std::mutex> lock(start_mutex_);
-            server_started_ = true;
-            cv_started_.notify_all();
+            acceptor_.async_accept(
+              p->socket(),
+              [this, p, &is, service_idx](boost::system::error_code ec) {
+                  if (!ec)
+                  {
+                      is.post(
+                        [p] {
+                            p->start();
+                        });
+                  }
+                  else
+                  {
+                      task_queue_length_pool_[service_idx]--;
+                      CROW_LOG_DEBUG << &is << " {" << service_idx << "} queue length: " << task_queue_length_pool_[service_idx];
+                      delete p;
+                  }
+                  do_accept();
+              });
         }
 
     private:
         asio::io_service io_service_;
         std::vector<std::unique_ptr<asio::io_service>> io_service_pool_;
-        std::vector<detail::task_timer *> task_timer_pool_;
+        std::vector<detail::task_timer*> task_timer_pool_;
         std::vector<std::function<std::string()>> get_cached_date_str_pool_;
         tcp::acceptor acceptor_;
-        bool shutting_down_ = false;
-        bool server_started_{false};
-        std::condition_variable cv_started_;
-        std::mutex start_mutex_;
-        asio::signal_set signals_;
+        boost::asio::signal_set signals_;
+        boost::asio::deadline_timer tick_timer_;
 
-        asio::basic_waitable_timer<std::chrono::high_resolution_clock> tick_timer_;
-
-        Handler *handler_;
+        Handler* handler_;
         uint16_t concurrency_{2};
         std::uint8_t timeout_;
         std::string server_name_;
@@ -283,8 +242,8 @@ namespace crow
         std::chrono::milliseconds tick_interval_;
         std::function<void()> tick_function_;
 
-        std::tuple<Middlewares...> *middlewares_;
+        std::tuple<Middlewares...>* middlewares_;
 
-        typename Adaptor::context *adaptor_ctx_;
+        typename Adaptor::context* adaptor_ctx_;
     };
 } // namespace crow

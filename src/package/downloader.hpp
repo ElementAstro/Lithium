@@ -34,26 +34,25 @@ Description: Downloader
 #include <string>
 #include <vector>
 
-struct DownloadTask
-{
-    std::string url;
-    std::string filepath;
-    bool completed = false;
-};
+class DownloadManager {
+private:
+    struct Task {
+        std::string url;
+        std::string filepath;
+        bool completed = false;
+    };
 
-class DownloadManager
-{
+    std::string task_file_;
+    std::vector<Task> tasks_;
+
+    void save_task_list_to_file();
+    void download_task(size_t index);
+
 public:
-    DownloadManager(const std::string &task_file);
+    explicit DownloadManager(const std::string& task_file);
     ~DownloadManager();
-    void add_task(const std::string &url, const std::string &filepath);
+
+    void add_task(const std::string& url, const std::string& filepath);
     bool remove_task(size_t index);
     void start();
-
-private:
-    std::string task_file_;
-    std::vector<DownloadTask> tasks_;
-
-    static void download_task(DownloadManager *manager, size_t index);
-    void download_task(size_t index);
 };

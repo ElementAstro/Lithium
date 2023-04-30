@@ -50,7 +50,7 @@ Description: Main
 #include "plugins/crash.hpp"
 #include "plugins/terminal.hpp"
 
-#include <spdlog/spdlog.h> // 引入 spdlog 日志库
+#include <spdlog/spdlog.h>
 
 #include <fstream>
 #include <vector>

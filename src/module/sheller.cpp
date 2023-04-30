@@ -48,35 +48,25 @@ using json = nlohmann::json;
 
 namespace OpenAPT
 {
-    ScriptManager::ScriptManager(const std::string &scriptPath)
-    {
-    std::string path = std::filesystem::path(scriptPath).parent_path().string();
-    m_path = std::filesystem::absolute(path);
-    m_files = getScriptFiles();
-    m_scriptsJson = getScriptsJson(m_files);
-    }
+    ScriptManager::ScriptManager(const std::string &scriptPath) : m_path(std::filesystem::absolute(std::filesystem::path(scriptPath).parent_path().string())), m_files(getScriptFiles()), m_scriptsJson(getScriptsJson(m_files)) {}
 
     std::vector<std::string> ScriptManager::getScriptFiles() const
     {
         std::vector<std::string> files;
-        for (const auto &entry : fs::recursive_directory_iterator(m_path))
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(m_path))
         {
             if (entry.is_regular_file() && (entry.path().extension() == ".sh" || entry.path().extension() == ".ps1"))
             {
-                std::string filePath = entry.path().string();
-                std::string relativePath = std::filesystem::relative(filePath, m_path).generic_string();
-                files.push_back(relativePath);
+                files.push_back(std::filesystem::relative(entry.path(), m_path).generic_string());
             }
         }
-
         return files;
     }
 
     std::string ScriptManager::readScriptFromFile(const std::string &path) const
     {
         std::ifstream input(path);
-        std::string contents((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
-        return contents;
+        return { std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>() };
     }
 
     bool ScriptManager::validateScript(const std::string &script, ScriptType scriptType) const
@@ -84,7 +74,6 @@ namespace OpenAPT
         switch (scriptType)
         {
         case ScriptType::Sh:
-            // 检查 Shell 脚本是否以正确的 shebang 开头（#!/bin/bash 或 #!/bin/sh）
             if (script.substr(0, 2) != "#!")
             {
                 spdlog::error("Invalid script: missing shebang");
@@ -97,9 +86,6 @@ namespace OpenAPT
             }
             return true;
         case ScriptType::Ps:
-            // 检查 PowerShell 脚本代码是否符合语法规范
-            // 使用 PowerShell 的系统命令 "$ErrorActionPreference = 'Stop'; $null = & {" + scriptContent + "}"
-            // 如果脚本有语法错误，则会抛出异常，因此使用 try-catch 捕获异常来判断脚本是否有效
             try
             {
                 std::string command = "powershell.exe -Command \"$ErrorActionPreference = 'Stop'; $null = & {" + script + "}\"";
@@ -122,8 +108,7 @@ namespace OpenAPT
         json j;
         for (const auto &file : files)
         {
-            std::string name = fs::path(file).stem();
-            j[name]["path"] = file;
+            j[std::filesystem::path(file).stem()].emplace("path", file);
         }
         return j;
     }
@@ -136,11 +121,11 @@ namespace OpenAPT
             return false;
         }
 
-        std::string scriptPath = m_scriptsJson[scriptName]["path"];
+        const auto &scriptPath = m_scriptsJson[scriptName]["path"].get<std::string>();
         spdlog::debug("Found script \"{}\" at \"{}\"", scriptName, scriptPath);
 
-        std::string scriptContent = readScriptFromFile(scriptPath);
-        ScriptType scriptType = getScriptType(scriptPath);
+        const auto &scriptContent = readScriptFromFile(scriptPath);
+        const auto scriptType = getScriptType(scriptPath);
 
         if (!validateScript(scriptContent, scriptType))
         {
@@ -148,45 +133,37 @@ namespace OpenAPT
             return false;
         }
 
-        std::string command = buildCommand(scriptPath);
+        const auto command = buildCommand(scriptPath);
         spdlog::debug("Executing command \"{}\"", command);
 
         if (async)
         {
 #ifdef _WIN32
-            STARTUPINFO si;
-            PROCESS_INFORMATION pi;
-            ZeroMemory(&si, sizeof(si));
-            si.cb = sizeof(si);
-            ZeroMemory(&pi, sizeof(pi));
-            if (!CreateProcess(NULL, (LPSTR)command.c_str(), NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+            if (!_spawnlp(_P_NOWAIT, "powershell.exe", "powershell.exe", "-ExecutionPolicy", "Bypass", "-File", command.c_str(), nullptr))
             {
-                spdlog::error("Error: CreateProcess failed ({})", GetLastError());
+                spdlog::error("Error: _spawnlp failed ({})", errno);
                 return false;
             }
 #else
-            std::thread t([=](){
-                int ret = std::system(command.c_str());
-                if (ret != 0)
+            if (auto pid = fork(); pid == 0)
+            {
+                if (execlp("/bin/sh", "sh", "-c", scriptContent.c_str(), nullptr) == -1)
                 {
-                    spdlog::error("Error: command failed ({})", ret);
-                    return false;
+                    spdlog::error("Error: execlp failed ({})", errno);
+                    exit(1);
                 }
-                return true;
-            });
-            t.detach();
+                exit(0);
+            }
 #endif
         }
         else
         {
 #ifdef _WIN32
-            std::string output = executeCommand(command);
+            const auto output = executeCommand(command);
             spdlog::debug("Script \"{}\" output: \n{}", scriptName, output);
 #else
-            // 在 Linux 中直接调用 shell 脚本的内容
             spdlog::debug("Script \"{}\" output: ", scriptName);
-            int ret = std::system(scriptContent.c_str());
-            if (ret != 0)
+            if (auto ret = std::system(scriptContent.c_str()); ret != 0)
             {
                 spdlog::error("Error: command failed ({})", ret);
                 return false;
@@ -199,10 +176,9 @@ namespace OpenAPT
 
     ScriptType ScriptManager::getScriptType(const std::string &path) const
     {
-        static const std::unordered_map<std::string, ScriptType> suffixMap = {{"sh", ScriptType::Sh}, {"ps1", ScriptType::Ps}};
-        std::string extension = std::filesystem::path(path).extension().string().substr(1);
-        auto it = suffixMap.find(extension);
-        if (it != suffixMap.end())
+        static const std::unordered_map<std::string_view, ScriptType> suffixMap = { { "sh", ScriptType::Sh },{ "ps1", ScriptType::Ps } };
+        const auto extension = std::filesystem::path(path).extension().string().substr(1);
+        if (auto it = suffixMap.find(extension); it != suffixMap.end())
         {
             return it->second;
         }
@@ -217,9 +193,8 @@ namespace OpenAPT
     {
         std::stringstream ss;
 
-// 根据操作系统不同构建执行脚本的命令
 #ifdef _WIN32
-        ss << "powershell.exe -ExecutionPolicy Bypass -File \"" << scriptPath << "\"";
+        ss << "\"" << scriptPath << "\"";
 #else
         ss << "sh \"" << scriptPath << "\"";
 #endif
@@ -227,19 +202,19 @@ namespace OpenAPT
         return ss.str();
     }
 
-#ifdef _WIN32 // 如果是 Windows 系统
+#ifdef _WIN32
     std::string ScriptManager::executeCommand(const std::string &command) const
     {
         std::array<char, 128> buffer;
         std::string result;
 
-        FILE *pipe = _popen(command.c_str(), "r");
-        if (!pipe)
+        FILE *pipe;
+        if ((pipe = _popen(command.c_str(), "r")) == nullptr)
         {
             spdlog::error("Error: _popen failed");
-            return "Error";
+            return result;
         }
-        while (fgets(buffer.data(), buffer.size(), pipe) != NULL)
+        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
         {
             result += buffer.data();
         }
@@ -247,19 +222,19 @@ namespace OpenAPT
 
         return result;
     }
-#else // 否则为 Linux 系统
+#else
     std::string ScriptManager::executeCommand(const std::string &command) const
     {
         std::array<char, 128> buffer;
         std::string result;
 
-        FILE *pipe = popen(command.c_str(), "r");
-        if (!pipe)
+        FILE *pipe;
+        if ((pipe = popen(command.c_str(), "r")) == nullptr)
         {
             spdlog::error("Error: popen failed");
-            return "Error";
+            return result;
         }
-        while (fgets(buffer.data(), buffer.size(), pipe) != NULL)
+        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
         {
             result += buffer.data();
         }

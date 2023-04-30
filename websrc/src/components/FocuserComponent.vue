@@ -1,82 +1,158 @@
 <template>
   <q-card class="q-my-md">
-    <q-card-section class="">
-      <ul class="list-group">
-        <li class="list-group-item d-flex align-items-center justify-content-between">
-          <div class="statusLed" id="focuser_status"></div>
-          <span id="focuserConnText">电调连接</span>
-        </li>
-      </ul>
-      <ul class="list-group text-small list-group-small">
-        <li class="list-group-item d-flex mount-panel-item p-0">
-          <div class="col p-1 m-0">
-            <div class="text-center text-muted">温度</div>
-            <div class="text-center shInField" id="focuser_temperature"></div>
-          </div>
-          <div class="col p-1 m-0">
-            <div class="text-center text-muted ">位置</div>
-            <div class="text-center shInField" id="focuser_position"></div>
-          </div>
-        </li>
-      </ul>
-
-      <div class="btn-group btn-group-sm w-100 mt-2" role="group" aria-label="Basic example">
-        <q-btn type="button" class="btn btn-orange btn-sm px-2" :key="'focuser_movein_100'" @click="handleClick(-100)"
-          data-param="-100" id="focuser_movein_100">
-          -100
-        </q-btn>
-        <q-btn type="button" class="btn btn-light-blue btn-sm px-2" :key="'focuser_movein_10'" @click="handleClick(-10)"
-          data-param="-10" id="focuser_movein_10">
-          -10
-        </q-btn>
-        <q-btn type="button" class="btn btn-light-green btn-sm px-2 mr-1" :key="'focuser_movein_1'"
-          @click="handleClick(-1)" data-param="-1" id="focuser_movein_1">
-          -1
-        </q-btn>
-        <q-btn type="button" class="btn btn-light-green btn-sm px-2 ml-1" :key="'focuser_moveout_1'"
-          @click="handleClick(1)" data-param="+1" id="focuser_moveout_1">
-          +1
-        </q-btn>
-        <q-btn type="button" class="btn btn-light-blue btn-sm px-2" :key="'focuser_moveout_10'" @click="handleClick(10)"
-          data-param="+10" id="focuser_moveout_10">
-          +10
-        </q-btn>
-        <q-btn type="button" class="btn btn-orange btn-sm px-2" :key="'focuser_moveout_100'" @click="handleClick(100)"
-          data-param="+100" id="focuser_moveout_100">
-          +100
-        </q-btn>
+    <!-- 连接状态 -->
+    <q-card-section class="d-flex flex-wrap align-items-center justify-content-between">
+      <div class="d-flex align-items-center">
+        <div class="statusLed" :class="{ 'led-on': data.connected }"></div>
+        <span class="ml-2">{{ data.connected ? '已连接' : '未连接' }}</span>
       </div>
+    </q-card-section>
 
-      <div class="input-group my-3 input-group-sm">
-        <div class="input-group-prepend">
-          <q-btn type="button" class="btn btn-sm btn-outline-success" id="focuser_looping">
-            <i class="fas fa-circle-arrow-up-right"></i>循环曝光
-          </q-btn>
-          <q-btn type="button" class="btn btn-sm btn-outline-info" id="goto_target_position">
-            <i class="fas fa-play"></i>前往
-          </q-btn>
+    <q-card-section>
+      <div class="row items-center justify-between">
+        <div class="col-auto mr-4 flex items-center">
+          <i class="fas fa-map-marker-alt fa-fw mr-1"></i>
+          <div class="text-subtitle2">Current Position:</div>
         </div>
-        <q-input type="number" min="0" max="100000000"
-          class="form-control form-control-sm text-small text-center text-primary" placeholder=""
-          id="focuser_target_position" aria-describedby="focuser-position" v-model="targetPosition" />
-        <div class="input-group-append">
-          <q-btn type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="offcanvas"
-            data-bs-target="#offcanvas-autofocus" aria-controls="offcanvas-autofocus" id="autofocus">
-            <i class="fas fa-microchip-ai"></i>自动对焦
-          </q-btn>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.currentPosition || '-' }}</div>
+        </div>
+        <div class="col-auto mr-4 flex items-center">
+          <i class="fas fa-thermometer-half fa-fw mr-1"></i>
+          <div class="text-subtitle2">Current Temperature:</div>
+        </div>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.currentTemperature || '-' }} ℃</div>
         </div>
       </div>
+      <div class="row items-center mt-4 justify-between">
+        <div class="col-auto mr-4 flex items-center">
+          <i class="fas fa-arrows-alt-h fa-fw mr-1"></i>
+          <div class="text-subtitle2">Step Size:</div>
+        </div>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.stepSize || '-' }}</div>
+        </div>
+        <div class="col-auto mr-4 flex items-center">
+          <i class="fas fa-map-marker-alt fa-fw mr-1"></i>
+          <div class="text-subtitle2">Max Position:</div>
+        </div>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.maxPosition || '-' }}</div>
+        </div>
+      </div>
+    </q-card-section>
 
-      <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-autofocus"
-        aria-labelledby="offcanvas-autofocusLabel">
-        <div class="offcanvas-body" id="autofocus_offcanvas_body">
-          <div class="row">
-            <div class="col-md-12"></div>
+    <q-separator />
+
+    <q-card-section class="d-flex justify-content-center">
+      <div class="row">
+        <div class="col-6">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Basic example">
+            <div class="row full-width justify-content-center">
+              <div class="col-auto">
+                <q-btn type="button" class="btn btn-secondary" label="-100" :disable="!data.connected" @click="move(-100)"
+                  color="negative" />
+              </div>
+              <div class="col-auto">
+                <q-btn type="button" class="btn btn-secondary" label="-10" :disable="!data.connected" @click="move(-10)"
+                  color="warning" />
+              </div>
+              <div class="col-auto">
+                <q-btn type="button" class="btn btn-success" label="-1" :disable="!data.connected" @click="move(-1)"
+                  color="positive" />
+              </div>
+              <div class="col-auto">
+                <q-btn type="button" class="btn btn-primary" label="+1" :disable="!data.connected" @click="move(1)"
+                  color="primary" />
+              </div>
+              <div class="col-auto">
+                <q-btn type="button" class="btn btn-secondary" label="+10" :disable="!data.connected" @click="move(10)"
+                  color="warning" />
+              </div>
+              <div class="col-auto">
+                <q-btn type="button" class="btn btn-secondary" label="+100" :disable="!data.connected" @click="move(100)"
+                  color="negative" />
+              </div>
+            </div>
           </div>
+        </div>
+        <div class="col-6">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Basic example">
+            <div class="row full-width justify-content-center">
+              <div class="col-auto">
+                <q-input type="number" min="0" max="100000" class="form-control text-center text-primary text-sm"
+                  placeholder="前往..." v-model="targetPosition" />
+              </div>
+              <div class="col-auto">
+                <q-btn type="button" icon="fas fa-play" class="btn btn-md btn-primary ml-2" label="前往"
+                  @click="gotoTargetPosition" :disable="!data.connected" />
+              </div>
+              <div class="input-group input-group-sm w-100 d-flex align-items-center">
+
+
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </q-card-section>
+
+    <q-separator />
+    <q-card-section>
+      <div class="d-flex align-items-center">
+        <!-- 循环曝光按钮 -->
+        <div class="mr-3">
+          <q-btn type="button" icon="fas fa-circle-arrow-up-right" class="btn btn-sm btn-outline-success" label="循环曝光"
+            @click="startFocusing" :disable="!data.connected" />
+        </div>
+        <!-- 自动对焦按钮 -->
+        <div class="ml-3">
+          <q-btn type="button" icon="fas fa-microchip-ai" class="btn btn-sm btn-outline-danger" label="自动对焦"
+            @click="$refs.offcanvasAutofocus.show()" :disable="!data.connected" />
         </div>
       </div>
     </q-card-section>
   </q-card>
+
+  <q-expansion-item label="自动对焦">
+    <q-card>
+      <q-card-section>
+        <div class="form-group q-mt-lg">
+          <label class="text-body2">最小对焦值:</label>
+          <q-input type="number" v-model="minFocusValue" class="q-mt-xs">
+            <template v-slot:append>
+              {{ focusUnit }}
+            </template>
+          </q-input>
+        </div>
+        <div class="form-group q-mt-lg">
+          <label class="text-body2">最大对焦值:</label>
+          <q-input type="number" v-model="maxFocusValue" class="q-mt-xs">
+            <template v-slot:append>
+              {{ focusUnit }}
+            </template>
+          </q-input>
+        </div>
+        <div class="form-group q-mt-lg">
+          <label class="text-body2">步长:</label>
+          <q-input type="number" v-model="focusStep" class="q-mt-xs">
+            <template v-slot:append>
+              {{ focusUnit }}
+            </template>
+          </q-input>
+        </div>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="取消" class="text-secondary" @click="$refs.offcanvasAutofocus.hide()" />
+        <q-btn color="primary" label="确定" :disable="!data.connected" @click="startAutofocus"
+          v-if="minFocusValue !== '' && maxFocusValue !== '' && focusStep !== ''" />
+      </q-card-actions>
+    </q-card>
+  </q-expansion-item>
 </template>
 
 <script>
@@ -87,11 +163,65 @@ export default {
       required: true,
     },
   },
+  data() {
+    return {
+      targetPosition: '',
+      minFocusValue: '',
+      maxFocusValue: '',
+      focusStep: '',
+      focusUnit: 'µm',
+    };
+  },
   methods: {
-    updateState() {
-      // 处理新的数据对象，并更新组件状态
-      this.$forceUpdate();
+    // 移动
+    move(delta) {
+      if (this.data.connected) {
+        this.$emit('move', delta);
+      }
+    },
+    // 循环曝光
+    startFocusing() {
+      if (this.data.connected) {
+        this.$emit('start-focusing');
+      }
+    },
+    // 前往位置
+    gotoTargetPosition() {
+      const pos = Number(this.targetPosition);
+      if (!isNaN(pos)) {
+        this.$emit('move-to', pos);
+      }
+    },
+    // 开始自动对焦
+    startAutofocus() {
+      console.log('start autofocus');
+      console.log('min focus value:', this.minFocusValue);
+      console.log('max focus value:', this.maxFocusValue);
+      console.log('focus step:', this.focusStep);
     },
   },
 };
 </script>
+
+<style scoped>
+.statusLed {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  transition: background-color 0.3s;
+}
+
+.led-on {
+  background-color: #4caf50;
+}
+
+.shInField {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.offcanvas-title {
+  font-size: 24px;
+}
+</style>

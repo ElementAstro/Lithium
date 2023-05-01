@@ -1,42 +1,42 @@
 <template>
-  <q-page class="login-page" :style="{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover' }">
+  <q-page class="login-page" :style="bgStyle">
     <q-form @submit.prevent="submitForm" class="form-container">
       <div class="form-row q-mb-md q-mt-none">
-        <q-input outlined dense v-model="form.host" label="Host" hint="Enter host address, default is 127.0.0.1"
+        <q-input outlined dense v-model.trim="form.host" label="Host" hint="Enter host address, default is 127.0.0.1"
           prepend-icon="mdi-server-network" class="q-mr-md" />
         <q-input outlined dense v-model.number="form.port" label="Port" type="number"
           hint="Enter port number, default is 5000" prepend-icon="mdi-numeric" class="q-mr-md" />
         <q-toggle v-model="form.encrypt" color="primary" label="Encrypt" left-label class="q-mt-sm" />
       </div>
       <div class="form-row">
-        <q-input outlined dense v-model="form.username" label="Username" hint="Enter your username"
-          prepend-icon="mdi-account" class="q-mr-md" :rules="[val => !!val || 'Please enter a username']" />
-        <q-input outlined dense v-model="form.password" label="Password" hint="Optional" type="password"
+        <q-input outlined dense v-model.trim="form.username" label="Username" hint="Enter your username"
+          prepend-icon="mdi-account" :rules="[val => !!val || 'Please enter a username']" />
+        <q-input outlined dense v-model.trim="form.password" label="Password" hint="Optional" type="password"
           prepend-icon="mdi-lock" />
       </div>
       <div class="form-row">
-        <q-btn icon="fa-solid fa-image" round size="md" color="primary"  @click="showFileChooser" class="q-mr-md"/>
+        <q-btn round size="md" color="primary" icon="fa-solid fa-image" class="q-mr-md" @click="showFileChooser" />
         <input ref="fileInput" type="file" accept="image/*" style="display:none" @change="changeBackgroundImage">
         <q-btn type="submit" color="primary" label="Log In" :loading="isLoading" :disabled="isLoading"
           class="q-mt-sm full-width" />
-      </div> 
+      </div>
     </q-form>
     <q-dialog v-model="errorDialog" title="Error">
       <div class="close-button">
         <q-btn round dense icon="mdi-close" @click="errorDialog = false"></q-btn>
       </div>
-      <q-card>
-        <q-card-section>
+      <q-card class="error-dialog">
+        <q-card-section class="error-dialog-section">
           <div>
             <p>Oops! Something went wrong:</p>
             <pre>{{ error }}</pre>
             <p>Please try again later or contact support if the problem persists.</p>
           </div>
         </q-card-section>
-        <q-card-section align="right">
-          <q-btn label="Email" icon="fa-solid fa-envelope" color="primary" class="q-mt-sm full-width" @click="openEmail" />
-          <q-btn label="OK" icon="fa-solid fa-check" color="primary" class="q-mt-sm full-width" @click="errorDialog = false" />
-        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn label="Email" icon="fa-solid fa-envelope" color="primary" class="q-mt-sm" @click="openEmail" />
+          <q-btn label="OK" icon="fa-solid fa-check" color="primary" class="q-mt-sm" @click="errorDialog = false" />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
@@ -61,8 +61,16 @@ export default {
     };
   },
   mounted() {
-    if (window.screen.orientation.type.includes('landscape')) {
+    if (window.matchMedia("(orientation: landscape)").matches) {
       document.body.style.overflow = 'hidden';
+    }
+  },
+  computed: {
+    bgStyle() {
+      return {
+        backgroundImage: `url(${this.bgImage})`,
+        backgroundSize: 'cover'
+      }
     }
   },
   methods: {
@@ -101,22 +109,21 @@ export default {
         });
     },
     isHostValid() {
-      const regex = new RegExp(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
-      return regex.test(this.form.host);
+      const regex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+      return regex.test(this.form.host.trim());
     },
     showFileChooser() {
       this.$refs.fileInput.click();
     },
     changeBackgroundImage(event) {
       const file = event.target.files[0];
-      if (!file || !file.type.includes('image/')) {
-        return;
+      if (file && file.type.includes('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          this.bgImage = reader.result;
+        };
+        reader.readAsDataURL(file);
       }
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        this.bgImage = reader.result;
-      };
     },
     openEmail() {
       const emailUrl = `mailto:support@example.com?subject=Login+error&body=${encodeURIComponent(this.error.stack)}`;
@@ -168,27 +175,32 @@ export default {
 }
 
 .error-dialog {
-  .q-card {
-    max-width: 400px;
-    color: white;
-    background-color: deepskyblue;
+  max-width: 400px;
+  color: white;
+  background-color: deepskyblue;
 
-    .q-card-section {
-      font-size: 14px;
-      padding: 20px;
+  .error-dialog-section {
+    font-size: 14px;
+    padding: 20px;
 
-      &:first-child {
-        border-bottom: 1px solid #fff;
-      }
+    &:first-child {
+      border-bottom: 1px solid #fff;
     }
+  }
 
-    .q-btn {
-      margin: 0 20px 20px 0;
-    }
-    .close-button {
-      display: flex;
-      justify-content: flex-end;
-    }
+  .q-btn {
+    margin: 0 20px 20px 0;
+  }
+
+  .close-button {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+@media screen and (orientation: landscape) {
+  body {
+    overflow: hidden;
   }
 }
 </style>

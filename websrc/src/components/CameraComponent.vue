@@ -1,73 +1,83 @@
 <template>
-  <q-card>
-    <q-card-section>
-      <div class="row items-center justify-between">
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-camera-retro fa-fw mr-1"></i>
-          <div class="text-subtitle2">Camera:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.camera }}</div>
-        </div>
+  <q-card class="q-pa-md">
+    <!-- 连接状态 -->
+    <q-card-section class="q-pb-sm q-pl-md q-pr-md q-mb-md d-flex flex-wrap align-items-center justify-content-between">
+      <div class="row d-flex align-items-center">
+        <q-icon :name="data.connected ? 'fas fa-circle' : 'far fa-circle'" size="lg" color="positive" />
+        <span class="q-ml-md">{{ data.connected ? '已连接' : '未连接' }}</span>
+        <q-select v-model="selectedDevice" :options="deviceOptions" label="选择设备" dense bordered class="q-ml-md">
+        </q-select>
+        <q-btn label="Scan" outline dense color="primary" class="q-ml-md" @click="scanDevices"></q-btn>
+        <q-btn label="Connect" dense color="primary" class="q-ml-md" @click="connectDevice"></q-btn>
       </div>
-      <div class="row items-center mt-4 justify-between">
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-ruler-horizontal fa-fw mr-1"></i>
-          <div class="text-subtitle2">Pixel Binning:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.pixelBinning || '-' }}</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-sliders-h fa-fw mr-1"></i>
-          <div class="text-subtitle2">Bias Level:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.biasLevel || '-' }}</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <div class="text-subtitle2">Resolution:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.resolution || '-' }}</div>
-        </div>
-        <div class="ccol-auto mr-4 flex items-center">
-          <div class="text-subtitle2">Sensor Type:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.sensorType || '-' }}</div>
-        </div>
-
+    </q-card-section>
+    <q-separator />
+    <q-card-section class="q-pa-sm row items-center justify-between">
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-camera-retro fa-fw mr-1"></i>
+        <div class="text-subtitle2">Camera:</div>
       </div>
-      <div class="row items-center mt-4 justify-between">
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-stopwatch fa-fw mr-1"></i>
-          <div class="text-subtitle2">Exposure Time:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.exposureTime || '-' }} ms</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-microchip fa-fw mr-1"></i>
-          <div class="text-subtitle2">Gain:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.gain || '-' }} dB</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-thermometer-half fa-fw mr-1"></i>
-          <div class="text-subtitle2">Temperature:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.temperature || '-' }} ℃</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-tint fa-fw mr-1"></i>
-          <div class="text-subtitle2">Humidity:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.humidity || '-' }} %</div>
-        </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.camera }}</div>
+      </div>
+    </q-card-section>
+    <q-separator />
+    <q-card-section class="row items-center justify-between">
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-ruler-horizontal fa-fw mr-1"></i>
+        <div class="text-subtitle2">Pixel Binning:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.pixelBinning || '-' }}</div>
+      </div>
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-sliders-h fa-fw mr-1"></i>
+        <div class="text-subtitle2">Bias Level:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.biasLevel || '-' }}</div>
+      </div>
+      <div class="col-auto mr-4 flex items-center">
+        <div class="text-subtitle2">Resolution:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.resolution || '-' }}</div>
+      </div>
+      <div class="col-auto mr-4 flex items-center">
+        <div class="text-subtitle2">Sensor Type:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.sensorType || '-' }}</div>
+      </div>
+    </q-card-section>
+    <q-card-section class="row items-center justify-between mt-4">
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-stopwatch fa-fw mr-1"></i>
+        <div class="text-subtitle2">Exposure Time:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.exposureTime || '-' }} ms</div>
+      </div>
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-microchip fa-fw mr-1"></i>
+        <div class="text-subtitle2">Gain:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.gain || '-' }}</div>
+      </div>
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-thermometer-half fa-fw mr-1"></i>
+        <div class="text-subtitle2">Temperature:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.temperature || '-' }} ℃</div>
+      </div>
+      <div class="col-auto mr-4 flex items-center">
+        <i class="fas fa-tint fa-fw mr-1"></i>
+        <div class="text-subtitle2">Humidity:</div>
+      </div>
+      <div class="col-auto">
+        <div class="text-body1">{{ data.humidity || '-' }} %</div>
       </div>
     </q-card-section>
     <q-separator />

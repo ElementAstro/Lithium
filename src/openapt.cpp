@@ -688,7 +688,7 @@ void quit()
 }
 
 // 初始化应用程序
-void init_app(int argc, char *argv[], crow::SimpleApp app)
+void init_app(int argc, char *argv[], crow::SimpleApp &app)
 {
     m_App.Initialize();
     parse_args(argc, argv);
@@ -726,7 +726,6 @@ MyApp::MyApp() :
     m_ConfigManager(nullptr),
     m_PackageManager(nullptr),
     m_PythonLoader(nullptr),
-    m_LuaLoader(nullptr),
     m_UseSSL(false),
     m_CertPath("")
 {}
@@ -750,7 +749,6 @@ void MyApp::Initialize(bool useSSL, const std::string& certPath) {
     m_ConfigManager = new OpenAPT::ConfigManager();
     m_PackageManager = new OpenAPT::PackageManager();
     m_PythonLoader = new OpenAPT::PyModuleLoader();
-    m_LuaLoader = OpenAPT::LuaScriptLoaderFactory::MakeLuaScriptLoader();
 
     // 保存 SSL 相关设置
     m_UseSSL = useSSL;
@@ -778,20 +776,7 @@ void MyApp::Initialize(bool useSSL, const std::string& certPath) {
     if (m_UseSSL) {
         try {
             // 创建 SSL 上下文对象
-            m_Server->set_tls_init_handler([this](websocketpp::connection_hdl) -> context_ptr {
-                auto ctx = std::make_shared<asio::ssl::context>(asio::ssl::context::sslv23);
-
-                ctx->set_options(asio::ssl::context::default_workarounds |
-                                 asio::ssl::context::no_sslv2 |
-                                 asio::ssl::context::no_sslv3 |
-                                 asio::ssl::context::single_dh_use);
-
-                // 指定证书路径和私钥
-                ctx->use_certificate_chain_file(m_CertPath);
-                ctx->use_private_key_file(m_CertPath, asio::ssl::context::pem);
-
-                return ctx;
-            });
+            
         } catch (const std::exception& ex) {
             spdlog::error("Failed to initialize SSL: {}", ex.what());
             // 释放已创建的对象以避免内存泄漏
@@ -857,7 +842,7 @@ void MyApp::on_close(websocketpp::connection_hdl hdl) {
 }
 
 // 启动 Web 服务器
-void start_server(int port, crow::SimpleApp app)
+void start_server(int port, crow::SimpleApp &app)
 {
     app.port(port).multithreaded().run();
 }

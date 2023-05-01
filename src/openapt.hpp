@@ -52,7 +52,7 @@ public:
 
     void Initialize(bool useSSL = false, const std::string& certPath = "");
 
-    crow::SimpleApp& GetApp() {
+    crow::SimpleApp & GetApp() {
         return app;
     }
 

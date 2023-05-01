@@ -8,6 +8,7 @@
           <q-tab name="focuser" icon="fas fa-adjust" label="Focuser"></q-tab>
           <q-tab name="filterWheel" icon="fas fa-filter" label="Wheel"></q-tab>
           <q-tab name="solver" icon="fas fa-search" label="Solver"></q-tab>
+          <q-tab name="search" icon="fas fa-search" label="Search"></q-tab>
         </q-tabs>
       </template>
 
@@ -38,6 +39,10 @@
           <q-tab-panel name="solver">
             <solver-component :data="solverData" @send-message="sendMessage" ref="solverComponent" />
           </q-tab-panel>
+
+          <q-tab-panel name="search">
+            <search-component :data="searchData" @send-message="sendMessage" ref="searchComponent" />
+          </q-tab-panel>
         </q-tab-panels>
       </template>
     </q-splitter>
@@ -51,6 +56,7 @@ import MountComponent from "../components/MountComponent.vue";
 import FocuserComponent from "../components/FocuserComponent.vue";
 import FilterWheelComponent from "../components/FilterWheelComponent.vue";
 import SolverComponent from "../components/SolverComponent.vue";
+import SearchComponent from "../components/AstroSearchX.vue"
 
 export default {
   components: {
@@ -58,7 +64,8 @@ export default {
     "mount-component": MountComponent,
     "focuser-component": FocuserComponent,
     "filter-wheel-component": FilterWheelComponent,
-    "solver-component" : SolverComponent
+    "solver-component" : SolverComponent,
+    "search-component" : SearchComponent
   },
   setup() {
     const cameraData = ref({
@@ -74,6 +81,9 @@ export default {
       //...
     });
     const solverData = ref({
+      //...
+    });
+    const searchData = ref({
       //...
     });
 
@@ -104,6 +114,9 @@ export default {
       } else if (data.type === "solver") {
         solverData.value = data.payload;
         this.$refs.solverComponent.updateState();
+      } else if (data.type === "search") {
+        solverData.value = data.payload;
+        this.$refs.searchComponent.updateState();
       }
     };
 
@@ -113,6 +126,7 @@ export default {
       focuserData,
       filterWheelData,
       solverData,
+      searchData,
       tab,
       splitterModel,
       wsClient,

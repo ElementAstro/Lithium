@@ -44,6 +44,52 @@ namespace OpenAPT
         ([]
         { return crow::mustache::load("client.html").render(); });
 
+         // Route to handle login requests
+        CROW_ROUTE(app, "/login")
+            .methods("POST"_method)([](const crow::request& req) -> crow::response {
+                try {
+                    // Parse JSON data from the request body
+                    json reqJson = json::parse(req.body);
+
+                    // Extract username and password from the request JSON
+                    std::string username = reqJson["username"].get<std::string>();
+                    std::string password = reqJson["password"].get<std::string>();
+
+                    if (username.empty()) {
+                        throw std::invalid_argument("'username' parameter is required");
+                    }
+
+                    if (password.empty()) {
+                        throw std::invalid_argument("'password' parameter is required");
+                    }
+
+                    // Load the password JSON file
+                    std::ifstream file("password.json");
+                    json passwordJson;
+                    if (file.good()) {
+                        file >> passwordJson;
+                    }
+                    file.close();
+
+                    // Check if the user exists and the password matches
+                    if (!passwordJson[username].is_null() && password == passwordJson[username].get<std::string>()) {
+                        // Set user session data to allow access to other pages
+                        // Redirect to the client page
+                        return crow::response{ 302, "<html><head><meta http-equiv='refresh' content='0; url=/client'></head></html>" };
+                    } else {
+                        // Return an error response if username or password is incorrect
+                        json resJson;
+                        resJson["error"] = "Invalid username or password";
+                        return crow::response{ 400, resJson.dump() };
+                    }
+                } catch (const std::exception& e) {
+                    // Handle exceptions and return an error response
+                    json resJson;
+                    resJson["error"] = e.what();
+                    return crow::response{ 400, resJson.dump() };
+                }
+            });
+
         CROW_ROUTE(app, "/greeting")
             .methods("GET"_method)([](const crow::request &req)
                                 {

@@ -1,72 +1,57 @@
 <template>
   <q-card class="q-pa-md">
-    <q-card-section>
+    <q-card-section class="q-pb-sm q-pl-md q-pr-md q-mb-md d-flex flex-wrap align-items-center justify-content-between">
+      <div class="row d-flex align-items-center">
+        <q-icon :name="data.connected ? 'fas fa-circle' : 'far fa-circle'" size="lg" color="positive" />
+        <span class="q-ml-md">{{ data.connected ? '已连接' : '未连接' }}</span>
+        <q-select v-model="selectedDevice" :options="deviceOptions" label="选择设备" dense bordered class="q-ml-md">
+        </q-select>
+        <q-btn label="扫描设备" outline dense color="primary" class="q-ml-md" @click="scanDevices"></q-btn>
+        <q-btn label="连接设备" dense color="primary" class="q-ml-md" @click="connectDevice"></q-btn>
+      </div>
+    </q-card-section>
+
+    <q-card-section class="q-pa-sm">
       <div class="row items-center justify-between">
         <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-map-marker-alt fa-fw mr-1"></i>
-          <div class="text-subtitle2">Alignment:</div>
+          <q-icon name="fas fa-map-marker-alt" class="q-mr-md" />
+          <div class="text-subtitle2">RA:</div>
         </div>
         <div class="col-auto">
-          <div class="text-body1">{{ data.alignment }}</div>
+          <div class="text-body1">{{ data.ra || '-' }}</div>
+        </div>
+        <div class="col-auto mr-4 flex items-center">
+          <q-icon name="fas fa-ruler-horizontal" class="q-mr-md" />
+          <div class="text-subtitle2">DEC:</div>
+        </div>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.dec || '-' }}</div>
+        </div>
+        <div class="col-auto mr-4 flex items-center">
+          <div class="text-subtitle2">AZ:</div>
+        </div>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.az || '-' }}</div>
+        </div>
+        <div class="col-auto mr-4 flex items-center">
+          <div class="text-subtitle2">ALT:</div>
+        </div>
+        <div class="col-auto">
+          <div class="text-body1">{{ data.alt || '-' }}</div>
         </div>
       </div>
       <div class="row items-center mt-4 justify-between">
         <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-ruler-horizontal fa-fw mr-1"></i>
-          <div class="text-subtitle2">Polar Axis Position:</div>
+          <div class="text-subtitle2">Tracking Speed:</div>
         </div>
         <div class="col-auto">
-          <div class="text-body1">{{ data.polarAxisPosition || '-' }}°</div>
+          <div class="text-body1">{{ data.trackingSpeed || '-' }}x</div>
         </div>
         <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-sliders-h fa-fw mr-1"></i>
-          <div class="text-subtitle2">Focus Position:</div>
+          <div class="text-subtitle2">Tracking Mode:</div>
         </div>
         <div class="col-auto">
-          <div class="text-body1">{{ data.focusPosition || '-' }}°</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <div class="text-subtitle2">Field of View:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.fieldOfView || '-' }}°</div>
-        </div>
-        <div class="ccol-auto mr-4 flex items-center">
-          <div class="text-subtitle2">Observation Region:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.observationRegion || '-' }}</div>
-        </div>
-
-      </div>
-      <div class="row items-center mt-4 justify-between">
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-stopwatch fa-fw mr-1"></i>
-          <div class="text-subtitle2">Exposure Time:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.exposureTime || '-' }} s</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-microchip fa-fw mr-1"></i>
-          <div class="text-subtitle2">Gain:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.gain || '-' }} dB</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-thermometer-half fa-fw mr-1"></i>
-          <div class="text-subtitle2">Temperature:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.temperature || '-' }} ℃</div>
-        </div>
-        <div class="col-auto mr-4 flex items-center">
-          <i class="fas fa-tint fa-fw mr-1"></i>
-          <div class="text-subtitle2">Humidity:</div>
-        </div>
-        <div class="col-auto">
-          <div class="text-body1">{{ data.humidity || '-' }} %</div>
+          <div class="text-body1">{{ data.trackingMode || '-' }}</div>
         </div>
       </div>
     </q-card-section>
@@ -171,15 +156,10 @@
           </div>
         </div>
       </div>
-        
+
       <div class="row q-gutter-md q-mt-lg">
         <div class="col-auto">
-          <q-btn
-            label="Save Settings"
-            color="primary"
-            class="q-mr-md"
-            @click="saveSettings"
-          />
+          <q-btn label="Save Settings" color="primary" class="q-mr-md" @click="saveSettings" />
         </div>
       </div>
     </q-card-section>

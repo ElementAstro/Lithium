@@ -297,8 +297,6 @@ if(UNIX)
         target_link_libraries(openapt ${ZLIB_LIBRARIES})
         target_link_libraries(openapt pugixml-static)
 
-        target_link_libraries(openapt lua)
-
         # Set output name for openapt executable
         set_target_properties(
             openapt
@@ -369,8 +367,6 @@ if(UNIX)
         # Link ZLIB and pugixml-static libraries
         target_link_libraries(openapt ${ZLIB_LIBRARIES})
         target_link_libraries(openapt pugixml-static)
-
-        target_link_libraries(openapt lua)
 
         # Set output name for openapt executable
         set_target_properties(

@@ -26,7 +26,7 @@ check_cxx_compiler_flag(-std=c++20 HAS_CXX20_FLAG)
 check_cxx_compiler_flag(-std=c++17 HAS_CXX17_FLAG)
 check_cxx_compiler_flag(-std=c++11 HAS_CXX11_FLAG)
 check_cxx_compiler_flag(-std=c++0x HAS_CXX0X_FLAG)
-
+set(CMAKE_C_STANDARD 17)
 if (HAS_CXX20_FLAG)
   set(CMAKE_CXX_STANDARD 20)
 elseif (HAS_CXX17_FLAG)

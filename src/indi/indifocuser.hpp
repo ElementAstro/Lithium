@@ -39,7 +39,7 @@ Description: INDI Focuser
 
 #include <string>
 
-#include <spdlog/spdlog.h>
+#include "nlohmann/json.hpp"
 
 namespace OpenAPT
 {
@@ -73,6 +73,8 @@ namespace OpenAPT
         std::string indi_focuser_exec = "";      // INDI 设备执行文件路径
         std::string indi_focuser_version = "";   // INDI 设备固件版本
         std::string indi_focuser_interface = ""; // INDI 接口版本
+
+        nlohmann::json focuser_json;
 
     public:
         /**

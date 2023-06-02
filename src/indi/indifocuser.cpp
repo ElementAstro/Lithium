@@ -174,115 +174,169 @@ namespace OpenAPT
         std::string PropName(property->getName());
         INDI_PROPERTY_TYPE Proptype = property->getType();
 
-        spdlog::debug("{} Property: {}", _name, property->getName());
+        if (Proptype != INDI_TEXT && Proptype != INDI_SWITCH && Proptype != INDI_NUMBER)
+        {
+            spdlog::warn("{} Unknown property type: {}", _name, Proptype);
+            return;
+        }
 
-        if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
+        if (PropName.empty())
         {
-            spdlog::debug("{} Found device port for {} ", _name, property->getDeviceName());
-            focuser_port = property->getText();
+            spdlog::warn("{} Property name is empty", _name);
+            return;
         }
-        else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
+
+        bool switch_on = false;
+        if (Proptype == INDI_SWITCH)
         {
-            spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
-            connection_prop = property->getSwitch();
-            ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
-            is_connected = (connectswitch->s == ISS_ON);
-            if (!is_connected)
+            ISwitchVectorProperty *switch_prop = property->getSwitch();
+            ISwitch *switch_connect = IUFindSwitch(switch_prop, "CONNECT");
+            if (switch_connect)
             {
-                connection_prop->sp->s = ISS_ON;
-                sendNewSwitch(connection_prop);
+                switch_on = (switch_connect->s == ISS_ON);
             }
-            spdlog::debug("{} Connected {}", _name, is_connected);
         }
-        else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
+
+        double prop_value = 0;
+        if (Proptype == INDI_NUMBER)
         {
-            device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
-            indi_focuser_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
-            indi_focuser_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
-            indi_focuser_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-            spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_focuser_exec);
-        }
-        else if (PropName == indi_focuser_cmd + "INFO" && Proptype == INDI_NUMBER)
-        {
-            focuserinfo_prop = property->getNumber();
-            newNumber(focuserinfo_prop);
-        }
-        else if (PropName == indi_focuser_cmd + "Mode" && Proptype == INDI_SWITCH)
-        {
-            mode_prop = property->getSwitch();
-            newSwitch(mode_prop);
-        }
-        else if (PropName == indi_focuser_cmd + "DEVICE_BAUD_RATE" && Proptype == INDI_SWITCH)
-        {
-            rate_prop = property->getSwitch();
-            if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
-                indi_focuser_rate = "9600";
-            else if (IUFindSwitch(rate_prop, "19200")->s == ISS_ON)
-                indi_focuser_rate = "19200";
-            else if (IUFindSwitch(rate_prop, "38400")->s == ISS_ON)
-                indi_focuser_rate = "38400";
-            else if (IUFindSwitch(rate_prop, "57600")->s == ISS_ON)
-                indi_focuser_rate = "57600";
-            else if (IUFindSwitch(rate_prop, "115200")->s == ISS_ON)
-                indi_focuser_rate = "115200";
-            else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
-                indi_focuser_rate = "230400";
-            spdlog::debug("{} baud rate : {}", _name, indi_focuser_rate);
-        }
-        else if (PropName == indi_focuser_cmd + "DEVICE_PORT" && Proptype == INDI_TEXT)
-        {
-            indi_focuser_port = IUFindText(property->getText(), "PORT")->text;
-            spdlog::debug("{} USB Port : {}", _name, indi_focuser_port);
-        }
-        else if (PropName == indi_focuser_cmd + "FOCUS_MOTION" && Proptype == INDI_SWITCH)
-        {
-            motion_prop = property->getSwitch();
-            if (IUFindSwitch(motion_prop, "FOCUS_INWARD")->s == ISS_ON)
+            INumberVectorProperty *num_prop = property->getNumber();
+            INumber *num_value = IUFindNumber(num_prop, "FOCUS_ABSOLUTE_POSITION");
+            if (num_value)
             {
-                current_motion = 0;
-                spdlog::debug("{} is moving inward", _name);
+                prop_value = num_value->value;
             }
             else
             {
-                current_motion = 1;
-                spdlog::debug("{} is moving outward", _name);
+                spdlog::warn("{} Unknown number property: {}", _name, PropName);
+                return;
             }
         }
-        else if (PropName == indi_focuser_cmd + "FOCUS_SPEED" && Proptype == INDI_NUMBER)
+
+        switch (property->getType())
         {
-            speed_prop = property->getNumber();
-            current_speed = IUFindNumber(speed_prop, "FOCUS_SPEED_VALUE")->value;
-            spdlog::debug("{} Current Speed : {}", _name, current_speed);
+        case INDI_TEXT:
+        {
+            if (PropName == "DEVICE_PORT")
+            {
+                spdlog::debug("{} Found device port for {}", _name, property->getDeviceName());
+                focuser_port = property->getText();
+            }
+            else if (PropName == "DRIVER_INFO")
+            {
+                device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
+                indi_focuser_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
+                indi_focuser_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
+                indi_focuser_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
+                focuser_info["driver"]["name"] = device_name;
+                focuser_info["driver"]["exec"] = indi_focuser_exec;
+                focuser_info["driver"]["version"] = indi_focuser_version;
+                focuser_info["driver"]["interfaces"] = indi_focuser_interface;
+                spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_focuser_exec);
+            }
+            else if (PropName == indi_focuser_cmd + "DEVICE_PORT")
+            {
+                indi_focuser_port = IUFindText(property->getText(), "PORT")->text;
+                spdlog::debug("{} USB Port : {}", _name, indi_focuser_port);
+            }
+            break;
         }
-        else if (PropName == indi_focuser_cmd + "ABS_FOCUS_POSITION" && Proptype == INDI_NUMBER)
+        case INDI_SWITCH:
         {
-            absolute_position_prop = property->getNumber();
-            current_position = IUFindNumber(absolute_position_prop, "FOCUS_ABSOLUTE_POSITION")->value;
-            spdlog::debug("{} Current Absolute Position : {}", _name, current_position);
+            if (PropName == "CONNECTION")
+            {
+                spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
+                connection_prop = property->getSwitch();
+                is_connected = switch_on;
+                if (!is_connected)
+                {
+                    connection_prop->sp->s = ISS_ON;
+                    sendNewSwitch(connection_prop);
+                }
+                spdlog::debug("{} Connected {}", _name, is_connected);
+            }
+            else if (PropName == indi_focuser_cmd + "Mode")
+            {
+                mode_prop = property->getSwitch();
+                newSwitch(mode_prop);
+            }
+            else if (PropName == indi_focuser_cmd + "DEVICE_BAUD_RATE")
+            {
+                rate_prop = property->getSwitch();
+                if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
+                    indi_focuser_rate = "9600";
+                else if (IUFindSwitch(rate_prop, "19200")->s == ISS_ON)
+                    indi_focuser_rate = "19200";
+                else if (IUFindSwitch(rate_prop, "38400")->s == ISS_ON)
+                    indi_focuser_rate = "38400";
+                else if (IUFindSwitch(rate_prop, "57600")->s == ISS_ON)
+                    indi_focuser_rate = "57600";
+                else if (IUFindSwitch(rate_prop, "115200")->s == ISS_ON)
+                    indi_focuser_rate = "115200";
+                else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
+                    indi_focuser_rate = "230400";
+                spdlog::debug("{} baud rate : {}", _name, indi_focuser_rate);
+            }
+            else if (PropName == indi_focuser_cmd + "FOCUS_MOTION")
+            {
+                current_motion = (IUFindSwitch(motion_prop, "FOCUS_INWARD")->s == ISS_ON) ? 0 : 1;
+                spdlog::debug("{} is moving {}", _name, current_motion ? "outward" : "inward");
+            }
+            else if (PropName == indi_focuser_cmd + "FOCUS_BACKLASH_TOGGLE")
+            {
+                has_backlash = (IUFindSwitch(backlash_prop, "INDI_ENABLED")->s == ISS_ON);
+                spdlog::debug("{} Has Backlash : {}", _name, has_backlash);
+            }
+            break;
         }
-        else if (PropName == indi_focuser_cmd + "DELAY" && Proptype == INDI_NUMBER)
+        case INDI_NUMBER:
         {
-            delay_prop = property->getNumber();
-            delay = IUFindNumber(delay_prop, "DELAY_VALUE")->value;
-            spdlog::debug("{} Current Delay : {}", _name, delay);
+            if (PropName == indi_focuser_cmd + "INFO")
+            {
+                focuserinfo_prop = property->getNumber();
+                newNumber(focuserinfo_prop);
+            }
+            else if (PropName == indi_focuser_cmd + "FOCUS_SPEED")
+            {
+                speed_prop = property->getNumber();
+                current_speed = prop_value;
+                spdlog::debug("{} Current Speed : {}", _name, current_speed);
+            }
+            else if (PropName == indi_focuser_cmd + "ABS_FOCUS_POSITION")
+            {
+                absolute_position_prop = property->getNumber();
+                current_position = prop_value;
+                spdlog::debug("{} Current Absolute Position : {}", _name, current_position);
+            }
+            else if (PropName == indi_focuser_cmd + "DELAY")
+            {
+                delay_prop = property->getNumber();
+                delay = prop_value;
+                spdlog::debug("{} Current Delay : {}", _name, delay);
+            }
+            else if (PropName == indi_focuser_cmd + "FOCUS_TEMPERATURE")
+            {
+                temperature_prop = property->getNumber();
+                current_temperature = prop_value;
+                spdlog::debug("{} Current Temperature : {}", _name, current_temperature);
+            }
+            else if (PropName == indi_focuser_cmd + "FOCUS_MAX")
+            {
+                max_position_prop = property->getNumber();
+                max_position = prop_value;
+                spdlog::debug("{} Max Position : {}", _name, max_position);
+            }
+            else
+            {
+                spdlog::warn("{} Unknown number property: {}", _name, PropName);
+            }
+            break;
         }
-        else if (PropName == indi_focuser_cmd + "FOCUS_TEMPERATURE" && Proptype == INDI_NUMBER)
+        default:
         {
-            temperature_prop = property->getNumber();
-            current_temperature = IUFindNumber(temperature_prop, "TEMPERATURE")->value;
-            spdlog::debug("{} Current Temperature : {}", _name, current_temperature);
+            spdlog::warn("{} Unknown property type: {}", _name, Proptype);
+            break;
         }
-        else if (PropName == indi_focuser_cmd + "FOCUS_BACKLASH_TOGGLE" && Proptype == INDI_SWITCH)
-        {
-            backlash_prop = property->getSwitch();
-            has_backlash = IUFindSwitch(backlash_prop, "INDI_ENABLED")->s == ISS_ON;
-            spdlog::debug("{} Has Backlash : {}", _name, has_backlash);
-        }
-        else if (PropName == indi_focuser_cmd + "FOCUS_MAX" && Proptype == INDI_NUMBER)
-        {
-            max_position_prop = property->getNumber();
-            max_position = IUFindNumber(max_position_prop, "FOCUS_MAX_VALUE")->value;
-            spdlog::debug("{} Max Position : {}", _name, max_position);
         }
     }
 
@@ -349,7 +403,7 @@ namespace OpenAPT
             return true;
         }
         setServer(hostname.c_str(), port);
-        // Receive messages only for our camera.
+        // Receive messages only for our focuser.
         watchDevice(name.c_str());
         // Connect to server.
         if (connectServer())

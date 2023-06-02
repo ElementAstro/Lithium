@@ -15,13 +15,9 @@ Despite facing stiff competition from closed source alternatives, we're not will
 
 ## Features
 
-Our astronomy software is designed to meet the needs of astronomers and astrophotographers of all levels. We have extensively optimized our platform for stable and efficient performance on all mainstream operating systems. Our device driver, based on INDI and ASCOM technologies, supports most astronomical devices - ensuring seamless integration with your existing equipment.
+OpenAPT is an astronomy software that caters to astronomers and astrophotographers of all levels. It boasts stable and efficient performance on mainstream operating systems, and seamless integration with most astronomical devices. With a modified version of PHD2 and asap and astrometry as platesolving engines, capturing stunning images has never been easier. Its multiple interface access, including web, desktop, and terminal interfaces, makes it user-friendly from anywhere. 
 
-Our software also includes a modified version of PHD2, built in as the guide tool. With asap and astrometry as the platesolving engine, you can capture stunning images with ease. And with multiple interface access, including web, desktop, and even terminal interfaces, it's easy to use no matter where you are.
-
-We're also proud to be fully open source, based on GPL3. This means that you can customize our software to suit your own unique needs, and it's completely free to use. We believe in making astronomy accessible to everyone, and we're committed to opening up the cosmos to enthusiasts and professionals alike.
-
-With OpenAPT, astronomers can now easily manage and control multiple astronomical devices using a unified interface. Our system is designed to be intuitive, efficient, and highly adaptable to the changing needs of astronomers and astrophotographers.
+But what sets OpenAPT apart is its commitment to accessibility and open source. Based on GPL3, it's completely free and customizable to suit unique needs. OpenAPT's intuitive and adaptable system allows for easy management and control of multiple astronomical devices, opening up the cosmos to enthusiasts and professionals alike.
 
 ## How to build
 
@@ -30,7 +26,7 @@ With OpenAPT, astronomers can now easily manage and control multiple astronomica
 ```
 sudo apt-add-repository ppa:mutlaqja/ppa -y // Add INDI source
 sudo apt update && sudo apt upgrade -y 
-sudo apt install libspdlog-dev libboost-dev libgsl-dev libcfitsio-dev libz-dev python3-dev libssl-dev libsqlite3-dev libboost-system-dev && sudo apt-get install libindi1 indi-bin libindi-dev
+sudo apt install libspdlog-dev libboost-dev libgsl-dev libcfitsio-dev libz-dev python3-dev libssl-dev libboost-system-dev && sudo apt-get install libindi1 indi-bin libindi-dev
 ```
 
 or just run

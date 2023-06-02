@@ -31,149 +31,317 @@ Description: Astrometry Command Line
 
 #include "astrometry.hpp"
 
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <stdexcept>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+#include <cassert>
+#include <chrono>
+#include <algorithm>
+
 namespace OpenAPT::API::Astrometry
 {
-    /**
-     * @brief 利用 Astrometry.net 的 solve-field 工具对图像进行求解
-     *
-     * @param image 图像文件路径
-     * @param ra 目标区域的赤经信息，格式为 HH:MM:SS（时：分：秒）
-     * @param dec 目标区域的赤纬信息，格式为 DD:MM:SS（度：分：秒）
-     * @param radius 搜索半径
-     * @param downsample 下采样倍率
-     * @param depth 图像搜索深度，由两个整数构成一个 vector
-     * @param scale_low 亮度值下限
-     * @param scale_high 亮度值上限
-     * @param width 图像宽度
-     * @param height 图像高度
-     * @param scale_units 图像尺寸单位，可选值有：degwidth（度）、arcminwidth（弧分）和 arcsecwidth（弧秒）
-     * @param overwrite 是否覆盖已有文件
-     * @param no_plot 是否生成星表图像
-     * @param verify 是否验证解决方案
-     * @param debug 是否开启调试模式
-     * @param timeout 解析超时时间（秒）
-     * @param resort 是否按照匹配等级重新排序
-     * @param _continue 是否从上次停止的地方继续
-     * @param no_tweak 是否关闭微调选项
-     * @return json类型的结果，包含解决方案的相关信息如赤经、赤纬、视场大小等，若解决方案失败则返回对应错误信息
-     */
+    using json = nlohmann::json;
+
+    // 命令行工具路径
+    constexpr char kSolveFieldPath[] = "/usr/local/astrometry/bin/solve-field";
+    // 最大命令行缓冲区长度，防止缓冲区溢出
+    constexpr int kMaxBufferSize = 4096;
+    // 命令行执行超时时间
+    constexpr int kDefaultTimeoutSeconds = 30;
+    // 命令行执行状态码
+    enum class CommandStatus
+    {
+        SUCCESS,
+        FAILED,
+        TIMEOUT
+    };
+
+    // 解析出的参数结构体
+    struct SolveResult
+    {
+        std::string ra;
+        std::string dec;
+        double fov_x = 0;
+        double fov_y = 0;
+        double rotation = 0;
+    };
+
+    // 程序内部异常类型
+    class AstrometryException : public std::runtime_error
+    {
+    public:
+        explicit AstrometryException(const std::string &message)
+            : std::runtime_error(message)
+        {
+        }
+    };
+
+    // UTC时间转换为字符串
+    std::string to_string(const std::tm &tm, const std::string &format)
+    {
+        std::stringstream ss;
+        char buffer[256];
+        if (strftime(buffer, sizeof(buffer), format.c_str(), &tm) == 0)
+        {
+            throw AstrometryException("Date format error");
+        }
+        ss << buffer;
+        return ss.str();
+    }
+
+    // 获取当前UTC时间
+    std::string get_utc_time()
+    {
+        const auto now = std::chrono::system_clock::now();
+        const std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+        struct std::tm tm;
+        gmtime_r(&now_time_t, &tm);
+        return to_string(tm, "%FT%TZ");
+    }
+
+    // 执行命令行指令
+    CommandStatus execute_command(const std::string &command, int timeout_seconds, std::string &output)
+    {
+        std::array<char, kMaxBufferSize> buffer{};
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+        if (!pipe)
+        {
+            throw AstrometryException("Failed to open pipe");
+        }
+        auto start_time = std::chrono::system_clock::now();
+        while (std::chrono::system_clock::now() - start_time < std::chrono::seconds(timeout_seconds))
+        {
+            std::memset(buffer.data(), 0, buffer.size());
+            if (std::fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+            {
+                output += buffer.data();
+            }
+            else
+            {
+                break;
+            }
+        }
+        auto status = pclose(pipe.get());
+        if (status == 0)
+        {
+            return CommandStatus::SUCCESS;
+        }
+        else if (WIFEXITED(status))
+        {
+            return CommandStatus::FAILED;
+        }
+        else
+        {
+            return CommandStatus::TIMEOUT;
+        }
+    }
+
+    // 解析命令行输出结果
+    SolveResult parse_output(const std::string &output)
+    {
+        SolveResult result;
+        std::unordered_map<std::string, std::string> tokens;
+        std::istringstream ss(output);
+        std::string line;
+        while (std::getline(ss, line))
+        {
+            // 解析命令行输出结果中的每一行
+            std::string key, value;
+            auto pos = line.find(": ");
+            if (pos != std::string::npos)
+            {
+                key = line.substr(0, pos);
+                value = line.substr(pos + 2);
+            }
+            else
+            {
+                key = line;
+                value = "";
+            }
+            key.erase(std::remove_if(key.begin(), key.end(), [](unsigned char c)
+                                     { return !std::isalnum(c); }),
+                      key.end());
+            tokens[key] = value;
+        }
+
+        // 提取解析出的参数
+        auto iter = tokens.find("FieldcenterRAHMSDecDMS");
+        if (iter != tokens.end())
+        {
+            auto pos = iter->second.find(",");
+            if (pos != std::string::npos)
+            {
+                result.ra = iter->second.substr(0, pos);
+                result.dec = iter->second.substr(pos + 1);
+            }
+        }
+        iter = tokens.find("Fieldsize");
+        if (iter != tokens.end())
+        {
+            auto pos = iter->second.find("x");
+            if (pos != std::string::npos)
+            {
+                result.fov_x = std::stod(iter->second.substr(0, pos));
+                result.fov_y = std::stod(iter->second.substr(pos + 1));
+            }
+        }
+        iter = tokens.find("Fieldrotationangleupisdegrees");
+        if (iter != tokens.end())
+        {
+            result.rotation = std::stod(iter->second);
+        }
+
+        return result;
+    }
+
+    // 给定输入参数，生成命令行指令
+    std::string make_command(const std::string &image, const std::string &ra, const std::string &dec, const double &radius, const int &downsample,
+                             const std::vector<int> &depth, const double &scale_low, const double &scale_high, const int &width, const int &height,
+                             const std::string &scale_units, const bool &overwrite, const bool &no_plot, const bool &verify,
+                             const bool &debug, const bool &resort, const bool &_continue, const bool &no_tweak)
+    {
+        // 参数校验
+        if (image.empty())
+        {
+            throw AstrometryException("Image file is empty");
+        }
+
+        // 生成命令行指令
+        std::stringstream ss;
+        ss << kSolveFieldPath << " \"" << image << "\"";
+        if (!ra.empty())
+        {
+            ss << " --ra \"" << ra << "\"";
+        }
+        if (!dec.empty())
+        {
+            ss << " --dec \"" << dec << "\"";
+        }
+        if (radius > 0)
+        {
+            ss << " --radius " << radius;
+        }
+        if (downsample != 1)
+        {
+            ss << " --downsample " << downsample;
+        }
+        if (!depth.empty())
+        {
+            ss << " --depth " << depth[0] << "," << depth[1];
+        }
+        if (scale_low > 0)
+        {
+            ss << " --scale-low " << scale_low;
+        }
+        if (scale_high > 0)
+        {
+            ss << " --scale-high " << scale_high;
+        }
+        if (width > 0)
+        {
+            ss << " --width " << width;
+        }
+        if (height > 0)
+        {
+            ss << " --height " << height;
+        }
+        if (!scale_units.empty())
+        {
+            ss << " --scale-units \"" << scale_units << "\"";
+        }
+        if (overwrite)
+        {
+            ss << " --overwrite";
+        }
+        if (no_plot)
+        {
+            ss << " --no-plot";
+        }
+        if (verify)
+        {
+            ss << " --verify";
+        }
+        if (debug)
+        {
+            ss << " --debug";
+        }
+        if (resort)
+        {
+            ss << " --resort";
+        }
+        if (_continue)
+        {
+            ss << " --continue";
+        }
+        if (no_tweak)
+        {
+            ss << " --no-tweak";
+        }
+
+        return ss.str();
+    }
+
     json solve(const std::string &image, const std::string &ra, const std::string &dec, const double &radius, const int &downsample,
                const std::vector<int> &depth, const double &scale_low, const double &scale_high, const int &width, const int &height,
                const std::string &scale_units, const bool &overwrite, const bool &no_plot, const bool &verify,
                const bool &debug, const int &timeout, const bool &resort, const bool &_continue, const bool &no_tweak)
     {
-        // 初始化返回值
+        SolveResult result;
         json ret_json;
-        ret_json["message"] = "unknown error";
 
         try
         {
-            // 参数校验
-            assert(!image.empty() && "wrong image file type");
-
-            // 生成命令行指令
-            std::string command = "solve-field " + image;
-
-            if (!ra.empty())
-                command += " --ra " + ra;
-            if (!dec.empty())
-                command += " --dec " + dec;
-            if (radius > 0)
-                command += " --radius " + std::to_string(radius);
-            if (downsample != 1)
-                command += " --downsample " + std::to_string(downsample);
-            if (!depth.empty())
-                command += " --depth " + std::to_string(depth[0]) + "," + std::to_string(depth[1]);
-            if (scale_low > 0)
-                command += " --scale-low " + std::to_string(scale_low);
-            if (scale_high > 0)
-                command += " --scale-high " + std::to_string(scale_high);
-            if (width > 0)
-                command += " --width " + std::to_string(width);
-            if (height > 0)
-                command += " --height " + std::to_string(height);
-            if (!scale_units.empty())
-                command += " --scale-units " + scale_units;
-            if (overwrite)
-                command += " --overwrite";
-            if (no_plot)
-                command += " --no-plot";
-            if (verify)
-                command += " --verify";
-            if (resort)
-                command += " --resort";
-            if (_continue)
-                command += " --continue";
-            if (no_tweak)
-                command += " --no-tweak";
-
-            // 执行命令行指令
-            FILE *pipe = popen(command.c_str(), "r");
-            if (!pipe)
+            auto command = make_command(image, ra, dec, radius, downsample, depth, scale_low, scale_high,
+                                        width, height, scale_units, overwrite, no_plot, verify, debug, resort, _continue, no_tweak);
+            std::string output;
+            auto status = execute_command(command, timeout, output);
+            switch (status)
             {
-                ret_json["message"] = "failed to open pipe";
-                return ret_json;
-            }
-
-            char buffer[256];
-            while (fgets(buffer, sizeof(buffer), pipe) != nullptr)
-            {
-                std::string item(buffer);
-
-                // 解析输出结果
-                size_t pos;
-                if ((pos = item.find("Field center: (RA H:M:S, Dec D:M:S) = ")) != std::string::npos)
-                {
-                    std::string ra_dec = item.substr(pos + 41, 19);
-                    pos = ra_dec.find(",");
-                    if (pos == std::string::npos)
-                    {
-                        continue;
-                    }
-                    ret_json["ra"] = ra_dec.substr(0, pos);
-                    ret_json["dec"] = ra_dec.substr(pos + 2);
-                }
-                else if ((pos = item.find("Field size: ")) != std::string::npos)
-                {
-                    std::string fov = item.substr(pos + 12);
-                    pos = fov.find("x");
-                    if (pos == std::string::npos)
-                    {
-                        continue;
-                    }
-                    ret_json["fov_x"] = fov.substr(0, pos);
-                    ret_json["fov_y"] = fov.substr(pos + 1);
-                }
-                else if ((pos = item.find("Field rotation angle: up is ")) != std::string::npos)
-                {
-                    auto end_pos = item.rfind(" degrees");
-                    if (end_pos == std::string::npos)
-                    {
-                        continue;
-                    }
-                    ret_json["rotation"] = item.substr(pos + 29, end_pos - pos - 29);
-                }
-            }
-
-            pclose(pipe);
-
-            // 判断解析结果是否可用
-            if (ret_json.find("ra") == ret_json.end() || ret_json.find("dec") == ret_json.end())
-            {
-                ret_json["message"] = "Solve failed";
-            }
-            else
-            {
-                ret_json.erase("message");
+            case CommandStatus::SUCCESS:
+                result = parse_output(output);
+                break;
+            case CommandStatus::FAILED:
+                throw AstrometryException("Command execution failed");
+            case CommandStatus::TIMEOUT:
+                throw AstrometryException("Command execution timed out");
             }
         }
         catch (const std::exception &e)
         {
-            ret_json["message"] = e.what();
+            ret_json["error_message"] = e.what();
+            return ret_json;
         }
-        catch (...)
+
+        // 将解析结果写入JSON对象
+        if (!result.ra.empty())
         {
-            ret_json["message"] = "unpredictable error";
+            ret_json["ra"] = result.ra;
+        }
+        if (!result.dec.empty())
+        {
+            ret_json["dec"] = result.dec;
+        }
+        if (result.fov_x > 0)
+        {
+            ret_json["fov_x"] = result.fov_x;
+        }
+        if (result.fov_y > 0)
+        {
+            ret_json["fov_y"] = result.fov_y;
+        }
+        if (result.rotation != 0)
+        {
+            ret_json["rotation"] = result.rotation;
+        }
+        if (ret_json.empty())
+        {
+            ret_json["error_message"] = "Solve failed";
         }
 
         return ret_json;

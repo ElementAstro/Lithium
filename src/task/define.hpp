@@ -62,7 +62,9 @@ public:
         return {
             {"type", "basic"},
             {"name", m_name},
-            {"id", m_id}
+            {"id", m_id},
+            {"description" ,m_description},
+            {"can_stop" ,m_canStop}
         };
     };
 

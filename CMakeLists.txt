@@ -129,17 +129,11 @@ set(image_SRC
 		${openapt_src_dir}/src/image/image.hpp
 
 		${openapt_src_dir}/src/image/draw.cpp
-
-		${openapt_src_dir}/src/image/cvimage.cpp
-		${openapt_src_dir}/src/image/cvimage.hpp
 )
 
 set(asx_SRC
-		${openapt_src_dir}/src/asx/search.cpp
+        ${openapt_src_dir}/src/asx/search.cpp
 		${openapt_src_dir}/src/asx/search.hpp
-
-        ${openapt_src_dir}/src/asx/jsearch.cpp
-		${openapt_src_dir}/src/asx/jsearch.hpp
 )
 
 set(api_SRC
@@ -279,9 +273,6 @@ if(UNIX)
             message("-- OpenSSL Not Found")
         endif()
 
-        find_package(SQLite3 REQUIRED)
-        target_link_libraries(openapt sqlite3)
-
         find_package(GSL REQUIRED)
         target_link_libraries(openapt ${GSL_LIBRARIES})
 
@@ -349,9 +340,6 @@ if(UNIX)
         else()
             message("-- OpenSSL Not Found")
         endif()
-
-        find_package(SQLite3 REQUIRED)
-        target_link_libraries(openapt sqlite3)
 
         find_package(GSL REQUIRED)
         target_link_libraries(openapt ${GSL_LIBRARIES})

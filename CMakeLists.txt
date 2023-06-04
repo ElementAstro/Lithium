@@ -49,33 +49,6 @@ set(USE_FOLDERS TRUE)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_custom_command(
-	OUTPUT ${CMAKE_BINARY_DIR}/websrc_modification
-	COMMAND ${CMAKE_COMMAND} -E compare_files ${CMAKE_SOURCE_DIR}/websrc ${CMAKE_BINARY_DIR}/websrc_modification
-	BYPRODUCTS ${CMAKE_BINARY_DIR}/websrc_modification
-	VERBATIM # Option to ensure that the command is executed correctly on all platforms
-)
-
-# Add a custom target that depends on the modification check
-add_custom_target(check_websrc_modification DEPENDS ${CMAKE_BINARY_DIR}/websrc_modification)
-
-# Set up the build directory with the necessary directories for static and templates
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/static)
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/templates)
-
-# Use file(GLOB_RECURSE) to automatically detect all files in the directories
-file(GLOB_RECURSE STATIC_FILES ${CMAKE_SOURCE_DIR}/websrc/static/*)
-file(GLOB_RECURSE TEMPLATE_FILES ${CMAKE_SOURCE_DIR}/websrc/templates/*)
-
-# Add a custom command to copy any modified static and template files to the build directory
-add_custom_command(
-	TARGET check_websrc_modification
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STATIC_FILES} ${CMAKE_BINARY_DIR}/static/
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different ${TEMPLATE_FILES} ${CMAKE_BINARY_DIR}/templates/
-	COMMAND_EXPAND_LISTS # Option to expand lists when copying files
-)
-
 #################################################################################
 #
 # main project
@@ -85,7 +58,7 @@ project(openapt)
 add_subdirectory(libs/)
 add_subdirectory(libs/pugixml)
 
-add_subdirectory(src/indiserver)
+#add_subdirectory(src/indiserver)
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/crow)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
@@ -224,6 +197,75 @@ set(openapt_SRC
 		${openapt_src_dir}/src/openapt.hpp
 )
 
+if(WIN32)
+    # Linux specific options
+    add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
+
+    # Use consistent formatting for target_precompile_headers
+    target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
+
+    # Use consistent formatting for find_package
+    find_package(ZLIB REQUIRED)
+
+    # Find and link CFITSIO libraries
+    find_package(CFITSIO REQUIRED)
+    target_link_libraries(openapt ${CFITSIO_LIBRARIES})
+
+    # Find and link INDI libraries
+    find_package(INDI 2.0.0 REQUIRED)
+    include_directories(${INDI_INCLUDE_DIR})
+    target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
+
+    find_package(CURL REQUIRED)
+    target_link_libraries(openapt CURL::libcurl)
+
+    # Check if Python is installed
+    find_package(Python REQUIRED COMPONENTS Development)
+    if(Python_FOUND)
+        message(STATUS "Python version: ${Python_VERSION}")
+    else()
+        message(SEND_ERROR "Python not found.")
+    endif()
+
+    # Add Python headers and library paths
+    include_directories(${Python_INCLUDE_DIRS})
+    link_directories(${Python_LIBRARY_DIRS})
+
+    # Add compiler flags and link Python libraries
+    add_definitions(${Python_DEFINITIONS})
+    target_link_libraries(openapt ${Python_LIBRARIES})
+
+    # Find and link OpenSSL libraries
+    find_package(OpenSSL REQUIRED)
+    if(OpenSSL_FOUND)
+        target_link_libraries(openapt ${OPENSSL_LIBRARIES})
+        message("-- Using OpenSSL ${OPENSSL_VERSION}")
+    else()
+        message("-- OpenSSL Not Found")
+    endif()
+
+    find_package(GSL REQUIRED)
+    target_link_libraries(openapt ${GSL_LIBRARIES})
+
+    # Find and link spdlog libraries
+    find_package(spdlog REQUIRED)
+    target_link_libraries(openapt spdlog::spdlog_header_only)
+
+    find_package(OpenCV REQUIRED)
+    include_directories(${OpenCV_INCLUDE_DIRS})
+    target_link_libraries(openapt ${OpenCV_LIBS})
+
+    # Link ZLIB and pugixml-static libraries
+    target_link_libraries(openapt ${ZLIB_LIBRARIES})
+    target_link_libraries(openapt pugixml-static)
+
+    # Set output name for openapt executable
+    set_target_properties(
+        openapt
+        PROPERTIES
+        OUTPUT_NAME openapt
+    )
+endif()
 if(UNIX)
     if(APPLE)
         # macOS specific options

@@ -1,18 +1,3 @@
-# should be done *before* declaring project.
-if (APPLE)
-  if (APPLE32)
-    # set build architecture for OSX
-    set(CMAKE_OSX_ARCHITECTURES i386 CACHE STRING "build architecture for OSX" FORCE)
-  endif ()
-  set(CMAKE_MACOSX_RPATH TRUE)
-elseif (WIN32)
-  # set Platform Toolset for Windows builds
-  if (NOT CMAKE_GENERATOR_TOOLSET MATCHES "v120_xp")
-    message(FATAL_ERROR "Visual Studio 2013 or later with v120_xp toolset is required.")
-  endif ()
-  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif ()
-
 # set default build type to Release
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Release' as none was specified.")

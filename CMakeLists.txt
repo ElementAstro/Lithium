@@ -94,7 +94,6 @@ set(plugins_SRC
 
 		${openapt_src_dir}/src/plugins/sha256.hpp
 		${openapt_src_dir}/src/plugins/glob.hpp
-		${openapt_src_dir}/src/plugins/uuid.h
 )
 
 set(image_SRC

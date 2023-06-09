@@ -65,9 +65,6 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 set(plugins_SRC
-		${openapt_src_dir}/src/plugins/thread.cpp
-		${openapt_src_dir}/src/plugins/thread.hpp
-
 		${openapt_src_dir}/src/plugins/file.cpp
 		${openapt_src_dir}/src/plugins/file.hpp
 
@@ -210,10 +207,8 @@ if(WIN32)
     find_package(CFITSIO REQUIRED)
     target_link_libraries(openapt ${CFITSIO_LIBRARIES})
 
-    # Find and link INDI libraries
-    find_package(INDI 2.0.0 REQUIRED)
-    include_directories(${INDI_INCLUDE_DIR})
-    target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
+    find_package(dlfcn-win32 REQUIRED)
+    target_link_libraries(openapt dlfcn-win32::dl)
 
     find_package(CURL REQUIRED)
     target_link_libraries(openapt CURL::libcurl)
@@ -264,8 +259,11 @@ if(WIN32)
         PROPERTIES
         OUTPUT_NAME openapt
     )
-endif()
-if(UNIX)
+elseif(UNIX)
+    if(MINGW)
+        find_package(dlfcn-win32 REQUIRED)
+        target_link_libraries(openapt dlfcn-win32::dl)
+    endif()
     if(APPLE)
         # macOS specific options
         add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})

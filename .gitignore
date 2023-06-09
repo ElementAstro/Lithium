@@ -34,7 +34,9 @@
 
 build
 .vscode
-test
 node_modules
 src/pyutils/__pycache__/astrometry.cpython-310.pyc
 src/pyutils/test.jpg
+test.cpp
+
+libexample.json

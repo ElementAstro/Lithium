@@ -29,8 +29,7 @@ Description: Websockcet Server
 
 **************************************************/
 
-#ifndef WEBSOCKET_SERVER_HPP
-#define WEBSOCKET_SERVER_HPP
+#pragma once
 
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
@@ -41,29 +40,31 @@ Description: Websockcet Server
 using json = nlohmann::json;
 using websocketpp::server;
 
-class WebSocketServer
+namespace OpenAPT
 {
-public:
-    explicit WebSocketServer(int max_connections = 100);
+    class WebSocketServer
+    {
+    public:
+        explicit WebSocketServer(int max_connections = 100);
 
-    void run(int port);
-    void stop();
-    bool isRunning() const { return running_; }
+        void run(int port);
+        void stop();
+        bool isRunning() const { return running_; }
 
-    void sendMessage(websocketpp::connection_hdl hdl, const std::string &message);
+        void sendMessage(websocketpp::connection_hdl hdl, const std::string &message);
 
-private:
-    server<websocketpp::config::asio> server_;
-    bool running_;
-    std::string client_file_path_;
-    int max_connections_;
-    int active_connections_;
-    std::mutex lock_;
+    private:
+        server<websocketpp::config::asio> server_;
+        bool running_;
+        std::string client_file_path_;
+        int max_connections_;
+        int active_connections_;
+        std::mutex lock_;
 
-    void onOpen(websocketpp::connection_hdl hdl);
-    void onClose(websocketpp::connection_hdl hdl);
-    void onMessage(websocketpp::connection_hdl hdl, server<websocketpp::config::asio>::message_ptr msg);
-    void saveClientInfo(const std::string &ip, uint16_t port);
-};
+        void onOpen(websocketpp::connection_hdl hdl);
+        void onClose(websocketpp::connection_hdl hdl);
+        void onMessage(websocketpp::connection_hdl hdl, server<websocketpp::config::asio>::message_ptr msg);
+        void saveClientInfo(const std::string &ip, uint16_t port);
+    };
 
-#endif // WEBSOCKET_SERVER_HPP
+} // namespace OpenAPT

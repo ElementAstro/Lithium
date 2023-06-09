@@ -31,8 +31,6 @@ Description: C++ and Python Modules Loader
 
 #include "modloader.hpp"
 
-#include <spdlog/spdlog.h>
-
 #include <filesystem>
 #include <iostream>
 #include <fstream>
@@ -170,7 +168,7 @@ namespace OpenAPT
         return config;
     }
 
-    ModuleLoader::ModuleLoader(MyApp *app) : m_App(app)
+    ModuleLoader::ModuleLoader()
     {
         spdlog::info("C++ module manager loaded successfully.");
     }
@@ -216,7 +214,8 @@ namespace OpenAPT
             }
 
             // Read the configuration file in JSON format
-            std::string config_file_path = std::filesystem::path(path).replace_extension(".json");
+            std::filesystem::path p = path;
+            std::string config_file_path = p.replace_extension(".json").string();
             if (std::filesystem::exists(config_file_path))
             {
                 nlohmann::json config;
@@ -297,149 +296,7 @@ namespace OpenAPT
         }
     }
 
-    bool ModuleLoader::LoadBinary(const char *dir_path, const char *out_path, const char *build_path, const char *lib_name)
-    {
-        DIR *dir;
-        struct dirent *ent;
-        struct stat file_stat;
-        char cmake_path[512];
-        char lib_path[512];
-        bool ret = true;
-
-        // Open the directory and check for errors
-        dir = opendir(dir_path);
-        if (!dir)
-        {
-            spdlog::error("Failed to open directory {}: {}", dir_path, strerror(errno));
-            return false;
-        }
-
-        // Look for the CMakeLists.txt file
-        while ((ent = readdir(dir)) != nullptr)
-        {
-            if (strcmp(ent->d_name, "CMakeLists.txt") == 0)
-            {
-                snprintf(cmake_path, sizeof(cmake_path), "%s%s%s", dir_path, PATH_SEPARATOR, ent->d_name);
-                break;
-            }
-        }
-
-        closedir(dir);
-
-        // If CMakeLists.txt is not found, return error
-        if (!ent)
-        {
-            spdlog::error("Could not find CMakeLists.txt in directory {}", dir_path);
-            return false;
-        }
-
-        // Create the build directory and check for errors
-        if (mkdir(build_path, 0777) == -1 && errno != EEXIST)
-        {
-            spdlog::error("Failed to create build directory: {}", strerror(errno));
-            return false;
-        }
-
-        // Change the working directory to build and check for errors
-        if (chdir(build_path) == -1)
-        {
-            spdlog::error("Failed to change working directory to {}: {}", build_path, strerror(errno));
-            return false;
-        }
-
-        // Check if the dynamic library already exists, and copy it if it does
-        snprintf(lib_path, sizeof(lib_path), "%s%slib%s.so", build_path, PATH_SEPARATOR, lib_name);
-        if (access(lib_path, F_OK) == 0)
-        {
-            char cmd[1024];
-            snprintf(cmd, sizeof(cmd), "cp -av %s %s%s", lib_path, out_path, PATH_SEPARATOR);
-            if (system(cmd) != 0)
-            {
-                spdlog::error("Failed to copy dynamic library");
-                ret = false;
-            }
-
-            // Remove the build directory
-            if (chdir(dir_path) == -1)
-            {
-                spdlog::error("Failed to change working directory to {}: {}", dir_path, strerror(errno));
-                return false;
-            }
-
-            char remove_cmd[512];
-#ifndef _WIN32
-            snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", build_path);
-#else
-            snprintf(remove_cmd, sizeof(remove_cmd), "rmdir /s /q %s", build_path);
-#endif
-            if (system(remove_cmd) != 0)
-            {
-                spdlog::error("Failed to remove build directory");
-            }
-            return true;
-        }
-
-        try
-        {
-            // Execute CMake to generate the build files
-            char cmd[1024];
-            snprintf(cmd, sizeof(cmd), "cmake -DCMAKE_BUILD_TYPE=Release -D LIBRARY_NAME=%s ..", lib_name);
-            if (system(cmd) != 0)
-            {
-                spdlog::error("Failed to run cmake");
-                return false;
-            }
-
-            // Execute Make to build the dynamic library
-#ifdef _WIN32
-            snprintf(cmd, sizeof(cmd), "nmake");
-#else
-            snprintf(cmd, sizeof(cmd), "make");
-#endif
-            if (system(cmd) != 0)
-            {
-                spdlog::error("Failed to run make");
-                return false;
-            }
-
-            // Copy the generated dynamic library to the output directory
-            snprintf(cmd, sizeof(cmd), "cp -av lib%s.so %s%s", lib_name, out_path, PATH_SEPARATOR);
-            if (system(cmd) != 0)
-            {
-                spdlog::error("Failed to copy dynamic library");
-                ret = false;
-            }
-
-            // Remove the build directory and check for errors
-            if (chdir(dir_path) == -1)
-            {
-                spdlog::error("Failed to change working directory to {}: {}", dir_path, strerror(errno));
-                return false;
-            }
-
-            char remove_cmd[512];
-#ifndef _WIN32
-            snprintf(remove_cmd, sizeof(remove_cmd), "rm -rf %s", build_path);
-#else
-            snprintf(remove_cmd, sizeof(remove_cmd), "rmdir /s /q %s", build_path);
-#endif
-            if (system(remove_cmd) != 0)
-            {
-                spdlog::error("Failed to remove build directory");
-            }
-        }
-        catch (const std::exception &e)
-        {
-            spdlog::error("{}", e.what());
-            ret = false;
-        }
-
-        // Return the final result
-        return ret;
-    }
-
-    template <typename T>
-    T ModuleLoader::GetFunction(const std::string &module_name, const std::string &function_name)
+    BasicTask *ModuleLoader::GetTaskPointer(const std::string &module_name, const nlohmann::json &config)
     {
         auto handle_it = handles_.find(module_name);
         if (handle_it == handles_.end())
@@ -448,78 +305,18 @@ namespace OpenAPT
             return nullptr;
         }
 
-#ifdef _WIN32
-        auto func_ptr = reinterpret_cast<T>(GetProcAddress(handle_it->second, function_name.c_str()));
-#else
-        auto func_ptr = reinterpret_cast<T>(dlsym(handle_it->second, function_name.c_str()));
-#endif
-
-        if (!func_ptr)
+        auto get_task_func = GetFunction<SimpleTask *(*)(const nlohmann::json &)>(module_name, "GetTaskInstance");
+        if (!get_task_func)
         {
-            spdlog::error("Failed to get symbol {} from module {}: {}", function_name, module_name, dlerror());
+            spdlog::error("Failed to get symbol {} from module {}: {}", "GetTaskInstance", module_name, dlerror());
             return nullptr;
         }
 
-        return func_ptr;
+        return get_task_func(config);
     }
 
     bool ModuleLoader::HasModule(const std::string &name) const
     {
         return handles_.count(name) > 0;
     }
-
-    nlohmann::json ModuleLoader::getArgsDesc(void *handle, const std::string &functionName)
-    {
-        nlohmann::json result = nlohmann::json::array();
-
-        if (!handle)
-        {
-            spdlog::error("Invalid handle passed to getArgsDesc()");
-            return {};
-        }
-
-        auto sym_ptr = dlsym(handle, functionName.c_str());
-
-        if (!sym_ptr)
-        {
-            spdlog::error("Failed to load symbol {}: {}", functionName, dlerror());
-            return {};
-        }
-
-        auto fptr = reinterpret_cast<const char *>(sym_ptr);
-        size_t i = 0;
-        bool foundParenthesis = false;
-        std::string currentArgType;
-
-        while (fptr[i] != '\0' && !foundParenthesis)
-        {
-            if (fptr[i] == '(')
-            {
-                foundParenthesis = true;
-            }
-            i++;
-        }
-
-        while (fptr[i] != '\0' && fptr[i] != ')')
-        {
-            if (fptr[i] == ',')
-            {
-                result.push_back(std::move(currentArgType));
-                currentArgType.clear();
-            }
-            else
-            {
-                currentArgType += fptr[i];
-            }
-            i++;
-        }
-
-        if (!currentArgType.empty())
-        {
-            result.push_back(std::move(currentArgType));
-        }
-
-        return result;
-    }
-
 }

@@ -34,25 +34,154 @@ Description: Basic Device Defination
 #include <string>
 #include <vector>
 
+#include "task.hpp"
+
 #include "nlohmann/json.hpp"
 
-class Device:
+/**
+ * @brief 设备基类
+ */
+class Device
 {
-    public:
+public:
+    /**
+     * @brief 构造函数
+     *
+     * @param name 设备名称
+     */
+    explicit Device(const std::string &name) { _name = name; };
 
-        explicit Device() {}
-        ~Device();
+    /**
+     * @brief 析构函数
+     */
+    virtual ~Device(){};
 
-        virtual bool Connect(std::string name) = 0;
-        virtual bool Disconnect() = 0;
-        virtual bool Reconnect() = 0;
-        virtual std::vector<std::string> Scan(std::string name,std::string type) = 0;
+    /**
+     * @brief 连接设备
+     *
+     * @param name 设备名称
+     * @return 连接设备是否成功
+     */
+    virtual bool connect(std::string name) = 0;
 
-        virtual bool ConnectServer(std::string host,int port) = 0;
-        virtual bool DisconnectServer() = 0;
-        virtual bool ReconnectServer() = 0;
-        virtual std::vector<std::string> ScanServer(std::string host) = 0;
+    /**
+     * @brief 断开设备连接
+     *
+     * @return 断开设备连接是否成功
+     */
+    virtual bool disconnect() = 0;
 
-        nlohmann::json GetParam(std::string name) = 0;
-        bool SetParam(nlo)
-}
+    /**
+     * @brief 重新连接设备
+     *
+     * @return 重新连接设备是否成功
+     */
+    virtual bool reconnect() = 0;
+
+    /**
+     * @brief 扫描可用设备
+     *
+     * @return 扫描可用设备是否成功
+     */
+    virtual bool scanForAvailableDevices() = 0;
+
+    /**
+     * @brief 获取设备设置
+     *
+     * @return 获取设备设置是否成功
+     */
+    virtual bool getSettings() = 0;
+
+    /**
+     * @brief 保存设备设置
+     *
+     * @return 保存设备设置是否成功
+     */
+    virtual bool saveSettings() = 0;
+
+    /**
+     * @brief 获取设备参数
+     *
+     * @param paramName 参数名称
+     * @return 获取设备参数是否成功
+     */
+    virtual bool getParameter(const std::string &paramName) = 0;
+
+    /**
+     * @brief 设置设备参数
+     *
+     * @param paramName 参数名称
+     * @param paramValue 参数值
+     * @return 设置设备参数是否成功
+     */
+    virtual bool setParameter(const std::string &paramName, const std::string &paramValue) = 0;
+
+    /**
+     * @brief 获取SimpleTask
+     *
+     * @param task_name 任务名
+     * @param params 参数
+     * @return SimpleTask指针
+     */
+    virtual std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) = 0;
+
+    /**
+     * @brief 获取ConditionalTask
+     *
+     * @param task_name 任务名
+     * @param params 参数
+     * @return ConditionalTask指针
+     */
+    virtual std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) = 0;
+
+    /**
+     * @brief 获取LoopTask
+     *
+     * @param task_name 任务名
+     * @param params 参数
+     * @return LoopTask指针
+     */
+    virtual std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) = 0;
+
+    /**
+     * @brief 获取设备名称
+     *
+     * @return 设备名称
+     */
+    virtual std::string getName() const = 0;
+
+    /**
+     * @brief 设置设备名称
+     *
+     * @param name 设备名称
+     * @return 设置设备名称是否成功
+     */
+    virtual void setName(const std::string &name) = 0;
+
+    virtual std::string getDeviceName() = 0;
+
+    virtual void setDeviceName(const std::string &name) = 0;
+
+    int getId() const {
+        return _id;
+    }
+
+    /**
+     * @brief 设置设备ID
+     *
+     * @param id 设备ID
+     * @return 设置设备ID是否成功
+     */
+    virtual void setId(int id) = 0;
+
+public:
+    std::string _name;                  ///< 设备名称
+    int _id;                            ///< 设备ID
+    std::string device_name;            ///< 设备名称
+    std::string description;            ///< 设备描述信息
+    std::string configPath;             ///< 配置文件路径
+    std::string hostname = "127.0.0.1"; ///< 主机名
+    int port = 7624;                    ///< 端口号
+    bool is_connected;                  ///< 是否已连接
+    bool is_debug;                      ///< 调试模式
+};

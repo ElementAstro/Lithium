@@ -51,6 +51,7 @@ Description: C++ and Python Modules Loader
 
 #include "thread.hpp"
 #include "task.hpp"
+#include "device.hpp"
 
 namespace OpenAPT
 {
@@ -87,23 +88,57 @@ namespace OpenAPT
         }
 
         /**
-         * @brief   Gets a pointer to the Task class instance from the specified module.
+         * @brief   Gets a pointer to an instance of the BasicTask class from the specified module.
          *
-         * This function tries to get a pointer to an instance of the Task class from the specified module.
+         * This function tries to get a pointer to an instance of the BasicTask class from the specified module.
          * If the module is not loaded or the function does not exist, this function will return nullptr.
          *
-         * @param[in]   module_name     The name of the module which contains the Task class implementation.
-         * @return      A pointer to the Task class instance if the loading is successful, nullptr otherwise.
+         * @param[in]   module_name     The name of the module which contains the BasicTask class implementation.
+         * @param[in]   config          A JSON object containing configuration information for the task instance.
+         * @return      A shared pointer to the BasicTask class instance if the loading is successful, nullptr otherwise.
          */
-        BasicTask *GetTaskPointer(const std::string &module_name, const nlohmann::json &config);
+        std::shared_ptr<BasicTask> GetTaskPointer(const std::string &module_name, const nlohmann::json &config);
 
+        /**
+         * @brief   Gets a pointer to an instance of the Device class from the specified module.
+         *
+         * This function tries to get a pointer to an instance of the Device class from the specified module.
+         * If the module is not loaded or the function does not exist, this function will return nullptr.
+         *
+         * @param[in]   module_name     The name of the module which contains the Device class implementation.
+         * @param[in]   config          A JSON object containing configuration information for the device instance.
+         * @return      A shared pointer to the Device class instance if the loading is successful, nullptr otherwise.
+         */
+        std::shared_ptr<Device> GetDevicePointer(const std::string &module_name, const nlohmann::json &config);
+
+        /**
+         * @brief   动态加载指定共享库中的函数，并在线程管理器中运行。
+         *
+         * 此模板函数需要一个成员函数或非成员函数的函数指针，以及该函数所属类的实例和一些参数。
+         * 函数将获取指定共享库中的函数指针，使用 std::bind 函数构造出函数对象，
+         * 然后将其传递给线程管理器以便管理执行。如果执行成功，函数会返回 true；否则返回 false。
+         *
+         * @tparam      T               函数返回值类型
+         * @tparam      class_type      成员函数所属的类
+         * @tparam      Args            函数除去成员函数指针之外的参数类型
+         * @param[in]   module_name     共享库的名称
+         * @param[in]   func_name       要加载的函数名
+         * @param[in]   thread_name     要为执行创建的线程名称
+         * @param[in]   runasync        是否异步执行
+         * @param[in]   instance        包含成员函数的实例
+         * @param[in]   args            除了成员函数指针之外的其他参数
+         * @return      如果执行成功，返回 true；否则返回 false。
+         */
         template <typename T, typename class_type, typename... Args>
         typename std::enable_if<std::is_class<class_type>::value, bool>::type
         LoadAndRunFunction(const std::string &module_name, const std::string &func_name,
                            const std::string &thread_name, bool runasync, class_type *instance, Args... args)
         {
+            // 定义成员函数指针和函数指针类型
             typedef T (class_type::*MemberFunctionPtr)(Args...);
             typedef T (*FunctionPtr)(Args...);
+
+            // 获取共享库句柄和函数指针
             void *handle = GetHandle(module_name);
             auto sym_ptr = dlsym(handle, func_name.c_str());
             if (!sym_ptr)
@@ -117,10 +152,28 @@ namespace OpenAPT
             {
                 member_func_ptr = reinterpret_cast<MemberFunctionPtr>(sym_ptr);
             }
+
+            // 将函数绑定到成员函数或者普通函数指针上，然后传递给线程管理器
             m_ThreadManager->addThread(std::bind(member_func_ptr, instance, args...), std::bind(func_ptr, args...), thread_name);
             return true;
         }
 
+        /**
+         * @brief   动态加载指定共享库中的函数，并直接调用它。
+         *
+         * 此模板函数需要一个非成员函数的函数指针以及一些参数。
+         * 函数将获取指定共享库中的函数指针并直接调用它，可以选择同步或异步执行。
+         * 如果执行成功，函数将返回该函数的返回值。
+         *
+         * @tparam      T           函数返回值类型
+         * @tparam      Args        函数除去函数指针之外的参数类型
+         * @param[in]   module_name 共享库的名称
+         * @param[in]   func_name   要加载的函数名
+         * @param[in]   thread_name 要为执行创建的线程名称
+         * @param[in]   runasync    是否异步执行
+         * @param[in]   args        函数除去函数指针之外的其他参数
+         * @return      如果执行成功，返回该函数的返回值；否则返回 0。
+         */
         template <typename T, typename... Args>
         T LoadAndRunFunction(const std::string &module_name, const std::string &func_name,
                              const std::string &thread_name, bool runasync, Args &&...args)
@@ -128,10 +181,8 @@ namespace OpenAPT
             // 定义函数指针类型
             typedef T (*FunctionPtr)(Args...);
 
-            // 获取动态链接库句柄
+            // 获取共享库句柄和函数指针
             void *handle = GetHandle(module_name);
-
-            // 加载函数
             auto sym_ptr = dlsym(handle, func_name.c_str());
             if (!sym_ptr)
             {
@@ -142,10 +193,12 @@ namespace OpenAPT
 
             if (runasync)
             {
+                // 异步运行函数
                 m_ThreadManager->addThread(std::bind(func_ptr, std::forward<Args>(args)...), thread_name);
             }
             else
             {
+                // 同步运行函数
                 auto funcc = std::bind(func_ptr, std::forward<Args>(args)...);
                 funcc();
                 spdlog::debug("Simple not async function is executed successfully!");

@@ -296,7 +296,7 @@ namespace OpenAPT
         }
     }
 
-    BasicTask *ModuleLoader::GetTaskPointer(const std::string &module_name, const nlohmann::json &config)
+    std::shared_ptr<BasicTask> ModuleLoader::GetTaskPointer(const std::string &module_name, const nlohmann::json &config)
     {
         auto handle_it = handles_.find(module_name);
         if (handle_it == handles_.end())
@@ -305,7 +305,7 @@ namespace OpenAPT
             return nullptr;
         }
 
-        auto get_task_func = GetFunction<SimpleTask *(*)(const nlohmann::json &)>(module_name, "GetTaskInstance");
+        auto get_task_func = GetFunction<std::shared_ptr<BasicTask>(*)(const nlohmann::json &)>(module_name, "GetTaskInstance");
         if (!get_task_func)
         {
             spdlog::error("Failed to get symbol {} from module {}: {}", "GetTaskInstance", module_name, dlerror());
@@ -313,6 +313,25 @@ namespace OpenAPT
         }
 
         return get_task_func(config);
+    }
+
+    std::shared_ptr<Device> ModuleLoader::GetDevicePointer(const std::string &module_name, const nlohmann::json &config)
+    {
+        auto handle_it = handles_.find(module_name);
+        if (handle_it == handles_.end())
+        {
+            spdlog::error("Failed to find module {}", module_name);
+            return nullptr;
+        }
+
+        auto get_device_func = GetFunction<std::shared_ptr<Device>(*)(const nlohmann::json &)>(module_name, "GetDeviceInstance");
+        if (!get_device_func)
+        {
+            spdlog::error("Failed to get symbol {} from module {}: {}", "GetDeviceInstance", module_name, dlerror());
+            return nullptr;
+        }
+
+        return get_device_func(config);
     }
 
     bool ModuleLoader::HasModule(const std::string &name) const

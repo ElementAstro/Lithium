@@ -39,9 +39,9 @@ namespace OpenAPT
         : running_(false), max_connections_(max_connections), active_connections_(0)
     {
         // 设置 WebSocket 服务器的回调函数
-        server_.set_open_handler(bind(&WebSocketServer::onOpen, this, ::_1));
-        server_.set_close_handler(bind(&WebSocketServer::onClose, this, ::_1));
-        server_.set_message_handler(bind(&WebSocketServer::onMessage, this, ::_1, ::_2));
+        server_.set_open_handler(bind(&WebSocketServer::onOpen, this, std::placeholders::_1));
+        server_.set_close_handler(bind(&WebSocketServer::onClose, this,  std::placeholders::_1));
+        server_.set_message_handler(bind(&WebSocketServer::onMessage, this,  std::placeholders::_1,  std::placeholders::_2));
 
         // 获取保存客户端信息的文件路径
         client_file_path_ = "clients.json";
@@ -178,26 +178,26 @@ namespace OpenAPT
         }
     }
 
-    void WebSocketServer::processMessage(websocketpp::connection_hdl hdl, const json &data, const std::string &payload)
-    {
+    void WebSocketServer::processMessage(websocketpp::connection_hdl hdl, const std::string &payload, const json& data) {
         // 处理消息并回复客户端
         json reply_data = {{"reply", payload + " - OK"}};
         try
         {
             // 模拟耗时操作
-#if __cplusplus >= 202002L
+    #if __cplusplus >= 202002L
             co_await asio::this_coro::executor->context().get_scheduler()->schedule_after(std::chrono::seconds(2));
             co_await sendAsync(hdl, reply_data.dump());
-#else
+    #else
             std::this_thread::sleep_for(std::chrono::seconds(2));
             sendMessage(hdl, reply_data.dump());
-#endif
+    #endif
         }
         catch (const std::exception &e)
         {
             spdlog::error("WebSocketServer::processMessage() exception: {}", e.what());
         }
     }
+
 
     void WebSocketServer::saveClientInfo(const std::string &ip, uint16_t port)
     {

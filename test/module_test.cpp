@@ -7,7 +7,7 @@ int main()
     ModuleLoader loader;
 
     // 加载模块
-    loader.LoadModule("libexample.so", "module_name");
+    loader.LoadModule("./libexample.so", "module_name");
 
     // 获取 Task 类的实例指针
     nlohmann::json taskConfig = {{"param1", 10}, {"param2", true}};

@@ -65,6 +65,7 @@ namespace OpenAPT
         void onClose(websocketpp::connection_hdl hdl);
         void onMessage(websocketpp::connection_hdl hdl, server<websocketpp::config::asio>::message_ptr msg);
         void saveClientInfo(const std::string &ip, uint16_t port);
+        void processMessage(websocketpp::connection_hdl hdl, const std::string &payload, const json& data);
     };
 
 } // namespace OpenAPT

@@ -31,6 +31,8 @@ Description: Thread Manager
 
 #include "thread.hpp"
 
+#include <sstream>
+
 #include <spdlog/spdlog.h>
 
 namespace OpenAPT

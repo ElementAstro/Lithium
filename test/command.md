@@ -6,4 +6,6 @@ g++ -std=c++11 -fPIC -c my_library.cpp -o my_library.o -I../libs -I../src/core/b
 g++ -shared -Wl,-soname,libexample.so -o libexample.so my_library.o
 g++ module_test.cpp ../src/core/thread.cpp ../src/core/modloader.cpp -std=c++2a -I../libs -o module_test -I../src/core/basic -lfmt -I../src/core/ -ldl
 
+g++ wsserver_test.cpp ../src/server/commander.cpp ../src/server/wsserver.cpp -std=c++2a -I../libs -o wsserver_test -I../src/core/basic -lfmt -I../src/core/ -I../src/server  -lboost_system-mt -lboost_thread-mt  -lwsock32 -lws2_32 -D_WEBSOCKETPP_CPP11_THREAD_=1 -I/usr/include/boost
+
 ```

@@ -184,11 +184,6 @@ int Compiler::RunShellCommand(const std::string &command, std::istream &inputStr
         spdlog::error("Failed to create input pipe for shell command: {}", command);
         return exitCode;
     }
-    if (!CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0))
-    {
-        spdlog::error("Failed to create output pipe for shell command: {}", command);
-        return exitCode;
-    }
     if (!SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0))
     {
         spdlog::error("Failed to set input handle information for shell command: {}", command);

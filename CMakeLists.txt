@@ -170,7 +170,6 @@ set(openapt_SRC
 
 		${openapt_src_dir}/src/task/camera_task.cpp
 		${openapt_src_dir}/src/task/camera_task.hpp
-		${openapt_src_dir}/src/task/define.hpp
 		${openapt_src_dir}/src/task/runner.cpp
 		${openapt_src_dir}/src/task/runner.hpp
 
@@ -182,8 +181,6 @@ set(openapt_SRC
 
 		${openapt_src_dir}/src/config/logger.cpp
 		${openapt_src_dir}/src/config/logger.hpp
-		${openapt_src_dir}/src/config/configor.cpp
-		${openapt_src_dir}/src/config/configor.hpp
 		${openapt_src_dir}/src/config/achievement.cpp
 		${openapt_src_dir}/src/config/achievement.hpp
 		${openapt_src_dir}/src/config/achievement_list.cpp

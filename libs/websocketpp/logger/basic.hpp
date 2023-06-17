@@ -137,8 +137,9 @@ public:
     void write(level channel, std::string const & msg) {
         scoped_lock_type lock(m_lock);
         if (!this->dynamic_test(channel)) { return; }
-        *m_out << "[" << timestamp << "] "
-                  << "[" << names::channel_name(channel) << "] "
+        *m_out << "[" << timestamp << "]"
+                  << "[" << "WSServer" << "]"
+                  << "[" << names::channel_name(channel) << "] - "
                   << msg << "\n";
         m_out->flush();
     }
@@ -151,8 +152,9 @@ public:
     void write(level channel, char const * msg) {
         scoped_lock_type lock(m_lock);
         if (!this->dynamic_test(channel)) { return; }
-        *m_out << "[" << timestamp << "] "
-                  << "[" << names::channel_name(channel) << "] "
+        *m_out << "[" << timestamp << "]"
+                  << "[" << "WSServer" << "]"
+                  << "[" << names::channel_name(channel) << "] - "
                   << msg << "\n";
         m_out->flush();
     }

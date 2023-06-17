@@ -23,83 +23,100 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-5-25
+Date: 2023-6-16
 
-Description: Sockcet Server
+Description: Socket Server
 
 **************************************************/
 
 #pragma once
 
+#include <iostream>
+#include <mutex>
 #include <string>
-#include <vector>
-#include <unordered_map>
-#include <fstream>
+#include <memory>
+
+#include <boost/asio.hpp>
+#include <boost/bind/bind.hpp>
 
 #include <nlohmann/json.hpp>
-#include <spdlog/spdlog.h>
-#include <ev.h>
 
-// 类型别名
+#include "commander.hpp"
+
+using boost::asio::ip::tcp;
 using json = nlohmann::json;
-using ConnectionData = std::unordered_map<std::string, std::string>;
 
-class Server {
-public:
-    // 构造函数和析构函数
-    Server(std::string host, int port, int max_connections);
-    ~Server();
+namespace OpenAPT
+{
+    /**
+     * @brief 实现 Socket 服务器，提供消息传输功能。
+     */
+    class SocketServer : public std::enable_shared_from_this<SocketServer>
+    {
+    public:
+        /**
+         * @brief 构造函数。
+         *
+         * @param max_connections 服务器最大连接数。
+         */
+        SocketServer(int max_connections);
 
-    // 启动服务器
-    void start();
+        /**
+         * @brief 启动 Socket 服务器。
+         *
+         * @param port 服务器监听的端口号。
+         */
+        void run(int port);
 
-    // 发送消息
-    void sendMessage(int fd, const std::string& payload);
+        /**
+         * @brief 停止 Socket 服务器。
+         */
+        void stop();
 
-private:
-    // 服务器状态
-    bool running_ = false;
+        /**
+         * @brief 向指定客户端发送消息。
+         *
+         * @param socket 客户端连接的套接字。
+         * @param message 要发送的消息。
+         */
+        void sendMsg(const std::shared_ptr<tcp::socket> &socket, const json &message);
 
-    // libev 相关变量
-    ev_io accept_watcher_;
-    ev_io read_watcher_;
-    ev_async close_watcher_;
-    ev_timer cleanup_timer_;
+    private:
+        /**
+         * @brief 接收新的客户端连接请求。
+         *
+         * @note 此函数为异步操作。
+         */
+        void do_accept();
 
-    // 最大连接数
-    int max_connections_;
+        /**
+         * @brief 读取客户端发送的消息。
+         *
+         * @param socket 客户端连接的套接字。
+         *
+         * @note 此函数为异步操作。
+         */
+        void do_read(const std::shared_ptr<tcp::socket> &socket);
 
-    // 监听地址和端口号
-    std::string host_;
-    int port_;
+        /**
+         * @brief 向客户端发送消息。
+         *
+         * @param socket 客户端连接的套接字。
+         * @param message 要发送的消息。
+         *
+         * @note 此函数为异步操作。
+         */
+        void do_write(const std::shared_ptr<tcp::socket> &socket, const json &message);
 
-    // 客户端信息
-    std::unordered_map<int, ConnectionData> client_info_;
+    private:
+        bool running_;                       ///< Socket 服务器是否正在运行。
+        int max_connections_;                ///< Socket 服务器最大连接数。
+        int active_connections_;             ///< Socket 服务器活跃连接数。
+        boost::asio::io_service io_service_; ///< asio IO 服务实例。
+        tcp::acceptor acceptor_;             ///< 用于接收新连接的套接字。
+        std::mutex lock_;                    ///< Socket 服务器线程锁。
 
-    // 客户端连接数
-    int connections_ = 0;
+        std::unique_ptr<CommandDispatcher> m_CommandDispatcher; ///< 命令派发器实例。
+    };
 
-    // 保存客户端信息的 JSON 文件路径
-    std::string client_info_file_ = "client_info.json";
-
-    // 日志器
-    std::shared_ptr<spdlog::logger> logger_;
-
-    // 处理连接请求
-    void onAccept(int fd, short events);
-
-    // 处理消息
-    void onRead(int fd, short events);
-
-    // 处理断开连接
-    void onClose();
-
-    // 清理已断开连接的客户端信息
-    void cleanup(int signum);
-
-    // 保存客户端信息到 JSON 文件
-    void saveClientInfo();
-
-    // 加载客户端信息
-    void loadClientInfo();
-};
+}

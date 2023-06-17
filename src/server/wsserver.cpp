@@ -31,20 +31,23 @@ Description: Websockcet Server
 
 #include "wsserver.hpp"
 
-#include <spdlog/spdlog.h>
-
 namespace OpenAPT
 {
-    WebSocketServer::WebSocketServer(int max_connections)
+    WebSocketServer::WebSocketServer(int max_connections = 0)
         : running_(false), max_connections_(max_connections), active_connections_(0)
     {
         // 设置 WebSocket 服务器的回调函数
         server_.set_open_handler(bind(&WebSocketServer::onOpen, this, std::placeholders::_1));
-        server_.set_close_handler(bind(&WebSocketServer::onClose, this,  std::placeholders::_1));
-        server_.set_message_handler(bind(&WebSocketServer::onMessage, this,  std::placeholders::_1,  std::placeholders::_2));
+        server_.set_close_handler(bind(&WebSocketServer::onClose, this, std::placeholders::_1));
+        server_.set_message_handler(bind(&WebSocketServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
 
         // 获取保存客户端信息的文件路径
         client_file_path_ = "clients.json";
+
+        m_CommandDispatcher = std::make_unique<CommandDispatcher>();
+
+        m_CommandDispatcher->RegisterHandler("RunDeviceTask", &WebSocketServer::RunDeviceTask, this);
+        m_CommandDispatcher->RegisterHandler("GetDeviceInfo", &WebSocketServer::GetDeviceInfo, this);
     }
 
     void WebSocketServer::run(int port)
@@ -60,6 +63,7 @@ namespace OpenAPT
         server_.set_max_http_body_size(1024 * 1024); // 1MB
         server_.listen(port);
         server_.start_accept();
+
         running_ = true;
 
         // 运行 WebSocket 服务器
@@ -71,7 +75,7 @@ namespace OpenAPT
             }
             catch (const std::exception &e)
             {
-                spdlog::error("WebSocketServer::run() exception: {}", e.what());
+                // spdlog::error("WebSocketServer::run() exception: {}", e.what());
             }
         }
     }
@@ -89,7 +93,7 @@ namespace OpenAPT
         }
         catch (const std::exception &e)
         {
-            spdlog::error("WebSocketServer::stop() exception: {}", e.what());
+            // spdlog::error("WebSocketServer::stop() exception: {}", e.what());
         }
     }
 
@@ -101,8 +105,8 @@ namespace OpenAPT
         }
         catch (const std::exception &e)
         {
-            spdlog::error("WebSocketServer::sendMessage() exception: {}", e.what());
-        }
+            // spdlog::error("WebSocketServer::sendMessage() exception: {}", e.what());
+        } // Check JSON syntax
     }
 
     void WebSocketServer::onOpen(websocketpp::connection_hdl hdl)
@@ -111,7 +115,7 @@ namespace OpenAPT
 
         if (max_connections_ > 0 && active_connections_ >= max_connections_)
         {
-            spdlog::warn("WebSocketServer::onOpen(): exceed max connections, refuse incoming connection");
+            // spdlog::warn("WebSocketServer::onOpen(): exceed max connections, refuse incoming connection");
             return;
         }
 
@@ -119,7 +123,7 @@ namespace OpenAPT
         auto conn = server_.get_con_from_hdl(hdl);
         auto client_ip = conn->get_socket().remote_endpoint().address().to_string();
         auto client_port = conn->get_socket().remote_endpoint().port();
-        spdlog::info("New client connected: {} : {}", client_ip, client_port);
+        // //spdlog::info("New client connected: {} : {}", client_ip, client_port);
 
         // 记录客户端信息到 JSON 文件中
         saveClientInfo(client_ip, client_port);
@@ -135,7 +139,7 @@ namespace OpenAPT
         auto conn = server_.get_con_from_hdl(hdl);
         auto client_ip = conn->get_socket().remote_endpoint().address().to_string();
         auto client_port = conn->get_socket().remote_endpoint().port();
-        spdlog::info("Client disconnected: {} : {}", client_ip, client_port);
+        // //spdlog::info("Client disconnected: {} : {}", client_ip, client_port);
 
         active_connections_--;
     }
@@ -143,61 +147,94 @@ namespace OpenAPT
     void WebSocketServer::onMessage(websocketpp::connection_hdl hdl, server<websocketpp::config::asio>::message_ptr msg)
     {
         // 获取客户端信息
+        if (msg == nullptr)
+        {
+            // spdlog::error("WebSocketServer::onMessage(): null message received");
+            return;
+        }
         auto conn = server_.get_con_from_hdl(hdl);
         auto client_ip = conn->get_socket().remote_endpoint().address().to_string();
         auto client_port = conn->get_socket().remote_endpoint().port();
 
         if (msg->get_opcode() == websocketpp::frame::opcode::text)
         {
+            // 检查 JSON 语法
+            if (!json::accept(msg->get_payload()))
+            {
+                // //spdlog::error("WebSocketServer::onMessage() invalid JSON syntax: {}", msg->get_payload());
+                return;
+            }
+
             // 解析 JSON 数据
             try
             {
                 json data = json::parse(msg->get_payload());
-                spdlog::info("Received message from {} : {}", client_ip, client_port);
-                spdlog::info("{}\n", data.dump(4));
 
-                // 异步调用处理消息的函数并回复客户端（根据编译器版本选择使用协程或线程）
-#if __cplusplus >= 202002L
-                asio::co_spawn(
-                    server_.get_io_service(), [this, conn, data, payload = msg->get_payload()]() -> asio::awaitable<void>
-                    { co_await processMessage(conn, data, payload); },
-                    asio::detached);
-#else
-                std::thread process_thread(&WebSocketServer::processMessage, this, conn, data, msg->get_payload());
+                std::thread process_thread(&WebSocketServer::processMessage, this, conn, msg->get_payload(), data);
                 process_thread.detach();
-#endif
             }
             catch (const std::exception &e)
             {
-                spdlog::error("WebSocketServer::onMessage() parse json failed: {}", e.what());
+                // spdlog::error("WebSocketServer::onMessage() parse json failed: {}", e.what());
             }
         }
         else
         {
-            spdlog::error("WebSocketServer::onMessage() unexpected message type received");
+            // spdlog::error("WebSocketServer::onMessage() unexpected message type received");
         }
     }
 
-    void WebSocketServer::processMessage(websocketpp::connection_hdl hdl, const std::string &payload, const json& data) {
-        // 处理消息并回复客户端
-        json reply_data = {{"reply", payload + " - OK"}};
+    void WebSocketServer::processMessage(websocketpp::connection_hdl hdl, const std::string &payload, const json &data)
+    {
+        if (payload.empty())
+        {
+            // spdlog::error("WebSocketServer::processMessage() payload is empty");
+            return;
+        }
+
+        if (data.empty())
+        {
+            // spdlog::error("WebSocketServer::processMessage() data is empty");
+            return;
+        }
+
         try
         {
-            // 模拟耗时操作
-    #if __cplusplus >= 202002L
-            co_await asio::this_coro::executor->context().get_scheduler()->schedule_after(std::chrono::seconds(2));
-            co_await sendAsync(hdl, reply_data.dump());
-    #else
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-            sendMessage(hdl, reply_data.dump());
-    #endif
+            // 解析 JSON 数据并获取参数。
+            std::string name;
+            json params;
+            if (data.contains("name") && data.contains("params"))
+            {
+                name = data["name"].get<std::string>();
+                params = data["params"].get<json>();
+            }
+            else
+            {
+                // spdlog::error("WebSocketServer::processMessage() missing parameter: name");
+                json reply_data = {{"error", "Missing parameter: name or params"}};
+                sendMessage(hdl, reply_data.dump());
+                return;
+            }
+
+            // TODO：在此处添加更多参数检查和处理逻辑。
+
+            // 执行命令。
+            if (m_CommandDispatcher->HasHandler(name))
+            {
+                m_CommandDispatcher->Dispatch(name, {});
+            }
+
+            // 发送回复。
+            json reply_data = {{"reply", "OK"}};
+            sendMessage(hdl, reply_data.dump()); // 将 JSON 对象转换为字符串
         }
         catch (const std::exception &e)
         {
-            spdlog::error("WebSocketServer::processMessage() exception: {}", e.what());
+            // spdlog::error("WebSocketServer::processMessage() exception: {}", e.what());
+            json reply_data = {{"error", e.what()}};
+            sendMessage(hdl, reply_data.dump());
         }
     }
-
 
     void WebSocketServer::saveClientInfo(const std::string &ip, uint16_t port)
     {
@@ -205,10 +242,9 @@ namespace OpenAPT
         try
         {
             std::ifstream fin(client_file_path_);
-            if (fin)
+            json clients;
+            if (fin >> clients)
             {
-                json clients;
-                fin >> clients;
                 // 检查如果客户端信息已经存在于列表中，则不再添加
                 bool exists = false;
                 for (auto &client : clients)
@@ -222,29 +258,54 @@ namespace OpenAPT
                 if (!exists)
                 {
                     // 将新的客户端信息添加到列表中
-                    json client_info = {{"ip", ip}, {"port", port}};
-                    clients.push_back(client_info);
-                    // 将客户端信息列表保存到文件中
-                    std::ofstream fout(client_file_path_);
-                    if (fout)
+                    if (clients.is_array())
                     {
-                        fout << clients.dump(4);
-                        fout.close();
+                        json client_info = {{"ip", ip}, {"port", port}};
+                        clients.push_back(client_info);
+                    }
+                    else if (clients.is_object())
+                    {
+                        json client_info = {{"ip", ip}, {"port", port}};
+                        clients["client" + std::to_string(clients.size() + 1)] = client_info;
                     }
                     else
                     {
-                        throw std::runtime_error("Failed to open client info file for writing");
+                        throw std::runtime_error("Invalid JSON file");
+                    }
+
+                    // 将客户端信息列表保存到文件中
+                    std::ofstream fout(client_file_path_);
+                    if (fout << clients.dump(4))
+                    {
+                        // spdlog::debug("Client info saved: {}",clients.dump(4));
+                    }
+                    else
+                    {
+                        throw std::runtime_error("Failed to write client info to file");
                     }
                 }
             }
             else
             {
-                throw std::runtime_error("Failed to open client info file for reading");
+                throw std::runtime_error("Failed to read client info from file");
             }
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Exception occurred while saving client info: " << e.what() << std::endl;
+            // spdlog::error("Exception occurred while saving client info: {}", e.what());
         }
     }
+
+    //-------------------------------------
+
+    void WebSocketServer::RunDeviceTask(const json &m_params)
+    {
+        std::cout << "RunDeviceTask() is called!" << std::endl;
+    }
+
+    void WebSocketServer::GetDeviceInfo(const json &m_params)
+    {
+        std::cout << "GetDeviceInfo() is called!" << std::endl;
+    }
+
 }

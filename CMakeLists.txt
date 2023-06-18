@@ -83,9 +83,6 @@ set(plugins_SRC
 		${openapt_src_dir}/src/plugins/xmlreader.cpp
 		${openapt_src_dir}/src/plugins/xmlreader.hpp
 
-		${openapt_src_dir}/src/plugins/crash.cpp
-		${openapt_src_dir}/src/plugins/crash.hpp
-
 		${openapt_src_dir}/src/plugins/terminal.cpp
 		${openapt_src_dir}/src/plugins/terminal.hpp
 

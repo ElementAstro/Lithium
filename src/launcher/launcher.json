@@ -1,0 +1,10 @@
+{
+    "server_command": "./server",
+    "stop_command": "q\n",
+    "resources": [
+      "data.json",
+      "config.ini"
+    ],
+    "resource_server": "http://example.com"
+  }
+  

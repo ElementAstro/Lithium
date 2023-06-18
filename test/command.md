@@ -10,4 +10,6 @@ g++ wsserver_test.cpp ../src/server/commander.cpp ../src/server/wsserver.cpp -st
 
 g++ http_server_test.cpp ../src/server/hserver.cpp -lssl -std=c++2a -I../libs -o http_server_test -I../src/core/basic -lfmt -I../src/core/ -I../src/server  -lboost_system-mt -lboost_thread-mt  -lwsock32 -lws2_32 -I/usr/include/boost -I../libs/crow -lcrypto
 
+g++ launcher.cpp -lssl -std=c++2a -I../../libs -o launcher -I../core/basic -lfmt -I../core/  -lboost_system-mt -lboost_thread-mt  -lwsock32 -lws2_32 -I/usr/include/boost -lcrypto
+
 ```

@@ -12,4 +12,6 @@ g++ http_server_test.cpp ../src/server/hserver.cpp -lssl -std=c++2a -I../libs -o
 
 g++ launcher.cpp -lssl -std=c++2a -I../../libs -o launcher -I../core/basic -lfmt -I../core/  -lboost_system-mt -lboost_thread-mt  -lwsock32 -lws2_32 -I/usr/include/boost -lcrypto
 
+g++ httptest.cpp ../src/network/httpclient.cpp -lssl -std=c++2a -I../libs -o httptest -lfmt -I../src/network  -lboost_system-mt -lboost_thread-mt  -lwsock32 -lws2_32 -I/usr/include/boost -lcrypto
+-lwinhttp
 ```

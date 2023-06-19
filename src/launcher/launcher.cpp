@@ -36,6 +36,7 @@ Description: OpenAPT Server Launcher
 #include <regex>
 #include <boost/asio.hpp>
 #include <iostream>
+#include <openssl/sha.h>
 
 ServerLauncher::ServerLauncher(const std::string &config_file_path, const std::string &log_file_path)
     : _config_file_path(config_file_path), _log_file_path(log_file_path)
@@ -67,6 +68,10 @@ void ServerLauncher::run()
             // 如果不完整则下载缺失的资源文件
             download_resources();
         }
+
+        check_dependencies();
+
+        check_config_file(_config_file_path);
 
         // 启动服务器
         start_server();
@@ -131,17 +136,35 @@ void ServerLauncher::load_config()
 
 bool ServerLauncher::check_resources()
 {
-    for (const auto &res_file : _config["resources"])
+    const auto &resources = _config["resources"];
+
+    for (const auto &res_file : resources)
     {
-        if (!fs::exists(res_file))
+        const std::string filename = res_file;
+
+        if (!fs::exists(filename))
         {
-            // spdlog::debug("Resource file '{}' is missing.", res_file.get<std::string>());
-            std::cout << "Resource file '" << res_file.get<std::string>() << "' is missing." << std::endl;
+            std::cout << "Resource file '" << filename << "' is missing." << std::endl;
+            return false;
+        }
+
+        // 计算 SHA256 值
+        std::string sha256_val;
+        if (!calculate_sha256(filename, sha256_val))
+        {
+            std::cout << "Failed to calculate SHA256 value of '" << filename << "'." << std::endl;
+            return false;
+        }
+
+        const std::string expected_sha256 = res_file["sha256"];
+        if (sha256_val != expected_sha256)
+        {
+            std::cout << "SHA256 check failed for '" << filename << "'." << std::endl;
             return false;
         }
     }
-    // spdlog::info("All resource files are found.");
-    std::cout << "All resource files are found." << std::endl;
+
+    std::cout << "All resource files are found and verified." << std::endl;
     return true;
 }
 
@@ -206,6 +229,92 @@ void ServerLauncher::download_resources()
 
     // spdlog::info("Downloading finished.");
     std::cout << "Downloading finished." << std::endl;
+}
+
+bool check_process(const std::string &name)
+{
+    std::string command = "ps aux | grep -v grep | grep -q '" + name + "'";
+    return (system(command.c_str()) == 0);
+}
+
+bool ServerLauncher::check_dependencies()
+{
+    const std::vector<std::string> dependencies = {"redis-server", "mysqld"};
+
+    for (const auto &dependency : dependencies)
+    {
+        if (!check_process(dependency))
+        {
+            std::cout << "Dependency process '" << dependency << "' is not running." << std::endl;
+            return false;
+        }
+    }
+
+    std::cout << "All dependencies are ready." << std::endl;
+    return true;
+}
+
+bool ServerLauncher::check_config_file(const std::string &config_file)
+{
+    if (!std::filesystem::exists(config_file))
+    {
+        std::cerr << "Config file not found: " << config_file << std::endl;
+        return false;
+    }
+
+    try
+    {
+        std::ifstream ifs(config_file);
+        json config = json::parse(ifs);
+
+        // 检查 "port" 配置项是否存在
+        if (config.find("port") == config.end())
+        {
+            std::cerr << "Config item 'port' not found in config file." << std::endl;
+            return false;
+        }
+
+        // 检查 "port" 配置项是否合法
+        int port = config["port"].get<int>();
+        if (port < 0 || port > 65535)
+        {
+            std::cerr << "'port' configuration value is invalid: " << port << std::endl;
+            return false;
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Failed to parse config file: " << e.what() << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool ServerLauncher::check_modules(const std::string &modules_dir, const json &module_list)
+{
+    if (!std::filesystem::exists(modules_dir))
+    {
+        std::cout << "Modules directory not found. Creating: " << modules_dir << std::endl;
+        if (!std::filesystem::create_directory(modules_dir))
+        {
+            std::cerr << "Failed to create modules directory: " << modules_dir << std::endl;
+            return false;
+        }
+    }
+
+    bool all_found = true;
+    for (const auto &module : module_list)
+    {
+        std::string module_path = modules_dir + "/" + module.get<std::string>();
+        if (!std::filesystem::exists(module_path))
+        {
+            std::cerr << "Required module not found: " << module_path << std::endl;
+            all_found = false;
+        }
+    }
+
+    return all_found;
 }
 
 void ServerLauncher::start_server()
@@ -387,21 +496,61 @@ void ServerLauncher::send_warning_email(const std::string &message)
     std::cout << "Sent warning email: " << message << std::endl;
 }
 
+bool ServerLauncher::calculate_sha256(const std::string &filename, std::string &sha256_val)
+{
+    // 打开文件
+    std::ifstream file(filename, std::ios::binary);
+    if (!file)
+    {
+        return false;
+    }
+
+    // 计算 SHA256 值
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+
+    char buffer[1024];
+    while (file.read(buffer, sizeof(buffer)))
+    {
+        SHA256_Update(&ctx, buffer, sizeof(buffer));
+    }
+
+    if (file.gcount() > 0)
+    {
+        SHA256_Update(&ctx, buffer, file.gcount());
+    }
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_Final(hash, &ctx);
+
+    // 转换为十六进制字符串
+    sha256_val.clear();
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i)
+    {
+        char hex_str[3];
+        sprintf(hex_str, "%02x", hash[i]);
+        sha256_val += hex_str;
+    }
+
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
-    if (argc < 3)
+    std::vector<std::string> args(argv + 1, argv + argc);
+
+    if (args.size() < 2)
     {
+        // 输出用法信息
         std::cerr << "Usage: " << argv[0] << " <config file> <log file>\n";
         return 1;
     }
 
     try
     {
-        ServerLauncher launcher(argv[1], argv[2]);
+        ServerLauncher launcher(args[0], args[1]);
         launcher.run();
 
-        // 模拟运行一段时间后停止服务器
-        std::this_thread::sleep_for(std::chrono::seconds(10));
         if (launcher.is_running())
         {
             launcher.stop();
@@ -409,7 +558,8 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        // spdlog::error("Error occurred in main function: {}", e.what());
+        // 输出错误信息并返回
+        std::cerr << "Error occurred: " << e.what() << std::endl;
         return 1;
     }
 

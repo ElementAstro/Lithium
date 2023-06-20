@@ -13,8 +13,6 @@ HttpClient::HttpClient(const std::string &host, int port)
 
 bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
 {
-    //spdlog::info("Sending GET request to {}{} with parameters: {}", host_, path, params);
-
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {
@@ -51,8 +49,6 @@ bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::str
 
 bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
 {
-    //spdlog::info("Sending POST request to {}{} with parameters: {}, data: {}", host_, path, params, data.dump());
-
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {
@@ -89,8 +85,6 @@ bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::st
 
 bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
 {
-    //spdlog::info("Sending PUT request to {}{} with parameters: {}, data: {}", host_, path, params, data.dump());
-
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {
@@ -127,8 +121,6 @@ bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::str
 
 bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
 {
-    //spdlog::info("Sending DELETE request to {}{} with parameters: {}", host_, path, params);
-
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {

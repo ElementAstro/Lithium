@@ -29,44 +29,64 @@ Description: Shell Manager
 
 **************************************************/
 
-#ifndef SHELLER_HPP
-#define SHELLER_HPP
+#pragma once
 
-#include <iostream>
+#include <map>
+#include <string>
 #include <vector>
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
 #include <filesystem>
-#include <sstream>
 
-#include "nlohmann/json.hpp"
-#include "spdlog/spdlog.h"
-
-namespace OpenAPT
+class ScriptManager
 {
-    enum class ScriptType
+public:
+    void AddScript(const std::string &scriptName, const std::string &scriptPath, int scriptType,
+                   const std::string &arguments, const std::string &argumentTypes);
+    void RemoveScript(const std::string &scriptName);
+    std::vector<std::string> GetScriptNames() const;
+    std::map<std::string, std::string> GetScript(const std::string &scriptName, bool getContent = false) const;
+    std::map<std::string, std::map<std::string, std::string>> GetAllScripts() const;
+    void SaveScriptsInfoToFile(const std::string &filePath) const;
+    std::string RunScript(const std::string &scriptName, const std::vector<std::string> &scriptArgs,
+                          bool block = true);
+    void StopScript(const std::string &scriptName);
+    std::string GetScriptOutput(const std::string &scriptName) const;
+
+private:
+    struct ScriptInfo
     {
-        Sh,
-        Ps
+        std::string path;
+        int type;
+        std::string arguments;
+        std::string argumentTypes;
+        std::string output;
+        bool isRunning;
+        mutable std::condition_variable cv;
+
+        ScriptInfo &operator=(const ScriptInfo &) = default;
+        ScriptInfo &operator=(ScriptInfo &&other) noexcept
+        {
+            if (this != &other)
+            {
+                path = std::move(other.path);
+                type = other.type;
+                arguments = std::move(other.arguments);
+                argumentTypes = std::move(other.argumentTypes);
+                isRunning = other.isRunning;
+                output = std::move(other.output);
+            }
+            return *this;
+        }
     };
 
-    class ScriptManager
-    {
-    public:
-        ScriptManager(const std::string &path);
-        bool runScript(const std::string &scriptName, bool async = false) const;
-
-    private:
-        std::vector<std::string> m_files;
-        json m_scriptsJson;
-        std::string m_path = "scripts";
-
-        std::vector<std::string> getScriptFiles() const;
-        std::string readScriptFromFile(const std::string &path) const;
-        bool validateScript(const std::string &script, ScriptType scriptType) const;
-        ScriptType getScriptType(const std::string &path) const;
-        json getScriptsJson(const std::vector<std::string> &files) const;
-        std::string buildCommand(const std::string &scriptPath) const;
-        std::string executeCommand(const std::string &command) const;
-    };
-}
-
-#endif // SHELLER_HPP
+    bool IsScriptRunning(const std::string &scriptName) const;
+    std::string GetScriptFilePath(const std::string &scriptName) const;
+    std::string BuildCommand(const std::string &scriptPath, const std::vector<std::string> &scriptArgs) const;
+    std::string ExecuteCommand(const std::string &command) const;
+    std::string ReadScriptFromFile(const std::string &scriptPath) const;
+    void RemoveFromRunningScripts(const std::string &scriptName);
+    std::map<std::string, ScriptInfo> m_scriptInfoMap;
+    mutable std::mutex m_scriptInfoMutex;
+};

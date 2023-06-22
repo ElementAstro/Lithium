@@ -14,4 +14,8 @@ g++ launcher.cpp -lssl -std=c++2a -I../../libs -o launcher -I../core/basic -lfmt
 
 g++ httptest.cpp ../src/network/httpclient.cpp -lssl -std=c++2a -I../libs -o httptest -lfmt -I../src/network  -lboost_system-mt -lboost_thread-mt  -lwsock32 -lws2_32 -I/usr/include/boost -lcrypto
 -lwinhttp
+
+g++ script_test.cpp ../src/module/sheller.cpp -lssl -std=c++2a -I../libs -o script_test -lfmt -I../src/module 
+
+g++ message_test.cpp -std=c++2a -o message_test
 ```

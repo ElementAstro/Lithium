@@ -32,215 +32,256 @@ Description: Shell Manager
 #include "sheller.hpp"
 
 #include <fstream>
-#include <cstdlib>
-#include <array>
-#include <unordered_map>
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <cstdio>
-#include <thread>
-#endif
-
-namespace fs = std::filesystem;
-using json = nlohmann::json;
-
-namespace OpenAPT
+void ScriptManager::AddScript(const std::string &scriptName, const std::string &scriptPath, int scriptType,
+                              const std::string &arguments, const std::string &argumentTypes)
 {
-    ScriptManager::ScriptManager(const std::string &scriptPath) : m_path(std::filesystem::absolute(std::filesystem::path(scriptPath).parent_path().string())), m_files(getScriptFiles()), m_scriptsJson(getScriptsJson(m_files)) {}
+    std::scoped_lock lock(m_scriptInfoMutex);
+    ScriptInfo scriptInfo;
+    scriptInfo.path = scriptPath;
+    scriptInfo.type = scriptType;
+    scriptInfo.arguments = arguments;
+    scriptInfo.argumentTypes = argumentTypes;
+    scriptInfo.isRunning = false;
+    m_scriptInfoMap[scriptName] = std::move(scriptInfo);
+}
 
-    std::vector<std::string> ScriptManager::getScriptFiles() const
+void ScriptManager::RemoveScript(const std::string &scriptName)
+{
+    std::scoped_lock lock(m_scriptInfoMutex);
+    m_scriptInfoMap.erase(scriptName);
+}
+
+std::vector<std::string> ScriptManager::GetScriptNames() const
+{
+    std::scoped_lock lock(m_scriptInfoMutex);
+    std::vector<std::string> scriptNames;
+    for (const auto &[key, value] : m_scriptInfoMap)
     {
-        std::vector<std::string> files;
-        for (const auto &entry : std::filesystem::recursive_directory_iterator(m_path))
-        {
-            if (entry.is_regular_file() && (entry.path().extension() == ".sh" || entry.path().extension() == ".ps1"))
-            {
-                files.push_back(std::filesystem::relative(entry.path(), m_path).generic_string());
-            }
-        }
-        return files;
+        scriptNames.push_back(key);
     }
+    return scriptNames;
+}
 
-    std::string ScriptManager::readScriptFromFile(const std::string &path) const
+std::map<std::string, std::string> ScriptManager::GetScript(const std::string &scriptName, bool getContent /*= false*/) const
+{
+    std::scoped_lock lock(m_scriptInfoMutex);
+    if (getContent)
     {
-        std::ifstream input(path);
-        return { std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>() };
+        std::string content = ReadScriptFromFile(GetScriptFilePath(scriptName));
+        std::map<std::string, std::string> scriptInfo;
+        scriptInfo["name"] = scriptName;
+        scriptInfo["content"] = content;
+        scriptInfo["arguments"] = m_scriptInfoMap.at(scriptName).arguments;
+        scriptInfo["argument_types"] = m_scriptInfoMap.at(scriptName).argumentTypes;
+        return scriptInfo;
     }
-
-    bool ScriptManager::validateScript(const std::string &script, ScriptType scriptType) const
+    else
     {
-        switch (scriptType)
+        if (m_scriptInfoMap.contains(scriptName))
         {
-        case ScriptType::Sh:
-            if (script.substr(0, 2) != "#!")
-            {
-                spdlog::error("Invalid script: missing shebang");
-                return false;
-            }
-            if (script.find("#!/bin/bash") == std::string::npos && script.find("#!/bin/sh") == std::string::npos)
-            {
-                spdlog::error("Unsupported script: wrong shebang");
-                return false;
-            }
-            return true;
-        case ScriptType::Ps:
-            try
-            {
-                std::string command = "powershell.exe -Command \"$ErrorActionPreference = 'Stop'; $null = & {" + script + "}\"";
-                executeCommand(command);
-            }
-            catch (const std::runtime_error &e)
-            {
-                spdlog::error("Invalid script: {}", e.what());
-                return false;
-            }
-            return true;
-        default:
-            spdlog::error("Unsupported script type");
-            return false;
-        }
-    }
-
-    json ScriptManager::getScriptsJson(const std::vector<std::string> &files) const
-    {
-        json j;
-        for (const auto &file : files)
-        {
-            j[std::filesystem::path(file).stem()].emplace("path", file);
-        }
-        return j;
-    }
-
-    bool ScriptManager::runScript(const std::string &scriptName, bool async) const
-    {
-        if (!m_scriptsJson.contains(scriptName))
-        {
-            spdlog::error("Script \"{}\" not found", scriptName);
-            return false;
-        }
-
-        const auto &scriptPath = m_scriptsJson[scriptName]["path"].get<std::string>();
-        spdlog::debug("Found script \"{}\" at \"{}\"", scriptName, scriptPath);
-
-        const auto &scriptContent = readScriptFromFile(scriptPath);
-        const auto scriptType = getScriptType(scriptPath);
-
-        if (!validateScript(scriptContent, scriptType))
-        {
-            spdlog::error("Script \"{}\" is invalid", scriptName);
-            return false;
-        }
-
-        const auto command = buildCommand(scriptPath);
-        spdlog::debug("Executing command \"{}\"", command);
-
-        if (async)
-        {
-#ifdef _WIN32
-            if (!_spawnlp(_P_NOWAIT, "powershell.exe", "powershell.exe", "-ExecutionPolicy", "Bypass", "-File", command.c_str(), nullptr))
-            {
-                spdlog::error("Error: _spawnlp failed ({})", errno);
-                return false;
-            }
-#else
-            if (auto pid = fork(); pid == 0)
-            {
-                if (execlp("/bin/sh", "sh", "-c", scriptContent.c_str(), nullptr) == -1)
-                {
-                    spdlog::error("Error: execlp failed ({})", errno);
-                    exit(1);
-                }
-                exit(0);
-            }
-#endif
+            std::map<std::string, std::string> scriptInfo;
+            const auto &info = m_scriptInfoMap.at(scriptName);
+            scriptInfo["name"] = scriptName;
+            scriptInfo["path"] = info.path;
+            scriptInfo["type"] = std::to_string(info.type);
+            scriptInfo["output"] = info.output;
+            scriptInfo["arguments"] = info.arguments;
+            scriptInfo["argument_types"] = info.argumentTypes;
+            return scriptInfo;
         }
         else
         {
-#ifdef _WIN32
-            const auto output = executeCommand(command);
-            spdlog::debug("Script \"{}\" output: \n{}", scriptName, output);
-#else
-            spdlog::debug("Script \"{}\" output: ", scriptName);
-            if (auto ret = std::system(scriptContent.c_str()); ret != 0)
-            {
-                spdlog::error("Error: command failed ({})", ret);
-                return false;
-            }
-#endif
-        }
-
-        return true;
-    }
-
-    ScriptType ScriptManager::getScriptType(const std::string &path) const
-    {
-        static const std::unordered_map<std::string_view, ScriptType> suffixMap = { { "sh", ScriptType::Sh },{ "ps1", ScriptType::Ps } };
-        const auto extension = std::filesystem::path(path).extension().string().substr(1);
-        if (auto it = suffixMap.find(extension); it != suffixMap.end())
-        {
-            return it->second;
-        }
-        else
-        {
-            spdlog::error("Unsupported script type");
-            return ScriptType::Sh;
+            return {};
         }
     }
+}
 
-    std::string ScriptManager::buildCommand(const std::string &scriptPath) const
+std::map<std::string, std::map<std::string, std::string>> ScriptManager::GetAllScripts() const
+{
+    std::scoped_lock lock(m_scriptInfoMutex);
+    std::map<std::string, std::map<std::string, std::string>> allScripts;
+    for (const auto &[scriptName, scriptInfo] : m_scriptInfoMap)
     {
-        std::stringstream ss;
+        std::map<std::string, std::string> script;
+        script["name"] = scriptName;
+        script["path"] = scriptInfo.path;
+        script["type"] = std::to_string(scriptInfo.type);
+        script["output"] = scriptInfo.output;
+        script["arguments"] = scriptInfo.arguments;
+        script["argument_types"] = scriptInfo.argumentTypes;
+        allScripts[scriptName] = script;
+    }
+    return allScripts;
+}
 
-#ifdef _WIN32
-        ss << "\"" << scriptPath << "\"";
-#else
-        ss << "sh \"" << scriptPath << "\"";
-#endif
-
-        return ss.str();
+void ScriptManager::SaveScriptsInfoToFile(const std::string &filePath) const
+{
+    std::scoped_lock lock(m_scriptInfoMutex);
+    nlohmann::json j;
+    for (const auto &[scriptName, scriptInfo] : m_scriptInfoMap)
+    {
+        nlohmann::json scriptJson;
+        scriptJson["name"] = scriptName;
+        scriptJson["path"] = scriptInfo.path;
+        scriptJson["type"] = scriptInfo.type;
+        scriptJson["arguments"] = scriptInfo.arguments;
+        scriptJson["argument_types"] = scriptInfo.argumentTypes;
+        j[scriptName] = scriptJson;
     }
 
-#ifdef _WIN32
-    std::string ScriptManager::executeCommand(const std::string &command) const
+    std::ofstream infoFile(filePath);
+    if (!infoFile)
     {
-        std::array<char, 128> buffer;
-        std::string result;
+        spdlog::error("Can't open script info file for writing: {}", filePath);
+        return;
+    }
+    infoFile << j.dump(4);
+}
 
-        FILE *pipe;
-        if ((pipe = _popen(command.c_str(), "r")) == nullptr)
-        {
-            spdlog::error("Error: _popen failed");
-            return result;
-        }
-        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
+std::string ScriptManager::RunScript(const std::string &scriptName, const std::vector<std::string> &scriptArgs, bool block /*= true*/)
+{
+    std::string scriptPath = GetScriptFilePath(scriptName);
+
+    // 检查脚本是否正在运行
+    if (IsScriptRunning(scriptName))
+    {
+        throw std::runtime_error("Script is already running: " + scriptName);
+    }
+
+    // 构建脚本命令
+    std::string command = BuildCommand(scriptPath, scriptArgs);
+
+    // 执行脚本命令
+    std::string output;
+    try
+    {
+        output = ExecuteCommand(command);
+    }
+    catch (const std::exception &e)
+    {
+        spdlog::error("Failed to execute script: {}", e.what());
+        throw;
+    }
+
+    // 更新脚本输出
+    std::unique_lock<std::mutex> lock(m_scriptInfoMutex);
+    ScriptInfo &info = m_scriptInfoMap.at(scriptName);
+    info.output = output;
+
+    return output;
+}
+
+void ScriptManager::StopScript(const std::string &scriptName)
+{
+    if (IsScriptRunning(scriptName))
+    {
+        RemoveFromRunningScripts(scriptName);
+    }
+}
+
+std::string ScriptManager::GetScriptOutput(const std::string &scriptName) const
+{
+    if (!m_scriptInfoMap.contains(scriptName))
+    {
+        return "";
+    }
+
+    const ScriptInfo &info = m_scriptInfoMap.at(scriptName);
+
+    if (info.isRunning)
+    {
+        /*
+        
+        */
+        // 将 shared_lock 转换为 unique_lock
+        std::unique_lock<std::mutex> uniqueLock(m_scriptInfoMutex, std::adopt_lock);
+        info.cv.wait(uniqueLock, [&info]()
+                     { return !info.isRunning; });
+    }
+
+    return info.output;
+}
+
+bool ScriptManager::IsScriptRunning(const std ::string &scriptName) const
+{
+    if (m_scriptInfoMap.contains(scriptName))
+    {
+        const ScriptInfo &info = m_scriptInfoMap.at(scriptName);
+        return info.isRunning;
+    }
+    return false;
+}
+
+std::string ScriptManager::GetScriptFilePath(const std::string &scriptName) const
+{
+    if (m_scriptInfoMap.contains(scriptName))
+    {
+        const ScriptInfo &info = m_scriptInfoMap.at(scriptName);
+        return info.path;
+    }
+    throw std::runtime_error("Script not found: " + scriptName);
+}
+
+std::string ScriptManager::BuildCommand(const std::string &scriptPath, const std::vector<std::string> &scriptArgs) const
+{
+    std::string command = scriptPath;
+    for (const auto &arg : scriptArgs)
+    {
+        command += " " + arg;
+    }
+    return command;
+}
+
+std::string ScriptManager::ExecuteCommand(const std::string &command) const
+{
+    std::array<char, 4096> buffer;
+    std::string result;
+
+    auto handle = ::popen(command.c_str(), "r");
+    if (!handle)
+    {
+        throw std::runtime_error("Error opening pipe for command: " + command);
+    }
+    while (!feof(handle))
+    {
+        if (fgets(buffer.data(), static_cast<int>(buffer.size()), handle) != nullptr)
         {
             result += buffer.data();
         }
-        _pclose(pipe);
-
-        return result;
     }
-#else
-    std::string ScriptManager::executeCommand(const std::string &command) const
+    int ret = ::pclose(handle);
+    if (ret != 0)
     {
-        std::array<char, 128> buffer;
-        std::string result;
-
-        FILE *pipe;
-        if ((pipe = popen(command.c_str(), "r")) == nullptr)
-        {
-            spdlog::error("Error: popen failed");
-            return result;
-        }
-        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr)
-        {
-            result += buffer.data();
-        }
-        pclose(pipe);
-
-        return result;
+        spdlog::error("Command failed with error code: {}", ret);
+        throw std::runtime_error("Command failed with error code: " + std::to_string(ret));
     }
-#endif
+    return result;
+}
+
+std::string ScriptManager::ReadScriptFromFile(const std::string &scriptPath) const
+{
+    std::filesystem::path path(scriptPath);
+    std::ifstream file(path);
+    if (!file.is_open())
+    {
+        spdlog::error("Can't open script file: {}", scriptPath);
+        return "";
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+void ScriptManager::RemoveFromRunningScripts(const std::string &scriptName)
+{
+    std::scoped_lock lock(m_scriptInfoMutex);
+    if (m_scriptInfoMap.contains(scriptName))
+    {
+        ScriptInfo &info = m_scriptInfoMap.at(scriptName);
+        info.isRunning = false;
+        info.cv.notify_all();
+    }
 }

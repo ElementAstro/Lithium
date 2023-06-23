@@ -29,13 +29,7 @@ Description: Device Manager
 
 **************************************************/
 
-#include "manager.hpp"
-#include "basic_device.hpp"
-
-#include "indi/indicamera.hpp"
-#include "indi/indifocuser.hpp"
-#include "indi/inditelescope.hpp"
-#include "indi/indifilterwheel.hpp"
+#include "device_manager.hpp"
 
 #include <spdlog/spdlog.h>
 #include "nlohmann/json.hpp"

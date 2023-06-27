@@ -129,6 +129,23 @@ namespace OpenAPT
 
         std::unique_ptr<CommandDispatcher> m_CommandDispatcher; ///< 命令派发器实例。
 
+    private:
+        template <typename ClassType>
+        void APTRegisterFunc(const std::string &name, void (ClassType::*handler)(const json &), ClassType *instance)
+        {
+            m_CommandDispatcher->RegisterHandler(name, handler, instance);
+        }
+
+        bool APTRunFunc(const std::string &name, const json &params)
+        {
+            if (m_CommandDispatcher->HasHandler(name))
+            {
+                m_CommandDispatcher->Dispatch(name, params);
+                return true;
+            }
+            return false;
+        }
+
     public:
         /**
          * @brief 执行设备任务。

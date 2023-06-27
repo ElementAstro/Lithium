@@ -46,8 +46,8 @@ namespace OpenAPT
 
         m_CommandDispatcher = std::make_unique<CommandDispatcher>();
 
-        m_CommandDispatcher->RegisterHandler("RunDeviceTask", &WebSocketServer::RunDeviceTask, this);
-        m_CommandDispatcher->RegisterHandler("GetDeviceInfo", &WebSocketServer::GetDeviceInfo, this);
+        APTRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask, this);
+        APTRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo, this);
     }
 
     void WebSocketServer::run(int port)

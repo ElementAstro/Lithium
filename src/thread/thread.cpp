@@ -35,10 +35,8 @@ Description: Thread Manager
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT
+namespace OpenAPT::Thread
 {
-
-    // 析构函数，停止所有线程并销毁 ThreadManager 对象
     ThreadManager::ThreadManager(int maxThreads) : m_maxThreads(maxThreads) {}
 
     ThreadManager::~ThreadManager()

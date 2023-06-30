@@ -23,7 +23,7 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-4-8
+Date: 2023-6-30
 
 Description: Terminal
 
@@ -180,6 +180,37 @@ namespace OpenAPT::Terminal
 
     bool isColorSupported()
     {
+#ifdef _WIN32
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hOut == INVALID_HANDLE_VALUE)
+            return false;
+
+        DWORD dwMode;
+        if (!GetConsoleMode(hOut, &dwMode))
+            return false;
+
+        dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        if (!SetConsoleMode(hOut, dwMode))
+            return false;
+
+        // 输出绿色字符
+        std::cout << "\x1B[32m" << std::flush;
+
+        int c = getchar();           // 读取用户的输入
+        bool result = (c == '\033'); // 判断是否为控制字符
+
+        // 恢复默认颜色
+        std::cout << "\x1B[0m" << std::flush;
+
+        // 还原控制台模式
+        dwMode &= ~ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+        SetConsoleMode(hOut, dwMode);
+
+        return result;
+#else
+        if (!isatty(fileno(stdout)))
+            return false;
+
         struct termios saved_termios, modified_termios;
         tcgetattr(STDIN_FILENO, &saved_termios);
 
@@ -187,27 +218,46 @@ namespace OpenAPT::Terminal
         modified_termios.c_lflag &= ~(ECHO | ICANON);
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &modified_termios);
 
-        std::cout << "\033[32m" << std::flush; // 输出绿色字符
-        int c = getchar();                     // 读取用户的输入
-        bool result = (c == '\033');           // 判断是否为控制字符
+        // 输出绿色字符
+        std::cout << "\033[32m" << std::flush;
 
-        std::cout << "\033[0m" << std::flush; // 恢复默认颜色
+        int c = getchar();           // 读取用户的输入
+        bool result = (c == '\033'); // 判断是否为控制字符
+
+        // 恢复默认颜色
+        std::cout << "\033[0m" << std::flush;
 
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_termios);
 
         return result;
+#endif
     }
 
     std::string getTerminalInput(CommandManager &manager)
     {
+        // 保存当前终端属性
+#ifdef _WIN32
+        HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+        DWORD mode;
+        GetConsoleMode(hStdin, &mode);
+        DWORD saved_mode = mode;
+#else
         struct termios saved_termios, modified_termios;
         tcgetattr(STDIN_FILENO, &saved_termios);
+#endif
 
+        // 修改终端属性
+#ifdef _WIN32
+        mode &= ~ENABLE_ECHO_INPUT;
+        mode &= ~ENABLE_LINE_INPUT;
+        SetConsoleMode(hStdin, mode);
+#else
         modified_termios = saved_termios;
         modified_termios.c_lflag &= ~(ECHO | ICANON);
         modified_termios.c_cc[VTIME] = 0; // 设置非阻塞模式
         modified_termios.c_cc[VMIN] = 1;  // 设置最少读取的字符数
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &modified_termios);
+#endif
 
         std::string input = "";
         int c = 0;
@@ -216,7 +266,12 @@ namespace OpenAPT::Terminal
 
         while (true)
         {
+            // 读取字符
+#ifdef _WIN32
+            c = _getch();
+#else
             c = getchar();
+#endif
 
             if (c == '\n' || c == EOF)
             {                           // 输入结束，退出循环
@@ -240,15 +295,28 @@ namespace OpenAPT::Terminal
                 if (!input.empty())
                 {
                     input.pop_back();
+
+#ifdef _WIN32
                     std::cout << "\b \b" << std::flush; // 输出退格符、空格和退格符，相当于清空当前字符
+#else
+                    std::cout << "\b \b" << std::flush; // 输出退格符、空格和退格符，相当于清空当前字符
+#endif
                 }
             }
             else if (c == '\033')
             { // 处理特殊字符，如向上键
+#ifdef _WIN32
+                int nextC = _getch();
+#else
                 int nextC = getchar();
+#endif
                 if (nextC == '[')
                 {
+#ifdef _WIN32
+                    switch (_getch())
+#else
                     switch (getchar())
+#endif
                     {
                     case 'B': // 向上键
                         if (manager.hasNextCommand())
@@ -280,7 +348,12 @@ namespace OpenAPT::Terminal
             }
         }
 
+        // 恢复终端属性
+#ifdef _WIN32
+        SetConsoleMode(hStdin, saved_mode);
+#else
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &saved_termios);
+#endif
 
         return input;
     }

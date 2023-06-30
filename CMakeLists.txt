@@ -207,22 +207,6 @@ if(WIN32)
     find_package(CURL REQUIRED)
     target_link_libraries(openapt CURL::libcurl)
 
-    # Check if Python is installed
-    find_package(Python REQUIRED COMPONENTS Development)
-    if(Python_FOUND)
-        message(STATUS "Python version: ${Python_VERSION}")
-    else()
-        message(SEND_ERROR "Python not found.")
-    endif()
-
-    # Add Python headers and library paths
-    include_directories(${Python_INCLUDE_DIRS})
-    link_directories(${Python_LIBRARY_DIRS})
-
-    # Add compiler flags and link Python libraries
-    add_definitions(${Python_DEFINITIONS})
-    target_link_libraries(openapt ${Python_LIBRARIES})
-
     # Find and link OpenSSL libraries
     find_package(OpenSSL REQUIRED)
     if(OpenSSL_FOUND)
@@ -234,10 +218,6 @@ if(WIN32)
 
     find_package(GSL REQUIRED)
     target_link_libraries(openapt ${GSL_LIBRARIES})
-
-    # Find and link spdlog libraries
-    find_package(spdlog REQUIRED)
-    target_link_libraries(openapt spdlog::spdlog_header_only)
 
     find_package(OpenCV REQUIRED)
     include_directories(${OpenCV_INCLUDE_DIRS})
@@ -281,22 +261,6 @@ elseif(UNIX)
         find_package(CURL REQUIRED)
         target_link_libraries(openapt CURL::libcurl)
 
-        # Check if Python is installed
-        find_package(Python REQUIRED COMPONENTS Development)
-        if(Python_FOUND)
-            message(STATUS "Python version: ${Python_VERSION}")
-        else()
-            message(SEND_ERROR "Python not found.")
-        endif()
-
-        # Add Python headers and library paths
-        include_directories(${Python_INCLUDE_DIRS})
-        link_directories(${Python_LIBRARY_DIRS})
-
-        # Add compiler flags and link Python libraries
-        add_definitions(${Python_DEFINITIONS})
-        target_link_libraries(openapt ${Python_LIBRARIES})
-
         # Find and link OpenSSL libraries
         find_package(OpenSSL REQUIRED)
         if(OpenSSL_FOUND)
@@ -308,10 +272,6 @@ elseif(UNIX)
 
         find_package(GSL REQUIRED)
         target_link_libraries(openapt ${GSL_LIBRARIES})
-
-        # Find and link spdlog libraries
-        find_package(spdlog REQUIRED)
-        target_link_libraries(openapt spdlog::spdlog_header_only)
 
         find_package(OpenCV REQUIRED)
         include_directories(${OpenCV_INCLUDE_DIRS})
@@ -349,22 +309,6 @@ elseif(UNIX)
         find_package(CURL REQUIRED)
         target_link_libraries(openapt CURL::libcurl)
 
-        # Check if Python is installed
-        find_package(Python REQUIRED COMPONENTS Development)
-        if(Python_FOUND)
-            message(STATUS "Python version: ${Python_VERSION}")
-        else()
-            message(SEND_ERROR "Python not found.")
-        endif()
-
-        # Add Python headers and library paths
-        include_directories(${Python_INCLUDE_DIRS})
-        link_directories(${Python_LIBRARY_DIRS})
-
-        # Add compiler flags and link Python libraries
-        add_definitions(${Python_DEFINITIONS})
-        target_link_libraries(openapt ${Python_LIBRARIES})
-
         # Find and link OpenSSL libraries
         find_package(OpenSSL REQUIRED)
         if(OpenSSL_FOUND)
@@ -376,10 +320,6 @@ elseif(UNIX)
 
         find_package(GSL REQUIRED)
         target_link_libraries(openapt ${GSL_LIBRARIES})
-
-        # Find and link spdlog libraries
-        find_package(spdlog REQUIRED)
-        target_link_libraries(openapt spdlog::spdlog_header_only)
 
         find_package(OpenCV REQUIRED)
         include_directories(${OpenCV_INCLUDE_DIRS})

@@ -42,3 +42,6 @@ test.cpp
 module_test
 
 libexample.json
+
+*.log
+*.xml

@@ -1,5 +1,5 @@
 /*
- * manager.cpp
+ * device_manager.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -31,8 +31,7 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
-#include <spdlog/spdlog.h>
-#include "nlohmann/json.hpp"
+#include "property/json.hpp"
 
 namespace OpenAPT
 {

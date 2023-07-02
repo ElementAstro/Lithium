@@ -29,7 +29,6 @@ Description: Time
 
 **************************************************/
 
-#include <spdlog/spdlog.h>
 #include <chrono>
 #include <string>
 #include <iostream>

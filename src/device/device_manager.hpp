@@ -1,5 +1,5 @@
 /*
- * manager.hpp
+ * device_manager.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *

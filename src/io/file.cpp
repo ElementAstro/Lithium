@@ -31,118 +31,125 @@ Description: File Manager
 
 #include "file.hpp"
 
-#include <spdlog/spdlog.h>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <cstdio>
+#include <filesystem>
+
 #include <openssl/md5.h>
 
-/**
- * @brief 检查文件是否存在。
- * @param filename 文件名
- * @return 文件是否存在
- */
-bool fileExists(const std::string &filename)
+namespace OpenAPT::File
 {
-    std::ifstream infile(filename.c_str());
-    return infile.good();
+
+
+bool fileExists(const std::string& filename)
+{
+    return std::filesystem::exists(filename);
 }
 
-bool FileManager::createFile(const std::string &filename)
+FileManager::FileManager() : m_file()
+{
+}
+
+bool FileManager::createFile(const std::string& filename)
 {
     if (fileExists(filename))
     {
-        spdlog::error("File \"{}\" already exists!", filename);
+        std::cerr << "File \"" << filename << "\" already exists!" << std::endl;
         return false;
     }
-    std::ofstream outfile(filename.c_str());
+    std::ofstream outfile(filename);
     if (!outfile)
     {
-        spdlog::error("Error creating file \"{}\"!", filename);
+        std::cerr << "Error creating file \"" << filename << "\"!" << std::endl;
         return false;
     }
     outfile.close();
     std::fclose(std::fopen(filename.c_str(), "a")); // create a link to the file
-    spdlog::debug("Created file \"{}\"", filename);
+    std::cout << "Created file \"" << filename << "\"" << std::endl;
     return true;
 }
 
-bool FileManager::openFile(const std::string &filename)
+bool FileManager::openFile(const std::string& filename)
 {
     if (!fileExists(filename))
     {
-        spdlog::error("File \"{}\" does not exist!", filename);
+        std::cerr << "File \"" << filename << "\" does not exist!" << std::endl;
         return false;
     }
     m_filename = filename;
-    m_file.open(filename.c_str(), std::ios::in | std::ios::out);
+    m_file.open(filename, std::ios::in | std::ios::out);
     if (!m_file)
     {
-        spdlog::error("Could not open file \"{}\"!", filename);
+        std::cerr << "Could not open file \"" << filename << "\"!" << std::endl;
         return false;
     }
-    spdlog::debug("Opened file \"{}\"", filename);
+    std::cout << "Opened file \"" << filename << "\"" << std::endl;
     return true;
 }
 
-bool FileManager::readFile(std::string &contents)
+bool FileManager::readFile(std::string& contents)
 {
     if (!m_file.is_open())
     {
-        spdlog::error("No file is currently open!");
+        std::cerr << "No file is currently open!" << std::endl;
         return false;
     }
     std::stringstream buffer;
     buffer << m_file.rdbuf();
     contents = buffer.str();
-    spdlog::debug("Read contents of file \"{}\"", m_filename);
+    std::cout << "Read contents of file \"" << m_filename << "\"" << std::endl;
     return true;
 }
 
-bool FileManager::writeFile(const std::string &contents)
+bool FileManager::writeFile(const std::string& contents)
 {
     if (!m_file.is_open())
     {
-        spdlog::error("No file is currently open!");
+        std::cerr << "No file is currently open!" << std::endl;
         return false;
     }
     m_file << contents;
-    spdlog::debug("Wrote contents to file \"{}\"", m_filename);
+    std::cout << "Wrote contents to file \"" << m_filename << "\"" << std::endl;
     return true;
 }
 
-bool FileManager::moveFile(const std::string &oldFilename, const std::string &newFilename)
+bool FileManager::moveFile(const std::string& oldFilename, const std::string& newFilename)
 {
     if (!fileExists(oldFilename))
     {
-        spdlog::error("File \"{}\" does not exist!", oldFilename);
+        std::cerr << "File \"" << oldFilename << "\" does not exist!" << std::endl;
         return false;
     }
     if (fileExists(newFilename))
     {
-        spdlog::error("File \"{}\" already exists!", newFilename);
+        std::cerr << "File \"" << newFilename << "\" already exists!" << std::endl;
         return false;
     }
     int result = std::rename(oldFilename.c_str(), newFilename.c_str());
     if (result != 0)
     {
-        spdlog::error("Could not move file \"{}\" to \"{}\"!", oldFilename, newFilename);
+        std::cerr << "Could not move file from \"" << oldFilename << "\" to \"" << newFilename << "\"!" << std::endl;
         return false;
     }
-    spdlog::debug("Moved file from \"{}\" to \"{}\"", oldFilename, newFilename);
+    std::cout << "Moved file from \"" << oldFilename << "\" to \"" << newFilename << "\"" << std::endl;
     return true;
 }
 
-bool FileManager::deleteFile(const std::string &filename)
+bool FileManager::deleteFile(const std::string& filename)
 {
     if (!fileExists(filename))
     {
-        spdlog::error("File \"{}\" does not exist!", filename);
+        std::cerr << "File \"" << filename << "\" does not exist!" << std::endl;
         return false;
     }
-    if (remove(filename.c_str()) != 0)
+    if (std::remove(filename.c_str()) != 0)
     {
-        spdlog::error("Could not delete file \"{}\"!", filename);
+        std::cerr << "Could not delete file \"" << filename << "\"!" << std::endl;
         return false;
     }
-    spdlog::debug("Deleted file \"{}\"", filename);
+    std::cout << "Deleted file \"" << filename << "\"" << std::endl;
     return true;
 }
 
@@ -150,7 +157,7 @@ long FileManager::getFileSize()
 {
     if (!m_file.is_open())
     {
-        spdlog::error("No file is currently open!");
+        std::cerr << "No file is currently open!" << std::endl;
         return -1;
     }
     m_file.seekg(0, m_file.end);
@@ -158,11 +165,11 @@ long FileManager::getFileSize()
     m_file.seekg(0, m_file.beg);
     if (fileSize == -1)
     {
-        spdlog::error("Could not get file size of \"{}\"!", m_filename);
+        std::cerr << "Could not get file size of \"" << m_filename << "\"!" << std::endl;
     }
     else
     {
-        spdlog::debug("File size of \"{}\" is {} bytes", m_filename, fileSize);
+        std::cout << "File size of \"" << m_filename << "\" is " << fileSize << " bytes" << std::endl;
     }
     return fileSize;
 }
@@ -171,7 +178,7 @@ std::string FileManager::calculateMD5()
 {
     if (!m_file.is_open())
     {
-        spdlog::error("No file is currently open!");
+        std::cerr << "No file is currently open!" << std::endl;
         return "";
     }
     MD5_CTX md5Context;
@@ -181,29 +188,31 @@ std::string FileManager::calculateMD5()
     {
         MD5_Update(&md5Context, buffer, sizeof(buffer));
     }
-    MD5_Final(reinterpret_cast<unsigned char *>(buffer), &md5Context);
+    MD5_Final(reinterpret_cast<unsigned char*>(buffer), &md5Context);
     std::stringstream md5Stream;
     md5Stream << std::hex << std::setfill('0');
     for (int i = 0; i < MD5_DIGEST_LENGTH; ++i)
     {
         md5Stream << std::setw(2) << static_cast<int>(buffer[i]);
     }
-    spdlog::debug("MD5 value for file \"{}\" is {}", m_filename, md5Stream.str());
+    std::cout << "MD5 value for file \"" << m_filename << "\" is " << md5Stream.str() << std::endl;
     return md5Stream.str();
 }
 
-std::string FileManager::getFileDirectory(const std::string &filename)
+std::string FileManager::getFileDirectory(const std::string& filename)
 {
     size_t pos = filename.find_last_of("/\\");
     if (pos == std::string::npos)
     {
-        spdlog::error("Could not get directory of file \"{}\"", filename);
+        std::cerr << "Could not get directory of file \"" << filename << "\"" << std::endl;
         return "";
     }
     else
     {
         std::string directory = filename.substr(0, pos);
-        spdlog::debug("Directory of file \"{}\" is \"{}\"", filename, directory);
+        std::cout << "Directory of file \"" << filename << "\" is \"" << directory << "\"" << std::endl;
         return directory;
     }
+}
+
 }

@@ -12,6 +12,11 @@ namespace OpenAPT::Property
         IMessage();
         virtual ~IMessage() = default;
 
+        const std::string &GetName() const
+        {
+            return name;
+        }
+
         virtual std::string toJson() const;
         virtual std::string toXml() const;
 
@@ -27,7 +32,6 @@ namespace OpenAPT::Property
         template <typename T>
         void setValue(const T &value);
 
-    protected:
         std::string device_name;
         std::string device_uuid;
 

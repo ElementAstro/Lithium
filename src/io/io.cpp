@@ -33,7 +33,6 @@ Description: IO
 
 #include <filesystem>
 #include <iostream>
-#include <spdlog/spdlog.h>
 
 namespace fs = std::filesystem;
 
@@ -45,12 +44,12 @@ namespace OpenAPT::File
         try
         {
             fs::create_directory(path);
-            spdlog::debug("Directory created: {}", path);
+            std::cout << "Directory created: " << path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to create directory {}: {}", path, ex.what());
+            std::cerr << "Failed to create directory " << path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -60,12 +59,12 @@ namespace OpenAPT::File
         try
         {
             fs::remove_all(path);
-            spdlog::debug("Directory removed: {}", path);
+            std::cout << "Directory removed: " << path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to remove directory {}: {}", path, ex.what());
+            std::cerr << "Failed to remove directory " << path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -75,12 +74,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            spdlog::debug("Directory renamed from {} to {}", old_path, new_path);
+            std::cout << "Directory renamed from " << old_path << " to " << new_path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to rename directory from {} to {}: {}", old_path, new_path, ex.what());
+            std::cerr << "Failed to rename directory from " << old_path << " to " << new_path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -90,12 +89,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            spdlog::debug("Directory moved from {} to {}", old_path, new_path);
+            std::cout << "Directory moved from " << old_path << " to " << new_path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to move directory from {} to {}: {}", old_path, new_path, ex.what());
+            std::cerr << "Failed to move directory from " << old_path << " to " << new_path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -105,12 +104,12 @@ namespace OpenAPT::File
         try
         {
             fs::copy_file(src_path, dst_path);
-            spdlog::debug("File copied from {} to {}", src_path, dst_path);
+            std::cout << "File copied from " << src_path << " to " << dst_path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to copy file from {} to {}: {}", src_path, dst_path, ex.what());
+            std::cerr << "Failed to copy file from " << src_path << " to " << dst_path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -120,12 +119,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(src_path, dst_path);
-            spdlog::debug("File moved from {} to {}", src_path, dst_path);
+            std::cout << "File moved from " << src_path << " to " << dst_path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to move file from {} to {}: {}", src_path, dst_path, ex.what());
+            std::cerr << "Failed to move file from " << src_path << " to " << dst_path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -135,12 +134,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            spdlog::debug("File renamed from {} to {}", old_path, new_path);
+            std::cout << "File renamed from " << old_path << " to " << new_path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to rename file from {} to {}: {}", old_path, new_path, ex.what());
+            std::cerr << "Failed to rename file from " << old_path << " to " << new_path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -150,12 +149,12 @@ namespace OpenAPT::File
         try
         {
             fs::remove(path);
-            spdlog::debug("File removed: {}", path);
+            std::cout << "File removed: " << path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to remove file {}: {}", path, ex.what());
+            std::cerr << "Failed to remove file " << path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -165,12 +164,12 @@ namespace OpenAPT::File
         try
         {
             fs::create_symlink(target_path, symlink_path);
-            spdlog::debug("Symlink created from {} to {}", target_path, symlink_path);
+            std::cout << "Symlink created from " << target_path << " to " << symlink_path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to create symlink from {} to {}: {}", target_path, symlink_path, ex.what());
+            std::cerr << "Failed to create symlink from " << target_path << " to " << symlink_path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -180,12 +179,12 @@ namespace OpenAPT::File
         try
         {
             fs::remove(path);
-            spdlog::debug("Symlink removed: {}", path);
+            std::cout << "Symlink removed: " << path << std::endl;
             return true;
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to remove symlink {}: {}", path, ex.what());
+            std::cerr << "Failed to remove symlink " << path << ": " << ex.what() << std::endl;
         }
         return false;
     }
@@ -198,7 +197,7 @@ namespace OpenAPT::File
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to get file size of {}: {}", path, ex.what());
+            std::cerr << "Failed to get file size of " << path << ": " << ex.what() << std::endl;
             return 0;
         }
     }
@@ -209,19 +208,19 @@ namespace OpenAPT::File
         {
             for (const auto &entry : fs::recursive_directory_iterator(path))
             {
-                if (fs::is_directory(entry))
+                if (entry.is_directory())
                 {
-                    spdlog::debug("Directory: {}", entry.path().string());
+                    std::cout << "Directory: " << entry.path().string() << std::endl;
                 }
                 else
                 {
-                    spdlog::debug("File: {}", entry.path().string());
+                    std::cout << "File: " << entry.path().string() << std::endl;
                 }
             }
         }
         catch (const std::exception &ex)
         {
-            spdlog::error("Failed to traverse directory {}: {}", path, ex.what());
+            std::cerr << "Failed to traverse directory " << path << ": " << ex.what() << std::endl;
         }
     }
 }

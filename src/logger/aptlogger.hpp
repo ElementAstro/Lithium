@@ -80,6 +80,18 @@ namespace OpenAPT::Logger
          */
         Logger(std::ostream &stream, std::string module_name = "Main") : outputStream(&std::cout), currentModuleName(module_name) {}
 
+
+        /**
+         * @brief 析构函数
+         */
+        ~Logger()
+        {
+            if(asyncLoggingEnabled)
+            {
+                disableAsyncLogging();
+            }
+        }
+
         /**
          * @brief 记录日志
          * @tparam Args 可变参数类型

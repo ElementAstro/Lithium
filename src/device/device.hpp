@@ -33,10 +33,13 @@ Description: Basic Device Defination
 
 #include <string>
 #include <vector>
+#include <functional>
 
-#include "task.hpp"
+#include "task/task.hpp"
+#include "logger/aptlogger.hpp"
 
-#include "nlohmann/json.hpp"
+#include "property/json.hpp"
+#include "property/imessage.hpp"
 
 /**
  * @brief 设备基类
@@ -49,7 +52,9 @@ public:
      *
      * @param name 设备名称
      */
-    explicit Device(const std::string &name) { _name = name; };
+    explicit Device(const std::string &name);
+
+    Device(){};
 
     /**
      * @brief 析构函数
@@ -162,8 +167,9 @@ public:
 
     virtual void setDeviceName(const std::string &name) = 0;
 
-    int getId() const {
-        return _id;
+    const std::string getId() const
+    {
+        return _uuid;
     }
 
     /**
@@ -175,8 +181,110 @@ public:
     virtual void setId(int id) = 0;
 
 public:
+    auto IAFindMessage(const std::string &identifier);
+
+    void IAInsertMessage(const OpenAPT::Property::IMessage &message,const std::string& task_name);
+
+    OpenAPT::Property::IMessage IACreateMessage(const std::string &message_name, std::any message_value);
+
+    void IAUpdateMessage(const std::string &identifier, const OpenAPT::Property::IMessage &newMessage);
+
+    void IARemoveMessage(const std::string &identifier);
+
+    OpenAPT::Property::IMessage *IAGetMessage(const std::string &identifier);
+
+    void IANotifyObservers(const OpenAPT::Property::IMessage &newMessage, const OpenAPT::Property::IMessage &oldMessage);
+
+    void IANotifyObservers(const OpenAPT::Property::IMessage &removedMessage);
+
+    struct MessageInfo
+    {
+        OpenAPT::Property::IMessage message;
+        std::shared_ptr<OpenAPT::SimpleTask> task;
+    };
+
+    std::vector<MessageInfo> device_messages;
+
+    std::vector<std::function<void(const OpenAPT::Property::IMessage &, const OpenAPT::Property::IMessage &)>> observers;
+
+public:
+    // 所有的日志封装组件
+
+    /**
+     * @brief 记录追踪级别日志
+     * @tparam Args 可变参数类型
+     * @param formatStr 格式化字符串
+     * @param args 可变参数
+     */
+    template <typename... Args>
+    void IDLtrace(const std::string &formatStr, Args... args)
+    {
+        device_logger.logTrace(formatStr, args...);
+    }
+
+    /**
+     * @brief 记录调试级别日志
+     * @tparam Args 可变参数类型
+     * @param formatStr 格式化字符串
+     * @param args 可变参数
+     */
+    template <typename... Args>
+    void IDLdebug(const std::string &formatStr, Args... args)
+    {
+        device_logger.logDebug(formatStr, args...);
+    }
+
+    /**
+     * @brief 记录信息级别日志
+     * @tparam Args 可变参数类型
+     * @param formatStr 格式化字符串
+     * @param args 可变参数
+     */
+    template <typename... Args>
+    void IDLinfo(const std::string &formatStr, Args... args)
+    {
+        device_logger.logInfo(formatStr, args...);
+    }
+
+    /**
+     * @brief 记录警告级别日志
+     * @tparam Args 可变参数类型
+     * @param formatStr 格式化字符串
+     * @param args 可变参数
+     */
+    template <typename... Args>
+    void IDLwarn(const std::string &formatStr, Args... args)
+    {
+        device_logger.logWarn(formatStr, args...);
+    }
+
+    /**
+     * @brief 记录错误级别日志
+     * @tparam Args 可变参数类型
+     * @param formatStr 格式化字符串
+     * @param args 可变参数
+     */
+    template <typename... Args>
+    void IDLerror(const std::string &formatStr, Args... args)
+    {
+        device_logger.logError(formatStr, args...);
+    }
+
+    /**
+     * @brief 记录严重错误级别日志
+     * @tparam Args 可变参数类型
+     * @param formatStr 格式化字符串
+     * @param args 可变参数
+     */
+    template <typename... Args>
+    void IDLcritical(const std::string &formatStr, Args... args)
+    {
+        device_logger.logCritical(formatStr, args...);
+    }
+
+public:
     std::string _name;                  ///< 设备名称
-    int _id;                            ///< 设备ID
+    std::string _uuid;                  ///< 设备ID
     std::string device_name;            ///< 设备名称
     std::string description;            ///< 设备描述信息
     std::string configPath;             ///< 配置文件路径
@@ -184,4 +292,6 @@ public:
     int port = 7624;                    ///< 端口号
     bool is_connected;                  ///< 是否已连接
     bool is_debug;                      ///< 调试模式
+
+    OpenAPT::Logger::Logger &device_logger = OpenAPT::Logger::GlobalLogger::getDefaultLogger();
 };

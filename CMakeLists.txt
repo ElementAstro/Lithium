@@ -2,7 +2,7 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: OpenAPT
-# Description: Automated image processing and analysis tool for astrophotography
+# Description: OpenAPT Astrophotography Terminal
 # Author: Max Qian
 # License: GPL3
 

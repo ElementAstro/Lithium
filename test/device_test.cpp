@@ -1,6 +1,6 @@
-// Camera.h
-
 #include "device.hpp"
+
+#include <iostream>
 
 class Camera : public Device
 {
@@ -38,64 +38,65 @@ public:
     void setDeviceName(const std::string &name) override;
     void setId(int id) override;
 
+    bool startExposure(const nlohmann::json &params)
+    {
+        std::cout << "aaaa" << std::endl;
+        return true;
+    }
+
 private:
     std::string _deviceName;
     int _id;
 };
 
-// Camera.cpp
-
 Camera::Camera(const std::string &name) : Device(name)
 {
     _deviceName = "Camera";
-    _id = 0;
+    IAInsertMessage(IACreateMessage("name", name), "");
+    IAInsertMessage(IACreateMessage("exposure", 1), "captureImage");
+    IAInsertMessage(IACreateMessage("gain", 50), "");
+    IAInsertMessage(IACreateMessage("offset", 20), "");
+    IAInsertMessage(IACreateMessage("width", 0), "");
+    IAInsertMessage(IACreateMessage("height", 0), "");
 }
 
 bool Camera::connect(std::string name)
 {
-    // 实现连接设备的代码，如果连接成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::disconnect()
 {
-    // 实现断开设备连接的代码，如果断开成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::reconnect()
 {
-    // 实现重新连接设备的代码，如果重新连接成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::scanForAvailableDevices()
 {
-    // 实现扫描可用设备的代码，如果扫描成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::getSettings()
 {
-    // 实现获取设备设置的代码，如果获取成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::saveSettings()
 {
-    // 实现保存设备设置的代码，如果保存成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::getParameter(const std::string &paramName)
 {
-    // 实现获取设备参数的代码，如果获取成功则返回true，否则返回false
     return true;
 }
 
 bool Camera::setParameter(const std::string &paramName, const std::string &paramValue)
 {
-    // 实现设置设备参数的代码，如果设置成功则返回true，否则返回false
     return true;
 }
 
@@ -104,25 +105,18 @@ std::shared_ptr<OpenAPT::SimpleTask> Camera::getSimpleTask(const std::string &ta
     if (task_name == "captureImage")
     {
         auto imageCaptureTask = std::make_shared<OpenAPT::SimpleTask>(
-            // 函数指针，封装拍照操作
-            [](const nlohmann::json &params) -> nlohmann::json
+            [this](const nlohmann::json &params) -> nlohmann::json
             {
-                // 调用相机的拍照功能
-                // ...
                 std::cout << "Image captured" << std::endl;
-                // 返回拍照结果
+                IAUpdateMessage("exposure", IACreateMessage("exposure", 1));
+                IAUpdateMessage("test", IACreateMessage("test", 1));
                 return {"result", "success"};
             },
-            // 参数
             params,
-            // 停止函数
             [this]()
             {
-                // 调用停止相机拍照功能
-                // ...
                 std::cout << "Image capture stopped" << std::endl;
             },
-            // 可停止（可选）
             true);
         return imageCaptureTask;
     }
@@ -134,13 +128,11 @@ std::shared_ptr<OpenAPT::SimpleTask> Camera::getSimpleTask(const std::string &ta
 
 std::shared_ptr<OpenAPT::ConditionalTask> Camera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
 {
-    // 实现获取 ConditionalTask 的代码，返回 ConditionalTask 指针
     return nullptr;
 }
 
 std::shared_ptr<OpenAPT::LoopTask> Camera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
 {
-    // 实现获取 LoopTask 的代码，返回 LoopTask 指针
     return nullptr;
 }
 
@@ -169,14 +161,20 @@ void Camera::setId(int id)
     _id = id;
 }
 
-// 调用方法
+void MyObserver(const OpenAPT::Property::IMessage &newMessage, const OpenAPT::Property::IMessage &oldMessage)
+{
+    std::cout << "Observer called with new message: " << newMessage.GetMessageUUID() << std::endl;
+    std::cout << "Old message: " << oldMessage.GetMessageUUID() << std::endl;
+    std::cout << "Old message: " << oldMessage.getValue<int>() << std::endl;
+    std::cout << "Old message: " << oldMessage.GetDeviceUUID() << std::endl;
+}
 
 int main()
 {
-    // 创建相机实例
     std::shared_ptr<Camera> camera = std::make_shared<Camera>("myCamera");
 
-    // 连接相机
+    camera->observers.push_back(MyObserver);
+
     bool connectResult = camera->connect("myCamera");
     if (connectResult)
     {
@@ -187,13 +185,11 @@ int main()
         std::cout << "Fail to connect to camera" << std::endl;
     }
 
-    // 获取相机名称
     std::string cameraName = camera->getName();
     std::cout << "Camera name: " << cameraName << std::endl;
 
-    camera->getSimpleTask("captureImage",{})->Execute();
+    camera->getSimpleTask("captureImage", {})->Execute();
 
-    // 断开相机连接
     bool disconnectResult = camera->disconnect();
     if (disconnectResult)
     {
@@ -203,6 +199,6 @@ int main()
     {
         std::cout << "Fail to disconnect from camera" << std::endl;
     }
-
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     return 0;
 }

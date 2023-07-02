@@ -29,10 +29,11 @@ Description: Compressor using ZLib
 
 **************************************************/
 
-#ifndef _COMPRESS_HPP_
-#define _COMPRESS_HPP_
+#pragma once
 
-namespace OpenAPT::Compressor
+#include <string>
+
+namespace OpenAPT::File
 {
 
     /**
@@ -51,7 +52,8 @@ namespace OpenAPT::Compressor
      *
      * @note If the file name already contains the .gz suffix, it will not be compressed again.
      */
-    bool compress_file(const char *file_name);
+    bool compress_file(const std::string &file_name, const std::string &output_folder);
+    
     /**
      * @brief 对单个文件进行解压缩
      * @param file_name 待解压的文件名（包含路径）
@@ -68,7 +70,8 @@ namespace OpenAPT::Compressor
      *
      * @note If the file name does not contain the .gz suffix, it will not be decompressed.
      */
-    bool decompress_file(const char *file_name);
+    bool decompress_file(const std::string &file_name, const std::string &output_folder);
+
     /**
      * @brief 对指定目录下的文件进行压缩
      * @param folder_name 待压缩的目录名（绝对路径）
@@ -87,4 +90,3 @@ namespace OpenAPT::Compressor
      */
     bool compress_folder(const char *folder_name);
 }
-#endif

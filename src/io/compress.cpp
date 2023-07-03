@@ -37,11 +37,13 @@ Description: Compressor using ZLib
 #include <string>
 #include <zlib.h>
 
+#include <spdlog/spdlog.h>
+
 #ifdef _WIN32
 #include <windows.h>
-#define DIR_SEPARATOR '\\'
+#define PATH_SEPARATOR '\\'
 #else
-#define DIR_SEPARATOR '/'
+#define PATH_SEPARATOR '/'
 #endif
 
 constexpr int CHUNK = 16384;
@@ -54,7 +56,7 @@ namespace OpenAPT::File
         std::filesystem::path input_path(file_name);
         if (!std::filesystem::exists(input_path))
         {
-            // spdlog::error("Input file {} does not exist.", file_name);
+            spdlog::error("Input file {} does not exist.", file_name);
             return false;
         }
 
@@ -62,14 +64,14 @@ namespace OpenAPT::File
         gzFile out = gzopen(output_path.string().c_str(), "wb");
         if (!out)
         {
-            // spdlog::error("Failed to create compressed file {}", output_path.string());
+            spdlog::error("Failed to create compressed file {}", output_path.string());
             return false;
         }
 
         std::ifstream in(file_name, std::ios::binary);
         if (!in)
         {
-            // spdlog::error("Failed to open input file {}", file_name);
+            spdlog::error("Failed to open input file {}", file_name);
             gzclose(out);
             return false;
         }
@@ -82,7 +84,7 @@ namespace OpenAPT::File
 
             if (gzwrite(out, buf, bytesRead) != bytesRead)
             {
-                // spdlog::error("Failed to compress file {}", file_name);
+                spdlog::error("Failed to compress file {}", file_name);
                 in.close();
                 gzclose(out);
                 return false;
@@ -91,7 +93,7 @@ namespace OpenAPT::File
 
         in.close();
         gzclose(out);
-        // spdlog::info("Compressed file {} -> {}", file_name, output_path.string());
+        spdlog::info("Compressed file {} -> {}", file_name, output_path.string());
         return true;
     }
 
@@ -100,7 +102,7 @@ namespace OpenAPT::File
         std::filesystem::path input_path(file_name);
         if (!std::filesystem::exists(input_path))
         {
-            // spdlog::error("Input file {} does not exist.", file_name);
+            spdlog::error("Input file {} does not exist.", file_name);
             return false;
         }
 
@@ -108,14 +110,14 @@ namespace OpenAPT::File
         FILE *out = fopen(output_path.string().c_str(), "wb");
         if (!out)
         {
-            // spdlog::error("Failed to create decompressed file {}", output_path.string());
+            spdlog::error("Failed to create decompressed file {}", output_path.string());
             return false;
         }
 
         gzFile in = gzopen(file_name.c_str(), "rb");
         if (!in)
         {
-            // spdlog::error("Failed to open compressed file {}", file_name);
+            spdlog::error("Failed to open compressed file {}", file_name);
             fclose(out);
             return false;
         }
@@ -126,7 +128,7 @@ namespace OpenAPT::File
         {
             if (fwrite(buf, 1, bytesRead, out) != static_cast<size_t>(bytesRead))
             {
-                // spdlog::error("Failed to decompress file {}", file_name);
+                spdlog::error("Failed to decompress file {}", file_name);
                 fclose(out);
                 gzclose(in);
                 return false;
@@ -135,7 +137,7 @@ namespace OpenAPT::File
 
         fclose(out);
         gzclose(in);
-        // spdlog::info("Decompressed file {} -> {}", file_name, output_path.string());
+        spdlog::info("Decompressed file {} -> {}", file_name, output_path.string());
         return true;
     }
 
@@ -147,7 +149,7 @@ namespace OpenAPT::File
         gzFile out = gzopen(outfile_name, "wb");
         if (!out)
         {
-            // spdlog::error("Failed to create compressed file {}", outfile_name);
+            spdlog::error("Failed to create compressed file {}", outfile_name);
             return false;
         }
 #ifdef _WIN32
@@ -159,7 +161,7 @@ namespace OpenAPT::File
         hFind = FindFirstFileA(searchPath, &findData);
         if (hFind == INVALID_HANDLE_VALUE)
         {
-            // spdlog::error("Failed to open folder {}", folder_name);
+            spdlog::error("Failed to open folder {}", folder_name);
             gzclose(out);
             return false;
         }
@@ -170,7 +172,7 @@ namespace OpenAPT::File
                 continue;
             // Construct the file path
             char file_name[256];
-            sprintf(file_name, "%s%c%s", folder_name, DIR_SEPARATOR, findData.cFileName);
+            sprintf(file_name, "%s%c%s", folder_name, PATH_SEPARATOR, findData.cFileName);
             // If it's a directory, recursively call this function
             if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
             {
@@ -192,7 +194,7 @@ namespace OpenAPT::File
             FILE *in = fopen(file_name, "rb");
             if (!in)
             {
-                // spdlog::warn("Failed to open file {}", file_name);
+                spdlog::warn("Failed to open file {}", file_name);
                 continue;
             }
             char buf[CHUNK];
@@ -203,12 +205,12 @@ namespace OpenAPT::File
                 {
                     fclose(in);
                     gzclose(out);
-                    // spdlog::error("Failed to compress file {}", file_name);
+                    spdlog::error("Failed to compress file {}", file_name);
                     return false;
                 }
             }
             fclose(in);
-            // spdlog::info("Compressed file {}", file_name);
+            spdlog::info("Compressed file {}", file_name);
         } while (FindNextFileA(hFind, &findData));
         FindClose(hFind);
 #else
@@ -217,7 +219,7 @@ namespace OpenAPT::File
         dir = opendir(folder_name);
         if (!dir)
         {
-            // spdlog::error("Failed to open folder {}", folder_name);
+            spdlog::error("Failed to open folder {}", folder_name);
             gzclose(out);
             return false;
         }
@@ -232,7 +234,7 @@ namespace OpenAPT::File
             if (ret < 0 || ret >= sizeof(file_name))
             {
                 // Check for truncation or other errors in snprintf()
-                // spdlog::error("Failed to compress file {} because the output was truncated or an error occurred in snprintf()", entry->d_name);
+                spdlog::error("Failed to compress file {} because the output was truncated or an error occurred in snprintf()", entry->d_name);
                 closedir(dir);
                 gzclose(out);
                 return false;
@@ -259,7 +261,7 @@ namespace OpenAPT::File
             FILE *in = fopen(file_name, "rb");
             if (!in)
             {
-                // spdlog::warn("Failed to open file {}", file_name);
+                spdlog::warn("Failed to open file {}", file_name);
                 continue;
             }
             char buf[CHUNK];
@@ -270,62 +272,159 @@ namespace OpenAPT::File
                 {
                     fclose(in);
                     gzclose(out);
-                    // spdlog::error("Failed to compress file {}", file_name);
+                    spdlog::error("Failed to compress file {}", file_name);
                     return false;
                 }
             }
             fclose(in);
-            // spdlog::info("Compressed file {}", file_name);
+            spdlog::info("Compressed file {}", file_name);
         }
         closedir(dir);
 #endif
         gzclose(out);
-        // spdlog::info("Compressed folder {} -> {}", folder_name, outfile_name);
+        spdlog::info("Compressed folder {} -> {}", folder_name, outfile_name);
+        return true;
+    }
+
+    bool extract_zip(const std::string &zip_file, const std::string &destination_folder)
+    {
+        std::ifstream file(zip_file, std::ios::binary);
+        if (!file)
+        {
+            spdlog::error("Failed to open ZIP file: {}", zip_file);
+            return false;
+        }
+
+        std::vector<char> buffer(8192);
+
+        z_stream stream{};
+        stream.zalloc = Z_NULL;
+        stream.zfree = Z_NULL;
+        stream.opaque = Z_NULL;
+        stream.avail_in = 0;
+        stream.next_in = Z_NULL;
+
+        int ret = inflateInit2(&stream, 15 + 16); // 解压缩方法使用 gzip 格式
+        if (ret != Z_OK)
+        {
+            spdlog::error("Failed to initialize zlib: {}", ret);
+            return false;
+        }
+
+        while (true)
+        {
+            file.read(buffer.data(), buffer.size());
+            stream.avail_in = static_cast<uInt>(file.gcount());
+            stream.next_in = reinterpret_cast<Bytef *>(buffer.data());
+
+            if (stream.avail_in == 0)
+                break;
+
+            do
+            {
+                std::vector<char> output_buffer(8192);
+
+                stream.avail_out = static_cast<uInt>(output_buffer.size());
+                stream.next_out = reinterpret_cast<Bytef *>(output_buffer.data());
+
+                ret = inflate(&stream, Z_NO_FLUSH);
+                if (ret == Z_STREAM_ERROR)
+                {
+                    spdlog::error("Failed to inflate data: {}", ret);
+                    inflateEnd(&stream);
+                    return false;
+                }
+
+                std::size_t output_size = output_buffer.size() - stream.avail_out;
+                if (output_size > 0)
+                {
+                    std::string entry_path = destination_folder + "/" + std::to_string(stream.total_in) + ".txt";
+                    std::ofstream output_file(entry_path, std::ios::binary | std::ios::app);
+                    output_file.write(output_buffer.data(), output_size);
+                    output_file.close();
+                }
+            } while (stream.avail_out == 0);
+        }
+
+        inflateEnd(&stream);
+        return true;
+    }
+
+    bool create_zip(const std::string &source_folder, const std::string &zip_file)
+    {
+        std::ofstream file(zip_file, std::ios::binary | std::ios::trunc);
+        if (!file)
+        {
+            spdlog::error("Failed to create ZIP file: {}", zip_file);
+            return false;
+        }
+
+        std::vector<char> buffer(8192);
+
+        z_stream stream{};
+        stream.zalloc = Z_NULL;
+        stream.zfree = Z_NULL;
+        stream.opaque = Z_NULL;
+
+        int ret = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY); // 压缩方法使用 gzip 格式
+        if (ret != Z_OK)
+        {
+            spdlog::error("Failed to initialize zlib: {}", ret);
+            return false;
+        }
+
+        std::vector<std::string> file_paths;
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(source_folder))
+        {
+            if (std::filesystem::is_regular_file(entry))
+            {
+                file_paths.push_back(entry.path().string());
+            }
+        }
+
+        for (const auto &file_path : file_paths)
+        {
+            std::ifstream input_file(file_path, std::ios::binary);
+            if (!input_file)
+            {
+                spdlog::error("Failed to open file: {}", file_path);
+                continue;
+            }
+
+            while (input_file.good())
+            {
+                input_file.read(buffer.data(), buffer.size());
+                stream.avail_in = static_cast<uInt>(input_file.gcount());
+                stream.next_in = reinterpret_cast<Bytef *>(buffer.data());
+
+                do
+                {
+                    std::vector<char> output_buffer(8192);
+
+                    stream.avail_out = static_cast<uInt>(output_buffer.size());
+                    stream.next_out = reinterpret_cast<Bytef *>(output_buffer.data());
+
+                    ret = deflate(&stream, Z_FINISH);
+                    if (ret == Z_STREAM_ERROR)
+                    {
+                        spdlog::error("Failed to deflate data: {}", ret);
+                        deflateEnd(&stream);
+                        return false;
+                    }
+
+                    std::size_t output_size = output_buffer.size() - stream.avail_out;
+                    if (output_size > 0)
+                    {
+                        file.write(output_buffer.data(), output_size);
+                    }
+                } while (stream.avail_out == 0);
+            }
+
+            input_file.close();
+        }
+
+        deflateEnd(&stream);
         return true;
     }
 
 }
-
-/*
-int main()
-{
-    std::string file_path = "path_to_your_file";
-    std::string output_folder = "path_to_your_output_folder";
-
-    try
-    {
-        bool compressed = compress_file(file_path, output_folder);
-        if (compressed)
-        {
-            std::cout << "File compressed successfully." << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to compress file." << std::endl;
-        }
-    }
-    catch (const std::exception& ex)
-    {
-        std::cout << "Exception occurred: " << ex.what() << std::endl;
-    }
-
-    try
-    {
-        bool decompressed = decompress_file(file_path, output_folder);
-        if (decompressed)
-        {
-            std::cout << "File decompressed successfully." << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to decompress file." << std::endl;
-        }
-    }
-    catch (const std::exception& ex)
-    {
-        std::cout << "Exception occurred: " << ex.what() << std::endl;
-    }
-
-    return 0;
-}
-*/

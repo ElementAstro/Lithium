@@ -33,8 +33,6 @@ namespace crow
     class ILogHandler
     {
     public:
-        virtual ~ILogHandler() = default;
-
         virtual void log(std::string message, LogLevel level) = 0;
     };
 

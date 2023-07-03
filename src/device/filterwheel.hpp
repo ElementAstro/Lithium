@@ -33,11 +33,11 @@ Description: Basic Focuser Defination
 
 #include "device.hpp"
 
-class Filterwheel : public Device
+class Filterwheel : public virtual Device
 {
 public:
     Filterwheel(const std::string &name);
     ~Filterwheel();
 
-    virtual bool moveTo(const int position) {}
+    virtual bool moveTo(const int position) = 0;
 };

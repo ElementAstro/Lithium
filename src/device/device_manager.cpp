@@ -31,7 +31,13 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
-#include "property/json.hpp"
+#include "nlohmann/json.hpp"
+#include <spdlog/spdlog.h>
+
+#include "camera.hpp"
+#include "telescope.hpp"
+#include "focuser.hpp"
+#include "filterwheel.hpp"
 
 namespace OpenAPT
 {
@@ -86,7 +92,7 @@ namespace OpenAPT
         // Check if device name already exists
         if (findDeviceByName(name))
         {
-            spdlog::warn("A device with name {} already exists, please choose a different name", name);
+            //spdlog::warn("A device with name {} already exists, please choose a different name", name);
             return;
         }
 
@@ -102,30 +108,30 @@ namespace OpenAPT
         {
         case DeviceType::Camera:
         {
-            spdlog::debug("Trying to add a new camera instance : {}", newName);
-            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDICamera>(newName));
-            spdlog::debug("Added new camera instance successfully");
+            //spdlog::debug("Trying to add a new camera instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Camera>(newName));
+            //spdlog::debug("Added new camera instance successfully");
             break;
         }
         case DeviceType::Telescope:
         {
-            spdlog::debug("Trying to add a new telescope instance : {}", newName);
-            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDITelescope>(newName));
-            spdlog::debug("Added new telescope instance successfully");
+            //spdlog::debug("Trying to add a new telescope instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+            //spdlog::debug("Added new telescope instance successfully");
             break;
         }
         case DeviceType::Focuser:
         {
-            spdlog::debug("Trying to add a new Focuser instance : {}", newName);
-            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDIFocuser>(newName));
-            spdlog::debug("Added new focuser instance successfully");
+            //spdlog::debug("Trying to add a new Focuser instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+            //spdlog::debug("Added new focuser instance successfully");
             break;
         }
         case DeviceType::FilterWheel:
         {
-            spdlog::debug("Trying to add a new filterwheel instance : {}", newName);
-            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<INDIFilterwheel>(newName));
-            spdlog::debug("Added new filterwheel instance successfully");
+            //spdlog::debug("Trying to add a new filterwheel instance : {}", newName);
+            m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
+            //spdlog::debug("Added new filterwheel instance successfully");
             break;
         }
         case DeviceType::Solver:
@@ -135,7 +141,7 @@ namespace OpenAPT
             // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
             break;
         default:
-            spdlog::error("Invalid device type");
+            //spdlog::error("Invalid device type");
             break;
         }
     }
@@ -154,7 +160,7 @@ namespace OpenAPT
                 return;
             }
         }
-        spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
+        //spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
     }
 
     void DeviceManager::removeDevicesByName(const std::string &name)
@@ -181,7 +187,7 @@ namespace OpenAPT
         }
         else
         {
-            spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
+            //spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
             return nullptr;
         }
     }
@@ -217,7 +223,7 @@ namespace OpenAPT
     std::shared_ptr<SimpleTask> DeviceManager::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
+        //spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
         auto device = findDeviceByName(device_name);
         if (device != nullptr)
         {
@@ -227,12 +233,12 @@ namespace OpenAPT
             {
                 if (device_type == "INDI")
                 {
-                    spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDICamera>(device)->getSimpleTask(task_name, params);
+                    //spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
+                    return std::dynamic_pointer_cast<Camera>(device)->getSimpleTask(task_name, params);
                 }
                 else if (device_type == "ASCOM")
                 {
-                    spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
+                    //spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
                 }
                 break;
             }
@@ -240,8 +246,8 @@ namespace OpenAPT
             {
                 if (device_type == "INDI")
                 {
-                    spdlog::debug("Found Telescope device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDITelescope>(device)->getSimpleTask(task_name, params);
+                    //spdlog::debug("Found Telescope device: {} with driver: {}", device_name, device_type);
+                    return std::dynamic_pointer_cast<Telescope>(device)->getSimpleTask(task_name, params);
                 }
                 break;
             }
@@ -249,8 +255,8 @@ namespace OpenAPT
             {
                 if (device_type == "INDI")
                 {
-                    spdlog::debug("Found Focuser device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDIFocuser>(device)->getSimpleTask(task_name, params);
+                    //spdlog::debug("Found Focuser device: {} with driver: {}", device_name, device_type);
+                    return std::dynamic_pointer_cast<Focuser>(device)->getSimpleTask(task_name, params);
                 }
                 break;
             }
@@ -258,8 +264,8 @@ namespace OpenAPT
             {
                 if (device_type == "INDI")
                 {
-                    spdlog::debug("Found FilterWheel device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<INDIFilterwheel>(device)->getSimpleTask(task_name, params);
+                    //spdlog::debug("Found FilterWheel device: {} with driver: {}", device_name, device_type);
+                    return std::dynamic_pointer_cast<Filterwheel>(device)->getSimpleTask(task_name, params);
                 }
                 break;
             }
@@ -267,12 +273,12 @@ namespace OpenAPT
             {
                 if (device_type == "ASTAP")
                 {
-                    spdlog::debug("Found Solver: ASTAP");
+                    //spdlog::debug("Found Solver: ASTAP");
                     // return std::make_shared<OpenAPT::ASTapSolverTask>();
                 }
                 if (device_type == "Astrometry")
                 {
-                    spdlog::debug("Found Solver: Astrometry");
+                    //spdlog::debug("Found Solver: Astrometry");
                     // return std::make_shared<OpenAPT::AstrometrySolverTask>();
                 }
                 break;
@@ -281,19 +287,19 @@ namespace OpenAPT
             {
                 if (device_type == "PHD2")
                 {
-                    spdlog::debug("Found Guider device: {} with driver: {}", device_name, device_type);
+                    //spdlog::debug("Found Guider device: {} with driver: {}", device_name, device_type);
                     // return std::make_shared<OpenAPT::PHD2GuiderTask>();
                 }
                 break;
             }
             default:
-                spdlog::error("Invalid device type");
+                //spdlog::error("Invalid device type");
                 break;
             }
         }
         else
         {
-            spdlog::debug("Device {} not found", device_name);
+            //spdlog::debug("Device {} not found", device_name);
         }
         return nullptr;
     }
@@ -301,7 +307,7 @@ namespace OpenAPT
     std::shared_ptr<ConditionalTask> DeviceManager::getConditionalTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
+        //spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
         auto device = findDeviceByName(device_name);
         if (device != nullptr)
         {
@@ -326,7 +332,7 @@ namespace OpenAPT
             {
             }
             default:
-                spdlog::error("Invalid device type");
+                //spdlog::error("Invalid device type");
                 break;
             }
         }

@@ -32,11 +32,8 @@ Description: Task Runner
 #include <iostream>
 #include <fstream>
 
-#include "define.hpp"
+#include "task.hpp"
 #include "runner.hpp"
-#include "openapt.hpp"
-
-extern MyApp m_App;
 
 namespace OpenAPT
 {

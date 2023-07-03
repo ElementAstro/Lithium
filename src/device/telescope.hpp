@@ -33,7 +33,7 @@ Description: Basic Telescope Defination
 
 #include "device.hpp"
 
-class Telescope : public Device
+class Telescope : public virtual Device
 {
 public:
     /**
@@ -67,19 +67,19 @@ protected:
      * @brief 获取望远镜是否在指向新目标
      * @return 返回 true 表示正在指向新目标，否则返回 false
      */
-    bool isSlewing(const nlohmann::json &params) = 0;
+    virtual bool isSlewing(const nlohmann::json &params) = 0;
 
     /**
      * @brief 获取当前赤经位置
      * @return 当前赤经位置
      */
-    std::string getCurrentRA(const nlohmann::json &params) = 0;
+    virtual std::string getCurrentRA(const nlohmann::json &params) = 0;
 
     /**
      * @brief 获取当前赤纬位置
      * @return 当前赤纬位置
      */
-    std::string getCurrentDec(const nlohmann::json &params) = 0;
+    virtual std::string getCurrentDec(const nlohmann::json &params) = 0;
 
     /**
      * @brief 开始跟踪运动目标
@@ -113,13 +113,13 @@ protected:
      * @brief 获取当前跟踪模式
      * @return 当前跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
      */
-    std::string getTrackingMode(const nlohmann::json &params) = 0;
+    virtual std::string getTrackingMode(const nlohmann::json &params) = 0;
 
     /**
      * @brief 获取当前跟踪速度
      * @return 当前跟踪速度
      */
-    std::string getTrackingSpeed(const nlohmann::json &params) = 0;
+    virtual std::string getTrackingSpeed(const nlohmann::json &params) = 0;
 
     /**
      * @brief 将望远镜回到家位置
@@ -143,7 +143,7 @@ protected:
      * @brief 获取望远镜是否可以回到家位置
      * @return 返回 true 表示望远镜可以回到家位置，否则返回 false
      */
-    bool isHomeAvailable(const nlohmann::json &params) = 0;
+    virtual bool isHomeAvailable(const nlohmann::json &params) = 0;
 
     /**
      * @brief 停车

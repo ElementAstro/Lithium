@@ -1,9 +1,6 @@
 #pragma once
 
-#ifndef ASIO_STANDALONE
-#define ASIO_STANDALONE
-#endif
-#include <asio.hpp>
+#include <boost/asio.hpp>
 
 #include "crow/common.h"
 #include "crow/ci_map.h"
@@ -29,18 +26,16 @@ namespace crow
         HTTPMethod method;
         std::string raw_url;     ///< The full URL containing the `?` and URL parameters.
         std::string url;         ///< The endpoint without any parameters.
-        query_string url_params; ///< The parameters associated with the request. (everything after the `?` in the URL)
+        query_string url_params; ///< The parameters associated with the request. (everything after the `?`)
         ci_map headers;
         std::string body;
         std::string remote_ip_address; ///< The IP address from which the request was sent.
         unsigned char http_ver_major, http_ver_minor;
-        bool keep_alive,    ///< Whether or not the server should send a `connection: Keep-Alive` header to the client.
-          close_connection, ///< Whether or not the server should shut down the TCP connection once a response is sent.
-          upgrade;          ///< Whether or noth the server should change the HTTP connection to a different connection.
+        bool keep_alive, close_connection, upgrade;
 
         void* middleware_context{};
         void* middleware_container{};
-        asio::io_service* io_service{};
+        boost::asio::io_service* io_service{};
 
         /// Construct an empty request. (sets the method to `GET`)
         request():
@@ -65,15 +60,6 @@ namespace crow
         bool check_version(unsigned char major, unsigned char minor) const
         {
             return http_ver_major == major && http_ver_minor == minor;
-        }
-
-        /// Get the body as parameters in QS format.
-
-        ///
-        /// This is meant to be used with requests of type "application/x-www-form-urlencoded"
-        const query_string get_body_params() const
-        {
-            return query_string(body, false);
         }
 
         /// Send data to whoever made this request with a completion handler and return immediately.

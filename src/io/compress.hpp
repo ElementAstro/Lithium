@@ -53,7 +53,7 @@ namespace OpenAPT::File
      * @note If the file name already contains the .gz suffix, it will not be compressed again.
      */
     bool compress_file(const std::string &file_name, const std::string &output_folder);
-    
+
     /**
      * @brief 对单个文件进行解压缩
      * @param file_name 待解压的文件名（包含路径）
@@ -89,4 +89,23 @@ namespace OpenAPT::File
      * @note The compressed files will be saved in the original directory, and files in subdirectories will not be compressed.
      */
     bool compress_folder(const char *folder_name);
+
+    /**
+     * @brief 创建ZIP文件，将指定文件夹中的内容压缩到目标ZIP文件中。
+     *
+     * @param source_folder 源文件夹的路径。
+     * @param zip_file 目标ZIP文件的路径。
+     * @return 成功创建ZIP文件返回true，否则返回false。
+     */
+    bool create_zip(const std::string &source_folder, const std::string &zip_file);
+
+    /**
+     * @brief 从ZIP文件中提取内容到指定的目标文件夹中。
+     *
+     * @param zip_file ZIP文件的路径。
+     * @param destination_folder 目标文件夹的路径。
+     * @return 成功提取内容返回true，否则返回false。
+     */
+    bool extract_zip(const std::string &zip_file, const std::string &destination_folder);
+
 }

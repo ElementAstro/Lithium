@@ -35,8 +35,6 @@ Description: Astap Solver Interface
 #include <future>
 #include <chrono>
 #include <stdexcept>
-#include <spdlog/spdlog.h>
-#include <fitsio.h>
 #include <iostream>
 #include <cstring>
 #include <filesystem>
@@ -49,6 +47,9 @@ Description: Astap Solver Interface
 #else
 #include <unistd.h>
 #endif
+
+#include <spdlog/spdlog.h>
+#include <fitsio.h>
 
 using namespace std;
 
@@ -66,35 +67,28 @@ namespace OpenAPT::API::ASTAP
      */
     bool check_executable_file(const string &file_name, const string &file_ext)
     {
-// 构建文件路径
 #if defined(_WIN32)
         fs::path file_path = file_name + file_ext;
 #else
         fs::path file_path = file_name;
 #endif
 
-        // 输出调试信息
         spdlog::debug("Checking file '{}'.", file_path.string());
 
-        // 检查文件是否存在
         if (!fs::exists(file_path))
         {
             spdlog::warn("The file '{}' does not exist.", file_path.string());
             return false;
         }
 
-// 检查文件权限（仅限 Linux）
-#if !defined(_WIN32)
-        if (!fs::is_regular_file(file_path) || access(file_path.c_str(), X_OK) != 0)
+#if defined(_WIN32)
+        if (!fs::is_regular_file(file_path) || !(GetFileAttributesA(file_path.generic_string().c_str()) & FILE_ATTRIBUTE_DIRECTORY))
         {
             spdlog::warn("The file '{}' is not a regular file or is not executable.", file_path.string());
             return false;
         }
-#endif
-
-// 检查文件是否为可执行文件（仅限 Windows）
-#if defined(_WIN32)
-        if (!fs::is_regular_file(file_path) || !(GetFileAttributesA(file_path.c_str()) & FILE_ATTRIBUTE_DIRECTORY))
+#else
+        if (!fs::is_regular_file(file_path) || access(file_path.c_str(), X_OK) != 0)
         {
             spdlog::warn("The file '{}' is not a regular file or is not executable.", file_path.string());
             return false;

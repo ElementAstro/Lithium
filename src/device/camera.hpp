@@ -33,7 +33,7 @@ Description: Basic Camera Defination
 
 #include "device.hpp"
 
-class Camera : public Device
+class Camera : public virtual Device
 {
 public:
     /**

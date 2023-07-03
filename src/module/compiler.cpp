@@ -30,7 +30,6 @@ Description: Compiler
 **************************************************/
 
 #include "compiler.hpp"
-#include "openapt.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -38,12 +37,11 @@ Description: Compiler
 #include <nlohmann/json.hpp>
 #include <filesystem>
 
-extern MyApp m_App;
-
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
+#include <windows.h>
 #define COMPILER "cl.exe"
 #define CMD_PREFIX ""
 #define CMD_SUFFIX ".dll"
@@ -132,6 +130,7 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     // Cache compiled module
     cache_[moduleName + "::" + functionName] = output;
 
+    /*
     // Load the compiled module
     if(m_App.GetModuleLoader()->LoadModule(output, moduleName)) {
         spdlog::info("Module {}::{} compiled successfully.", moduleName, functionName);
@@ -140,6 +139,8 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
         spdlog::error("Failed to load the compiled module: {}", output);
         return false;
     }
+    */
+    return false;
 }
 
 
@@ -166,12 +167,9 @@ bool Compiler::CopyFile(const std::string& source, const std::string& destinatio
 int Compiler::RunShellCommand(const std::string &command, std::istream &inputStream, std::ostream &outputStream)
 {
     int exitCode = -1;
-
 #ifdef _WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
+    HANDLE hStdoutRead;
+
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
     HANDLE hStdinRead, hStdoutWrite;
@@ -179,12 +177,12 @@ int Compiler::RunShellCommand(const std::string &command, std::istream &inputStr
     sa.nLength = sizeof(sa);
     sa.lpSecurityDescriptor = NULL;
     sa.bInheritHandle = TRUE;
-    if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0))
+    if (!CreatePipe(&hStdinRead, &hStdoutWrite, &sa, 0))
     {
         spdlog::error("Failed to create input pipe for shell command: {}", command);
         return exitCode;
     }
-    if (!SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0))
+    if (!SetHandleInformation(hStdoutWrite, HANDLE_FLAG_INHERIT, 0))
     {
         spdlog::error("Failed to set input handle information for shell command: {}", command);
         return exitCode;
@@ -203,7 +201,7 @@ int Compiler::RunShellCommand(const std::string &command, std::istream &inputStr
     {
         spdlog::error("Failed to launch shell command: {}", command);
         CloseHandle(hStdinRead);
-        CloseHandle(hStdinWrite);
+        CloseHandle(hStdoutWrite);
         CloseHandle(hStdoutRead);
         CloseHandle(hStdoutWrite);
         return exitCode;
@@ -211,15 +209,15 @@ int Compiler::RunShellCommand(const std::string &command, std::istream &inputStr
     CloseHandle(hStdinRead);
     CloseHandle(hStdoutWrite);
 
-    std::thread inputThread([&inputStream, hStdinWrite]() {
+    std::thread inputThread([&inputStream, hStdoutWrite]() {
         std::string line;
         while (std::getline(inputStream, line))
         {
             line += "\n";
             DWORD written = 0;
-            WriteFile(hStdinWrite, line.c_str(), line.size(), &written, NULL);
+            WriteFile(hStdoutWrite, line.c_str(), line.size(), &written, NULL);
         }
-        CloseHandle(hStdinWrite);
+        CloseHandle(hStdoutWrite);
     });
 
     std::array<char, 8192> buffer;

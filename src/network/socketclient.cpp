@@ -1,10 +1,9 @@
 #include "socketclient.hpp"
 
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include <spdlog/spdlog.h>
 
 TcpClient::TcpClient(const std::string &host, const std::string &port)
-    : socket_(io_context_), host_(host), port_(port),
-      logger_(spdlog::stdout_color_mt("client_logger"))
+    : socket_(io_context_), host_(host), port_(port)
 {
 }
 
@@ -18,12 +17,12 @@ bool TcpClient::Connect()
         auto endpoints = resolver.resolve(host_, port_);
 
         boost::asio::connect(socket_, endpoints);
-        logger_->info("Connected to {}:{}", host_, port_);
+        spdlog::info("Connected to {}:{}", host_, port_);
         return true;
     }
     catch (std::exception &e)
     {
-        logger_->error("Failed to connect to {}:{}. Error message: {}", host_, port_, e.what());
+        spdlog::error("Failed to connect to {}:{}. Error message: {}", host_, port_, e.what());
         return false;
     }
 }
@@ -34,12 +33,12 @@ bool TcpClient::Send(const json &data)
     {
         std::string message = data.dump();
         boost::asio::write(socket_, boost::asio::buffer(message));
-        logger_->debug("Sent data to server: {}", message);
+        spdlog::debug("Sent data to server: {}", message);
         return true;
     }
     catch (std::exception &e)
     {
-        logger_->error("Failed to send data to server. Error message: {}", e.what());
+        spdlog::error("Failed to send data to server. Error message: {}", e.what());
         return false;
     }
 }
@@ -50,7 +49,7 @@ bool TcpClient::Receive(json &response, int timeout)
     {
         if (timeout > 0)
         {
-            socket_.set_option(boost::asio::socket_base::receive_timeout(boost::asio::chrono::seconds(timeout)));
+            //socket_.set_option(boost::asio::socket_base::receive_timeout(boost::asio::chrono::seconds(timeout)));
         }
 
         boost::asio::streambuf receive_buffer;
@@ -67,18 +66,18 @@ bool TcpClient::Receive(json &response, int timeout)
             std::getline(input, message);
 
             response = json::parse(message);
-            logger_->debug("Received data from server: {}", response.dump());
+            spdlog::debug("Received data from server: {}", response.dump());
             return true;
         }
         else
         {
-            logger_->warn("No data received from server. Error message: {}", error.message());
+            spdlog::warn("No data received from server. Error message: {}", error.message());
             return false;
         }
     }
     catch (std::exception &e)
     {
-        logger_->error("Failed to receive data from server. Error message: {}", e.what());
+        spdlog::error("Failed to receive data from server. Error message: {}", e.what());
         return false;
     }
 }
@@ -90,7 +89,7 @@ void TcpClient::Disconnect()
         boost::system::error_code ec;
         socket_.shutdown(tcp::socket::shutdown_both, ec);
         socket_.close();
-        logger_->info("Disconnected from server.");
+        spdlog::info("Disconnected from server.");
     }
 }
 
@@ -105,12 +104,12 @@ bool TcpClient::CheckServerExistence()
     if (temp_socket.is_open())
     {
         temp_socket.close();
-        logger_->info("Server {}:{} exists.", host_, port_);
+        spdlog::info("Server {}:{} exists.", host_, port_);
         return true;
     }
     else
     {
-        logger_->error("Server {}:{} does not exist.", host_, port_);
+        spdlog::error("Server {}:{} does not exist.", host_, port_);
         return false;
     }
 }
@@ -122,8 +121,7 @@ bool TcpClient::IsConnected()
 
 void TcpClient::SetTimeout(int timeout)
 {
-    socket_.set_option(boost::asio::socket_base::receive_timeout(boost::asio::chrono::seconds(timeout)));
-    socket_.set_option(boost::asio::socket_base::send_timeout(boost::asio::chrono::seconds(timeout)));
+    
 }
 
 void TcpClient::ClearSocket()

@@ -8,6 +8,9 @@
 /* #ifdef - enables logging */
 #define CROW_ENABLE_LOGGING
 
+/* #ifdef - enables ssl */
+//#define CROW_ENABLE_SSL
+
 /* #ifdef - enforces section 5.2 and 6.1 of RFC6455 (only accepting masked messages from clients) */
 //#define CROW_ENFORCE_WS_SPEC
 
@@ -45,9 +48,6 @@
 #endif
 #if __cplusplus >= 201703L
 #define CROW_CAN_USE_CPP17
-#if defined(__GNUC__) && __GNUC__ < 8
-#define CROW_FILESYSTEM_IS_EXPERIMENTAL
-#endif
 #endif
 
 #if defined(_MSC_VER)

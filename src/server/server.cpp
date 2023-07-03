@@ -78,13 +78,13 @@ namespace OpenAPT
                                {
         if (!error) {
             // 处理新连接。
-            spdlog::info(logger, "New connection from: {}:{}", socket->remote_endpoint().address().to_string(), socket->remote_endpoint().port());
+            spdlog::info("New connection from: {}:{}", socket->remote_endpoint().address().to_string(), socket->remote_endpoint().port());
             ++active_connections_;
 
             // 异步读取数据。
             do_read(socket);
         } else {
-            spdlog::error(logger, "Error accepting connection: {}", error.message());
+            spdlog::error("Error accepting connection: {}", error.message());
         }
 
         // 继续接受下一个连接请求。
@@ -105,7 +105,7 @@ namespace OpenAPT
                                               std::string message_str;
                                               std::getline(input, message_str);
 
-                                              spdlog::info(logger, "Received {} bytes of data: {}", bytes_transferred, message_str);
+                                              spdlog::info("Received {} bytes of data: {}", bytes_transferred, message_str);
 
                                               // 解析 JSON 数据。
                                               json message;
@@ -115,7 +115,7 @@ namespace OpenAPT
                                               }
                                               catch (const std::exception &e)
                                               {
-                                                  spdlog::error(logger, "Error parsing JSON data: {}", e.what());
+                                                  spdlog::error("Error parsing JSON data: {}", e.what());
                                               }
 
                                               // 处理消息。
@@ -133,7 +133,7 @@ namespace OpenAPT
                                           }
                                           else
                                           {
-                                              spdlog::error(logger, "Error receiving data: {}", error.message());
+                                              spdlog::error("Error receiving data: {}", error.message());
 
                                               // 关闭连接。
                                               socket->close();
@@ -150,11 +150,11 @@ namespace OpenAPT
                                  {
                                      if (!error)
                                      {
-                                         spdlog::info(logger, "Sent {} bytes of reply: {}", bytes_transferred, message.dump());
+                                         spdlog::info("Sent {} bytes of reply: {}", bytes_transferred, message.dump());
                                      }
                                      else
                                      {
-                                         spdlog::error(logger, "Error sending data: {}", error.message());
+                                         spdlog::error("Error sending data: {}", error.message());
 
                                          // 关闭连接。
                                          socket->close();

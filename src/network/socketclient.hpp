@@ -1,11 +1,11 @@
-#ifndef TCP_CLIENT_H
+#pragma once
+
 #define TCP_CLIENT_H
 
 #include <string>
 #include <memory>
 #include <boost/asio.hpp>
-#include "json.hpp"
-#include "spdlog/spdlog.h"
+#include "nlohmann/json.hpp"
 
 using boost::asio::ip::tcp;
 using json = nlohmann::json;
@@ -234,7 +234,5 @@ private:
     tcp::socket socket_;
     std::string host_;
     std::string port_;
-    std::shared_ptr<spdlog::logger> logger_;
 };
 
-#endif // TCP_CLIENT_H

@@ -202,7 +202,7 @@ void DownloadManager::run(size_t download_speed)
         {
             continue;
         }
-
+        start_time_ = std::chrono::system_clock::now();
         download_task(*task, download_speed);
     }
 }

@@ -64,174 +64,202 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/crow)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 
-set(plugins_SRC
-		${openapt_src_dir}/src/plugins/file.cpp
-		${openapt_src_dir}/src/plugins/file.hpp
+set(api_SRC
+	${openapt_src_dir}/src/api/astap.cpp
+	${openapt_src_dir}/src/api/astap.hpp
 
-		${openapt_src_dir}/src/plugins/process.cpp
-		${openapt_src_dir}/src/plugins/process.hpp
+	${openapt_src_dir}/src/api/astrometry.cpp
+	${openapt_src_dir}/src/api/astrometry.hpp
 
-		${openapt_src_dir}/src/plugins/compress.cpp
-		${openapt_src_dir}/src/plugins/compress.hpp
+    ${openapt_src_dir}/src/api/phd2client.cpp
+	${openapt_src_dir}/src/api/phd2client.hpp
+)
 
-		${openapt_src_dir}/src/plugins/time.cpp
-		${openapt_src_dir}/src/plugins/time.hpp
+set(config_SRC
+    ${openapt_src_dir}/src/config/configor.cpp
+    ${openapt_src_dir}/src/config/configor.hpp
 
-		${openapt_src_dir}/src/plugins/io.cpp
-		${openapt_src_dir}/src/plugins/io.hpp
+    ${openapt_src_dir}/src/config/achievement.cpp
+    ${openapt_src_dir}/src/config/achievement.hpp
 
-		${openapt_src_dir}/src/plugins/xmlreader.cpp
-		${openapt_src_dir}/src/plugins/xmlreader.hpp
+    ${openapt_src_dir}/src/config/achievement_list.cpp
+    ${openapt_src_dir}/src/config/achievement_list.hpp
+)
 
-		${openapt_src_dir}/src/plugins/terminal.cpp
-		${openapt_src_dir}/src/plugins/terminal.hpp
+set(database_SRC
+    ${openapt_src_dir}/src/database/database.cpp
+    ${openapt_src_dir}/src/database/database.hpp
+)
 
-		${openapt_src_dir}/src/plugins/sha256.hpp
-		${openapt_src_dir}/src/plugins/glob.hpp
+set(debug_SRC
+    ${openapt_src_dir}/src/debug/terminal.cpp
+    ${openapt_src_dir}/src/debug/terminal.hpp
+)
+
+set(device_SRC
+    ${openapt_src_dir}/src/device/device.cpp
+    ${openapt_src_dir}/src/device/device.hpp
+
+    #${openapt_src_dir}/src/device/device_manager.cpp
+    #${openapt_src_dir}/src/device/device_manager.hpp
+)
+
+set(driver_indi_SRC
+    ${openapt_src_dir}/src/api/indiclient.cpp
+    ${openapt_src_dir}/src/api/indiclient.hpp
+
+    ${openapt_src_dir}/src/driver/indi/indi_exception.hpp
+
+	${openapt_src_dir}/src/driver/indi/indicamera.cpp
+	${openapt_src_dir}/src/driver/indi/indicamera.hpp
+
+	${openapt_src_dir}/src/driver/indi/indifocuser.cpp
+	${openapt_src_dir}/src/driver/indi/indifocuser.hpp
+
+	${openapt_src_dir}/src/driver/indi/inditelescope.cpp
+	${openapt_src_dir}/src/driver/indi/inditelescope.hpp
+
+	${openapt_src_dir}/src/driver/indi/indifilterwheel.cpp
+	${openapt_src_dir}/src/driver/indi/indifilterwheel.hpp
 )
 
 set(image_SRC
-		${openapt_src_dir}/src/image/image.cpp
-		${openapt_src_dir}/src/image/image.hpp
+	${openapt_src_dir}/src/image/image.cpp
+	${openapt_src_dir}/src/image/image.hpp
 
-		${openapt_src_dir}/src/image/draw.cpp
+	${openapt_src_dir}/src/image/draw.cpp
 )
 
-set(asx_SRC
-        ${openapt_src_dir}/src/asx/search.cpp
-		${openapt_src_dir}/src/asx/search.hpp
+set(io_SRC
+    ${openapt_src_dir}/src/io/compress.cpp
+    ${openapt_src_dir}/src/io/compress.hpp
+
+    ${openapt_src_dir}/src/io/file.cpp
+    ${openapt_src_dir}/src/io/file.hpp
+
+    ${openapt_src_dir}/src/io/glob.hpp
+
+    ${openapt_src_dir}/src/io/io.cpp
+    ${openapt_src_dir}/src/io/io.hpp
+
+    ${openapt_src_dir}/src/io/system.cpp
+    ${openapt_src_dir}/src/io/system.hpp
 )
 
-set(api_SRC
-		${openapt_src_dir}/src/api/astap.cpp
-		${openapt_src_dir}/src/api/astap.hpp
-
-		${openapt_src_dir}/src/api/astrometry.cpp
-		${openapt_src_dir}/src/api/astrometry.hpp
-
-		${openapt_src_dir}/src/api/indiclient.cpp
-		${openapt_src_dir}/src/api/indiclient.hpp
+set(launcher_SRC
+    ${openapt_src_dir}/src/launcher/crash.cpp
+    ${openapt_src_dir}/src/launcher/crash.hpp
 )
 
-set(webapi_SRC
-		${openapt_src_dir}/src/webapi/http_api.cpp
-		${openapt_src_dir}/src/webapi/http_api.hpp
+set(logger_SRC
+    ${openapt_src_dir}/src/logger/aptlogger.cpp
+    ${openapt_src_dir}/src/logger/aptlogger.hpp
+
+    ${openapt_src_dir}/src/logger/log_manager.cpp
+    ${openapt_src_dir}/src/logger/log_manager.hpp
 )
 
-set(indi_SRC
-		${openapt_src_dir}/src/indi/indicamera.cpp
-		${openapt_src_dir}/src/indi/indicamera.hpp
+set(module_SRC
+    ${openapt_src_dir}/src/module/modloader.cpp
+    ${openapt_src_dir}/src/module/modloader.hpp
 
-		${openapt_src_dir}/src/indi/indifocuser.cpp
-		${openapt_src_dir}/src/indi/indifocuser.hpp
-
-		${openapt_src_dir}/src/indi/inditelescope.cpp
-		${openapt_src_dir}/src/indi/inditelescope.hpp
-
-		${openapt_src_dir}/src/indi/indifilterwheel.cpp
-		${openapt_src_dir}/src/indi/indifilterwheel.hpp
+    #${openapt_src_dir}/src/module/compiler.cpp
+    #${openapt_src_dir}/src/module/compiler.hpp
 )
 
-set(indiserver_SRC
-        ${openapt_src_dir}/src/indiserver/indidvrinfo.cpp
-        ${openapt_src_dir}/src/indiserver/indidvrinfo.hpp
+set(network_SRC
+    ${openapt_src_dir}/src/network/downloader.cpp
+    ${openapt_src_dir}/src/network/downloader.hpp
 
-        ${openapt_src_dir}/src/indiserver/indimsg.cpp
-        ${openapt_src_dir}/src/indiserver/indimsg.hpp
+    ${openapt_src_dir}/src/network/httpclient.cpp
+    ${openapt_src_dir}/src/network/httpclient.hpp
 
-        ${openapt_src_dir}/src/indiserver/indiserver.cpp
-        ${openapt_src_dir}/src/indiserver/indiserver.hpp
+    ${openapt_src_dir}/src/network/socketclient.cpp
+    ${openapt_src_dir}/src/network/socketclient.hpp
 
-        ${openapt_src_dir}/src/indiserver/indismsg.cpp
-        ${openapt_src_dir}/src/indiserver/indismsg.hpp
+    ${openapt_src_dir}/src/network/time.cpp
+    ${openapt_src_dir}/src/network/time.hpp
+)
+
+set(property_SRC
+    ${openapt_src_dir}/src/property/base64.cpp
+    ${openapt_src_dir}/src/property/base64.hpp
+
+    ${openapt_src_dir}/src/property/imessage.cpp
+    ${openapt_src_dir}/src/property/imessage.hpp
+
+    ${openapt_src_dir}/src/property/sha256.hpp
+
+    ${openapt_src_dir}/src/property/uuid.cpp
+    ${openapt_src_dir}/src/property/uuid.hpp
+
+    #${openapt_src_dir}/src/property/xml.cpp
+    #${openapt_src_dir}/src/property/xml.hpp
+)
+
+set(server_SRC
+    ${openapt_src_dir}/src/server/commander.cpp
+    ${openapt_src_dir}/src/server/commander.hpp
+
+    ${openapt_src_dir}/src/server/hserver.cpp
+    ${openapt_src_dir}/src/server/hserver.hpp
+
+    ${openapt_src_dir}/src/server/server.cpp
+    ${openapt_src_dir}/src/server/server.hpp
+
+    ${openapt_src_dir}/src/server/wsserver.cpp
+    ${openapt_src_dir}/src/server/wsserver.hpp
+)
+
+set(task_SRC
+    #${openapt_src_dir}/src/task/runner.cpp
+	#${openapt_src_dir}/src/task/runner.hpp
+)
+
+set(thread_SRC
+    ${openapt_src_dir}/src/thread/thread.cpp
+    ${openapt_src_dir}/src/thread/thread.hpp
+
+    ${openapt_src_dir}/src/thread/threadpool.cpp
+    ${openapt_src_dir}/src/thread/threadpool.hpp
 )
 
 set(openapt_SRC
-		${openapt_src_dir}/src/module/modloader.cpp
-		${openapt_src_dir}/src/module/modloader.hpp
-
-		${openapt_src_dir}/src/module/pythonloader.cpp
-		${openapt_src_dir}/src/module/pythonloader.hpp
-
-		${openapt_src_dir}/src/module/compiler.cpp
-		${openapt_src_dir}/src/module/compiler.hpp
-
-		${openapt_src_dir}/src/module/sheller.cpp
-		${openapt_src_dir}/src/module/sheller.hpp
-
-		${openapt_src_dir}/src/package/downloader.cpp
-		${openapt_src_dir}/src/package/downloader.hpp
-
-		${openapt_src_dir}/src/package/packageloader.cpp
-		${openapt_src_dir}/src/package/packageloader.hpp
-
-		${openapt_src_dir}/src/task/camera_task.cpp
-		${openapt_src_dir}/src/task/camera_task.hpp
-		${openapt_src_dir}/src/task/runner.cpp
-		${openapt_src_dir}/src/task/runner.hpp
-
-		${openapt_src_dir}/src/device/basic_device.cpp
-		${openapt_src_dir}/src/device/basic_device.hpp
-
-		${openapt_src_dir}/src/device/manager.cpp
-		${openapt_src_dir}/src/device/manager.hpp
-
-		${openapt_src_dir}/src/config/logger.cpp
-		${openapt_src_dir}/src/config/logger.hpp
-		${openapt_src_dir}/src/config/achievement.cpp
-		${openapt_src_dir}/src/config/achievement.hpp
-		${openapt_src_dir}/src/config/achievement_list.cpp
-		${openapt_src_dir}/src/config/achievement_list.hpp
-
-		${openapt_src_dir}/src/openapt.cpp
-		${openapt_src_dir}/src/openapt.hpp
+	${openapt_src_dir}/src/openapt_server.cpp
+	${openapt_src_dir}/src/openapt_server.hpp
 )
 
 if(WIN32)
-    # Linux specific options
-    add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
+    add_executable(openapt_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
+    ${device_SRC} ${image_SRC} ${io_SRC} ${logger_SRC} ${module_SRC} 
+    ${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${openapt_SRC})
 
-    # Use consistent formatting for target_precompile_headers
-    target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
-
-    # Use consistent formatting for find_package
-    find_package(ZLIB REQUIRED)
-
-    # Find and link CFITSIO libraries
     find_package(CFITSIO REQUIRED)
-    target_link_libraries(openapt ${CFITSIO_LIBRARIES})
+    target_link_libraries(openapt_server ${CFITSIO_LIBRARIES})
 
     find_package(dlfcn-win32 REQUIRED)
-    target_link_libraries(openapt dlfcn-win32::dl)
+    target_link_libraries(openapt_server dlfcn-win32::dl)
 
-    find_package(CURL REQUIRED)
-    target_link_libraries(openapt CURL::libcurl)
-
-    # Find and link OpenSSL libraries
     find_package(OpenSSL REQUIRED)
     if(OpenSSL_FOUND)
-        target_link_libraries(openapt ${OPENSSL_LIBRARIES})
+        target_link_libraries(openapt_server ${OPENSSL_LIBRARIES})
         message("-- Using OpenSSL ${OPENSSL_VERSION}")
     else()
         message("-- OpenSSL Not Found")
     endif()
 
-    find_package(GSL REQUIRED)
-    target_link_libraries(openapt ${GSL_LIBRARIES})
+    find_package(ZLIB REQUIRED)
+    target_link_libraries(openapt_server ${ZLIB_LIBRARIES})
+    target_link_libraries(openapt_server pugixml-static)
 
-    find_package(OpenCV REQUIRED)
-    include_directories(${OpenCV_INCLUDE_DIRS})
-    target_link_libraries(openapt ${OpenCV_LIBS})
-
-    # Link ZLIB and pugixml-static libraries
-    target_link_libraries(openapt ${ZLIB_LIBRARIES})
-    target_link_libraries(openapt pugixml-static)
+    find_package(SQLite3 REQUIRED)
+    target_link_libraries(openapt_server sqlite3)
 
     # Set output name for openapt executable
     set_target_properties(
-        openapt
+        openapt_server
         PROPERTIES
-        OUTPUT_NAME openapt
+        OUTPUT_NAME openapt_server
     )
 elseif(UNIX)
     if(MINGW)
@@ -288,28 +316,17 @@ elseif(UNIX)
             OUTPUT_NAME openapt
         )
     elseif(UNIX AND NOT APPLE)
-        # Linux specific options
         add_executable(openapt ${plugins_SRC} ${image_SRC} ${api_SRC} ${webapi_SRC} ${indi_SRC} ${asx_SRC} ${openapt_SRC})
 
-        # Use consistent formatting for target_precompile_headers
         target_precompile_headers(openapt PUBLIC ${openapt_src_dir}/src/openapt.hpp)
 
-        # Use consistent formatting for find_package
-        find_package(ZLIB REQUIRED)
-
-        # Find and link CFITSIO libraries
         find_package(CFITSIO REQUIRED)
         target_link_libraries(openapt ${CFITSIO_LIBRARIES})
 
-        # Find and link INDI libraries
         find_package(INDI 2.0.0 REQUIRED)
         include_directories(${INDI_INCLUDE_DIR})
         target_link_libraries(openapt ${INDI_CLIENT_LIBRARIES})
 
-        find_package(CURL REQUIRED)
-        target_link_libraries(openapt CURL::libcurl)
-
-        # Find and link OpenSSL libraries
         find_package(OpenSSL REQUIRED)
         if(OpenSSL_FOUND)
             target_link_libraries(openapt ${OPENSSL_LIBRARIES})
@@ -318,14 +335,7 @@ elseif(UNIX)
             message("-- OpenSSL Not Found")
         endif()
 
-        find_package(GSL REQUIRED)
-        target_link_libraries(openapt ${GSL_LIBRARIES})
-
-        find_package(OpenCV REQUIRED)
-        include_directories(${OpenCV_INCLUDE_DIRS})
-        target_link_libraries(openapt ${OpenCV_LIBS})
-
-        # Link ZLIB and pugixml-static libraries
+        find_package(ZLIB REQUIRED)
         target_link_libraries(openapt ${ZLIB_LIBRARIES})
         target_link_libraries(openapt pugixml-static)
 

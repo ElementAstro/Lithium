@@ -61,7 +61,7 @@ namespace OpenAPT::Logger
     {
         for (const auto &entry : std::filesystem::directory_iterator(folderPath))
         {
-            spdlog::info("Scanning log file: {}", entry.path().c_str());
+            spdlog::info("Scanning log file: {}", entry.path().generic_string().c_str());
             if (entry.is_regular_file())
             {
                 parseLog(entry.path().string());

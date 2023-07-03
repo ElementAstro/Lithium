@@ -29,7 +29,12 @@ Description: IO
 
 **************************************************/
 
+#pragma once
+
 #include <string>
+#include <vector>
+#include <cstdint>
+#include <filesystem>
 
 namespace OpenAPT::File
 {
@@ -198,4 +203,35 @@ namespace OpenAPT::File
      * @param path 要遍历的目录的路径。
      */
     void traverse_directory(const std::string &path);
+
+    /**
+     * @brief Traverse the directories recursively and collect all folder paths.
+     *
+     * This function traverses the directories recursively starting from the specified directory,
+     * and collects all folder paths encountered during the traversal.
+     *
+     * @param directory The starting directory path.
+     * @param[out] folders A vector to store the collected folder paths.
+     */
+    void traverse_directories(const std::filesystem::path &directory, std::vector<std::string> &folders);
+
+    /**
+     * @brief Convert Windows path to Linux path.
+     *
+     * This function converts a Windows path to a Linux path by replacing backslashes with forward slashes.
+     *
+     * @param windows_path The Windows path to convert.
+     * @return The converted Linux path.
+     */
+    std::string convert_windows_to_linux_path(const std::string &windows_path);
+
+    /**
+     * @brief Convert Linux path to Windows path.
+     *
+     * This function converts a Linux path to a Windows path by replacing forward slashes with backslashes.
+     *
+     * @param linux_path The Linux path to convert.
+     * @return The converted Windows path.
+     */
+    std::string convert_linux_to_windows_path(const std::string &linux_path);
 } // namespace OpenAPT::File

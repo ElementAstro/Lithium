@@ -49,9 +49,9 @@ Description: C++ and Python Modules Loader
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "thread.hpp"
-#include "task.hpp"
-#include "device.hpp"
+#include "thread/thread.hpp"
+#include "task/task.hpp"
+#include "device/device.hpp"
 
 namespace OpenAPT
 {
@@ -224,6 +224,6 @@ namespace OpenAPT
     private:
         std::unordered_map<std::string, void *> handles_;
 
-        ThreadManager *m_ThreadManager;
+        Thread::ThreadManager *m_ThreadManager;
     };
 }

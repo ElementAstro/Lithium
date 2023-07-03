@@ -41,6 +41,12 @@ namespace OpenAPT
         server_.set_close_handler(bind(&WebSocketServer::onClose, this, std::placeholders::_1));
         server_.set_message_handler(bind(&WebSocketServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
 
+        server_.set_validate_handler([](websocketpp::connection_hdl)
+                                       { return true; });
+        server_.set_fail_handler([](websocketpp::connection_hdl) {});
+        server_.set_http_handler([](websocketpp::connection_hdl) {});
+
+        server_.set_reuse_addr(true);
         // 获取保存客户端信息的文件路径
         client_file_path_ = "clients.json";
 

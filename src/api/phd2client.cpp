@@ -33,11 +33,14 @@ Description: PHD2 CLient Interface
 #include <iostream>
 #include <boost/asio/bind_executor.hpp>
 #include <spdlog/spdlog.h>
+
 PHD2Client::PHD2Client(boost::asio::io_context &io_context, const std::string &host, const unsigned short port)
-    : resolver_(io_context), socket_(io_context), host_(host), port_(port), strand_(io_context.get_executor())
+    : resolver_(io_context), socket_(io_context), host_(host), port_(port), strand_(io_context)
 {
 }
+
 PHD2Client::~PHD2Client() = default;
+
 void PHD2Client::run()
 {
     tcp::resolver::query query(host_, std::to_string(port_));
@@ -61,6 +64,7 @@ void PHD2Client::run()
               self->read();
           })); }));
 }
+
 void PHD2Client::send(const json &data)
 {
     const auto message = data.dump();
@@ -73,10 +77,11 @@ void PHD2Client::send(const json &data)
                                      return;
                                  } }));
 }
+
 void PHD2Client::read()
 {
     socket_.async_read_some(boost::asio::buffer(buffer_),
-                            boost::asio::bind_executor(strand_, [self = shared_from_this()](const auto &error_code, const auto length)
+                            boost::asio::bind_executor(strand_, [self = shared_from_this(),this](const auto &error_code, const auto length)
                                                        {
                                 if (error_code)
                                 {

@@ -33,7 +33,7 @@ Description: Basic Focuser Defination
 
 #include "device.hpp"
 
-class Focuser : public Device
+class Focuser : public virtual Device
 {
 public:
     /**
@@ -55,7 +55,7 @@ protected:
      * @param position 相对移动的步数
      * @return bool 移动是否成功
      */
-    virtual bool moveTo(const int position) {}
+    virtual bool moveTo(const int position) = 0;
 
     /**
      * @brief 将电调移动到绝对位置 position
@@ -63,7 +63,7 @@ protected:
      * @param position 绝对位置步数
      * @return bool 移动是否成功
      */
-    virtual bool moveToAbsolute(const int position) {}
+    virtual bool moveToAbsolute(const int position) = 0;
 
     /**
      * @brief 移动电调 step 个步长
@@ -71,7 +71,7 @@ protected:
      * @param step 移动步数
      * @return bool 移动是否成功
      */
-    virtual bool moveStep(const int step) {}
+    virtual bool moveStep(const int step) = 0;
 
     /**
      * @brief 移动电调至绝对步数位置
@@ -79,21 +79,21 @@ protected:
      * @param step 绝对步数位置
      * @return bool 移动是否成功
      */
-    virtual bool moveStepAbsolute(const int step) {}
+    virtual bool moveStepAbsolute(const int step) = 0;
 
     /**
      * @brief 中止电调移动
      *
      * @return bool 操作是否成功
      */
-    virtual bool AbortMove() {}
+    virtual bool AbortMove() = 0;
 
     /**
      * @brief 获取电调最大位置
      *
      * @return int 电调最大位置
      */
-    virtual int getMaxPosition() {}
+    virtual int getMaxPosition() = 0;
 
     /**
      * @brief 设置电调最大位置
@@ -101,49 +101,49 @@ protected:
      * @param max_position 电调最大位置
      * @return bool 操作是否成功
      */
-    virtual bool setMaxPosition(int max_position) {}
+    virtual bool setMaxPosition(int max_position) = 0;
 
     /**
      * @brief 判断是否支持获取温度功能
      *
      * @return bool 是否支持获取温度功能
      */
-    bool isGetTemperatureAvailable() {}
+    virtual bool isGetTemperatureAvailable() = 0;
 
     /**
      * @brief 获取电调当前温度
      *
      * @return double 当前温度
      */
-    virtual double getTemperature() {}
+    virtual double getTemperature() = 0;
 
     /**
      * @brief 判断是否支持绝对移动功能
      *
      * @return bool 是否支持绝对移动功能
      */
-    bool isAbsoluteMoveAvailable() {}
+    virtual bool isAbsoluteMoveAvailable() = 0;
 
     /**
      * @brief 判断是否支持手动移动功能
      *
      * @return bool 是否支持手动移动功能
      */
-    bool isManualMoveAvailable() {}
+    virtual bool isManualMoveAvailable() = 0;
 
     /**
      * @brief 获取电调当前位置
      *
      * @return int 当前位置
      */
-    virtual int getCurrentPosition() {}
+    virtual int getCurrentPosition() = 0;
 
     /**
      * @brief 判断电调是否存在反向间隙
      *
      * @return bool 是否存在反向间隙
      */
-    virtual bool haveBacklash() {}
+    virtual bool haveBacklash() = 0;
 
     /**
      * @brief 设置电调反向间隙值
@@ -151,7 +151,7 @@ protected:
      * @param value 反向间隙值
      * @return bool 操作是否成功
      */
-    virtual bool setBacklash(int value) {}
+    virtual bool setBacklash(int value) = 0;
 
 public:
     bool is_moving; // 电调是否正在移动

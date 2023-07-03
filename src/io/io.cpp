@@ -34,6 +34,15 @@ Description: IO
 #include <filesystem>
 #include <iostream>
 
+#include <spdlog/spdlog.h>
+
+#ifdef _WIN32
+#include <windows.h>
+const std::string PATH_SEPARATOR = "\\";
+#else
+const std::string PATH_SEPARATOR = "/";
+#endif
+
 namespace fs = std::filesystem;
 
 namespace OpenAPT::File
@@ -44,12 +53,12 @@ namespace OpenAPT::File
         try
         {
             fs::create_directory(path);
-            std::cout << "Directory created: " << path << std::endl;
+            spdlog::info("Directory created: {}", path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to create directory " << path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to create directory {}: {}", path, ex.what());
         }
         return false;
     }
@@ -59,12 +68,12 @@ namespace OpenAPT::File
         try
         {
             fs::remove_all(path);
-            std::cout << "Directory removed: " << path << std::endl;
+            spdlog::info("Directory removed: {}", path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to remove directory " << path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to remove directory {}: {}", path, ex.what());
         }
         return false;
     }
@@ -74,12 +83,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            std::cout << "Directory renamed from " << old_path << " to " << new_path << std::endl;
+            spdlog::info("Directory renamed from {} to {}", old_path, new_path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to rename directory from " << old_path << " to " << new_path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to rename directory from {} to {}: {}", old_path, new_path, ex.what());
         }
         return false;
     }
@@ -89,12 +98,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            std::cout << "Directory moved from " << old_path << " to " << new_path << std::endl;
+            spdlog::info("Directory moved from {} to {}", old_path, new_path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to move directory from " << old_path << " to " << new_path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to move directory from {} to {}: {}", old_path, new_path, ex.what());
         }
         return false;
     }
@@ -104,12 +113,12 @@ namespace OpenAPT::File
         try
         {
             fs::copy_file(src_path, dst_path);
-            std::cout << "File copied from " << src_path << " to " << dst_path << std::endl;
+            spdlog::info("File copied from {} to {}", src_path, dst_path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to copy file from " << src_path << " to " << dst_path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to copy file from {} to {}: {}", src_path, dst_path, ex.what());
         }
         return false;
     }
@@ -119,12 +128,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(src_path, dst_path);
-            std::cout << "File moved from " << src_path << " to " << dst_path << std::endl;
+            spdlog::info("File moved from {} to {}", src_path, dst_path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to move file from " << src_path << " to " << dst_path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to move file from {} to {}: {}", src_path, dst_path, ex.what());
         }
         return false;
     }
@@ -134,12 +143,12 @@ namespace OpenAPT::File
         try
         {
             fs::rename(old_path, new_path);
-            std::cout << "File renamed from " << old_path << " to " << new_path << std::endl;
+            spdlog::info("File renamed from {} to {}", old_path, new_path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to rename file from " << old_path << " to " << new_path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to rename file from {} to {}: {}", old_path, new_path, ex.what());
         }
         return false;
     }
@@ -149,12 +158,12 @@ namespace OpenAPT::File
         try
         {
             fs::remove(path);
-            std::cout << "File removed: " << path << std::endl;
+            spdlog::info("File removed: {}", path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to remove file " << path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to remove file {}: {}", path, ex.what());
         }
         return false;
     }
@@ -164,12 +173,12 @@ namespace OpenAPT::File
         try
         {
             fs::create_symlink(target_path, symlink_path);
-            std::cout << "Symlink created from " << target_path << " to " << symlink_path << std::endl;
+            spdlog::info("Symlink created from {} to {}", target_path, symlink_path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to create symlink from " << target_path << " to " << symlink_path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to create symlink from {} to {}: {}", target_path, symlink_path, ex.what());
         }
         return false;
     }
@@ -179,12 +188,12 @@ namespace OpenAPT::File
         try
         {
             fs::remove(path);
-            std::cout << "Symlink removed: " << path << std::endl;
+            spdlog::info("Symlink removed: {}", path);
             return true;
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to remove symlink " << path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to remove symlink {}: {}", path, ex.what());
         }
         return false;
     }
@@ -197,7 +206,7 @@ namespace OpenAPT::File
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to get file size of " << path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to get file size of {}: {}", path, ex.what());
             return 0;
         }
     }
@@ -210,17 +219,93 @@ namespace OpenAPT::File
             {
                 if (entry.is_directory())
                 {
-                    std::cout << "Directory: " << entry.path().string() << std::endl;
+                    spdlog::info("Directory: {}", entry.path().string());
                 }
                 else
                 {
-                    std::cout << "File: " << entry.path().string() << std::endl;
+                    spdlog::info("File: {}", entry.path().string());
                 }
             }
         }
         catch (const std::exception &ex)
         {
-            std::cerr << "Failed to traverse directory " << path << ": " << ex.what() << std::endl;
+            spdlog::error("Failed to traverse directory {}: {}", path, ex.what());
+        }
+    }
+
+    std::string convert_windows_to_linux_path(const std::string &windows_path)
+    {
+        std::string linux_path = windows_path;
+        for (char &c : linux_path)
+        {
+            if (c == '\\')
+            {
+                c = '/';
+            }
+        }
+        if (linux_path.length() >= 2 && linux_path[1] == ':')
+        {
+            linux_path[0] = tolower(linux_path[0]);
+        }
+
+        return linux_path;
+    }
+
+    std::string convert_linux_to_windows_path(const std::string &linux_path)
+    {
+        std::string windows_path = linux_path;
+        for (char &c : windows_path)
+        {
+            if (c == '/')
+            {
+                c = '\\';
+            }
+        }
+        if (windows_path.length() >= 2 && islower(windows_path[0]) && windows_path[1] == ':')
+        {
+            windows_path[0] = toupper(windows_path[0]);
+        }
+
+        return windows_path;
+    }
+
+    std::string get_absolute_directory()
+    {
+        fs::path program_path;
+#ifdef _WIN32
+        wchar_t buffer[MAX_PATH];
+        GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+        program_path = buffer;
+#else
+        char buffer[PATH_MAX];
+        ssize_t length = readlink("/proc/self/exe", buffer, sizeof(buffer));
+        if (length != -1)
+        {
+            program_path = std::string(buffer, length);
+        }
+#endif
+
+        return program_path.parent_path().string();
+    }
+
+    std::string normalize_path(const std::string &path)
+    {
+        std::string normalized_path = path;
+        std::replace(normalized_path.begin(), normalized_path.end(), '/', PATH_SEPARATOR.front());
+        std::replace(normalized_path.begin(), normalized_path.end(), '\\', PATH_SEPARATOR.front());
+        return normalized_path;
+    }
+
+    void traverse_directories(const fs::path &directory, std::vector<std::string> &folders)
+    {
+        for (const auto &entry : fs::directory_iterator(directory))
+        {
+            if (entry.is_directory())
+            {
+                std::string folder_path = normalize_path(entry.path().string());
+                folders.push_back(folder_path);
+                traverse_directories(entry.path(), folders);
+            }
         }
     }
 }

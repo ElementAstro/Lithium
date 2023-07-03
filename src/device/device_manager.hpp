@@ -40,6 +40,16 @@ Description: Device Manager
 
 namespace OpenAPT
 {
+    enum class DeviceType
+    {
+        Camera,
+        Telescope,
+        Focuser,
+        FilterWheel,
+        Solver,
+        Guider,
+        NumDeviceTypes
+    };
 
     class DeviceManager
     {

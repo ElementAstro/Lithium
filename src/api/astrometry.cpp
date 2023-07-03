@@ -43,6 +43,11 @@ Description: Astrometry Command Line
 #include <cassert>
 #include <chrono>
 #include <algorithm>
+#include <ctime>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace OpenAPT::API::Astrometry
 {
@@ -101,19 +106,30 @@ namespace OpenAPT::API::Astrometry
         const auto now = std::chrono::system_clock::now();
         const std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
         struct std::tm tm;
+#ifdef _WIN32
+        gmtime_s(&tm, &now_time_t);
+#else
         gmtime_r(&now_time_t, &tm);
+#endif
         return to_string(tm, "%FT%TZ");
     }
 
-    // 执行命令行指令
     CommandStatus execute_command(const std::string &command, int timeout_seconds, std::string &output)
     {
         std::array<char, kMaxBufferSize> buffer{};
-        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"), pclose);
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(nullptr, nullptr);
+
+#ifdef _WIN32
+        pipe.reset(_popen(command.c_str(), "r"));
+#else
+        pipe.reset(popen(command.c_str(), "r"));
+#endif
+
         if (!pipe)
         {
             throw AstrometryException("Failed to open pipe");
         }
+
         auto start_time = std::chrono::system_clock::now();
         while (std::chrono::system_clock::now() - start_time < std::chrono::seconds(timeout_seconds))
         {
@@ -127,7 +143,19 @@ namespace OpenAPT::API::Astrometry
                 break;
             }
         }
+
         auto status = pclose(pipe.get());
+
+#ifdef _WIN32
+        if (status == 0)
+        {
+            return CommandStatus::SUCCESS;
+        }
+        else if (status != -1)
+        {
+            return CommandStatus::FAILED;
+        }
+#else
         if (status == 0)
         {
             return CommandStatus::SUCCESS;
@@ -136,10 +164,8 @@ namespace OpenAPT::API::Astrometry
         {
             return CommandStatus::FAILED;
         }
-        else
-        {
-            return CommandStatus::TIMEOUT;
-        }
+#endif
+        return CommandStatus::TIMEOUT;
     }
 
     // 解析命令行输出结果

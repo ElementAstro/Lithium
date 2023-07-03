@@ -1,9 +1,9 @@
 #pragma once
+
 #include <string>
 #include <vector>
 #include <memory>
 #include <sqlite3.h>
-#include "spdlog/spdlog.h"
 
 /**
  * @brief 数据库管理器类，用于管理数据库操作
@@ -50,7 +50,6 @@ public:
 
 private:
     sqlite3* __conn; ///< 数据库连接
-    std::shared_ptr<spdlog::logger> __logger; ///< 日志记录器
 
     /**
      * @brief SQL 回调函数，用于接收查询结果

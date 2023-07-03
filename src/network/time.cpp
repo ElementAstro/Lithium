@@ -37,8 +37,10 @@ Description: Time
 #include <ctime>
 
 #ifdef _WIN32 // Windows
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
+#include <winreg.h>
+#include <ws2tcpip.h>
 #else // Linux
 #include <cstring>
 #include <cstdlib>
@@ -51,6 +53,8 @@ Description: Time
 #include <arpa/inet.h>
 #include <netdb.h>
 #endif
+
+#include <spdlog/spdlog.h>
 
 namespace OpenAPT::Time
 {
@@ -80,11 +84,13 @@ namespace OpenAPT::Time
         }
     }
 
+    bool GetTimeZoneInformationByName(const std::string &timezone, DWORD *tz_id);
+
     bool set_system_timezone(const std::string &timezone)
     {
         bool success = true;
         DWORD tz_id;
-        if (!GetTimeZoneInformationByName(timezone.c_str(), &tz_id))
+        if (!GetTimeZoneInformationByName(timezone, &tz_id))
         {
             spdlog::error("Error getting time zone id for {}: {}", timezone, GetLastError());
             success = false;
@@ -95,7 +101,7 @@ namespace OpenAPT::Time
             spdlog::error("Error getting current time zone information: {}", GetLastError());
             success = false;
         }
-        else if (tz_info.StandardBias != -tz_id)
+        else if (tz_info.StandardBias != -static_cast<int>(tz_id))
         {
             spdlog::error("Time zone id obtained does not match offset: {} != {}", tz_id, -tz_info.StandardBias);
             success = false;
@@ -111,7 +117,7 @@ namespace OpenAPT::Time
     bool GetTimeZoneInformationByName(const std::string &timezone, DWORD *tz_id)
     {
         HKEY hkey;
-        LPTSTR reg_path = const_cast<LPTSTR>("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\\");
+        LPCTSTR reg_path = TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Time Zones\\");
 
         LONG ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, reg_path, 0, KEY_READ, &hkey);
         if (ret != ERROR_SUCCESS)
@@ -130,12 +136,12 @@ namespace OpenAPT::Time
             if (RegOpenKeyEx(hkey, sub_key, 0, KEY_READ, &sub_hkey) == ERROR_SUCCESS)
             {
                 DWORD size_disp_name = MAX_PATH;
-                if (RegQueryValueEx(sub_hkey, L"Display", NULL, NULL, reinterpret_cast<LPBYTE>(disp_name), &size_disp_name) == ERROR_SUCCESS)
+                if (RegQueryValueEx(sub_hkey, TEXT("Display"), NULL, NULL, reinterpret_cast<LPBYTE>(disp_name), &size_disp_name) == ERROR_SUCCESS)
                 {
                     if (timezone.compare(disp_name) == 0)
                     {
                         DWORD size_tz_id = sizeof(DWORD);
-                        if (RegQueryValueEx(sub_hkey, L"TZI", NULL, NULL, reinterpret_cast<LPBYTE>(tz_id), &size_tz_id) == ERROR_SUCCESS)
+                        if (RegQueryValueEx(sub_hkey, TEXT("TZI"), NULL, NULL, reinterpret_cast<LPBYTE>(tz_id), &size_tz_id) == ERROR_SUCCESS)
                         {
                             RegCloseKey(sub_hkey);
                             RegCloseKey(hkey);
@@ -186,7 +192,7 @@ namespace OpenAPT::Time
 
         // 计算当前RTC时间距离1970年1月1日0时0分0秒（UTC时间）的秒数
         // 这里需要根据具体硬件RTC模块的接口来实现读取RTC时间的功能
-        time_t rtc_timestamp = ...; // 假设读取到的RTC时间为rtc_timestamp
+        time_t rtc_timestamp;
 
         // 计算RTC时间距离本地时间的毫秒偏差
         long ms_offset = (int)(local_timestamp - rtc_timestamp) * 1000L;
@@ -348,7 +354,7 @@ namespace OpenAPT::Time
         WSADATA wsaData;
         if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         {
-            spdlog::error"Failed to initialize Winsock2.");
+            spdlog::error("Failed to initialize Winsock2.");
             return 0;
         }
 #endif

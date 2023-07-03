@@ -37,6 +37,7 @@ Description: Simple Thread Pool
 #include <queue>
 #include <functional>
 #include <vector>
+#include <future>
 
 namespace OpenAPT::Thread
 {

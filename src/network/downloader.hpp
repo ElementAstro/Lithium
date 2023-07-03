@@ -29,7 +29,8 @@ Description: Downloader
 
 **************************************************/
 
-#ifndef DOWNLOAD_MANAGER_H
+#pragma once
+
 #define DOWNLOAD_MANAGER_H
 
 #include <string>
@@ -38,6 +39,7 @@ Description: Downloader
 #include <atomic>
 #include <optional>
 #include <mutex>
+#include <thread>
 
 struct DownloadTask
 {
@@ -149,6 +151,7 @@ private:
     std::priority_queue<DownloadTask> task_queue_; ///< 任务队列，按照优先级排序
     std::mutex mutex_;                             ///< 互斥量，用于保护任务列表和任务队列
     std::atomic<bool> running_{false};             ///< 是否正在下载中
+    std::chrono::system_clock::time_point start_time_;
 };
 
 /*

@@ -6,24 +6,23 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
-#include <memory>
+#include <boost/optional.hpp>
 
 namespace crow
 {
-
 // ----------------------------------------------------------------------------
 // qs_parse (modified)
 // https://github.com/bartgrantham/qs_parse
 // ----------------------------------------------------------------------------
 /*  Similar to strncmp, but handles URL-encoding for either string  */
-int qs_strncmp(const char* s, const char* qs, size_t n);
+int qs_strncmp(const char * s, const char * qs, size_t n);
 
 
 /*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
  *  Also decodes the value portion of the k/v pair *in-place*.  In a future
  *  enhancement it will also have a compile-time option of sorting qs_kv
  *  alphabetically by key.  */
-size_t qs_parse(char* qs, char* qs_kv[], size_t qs_kv_size, bool parse_url);
+int qs_parse(char * qs, char * qs_kv[], int qs_kv_size);
 
 
 /*  Used by qs_parse to decode the value portion of a k/v pair  */
@@ -34,7 +33,7 @@ int qs_decode(char * qs);
  *  A future enhancement will be a compile-time option to look up the key
  *  in a pre-sorted qs_kv array via a binary search.  */
 //char * qs_k2v(const char * key, char * qs_kv[], int qs_kv_size);
- char * qs_k2v(const char * key, char * const * qs_kv, size_t qs_kv_size, int nth);
+ char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth);
 
 
 /*  Non-destructive lookup of value, based on key.  User provides the
@@ -51,6 +50,7 @@ char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_le
 
 inline int qs_strncmp(const char * s, const char * qs, size_t n)
 {
+    int i=0;
     unsigned char u1, u2, unyb, lnyb;
 
     while(n-- > 0)
@@ -87,6 +87,7 @@ inline int qs_strncmp(const char * s, const char * qs, size_t n)
             return u1 - u2;
         if ( u1 == '\0' )
             return 0;
+        i++;
     }
     if ( CROW_QS_ISQSCHR(*qs) )
         return -1;
@@ -95,22 +96,19 @@ inline int qs_strncmp(const char * s, const char * qs, size_t n)
 }
 
 
-inline size_t qs_parse(char* qs, char* qs_kv[], size_t qs_kv_size, bool parse_url = true)
+inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
 {
-    size_t i, j;
+    int i, j;
     char * substr_ptr;
 
     for(i=0; i<qs_kv_size; i++)  qs_kv[i] = NULL;
 
     // find the beginning of the k/v substrings or the fragment
-    substr_ptr = parse_url ? qs + strcspn(qs, "?#") : qs;
-    if (parse_url)
-    {
-        if (substr_ptr[0] != '\0')
-            substr_ptr++;
-        else
-            return 0; // no query or fragment
-    }
+    substr_ptr = qs + strcspn(qs, "?#");
+    if (substr_ptr[0] != '\0')
+        substr_ptr++;
+    else
+        return 0; // no query or fragment
 
     i=0;
     while(i<qs_kv_size)
@@ -138,7 +136,7 @@ inline size_t qs_parse(char* qs, char* qs_kv[], size_t qs_kv_size, bool parse_ur
 #endif
 
     return i;
-    }
+}
 
 
 inline int qs_decode(char * qs)
@@ -170,9 +168,9 @@ inline int qs_decode(char * qs)
 }
 
 
-inline char * qs_k2v(const char * key, char * const * qs_kv, size_t qs_kv_size, int nth = 0)
+inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
 {
-    size_t i;
+    int i;
     size_t key_len, skip;
 
     key_len = strlen(key);
@@ -191,7 +189,7 @@ inline char * qs_k2v(const char * key, char * const * qs_kv, size_t qs_kv_size, 
             // return (zero-char value) ? ptr to trailing '\0' : ptr to value
             if(nth == 0)
                 return qs_kv[i] + skip;
-            else
+            else 
                 --nth;
         }
     }
@@ -200,9 +198,9 @@ inline char * qs_k2v(const char * key, char * const * qs_kv, size_t qs_kv_size, 
     return nullptr;
 }
 
-inline std::unique_ptr<std::pair<std::string, std::string>> qs_dict_name2kv(const char * dict_name, char * const * qs_kv, size_t qs_kv_size, int nth = 0)
+inline boost::optional<std::pair<std::string, std::string>> qs_dict_name2kv(const char * dict_name, char * const * qs_kv, int qs_kv_size, int nth = 0)
 {
-    size_t i;
+    int i;
     size_t name_len, skip_to_eq, skip_to_brace_open, skip_to_brace_close;
 
     name_len = strlen(dict_name);
@@ -229,7 +227,7 @@ inline std::unique_ptr<std::pair<std::string, std::string>> qs_dict_name2kv(cons
             {
                 auto key = std::string(qs_kv[i] + skip_to_brace_open, skip_to_brace_close - skip_to_brace_open);
                 auto value = std::string(qs_kv[i] + skip_to_eq);
-                return std::unique_ptr<std::pair<std::string, std::string>>(new std::pair<std::string, std::string>(key, value));
+                return boost::make_optional(std::make_pair(key, value));
             }
             else
             {
@@ -239,7 +237,7 @@ inline std::unique_ptr<std::pair<std::string, std::string>> qs_dict_name2kv(cons
     }
 #endif  // _qsSORTING
 
-    return nullptr;
+    return boost::none;
 }
 
 
@@ -286,9 +284,8 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
 // ----------------------------------------------------------------------------
 
 
-namespace crow
+namespace crow 
 {
-    struct request;
     /// A class to represent any data coming after the `?` in the request URL into key-value pairs.
     class query_string
     {
@@ -297,34 +294,35 @@ namespace crow
 
         query_string()
         {
+
         }
 
-        query_string(const query_string& qs):
-          url_(qs.url_)
+        query_string(const query_string& qs)
+            : url_(qs.url_)
         {
-            for (auto p : qs.key_value_pairs_)
+            for(auto p:qs.key_value_pairs_)
             {
-                key_value_pairs_.push_back((char*)(p - qs.url_.c_str() + url_.c_str()));
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
             }
         }
 
-        query_string& operator=(const query_string& qs)
+        query_string& operator = (const query_string& qs)
         {
             url_ = qs.url_;
             key_value_pairs_.clear();
-            for (auto p : qs.key_value_pairs_)
+            for(auto p:qs.key_value_pairs_)
             {
-                key_value_pairs_.push_back((char*)(p - qs.url_.c_str() + url_.c_str()));
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
             }
             return *this;
         }
 
-        query_string& operator=(query_string&& qs)
+        query_string& operator = (query_string&& qs)
         {
             key_value_pairs_ = std::move(qs.key_value_pairs_);
             char* old_data = (char*)qs.url_.c_str();
             url_ = std::move(qs.url_);
-            for (auto& p : key_value_pairs_)
+            for(auto& p:key_value_pairs_)
             {
                 p += (char*)url_.c_str() - old_data;
             }
@@ -332,19 +330,19 @@ namespace crow
         }
 
 
-        query_string(std::string params, bool url = true):
-          url_(std::move(params))
+        query_string(std::string url)
+            : url_(std::move(url))
         {
             if (url_.empty())
                 return;
 
             key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
 
-            size_t count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT, url);
+            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
             key_value_pairs_.resize(count);
         }
 
-        void clear()
+        void clear() 
         {
             key_value_pairs_.clear();
             url_.clear();
@@ -353,38 +351,38 @@ namespace crow
         friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
         {
             os << "[ ";
-            for (size_t i = 0; i < qs.key_value_pairs_.size(); ++i)
-            {
+            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
                 if (i)
                     os << ", ";
                 os << qs.key_value_pairs_[i];
             }
             os << " ]";
             return os;
+
         }
 
         /// Get a value from a name, used for `?name=value`.
 
         ///
         /// Note: this method returns the value of the first occurrence of the key only, to return all occurrences, see \ref get_list().
-        char* get(const std::string& name) const
+        char* get (const std::string& name) const
         {
             char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
             return ret;
         }
 
         /// Works similar to \ref get() except it removes the item from the query string.
-        char* pop(const std::string& name)
+        char* pop (const std::string& name)
         {
             char* ret = get(name);
             if (ret != nullptr)
             {
-                for (unsigned int i = 0; i < key_value_pairs_.size(); i++)
+                for (unsigned int i = 0; i<key_value_pairs_.size(); i++)
                 {
                     std::string str_item(key_value_pairs_[i]);
-                    if (str_item.substr(0, name.size() + 1) == name + '=')
+                    if (str_item.substr(0, name.size()+1) == name+'=')
                     {
-                        key_value_pairs_.erase(key_value_pairs_.begin() + i);
+                        key_value_pairs_.erase(key_value_pairs_.begin()+i);
                         break;
                     }
                 }
@@ -396,14 +394,14 @@ namespace crow
 
         ///
         /// Note: Square brackets in the above example are controlled by `use_brackets` boolean (true by default). If set to false, the example becomes `?name=value1,name=value2...name=valuen`
-        std::vector<char*> get_list(const std::string& name, bool use_brackets = true) const
+        std::vector<char*> get_list (const std::string& name, bool use_brackets = true) const
         {
             std::vector<char*> ret;
             std::string plus = name + (use_brackets ? "[]" : "");
             char* element = nullptr;
 
             int count = 0;
-            while (1)
+            while(1)
             {
                 element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
                 if (!element)
@@ -414,17 +412,17 @@ namespace crow
         }
 
         /// Similar to \ref get_list() but it removes the
-        std::vector<char*> pop_list(const std::string& name, bool use_brackets = true)
+        std::vector<char*> pop_list (const std::string& name, bool use_brackets = true)
         {
             std::vector<char*> ret = get_list(name, use_brackets);
             if (!ret.empty())
             {
-                for (unsigned int i = 0; i < key_value_pairs_.size(); i++)
+                for (unsigned int i = 0; i<key_value_pairs_.size(); i++)
                 {
                     std::string str_item(key_value_pairs_[i]);
-                    if ((use_brackets ? (str_item.substr(0, name.size() + 3) == name + "[]=") : (str_item.substr(0, name.size() + 1) == name + '=')))
+                    if ((use_brackets ? (str_item.substr(0, name.size()+3) == name+"[]=") : (str_item.substr(0, name.size()+1) == name+'=')))
                     {
-                        key_value_pairs_.erase(key_value_pairs_.begin() + i--);
+                        key_value_pairs_.erase(key_value_pairs_.begin()+i--);
                     }
                 }
             }
@@ -437,12 +435,12 @@ namespace crow
         /// For example calling `get_dict(yourname)` on `?yourname[sub1]=42&yourname[sub2]=84` would give a map containing `{sub1 : 42, sub2 : 84}`.
         ///
         /// if your query string has both empty brackets and ones with a key inside, use pop_list() to get all the values without a key before running this method.
-        std::unordered_map<std::string, std::string> get_dict(const std::string& name) const
+        std::unordered_map<std::string, std::string> get_dict (const std::string& name) const
         {
             std::unordered_map<std::string, std::string> ret;
 
             int count = 0;
-            while (1)
+            while(1)
             {
                 if (auto element = qs_dict_name2kv(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++))
                     ret.insert(*element);
@@ -453,17 +451,17 @@ namespace crow
         }
 
         /// Works the same as \ref get_dict() but removes the values from the query string.
-        std::unordered_map<std::string, std::string> pop_dict(const std::string& name)
+        std::unordered_map<std::string, std::string> pop_dict (const std::string& name)
         {
             std::unordered_map<std::string, std::string> ret = get_dict(name);
             if (!ret.empty())
             {
-                for (unsigned int i = 0; i < key_value_pairs_.size(); i++)
+                for (unsigned int i = 0; i<key_value_pairs_.size(); i++)
                 {
                     std::string str_item(key_value_pairs_[i]);
-                    if (str_item.substr(0, name.size() + 1) == name + '[')
+                    if (str_item.substr(0, name.size()+1) == name+'[')
                     {
-                        key_value_pairs_.erase(key_value_pairs_.begin() + i--);
+                        key_value_pairs_.erase(key_value_pairs_.begin()+i--);
                     }
                 }
             }
@@ -473,7 +471,7 @@ namespace crow
         std::vector<std::string> keys() const
         {
             std::vector<std::string> ret;
-            for (auto element : key_value_pairs_)
+            for (auto element: key_value_pairs_)
             {
                 std::string str_element(element);
                 ret.emplace_back(str_element.substr(0, str_element.find('=')));
@@ -486,4 +484,4 @@ namespace crow
         std::vector<char*> key_value_pairs_;
     };
 
-} // namespace crow
+} // end namespace

@@ -29,12 +29,16 @@ Description: PHD2 CLient Interface
 
 **************************************************/
 
-#ifndef PHD2_CLIENT_HPP
+#pragma once
+
 #define PHD2_CLIENT_HPP
 
-#include <boost/asio.hpp>
 #include <memory>
-#include "json.hpp"
+
+#include <boost/asio.hpp>
+#include<boost/asio/strand.hpp>
+
+#include "nlohmann/json.hpp"
 
 using boost::asio::ip::tcp;
 using nlohmann::json;
@@ -65,9 +69,9 @@ private:
         max_length = 1024
     };
     std::array<char, max_length> buffer_;
+    boost::asio::io_context::strand strand_;
 };
 
-#endif // PHD2_CLIENT_HPP
 /*
 #include <iostream>
 #include <boost/asio.hpp>

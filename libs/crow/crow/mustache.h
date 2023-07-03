@@ -173,10 +173,8 @@ namespace crow
             bool isTagInsideObjectBlock(const int& current, const std::vector<context*>& stack) const
             {
                 int openedBlock = 0;
-                int totalBlocksBefore = 0;
                 for (int i = current; i > 0; --i)
                 {
-                    ++totalBlocksBefore;
                     auto& action = actions_[i - 1];
 
                     if (action.t == ActionType::OpenBlock)
@@ -233,6 +231,8 @@ namespace crow
                             auto& ctx = optional_ctx.second;
                             switch (ctx.t())
                             {
+                                case json::type::False:
+                                case json::type::True:
                                 case json::type::Number:
                                     out += ctx.dump();
                                     break;
@@ -258,7 +258,7 @@ namespace crow
                                 }
                                 break;
                                 default:
-                                    throw std::runtime_error("not implemented tag type" + boost::lexical_cast<std::string>(static_cast<int>(ctx.t())));
+                                    throw std::runtime_error("not implemented tag type" + utility::lexical_cast<std::string>(static_cast<int>(ctx.t())));
                             }
                         }
                         break;
@@ -324,7 +324,7 @@ namespace crow
                                     current = action.pos;
                                     break;
                                 default:
-                                    throw std::runtime_error("{{#: not implemented context type: " + boost::lexical_cast<std::string>(static_cast<int>(ctx.t())));
+                                    throw std::runtime_error("{{#: not implemented context type: " + utility::lexical_cast<std::string>(static_cast<int>(ctx.t())));
                                     break;
                             }
                             break;
@@ -333,7 +333,7 @@ namespace crow
                             stack.pop_back();
                             break;
                         default:
-                            throw std::runtime_error("not implemented " + boost::lexical_cast<std::string>(static_cast<int>(action.t)));
+                            throw std::runtime_error("not implemented " + utility::lexical_cast<std::string>(static_cast<int>(action.t)));
                     }
                     current++;
                 }
@@ -377,6 +377,12 @@ namespace crow
                 std::string ret;
                 render_internal(0, fragments_.size() - 1, stack, ret, 0);
                 return rendered_template(ret);
+            }
+
+            /// Apply the values from the context provided and output a returnable template from this mustache template
+            rendered_template render(context&& ctx) const
+            {
+                return render(ctx);
             }
 
             /// Output a returnable template from this mustache template
@@ -643,10 +649,7 @@ namespace crow
         inline std::string default_loader(const std::string& filename)
         {
             std::string path = detail::get_template_base_directory_ref();
-            if (!(path.back() == '/' || path.back() == '\\'))
-                path += '/';
-            path += filename;
-            std::ifstream inf(path);
+            std::ifstream inf(utility::join_path(path, filename));
             if (!inf)
             {
                 CROW_LOG_WARNING << "Template \"" << filename << "\" not found.";

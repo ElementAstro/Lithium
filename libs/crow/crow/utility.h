@@ -5,11 +5,18 @@
 #include <tuple>
 #include <type_traits>
 #include <cstring>
+#include <cctype>
 #include <functional>
 #include <string>
+#include <sstream>
 #include <unordered_map>
+#include <random>
 
 #include "crow/settings.h"
+
+#if defined(CROW_CAN_USE_CPP17) && !defined(CROW_FILESYSTEM_IS_EXPERIMENTAL)
+#include <filesystem>
+#endif
 
 // TODO(EDev): Adding C++20's [[likely]] and [[unlikely]] attributes might be useful
 #if defined(__GNUG__) || defined(__clang__)
@@ -265,6 +272,46 @@ namespace crow
         struct has_type<T, std::tuple<T, Ts...>> : std::true_type
         {};
 
+        // Find index of type in tuple
+        template<class T, class Tuple>
+        struct tuple_index;
+
+        template<class T, class... Types>
+        struct tuple_index<T, std::tuple<T, Types...>>
+        {
+            static const int value = 0;
+        };
+
+        template<class T, class U, class... Types>
+        struct tuple_index<T, std::tuple<U, Types...>>
+        {
+            static const int value = 1 + tuple_index<T, std::tuple<Types...>>::value;
+        };
+
+        // Extract element from forward tuple or get default
+#ifdef CROW_CAN_USE_CPP14
+        template<typename T, typename Tup>
+        typename std::enable_if<has_type<T&, Tup>::value, typename std::decay<T>::type&&>::type
+          tuple_extract(Tup& tup)
+        {
+            return std::move(std::get<T&>(tup));
+        }
+#else
+        template<typename T, typename Tup>
+        typename std::enable_if<has_type<T&, Tup>::value, T&&>::type
+          tuple_extract(Tup& tup)
+        {
+            return std::move(std::get<tuple_index<T&, Tup>::value>(tup));
+        }
+#endif
+
+        template<typename T, typename Tup>
+        typename std::enable_if<!has_type<T&, Tup>::value, T>::type
+          tuple_extract(Tup&)
+        {
+            return T{};
+        }
+
         // Kind of fold expressions in C++11
         template<bool...>
         struct bool_pack;
@@ -460,7 +507,6 @@ namespace crow
         {
             static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
         };
-
     } // namespace detail
 
     namespace utility
@@ -669,7 +715,8 @@ namespace crow
             // a special device. Thus we search for the string (case-insensitive), and then check if the string ends or if
             // is has a dangerous follow up character (.:\/)
             auto sanitizeSpecialFile = [](std::string& source, unsigned ofs, const char* pattern, bool includeNumber, char replacement) {
-                unsigned i = ofs, len = source.length();
+	      unsigned i = ofs;
+	      size_t len = source.length();
                 const char* p = pattern;
                 while (*p)
                 {
@@ -740,5 +787,115 @@ namespace crow
             }
         }
 
+        inline static std::string random_alphanum(std::size_t size)
+        {
+            static const char alphabet[] = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            std::random_device dev;
+            std::mt19937 rng(dev());
+            std::uniform_int_distribution<std::mt19937::result_type> dist(0, sizeof(alphabet) - 2);
+            std::string out;
+            out.reserve(size);
+            for (std::size_t i = 0; i < size; i++)
+                out.push_back(alphabet[dist(rng)]);
+            return out;
+        }
+
+        inline static std::string join_path(std::string path, const std::string& fname)
+        {
+#if defined(CROW_CAN_USE_CPP17) && !defined(CROW_FILESYSTEM_IS_EXPERIMENTAL)
+            return (std::filesystem::path(path) / fname).string();
+#else
+            if (!(path.back() == '/' || path.back() == '\\'))
+                path += '/';
+            path += fname;
+            return path;
+#endif
+        }
+
+        /**
+         * @brief Checks two string for equality.
+         * Always returns false if strings differ in size.
+         * Defaults to case-insensitive comparison.
+         */
+        inline static bool string_equals(const std::string& l, const std::string& r, bool case_sensitive = false)
+        {
+            if (l.length() != r.length())
+                return false;
+
+            for (size_t i = 0; i < l.length(); i++)
+            {
+                if (case_sensitive)
+                {
+                    if (l[i] != r[i])
+                        return false;
+                }
+                else
+                {
+                    if (std::toupper(l[i]) != std::toupper(r[i]))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        template<typename T, typename U>
+        inline static T lexical_cast(const U& v)
+        {
+            std::stringstream stream;
+            T res;
+
+            stream << v;
+            stream >> res;
+
+            return res;
+        }
+
+        template<typename T>
+        inline static T lexical_cast(const char* v, size_t count)
+        {
+            std::stringstream stream;
+            T res;
+
+            stream.write(v, count);
+            stream >> res;
+
+            return res;
+        }
+
+
+        /// Return a copy of the given string with its
+        /// leading and trailing whitespaces removed.
+        inline static std::string trim(const std::string& v)
+        {
+            if (v.empty())
+                return "";
+
+            size_t begin = 0, end = v.length();
+
+            size_t i;
+            for (i = 0; i < v.length(); i++)
+            {
+                if (!std::isspace(v[i]))
+                {
+                    begin = i;
+                    break;
+                }
+            }
+
+            if (i == v.length())
+                return "";
+
+            for (i = v.length(); i > 0; i--)
+            {
+                if (!std::isspace(v[i - 1]))
+                {
+                    end = i;
+                    break;
+                }
+            }
+
+            return v.substr(begin, end - begin);
+        }
     } // namespace utility
 } // namespace crow

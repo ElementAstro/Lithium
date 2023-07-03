@@ -42,24 +42,26 @@ Description: Custom Logger Manager
 
 #include "cpp_httplib/httplib.h"
 
+#include <spdlog/spdlog.h>
+
 namespace OpenAPT::Logger
 {
     LoggerManager::LoggerManager()
     {
-        logger.setCurrentModule("LogManager");
-        logger.enableAsyncLogging();
+        // logger.setCurrentModule("LogManager");
+        // logger.enableAsyncLogging();
     }
 
     LoggerManager::~LoggerManager()
     {
-        logger.disableAsyncLogging();
+        // logger.disableAsyncLogging();
     }
 
     void LoggerManager::scanLogsFolder(const std::string &folderPath)
     {
         for (const auto &entry : std::filesystem::directory_iterator(folderPath))
         {
-            std::wcout << entry.path().c_str() << std::endl;
+            spdlog::info("Scanning log file: {}", entry.path().c_str());
             if (entry.is_regular_file())
             {
                 parseLog(entry.path().string());
@@ -105,11 +107,11 @@ namespace OpenAPT::Logger
         auto res = client.Post("/upload", filePath.c_str(), "application/octet-stream");
         if (res && res->status == 200)
         {
-            logger.logInfo("File uploaded successfully");
+            spdlog::info("File uploaded successfully");
         }
         else
         {
-            logger.logError("Failed to upload file");
+            spdlog::error("Failed to upload file");
         }
     }
 
@@ -121,7 +123,7 @@ namespace OpenAPT::Logger
             if (logEntry.message.find("[ERROR]") != std::string::npos)
             {
                 errorMessages.push_back(logEntry.message);
-                logger.logDebug("{}", logEntry.message);
+                spdlog::debug("{}", logEntry.message);
             }
         }
         return errorMessages;
@@ -133,10 +135,10 @@ namespace OpenAPT::Logger
 
         if (errorMessages.empty())
         {
-            logger.logInfo("No errors found in the logs.");
+            spdlog::info("No errors found in the logs.");
             return;
         }
-        logger.logInfo("Analyzing logs...");
+        spdlog::info("Analyzing logs...");
 
         // 统计错误类型
         std::map<std::string, int> errorTypeCount;
@@ -145,15 +147,15 @@ namespace OpenAPT::Logger
             std::string errorType = getErrorType(errorMessage);
             errorTypeCount[errorType]++;
         }
-        logger.logInfo("Error Type Count:");
+        spdlog::info("Error Type Count:");
         for (const auto &[errorType, count] : errorTypeCount)
         {
-            logger.logInfo("{} : {}", errorType, count);
+            spdlog::info("{} : {}", errorType, count);
         }
 
         // 查找最常见的错误消息
         std::string mostCommonErrorMessage = getMostCommonErrorMessage(errorMessages);
-        logger.logInfo("Most Common Error Message: {}", mostCommonErrorMessage);
+        spdlog::info("Most Common Error Message: {}", mostCommonErrorMessage);
     }
 
     std::string computeMd5Hash(const std::string &filePath)
@@ -221,5 +223,4 @@ namespace OpenAPT::Logger
         }
         return mostCommonErrorMessage;
     }
-
 }

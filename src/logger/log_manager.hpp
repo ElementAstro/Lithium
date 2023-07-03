@@ -35,7 +35,7 @@ Description: Custom Logger Manager
 #include <vector>
 #include <memory>
 
-#include "aptlogger.hpp"
+// #include "aptlogger.hpp"
 
 namespace OpenAPT::Logger
 {
@@ -120,7 +120,7 @@ namespace OpenAPT::Logger
         std::string getMostCommonErrorMessage(const std::vector<std::string> &errorMessages);
 
     private:
-        std::vector<LogEntry> logEntries; /**< 日志条目的向量。 */
+        std::vector<LogEntry> logEntries;       /**< 日志条目的向量。 */
         std::vector<std::string> errorMessages; /**< 错误消息的向量。 */
 
         /**
@@ -131,7 +131,7 @@ namespace OpenAPT::Logger
          */
         std::string computeMd5Hash(const std::string &filePath);
 
-        Logger &logger = GlobalLogger::getDefaultLogger();
+        // Logger &logger = GlobalLogger::getDefaultLogger();
     };
 
 }

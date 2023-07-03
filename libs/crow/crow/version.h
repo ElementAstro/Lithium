@@ -2,5 +2,5 @@
 
 namespace crow
 {
-    constexpr const char VERSION[] = "1.0";
+    constexpr const char VERSION[] = "master";
 }

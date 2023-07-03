@@ -40,7 +40,7 @@ Description: Task Definition
 #include <cstddef>
 #include <cstdint>
 
-#include "property/json.hpp"
+#include "nlohmann/json.hpp"
 
 namespace OpenAPT
 {

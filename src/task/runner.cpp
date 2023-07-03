@@ -31,7 +31,6 @@ Description: Task Runner
 
 #include <iostream>
 #include <fstream>
-#include <spdlog/spdlog.h>
 
 #include "define.hpp"
 #include "runner.hpp"

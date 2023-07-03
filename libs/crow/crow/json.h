@@ -12,9 +12,6 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/operators.hpp>
 #include <vector>
 #include <cmath>
 
@@ -117,7 +114,7 @@ namespace crow
         namespace detail
         {
             /// A read string implementation with comparison functionality.
-            struct r_string : boost::less_than_comparable<r_string>, boost::less_than_comparable<r_string, std::string>, boost::equality_comparable<r_string>, boost::equality_comparable<r_string, std::string>
+            struct r_string
             {
                 r_string(){};
                 r_string(char* s, char* e):
@@ -186,31 +183,85 @@ namespace crow
                     owned_ = 1;
                 }
                 friend rvalue crow::json::load(const char* data, size_t size);
+
+                friend bool operator==(const r_string& l, const r_string& r);
+                friend bool operator==(const std::string& l, const r_string& r);
+                friend bool operator==(const r_string& l, const std::string& r);
+
+                template<typename T, typename U>
+                inline static bool equals(const T& l, const U& r)
+                {
+                    if (l.size() != r.size())
+                        return false;
+
+                    for (size_t i = 0; i < l.size(); i++)
+                    {
+                        if (*(l.begin() + i) != *(r.begin() + i))
+                            return false;
+                    }
+
+                    return true;
+                }
             };
 
             inline bool operator<(const r_string& l, const r_string& r)
             {
-                return boost::lexicographical_compare(l, r);
+                return std::lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
             }
 
             inline bool operator<(const r_string& l, const std::string& r)
             {
-                return boost::lexicographical_compare(l, r);
+                return std::lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
+            }
+
+            inline bool operator<(const std::string& l, const r_string& r)
+            {
+                return std::lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
+            }
+
+            inline bool operator>(const r_string& l, const r_string& r)
+            {
+                return std::lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
             }
 
             inline bool operator>(const r_string& l, const std::string& r)
             {
-                return boost::lexicographical_compare(r, l);
+                return std::lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
+            }
+
+            inline bool operator>(const std::string& l, const r_string& r)
+            {
+                return std::lexicographical_compare(l.begin(), l.end(), r.begin(), r.end());
             }
 
             inline bool operator==(const r_string& l, const r_string& r)
             {
-                return boost::equals(l, r);
+                return r_string::equals(l, r);
             }
 
             inline bool operator==(const r_string& l, const std::string& r)
             {
-                return boost::equals(l, r);
+                return r_string::equals(l, r);
+            }
+
+            inline bool operator==(const std::string& l, const r_string& r)
+            {
+                return r_string::equals(l, r);
+            }
+
+            inline bool operator!=(const r_string& l, const r_string& r)
+            {
+                return !(l == r);
+            }
+
+            inline bool operator!=(const r_string& l, const std::string& r)
+            {
+                return !(l == r);
+            }
+
+            inline bool operator!=(const std::string& l, const r_string& r)
+            {
+                return !(l == r);
             }
         } // namespace detail
 
@@ -349,13 +400,13 @@ namespace crow
                 {
                     case type::Number:
                     case type::String:
-                        return boost::lexical_cast<int64_t>(start_, end_ - start_);
+                        return utility::lexical_cast<int64_t>(start_, end_ - start_);
                     default:
                         const std::string msg = "expected number, got: " + std::string(get_type_str(t()));
                         throw std::runtime_error(msg);
                 }
 #endif
-                return boost::lexical_cast<int64_t>(start_, end_ - start_);
+                return utility::lexical_cast<int64_t>(start_, end_ - start_);
             }
 
             /// The unsigned integer value.
@@ -366,12 +417,12 @@ namespace crow
                 {
                     case type::Number:
                     case type::String:
-                        return boost::lexical_cast<uint64_t>(start_, end_ - start_);
+                        return utility::lexical_cast<uint64_t>(start_, end_ - start_);
                     default:
                         throw std::runtime_error(std::string("expected number, got: ") + get_type_str(t()));
                 }
 #endif
-                return boost::lexical_cast<uint64_t>(start_, end_ - start_);
+                return utility::lexical_cast<uint64_t>(start_, end_ - start_);
             }
 
             /// The double precision floating-point number value.
@@ -381,7 +432,7 @@ namespace crow
                 if (t() != type::Number)
                     throw std::runtime_error("value is not number");
 #endif
-                return boost::lexical_cast<double>(start_, end_ - start_);
+                return utility::lexical_cast<double>(start_, end_ - start_);
             }
 
             /// The boolean value.
@@ -630,7 +681,7 @@ namespace crow
                 return (option_ & error_bit) != 0;
             }
 
-            std::vector<std::string> keys()
+            std::vector<std::string> keys() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object)
@@ -968,8 +1019,8 @@ namespace crow
                                 {
                                     state = NumberParsingState::ZeroFirst;
                                 }
-                                else if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterE || 
+                                else if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterE ||
                                     state == NumberParsingState::DigitsAfterPoints)
                                 {
                                     // ok; pass
@@ -997,8 +1048,8 @@ namespace crow
                                 {
                                     state = NumberParsingState::Digits;
                                 }
-                                else if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterE || 
+                                else if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterE ||
                                     state == NumberParsingState::DigitsAfterPoints)
                                 {
                                     // ok; pass
@@ -1046,12 +1097,12 @@ namespace crow
                             case 'e':
                             case 'E':
                                 state = static_cast<NumberParsingState>("\7\7\7\5\5\7\7"[state]);
-                                /*if (state == NumberParsingState::Digits || 
+                                /*if (state == NumberParsingState::Digits ||
                                     state == NumberParsingState::DigitsAfterPoints)
                                 {
                                     state = NumberParsingState::E;
                                 }
-                                else 
+                                else
                                     return {};*/
                                 break;
                             default:
@@ -1224,6 +1275,7 @@ namespace crow
             return load(str.data(), str.size());
         }
 
+        struct wvalue_reader;
 
         /// JSON write value.
 
@@ -1233,6 +1285,7 @@ namespace crow
         class wvalue : public returnable
         {
             friend class crow::mustache::template_t;
+            friend struct wvalue_reader;
 
         public:
             using object =
@@ -1245,6 +1298,9 @@ namespace crow
             using list = std::vector<wvalue>;
 
             type t() const { return t_; }
+
+            /// Create an empty json value (outputs "{}" instead of a "null" string)
+            static crow::json::wvalue empty_object() { return crow::json::wvalue::object(); }
 
         private:
             type t_{type::Null};         ///< The type of the value.
@@ -1422,6 +1478,7 @@ namespace crow
             wvalue& operator=(wvalue&& r)
             {
                 t_ = r.t_;
+                nt = r.nt;
                 num = r.num;
                 s = std::move(r.s);
                 l = std::move(r.l);
@@ -1599,7 +1656,7 @@ namespace crow
                 }
                 else
                 {
-#if defined(__APPLE__) || defined(__MACH__)
+#if defined(__APPLE__) || defined(__MACH__) || defined (__FreeBSD__)  || defined (__ANDROID__)
                     o = std::unique_ptr<object>(new object(initializer_list));
 #else
                     (*o) = initializer_list;
@@ -1618,7 +1675,7 @@ namespace crow
                 }
                 else
                 {
-#if defined(__APPLE__) || defined(__MACH__)
+#if defined(__APPLE__) || defined(__MACH__) || defined (__FreeBSD__)
                     o = std::unique_ptr<object>(new object(value));
 #else
                     (*o) = value;
@@ -1776,20 +1833,19 @@ namespace crow
                                 CROW_LOG_WARNING << "Invalid JSON value detected (" << v.num.d << "), value set to null";
                                 break;
                             }
-#ifdef _MSC_VER
-#define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf_s((BUFFER_PTR), 128, (FORMAT_PTR), (VALUE))
-#else
-#define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf((BUFFER_PTR), (FORMAT_PTR), (VALUE))
-#endif
                             enum
                             {
                                 start,
-                                decp,
+                                decp, // Decimal point
                                 zero
                             } f_state;
                             char outbuf[128];
-                            MSC_COMPATIBLE_SPRINTF(outbuf, "%f", v.num.d);
-                            char *p = &outbuf[0], *o = nullptr;
+#ifdef _MSC_VER
+			    sprintf_s(outbuf, sizeof(outbuf), "%f", v.num.d);
+#else
+			    snprintf(outbuf, sizeof(outbuf), "%f", v.num.d);
+#endif
+                            char *p = &outbuf[0], *o = nullptr; // o is the position of the first trailing 0
                             f_state = start;
                             while (*p != '\0')
                             {
@@ -1797,15 +1853,17 @@ namespace crow
                                 char ch = *p;
                                 switch (f_state)
                                 {
-                                    case start:
+                                    case start: // Loop and lookahead until a decimal point is found
                                         if (ch == '.')
                                         {
-                                            if (p + 1 && *(p + 1) == '0') p++;
+                                            char fch = *(p + 1);
+                                            // if the first character is 0, leave it be (this is so that "1.00000" becomes "1.0" and not "1.")
+                                            if (fch != '\0' && fch == '0') p++;
                                             f_state = decp;
                                         }
                                         p++;
                                         break;
-                                    case decp:
+                                    case decp: // Loop until a 0 is found, if found, record its position
                                         if (ch == '0')
                                         {
                                             f_state = zero;
@@ -1813,7 +1871,7 @@ namespace crow
                                         }
                                         p++;
                                         break;
-                                    case zero:
+                                    case zero: // if a non 0 is found (e.g. 1.00004) remove the earlier recorded 0 position and look for more trailing 0s
                                         if (ch != '0')
                                         {
                                             o = nullptr;
@@ -1823,10 +1881,9 @@ namespace crow
                                         break;
                                 }
                             }
-                            if (o != nullptr)
+                            if (o != nullptr) // if any trailing 0s are found, terminate the string where they begin
                                 *o = '\0';
                             out += outbuf;
-#undef MSC_COMPATIBLE_SPRINTF
                         }
                         else if (v.nt == num_type::Signed_integer)
                         {
@@ -1896,9 +1953,40 @@ namespace crow
             }
         };
 
+        // Used for accessing the internals of a wvalue
+        struct wvalue_reader
+        {
+            int64_t get(int64_t fallback)
+            {
+                if (ref.t() != type::Number || ref.nt == num_type::Floating_point)
+                    return fallback;
+                return ref.num.si;
+            }
 
+            double get(double fallback)
+            {
+                if (ref.t() != type::Number || ref.nt != num_type::Floating_point)
+                    return fallback;
+                return ref.num.d;
+            }
 
-        //std::vector<boost::asio::const_buffer> dump_ref(wvalue& v)
+            bool get(bool fallback)
+            {
+                if (ref.t() == type::True) return true;
+                if (ref.t() == type::False) return false;
+                return fallback;
+            }
+
+            std::string get(const std::string& fallback)
+            {
+                if (ref.t() != type::String) return fallback;
+                return ref.s;
+            }
+
+            const wvalue& ref;
+        };
+
+        //std::vector<asio::const_buffer> dump_ref(wvalue& v)
         //{
         //}
     } // namespace json

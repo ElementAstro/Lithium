@@ -1,4 +1,4 @@
-#include "device.hpp"
+#include "../src/device/device.hpp"
 
 #include <iostream>
 
@@ -52,12 +52,7 @@ private:
 Camera::Camera(const std::string &name) : Device(name)
 {
     _deviceName = "Camera";
-    IAInsertMessage(IACreateMessage("name", name), "");
-    IAInsertMessage(IACreateMessage("exposure", 1), "captureImage");
-    IAInsertMessage(IACreateMessage("gain", 50), "");
-    IAInsertMessage(IACreateMessage("offset", 20), "");
-    IAInsertMessage(IACreateMessage("width", 0), "");
-    IAInsertMessage(IACreateMessage("height", 0), "");
+    IAInsertMessage(IACreateMessage("exposure", 1),getSimpleTask("captureImage",{}));
 }
 
 bool Camera::connect(std::string name)

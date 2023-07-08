@@ -1,3 +1,34 @@
+/*
+ * system.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-6-17
+
+Description: System
+
+**************************************************/
+
 #pragma once
 
 #include <string>
@@ -54,26 +85,6 @@ namespace OpenAPT::System
     std::vector<std::pair<std::string, float>> GetDiskUsage();
 
     /**
-     * @brief Get the network status information.
-     * 获取网络状态信息
-     *
-     * @return A vector of strings representing the network status.
-     *         表示网络状态的字符串向量
-     */
-    std::vector<std::string> GetNetworkStatus();
-
-    /**
-     * @brief Check whether the device is connected to the internet.
-     * 检查设备是否连接到互联网
-     *
-     * @return true if the device is connected to the internet.
-     *         如果设备已连接到互联网，则返回 true
-     * @return false if the device is not connected to the internet.
-     *         如果设备未连接到互联网，则返回 false
-     */
-    bool IsConnectedToInternet();
-
-    /**
      * @brief Check whether the current user has root/administrator privileges.
      * 检查当前用户是否具有根/管理员权限
      *
@@ -103,17 +114,4 @@ namespace OpenAPT::System
      * @param program_name The name of the program to check for duplicates. 要检查重复项的程序名称。
      */
     void CheckDuplicateProcess(const std::string &program_name);
-
-    /**
-     * @brief Check if there is any program running on the specified port and kill it if found.
-     * 检查指定端口上是否有程序正在运行，如果找到则终止该程序。
-     *
-     * This function checks if there is any program running on the specified port by querying the system.
-     * If a program is found, it will be terminated.
-     *
-     * @param port The port number to check. 要检查的端口号。
-     * @return `true` if a program was found and terminated, `false` otherwise. 如果找到并终止了程序，则返回true；否则返回false。
-     */
-    bool CheckAndKillProgramOnPort(int port);
-
 }

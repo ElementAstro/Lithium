@@ -3,8 +3,6 @@
 
 Device::Device(const std::string &name)
 {
-    device_logger.setCurrentModule(name);
-    device_logger.enableAsyncLogging();
     _name = name;
     OpenAPT::UUID::UUIDGenerator generator;
     _uuid = generator.generateUUIDWithFormat();
@@ -16,11 +14,11 @@ auto Device::IAFindMessage(const std::string &identifier)
                         { return msg.message.GetMessageUUID() == identifier || msg.message.GetName() == identifier; });
 }
 
-void Device::IAInsertMessage(const OpenAPT::Property::IMessage &message,const std::string& task_name)
+void Device::IAInsertMessage(const OpenAPT::Property::IMessage &message, std::shared_ptr<OpenAPT::SimpleTask> task)
 {
     MessageInfo info;
     info.message = message;
-    info.task = getSimpleTask(task_name,{});
+    info.task = task;
 
     device_messages.push_back(info);
     IANotifyObservers(message);

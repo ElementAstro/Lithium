@@ -36,7 +36,6 @@ Description: Basic Device Defination
 #include <functional>
 
 #include "task/task.hpp"
-#include "logger/aptlogger.hpp"
 
 #include "nlohmann/json.hpp"
 #include "property/imessage.hpp"
@@ -183,7 +182,7 @@ public:
 public:
     auto IAFindMessage(const std::string &identifier);
 
-    void IAInsertMessage(const OpenAPT::Property::IMessage &message,const std::string& task_name);
+    void IAInsertMessage(const OpenAPT::Property::IMessage &message,std::shared_ptr<OpenAPT::SimpleTask> task);
 
     OpenAPT::Property::IMessage IACreateMessage(const std::string &message_name, std::any message_value);
 
@@ -208,81 +207,6 @@ public:
     std::vector<std::function<void(const OpenAPT::Property::IMessage &, const OpenAPT::Property::IMessage &)>> observers;
 
 public:
-    // 所有的日志封装组件
-
-    /**
-     * @brief 记录追踪级别日志
-     * @tparam Args 可变参数类型
-     * @param formatStr 格式化字符串
-     * @param args 可变参数
-     */
-    template <typename... Args>
-    void IDLtrace(const std::string &formatStr, Args... args)
-    {
-        device_logger.logTrace(formatStr, args...);
-    }
-
-    /**
-     * @brief 记录调试级别日志
-     * @tparam Args 可变参数类型
-     * @param formatStr 格式化字符串
-     * @param args 可变参数
-     */
-    template <typename... Args>
-    void IDLdebug(const std::string &formatStr, Args... args)
-    {
-        device_logger.logDebug(formatStr, args...);
-    }
-
-    /**
-     * @brief 记录信息级别日志
-     * @tparam Args 可变参数类型
-     * @param formatStr 格式化字符串
-     * @param args 可变参数
-     */
-    template <typename... Args>
-    void IDLinfo(const std::string &formatStr, Args... args)
-    {
-        device_logger.logInfo(formatStr, args...);
-    }
-
-    /**
-     * @brief 记录警告级别日志
-     * @tparam Args 可变参数类型
-     * @param formatStr 格式化字符串
-     * @param args 可变参数
-     */
-    template <typename... Args>
-    void IDLwarn(const std::string &formatStr, Args... args)
-    {
-        device_logger.logWarn(formatStr, args...);
-    }
-
-    /**
-     * @brief 记录错误级别日志
-     * @tparam Args 可变参数类型
-     * @param formatStr 格式化字符串
-     * @param args 可变参数
-     */
-    template <typename... Args>
-    void IDLerror(const std::string &formatStr, Args... args)
-    {
-        device_logger.logError(formatStr, args...);
-    }
-
-    /**
-     * @brief 记录严重错误级别日志
-     * @tparam Args 可变参数类型
-     * @param formatStr 格式化字符串
-     * @param args 可变参数
-     */
-    template <typename... Args>
-    void IDLcritical(const std::string &formatStr, Args... args)
-    {
-        device_logger.logCritical(formatStr, args...);
-    }
-
-public:
     std::string _name;                  ///< 设备名称
     std::string _uuid;                  ///< 设备ID
     std::string device_name;            ///< 设备名称
@@ -292,6 +216,4 @@ public:
     int port = 7624;                    ///< 端口号
     bool is_connected;                  ///< 是否已连接
     bool is_debug;                      ///< 调试模式
-
-    OpenAPT::Logger::Logger &device_logger = OpenAPT::Logger::GlobalLogger::getDefaultLogger();
 };

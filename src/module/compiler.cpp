@@ -36,6 +36,7 @@ Description: Compiler
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <filesystem>
+#include <atomic>
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -46,34 +47,42 @@ namespace fs = std::filesystem;
 #define CMD_PREFIX ""
 #define CMD_SUFFIX ".dll"
 #else
+#include <cstdio>
 #define COMPILER "g++"
 #define CMD_PREFIX "lib"
 #define CMD_SUFFIX ".so"
 #endif
 
-bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string& moduleName, const std::string& functionName) {
+bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string &moduleName, const std::string &functionName)
+{
     spdlog::debug("Compiling module {}::{}...", moduleName, functionName);
 
     // 参数校验
-    if (code.empty() || moduleName.empty() || functionName.empty()) {
+    if (code.empty() || moduleName.empty() || functionName.empty())
+    {
         spdlog::error("Invalid parameters.");
         return false;
     }
 
     // Check if the module is already compiled and cached
     auto cachedResult = cache_.find(moduleName + "::" + functionName);
-    if (cachedResult != cache_.end()) {
+    if (cachedResult != cache_.end())
+    {
         spdlog::warn("Module {}::{} is already compiled, returning cached result.", moduleName, functionName);
         return true;
     }
 
     // Create output directory if it does not exist
     const std::string outputDir = "modules/global/";
-    if (!fs::exists(outputDir)) {
+    if (!fs::exists(outputDir))
+    {
         spdlog::warn("Output directory does not exist, creating it: {}", outputDir);
-        try {
+        try
+        {
             fs::create_directories(outputDir);
-        } catch(const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             spdlog::error("Failed to create output directory: {}", e.what());
             return false;
         }
@@ -82,19 +91,26 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     // Read compile options from JSON file
     std::string compileOptions = "-shared -fPIC -x c++ ";
     std::ifstream compileOptionFile("compile_options.json");
-    if (compileOptionFile.is_open()) {
+    if (compileOptionFile.is_open())
+    {
         json compileOptionsJson;
-        try {
+        try
+        {
             compileOptionFile >> compileOptionsJson;
-            if (compileOptionsJson.contains("optimization_level") && compileOptionsJson.contains("cplus_version") && compileOptionsJson.contains("warnings")) {
+            if (compileOptionsJson.contains("optimization_level") && compileOptionsJson.contains("cplus_version") && compileOptionsJson.contains("warnings"))
+            {
                 compileOptions = compileOptionsJson["optimization_level"].get<std::string>() + " " +
-                                  compileOptionsJson["cplus_version"].get<std::string>() + " " +
-                                  compileOptionsJson["warnings"].get<std::string>() + " ";
-            } else {
+                                 compileOptionsJson["cplus_version"].get<std::string>() + " " +
+                                 compileOptionsJson["warnings"].get<std::string>() + " ";
+            }
+            else
+            {
                 spdlog::error("Invalid format in compile_options.json.");
                 return false;
             }
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception &e)
+        {
             spdlog::error("Error reading compile_options.json: {}", e.what());
             return false;
         }
@@ -104,25 +120,23 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     std::string output = outputDir + moduleName + CMD_SUFFIX;
 
     // Syntax and semantic checking
-    std::istringstream codeStream(code);
     std::stringstream syntaxCheckCmd;
     syntaxCheckCmd << COMPILER << " -fsyntax-only -x c++ -";
     std::ostringstream syntaxCheckOutput;
-    if (RunShellCommand(syntaxCheckCmd.str(), codeStream, syntaxCheckOutput) != 0) {
+    if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0)
+    {
         spdlog::error("Syntax error in C++ code: {}", syntaxCheckOutput.str());
         return false;
     }
 
     // Compile code
-    codeStream.clear(); // Clear code stream state
-    codeStream.seekg(0); // Reset code stream read pointer to beginning of stream
-
     std::ostringstream compilationOutput;
     std::string cmd = std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
     spdlog::debug("{}", cmd);
 
-    int exitCode = RunShellCommand(cmd, codeStream, compilationOutput);
-    if (exitCode != 0) {
+    int exitCode = RunShellCommand(cmd, code, compilationOutput);
+    if (exitCode != 0)
+    {
         spdlog::error("Failed to compile C++ code: {}", compilationOutput.str());
         return false;
     }
@@ -143,8 +157,7 @@ bool Compiler::CompileToSharedLibrary(const std::string& code, const std::string
     return false;
 }
 
-
-bool Compiler::CopyFile(const std::string& source, const std::string& destination)
+bool Compiler::CopyFile(const std::string &source, const std::string &destination)
 {
     std::ifstream src(source, std::ios::binary);
     if (!src)
@@ -164,13 +177,13 @@ bool Compiler::CopyFile(const std::string& source, const std::string& destinatio
     return true;
 }
 
-int Compiler::RunShellCommand(const std::string &command, std::istream &inputStream, std::ostream &outputStream)
+int Compiler::RunShellCommand(const std::string &command, const std::string &input, std::string &output)
 {
     int exitCode = -1;
 #ifdef _WIN32
     HANDLE hStdoutRead;
 
-    STARTUPINFO si = { sizeof(si) };
+    STARTUPINFO si = {sizeof(si)};
     PROCESS_INFORMATION pi;
     HANDLE hStdinRead, hStdoutWrite;
     SECURITY_ATTRIBUTES sa;
@@ -209,70 +222,47 @@ int Compiler::RunShellCommand(const std::string &command, std::istream &inputStr
     CloseHandle(hStdinRead);
     CloseHandle(hStdoutWrite);
 
-    std::thread inputThread([&inputStream, hStdoutWrite]() {
-        std::string line;
-        while (std::getline(inputStream, line))
+    // Read the command output
+    std::thread outputThread([&]()
+                             {
+        char buffer[4096];
+        DWORD bytesRead;
+        while (ReadFile(hStdoutRead, buffer, sizeof(buffer), &bytesRead, NULL))
         {
-            line += "\n";
-            DWORD written = 0;
-            WriteFile(hStdoutWrite, line.c_str(), line.size(), &written, NULL);
-        }
-        CloseHandle(hStdoutWrite);
-    });
+            output.append(buffer, bytesRead);
+        } });
 
-    std::array<char, 8192> buffer;
-    DWORD bytesRead = 0;
-
-    while (true)
+    // Write the command input
+    DWORD bytesWritten;
+    if (!WriteFile(hStdinWrite, input.c_str(), input.size(), &bytesWritten, NULL))
     {
-        if (!ReadFile(hStdoutRead, buffer.data(), buffer.size(), &bytesRead, NULL) || bytesRead == 0)
-        {
-            break;
-        }
-        outputStream.write(buffer.data(), bytesRead);
+        spdlog::error("Failed to write input for shell command: {}", command);
+        return exitCode;
     }
+    CloseHandle(hStdinWrite);
 
-    DWORD exitCodeNative = 0;
-    GetExitCodeProcess(pi.hProcess, &exitCodeNative);
+    // Wait for the command to finish
+    WaitForSingleObject(pi.hProcess, INFINITE);
+    GetExitCodeProcess(pi.hProcess, (LPDWORD)&exitCode);
 
-    inputThread.join();
-
+    // Clean up
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+    CloseHandle(hStdoutRead);
+    outputThread.join();
 
-    exitCode = static_cast<int>(exitCodeNative);
 #else
-    std::array<char, 8192> buffer;
-
     FILE *pipe = popen(command.c_str(), "w");
-    if (pipe == nullptr)
+    if (!pipe)
     {
-        spdlog::error("Failed to launch shell command: {}", command);
+        spdlog::error("Failed to popen shell command: {}", command);
         return exitCode;
     }
 
-    while (inputStream.good() && !inputStream.eof())
-    {
-        inputStream.read(buffer.data(), buffer.size());
-        std::size_t bytesRead = inputStream.gcount();
-        fwrite(buffer.data(), sizeof(char), bytesRead, pipe);
-    }
+    fwrite(input.c_str(), 1, input.size(), pipe);
+    fclose(pipe);
 
-    fflush(pipe);
-
-    int fdout = fileno(pipe);
-
-    while (true)
-    {
-        ssize_t bytesRead = read(fdout, buffer.data(), buffer.size());
-        if (bytesRead == -1 || bytesRead == 0)
-        {
-            break;
-        }
-        outputStream.write(buffer.data(), bytesRead);
-    }
-
-    exitCode = pclose(pipe);
+    exitCode = WEXITSTATUS(pclose(pipe));
 #endif
 
     return exitCode;

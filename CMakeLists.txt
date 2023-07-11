@@ -230,9 +230,11 @@ set(openapt_SRC
 )
 
 if(WIN32)
-    add_executable(openapt_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
-    ${device_SRC} ${image_SRC} ${io_SRC} ${logger_SRC} ${module_SRC} 
-    ${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${openapt_SRC})
+    #add_executable(openapt_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
+    #${device_SRC} ${image_SRC} ${io_SRC} ${logger_SRC} ${module_SRC} 
+    #${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${openapt_SRC})
+
+    add_executable(openapt_server ${openapt_SRC})
 
     find_package(CFITSIO REQUIRED)
     target_link_libraries(openapt_server ${CFITSIO_LIBRARIES})

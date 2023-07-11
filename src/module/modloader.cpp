@@ -55,8 +55,12 @@ namespace OpenAPT
      * This function reads a JSON configuration file, stores its content in a JSON object, and returns the object. If it fails to read
      * the file or encounters any exception, it returns an error message as a JSON object.
      *
+     * 读取JSON配置文件，将其内容存储在一个JSON对象中，并返回该对象。如果无法读取文件或遇到任何异常，则返回错误消息作为JSON对象。
+     *
      * @param file_path (const std::string&) : The path of the configuration file to be read.
-     * @return nlohmann::json - A JSON object containing the configuration information or an error message.
+     *                                         要读取的配置文件的路径。
+     * @return json - A JSON object containing the configuration information or an error message.
+     *                包含配置信息或错误消息的JSON对象。
      */
     nlohmann::json read_config_file(const std::string &file_path)
     {
@@ -71,8 +75,7 @@ namespace OpenAPT
             }
 
             // Read the configuration file content into a JSON object
-            nlohmann::json config;
-            file_stream >> config;
+            nlohmann::json config = nlohmann::json::parse(file_stream);
 
             // Close the file stream
             file_stream.close();
@@ -85,16 +88,6 @@ namespace OpenAPT
         }
     }
 
-    /**
-     * @brief Traverse the "modules" directory and create a JSON object containing the information of all modules.
-     *
-     * This function iterates through the "modules" directory and its subdirectories, creates a JSON object for each subdirectory that
-     * contains an "info.json" configuration file, and stores the module's name, version, author, license, description, path, and configuration
-     * file path in the JSON object. It returns a JSON object containing all module information, or an error message if it fails to iterate
-     * the directories or encounters any exception.
-     *
-     * @return nlohmann::json - A JSON object containing the module information or an error message.
-     */
     nlohmann::json iterator_modules_dir()
     {
         // Define the modules directory path
@@ -126,10 +119,10 @@ namespace OpenAPT
         try
         {
             // Iterate through each subdirectory of the modules directory
-            for (auto &dir : fs::recursive_directory_iterator(modules_dir))
+            for (const auto &dir : fs::recursive_directory_iterator(modules_dir))
             {
                 // Check if the current directory is indeed a subdirectory
-                if (fs::is_directory(dir))
+                if (dir.is_directory())
                 {
                     // Get the path of the info.json file within the subdirectory
                     fs::path info_file = dir.path() / "info.json";
@@ -184,16 +177,6 @@ namespace OpenAPT
         }
     }
 
-    /**
-     * @brief   Loads a dynamic module from the given path.
-     *
-     * This function loads a dynamic module from the given path. If the loading is successful, it returns true and saves the handle to the module in the handles_ map.
-     * If the loading fails, it returns false and logs an error message.
-     *
-     * @param[in]   path    The path of the dynamic module to load.
-     * @param[in]   name    The name of the dynamic module.
-     * @return      true if the loading is successful, false otherwise.
-     */
     bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)
     {
         try
@@ -253,14 +236,7 @@ namespace OpenAPT
         }
     }
 
-    /**
-     * @brief 卸载指定名称的动态库
-     *
-     * @param filename [in] 要卸载的动态库的文件名（包括扩展名）
-     * @return true 动态库卸载成功
-     * @return false 动态库卸载失败
-     */
-    bool ModuleLoader::UnloadModule(const std::string &filename)
+        bool ModuleLoader::UnloadModule(const std::string &filename)
     {
         try
         {
@@ -296,44 +272,35 @@ namespace OpenAPT
         }
     }
 
+    bool ModuleLoader::CheckModuleExists(const std::string &moduleName) const
+    {
+        void *handle = LOAD_LIBRARY(moduleName.c_str());
+        if (handle == nullptr)
+        {
+            spdlog::error("Module {} does not exist.", moduleName);
+            return false;
+        }
+        spdlog::info("Module {} is existing.", moduleName);
+        UNLOAD_LIBRARY(handle);
+        return true;
+    }
+
     std::shared_ptr<BasicTask> ModuleLoader::GetTaskPointer(const std::string &module_name, const nlohmann::json &config)
     {
-        auto handle_it = handles_.find(module_name);
-        if (handle_it == handles_.end())
-        {
-            spdlog::error("Failed to find module {}", module_name);
-            return nullptr;
-        }
-
-        auto get_task_func = GetFunction<std::shared_ptr<BasicTask>(*)(const nlohmann::json &)>(module_name, "GetTaskInstance");
-        if (!get_task_func)
-        {
-            spdlog::error("Failed to get symbol {} from module {}: {}", "GetTaskInstance", module_name, dlerror());
-            return nullptr;
-        }
-
-        return get_task_func(config);
+        return GetInstance<BasicTask>(module_name, config, "GetTaskInstance");
     }
 
     std::shared_ptr<Device> ModuleLoader::GetDevicePointer(const std::string &module_name, const nlohmann::json &config)
     {
-        auto handle_it = handles_.find(module_name);
-        if (handle_it == handles_.end())
-        {
-            spdlog::error("Failed to find module {}", module_name);
-            return nullptr;
-        }
-
-        auto get_device_func = GetFunction<std::shared_ptr<Device>(*)(const nlohmann::json &)>(module_name, "GetDeviceInstance");
-        if (!get_device_func)
-        {
-            spdlog::error("Failed to get symbol {} from module {}: {}", "GetDeviceInstance", module_name, dlerror());
-            return nullptr;
-        }
-
-        return get_device_func(config);
+        return GetInstance<Device>(module_name, config, "GetDeviceInstance");
     }
-
+    /*
+    std::shared_ptr<Plugin> ModuleLoader::GetPluginPointer(const std::string &module_name, const nlohmann::json &config)
+    {
+        return GetInstance<Device>(module_name, config, "GetPluginInstance");
+    }
+    */
+    
     bool ModuleLoader::HasModule(const std::string &name) const
     {
         return handles_.count(name) > 0;

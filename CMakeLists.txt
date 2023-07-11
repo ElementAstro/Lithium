@@ -60,7 +60,7 @@ add_subdirectory(libs/pugixml)
 
 #add_subdirectory(src/indiserver)
 
-include_directories(${CMAKE_SOURCE_DIR}/libs/crow)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_SOURCE_DIR}/src/)
 

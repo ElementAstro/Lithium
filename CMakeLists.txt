@@ -55,14 +55,16 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # this should appear after setting the architecture
 project(openapt)
 
+include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${CMAKE_SOURCE_DIR}/src/)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
+
 add_subdirectory(libs/)
 add_subdirectory(libs/pugixml)
 
 #add_subdirectory(src/indiserver)
-
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
-include_directories(${CMAKE_SOURCE_DIR}/libs/)
-include_directories(${CMAKE_SOURCE_DIR}/src/)
 
 set(api_SRC
 	${openapt_src_dir}/src/api/astap.cpp
@@ -225,8 +227,9 @@ set(thread_SRC
 )
 
 set(openapt_SRC
-	${openapt_src_dir}/src/openapt_server.cpp
-	${openapt_src_dir}/src/openapt_server.hpp
+	${openapt_src_dir}/src/App.cpp
+	${openapt_src_dir}/src/AppComponent.hpp
+
 )
 
 if(WIN32)
@@ -235,6 +238,8 @@ if(WIN32)
     #${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${openapt_SRC})
 
     add_executable(openapt_server ${openapt_SRC})
+
+    target_link_libraries(openapt_server oatpp-swagger oatpp-websocket oatpp)
 
     find_package(CFITSIO REQUIRED)
     target_link_libraries(openapt_server ${CFITSIO_LIBRARIES})

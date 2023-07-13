@@ -226,10 +226,16 @@ set(thread_SRC
     ${openapt_src_dir}/src/thread/threadpool.hpp
 )
 
+set(system_module
+    ${openapt_src_dir}/src/modules/system/system.cpp
+    ${openapt_src_dir}/src/modules/system/system.hpp
+)
+
 set(openapt_SRC
 	${openapt_src_dir}/src/App.cpp
 	${openapt_src_dir}/src/AppComponent.hpp
 
+    ${openapt_src_dir}/src/websocket/WSListener.cpp
 )
 
 if(WIN32)
@@ -237,7 +243,9 @@ if(WIN32)
     #${device_SRC} ${image_SRC} ${io_SRC} ${logger_SRC} ${module_SRC} 
     #${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${openapt_SRC})
 
-    add_executable(openapt_server ${openapt_SRC})
+    add_executable(openapt_server ${system_module} ${openapt_SRC})
+
+    target_link_libraries(openapt_server pdh iphlpapi)
 
     target_link_libraries(openapt_server oatpp-swagger oatpp-websocket oatpp)
 

@@ -80,17 +80,11 @@ public:
     res->cacheResource("index.html");
     res->cacheResource("oauth2-redirect.html");
     res->cacheResource("swagger-ui-bundle.js");
-    res->cacheResource("swagger-ui-bundle.js.map");
     res->cacheResource("swagger-ui-es-bundle-core.js");
-    res->cacheResource("swagger-ui-es-bundle-core.js.map");
     res->cacheResource("swagger-ui-es-bundle.js");
-    res->cacheResource("swagger-ui-es-bundle.js.map");
     res->cacheResource("swagger-ui-standalone-preset.js");
-    res->cacheResource("swagger-ui-standalone-preset.js.map");
     res->cacheResource("swagger-ui.css");
-    res->cacheResource("swagger-ui.css.map");
     res->cacheResource("swagger-ui.js");
-    res->cacheResource("swagger-ui.js.map");
     
     return res;
   }

@@ -52,8 +52,6 @@ Description: System
 #include <netinet/udp.h>
 #endif
 
-// #include <spdlog/spdlog.h>
-
 namespace OpenAPT::System
 {
 
@@ -66,7 +64,7 @@ namespace OpenAPT::System
         const std::string uninstall_key = R"(SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall)";
         if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, uninstall_key.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS)
         {
-            // spdlog::error("Failed to open registry key.");
+            // // spdlog::error("Failed to open registry key.");
             return false;
         }
 
@@ -92,7 +90,7 @@ namespace OpenAPT::System
                     RegCloseKey(subkey_handle);
                     RegCloseKey(hKey);
                     is_installed = true;
-                    spdlog::info("Software '{}' is installed.", software_name); // 记录日志
+                    // spdlog::info("Software '{}' is installed.", software_name); // 记录日志
                     break;
                 }
             }
@@ -501,7 +499,7 @@ namespace OpenAPT::System
         HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (hSnapshot == INVALID_HANDLE_VALUE)
         {
-            // spdlog::error("CreateToolhelp32Snapshot failed: {}", GetLastError());
+            // // spdlog::error("CreateToolhelp32Snapshot failed: {}", GetLastError());
             exit(EXIT_FAILURE);
         }
 
@@ -513,16 +511,16 @@ namespace OpenAPT::System
             std::string name = pe.szExeFile;
             if (name == program_name)
             {
-                spdlog::warn("Found duplicate {} process with PID {}", program_name, pe.th32ProcessID);
+                // spdlog::warn("Found duplicate {} process with PID {}", program_name, pe.th32ProcessID);
                 HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
                 if (hProcess == NULL)
                 {
-                    // spdlog::error("OpenProcess failed: {}", GetLastError());
+                    // // spdlog::error("OpenProcess failed: {}", GetLastError());
                     exit(EXIT_FAILURE);
                 }
                 if (!TerminateProcess(hProcess, 0))
                 {
-                    // spdlog::error("TerminateProcess failed: {}", GetLastError());
+                    // // spdlog::error("TerminateProcess failed: {}", GetLastError());
                     exit(EXIT_FAILURE);
                 }
                 CloseHandle(hProcess);
@@ -535,7 +533,7 @@ namespace OpenAPT::System
         DIR *dirp = opendir("/proc");
         if (dirp == NULL)
         {
-            // spdlog::error("Cannot open /proc directory");
+            // // spdlog::error("Cannot open /proc directory");
             exit(EXIT_FAILURE);
         }
 
@@ -557,7 +555,7 @@ namespace OpenAPT::System
                 char cmdline[1024];
                 if (fgets(cmdline, sizeof(cmdline), cmd_file) == NULL)
                 {
-                    // spdlog::error("Failed to get pids");
+                    // // spdlog::error("Failed to get pids");
                 }
                 fclose(cmd_file);
                 std::string name = cmdline;
@@ -571,16 +569,16 @@ namespace OpenAPT::System
 
         if (pids.size() <= 1)
         {
-            spdlog::info("No duplicate {} process found", program_name);
+            // spdlog::info("No duplicate {} process found", program_name);
             return;
         }
 
         for (auto pid : pids)
         {
-            spdlog::warn("Found duplicate {} process with PID {}", program_name, pid);
+            // spdlog::warn("Found duplicate {} process with PID {}", program_name, pid);
             if (kill(pid, SIGTERM) != 0)
             {
-                // spdlog::error("kill failed: {}", strerror(errno));
+                // // spdlog::error("kill failed: {}", strerror(errno));
                 exit(EXIT_FAILURE);
             }
         }

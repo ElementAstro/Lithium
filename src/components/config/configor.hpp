@@ -33,7 +33,7 @@ Description: Configor
 
 #include "nlohmann/json.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
     class ConfigManager
     {
@@ -148,4 +148,4 @@ namespace OpenAPT
          */
         std::vector<std::string> split(const std::string &s, const std::string &delimiter) const;
     };
-} // namespace OpenAPT
+} // namespace Lithium

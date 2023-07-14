@@ -34,7 +34,7 @@ Description: File Manager
 #include <fstream>
 #include <string>
 
-namespace OpenAPT::File
+namespace Lithium::File
 {
     /**
      * @class FileManager

@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-3-29
 
-Description: OpenAPT Server Launcher
+Description: Lithium Server Launcher
 
 **************************************************/
 
@@ -406,7 +406,7 @@ void ServerLauncher::read_server_output()
                 // 根据错误类型处理错误
                 if (error_type == "CRITICAL") {
                     // 生成冲突日志
-                    //OpenAPT::CrashReport::saveCrashLog(error_message);
+                    //Lithium::CrashReport::saveCrashLog(error_message);
                 }
                 else if (error_type == "WARNING") {
                     // 发送警告邮件

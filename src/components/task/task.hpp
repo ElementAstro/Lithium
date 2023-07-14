@@ -42,7 +42,7 @@ Description: Task Definition
 
 #include "nlohmann/json.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
     class BasicTask
     {

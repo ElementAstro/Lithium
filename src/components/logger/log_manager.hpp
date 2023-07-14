@@ -37,7 +37,7 @@ Description: Custom Logger Manager
 
 // #include "aptlogger.hpp"
 
-namespace OpenAPT::Logger
+namespace Lithium::Logger
 {
     struct LogEntry
     {

@@ -1,17 +1,17 @@
 add_subdirectory(oatpp)
 
 add_library(oatpp-swagger
-        oatpp-swagger/AsyncController.hpp
-        oatpp-swagger/Controller.hpp
-        oatpp-swagger/ControllerPaths.hpp
-        oatpp-swagger/Generator.cpp
-        oatpp-swagger/Generator.hpp
-        oatpp-swagger/Model.hpp
-        oatpp-swagger/Resources.cpp
-        oatpp-swagger/Resources.hpp
-        oatpp-swagger/Types.cpp
-        oatpp-swagger/Types.hpp
-        oatpp-swagger/oas3/Model.hpp)
+    oatpp-swagger/AsyncController.hpp
+    oatpp-swagger/Controller.hpp
+    oatpp-swagger/ControllerPaths.hpp
+    oatpp-swagger/Generator.cpp
+    oatpp-swagger/Generator.hpp
+    oatpp-swagger/Model.hpp
+    oatpp-swagger/Resources.cpp
+    oatpp-swagger/Resources.hpp
+    oatpp-swagger/Types.cpp
+    oatpp-swagger/Types.hpp
+    oatpp-swagger/oas3/Model.hpp)
 
 add_library(oatpp-websocket
     oatpp-websocket/AsyncConnectionHandler.cpp
@@ -33,4 +33,40 @@ add_library(oatpp-websocket
     oatpp-websocket/Utils.hpp
     oatpp-websocket/WebSocket.cpp
     oatpp-websocket/WebSocket.hpp
+)
+
+add_library(oatpp-openssl
+    oatpp-openssl/Config.cpp
+    oatpp-openssl/Config.hpp
+    oatpp-openssl/Connection.cpp
+    oatpp-openssl/Connection.hpp
+    oatpp-openssl/ErrorStack.cpp
+    oatpp-openssl/ErrorStack.hpp
+    oatpp-openssl/client/ConnectionProvider.cpp
+    oatpp-openssl/client/ConnectionProvider.hpp
+    oatpp-openssl/server/ConnectionProvider.cpp
+    oatpp-openssl/server/ConnectionProvider.hpp
+    oatpp-openssl/configurer/CaCertificateBundleBuffer.cpp
+    oatpp-openssl/configurer/CaCertificateBundleBuffer.hpp
+    oatpp-openssl/configurer/CertificateChainBuffer.cpp
+    oatpp-openssl/configurer/CertificateChainBuffer.hpp
+    oatpp-openssl/configurer/CertificateChainFile.cpp
+    oatpp-openssl/configurer/CertificateChainFile.hpp
+    oatpp-openssl/configurer/CertificateBuffer.cpp
+    oatpp-openssl/configurer/CertificateBuffer.hpp
+    oatpp-openssl/configurer/CertificateFile.cpp
+    oatpp-openssl/configurer/CertificateFile.hpp
+    oatpp-openssl/configurer/ContextConfigurer.hpp
+    oatpp-openssl/configurer/Groups.cpp
+    oatpp-openssl/configurer/Groups.hpp
+    oatpp-openssl/configurer/PeerCertificateVerification.cpp
+    oatpp-openssl/configurer/PeerCertificateVerification.hpp
+    oatpp-openssl/configurer/PrivateKeyBuffer.cpp
+    oatpp-openssl/configurer/PrivateKeyBuffer.hpp
+    oatpp-openssl/configurer/PrivateKeyFile.cpp
+    oatpp-openssl/configurer/PrivateKeyFile.hpp
+    oatpp-openssl/configurer/TemporaryDhParamsFile.cpp
+    oatpp-openssl/configurer/TemporaryDhParamsFile.hpp
+    oatpp-openssl/configurer/TrustStore.cpp
+    oatpp-openssl/configurer/TrustStore.hpp
 )

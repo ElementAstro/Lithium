@@ -49,7 +49,7 @@ Description: Astrometry Command Line
 #include <windows.h>
 #endif
 
-namespace OpenAPT::API::Astrometry
+namespace Lithium::API::Astrometry
 {
     using json = nlohmann::json;
 
@@ -373,4 +373,4 @@ namespace OpenAPT::API::Astrometry
         return ret_json;
     }
 
-} // namespace OpenAPT::API:Astrometry
+} // namespace Lithium::API:Astrometry

@@ -48,7 +48,7 @@ Description: Compressor using ZLib
 
 constexpr int CHUNK = 16384;
 
-namespace OpenAPT::File
+namespace Lithium::File
 {
 
     bool compress_file(const std::string &file_name, const std::string &output_folder)

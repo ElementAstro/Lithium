@@ -31,7 +31,7 @@ Description: Simple Thread Pool
 
 #include "threadpool.hpp"
 
-namespace OpenAPT::Thread
+namespace Lithium::Thread
 {
     ThreadPool::ThreadPool(size_t num_threads)
         : stop_(false)

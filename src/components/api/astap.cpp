@@ -55,7 +55,7 @@ using namespace std;
 
 namespace fs = std::filesystem;
 
-namespace OpenAPT::API::ASTAP
+namespace Lithium::API::ASTAP
 {
     /**
      * @brief 检查指定的可执行文件是否存在且可以执行。

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <string>
 
-using namespace OpenAPT::File;
+using namespace Lithium::File;
 
 int main()
 {

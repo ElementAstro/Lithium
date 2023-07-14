@@ -38,7 +38,7 @@ Description: Achiement List
 
 using namespace std;
 
-namespace OpenAPT::AAchievement
+namespace Lithium::AAchievement
 {
 
     AchievementList::AchievementList() : AchievementList("achievements.json")

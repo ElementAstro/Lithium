@@ -37,7 +37,7 @@ Description: INDI Camera
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT
+namespace Lithium
 {
 
     void INDICamera::newDevice(INDI::BaseDevice *dp)
@@ -696,7 +696,7 @@ namespace OpenAPT
         return true;
     }
 
-    std::shared_ptr<OpenAPT::SimpleTask> INDICamera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> INDICamera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
         // 定义任务名称与逻辑之间的映射关系
         std::map<std::string, std::function<void(const nlohmann::json &)>> task_map = {
@@ -831,18 +831,18 @@ namespace OpenAPT
         auto it = task_map.find(task_name);
         if (it != task_map.end())
         {
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(it->second, {params}));
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(it->second, {params}));
         }
         spdlog::error("Unknown type of the {} task : {}", _name, task_name);
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::ConditionalTask> INDICamera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> INDICamera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::LoopTask> INDICamera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> INDICamera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         return nullptr;
     }

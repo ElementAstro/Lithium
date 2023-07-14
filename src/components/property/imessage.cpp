@@ -3,7 +3,7 @@
 
 #include <random>
 
-namespace OpenAPT::Property
+namespace Lithium::Property
 {
     IMessage::IMessage()
     {
@@ -149,4 +149,4 @@ namespace OpenAPT::Property
         ss << "</message>";
         return ss.str();
     }
-} // namespace OpenAPT::Property
+} // namespace Lithium::Property

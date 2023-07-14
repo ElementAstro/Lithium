@@ -6,5 +6,3 @@ pacman -S mingw-w64-x86_64-dlfcn
 pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-cfitsio
 pacman -S mingw-w64-x86_64-cmake
-pacman -S mingw-w64-x86_64-qt6
-pacman -S mingw-w64-x86_64-qt-creator

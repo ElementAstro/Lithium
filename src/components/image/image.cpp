@@ -43,7 +43,7 @@ Description: Image Processing
 
 using namespace cimg_library;
 
-namespace OpenAPT::Image
+namespace Lithium::Image
 {
 
     CImg<unsigned char> read_image(const char *filename)

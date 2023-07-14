@@ -1,5 +1,5 @@
-#ifndef OPENAPT_ERRORHANDLER_HPP
-#define OPENAPT_ERRORHANDLER_HPP
+#ifndef Lithium_ERRORHANDLER_HPP
+#define Lithium_ERRORHANDLER_HPP
 
 #include "oatpp/web/server/handler/ErrorHandler.hpp"
 #include "oatpp/web/protocol/http/outgoing/ResponseFactory.hpp"
@@ -21,4 +21,4 @@ public:
 };
 
 
-#endif //OPENAPT_ERRORHANDLER_HPP
+#endif //Lithium_ERRORHANDLER_HPP

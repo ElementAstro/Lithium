@@ -4,7 +4,7 @@
 #include <any>
 #include <vector>
 
-namespace OpenAPT::Property
+namespace Lithium::Property
 {
     class IMessage
     {
@@ -81,7 +81,7 @@ namespace OpenAPT::Property
 
         std::string author;
         std::string time;
-        std::string software = "OpenAPT-Server";
+        std::string software = "Lithium-Server";
 
         std::string toJson() const override;
         std::string toXml() const override;

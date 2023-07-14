@@ -33,7 +33,7 @@ Description: INDI Filterwheel
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT
+namespace Lithium
 {
     void INDIFilterwheel::newDevice(INDI::BaseDevice *dp)
     {
@@ -284,21 +284,21 @@ namespace OpenAPT
         return false;
     }
 
-    std::shared_ptr<OpenAPT::SimpleTask> INDIFilterwheel::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> INDIFilterwheel::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::error("Unknown type of the INDI filter task: {}", task_name);
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::ConditionalTask> INDIFilterwheel::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> INDIFilterwheel::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getCondtionalTask function not implemented");
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::LoopTask> INDIFilterwheel::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> INDIFilterwheel::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getLoopTask function not implemented");
         return nullptr;
     }
-} // namespace OpenAPT
+} // namespace Lithium

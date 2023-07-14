@@ -39,7 +39,7 @@ Description: Simple Thread Pool
 #include <vector>
 #include <future>
 
-namespace OpenAPT::Thread
+namespace Lithium::Thread
 {
     /**
      * @class ThreadPool

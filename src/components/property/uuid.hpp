@@ -35,7 +35,7 @@ Description: UUID Generator
 #include <sstream>
 #include <iomanip>
 
-namespace OpenAPT::UUID
+namespace Lithium::UUID
 {
     /**
      * @class UUIDGenerator
@@ -79,4 +79,4 @@ namespace OpenAPT::UUID
          */
         unsigned int getRandomNumber();
     };
-} // namespace OpenAPT::UUID
+} // namespace Lithium::UUID

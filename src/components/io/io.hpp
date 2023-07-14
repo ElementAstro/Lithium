@@ -36,7 +36,7 @@ Description: IO
 #include <cstdint>
 #include <filesystem>
 
-namespace OpenAPT::File
+namespace Lithium::File
 {
     /**
      * @brief Creates a directory with the specified path.
@@ -234,4 +234,4 @@ namespace OpenAPT::File
      * @return The converted Windows path.
      */
     std::string convert_linux_to_windows_path(const std::string &linux_path);
-} // namespace OpenAPT::File
+} // namespace Lithium::File

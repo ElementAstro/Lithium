@@ -127,7 +127,7 @@ public:
      * @param params 参数
      * @return SimpleTask指针
      */
-    virtual std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) = 0;
+    virtual std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) = 0;
 
     /**
      * @brief 获取ConditionalTask
@@ -136,7 +136,7 @@ public:
      * @param params 参数
      * @return ConditionalTask指针
      */
-    virtual std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) = 0;
+    virtual std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) = 0;
 
     /**
      * @brief 获取LoopTask
@@ -145,7 +145,7 @@ public:
      * @param params 参数
      * @return LoopTask指针
      */
-    virtual std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) = 0;
+    virtual std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) = 0;
 
     /**
      * @brief 获取设备名称
@@ -182,29 +182,29 @@ public:
 public:
     auto IAFindMessage(const std::string &identifier);
 
-    void IAInsertMessage(const OpenAPT::Property::IMessage &message,std::shared_ptr<OpenAPT::SimpleTask> task);
+    void IAInsertMessage(const Lithium::Property::IMessage &message,std::shared_ptr<Lithium::SimpleTask> task);
 
-    OpenAPT::Property::IMessage IACreateMessage(const std::string &message_name, std::any message_value);
+    Lithium::Property::IMessage IACreateMessage(const std::string &message_name, std::any message_value);
 
-    void IAUpdateMessage(const std::string &identifier, const OpenAPT::Property::IMessage &newMessage);
+    void IAUpdateMessage(const std::string &identifier, const Lithium::Property::IMessage &newMessage);
 
     void IARemoveMessage(const std::string &identifier);
 
-    OpenAPT::Property::IMessage *IAGetMessage(const std::string &identifier);
+    Lithium::Property::IMessage *IAGetMessage(const std::string &identifier);
 
-    void IANotifyObservers(const OpenAPT::Property::IMessage &newMessage, const OpenAPT::Property::IMessage &oldMessage);
+    void IANotifyObservers(const Lithium::Property::IMessage &newMessage, const Lithium::Property::IMessage &oldMessage);
 
-    void IANotifyObservers(const OpenAPT::Property::IMessage &removedMessage);
+    void IANotifyObservers(const Lithium::Property::IMessage &removedMessage);
 
     struct MessageInfo
     {
-        OpenAPT::Property::IMessage message;
-        std::shared_ptr<OpenAPT::SimpleTask> task;
+        Lithium::Property::IMessage message;
+        std::shared_ptr<Lithium::SimpleTask> task;
     };
 
     std::vector<MessageInfo> device_messages;
 
-    std::vector<std::function<void(const OpenAPT::Property::IMessage &, const OpenAPT::Property::IMessage &)>> observers;
+    std::vector<std::function<void(const Lithium::Property::IMessage &, const Lithium::Property::IMessage &)>> observers;
 
 public:
     std::string _name;                  ///< 设备名称

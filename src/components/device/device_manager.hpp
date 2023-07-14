@@ -38,7 +38,7 @@ Description: Device Manager
 #include <mutex>
 #include <functional>
 
-namespace OpenAPT
+namespace Lithium
 {
     enum class DeviceType
     {

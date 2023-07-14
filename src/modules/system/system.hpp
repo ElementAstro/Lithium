@@ -34,7 +34,7 @@ Description: System
 #include <string>
 #include <vector>
 
-namespace OpenAPT::System
+namespace Lithium::System
 {
     /**
      * @brief Check whether the specified software is installed.

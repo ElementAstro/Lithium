@@ -34,7 +34,7 @@ Description: Astap Solver Interface
 #include <map>
 #include <string>
 
-namespace OpenAPT::API::ASTAP
+namespace Lithium::API::ASTAP
 {
     /**
      * @brief 使用 ASTAP 进行图像匹配，并返回匹配结果。如果匹配成功，返回包含星表数据的映射；否则返回一个错误消息。
@@ -48,4 +48,4 @@ namespace OpenAPT::API::ASTAP
      * @return 如果匹配成功，返回包含星表数据的映射；否则返回一个错误消息。
      * */
     std::map<std::string, std::string> run_astap(double ra = 0.0, double dec = 0.0, double fov = 0.0, int timeout = 30, bool update = true, std::string image = "");
-} // namespace OpenAPT::API::ASTAP
+} // namespace Lithium::API::ASTAP

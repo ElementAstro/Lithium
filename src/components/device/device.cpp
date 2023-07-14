@@ -4,7 +4,7 @@
 Device::Device(const std::string &name)
 {
     _name = name;
-    OpenAPT::UUID::UUIDGenerator generator;
+    Lithium::UUID::UUIDGenerator generator;
     _uuid = generator.generateUUIDWithFormat();
 }
 
@@ -14,7 +14,7 @@ auto Device::IAFindMessage(const std::string &identifier)
                         { return msg.message.GetMessageUUID() == identifier || msg.message.GetName() == identifier; });
 }
 
-void Device::IAInsertMessage(const OpenAPT::Property::IMessage &message, std::shared_ptr<OpenAPT::SimpleTask> task)
+void Device::IAInsertMessage(const Lithium::Property::IMessage &message, std::shared_ptr<Lithium::SimpleTask> task)
 {
     MessageInfo info;
     info.message = message;
@@ -24,9 +24,9 @@ void Device::IAInsertMessage(const OpenAPT::Property::IMessage &message, std::sh
     IANotifyObservers(message);
 }
 
-OpenAPT::Property::IMessage Device::IACreateMessage(const std::string &message_name, std::any message_value)
+Lithium::Property::IMessage Device::IACreateMessage(const std::string &message_name, std::any message_value)
 {
-    OpenAPT::Property::IMessage message;
+    Lithium::Property::IMessage message;
     message.name = message_name;
     message.device_name = _name;
     message.device_uuid = _uuid;
@@ -34,13 +34,13 @@ OpenAPT::Property::IMessage Device::IACreateMessage(const std::string &message_n
     return message;
 }
 
-void Device::IAUpdateMessage(const std::string &identifier, const OpenAPT::Property::IMessage &newMessage)
+void Device::IAUpdateMessage(const std::string &identifier, const Lithium::Property::IMessage &newMessage)
 {
     auto it = IAFindMessage(identifier);
 
     if (it != device_messages.end())
     {
-        OpenAPT::Property::IMessage oldMessage = it->message;
+        Lithium::Property::IMessage oldMessage = it->message;
         it->message = newMessage;
         IANotifyObservers(newMessage, oldMessage);
     }
@@ -52,13 +52,13 @@ void Device::IARemoveMessage(const std::string &identifier)
 
     if (it != device_messages.end())
     {
-        OpenAPT::Property::IMessage removedMessage = it->message;
+        Lithium::Property::IMessage removedMessage = it->message;
         device_messages.erase(it);
         IANotifyObservers(removedMessage);
     }
 }
 
-OpenAPT::Property::IMessage *Device::IAGetMessage(const std::string &identifier)
+Lithium::Property::IMessage *Device::IAGetMessage(const std::string &identifier)
 {
     auto it = IAFindMessage(identifier);
 
@@ -70,7 +70,7 @@ OpenAPT::Property::IMessage *Device::IAGetMessage(const std::string &identifier)
     return nullptr;
 }
 
-void Device::IANotifyObservers(const OpenAPT::Property::IMessage &newMessage, const OpenAPT::Property::IMessage &oldMessage)
+void Device::IANotifyObservers(const Lithium::Property::IMessage &newMessage, const Lithium::Property::IMessage &oldMessage)
 {
     for (const auto &observer : observers)
     {
@@ -78,7 +78,7 @@ void Device::IANotifyObservers(const OpenAPT::Property::IMessage &newMessage, co
     }
 }
 
-void Device::IANotifyObservers(const OpenAPT::Property::IMessage &removedMessage)
+void Device::IANotifyObservers(const Lithium::Property::IMessage &removedMessage)
 {
     for (const auto &observer : observers)
     {

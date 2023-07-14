@@ -1,51 +1,59 @@
-# OpenAPT
-Open Astrophotography Terminal
+# Lithium 锂
 
-## Why we build this software ?
+# Introduction 简介
 
-In the past, astronomical photography was a tedious and frustrating process. Enthusiasts had to battle with unpredictable weather conditions and constantly monitor their cameras to ensure the perfect shot. Carrying around bulky equipment only added to the hassle, making it a far from enjoyable experience.
+像锂一样活泼的轻量化天文摄影终端
 
-While commercial products have emerged to make things easier, they come with major downsides. Many of these solutions are closed source and lack compatibility with devices that aren't their own, leaving astronomers feeling frustrated and limited in their choices.
+## Features 特性
 
-We understand this frustration all too well, which is why we've set out to create an open source alternative - the Astronomical Pi. With a passion for the cosmos and a deep commitment to open source principles, we're determined to make astronomical photography accessible to everyone.
+等待最后的修改
 
-Our team is passionate about creating an affordable and easy-to-use solution that not only supports all mainstream operating systems and astronomical devices, but also offers a highly optimized asynchronous architecture for stable and efficient performance. Our software even includes modified versions of popular tools like PHD2, asap, and astrometry, making it easier than ever to capture breathtaking images.
+## How to build 如何构建
 
-Despite facing stiff competition from closed source alternatives, we're not willing to give up. We believe that the world belongs to open source, and we're committed to making our vision a reality.
+### Install dependencies 安装依赖项
 
-## Features
+诚然，已经尽可能使用了少的库，但是依然需要安装一些依赖库
 
-OpenAPT is an astronomy software that caters to astronomers and astrophotographers of all levels. It boasts stable and efficient performance on mainstream operating systems, and seamless integration with most astronomical devices. With a modified version of PHD2 and asap and astrometry as platesolving engines, capturing stunning images has never been easier. Its multiple interface access, including web, desktop, and terminal interfaces, makes it user-friendly from anywhere. 
-
-But what sets OpenAPT apart is its commitment to accessibility and open source. Based on GPL3, it's completely free and customizable to suit unique needs. OpenAPT's intuitive and adaptable system allows for easy management and control of multiple astronomical devices, opening up the cosmos to enthusiasts and professionals alike.
-
-## How to build
-
-### Install dependencies
+在Windows平台下
 
 ```
-sudo apt-add-repository ppa:mutlaqja/ppa -y // Add INDI source
-sudo apt update && sudo apt upgrade -y 
-sudo apt install libspdlog-dev libboost-dev libgsl-dev libcfitsio-dev libz-dev python3-dev libssl-dev libboost-system-dev && sudo apt-get install libindi1 indi-bin libindi-dev
+sed -i "s#https\?://mirror.msys2.org/#https://mirrors.tuna.tsinghua.edu.cn/msys2/#g" /etc/pacman.d/mirrorlist*
+pacman -Syu
+pacman -S mingw-w64-x86_64-toolchain
+pacman -S mingw-w64-x86_64-dlfcn
+pacman -S mingw-w64-x86_64-fmt
+pacman -S mingw-w64-x86_64-cfitsio
+pacman -S mingw-w64-x86_64-cmake
 ```
 
-or just run
+在Ubuntu或者其他的类似Linux平台下
+```
+sudo apt-add-repository ppa:mutlaqja/ppa -y
+sudo apt update && sudo apt upgrade -y
+sudo apt-get install libindi1 indi-bin libindi-dev
+sudo apt install libcfitsio-dev libz-dev libssl-dev
+```
+
+或者直接根据平台运行现成的脚本
 
 ```
 sudo sh scripts/build_ci.sh
+sh scripts/build_win.sh
 ```
 
-### Build the code
+### Build the code 构建代码
 
 ```
 mkdir build && cd build
 cmake ..
-make -j4
+make -j4 or cmake --build . -j4
 
-./openapt
+./lithium_server
 ```
 
-Everything is very simple.
+Everything is very simple. 整个过程都很简单awa
+
+下面是一首小诗，改编自三体中的一段台词
 
 ```
 Learning requires not mere imagination,

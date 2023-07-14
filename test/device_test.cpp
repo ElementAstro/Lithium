@@ -23,11 +23,11 @@ public:
 
     bool setParameter(const std::string &paramName, const std::string &paramValue) override;
 
-    std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
+    std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
 
-    std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
+    std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
 
-    std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
+    std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
 
     std::string getName() const override;
 
@@ -95,11 +95,11 @@ bool Camera::setParameter(const std::string &paramName, const std::string &param
     return true;
 }
 
-std::shared_ptr<OpenAPT::SimpleTask> Camera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+std::shared_ptr<Lithium::SimpleTask> Camera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
 {
     if (task_name == "captureImage")
     {
-        auto imageCaptureTask = std::make_shared<OpenAPT::SimpleTask>(
+        auto imageCaptureTask = std::make_shared<Lithium::SimpleTask>(
             [this](const nlohmann::json &params) -> nlohmann::json
             {
                 std::cout << "Image captured" << std::endl;
@@ -121,12 +121,12 @@ std::shared_ptr<OpenAPT::SimpleTask> Camera::getSimpleTask(const std::string &ta
     }
 }
 
-std::shared_ptr<OpenAPT::ConditionalTask> Camera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+std::shared_ptr<Lithium::ConditionalTask> Camera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
 {
     return nullptr;
 }
 
-std::shared_ptr<OpenAPT::LoopTask> Camera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+std::shared_ptr<Lithium::LoopTask> Camera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
 {
     return nullptr;
 }
@@ -156,7 +156,7 @@ void Camera::setId(int id)
     _id = id;
 }
 
-void MyObserver(const OpenAPT::Property::IMessage &newMessage, const OpenAPT::Property::IMessage &oldMessage)
+void MyObserver(const Lithium::Property::IMessage &newMessage, const Lithium::Property::IMessage &oldMessage)
 {
     std::cout << "Observer called with new message: " << newMessage.GetMessageUUID() << std::endl;
     std::cout << "Old message: " << oldMessage.GetMessageUUID() << std::endl;

@@ -1,6 +1,6 @@
 #include "xml.hpp"
 
-namespace OpenAPT::XML
+namespace Lithium::XML
 {
     px::xml_node read_xml(const std::string &filename)
     {
@@ -110,4 +110,4 @@ namespace OpenAPT::XML
 
         return j.dump();
     }
-} // namespace OpenAPT::XML
+} // namespace Lithium::XML

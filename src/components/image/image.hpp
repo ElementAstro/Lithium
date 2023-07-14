@@ -29,7 +29,7 @@ Description: Image Processing
 
 **************************************************/
 
-namespace OpenAPT
+namespace Lithium
 {
     int StarDrawing(const std::string &filename, const unsigned int outerHfdDiameter = 50);
-} // namespace OpenAPT
+} // namespace Lithium

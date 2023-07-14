@@ -21,8 +21,8 @@ public:
          oatpp::swagger::DocumentInfo::Builder builder;
 
          builder
-             .setTitle("OpenAPT API")
-             .setDescription("OpenAPT API")
+             .setTitle("Lithium API")
+             .setDescription("Lithium API")
              .setVersion("1.0")
              .setContactName("Max Qian")
              .setContactUrl("https://lightapt.com/")

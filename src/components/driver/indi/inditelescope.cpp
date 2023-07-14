@@ -33,7 +33,7 @@ Description: INDI Telescope
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT
+namespace Lithium
 {
     void INDITelescope::newDevice(INDI::BaseDevice *dp)
     {
@@ -406,20 +406,20 @@ namespace OpenAPT
         return true;
     }
 
-    std::shared_ptr<OpenAPT::SimpleTask> INDITelescope::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> INDITelescope::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::error("Unknown type of the INDI telescope task: {}", task_name);
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::ConditionalTask> INDITelescope::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> INDITelescope::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         throw std::runtime_error("getCondtionalTask function not implemented");
     }
 
-    std::shared_ptr<OpenAPT::LoopTask> INDITelescope::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> INDITelescope::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         throw std::runtime_error("getLoopTask function not implemented");
     }
 
-} // namespace OpenAPT
+} // namespace Lithium

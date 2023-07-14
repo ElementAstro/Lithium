@@ -35,13 +35,13 @@ Description: INDI CLient Interface
 #include <libindi/baseclient.h>
 #include <libindi/basedevice.h>
 
-class OpenAptIndiClient : public INDI::BaseClient
+class LithiumIndiClient : public INDI::BaseClient
 {
     bool m_disconnecting;
 
 public:
-    OpenAptIndiClient();
-    ~OpenAptIndiClient();
+    LithiumIndiClient();
+    ~LithiumIndiClient();
 
 public:
     bool connectServer()

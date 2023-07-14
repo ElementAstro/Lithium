@@ -39,7 +39,7 @@ Description: File Manager
 
 #include <openssl/md5.h>
 
-namespace OpenAPT::File
+namespace Lithium::File
 {
 
 

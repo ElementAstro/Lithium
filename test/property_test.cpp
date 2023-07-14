@@ -1,6 +1,6 @@
 #include "../src/property/imessage.hpp"
 
-using namespace OpenAPT::Property;
+using namespace Lithium::Property;
 
 int main()
 {

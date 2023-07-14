@@ -31,32 +31,32 @@ Description: INDI CLient Interface
 
 #include "indiclient.hpp"
 
-OpenAptIndiClient::OpenAptIndiClient()
+LithiumIndiClient::LithiumIndiClient()
     : m_disconnecting(false)
 {
 }
 
-OpenAptIndiClient::~OpenAptIndiClient()
+LithiumIndiClient::~LithiumIndiClient()
 {
 }
 
-void OpenAptIndiClient::serverDisconnected(int exit_code)
+void LithiumIndiClient::serverDisconnected(int exit_code)
 {
     m_disconnecting = true;
     IndiServerDisconnected(exit_code);
     m_disconnecting = false;
 }
 
-void OpenAptIndiClient::serverConnected()
+void LithiumIndiClient::serverConnected()
 {
     // nothing to do yet
     // for INDI Core 1.9.9, 2.0.0, the function is called before requesting to retrieve device information.
     // If the function implementation waits for information, a deadlock occurs.
     //
-    // see OpenAptIndiClient::connectServer override function below
+    // see LithiumIndiClient::connectServer override function below
 }
 
-bool OpenAptIndiClient::connectServer()
+bool LithiumIndiClient::connectServer()
 {
     // Call the original function.
     bool ok = INDI::BaseClient::connectServer();
@@ -74,7 +74,7 @@ bool OpenAptIndiClient::connectServer()
     return ok;
 }
 
-bool OpenAptIndiClient::DisconnectIndiServer()
+bool LithiumIndiClient::DisconnectIndiServer()
 {
     // suppress any attempt to call disconnectServer from the
     // serverDisconnected callback.  Some serverDisconnected callbacks

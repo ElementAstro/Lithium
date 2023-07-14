@@ -39,7 +39,7 @@ Description: Device Manager
 #include "focuser.hpp"
 #include "filterwheel.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
 
     // Constructor
@@ -274,12 +274,12 @@ namespace OpenAPT
                 if (device_type == "ASTAP")
                 {
                     //spdlog::debug("Found Solver: ASTAP");
-                    // return std::make_shared<OpenAPT::ASTapSolverTask>();
+                    // return std::make_shared<Lithium::ASTapSolverTask>();
                 }
                 if (device_type == "Astrometry")
                 {
                     //spdlog::debug("Found Solver: Astrometry");
-                    // return std::make_shared<OpenAPT::AstrometrySolverTask>();
+                    // return std::make_shared<Lithium::AstrometrySolverTask>();
                 }
                 break;
             }
@@ -288,7 +288,7 @@ namespace OpenAPT
                 if (device_type == "PHD2")
                 {
                     //spdlog::debug("Found Guider device: {} with driver: {}", device_name, device_type);
-                    // return std::make_shared<OpenAPT::PHD2GuiderTask>();
+                    // return std::make_shared<Lithium::PHD2GuiderTask>();
                 }
                 break;
             }

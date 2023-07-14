@@ -44,7 +44,7 @@ Description: Custom Logger Manager
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT::Logger
+namespace Lithium::Logger
 {
     LoggerManager::LoggerManager()
     {

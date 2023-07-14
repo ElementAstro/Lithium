@@ -1,6 +1,6 @@
 #include "uuid.hpp"
 
-namespace OpenAPT::UUID
+namespace Lithium::UUID
 {
     UUIDGenerator::UUIDGenerator() : gen_(std::random_device{}()), dis_(0, 15)
     {
@@ -57,7 +57,7 @@ namespace OpenAPT::UUID
 
 int main()
 {
-    OpenAPT::UUID::UUIDGenerator generator;
+    Lithium::UUID::UUIDGenerator generator;
 
     // 设置随机数种子
     generator.seed(123);

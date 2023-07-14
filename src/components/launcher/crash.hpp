@@ -31,7 +31,7 @@ Description: Crash Report
 
 #include <string>
 
-namespace OpenAPT::CrashReport
+namespace Lithium::CrashReport
 {
     /**
      * @brief 保存崩溃日志
@@ -50,4 +50,4 @@ namespace OpenAPT::CrashReport
      * otherwise calling this function will have no effect.
      */
     void saveCrashLog(const std::string &error_msg);
-} // namespace OpenAPT::CrashReport
+} // namespace Lithium::CrashReport

@@ -35,7 +35,7 @@ Description: Base64
 #include <vector>
 #include <stdexcept>
 
-namespace OpenAPT::Base64
+namespace Lithium::Base64
 {
 
     /**

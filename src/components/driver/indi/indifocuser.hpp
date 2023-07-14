@@ -41,9 +41,9 @@ Description: INDI Focuser
 
 #include "nlohmann/json.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
-    class INDIFocuser : public Focuser, public OpenAptIndiClient
+    class INDIFocuser : public Focuser, public LithiumIndiClient
     {
         // INDI 客户端参数
         ISwitchVectorProperty *connection_prop;        // 连接属性指针
@@ -205,27 +205,27 @@ namespace OpenAPT
          *
          * @param task_name 任务名字
          * @param params 任务参数
-         * @return std::shared_ptr<OpenAPT::SimpleTask> 简单任务指针
+         * @return std::shared_ptr<Lithium::SimpleTask> 简单任务指针
          */
-        std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
+        std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
 
         /**
          * @brief 获取条件任务
          *
          * @param task_name 任务名字
          * @param params 任务参数
-         * @return std::shared_ptr<OpenAPT::ConditionalTask> 条件任务指针
+         * @return std::shared_ptr<Lithium::ConditionalTask> 条件任务指针
          */
-        std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
+        std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
 
         /**
          * @brief 获取循环任务
          *
          * @param task_name 任务名字
          * @param params 任务参数
-         * @return std::shared_ptr<OpenAPT::LoopTask> 循环任务指针
+         * @return std::shared_ptr<Lithium::LoopTask> 循环任务指针
          */
-        std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
+        std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
 
     protected:
         /**

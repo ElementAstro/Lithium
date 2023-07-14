@@ -37,7 +37,7 @@ Description: Base64
 #include <arpa/inet.h>
 #endif
 
-namespace OpenAPT::Base64
+namespace Lithium::Base64
 {
     std::string base64Encode(const std::vector<unsigned char> &bytes_to_encode)
     {

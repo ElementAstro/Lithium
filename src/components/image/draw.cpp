@@ -35,7 +35,7 @@
 using namespace std;
 using namespace cimg_library;
 
-namespace OpenAPT
+namespace Lithium
 {
 	typedef tuple<int
 				  /*x*/

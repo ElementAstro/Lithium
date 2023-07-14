@@ -67,7 +67,7 @@ Description: C++ and Python Modules Loader
 #include "task/task.hpp"
 #include "device/device.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
 
     /**

@@ -33,7 +33,7 @@ Description: {}
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT
+namespace Lithium
 {
     void INDIFocuser::newDevice(INDI::BaseDevice *dp)
     {
@@ -506,12 +506,12 @@ namespace OpenAPT
         return false;
     }
 
-    std::shared_ptr<OpenAPT::SimpleTask> INDIFocuser::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> INDIFocuser::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
         if (task_name == "MoveToAbsolute")
         {
             spdlog::debug("MoveToAbsolute task with parameters: {}", params.dump());
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
                     this->moveToAbsolute(tpramas["position"].get<int>());
@@ -521,7 +521,7 @@ namespace OpenAPT
         else if (task_name == "MoveStepAbsolute")
         {
             spdlog::debug("MoveStepAbsolute task with parameters: {}", params.dump());
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
                     this->moveStepAbsolute(tpramas["step"].get<int>());
@@ -531,7 +531,7 @@ namespace OpenAPT
         else if (task_name == "AbortMove")
         {
             spdlog::debug("AbortMove task");
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &)
                 {
                     this->AbortMove();
@@ -541,7 +541,7 @@ namespace OpenAPT
         else if (task_name == "GetMaxPosition")
         {
             spdlog::debug("GetMaxPosition task");
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &)
                 {
                     this->getMaxPosition();
@@ -551,7 +551,7 @@ namespace OpenAPT
         else if (task_name == "SetMaxPosition")
         {
             spdlog::debug("SetMaxPosition task with parameters: {}", params.dump());
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
                     this->setMaxPosition(tpramas["max_position"].get<int>());
@@ -561,7 +561,7 @@ namespace OpenAPT
         else if (task_name == "HaveBacklash")
         {
             spdlog::debug("HaveBacklash task");
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &)
                 {
                     this->haveBacklash();
@@ -571,7 +571,7 @@ namespace OpenAPT
         else if (task_name == "SetBacklash")
         {
             spdlog::debug("SetBacklash task with parameters: {}", params.dump());
-            return std::shared_ptr<OpenAPT::SimpleTask>(new OpenAPT::SimpleTask(
+            return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
                     this->setBacklash(tpramas["backlash"].get<int>());
@@ -582,15 +582,15 @@ namespace OpenAPT
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::ConditionalTask> INDIFocuser::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> INDIFocuser::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getCondtionalTask function not implemented");
         return nullptr;
     }
 
-    std::shared_ptr<OpenAPT::LoopTask> INDIFocuser::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> INDIFocuser::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getLoopTask function not implemented");
         return nullptr;
     }
-} // namespace OpenAPT
+} // namespace Lithium

@@ -65,7 +65,7 @@ Description: Crash Report
 #include <unistd.h>
 #endif
 
-namespace OpenAPT::CrashReport
+namespace Lithium::CrashReport
 {
 
     // 获取系统信息

@@ -1,5 +1,5 @@
 #include "../src/module/modloader.hpp"
-using namespace OpenAPT;
+using namespace Lithium;
 
 int main()
 {

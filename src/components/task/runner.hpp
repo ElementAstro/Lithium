@@ -36,7 +36,7 @@ Description: Task Runner
 
 #include "nlohmann/json.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
     class BasicTask;
     class TaskGenerator
@@ -185,4 +185,4 @@ namespace OpenAPT
         std::shared_ptr<BasicTask> m_CurrentTask;
     };
 
-} // namespace OpenAPT
+} // namespace Lithium

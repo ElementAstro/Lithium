@@ -41,7 +41,7 @@ Description: Thread Manager
 #include <functional>
 #include <condition_variable>
 
-namespace OpenAPT::Thread
+namespace Lithium::Thread
 {
 
     /**

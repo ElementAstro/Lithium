@@ -44,7 +44,7 @@ Description: Websockcet Server
 using json = nlohmann::json;
 using websocketpp::server;
 
-namespace OpenAPT
+namespace Lithium
 {
     /**
      * @brief 实现 WebSocket 服务器，提供消息传输和命令派发功能。
@@ -162,4 +162,4 @@ namespace OpenAPT
         void GetDeviceInfo(const json &m_params);
     };
 
-} // namespace OpenAPT
+} // namespace Lithium

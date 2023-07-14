@@ -1,5 +1,5 @@
-#ifndef OPENAPT_STATICCONTROLLER_HPP
-#define OPENAPT_STATICCONTROLLER_HPP
+#ifndef Lithium_STATICCONTROLLER_HPP
+#define Lithium_STATICCONTROLLER_HPP
 
 #include "oatpp/web/server/api/ApiController.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
@@ -32,7 +32,7 @@ public:
             "    <meta charset=utf-8/>"
             "  </head>"
             "  <body>"
-            "    <p>Hello OPENAPT example project!</p>"
+            "    <p>Hello Lithium example project!</p>"
             "    <a href='swagger/ui'>Checkout Swagger-UI page</a>"
             "  </body>"
             "</html>";
@@ -44,4 +44,4 @@ public:
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen
 
-#endif // OPENAPT_STATICCONTROLLER_HPP
+#endif // Lithium_STATICCONTROLLER_HPP

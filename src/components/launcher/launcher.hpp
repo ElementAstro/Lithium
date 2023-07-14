@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-3-29
 
-Description: OpenAPT Server Launcher
+Description: Lithium Server Launcher
 
 **************************************************/
 

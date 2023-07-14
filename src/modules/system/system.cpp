@@ -52,7 +52,7 @@ Description: System
 #include <netinet/udp.h>
 #endif
 
-namespace OpenAPT::System
+namespace Lithium::System
 {
 
     bool CheckSoftwareInstalled(const std::string &software_name)

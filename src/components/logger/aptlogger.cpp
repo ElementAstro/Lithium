@@ -31,7 +31,7 @@ Description: Custom Logger
 
 #include "aptlogger.hpp"
 
-namespace OpenAPT::Logger
+namespace Lithium::Logger
 {
 
     std::string_view levelToString(LogLevel level)

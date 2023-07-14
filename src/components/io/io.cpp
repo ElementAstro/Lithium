@@ -45,7 +45,7 @@ const std::string PATH_SEPARATOR = "/";
 
 namespace fs = std::filesystem;
 
-namespace OpenAPT::File
+namespace Lithium::File
 {
 
     bool create_directory(const std::string &path)

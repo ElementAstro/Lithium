@@ -2,7 +2,7 @@
 
 int main()
 {
-    OpenAPT::Logger::LoggerManager logger;
+    Lithium::Logger::LoggerManager logger;
     std::string logsFolder = ".\\log";
     logger.scanLogsFolder(logsFolder);
     logger.analyzeLogs();

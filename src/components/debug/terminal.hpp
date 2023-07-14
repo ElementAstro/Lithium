@@ -31,7 +31,7 @@ Description: Terminal
 
 #pragma once
 
-#define HAS_OPENAPT_TERMINAL 1
+#define HAS_Lithium_TERMINAL 1
 
 #include <iostream>
 #include <string>
@@ -52,7 +52,7 @@ Description: Terminal
 #include <termios.h>
 #endif
 
-namespace OpenAPT::Terminal
+namespace Lithium::Terminal
 {
     /**
      * @brief 命令管理器类，用于注册、运行指令函数以及管理历史记录等功能。

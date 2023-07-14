@@ -56,7 +56,7 @@ Description: Time
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT::Time
+namespace Lithium::Time
 {
 
     std::time_t getSystemTime()

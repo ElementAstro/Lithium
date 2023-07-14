@@ -35,7 +35,7 @@ Description: Time
 #include <ctime>
 #include <string>
 
-namespace OpenAPT
+namespace Lithium
 {
     namespace Time
     {
@@ -83,6 +83,6 @@ namespace OpenAPT
         bool SyncTimeFromRTC();
 
     } // namespace Time
-} // namespace OpenAPT
+} // namespace Lithium
 
 #endif // TIME_HPP

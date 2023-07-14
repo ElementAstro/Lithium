@@ -47,7 +47,7 @@ namespace fs = std::filesystem;
 #define PATH_SEPARATOR "/"
 #endif
 
-namespace OpenAPT
+namespace Lithium
 {
     /**
      * @brief Read a JSON configuration file and return its content as a JSON object.

@@ -35,7 +35,7 @@ Description: Task Runner
 #include "task.hpp"
 #include "runner.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
 
     // This function returns a std::function that takes a const nlohmann::json& parameter and returns void.

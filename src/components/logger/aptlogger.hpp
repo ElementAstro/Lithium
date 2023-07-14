@@ -44,7 +44,7 @@ Description: Custom Logger
 #include <regex>
 #include <fmt/core.h>
 
-namespace OpenAPT::Logger
+namespace Lithium::Logger
 {
     /**
      * @brief 日志级别枚举类
@@ -302,4 +302,4 @@ namespace OpenAPT::Logger
      */
     void writeErrorLog(const std::vector<std::string> &errorMessages, const std::string &filename);
 
-} // namespace OpenAPT::Logger
+} // namespace Lithium::Logger

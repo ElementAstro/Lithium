@@ -1,6 +1,6 @@
 #include "../src/io/io.hpp"
 
-using namespace OpenAPT::File;
+using namespace Lithium::File;
 
 int main()
 {

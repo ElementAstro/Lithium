@@ -31,7 +31,7 @@ Description: Websockcet Server
 
 #include "wsserver.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
     WebSocketServer::WebSocketServer(int max_connections = 0)
         : running_(false), max_connections_(max_connections), active_connections_(0)
@@ -42,7 +42,7 @@ namespace OpenAPT
         server_.set_message_handler(bind(&WebSocketServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
 
         server_.set_validate_handler([](websocketpp::connection_hdl)
-                                       { return true; });
+                                     { return true; });
         server_.set_fail_handler([](websocketpp::connection_hdl) {});
         server_.set_http_handler([](websocketpp::connection_hdl) {});
 
@@ -129,7 +129,7 @@ namespace OpenAPT
         auto conn = server_.get_con_from_hdl(hdl);
         auto client_ip = conn->get_socket().remote_endpoint().address().to_string();
         auto client_port = conn->get_socket().remote_endpoint().port();
-        // //spdlog::info("New client connected: {} : {}", client_ip, client_port);
+        // //// spdlog::info("New client connected: {} : {}", client_ip, client_port);
 
         // 记录客户端信息到 JSON 文件中
         saveClientInfo(client_ip, client_port);
@@ -145,7 +145,7 @@ namespace OpenAPT
         auto conn = server_.get_con_from_hdl(hdl);
         auto client_ip = conn->get_socket().remote_endpoint().address().to_string();
         auto client_port = conn->get_socket().remote_endpoint().port();
-        // //spdlog::info("Client disconnected: {} : {}", client_ip, client_port);
+        // //// spdlog::info("Client disconnected: {} : {}", client_ip, client_port);
 
         active_connections_--;
     }
@@ -167,7 +167,7 @@ namespace OpenAPT
             // 检查 JSON 语法
             if (!json::accept(msg->get_payload()))
             {
-                // //spdlog::error("WebSocketServer::onMessage() invalid JSON syntax: {}", msg->get_payload());
+                // //// spdlog::error("WebSocketServer::onMessage() invalid JSON syntax: {}", msg->get_payload());
                 return;
             }
 

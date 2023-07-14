@@ -42,7 +42,7 @@ Description: Configor
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
-namespace OpenAPT
+namespace Lithium
 {
 
     void ConfigManager::loadFromFile(const std::string &path)

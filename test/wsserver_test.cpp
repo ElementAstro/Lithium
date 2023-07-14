@@ -1,6 +1,6 @@
 #include "wsserver.hpp"
 
-using namespace OpenAPT;
+using namespace Lithium;
 
 int main()
 {

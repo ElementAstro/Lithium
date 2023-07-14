@@ -31,7 +31,7 @@ Description: Terminal
 
 #include "terminal.hpp"
 
-namespace OpenAPT::Terminal
+namespace Lithium::Terminal
 {
     CommandManager::CommandManager() : hist_iter_(command_history_.begin()) {}
 
@@ -396,7 +396,7 @@ namespace OpenAPT::Terminal
 
     void printHeader()
     {
-        std::cout << "Welcome to OpenAPT Command Line Tool v1.0" << std::endl;
+        std::cout << "Welcome to Lithium Command Line Tool v1.0" << std::endl;
         std::cout << "Type 'help' to see a list of available commands." << std::endl;
         std::cout << "--------------------------------------------------" << std::endl;
     }

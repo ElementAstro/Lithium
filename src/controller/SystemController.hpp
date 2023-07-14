@@ -1,5 +1,5 @@
-#ifndef OPENAPT_SystemCONTROLLER_HPP
-#define OPENAPT_SystemCONTROLLER_HPP
+#ifndef Lithium_SystemCONTROLLER_HPP
+#define Lithium_SystemCONTROLLER_HPP
 
 #include "modules/system/system.hpp"
 
@@ -30,7 +30,7 @@ public:
 
     ENDPOINT("GET", "/api/system/cpu", getUICpuUsage)
     {
-        float cpu_usage = OpenAPT::System::GetCpuUsage();
+        float cpu_usage = Lithium::System::GetCpuUsage();
         nlohmann::json res;
         if (cpu_usage == 0.0)
         {
@@ -50,7 +50,7 @@ public:
 
     ENDPOINT("GET", "/api/system/memory", getUIMemoryUsage)
     {
-        float memory_usage = OpenAPT::System::GetMemoryUsage();
+        float memory_usage = Lithium::System::GetMemoryUsage();
         nlohmann::json res;
         if (memory_usage == 0.0)
         {
@@ -70,7 +70,7 @@ public:
 
     ENDPOINT("GET", "/api/system/cpu_temp", getUICpuTemperature)
     {
-        float cpu_temp = OpenAPT::System::GetCpuTemperature();
+        float cpu_temp = Lithium::System::GetCpuTemperature();
         nlohmann::json res;
         if (cpu_temp == 0.0)
         {
@@ -91,7 +91,7 @@ public:
     ENDPOINT("GET", "/api/system/disk", getUIDiskUsage)
     {
         nlohmann::json res;
-        for (const auto &disk : OpenAPT::System::GetDiskUsage())
+        for (const auto &disk : Lithium::System::GetDiskUsage())
         {
             OATPP_LOGD("System","Disk %s Usage: %f %",disk.first.c_str(),disk.second);
             res["value"][disk.first] = disk.second;
@@ -104,7 +104,7 @@ public:
     ENDPOINT("GET", "/api/system/process", getUIProcesses)
     {
         nlohmann::json res;
-        for (const auto &process : OpenAPT::System::GetProcessInfo())
+        for (const auto &process : Lithium::System::GetProcessInfo())
         {
             OATPP_LOGD("System","Process Name: %s File Address: %s",process.first.c_str(),process.second.c_str());
             res["value"][process.first] = process.second;
@@ -117,4 +117,4 @@ public:
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen
 
-#endif // OPENAPT_SystemCONTROLLER_HPP
+#endif // Lithium_SystemCONTROLLER_HPP

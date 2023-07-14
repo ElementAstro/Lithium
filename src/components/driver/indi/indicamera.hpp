@@ -43,9 +43,9 @@ Description: INDI Camera
 #include <spdlog/spdlog.h>
 #include "nlohmann/json.hpp"
 
-namespace OpenAPT
+namespace Lithium
 {
-    class INDICamera : public Camera, public OpenAptIndiClient
+    class INDICamera : public Camera, public LithiumIndiClient
     {
         // INDI Parameters
     private:
@@ -206,11 +206,11 @@ namespace OpenAPT
         bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) override;
 
         // 获取简单任务
-        std::shared_ptr<OpenAPT::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
+        std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
         // 获取条件任务
-        std::shared_ptr<OpenAPT::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
+        std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
         // 获取循环任务
-        std::shared_ptr<OpenAPT::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
+        std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
 
     protected:
         // 清空状态

@@ -33,7 +33,7 @@ Description: Compressor using ZLib
 
 #include <string>
 
-namespace OpenAPT::File
+namespace Lithium::File
 {
 
     /**

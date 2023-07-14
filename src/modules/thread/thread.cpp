@@ -35,7 +35,7 @@ Description: Thread Manager
 
 #include <spdlog/spdlog.h>
 
-namespace OpenAPT::Thread
+namespace Lithium::Thread
 {
     ThreadManager::ThreadManager(int maxThreads) : m_maxThreads(maxThreads) {}
 

@@ -39,6 +39,8 @@ static int toSslVerify(CertificateVerificationMode mode) {
       return SSL_VERIFY_PEER;
     case CertificateVerificationMode::Disabled:
       return SSL_VERIFY_NONE;
+    default:
+      return SSL_VERIFY_NONE;
   }
 }
 

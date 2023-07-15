@@ -199,9 +199,6 @@ set(property_SRC
 set(server_SRC
     ${lithium_src_dir}/src/modules/server/commander.cpp
     ${lithium_src_dir}/src/modules/server/commander.hpp
-
-    ${lithium_src_dir}/src/modules/server/wsserver.cpp
-    ${lithium_src_dir}/src/modules/server/wsserver.hpp
 )
 
 set(task_SRC
@@ -223,7 +220,7 @@ set(system_module
 )
 
 set(Lithium_SRC
-${lithium_src_dir}/src/websocket/WSListener.cpp
+${lithium_src_dir}/src/websocket/WebSocketServer.cpp
 
 	${lithium_src_dir}/src/App.cpp
 	${lithium_src_dir}/src/AppComponent.hpp
@@ -239,8 +236,6 @@ if(WIN32)
     add_executable(lithium_server ${server_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_libraries(lithium_server pdh iphlpapi)
-
-    target_link_libraries(lithium_server fmt boost_system-mt boost_thread-mt)
 
     target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp)
 

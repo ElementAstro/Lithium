@@ -75,14 +75,8 @@ set(api_SRC
 )
 
 set(config_SRC
-    ${lithium_src_dir}/src/config/configor.cpp
-    ${lithium_src_dir}/src/config/configor.hpp
-
-    ${lithium_src_dir}/src/config/achievement.cpp
-    ${lithium_src_dir}/src/config/achievement.hpp
-
-    ${lithium_src_dir}/src/config/achievement_list.cpp
-    ${lithium_src_dir}/src/config/achievement_list.hpp
+    ${lithium_src_dir}/src/modules/config/configor.cpp
+    ${lithium_src_dir}/src/modules/config/configor.hpp
 )
 
 set(database_SRC
@@ -130,19 +124,16 @@ set(image_SRC
 )
 
 set(io_SRC
-    ${lithium_src_dir}/src/io/compress.cpp
-    ${lithium_src_dir}/src/io/compress.hpp
+    ${lithium_src_dir}/src/modules/io/compress.cpp
+    ${lithium_src_dir}/src/modules/io/compress.hpp
 
-    ${lithium_src_dir}/src/io/file.cpp
-    ${lithium_src_dir}/src/io/file.hpp
+    ${lithium_src_dir}/src/modules/io/file.cpp
+    ${lithium_src_dir}/src/modules/io/file.hpp
 
-    ${lithium_src_dir}/src/io/glob.hpp
+    ${lithium_src_dir}/src/modules/io/glob.hpp
 
-    ${lithium_src_dir}/src/io/io.cpp
-    ${lithium_src_dir}/src/io/io.hpp
-
-    ${lithium_src_dir}/src/io/system.cpp
-    ${lithium_src_dir}/src/io/system.hpp
+    ${lithium_src_dir}/src/modules/io/io.cpp
+    ${lithium_src_dir}/src/modules/io/io.hpp
 )
 
 set(launcher_SRC
@@ -199,6 +190,8 @@ set(property_SRC
 set(server_SRC
     ${lithium_src_dir}/src/modules/server/commander.cpp
     ${lithium_src_dir}/src/modules/server/commander.hpp
+
+    ${lithium_src_dir}/src/websocket/WebSocketServer.cpp
 )
 
 set(task_SRC
@@ -207,11 +200,11 @@ set(task_SRC
 )
 
 set(thread_SRC
-    ${lithium_src_dir}/src/thread/thread.cpp
-    ${lithium_src_dir}/src/thread/thread.hpp
+    ${lithium_src_dir}/src/modules/thread/thread.cpp
+    ${lithium_src_dir}/src/modules/thread/thread.hpp
 
-    ${lithium_src_dir}/src/thread/threadpool.cpp
-    ${lithium_src_dir}/src/thread/threadpool.hpp
+    ${lithium_src_dir}/src/modules/thread/threadpool.cpp
+    ${lithium_src_dir}/src/modules/thread/threadpool.hpp
 )
 
 set(system_module
@@ -220,24 +213,25 @@ set(system_module
 )
 
 set(Lithium_SRC
-${lithium_src_dir}/src/websocket/WebSocketServer.cpp
-
 	${lithium_src_dir}/src/App.cpp
 	${lithium_src_dir}/src/AppComponent.hpp
 
-
+    ${lithium_src_dir}/src/LithiumApp.cpp
+	${lithium_src_dir}/src/LithiumApp.hpp
 )
 
 if(WIN32)
     #add_executable(lithium_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
-    #${device_SRC} ${image_SRC} ${io_SRC} ${logger_SRC} ${module_SRC} 
+    #${device_SRC} ${image_SRC} ${logger_SRC} ${module_SRC} 
     #${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC}  ${thread_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_libraries(lithium_server pdh iphlpapi)
 
     target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp)
+
+    target_link_libraries(lithium_server loguru)
 
     find_package(CFITSIO REQUIRED)
     target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})

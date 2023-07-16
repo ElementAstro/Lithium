@@ -44,6 +44,8 @@ class WebSocketServer : public oatpp::websocket::WebSocket::Listener
 private:
 	static constexpr const char *TAG = "WebSocketServer";
 
+	void ProcessMessage(const WebSocket &socket,const nlohmann::json &data);
+
 private:
 	oatpp::data::stream::BufferOutputStream m_messageBuffer;
 

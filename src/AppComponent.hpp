@@ -38,6 +38,9 @@ Description: App Components
 
 #include "oatpp-websocket/ConnectionHandler.hpp"
 
+#include "oatpp-openssl/server/ConnectionProvider.hpp"
+#include "oatpp-openssl/Config.hpp"
+
 #include "oatpp/web/server/HttpConnectionHandler.hpp"
 #include "oatpp/web/server/HttpRouter.hpp"
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"

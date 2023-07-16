@@ -44,75 +44,25 @@ Description: Thread Manager
 namespace Lithium::Thread
 {
 
-    /**
-     * @class ThreadManager
-     * @brief 线程管理器类，用于管理多线程执行任务
-     */
     class ThreadManager
     {
     public:
-        /**
-         * @brief 默认构造函数，使用默认参数初始化线程管理器
-         */
-        ThreadManager() : m_maxThreads(10), m_stopFlag(false) {}
-
-        /**
-         * @brief 构造函数，使用指定的最大线程数初始化线程管理器
-         * @param maxThreads 最大线程数
-         */
-        ThreadManager(int maxThreads);
-
-        /**
-         * @brief 析构函数，销毁线程管理器
-         */
+        explicit ThreadManager(int maxThreads);
         ~ThreadManager();
 
-        /**
-         * @brief 添加线程
-         * @param func 线程执行的函数对象
-         * @param name 线程的名称
-         */
         void addThread(std::function<void()> func, const std::string &name);
-
-        /**
-         * @brief 等待所有线程完成
-         */
         void joinAllThreads();
-
-        /**
-         * @brief 根据线程名称等待指定线程完成
-         * @param name 线程的名称
-         */
         void joinThreadByName(const std::string &name);
-
-        /**
-         * @brief 根据线程名称让指定线程休眠一段时间
-         * @param name 线程的名称
-         * @param seconds 休眠的秒数
-         * @return 如果找到指定名称的线程并成功让其休眠，则返回 true，否则返回 false
-         */
         bool sleepThreadByName(const std::string &name, int seconds);
-
-        /**
-         * @brief 判断指定名称的线程是否正在运行
-         * @param name 线程的名称
-         * @return 如果指定名称的线程正在运行，则返回 true，否则返回 false
-         */
         bool isThreadRunning(const std::string &name);
 
     private:
-        /**
-         * @brief 根据给定的锁和线程元组对象等待线程完成
-         * @param lock 线程锁
-         * @param t 线程元组对象
-         */
         void joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::thread>, std::string, bool> &t);
 
-        std::mutex m_mtx;                                                                   ///< 互斥锁，用于线程同步
-        std::condition_variable m_cv;                                                       ///< 条件变量，用于线程同步
-        std::vector<std::tuple<std::unique_ptr<std::thread>, std::string, bool>> m_threads; ///< 存储线程的容器
-        std::atomic_bool m_stopFlag{false};                                                 ///< 停止标志，用于控制线程的停止
-        int m_maxThreads;                                                                   ///< 最大线程数
+        int m_maxThreads;
+        std::vector<std::tuple<std::unique_ptr<std::thread>, std::string, bool>> m_threads;
+        std::mutex m_mtx;
+        std::condition_variable m_cv;
+        std::atomic<bool> m_stopFlag;
     };
-
 }

@@ -31,9 +31,12 @@ Description: WebSocket Server
 
 #include "WebSocketServer.hpp"
 
-#include <thread>
 #include <functional>
 #include <iostream>
+#include <version>
+#include <thread>
+
+#include "LithiumApp.hpp"
 
 WebSocketServer::WebSocketServer()
 {
@@ -61,76 +64,89 @@ void WebSocketServer::onClose(const WebSocket &socket, v_uint16 code, const oatp
 
 void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size)
 {
-
 	if (size == 0)
-	{ // message transfer finished
-
+	{
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
-
 		OATPP_LOGD(TAG, "onMessage message='%s'", wholeMessage->c_str());
-
-		/* Send message in reply */
 		socket.sendOneFrameText("Hello from oatpp!: " + wholeMessage);
-
-		// 检查 JSON 语法
 		if (!nlohmann::json::accept(wholeMessage->c_str()))
 		{
+			OATPP_LOGE("WSServer", "Message is not in JSON format");
+			return;
 		}
-
-		// 解析 JSON 数据
 		try
 		{
+			OATPP_LOGD("WSServer", "Start client command in alone thread");
 			nlohmann::json jdata = nlohmann::json::parse(wholeMessage->c_str());
-
-			if (jdata.empty())
-			{
-				// spdlog::error("WebSocketServer::processMessage() data is empty");
-			}
-			nlohmann::json reply_data;
-			try
-			{
-				// 解析 JSON 数据并获取参数。
-				std::string name;
-				nlohmann::json params;
-
-				if (jdata.contains("name") && jdata.contains("params"))
-				{
-					name = jdata["name"].get<std::string>();
-					params = jdata["params"].get<json>();
-				}
-				else
-				{
-					// spdlog::error("WebSocketServer::processMessage() missing parameter: name");
-					reply_data = {{"error", "Missing parameter: name or params"}};
-					socket.sendOneFrameText(reply_data.dump());
-				}
-
-				// TODO：在此处添加更多参数检查和处理逻辑。
-
-				// 执行命令。
-				if (m_CommandDispatcher->HasHandler(name))
-				{
-					m_CommandDispatcher->Dispatch(name, {});
-				}
-				// 发送回复。
-				reply_data = {{"reply", "OK"}};
-			}
-			catch (const std::exception &e)
-			{
-				// spdlog::error("WebSocketServer::processMessage() exception: {}", e.what());
-				reply_data = {{"error", e.what()}};
-			}
-			socket.sendOneFrameText(reply_data.dump());
+#if __cplusplus >= 202002L
+			std::jthread myThread(std::bind(&WebSocketServer::ProcessMessage, this, std::ref(socket), std::ref(jdata)));
+#else
+			std::thread myThread(std::bind(&WebSocketServer::ProcessMessage, this, std::ref(socket), std::ref(jdata)));
+#endif
+			myThread.detach();
+			OATPP_LOGD("WSServer", "Started command thread successfully");
+		}
+		catch (nlohmann::detail::parse_error &e)
+		{
+			OATPP_LOGE("WSServer", "Failed to parser JSON message : %s", e.what());
 		}
 		catch (const std::exception &e)
 		{
-			// spdlog::error("WebSocketServer::onMessage() parse json failed: {}", e.what());
+			OATPP_LOGE("WSServer", "Unknown error happened in WebsocketServer : %s", e.what());
 		}
 	}
 	else if (size > 0)
 	{ // message frame received
 		m_messageBuffer.writeSimple(data, size);
+	}
+}
+
+void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::json &data)
+{
+	try
+	{
+		if (data.empty())
+		{
+			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() data is empty");
+			return;
+		}
+		nlohmann::json reply_data;
+		try
+		{
+			if (data.contains("name") && data.contains("params"))
+			{
+				const std::string name = data["name"].get<std::string>();
+				if (m_CommandDispatcher->HasHandler(name))
+				{
+					if (!m_CommandDispatcher->Dispatch(name, data["params"].get<json>()))
+					{
+						OATPP_LOGE("WSServer", "Failed to run command %s", name.c_str());
+						reply_data = {{"error", "Failed to run command"}};
+					}
+					else
+					{
+						OATPP_LOGD("WSServer", "Run command %s successfully", name.c_str());
+						reply_data = {{"reply", "OK"}};
+					}
+				}
+			}
+			else
+			{
+				OATPP_LOGE("WSServer", "WebSocketServer::processMessage() missing parameter: name or params");
+				reply_data = {{"error", "Missing parameter: name or params"}};
+			}
+		}
+		catch (const std::exception &e)
+		{
+			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() exception: %s", e.what());
+			reply_data = {{"error"}};
+		}
+		socket.sendOneFrameText(reply_data.dump());
+	}
+	catch (const std::exception &e)
+	{
+		// spdlog::error("WebSocketServer::onMessage() parse json failed: {}", e.what());
 	}
 }
 

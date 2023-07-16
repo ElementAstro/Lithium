@@ -34,10 +34,15 @@ Description: Main
 #include "controller/StaticController.hpp"
 #include "controller/SystemController.hpp"
 #include "controller/WebSocketController.hpp"
+#include "controller/IOController.hpp"
 
 #include "oatpp-swagger/Controller.hpp"
 
 #include "oatpp/network/Server.hpp"
+
+#include <argparse/argparse.hpp>
+
+#include "LithiumApp.hpp"
 
 void run()
 {
@@ -53,6 +58,7 @@ void run()
     router->addController(StaticController::createShared());
     router->addController(SystemController::createShared());
     router->addController(WebSocketController::createShared());
+    router->addController(IOController::createShared());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, connectionHandler, "http");
@@ -64,6 +70,11 @@ void run()
     oatpp::network::Server server(connectionProvider,
                                   connectionHandler);
 
+    if (Lithium::MyApp.GetConfig("server/port") == nullptr)
+    {
+        Lithium::MyApp.SetConfig("server/port", 8000);
+    }
+
     OATPP_LOGD("Server", "Running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
 
     server.run();
@@ -74,6 +85,35 @@ void run()
  */
 int main(int argc, const char *argv[])
 {
+    argparse::ArgumentParser program("Lithium");
+
+    program.add_argument("-P", "--port").help("port the server running on").default_value(8000);
+
+    program.add_description("Lithium Command Line Interface:");
+    program.add_epilog("End.");
+
+    try
+    {
+        program.parse_args(argc, argv);
+    }
+    catch (const std::runtime_error &e)
+    {
+        OATPP_LOGE("PreLaunch", "Failed to parser command line : %s", e.what());
+        std::exit(1);
+    }
+
+    auto cmd_port = program.get<int>("--port");
+    if (cmd_port != 8000)
+    {
+        OATPP_LOGD("PreLaunch", "Command line server port : %d", cmd_port);
+        auto port = Lithium::MyApp.GetConfig("server/port");
+        if (port != cmd_port)
+        {
+            Lithium::MyApp.SetConfig("server/port", cmd_port);
+            OATPP_LOGI("PreLaunch", "Set server port to %d", cmd_port);
+        }
+    }
+
     oatpp::base::Environment::init();
     run();
     oatpp::base::Environment::destroy();

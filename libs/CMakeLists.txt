@@ -70,3 +70,5 @@ add_library(oatpp-openssl
     oatpp-openssl/configurer/TrustStore.cpp
     oatpp-openssl/configurer/TrustStore.hpp
 )
+
+add_library(loguru loguru/loguru.cpp) 

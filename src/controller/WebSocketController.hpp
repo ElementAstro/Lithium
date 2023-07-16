@@ -33,26 +33,11 @@ public:
 	{
 		return std::make_shared<WebSocketController>(objectMapper);
 	}
-	/*
 	ENDPOINT("GET", "ws", ws, REQUEST(std::shared_ptr<IncomingRequest>, request))
 	{
 		return oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), websocketConnectionHandler);
 	};
-	*/
-	ENDPOINT_ASYNC("GET", "ws", ws){
-
-		ENDPOINT_ASYNC_INIT(WS)
-
-			Action act() override{
-				auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketConnectionHandler);
-	return _return(response);
-}
-}
-;
-
-// TODO Insert Your endpoints here !!!
-}
-;
+};
 
 #include OATPP_CODEGEN_END(ApiController) //<-- codegen end
 

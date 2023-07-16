@@ -80,7 +80,7 @@ public:
      * @param name 要派发的命令的名称。
      * @param data 命令所携带的数据。
      */
-    void Dispatch(const std::string &name, const json &data);
+    bool Dispatch(const std::string &name, const json &data);
 
 private:
     /**

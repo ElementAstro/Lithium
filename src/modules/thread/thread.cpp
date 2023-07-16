@@ -33,11 +33,14 @@ Description: Thread Manager
 
 #include <sstream>
 
-#include <spdlog/spdlog.h>
+#include "loguru/loguru.hpp"
 
 namespace Lithium::Thread
 {
-    ThreadManager::ThreadManager(int maxThreads) : m_maxThreads(maxThreads) {}
+    ThreadManager::ThreadManager(int maxThreads)
+        : m_maxThreads(maxThreads), m_stopFlag(false)
+    {
+    }
 
     ThreadManager::~ThreadManager()
     {
@@ -49,11 +52,12 @@ namespace Lithium::Thread
                 m_stopFlag = true;
                 m_cv.notify_all();
             }
+            lock.unlock();
             joinAllThreads();
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to destroy ThreadManager: {}", e.what());
+            LOG_F(ERROR, "Failed to destroy ThreadManager: %s", e.what());
         }
     }
 
@@ -62,36 +66,33 @@ namespace Lithium::Thread
         try
         {
             std::unique_lock<std::mutex> lock(m_mtx);
-            m_cv.wait(lock, [this]()
+            m_cv.wait(lock, [this]
                       { return m_threads.size() < m_maxThreads || m_stopFlag; });
             if (m_stopFlag)
             {
                 throw std::runtime_error("Thread manager has stopped, cannot add new thread");
             }
-            auto t = std::make_tuple(std::make_unique<std::thread>([this, func]()
-                                                                   {
-                                                                       try
-                                                                       {
-                                                                           func();
-                                                                       }
-                                                                       catch (const std::exception &e)
-                                                                       {
-                                                                           std::ostringstream ss;
-                                                                           ss << std::this_thread::get_id();
-                                                                           spdlog::error("Unhandled exception in thread {}: {}", ss.str(), e.what());
-                                                                       }
-                                                                       std::unique_lock<std::mutex> lock(m_mtx);
-                                                                       // joinThread(lock, t);
-                                                                   }),
-                                     name, false);
+            auto t = std::make_tuple(
+                std::make_unique<std::thread>([this, func, &lock]
+                                              {
+                try
+                {
+                    func();
+                }
+                catch (const std::exception &e)
+                {
+                    LOG_F(ERROR, "Unhandled exception in thread: %s", e.what());
+                } }),
+                name,
+                false);
 
             m_threads.emplace_back(std::move(t));
-            spdlog::info("Added thread: {}", name);
-            m_cv.notify_one();
+            LOG_F(INFO, "Added thread: %s", name.c_str());
+            m_cv.notify_all();
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to add thread {}: {}", name, e.what());
+            LOG_F(ERROR, "Failed to add thread %s: %s", name.c_str(), e.what());
         }
     }
 
@@ -100,18 +101,18 @@ namespace Lithium::Thread
         try
         {
             std::unique_lock<std::mutex> lock(m_mtx);
-            m_cv.wait(lock, [this]()
+            m_cv.wait(lock, [this]
                       { return m_threads.empty(); });
             for (auto &t : m_threads)
             {
                 joinThread(lock, t);
             }
             m_threads.clear();
-            spdlog::info("All threads joined");
+            LOG_F(INFO, "All threads joined");
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to join all threads: {}", e.what());
+            LOG_F(ERROR, "Failed to join all threads: %s", e.what());
         }
     }
 
@@ -121,7 +122,7 @@ namespace Lithium::Thread
         {
             if (m_threads.empty())
             {
-                spdlog::warn("Thread {} not found", name);
+                LOG_F(WARNING, "Thread %s not found", name.c_str());
                 return;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -130,18 +131,19 @@ namespace Lithium::Thread
                 if (std::get<1>(t) == name)
                 {
                     joinThread(lock, t);
-                    spdlog::info("Thread {} joined", name);
-                    m_threads.erase(std::remove_if(m_threads.begin(), m_threads.end(), [&](auto &x)
+                    LOG_F(INFO, "Thread %s joined", name.c_str());
+                    m_threads.erase(std::remove_if(m_threads.begin(), m_threads.end(),
+                                                   [&](auto &x)
                                                    { return !std::get<0>(x); }),
                                     m_threads.end());
                     return;
                 }
             }
-            spdlog::warn("Thread {} not found", name);
+            LOG_F(WARNING, "Thread %s not found", name.c_str());
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to join thread {}: {}", name, e.what());
+            LOG_F(ERROR, "Failed to join thread %s: %s", name.c_str(), e.what());
         }
     }
 
@@ -151,7 +153,7 @@ namespace Lithium::Thread
         {
             if (m_threads.empty())
             {
-                spdlog::warn("Thread {} not found", name);
+                LOG_F(WARNING, "Thread %s not found", name.c_str());
                 return false;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -161,7 +163,7 @@ namespace Lithium::Thread
                 {
                     if (std::get<2>(t))
                     {
-                        spdlog::warn("Thread {} is already sleeping", name);
+                        LOG_F(WARNING, "Thread %s is already sleeping", name.c_str());
                         return true;
                     }
                     std::get<2>(t) = true;
@@ -174,12 +176,12 @@ namespace Lithium::Thread
                     return true;
                 }
             }
-            spdlog::warn("Thread {} not found", name);
+            LOG_F(WARNING, "Thread %s not found", name.c_str());
             return false;
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to sleep thread {}: {}", name, e.what());
+            LOG_F(ERROR, "Failed to sleep thread %s: %s", name.c_str(), e.what());
             return false;
         }
     }
@@ -190,7 +192,7 @@ namespace Lithium::Thread
         {
             if (m_threads.empty())
             {
-                spdlog::warn("Thread {} not found", name);
+                LOG_F(WARNING, "Thread %s not found", name.c_str());
                 return false;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -201,30 +203,30 @@ namespace Lithium::Thread
                     return !std::get<2>(t);
                 }
             }
-            spdlog::warn("Thread {} not found", name);
+            LOG_F(WARNING, "Thread %s not found", name.c_str());
             return false;
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to check if thread {} is running: {}", name, e.what());
+            LOG_F(ERROR, "Failed to check if thread %s is running: %s", name.c_str(), e.what());
             return false;
         }
     }
 
     void ThreadManager::joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::thread>, std::string, bool> &t)
     {
-        if (std::get<0>(t) && std::get<0>(t)->joinable())
+        auto &threadPtr = std::get<0>(t);
+        if (threadPtr && threadPtr->joinable())
         {
-            std::get<0>(t)->join();
-            std::get<0>(t).reset();
+            threadPtr->join();
+            threadPtr.reset();
         }
         std::get<2>(t) = true;
         m_cv.notify_all();
         lock.unlock();
-        std::get<0>(t).reset();
+        threadPtr.reset();
         lock.lock();
         std::get<2>(t) = false;
         m_cv.notify_all();
     }
-
 }

@@ -31,8 +31,6 @@ Description: Commander
 
 #include "commander.hpp"
 
-#include "spdlog/spdlog.h"
-
 #include <iostream>
 
 bool CommandDispatcher::HasHandler(const std::string &name)
@@ -40,18 +38,18 @@ bool CommandDispatcher::HasHandler(const std::string &name)
     return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
 }
 
-void CommandDispatcher::Dispatch(const std::string &name, const json &data)
+bool CommandDispatcher::Dispatch(const std::string &name, const json &data)
 {
     auto it = handlers_.find(Djb2Hash(name.c_str()));
     if (it != handlers_.end())
     {
-        spdlog::debug("Find command : {}", name);
         it->second(data);
     }
     else
     {
-        spdlog::error("Error: Unknown command {}", name);
+        return false;
     }
+    return true;
 }
 
 std::size_t CommandDispatcher::Djb2Hash(const char *str)

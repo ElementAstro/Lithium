@@ -33,19 +33,19 @@ Description: Basic Telescope Defination
 
 #include "device.hpp"
 
-class Telescope : public virtual Device
+class Telescope : virtual public Device
 {
 public:
     /**
      * @brief 构造函数
      * @param name 望远镜名称
      */
-    Telescope(const std::string &name);
+    Telescope(const std::string &name) : Device(name) {}
 
     /**
      * @brief 析构函数
      */
-    ~Telescope();
+    ~Telescope() {}
 
 protected:
     /**

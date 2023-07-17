@@ -35,10 +35,23 @@ Description: Basic Device Defination
 #include <vector>
 #include <functional>
 
-#include "task/task.hpp"
+#include "modules/task/task.hpp"
+#include "modules/property/imessage.hpp"
 
 #include "nlohmann/json.hpp"
-#include "property/imessage.hpp"
+
+enum class DeviceType
+{
+    Camera,
+    Telescope,
+    Focuser,
+    FilterWheel,
+    Solver,
+    Guider,
+    NumDeviceTypes
+};
+
+static constexpr int DeviceTypeCount = 6;
 
 /**
  * @brief 设备基类
@@ -53,8 +66,6 @@ public:
      */
     explicit Device(const std::string &name);
 
-    Device(){};
-
     /**
      * @brief 析构函数
      */
@@ -66,7 +77,7 @@ public:
      * @param name 设备名称
      * @return 连接设备是否成功
      */
-    virtual bool connect(std::string name) = 0;
+    virtual bool connect(const std::string &name) = 0;
 
     /**
      * @brief 断开设备连接
@@ -87,38 +98,7 @@ public:
      *
      * @return 扫描可用设备是否成功
      */
-    virtual bool scanForAvailableDevices() = 0;
-
-    /**
-     * @brief 获取设备设置
-     *
-     * @return 获取设备设置是否成功
-     */
-    virtual bool getSettings() = 0;
-
-    /**
-     * @brief 保存设备设置
-     *
-     * @return 保存设备设置是否成功
-     */
-    virtual bool saveSettings() = 0;
-
-    /**
-     * @brief 获取设备参数
-     *
-     * @param paramName 参数名称
-     * @return 获取设备参数是否成功
-     */
-    virtual bool getParameter(const std::string &paramName) = 0;
-
-    /**
-     * @brief 设置设备参数
-     *
-     * @param paramName 参数名称
-     * @param paramValue 参数值
-     * @return 设置设备参数是否成功
-     */
-    virtual bool setParameter(const std::string &paramName, const std::string &paramValue) = 0;
+    virtual std::vector<std::string> scanForAvailableDevices() = 0;
 
     /**
      * @brief 获取SimpleTask
@@ -129,60 +109,14 @@ public:
      */
     virtual std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) = 0;
 
-    /**
-     * @brief 获取ConditionalTask
-     *
-     * @param task_name 任务名
-     * @param params 参数
-     * @return ConditionalTask指针
-     */
-    virtual std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) = 0;
-
-    /**
-     * @brief 获取LoopTask
-     *
-     * @param task_name 任务名
-     * @param params 参数
-     * @return LoopTask指针
-     */
-    virtual std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) = 0;
-
-    /**
-     * @brief 获取设备名称
-     *
-     * @return 设备名称
-     */
-    virtual std::string getName() const = 0;
-
-    /**
-     * @brief 设置设备名称
-     *
-     * @param name 设备名称
-     * @return 设置设备名称是否成功
-     */
-    virtual void setName(const std::string &name) = 0;
-
-    virtual std::string getDeviceName() = 0;
-
-    virtual void setDeviceName(const std::string &name) = 0;
-
-    const std::string getId() const
-    {
-        return _uuid;
-    }
-
-    /**
-     * @brief 设置设备ID
-     *
-     * @param id 设备ID
-     * @return 设置设备ID是否成功
-     */
-    virtual void setId(int id) = 0;
-
 public:
     auto IAFindMessage(const std::string &identifier);
 
-    void IAInsertMessage(const Lithium::Property::IMessage &message,std::shared_ptr<Lithium::SimpleTask> task);
+    void IASetProperty(const std::string &name, const std::string &value);
+
+    std::string IAGetProperty(const std::string &name);
+
+    void IAInsertMessage(const Lithium::Property::IMessage &message, std::shared_ptr<Lithium::SimpleTask> task);
 
     Lithium::Property::IMessage IACreateMessage(const std::string &message_name, std::any message_value);
 
@@ -206,14 +140,6 @@ public:
 
     std::vector<std::function<void(const Lithium::Property::IMessage &, const Lithium::Property::IMessage &)>> observers;
 
-public:
-    std::string _name;                  ///< 设备名称
-    std::string _uuid;                  ///< 设备ID
-    std::string device_name;            ///< 设备名称
-    std::string description;            ///< 设备描述信息
-    std::string configPath;             ///< 配置文件路径
-    std::string hostname = "127.0.0.1"; ///< 主机名
-    int port = 7624;                    ///< 端口号
-    bool is_connected;                  ///< 是否已连接
-    bool is_debug;                      ///< 调试模式
+private:
+    nlohmann::json device_info;
 };

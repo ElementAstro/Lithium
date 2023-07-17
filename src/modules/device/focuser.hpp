@@ -33,7 +33,7 @@ Description: Basic Focuser Defination
 
 #include "device.hpp"
 
-class Focuser : public virtual Device
+class Focuser : virtual public Device
 {
 public:
     /**
@@ -41,12 +41,12 @@ public:
      *
      * @param name 电调名称
      */
-    Focuser(const std::string &name);
+    Focuser(const std::string &name) : Device(name) {}
 
     /**
      * @brief 析构函数，释放资源
      */
-    virtual ~Focuser();
+    virtual ~Focuser() = default;
 
 protected:
     /**

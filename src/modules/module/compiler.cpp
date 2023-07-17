@@ -33,10 +33,11 @@ Description: Compiler
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <atomic>
+
+#include "loguru/loguru.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;

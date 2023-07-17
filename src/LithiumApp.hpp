@@ -4,6 +4,7 @@
 
 #include "modules/thread/thread.hpp"
 #include "modules/config/configor.hpp"
+#include "modules/device/device_manager.hpp"
 
 namespace Lithium
 {
@@ -18,6 +19,11 @@ namespace Lithium
                 return m_ConfigManager;
             }
 
+            std::shared_ptr<DeviceManager> GetDeviceManager()
+            {
+                return m_DeviceManager;
+            }
+
         public:
 
             nlohmann::json GetConfig(const std::string &key_path) const;
@@ -26,6 +32,7 @@ namespace Lithium
         private:
             std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
             std::shared_ptr<Config::ConfigManager> m_ConfigManager;
+            std::shared_ptr<DeviceManager> m_DeviceManager;
     };
     extern LithiumApp MyApp;
 } // namespace Lithium

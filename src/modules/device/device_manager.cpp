@@ -32,12 +32,17 @@ Description: Device Manager
 #include "device_manager.hpp"
 
 #include "nlohmann/json.hpp"
-#include <spdlog/spdlog.h>
 
 #include "camera.hpp"
 #include "telescope.hpp"
 #include "focuser.hpp"
 #include "filterwheel.hpp"
+
+#include "loguru/loguru.hpp"
+
+#if __cplusplus >= 202002L
+#include <format>
+#endif
 
 namespace Lithium
 {
@@ -92,7 +97,7 @@ namespace Lithium
         // Check if device name already exists
         if (findDeviceByName(name))
         {
-            //spdlog::warn("A device with name {} already exists, please choose a different name", name);
+            // spdlog::warn("A device with name {} already exists, please choose a different name", name);
             return;
         }
 
@@ -100,7 +105,13 @@ namespace Lithium
         int index = 1;
         while (findDevice(type, newName) != -1)
         {
-            newName = fmt::format("{}-{}", name, index++);
+#if __cplusplus >= 202002L
+            newName = std::format("{}-{}", name, index++);
+#else
+            std::stringstream ss;
+            ss << name << "-" << index++;
+            newName = ss.str();
+#endif
         }
 
         // Create new device and add it to the device list
@@ -108,30 +119,30 @@ namespace Lithium
         {
         case DeviceType::Camera:
         {
-            //spdlog::debug("Trying to add a new camera instance : {}", newName);
+            LOG_F(INFO, "Trying to add a new camera instance : %s", newName.c_str());
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Camera>(newName));
-            //spdlog::debug("Added new camera instance successfully");
+            LOG_F(INFO, "Added new camera instance successfully");
             break;
         }
         case DeviceType::Telescope:
         {
-            //spdlog::debug("Trying to add a new telescope instance : {}", newName);
+            LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
-            //spdlog::debug("Added new telescope instance successfully");
+            LOG_F(INFO, "Added new telescope instance successfully");
             break;
         }
         case DeviceType::Focuser:
         {
-            //spdlog::debug("Trying to add a new Focuser instance : {}", newName);
+            LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
-            //spdlog::debug("Added new focuser instance successfully");
+            LOG_F(INFO, "Added new focuser instance successfully");
             break;
         }
         case DeviceType::FilterWheel:
         {
-            //spdlog::debug("Trying to add a new filterwheel instance : {}", newName);
+            LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
             m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
-            //spdlog::debug("Added new filterwheel instance successfully");
+            LOG_F(INFO, "Added new filterwheel instance successfully");
             break;
         }
         case DeviceType::Solver:
@@ -141,7 +152,7 @@ namespace Lithium
             // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
             break;
         default:
-            //spdlog::error("Invalid device type");
+            LOG_F(ERROR, "Invalid device type");
             break;
         }
     }
@@ -160,7 +171,7 @@ namespace Lithium
                 return;
             }
         }
-        //spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
+        // spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
     }
 
     void DeviceManager::removeDevicesByName(const std::string &name)
@@ -187,7 +198,7 @@ namespace Lithium
         }
         else
         {
-            //spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
+            // spdlog::warn("Could not find device {} of type {}", name, static_cast<int>(type));
             return nullptr;
         }
     }
@@ -223,7 +234,7 @@ namespace Lithium
     std::shared_ptr<SimpleTask> DeviceManager::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        //spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
+        LOG_F(INFO, "Trying to find %s and get %s task", device_name.c_str(), task_name.c_str());
         auto device = findDeviceByName(device_name);
         if (device != nullptr)
         {
@@ -231,117 +242,45 @@ namespace Lithium
             {
             case DeviceType::Camera:
             {
-                if (device_type == "INDI")
-                {
-                    //spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<Camera>(device)->getSimpleTask(task_name, params);
-                }
-                else if (device_type == "ASCOM")
-                {
-                    //spdlog::debug("Found Camera device: {} with driver: {}", device_name, device_type);
-                }
+                LOG_F(INFO, "Found Camera device: %s with driver: %s", device_name.c_str(), device_type.c_str());
+                return std::dynamic_pointer_cast<Camera>(device)->getSimpleTask(task_name, params);
                 break;
             }
             case DeviceType::Telescope:
             {
-                if (device_type == "INDI")
-                {
-                    //spdlog::debug("Found Telescope device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<Telescope>(device)->getSimpleTask(task_name, params);
-                }
+                LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, device_type);
+                return std::dynamic_pointer_cast<Telescope>(device)->getSimpleTask(task_name, params);
                 break;
             }
             case DeviceType::Focuser:
             {
-                if (device_type == "INDI")
-                {
-                    //spdlog::debug("Found Focuser device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<Focuser>(device)->getSimpleTask(task_name, params);
-                }
+                LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, device_type);
+                return std::dynamic_pointer_cast<Focuser>(device)->getSimpleTask(task_name, params);
                 break;
             }
             case DeviceType::FilterWheel:
             {
-                if (device_type == "INDI")
-                {
-                    //spdlog::debug("Found FilterWheel device: {} with driver: {}", device_name, device_type);
-                    return std::dynamic_pointer_cast<Filterwheel>(device)->getSimpleTask(task_name, params);
-                }
+                LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, device_type);
+                return std::dynamic_pointer_cast<Filterwheel>(device)->getSimpleTask(task_name, params);
                 break;
             }
             case DeviceType::Solver:
             {
-                if (device_type == "ASTAP")
-                {
-                    //spdlog::debug("Found Solver: ASTAP");
-                    // return std::make_shared<Lithium::ASTapSolverTask>();
-                }
-                if (device_type == "Astrometry")
-                {
-                    //spdlog::debug("Found Solver: Astrometry");
-                    // return std::make_shared<Lithium::AstrometrySolverTask>();
-                }
                 break;
             }
             case DeviceType::Guider:
             {
-                if (device_type == "PHD2")
-                {
-                    //spdlog::debug("Found Guider device: {} with driver: {}", device_name, device_type);
-                    // return std::make_shared<Lithium::PHD2GuiderTask>();
-                }
                 break;
             }
             default:
-                //spdlog::error("Invalid device type");
+                LOG_F(ERROR, "Invalid device type");
                 break;
             }
         }
         else
         {
-            //spdlog::debug("Device {} not found", device_name);
+            LOG_F(INFO, "Device {} not found", device_name);
         }
         return nullptr;
     }
-
-    std::shared_ptr<ConditionalTask> DeviceManager::getConditionalTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        //spdlog::debug("Trying to find {} and get {} task", device_name, task_name);
-        auto device = findDeviceByName(device_name);
-        if (device != nullptr)
-        {
-            switch (type)
-            {
-            case DeviceType::Camera:
-            {
-            }
-            case DeviceType::Telescope:
-            {
-            }
-            case DeviceType::Focuser:
-            {
-            }
-            case DeviceType::FilterWheel:
-            {
-            }
-            case DeviceType::Solver:
-            {
-            }
-            case DeviceType::Guider:
-            {
-            }
-            default:
-                //spdlog::error("Invalid device type");
-                break;
-            }
-        }
-        return nullptr;
-    }
-
-    std::shared_ptr<LoopTask> DeviceManager::getLoopTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
-    {
-        return nullptr;
-    }
-
 }

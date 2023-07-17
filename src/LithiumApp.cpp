@@ -10,8 +10,9 @@ namespace Lithium
         LOG_F(INFO, "Loading Lithium App and preparing ...");
         try
         {
-            m_ThreadManager = std::make_shared<Thread::ThreadManager>();
+            m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
             m_ConfigManager = std::make_shared<Config::ConfigManager>();
+            m_DeviceManager = std::make_shared<DeviceManager>();
             LOG_F(INFO, "Lithium App Loaded.");
         }
         catch (const std::exception &e)

@@ -90,11 +90,11 @@ set(debug_SRC
 )
 
 set(device_SRC
-    ${lithium_src_dir}/src/device/device.cpp
-    ${lithium_src_dir}/src/device/device.hpp
+    ${lithium_src_dir}/src/modules/device/device.cpp
+    ${lithium_src_dir}/src/modules/device/device.hpp
 
-    #${lithium_src_dir}/src/device/device_manager.cpp
-    #${lithium_src_dir}/src/device/device_manager.hpp
+    ${lithium_src_dir}/src/modules/device/device_manager.cpp
+    ${lithium_src_dir}/src/modules/device/device_manager.hpp
 )
 
 set(driver_indi_SRC
@@ -150,8 +150,8 @@ set(logger_SRC
 )
 
 set(module_SRC
-    ${lithium_src_dir}/src/module/modloader.cpp
-    ${lithium_src_dir}/src/module/modloader.hpp
+    ${lithium_src_dir}/src/modules/module/modloader.cpp
+    ${lithium_src_dir}/src/modules/module/modloader.hpp
 
     #${lithium_src_dir}/src/module/compiler.cpp
     #${lithium_src_dir}/src/module/compiler.hpp
@@ -172,16 +172,16 @@ set(network_SRC
 )
 
 set(property_SRC
-    ${lithium_src_dir}/src/property/base64.cpp
-    ${lithium_src_dir}/src/property/base64.hpp
+    ${lithium_src_dir}/src/modules/property/base64.cpp
+    ${lithium_src_dir}/src/modules/property/base64.hpp
 
-    ${lithium_src_dir}/src/property/imessage.cpp
-    ${lithium_src_dir}/src/property/imessage.hpp
+    ${lithium_src_dir}/src/modules/property/imessage.cpp
+    ${lithium_src_dir}/src/modules/property/imessage.hpp
 
-    ${lithium_src_dir}/src/property/sha256.hpp
+    ${lithium_src_dir}/src/modules/property/sha256.hpp
 
-    ${lithium_src_dir}/src/property/uuid.cpp
-    ${lithium_src_dir}/src/property/uuid.hpp
+    ${lithium_src_dir}/src/modules/property/uuid.cpp
+    ${lithium_src_dir}/src/modules/property/uuid.hpp
 
     #${lithium_src_dir}/src/property/xml.cpp
     #${lithium_src_dir}/src/property/xml.hpp
@@ -222,10 +222,10 @@ set(Lithium_SRC
 
 if(WIN32)
     #add_executable(lithium_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
-    #${device_SRC} ${image_SRC} ${logger_SRC} ${module_SRC} 
-    #${network_SRC} ${property_SRC} ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
+     #${image_SRC} ${logger_SRC} ${module_SRC} 
+    #${network_SRC}  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${config_SRC} ${io_SRC}  ${thread_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${property_SRC} ${device_SRC} ${thread_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_libraries(lithium_server pdh iphlpapi)
 

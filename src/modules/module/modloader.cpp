@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-3-29
 
-Description: C++ and Python Modules Loader
+Description: C++ and Modules Loader
 
 **************************************************/
 
@@ -165,6 +165,7 @@ namespace Lithium
 
     ModuleLoader::ModuleLoader()
     {
+        m_ThreadManager = std::make_shared<Thread::ThreadManager>();
         LOG_F(INFO, "C++ module manager loaded successfully.");
     }
 

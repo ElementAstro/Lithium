@@ -1,5 +1,5 @@
 #include "device.hpp"
-#include "property/uuid.hpp"
+#include "modules/property/uuid.hpp"
 
 Device::Device(const std::string &name)
 {
@@ -12,6 +12,20 @@ auto Device::IAFindMessage(const std::string &identifier)
 {
     return std::find_if(device_messages.begin(), device_messages.end(), [&](const MessageInfo &msg)
                         { return msg.message.GetMessageUUID() == identifier || msg.message.GetName() == identifier; });
+}
+
+void Device::IASetProperty(const std::string &name, const std::string &value)
+{
+    device_info["name"] = value;
+}
+
+std::string Device::IAGetProperty(const std::string &name)
+{
+    if (device_info.contains(name))
+    {
+        return device_info[name].dump();
+    }
+    return "";
 }
 
 void Device::IAInsertMessage(const Lithium::Property::IMessage &message, std::shared_ptr<Lithium::SimpleTask> task)

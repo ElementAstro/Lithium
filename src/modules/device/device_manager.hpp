@@ -31,12 +31,13 @@ Description: Device Manager
 
 #pragma once
 
-#include "device.hpp"
-
 #include <string>
 #include <vector>
 #include <mutex>
 #include <functional>
+
+#include "device.hpp"
+#include "modules/module/modloader.hpp"
 
 namespace Lithium
 {
@@ -60,11 +61,15 @@ namespace Lithium
 
         std::vector<std::string> getDeviceList(DeviceType type);
 
-        void addDevice(DeviceType type, const std::string &name);
+        void addDevice(DeviceType type, const std::string &name, const std::string &lib_name);
+
+        bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
 
         void removeDevice(DeviceType type, const std::string &name);
 
         void removeDevicesByName(const std::string &name);
+
+        bool removeDeviceLibrary(const std::string &lib_name);
 
         std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
 
@@ -73,11 +78,13 @@ namespace Lithium
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
 
         std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
-        
+
     private:
-        std::vector<std::shared_ptr<Device>> m_devices[6]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.
+        std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.
 
         std::mutex m_mutex;
+
+        std::shared_ptr<ModuleLoader> m_ModuleLoader;
     };
 
 }

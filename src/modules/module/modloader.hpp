@@ -116,7 +116,7 @@ namespace Lithium
 
         bool HasModule(const std::string &name) const;
 
-        bool CheckModuleExists(const std::string &moduleName) const;
+        bool CheckModuleExists(const std::string &name) const;
 
         /**
          * @brief 获取指定模块中的函数指针
@@ -178,28 +178,22 @@ namespace Lithium
         }
 
         /**
-         * @brief   Gets a pointer to an instance of the BasicTask class from the specified module.
+         * @brief 获取指定模块的任务实例指针
          *
-         * This function tries to get a pointer to an instance of the BasicTask class from the specified module.
-         * If the module is not loaded or the function does not exist, this function will return nullptr.
-         *
-         * @param[in]   module_name     The name of the module which contains the BasicTask class implementation.
-         * @param[in]   config          A JSON object containing configuration information for the task instance.
-         * @return      A shared pointer to the BasicTask class instance if the loading is successful, nullptr otherwise.
+         * @tparam T 任务类型
+         * @param module_name 模块名称
+         * @param config 配置信息
+         * @param instance_function_name 实例化函数名称
+         * @return std::shared_ptr<T> 任务实例指针
+         * std::shared_ptr<BasicTask> task = GetInstancePointer<BasicTask>(module_name, config, "GetTaskInstance");
+         * std::shared_ptr<Device> device = GetInstancePointer<Device>(module_name, config, "GetDeviceInstance");
+         * std::shared_ptr<Plugin> plugin = GetInstancePointer<Plugin>(module_name, config, "GetPluginInstance");
          */
-        std::shared_ptr<BasicTask> GetTaskPointer(const std::string &module_name, const nlohmann::json &config);
-
-        /**
-         * @brief   Gets a pointer to an instance of the Device class from the specified module.
-         *
-         * This function tries to get a pointer to an instance of the Device class from the specified module.
-         * If the module is not loaded or the function does not exist, this function will return nullptr.
-         *
-         * @param[in]   module_name     The name of the module which contains the Device class implementation.
-         * @param[in]   config          A JSON object containing configuration information for the device instance.
-         * @return      A shared pointer to the Device class instance if the loading is successful, nullptr otherwise.
-         */
-        std::shared_ptr<Device> GetDevicePointer(const std::string &module_name, const nlohmann::json &config);
+        template <typename T>
+        std::shared_ptr<T> GetInstancePointer(const std::string &module_name, const nlohmann::json &config, const std::string &instance_function_name)
+        {
+            return GetInstance<T>(module_name, config, instance_function_name);
+        }
 
         /**
          * @brief   动态加载指定共享库中的函数，并在线程管理器中运行。

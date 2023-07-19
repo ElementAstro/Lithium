@@ -1,101 +1,144 @@
 #include "device.hpp"
 #include "modules/property/uuid.hpp"
 
-Device::Device(const std::string &name)
+Device::Device(const std::string &name) : _name(name)
 {
-    _name = name;
     Lithium::UUID::UUIDGenerator generator;
     _uuid = generator.generateUUIDWithFormat();
 }
 
-auto Device::IAFindMessage(const std::string &identifier)
+Device::~Device() {}
+
+void Device::init()
 {
-    return std::find_if(device_messages.begin(), device_messages.end(), [&](const MessageInfo &msg)
-                        { return msg.message.GetMessageUUID() == identifier || msg.message.GetName() == identifier; });
+    setProperty("name", _name);
 }
 
-void Device::IASetProperty(const std::string &name, const std::string &value)
+void Device::setProperty(const std::string &name, const std::string &value)
 {
-    device_info["name"] = value;
-}
+    std::string oldValue = getProperty(name);
 
-std::string Device::IAGetProperty(const std::string &name)
-{
-    if (device_info.contains(name))
+    device_info.properties[name] = value;
+
+    if (value != oldValue)
     {
-        return device_info[name].dump();
+        insertMessage(name, value);
+    }
+}
+
+std::string Device::getProperty(const std::string &name)
+{
+    if (device_info.properties.find(name) != device_info.properties.end())
+    {
+        return device_info.properties[name];
     }
     return "";
 }
 
-void Device::IAInsertMessage(const Lithium::Property::IMessage &message, std::shared_ptr<Lithium::SimpleTask> task)
+void Device::insertTask(const std::string &name, std::any defaultValue,
+                        bool isBlock, std::shared_ptr<Lithium::SimpleTask> task)
 {
-    MessageInfo info;
-    info.message = message;
-    info.task = task;
-
-    device_messages.push_back(info);
-    IANotifyObservers(message);
+    // TODO: Implement task insertion logic
 }
 
-Lithium::Property::IMessage Device::IACreateMessage(const std::string &message_name, std::any message_value)
+void Device::insertMessage(const std::string &name, std::any value)
 {
-    Lithium::Property::IMessage message;
-    message.name = message_name;
-    message.device_name = _name;
-    message.device_uuid = _uuid;
-    message.value = message_value;
-    return message;
-}
+    device_info.messages[name] = value;
 
-void Device::IAUpdateMessage(const std::string &identifier, const Lithium::Property::IMessage &newMessage)
-{
-    auto it = IAFindMessage(identifier);
-
-    if (it != device_messages.end())
+    for (const auto &observer : observers)
     {
-        Lithium::Property::IMessage oldMessage = it->message;
-        it->message = newMessage;
-        IANotifyObservers(newMessage, oldMessage);
+        observer(value, nullptr);
     }
 }
 
-void Device::IARemoveMessage(const std::string &identifier)
+void Device::updateMessage(const std::string &name, const std::string &identifier, std::any newValue)
 {
-    auto it = IAFindMessage(identifier);
-
-    if (it != device_messages.end())
+    if (device_info.messages.find(identifier) != device_info.messages.end())
     {
-        Lithium::Property::IMessage removedMessage = it->message;
-        device_messages.erase(it);
-        IANotifyObservers(removedMessage);
+        std::any oldValue = device_info.messages[identifier];
+        device_info.messages[identifier] = newValue;
+
+        for (const auto &observer : observers)
+        {
+            observer(newValue, oldValue);
+        }
     }
 }
 
-Lithium::Property::IMessage *Device::IAGetMessage(const std::string &identifier)
+void Device::removeMessage(const std::string &name, const std::string &identifier)
 {
-    auto it = IAFindMessage(identifier);
-
-    if (it != device_messages.end())
+    if (device_info.messages.find(identifier) != device_info.messages.end())
     {
-        return &(it->message);
+        std::any value = device_info.messages[identifier];
+        device_info.messages.erase(identifier);
+
+        for (const auto &observer : observers)
+        {
+            observer(nullptr, value);
+        }
+    }
+}
+
+std::any Device::getMessageValue(const std::string &name, const std::string &identifier)
+{
+    if (device_info.messages.find(identifier) != device_info.messages.end())
+    {
+        return device_info.messages[identifier];
     }
 
     return nullptr;
 }
 
-void Device::IANotifyObservers(const Lithium::Property::IMessage &newMessage, const Lithium::Property::IMessage &oldMessage)
+void Device::addObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer)
 {
-    for (const auto &observer : observers)
-    {
-        observer(newMessage, oldMessage);
-    }
+    observers.push_back(observer);
 }
 
-void Device::IANotifyObservers(const Lithium::Property::IMessage &removedMessage)
+void Device::removeObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer)
 {
-    for (const auto &observer : observers)
+    observers.erase(std::remove_if(observers.begin(), observers.end(),
+                                   [&observer](const std::function<void(std::any, std::any)> &o)
+                                   {
+                                       return o.target<std::function<void(std::any, std::any)>>() == observer.target<std::function<void(std::any, std::any)>>();
+                                   }),
+                    observers.end());
+}
+
+void Device::exportDeviceInfoToJson()
+{
+    nlohmann::json jsonInfo;
+
+    for (const auto &kv : device_info.properties)
     {
-        observer(removedMessage, removedMessage);
+        jsonInfo[kv.first] = kv.second;
     }
+
+    std::string jsonStr = jsonInfo.dump();
+
+    std::cout << jsonStr << std::endl;
+}
+
+Device &Device::operator<<(const std::pair<std::string, std::string> &property)
+{
+    setProperty(property.first, property.second);
+    return *this;
+}
+
+std::ostream &operator<<(std::ostream &os, const Device &device)
+{
+    nlohmann::json jsonInfo;
+    jsonInfo["Device Name"] = device._name;
+    jsonInfo["Device UUID"] = device._uuid;
+
+    nlohmann::json propertiesJson;
+    for (const auto &kv : device.device_info.properties)
+    {
+        propertiesJson[kv.first] = kv.second;
+    }
+
+    jsonInfo["Device Properties"] = propertiesJson;
+
+    os << jsonInfo.dump(4); // 输出缩进格式的JSON字符串，缩进为4个空格
+
+    return os;
 }

@@ -44,6 +44,17 @@ Description: Main
 
 #include "LithiumApp.hpp"
 
+#include "modules/system/crash.hpp"
+
+#include <chrono>
+#include <ctime>
+#include <filesystem>
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <signal.h>
+#endif
+
 void run()
 {
 
@@ -80,10 +91,60 @@ void run()
     server.run();
 }
 
+void setupLogFile()
+{
+    std::filesystem::path logsFolder = std::filesystem::current_path() / "logs";
+    if (!std::filesystem::exists(logsFolder))
+    {
+        std::filesystem::create_directory(logsFolder);
+    }
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm *local_time = std::localtime(&now_time_t);
+    char filename[100];
+    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", local_time);
+    std::filesystem::path logFilePath = logsFolder / filename;
+    loguru::add_file(logFilePath.string().c_str(), loguru::Append, loguru::Verbosity_MAX);
+}
+
+#ifdef _WIN32
+// Define the signal handler function for Windows platform
+BOOL WINAPI interruptHandler(DWORD signalNumber)
+{
+    if (signalNumber == CTRL_C_EVENT)
+    {
+        LOG_F(INFO, "Ctrl+C pressed on Windows. Exiting...");
+        throw std::runtime_error("KeyInterruption received");
+    }
+    return TRUE;
+}
+
+#else
+// Define the signal handler function
+void interruptHandler(int signalNumber, siginfo_t *info, void *context)
+{
+    ::exit(1);
+}
+#endif
+
+void registerInterruptHandler()
+{
+#ifdef _WIN32
+    SetConsoleCtrlHandler(interruptHandler, TRUE);
+#else
+    struct sigaction sa;
+    sa.sa_sigaction = &interruptHandler;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    sigaddset(&sa.sa_mask, SIGINT);
+    sigaction(SIGINT, &sa, NULL);
+#endif
+}
+
 /**
  *  main
  */
-int main(int argc, const char *argv[])
+int main(int argc, char *argv[])
 {
     argparse::ArgumentParser program("Lithium");
 
@@ -114,8 +175,25 @@ int main(int argc, const char *argv[])
         }
     }
 
-    oatpp::base::Environment::init();
-    run();
-    oatpp::base::Environment::destroy();
+    try
+    {
+        loguru::init(argc, argv);
+        setupLogFile();
+
+        registerInterruptHandler();
+        Lithium::MyApp.addDevice(Lithium::DeviceType::Camera, "MyCamera");
+        Lithium::MyApp.GetDeviceManager()->addDeviceLibrary("./libmycamera.so", "mycamera");
+        Lithium::MyApp.addDevice(Lithium::DeviceType::Camera, "MyCameraFromLibrary","mycamera");
+
+        oatpp::base::Environment::init();
+        run();
+        oatpp::base::Environment::destroy();
+    }
+    catch (const std::exception &e)
+    {
+        LOG_F(ERROR, "Error: %s", e.what());
+        Lithium::CrashReport::saveCrashLog(e.what());
+        std::exit(EXIT_FAILURE);
+    }
     return 0;
 }

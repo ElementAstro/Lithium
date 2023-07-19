@@ -39,7 +39,7 @@ Description: File Manager
 
 #include "loguru/loguru.hpp"
 
-#include <openssl/md5.h>
+#include <openssl/evp.h>
 
 namespace Lithium::File
 {
@@ -175,29 +175,59 @@ namespace Lithium::File
         return fileSize;
     }
 
-    std::string FileManager::calculateMD5()
+    std::string FileManager::calculateSHA256()
     {
         if (!m_file.is_open())
         {
             LOG_F(ERROR, "No file is currently open!");
             return "";
         }
-        MD5_CTX md5Context;
-        MD5_Init(&md5Context);
+
+        EVP_MD_CTX *mdContext = EVP_MD_CTX_new();
+        if (mdContext == nullptr)
+        {
+            LOG_F(ERROR, "Failed to create EVP_MD_CTX");
+            return "";
+        }
+
+        if (EVP_DigestInit_ex(mdContext, EVP_sha256(), nullptr) != 1)
+        {
+            LOG_F(ERROR, "Failed to initialize EVP_MD_CTX");
+            EVP_MD_CTX_free(mdContext);
+            return "";
+        }
+
         char buffer[1024];
         while (m_file.read(buffer, sizeof(buffer)))
         {
-            MD5_Update(&md5Context, buffer, sizeof(buffer));
+            if (EVP_DigestUpdate(mdContext, buffer, sizeof(buffer)) != 1)
+            {
+                LOG_F(ERROR, "Failed to update EVP_MD_CTX");
+                EVP_MD_CTX_free(mdContext);
+                return "";
+            }
         }
-        MD5_Final(reinterpret_cast<unsigned char *>(buffer), &md5Context);
-        std::stringstream md5Stream;
-        md5Stream << std::hex << std::setfill('0');
-        for (int i = 0; i < MD5_DIGEST_LENGTH; ++i)
+
+        unsigned char hash[EVP_MAX_MD_SIZE];
+        unsigned int hashLength = 0;
+        if (EVP_DigestFinal_ex(mdContext, hash, &hashLength) != 1)
         {
-            md5Stream << std::setw(2) << static_cast<int>(buffer[i]);
+            LOG_F(ERROR, "Failed to finalize EVP_MD_CTX");
+            EVP_MD_CTX_free(mdContext);
+            return "";
         }
-        LOG_F(INFO, "MD5 value for file \"%s\" is %s", m_filename.c_str(), md5Stream.str().c_str());
-        return md5Stream.str();
+
+        EVP_MD_CTX_free(mdContext);
+
+        std::stringstream sha256Stream;
+        sha256Stream << std::hex << std::setfill('0');
+        for (unsigned int i = 0; i < hashLength; ++i)
+        {
+            sha256Stream << std::setw(2) << static_cast<int>(hash[i]);
+        }
+
+        LOG_F(INFO, "SHA-256 value for file \"%s\" is %s", m_filename.c_str(), sha256Stream.str().c_str());
+        return sha256Stream.str();
     }
 
     std::string FileManager::getFileDirectory(const std::string &filename)

@@ -23,7 +23,7 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-7-1
+Date: 2023-7-19
 
 Description: Task Definition
 
@@ -50,6 +50,14 @@ namespace Lithium
         // Constructor
         BasicTask(const std::function<void()> &stop_fn = nullptr, bool can_stop = false)
             : stop_fn_(stop_fn), can_stop_(stop_fn != nullptr), stop_flag_(false) {}
+
+        virtual ~BasicTask()
+        {
+            if(stop_flag_)
+            {
+                Stop();
+            }
+        }
 
         // Executes the task
         virtual nlohmann::json Execute() = 0;
@@ -100,6 +108,61 @@ namespace Lithium
             }
         }
 
+        bool validateJsonValue(const nlohmann::json &data, const nlohmann::json &templateValue)
+        {
+            if (data.type() != templateValue.type())
+            {
+                if (templateValue.empty())
+                {
+                    return false;
+                }
+            }
+            if (data.is_object())
+            {
+                for (auto it = templateValue.begin(); it != templateValue.end(); ++it)
+                {
+                    const std::string &key = it.key();
+                    const auto &subTemplateValue = it.value();
+                    if (!validateJsonValue(data.value(key, nlohmann::json()), subTemplateValue))
+                    {
+                        return false;
+                    }
+                }
+            }
+            else if (data.is_array())
+            {
+                if (templateValue.size() > 0 && data.size() != templateValue.size())
+                {
+                    return false;
+                }
+
+                for (size_t i = 0; i < data.size(); ++i)
+                {
+                    if (!validateJsonValue(data[i], templateValue[0]))
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        bool validateJsonString(const std::string &jsonString, const std::string &templateString)
+        {
+            nlohmann::json jsonData;
+            nlohmann::json templateData;
+            try
+            {
+                jsonData = nlohmann::json::parse(jsonString);
+                templateData = nlohmann::json::parse(templateString);
+            }
+            catch (const std::exception &e)
+            {
+                return false;
+            }
+            return validateJsonValue(jsonData, templateData);
+        }
+
     protected:
         // True if the task is completed
         bool done_ = false;
@@ -128,13 +191,20 @@ namespace Lithium
     {
     public:
         // Constructor
-        SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func, const nlohmann::json &params,
+        SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func, const nlohmann::json &params_template,
                    const std::function<void()> &stop_fn = nullptr, bool can_stop = false)
-            : function_(func), params_(params), BasicTask(stop_fn, can_stop) {}
+            : function_(func), params_template_(params_template), BasicTask(stop_fn, can_stop) {}
 
         // Executes the task
         virtual nlohmann::json Execute() override
         {
+            if (!params_template_.is_null() && !params_.is_null())
+            {
+                if(!validateJsonValue(params_,params_template_))
+                {
+                    return {"error","Incorrect value type for element:"};
+                }
+            }
             if (!stop_flag_)
             {
                 returns_ = function_(params_);
@@ -143,7 +213,11 @@ namespace Lithium
             return ToJson();
         }
 
-        // Serializes the task to a JSON object
+        virtual void SetParams(const nlohmann::json &params)
+        {
+            params_ = params;
+        }
+
         virtual nlohmann::json ToJson() const override
         {
             auto j = BasicTask::ToJson();
@@ -163,6 +237,9 @@ namespace Lithium
 
         // Parameters passed to the function
         nlohmann::json params_;
+
+        // Parameter template to check
+        nlohmann::json params_template_;
 
         // The result of the function
         nlohmann::json returns_;

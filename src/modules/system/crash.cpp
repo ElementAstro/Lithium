@@ -294,16 +294,12 @@ namespace Lithium::CrashReport
         std::vector<std::string> env_vars = {
             "PATH", "TMP", "TEMP", "ProgramFiles(x86)", "ProgramFiles", "SystemRoot", "APPDATA"};
 
-// Linux
 #if defined(__linux__)
         ss << "================== Linux Environment Information ==================" << std::endl;
 
         for (auto &env_var : env_vars)
         {
-            char *env_value;
-            size_t len;
-
-            env_value = getenv(env_var.c_str());
+            char *env_value = getenv(env_var.c_str());
             if (env_value != nullptr)
             {
                 ss << "Linux ";
@@ -312,16 +308,12 @@ namespace Lithium::CrashReport
         }
 #endif
 
-// Mac OS X
 #if defined(__APPLE__)
         ss << "================== Mac OS X Environment Information ==================" << std::endl;
 
         for (auto &env_var : env_vars)
         {
-            char *env_value;
-            size_t len;
-
-            env_value = getenv(env_var.c_str());
+            char *env_value = getenv(env_var.c_str());
             if (env_value != nullptr)
             {
                 ss << "Mac OS X ";
@@ -330,24 +322,22 @@ namespace Lithium::CrashReport
         }
 #endif
 
-// Windows
 #if defined(_WIN32) || defined(_WIN64)
         ss << "================== Windows Environment Information ==================" << std::endl;
-        /*
+
         for (auto &env_var : env_vars)
         {
-            char *env_value;
-            size_t len;
-
-            if (_dupenv_s(&env_value, &len, env_var.c_str()) == 0 && env_value != nullptr)
+            DWORD buffer_size = GetEnvironmentVariableA(env_var.c_str(), nullptr, 0);
+            if (buffer_size > 0)
             {
-                ss << "Windows ";
-                ss << env_var << "=" << env_value << std::endl;
-                free(env_value);
+                std::vector<char> buffer(buffer_size);
+                if (GetEnvironmentVariableA(env_var.c_str(), buffer.data(), buffer_size) > 0)
+                {
+                    ss << "Windows " << env_var << "=" << buffer.data() << std::endl;
+                }
             }
         }
-        */
-        
+
 #endif
 
         return ss.str();

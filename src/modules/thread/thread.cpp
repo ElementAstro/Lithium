@@ -32,6 +32,7 @@ Description: Thread Manager
 #include "thread.hpp"
 
 #include <sstream>
+#include <iostream>
 
 #include "loguru/loguru.hpp"
 
@@ -68,13 +69,19 @@ namespace Lithium::Thread
             std::unique_lock<std::mutex> lock(m_mtx);
             m_cv.wait(lock, [this]
                       { return m_threads.size() < m_maxThreads || m_stopFlag; });
+
             if (m_stopFlag)
             {
                 throw std::runtime_error("Thread manager has stopped, cannot add new thread");
             }
             auto t = std::make_tuple(
-                std::make_unique<std::thread>([this, func, &lock]
-                                              {
+#if __cplusplus >= 202002L
+                std::make_unique<std::jthread>([func]
+#else
+                std::make_unique<std::thread>([func]
+#endif
+
+                                               {
                 try
                 {
                     func();
@@ -213,12 +220,19 @@ namespace Lithium::Thread
         }
     }
 
+#if __cplusplus >= 202002L
+    void ThreadManager::joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::jthread>, std::string, bool> &t)
+#else
     void ThreadManager::joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::thread>, std::string, bool> &t)
+#endif
     {
         auto &threadPtr = std::get<0>(t);
         if (threadPtr && threadPtr->joinable())
         {
             threadPtr->join();
+#if __cplusplus >= 202002L
+            threadPtr->request_stop();
+#endif
             threadPtr.reset();
         }
         std::get<2>(t) = true;

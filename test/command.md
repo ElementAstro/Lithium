@@ -18,4 +18,8 @@ g++ httptest.cpp ../src/network/httpclient.cpp -lssl -std=c++2a -I../libs -o htt
 g++ script_test.cpp ../src/module/sheller.cpp -lssl -std=c++2a -I../libs -o script_test -lfmt -I../src/module 
 
 g++ message_test.cpp -std=c++2a -o message_test
+
+g++ -std=c++20 -fPIC -c camera_lib_test.cpp -o camera_lib_test.o -I../libs -I../src/modules/device -I ../src
+g++ -shared -Wl,-soname,libmycamera.so -o libmycamera.so ../src/modules/device/device.cpp ../src/modules/property/uuid.cpp camera_lib_test.o -I../libs -I../src
+
 ```

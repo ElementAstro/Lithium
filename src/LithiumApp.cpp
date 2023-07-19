@@ -37,4 +37,44 @@ namespace Lithium
         m_ConfigManager->setValue(key_path, value);
     }
 
+    std::vector<std::string> LithiumApp::getDeviceList(DeviceType type)
+    {
+        return m_DeviceManager->getDeviceList(type);
+    }
+
+    void LithiumApp::addDevice(DeviceType type, const std::string &name, const std::string &lib_name)
+    {
+        m_DeviceManager->addDevice(type, name, lib_name);
+    }
+
+    void LithiumApp::removeDevice(DeviceType type, const std::string &name)
+    {
+        m_DeviceManager->removeDevice(type, name);
+    }
+
+    void LithiumApp::removeDevicesByName(const std::string &name)
+    {
+        m_DeviceManager->removeDevicesByName(name);
+    }
+
+    std::shared_ptr<Device> LithiumApp::getDevice(DeviceType type, const std::string &name)
+    {
+        return m_DeviceManager->getDevice(type, name);
+    }
+
+    size_t LithiumApp::findDevice(DeviceType type, const std::string &name)
+    {
+        return m_DeviceManager->findDevice(type, name);
+    }
+
+    std::shared_ptr<Device> LithiumApp::findDeviceByName(const std::string &name) const
+    {
+        return m_DeviceManager->findDeviceByName(name);
+    }
+
+    std::shared_ptr<SimpleTask> LithiumApp::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    {
+        return m_DeviceManager->getSimpleTask(type, device_type, device_name, task_name, params);
+    }
+
 }

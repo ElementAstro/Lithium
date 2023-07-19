@@ -101,7 +101,7 @@ namespace Lithium::File
          * 计算文件的MD5值
          * @return 文件的MD5值
          */
-        std::string calculateMD5();
+        std::string calculateSHA256();
 
         /**
          * 获取文件所在目录路径

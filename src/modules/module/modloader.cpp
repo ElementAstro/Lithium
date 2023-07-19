@@ -95,7 +95,8 @@ namespace Lithium
         // Define the modules directory path
         fs::path modules_dir;
 #ifdef _WIN32 // Windows OS
-        modules_dir = fs::path(getenv("USERPROFILE")) / "Documents" / "modules";
+        // modules_dir = fs::path(getenv("USERPROFILE")) / "Documents" / "modules";
+        modules_dir = std::filesystem::current_path() / "modules";
 #else // Linux OS
         modules_dir = "modules";
 #endif
@@ -165,8 +166,12 @@ namespace Lithium
 
     ModuleLoader::ModuleLoader()
     {
-        m_ThreadManager = std::make_shared<Thread::ThreadManager>();
+        m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
         LOG_F(INFO, "C++ module manager loaded successfully.");
+        m_ThreadManager->addThread([]()
+                                   { iterator_modules_dir(); },
+                                   "iterator_modules_dir");
+
     }
 
     ModuleLoader::~ModuleLoader()
@@ -216,7 +221,7 @@ namespace Lithium
                     std::string license = config.value("license", "");
 
                     LOG_F(INFO, "Loaded Module : %s version %s written by %s%s",
-                          config.value("name", "Unknown"), version.c_str(), author.c_str(), license.empty() ? "" : " under " + license);
+                          config.value("name", "Unknown").c_str(), version.c_str(), author.c_str(), license.empty() ? "" : " under " + license);
                 }
                 else
                 {
@@ -275,34 +280,18 @@ namespace Lithium
         }
     }
 
-    bool ModuleLoader::CheckModuleExists(const std::string &moduleName) const
+    bool ModuleLoader::CheckModuleExists(const std::string &name) const
     {
-        void *handle = LOAD_LIBRARY(moduleName.c_str());
+        void *handle = LOAD_LIBRARY(name.c_str());
         if (handle == nullptr)
         {
-            LOG_F(ERROR, "Module %s does not exist.", moduleName.c_str());
+            LOG_F(ERROR, "Module %s does not exist.", name.c_str());
             return false;
         }
-        LOG_F(INFO, "Module %s is existing.", moduleName.c_str());
+        LOG_F(INFO, "Module %s is existing.", name.c_str());
         UNLOAD_LIBRARY(handle);
         return true;
     }
-
-    std::shared_ptr<BasicTask> ModuleLoader::GetTaskPointer(const std::string &module_name, const nlohmann::json &config)
-    {
-        return GetInstance<BasicTask>(module_name, config, "GetTaskInstance");
-    }
-
-    std::shared_ptr<Device> ModuleLoader::GetDevicePointer(const std::string &module_name, const nlohmann::json &config)
-    {
-        return GetInstance<Device>(module_name, config, "GetDeviceInstance");
-    }
-    /*
-    std::shared_ptr<Plugin> ModuleLoader::GetPluginPointer(const std::string &module_name, const nlohmann::json &config)
-    {
-        return GetInstance<Device>(module_name, config, "GetPluginInstance");
-    }
-    */
 
     bool ModuleLoader::HasModule(const std::string &name) const
     {

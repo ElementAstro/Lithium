@@ -33,7 +33,7 @@ Description: Basic Camera Defination
 
 #include "device.hpp"
 
-class Camera : virtual public Device
+class Camera : public Device
 {
 public:
     /**
@@ -41,9 +41,38 @@ public:
      *
      * @param name 摄像机名称
      */
-    explicit Camera(const std::string &name);
+    explicit Camera(const std::string &name) : Device(name)
+    {
+        init();
+    }
 
-    virtual ~Camera() = 0;
+    virtual ~Camera() {}
+
+    std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params) override
+    {
+        if (name == "captureImage")
+        {
+            auto imageCaptureTask = std::make_shared<Lithium::SimpleTask>(
+                [this](const nlohmann::json &params) -> nlohmann::json
+                {
+                    std::cout << "Image captured" << std::endl;
+                    //IAUpdateMessage("exposure", IACreateMessage("exposure", 1));
+                    //IAUpdateMessage("test", IACreateMessage("test", 1));
+                    return {"result", "success"};
+                },
+                params,
+                [this]()
+                {
+                    std::cout << "Image capture stopped" << std::endl;
+                },
+                true);
+            return imageCaptureTask;
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
 
 protected:
     /**
@@ -52,7 +81,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool startExposure(const nlohmann::json &params) = 0;
+    virtual bool startExposure(const nlohmann::json &params) {}
 
     /**
      * @brief 中止曝光
@@ -60,7 +89,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool abortExposure(const nlohmann::json &params) = 0;
+    virtual bool abortExposure(const nlohmann::json &params) {}
 
     /**
      * @brief 获取曝光状态
@@ -68,7 +97,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getExposureStatus(const nlohmann::json &params) = 0;
+    virtual bool getExposureStatus(const nlohmann::json &params) {}
 
     /**
      * @brief 获取曝光结果
@@ -76,7 +105,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getExposureResult(const nlohmann::json &params) = 0;
+    virtual bool getExposureResult(const nlohmann::json &params) {}
 
     /**
      * @brief 保存曝光结果
@@ -84,7 +113,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool saveExposureResult(const nlohmann::json &params) = 0;
+    virtual bool saveExposureResult(const nlohmann::json &params) {}
 
     /**
      * @brief 启动视频
@@ -92,7 +121,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool startVideo(const nlohmann::json &params) = 0;
+    virtual bool startVideo(const nlohmann::json &params) {}
 
     /**
      * @brief 停止视频
@@ -100,7 +129,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool stopVideo(const nlohmann::json &params) = 0;
+    virtual bool stopVideo(const nlohmann::json &params) {}
 
     /**
      * @brief 获取视频状态
@@ -108,7 +137,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getVideoStatus(const nlohmann::json &params) = 0;
+    virtual bool getVideoStatus(const nlohmann::json &params) {}
 
     /**
      * @brief 获取视频结果
@@ -116,7 +145,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getVideoResult(const nlohmann::json &params) = 0;
+    virtual bool getVideoResult(const nlohmann::json &params) {}
 
     /**
      * @brief 保存视频结果
@@ -124,7 +153,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool saveVideoResult(const nlohmann::json &params) = 0;
+    virtual bool saveVideoResult(const nlohmann::json &params) {}
 
     /**
      * @brief 启动冷却
@@ -132,7 +161,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool startCooling(const nlohmann::json &params) = 0;
+    virtual bool startCooling(const nlohmann::json &params) {}
 
     /**
      * @brief 停止冷却
@@ -140,7 +169,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool stopCooling(const nlohmann::json &params) = 0;
+    virtual bool stopCooling(const nlohmann::json &params) {}
 
     /**
      * @brief 获取温度
@@ -148,7 +177,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getTemperature(const nlohmann::json &params) = 0;
+    virtual bool getTemperature(const nlohmann::json &params) {}
 
     /**
      * @brief 获取冷却功率
@@ -156,7 +185,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getCoolingPower(const nlohmann::json &params) = 0;
+    virtual bool getCoolingPower(const nlohmann::json &params) {}
 
     /**
      * @brief 设置温度
@@ -164,7 +193,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool setTemperature(const nlohmann::json &params) = 0;
+    virtual bool setTemperature(const nlohmann::json &params) {}
 
     /**
      * @brief 设置冷却功率
@@ -172,7 +201,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool setCoolingPower(const nlohmann::json &params) = 0;
+    virtual bool setCoolingPower(const nlohmann::json &params) {}
 
     /**
      * @brief 获取增益值
@@ -180,7 +209,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getGain(const nlohmann::json &params) = 0;
+    virtual bool getGain(const nlohmann::json &params) {}
 
     /**
      * @brief 设置增益值
@@ -188,7 +217,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool setGain(const nlohmann::json &params) = 0;
+    virtual bool setGain(const nlohmann::json &params) {}
 
     /**
      * @brief 获取偏移量
@@ -196,7 +225,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getOffset(const nlohmann::json &params) = 0;
+    virtual bool getOffset(const nlohmann::json &params) {}
 
     /**
      * @brief 设置偏移量
@@ -204,7 +233,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool setOffset(const nlohmann::json &params) = 0;
+    virtual bool setOffset(const nlohmann::json &params) {}
 
     /**
      * @brief 获取ISO值
@@ -212,7 +241,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getISO(const nlohmann::json &params) = 0;
+    virtual bool getISO(const nlohmann::json &params) {}
 
     /**
      * @brief 设置ISO值
@@ -220,7 +249,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool setISO(const nlohmann::json &params) = 0;
+    virtual bool setISO(const nlohmann::json &params) {}
 
     /**
      * @brief 获取帧数
@@ -228,7 +257,7 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool getFrame(const nlohmann::json &params) = 0;
+    virtual bool getFrame(const nlohmann::json &params) {}
 
     /**
      * @brief 设置帧数
@@ -236,5 +265,5 @@ protected:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    virtual bool setFrame(const nlohmann::json &params) = 0;
+    virtual bool setFrame(const nlohmann::json &params) {}
 };

@@ -49,14 +49,9 @@ option(OATPP_DISABLE_LOGI "DISABLE logs priority I" OFF)
 option(OATPP_DISABLE_LOGW "DISABLE logs priority W" OFF)
 option(OATPP_DISABLE_LOGE "DISABLE logs priority E" OFF)
 
-## Print config ##################################################################################
-
-message("############################################################################")
-message("## oatpp module compilation config:")
-
-message("OATPP_DISABLE_ENV_OBJECT_COUNTERS=${OATPP_DISABLE_ENV_OBJECT_COUNTERS}")
-message("OATPP_THREAD_HARDWARE_CONCURRENCY=${OATPP_THREAD_HARDWARE_CONCURRENCY}")
-message("OATPP_COMPAT_BUILD_NO_THREAD_LOCAL=${OATPP_COMPAT_BUILD_NO_THREAD_LOCAL}")
+# message("-- OATPP_DISABLE_ENV_OBJECT_COUNTERS=${OATPP_DISABLE_ENV_OBJECT_COUNTERS}")
+#message("-- OATPP_THREAD_HARDWARE_CONCURRENCY=${OATPP_THREAD_HARDWARE_CONCURRENCY}")
+# message("-- OATPP_COMPAT_BUILD_NO_THREAD_LOCAL=${OATPP_COMPAT_BUILD_NO_THREAD_LOCAL}")
 
 ## Set definitions ###############################################################################
 
@@ -111,11 +106,9 @@ if(CMAKE_COMPILER_IS_GNUCXX AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 5.0)
     add_definitions(-DOATPP_DISABLE_STD_PUT_TIME)
 endif()
 
-message("############################################################################")
-
 ###################################################################################################
 
-message("oatpp version: '${OATPP_THIS_MODULE_VERSION}'")
+message("-- oatpp version: '${OATPP_THIS_MODULE_VERSION}'")
 
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
@@ -443,8 +436,6 @@ elseif(NOT APPLE AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
                 SET(OATPP_ADD_LINK_LIBS atomic)
         endif()
 endif()
-
-message("OATPP_ADD_LINK_LIBS=${OATPP_ADD_LINK_LIBS}")
 
 target_link_libraries(oatpp PUBLIC ${CMAKE_THREAD_LIBS_INIT}
         ${OATPP_ADD_LINK_LIBS}

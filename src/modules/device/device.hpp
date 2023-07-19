@@ -29,117 +29,66 @@ Description: Basic Device Defination
 
 *************************************************/
 
-#pragma once
+#ifndef DEVICE_H
+#define DEVICE_H
 
-#include <string>
-#include <vector>
+#include <iostream>
+#include <any>
+#include <nlohmann/json.hpp>
 #include <functional>
+#include <memory>
+#include <map>
 
-#include "modules/task/task.hpp"
 #include "modules/property/imessage.hpp"
+#include "modules/task/task.hpp"
 
-#include "nlohmann/json.hpp"
-
-enum class DeviceType
-{
-    Camera,
-    Telescope,
-    Focuser,
-    FilterWheel,
-    Solver,
-    Guider,
-    NumDeviceTypes
-};
-
-static constexpr int DeviceTypeCount = 6;
-
-/**
- * @brief 设备基类
- */
 class Device
 {
 public:
-    /**
-     * @brief 构造函数
-     *
-     * @param name 设备名称
-     */
     explicit Device(const std::string &name);
+    virtual ~Device();
 
-    /**
-     * @brief 析构函数
-     */
-    virtual ~Device(){};
+    virtual void init();
 
-    /**
-     * @brief 连接设备
-     *
-     * @param name 设备名称
-     * @return 连接设备是否成功
-     */
-    virtual bool connect(const std::string &name) = 0;
+    void setProperty(const std::string &name, const std::string &value);
 
-    /**
-     * @brief 断开设备连接
-     *
-     * @return 断开设备连接是否成功
-     */
-    virtual bool disconnect() = 0;
+    std::string getProperty(const std::string &name);
 
-    /**
-     * @brief 重新连接设备
-     *
-     * @return 重新连接设备是否成功
-     */
-    virtual bool reconnect() = 0;
+    void insertTask(const std::string &name, std::any defaultValue,
+                    bool isBlock = false, std::shared_ptr<Lithium::SimpleTask> task = nullptr);
 
-    /**
-     * @brief 扫描可用设备
-     *
-     * @return 扫描可用设备是否成功
-     */
-    virtual std::vector<std::string> scanForAvailableDevices() = 0;
+    virtual std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params) = 0;
 
-    /**
-     * @brief 获取SimpleTask
-     *
-     * @param task_name 任务名
-     * @param params 参数
-     * @return SimpleTask指针
-     */
-    virtual std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) = 0;
+    void insertMessage(const std::string &name, std::any value);
 
-public:
-    auto IAFindMessage(const std::string &identifier);
+    void updateMessage(const std::string &name, const std::string &identifier, std::any newValue);
 
-    void IASetProperty(const std::string &name, const std::string &value);
+    void removeMessage(const std::string &name, const std::string &identifier);
 
-    std::string IAGetProperty(const std::string &name);
+    std::any getMessageValue(const std::string &name, const std::string &identifier);
 
-    void IAInsertMessage(const Lithium::Property::IMessage &message, std::shared_ptr<Lithium::SimpleTask> task);
+    void addObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer);
 
-    Lithium::Property::IMessage IACreateMessage(const std::string &message_name, std::any message_value);
+    void removeObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer);
 
-    void IAUpdateMessage(const std::string &identifier, const Lithium::Property::IMessage &newMessage);
+    void exportDeviceInfoToJson();
 
-    void IARemoveMessage(const std::string &identifier);
+    Device &operator<<(const std::pair<std::string, std::string> &property);
 
-    Lithium::Property::IMessage *IAGetMessage(const std::string &identifier);
-
-    void IANotifyObservers(const Lithium::Property::IMessage &newMessage, const Lithium::Property::IMessage &oldMessage);
-
-    void IANotifyObservers(const Lithium::Property::IMessage &removedMessage);
-
-    struct MessageInfo
-    {
-        Lithium::Property::IMessage message;
-        std::shared_ptr<Lithium::SimpleTask> task;
-    };
-
-    std::vector<MessageInfo> device_messages;
-
-    std::vector<std::function<void(const Lithium::Property::IMessage &, const Lithium::Property::IMessage &)>> observers;
+    friend std::ostream &operator<<(std::ostream &os, const Device &device);
 
 private:
-    nlohmann::json device_info;
+    class DeviceInfo
+    {
+    public:
+        std::map<std::string, std::string> properties;
+        std::map<std::string, std::any> messages;
+    };
+
+    std::string _name;
+    std::string _uuid;
+    DeviceInfo device_info;
+    std::vector<std::function<void(std::any, std::any)>> observers;
 };
+
+#endif // DEVICE_H

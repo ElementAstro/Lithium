@@ -57,10 +57,17 @@ namespace Lithium::Thread
         bool isThreadRunning(const std::string &name);
 
     private:
+#if __cplusplus >= 202002L
+        void joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::jthread>, std::string, bool> &t);
+#else
         void joinThread(std::unique_lock<std::mutex> &lock, std::tuple<std::unique_ptr<std::thread>, std::string, bool> &t);
-
+#endif
         int m_maxThreads;
+#if __cplusplus >= 202002L
+        std::vector<std::tuple<std::unique_ptr<std::jthread>, std::string, bool>> m_threads;
+#else
         std::vector<std::tuple<std::unique_ptr<std::thread>, std::string, bool>> m_threads;
+#endif
         std::mutex m_mtx;
         std::condition_variable m_cv;
         std::atomic<bool> m_stopFlag;

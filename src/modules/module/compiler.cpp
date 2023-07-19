@@ -56,12 +56,12 @@ namespace fs = std::filesystem;
 
 bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string &moduleName, const std::string &functionName)
 {
-    spdlog::debug("Compiling module {}::{}...", moduleName, functionName);
+    LOG_F(ERROR, "Compiling module %s::%s...", moduleName.c_str(), functionName.c_str());
 
     // 参数校验
     if (code.empty() || moduleName.empty() || functionName.empty())
     {
-        spdlog::error("Invalid parameters.");
+        LOG_F(ERROR, "Invalid parameters.");
         return false;
     }
 
@@ -69,7 +69,7 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     auto cachedResult = cache_.find(moduleName + "::" + functionName);
     if (cachedResult != cache_.end())
     {
-        spdlog::warn("Module {}::{} is already compiled, returning cached result.", moduleName, functionName);
+        LOG_F(WARNING, "Module %s::%s is already compiled, returning cached result.", moduleName.c_str(), functionName.c_str());
         return true;
     }
 
@@ -77,14 +77,14 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     const std::string outputDir = "modules/global/";
     if (!fs::exists(outputDir))
     {
-        spdlog::warn("Output directory does not exist, creating it: {}", outputDir);
+        LOG_F(WARNING, "Output directory does not exist, creating it: %s", outputDir.c_str());
         try
         {
             fs::create_directories(outputDir);
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Failed to create output directory: {}", e.what());
+            LOG_F(ERROR, "Failed to create output directory: %s", e.what());
             return false;
         }
     }
@@ -106,13 +106,13 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
             }
             else
             {
-                spdlog::error("Invalid format in compile_options.json.");
+                LOG_F(ERROR, "Invalid format in compile_options.json.");
                 return false;
             }
         }
         catch (const std::exception &e)
         {
-            spdlog::error("Error reading compile_options.json: {}", e.what());
+            LOG_F(ERROR, "Error reading compile_options.json: %s", e.what());
             return false;
         }
     }
@@ -126,19 +126,19 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     std::ostringstream syntaxCheckOutput;
     if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0)
     {
-        spdlog::error("Syntax error in C++ code: {}", syntaxCheckOutput.str());
+        LOG_F(ERROR, "Syntax error in C++ code: %s", syntaxCheckOutput.str().c_str());
         return false;
     }
 
     // Compile code
     std::ostringstream compilationOutput;
     std::string cmd = std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
-    spdlog::debug("{}", cmd);
+    LOG_F(DEBUG, "%s", cmd.c_str());
 
     int exitCode = RunShellCommand(cmd, code, compilationOutput);
     if (exitCode != 0)
     {
-        spdlog::error("Failed to compile C++ code: {}", compilationOutput.str());
+        LOG_F(ERROR, "Failed to compile C++ code: %s", compilationOutput.str().c_str());
         return false;
     }
 
@@ -148,10 +148,10 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     /*
     // Load the compiled module
     if(m_App.GetModuleLoader()->LoadModule(output, moduleName)) {
-        spdlog::info("Module {}::{} compiled successfully.", moduleName, functionName);
+        LOG_S(INFO) << "Module " << moduleName << "::" << functionName << " compiled successfully.";
         return true;
     } else {
-        spdlog::error("Failed to load the compiled module: {}", output);
+        LOG_F(ERROR, "Failed to load the compiled module: %s", output.c_str());
         return false;
     }
     */
@@ -163,14 +163,14 @@ bool Compiler::CopyFile(const std::string &source, const std::string &destinatio
     std::ifstream src(source, std::ios::binary);
     if (!src)
     {
-        spdlog::error("Failed to open file for copy: {}", source);
+        // spdlog::error("Failed to open file for copy: {}", source);
         return false;
     }
 
     std::ofstream dst(destination, std::ios::binary);
     if (!dst)
     {
-        spdlog::error("Failed to create file for copy: {}", destination);
+        // spdlog::error("Failed to create file for copy: {}", destination);
         return false;
     }
 
@@ -193,17 +193,17 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     sa.bInheritHandle = TRUE;
     if (!CreatePipe(&hStdinRead, &hStdoutWrite, &sa, 0))
     {
-        spdlog::error("Failed to create input pipe for shell command: {}", command);
+        LOG_F(ERROR, "Failed to create input pipe for shell command: %s", command.c_str());
         return exitCode;
     }
     if (!SetHandleInformation(hStdoutWrite, HANDLE_FLAG_INHERIT, 0))
     {
-        spdlog::error("Failed to set input handle information for shell command: {}", command);
+        LOG_F(ERROR, "Failed to set input handle information for shell command: %s", command.c_str());
         return exitCode;
     }
     if (!SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0))
     {
-        spdlog::error("Failed to set output handle information for shell command: {}", command);
+        LOG_F(ERROR, "Failed to set output handle information for shell command: %s", command.c_str());
         return exitCode;
     }
     si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
@@ -213,7 +213,7 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     si.hStdError = hStdoutWrite;
     if (!CreateProcess(NULL, &command[0], NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
-        spdlog::error("Failed to launch shell command: {}", command);
+        LOG_F(ERROR, "Failed to launch shell command: %s", command.c_str());
         CloseHandle(hStdinRead);
         CloseHandle(hStdoutWrite);
         CloseHandle(hStdoutRead);
@@ -237,7 +237,7 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     DWORD bytesWritten;
     if (!WriteFile(hStdinWrite, input.c_str(), input.size(), &bytesWritten, NULL))
     {
-        spdlog::error("Failed to write input for shell command: {}", command);
+        LOG_F(ERROR, "Failed to write input for shell command: %s", command.c_str());
         return exitCode;
     }
     CloseHandle(hStdinWrite);
@@ -256,7 +256,7 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     FILE *pipe = popen(command.c_str(), "w");
     if (!pipe)
     {
-        spdlog::error("Failed to popen shell command: {}", command);
+        LOG_F(ERROR, "Failed to popen shell command: %s", command.c_str());
         return exitCode;
     }
 

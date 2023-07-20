@@ -74,6 +74,9 @@ namespace Lithium::Process
 #endif
 
         std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [this]()
+                { return processes.size() < m_maxProcesses; });
+        lock.unlock();
         Process process;
         process.pid = pid;
         process.name = identifier;
@@ -121,6 +124,9 @@ namespace Lithium::Process
 #endif
 
         std::unique_lock<std::mutex> lock(mtx);
+        cv.wait(lock, [this]()
+                { return processes.size() < m_maxProcesses; });
+        lock.unlock();
         Process process;
         process.pid = pid;
         process.name = identifier;
@@ -159,6 +165,7 @@ namespace Lithium::Process
 #endif
 
             processes.erase(it);
+            cv.notify_one();
         }
         else
         {
@@ -231,6 +238,7 @@ namespace Lithium::Process
         }
 
         processes.clear();
+        cv.notify_all();
     }
 
 }

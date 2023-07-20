@@ -36,6 +36,7 @@ Description: Compressor using ZLib
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <cstring>
 #include <zlib.h>
 
 #include "loguru/loguru.hpp"
@@ -44,6 +45,7 @@ Description: Compressor using ZLib
 #include <windows.h>
 #define PATH_SEPARATOR '\\'
 #else
+#include <dirent.h>
 #define PATH_SEPARATOR '/'
 #endif
 
@@ -225,21 +227,17 @@ namespace Lithium::File
         }
         while ((entry = readdir(dir)) != NULL)
         {
-            // Ignore "." and ".." directories
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
-            // Construct the file path
             char file_name[512];
             int ret = snprintf(file_name, sizeof(file_name), "%s/%s", folder_name, entry->d_name);
             if (ret < 0 || ret >= sizeof(file_name))
             {
-                // Check for truncation or other errors in snprintf()
                 LOG_F(ERROR, "Failed to compress file %s because the output was truncated or an error occurred in snprintf()", entry->d_name);
                 closedir(dir);
                 gzclose(out);
                 return false;
             }
-            // If it's a directory, recursively call this function
             struct stat st;
             if (stat(file_name, &st) == 0 && S_ISDIR(st.st_mode))
             {

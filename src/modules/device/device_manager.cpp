@@ -31,6 +31,8 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
+#include "device_exception.hpp"
+
 #include "nlohmann/json.hpp"
 
 #include "camera.hpp"
@@ -85,23 +87,18 @@ namespace Lithium
         return deviceList;
     }
 
-    void DeviceManager::addDevice(DeviceType type, const std::string &name, const std::string &lib_name)
+    bool DeviceManager::addDevice(DeviceType type, const std::string &name, const std::string &lib_name)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-
-        // Check if device type is valid
         if (type < DeviceType::Camera || type > DeviceType::Guider)
         {
-            throw std::invalid_argument("Invalid device type");
+            throw InvalidDeviceType("Invalid device type");
         }
-
-        // Check if device name already exists
         if (findDeviceByName(name))
         {
-            // spdlog::warn("A device with name {} already exists, please choose a different name", name);
-            return;
+            LOG_F(ERROR, "A device with name %s already exists, please choose a different name", name.c_str());
+            return false;
         }
-
         std::string newName = name;
         int index = 1;
         while (findDevice(type, newName) != -1)
@@ -114,93 +111,105 @@ namespace Lithium
             newName = ss.str();
 #endif
         }
-
-        if (lib_name.empty())
+        try
         {
-            switch (type)
+            if (lib_name.empty())
             {
-            case DeviceType::Camera:
-            {
-                LOG_F(INFO, "Trying to add a new camera instance : %s", newName.c_str());
-                m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Camera>(newName));
-                LOG_F(INFO, "Added new camera instance successfully");
-                break;
+                switch (type)
+                {
+                case DeviceType::Camera:
+                {
+                    LOG_F(INFO, "Trying to add a new camera instance : %s", newName.c_str());
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Camera>(newName));
+                    LOG_F(INFO, "Added new camera %s instance successfully", newName.c_str());
+                    break;
+                }
+                case DeviceType::Telescope:
+                {
+                    LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+                    LOG_F(INFO, "Added new telescope instance successfully");
+                    break;
+                }
+                case DeviceType::Focuser:
+                {
+                    LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+                    LOG_F(INFO, "Added new focuser instance successfully");
+                    break;
+                }
+                case DeviceType::FilterWheel:
+                {
+                    LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
+                    LOG_F(INFO, "Added new filterwheel instance successfully");
+                    break;
+                }
+                case DeviceType::Solver:
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
+                    break;
+                case DeviceType::Guider:
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
+                    break;
+                default:
+                    LOG_F(ERROR, "Invalid device type");
+                    throw InvalidDeviceType("Invalid device type");
+                    break;
+                }
             }
-            case DeviceType::Telescope:
+            else
             {
-                LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
-                LOG_F(INFO, "Added new telescope instance successfully");
-                break;
-            }
-            case DeviceType::Focuser:
-            {
-                LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
-                LOG_F(INFO, "Added new focuser instance successfully");
-                break;
-            }
-            case DeviceType::FilterWheel:
-            {
-                LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
-                LOG_F(INFO, "Added new filterwheel instance successfully");
-                break;
-            }
-            case DeviceType::Solver:
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
-                break;
-            case DeviceType::Guider:
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
-                break;
-            default:
-                LOG_F(ERROR, "Invalid device type");
-                break;
+                nlohmann::json params;
+                params["name"] = newName;
+                switch (type)
+                {
+                case DeviceType::Camera:
+                {
+                    LOG_F(INFO, "Trying to add a new camera instance : %s from %s", newName.c_str(), lib_name.c_str());
+                    m_devices[static_cast<int>(type)].emplace_back(m_ModuleLoader->GetInstance<Camera>(lib_name, params, "GetInstance"));
+                    LOG_F(INFO, "Added new camera %s instance successfully", newName.c_str());
+                    break;
+                }
+                case DeviceType::Telescope:
+                {
+                    LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+                    LOG_F(INFO, "Added new telescope instance successfully");
+                    break;
+                }
+                case DeviceType::Focuser:
+                {
+                    LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+                    LOG_F(INFO, "Added new focuser instance successfully");
+                    break;
+                }
+                case DeviceType::FilterWheel:
+                {
+                    LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
+                    LOG_F(INFO, "Added new filterwheel instance successfully");
+                    break;
+                }
+                case DeviceType::Solver:
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
+                    break;
+                case DeviceType::Guider:
+                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
+                    break;
+                default:
+                    LOG_F(ERROR, "Invalid device type");
+                    throw InvalidDeviceType("Invalid device type");
+                    break;
+                }
             }
         }
-        else
+        catch (const std::exception &e)
         {
-            switch (type)
-            {
-            case DeviceType::Camera:
-            {
-                LOG_F(INFO, "Trying to add a new camera instance : %s from %s", newName.c_str(), lib_name.c_str());
-                m_devices[static_cast<int>(type)].emplace_back(m_ModuleLoader->GetInstance<Camera>("mycamera", {"name", newName}, "GetInstance"));
-                LOG_F(INFO, "Added new camera instance successfully");
-                break;
-            }
-            case DeviceType::Telescope:
-            {
-                LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
-                LOG_F(INFO, "Added new telescope instance successfully");
-                break;
-            }
-            case DeviceType::Focuser:
-            {
-                LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
-                LOG_F(INFO, "Added new focuser instance successfully");
-                break;
-            }
-            case DeviceType::FilterWheel:
-            {
-                LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
-                LOG_F(INFO, "Added new filterwheel instance successfully");
-                break;
-            }
-            case DeviceType::Solver:
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
-                break;
-            case DeviceType::Guider:
-                // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
-                break;
-            default:
-                LOG_F(ERROR, "Invalid device type");
-                break;
-            }
+            LOG_F(ERROR, "Failed to add device %s , error : %s", newName.c_str(), e.what());
+            return false;
         }
+        return true;
     }
 
     bool DeviceManager::addDeviceLibrary(const std::string &lib_path, const std::string &lib_name)
@@ -218,7 +227,7 @@ namespace Lithium
         return true;
     }
 
-    void DeviceManager::removeDevice(DeviceType type, const std::string &name)
+    bool DeviceManager::removeDevice(DeviceType type, const std::string &name)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -229,13 +238,15 @@ namespace Lithium
             {
                 (*it)->getTask("disconnect", {});
                 devices.erase(it);
-                return;
+                LOG_F(INFO,"Remove device %s successfully",name.c_str());
+                return true;
             }
         }
-        LOG_F(WARNING, "Could not find device %s of type %d", name.c_str(), static_cast<int>(type));
+        LOG_F(ERROR, "Could not find device %s of type %d", name.c_str(), static_cast<int>(type));
+        return false;
     }
 
-    void DeviceManager::removeDevicesByName(const std::string &name)
+    bool DeviceManager::removeDevicesByName(const std::string &name)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -246,6 +257,7 @@ namespace Lithium
                                          { return device && device->getProperty("name") == name; }),
                           devices.end());
         }
+        return true;
     }
 
     bool DeviceManager::removeDeviceLibrary(const std::string &lib_name)
@@ -307,7 +319,7 @@ namespace Lithium
         return nullptr;
     }
 
-    std::shared_ptr<SimpleTask> DeviceManager::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<SimpleTask> DeviceManager::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         LOG_F(INFO, "Trying to find %s and get %s task", device_name.c_str(), task_name.c_str());
@@ -319,26 +331,26 @@ namespace Lithium
             {
             case DeviceType::Camera:
             {
-                LOG_F(INFO, "Found Camera device: %s with driver: %s", device_name.c_str(), device_type.c_str());
+                LOG_F(INFO, "Found Camera device: %s with task: %s", device_name.c_str(), task_name.c_str());
                 return std::dynamic_pointer_cast<Camera>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Telescope:
             {
-                LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, device_type);
-                // return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
+                // LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, device_type);
+                //  return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Focuser:
             {
-                LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, device_type);
-                // return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
+                // LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, device_type);
+                //  return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::FilterWheel:
             {
-                LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, device_type);
-                // return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
+                // LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, device_type);
+                //  return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Solver:
@@ -356,7 +368,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(INFO, "Device {} not found", device_name);
+            LOG_F(INFO, "Device %s not found", device_name.c_str());
         }
         return nullptr;
     }

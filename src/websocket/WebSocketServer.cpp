@@ -42,8 +42,14 @@ WebSocketServer::WebSocketServer()
 {
 	m_CommandDispatcher = std::make_unique<CommandDispatcher>();
 
-	APTRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask, this);
-	APTRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo, this);
+	LiRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask);
+	LiRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo);
+	LiRegisterFunc("GetDeviceList", &WebSocketServer::GetDeviceList);
+	LiRegisterFunc("AddDevice",&WebSocketServer::AddDevice);
+	LiRegisterFunc("AddDeviceLibrary",&WebSocketServer::AddDeviceLibrary);
+	LiRegisterFunc("RemoveDevice",&WebSocketServer::RemoveDevice);
+	LiRegisterFunc("RemoveDeviceByName",&WebSocketServer::RemoveDevicesByName);
+	LiRegisterFunc("RemoveDeviceLibrary",&WebSocketServer::RemoveDeviceLibrary);
 }
 
 void WebSocketServer::onPing(const WebSocket &socket, const oatpp::String &message)
@@ -69,7 +75,6 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
 		OATPP_LOGD(TAG, "onMessage message='%s'", wholeMessage->c_str());
-		socket.sendOneFrameText("Hello from oatpp!: " + wholeMessage);
 		if (!nlohmann::json::accept(wholeMessage->c_str()))
 		{
 			OATPP_LOGE("WSServer", "Message is not in JSON format");
@@ -87,7 +92,7 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 			myThread.detach();
 			OATPP_LOGD("WSServer", "Started command thread successfully");
 		}
-		catch (nlohmann::detail::parse_error &e)
+		catch (const nlohmann::detail::parse_error &e)
 		{
 			OATPP_LOGE("WSServer", "Failed to parser JSON message : %s", e.what());
 		}
@@ -119,10 +124,11 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 				const std::string name = data["name"].get<std::string>();
 				if (m_CommandDispatcher->HasHandler(name))
 				{
-					if (!m_CommandDispatcher->Dispatch(name, data["params"].get<json>()))
+					json res = m_CommandDispatcher->Dispatch(name, data["params"].get<json>());
+					if (res.contains("error"))
 					{
-						OATPP_LOGE("WSServer", "Failed to run command %s", name.c_str());
-						reply_data = {{"error", "Failed to run command"}};
+						OATPP_LOGE("WSServer", "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
+						reply_data["error"] = res["error"];
 					}
 					else
 					{
@@ -137,27 +143,22 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 				reply_data = {{"error", "Missing parameter: name or params"}};
 			}
 		}
+		catch (const nlohmann::json::exception &e)
+		{
+			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() json exception: %s", e.what());
+			reply_data = {{"error", e.what()}};
+		}
 		catch (const std::exception &e)
 		{
 			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() exception: %s", e.what());
-			reply_data = {{"error"}};
+			reply_data = {{"error", e.what()}};
 		}
 		socket.sendOneFrameText(reply_data.dump());
 	}
 	catch (const std::exception &e)
 	{
-		// spdlog::error("WebSocketServer::onMessage() parse json failed: {}", e.what());
+		OATPP_LOGE("WSServer", "WebSocketServer::onMessage() parse json failed: %s", e.what());
 	}
-}
-
-void WebSocketServer::RunDeviceTask(const nlohmann::json &m_params)
-{
-	std::cout << "RunDeviceTask() is called!" << std::endl;
-}
-
-void WebSocketServer::GetDeviceInfo(const nlohmann::json &m_params)
-{
-	std::cout << "GetDeviceInfo() is called!" << std::endl;
 }
 
 std::atomic<v_int32> WSInstanceListener::SOCKETS(0);

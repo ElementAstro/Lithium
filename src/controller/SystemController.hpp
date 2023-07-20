@@ -22,19 +22,18 @@ public:
 
 public:
     static std::shared_ptr<SystemController> createShared(
-        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)
-    )
+        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
     {
         return std::make_shared<SystemController>(objectMapper);
     }
-
+    
     ENDPOINT("GET", "/api/system/cpu", getUICpuUsage)
     {
         float cpu_usage = Lithium::System::GetCpuUsage();
         nlohmann::json res;
         if (cpu_usage == 0.0)
         {
-            OATPP_LOGE("System","Failed to get cpu usage!");
+            OATPP_LOGE("System", "Failed to get cpu usage!");
             res["message"] = "Failed to get cpu usage!";
         }
         else
@@ -42,19 +41,26 @@ public:
             OATPP_LOGD("System", "Get current cpu usage : %f", cpu_usage);
             res["value"] = cpu_usage;
         }
-        
+
         auto response = createResponse(Status::CODE_200, res.dump());
         response->putHeader(Header::CONTENT_TYPE, "text/json");
         return response;
     }
 
+    ENDPOINT_INFO(getUIMemoryUsage)
+    {
+        info->summary = "Get current RAM usage";
+        info->addConsumes<String>("application/json");
+        info->addResponse<String>(Status::CODE_200, "application/json", "Usage of RAM");
+        info->addResponse<String>(Status::CODE_404, "text/plain");
+    }
     ENDPOINT("GET", "/api/system/memory", getUIMemoryUsage)
     {
         float memory_usage = Lithium::System::GetMemoryUsage();
         nlohmann::json res;
         if (memory_usage == 0.0)
         {
-            OATPP_LOGE("System","Failed to get cpu usage!");
+            OATPP_LOGE("System", "Failed to get cpu usage!");
             res["message"] = "Failed to get cpu usage!";
         }
         else
@@ -62,19 +68,26 @@ public:
             OATPP_LOGD("System", "Get current memory usage : %f", memory_usage);
             res["value"] = memory_usage;
         }
-        
+
         auto response = createResponse(Status::CODE_200, res.dump());
         response->putHeader(Header::CONTENT_TYPE, "text/json");
         return response;
     }
 
+    ENDPOINT_INFO(getUICpuTemperature)
+    {
+        info->summary = "Get current CPU temperature";
+        info->addConsumes<String>("application/json");
+        info->addResponse<String>(Status::CODE_200, "application/json", "Temperature of CPU");
+        info->addResponse<String>(Status::CODE_404, "text/plain");
+    }
     ENDPOINT("GET", "/api/system/cpu_temp", getUICpuTemperature)
     {
         float cpu_temp = Lithium::System::GetCpuTemperature();
         nlohmann::json res;
         if (cpu_temp == 0.0)
         {
-            OATPP_LOGE("System","Failed to get cpu usage!");
+            OATPP_LOGE("System", "Failed to get cpu usage!");
             res["message"] = "Failed to get cpu usage!";
         }
         else
@@ -82,18 +95,25 @@ public:
             OATPP_LOGD("System", "Get current cpu temperature : %f", cpu_temp);
             res["value"] = cpu_temp;
         }
-        
+
         auto response = createResponse(Status::CODE_200, res.dump());
         response->putHeader(Header::CONTENT_TYPE, "text/json");
         return response;
     }
 
+    ENDPOINT_INFO(getUIDiskUsage)
+    {
+        info->summary = "Get current disks usage";
+        info->addConsumes<String>("application/json");
+        info->addResponse<String>(Status::CODE_200, "application/json", "Usage of disks");
+        info->addResponse<String>(Status::CODE_404, "text/plain");
+    }
     ENDPOINT("GET", "/api/system/disk", getUIDiskUsage)
     {
         nlohmann::json res;
         for (const auto &disk : Lithium::System::GetDiskUsage())
         {
-            OATPP_LOGD("System","Disk %s Usage: %f %",disk.first.c_str(),disk.second);
+            OATPP_LOGD("System", "Disk %s Usage: %f %", disk.first.c_str(), disk.second);
             res["value"][disk.first] = disk.second;
         }
         auto response = createResponse(Status::CODE_200, res.dump());
@@ -101,12 +121,19 @@ public:
         return response;
     }
 
+    ENDPOINT_INFO(getUICpuUsage)
+    {
+        info->summary = "Get all running processes";
+        info->addConsumes<String>("application/json");
+        info->addResponse<String>(Status::CODE_200, "application/json", "Processes");
+        info->addResponse<String>(Status::CODE_404, "text/plain");
+    }
     ENDPOINT("GET", "/api/system/process", getUIProcesses)
     {
         nlohmann::json res;
         for (const auto &process : Lithium::System::GetProcessInfo())
         {
-            OATPP_LOGD("System","Process Name: %s File Address: %s",process.first.c_str(),process.second.c_str());
+            OATPP_LOGD("System", "Process Name: %s File Address: %s", process.first.c_str(), process.second.c_str());
             res["value"][process.first] = process.second;
         }
         auto response = createResponse(Status::CODE_200, res.dump());

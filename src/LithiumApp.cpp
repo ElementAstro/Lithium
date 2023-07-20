@@ -13,6 +13,7 @@ namespace Lithium
             m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
             m_ConfigManager = std::make_shared<Config::ConfigManager>();
             m_DeviceManager = std::make_shared<DeviceManager>();
+            m_ProcessManager = std::make_shared<Process::ProcessManager>(10);
             LOG_F(INFO, "Lithium App Loaded.");
         }
         catch (const std::exception &e)
@@ -42,19 +43,29 @@ namespace Lithium
         return m_DeviceManager->getDeviceList(type);
     }
 
-    void LithiumApp::addDevice(DeviceType type, const std::string &name, const std::string &lib_name)
+    bool LithiumApp::addDevice(DeviceType type, const std::string &name, const std::string &lib_name)
     {
-        m_DeviceManager->addDevice(type, name, lib_name);
+        return m_DeviceManager->addDevice(type, name, lib_name);
     }
 
-    void LithiumApp::removeDevice(DeviceType type, const std::string &name)
+    bool LithiumApp::addDeviceLibrary(const std::string &lib_path, const std::string &lib_name)
     {
-        m_DeviceManager->removeDevice(type, name);
+        return m_DeviceManager->addDeviceLibrary(lib_path, lib_name);
     }
 
-    void LithiumApp::removeDevicesByName(const std::string &name)
+    bool LithiumApp::removeDevice(DeviceType type, const std::string &name)
     {
-        m_DeviceManager->removeDevicesByName(name);
+        return m_DeviceManager->removeDevice(type, name);
+    }
+
+    bool LithiumApp::removeDevicesByName(const std::string &name)
+    {
+        return m_DeviceManager->removeDevicesByName(name);
+    }
+
+    bool LithiumApp::removeDeviceLibrary(const std::string &lib_name)
+    {
+        return m_DeviceManager->removeDeviceLibrary(lib_name);
     }
 
     std::shared_ptr<Device> LithiumApp::getDevice(DeviceType type, const std::string &name)
@@ -72,9 +83,44 @@ namespace Lithium
         return m_DeviceManager->findDeviceByName(name);
     }
 
-    std::shared_ptr<SimpleTask> LithiumApp::getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<SimpleTask> LithiumApp::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
-        return m_DeviceManager->getSimpleTask(type, device_type, device_name, task_name, params);
+        return m_DeviceManager->getTask(type, device_name, task_name, params);
+    }
+
+    void LithiumApp::createProcess(const std::string &command, const std::string &identifier)
+    {
+        m_ProcessManager->createProcess(command, identifier);
+    }
+
+    void LithiumApp::runScript(const std::string &script, const std::string &identifier)
+    {
+        m_ProcessManager->runScript(script, identifier);
+    }
+
+    void LithiumApp::addThread(std::function<void()> func, const std::string &name)
+    {
+        m_ThreadManager->addThread(func, name);
+    }
+
+    void LithiumApp::joinAllThreads()
+    {
+        m_ThreadManager->joinAllThreads();
+    }
+
+    void LithiumApp::joinThreadByName(const std::string &name)
+    {
+        m_ThreadManager->joinThreadByName(name);
+    }
+
+    bool LithiumApp::sleepThreadByName(const std::string &name, int seconds)
+    {
+        return m_ThreadManager->sleepThreadByName(name, seconds);
+    }
+
+    bool LithiumApp::isThreadRunning(const std::string &name)
+    {
+        return m_ThreadManager->isThreadRunning(name);
     }
 
 }

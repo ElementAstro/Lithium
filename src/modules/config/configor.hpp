@@ -33,6 +33,8 @@ Description: Configor
 
 #include <fstream>
 
+#include "achievement_list.hpp"
+
 #include "nlohmann/json.hpp"
 
 namespace Lithium::Config
@@ -40,6 +42,8 @@ namespace Lithium::Config
     class ConfigManager
     {
     public:
+        ConfigManager();
+        
         /**
          * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
          *
@@ -122,6 +126,8 @@ namespace Lithium::Config
     private:
         // JSON配置项
         nlohmann::json config_;
+
+        std::shared_ptr<AAchievement::AchievementList> m_AchievementManager;
 
         void mergeConfig(const nlohmann::json &j)
         {

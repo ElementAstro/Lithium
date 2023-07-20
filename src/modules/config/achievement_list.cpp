@@ -34,7 +34,8 @@ Description: Achiement List
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
-#include <spdlog/spdlog.h>
+
+#include "loguru/loguru.hpp"
 
 using namespace std;
 
@@ -55,7 +56,7 @@ namespace Lithium::AAchievement
     void AchievementList::addAchievement(const std::shared_ptr<Achievement> &achievement)
     {
         m_achievements.emplace_back(achievement);
-        spdlog::debug("Achievement {} added to ", achievement->getName());
+        LOG_F(INFO, "Achievement %s added to", achievement->getName().c_str());
         writeToFile();
     }
 
@@ -66,7 +67,7 @@ namespace Lithium::AAchievement
         if (it != m_achievements.end())
         {
             m_achievements.erase(it);
-            spdlog::debug("Achievement {} removed from ", name);
+            LOG_F(INFO, "Achievement %s removed from", name.c_str());
             writeToFile();
         }
     }
@@ -78,7 +79,7 @@ namespace Lithium::AAchievement
         if (it != m_achievements.end())
         {
             *it = achievement;
-            spdlog::debug("Achievement {} modified.", name);
+            LOG_F(INFO, "Achievement %s modified.", name.c_str());
             writeToFile();
         }
     }
@@ -97,18 +98,17 @@ namespace Lithium::AAchievement
         if (it != m_achievements.end())
         {
             (*it)->markAsCompleted();
-            spdlog::info("Achievement {} marked as completed.", name);
+            LOG_F(INFO, "Achievement %s marked as completed.", name.c_str());
             writeToFile();
         }
     }
 
     void AchievementList::printAchievements() const
     {
-        spdlog::debug("Achievements:");
         for (const auto &achievement : m_achievements)
         {
             const auto status = achievement->isCompleted() ? "Completed" : "Incomplete";
-            spdlog::debug("\tName: {}, Description: {}, Status: {}", achievement->getName(), achievement->getDescription(), status);
+            LOG_F(INFO, "  Name: %s, Description: %s, Status: %s", achievement->getName().c_str(), achievement->getDescription().c_str(), status);
         }
     }
 
@@ -127,7 +127,7 @@ namespace Lithium::AAchievement
         }
 
         file << std::setw(4) << j << std::endl;
-        spdlog::info("Achievements written to file {}.", m_filename);
+        LOG_F(INFO, "Achievements written to file %s.", m_filename.c_str());
     }
 
     void AchievementList::readFromFile()
@@ -151,7 +151,7 @@ namespace Lithium::AAchievement
         m_achievements.reserve(j.size());
         std::transform(begin(j), end(j), std::back_inserter(m_achievements), Achievement::from_json);
 
-        spdlog::debug("Achievements read from file {}.", m_filename);
+        LOG_F(INFO, "Achievements read from file %s.", m_filename.c_str());
     }
 
     void AchievementList::addAstronomyPhotographyAchievements()

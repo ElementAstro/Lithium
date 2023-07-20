@@ -40,25 +40,78 @@ using json = nlohmann::json;
 namespace Lithium::AAchievement
 {
     // 成就类
+    /**
+     * @brief 表示一个成就的类。
+     *
+     * 该类用于存储成就的名称、描述以及完成状态，并提供相关操作方法。
+     */
     class Achievement
     {
-    private:
-        std::string m_name;        // 成就名称
-        std::string m_description; // 成就描述
-        bool m_isCompleted;        // 是否已完成
-
     public:
-        Achievement();                                                        // 默认构造函数
-        Achievement(const std::string &name, const std::string &description); // 构造函数
+        /**
+         * @brief 默认构造函数。
+         *
+         * 默认构造函数创建一个空的成就对象。
+         */
+        Achievement();
 
-        std::string getName() const;        // 获取成就名称
-        std::string getDescription() const; // 获取成就描述
+        /**
+         * @brief 构造函数。
+         *
+         * @param name        成就名称
+         * @param description 成就描述
+         */
+        Achievement(const std::string &name, const std::string &description);
 
-        bool isCompleted() const; // 判断成就是否已完成
-        void markAsCompleted();   // 标记成就为已完成
+        /**
+         * @brief 获取成就名称。
+         *
+         * @return 成就名称
+         */
+        std::string getName() const;
 
-        json to_json() const;                                         // 将成就转换为 JSON 格式
-        static std::shared_ptr<Achievement> from_json(const json &j); // 从 JSON 数据中创建成就
+        /**
+         * @brief 获取成就描述。
+         *
+         * @return 成就描述
+         */
+        std::string getDescription() const;
+
+        /**
+         * @brief 判断成就是否已完成。
+         *
+         * @return 如果成就已完成，则返回 true，否则返回 false
+         */
+        bool isCompleted() const;
+
+        /**
+         * @brief 标记成就为已完成状态。
+         *
+         * 将成就的完成状态标记为已完成。
+         */
+        void markAsCompleted();
+
+        /**
+         * @brief 将成就转换为 JSON 格式。
+         *
+         * @return 表示成就的 JSON 对象
+         */
+        json to_json() const;
+
+        /**
+         * @brief 从 JSON 数据中创建成就。
+         *
+         * 根据传入的 JSON 数据创建一个成就对象。
+         *
+         * @param j 包含成就信息的 JSON 对象
+         * @return 指向新创建成就对象的共享指针
+         */
+        static std::shared_ptr<Achievement> from_json(const json &j);
+
+    private:
+        std::string m_name;        ///< 成就名称
+        std::string m_description; ///< 成就描述
+        bool m_isCompleted;        ///< 是否已完成
     };
 
 }

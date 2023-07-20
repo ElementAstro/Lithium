@@ -39,6 +39,7 @@ Description: Process Manager
 #include <chrono>
 #include <mutex>
 #include <fstream>
+#include <condition_variable>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -60,6 +61,13 @@ namespace Lithium::Process
     class ProcessManager
     {
     public:
+        ProcessManager()
+        {
+            m_maxProcesses = 10;
+        }
+
+        ProcessManager(int maxProcess) : m_maxProcesses(maxProcess) {}
+
         /**
          * 创建一个新的进程。
          * @param command 要执行的命令。
@@ -99,6 +107,8 @@ namespace Lithium::Process
         void waitForCompletion();
 
     private:
+        int m_maxProcesses;
+        std::condition_variable cv;
         std::vector<Process> processes; ///< 存储当前运行的进程列表。 // Stores the list of currently running processes.
         std::mutex mtx;                 ///< 互斥锁，用于操作进程列表。 // Mutex used for manipulating the process list.
     };

@@ -77,6 +77,12 @@ set(api_SRC
 set(config_SRC
     ${lithium_src_dir}/modules/config/configor.cpp
     ${lithium_src_dir}/modules/config/configor.hpp
+
+    ${lithium_src_dir}/modules/config/achievement.cpp
+    ${lithium_src_dir}/modules/config/achievement.hpp
+
+    ${lithium_src_dir}/modules/config/achievement_list.cpp
+    ${lithium_src_dir}/modules/config/achievement_list.hpp
 )
 
 set(database_SRC
@@ -192,6 +198,8 @@ set(server_SRC
     ${lithium_src_dir}/modules/server/commander.hpp
 
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
+    ${lithium_src_dir}/websocket/WebSocketServer.hpp
+    ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
 )
 
 set(task_SRC

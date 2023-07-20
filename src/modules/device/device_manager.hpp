@@ -61,13 +61,13 @@ namespace Lithium
 
         std::vector<std::string> getDeviceList(DeviceType type);
 
-        void addDevice(DeviceType type, const std::string &name, const std::string &lib_name);
+        bool addDevice(DeviceType type, const std::string &name, const std::string &lib_name);
 
         bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
 
-        void removeDevice(DeviceType type, const std::string &name);
+        bool removeDevice(DeviceType type, const std::string &name);
 
-        void removeDevicesByName(const std::string &name);
+        bool removeDevicesByName(const std::string &name);
 
         bool removeDeviceLibrary(const std::string &lib_name);
 
@@ -77,7 +77,7 @@ namespace Lithium
 
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
 
-        std::shared_ptr<SimpleTask> getSimpleTask(DeviceType type, const std::string &device_type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
+        std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
     private:
         std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.

@@ -44,7 +44,7 @@ class WebSocketServer : public oatpp::websocket::WebSocket::Listener
 private:
 	static constexpr const char *TAG = "WebSocketServer";
 
-	void ProcessMessage(const WebSocket &socket,const nlohmann::json &data);
+	void ProcessMessage(const WebSocket &socket, const nlohmann::json &data);
 
 private:
 	oatpp::data::stream::BufferOutputStream m_messageBuffer;
@@ -52,9 +52,9 @@ private:
 	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
 
 	template <typename ClassType>
-	void APTRegisterFunc(const std::string &name, void (ClassType::*handler)(const nlohmann::json &), ClassType *instance)
+	void LiRegisterFunc(const std::string &name, nlohmann::json (ClassType::*handler)(const nlohmann::json &))
 	{
-		m_CommandDispatcher->RegisterHandler(name, handler, instance);
+		m_CommandDispatcher->RegisterHandler(name, handler, this);
 	}
 
 	bool APTRunFunc(const std::string &name, const nlohmann::json &params)
@@ -71,9 +71,14 @@ public:
 	WebSocketServer();
 
 public:
-	void RunDeviceTask(const nlohmann::json &m_params);
-
-	void GetDeviceInfo(const nlohmann::json &m_params);
+	nlohmann::json GetDeviceList(const nlohmann::json &m_params);
+	nlohmann::json AddDevice(const nlohmann::json &m_params);
+	nlohmann::json AddDeviceLibrary(const nlohmann::json &m_params);
+	nlohmann::json RemoveDevice(const nlohmann::json &m_params);
+	nlohmann::json RemoveDevicesByName(const nlohmann::json &m_params);
+	nlohmann::json RemoveDeviceLibrary(const nlohmann::json &m_params);
+	nlohmann::json RunDeviceTask(const nlohmann::json &m_params);
+	nlohmann::json GetDeviceInfo(const nlohmann::json &m_params);
 
 public:
 	void onPing(const WebSocket &socket, const oatpp::String &message) override;

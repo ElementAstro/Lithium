@@ -44,6 +44,10 @@ namespace fs = std::filesystem;
 
 namespace Lithium::Config
 {
+    ConfigManager::ConfigManager()
+    {
+        m_AchievementManager = std::make_shared<AAchievement::AchievementList>();
+    }
 
     void ConfigManager::loadFromFile(const std::string &path)
     {

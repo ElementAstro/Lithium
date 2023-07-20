@@ -38,18 +38,16 @@ bool CommandDispatcher::HasHandler(const std::string &name)
     return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
 }
 
-bool CommandDispatcher::Dispatch(const std::string &name, const json &data)
+json CommandDispatcher::Dispatch(const std::string &name, const json &data)
 {
     auto it = handlers_.find(Djb2Hash(name.c_str()));
     if (it != handlers_.end())
     {
-        it->second(data);
+        return it->second(data);
     }
-    else
-    {
-        return false;
-    }
-    return true;
+    json res;
+    res["error"] = "Function not found";
+    return res;
 }
 
 std::size_t CommandDispatcher::Djb2Hash(const char *str)

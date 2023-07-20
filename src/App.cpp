@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
     if (cmd_port != 8000)
     {
         OATPP_LOGD("PreLaunch", "Command line server port : %d", cmd_port);
+        
         auto port = Lithium::MyApp.GetConfig("server/port");
         if (port != cmd_port)
         {
@@ -181,10 +182,7 @@ int main(int argc, char *argv[])
         setupLogFile();
 
         registerInterruptHandler();
-        Lithium::MyApp.addDevice(Lithium::DeviceType::Camera, "MyCamera");
-        Lithium::MyApp.GetDeviceManager()->addDeviceLibrary("./libmycamera.so", "mycamera");
-        Lithium::MyApp.addDevice(Lithium::DeviceType::Camera, "MyCameraFromLibrary","mycamera");
-
+        
         oatpp::base::Environment::init();
         run();
         oatpp::base::Environment::destroy();

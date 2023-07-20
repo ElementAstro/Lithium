@@ -4,6 +4,7 @@
 
 extern "C" std::shared_ptr<Camera> GetInstance(const nlohmann::json& params) {
     std::string name;
+    std::cout << params.dump(4) << std::endl;
     if (!params.contains("name"))
     {
         name = "MyCamera";
@@ -13,5 +14,5 @@ extern "C" std::shared_ptr<Camera> GetInstance(const nlohmann::json& params) {
         name = params["name"];
     }
     // 创建 SimpleTask 对象并返回
-    return std::make_shared<Camera>("MyCamera");
+    return std::make_shared<Camera>(name);
 }

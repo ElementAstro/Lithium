@@ -46,6 +46,8 @@ Description: Compressor using ZLib
 #define PATH_SEPARATOR '\\'
 #else
 #include <dirent.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #define PATH_SEPARATOR '/'
 #endif
 

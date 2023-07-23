@@ -38,6 +38,7 @@ Description: Device Manager
 
 #include "device.hpp"
 #include "modules/module/modloader.hpp"
+#include "modules/server/message_bus.hpp"
 
 namespace Lithium
 {
@@ -55,7 +56,7 @@ namespace Lithium
     class DeviceManager
     {
     public:
-        DeviceManager();
+        DeviceManager(std::shared_ptr<MessageBus> messageBus);
 
         ~DeviceManager();
 
@@ -64,6 +65,8 @@ namespace Lithium
         bool addDevice(DeviceType type, const std::string &name, const std::string &lib_name);
 
         bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
+
+        bool AddDeviceObserver(DeviceType type, const std::string &name);
 
         bool removeDevice(DeviceType type, const std::string &name);
 
@@ -79,12 +82,15 @@ namespace Lithium
 
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
+        void messageBusPublish(const Lithium::IMessage &message);
+
     private:
         std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.
 
         std::mutex m_mutex;
 
         std::shared_ptr<ModuleLoader> m_ModuleLoader;
+        std::shared_ptr<MessageBus> m_MessageBus;
     };
 
 }

@@ -10,10 +10,14 @@ namespace Lithium
         LOG_F(INFO, "Loading Lithium App and preparing ...");
         try
         {
+            m_MessageBus = std::make_shared<MessageBus>();
+            m_MessageQueue = std::make_shared<QueueWrapper>();
             m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
             m_ConfigManager = std::make_shared<Config::ConfigManager>();
-            m_DeviceManager = std::make_shared<DeviceManager>();
+            m_DeviceManager = std::make_shared<DeviceManager>(m_MessageBus);
             m_ProcessManager = std::make_shared<Process::ProcessManager>(10);
+            m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
+            m_MessageBus->StartProcessingThread<IMessage>();
             LOG_F(INFO, "Lithium App Loaded.");
         }
         catch (const std::exception &e)
@@ -53,6 +57,11 @@ namespace Lithium
         return m_DeviceManager->addDeviceLibrary(lib_path, lib_name);
     }
 
+    void LithiumApp::addDeviceObserver(DeviceType type, const std::string &name)
+    {
+        m_DeviceManager->AddDeviceObserver(type,name);
+    }
+
     bool LithiumApp::removeDevice(DeviceType type, const std::string &name)
     {
         return m_DeviceManager->removeDevice(type, name);
@@ -88,14 +97,94 @@ namespace Lithium
         return m_DeviceManager->getTask(type, device_name, task_name, params);
     }
 
-    void LithiumApp::createProcess(const std::string &command, const std::string &identifier)
+    bool LithiumApp::createProcess(const std::string &command, const std::string &identifier)
     {
-        m_ProcessManager->createProcess(command, identifier);
+        return m_ProcessManager->createProcess(command, identifier);
     }
 
-    void LithiumApp::runScript(const std::string &script, const std::string &identifier)
+    bool LithiumApp::runScript(const std::string &script, const std::string &identifier)
     {
-        m_ProcessManager->runScript(script, identifier);
+        return m_ProcessManager->runScript(script, identifier);
+    }
+
+    bool LithiumApp::terminateProcess(pid_t pid, int signal)
+    {
+        return m_ProcessManager->terminateProcess(pid, signal);
+    }
+
+    bool LithiumApp::terminateProcessByName(const std::string &name, int signal)
+    {
+        return m_ProcessManager->terminateProcessByName(name, signal);
+    }
+
+    std::vector<Process::Process> LithiumApp::getRunningProcesses()
+    {
+        return m_ProcessManager->getRunningProcesses();
+    }
+
+    std::vector<std::string> LithiumApp::getProcessOutput(const std::string &identifier)
+    {
+        return m_ProcessManager->getProcessOutput(identifier);
+    }
+
+    bool LithiumApp::addTask(const std::shared_ptr<BasicTask> &task)
+    {
+        return m_TaskManager->addTask(task);
+    }
+
+    bool LithiumApp::insertTask(const std::shared_ptr<BasicTask> &task, int position)
+    {
+        return m_TaskManager->insertTask(task, position);
+    }
+
+    bool LithiumApp::executeAllTasks()
+    {
+        return m_TaskManager->executeAllTasks();
+    }
+
+    void LithiumApp::stopTask()
+    {
+        m_TaskManager->stopTask();
+    }
+
+    bool LithiumApp::executeTaskByName(const std::string &name)
+    {
+        return m_TaskManager->executeTaskByName(name);
+    }
+
+    bool LithiumApp::modifyTask(int index, const std::shared_ptr<BasicTask> &task)
+    {
+        return m_TaskManager->modifyTask(index, task);
+    }
+
+    bool LithiumApp::modifyTaskByName(const std::string &name, const std::shared_ptr<BasicTask> &task)
+    {
+        return m_TaskManager->modifyTaskByName(name, task);
+    }
+
+    bool LithiumApp::deleteTask(int index)
+    {
+        return m_TaskManager->deleteTask(index);
+    }
+
+    bool LithiumApp::deleteTaskByName(const std::string &name)
+    {
+        return m_TaskManager->deleteTaskByName(name);
+    }
+
+    bool LithiumApp::queryTaskByName(const std::string &name)
+    {
+        return m_TaskManager->queryTaskByName(name);
+    }
+
+    const std::vector<std::shared_ptr<BasicTask>> &LithiumApp::getTaskList() const
+    {
+        return m_TaskManager->getTaskList();
+    }
+
+    bool LithiumApp::saveTasksToJson() const
+    {
+        return m_TaskManager->saveTasksToJson();
     }
 
     void LithiumApp::addThread(std::function<void()> func, const std::string &name)

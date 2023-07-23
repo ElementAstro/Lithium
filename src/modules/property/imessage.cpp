@@ -3,7 +3,7 @@
 
 #include <random>
 
-namespace Lithium::Property
+namespace Lithium
 {
     IMessage::IMessage()
     {

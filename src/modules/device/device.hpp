@@ -67,9 +67,9 @@ public:
 
     std::any getMessageValue(const std::string &name, const std::string &identifier);
 
-    void addObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer);
+    void addObserver(const std::function<void(const Lithium::IMessage &message)> &observer);
 
-    void removeObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer);
+    void removeObserver(const std::function<void(const Lithium::IMessage &message)> &observer);
 
     void exportDeviceInfoToJson();
 
@@ -82,13 +82,13 @@ private:
     {
     public:
         std::map<std::string, std::string> properties;
-        std::map<std::string, std::any> messages;
+        std::map<std::string, Lithium::IMessage> messages;
     };
 
     std::string _name;
     std::string _uuid;
     DeviceInfo device_info;
-    std::vector<std::function<void(std::any, std::any)>> observers;
+    std::vector<std::function<void(Lithium::IMessage)>> observers;
 };
 
 #endif // DEVICE_H

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.10)
 project(pugixml VERSION 1.13 LANGUAGES CXX)
 
 include(CMakePackageConfigHelpers)

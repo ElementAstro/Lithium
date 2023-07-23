@@ -200,11 +200,15 @@ set(server_SRC
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
+    ${lithium_src_dir}/websocket/WsProcessComponent.cpp
+    ${lithium_src_dir}/websocket/WsTaskComponent.cpp
 )
 
 set(task_SRC
-    #${lithium_src_dir}/task/runner.cpp
-	#${lithium_src_dir}/task/runner.hpp
+    ${lithium_src_dir}/modules/task/task_manager.cpp
+    ${lithium_src_dir}/modules/task/task_manager.hpp
+
+    ${lithium_src_dir}/modules/task/task.hpp
 )
 
 set(thread_SRC
@@ -250,7 +254,7 @@ if(WIN32)
      #${image_SRC} ${logger_SRC} ${module_SRC} 
     #${network_SRC}  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${device_SRC} ${thread_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_libraries(lithium_server pdh iphlpapi winmm)
 

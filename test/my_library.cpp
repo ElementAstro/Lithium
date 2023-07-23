@@ -1,25 +1,19 @@
-#include "task.hpp"
-#include <memory>
-#include <functional>
+#include "nlohmann/json.hpp"
+#include <iostream>
+using json = nlohmann::json;
 
-using namespace Lithium;
+// 示例动态库中的类定义
+class MyClass {
+public:
+    virtual json HandlerFunction(const json& data) {
+        std::cout << "Function is called" << std::endl;
+        // 处理函数逻辑
+        // ...
+        return {};
+    }
+};
 
-// 定义 task_func 函数
-nlohmann::json task_func(const nlohmann::json &input)
-{
-    // 处理输入参数并返回输出结果
-    nlohmann::json output;
-    output["aaa"] = "aaaa";
-    std::cout << "Hello" << std::endl;
-    std::cout << "SimpleTask from dynamic lib" << std::endl;
-    // ...
-    return output;
-}
-
-extern "C" std::shared_ptr<SimpleTask> GetTaskInstance(const nlohmann::json&) {
-    nlohmann::json input_params;
-    std::function<nlohmann::json(const nlohmann::json &)> func = task_func;
-
-    // 创建 SimpleTask 对象并返回
-    return std::make_shared<SimpleTask>(func, input_params);
+// 创建类实例的工厂函数
+extern "C" MyClass* CreateInstance() {
+    return new MyClass();
 }

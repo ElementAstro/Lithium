@@ -1,10 +1,12 @@
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <any>
 #include <vector>
 
-namespace Lithium::Property
+namespace Lithium
 {
     class IMessage
     {

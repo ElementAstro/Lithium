@@ -73,26 +73,30 @@ namespace Lithium::Process
          * @param command 要执行的命令。
          * @param identifier 进程的标识符。
          */
-        void createProcess(const std::string &command, const std::string &identifier);
+        bool createProcess(const std::string &command, const std::string &identifier);
 
         /**
          * 运行一个脚本。
          * @param script 要运行的脚本。
          * @param identifier 进程的标识符。
          */
-        void runScript(const std::string &script, const std::string &identifier);
+        bool runScript(const std::string &script, const std::string &identifier);
 
         /**
          * 终止一个进程。
          * @param pid 要终止的进程的PID。
          * @param signal 终止信号，默认为SIGTERM。
          */
-        void terminateProcess(pid_t pid, int signal = SIGTERM);
+        bool terminateProcess(pid_t pid, int signal = SIGTERM);
+
+        bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
 
         /**
          * 列出当前运行的进程。
          */
         void listProcesses();
+
+        std::vector<Process> getRunningProcesses();
 
         /**
          * 获取指定进程的输出信息。

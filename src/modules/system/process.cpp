@@ -35,7 +35,7 @@ Description: Process Manager
 
 namespace Lithium::Process
 {
-    void ProcessManager::createProcess(const std::string &command, const std::string &identifier)
+    bool ProcessManager::createProcess(const std::string &command, const std::string &identifier)
     {
         pid_t pid;
 
@@ -46,7 +46,7 @@ namespace Lithium::Process
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
             LOG_F(ERROR, "Failed to create PowerShell process");
-            return;
+            return false;
         }
         pid = pi.dwProcessId;
 #else
@@ -69,23 +69,20 @@ namespace Lithium::Process
         {
             // Error handling
             PLOG_F(ERROR, "Failed to create process");
-            return;
+            return false;
         }
 #endif
 
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this]()
-                { return processes.size() < m_maxProcesses; });
-        lock.unlock();
+        std::lock_guard<std::mutex> lock(mtx);
         Process process;
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        lock.unlock();
         LOG_F(INFO, "Process created: %s (PID: %d)", identifier.c_str(), pid);
+        return true;
     }
 
-    void ProcessManager::runScript(const std::string &script, const std::string &identifier)
+    bool ProcessManager::runScript(const std::string &script, const std::string &identifier)
     {
         pid_t pid;
 
@@ -96,7 +93,7 @@ namespace Lithium::Process
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
             LOG_F(ERROR, "Failed to create process");
-            return;
+            return false;
         }
         pid = pi.dwProcessId;
 #else
@@ -112,30 +109,25 @@ namespace Lithium::Process
 #else
             execl("/bin/bash", "bash", "-c", script.c_str(), NULL);
 #endif
-
-            exit(0);
         }
         else if (pid < 0)
         {
             // Error handling
             LOG_F(ERROR, "Failed to create process");
-            return;
+            return false;
         }
 #endif
 
-        std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [this]()
-                { return processes.size() < m_maxProcesses; });
-        lock.unlock();
+        std::lock_guard<std::mutex> lock(mtx);
         Process process;
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        lock.unlock();
         LOG_F(INFO, "Process created: %s (PID: %d)", identifier.c_str(), pid);
+        return true;
     }
 
-    void ProcessManager::terminateProcess(pid_t pid, int signal)
+    bool ProcessManager::terminateProcess(pid_t pid, int signal)
     {
         auto it = std::find_if(processes.begin(), processes.end(), [pid](const Process &p)
                                { return p.pid == pid; });
@@ -153,15 +145,14 @@ namespace Lithium::Process
             else
             {
                 LOG_F(ERROR, "Failed to terminate process");
+                return false;
             }
 #else
             int status;
-            kill(pid, signal); // Send signal to the process
+            kill(pid, signal);
             waitpid(pid, &status, 0);
 
-            std::unique_lock<std::mutex> lock(mtx);
             LOG_F(INFO, "Process terminated: %s (PID: %d)", it->name.c_str(), pid);
-            lock.unlock();
 #endif
 
             processes.erase(it);
@@ -170,20 +161,39 @@ namespace Lithium::Process
         else
         {
             LOG_F(ERROR, "Process not found");
+            return false;
         }
+        return true;
+    }
+
+    bool ProcessManager::terminateProcessByName(const std::string &name, int signal)
+    {
+        auto it = std::find_if(processes.begin(), processes.end(), [&name](const Process &p)
+                               { return p.name == name; });
+
+        if (it != processes.end())
+        {
+            return terminateProcess(it->pid, signal);
+        }
+        LOG_F(ERROR, "Process not found by name: %s", name.c_str());
+        return false;
     }
 
     void ProcessManager::listProcesses()
     {
-        std::unique_lock<std::mutex> lock(mtx);
+        std::lock_guard<std::mutex> lock(mtx);
         LOG_F(INFO, "Currently running processes:");
 
         for (const auto &process : processes)
         {
             LOG_F(INFO, "%s (PID: %d)", process.name.c_str(), process.pid);
         }
+    }
 
-        lock.unlock();
+    std::vector<Process> ProcessManager::getRunningProcesses()
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        return processes;
     }
 
     std::vector<std::string> ProcessManager::getProcessOutput(const std::string &identifier)
@@ -231,14 +241,12 @@ namespace Lithium::Process
             int status;
             waitpid(process.pid, &status, 0);
 
-            std::unique_lock<std::mutex> lock(mtx);
             LOG_F(INFO, "Process completed: %s (PID: %d)", process.name.c_str(), process.pid);
-            lock.unlock();
 #endif
         }
 
         processes.clear();
-        cv.notify_all();
+        LOG_F(INFO, "All processes completed.");
     }
 
 }

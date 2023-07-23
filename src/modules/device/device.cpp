@@ -20,9 +20,13 @@ void Device::setProperty(const std::string &name, const std::string &value)
 
     device_info.properties[name] = value;
 
-    if (value != oldValue)
+    if (device_info.messages.find(name) == device_info.messages.end())
     {
         insertMessage(name, value);
+    }
+    else
+    {
+        updateMessage(name, name, value);
     }
 }
 
@@ -43,11 +47,14 @@ void Device::insertTask(const std::string &name, std::any defaultValue,
 
 void Device::insertMessage(const std::string &name, std::any value)
 {
-    device_info.messages[name] = value;
+    Lithium::IMessage message;
+    message.name = name;
+    message.value = value;
+    device_info.messages[name] = message;
 
     for (const auto &observer : observers)
     {
-        observer(value, nullptr);
+        observer(message);
     }
 }
 
@@ -55,12 +62,14 @@ void Device::updateMessage(const std::string &name, const std::string &identifie
 {
     if (device_info.messages.find(identifier) != device_info.messages.end())
     {
-        std::any oldValue = device_info.messages[identifier];
-        device_info.messages[identifier] = newValue;
+        Lithium::IMessage message;
+        message.value = newValue;
+        message.name = name;
+        device_info.messages[identifier] = message;
 
         for (const auto &observer : observers)
         {
-            observer(newValue, oldValue);
+            observer(message);
         }
     }
 }
@@ -69,12 +78,12 @@ void Device::removeMessage(const std::string &name, const std::string &identifie
 {
     if (device_info.messages.find(identifier) != device_info.messages.end())
     {
-        std::any value = device_info.messages[identifier];
+        Lithium::IMessage message = device_info.messages[identifier];
         device_info.messages.erase(identifier);
 
         for (const auto &observer : observers)
         {
-            observer(nullptr, value);
+            observer(message);
         }
     }
 }
@@ -89,17 +98,17 @@ std::any Device::getMessageValue(const std::string &name, const std::string &ide
     return nullptr;
 }
 
-void Device::addObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer)
+void Device::addObserver(const std::function<void(const Lithium::IMessage &message)> &observer)
 {
     observers.push_back(observer);
 }
 
-void Device::removeObserver(const std::function<void(std::any newValue, std::any oldValue)> &observer)
+void Device::removeObserver(const std::function<void(const Lithium::IMessage &message)> &observer)
 {
     observers.erase(std::remove_if(observers.begin(), observers.end(),
-                                   [&observer](const std::function<void(std::any, std::any)> &o)
+                                   [&observer](const std::function<void(const Lithium::IMessage &message)> &o)
                                    {
-                                       return o.target<std::function<void(std::any, std::any)>>() == observer.target<std::function<void(std::any, std::any)>>();
+                                       return o.target<std::function<void(const Lithium::IMessage &message)>>() == observer.target<std::function<void(const Lithium::IMessage &message)>>();
                                    }),
                     observers.end());
 }

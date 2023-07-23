@@ -50,9 +50,10 @@ namespace Lithium
 {
 
     // Constructor
-    DeviceManager::DeviceManager()
+    DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus)
     {
         m_ModuleLoader = std::make_shared<ModuleLoader>();
+        m_MessageBus = messageBus;
         for (auto &devices : m_devices)
         {
             devices.emplace_back();
@@ -192,8 +193,11 @@ namespace Lithium
                     break;
                 }
                 case DeviceType::Solver:
+                {
+                    LOG_F(INFO, "Trying to add a new solver instance : %s from %s", newName.c_str(), lib_name.c_str());
                     // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
                     break;
+                }
                 case DeviceType::Guider:
                     // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
                     break;
@@ -227,6 +231,25 @@ namespace Lithium
         return true;
     }
 
+    bool DeviceManager::AddDeviceObserver(DeviceType type, const std::string &name)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        auto &devices = m_devices[static_cast<int>(type)];
+        for (auto it = devices.begin(); it != devices.end(); ++it)
+        {
+            if (*it && (*it)->getProperty("name") == name)
+            {
+                (*it)->addObserver([this](const Lithium::IMessage &message)
+                                   { messageBusPublish(message); });
+                LOG_F(INFO, "Add device %s observer successfully", name.c_str());
+                return true;
+            }
+        }
+        LOG_F(ERROR, "Could not find device %s of type %d", name.c_str(), static_cast<int>(type));
+        return false;
+    }
+
     bool DeviceManager::removeDevice(DeviceType type, const std::string &name)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -238,7 +261,7 @@ namespace Lithium
             {
                 (*it)->getTask("disconnect", {});
                 devices.erase(it);
-                LOG_F(INFO,"Remove device %s successfully",name.c_str());
+                LOG_F(INFO, "Remove device %s successfully", name.c_str());
                 return true;
             }
         }
@@ -371,5 +394,11 @@ namespace Lithium
             LOG_F(INFO, "Device %s not found", device_name.c_str());
         }
         return nullptr;
+    }
+
+    void DeviceManager::messageBusPublish(const Lithium::IMessage &message)
+    {
+        LOG_F(INFO, "Reviced device message with content %s", message.getValue<std::string>().c_str());
+        m_MessageBus->Publish<Lithium::IMessage>("main", message);
     }
 }

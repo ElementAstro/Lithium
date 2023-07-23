@@ -38,6 +38,7 @@ Description: WebSocket Server
 #include "nlohmann/json.hpp"
 
 #include "modules/server/commander.hpp"
+#include "modules/property/imessage.hpp"
 
 class WebSocketServer : public oatpp::websocket::WebSocket::Listener
 {
@@ -81,6 +82,27 @@ public:
 	nlohmann::json GetDeviceInfo(const nlohmann::json &m_params);
 
 public:
+	nlohmann::json CreateProcessLi(const nlohmann::json &m_params);
+	nlohmann::json RunScript(const nlohmann::json &m_params);
+	nlohmann::json TerminateProcessByName(const nlohmann::json &m_params);
+	nlohmann::json GetRunningProcesses(const nlohmann::json &m_params);
+	nlohmann::json GetProcessOutput(const nlohmann::json &m_params);
+
+public:
+	nlohmann::json AddTask(const nlohmann::json &m_params);
+	nlohmann::json InsertTask(const nlohmann::json &m_params);
+	nlohmann::json ExecuteAllTasks(const nlohmann::json &m_params);
+	nlohmann::json StopTask(const nlohmann::json &m_params);
+	nlohmann::json ExecuteTaskByName(const nlohmann::json &m_params);
+	nlohmann::json ModifyTask(const nlohmann::json &m_params);
+	nlohmann::json ModifyTaskByName(const nlohmann::json &m_params);
+	nlohmann::json DeleteTask(const nlohmann::json &m_params);
+	nlohmann::json DeleteTaskByName(const nlohmann::json &m_params);
+	nlohmann::json QueryTaskByName(const nlohmann::json &m_params);
+	nlohmann::json GetTaskList(const nlohmann::json &m_params);
+	nlohmann::json SaveTasksToJson(const nlohmann::json &m_params);
+
+public:
 	void onPing(const WebSocket &socket, const oatpp::String &message) override;
 
 	void onPong(const WebSocket &socket, const oatpp::String &message) override;
@@ -88,6 +110,9 @@ public:
 	void onClose(const WebSocket &socket, v_uint16 code, const oatpp::String &message) override;
 
 	void readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
+
+private:
+	void OnMessageReceived(const Lithium::IMessage &message);
 };
 
 /**

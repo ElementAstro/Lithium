@@ -41,13 +41,19 @@ Description: App Components
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-openssl/Config.hpp"
 
+#ifdef ASYNC_SERVER
+#include "oatpp/web/server/AsyncHttpConnectionHandler.hpp"
+#else
 #include "oatpp/web/server/HttpConnectionHandler.hpp"
+#endif
 #include "oatpp/web/server/HttpRouter.hpp"
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
 
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
 
 #include "oatpp/core/macro/component.hpp"
+
+#include <thread>
 
 /**
  *  Class which creates and holds Application components and registers components in oatpp::base::Environment
@@ -60,6 +66,19 @@ public:
      *  Swagger component
      */
     SwaggerComponent swaggerComponent;
+
+#ifdef ASYNC_SERVER
+    /**
+     * Create Async Executor
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor)
+    ([]
+     { return std::make_shared<oatpp::async::Executor>(
+           std::thread::hardware_concurrency() + 2 /* Data-Processing threads */,
+           1 /* I/O threads */,
+           1 /* Timer threads */
+       ); }());
+#endif
 
     /**
      * Create ObjectMapper component to serialize/deserialize DTOs in Controller's API
@@ -91,15 +110,24 @@ public:
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, serverConnectionHandler)
     ("http", []
      {
-        
-         OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);           // get Router component
-         OATPP_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, objectMapper); // get ObjectMapper component
-         return oatpp::web::server::HttpConnectionHandler::createShared(router); }());
+        OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);           // get Router component
+        OATPP_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, objectMapper); // get ObjectMapper component
+#ifdef ASNYC_SERVER
+        OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor); // get Async executor component
+        return oatpp::web::server::AsyncHttpConnectionHandler::createShared(router, executor);
+#else
+        return oatpp::web::server::HttpConnectionHandler::createShared(router);
+#endif }());
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler)
     ("websocket", []
      {
+#ifdef ASYNC_SERVER
+        OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
+        auto connectionHandler = oatpp::websocket::AsyncConnectionHandler::createShared(executor);
+#else
         auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
+#endif
         connectionHandler->setSocketInstanceListener(std::make_shared<WSInstanceListener>());
         return connectionHandler; }());
 };

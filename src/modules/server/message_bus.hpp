@@ -1,3 +1,36 @@
+/*
+ * message_bus.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-7-23
+
+Description: Main Message Bus
+
+**************************************************/
+
+#pragma once
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -9,7 +42,7 @@
 #include <condition_variable>
 #include <thread>
 #include <algorithm>
-#include <loguru.hpp>
+#include "loguru/loguru.hpp"
 
 class MessageBus
 {
@@ -56,7 +89,7 @@ public:
         messageQueue_.push({topic, std::any(message)});
         conditionVariable_.notify_one();
 
-        LOG_F(INFO, "Published message to topic: %s", topic.c_str());
+        // LOG_F(INFO, "Published message to topic: %s", topic.c_str());
     }
 
     template <typename T>
@@ -125,28 +158,6 @@ private:
     std::thread processingThread_;
     bool isRunning_ = true;
 };
-
-class OtherClass
-{
-public:
-    void OnMyMessageReceived(const std::string &message)
-    {
-        try
-        {
-            // 处理接收到的消息
-            LOG_F(INFO, "OtherClass received message with content: %s", message.c_str());
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Exception caught in OnMyMessageReceived: %s", e.what());
-        }
-        catch (...)
-        {
-            LOG_F(ERROR, "Unknown exception caught in OnMyMessageReceived");
-        }
-    }
-};
-
 /*
 int main(int argc, char *argv[])
 {

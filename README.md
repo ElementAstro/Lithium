@@ -30,6 +30,7 @@ pacman -S mingw-w64-x86_64-cmake
 ```
 sudo apt-add-repository ppa:mutlaqja/ppa -y
 sudo apt update && sudo apt upgrade -y
+sudo apt install gcc g++ cmake
 sudo apt-get install libindi1 indi-bin libindi-dev
 sudo apt install libcfitsio-dev libz-dev libssl-dev
 ```

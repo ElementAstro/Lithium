@@ -42,14 +42,31 @@ WebSocketServer::WebSocketServer()
 {
 	m_CommandDispatcher = std::make_unique<CommandDispatcher>();
 
+	Lithium::MyApp.MSSubscribe("main", std::function<void(const Lithium::IMessage &)>(std::bind(&WebSocketServer::OnMessageReceived, this, std::placeholders::_1)));
+
 	LiRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask);
 	LiRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo);
 	LiRegisterFunc("GetDeviceList", &WebSocketServer::GetDeviceList);
-	LiRegisterFunc("AddDevice",&WebSocketServer::AddDevice);
-	LiRegisterFunc("AddDeviceLibrary",&WebSocketServer::AddDeviceLibrary);
-	LiRegisterFunc("RemoveDevice",&WebSocketServer::RemoveDevice);
-	LiRegisterFunc("RemoveDeviceByName",&WebSocketServer::RemoveDevicesByName);
-	LiRegisterFunc("RemoveDeviceLibrary",&WebSocketServer::RemoveDeviceLibrary);
+	LiRegisterFunc("AddDevice", &WebSocketServer::AddDevice);
+	LiRegisterFunc("AddDeviceLibrary", &WebSocketServer::AddDeviceLibrary);
+	LiRegisterFunc("RemoveDevice", &WebSocketServer::RemoveDevice);
+	LiRegisterFunc("RemoveDeviceByName", &WebSocketServer::RemoveDevicesByName);
+	LiRegisterFunc("RemoveDeviceLibrary", &WebSocketServer::RemoveDeviceLibrary);
+	LiRegisterFunc("CreateProcess", &WebSocketServer::CreateProcessLi);
+	LiRegisterFunc("RunScript", &WebSocketServer::RunScript);
+	LiRegisterFunc("TerminateProcessByName", &WebSocketServer::TerminateProcessByName);
+	LiRegisterFunc("GetRunningProcesses", &WebSocketServer::GetRunningProcesses);
+	LiRegisterFunc("GetProcessOutput", &WebSocketServer::GetProcessOutput);
+	LiRegisterFunc("AddTask", &WebSocketServer::AddTask);
+	LiRegisterFunc("InsertTask", &WebSocketServer::InsertTask);
+	LiRegisterFunc("ExecuteAllTasks", &WebSocketServer::ExecuteAllTasks);
+	LiRegisterFunc("StopTask", &WebSocketServer::StopTask);
+	LiRegisterFunc("ExecuteTaskByName", &WebSocketServer::ExecuteTaskByName);
+	LiRegisterFunc("ModifyTask", &WebSocketServer::ModifyTask);
+	LiRegisterFunc("ModifyTaskByName", &WebSocketServer::ModifyTaskByName);
+	LiRegisterFunc("DeleteTask", &WebSocketServer::DeleteTask);
+	LiRegisterFunc("DeleteTaskByName", &WebSocketServer::DeleteTaskByName);
+	LiRegisterFunc("QueryTaskByName", &WebSocketServer::QueryTaskByName);
 }
 
 void WebSocketServer::onPing(const WebSocket &socket, const oatpp::String &message)
@@ -158,6 +175,23 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 	catch (const std::exception &e)
 	{
 		OATPP_LOGE("WSServer", "WebSocketServer::onMessage() parse json failed: %s", e.what());
+	}
+}
+
+void WebSocketServer::OnMessageReceived(const Lithium::IMessage &message)
+{
+	try
+	{
+		// 处理接收到的消息
+		LOG_F(INFO, "WebSocketServer received message with content: %s", message.getValue<std::string>().c_str());
+	}
+	catch (const std::exception &e)
+	{
+		LOG_F(ERROR, "Exception caught in OnMyMessageReceived: %s", e.what());
+	}
+	catch (...)
+	{
+		LOG_F(ERROR, "Unknown exception caught in OnMyMessageReceived");
 	}
 }
 

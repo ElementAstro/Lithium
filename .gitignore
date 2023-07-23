@@ -43,5 +43,7 @@ module_test
 
 libexample.json
 
+test
+
 *.log
 *.xml

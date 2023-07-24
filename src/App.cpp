@@ -36,7 +36,11 @@ Description: Main
 #include "controller/WebSocketController.hpp"
 #include "controller/IOController.hpp"
 
+#if ENABLE_ASYNC
+#include "oatpp-swagger/AsyncController.hpp"
+#else
 #include "oatpp-swagger/Controller.hpp"
+#endif
 
 #include "oatpp/network/Server.hpp"
 
@@ -57,19 +61,36 @@ Description: Main
 
 void run()
 {
-
-    AppComponent components; // Create scope Environment components
+    if (Lithium::MyApp.GetConfig("server/port") == nullptr)
+    {
+        Lithium::MyApp.SetConfig("server/port", 8000);
+    }
+    AppComponent components(Lithium::MyApp.GetConfig("server/port").get<int>()); // Create scope Environment components
 
     /* Get router component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);
 
     oatpp::web::server::api::Endpoints docEndpoints;
 
+    auto static_controller = StaticController::createShared();
+    docEndpoints.append(static_controller->getEndpoints());
+    router->addController(static_controller);
+
+    auto system_controller = SystemController::createShared();
+    docEndpoints.append(system_controller->getEndpoints());
+    router->addController(system_controller);
+
+    auto io_controller = IOController::createShared();
+    docEndpoints.append(io_controller->getEndpoints());
+    router->addController(io_controller);
+
+    #if ENABLE_ASYNC
+    router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
+    #else
     router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
-    router->addController(StaticController::createShared());
-    router->addController(SystemController::createShared());
+    #endif
+    
     router->addController(WebSocketController::createShared());
-    router->addController(IOController::createShared());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, connectionHandler, "http");
@@ -80,11 +101,6 @@ void run()
     /* create server */
     oatpp::network::Server server(connectionProvider,
                                   connectionHandler);
-
-    if (Lithium::MyApp.GetConfig("server/port") == nullptr)
-    {
-        Lithium::MyApp.SetConfig("server/port", 8000);
-    }
 
     OATPP_LOGD("Server", "Running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
 
@@ -167,7 +183,7 @@ int main(int argc, char *argv[])
     if (cmd_port != 8000)
     {
         OATPP_LOGD("PreLaunch", "Command line server port : %d", cmd_port);
-        
+
         auto port = Lithium::MyApp.GetConfig("server/port");
         if (port != cmd_port)
         {
@@ -182,9 +198,11 @@ int main(int argc, char *argv[])
         setupLogFile();
 
         registerInterruptHandler();
-        
+
         oatpp::base::Environment::init();
+
         run();
+
         oatpp::base::Environment::destroy();
     }
     catch (const std::exception &e)

@@ -32,20 +32,35 @@ Description: WebSocket Server
 #ifndef WebSocketServer_hpp
 #define WebSocketServer_hpp
 
+#include "config.h"
+
+#if ENABLE_ASYNC
+#include "oatpp-websocket/AsyncConnectionHandler.hpp"
+#include "oatpp-websocket/AsyncWebSocket.hpp"
+#else
 #include "oatpp-websocket/ConnectionHandler.hpp"
 #include "oatpp-websocket/WebSocket.hpp"
+#endif
 
 #include "nlohmann/json.hpp"
 
 #include "modules/server/commander.hpp"
 #include "modules/property/imessage.hpp"
 
+#if ENABLE_ASYNC
+class WebSocketServer : public oatpp::websocket::AsyncWebSocket::Listener
+#else
 class WebSocketServer : public oatpp::websocket::WebSocket::Listener
+#endif
 {
 private:
 	static constexpr const char *TAG = "WebSocketServer";
 
+#if ENABLE_ASYNC
+	void ProcessMessage(const std::shared_ptr<AsyncWebSocket> &socket, const nlohmann::json &data);
+#else
 	void ProcessMessage(const WebSocket &socket, const nlohmann::json &data);
+#endif
 
 private:
 	oatpp::data::stream::BufferOutputStream m_messageBuffer;
@@ -103,6 +118,15 @@ public:
 	nlohmann::json SaveTasksToJson(const nlohmann::json &m_params);
 
 public:
+#if ENABLE_ASYNC
+	CoroutineStarter onPing(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;
+
+	CoroutineStarter onPong(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;
+
+	CoroutineStarter onClose(const std::shared_ptr<AsyncWebSocket> &socket, v_uint16 code, const oatpp::String &message) override;
+
+	CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
+#else
 	void onPing(const WebSocket &socket, const oatpp::String &message) override;
 
 	void onPong(const WebSocket &socket, const oatpp::String &message) override;
@@ -110,7 +134,7 @@ public:
 	void onClose(const WebSocket &socket, v_uint16 code, const oatpp::String &message) override;
 
 	void readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
-
+#endif
 private:
 	void OnMessageReceived(const Lithium::IMessage &message);
 };
@@ -118,7 +142,11 @@ private:
 /**
  * Listener on new WebSocket connections.
  */
+#if ENABLE_ASYNC
+class WSInstanceListener : public oatpp::websocket::AsyncConnectionHandler::SocketInstanceListener
+#else
 class WSInstanceListener : public oatpp::websocket::ConnectionHandler::SocketInstanceListener
+#endif
 {
 private:
 	static constexpr const char *TAG = "WebSocketInstanceListener";
@@ -130,9 +158,15 @@ public:
 	static std::atomic<v_int32> SOCKETS;
 
 public:
+#if ENABLE_ASYNC
+	void onAfterCreate_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params) override;
+
+	void onBeforeDestroy_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket) override;
+#else
 	void onAfterCreate(const oatpp::websocket::WebSocket &socket, const std::shared_ptr<const ParameterMap> &params) override;
 
 	void onBeforeDestroy(const oatpp::websocket::WebSocket &socket) override;
+#endif
 };
 
 #endif // WebSocketServer_hpp

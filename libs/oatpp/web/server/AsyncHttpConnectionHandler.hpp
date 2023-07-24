@@ -117,6 +117,9 @@ public:
   static std::shared_ptr<AsyncHttpConnectionHandler> createShared(const std::shared_ptr<HttpRouter>& router,
                                                                   const std::shared_ptr<oatpp::async::Executor>& executor);
   
+  static std::shared_ptr<AsyncHttpConnectionHandler> createShared(const std::shared_ptr<HttpProcessor::Components>& components,
+                                                                  const std::shared_ptr<oatpp::async::Executor>& executor);
+
   void setErrorHandler(const std::shared_ptr<handler::ErrorHandler>& errorHandler);
 
   /**

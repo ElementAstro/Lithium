@@ -44,6 +44,14 @@ set(USE_FOLDERS TRUE)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+option(ENABLE_ASYNC "Enable Async Server Mode" ON)
+if(ENABLE_ASYNC)
+    set(ENABLE_ASYNC_FLAG "1")
+endif()
+
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 #################################################################################
 #
 # main project
@@ -197,6 +205,9 @@ set(server_SRC
     ${lithium_src_dir}/modules/server/commander.cpp
     ${lithium_src_dir}/modules/server/commander.hpp
 
+    ${lithium_src_dir}/modules/server/login_manager.cpp
+    ${lithium_src_dir}/modules/server/login_manager.hpp
+
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
@@ -258,7 +269,7 @@ if(WIN32)
 
     target_link_libraries(lithium_server pdh iphlpapi winmm)
 
-    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp)
+    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
 
     target_link_libraries(lithium_server loguru)
 

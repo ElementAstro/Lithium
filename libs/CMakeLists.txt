@@ -71,4 +71,38 @@ add_library(oatpp-openssl
     oatpp-openssl/configurer/TrustStore.hpp
 )
 
+add_library(oatpp-sqlite
+    oatpp-sqlite/mapping/type/Blob.cpp
+    oatpp-sqlite/mapping/type/Blob.hpp
+    oatpp-sqlite/mapping/Deserializer.cpp
+    oatpp-sqlite/mapping/Deserializer.hpp
+    oatpp-sqlite/mapping/ResultMapper.cpp
+    oatpp-sqlite/mapping/ResultMapper.hpp
+    oatpp-sqlite/mapping/Serializer.cpp
+    oatpp-sqlite/mapping/Serializer.hpp
+    oatpp-sqlite/ql_template/Parser.cpp
+    oatpp-sqlite/ql_template/Parser.hpp
+    oatpp-sqlite/ql_template/TemplateValueProvider.cpp
+    oatpp-sqlite/ql_template/TemplateValueProvider.hpp
+    oatpp-sqlite/Connection.cpp
+    oatpp-sqlite/Connection.hpp
+    oatpp-sqlite/ConnectionProvider.cpp
+    oatpp-sqlite/ConnectionProvider.hpp
+    oatpp-sqlite/Executor.cpp
+    oatpp-sqlite/Executor.hpp
+    oatpp-sqlite/QueryResult.cpp
+    oatpp-sqlite/QueryResult.hpp
+    oatpp-sqlite/Types.hpp
+    oatpp-sqlite/orm.hpp
+    oatpp-sqlite/Utils.cpp
+    oatpp-sqlite/Utils.hpp
+)
+
+add_library(oatpp-zlib
+    oatpp-zlib/Processor.cpp
+    oatpp-zlib/Processor.hpp
+    oatpp-zlib/EncoderProvider.cpp
+    oatpp-zlib/EncoderProvider.hpp
+)
+
 add_library(loguru loguru/loguru.cpp) 

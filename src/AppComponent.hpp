@@ -32,22 +32,32 @@ Description: App Components
 #ifndef AppComponent_hpp
 #define AppComponent_hpp
 
+#include "config.h"
+
 #include "websocket/WebSocketServer.hpp"
 
 #include "components/SwaggerComponent.hpp"
 
-#include "oatpp-websocket/ConnectionHandler.hpp"
-
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
+#include "oatpp-openssl/configurer/TrustStore.hpp"
 #include "oatpp-openssl/Config.hpp"
 
-#ifdef ASYNC_SERVER
+#if ENABLE_ASYNC
 #include "oatpp/web/server/AsyncHttpConnectionHandler.hpp"
+#include "oatpp-websocket/AsyncConnectionHandler.hpp"
 #else
 #include "oatpp/web/server/HttpConnectionHandler.hpp"
+#include "oatpp-websocket/ConnectionHandler.hpp"
 #endif
 #include "oatpp/web/server/HttpRouter.hpp"
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
+
+#include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
+#include "oatpp/network/virtual_/Interface.hpp"
+
+#include "oatpp-zlib/EncoderProvider.hpp"
+
+#include "oatpp/web/server/interceptor/AllowCorsGlobal.hpp"
 
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
 
@@ -61,13 +71,19 @@ Description: App Components
  */
 class AppComponent
 {
+private:
+    v_uint16 m_port;
 public:
+
+	AppComponent(v_uint16 port)
+    : m_port(port)
+  {}
     /**
      *  Swagger component
      */
     SwaggerComponent swaggerComponent;
 
-#ifdef ASYNC_SERVER
+#if ENABLE_ASYNC
     /**
      * Create Async Executor
      */
@@ -78,6 +94,10 @@ public:
            1 /* I/O threads */,
            1 /* Timer threads */
        ); }());
+
+	OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, virtualInterface)([] {
+		return oatpp::network::virtual_::Interface::obtainShared("virtualhost");
+	}());
 #endif
 
     /**
@@ -94,8 +114,20 @@ public:
      *  Create ConnectionProvider component which listens on the port
      */
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ServerConnectionProvider>, serverConnectionProvider)
-    ([]
-     { return oatpp::network::tcp::server::ConnectionProvider::createShared({"0.0.0.0", 8000, oatpp::network::Address::IP_4}); }());
+    ([this]
+     { 
+        std::shared_ptr<oatpp::network::ServerConnectionProvider> connectionProvider;
+		if(m_port == 0) 
+		{ // Use oatpp virtual interface
+			OATPP_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, interface);
+			connectionProvider = oatpp::network::virtual_::server::ConnectionProvider::createShared(interface);
+    	} 
+		else 
+		{
+      		connectionProvider = oatpp::network::tcp::server::ConnectionProvider::createShared({"0.0.0.0", m_port, oatpp::network::Address::IP_4});
+    	}
+        return connectionProvider;
+	}());
 
     /**
      *  Create Router component
@@ -112,17 +144,28 @@ public:
      {
         OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);           // get Router component
         OATPP_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, objectMapper); // get ObjectMapper component
-#ifdef ASNYC_SERVER
+		/* Create HttpProcessor::Components */
+  		auto components = std::make_shared<oatpp::web::server::HttpProcessor::Components>(router);
+		/* Add content encoders */
+		auto encoders = std::make_shared<oatpp::web::protocol::http::encoding::ProviderCollection>();
+
+		encoders->add(std::make_shared<oatpp::zlib::DeflateEncoderProvider>());
+		encoders->add(std::make_shared<oatpp::zlib::GzipEncoderProvider>());
+
+		/* Set content encoders */
+		components->contentEncodingProviders = encoders;
+#if ENABLE_ASYNC
         OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor); // get Async executor component
-        return oatpp::web::server::AsyncHttpConnectionHandler::createShared(router, executor);
+        return oatpp::web::server::AsyncHttpConnectionHandler::createShared(components, executor);
 #else
-        return oatpp::web::server::HttpConnectionHandler::createShared(router);
-#endif }());
+        return oatpp::web::server::HttpConnectionHandler::createShared(components);
+#endif 
+        }());
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler)
     ("websocket", []
      {
-#ifdef ASYNC_SERVER
+#if ENABLE_ASYNC
         OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
         auto connectionHandler = oatpp::websocket::AsyncConnectionHandler::createShared(executor);
 #else

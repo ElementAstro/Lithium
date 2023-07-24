@@ -2,6 +2,8 @@
 #ifndef WebSocketController_hpp
 #define WebSocketController_hpp
 
+#include "config.h"
+
 #include "oatpp-websocket/Handshaker.hpp"
 
 #include "oatpp/web/server/api/ApiController.hpp"
@@ -18,6 +20,10 @@
  */
 class WebSocketController : public oatpp::web::server::api::ApiController
 {
+#if ENABLE_ASYNC
+private:
+  typedef WebSocketController __ControllerType;
+#endif
 private:
 	OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler, "websocket");
 
@@ -33,10 +39,23 @@ public:
 	{
 		return std::make_shared<WebSocketController>(objectMapper);
 	}
+
+#if ENABLE_ASYNC
+	ENDPOINT_ASYNC("GET", "ws", ws)
+	{
+		ENDPOINT_ASYNC_INIT(ws)
+		Action act() override 
+		{
+			auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketConnectionHandler);
+			return _return(response);
+		}
+	};
+#else
 	ENDPOINT("GET", "ws", ws, REQUEST(std::shared_ptr<IncomingRequest>, request))
 	{
 		return oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), websocketConnectionHandler);
 	};
+#endif
 };
 
 #include OATPP_CODEGEN_END(ApiController) //<-- codegen end

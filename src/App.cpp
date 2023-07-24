@@ -35,6 +35,7 @@ Description: Main
 #include "controller/SystemController.hpp"
 #include "controller/WebSocketController.hpp"
 #include "controller/IOController.hpp"
+#include "controller/AuthController.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -83,6 +84,10 @@ void run()
     auto io_controller = IOController::createShared();
     docEndpoints.append(io_controller->getEndpoints());
     router->addController(io_controller);
+
+    auto auth_controller = AuthController::createShared();
+    docEndpoints.append(auth_controller->getEndpoints());
+    router->addController(auth_controller);
 
     #if ENABLE_ASYNC
     router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));

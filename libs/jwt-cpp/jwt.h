@@ -3640,8 +3640,6 @@ std::ostream& operator<<(std::ostream& os, const jwt::basic_claim<json_traits>& 
 	return os << c.to_json();
 }
 
-#ifndef JWT_DISABLE_PICOJSON
-#include "traits/kazuho-picojson/defaults.h"
-#endif
+#include "traits/nlohmann-json/defaults.h"
 
 #endif

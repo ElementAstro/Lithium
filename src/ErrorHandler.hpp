@@ -1,6 +1,8 @@
 #ifndef Lithium_ERRORHANDLER_HPP
 #define Lithium_ERRORHANDLER_HPP
 
+#include "data/StatusDto.hpp"
+
 #include "oatpp/web/server/handler/ErrorHandler.hpp"
 #include "oatpp/web/protocol/http/outgoing/ResponseFactory.hpp"
 

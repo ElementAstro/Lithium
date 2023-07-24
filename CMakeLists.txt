@@ -242,7 +242,22 @@ set(system_module
 )
 
 set(Lithium_SRC
-	${lithium_src_dir}/App.cpp
+    ${lithium_src_dir}/auth/AuthHandler.cpp
+    ${lithium_src_dir}/auth/AuthHandler.hpp
+
+    ${lithium_src_dir}/auth/JWT.cpp
+    ${lithium_src_dir}/auth/JWT.cpp
+
+	${lithium_src_dir}/ErrorHandler.cpp
+    ${lithium_src_dir}/ErrorHandler.hpp
+
+    ${lithium_src_dir}/interceptor/AuthInterceptor.cpp
+    ${lithium_src_dir}/interceptor/AuthInterceptor.hpp
+
+    ${lithium_src_dir}/service/AuthService.cpp
+    ${lithium_src_dir}/service/AuthService.hpp
+
+    ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp
 
     ${lithium_src_dir}/LithiumApp.cpp
@@ -272,6 +287,8 @@ if(WIN32)
     target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
 
     target_link_libraries(lithium_server loguru)
+
+    target_link_libraries(lithium_server sockpp)
 
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server dlfcn-win32::dl)

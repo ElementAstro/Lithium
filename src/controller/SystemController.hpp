@@ -31,7 +31,7 @@ public:
     ENDPOINT_INFO(getUICpuUsage)
     {
         info->summary = "Get current CPU usage";
-        info->addResponse<String>(Status::CODE_200, "application/json", "Usage of RAM");
+        info->addResponse<String>(Status::CODE_200, "application/json", "Usage of CPU");
         info->addResponse<String>(Status::CODE_404, "text/plain");
     }
 #if ENABLE_ASYNC

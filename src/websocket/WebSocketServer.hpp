@@ -37,10 +37,13 @@ Description: WebSocket Server
 #if ENABLE_ASYNC
 #include "oatpp-websocket/AsyncConnectionHandler.hpp"
 #include "oatpp-websocket/AsyncWebSocket.hpp"
+#include "oatpp/core/async/Lock.hpp"
+#include "oatpp/core/async/Executor.hpp"
 #else
 #include "oatpp-websocket/ConnectionHandler.hpp"
 #include "oatpp-websocket/WebSocket.hpp"
 #endif
+#include "oatpp/core/macro/component.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -56,14 +59,27 @@ class WebSocketServer : public oatpp::websocket::WebSocket::Listener
 private:
 	static constexpr const char *TAG = "WebSocketServer";
 
-#if ENABLE_ASYNC
-	void ProcessMessage(const std::shared_ptr<AsyncWebSocket> &socket, const nlohmann::json &data);
-#else
+#if ENABLE_ASYNC == 0
 	void ProcessMessage(const WebSocket &socket, const nlohmann::json &data);
 #endif
 
 private:
 	oatpp::data::stream::BufferOutputStream m_messageBuffer;
+
+#if ENABLE_ASYNC
+	std::shared_ptr<AsyncWebSocket> m_socket;
+	/**
+	 * Lock for synchronization of writes to the web socket.
+	 */
+	oatpp::async::Lock m_writeLock;
+
+#endif
+
+private:
+	/**
+	 * Inject async executor object.
+	 */
+	OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
 
 	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
 
@@ -85,6 +101,8 @@ private:
 
 public:
 	WebSocketServer();
+
+	void SendMessageNonBlocking(const oatpp::String &message);
 
 public:
 	nlohmann::json GetDeviceList(const nlohmann::json &m_params);

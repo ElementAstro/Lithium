@@ -42,13 +42,19 @@ public:
 		info->addResponse<Object<StatusDto>>(Status::CODE_500, "application/json");
 	}
 #if ENABLE_ASYNC
-	ENDPOINT_ASYNC("POST", "users/signup", signUp,
-			 BODY_DTO(Object<SignUpDto>, dto))
+	ENDPOINT_ASYNC("POST", "users/signup", signUp)
 	{
 		ENDPOINT_ASYNC_INIT(signUp)
-		Action act() override
-        {
-			return _return(createDtoResponse(Status::CODE_200, m_userService.signUp(dto)));
+
+		Action act() override {
+			return request->readBodyToDtoAsync<oatpp::Object<SignUpDto>>(
+				controller->getDefaultObjectMapper()
+			).callbackTo(&signUp::returnResponse);
+		}
+
+		Action returnResponse(const oatpp::Object<SignUpDto>& body)
+		{
+			return _return(controller->createDtoResponse(Status::CODE_200,body));
 		}
 	};
 #else
@@ -69,13 +75,20 @@ public:
 		info->addResponse<Object<StatusDto>>(Status::CODE_500, "application/json");
 	}
 #if ENABLE_ASYNC
-	ENDPOINT_ASYNC("POST", "users/signin", signIn,
-			 BODY_DTO(Object<SignInDto>, dto))
+	ENDPOINT_ASYNC("POST", "users/signin", signIn)
 	{
 		ENDPOINT_ASYNC_INIT(signIn)
+
 		Action act() override
 		{
-			return _return(createDtoResponse(Status::CODE_200, m_userService.signIn(dto)));
+			return request->readBodyToDtoAsync<oatpp::Object<SignInDto>>(
+				controller->getDefaultObjectMapper()
+			).callbackTo(&signIn::returnResponse);
+		}
+
+		Action returnResponse(const oatpp::Object<SignInDto>& body)
+		{
+			return _return(controller->createDtoResponse(Status::CODE_200, body));
 		}
 	};
 #else
@@ -94,13 +107,17 @@ public:
 		info->addResponse<Object<StatusDto>>(Status::CODE_500, "application/json");
 	}
 #if ENABLE_ASYNC
-	ENDPOINT_ASYNC("DELETE", "users", deleteUser,
-			 BUNDLE(String, userId))
+	ENDPOINT_ASYNC("DELETE", "users", deleteUser)
 	{
 		ENDPOINT_ASYNC_INIT(deleteUser)
-		Action act() override
+
+		Action act() override 
 		{
-			return _return(createDtoResponse(Status::CODE_200, m_userService.deleteUserById(userId)));
+			return request->readBodyToStringAsync().callbackTo(&deleteUser::returnResponse);
+		}
+		Action returnResponse(const oatpp::String& body)
+		{
+			return _return(controller->createDtoResponse(Status::CODE_200, body));
 		}
 	};
 #else

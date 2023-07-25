@@ -60,18 +60,26 @@ Description: Main
 #include <signal.h>
 #endif
 
+#include "loguru/loguru.hpp"
+
 void run()
 {
     if (Lithium::MyApp.GetConfig("server/port") == nullptr)
     {
         Lithium::MyApp.SetConfig("server/port", 8000);
     }
+
+    LOG_F(INFO,"Loading App component ...");
+
     AppComponent components(Lithium::MyApp.GetConfig("server/port").get<int>()); // Create scope Environment components
 
+LOG_F(INFO,"App component loaded");
     /* Get router component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);
 
     oatpp::web::server::api::Endpoints docEndpoints;
+
+LOG_F(INFO,"Document endpoints loaded");
 
     /* Add document */
 
@@ -87,16 +95,16 @@ void run()
     docEndpoints.append(io_controller->getEndpoints());
     router->addController(io_controller);
 
-    auto auth_controller = AuthController::createShared();
-    docEndpoints.append(auth_controller->getEndpoints());
-    router->addController(auth_controller);
+    //auto auth_controller = AuthController::createShared();
+    //  docEndpoints.append(auth_controller->getEndpoints());
+    //router->addController(auth_controller);
 
-    #if ENABLE_ASYNC
+#if ENABLE_ASYNC
     router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
-    #else
+#else
     router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
-    #endif
-    
+#endif
+
     router->addController(WebSocketController::createShared());
 
     /* Get connection handler component */
@@ -109,7 +117,7 @@ void run()
     oatpp::network::Server server(connectionProvider,
                                   connectionHandler);
 
-    OATPP_LOGD("Server", "Running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
+    LOG_F(INFO,"Running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
 
     server.run();
 }
@@ -182,34 +190,34 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error &e)
     {
-        OATPP_LOGE("PreLaunch", "Failed to parser command line : %s", e.what());
+        LOG_F(ERROR,"Failed to parser command line : %s", e.what());
         std::exit(1);
     }
 
     auto cmd_port = program.get<int>("--port");
     if (cmd_port != 8000)
     {
-        OATPP_LOGD("PreLaunch", "Command line server port : %d", cmd_port);
+        LOG_F(INFO,"Command line server port : %d", cmd_port);
 
         auto port = Lithium::MyApp.GetConfig("server/port");
         if (port != cmd_port)
         {
             Lithium::MyApp.SetConfig("server/port", cmd_port);
-            OATPP_LOGI("PreLaunch", "Set server port to %d", cmd_port);
+            LOG_F(INFO,"Set server port to %d", cmd_port);
         }
     }
 
     try
     {
+        // Init loguru log system
         loguru::init(argc, argv);
+        // Set log file
         setupLogFile();
-
+        // Register ctrl-c handle for better debug
         registerInterruptHandler();
-
+        // Run oatpp server
         oatpp::base::Environment::init();
-
         run();
-
         oatpp::base::Environment::destroy();
     }
     catch (const std::exception &e)

@@ -2,7 +2,7 @@
 #ifndef EXAMPLE_JWT_USERDB_HPP
 #define EXAMPLE_JWT_USERDB_HPP
 
-#include "model/UserModel.hpp"
+#include "data/UserDto.hpp"
 #include "oatpp-sqlite/orm.hpp"
 
 #include OATPP_CODEGEN_BEGIN(DbClient) //<- Begin Codegen
@@ -16,22 +16,13 @@ public:
       UserDb(const std::shared_ptr<oatpp::orm::Executor> &executor)
           : oatpp::orm::DbClient(executor)
       {
-
-            oatpp::orm::SchemaMigration migration(executor, "auth_service");
-            // TODO - Add more migrations here.
-            migration.migrate(); // <-- run migrations. This guy will throw on error.
-
-            auto version = migration.getSchemaVersion();
-            OATPP_LOGD("UserDb", "Migration - OK. Version=%d.", version);
       }
 
       QUERY(createUser,
-            "INSERT INTO users "
-            "(id, username, email, pswhash) VALUES "
-            "(uuid_generate_v4(), :user.username, :user.email, crypt(:user.password, gen_salt('bf', 8))) "
-            "RETURNING id;",
-            PREPARE(true), // prepared statement!
-            PARAM(oatpp::Object<UserModel>, user))
+        "INSERT INTO AppUser"
+        "(username, email, password, role) VALUES "
+        "(:user.username, :user.email, :user.password, :user.role);",
+        PARAM(oatpp::Object<UserDto>, user))
 
       QUERY(changeUserPassword,
             "UPDATE users "

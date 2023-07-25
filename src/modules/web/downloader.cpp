@@ -35,8 +35,9 @@ Description: Downloader
 #include <fstream>
 #include <thread>
 #include <chrono>
-#include "spdlog/spdlog.h"
 #include "cpp_httplib/httplib.h"
+
+#include "loguru/loguru.hpp"
 
 DownloadManager::DownloadManager(const std::string &task_file) : task_file_(task_file)
 {
@@ -45,7 +46,7 @@ DownloadManager::DownloadManager(const std::string &task_file) : task_file_(task
         std::ifstream infile(task_file_);
         if (!infile)
         {
-            spdlog::error("Failed to open task file {}.", task_file_);
+            LOG_F(ERROR, "Failed to open task file %s", task_file_.c_str());
             throw std::runtime_error("Failed to open task file.");
         }
         while (infile >> std::ws && !infile.eof())
@@ -61,7 +62,7 @@ DownloadManager::DownloadManager(const std::string &task_file) : task_file_(task
     }
     catch (const std::exception &e)
     {
-        spdlog::error(e.what());
+        LOG_F(ERROR, "Error: %s", e.what());
         throw;
     }
 }
@@ -78,7 +79,7 @@ void DownloadManager::add_task(const std::string &url, const std::string &filepa
         std::ofstream outfile(task_file_, std::ios_base::app);
         if (!outfile)
         {
-            spdlog::error("Failed to open task file {}.", task_file_);
+            LOG_F(ERROR, "Failed to open task file %s", task_file_.c_str());
             throw std::runtime_error("Failed to open task file.");
         }
         outfile << url << " " << filepath << std::endl;
@@ -86,7 +87,7 @@ void DownloadManager::add_task(const std::string &url, const std::string &filepa
     }
     catch (const std::exception &e)
     {
-        spdlog::error(e.what());
+        LOG_F(ERROR, "Error: %s", e.what());
         throw;
     }
     tasks_.push_back({url, filepath, false, false, 0, priority});
@@ -120,19 +121,19 @@ void DownloadManager::pause_task(size_t index)
 {
     if (index >= tasks_.size())
     {
-        spdlog::error("Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds!");
         return;
     }
 
     tasks_[index].paused = true;
-    spdlog::info("Paused task {} - {}", tasks_[index].url, tasks_[index].filepath);
+    LOG_F(INFO, "Paused task %s - %s", tasks_[index].url.c_str(), tasks_[index].filepath.c_str());
 }
 
 void DownloadManager::resume_task(size_t index)
 {
     if (index >= tasks_.size())
     {
-        spdlog::error("Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds!");
         return;
     }
 
@@ -141,7 +142,7 @@ void DownloadManager::resume_task(size_t index)
     // 如果任务未完成，则重新下载
     if (!tasks_[index].completed)
     {
-        spdlog::info("Resumed task {} - {}", tasks_[index].url, tasks_[index].filepath);
+        LOG_F(INFO, "Resumed task %s - %s", tasks_[index].url.c_str(), tasks_[index].filepath.c_str());
     }
 }
 
@@ -149,7 +150,7 @@ size_t DownloadManager::get_downloaded_bytes(size_t index)
 {
     if (index >= tasks_.size())
     {
-        spdlog::error("Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds!");
         return 0;
     }
 
@@ -213,14 +214,14 @@ void DownloadManager::download_task(DownloadTask &task, size_t download_speed)
     auto res = cli.Get("/");
     if (!res || res->status != 200)
     {
-        spdlog::error("Failed to download {}.", task.url);
+        LOG_F(ERROR, "Failed to download %s", task.url.c_str());
         return;
     }
 
     std::ofstream outfile(task.filepath, std::ofstream::binary | std::ofstream::app);
     if (!outfile)
     {
-        spdlog::error("Failed to open file {}.", task.filepath);
+        LOG_F(ERROR, "Failed to open file %s", task.filepath.c_str());
         return;
     }
 
@@ -276,7 +277,7 @@ void DownloadManager::download_task(DownloadTask &task, size_t download_speed)
 
     if (task.completed)
     {
-        spdlog::info("Downloaded file {}.", task.filepath);
+        LOG_F(INFO, "Downloaded file %s", task.filepath.c_str());
     }
 }
 
@@ -287,7 +288,7 @@ void DownloadManager::save_task_list_to_file()
         std::ofstream outfile(task_file_);
         if (!outfile)
         {
-            spdlog::error("Failed to open task file {}.", task_file_);
+            LOG_F(INFO, "Failed to open task file %s", task_file_.c_str());
             throw std::runtime_error("Failed to open task file.");
         }
         for (const auto &task : tasks_)
@@ -298,7 +299,7 @@ void DownloadManager::save_task_list_to_file()
     }
     catch (const std::exception &e)
     {
-        spdlog::error(e.what());
+        LOG_F(ERROR, "Error: %s", e.what());
         throw;
     }
 }

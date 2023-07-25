@@ -48,6 +48,14 @@ public:
     explicit Device(const std::string &name);
     virtual ~Device();
 
+public:
+
+    virtual bool connect(const std::string &name) = 0;
+
+    virtual bool disconnect() = 0;
+
+    virtual bool reconnect() = 0;
+
     virtual void init();
 
     void setProperty(const std::string &name, const std::string &value);

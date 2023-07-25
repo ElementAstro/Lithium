@@ -39,6 +39,7 @@ Description: Process Manager
 #include <chrono>
 #include <mutex>
 #include <fstream>
+#include <sstream>
 #include <condition_variable>
 
 #ifdef _WIN32

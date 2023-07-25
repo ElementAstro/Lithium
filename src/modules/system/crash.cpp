@@ -56,6 +56,8 @@ Description: Crash Report
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/utsname.h>
+#include <sys/sysinfo.h>
 #endif
 
 #if defined(__APPLE__)
@@ -192,57 +194,38 @@ namespace Lithium::CrashReport
 #if defined(__linux__)
         try
         {
-            OSVERSIONINFO osvi;
-            SYSTEM_INFO si;
-            std::memset(&osvi, 0, sizeof(osvi));
-            std::memset(&si, 0, sizeof(si));
-            osvi.dwOSVersionInfoSize = sizeof(osvi);
-            GetVersionEx(&osvi);
-            GetSystemInfo(&si);
-
-            char distro[256] = {0};
-            FILE *fp = fopen("/etc/os-release", "r");
-            if (fp != nullptr)
-            {
-                while (!feof(fp))
-                {
-                    char line[256] = {0};
-                    if (fgets(line, sizeof(line), fp) == NULL)
-                    {
-                    }
-
-                    if (strncmp(line, "ID=", 3) == 0)
-                    {
-                        strncpy(distro, line + 3, sizeof(distro) - 1);
-                        strtok(distro, "\n");
-                    }
-                }
-                fclose(fp);
-            }
-
-            // 获取 Linux 系统信息
             struct utsname name;
+            std::memset(&name, 0, sizeof(name));
             uname(&name);
 
-            // 组装 Linux 系统信息字符串
+            char distro[256] = {0};
+            std::ifstream osRelease("/etc/os-release");
+            if (osRelease.is_open())
+            {
+                std::string line;
+                while (std::getline(osRelease, line))
+                {
+                    if (line.compare(0, 3, "ID=") == 0)
+                    {
+                        strncpy(distro, line.c_str() + 3, sizeof(distro) - 1);
+                        break;
+                    }
+                }
+                osRelease.close();
+            }
+
             ss << "Operating system version: " << distro << " " << name.release << std::endl;
             ss << "Processor architecture: " << name.machine << std::endl;
-            ss << "Physical memory size: " << sysconf(_SC_PHYS_PAGES) / 1024 / 1024 << "MB" << std::endl;
-
-            std::string cpuInfo;
-            std::string ramInfo;
-
-            long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
-            cpuInfo = "Number of processors: " + std::to_string(numProcessors);
-
-            // 获取RAM信息
 
             struct sysinfo memInfo;
+            std::memset(&memInfo, 0, sizeof(memInfo));
             sysinfo(&memInfo);
-            ramInfo = "Memory usage: " + std::to_string((memInfo.totalram - memInfo.freeram) / 1024 / 1024) + "/" + std::to_string(memInfo.totalram / 1024 / 1024) + " MB (" + std::to_string(static_cast<float>(memInfo.freeram) / memInfo.totalram * 100) + "%)";
+            long totalMemory = memInfo.totalram * memInfo.mem_unit;
+            long freeMemory = memInfo.freeram * memInfo.mem_unit;
+            long usedMemory = totalMemory - freeMemory;
 
-            ss << cpuInfo << std::endl;
-            ss << ramInfo << std::endl;
+            ss << "Physical memory size: " << totalMemory / 1024 / 1024 << "MB" << std::endl;
+            ss << "Memory usage: " << usedMemory / 1024 / 1024 << "/" << totalMemory / 1024 / 1024 << " MB (" << static_cast<float>(usedMemory) / totalMemory * 100 << "%)" << std::endl;
         }
         catch (const std::exception &e)
         {

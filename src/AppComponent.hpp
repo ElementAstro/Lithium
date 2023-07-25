@@ -62,7 +62,7 @@ Description: App Components
 #include "oatpp-zlib/EncoderProvider.hpp"
 #include "oatpp/web/protocol/http/incoming/SimpleBodyDecoder.hpp"
 
-#include "interceptor/AuthInterceptor.hpp"
+// #include "interceptor/AuthInterceptor.hpp"
 #include "oatpp/web/server/interceptor/AllowCorsGlobal.hpp"
 
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"

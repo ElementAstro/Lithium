@@ -6,7 +6,10 @@
 
 ## Features 特性
 
-等待最后的修改
++ 基于最新的c++20和c++17标准
++ 多平台多设备支持
++ 轻量化但功能丰富
++ 采用GPL3开源协议
 
 ## How to build 如何构建
 
@@ -32,7 +35,7 @@ sudo apt-add-repository ppa:mutlaqja/ppa -y
 sudo apt update && sudo apt upgrade -y
 sudo apt install gcc g++ cmake
 sudo apt-get install libindi1 indi-bin libindi-dev
-sudo apt install libcfitsio-dev libz-dev libssl-dev
+sudo apt install libcfitsio-dev zlib1g-dev libssl-dev
 ```
 
 或者直接根据平台运行现成的脚本

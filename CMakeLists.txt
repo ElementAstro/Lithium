@@ -107,6 +107,9 @@ set(device_SRC
     ${lithium_src_dir}/modules/device/device.cpp
     ${lithium_src_dir}/modules/device/device.hpp
 
+    ${lithium_src_dir}/modules/device/camera.cpp
+    ${lithium_src_dir}/modules/device/camera.hpp
+
     ${lithium_src_dir}/modules/device/device_manager.cpp
     ${lithium_src_dir}/modules/device/device_manager.hpp
 )
@@ -172,17 +175,17 @@ set(module_SRC
 )
 
 set(network_SRC
-    ${lithium_src_dir}/network/downloader.cpp
-    ${lithium_src_dir}/network/downloader.hpp
+    ${lithium_src_dir}/modules/web/downloader.cpp
+    ${lithium_src_dir}/modules/web/downloader.hpp
 
-    ${lithium_src_dir}/network/httpclient.cpp
-    ${lithium_src_dir}/network/httpclient.hpp
+    ${lithium_src_dir}/modules/web/httpclient.cpp
+    ${lithium_src_dir}/modules/web/httpclient.hpp
 
-    ${lithium_src_dir}/network/socketclient.cpp
-    ${lithium_src_dir}/network/socketclient.hpp
+    ${lithium_src_dir}/modules/web/utils.cpp
+    ${lithium_src_dir}/modules/web/utils.hpp
 
-    ${lithium_src_dir}/network/time.cpp
-    ${lithium_src_dir}/network/time.hpp
+    # ${lithium_src_dir}/network/time.cpp
+    # ${lithium_src_dir}/network/time.hpp
 )
 
 set(property_SRC
@@ -254,8 +257,8 @@ set(Lithium_SRC
     ${lithium_src_dir}/interceptor/AuthInterceptor.cpp
     ${lithium_src_dir}/interceptor/AuthInterceptor.hpp
 
-    ${lithium_src_dir}/service/AuthService.cpp
-    ${lithium_src_dir}/service/AuthService.hpp
+    # ${lithium_src_dir}/service/AuthService.cpp
+    # ${lithium_src_dir}/service/AuthService.hpp
 
     ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp
@@ -278,9 +281,9 @@ find_package(SQLite3 REQUIRED)
 if(WIN32)
     #add_executable(lithium_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
      #${image_SRC} ${logger_SRC} ${module_SRC} 
-    #${network_SRC}  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
+    #  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_libraries(lithium_server pdh iphlpapi winmm)
 
@@ -305,9 +308,9 @@ if(WIN32)
     )
 elseif(UNIX OR LINUX OR APPLE)
     
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${property_SRC} ${device_SRC} ${thread_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
-    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp)
+    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
 
     target_link_libraries(lithium_server loguru)
 
@@ -319,6 +322,9 @@ elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server ${OPENSSL_LIBRARIES})
     target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
     target_link_libraries(lithium_server pugixml-static)
+    target_link_libraries(lithium_server sqlite3)
+
+    target_link_libraries(lithium_server dl)
 
     set_target_properties(
         lithium_server

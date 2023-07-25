@@ -1,6 +1,8 @@
 
 #include "AuthService.hpp"
 
+#include "database/models/UserModel.hpp"
+
 oatpp::Object<AuthDto> AuthService::signUp(const oatpp::Object<SignUpDto> &dto)
 {
 

@@ -68,7 +68,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            PLOG_F(ERROR, "Failed to create process");
+            LOG_F(ERROR, "Failed to create process");
             return false;
         }
 #endif

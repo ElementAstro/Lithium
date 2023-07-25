@@ -84,34 +84,45 @@ nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 }
 nlohmann::json WebSocketServer::InsertTask(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::ModifyTask(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::ModifyTaskByName(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::DeleteTask(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::DeleteTaskByName(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::QueryTaskByName(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::GetTaskList(const nlohmann::json &m_params)
 {
+	return {};
 }
 nlohmann::json WebSocketServer::SaveTasksToJson(const nlohmann::json &m_params)
 {
+	return {};
 }

@@ -41,6 +41,8 @@ Description: IO
 #include <windows.h>
 const std::string PATH_SEPARATOR = "\\";
 #else
+#include <unistd.h>
+#include <limits.h>
 const std::string PATH_SEPARATOR = "/";
 #endif
 

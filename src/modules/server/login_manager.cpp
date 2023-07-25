@@ -129,7 +129,7 @@ bool LoginManager::forceLogoutInactiveUsers(int timeoutSeconds)
     std::unique_lock<std::shared_mutex> lock(users_mutex);
     if (!loggedInUser.empty())
     {
-        LOG_F(INFO, "Forced logout for inactive user: ", loggedInUser.c_str());
+        LOG_F(INFO, "Forced logout for inactive user: %s", loggedInUser.c_str());
 
         loggedInUser.clear();
         rememberUser = false;

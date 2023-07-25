@@ -169,7 +169,7 @@ bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send DELETE request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), data.dump().c_str(), err.c_str());
+        LOG_F(ERROR, "Failed to send DELETE request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), res->body.c_str(), err.c_str());
         return false;
     }
 
@@ -209,7 +209,7 @@ void HttpClient::SetClientKeyPath(const std::string &path)
 
 bool HttpClient::ScanPort(int start_port, int end_port, std::vector<int> &open_ports)
 {
-    LOG_F(INFO, "Scanning ports from %s to %s on %s:%s", start_port, end_port, host_.c_str(), port_);
+    LOG_F(INFO, "Scanning ports from %d to %d on %s:%d", start_port, end_port, host_.c_str(), port_);
 
     open_ports.clear();
     Client client(host_.c_str(), port_);
@@ -227,7 +227,6 @@ bool HttpClient::ScanPort(int start_port, int end_port, std::vector<int> &open_p
         {
             open_ports.push_back(port);
             LOG_F(INFO, "Port %d is open on %s:%d", port, host_.c_str(), port_);
-            spdlog::info();
         }
     }
 

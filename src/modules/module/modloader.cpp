@@ -221,7 +221,7 @@ namespace Lithium
                     std::string license = config.value("license", "");
 
                     LOG_F(INFO, "Loaded Module : %s version %s written by %s%s",
-                          config.value("name", "Unknown").c_str(), version.c_str(), author.c_str(), license.empty() ? "" : " under " + license);
+                          config.value("name", "Unknown").c_str(), version.c_str(), author.c_str(), license.empty() ? "" : (" under " + license).c_str());
                 }
                 else
                 {

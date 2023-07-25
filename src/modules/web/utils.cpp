@@ -32,6 +32,10 @@ Description: Network Utils
 #include "utils.hpp"
 
 #include <cstdlib>
+#include <sstream>
+#include <string>
+#include <cstring>
+#include <iterator>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -40,6 +44,8 @@ Description: Network Utils
 #include <iphlpapi.h>
 #elif __linux__
 #include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #elif __APPLE__
 #include <mach/mach_init.h>
 #include <mach/task_info.h>
@@ -48,6 +54,10 @@ Description: Network Utils
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#endif
+
+#if __cplusplus >= 202002L
+#include <format>
 #endif
 
 bool IsConnectedToInternet()
@@ -189,9 +199,17 @@ bool CheckAndKillProgramOnPort(int port)
             // 获取占用端口的进程 ID
             std::string cmd;
 #ifdef _WIN32
-            cmd = fmt::format("netstat -ano | find \"LISTENING\" | find \"{0}\"", port);
+#if __cplusplus >= 202002L
+            cmd = std::format("netstat -ano | find \"LISTENING\" | find \"{0}\"", port);
 #else
-            cmd = fmt::format("lsof -i :{} -t", port);
+            cmd = "netstat -ano | find \"LISTENING\" | find \"" << std::to_string(port) << "\""；
+#endif
+#else
+#if __cplusplus >= 202002L
+            cmd = std::format("lsof -i :{} -t", port);
+#else
+            cmd = "lsof -i :" + std::to_string(port) + " -t";
+#endif
 #endif
 
             FILE *fp = popen(cmd.c_str(), "r");
@@ -218,10 +236,21 @@ bool CheckAndKillProgramOnPort(int port)
             if (!pid_str.empty())
             {
                 // std::cout << "Killing the process on port(" << port << "): PID=" << pid_str << std::endl;
+#if __cplusplus >= 202002L
 #ifdef _WIN32
-                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
+                ret = std::system(std::format("taskkill /F /PID {}", pid_str).c_str());
 #else
-                int ret = std::system(fmt::format("kill {}", pid_str).c_str());
+                int ret = std::system(std::format("kill {}", pid_str).c_str());
+#endif
+#else
+                std::ostringstream oss;
+
+#ifdef _WIN32
+                oss << "taskkill /F /PID " << pid;
+#else
+                oss << "kill " << pid_str;
+#endif
+                int ret = std::system(oss.str().c_str());
 #endif
                 if (ret != 0)
                 {

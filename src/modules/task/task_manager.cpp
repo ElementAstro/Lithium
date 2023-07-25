@@ -48,7 +48,7 @@ namespace Lithium::Task
         }
         m_TaskList.push_back(task);
         m_TaskMap[task->get_name()] = task;
-        LOG_F(INFO, "Task added: %d", task->get_name());
+        LOG_F(INFO, "Task added: %s", task->get_name().c_str());
         return true;
     }
 
@@ -68,7 +68,7 @@ namespace Lithium::Task
 
         auto it = m_TaskList.begin() + position;
         m_TaskList.insert(it, task);
-        LOG_F(INFO, "Task inserted at position %d: %d", position, task->get_name());
+        LOG_F(INFO, "Task inserted at position %d: %s", position, task->get_name().c_str());
         return true;
     }
 
@@ -83,7 +83,7 @@ namespace Lithium::Task
                 {
                     if (task->Execute())
                     {
-                        LOG_F(INFO, "Task executed: %d", task->get_name());
+                        LOG_F(INFO, "Task executed: %s", task->get_name().c_str());
                         it = m_TaskList.erase(it);
                     }
                     else
@@ -93,12 +93,12 @@ namespace Lithium::Task
                 }
                 catch (const std::exception &ex)
                 {
-                    LOG_F(ERROR, "Error: Failed to execute task %d - %s", task->get_name(), ex.what());
+                    LOG_F(ERROR, "Error: Failed to execute task %s - %s", task->get_name().c_str(), ex.what());
                     ++it;
                 }
                 catch (...)
                 {
-                    LOG_F(ERROR, "Error: Failed to execute task %d", task->get_name());
+                    LOG_F(ERROR, "Error: Failed to execute task %s", task->get_name().c_str());
                     ++it;
                 }
             }
@@ -124,21 +124,21 @@ namespace Lithium::Task
             {
                 if (it->second->Execute())
                 {
-                    LOG_F(INFO, "Task executed: %d", it->second->get_name());
+                    LOG_F(INFO, "Task executed: %s", it->second->get_name().c_str());
                 }
                 else
                 {
-                    LOG_F(ERROR, "Error: Failed to execute task %d", it->second->get_name());
+                    LOG_F(ERROR, "Error: Failed to execute task %s", it->second->get_name().c_str());
                 }
                 return true;
             }
             catch (const std::exception &ex)
             {
-                LOG_F(ERROR, "Error: Failed to execute task %d - %s", it->second->get_name(), ex.what());
+                LOG_F(ERROR, "Error: Failed to execute task %s - %s", it->second->get_name().c_str(), ex.what());
             }
             catch (...)
             {
-                LOG_F(ERROR, "Error: Failed to execute task %d", it->second->get_name());
+                LOG_F(ERROR, "Error: Failed to execute task %s", it->second->get_name().c_str());
             }
         }
         else
@@ -163,7 +163,7 @@ namespace Lithium::Task
         }
 
         m_TaskList[index] = task;
-        LOG_F(INFO, "Task modified at index %d: %d", index, task->get_name());
+        LOG_F(INFO, "Task modified at index %d: %s", index, task->get_name().c_str());
         return true;
     }
 
@@ -173,7 +173,7 @@ namespace Lithium::Task
         if (it != m_TaskMap.end() && task)
         {
             it->second = task;
-            LOG_F(INFO, "Task modified : %d", task->get_name());
+            LOG_F(INFO, "Task modified : %s", task->get_name().c_str());
             return true;
         }
         return false;
@@ -190,7 +190,7 @@ namespace Lithium::Task
         auto it = m_TaskList.begin() + index;
         auto task = *it;
         m_TaskList.erase(it);
-        LOG_F(INFO, "Task deleted at index %d: %d", index, task->get_name());
+        LOG_F(INFO, "Task deleted at index %d: %s", index, task->get_name().c_str());
         return true;
     }
 
@@ -202,7 +202,7 @@ namespace Lithium::Task
             auto task = it->second;
             m_TaskList.erase(std::remove(m_TaskList.begin(), m_TaskList.end(), task), m_TaskList.end());
             m_TaskMap.erase(it);
-            LOG_F(INFO, "Task deleted: %d", task->get_name());
+            LOG_F(INFO, "Task deleted: %s", task->get_name().c_str());
             return true;
         }
         LOG_F(ERROR, "Error: Task not found!");
@@ -214,7 +214,7 @@ namespace Lithium::Task
         auto it = findTaskByName(name);
         if (it != m_TaskMap.end())
         {
-            LOG_F(INFO, "Task found: %d", it->second->get_name());
+            LOG_F(INFO, "Task found: %s", it->second->get_name().c_str());
             return true;
         }
         else

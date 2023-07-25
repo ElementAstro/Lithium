@@ -31,16 +31,15 @@ Description: INDI Camera
 
 #pragma once
 
-#include "api/indiclient.hpp"
-#include "device/basic_device.hpp"
-#include "task/camera_task.hpp"
+#include "modules/client/indiclient.hpp"
+#include "modules/device/device.hpp"
+#include "modules/task/task.hpp"
 
 #include <libindi/basedevice.h>
 #include <libindi/indiproperty.h>
 
 #include <string>
 
-#include <spdlog/spdlog.h>
 #include "nlohmann/json.hpp"
 
 namespace Lithium

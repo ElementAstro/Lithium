@@ -33,6 +33,9 @@ Description: System
 
 #include <iostream>
 #include <cstdlib>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -41,7 +44,15 @@ Description: System
 #include <Psapi.h>
 #include <iphlpapi.h>
 #elif __linux__
+#include <dirent.h>
+#include <limits.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/sysinfo.h>
+#include <sys/statfs.h>
+#include <iterator>
+#include <csignal>
+#include <signal.h>
 #elif __APPLE__
 #include <mach/mach_init.h>
 #include <mach/task_info.h>
@@ -326,9 +337,6 @@ namespace Lithium::System
             drive_letter++;
         }
 #elif __linux__ || __APPLE__
-        struct statfs stats;
-        struct statvfs vfs;
-
         std::ifstream file("/proc/mounts");
         std::string line;
         while (std::getline(file, line))
@@ -337,16 +345,18 @@ namespace Lithium::System
             std::string device, path;
             iss >> device >> path;
 
-            if (statfs(path.c_str(), &stats) == 0 && statvfs(path.c_str(), &vfs) == 0)
+            struct statfs stats;
+            if (statfs(path.c_str(), &stats) == 0)
             {
-                unsigned long long total_space = stats.f_blocks * stats.f_bsize;
-                unsigned long long free_space = stats.f_bfree * stats.f_bsize;
+                unsigned long long totalSpace = static_cast<unsigned long long>(stats.f_blocks) * stats.f_bsize;
+                unsigned long long freeSpace = static_cast<unsigned long long>(stats.f_bfree) * stats.f_bsize;
 
-                unsigned long long used_space = total_space - free_space;
-                float usage = static_cast<float>(used_space) / total_space * 100.0;
-                disk_usage.push_back(std::make_pair(path, usage));
+                unsigned long long usedSpace = totalSpace - freeSpace;
+                float usage = static_cast<float>(usedSpace) / totalSpace * 100.0;
+                disk_usage.push_back({path, usage});
             }
         }
+
 #endif
 
         return disk_usage;

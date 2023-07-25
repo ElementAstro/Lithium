@@ -35,8 +35,6 @@ Description: INDI Camera
 
 #include "indicamera.hpp"
 
-#include <spdlog/spdlog.h>
-
 namespace Lithium
 {
 
@@ -52,7 +50,7 @@ namespace Lithium
     {
         std::string name = svp->name;
 
-        spdlog::debug("{} Received Switch: {}", _name, name);
+        // spdlog::debug("{} Received Switch: {}", _name, name);
 
         if (name == "CONNECTION")
         {
@@ -60,7 +58,7 @@ namespace Lithium
             {
                 is_connected = true;
                 camera_info["connected"] = true;
-                spdlog::info("{} is connected", _name);
+                // spdlog::info("{} is connected", _name);
             }
             else
             {
@@ -68,7 +66,7 @@ namespace Lithium
                 {
                     ClearStatus();
                     camera_info["connected"] = false;
-                    spdlog::info("{} is disconnected", _name);
+                    // spdlog::info("{} is disconnected", _name);
                 }
             }
         }
@@ -78,13 +76,13 @@ namespace Lithium
             {
                 is_debug = true;
                 camera_info["debug"] = true;
-                spdlog::info("DEBUG mode of {} is enabled", _name);
+                // spdlog::info("DEBUG mode of {} is enabled", _name);
             }
             else
             {
                 is_debug = false;
                 camera_info["debug"] = false;
-                spdlog::info("DEBUG mode of {} is disabled", _name);
+                // spdlog::info("DEBUG mode of {} is disabled", _name);
             }
         }
         else if (name == "CCD_FRAME_TYPE")
@@ -101,7 +99,7 @@ namespace Lithium
                 type = "Bias";
 
             camera_info["frame"]["type"] = type;
-            spdlog::debug("Current frame type of {} is {}", _name, camera_info["frame"]["type"].dump());
+            // spdlog::debug("Current frame type of {} is {}", _name, camera_info["frame"]["type"].dump());
         }
         else if (name == "CCD_TRANSFER_FORMAT")
         {
@@ -115,14 +113,14 @@ namespace Lithium
                 format = "Xisf";
 
             camera_info["frame"]["format"] = format;
-            spdlog::debug("Current frame format of {} is {}", _name, camera_info["frame"]["format"].dump());
+            // spdlog::debug("Current frame format of {} is {}", _name, camera_info["frame"]["format"].dump());
         }
         else if (name == "CCD_ABORT_EXPOSURE")
         {
             if (auto abortswitch = IUFindSwitch(svp, "ABORT_EXPOSURE"); abortswitch->s == ISS_ON)
             {
                 camera_info["exposure"]["abort"] = true;
-                spdlog::debug("{} is stopped", _name);
+                // spdlog::debug("{} is stopped", _name);
                 is_exposuring = false;
             }
         }
@@ -138,7 +136,7 @@ namespace Lithium
                 mode = "Both";
 
             camera_info["network"]["mode"] = mode;
-            spdlog::debug("Current upload mode of {} is {}", _name, camera_info["network"]["mode"].dump());
+            // spdlog::debug("Current upload mode of {} is {}", _name, camera_info["network"]["mode"].dump());
         }
         else if (name == "CCD_FAST_TOGGLE")
         {
@@ -150,7 +148,7 @@ namespace Lithium
                 mode = false;
 
             camera_info["frame"]["fast_read"] = mode;
-            spdlog::debug("Current readout mode of {} is {}", _name, camera_info["frame"]["fast_read"].dump());
+            // spdlog::debug("Current readout mode of {} is {}", _name, camera_info["frame"]["fast_read"].dump());
         }
         else if (name == "CCD_VIDEO_STREAM")
         {
@@ -158,13 +156,13 @@ namespace Lithium
             {
                 camera_info["video"]["is_video"] = true;
                 is_video = true;
-                spdlog::debug("{} start video capture", _name);
+                // spdlog::debug("{} start video capture", _name);
             }
             else if (auto offswitch = IUFindSwitch(svp, "STREAM_OFF"); offswitch->s == ISS_ON)
             {
                 camera_info["video"]["is_video"] = false;
                 is_video = false;
-                spdlog::debug("{} stop video capture", _name);
+                // spdlog::debug("{} stop video capture", _name);
             }
         }
         else if (name == "FLIP")
@@ -174,7 +172,7 @@ namespace Lithium
 
     void INDICamera::newMessage(INDI::BaseDevice *dp, int messageID)
     {
-        spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
+        // spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
     }
 
     inline static const char *StateStr(IPState st)
@@ -201,7 +199,7 @@ namespace Lithium
         {
             const double exposure = nvp->np->value;
             camera_info["exposure"]["current"] = exposure;
-            spdlog::debug("Current CCD_EXPOSURE for {} is {}", _name, exposure);
+            // spdlog::debug("Current CCD_EXPOSURE for {} is {}", _name, exposure);
         }
         else if (name == "CCD_INFO")
         {
@@ -218,7 +216,7 @@ namespace Lithium
                 {"pixel_depth", pixel_depth},
                 {"max_frame_x", max_frame_x},
                 {"max_frame_y", max_frame_y}};
-            spdlog::debug("{} pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}", _name, pixel, pixel_x, pixel_y, max_frame_x, max_frame_y, pixel_depth);
+            // spdlog::debug("{} pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}", _name, pixel, pixel_x, pixel_y, max_frame_x, max_frame_y, pixel_depth);
         }
         else if (name == "BINNING")
         {
@@ -227,7 +225,7 @@ namespace Lithium
             camera_info["exposure"] = {
                 {"binning_x", indi_binning_x->value},
                 {"binning_y", indi_binning_y->value}};
-            spdlog::debug("Current binning_x and y of {} are {} {}", _name, indi_binning_x->value, indi_binning_y->value);
+            // spdlog::debug("Current binning_x and y of {} are {} {}", _name, indi_binning_x->value, indi_binning_y->value);
         }
         else if (name == "FRAME")
         {
@@ -241,62 +239,62 @@ namespace Lithium
                 {"y", indi_frame_y->value},
                 {"width", indi_frame_width->value},
                 {"height", indi_frame_height->value}};
-            spdlog::debug("Current frame of {} are {} {} {} {}", _name, indi_frame_width->value, indi_frame_y->value, indi_frame_width->value, indi_frame_height->value);
+            // spdlog::debug("Current frame of {} are {} {} {} {}", _name, indi_frame_width->value, indi_frame_y->value, indi_frame_width->value, indi_frame_height->value);
         }
         else if (name == "CCD_TEMPERATURE")
         {
             current_temperature = IUFindNumber(nvp, "CCD_TEMPERATURE_VALUE")->value;
             camera_info["temperature"]["current"] = current_temperature;
-            spdlog::debug("Current temperature of {} is {}", _name, current_temperature);
+            // spdlog::debug("Current temperature of {} is {}", _name, current_temperature);
         }
         else if (name == "CCD_GAIN")
         {
             gain = IUFindNumber(nvp, "GAIN")->value;
             camera_info["exposure"]["gain"] = gain;
-            spdlog::debug("Current camera gain of {} is {}", _name, gain);
+            // spdlog::debug("Current camera gain of {} is {}", _name, gain);
         }
         else if (name == "CCD_OFFSET")
         {
             offset = IUFindNumber(nvp, "OFFSET")->value;
             camera_info["exposure"]["offset"] = offset;
-            spdlog::debug("Current camera offset of {} is {}", _name, offset);
+            // spdlog::debug("Current camera offset of {} is {}", _name, offset);
         }
         else if (name == "POLLING_PERIOD")
         {
             camera_info["network"]["period"] = IUFindNumber(nvp, "PERIOD_MS")->value;
-            spdlog::debug("Current period of {} is {}", _name, camera_info["network"]["period"].dump());
+            // spdlog::debug("Current period of {} is {}", _name, camera_info["network"]["period"].dump());
         }
         else if (name == "LIMITS")
         {
             camera_info["limits"]["maxbuffer"] = IUFindNumber(nvp, "LIMITS_BUFFER_MAX")->value;
-            spdlog::debug("Current max buffer of {} is {}", _name, camera_info["limits"]["maxbuffer"].dump());
+            // spdlog::debug("Current max buffer of {} is {}", _name, camera_info["limits"]["maxbuffer"].dump());
             camera_info["limits"]["maxfps"] = IUFindNumber(nvp, "LIMITS_PREVIEW_FPS")->value;
-            spdlog::debug("Current max fps of {} is {}", _name, camera_info["limits"]["maxfps"].dump());
+            // spdlog::debug("Current max fps of {} is {}", _name, camera_info["limits"]["maxfps"].dump());
         }
         else if (name == "STREAM_DELAY")
         {
             camera_info["video"]["delay"] = IUFindNumber(nvp, "STREAM_DELAY_TIME")->value;
-            spdlog::debug("Current stream delay of {} is {}", _name, camera_info["video"]["delay"].dump());
+            // spdlog::debug("Current stream delay of {} is {}", _name, camera_info["video"]["delay"].dump());
         }
         else if (name == "STREAMING_EXPOSURE")
         {
             camera_info["video"]["exposure"] = IUFindNumber(nvp, "STREAMING_EXPOSURE_VALUE")->value;
-            spdlog::debug("Current streaming exposure of {} is {}", _name, camera_info["video"]["exposure"].dump());
+            // spdlog::debug("Current streaming exposure of {} is {}", _name, camera_info["video"]["exposure"].dump());
             camera_info["video"]["division"] = IUFindNumber(nvp, "STREAMING_DIVISOR_VALUE")->value;
-            spdlog::debug("Current streaming division of {} is {}", _name, camera_info["video"]["division"].dump());
+            // spdlog::debug("Current streaming division of {} is {}", _name, camera_info["video"]["division"].dump());
         }
         else if (name == "FPS")
         {
             camera_info["video"]["fps"] = IUFindNumber(nvp, "EST_FPS")->value;
-            spdlog::debug("Current fps of {} is {}", _name, camera_info["video"]["fps"].dump());
+            // spdlog::debug("Current fps of {} is {}", _name, camera_info["video"]["fps"].dump());
             camera_info["video"]["avgfps"] = IUFindNumber(nvp, "AVG_FPS")->value;
-            spdlog::debug("Current average fps of {} is {}", _name, camera_info["video"]["avgfps"].dump());
+            // spdlog::debug("Current average fps of {} is {}", _name, camera_info["video"]["avgfps"].dump());
         }
     }
 
     void INDICamera::newText(ITextVectorProperty *tvp)
     {
-        spdlog::debug("{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
+        // spdlog::debug("{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
     }
 
     void INDICamera::newBLOB(IBLOB *bp)
@@ -304,7 +302,7 @@ namespace Lithium
         // we go here every time a new blob is available
         // this is normally the image from the camera
 
-        spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+        // spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
 
         if (expose_prop)
         {
@@ -323,7 +321,7 @@ namespace Lithium
         std::string PropName(property->getName());
         INDI_PROPERTY_TYPE Proptype = property->getType();
 
-        // spdlog::debug("{} Property: {}", _name, property->getName());
+        // // spdlog::debug("{} Property: {}", _name, property->getName());
 
         if (Proptype == INDI_BLOB)
         {
@@ -366,7 +364,7 @@ namespace Lithium
             IText *cfa_type = IUFindText(cfa_prop, "CFA_TYPE");
             if (cfa_type && cfa_type->text && *cfa_type->text)
             {
-                spdlog::debug("{} CFA_TYPE is {}", _name, cfa_type->text);
+                // spdlog::debug("{} CFA_TYPE is {}", _name, cfa_type->text);
                 is_color = true;
             }
         }
@@ -394,7 +392,7 @@ namespace Lithium
         {
             camera_port = property->getText();
             camera_info["network"]["port"] = camera_port->tp->text;
-            spdlog::debug("Current device port of {} is {}", _name, camera_port->tp->text);
+            // spdlog::debug("Current device port of {} is {}", _name, camera_port->tp->text);
         }
         else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
         {
@@ -406,7 +404,7 @@ namespace Lithium
                 connection_prop->sp->s = ISS_ON;
                 sendNewSwitch(connection_prop);
             }
-            spdlog::debug("{} Connected {}", _name, is_connected);
+            // spdlog::debug("{} Connected {}", _name, is_connected);
         }
         else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
         {
@@ -418,7 +416,7 @@ namespace Lithium
             camera_info["driver"]["exec"] = indi_camera_exec;
             camera_info["driver"]["version"] = indi_camera_version;
             camera_info["driver"]["interfaces"] = indi_camera_interface;
-            spdlog::debug("Camera Name : {} connected exec {}", _name, device_name, indi_camera_exec);
+            // spdlog::debug("Camera Name : {} connected exec {}", _name, device_name, indi_camera_exec);
         }
         else if (PropName == indi_camera_cmd + "INFO" && Proptype == INDI_NUMBER)
         {
@@ -515,24 +513,24 @@ namespace Lithium
 
     void INDICamera::IndiServerConnected()
     {
-        spdlog::debug("{} connection succeeded", _name);
+        // spdlog::debug("{} connection succeeded", _name);
         is_connected = true;
     }
 
     void INDICamera::IndiServerDisconnected(int exit_code)
     {
-        spdlog::debug("{}: serverDisconnected", _name);
+        // spdlog::debug("{}: serverDisconnected", _name);
         // after disconnection we reset the connection status and the properties pointers
         ClearStatus();
         // in case the connection lost we must reset the client socket
         if (exit_code == -1)
-            spdlog::debug("{} : INDI server disconnected", _name);
+            // spdlog::debug("{} : INDI server disconnected", _name);
     }
 
     void INDICamera::removeDevice(INDI::BaseDevice *dp)
     {
         ClearStatus();
-        spdlog::info("{} disconnected", _name);
+        // spdlog::info("{} disconnected", _name);
     }
 
     void INDICamera::ClearStatus()
@@ -578,14 +576,14 @@ namespace Lithium
 
     bool INDICamera::connect(std::string name)
     {
-        spdlog::debug("Trying to connect to {}", name);
+        // spdlog::debug("Trying to connect to {}", name);
         setServer(hostname.c_str(), port);
         // Receive messages only for our camera.
         watchDevice(name.c_str());
         // Connect to server.
         if (connectServer())
         {
-            spdlog::debug("{}: connectServer done ready = {}", _name, is_ready);
+            // spdlog::debug("{}: connectServer done ready = {}", _name, is_ready);
             connectDevice(name.c_str());
             return !is_ready;
         }
@@ -611,7 +609,7 @@ namespace Lithium
     {
         if (paramName.empty())
         {
-            spdlog::error("INDICamera::getParameter : Parameter name is required");
+            // spdlog::error("INDICamera::getParameter : Parameter name is required");
             return false;
         }
         return false;
@@ -621,7 +619,7 @@ namespace Lithium
     {
         if (paramName.empty() || paramValue.empty())
         {
-            spdlog::error("INDICamera::setParameter : Parameter name and value are required");
+            // spdlog::error("INDICamera::setParameter : Parameter name and value are required");
             return false;
             ;
         }
@@ -704,12 +702,12 @@ namespace Lithium
              {
                  if (tparams["name"].empty())
                  {
-                     spdlog::error("No camera name specified");
+                     // spdlog::error("No camera name specified");
                      return;
                  }
                  if (!this->connect(tparams["name"]))
                  {
-                     spdlog::error("Failed to connect to camera {}", _name);
+                     // spdlog::error("Failed to connect to camera {}", _name);
                      return;
                  }
              }},
@@ -717,24 +715,24 @@ namespace Lithium
              {
                  if (!this->is_connected && !this->camera_info["connected"].empty())
                  {
-                     spdlog::warn("Camera is not connected, please do not execute disconnect command");
+                     // spdlog::warn("Camera is not connected, please do not execute disconnect command");
                      return;
                  }
                  if (!this->disconnect())
                  {
-                     spdlog::error("Failed to disconnect from camera {}", _name);
+                     // spdlog::error("Failed to disconnect from camera {}", _name);
                  }
              }},
             {"Reconnect", [this](const nlohmann::json &tparams)
              {
                  if (!this->is_connected && !this->camera_info["connected"].empty())
                  {
-                     spdlog::warn("Camera is not connected, please do not execute reconnect command");
+                     // spdlog::warn("Camera is not connected, please do not execute reconnect command");
                      return;
                  }
                  if (!this->reconnect())
                  {
-                     spdlog::error("Failed to reconnect from camera {}", _name);
+                     // spdlog::error("Failed to reconnect from camera {}", _name);
                  }
              }},
 
@@ -742,31 +740,31 @@ namespace Lithium
              {
                  if (!this->scanForAvailableDevices())
                  {
-                     spdlog::error("Failed to scan for available devices from camera {}", _name);
+                     // spdlog::error("Failed to scan for available devices from camera {}", _name);
                  }
              }},
             {"GetParameter", [this](const nlohmann::json &tparams)
              {
                  if (!this->getParameter(tparams["name"].get<std::string>()))
                  {
-                     spdlog::error("Failed to get parameter from camera {}", _name);
+                     // spdlog::error("Failed to get parameter from camera {}", _name);
                  }
              }},
             {"SetParameter", [this](const nlohmann::json &tparams)
              {
                  if (!this->setParameter(tparams["name"].get<std::string>(), tparams["value"].get<std::string>()))
                  {
-                     spdlog::error("Failed to set parameter to camera {}", _name);
+                     // spdlog::error("Failed to set parameter to camera {}", _name);
                  }
              }},
             {"SingleShot", [this](const nlohmann::json &tparams)
              {
-                 spdlog::debug("{} SingleShot task is called", this->_name);
+                 // spdlog::debug("{} SingleShot task is called", this->_name);
              }},
 
             {"AbortShot", [this](const nlohmann::json &tparams)
              {
-                 spdlog::debug("{} AbortShot task is called", this->_name);
+                 // spdlog::debug("{} AbortShot task is called", this->_name);
              }},
             {"StartLiveView", [this](const nlohmann::json &tparams)
              {
@@ -780,12 +778,12 @@ namespace Lithium
              {
                  if (!this->can_cooling)
                  {
-                     spdlog::error("Can't cool while cooling is unsupported");
+                     // spdlog::error("Can't cool while cooling is unsupported");
                      return;
                  }
                  if (!this->setCoolingOn(tparams["enable"].get<bool>()))
                  {
-                     spdlog::error("Failed to change the mode of cooling");
+                     // spdlog::error("Failed to change the mode of cooling");
                  }
              }},
             {"GetTemperature", [this](const nlohmann::json &tparams)
@@ -796,35 +794,35 @@ namespace Lithium
              {
                  if (!this->can_cooling)
                  {
-                     spdlog::error("Can't set temperature while cooling is unsupported");
+                     // spdlog::error("Can't set temperature while cooling is unsupported");
                      return;
                  }
              }},
             {"SetGain", [this](const nlohmann::json &tparams)
              {
-                 spdlog::debug("{} SetGain task is called", this->_name);
+                 // spdlog::debug("{} SetGain task is called", this->_name);
              }},
             {"SetOffset", [this](const nlohmann::json &tparams)
              {
-                 spdlog::debug("{} SetOffset task is called", this->_name);
+                 // spdlog::debug("{} SetOffset task is called", this->_name);
              }},
             {"SetBinning", [this](const nlohmann::json &tparams)
              {
                  if (!this->can_binning)
                  {
-                     spdlog::error("Can't bin while binning is unsupported");
+                     // spdlog::error("Can't bin while binning is unsupported");
                      return;
                  }
                  if (!this->setBinning(tparams["binning"].get<int>()))
                  {
-                     spdlog::error("Failed to change the mode of binning");
+                     // spdlog::error("Failed to change the mode of binning");
                  }
              }},
             {"SetROIFrame", [this](const nlohmann::json &tparams)
              {
                  if (!this->setROIFrame(tparams["start_x"].get<int>(), tparams["start_y"].get<int>(), tparams["frame_x"].get<int>(), tparams["frame_y"].get<int>()))
                  {
-                     spdlog::error("Failed to change the mode of ROI");
+                     // spdlog::error("Failed to change the mode of ROI");
                  }
              }}};
 
@@ -833,7 +831,7 @@ namespace Lithium
         {
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(it->second, {params}));
         }
-        spdlog::error("Unknown type of the {} task : {}", _name, task_name);
+        // spdlog::error("Unknown type of the {} task : {}", _name, task_name);
         return nullptr;
     }
 

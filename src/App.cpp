@@ -73,6 +73,8 @@ void run()
 
     oatpp::web::server::api::Endpoints docEndpoints;
 
+    /* Add document */
+
     auto static_controller = StaticController::createShared();
     docEndpoints.append(static_controller->getEndpoints());
     router->addController(static_controller);

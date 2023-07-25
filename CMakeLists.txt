@@ -288,8 +288,6 @@ if(WIN32)
 
     target_link_libraries(lithium_server loguru)
 
-    target_link_libraries(lithium_server sockpp)
-
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server dlfcn-win32::dl)
 

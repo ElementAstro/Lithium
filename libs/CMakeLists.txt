@@ -106,27 +106,3 @@ add_library(oatpp-zlib
 )
 
 add_library(loguru loguru/loguru.cpp)
-
-add_library(sockpp
-	sockpp/acceptor.cpp
-	sockpp/connector.cpp
-	sockpp/datagram_socket.cpp
-	sockpp/exception.cpp
-	sockpp/inet_address.cpp
-	sockpp/inet6_address.cpp
-    sockpp/result.cpp
-	sockpp/socket.cpp
-	sockpp/stream_socket.cpp
-)
-
-if(UNIX)
-	target_sources(sockpp PUBLIC
-        sockpp/unix/unix_address.cpp
-	)
-	if(SOCKPP_BUILD_CAN)
-		target_sources(sockpp PUBLIC
-            sockpp/linux/can_address.cpp
-            sockpp/linux/can_socket.cpp
-		)
-	endif()
-endif()

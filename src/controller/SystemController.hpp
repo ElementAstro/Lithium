@@ -2,6 +2,7 @@
 #define Lithium_SystemCONTROLLER_HPP
 
 #include "modules/system/system.hpp"
+#include "LithiumApp.hpp"
 #include "config.h"
 
 #include "oatpp/web/server/api/ApiController.hpp"
@@ -255,6 +256,76 @@ public:
             res["value"][process.first] = process.second;
         }
         auto response = createResponse(Status::CODE_200, res.dump());
+        response->putHeader(Header::CONTENT_TYPE, "text/json");
+        return response;
+    }
+#endif
+
+    ENDPOINT_INFO(getUIShutdown)
+    {
+        info->summary = "Shutdown system";
+    }
+#if ENABLE_ASYNC
+    ENDPOINT_ASYNC("GET", "/api/system/shutdown", getUIShutdown)
+    {
+        ENDPOINT_ASYNC_INIT(getUIShutdown)
+        Action act() override
+        {
+#ifdef _WIN32
+            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Stop-Computer","shutdown");
+#else
+            Lithium::MyApp.createProcess("sleep 1 && shutdown -h now","shutdown");
+#endif
+            auto response = controller->createResponse(Status::CODE_200);
+            response->putHeader(Header::CONTENT_TYPE, "text/json");
+            return _return(response);
+        }
+    };
+#else
+    ENDPOINT("GET", "/api/system/shutdown", getUIShutdown)
+    {
+#ifdef _WIN32
+            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Stop-Computer","shutdown");
+#else
+            Lithium::MyApp.createProcess("sleep 1 && shutdown -h now","shutdown");
+#endif
+
+        auto response = createResponse(Status::CODE_200);
+        response->putHeader(Header::CONTENT_TYPE, "text/json");
+        return response;
+    }
+#endif
+
+    ENDPOINT_INFO(getUIReboot)
+    {
+        info->summary = "Reboot system";
+    }
+#if ENABLE_ASYNC
+    ENDPOINT_ASYNC("GET", "/api/system/reboot", getUIReboot)
+    {
+        ENDPOINT_ASYNC_INIT(getUIReboot)
+        Action act() override
+        {
+#ifdef _WIN32
+            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Restart-Computer","shutdown");
+#else
+            Lithium::MyApp.createProcess("sleep 1 && reboot","shutdown");
+#endif
+            auto response = controller->createResponse(Status::CODE_200);
+            response->putHeader(Header::CONTENT_TYPE, "text/json");
+            return _return(response);
+        }
+    };
+#else
+    ENDPOINT("GET", "/api/system/reboot", getUIReboot)
+    {
+#ifdef _WIN32
+            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Restart-Computer","shutdown");
+#else
+            Lithium::MyApp.createProcess("sleep 1 && reboot","shutdown");
+#endif
+
+        auto response = createResponse(Status::CODE_200);
         response->putHeader(Header::CONTENT_TYPE, "text/json");
         return response;
     }

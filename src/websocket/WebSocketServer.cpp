@@ -334,18 +334,17 @@ std::atomic<v_int32> WSInstanceListener::SOCKETS(0);
 #if ENABLE_ASYNC
 void WSInstanceListener::onAfterCreate_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params)
 {
-
 	SOCKETS++;
 	OATPP_LOGD(TAG, "New Incoming Connection. Connection count=%d", SOCKETS.load());
-
-	/* In this particular case we create one WebSocketServer per each connection */
-	/* Which may be redundant in many cases */
-	socket->setListener(std::make_shared<WebSocketServer>());
+	if (!m_socket)
+	{
+		m_socket = std::make_shared<WebSocketServer>();
+	}
+	socket->setListener(m_socket);
 }
 
 void WSInstanceListener::onBeforeDestroy_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket)
 {
-
 	SOCKETS--;
 	OATPP_LOGD(TAG, "Connection closed. Connection count=%d", SOCKETS.load());
 }

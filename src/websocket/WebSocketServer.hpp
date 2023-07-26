@@ -84,7 +84,7 @@ private:
 	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
 
 	template <typename ClassType>
-	void LiRegisterFunc(const std::string &name, nlohmann::json (ClassType::*handler)(const nlohmann::json &))
+	void LiRegisterFunc(const std::string &name, const nlohmann::json (ClassType::*handler)(const nlohmann::json &))
 	{
 		m_CommandDispatcher->RegisterHandler(name, handler, this);
 	}
@@ -105,35 +105,35 @@ public:
 	void SendMessageNonBlocking(const oatpp::String &message);
 
 public:
-	nlohmann::json GetDeviceList(const nlohmann::json &m_params);
-	nlohmann::json AddDevice(const nlohmann::json &m_params);
-	nlohmann::json AddDeviceLibrary(const nlohmann::json &m_params);
-	nlohmann::json RemoveDevice(const nlohmann::json &m_params);
-	nlohmann::json RemoveDevicesByName(const nlohmann::json &m_params);
-	nlohmann::json RemoveDeviceLibrary(const nlohmann::json &m_params);
-	nlohmann::json RunDeviceTask(const nlohmann::json &m_params);
-	nlohmann::json GetDeviceInfo(const nlohmann::json &m_params);
+	const nlohmann::json GetDeviceList(const nlohmann::json &m_params);
+	const nlohmann::json AddDevice(const nlohmann::json &m_params);
+	const nlohmann::json AddDeviceLibrary(const nlohmann::json &m_params);
+	const nlohmann::json RemoveDevice(const nlohmann::json &m_params);
+	const nlohmann::json RemoveDevicesByName(const nlohmann::json &m_params);
+	const nlohmann::json RemoveDeviceLibrary(const nlohmann::json &m_params);
+	const nlohmann::json RunDeviceTask(const nlohmann::json &m_params);
+	const nlohmann::json GetDeviceInfo(const nlohmann::json &m_params);
 
 public:
-	nlohmann::json CreateProcessLi(const nlohmann::json &m_params);
-	nlohmann::json RunScript(const nlohmann::json &m_params);
-	nlohmann::json TerminateProcessByName(const nlohmann::json &m_params);
-	nlohmann::json GetRunningProcesses(const nlohmann::json &m_params);
-	nlohmann::json GetProcessOutput(const nlohmann::json &m_params);
+	const nlohmann::json CreateProcessLi(const nlohmann::json &m_params);
+	const nlohmann::json RunScript(const nlohmann::json &m_params);
+	const nlohmann::json TerminateProcessByName(const nlohmann::json &m_params);
+	const nlohmann::json GetRunningProcesses(const nlohmann::json &m_params);
+	const nlohmann::json GetProcessOutput(const nlohmann::json &m_params);
 
 public:
-	nlohmann::json AddTask(const nlohmann::json &m_params);
-	nlohmann::json InsertTask(const nlohmann::json &m_params);
-	nlohmann::json ExecuteAllTasks(const nlohmann::json &m_params);
-	nlohmann::json StopTask(const nlohmann::json &m_params);
-	nlohmann::json ExecuteTaskByName(const nlohmann::json &m_params);
-	nlohmann::json ModifyTask(const nlohmann::json &m_params);
-	nlohmann::json ModifyTaskByName(const nlohmann::json &m_params);
-	nlohmann::json DeleteTask(const nlohmann::json &m_params);
-	nlohmann::json DeleteTaskByName(const nlohmann::json &m_params);
-	nlohmann::json QueryTaskByName(const nlohmann::json &m_params);
-	nlohmann::json GetTaskList(const nlohmann::json &m_params);
-	nlohmann::json SaveTasksToJson(const nlohmann::json &m_params);
+	const nlohmann::json AddTask(const nlohmann::json &m_params);
+	const nlohmann::json InsertTask(const nlohmann::json &m_params);
+	const nlohmann::json ExecuteAllTasks(const nlohmann::json &m_params);
+	const nlohmann::json StopTask(const nlohmann::json &m_params);
+	const nlohmann::json ExecuteTaskByName(const nlohmann::json &m_params);
+	const nlohmann::json ModifyTask(const nlohmann::json &m_params);
+	const nlohmann::json ModifyTaskByName(const nlohmann::json &m_params);
+	const nlohmann::json DeleteTask(const nlohmann::json &m_params);
+	const nlohmann::json DeleteTaskByName(const nlohmann::json &m_params);
+	const nlohmann::json QueryTaskByName(const nlohmann::json &m_params);
+	const nlohmann::json GetTaskList(const nlohmann::json &m_params);
+	const nlohmann::json SaveTasksToJson(const nlohmann::json &m_params);
 
 public:
 #if ENABLE_ASYNC
@@ -174,6 +174,8 @@ public:
 	 * Counter for connected clients.
 	 */
 	static std::atomic<v_int32> SOCKETS;
+
+	std::shared_ptr<WebSocketServer> m_socket;
 
 public:
 #if ENABLE_ASYNC

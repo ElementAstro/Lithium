@@ -49,7 +49,7 @@ public:
      *
      * 该函数应该接受一个 `json` 类型的参数，表示命令所携带的数据。
      */
-    using HandlerFunc = std::function<json(const json &)>;
+    using HandlerFunc = std::function<const json(const json &)>;
 
     /**
      * @brief RegisterHandler 函数用于将一个命令处理程序注册到 `CommandDispatcher` 中。
@@ -60,7 +60,7 @@ public:
      * @param instance 处理命令的对象指针。
      */
     template <typename ClassType>
-    void RegisterHandler(const std::string &name, json (ClassType::*handler)(const json &), ClassType *instance)
+    void RegisterHandler(const std::string &name,const json (ClassType::*handler)(const json &), ClassType *instance)
     {
         auto hash_value = Djb2Hash(name.c_str());
         handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);

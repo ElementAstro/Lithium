@@ -35,7 +35,7 @@ Description: Process API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "CreateProcess";
@@ -70,7 +70,7 @@ nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_params)
 	return res;
 }
 
-nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "RunScript";
@@ -105,7 +105,7 @@ nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 	return res;
 }
 
-nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "TerminateProcessByName";
@@ -139,7 +139,7 @@ nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::json &m_p
 	return res;
 }
 
-nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "GetRunningProcesses";
@@ -167,7 +167,7 @@ nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &m_para
 	return res;
 }
 
-nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "GetProcessOutput";

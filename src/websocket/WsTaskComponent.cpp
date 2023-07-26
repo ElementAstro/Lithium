@@ -35,7 +35,7 @@ Description: Task API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 {
     nlohmann::json res;
 	res["command"] = "AddTask";
@@ -82,47 +82,47 @@ nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 	}
 	return res;
 }
-nlohmann::json WebSocketServer::InsertTask(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::InsertTask(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::ModifyTask(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::ModifyTask(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::ModifyTaskByName(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::ModifyTaskByName(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::DeleteTask(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::DeleteTask(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::DeleteTaskByName(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::DeleteTaskByName(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::QueryTaskByName(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::QueryTaskByName(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::GetTaskList(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::GetTaskList(const nlohmann::json &m_params)
 {
 	return {};
 }
-nlohmann::json WebSocketServer::SaveTasksToJson(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::SaveTasksToJson(const nlohmann::json &m_params)
 {
 	return {};
 }

@@ -43,7 +43,7 @@ std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
 	{"Solver", Lithium::DeviceType::Solver},
 	{"Guider", Lithium::DeviceType::Guider}};
 
-nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_params)
 {
 	try
 	{
@@ -77,7 +77,7 @@ nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_params)
 	}
 }
 
-nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "AddDevice";
@@ -122,7 +122,7 @@ nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 	return res;
 }
 
-nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "AddDeviceLibrary";
@@ -157,7 +157,7 @@ nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_params)
 	return res;
 }
 
-nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "RemoveDevice";
@@ -202,7 +202,7 @@ nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_params)
 	return res;
 }
 
-nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "RemoveDeviceByName";
@@ -237,7 +237,7 @@ nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &m_para
 	return res;
 }
 
-nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "RemoveDeviceLibrary";
@@ -272,7 +272,7 @@ nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &m_para
 	return res;
 }
 
-nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "RunDeviceTask";
@@ -328,7 +328,7 @@ nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_params)
 	return res;
 }
 
-nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_params)
+const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_params)
 {
 	nlohmann::json res;
 	res["command"] = "GetDeviceInfo";

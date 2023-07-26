@@ -70,6 +70,24 @@ Description: Crash Report
 namespace Lithium::CrashReport
 {
 
+    std::vector<std::string> SplitString(const std::string &input, char delimiter)
+    {
+        std::vector<std::string> tokens;
+        size_t pos = 0;
+        size_t foundPos = input.find(delimiter);
+
+        while (foundPos != std::string::npos)
+        {
+            tokens.push_back(input.substr(pos, foundPos - pos));
+            pos = foundPos + 1;
+            foundPos = input.find(delimiter, pos);
+        }
+
+        tokens.push_back(input.substr(pos));
+
+        return tokens;
+    }
+
     // 获取系统信息
     std::string getSystemInfo()
     {
@@ -287,6 +305,14 @@ namespace Lithium::CrashReport
             {
                 ss << "Linux ";
                 ss << env_var << "=" << env_value << std::endl;
+                char delimiter = ':';
+
+                std::vector<std::string> tokens = SplitString(env_value, delimiter);
+
+                for (const auto &token : tokens)
+                {
+                    ss << token << std::endl;
+                }
             }
         }
 #endif

@@ -72,7 +72,13 @@ private:
 	 * Lock for synchronization of writes to the web socket.
 	 */
 	oatpp::async::Lock m_writeLock;
-
+#else
+public:
+	int add_connection(const oatpp::websocket::WebSocket *recv);
+	int remove_connection(const oatpp::websocket::WebSocket *recv);
+private:
+	std::vector<const oatpp::websocket::WebSocket *> m_connections;
+	std::vector<const oatpp::websocket::WebSocket *>::const_iterator find(const oatpp::websocket::WebSocket *recv);
 #endif
 
 private:
@@ -101,8 +107,15 @@ private:
 
 public:
 	WebSocketServer();
+	~WebSocketServer();
 
+#if ENABLE_ASYNC
 	void SendMessageNonBlocking(const oatpp::String &message);
+	void SendBinaryMessageNonBlocking(const void *binary_message, int size);
+#else
+	void SendMessage(const oatpp::String &message);
+	void SendBinaryMessage(const void *binary_message, int size);
+#endif
 
 public:
 	const nlohmann::json GetDeviceList(const nlohmann::json &m_params);
@@ -176,6 +189,8 @@ public:
 	static std::atomic<v_int32> SOCKETS;
 
 	std::shared_ptr<WebSocketServer> m_socket;
+
+	const std::shared_ptr<WebSocketServer> m_sockets;
 
 public:
 #if ENABLE_ASYNC

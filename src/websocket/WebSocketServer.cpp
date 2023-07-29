@@ -69,22 +69,34 @@ WebSocketServer::WebSocketServer()
 	LiRegisterFunc("QueryTaskByName", &WebSocketServer::QueryTaskByName);
 }
 
+WebSocketServer::~WebSocketServer()
+{
+#if ENABLE_ASYNC
+	m_socket->sendCloseAsync();
+#else
+	for (auto &it : m_connections)
+	{
+		it->sendClose();
+	}
+#endif
+}
+
 #if ENABLE_ASYNC
 oatpp::async::CoroutineStarter WebSocketServer::onPing(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message)
 {
-	OATPP_LOGD(TAG, "onPing");
+	LOG_F(INFO, "onPing");
 	return socket->sendPongAsync(message);
 }
 
 oatpp::async::CoroutineStarter WebSocketServer::onPong(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message)
 {
-	OATPP_LOGD(TAG, "onPong");
+	LOG_F(INFO, "onPong");
 	return nullptr; // do nothing
 }
 
 oatpp::async::CoroutineStarter WebSocketServer::onClose(const std::shared_ptr<AsyncWebSocket> &socket, v_uint16 code, const oatpp::String &message)
 {
-	OATPP_LOGD(TAG, "onClose code=%d", code);
+	LOG_F(INFO, "onClose code=%d", code);
 	return nullptr; // do nothing
 }
 
@@ -95,7 +107,7 @@ oatpp::async::CoroutineStarter WebSocketServer::readMessage(const std::shared_pt
 	{
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
-		OATPP_LOGD(TAG, "onMessage message='%s'", wholeMessage->c_str());
+		LOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
 		if (!nlohmann::json::accept(wholeMessage->c_str()))
 		{
 			OATPP_LOGE("WSServer", "Message is not in JSON format");
@@ -198,22 +210,48 @@ void WebSocketServer::SendMessageNonBlocking(const oatpp::String &message)
 	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, message);
 }
 
+void WebSocketServer::SendBinaryMessageNonBlocking(const void *binary_message, int size)
+{
+	oatpp::String binary((const char *)binary_message, size);
+	class SendMessageCoroutine : public oatpp::async::Coroutine<SendMessageCoroutine>
+	{
+	private:
+		oatpp::async::Lock *m_lock;
+		std::shared_ptr<AsyncWebSocket> m_websocket;
+		oatpp::String m_message;
+
+	public:
+		SendMessageCoroutine(oatpp::async::Lock *lock,
+							 const std::shared_ptr<AsyncWebSocket> &websocket,
+							 const oatpp::String &message)
+			: m_lock(lock), m_websocket(websocket), m_message(message)
+		{
+		}
+
+		Action act() override
+		{
+			return oatpp::async::synchronize(m_lock, m_websocket->sendOneFrameBinaryAsync(m_message)).next(finish());
+		}
+	};
+	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, binary);
+}
+
 #else
 
 void WebSocketServer::onPing(const WebSocket &socket, const oatpp::String &message)
 {
-	OATPP_LOGD(TAG, "onPing");
+	LOG_F(INFO, "onPing");
 	socket.sendPong(message);
 }
 
 void WebSocketServer::onPong(const WebSocket &socket, const oatpp::String &message)
 {
-	OATPP_LOGD(TAG, "onPong");
+	LOG_F(INFO, "onPong");
 }
 
 void WebSocketServer::onClose(const WebSocket &socket, v_uint16 code, const oatpp::String &message)
 {
-	OATPP_LOGD(TAG, "onClose code=%d", code);
+	LOG_F(INFO, "onClose code=%d", code);
 }
 
 void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size)
@@ -222,7 +260,7 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 	{
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
-		OATPP_LOGD(TAG, "onMessage message='%s'", wholeMessage->c_str());
+		LOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
 		if (!nlohmann::json::accept(wholeMessage->c_str()))
 		{
 			OATPP_LOGE("WSServer", "Message is not in JSON format");
@@ -254,6 +292,49 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 		m_messageBuffer.writeSimple(data, size);
 	}
 }
+
+int WebSocketServer::add_connection(const oatpp::websocket::WebSocket *recv)
+{
+	auto it = find(recv);
+	if (it == m_connections.end())
+	{
+		LOG_F("WebSocketServer", "Registering %p", recv);
+		m_connections.push_back(recv);
+	}
+	else
+	{
+		LOG_F("WebSocketServer", "%p already registered", recv);
+	}
+	return 0;
+}
+
+int WebSocketServer::remove_connection(const oatpp::websocket::WebSocket *recv)
+{
+	auto it = find(recv);
+	if (it != m_connections.end())
+	{
+		LOG_F("WebSocketServer", "Unregistering %p", recv);
+		m_connections.erase(it);
+	}
+	else
+	{
+		LOG_F("WebSocketServer", "%p not registered", recv);
+	}
+	return 0;
+}
+
+std::vector<const oatpp::websocket::WebSocket *>::const_iterator WebSocketServer::find(const oatpp::websocket::WebSocket *recv)
+{
+	for (auto it = m_connections.begin(); it != m_connections.end(); ++it)
+	{
+		if ((*it) == recv)
+		{
+			return it;
+		}
+	}
+	return m_connections.end();
+}
+
 #endif
 
 #if ENABLE_ASYNC == 0
@@ -318,14 +399,19 @@ void WebSocketServer::OnMessageReceived(const Lithium::IMessage &message)
 	{
 		// 处理接收到的消息
 		LOG_F(INFO, "WebSocketServer received message with content: %s", message.getValue<std::string>().c_str());
+#if ENABLE_ASYNC
+		SendMessageNonBlocking(message.toJson());
+#else
+		SendMessage(message.toJson());
+#endif
 	}
 	catch (const std::exception &e)
 	{
-		LOG_F(ERROR, "Exception caught in OnMyMessageReceived: %s", e.what());
+		LOG_F(ERROR, "Exception caught in OnMessageReceived: %s", e.what());
 	}
 	catch (...)
 	{
-		LOG_F(ERROR, "Unknown exception caught in OnMyMessageReceived");
+		LOG_F(ERROR, "Unknown exception caught in OnMessageReceived");
 	}
 }
 
@@ -335,7 +421,7 @@ std::atomic<v_int32> WSInstanceListener::SOCKETS(0);
 void WSInstanceListener::onAfterCreate_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params)
 {
 	SOCKETS++;
-	OATPP_LOGD(TAG, "New Incoming Connection. Connection count=%d", SOCKETS.load());
+	LOG_F(INFO, "New Incoming Connection. Connection count=%d", SOCKETS.load());
 	if (!m_socket)
 	{
 		m_socket = std::make_shared<WebSocketServer>();
@@ -346,24 +432,25 @@ void WSInstanceListener::onAfterCreate_NonBlocking(const std::shared_ptr<WebSock
 void WSInstanceListener::onBeforeDestroy_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket)
 {
 	SOCKETS--;
-	OATPP_LOGD(TAG, "Connection closed. Connection count=%d", SOCKETS.load());
+	LOG_F(INFO, "Connection closed. Connection count=%d", SOCKETS.load());
 }
 #else
 void WSInstanceListener::onAfterCreate(const oatpp::websocket::WebSocket &socket, const std::shared_ptr<const ParameterMap> &params)
 {
-
 	SOCKETS++;
-	OATPP_LOGD(TAG, "New Incoming Connection. Connection count=%d", SOCKETS.load());
-
-	/* In this particular case we create one WebSocketServer per each connection */
-	/* Which may be redundant in many cases */
-	socket.setListener(std::make_shared<WebSocketServer>());
+	LOG_F(INFO, "New Incoming Connection. Connection count=%d", SOCKETS.load());
+	if (!m_socket)
+	{
+		m_socket = std::make_shared<WebSocketServer>();
+	}
+	socket->setListener(m_socket);
+	m_sockets->add_connection(&socket);
 }
 
 void WSInstanceListener::onBeforeDestroy(const oatpp::websocket::WebSocket &socket)
 {
-
 	SOCKETS--;
-	OATPP_LOGD(TAG, "Connection closed. Connection count=%d", SOCKETS.load());
+	LOG_F(INFO, "Connection closed. Connection count=%d", SOCKETS.load());
+	m_sockets->remove_connection(&socket);
 }
 #endif

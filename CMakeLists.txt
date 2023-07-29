@@ -69,6 +69,8 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
 add_subdirectory(libs/)
 add_subdirectory(libs/pugixml)
 
+add_subdirectory(tools)
+
 #add_subdirectory(src/indiserver)
 
 set(api_SRC
@@ -222,6 +224,19 @@ set(task_SRC
     ${lithium_src_dir}/modules/task/task_manager.cpp
     ${lithium_src_dir}/modules/task/task_manager.hpp
 
+    ${lithium_src_dir}/modules/task/task_generator.cpp
+    ${lithium_src_dir}/modules/task/task_generator.hpp
+
+    ${lithium_src_dir}/modules/task/conditional_task.cpp
+    ${lithium_src_dir}/modules/task/conditional_task.hpp
+
+    ${lithium_src_dir}/modules/task/daemon_task.cpp
+    ${lithium_src_dir}/modules/task/daemon_task.hpp
+
+    ${lithium_src_dir}/modules/task/loop_task.cpp
+    ${lithium_src_dir}/modules/task/loop_task.hpp
+
+    ${lithium_src_dir}/modules/task/task.cpp
     ${lithium_src_dir}/modules/task/task.hpp
 )
 
@@ -285,7 +300,7 @@ if(WIN32)
 
     add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
-    target_link_libraries(lithium_server pdh iphlpapi winmm)
+    target_link_libraries(lithium_server pdh iphlpapi winmm crypt32)
 
     target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
 

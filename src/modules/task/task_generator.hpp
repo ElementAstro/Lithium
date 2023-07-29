@@ -28,3 +28,38 @@ Date: 2023-7-21
 Description: Task Generator
 
 **************************************************/
+
+#pragma once
+
+#define TASK_GENERATOR_ENABLE
+
+#include <unordered_map>
+#include <fstream>
+
+#include "nlohmann/json.hpp"
+
+
+using json = nlohmann::json;
+
+class TaskGenerator
+{
+private:
+    std::unordered_map<std::string, std::string> m_MacroMap; // 宏名称到宏内容的映射表
+
+public:
+
+    explicit TaskGenerator();
+    
+    bool loadMacros(const std::string &macroFileName);
+    bool loadMacrosFromFolder(const std::string &folderPath);
+    bool addMacro(const std::string &name, const std::string &content);
+    bool deleteMacro(const std::string &name);
+    std::optional<std::string> getMacroContent(const std::string &name);
+
+    bool generateTasks(const std::string &tomlFileName);
+
+private:
+    bool parseTomlFile(const std::string &tomlFileName, toml::table &table);
+    void getTasksFromManagers(DeviceManager &deviceManager, PluginManager &pluginManager, std::vector<std::shared_ptr<Lithium::Task::BasicTask>> &tasks);
+    void saveTasksToJson(const std::string &jsonFileName, const std::vector<std::shared_ptr<Lithium::Task::BasicTask>> &tasks);
+};

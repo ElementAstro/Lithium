@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-7-19
 
-Description: Task Definition
+Description: Basic and Simple Task Definition
 
 **************************************************/
 
@@ -37,6 +37,7 @@ Description: Task Definition
 #include <vector>
 #include <memory>
 #include <thread>
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 
@@ -47,125 +48,120 @@ namespace Lithium
     class BasicTask
     {
     public:
-        // Constructor
-        BasicTask(const std::function<void()> &stop_fn = nullptr, bool can_stop = false)
-            : stop_fn_(stop_fn), can_stop_(stop_fn != nullptr), stop_flag_(false) {}
+        /**
+         * @brief BasicTask类构造函数
+         * @param stop_fn 一个可选的停止函数，默认为nullptr
+         * @param can_stop 指示任务是否可以停止，默认为false
+         */
+        BasicTask(const std::function<void()> &stop_fn = nullptr, bool can_stop = false);
 
-        virtual ~BasicTask()
-        {
-            if(stop_flag_)
-            {
-                Stop();
-            }
-        }
+        /**
+         * @brief BasicTask类析构函数
+         */
+        virtual ~BasicTask();
 
-        // Executes the task
+        /**
+         * @brief 执行任务的纯虚函数，由子类实现具体逻辑
+         * @return 以json格式返回任务执行结果
+         */
         virtual nlohmann::json Execute() = 0;
 
-        // Serializes the task to a JSON object
-        virtual nlohmann::json ToJson() const
-        {
-            return {
-                {"type", "basic"},
-                {"name", name_},
-                {"id", id_},
-                {"description", description_},
-                {"can_stop", can_stop_}};
-        };
+        /**
+         * @brief 将任务序列化为JSON对象
+         * @return 表示任务的JSON对象
+         */
+        virtual nlohmann::json ToJson() const;
 
-        // Accessor and mutator for the task ID
-        int get_id() const { return id_; }
-        void set_id(int id) { id_ = id; }
+        /**
+         * @brief 获取任务ID
+         * @return 任务ID
+         */
+        int get_id() const;
 
-        // Accessor and mutator for the task name
-        const std::string &get_name() const { return name_; }
-        void set_name(const std::string &name) { name_ = name; }
+        /**
+         * @brief 设置任务ID
+         * @param id 要设置的任务ID
+         */
+        void set_id(int id);
 
-        const std::string &get_description() const { return description_; }
-        void set_description(const std::string &description) { description_ = description; }
+        /**
+         * @brief 获取任务名称
+         * @return 任务名称
+         */
+        const std::string &get_name() const;
 
-        void set_can_execute(bool can_execute) { can_execute_ = can_execute; }
-        bool can_execute() const { return can_execute_; }
+        /**
+         * @brief 设置任务名称
+         * @param name 要设置的任务名称
+         */
+        void set_name(const std::string &name);
 
-        // Set the stop function
-        void set_stop_function(const std::function<void()> &stop_fn)
-        {
-            stop_fn_ = stop_fn;
-            can_stop_ = true;
-        }
+        /**
+         * @brief 获取任务描述
+         * @return 任务描述
+         */
+        const std::string &get_description() const;
 
-        // Accessor and mutator for the stop flag
-        bool get_stop_flag() const { return stop_flag_; }
-        void set_stop_flag(bool flag) { stop_flag_ = flag; }
+        /**
+         * @brief 设置任务描述
+         * @param description 要设置的任务描述
+         */
+        void set_description(const std::string &description);
 
-        // Stops the task
-        virtual void Stop()
-        {
-            stop_flag_ = true;
-            if (stop_fn_)
-            {
-                stop_fn_();
-            }
-        }
+        /**
+         * @brief 设置任务是否可以执行
+         * @param can_execute 指示任务是否可以执行
+         */
+        void set_can_execute(bool can_execute);
 
-        bool validateJsonValue(const nlohmann::json &data, const nlohmann::json &templateValue)
-        {
-            if (data.type() != templateValue.type())
-            {
-                if (templateValue.empty())
-                {
-                    return false;
-                }
-            }
-            if (data.is_object())
-            {
-                for (auto it = templateValue.begin(); it != templateValue.end(); ++it)
-                {
-                    const std::string &key = it.key();
-                    const auto &subTemplateValue = it.value();
-                    if (!validateJsonValue(data.value(key, nlohmann::json()), subTemplateValue))
-                    {
-                        return false;
-                    }
-                }
-            }
-            else if (data.is_array())
-            {
-                if (templateValue.size() > 0 && data.size() != templateValue.size())
-                {
-                    return false;
-                }
+        /**
+         * @brief 获取任务是否可以执行
+         * @return true表示任务可以执行，false表示任务不可执行
+         */
+        bool can_execute() const;
 
-                for (size_t i = 0; i < data.size(); ++i)
-                {
-                    if (!validateJsonValue(data[i], templateValue[0]))
-                    {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
+        /**
+         * @brief 设置停止函数
+         * @param stop_fn 停止函数
+         */
+        void set_stop_function(const std::function<void()> &stop_fn);
 
-        bool validateJsonString(const std::string &jsonString, const std::string &templateString)
-        {
-            nlohmann::json jsonData;
-            nlohmann::json templateData;
-            try
-            {
-                jsonData = nlohmann::json::parse(jsonString);
-                templateData = nlohmann::json::parse(templateString);
-            }
-            catch (const std::exception &e)
-            {
-                return false;
-            }
-            return validateJsonValue(jsonData, templateData);
-        }
+        /**
+         * @brief 获取停止标志
+         * @return true表示任务已停止，false表示任务未停止
+         */
+        bool get_stop_flag() const;
+
+        /**
+         * @brief 设置停止标志
+         * @param flag 停止标志，true表示任务已停止，false表示任务未停止
+         */
+        void set_stop_flag(bool flag);
+
+        /**
+         * @brief 停止任务的虚函数，由子类实现具体停止逻辑
+         */
+        virtual void Stop();
+
+        /**
+         * @brief 验证json值与模板值是否匹配
+         * @param data 要验证的JSON值
+         * @param templateValue 模板值
+         * @return true表示匹配，false表示不匹配
+         */
+        bool validateJsonValue(const nlohmann::json &data, const nlohmann::json &templateValue);
+
+        /**
+         * @brief 验证json字符串与模板字符串是否匹配
+         * @param jsonString 要验证的json字符串
+         * @param templateString 模板字符串
+         * @return true表示匹配，false表示不匹配
+         */
+        bool validateJsonString(const std::string &jsonString, const std::string &templateString);
 
     protected:
         // True if the task is completed
-        bool done_ = false;
+        std::atomic<bool> done_ = false;
 
         // Task ID
         int id_;
@@ -173,6 +169,7 @@ namespace Lithium
         // Task name
         std::string name_;
 
+        // Task description
         std::string description_;
 
         // True if the task can be stopped
@@ -184,177 +181,61 @@ namespace Lithium
         // Stop flag
         bool stop_flag_ = false;
 
+        // True if the task can be executed
         bool can_execute_ = true;
     };
 
     class SimpleTask : public BasicTask
     {
     public:
-        // Constructor
-        SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func, const nlohmann::json &params_template,
-                   const std::function<void()> &stop_fn = nullptr, bool can_stop = false)
-            : function_(func), params_template_(params_template), BasicTask(stop_fn, can_stop) {}
+        /**
+         * @brief SimpleTask类构造函数
+         * @param func 要执行的函数
+         * @param params_template 参数模板，用于参数验证
+         * @param stop_fn 一个可选的停止函数，默认为nullptr
+         * @param can_stop 指示任务是否可以停止，默认为false
+         */
+        SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func,
+                   const nlohmann::json &params_template,
+                   const std::function<void()> &stop_fn = nullptr,
+                   bool can_stop = false);
 
-        // Executes the task
-        virtual nlohmann::json Execute() override
-        {
-            if (!params_template_.is_null() && !params_.is_null())
-            {
-                if(!validateJsonValue(params_,params_template_))
-                {
-                    return {"error","Incorrect value type for element:"};
-                }
-            }
-            if (!stop_flag_)
-            {
-                returns_ = function_(params_);
-            }
-            done_ = true;
-            return ToJson();
-        }
+        /**
+         * @brief 执行任务的虚函数，由子类实现具体逻辑
+         * @return 以json格式返回任务执行结果
+         */
+        virtual nlohmann::json Execute() override;
 
-        virtual void SetParams(const nlohmann::json &params)
-        {
-            params_ = params;
-        }
+        /**
+         * @brief 设置任务参数
+         * @param params 要设置的任务参数
+         */
+        virtual void SetParams(const nlohmann::json &params);
 
-        virtual nlohmann::json ToJson() const override
-        {
-            auto j = BasicTask::ToJson();
-            j["type"] = "simple";
-            j["params"] = params_;
-            return j;
-        }
+        /**
+         * @brief 将任务序列化为JSON对象
+         * @return 表示任务的JSON对象
+         */
+        virtual nlohmann::json ToJson() const override;
 
-        virtual nlohmann::json GetResult() const
-        {
-            return returns_;
-        }
+        /**
+         * @brief 获取任务的执行结果
+         * @return 任务的执行结果
+         */
+        virtual nlohmann::json GetResult() const;
 
     private:
-        // Function to execute
+        // 要执行的函数
         std::function<nlohmann::json(const nlohmann::json &)> function_;
 
-        // Parameters passed to the function
+        // 参数传递给函数
         nlohmann::json params_;
 
-        // Parameter template to check
+        // 用于检查的参数模板
         nlohmann::json params_template_;
 
-        // The result of the function
+        // 函数的执行结果
         nlohmann::json returns_;
-    };
-
-    class ConditionalTask : public BasicTask
-    {
-    public:
-        // Constructor
-        ConditionalTask(const std::function<bool(const nlohmann::json &)> &condition_fn,
-                        const nlohmann::json &params,
-                        const std::function<void(const nlohmann::json &)> &task_fn,
-                        const std::function<void()> &stop_fn = nullptr)
-            : BasicTask(stop_fn, stop_fn != nullptr), condition_fn_(condition_fn), params_(params), task_fn_(task_fn) {}
-
-        // Executes the task
-        nlohmann::json Execute() override
-        {
-            if (condition_fn_(params_))
-            {
-                task_fn_(params_);
-            }
-            done_ = true;
-            return {{"status", "done"}};
-        }
-
-        // Serializes the task to a JSON object
-        nlohmann::json ToJson() const override
-        {
-            auto json = BasicTask::ToJson();
-            json["type"] = "conditional";
-            json["params"] = params_;
-            return json;
-        }
-
-    private:
-        std::function<bool(const nlohmann::json &)> condition_fn_;
-        nlohmann::json params_;
-        std::function<void(const nlohmann::json &)> task_fn_;
-    };
-
-    class LoopTask : public BasicTask
-    {
-    public:
-        // Constructor
-        LoopTask(const std::function<void(const nlohmann::json &)> &item_fn,
-                 const nlohmann::json &params,
-                 const std::function<void()> &stop_fn = nullptr)
-            : BasicTask(stop_fn, stop_fn != nullptr), item_fn_(item_fn), params_(params) {}
-
-        // Executes the task
-        nlohmann::json Execute() override
-        {
-            for (const auto &item : params_["items"])
-            {
-                if (stop_flag_)
-                {
-                    break;
-                }
-                item_fn_({{"item", item}});
-            }
-            done_ = true;
-            return {{"status", "done"}};
-        }
-
-        // Serializes the task to a JSON object
-        nlohmann::json ToJson() const override
-        {
-            auto json = BasicTask::ToJson();
-            json["type"] = "loop";
-            json["params"] = params_;
-            return json;
-        }
-
-    private:
-        std::function<void(const nlohmann::json &)> item_fn_;
-        nlohmann::json params_;
-    };
-
-    class DaemonTask : public BasicTask
-    {
-    public:
-        // Constructor
-        DaemonTask(const std::function<void()> &task_fn,
-                   const std::function<void()> &stop_fn = nullptr)
-            : BasicTask(stop_fn, true), task_fn_(task_fn) {}
-
-        // Executes the task
-        nlohmann::json Execute() override
-        {
-            std::thread t(&DaemonTask::RunTask, this);
-            t.detach(); // detach thread so that it runs as a daemon
-            return {{"status", "running"}};
-        }
-
-        // Serializes the task to a JSON object
-        nlohmann::json ToJson() const override
-        {
-            auto json = BasicTask::ToJson();
-            json["type"] = "daemon";
-            return json;
-        }
-
-    private:
-        std::function<void()> task_fn_;
-
-        // Runs the task in a loop
-        void RunTask()
-        {
-            while (!stop_flag_)
-            {
-                task_fn_();
-            }
-            done_ = true;
-        }
     };
 
 }

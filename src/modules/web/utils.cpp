@@ -38,10 +38,12 @@ Description: Network Utils
 #include <iterator>
 
 #ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
 #include <tlhelp32.h>
 #include <Psapi.h>
 #include <iphlpapi.h>
+#define close closesocket
 #elif __linux__
 #include <unistd.h>
 #include <sys/socket.h>
@@ -59,6 +61,7 @@ Description: Network Utils
 #if __cplusplus >= 202002L
 #include <format>
 #endif
+#include "loguru/loguru.hpp"
 
 bool IsConnectedToInternet()
 {
@@ -168,7 +171,7 @@ bool CheckAndKillProgramOnPort(int port)
     int ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (ret != 0)
     {
-        // std::cerr << "Failed to initialize Windows Socket API: " << ret << std::endl;
+        LOG_F(ERROR, "Failed to initialize Windows Socket API: %d", ret);
         return false;
     }
 #endif
@@ -177,7 +180,7 @@ bool CheckAndKillProgramOnPort(int port)
     int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd < 0)
     {
-        // std::cerr << "Failed to create socket: " << strerror(errno) << std::endl;
+        LOG_F(ERROR, "Failed to create socket: %s", strerror(errno));
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -194,28 +197,20 @@ bool CheckAndKillProgramOnPort(int port)
     {
         if (errno == EADDRINUSE)
         {
-            // std::cerr << "The port(" << port << ") is already in use" << std::endl;
+            LOG_F(WARNING, "The port(%d) is already in use", port);
 
             // 获取占用端口的进程 ID
             std::string cmd;
 #ifdef _WIN32
-#if __cplusplus >= 202002L
-            cmd = std::format("netstat -ano | find \"LISTENING\" | find \"{0}\"", port);
+            cmd = std::format("netstat -ano | find \"LISTENING\" | find \"{}\"", port);
 #else
-            cmd = "netstat -ano | find \"LISTENING\" | find \"" << std::to_string(port) << "\""；
-#endif
-#else
-#if __cplusplus >= 202002L
             cmd = std::format("lsof -i :{} -t", port);
-#else
-            cmd = "lsof -i :" + std::to_string(port) + " -t";
-#endif
 #endif
 
             FILE *fp = popen(cmd.c_str(), "r");
             if (fp == nullptr)
             {
-                // std::cerr << "Failed to execute command: " << cmd << std::endl;
+                LOG_F(ERROR, "Failed to execute command: %s", cmd.c_str());
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -235,37 +230,29 @@ bool CheckAndKillProgramOnPort(int port)
             // 如果获取到了 PID，则杀死该进程
             if (!pid_str.empty())
             {
-                // std::cout << "Killing the process on port(" << port << "): PID=" << pid_str << std::endl;
-#if __cplusplus >= 202002L
+                LOG_F(INFO, "Killing the process on port(%d): PID=%s", port, pid_str.c_str());
+
 #ifdef _WIN32
                 ret = std::system(std::format("taskkill /F /PID {}", pid_str).c_str());
 #else
                 int ret = std::system(std::format("kill {}", pid_str).c_str());
 #endif
-#else
-                std::ostringstream oss;
 
-#ifdef _WIN32
-                oss << "taskkill /F /PID " << pid;
-#else
-                oss << "kill " << pid_str;
-#endif
-                int ret = std::system(oss.str().c_str());
-#endif
                 if (ret != 0)
                 {
-                    // std::cerr << "Failed to kill the process: " << pid_str << std::endl;
+                    LOG_F(ERROR, "Failed to kill the process: %s", pid_str.c_str());
                     close(sockfd);
 #ifdef _WIN32
                     WSACleanup();
 #endif
                     return false;
                 }
-                // std::cout << "The process(" << pid_str << ") is killed successfully" << std::endl;
+
+                LOG_F(INFO, "The process(%s) is killed successfully", pid_str.c_str());
             }
             else
             {
-                // std::cerr << "Failed to get process ID on port(" << port << ")" << std::endl;
+                LOG_F(ERROR, "Failed to get process ID on port(%d)", port);
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -275,7 +262,7 @@ bool CheckAndKillProgramOnPort(int port)
         }
         else
         {
-            // std::cerr << "Failed to bind socket: " << strerror(errno) << std::endl;
+            LOG_F(ERROR, "Failed to bind socket: %s", strerror(errno));
             close(sockfd);
 #ifdef _WIN32
             WSACleanup();

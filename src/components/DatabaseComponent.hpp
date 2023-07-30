@@ -1,6 +1,6 @@
 
-#ifndef EXAMPLE_JWT_DATABASECOMPONENT_HPP
-#define EXAMPLE_JWT_DATABASECOMPONENT_HPP
+#ifndef DATABASECOMPONENT_HPP
+#define DATABASECOMPONENT_HPP
 
 #include "database/UserDb.hpp"
 
@@ -42,4 +42,4 @@ public:
      return std::make_shared<UserDb>(databaseExecutor); }());
 };
 
-#endif // EXAMPLE_JWT_DATABASECOMPONENT_HPP
+#endif // DATABASECOMPONENT_HPP

@@ -35,14 +35,6 @@ Description: Device API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
-	{"Camera", Lithium::DeviceType::Camera},
-	{"Telescope", Lithium::DeviceType::Telescope},
-	{"Focuser", Lithium::DeviceType::Focuser},
-	{"FilterWheel", Lithium::DeviceType::FilterWheel},
-	{"Solver", Lithium::DeviceType::Solver},
-	{"Guider", Lithium::DeviceType::Guider}};
-
 const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_params)
 {
 	try
@@ -64,7 +56,7 @@ const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_para
 			return res;
 		}
 		device_type = it->second;
-		for (const auto &device : Lithium::MyApp.getDeviceList(device_type))
+		for (const auto &device : Lithium::MyApp->getDeviceList(device_type))
 		{
 			res["result"].push_back(device);
 		}
@@ -99,13 +91,13 @@ const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 		}
 		device_type = it->second;
 
-		if (!Lithium::MyApp.addDevice(device_type, m_params["device_name"].get<std::string>(), m_params.value("lib_name", "")))
+		if (!Lithium::MyApp->addDevice(device_type, m_params["device_name"].get<std::string>(), m_params.value("lib_name", "")))
 		{
 			res["error"] = "Failed to add device";
 		}
 		else
 		{
-			Lithium::MyApp.addDeviceObserver(device_type, m_params["device_name"].get<std::string>());
+			Lithium::MyApp->addDeviceObserver(device_type, m_params["device_name"].get<std::string>());
 		}
 	}
 	catch (const nlohmann::json::exception &e)
@@ -137,7 +129,7 @@ const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_p
 	{
 		std::string lib_path = m_params["lib_path"].get<std::string>();
 		std::string lib_name = m_params["lib_name"].get<std::string>();
-		if (!Lithium::MyApp.addDeviceLibrary(lib_path, lib_name))
+		if (!Lithium::MyApp->addDeviceLibrary(lib_path, lib_name))
 		{
 			res["error"] = "Failed to add device library";
 		}
@@ -182,7 +174,7 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 
 		std::string device_name = m_params["device_name"].get<std::string>();
 
-		if (!Lithium::MyApp.removeDevice(device_type, device_name))
+		if (!Lithium::MyApp->removeDevice(device_type, device_name))
 		{
 			res["error"] = "Failed to remove device";
 		}
@@ -217,7 +209,7 @@ const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &
 	{
 		std::string device_name = m_params["device_name"].get<std::string>();
 
-		if (!Lithium::MyApp.removeDevicesByName(device_name))
+		if (!Lithium::MyApp->removeDevicesByName(device_name))
 		{
 			res["error"] = "Failed to remove device by name";
 		}
@@ -252,7 +244,7 @@ const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &
 	{
 		std::string lib_name = m_params["lib_name"].get<std::string>();
 
-		if (!Lithium::MyApp.removeDeviceLibrary(lib_name))
+		if (!Lithium::MyApp->removeDeviceLibrary(lib_name))
 		{
 			res["error"] = "Failed to remove device library";
 		}
@@ -308,7 +300,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	std::string task_name = m_params["task_name"];
 
 	// 获取任务并执行
-	std::shared_ptr<Lithium::SimpleTask> task = Lithium::MyApp.getTask(device_type, device_name, task_name, {});
+	std::shared_ptr<Lithium::SimpleTask> task = Lithium::MyApp->getTask(device_type, device_name, task_name, {});
 	if (task == nullptr)
 	{
 		res["error"] = "Failed to get task";
@@ -344,7 +336,7 @@ const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_para
 	try
 	{
 		std::string device_name = m_params.value("device_name", "");
-		std::shared_ptr<Device> device = Lithium::MyApp.findDeviceByName(device_name);
+		std::shared_ptr<Device> device = Lithium::MyApp->findDeviceByName(device_name);
 		if (!device)
 		{
 			res["error"] = "Device not found";

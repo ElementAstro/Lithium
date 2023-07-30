@@ -36,6 +36,9 @@ Description: Main
 #include "controller/WebSocketController.hpp"
 #include "controller/IOController.hpp"
 #include "controller/AuthController.hpp"
+#include "controller/ProcessController.hpp"
+#include "controller/PHD2Controller.hpp"
+#include "controller/TaskController.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -64,14 +67,14 @@ Description: Main
 
 void run()
 {
-    if (Lithium::MyApp.GetConfig("server/port") == nullptr)
+    if (Lithium::MyApp->GetConfig("server/port") == nullptr)
     {
-        Lithium::MyApp.SetConfig("server/port", 8000);
+        Lithium::MyApp->SetConfig("server/port", 8000);
     }
 
     LOG_F(INFO, "Loading App component ...");
 
-    AppComponent components(Lithium::MyApp.GetConfig("server/port").get<int>()); // Create scope Environment components
+    AppComponent components(Lithium::MyApp->GetConfig("server/port").get<int>()); // Create scope Environment components
 
     LOG_F(INFO, "App component loaded");
     /* Get router component */
@@ -94,6 +97,18 @@ void run()
     auto io_controller = IOController::createShared();
     docEndpoints.append(io_controller->getEndpoints());
     router->addController(io_controller);
+
+    auto process_controller = ProcessController::createShared();
+    docEndpoints.append(process_controller->getEndpoints());
+    router->addController(process_controller);
+
+    auto phd2_controller = PHD2Controller::createShared();
+    docEndpoints.append(phd2_controller->getEndpoints());
+    router->addController(phd2_controller);
+
+    auto task_controller = TaskController::createShared();
+    docEndpoints.append(task_controller->getEndpoints());
+    router->addController(task_controller);
 
     // auto auth_controller = AuthController::createShared();
     //   docEndpoints.append(auth_controller->getEndpoints());
@@ -199,10 +214,10 @@ int main(int argc, char *argv[])
     {
         LOG_F(INFO, "Command line server port : %d", cmd_port);
 
-        auto port = Lithium::MyApp.GetConfig("server/port");
+        auto port = Lithium::MyApp->GetConfig("server/port");
         if (port != cmd_port)
         {
-            Lithium::MyApp.SetConfig("server/port", cmd_port);
+            Lithium::MyApp->SetConfig("server/port", cmd_port);
             LOG_F(INFO, "Set server port to %d", cmd_port);
         }
     }
@@ -214,8 +229,9 @@ int main(int argc, char *argv[])
         // Set log file
         setupLogFile();
         // Register ctrl-c handle for better debug
-        // registerInterruptHandler();
+        registerInterruptHandler();
         // Run oatpp server
+        Lithium::MyApp = std::make_shared<Lithium::LithiumApp>();
         oatpp::base::Environment::init();
         run();
         oatpp::base::Environment::destroy();

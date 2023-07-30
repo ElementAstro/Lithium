@@ -4,7 +4,6 @@
 
 namespace Lithium
 {
-    LithiumApp MyApp;
     LithiumApp::LithiumApp()
     {
         LOG_F(INFO, "Loading Lithium App and preparing ...");
@@ -17,6 +16,7 @@ namespace Lithium
             m_DeviceManager = std::make_shared<DeviceManager>(m_MessageBus);
             m_ProcessManager = std::make_shared<Process::ProcessManager>(10);
             m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
+            m_TaskGenerator = std::make_shared<TaskGenerator>(m_DeviceManager);
             m_MessageBus->StartProcessingThread<IMessage>();
             LOG_F(INFO, "Lithium App Loaded.");
         }
@@ -142,9 +142,10 @@ namespace Lithium
         return m_TaskManager->executeAllTasks();
     }
 
-    void LithiumApp::stopTask()
+    bool LithiumApp::stopTask()
     {
         m_TaskManager->stopTask();
+        return true;
     }
 
     bool LithiumApp::executeTaskByName(const std::string &name)

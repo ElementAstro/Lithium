@@ -49,7 +49,7 @@ const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_pa
 		}
 		std::string command = m_params["command"].get<std::string>();
 		std::string cmd_id = m_params["cmd_id"].get<std::string>();
-		if (!Lithium::MyApp.createProcess(command, cmd_id))
+		if (!Lithium::MyApp->createProcess(command, cmd_id))
 		{
 			res["error"] = "Failed to create process";
 			return res;
@@ -84,7 +84,7 @@ const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 		}
 		std::string script_name = m_params["script_name"].get<std::string>();
 		std::string script_id = m_params["script_id"].get<std::string>();
-		if (!Lithium::MyApp.runScript(script_name, script_id))
+		if (!Lithium::MyApp->runScript(script_name, script_id))
 		{
 			res["error"] = "Failed to run script";
 			return res;
@@ -118,7 +118,7 @@ const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::jso
 			return res;
 		}
 		std::string process_name = m_params["process_name"].get<std::string>();
-		if (!Lithium::MyApp.terminateProcessByName(process_name))
+		if (!Lithium::MyApp->terminateProcessByName(process_name))
 		{
 			res["error"] = "Failed to terminate process";
 			return res;
@@ -145,7 +145,7 @@ const nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &
 	res["command"] = "GetRunningProcesses";
 	try
 	{
-		for (auto process : Lithium::MyApp.getRunningProcesses())
+		for (auto process : Lithium::MyApp->getRunningProcesses())
 		{
 			res["result"][process.name]["name"] = process.name;
 			res["result"][process.name]["pid"] = process.pid;
@@ -180,7 +180,7 @@ const nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_p
 			return res;
 		}
 		std::string process_name = m_params["process_name"].get<std::string>();
-		for (auto output : Lithium::MyApp.getProcessOutput(process_name))
+		for (auto output : Lithium::MyApp->getProcessOutput(process_name))
 		{
 			res["result"].push_back(output);
 		}

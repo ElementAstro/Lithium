@@ -56,8 +56,8 @@ Description: App Components
 #include "oatpp/web/server/HttpRouter.hpp"
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
 
-#include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
-#include "oatpp/network/virtual_/Interface.hpp"
+// #include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
+// #include "oatpp/network/virtual_/Interface.hpp"
 
 #include "oatpp-zlib/EncoderProvider.hpp"
 #include "oatpp/web/protocol/http/incoming/SimpleBodyDecoder.hpp"
@@ -79,20 +79,21 @@ class AppComponent
 {
 private:
     v_uint16 m_port;
-public:
 
-	AppComponent(v_uint16 port)
-    : m_port(port)
-  {}
+public:
+    AppComponent(v_uint16 port)
+        : m_port(port)
+    {
+    }
     /**
      *  Swagger component
      */
     SwaggerComponent swaggerComponent;
 
     /**
-   * Database component
-   */
-  DatabaseComponent databaseComponent;
+     * Database component
+     */
+    DatabaseComponent databaseComponent;
 
 #if ENABLE_ASYNC
     /**
@@ -106,9 +107,9 @@ public:
            1 /* Timer threads */
        ); }());
 
-	OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, virtualInterface)([] {
-		return oatpp::network::virtual_::Interface::obtainShared("virtualhost");
-	}());
+    // OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, virtualInterface)
+    //([]
+    //  { return oatpp::network::virtual_::Interface::obtainShared("virtualhost"); }());
 #endif
 
     /**
@@ -130,15 +131,14 @@ public:
         std::shared_ptr<oatpp::network::ServerConnectionProvider> connectionProvider;
 		if(m_port == 0) 
 		{ // Use oatpp virtual interface
-			OATPP_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, interface);
-			connectionProvider = oatpp::network::virtual_::server::ConnectionProvider::createShared(interface);
+			//OATPP_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, interface);
+			//connectionProvider = oatpp::network::virtual_::server::ConnectionProvider::createShared(interface);
     	} 
 		else 
 		{
       		connectionProvider = oatpp::network::tcp::server::ConnectionProvider::createShared({"0.0.0.0", m_port, oatpp::network::Address::IP_4});
     	}
-        return connectionProvider;
-	}());
+        return connectionProvider; }());
 
     /**
      *  Create Router component
@@ -187,8 +187,7 @@ public:
         // connectionHandler->addRequestInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowOptionsGlobal>());
         // connectionHandler->addRequestInterceptor(std::make_shared<AuthInterceptor>(jwt));
         // connectionHandler->addResponseInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowCorsGlobal>());
-        return connectionHandler;
-        }());
+        return connectionHandler; }());
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler)
     ("websocket", []

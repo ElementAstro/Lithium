@@ -47,6 +47,8 @@ Description: WebSocket Server
 
 #include "nlohmann/json.hpp"
 
+#include "LithiumApp.hpp"
+
 #include "modules/server/commander.hpp"
 #include "modules/property/imessage.hpp"
 
@@ -106,7 +108,7 @@ private:
 	}
 
 public:
-	WebSocketServer();
+	WebSocketServer(const std::shared_ptr<AsyncWebSocket>& socket);
 	~WebSocketServer();
 
 #if ENABLE_ASYNC
@@ -194,14 +196,16 @@ public:
 
 public:
 #if ENABLE_ASYNC
-	void onAfterCreate_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params) override;
+	void onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params) override;
 
-	void onBeforeDestroy_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket) override;
+	void onBeforeDestroy_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket) override;
 #else
 	void onAfterCreate(const oatpp::websocket::WebSocket &socket, const std::shared_ptr<const ParameterMap> &params) override;
 
 	void onBeforeDestroy(const oatpp::websocket::WebSocket &socket) override;
 #endif
 };
+
+extern std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap;
 
 #endif // WebSocketServer_hpp

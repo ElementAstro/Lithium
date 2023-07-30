@@ -7,6 +7,7 @@
 #include "modules/device/device_manager.hpp"
 #include "modules/system/process.hpp"
 #include "modules/task/task_manager.hpp"
+#include "modules/task/task_generator.hpp"
 #include "modules/server/message_bus.hpp"
 #include "modules/server/message_queue.hpp"
 #include "modules/property/imessage.hpp"
@@ -35,7 +36,7 @@ namespace Lithium
         size_t findDevice(DeviceType type, const std::string &name);
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
-        
+
     public:
         bool createProcess(const std::string &command, const std::string &identifier);
         bool runScript(const std::string &script, const std::string &identifier);
@@ -48,7 +49,7 @@ namespace Lithium
         bool addTask(const std::shared_ptr<BasicTask> &task);
         bool insertTask(const std::shared_ptr<BasicTask> &task, int position);
         bool executeAllTasks();
-        void stopTask();
+        bool stopTask();
         bool executeTaskByName(const std::string &name);
         bool modifyTask(int index, const std::shared_ptr<BasicTask> &task);
         bool modifyTaskByName(const std::string &name, const std::shared_ptr<BasicTask> &task);
@@ -84,6 +85,7 @@ namespace Lithium
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Process::ProcessManager> m_ProcessManager;
         std::shared_ptr<Task::TaskManager> m_TaskManager;
+        std::shared_ptr<TaskGenerator> m_TaskGenerator;
         std::shared_ptr<MessageBus> m_MessageBus;
 
         struct QueueWrapper
@@ -92,5 +94,5 @@ namespace Lithium
         };
         std::shared_ptr<QueueWrapper> m_MessageQueue;
     };
-    extern LithiumApp MyApp;
+    extern std::shared_ptr<LithiumApp> MyApp;
 } // namespace Lithium

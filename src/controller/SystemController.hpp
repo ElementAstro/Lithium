@@ -272,9 +272,9 @@ public:
         Action act() override
         {
 #ifdef _WIN32
-            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Stop-Computer","shutdown");
+            Lithium::MyApp->createProcess("Start-Sleep -Seconds 1; Stop-Computer","shutdown");
 #else
-            Lithium::MyApp.createProcess("sleep 1 && shutdown -h now","shutdown");
+            Lithium::MyApp->createProcess("sleep 1 && shutdown -h now","shutdown");
 #endif
             auto response = controller->createResponse(Status::CODE_200);
             response->putHeader(Header::CONTENT_TYPE, "text/json");
@@ -285,9 +285,9 @@ public:
     ENDPOINT("GET", "/api/system/shutdown", getUIShutdown)
     {
 #ifdef _WIN32
-            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Stop-Computer","shutdown");
+            Lithium::MyApp->createProcess("Start-Sleep -Seconds 1; Stop-Computer","shutdown");
 #else
-            Lithium::MyApp.createProcess("sleep 1 && shutdown -h now","shutdown");
+            Lithium::MyApp->createProcess("sleep 1 && shutdown -h now","shutdown");
 #endif
 
         auto response = createResponse(Status::CODE_200);
@@ -307,9 +307,9 @@ public:
         Action act() override
         {
 #ifdef _WIN32
-            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Restart-Computer","shutdown");
+            Lithium::MyApp->createProcess("Start-Sleep -Seconds 1; Restart-Computer","shutdown");
 #else
-            Lithium::MyApp.createProcess("sleep 1 && reboot","shutdown");
+            Lithium::MyApp->createProcess("sleep 1 && reboot","shutdown");
 #endif
             auto response = controller->createResponse(Status::CODE_200);
             response->putHeader(Header::CONTENT_TYPE, "text/json");
@@ -320,9 +320,9 @@ public:
     ENDPOINT("GET", "/api/system/reboot", getUIReboot)
     {
 #ifdef _WIN32
-            Lithium::MyApp.createProcess("Start-Sleep -Seconds 1; Restart-Computer","shutdown");
+            Lithium::MyApp->createProcess("Start-Sleep -Seconds 1; Restart-Computer","shutdown");
 #else
-            Lithium::MyApp.createProcess("sleep 1 && reboot","shutdown");
+            Lithium::MyApp->createProcess("sleep 1 && reboot","shutdown");
 #endif
 
         auto response = createResponse(Status::CODE_200);

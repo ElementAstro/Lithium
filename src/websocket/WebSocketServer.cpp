@@ -36,13 +36,19 @@ Description: WebSocket Server
 #include <version>
 #include <thread>
 
-#include "LithiumApp.hpp"
+std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
+	{"Camera", Lithium::DeviceType::Camera},
+	{"Telescope", Lithium::DeviceType::Telescope},
+	{"Focuser", Lithium::DeviceType::Focuser},
+	{"FilterWheel", Lithium::DeviceType::FilterWheel},
+	{"Solver", Lithium::DeviceType::Solver},
+	{"Guider", Lithium::DeviceType::Guider}};
 
-WebSocketServer::WebSocketServer()
+WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 {
 	m_CommandDispatcher = std::make_unique<CommandDispatcher>();
 
-	Lithium::MyApp.MSSubscribe("main", std::function<void(const Lithium::IMessage &)>(std::bind(&WebSocketServer::OnMessageReceived, this, std::placeholders::_1)));
+	Lithium::MyApp->MSSubscribe("main", std::function<void(const Lithium::IMessage &)>(std::bind(&WebSocketServer::OnMessageReceived, this, std::placeholders::_1)));
 
 	LiRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask);
 	LiRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo);
@@ -71,6 +77,7 @@ WebSocketServer::WebSocketServer()
 
 WebSocketServer::~WebSocketServer()
 {
+	/*
 #if ENABLE_ASYNC
 	m_socket->sendCloseAsync();
 #else
@@ -79,6 +86,7 @@ WebSocketServer::~WebSocketServer()
 		it->sendClose();
 	}
 #endif
+	*/
 }
 
 #if ENABLE_ASYNC
@@ -102,84 +110,75 @@ oatpp::async::CoroutineStarter WebSocketServer::onClose(const std::shared_ptr<As
 
 oatpp::async::CoroutineStarter WebSocketServer::readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size)
 {
-
 	if (size == 0)
 	{
+		nlohmann::json reply_data;
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
-		LOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
+		// LOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
 		if (!nlohmann::json::accept(wholeMessage->c_str()))
 		{
-			OATPP_LOGE("WSServer", "Message is not in JSON format");
-			return nullptr;
+			LOG_F(ERROR, "Message is not in JSON format");
+			reply_data["error"] = "Invalid Format";
+			reply_data["message"] = "Message is not in JSON format";
+			return socket->sendOneFrameTextAsync(reply_data.dump());
 		}
 		try
 		{
-			OATPP_LOGD("WSServer", "Start client command in alone thread");
 			nlohmann::json jdata = nlohmann::json::parse(wholeMessage->c_str());
-			nlohmann::json reply_data;
 			try
 			{
 				if (jdata.empty())
 				{
-					OATPP_LOGE("WSServer", "WebSocketServer::processMessage() data is empty");
-					return nullptr;
+					LOG_F(ERROR, "WebSocketServer::processMessage() data is empty");
+					reply_data["error"] = "Invalid Parameters";
+					reply_data["message"] = "Data is empty";
+					return socket->sendOneFrameTextAsync(reply_data.dump());
 				}
-				try
+				if (jdata.contains("name") && jdata.contains("params"))
 				{
-					if (jdata.contains("name") && jdata.contains("params"))
+					const std::string name = jdata["name"].get<std::string>();
+					if (m_CommandDispatcher->HasHandler(name))
 					{
-						const std::string name = jdata["name"].get<std::string>();
-						if (m_CommandDispatcher->HasHandler(name))
+						json res = m_CommandDispatcher->Dispatch(name, jdata["params"].get<json>());
+						if (res.contains("error"))
 						{
-							json res = m_CommandDispatcher->Dispatch(name, jdata["params"].get<json>());
-							if (res.contains("error"))
-							{
-								OATPP_LOGE("WSServer", "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
-								reply_data["error"] = res["error"];
-							}
-							else
-							{
-								OATPP_LOGD("WSServer", "Run command %s successfully", name.c_str());
-								reply_data = {{"reply", "OK"}};
-							}
+							LOG_F(ERROR, "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
+							reply_data["error"] = res["error"];
+						}
+						else
+						{
+							LOG_F(INFO, "Run command %s successfully", name.c_str());
+							reply_data = {{"reply", "OK"}};
 						}
 					}
-					else
-					{
-						OATPP_LOGE("WSServer", "WebSocketServer::processMessage() missing parameter: name or params");
-						reply_data = {{"error", "Missing parameter: name or params"}};
-					}
 				}
-				catch (const nlohmann::json::exception &e)
+				else
 				{
-					OATPP_LOGE("WSServer", "WebSocketServer::processMessage() json exception: %s", e.what());
-					reply_data = {{"error", e.what()}};
-				}
-				catch (const std::exception &e)
-				{
-					OATPP_LOGE("WSServer", "WebSocketServer::processMessage() exception: %s", e.what());
-					reply_data = {{"error", e.what()}};
+					LOG_F(ERROR, "[ASYNC MODE] WebSocketServer::readMessage() missing parameter: name or params");
+					reply_data = {{"error", "Invalid Parameters"}, {"message", "Missing parameter: name or params"}};
 				}
 			}
 			catch (const std::exception &e)
 			{
-				OATPP_LOGE("WSServer", "WebSocketServer::onMessage() parse json failed: %s", e.what());
+				LOG_F(ERROR, "WebSocketServer::readMessage() run command failed: %s", e.what());
+				reply_data = {{"error", "Running Error"}, {"message", e.what()}};
 			}
-			OATPP_LOGD("WSServer", "Completed command thread successfully");
-			return socket->sendOneFrameTextAsync(reply_data.dump());
 		}
 		catch (const nlohmann::detail::parse_error &e)
 		{
-			OATPP_LOGE("WSServer", "Failed to parser JSON message : %s", e.what());
+			LOG_F(ERROR, "[ASYNC MODE] WebSocketServer::readMessage() json exception: %s", e.what());
+			reply_data = {{"errro", "Invalid Format"}, {"message", e.what()}};
 		}
 		catch (const std::exception &e)
 		{
-			OATPP_LOGE("WSServer", "Unknown error happened in WebsocketServer : %s", e.what());
+			LOG_F(ERROR, "[ASYNC MODE] WebSocketServer::readMessage() exception: %s", e.what());
+			reply_data = {{"errro", "Unknown Error"}, {"message", e.what()}};
 		}
+		return socket->sendOneFrameTextAsync(reply_data.dump());
 	}
 	else if (size > 0)
-	{ // message frame received
+	{
 		m_messageBuffer.writeSimple(data, size);
 	}
 	return nullptr;
@@ -233,7 +232,8 @@ void WebSocketServer::SendBinaryMessageNonBlocking(const void *binary_message, i
 			return oatpp::async::synchronize(m_lock, m_websocket->sendOneFrameBinaryAsync(m_message)).next(finish());
 		}
 	};
-	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, binary);
+	if (m_socket)
+		m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, binary);
 }
 
 #else
@@ -263,12 +263,12 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 		LOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
 		if (!nlohmann::json::accept(wholeMessage->c_str()))
 		{
-			OATPP_LOGE("WSServer", "Message is not in JSON format");
+			LOG_F(ERROR, "Message is not in JSON format");
 			return;
 		}
 		try
 		{
-			OATPP_LOGD("WSServer", "Start client command in alone thread");
+			LOG_F(INFO, "Start client command in alone thread");
 			nlohmann::json jdata = nlohmann::json::parse(wholeMessage->c_str());
 #if __cplusplus >= 202002L
 			std::jthread myThread(std::bind(&WebSocketServer::ProcessMessage, this, std::ref(socket), std::ref(jdata)));
@@ -276,15 +276,15 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 			std::thread myThread(std::bind(&WebSocketServer::ProcessMessage, this, std::ref(socket), std::ref(jdata)));
 #endif
 			myThread.detach();
-			OATPP_LOGD("WSServer", "Started command thread successfully");
+			LOG_F(INFO, "Started command thread successfully");
 		}
 		catch (const nlohmann::detail::parse_error &e)
 		{
-			OATPP_LOGE("WSServer", "Failed to parser JSON message : %s", e.what());
+			LOG_F(ERROR, "Failed to parser JSON message : %s", e.what());
 		}
 		catch (const std::exception &e)
 		{
-			OATPP_LOGE("WSServer", "Unknown error happened in WebsocketServer : %s", e.what());
+			LOG_F(ERROR, "Unknown error happened in WebsocketServer : %s", e.what());
 		}
 	}
 	else if (size > 0)
@@ -344,7 +344,7 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 	{
 		if (data.empty())
 		{
-			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() data is empty");
+			LOG_F(ERROR, "WebSocketServer::processMessage() data is empty");
 			return;
 		}
 		nlohmann::json reply_data;
@@ -358,37 +358,37 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 					json res = m_CommandDispatcher->Dispatch(name, data["params"].get<json>());
 					if (res.contains("error"))
 					{
-						OATPP_LOGE("WSServer", "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
+						LOG_F(ERROR, "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
 						reply_data["error"] = res["error"];
 					}
 					else
 					{
-						OATPP_LOGD("WSServer", "Run command %s successfully", name.c_str());
+						LOG_F(INFO, "Run command %s successfully", name.c_str());
 						reply_data = {{"reply", "OK"}};
 					}
 				}
 			}
 			else
 			{
-				OATPP_LOGE("WSServer", "WebSocketServer::processMessage() missing parameter: name or params");
+				LOG_F(ERROR, "WebSocketServer::processMessage() missing parameter: name or params");
 				reply_data = {{"error", "Missing parameter: name or params"}};
 			}
 		}
 		catch (const nlohmann::json::exception &e)
 		{
-			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() json exception: %s", e.what());
+			LOG_F(ERROR, "WebSocketServer::processMessage() json exception: %s", e.what());
 			reply_data = {{"error", e.what()}};
 		}
 		catch (const std::exception &e)
 		{
-			OATPP_LOGE("WSServer", "WebSocketServer::processMessage() exception: %s", e.what());
+			LOG_F(ERROR, "WebSocketServer::processMessage() exception: %s", e.what());
 			reply_data = {{"error", e.what()}};
 		}
 		socket.sendOneFrameText(reply_data.dump());
 	}
 	catch (const std::exception &e)
 	{
-		OATPP_LOGE("WSServer", "WebSocketServer::onMessage() parse json failed: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::onMessage() parse json failed: %s", e.what());
 	}
 }
 #endif
@@ -418,18 +418,18 @@ void WebSocketServer::OnMessageReceived(const Lithium::IMessage &message)
 std::atomic<v_int32> WSInstanceListener::SOCKETS(0);
 
 #if ENABLE_ASYNC
-void WSInstanceListener::onAfterCreate_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params)
+void WSInstanceListener::onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params)
 {
 	SOCKETS++;
 	LOG_F(INFO, "New Incoming Connection. Connection count=%d", SOCKETS.load());
 	if (!m_socket)
 	{
-		m_socket = std::make_shared<WebSocketServer>();
+		m_socket = std::make_shared<WebSocketServer>(socket);
 	}
 	socket->setListener(m_socket);
 }
 
-void WSInstanceListener::onBeforeDestroy_NonBlocking(const std::shared_ptr<WebSocketServer::AsyncWebSocket> &socket)
+void WSInstanceListener::onBeforeDestroy_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket)
 {
 	SOCKETS--;
 	LOG_F(INFO, "Connection closed. Connection count=%d", SOCKETS.load());

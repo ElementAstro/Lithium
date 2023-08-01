@@ -118,9 +118,16 @@ public:
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, apiObjectMapper)
     ([]
      {
-    auto objectMapper = oatpp::parser::json::mapping::ObjectMapper::createShared();
-    objectMapper->getDeserializer()->getConfig()->allowUnknownFields = false;
-    return objectMapper; }());
+        /* create serializer and deserializer configurations */
+        auto serializeConfig = oatpp::parser::json::mapping::Serializer::Config::createShared();
+        auto deserializeConfig = oatpp::parser::json::mapping::Deserializer::Config::createShared();
+
+        /* enable beautifier */
+        serializeConfig->useBeautifier = true;
+
+        auto objectMapper = oatpp::parser::json::mapping::ObjectMapper::createShared(serializeConfig, deserializeConfig);
+        objectMapper->getDeserializer()->getConfig()->allowUnknownFields = false;
+        return objectMapper; }());
 
     /**
      *  Create ConnectionProvider component which listens on the port

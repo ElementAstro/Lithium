@@ -1,5 +1,5 @@
-#ifndef EXAMPLE_JWT_AUTHCONTROLLER_HPP
-#define EXAMPLE_JWT_AUTHCONTROLLER_HPP
+#ifndef AUTHCONTROLLER_HPP
+#define AUTHCONTROLLER_HPP
 
 #include "config.h"
 
@@ -131,4 +131,4 @@ public:
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- End Codegen
 
-#endif // EXAMPLE_JWT_AUTHCONTROLLER_HPP
+#endif // AUTHCONTROLLER_HPP

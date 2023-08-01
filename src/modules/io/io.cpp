@@ -34,16 +34,19 @@ Description: IO
 #include <filesystem>
 #include <iostream>
 #include <algorithm>
+#include <regex>
 
 #include "loguru/loguru.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
 const std::string PATH_SEPARATOR = "\\";
+const std::regex folderNameRegex("^[^\\/?*:;{}\\\\]+[^\\\\]*$");
 #else
 #include <unistd.h>
 #include <limits.h>
 const std::string PATH_SEPARATOR = "/";
+const std::regex folderNameRegex("^[^/]+$");
 #endif
 
 namespace fs = std::filesystem;
@@ -310,5 +313,16 @@ namespace Lithium::File
                 traverse_directories(entry.path(), folders);
             }
         }
+    }
+
+    bool is_full_path(const std::string& path)
+    {
+        std::filesystem::path fsPath(path);
+        return fsPath.is_absolute();
+    }
+
+    bool isFolderNameValid(const std::string& folderName)
+    {
+        return std::regex_match(folderName, folderNameRegex);
     }
 }

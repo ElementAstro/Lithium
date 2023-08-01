@@ -1,5 +1,5 @@
 /*
- * StatusDto.hpp
+ * PHD2Dto.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,54 +25,49 @@ E-mail: astro_air@126.com
 
 Date: 2023-7-25
 
-Description: Status Data Transform Object
+Description: Data Transform Object for Process Controller
 
 **************************************************/
 
-#ifndef STATUSDTO_HPP
-#define STATUSDTO_HPP
+#ifndef PHD2DTO_HPP
+#define PHD2DTO_HPP
 
-#include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/Types.hpp"
+#include "oatpp/core/macro/codegen.hpp"
 
-#include OATPP_CODEGEN_BEGIN(DTO)
+#include OATPP_CODEGEN_BEGIN(DTO) ///< Begin DTO codegen section
 
-class StatusDto : public oatpp::DTO
+class StartPHD2DTO : public oatpp::DTO
 {
+    DTO_INIT(StartPHD2DTO, DTO)
 
-  DTO_INIT(StatusDto, DTO)
-
-  DTO_FIELD_INFO(status)
-  {
-    info->description = "Short status text";
-  }
-  DTO_FIELD(String, status);
-
-  DTO_FIELD_INFO(code)
-  {
-    info->description = "Status code";
-  }
-  DTO_FIELD(Int32, code) = 200;
-
-  DTO_FIELD_INFO(message)
-  {
-    info->description = "Verbose message";
-  }
-  DTO_FIELD(String, message);
-
-  DTO_FIELD_INFO(error)
-  {
-    info->description = "Verbose error message";
-  }
-  DTO_FIELD(String, error);
-
-  DTO_FIELD_INFO(command)
-  {
-    info->description = "Command";
-  }
-  DTO_FIELD(String, command);
+    DTO_FIELD_INFO(phd2_params)
+    {
+        info->description = "parameters of PHD2 (JSON)";
+        info->required = false;
+    }
+    DTO_FIELD(String, phd2_params);
 };
 
-#include OATPP_CODEGEN_END(DTO)
+class ModifyPHD2ParamDTO : public oatpp::DTO
+{
+    DTO_INIT(ModifyPHD2ParamDTO, DTO)
 
-#endif // STATUSDTO_HPP
+    DTO_FIELD_INFO(param_name)
+    {
+        info->description = "name of parameters";
+        info->required = true;
+    }
+    DTO_FIELD(String, param_name);
+
+    DTO_FIELD_INFO(param_value)
+    {
+        info->description = "value of parameters";
+        info->required = true;
+    }
+    DTO_FIELD(String, param_value);
+};
+
+#include OATPP_CODEGEN_END(DTO) ///< End DTO codegen section
+
+#endif

@@ -39,6 +39,7 @@ Description: Main
 #include "controller/ProcessController.hpp"
 #include "controller/PHD2Controller.hpp"
 #include "controller/TaskController.hpp"
+#include "controller/UploadController.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -110,9 +111,15 @@ void run()
     docEndpoints.append(task_controller->getEndpoints());
     router->addController(task_controller);
 
-    // auto auth_controller = AuthController::createShared();
-    //   docEndpoints.append(auth_controller->getEndpoints());
-    // router->addController(auth_controller);
+    auto upload_controller = UploadController::createShared();
+    docEndpoints.append(upload_controller->getEndpoints());
+    router->addController(upload_controller);
+
+/*
+    auto auth_controller = AuthController::createShared();
+    docEndpoints.append(auth_controller->getEndpoints());
+    router->addController(auth_controller);
+*/
 
 #if ENABLE_ASYNC
     router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
@@ -128,11 +135,12 @@ void run()
     /* Get connection provider component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ServerConnectionProvider>, connectionProvider);
 
+    LOG_F(INFO, "Loaded server components ... Prepare for starting ...");
     /* create server */
     oatpp::network::Server server(connectionProvider,
                                   connectionHandler);
 
-    LOG_F(INFO, "Running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
+    LOG_F(INFO, "Server running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
 
     server.run();
 }
@@ -192,9 +200,13 @@ void registerInterruptHandler()
  */
 int main(int argc, char *argv[])
 {
-    argparse::ArgumentParser program("Lithium");
+    argparse::ArgumentParser program("Lithium Server");
 
     program.add_argument("-P", "--port").help("port the server running on").default_value(8000);
+    program.add_argument("-H", "--host").help("host the server running on").default_value("0.0.0.0");
+    program.add_argument("-C", "--config").help("path to the config file").default_value("config/cpnfig.json");
+    program.add_argument("-M", "--module-path").help("path to the modules directory").default_value("modules");
+    program.add_argument("-W", "--web-panel").help("web panel").default_value(true);
 
     program.add_description("Lithium Command Line Interface:");
     program.add_epilog("End.");
@@ -228,8 +240,10 @@ int main(int argc, char *argv[])
         loguru::init(argc, argv);
         // Set log file
         setupLogFile();
+#ifdef _WIN32
         // Register ctrl-c handle for better debug
         registerInterruptHandler();
+#endif
         // Run oatpp server
         Lithium::MyApp = std::make_shared<Lithium::LithiumApp>();
         oatpp::base::Environment::init();

@@ -2,11 +2,11 @@
 # This project is licensed under the terms of the GPL3 license.
 #
 # Project Name: Lithium
-# Description: Open Astrophotography Terminal
+# Description: Lithium - Open Astrophotography Terminal
 # Author: Max Qian
 # License: GPL3
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.13)
 
 enable_language(C CXX)
 
@@ -210,9 +210,6 @@ set(server_SRC
     ${lithium_src_dir}/modules/server/commander.cpp
     ${lithium_src_dir}/modules/server/commander.hpp
 
-    ${lithium_src_dir}/modules/server/login_manager.cpp
-    ${lithium_src_dir}/modules/server/login_manager.hpp
-
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
@@ -300,20 +297,22 @@ if(WIN32)
 
     add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
-    target_link_libraries(lithium_server pdh iphlpapi winmm crypt32)
+    target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
+    
+    target_link_libraries(lithium_server PRIVATE pdh iphlpapi winmm crypt32 wsock32 ws2_32)
 
-    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
+    target_link_libraries(lithium_server PRIVATE oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib)
 
-    target_link_libraries(lithium_server loguru)
+    target_link_libraries(lithium_server PRIVATE loguru)
 
     find_package(dlfcn-win32 REQUIRED)
-    target_link_libraries(lithium_server dlfcn-win32::dl)
+    target_link_libraries(lithium_server PRIVATE dlfcn-win32::dl)
 
-    target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
-    target_link_libraries(lithium_server ${OPENSSL_LIBRARIES})
-    target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
-    target_link_libraries(lithium_server pugixml-static)
-    target_link_libraries(lithium_server sqlite3)
+    target_link_libraries(lithium_server PRIVATE ${CFITSIO_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE ${OPENSSL_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE ${ZLIB_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE pugixml-static)
+    target_link_libraries(lithium_server PRIVATE sqlite3)
 
     # Set output name for Lithium executable
     set_target_properties(

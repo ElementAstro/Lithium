@@ -234,4 +234,8 @@ namespace Lithium::File
      * @return The converted Windows path.
      */
     std::string convert_linux_to_windows_path(const std::string &linux_path);
+
+    bool is_full_path(const std::string& path);
+
+    bool isFolderNameValid(const std::string& folderName);
 } // namespace Lithium::File

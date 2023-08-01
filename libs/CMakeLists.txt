@@ -1,6 +1,6 @@
 add_subdirectory(oatpp)
 
-add_library(oatpp-swagger
+add_library(oatpp-swagger SHARED
     oatpp-swagger/AsyncController.hpp
     oatpp-swagger/Controller.hpp
     oatpp-swagger/ControllerPaths.hpp
@@ -13,7 +13,9 @@ add_library(oatpp-swagger
     oatpp-swagger/Types.hpp
     oatpp-swagger/oas3/Model.hpp)
 
-add_library(oatpp-websocket
+target_link_libraries(oatpp-swagger PRIVATE oatpp)
+
+add_library(oatpp-websocket SHARED
     oatpp-websocket/AsyncConnectionHandler.cpp
     oatpp-websocket/AsyncConnectionHandler.hpp
     oatpp-websocket/AsyncWebSocket.cpp
@@ -35,7 +37,9 @@ add_library(oatpp-websocket
     oatpp-websocket/WebSocket.hpp
 )
 
-add_library(oatpp-openssl
+target_link_libraries(oatpp-websocket PRIVATE oatpp)
+
+add_library(oatpp-openssl SHARED
     oatpp-openssl/Config.cpp
     oatpp-openssl/Config.hpp
     oatpp-openssl/Connection.cpp
@@ -70,8 +74,11 @@ add_library(oatpp-openssl
     oatpp-openssl/configurer/TrustStore.cpp
     oatpp-openssl/configurer/TrustStore.hpp
 )
+find_package(OpenSSL REQUIRED)
+target_link_libraries(oatpp-openssl PRIVATE oatpp)
+target_link_libraries(oatpp-openssl PRIVATE ${OPENSSL_LIBRARIES})
 
-add_library(oatpp-sqlite
+add_library(oatpp-sqlite SHARED
     oatpp-sqlite/mapping/type/Blob.cpp
     oatpp-sqlite/mapping/type/Blob.hpp
     oatpp-sqlite/mapping/Deserializer.cpp
@@ -97,12 +104,42 @@ add_library(oatpp-sqlite
     oatpp-sqlite/Utils.cpp
     oatpp-sqlite/Utils.hpp
 )
+find_package(SQLite3 REQUIRED)
+target_link_libraries(oatpp-sqlite PRIVATE oatpp)
+target_link_libraries(oatpp-sqlite PRIVATE sqlite3)
 
-add_library(oatpp-zlib
+add_library(oatpp-zlib SHARED
     oatpp-zlib/Processor.cpp
     oatpp-zlib/Processor.hpp
     oatpp-zlib/EncoderProvider.cpp
     oatpp-zlib/EncoderProvider.hpp
 )
+find_package(ZLIB REQUIRED)
+target_link_libraries(oatpp-zlib PRIVATE oatpp)
+target_link_libraries(oatpp-zlib PRIVATE ${ZLIB_LIBRARIES})
+
+add_library(oatpp-curl SHARED
+        oatpp-curl/RequestExecutor.cpp
+        oatpp-curl/RequestExecutor.hpp
+        oatpp-curl/io/BodyDecoder.cpp
+        oatpp-curl/io/BodyDecoder.hpp
+        oatpp-curl/io/BodyInputStream.cpp
+        oatpp-curl/io/BodyInputStream.hpp
+        oatpp-curl/io/BodyOutputStream.cpp
+        oatpp-curl/io/BodyOutputStream.hpp
+        oatpp-curl/io/Curl.cpp
+        oatpp-curl/io/Curl.hpp
+        oatpp-curl/io/CurlBodyReader.cpp
+        oatpp-curl/io/CurlBodyReader.hpp
+        oatpp-curl/io/CurlBodyWriter.cpp
+        oatpp-curl/io/CurlBodyWriter.hpp
+        oatpp-curl/io/CurlHeadersReader.cpp
+        oatpp-curl/io/CurlHeadersReader.hpp
+)
+find_package(CURL REQUIRED)
+target_link_libraries(oatpp-curl PRIVATE oatpp)
+target_link_libraries(oatpp-curl PRIVATE CURL::libcurl)
 
 add_library(loguru loguru/loguru.cpp)
+
+add_library(cpp_httplib cpp_httplib/httplib.cpp)

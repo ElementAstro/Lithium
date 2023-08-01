@@ -120,6 +120,9 @@ public:
   static std::shared_ptr<AsyncHttpConnectionHandler> createShared(const std::shared_ptr<HttpProcessor::Components>& components,
                                                                   const std::shared_ptr<oatpp::async::Executor>& executor);
 
+  static std::shared_ptr<AsyncHttpConnectionHandler> createShared(const std::shared_ptr<HttpProcessor::Components>& components,
+                                                                  v_int32 threadCount = oatpp::async::Executor::VALUE_SUGGESTED);
+
   void setErrorHandler(const std::shared_ptr<handler::ErrorHandler>& errorHandler);
 
   /**

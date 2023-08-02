@@ -5,6 +5,7 @@
 #include "auth/JWT.hpp"
 
 #include "database/UserDb.hpp"
+#include "data/UserDto.hpp"
 #include "data/SignUpDto.hpp"
 #include "data/SignInDto.hpp"
 #include "data/AuthDto.hpp"

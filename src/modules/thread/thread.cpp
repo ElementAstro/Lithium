@@ -33,6 +33,7 @@ Description: Thread Manager
 
 #include <sstream>
 #include <iostream>
+#include <random>
 
 #include "loguru/loguru.hpp"
 
@@ -74,14 +75,16 @@ namespace Lithium::Thread
             {
                 throw std::runtime_error("Thread manager has stopped, cannot add new thread");
             }
-            auto t = std::make_tuple(
+            if (name != "")
+            {
+                auto t = std::make_tuple(
 #if __cplusplus >= 202002L
-                std::make_unique<std::jthread>([func]
+                    std::make_unique<std::jthread>([func]
 #else
-                std::make_unique<std::thread>([func]
+                    std::make_unique<std::thread>([func]
 #endif
 
-                                               {
+                                                   {
                 try
                 {
                     func();
@@ -90,10 +93,32 @@ namespace Lithium::Thread
                 {
                     LOG_F(ERROR, "Unhandled exception in thread: %s", e.what());
                 } }),
-                name,
-                false);
+                    name,
+                    false);
+                m_threads.emplace_back(std::move(t));
+            }
+            else
+            {
+                auto t = std::make_tuple(
+#if __cplusplus >= 202002L
+                    std::make_unique<std::jthread>([func]
+#else
+                    std::make_unique<std::thread>([func]
+#endif
 
-            m_threads.emplace_back(std::move(t));
+                                                   {
+                try
+                {
+                    func();
+                }
+                catch (const std::exception &e)
+                {
+                    LOG_F(ERROR, "Unhandled exception in thread: %s", e.what());
+                } }),
+                    generateRandomString(16),
+                    false);
+                m_threads.emplace_back(std::move(t));
+            }
             LOG_F(INFO, "Added thread: %s", name.c_str());
             m_cv.notify_all();
         }
@@ -242,5 +267,23 @@ namespace Lithium::Thread
         lock.lock();
         std::get<2>(t) = false;
         m_cv.notify_all();
+    }
+
+    const std::string ThreadManager::generateRandomString(int length)
+    {
+        static const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        static std::random_device rd;
+        static std::mt19937 generator(rd());
+        static std::uniform_int_distribution<int> distribution(0, characters.size() - 1);
+
+        std::string randomString;
+        randomString.reserve(length);
+
+        for (int i = 0; i < length; ++i)
+        {
+            randomString.push_back(characters[distribution(generator)]);
+        }
+
+        return randomString;
     }
 }

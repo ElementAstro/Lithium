@@ -40,6 +40,7 @@ Description: Main
 #include "controller/PHD2Controller.hpp"
 #include "controller/TaskController.hpp"
 #include "controller/UploadController.hpp"
+#include "controller/StarController.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -114,6 +115,10 @@ void run()
     auto upload_controller = UploadController::createShared();
     docEndpoints.append(upload_controller->getEndpoints());
     router->addController(upload_controller);
+
+    auto star_controller = StarController::createShared();
+    docEndpoints.append(star_controller->getEndpoints());
+    router->addController(star_controller);
 
 /*
     auto auth_controller = AuthController::createShared();

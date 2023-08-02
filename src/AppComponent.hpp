@@ -40,6 +40,7 @@ Description: App Components
 
 #include "components/SwaggerComponent.hpp"
 #include "components/DatabaseComponent.hpp"
+#include "components/ClientComponent.hpp"
 
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-openssl/configurer/TrustStore.hpp"
@@ -62,7 +63,7 @@ Description: App Components
 #include "oatpp-zlib/EncoderProvider.hpp"
 #include "oatpp/web/protocol/http/incoming/SimpleBodyDecoder.hpp"
 
-// #include "interceptor/AuthInterceptor.hpp"
+#include "interceptor/AuthInterceptor.hpp"
 #include "oatpp/web/server/interceptor/AllowCorsGlobal.hpp"
 
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
@@ -94,6 +95,11 @@ public:
      * Database component
      */
     DatabaseComponent databaseComponent;
+
+    /**
+     * Client component 
+     */
+    ClientComponent clientComponent;
 
 #if ENABLE_ASYNC
     /**
@@ -191,9 +197,9 @@ public:
         connectionHandler->setErrorHandler(std::make_shared<ErrorHandler>(objectMapper));
 #endif 
         // oatpp-jwt for login system
-        // connectionHandler->addRequestInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowOptionsGlobal>());
-        // connectionHandler->addRequestInterceptor(std::make_shared<AuthInterceptor>(jwt));
-        // connectionHandler->addResponseInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowCorsGlobal>());
+        connectionHandler->addRequestInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowOptionsGlobal>());
+        connectionHandler->addRequestInterceptor(std::make_shared<AuthInterceptor>(jwt));
+        connectionHandler->addResponseInterceptor(std::make_shared<oatpp::web::server::interceptor::AllowCorsGlobal>());
         return connectionHandler; }());
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler)

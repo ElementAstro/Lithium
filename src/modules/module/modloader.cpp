@@ -39,8 +39,6 @@ Description: C++ and Modules Loader
 #include <cxxabi.h>
 #include <regex>
 
-#include "loguru/loguru.hpp"
-
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
@@ -90,17 +88,16 @@ namespace Lithium
         }
     }
 
-    nlohmann::json iterator_modules_dir()
+    nlohmann::json iterator_modules_dir(const std::string &dir_name)
     {
+        if (dir_name == "")
+        {
+            LOG_F(ERROR, "DIR name should not be null");
+            return {{"error", "dir name should not be null"}};
+        }
         // Define the modules directory path
         fs::path modules_dir;
-#ifdef _WIN32 // Windows OS
-        // modules_dir = fs::path(getenv("USERPROFILE")) / "Documents" / "modules";
-        modules_dir = std::filesystem::current_path() / "modules";
-#else // Linux OS
-        modules_dir = "modules";
-#endif
-
+        modules_dir = fs::absolute(std::filesystem::current_path() / dir_name);
         try
         {
             // Create the modules directory if it does not exist
@@ -168,10 +165,28 @@ namespace Lithium
     {
         m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
         LOG_F(INFO, "C++ module manager loaded successfully.");
-        m_ThreadManager->addThread([]()
-                                   { iterator_modules_dir(); },
-                                   "iterator_modules_dir");
+        if (!m_ThreadManager)
+        {
+            m_ThreadManager->addThread([this]()
+                                       { if(!LoadOnInit()){
+                                    LOG_F(ERROR,"Failed to load modules on init");
+                                   } },
+                                       "LoadOnInit");
+        }
+    }
 
+    ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager)
+    {
+        m_ThreadManager = threadManager;
+        LOG_F(INFO, "C++ module manager loaded successfully.");
+        if (!m_ThreadManager)
+        {
+            m_ThreadManager->addThread([this]()
+                                       { if(!LoadOnInit()){
+                                    LOG_F(ERROR,"Failed to load modules on init");
+                                   } },
+                                       "LoadOnInit");
+        }
     }
 
     ModuleLoader::~ModuleLoader()
@@ -183,6 +198,21 @@ namespace Lithium
                 UNLOAD_LIBRARY(entry.second);
             }
         }
+    }
+
+    bool ModuleLoader::LoadOnInit()
+    {
+        const nlohmann::json dir_info = iterator_modules_dir("modules");
+        for (auto module_ : dir_info)
+        {
+            const std::string name = module_.value("name", "");
+            const std::string path = module_.value("path", "");
+            if (name == "" || path == "")
+                continue;
+            if (!LoadModule(path, name))
+                continue;
+        }
+        return true;
     }
 
     bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)

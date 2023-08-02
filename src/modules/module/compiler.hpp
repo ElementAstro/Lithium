@@ -55,7 +55,7 @@ private:
      * \param destination 目标文件路径
      * \return 是否复制成功
      */
-    bool CopyFile(const std::string &source, const std::string &destination);
+    bool CopyFile_(const std::string &source, const std::string &destination);
 
     /**
      * \brief 运行外部 shell 命令，并将标准输入输出流转发到命令的标准输入输出流中
@@ -65,7 +65,7 @@ private:
      * \param outputStream 标准输出流
      * \return 命令运行的返回值
      */
-    int Compiler::RunShellCommand(const std::string &command, const std::string &input, std::string &output)
+    int RunShellCommand(const std::string &command, const std::string &input, std::string &output);
 
     std::unordered_map<std::string, std::string> cache_;
 };

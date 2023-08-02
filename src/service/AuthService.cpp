@@ -1,17 +1,14 @@
 
 #include "AuthService.hpp"
 
-#include "database/models/UserModel.hpp"
-
 oatpp::Object<AuthDto> AuthService::signUp(const oatpp::Object<SignUpDto> &dto)
 {
 
-    auto user = UserModel::createShared();
+    auto user = UserDto::createShared();
     user->id = nullptr;
     user->userName = dto->userName;
     user->email = dto->email;
     user->password = dto->password;
-
     auto dbResult = m_database->createUser(user);
     if (!dbResult->isSuccess())
     {

@@ -172,8 +172,14 @@ set(module_SRC
     ${lithium_src_dir}/modules/module/modloader.cpp
     ${lithium_src_dir}/modules/module/modloader.hpp
 
-    # ${lithium_src_dir}/modules/module/compiler.cpp
-    # ${lithium_src_dir}/modules/module/compiler.hpp
+    ${lithium_src_dir}/modules/module/plugin.cpp
+    ${lithium_src_dir}/modules/module/plugin.hpp
+
+    ${lithium_src_dir}/modules/module/plugin_manager.cpp
+    ${lithium_src_dir}/modules/module/plugin_manager.hpp
+
+    ${lithium_src_dir}/modules/module/compiler.cpp
+    ${lithium_src_dir}/modules/module/compiler.hpp
 )
 
 set(network_SRC
@@ -269,8 +275,11 @@ set(Lithium_SRC
     ${lithium_src_dir}/interceptor/AuthInterceptor.cpp
     ${lithium_src_dir}/interceptor/AuthInterceptor.hpp
 
-    # ${lithium_src_dir}/service/AuthService.cpp
-    # ${lithium_src_dir}/service/AuthService.hpp
+    ${lithium_src_dir}/service/AuthService.cpp
+    ${lithium_src_dir}/service/AuthService.hpp
+
+    ${lithium_src_dir}/service/StarService.cpp
+    ${lithium_src_dir}/service/StarService.hpp
 
     ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp

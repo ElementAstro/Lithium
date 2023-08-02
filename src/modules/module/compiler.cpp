@@ -36,6 +36,7 @@ Description: Compiler
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <atomic>
+#include <thread>
 
 #include "loguru/loguru.hpp"
 
@@ -123,22 +124,22 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     // Syntax and semantic checking
     std::stringstream syntaxCheckCmd;
     syntaxCheckCmd << COMPILER << " -fsyntax-only -x c++ -";
-    std::ostringstream syntaxCheckOutput;
+    std::string syntaxCheckOutput;
     if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0)
     {
-        LOG_F(ERROR, "Syntax error in C++ code: %s", syntaxCheckOutput.str().c_str());
+        LOG_F(ERROR, "Syntax error in C++ code: %s", syntaxCheckOutput.c_str());
         return false;
     }
 
     // Compile code
-    std::ostringstream compilationOutput;
+    std::string compilationOutput;
     std::string cmd = std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
-    LOG_F(DEBUG, "%s", cmd.c_str());
+    LOG_F(INFO, "%s", cmd.c_str());
 
     int exitCode = RunShellCommand(cmd, code, compilationOutput);
     if (exitCode != 0)
     {
-        LOG_F(ERROR, "Failed to compile C++ code: %s", compilationOutput.str().c_str());
+        LOG_F(ERROR, "Failed to compile C++ code: %s", compilationOutput.c_str());
         return false;
     }
 
@@ -158,7 +159,7 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     return false;
 }
 
-bool Compiler::CopyFile(const std::string &source, const std::string &destination)
+bool Compiler::CopyFile_(const std::string &source, const std::string &destination)
 {
     std::ifstream src(source, std::ios::binary);
     if (!src)
@@ -211,7 +212,11 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     si.hStdInput = hStdinRead;
     si.hStdOutput = hStdoutWrite;
     si.hStdError = hStdoutWrite;
-    if (!CreateProcess(NULL, &command[0], NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+
+    std::vector<char> commandBuffer(command.begin(), command.end());
+    commandBuffer.push_back('\0');
+
+    if (!CreateProcess(NULL, &commandBuffer[0], NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
         LOG_F(ERROR, "Failed to launch shell command: %s", command.c_str());
         CloseHandle(hStdinRead);
@@ -226,21 +231,21 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     // Read the command output
     std::thread outputThread([&]()
                              {
-        char buffer[4096];
-        DWORD bytesRead;
-        while (ReadFile(hStdoutRead, buffer, sizeof(buffer), &bytesRead, NULL))
-        {
-            output.append(buffer, bytesRead);
-        } });
+    char buffer[4096];
+    DWORD bytesRead;
+    while (ReadFile(hStdoutRead, buffer, sizeof(buffer), &bytesRead, NULL))
+    {
+        output.append(buffer, bytesRead);
+    } });
 
     // Write the command input
     DWORD bytesWritten;
-    if (!WriteFile(hStdinWrite, input.c_str(), input.size(), &bytesWritten, NULL))
+    if (!WriteFile(hStdoutWrite, input.c_str(), input.size(), &bytesWritten, NULL))
     {
         LOG_F(ERROR, "Failed to write input for shell command: %s", command.c_str());
         return exitCode;
     }
-    CloseHandle(hStdinWrite);
+    CloseHandle(hStdoutWrite);
 
     // Wait for the command to finish
     WaitForSingleObject(pi.hProcess, INFINITE);

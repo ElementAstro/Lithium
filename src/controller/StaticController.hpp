@@ -28,7 +28,7 @@ public:
 
     ENDPOINT_INFO(root)
     {
-        info->summary = "'Root' endpoint. Without any params";
+        info->summary = "'Root' endpoint";
     }
 #if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/", root)
@@ -46,7 +46,9 @@ public:
             "</html>";
         Action act() override
         {
-            return _return(controller->createResponse(Status::CODE_200, html));
+            auto response = controller->createResponse(Status::CODE_200, html);
+            response->putHeader(Header::CONTENT_TYPE, "text/html");
+            return _return(response);
         }
     };
 #else

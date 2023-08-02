@@ -6,13 +6,12 @@
 #include "config.h"
 
 #include "data/ProcessDto.hpp"
+#include "data/StatusDto.hpp"
 
 #include "oatpp/web/server/api/ApiController.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
-
-#include "nlohmann/json.hpp"
 
 #include <string>
 #include <cstdlib>
@@ -47,8 +46,8 @@ public:
     ENDPOINT_INFO(getUICreateProcess)
     {
         info->summary = "Create Process with process name and id";
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/text");
         info->pathParams.add<String>("process-name").description = "Name of the process want to start (must be available to execute)";
         info->pathParams.add<String>("process-id").description = "ID of the process , used to stop or get output";
     }
@@ -58,38 +57,35 @@ public:
 
         ENDPOINT_ASYNC_INIT(getUICreateProcess)
 
-        Action act() override {
-            nlohmann::json res;
-            res["command"] = "CreateProcess";
+        Action act() override
+        {
+            auto res = StatusDto::createShared();
+            res->command = "CreateProcess";
             auto processName = request->getPathVariable("process-name");
             auto processId = request->getPathVariable("process-id");
-            OATPP_ASSERT_HTTP(processName && processId, Status::CODE_400, "process name and id should not be null");
+            OATPP_ASSERT_HTTP(processName != "" && processId != "", Status::CODE_400, "process name and id should not be null");
             if (!Lithium::MyApp->createProcess(processName, processId))
             {
-                res["error"] = "Operate Error";
-                res["message"] = "Failed to create process";
+                res->error = "Operate Error";
+                res->message = "Failed to create process";
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 #else
     ENDPOINT("GET", "process/start/{process-name}/{process-id}", getUIStopProcess)
     {
-        nlohmann::json res;
-        res["command"] = "CreateProcess";
+        auto res = StatusDto::createShared();
+        res->commnad = "CreateProcess"
         auto processName = request->getPathVariable("process-name");
         auto processId = request->getPathVariable("process-id");
         OATPP_ASSERT_HTTP(processName && processId, Status::CODE_400, "process name and id should not be null");
         if (!Lithium::MyApp->createProcess(processName, processId))
         {
-            res["error"] = "Operate Error";
-            res["message"] = "Failed to create process";
+            res->error = "Operate Error";
+            res->message = "Failed to create process";
         }
-        auto response = createResponse(Status::CODE_200, res.dump());
-        response->putHeader(Header::CONTENT_TYPE, "text/json");
-        return response;
+        return createDtoResponse(Status::CODE_200, res);
     }
 #endif
 
@@ -97,34 +93,31 @@ public:
     {
         info->summary = "Create Process with process name and id";
         info->addConsumes<Object<CreateProcessDTO>>("application/json");
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
     }
 #if ENABLE_ASYNC
 
     ENDPOINT_ASYNC("GET", "/api/process/start", getUICreateProcessAPI){
 
         ENDPOINT_ASYNC_INIT(getUICreateProcessAPI)
-
         Action act() override
         {
             return request->readBodyToDtoAsync<oatpp::Object<CreateProcessDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUICreateProcessAPI::returnResponse);
         }
-
         Action returnResponse(const oatpp::Object<CreateProcessDTO>& body)
         {
-            nlohmann::json res;
-            res["command"] = "CreateProcess";
+            auto res = StatusDto::createShared();
+            res->command = "CreateProcess";
             auto processName = body->process_name.getValue("");
             auto processId = body->process_id.getValue("");
             OATPP_ASSERT_HTTP(processName != "" && processId !="" , Status::CODE_400, "process name and id should not be null");
             if (!Lithium::MyApp->createProcess(processName, processId))
             {
-                res = {{"error","Process Failed"},{"message","Failed to create process"}};
+                res->error = "Process Failed";
+                res->message = "Failed to create process";
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 #else
@@ -134,44 +127,41 @@ public:
     ENDPOINT_INFO(getUIStopProcess)
     {
         info->summary = "Stop Process with id";
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
         info->pathParams.add<String>("process-id").description = "ID of the process";
     }
 #if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "process/stop/{process-id}", getUIStopProcess)
     {
         ENDPOINT_ASYNC_INIT(getUIStopProcess)
-        Action act() override {
-            nlohmann::json res;
-            res["command"] = "TerminateProcess";
+        Action act() override
+        {
+            auto res = StatusDto::createShared();
+            res->command = "TerminateProcess";
             auto processId = std::stoi(request->getPathVariable("process-id"));
             OATPP_ASSERT_HTTP(processId, Status::CODE_400, "process id should not be null");
             if (!Lithium::MyApp->terminateProcess(processId))
             {
-                res["error"] = "Operate Error";
-                res["message"] = "Failed to create process";
+                res->error = "Operate Error";
+                res->message = "Failed to create process";
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 #else
     ENDPOINT("GET", "process/stop/{process-id}", getUIStopProcess,
             PATH(String,processId))
     {
-        nlohmann::json res;
-        res["command"] = "TerminateProcess";
+        auto res = StatusDto::createShared();
+        res->command = "TerminateProcess";
         OATPP_ASSERT_HTTP(processId, Status::CODE_400, "process id should not be null");
         if (!Lithium::MyApp->terminateProcess(processId->getValue()))
         {
-            res["error"] = "Operate Error";
-            res["message"] = "Failed to create process";
+            res->error = "Operate Error";
+            res->message = "Failed to create process";
         }
-        auto response = createResponse(Status::CODE_200, res.dump());
-        response->putHeader(Header::CONTENT_TYPE, "text/json");
-        return response;
+        return createDtoResponse(Status::CODE_200, res);
     }
 #endif
 
@@ -179,8 +169,8 @@ public:
     {
         info->summary = "Terminate process with process and id";
         info->addConsumes<Object<TerminateProcessDTO>>("application/json");
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
     }
 #if ENABLE_ASYNC
 
@@ -195,17 +185,16 @@ public:
 
         Action returnResponse(const oatpp::Object<TerminateProcessDTO>& body)
         {
-            nlohmann::json res;
-            res["command"] = "TerminateProcess";
+            auto res = StatusDto::createShared();
+            res->command = "TerminateProcess";
             auto processId = body->process_id.getValue("");
             OATPP_ASSERT_HTTP(processId != "", Status::CODE_400, "process name and id should not be null");
             if (!Lithium::MyApp->terminateProcessByName(processId))
             {
-                res = {{"error","Process Failed"},{"message","Failed to terminate process"}};
+                res->error = "Process Failed";
+                res->message = "Failed to terminate process";
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 #else
@@ -215,8 +204,8 @@ public:
     ENDPOINT_INFO(getUIRunScript)
     {
         info->summary = "Run script with script name and running id";
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
         info->pathParams.add<String>("script-name").description = "Name of the script want to start (must be available to execute)";
         info->pathParams.add<String>("script-id").description = "ID of the script , used to stop or get output";
     }
@@ -226,38 +215,35 @@ public:
 
         ENDPOINT_ASYNC_INIT(getUIRunScript)
 
-        Action act() override {
-            nlohmann::json res;
-            res["command"] = "RunScript";
+        Action act() override
+        {
+            auto res = StatusDto::createShared();
+            res->command = "RunScript";
             auto scriptName = request->getPathVariable("script-name");
             auto scriptId = request->getPathVariable("script-id");
             OATPP_ASSERT_HTTP(scriptName && scriptId, Status::CODE_400, "script name and id should not be null");
             if (!Lithium::MyApp->runScript(scriptName, scriptId))
             {
-                res["error"] = "Operate Error";
-                res["message"] = "Failed to run script";
+                res->error = "Operate Error";
+                res->message = "Failed to run script";
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 #else
     ENDPOINT_ASYNC("GET", "process/start/{script-name}/{script-id}", getUIRunScript)
     {
-        nlohmann::json res;
-        res["command"] = "RunScript";
+        auto res = StatusDto::createShared();
+        res->command = "RunScript";
         auto scriptName = request->getPathVariable("script-name");
         auto scriptId = request->getPathVariable("script-id");
         OATPP_ASSERT_HTTP(scriptName && scriptId, Status::CODE_400, "script name and id should not be null");
         if (!Lithium::MyApp->runScript(scriptName, scriptId))
         {
-            res["error"] = "Operate Error";
-            res["message"] = "Failed to run script";
+            res->error = "Operate Error";
+            res->message = "Failed to run script";
         }
-        auto response = createResponse(Status::CODE_200, res.dump());
-        response->putHeader(Header::CONTENT_TYPE, "text/json");
-        return response;
+        return createDtoResponse(Status::CODE_200, res);
     }
 #endif
 
@@ -265,8 +251,8 @@ public:
     {
         info->summary = "Run script with process name and id";
         info->addConsumes<Object<RunScriptDTO>>("application/json");
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
     }
 #if ENABLE_ASYNC
 
@@ -281,18 +267,17 @@ public:
 
         Action returnResponse(const oatpp::Object<RunScriptDTO>& body)
         {
-            nlohmann::json res;
-            res["command"] = "RunScript";
+            auto res = StatusDto::createShared();
+            res->command = "RunScript";
             auto scriptId = body->script_id.getValue("");
             auto scriptName = body->script_name.getValue("");
             OATPP_ASSERT_HTTP(scriptId != "" && scriptName != "", Status::CODE_400, "script name and id should not be null");
             if (!Lithium::MyApp->runScript(scriptName,scriptId))
             {
-                res = {{"error","Process Failed"},{"message","Failed to start script"}};
+                res->error = "Process Failed";
+                res->message = "Failed to start script";
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 #else

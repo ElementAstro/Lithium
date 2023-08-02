@@ -143,3 +143,5 @@ target_link_libraries(oatpp-curl PRIVATE CURL::libcurl)
 add_library(loguru loguru/loguru.cpp)
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
+
+add_library(zippp zippp/libzippp.cpp)

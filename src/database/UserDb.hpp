@@ -1,6 +1,6 @@
 
-#ifndef EXAMPLE_JWT_USERDB_HPP
-#define EXAMPLE_JWT_USERDB_HPP
+#ifndef USERDB_HPP
+#define USERDB_HPP
 
 #include "data/UserDto.hpp"
 #include "oatpp-sqlite/orm.hpp"
@@ -19,10 +19,10 @@ public:
       }
 
       QUERY(createUser,
-        "INSERT INTO AppUser"
-        "(username, email, password, role) VALUES "
-        "(:user.username, :user.email, :user.password, :user.role);",
-        PARAM(oatpp::Object<UserDto>, user))
+            "INSERT INTO AppUser"
+            "(username, email, password, role) VALUES "
+            "(:user.username, :user.email, :user.password, :user.role);",
+            PARAM(oatpp::Object<UserDto>, user))
 
       QUERY(changeUserPassword,
             "UPDATE users "
@@ -49,4 +49,4 @@ public:
 
 #include OATPP_CODEGEN_END(DbClient) //<- End Codegen
 
-#endif // EXAMPLE_JWT_USERDB_HPP
+#endif // USERDB_HPP

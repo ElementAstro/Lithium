@@ -47,6 +47,13 @@ namespace Lithium::Config
     ConfigManager::ConfigManager()
     {
         m_AchievementManager = std::make_shared<AAchievement::AchievementList>();
+        loadFromFile("config.json");
+        LOG_F(INFO, "%s", config_.dump(4));
+    }
+
+    std::shared_ptr<ConfigManager> ConfigManager::createShared()
+    {
+        return std::make_shared<ConfigManager>();
     }
 
     void ConfigManager::loadFromFile(const std::string &path)
@@ -61,11 +68,10 @@ namespace Lithium::Config
         try
         {
             ifs >> j;
+            LOG_F(INFO, "%s", j.dump(4).c_str());
             const std::string basename = path.substr(path.find_last_of("/\\") + 1);
             const std::string name_without_ext = basename.substr(0, basename.find_last_of('.'));
-            auto merged_j = json::object_t{};
-            merged_j[name_without_ext] = j;
-            mergeConfig(merged_j);
+            config_[name_without_ext] = j["config"];
             LOG_F(INFO, "Loaded config file %s successfully", path.c_str());
         }
         catch (const json::exception &e)
@@ -139,7 +145,7 @@ namespace Lithium::Config
             }
             else
             {
-                LOG_F(ERROR,"Key not found: %s", key_path.c_str());
+                LOG_F(ERROR, "Key not found: %s", key_path.c_str());
                 return nullptr;
             }
         }
@@ -158,7 +164,7 @@ namespace Lithium::Config
             }
             else
             {
-                LOG_F(ERROR,"Key not found: %s", key_path.c_str());
+                LOG_F(ERROR, "Key not found: %s", key_path.c_str());
                 return;
             }
         }
@@ -178,7 +184,7 @@ namespace Lithium::Config
         }
         else
         {
-            LOG_F(INFO,"%s: %s",key.c_str(),value.dump().c_str());
+            LOG_F(INFO, "%s: %s", key.c_str(), value.dump().c_str());
         }
     }
 

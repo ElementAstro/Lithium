@@ -44,6 +44,7 @@ Description: Lithium App Enter
 #include "modules/server/message_bus.hpp"
 #include "modules/server/message_queue.hpp"
 #include "modules/property/imessage.hpp"
+#include "modules/module/plugin_manager.hpp"
 
 namespace Lithium
 {
@@ -112,6 +113,18 @@ namespace Lithium
         bool sleepThreadByName(const std::string &name, int seconds);
         bool isThreadRunning(const std::string &name);
 
+    public:
+        template <typename T>
+        std::vector<std::shared_ptr<T>> loadControllers()
+        {
+            std::vector<std::shared_ptr<T>> res;
+            for (auto lib_name : m_cModuleLoader->GetAllExistedModules())
+            {
+                res.push_back(m_cModuleLoader->GetInstance<T>(lib_name, {}, "GetController"));
+            }
+            return res;
+        }
+
     private:
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
         std::shared_ptr<Config::ConfigManager> m_ConfigManager;
@@ -120,6 +133,9 @@ namespace Lithium
         std::shared_ptr<Task::TaskManager> m_TaskManager;
         std::shared_ptr<TaskGenerator> m_TaskGenerator;
         std::shared_ptr<MessageBus> m_MessageBus;
+        std::shared_ptr<PluginManager> m_PluginManager;
+        // This is special for dynamic load oatpp server controller before starting server
+        std::shared_ptr<ModuleLoader> m_cModuleLoader;
 
         struct QueueWrapper
         {

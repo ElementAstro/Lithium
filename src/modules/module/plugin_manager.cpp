@@ -4,6 +4,15 @@
 
 namespace Lithium
 {
+    PluginManager::PluginManager()
+    {
+    }
+
+    std::shared_ptr<PluginManager> PluginManager::createShared()
+    {
+        return std::make_shared<PluginManager>();
+    }
+
     void PluginManager::LoadPlugin(const std::string &PluginName, std::string PluginPath, std::string version, std::string author, std::string description)
     {
         std::lock_guard<std::mutex> lock(mutex_);

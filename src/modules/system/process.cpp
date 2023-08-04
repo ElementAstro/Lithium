@@ -35,6 +35,16 @@ Description: Process Manager
 
 namespace Lithium::Process
 {
+    std::shared_ptr<ProcessManager> ProcessManager::createShared()
+    {
+        return std::make_shared<ProcessManager>();
+    }
+    
+    std::shared_ptr<ProcessManager> ProcessManager::createShared(int maxProcess)
+    {
+        return std::make_shared<ProcessManager>(maxProcess);
+    }
+
     bool ProcessManager::createProcess(const std::string &command, const std::string &identifier)
     {
         pid_t pid;

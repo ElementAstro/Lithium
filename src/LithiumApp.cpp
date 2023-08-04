@@ -41,14 +41,24 @@ namespace Lithium
         LOG_F(INFO, "Loading Lithium App and preparing ...");
         try
         {
+            m_ConfigManager = Config::ConfigManager::createShared();
             m_MessageBus = std::make_shared<MessageBus>();
             m_MessageQueue = std::make_shared<QueueWrapper>();
-            m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
-            m_ConfigManager = std::make_shared<Config::ConfigManager>();
-            m_DeviceManager = std::make_shared<DeviceManager>(m_MessageBus);
-            m_ProcessManager = std::make_shared<Process::ProcessManager>(10);
+            m_DeviceManager = DeviceManager::createShared(m_MessageBus);
+
+            auto max_thread = GetConfig("config/server").value<int>("maxthread", 10);
+            m_ThreadManager = Thread::ThreadManager::createShared(max_thread);
+
+            auto max_process = GetConfig("config/server").value<int>("maxprocess", 10);
+
+            m_ProcessManager = Process::ProcessManager::createShared(max_process);
+
+            m_PluginManager = PluginManager::createShared();
             m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
             m_TaskGenerator = std::make_shared<TaskGenerator>(m_DeviceManager);
+
+            m_cModuleLoader = ModuleLoader::createShared("controllers");
+
             m_MessageBus->StartProcessingThread<IMessage>();
             LOG_F(INFO, "Lithium App Loaded.");
         }
@@ -91,7 +101,7 @@ namespace Lithium
 
     void LithiumApp::addDeviceObserver(DeviceType type, const std::string &name)
     {
-        m_DeviceManager->AddDeviceObserver(type,name);
+        m_DeviceManager->AddDeviceObserver(type, name);
     }
 
     bool LithiumApp::removeDevice(DeviceType type, const std::string &name)

@@ -60,6 +60,8 @@ namespace Lithium
 
         ~DeviceManager();
 
+        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus);
+
         std::vector<std::string> getDeviceList(DeviceType type);
 
         bool addDevice(DeviceType type, const std::string &name, const std::string &lib_name);

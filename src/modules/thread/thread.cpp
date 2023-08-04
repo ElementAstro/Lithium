@@ -63,6 +63,11 @@ namespace Lithium::Thread
         }
     }
 
+    std::shared_ptr<ThreadManager> ThreadManager::createShared(int maxThreads)
+    {
+        return std::make_shared<ThreadManager>(maxThreads);
+    }
+
     void ThreadManager::addThread(std::function<void()> func, const std::string &name)
     {
         try

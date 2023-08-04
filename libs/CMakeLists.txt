@@ -144,4 +144,4 @@ add_library(loguru loguru/loguru.cpp)
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
 
-add_library(zippp zippp/libzippp.cpp)
+add_library(libzippp zippp/libzippp.cpp)

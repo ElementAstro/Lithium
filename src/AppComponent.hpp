@@ -40,7 +40,6 @@ Description: App Components
 
 #include "components/SwaggerComponent.hpp"
 #include "components/DatabaseComponent.hpp"
-#include "components/ClientComponent.hpp"
 
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-openssl/configurer/TrustStore.hpp"
@@ -96,10 +95,10 @@ public:
      */
     DatabaseComponent databaseComponent;
 
-    /**
-     * Client component 
-     */
-    ClientComponent clientComponent;
+    OATPP_CREATE_COMPONENT(std::shared_ptr<JWT>, jwt)
+    ([]{
+        return std::make_shared<JWT>("<my-secret>", "<my-issuer>");
+    }());
 
 #if ENABLE_ASYNC
     /**
@@ -166,7 +165,7 @@ public:
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, serverConnectionHandler)
     ("http", []
      {
-        // OATPP_COMPONENT(std::shared_ptr<JWT>, jwt);                                         // get JWT component
+        OATPP_COMPONENT(std::shared_ptr<JWT>, jwt);                                         // get JWT component
         OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);           // get Router component
         OATPP_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, objectMapper); // get ObjectMapper component
 		/* Create HttpProcessor::Components */

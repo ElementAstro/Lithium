@@ -32,15 +32,6 @@ public:
 		return std::make_shared<AuthController>(objectMapper);
 	}
 
-	ENDPOINT_INFO(signUp)
-	{
-		info->summary = "Sign up";
-
-		info->addConsumes<Object<SignUpDto>>("application/json");
-
-		info->addResponse<Object<AuthDto>>(Status::CODE_200, "application/json");
-		info->addResponse<Object<StatusDto>>(Status::CODE_500, "application/json");
-	}
 #if ENABLE_ASYNC
 	ENDPOINT_ASYNC("POST", "users/signup", signUp)
 	{
@@ -65,15 +56,6 @@ public:
 	}
 #endif
 
-	ENDPOINT_INFO(signIn)
-	{
-		info->summary = "Sign in";
-
-		info->addConsumes<Object<SignInDto>>("application/json");
-
-		info->addResponse<Object<AuthDto>>(Status::CODE_200, "application/json");
-		info->addResponse<Object<StatusDto>>(Status::CODE_500, "application/json");
-	}
 #if ENABLE_ASYNC
 	ENDPOINT_ASYNC("POST", "users/signin", signIn)
 	{
@@ -99,13 +81,6 @@ public:
 	}
 #endif
 
-	ENDPOINT_INFO(deleteUser)
-	{
-		info->summary = "Delete User";
-
-		info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-		info->addResponse<Object<StatusDto>>(Status::CODE_500, "application/json");
-	}
 #if ENABLE_ASYNC
 	ENDPOINT_ASYNC("DELETE", "users", deleteUser)
 	{

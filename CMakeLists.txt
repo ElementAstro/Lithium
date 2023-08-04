@@ -56,6 +56,16 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 #
 # main project
 # this should appear after setting the architecture
+if(WIN32)
+    set(CMAKE_INSTALL_PREFIX "C:/Program Files/LithiumServer")
+elseif(LINUX)
+    set(CMAKE_INSTALL_PREFIX "/usr/lithium")
+endif()
+
+#################################################################################
+#
+# main project
+# this should appear after setting the architecture
 project(Lithium)
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
@@ -298,6 +308,7 @@ endif()
 find_package(CFITSIO REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(LIBZIP REQUIRED)
 
 if(WIN32)
     #add_executable(lithium_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
@@ -314,12 +325,15 @@ if(WIN32)
 
     target_link_libraries(lithium_server PRIVATE loguru)
 
+    target_link_libraries(lithium_server PRIVATE libzippp)
+
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server PRIVATE dlfcn-win32::dl)
 
     target_link_libraries(lithium_server PRIVATE ${CFITSIO_LIBRARIES})
     target_link_libraries(lithium_server PRIVATE ${OPENSSL_LIBRARIES})
     target_link_libraries(lithium_server PRIVATE ${ZLIB_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE libzip::zip)
     target_link_libraries(lithium_server PRIVATE pugixml-static)
     target_link_libraries(lithium_server PRIVATE sqlite3)
 
@@ -329,6 +343,14 @@ if(WIN32)
         PROPERTIES
         OUTPUT_NAME lithium_server
     )
+
+    install(TARGETS lithium_server)
+    install(TARGETS oatpp)
+    install(TARGETS oatpp-zlib)
+    install(TARGETS oatpp-openssl)
+    install(TARGETS oatpp-sqlite)
+    install(TARGETS oatpp-curl)
+    install(TARGETS oatpp-websocket)
 elseif(UNIX OR LINUX OR APPLE)
     
     add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
@@ -337,6 +359,8 @@ elseif(UNIX OR LINUX OR APPLE)
 
     target_link_libraries(lithium_server loguru)
 
+    target_link_libraries(lithium_server PRIVATE libzippp)
+
     find_package(INDI 2.0.0 REQUIRED)
     include_directories(${INDI_INCLUDE_DIR})
     target_link_libraries(lithium_server ${INDI_CLIENT_LIBRARIES})
@@ -344,6 +368,7 @@ elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
     target_link_libraries(lithium_server ${OPENSSL_LIBRARIES})
     target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE libzip::zip)
     target_link_libraries(lithium_server pugixml-static)
     target_link_libraries(lithium_server sqlite3)
 
@@ -358,4 +383,3 @@ elseif(UNIX OR LINUX OR APPLE)
 else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
-

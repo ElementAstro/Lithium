@@ -40,6 +40,30 @@ Description: Compressor using ZLib
 #include <zlib.h>
 
 #include "loguru/loguru.hpp"
+#include "zippp/libzippp.h"
+#include "nlohmann/json.hpp"
+
+#include "io.hpp"
+
+using namespace libzippp;
+
+class ProgressListener : public ZipProgressListener
+{
+public:
+    ProgressListener(void) {}
+    virtual ~ProgressListener(void) {}
+
+    void progression(double p)
+    {
+        LOG_F(INFO, "-- Progression: %lf", p);
+    }
+
+    int cancel(void)
+    {
+        LOG_F(INFO, "Canceled");
+        return 0;
+    }
+};
 
 #ifdef _WIN32
 #include <windows.h>
@@ -293,137 +317,89 @@ namespace Lithium::File
             LOG_F(ERROR, "Failed to open ZIP file: %s", zip_file.c_str());
             return false;
         }
+        file.close();
 
-        std::vector<char> buffer(8192);
+        ZipArchive zip("archive.zip");
+        zip.setErrorHandlerCallback([](const std::string &message,
+                                       const std::string &strerror,
+                                       int zip_error_code,
+                                       int system_error_code)
+                                    { LOG_F(ERROR, "Exract zip file failed : %s %s", message.c_str(), strerror.c_str()); });
+        zip.open(ZipArchive::ReadOnly);
+        ProgressListener pl;
+        zip.addProgressListener(&pl);
+        zip.setProgressPrecision(0.1);
 
-        z_stream stream{};
-        stream.zalloc = Z_NULL;
-        stream.zfree = Z_NULL;
-        stream.opaque = Z_NULL;
-        stream.avail_in = 0;
-        stream.next_in = Z_NULL;
-
-        int ret = inflateInit2(&stream, 15 + 16); // 解压缩方法使用 gzip 格式
-        if (ret != Z_OK)
+        try
         {
-            LOG_F(ERROR, "Failed to initialize zlib: %d", ret);
+            std::vector<ZipEntry> entries = zip.getEntries();
+            for (const auto &entry : entries)
+            {
+                std::string name = entry.getName();
+                int size = entry.getSize();
+                LOG_F(ERROR, "Extracting file: %s, size: %d", name.c_str(), size);
+                std::string textData = entry.readAsText();
+                std::filesystem::path file_path = std::filesystem::path(destination_folder) / name;
+                std::ofstream file(file_path);
+                if (file.is_open())
+                {
+                    file << textData;
+                    file.close();
+                    LOG_F(INFO, "File extracted: %s", file_path.c_str());
+                }
+                else
+                {
+                    LOG_F(ERROR, "Failed to create file: %s", file_path.c_str());
+                }
+            }
+            zip.close();
+            LOG_F(INFO, "ZIP file extracted successfully.");
+            return true;
+        }
+        catch (const std::exception &e)
+        {
+            LOG_F(ERROR, "Failed to extract ZIP file: %s", e.what());
             return false;
         }
-
-        while (true)
-        {
-            file.read(buffer.data(), buffer.size());
-            stream.avail_in = static_cast<uInt>(file.gcount());
-            stream.next_in = reinterpret_cast<Bytef *>(buffer.data());
-
-            if (stream.avail_in == 0)
-                break;
-
-            do
-            {
-                std::vector<char> output_buffer(8192);
-
-                stream.avail_out = static_cast<uInt>(output_buffer.size());
-                stream.next_out = reinterpret_cast<Bytef *>(output_buffer.data());
-
-                ret = inflate(&stream, Z_NO_FLUSH);
-                if (ret == Z_STREAM_ERROR)
-                {
-                    LOG_F(ERROR, "Failed to inflate data: %d", ret);
-                    inflateEnd(&stream);
-                    return false;
-                }
-
-                std::size_t output_size = output_buffer.size() - stream.avail_out;
-                if (output_size > 0)
-                {
-                    std::string entry_path = destination_folder + "/" + std::to_string(stream.total_in) + ".txt";
-                    std::ofstream output_file(entry_path, std::ios::binary | std::ios::app);
-                    output_file.write(output_buffer.data(), output_size);
-                    output_file.close();
-                }
-            } while (stream.avail_out == 0);
-        }
-
-        inflateEnd(&stream);
-        return true;
     }
 
     bool create_zip(const std::string &source_folder, const std::string &zip_file)
     {
-        std::ofstream file(zip_file, std::ios::binary | std::ios::trunc);
-        if (!file)
+        try
         {
-            LOG_F(ERROR, "Failed to create ZIP file: %s", zip_file.c_str());
-            return false;
-        }
+            ZipArchive zip(zip_file);
+            zip.setErrorHandlerCallback([](const std::string &message,
+                                           const std::string &strerror,
+                                           int zip_error_code,
+                                           int system_error_code)
+                                        { LOG_F(ERROR, "Create zip file failed : %s %s", message.c_str(), strerror.c_str()); });
 
-        std::vector<char> buffer(8192);
+            zip.open(ZipArchive::Write);
+            ProgressListener pl;
+            zip.addProgressListener(&pl);
+            zip.setProgressPrecision(0.1);
 
-        z_stream stream{};
-        stream.zalloc = Z_NULL;
-        stream.zfree = Z_NULL;
-        stream.opaque = Z_NULL;
-
-        int ret = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY); // 压缩方法使用 gzip 格式
-        if (ret != Z_OK)
-        {
-            LOG_F(ERROR, "Failed to initialize zlib: %d", ret);
-            return false;
-        }
-
-        std::vector<std::string> file_paths;
-        for (const auto &entry : std::filesystem::recursive_directory_iterator(source_folder))
-        {
-            if (std::filesystem::is_regular_file(entry))
+            for (const auto &entry : std::filesystem::recursive_directory_iterator(source_folder))
             {
-                file_paths.push_back(entry.path().string());
-            }
-        }
-
-        for (const auto &file_path : file_paths)
-        {
-            std::ifstream input_file(file_path, std::ios::binary);
-            if (!input_file)
-            {
-                LOG_F(ERROR, "Failed to open file: %s", file_path.c_str());
-                continue;
-            }
-
-            while (input_file.good())
-            {
-                input_file.read(buffer.data(), buffer.size());
-                stream.avail_in = static_cast<uInt>(input_file.gcount());
-                stream.next_in = reinterpret_cast<Bytef *>(buffer.data());
-
-                do
+                if (std::filesystem::is_regular_file(entry))
                 {
-                    std::vector<char> output_buffer(8192);
+                    std::string file_path = entry.path().string();
+                    std::string relative_path = std::filesystem::relative(file_path, source_folder).string();
 
-                    stream.avail_out = static_cast<uInt>(output_buffer.size());
-                    stream.next_out = reinterpret_cast<Bytef *>(output_buffer.data());
-
-                    ret = deflate(&stream, Z_FINISH);
-                    if (ret == Z_STREAM_ERROR)
-                    {
-                        LOG_F(ERROR, "Failed to deflate data: %d", ret);
-                        deflateEnd(&stream);
-                        return false;
-                    }
-
-                    std::size_t output_size = output_buffer.size() - stream.avail_out;
-                    if (output_size > 0)
-                    {
-                        file.write(output_buffer.data(), output_size);
-                    }
-                } while (stream.avail_out == 0);
+                    zip.addFile(file_path, relative_path);
+                }
             }
 
-            input_file.close();
+            // 关闭 ZIP 文件
+            zip.close();
+
+            std::cout << "ZIP file created successfully: " << zip_file << std::endl;
+            return true;
         }
-
-        deflateEnd(&stream);
-        return true;
+        catch (const std::exception &e)
+        {
+            LOG_F(ERROR, "Failed to create ZIP file: %s", e.what());
+            return false;
+        }
     }
-
 }

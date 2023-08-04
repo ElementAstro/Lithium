@@ -91,48 +91,74 @@ void run()
     auto static_controller = StaticController::createShared();
     docEndpoints.append(static_controller->getEndpoints());
     router->addController(static_controller);
+    LOG_F(INFO, "Static file controller loaded");
 
     auto system_controller = SystemController::createShared();
     docEndpoints.append(system_controller->getEndpoints());
     router->addController(system_controller);
+    LOG_F(INFO, "System controller loaded");
 
-    auto io_controller = IOController::createShared();
-    docEndpoints.append(io_controller->getEndpoints());
-    router->addController(io_controller);
+    ///auto io_controller = IOController::createShared();
+    ///docEndpoints.append(io_controller->getEndpoints());
+    ///router->addController(io_controller);
+    ///LOG_F(INFO, "IO controller loaded");
 
-    auto process_controller = ProcessController::createShared();
-    docEndpoints.append(process_controller->getEndpoints());
-    router->addController(process_controller);
+    ///auto process_controller = ProcessController::createShared();
+    ///docEndpoints.append(process_controller->getEndpoints());
+    ///router->addController(process_controller);
+    ///LOG_F(INFO, "System process controller loaded");
 
     auto phd2_controller = PHD2Controller::createShared();
     docEndpoints.append(phd2_controller->getEndpoints());
     router->addController(phd2_controller);
+    LOG_F(INFO, "PHD2 controller loaded");
 
     auto task_controller = TaskController::createShared();
     docEndpoints.append(task_controller->getEndpoints());
     router->addController(task_controller);
+    LOG_F(INFO, "Task controller loaded");
 
-    auto upload_controller = UploadController::createShared();
-    docEndpoints.append(upload_controller->getEndpoints());
-    router->addController(upload_controller);
+    /// auto upload_controller = UploadController::createShared();
+    /// docEndpoints.append(upload_controller->getEndpoints());
+    /// router->addController(upload_controller);
+    /// LOG_F(INFO, "Upload controller loaded");
 
-    auto star_controller = StarController::createShared();
-    docEndpoints.append(star_controller->getEndpoints());
-    router->addController(star_controller);
+    /// auto star_controller = StarController::createShared();
+    /// docEndpoints.append(star_controller->getEndpoints());
+    /// router->addController(star_controller);
+    /// LOG_F(INFO, "Star search controller loaded");
 
-/*
-    auto auth_controller = AuthController::createShared();
-    docEndpoints.append(auth_controller->getEndpoints());
-    router->addController(auth_controller);
-*/
+    /// auto auth_controller = AuthController::createShared();
+    /// docEndpoints.append(auth_controller->getEndpoints());
+    /// router->addController(auth_controller);
+    /// LOG_F(INFO, "Auth controller loaded");
 
+    LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
     router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
 #else
     router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
 #endif
+    LOG_F(INFO, "API doc controller loaded");
 
     router->addController(WebSocketController::createShared());
+
+    LOG_F(INFO, "Start loading controllers from dynamic library");
+    std::vector<std::shared_ptr<oatpp::web::server::api::ApiController>> d_controllers = Lithium::MyApp->loadControllers<oatpp::web::server::api::ApiController>();
+    LOG_F(INFO, "Start loading controllers from dynamic library");
+    if (!d_controllers.empty())
+    {
+        for (auto controller : d_controllers)
+        {
+            docEndpoints.append(controller->getEndpoints());
+            router->addController(controller);
+        }
+    }
+    else
+    {
+        LOG_F(INFO, "No dynamic controller loaded");
+    }
+    LOG_F(INFO, "Dynamic controllers loaded successfully");
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, connectionHandler, "http");

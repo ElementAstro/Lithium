@@ -52,7 +52,7 @@ namespace Lithium
     // Constructor
     DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus)
     {
-        m_ModuleLoader = std::make_shared<ModuleLoader>();
+        m_ModuleLoader = ModuleLoader::createShared("drivers");
         m_MessageBus = messageBus;
         for (auto &devices : m_devices)
         {
@@ -72,6 +72,11 @@ namespace Lithium
                 }
             }
         }
+    }
+
+    std::shared_ptr<DeviceManager> DeviceManager::createShared(std::shared_ptr<MessageBus> messageBus)
+    {
+        return std::make_shared<DeviceManager>(messageBus);
     }
 
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type)

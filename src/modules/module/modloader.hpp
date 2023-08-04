@@ -92,12 +92,20 @@ namespace Lithium
     {
     public:
         ModuleLoader();
+        ModuleLoader(const std::string &dir_name);
         ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager);
+        ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
 
         ~ModuleLoader();
 
+    public:
+        static std::shared_ptr<ModuleLoader> createShared();
+        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name);
+        static std::shared_ptr<ModuleLoader> createShared(std::shared_ptr<Thread::ThreadManager> threadManager);
+        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
+
         bool LoadOnInit();
-        
+
         /**
          * @brief   Loads a dynamic module from the given path.
          *
@@ -121,6 +129,24 @@ namespace Lithium
         bool HasModule(const std::string &name) const;
 
         bool CheckModuleExists(const std::string &name) const;
+
+        /**
+         * @brief 允许指定模块
+         *
+         * @param module_name 模块名称
+         * @return true 成功允许模块
+         * @return false 允许模块失败
+         */
+        bool EnableModule(const std::string &module_name);
+
+        /**
+         * @brief 禁用指定模块
+         *
+         * @param module_name 模块名称
+         * @return true 成功禁用模块
+         * @return false 禁用模块失败
+         */
+        bool DisableModule(const std::string &module_name);
 
         /**
          * @brief 获取指定模块中的函数指针
@@ -210,9 +236,22 @@ namespace Lithium
             return it->second;
         }
 
-    private:
-        std::unordered_map<std::string, void *> handles_;
+        std::string GetModulePath(const std::string& module_name);
 
+        const std::vector<std::string> GetAllExistedModules() const
+        {
+            std::vector<std::string> modules_name;
+            for (auto module_ : handles_)
+            {
+                modules_name.push_back(module_.first);
+            }
+            return modules_name;
+        }
+
+    private:
+        std::string m_dir_name;
+        std::unordered_map<std::string, void *> handles_;
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
+        std::unordered_map<std::string, std::string> disabled_modules_;
     };
 }

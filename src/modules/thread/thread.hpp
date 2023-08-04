@@ -60,6 +60,8 @@ namespace Lithium::Thread
 		 */
 		~ThreadManager();
 
+		static std::shared_ptr<ThreadManager> createShared(int maxThreads = 10);
+
 		/**
 		 * @brief 添加线程
 		 * @param func 线程函数

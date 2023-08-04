@@ -16,6 +16,11 @@ public:
       UserDb(const std::shared_ptr<oatpp::orm::Executor> &executor)
           : oatpp::orm::DbClient(executor)
       {
+            oatpp::orm::SchemaMigration migration(executor, "auth_service");
+            migration.addFile(1, "sql/init_user_database.sql");
+            migration.migrate();
+            auto version = migration.getSchemaVersion();
+            OATPP_LOGD("UserDb", "Migration - OK. Version=%d.", version);
       }
 
       QUERY(createUser,

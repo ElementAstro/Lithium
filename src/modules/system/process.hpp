@@ -69,6 +69,9 @@ namespace Lithium::Process
 
         ProcessManager(int maxProcess) : m_maxProcesses(maxProcess) {}
 
+        static std::shared_ptr<ProcessManager> createShared();
+        static std::shared_ptr<ProcessManager> createShared(int maxProcess);
+
         /**
          * 创建一个新的进程。
          * @param command 要执行的命令。

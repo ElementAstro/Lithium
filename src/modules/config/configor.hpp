@@ -43,6 +43,8 @@ namespace Lithium::Config
     {
     public:
         ConfigManager();
+
+        static std::shared_ptr<ConfigManager> createShared();
         
         /**
          * @brief 从指定文件中加载JSON配置，并与原有配置进行合并

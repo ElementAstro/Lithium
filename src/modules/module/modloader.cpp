@@ -97,7 +97,7 @@ namespace Lithium
         }
         // Define the modules directory path
         fs::path modules_dir;
-        modules_dir = fs::absolute(std::filesystem::current_path() / dir_name);
+        modules_dir = fs::absolute(std::filesystem::current_path() / "modules" / dir_name);
         try
         {
             // Create the modules directory if it does not exist
@@ -161,25 +161,29 @@ namespace Lithium
         return config;
     }
 
-    ModuleLoader::ModuleLoader()
+    ModuleLoader::ModuleLoader() : m_dir_name("modules")
     {
         m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
         LOG_F(INFO, "C++ module manager loaded successfully.");
-        if (!m_ThreadManager)
+        if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this]()
                                        { if(!LoadOnInit()){
                                     LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
-    ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager)
+    ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager) : m_dir_name("modules")
     {
         m_ThreadManager = threadManager;
         LOG_F(INFO, "C++ module manager loaded successfully.");
-        if (!m_ThreadManager)
+        if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this]()
                                        { if(!LoadOnInit()){
@@ -187,6 +191,64 @@ namespace Lithium
                                    } },
                                        "LoadOnInit");
         }
+        else
+        {
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+        }
+    }
+
+    ModuleLoader::ModuleLoader(const std::string &dir_name) : m_dir_name(dir_name)
+    {
+        m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
+        LOG_F(INFO, "C++ module manager loaded successfully.");
+        if (m_ThreadManager)
+        {
+            m_ThreadManager->addThread([this]()
+                                       { if(!LoadOnInit()){
+                                    LOG_F(ERROR,"Failed to load modules on init");
+                                   } },
+                                       "LoadOnInit");
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+        }
+    }
+
+    ModuleLoader::ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager) : m_dir_name(dir_name), m_ThreadManager(threadManager)
+    {
+        LOG_F(INFO, "C++ module manager loaded successfully.");
+        if (m_ThreadManager)
+        {
+            m_ThreadManager->addThread([this]()
+                                       { if(!LoadOnInit()){
+                                    LOG_F(ERROR,"Failed to load modules on init");
+                                   } },
+                                       "LoadOnInit");
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+        }
+    }
+
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared()
+    {
+        return std::make_shared<ModuleLoader>();
+    }
+
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name)
+    {
+        return std::make_shared<ModuleLoader>(dir_name);
+    }
+
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(std::shared_ptr<Thread::ThreadManager> threadManager)
+    {
+        return std::make_shared<ModuleLoader>(threadManager);
+    }
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager)
+    {
+        return std::make_shared<ModuleLoader>(dir_name, threadManager);
     }
 
     ModuleLoader::~ModuleLoader()
@@ -202,15 +264,22 @@ namespace Lithium
 
     bool ModuleLoader::LoadOnInit()
     {
-        const nlohmann::json dir_info = iterator_modules_dir("modules");
-        for (auto module_ : dir_info)
+        const nlohmann::json dir_info = iterator_modules_dir(m_dir_name);
+        LOG_F(INFO, "%s", dir_info.dump(4).c_str());
+        if (!dir_info.empty())
         {
-            const std::string name = module_.value("name", "");
-            const std::string path = module_.value("path", "");
-            if (name == "" || path == "")
-                continue;
-            if (!LoadModule(path, name))
-                continue;
+            if (dir_info["message"].get<std::string>() != "No module found")
+            {
+                for (auto module_ : dir_info)
+                {
+                    const std::string name = module_.value("name", "");
+                    const std::string path = module_.value("path", "");
+                    if (name == "" || path == "")
+                        continue;
+                    if (!LoadModule(path, name))
+                        continue;
+                }
+            }
         }
         return true;
     }
@@ -326,5 +395,76 @@ namespace Lithium
     bool ModuleLoader::HasModule(const std::string &name) const
     {
         return handles_.count(name) > 0;
+    }
+
+    bool ModuleLoader::EnableModule(const std::string &module_name)
+    {
+        auto it = disabled_modules_.find(module_name);
+        if (it != disabled_modules_.end())
+        {
+            std::string disabled_file = it->second;
+            std::string enabled_file = disabled_file.substr(0, disabled_file.size() - 8);
+            if (CheckModuleExists(enabled_file))
+            {
+                if (UnloadModule(enabled_file))
+                {
+                    std::rename(disabled_file.c_str(), enabled_file.c_str());
+                    disabled_modules_.erase(it);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                LOG_F(ERROR, "Enabled file not found for module %s", module_name.c_str());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool ModuleLoader::DisableModule(const std::string &module_name)
+    {
+        auto it = handles_.find(module_name);
+        if (it != handles_.end())
+        {
+            void *handle = it->second;
+            std::string module_path = GetModulePath(module_name);
+            if (module_path.empty())
+            {
+                LOG_F(ERROR, "Module path not found for module %s", module_name.c_str());
+                return false;
+            }
+            std::string disabled_file = module_path + ".disabled";
+            if (std::rename(module_path.c_str(), disabled_file.c_str()) == 0)
+            {
+                handles_.erase(it);
+                disabled_modules_.insert(std::make_pair(module_name, disabled_file));
+                return true;
+            }
+            else
+            {
+                LOG_F(ERROR, "Failed to disable module %s", module_name.c_str());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::string ModuleLoader::GetModulePath(const std::string &module_name)
+    {
+        auto it = handles_.find(module_name);
+        if (it != handles_.end())
+        {
+            Dl_info dl_info;
+            if (dladdr(it->second, &dl_info) != 0)
+            {
+                return dl_info.dli_fname;
+            }
+        }
+        return "";
     }
 }

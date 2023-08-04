@@ -14,6 +14,9 @@ namespace Lithium
     class PluginManager
     {
     public:
+        PluginManager();
+        static std::shared_ptr<PluginManager> createShared();
+    
         void LoadPlugin(const std::string &PluginName, std::string PluginPath, std::string version, std::string author, std::string description);
         void UnloadPlugin(const std::string &PluginName);
         void RunPlugin(const std::string &PluginName, const std::vector<std::string> &args);

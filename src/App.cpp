@@ -69,14 +69,14 @@ Description: Main
 
 void run()
 {
-    if (Lithium::MyApp->GetConfig("server/port") == nullptr)
+    if (Lithium::MyApp->GetConfig("config/server/port") == nullptr)
     {
-        Lithium::MyApp->SetConfig("server/port", 8000);
+        Lithium::MyApp->SetConfig("config/server/port", 8000);
     }
 
     LOG_F(INFO, "Loading App component ...");
 
-    AppComponent components(Lithium::MyApp->GetConfig("server/port").get<int>()); // Create scope Environment components
+    AppComponent components(Lithium::MyApp->GetConfig("config/server/port").get<int>()); // Create scope Environment components
 
     LOG_F(INFO, "App component loaded");
     /* Get router component */
@@ -98,15 +98,15 @@ void run()
     router->addController(system_controller);
     LOG_F(INFO, "System controller loaded");
 
-    ///auto io_controller = IOController::createShared();
-    ///docEndpoints.append(io_controller->getEndpoints());
-    ///router->addController(io_controller);
-    ///LOG_F(INFO, "IO controller loaded");
+    auto io_controller = IOController::createShared();
+    docEndpoints.append(io_controller->getEndpoints());
+    router->addController(io_controller);
+    LOG_F(INFO, "IO controller loaded");
 
-    ///auto process_controller = ProcessController::createShared();
-    ///docEndpoints.append(process_controller->getEndpoints());
-    ///router->addController(process_controller);
-    ///LOG_F(INFO, "System process controller loaded");
+    auto process_controller = ProcessController::createShared();
+    docEndpoints.append(process_controller->getEndpoints());
+    router->addController(process_controller);
+    LOG_F(INFO, "System process controller loaded");
 
     auto phd2_controller = PHD2Controller::createShared();
     docEndpoints.append(phd2_controller->getEndpoints());
@@ -118,28 +118,28 @@ void run()
     router->addController(task_controller);
     LOG_F(INFO, "Task controller loaded");
 
-    /// auto upload_controller = UploadController::createShared();
-    /// docEndpoints.append(upload_controller->getEndpoints());
-    /// router->addController(upload_controller);
-    /// LOG_F(INFO, "Upload controller loaded");
+    auto upload_controller = UploadController::createShared();
+    docEndpoints.append(upload_controller->getEndpoints());
+    router->addController(upload_controller);
+    LOG_F(INFO, "Upload controller loaded");
 
-    /// auto star_controller = StarController::createShared();
-    /// docEndpoints.append(star_controller->getEndpoints());
-    /// router->addController(star_controller);
-    /// LOG_F(INFO, "Star search controller loaded");
+    auto star_controller = StarController::createShared();
+    docEndpoints.append(star_controller->getEndpoints());
+    router->addController(star_controller);
+    LOG_F(INFO, "Star search controller loaded");
 
-    /// auto auth_controller = AuthController::createShared();
-    /// docEndpoints.append(auth_controller->getEndpoints());
-    /// router->addController(auth_controller);
-    /// LOG_F(INFO, "Auth controller loaded");
+    auto auth_controller = AuthController::createShared();
+    docEndpoints.append(auth_controller->getEndpoints());
+    router->addController(auth_controller);
+    LOG_F(INFO, "Auth controller loaded");
 
-    LOG_F(INFO, "Starting to load API doc controller");
+    //LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
-    router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
+    //router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
 #else
     router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
 #endif
-    LOG_F(INFO, "API doc controller loaded");
+    //LOG_F(INFO, "API doc controller loaded");
 
     router->addController(WebSocketController::createShared());
 
@@ -235,9 +235,10 @@ int main(int argc, char *argv[])
 
     program.add_argument("-P", "--port").help("port the server running on").default_value(8000);
     program.add_argument("-H", "--host").help("host the server running on").default_value("0.0.0.0");
-    program.add_argument("-C", "--config").help("path to the config file").default_value("config/cpnfig.json");
+    program.add_argument("-C", "--config").help("path to the config file").default_value("cpnfig.json");
     program.add_argument("-M", "--module-path").help("path to the modules directory").default_value("modules");
     program.add_argument("-W", "--web-panel").help("web panel").default_value(true);
+    program.add_argument("-L", "--log-file").help("path to log file");
 
     program.add_description("Lithium Command Line Interface:");
     program.add_epilog("End.");
@@ -252,19 +253,6 @@ int main(int argc, char *argv[])
         std::exit(1);
     }
 
-    auto cmd_port = program.get<int>("--port");
-    if (cmd_port != 8000)
-    {
-        LOG_F(INFO, "Command line server port : %d", cmd_port);
-
-        auto port = Lithium::MyApp->GetConfig("server/port");
-        if (port != cmd_port)
-        {
-            Lithium::MyApp->SetConfig("server/port", cmd_port);
-            LOG_F(INFO, "Set server port to %d", cmd_port);
-        }
-    }
-
     try
     {
         // Init loguru log system
@@ -277,6 +265,24 @@ int main(int argc, char *argv[])
 #endif
         // Run oatpp server
         Lithium::MyApp = std::make_shared<Lithium::LithiumApp>();
+
+        auto cmd_port = program.get<int>("--port");
+        if (cmd_port != 8000)
+        {
+            LOG_F(INFO, "Command line server port : %d", cmd_port);
+
+            auto port = Lithium::MyApp->GetConfig("config/server").value<int>("port", 8000);
+            if (port != cmd_port)
+            {
+                Lithium::MyApp->SetConfig("config/server/port", cmd_port);
+                LOG_F(INFO, "Set server port to %d", cmd_port);
+            }
+        }
+        auto cmd_host = program.get<std::string>("--host");
+        auto cmd_config_path = program.get<std::string>("--config");
+        auto cmd_module_path = program.get<std::string>("--module-path");
+        auto cmd_web_panel = program.get<bool>("--web-panel");
+
         oatpp::base::Environment::init();
         run();
         oatpp::base::Environment::destroy();

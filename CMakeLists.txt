@@ -336,6 +336,7 @@ if(WIN32)
     target_link_libraries(lithium_server PRIVATE libzip::zip)
     target_link_libraries(lithium_server PRIVATE pugixml-static)
     target_link_libraries(lithium_server PRIVATE sqlite3)
+    target_link_libraries(lithium_server PRIVATE cpp_httplib)
 
     # Set output name for Lithium executable
     set_target_properties(
@@ -355,24 +356,25 @@ elseif(UNIX OR LINUX OR APPLE)
     
     add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
 
-    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
+    target_link_libraries(lithium_server PRIVATE oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
 
-    target_link_libraries(lithium_server loguru)
+    target_link_libraries(lithium_server PRIVATE loguru)
 
     target_link_libraries(lithium_server PRIVATE libzippp)
 
     find_package(INDI 2.0.0 REQUIRED)
     include_directories(${INDI_INCLUDE_DIR})
-    target_link_libraries(lithium_server ${INDI_CLIENT_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE ${INDI_CLIENT_LIBRARIES})
 
-    target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
-    target_link_libraries(lithium_server ${OPENSSL_LIBRARIES})
-    target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE ${CFITSIO_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE ${OPENSSL_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE ${ZLIB_LIBRARIES})
     target_link_libraries(lithium_server PRIVATE libzip::zip)
-    target_link_libraries(lithium_server pugixml-static)
-    target_link_libraries(lithium_server sqlite3)
+    target_link_libraries(lithium_server PRIVATE pugixml-static)
+    target_link_libraries(lithium_server PRIVATE sqlite3)
+    target_link_libraries(lithium_server PRIVATE cpp_httplib)
 
-    target_link_libraries(lithium_server dl)
+    target_link_libraries(lithium_server PRIVATE dl)
 
     set_target_properties(
         lithium_server

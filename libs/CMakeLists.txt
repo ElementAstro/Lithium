@@ -143,5 +143,13 @@ target_link_libraries(oatpp-curl PRIVATE CURL::libcurl)
 add_library(loguru loguru/loguru.cpp)
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
+target_link_libraries(cpp_httplib PRIVATE ${OPENSSL_LIBRARIES})
+target_link_libraries(cpp_httplib PRIVATE crypt32)
 
 add_library(libzippp zippp/libzippp.cpp)
+
+add_library(
+  bustache
+  bustache/format.cpp
+  bustache/render.cpp
+)

@@ -41,44 +41,18 @@ public:
 
      /* Create MyClient database client */
      return std::make_shared<UserDb>(databaseExecutor); }());
-};
-
-class StarDatabaseComponent
-{
-public:
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::sqlite::ConnectionPool>, connectionPool)
-    ([]
-     {
-    oatpp::String connStr = "stardata.db";
-
-    /* Create database-specific ConnectionProvider */
-    auto connectionProvider = std::make_shared<oatpp::sqlite::ConnectionProvider>(connStr);
-
-    /* Create database-specific ConnectionPool */
-    return oatpp::sqlite::ConnectionPool::createShared(connectionProvider,
-                                                           10 /* max-connections */,
-                                                           std::chrono::seconds(5) /* connection TTL */); }());
-
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::sqlite::Executor>, databaseExecutor)
-    ([]
-     {
-     /* get connection pool component */
-     OATPP_COMPONENT(std::shared_ptr<oatpp::sqlite::ConnectionPool>, connectionPool);
-
-     /* Create database-specific Executor */
-     return std::make_shared<oatpp::sqlite::Executor>(connectionPool); }());
 
     /**
-     * Create database client
+     * Create star search database client
      */
-    OATPP_CREATE_COMPONENT(std::shared_ptr<UserDb>, userDb)
+    OATPP_CREATE_COMPONENT(std::shared_ptr<StarDb>, starDb)
     ([]
      {
      /* get DB executor component */
      OATPP_COMPONENT(std::shared_ptr<oatpp::sqlite::Executor>, databaseExecutor);
 
      /* Create MyClient database client */
-     return std::make_shared<UserDb>(databaseExecutor); }());
+     return std::make_shared<StarDb>(databaseExecutor); }());
 };
 
 #endif // DATABASECOMPONENT_HPP

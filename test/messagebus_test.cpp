@@ -1,15 +1,15 @@
+#include <atomic>
 #include <iostream>
 #include <string>
-#include <vector>
 #include <unordered_map>
 #include <functional>
 #include <any>
 #include <queue>
 #include <mutex>
-#include <condition_variable>
 #include <thread>
 #include <algorithm>
-#include <loguru.hpp>
+#include <condition_variable>
+#include "loguru/loguru.hpp"
 
 class MessageBus
 {
@@ -17,13 +17,26 @@ public:
     template <typename T>
     void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        subscribers_[topic].push_back({priority, std::any(callback)});
-        std::sort(subscribers_[topic].begin(), subscribers_[topic].end(),
-                  [](const auto &a, const auto &b)
-                  {
-                      return a.first > b.first;
-                  });
+        std::lock_guard<std::mutex> lock(subscribersLock_);
+
+        if (topic.empty())
+        {
+            globalSubscribers_.push_back({priority, std::make_any<std::function<void(const T &)>>(callback)});
+            std::sort(globalSubscribers_.begin(), globalSubscribers_.end(),
+                      [](const auto &a, const auto &b)
+                      {
+                          return a.first > b.first;
+                      });
+        }
+        else
+        {
+            subscribers_[topic].push_back({priority, std::make_any<std::function<void(const T &)>>(callback)});
+            std::sort(subscribers_[topic].begin(), subscribers_[topic].end(),
+                      [](const auto &a, const auto &b)
+                      {
+                          return a.first > b.first;
+                      });
+        }
 
         LOG_F(INFO, "Subscribed to topic: %s", topic.c_str());
     }
@@ -31,84 +44,129 @@ public:
     template <typename T>
     void Unsubscribe(const std::string &topic, std::function<void(const T &)> callback)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        auto it = subscribers_.find(topic);
-        if (it != subscribers_.end())
+        std::lock_guard<std::mutex> lock(subscribersLock_);
+
+        if (topic.empty())
         {
-            auto &topicSubscribers = it->second;
-            topicSubscribers.erase(
+            globalSubscribers_.erase(
                 std::remove_if(
-                    topicSubscribers.begin(), topicSubscribers.end(),
+                    globalSubscribers_.begin(), globalSubscribers_.end(),
                     [&](const auto &subscriber)
                     {
-                        return subscriber.second.type() == typeid(callback);
+                        if (subscriber.second.type() == typeid(std::function<void(const T &)>))
+                        {
+                            return callback.target<std::function<void(const T &)>>() ==
+                                   std::any_cast<std::function<void(const T &)>>(
+                                       subscriber.second)
+                                       .target<std::function<void(const T &)>>();
+                        }
+                        return false;
                     }),
-                topicSubscribers.end());
-
-            //LOG_F(INFO, "Unsubscribed from topic: %s", topic.c_str());
+                globalSubscribers_.end());
+        }
+        else
+        {
+            auto it = subscribers_.find(topic);
+            if (it != subscribers_.end())
+            {
+                auto &topicSubscribers = it->second;
+                topicSubscribers.erase(
+                    std::remove_if(
+                        topicSubscribers.begin(), topicSubscribers.end(),
+                        [&](const auto &subscriber)
+                        {
+                            if (subscriber.second.type() == typeid(std::function<void(const T &)>))
+                            {
+                                return callback.target<std::function<void(const T &)>>() ==
+                                       std::any_cast<std::function<void(const T &)>>(
+                                           subscriber.second)
+                                           .target<std::function<void(const T &)>>();
+                            }
+                            return false;
+                        }),
+                    topicSubscribers.end());
+            }
         }
     }
 
     template <typename T>
     void Publish(const std::string &topic, const T &message)
     {
-        std::unique_lock<std::mutex> lock(mutex_);
-        messageQueue_.push({topic, std::any(message)});
-        conditionVariable_.notify_one();
+        std::lock_guard<std::mutex> lock(messageQueueLock_);
 
-        LOG_F(INFO, "Published message to topic: %s", topic.c_str());
+        if (topic.empty())
+        {
+            for (const auto &subscriber : globalSubscribers_)
+            {
+                if (subscriber.second.type() == typeid(std::function<void(const T &)>))
+                {
+                    std::any_cast<std::function<void(const T &)>>(subscriber.second)(message);
+                }
+            }
+        }
+        else
+        {
+            auto it = subscribers_.find(topic);
+            if (it != subscribers_.end())
+            {
+                const auto &topicSubscribers = it->second;
+                for (const auto &subscriber : topicSubscribers)
+                {
+                    if (subscriber.second.type() == typeid(std::function<void(const T &)>))
+                    {
+                        std::any_cast<std::function<void(const T &)>>(subscriber.second)(message);
+                    }
+                }
+            }
+        }
     }
 
-    template <typename T>
     void StartProcessingThread()
     {
         processingThread_ = std::thread([&]()
                                         {
-            while (isRunning_) {
+            while (isRunning_.load()) {
                 std::pair<std::string, std::any> message;
-                {
-                    std::unique_lock<std::mutex> lock(mutex_);
-                    conditionVariable_.wait(lock, [&]() {
-                        return !messageQueue_.empty() || !isRunning_;
-                    });
+                bool hasMessage = false;
 
-                    if (!isRunning_) {
-                        return;
+                while (isRunning_.load()) {
+                    std::unique_lock<std::mutex> lock(messageQueueLock_);
+                    if (!messageQueue_.empty()) {
+                        message = std::move(messageQueue_.front());
+                        messageQueue_.pop();
+                        hasMessage = true;
+                    }
+                    lock.unlock();
+
+                    if (hasMessage) {
+                        break;
                     }
 
-                    message = std::move(messageQueue_.front());
-                    messageQueue_.pop();
+                    std::unique_lock<std::mutex> waitingLock(waitingMutex_);
+                    messageAvailableFlag_.wait(waitingLock);
                 }
 
-                const std::string& topic = message.first;
-                const std::any& data = message.second;
-                auto it = subscribers_.find(topic);
-                if (it != subscribers_.end()) {
-                    try {
-                        for (const auto& subscriber : it->second) {
-                            if (subscriber.second.type() == typeid(std::function<void(const T&)>)) {
-                                std::any_cast<std::function<void(const T&)>>(subscriber.second)(std::any_cast<const T&>(data));
-                            }
+                if (hasMessage) {
+                    const std::string& topic = message.first;
+                    const std::any& data = message.second;
+
+                    std::lock_guard<std::mutex> lock(subscribersLock_);
+                    if (topic.empty()) {
+                        ProcessSubscribers(globalSubscribers_, data);
+                    } else {
+                        auto it = subscribers_.find(topic);
+                        if (it != subscribers_.end()) {
+                            ProcessSubscribers(it->second, data);
                         }
-                    } catch (const std::bad_any_cast& e) {
-                        LOG_F(ERROR, "Message type mismatch: %s", e.what());
-                    } catch (...) {
-                        LOG_F(ERROR, "Unknown error occurred during message processing");
                     }
                 }
-
-                //LOG_F(INFO, "Processed message on topic: %s", topic.c_str());
             } });
     }
 
     void StopProcessingThread()
     {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            isRunning_ = false;
-        }
-
-        conditionVariable_.notify_one();
+        isRunning_.store(false);
+        messageAvailableFlag_.notify_one();
 
         if (processingThread_.joinable())
         {
@@ -119,11 +177,37 @@ public:
 
 private:
     std::unordered_map<std::string, std::vector<std::pair<int, std::any>>> subscribers_;
+    std::vector<std::pair<int, std::any>> globalSubscribers_;
+    std::mutex subscribersLock_;
     std::queue<std::pair<std::string, std::any>> messageQueue_;
-    std::mutex mutex_;
-    std::condition_variable conditionVariable_;
+    std::mutex messageQueueLock_;
+    std::condition_variable messageAvailableFlag_;
+    std::mutex waitingMutex_;
     std::thread processingThread_;
-    bool isRunning_ = true;
+    std::atomic<bool> isRunning_{true};
+
+    template <typename T>
+    void ProcessSubscribers(const std::vector<std::pair<int, std::any>> &subscribers, const std::any &data)
+    {
+        try
+        {
+            for (const auto &subscriber : subscribers)
+            {
+                if (subscriber.second.type() == typeid(std::function<void(const T &)>))
+                {
+                    std::any_cast<std::function<void(const T &)>>(subscriber.second)(std::any_cast<const T &>(data));
+                }
+            }
+        }
+        catch (const std::bad_any_cast &e)
+        {
+            LOG_F(ERROR, "Message type mismatch: %s", e.what());
+        }
+        catch (...)
+        {
+            LOG_F(ERROR, "Unknown error occurred during message processing");
+        }
+    }
 };
 
 class OtherClass
@@ -147,46 +231,41 @@ public:
     }
 };
 
-int main(int argc, char *argv[])
+void GlobalCallback(const std::string &message)
 {
-    loguru::init(argc, argv);
-    MessageBus bus;
+    std::cout << "Received global message: " << message << std::endl;
+}
 
-    auto callback1 = [](const std::string &message)
-    {
-        LOG_F(INFO, "Callback 1 received message: %s", message.c_str());
-    };
-    auto callback2 = [](const std::string &message)
-    {
-        LOG_F(INFO, "Callback 2 received message: %s", message.c_str());
-    };
+void LocalCallback(const std::string &message)
+{
+    std::cout << "Received local message: " << message << std::endl;
+}
 
-    OtherClass otherObj;
-    bus.Subscribe("my_topic", std::function<void(const std::string &)>(std::bind(&OtherClass::OnMyMessageReceived, &otherObj, std::placeholders::_1)));
+int main()
+{
+    MessageBus messageBus;
 
-    bus.Subscribe("my_topic", static_cast<std::function<void(const std::string &)>>(callback1), 1);
-    bus.Subscribe("my_topic", static_cast<std::function<void(const std::string &)>>(callback2), -1);
-    
+    // 订阅全局主题
+    messageBus.Subscribe<std::string>("", GlobalCallback);
 
-    bus.StartProcessingThread<std::string>();
+    // 订阅局部主题
+    messageBus.Subscribe<std::string>("topic1", LocalCallback);
 
-    for (int i = 0; i < 10; i++)
-    {
-        bus.Publish("my_topic", std::string("Hello, world!") + std::to_string(i));
-    }
+    // 发布全局消息
+    messageBus.Publish("", "Hello, global!");
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    // 发布局部消息
+    messageBus.Publish("topic1", "Hello, local!");
 
-   bus.Unsubscribe("my_topic", static_cast<std::function<void(const std::string &)>>(callback1));
+    // 取消订阅全局主题
+    messageBus.Unsubscribe<std::string>("", GlobalCallback);
 
-    for (int i = 0; i < 10; i++)
-    {
-        bus.Publish("my_topic", std::string("Hello again!") + std::to_string(i));
-    }
+    // 取消订阅局部主题
+    messageBus.Unsubscribe<std::string>("topic1", LocalCallback);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    bus.StopProcessingThread();
+    // 再次发布消息，但由于没有订阅者，将不会有输出
+    messageBus.Publish("", "This message won't be received");
+    messageBus.Publish("topic1", "This message won't be received either");
 
     return 0;
 }

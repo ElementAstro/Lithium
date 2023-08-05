@@ -87,7 +87,7 @@ bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::st
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {
-        client.enable_server_certificate_verification(true);
+        // client.enable_server_certificate_verification(true);
         client.set_ca_cert_path(ca_cert_path_.c_str());
         if (!client_cert_path_.empty() && !client_key_path_.empty())
         {
@@ -122,7 +122,7 @@ bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::str
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {
-        client.enable_server_certificate_verification(true);
+        // client.enable_server_certificate_verification(true);
         client.set_ca_cert_path(ca_cert_path_.c_str());
         if (!client_cert_path_.empty() && !client_key_path_.empty())
         {
@@ -157,7 +157,7 @@ bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::
     Client client(host_.c_str(), port_);
     if (ssl_enabled_)
     {
-        client.enable_server_certificate_verification(true);
+        // client.enable_server_certificate_verification(true);
         client.set_ca_cert_path(ca_cert_path_.c_str());
         if (!client_cert_path_.empty() && !client_key_path_.empty())
         {

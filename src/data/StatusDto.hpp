@@ -52,7 +52,7 @@ class StatusDto : public oatpp::DTO
   {
     info->description = "Status code";
   }
-  DTO_FIELD(Int32, code) = 200;
+  DTO_FIELD(Int32, code);
 
   DTO_FIELD_INFO(message)
   {

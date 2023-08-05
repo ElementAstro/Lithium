@@ -26,7 +26,7 @@ private:
 #endif
 private:
 	OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler, "websocket");
-
+	OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketDeviceConnectionHandler, "websocket-device");
 public:
 	WebSocketController(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
 		: oatpp::web::server::api::ApiController(objectMapper)
@@ -47,6 +47,22 @@ public:
 		Action act() override 
 		{
 			auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketConnectionHandler);
+			return _return(response);
+		}
+	};
+
+	ENDPOINT_ASYNC("GET", "/ws/device/{device-hub}/{device-name}", wsDevice)
+	{
+		ENDPOINT_ASYNC_INIT(wsDevice)
+		Action act() override 
+		{
+			auto deviceName = request->getPathVariable("device-name");
+			auto deviceHub = request->getPathVariable("device-hub");
+			auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketDeviceConnectionHandler);
+			auto parameters = std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
+			(*parameters)["deviceName"] = deviceName;
+			(*parameters)["deviceHub"] = deviceHub;
+			response->setConnectionUpgradeParameters(parameters);
 			return _return(response);
 		}
 	};

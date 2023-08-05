@@ -12,6 +12,7 @@ AuthInterceptor::AuthInterceptor(const std::shared_ptr<JWT> &jwt)
 
 	authEndpoints.route("GET", "/", false);
 	authEndpoints.route("GET", "/ws", false);
+	authEndpoints.route("GET", "/ws/device/*", false);
 
 	authEndpoints.route("GET", "/static/*", false);
 }

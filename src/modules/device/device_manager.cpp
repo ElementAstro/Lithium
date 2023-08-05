@@ -45,12 +45,13 @@ Description: Device Manager
 #if __cplusplus >= 202002L
 #include <format>
 #endif
+#include <typeinfo>
 
 namespace Lithium
 {
 
     // Constructor
-    DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus)
+    DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager)
     {
         m_ModuleLoader = ModuleLoader::createShared("drivers");
         m_MessageBus = messageBus;
@@ -74,9 +75,9 @@ namespace Lithium
         }
     }
 
-    std::shared_ptr<DeviceManager> DeviceManager::createShared(std::shared_ptr<MessageBus> messageBus)
+    std::shared_ptr<DeviceManager> DeviceManager::createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager)
     {
-        return std::make_shared<DeviceManager>(messageBus);
+        return std::make_shared<DeviceManager>(messageBus, configManager);
     }
 
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type)
@@ -218,6 +219,15 @@ namespace Lithium
             LOG_F(ERROR, "Failed to add device %s , error : %s", newName.c_str(), e.what());
             return false;
         }
+#if __cplusplus >= 202002L
+        const std::string newNameKey = std::format("driver/{}/name", newName);
+#else
+        std::stringstream ss;
+        ss << "driver/ << " << newName << "/name";
+        const std::string newNameKey = ss.str();
+#endif
+        LOG_F(INFO, "%s", newNameKey.c_str());
+        m_ConfigManager->setValue(newNameKey, newName);
         return true;
     }
 
@@ -267,6 +277,14 @@ namespace Lithium
                 (*it)->getTask("disconnect", {});
                 devices.erase(it);
                 LOG_F(INFO, "Remove device %s successfully", name.c_str());
+#if __cplusplus >= 202002L
+                const std::string NameKey = std::format("driver/{}", name);
+#else
+                std::stringstream ss;
+                ss << "driver/ << " << name;
+                const std::string NameKey = ss.str();
+#endif
+                m_ConfigManager->deleteValue(NameKey);
                 return true;
             }
         }
@@ -285,6 +303,14 @@ namespace Lithium
                                          { return device && device->getProperty("name") == name; }),
                           devices.end());
         }
+#if __cplusplus >= 202002L
+        const std::string NameKey = std::format("driver/{}", name);
+#else
+        std::stringstream ss;
+        ss << "driver/ << " << name;
+        const std::string NameKey = ss.str();
+#endif
+        m_ConfigManager->deleteValue(NameKey);
         return true;
     }
 
@@ -405,5 +431,38 @@ namespace Lithium
     {
         LOG_F(INFO, "Reviced device message with content %s", message.getValue<std::string>().c_str());
         m_MessageBus->Publish<Lithium::IMessage>("main", message);
+        if (message.value.has_value())
+        {
+#if __cplusplus >= 202002L
+            const std::string NameKey = std::format("driver/{}/{}", message.device_name, message.name);
+#else
+            std::stringstream ss;
+            ss << "driver/" << name << "/" << message.device_name << "/" << message.name;
+            const std::string NameKey = ss.str();
+#endif
+            try
+            {
+                if (message.value.type() == typeid(int))
+                {
+                    m_ConfigManager->setValue(NameKey, std::any_cast<int>(message.value));
+                }
+                else if (message.value.type() == typeid(double))
+                {
+                    m_ConfigManager->setValue(NameKey, std::any_cast<double>(message.value));
+                }
+                else if (message.value.type() == typeid(std::string))
+                {
+                    m_ConfigManager->setValue(NameKey, std::any_cast<std::string>(message.value));
+                }
+                else
+                {
+                    LOG_F(WARNING, "Unknown type of message value is received from %s %s", message.device_name.c_str(), message.name.c_str());
+                }
+            }
+            catch (std::bad_any_cast &e)
+            {
+                LOG_F(ERROR, "Failed to convert value in %s from %s", message.name.c_str(), message.device_name.c_str());
+            }
+        }
     }
 }

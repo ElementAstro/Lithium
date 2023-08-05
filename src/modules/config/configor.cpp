@@ -34,6 +34,7 @@ Description: Configor
 #include <filesystem>
 #include <unordered_map>
 #include <sstream>
+#include <regex>
 
 #include "configor.hpp"
 
@@ -46,9 +47,14 @@ namespace Lithium::Config
 {
     ConfigManager::ConfigManager()
     {
-        m_AchievementManager = std::make_shared<AAchievement::AchievementList>();
+        m_AchievementManager = std::make_unique<AAchievement::AchievementList>();
         loadFromFile("config.json");
         LOG_F(INFO, "%s", config_.dump(4));
+    }
+
+    ConfigManager::~ConfigManager()
+    {
+        saveToFile("config.json");
     }
 
     std::shared_ptr<ConfigManager> ConfigManager::createShared()
@@ -118,19 +124,16 @@ namespace Lithium::Config
     {
         std::vector<std::string> keys = split(key_path, "/");
         json *p = &config_;
-        for (int i = 0; i < keys.size() - 1; ++i)
+        for (const auto &key : keys)
         {
-            if (p->contains(keys[i]))
+            if (!p->is_object())
             {
-                p = &(*p)[keys[i]];
+                LOG_F(ERROR, "Invalid key path: %s", key_path.c_str());
+                return;
             }
-            else
-            {
-                (*p)[keys[i]] = json();
-                p = &(*p)[keys[i]];
-            }
+            p = &(*p)[key];
         }
-        (*p)[keys.back()] = value;
+        *p = value;
     }
 
     json ConfigManager::getValue(const std::string &key_path) const
@@ -139,7 +142,7 @@ namespace Lithium::Config
         const json *p = &config_;
         for (const auto &key : keys)
         {
-            if (p->contains(key))
+            if (p->is_object() && p->contains(key))
             {
                 p = &(*p)[key];
             }
@@ -156,19 +159,21 @@ namespace Lithium::Config
     {
         std::vector<std::string> keys = split(key_path, "/");
         json *p = &config_;
-        for (int i = 0; i < keys.size() - 1; ++i)
+        for (const auto &key : keys)
         {
-            if (p->contains(keys[i]))
+            if (!p->is_object())
             {
-                p = &(*p)[keys[i]];
-            }
-            else
-            {
-                LOG_F(ERROR, "Key not found: %s", key_path.c_str());
+                LOG_F(ERROR, "Invalid key path: %s", key_path.c_str());
                 return;
             }
+            p = &(*p)[key];
         }
-        p->erase(keys.back());
+        if (p->is_null())
+        {
+            LOG_F(ERROR, "Key not found: %s", key_path.c_str());
+            return;
+        }
+        p->clear();
     }
 
     void ConfigManager::printValue(const std::string &key, const json &value) const
@@ -191,14 +196,11 @@ namespace Lithium::Config
     std::vector<std::string> ConfigManager::split(const std::string &s, const std::string &delimiter) const
     {
         std::vector<std::string> tokens;
-        std::size_t pos = 0;
-        std::string tempStr = s;
-        while ((pos = tempStr.find(delimiter)) != std::string::npos)
-        {
-            tokens.push_back(tempStr.substr(0, pos));
-            tempStr = tempStr.substr(pos + delimiter.length());
-        }
-        tokens.push_back(tempStr);
+        std::regex regex(delimiter);
+        std::copy(std::sregex_token_iterator(s.begin(), s.end(), regex, -1),
+                  std::sregex_token_iterator(),
+                  std::back_inserter(tokens));
         return tokens;
     }
+
 }

@@ -231,6 +231,15 @@ set(server_SRC
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
     ${lithium_src_dir}/websocket/WsProcessComponent.cpp
     ${lithium_src_dir}/websocket/WsTaskComponent.cpp
+
+    ${lithium_src_dir}/websocket/device/WsDeviceHub.cpp
+    ${lithium_src_dir}/websocket/device/WsDeviceHub.hpp
+
+    ${lithium_src_dir}/websocket/device/WsDeviceInstance.cpp
+    ${lithium_src_dir}/websocket/device/WsDeviceInstance.hpp
+
+    ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
+    ${lithium_src_dir}/websocket/device/WsDeviceServer.hpp
 )
 
 set(task_SRC

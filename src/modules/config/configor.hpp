@@ -44,6 +44,8 @@ namespace Lithium::Config
     public:
         ConfigManager();
 
+        ~ConfigManager();
+
         static std::shared_ptr<ConfigManager> createShared();
         
         /**

@@ -4,3 +4,4 @@
 2023-7-3 compiler.cpp 编译出现重大问题，似乎是RunShellCommand函数出现问题，暂时放弃
 2023-7-3 runner.cpp 任务管理器需要根据最新的task定义进行重写
 2023-7-3 device_manager.cpp 需要根据最新的device定义进行重写，虚函数的继承问题尚未解决
+2023-8-5 coroutines.cpp 对于协程的支持

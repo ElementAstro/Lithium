@@ -55,6 +55,7 @@ Description: Main
 #include "LithiumApp.hpp"
 
 #include "modules/system/crash.hpp"
+#include "modules/web/utils.hpp"
 
 #include <chrono>
 #include <ctime>
@@ -69,14 +70,13 @@ Description: Main
 
 void run()
 {
-    if (Lithium::MyApp->GetConfig("config/server/port") == nullptr)
-    {
-        Lithium::MyApp->SetConfig("config/server/port", 8000);
-    }
-
     LOG_F(INFO, "Loading App component ...");
 
-    AppComponent components(Lithium::MyApp->GetConfig("config/server/port").get<int>()); // Create scope Environment components
+#if ENABLE_IPV6
+    AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "::"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
+#else
+    AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
+#endif
 
     LOG_F(INFO, "App component loaded");
     /* Get router component */
@@ -133,13 +133,13 @@ void run()
     router->addController(auth_controller);
     LOG_F(INFO, "Auth controller loaded");
 
-    //LOG_F(INFO, "Starting to load API doc controller");
+    // LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
-    //router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
+    // router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
 #else
-    router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
+    // router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
 #endif
-    //LOG_F(INFO, "API doc controller loaded");
+    // LOG_F(INFO, "API doc controller loaded");
 
     router->addController(WebSocketController::createShared());
 

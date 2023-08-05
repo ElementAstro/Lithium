@@ -37,6 +37,7 @@ Description: Device Manager
 #include <functional>
 
 #include "device.hpp"
+#include "modules/config/configor.hpp"
 #include "modules/module/modloader.hpp"
 #include "modules/server/message_bus.hpp"
 
@@ -56,11 +57,11 @@ namespace Lithium
     class DeviceManager
     {
     public:
-        DeviceManager(std::shared_ptr<MessageBus> messageBus);
+        DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager);
 
         ~DeviceManager();
 
-        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus);
+        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager);
 
         std::vector<std::string> getDeviceList(DeviceType type);
 
@@ -93,6 +94,7 @@ namespace Lithium
 
         std::shared_ptr<ModuleLoader> m_ModuleLoader;
         std::shared_ptr<MessageBus> m_MessageBus;
+        std::shared_ptr<Config::ConfigManager> m_ConfigManager;
     };
 
 }

@@ -35,6 +35,7 @@ Description: App Components
 #include "config.h"
 
 #include "websocket/WebSocketServer.hpp"
+#include "websocket/device/WsDeviceServer.hpp"
 
 #include "ErrorHandler.hpp"
 
@@ -56,8 +57,10 @@ Description: App Components
 #include "oatpp/web/server/HttpRouter.hpp"
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
 
-// #include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
-// #include "oatpp/network/virtual_/Interface.hpp"
+#if ENABLE_DEBUG
+#include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
+#include "oatpp/network/virtual_/Interface.hpp"
+#endif
 
 #include "oatpp-zlib/EncoderProvider.hpp"
 #include "oatpp/web/protocol/http/incoming/SimpleBodyDecoder.hpp"
@@ -79,10 +82,11 @@ class AppComponent
 {
 private:
     v_uint16 m_port;
+    oatpp::String m_host;
 
 public:
-    AppComponent(v_uint16 port)
-        : m_port(port)
+    AppComponent(oatpp::String host,v_uint16 port)
+        : m_host(host), m_port(port)
     {
     }
     /**
@@ -96,9 +100,8 @@ public:
     DatabaseComponent databaseComponent;
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<JWT>, jwt)
-    ([]{
-        return std::make_shared<JWT>("<my-secret>", "<my-issuer>");
-    }());
+    ([]
+     { return std::make_shared<JWT>("<my-secret>", "<my-issuer>"); }());
 
 #if ENABLE_ASYNC
     /**
@@ -111,10 +114,12 @@ public:
            1 /* I/O threads */,
            1 /* Timer threads */
        ); }());
+#endif
 
-    // OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, virtualInterface)
-    //([]
-    //  { return oatpp::network::virtual_::Interface::obtainShared("virtualhost"); }());
+#if ENABLE_DEBUG
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, virtualInterface)
+    ([]
+     { return oatpp::network::virtual_::Interface::obtainShared("virtualhost"); }());
 #endif
 
     /**
@@ -142,13 +147,22 @@ public:
      { 
         std::shared_ptr<oatpp::network::ServerConnectionProvider> connectionProvider;
 		if(m_port == 0) 
-		{ // Use oatpp virtual interface
-			//OATPP_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, interface);
-			//connectionProvider = oatpp::network::virtual_::server::ConnectionProvider::createShared(interface);
+		{
+#if ENABLE_DEBUG
+            OATPP_LOGD("Debug", "Debug server is starting ...");
+            OATPP_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>, interface);
+			connectionProvider = oatpp::network::virtual_::server::ConnectionProvider::createShared(interface);
+#else
+            OATPP_LOGE("Debug", "Debug mode is not enabled,please enable when compile");
+#endif
     	} 
 		else 
 		{
-      		connectionProvider = oatpp::network::tcp::server::ConnectionProvider::createShared({"0.0.0.0", m_port, oatpp::network::Address::IP_4});
+#if ENABLE_IPV6
+            connectionProvider = oatpp::network::tcp::server::ConnectionProvider::createShared({m_host, m_port, oatpp::network::Address::IP_6});
+#else
+            connectionProvider = oatpp::network::tcp::server::ConnectionProvider::createShared({m_host, m_port, oatpp::network::Address::IP_4});
+#endif	
     	}
         return connectionProvider; }());
 
@@ -211,6 +225,18 @@ public:
         auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
 #endif
         connectionHandler->setSocketInstanceListener(std::make_shared<WSInstanceListener>());
+        return connectionHandler; }());
+
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketDeviceConnectionHandler)
+    ("websocket-device", []
+     {
+#if ENABLE_ASYNC
+        OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
+        auto connectionHandler = oatpp::websocket::AsyncConnectionHandler::createShared(executor);
+#else
+        auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
+#endif
+        connectionHandler->setSocketInstanceListener(std::make_shared<WsDeviceServer>());
         return connectionHandler; }());
 };
 

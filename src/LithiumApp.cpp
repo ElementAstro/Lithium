@@ -44,7 +44,7 @@ namespace Lithium
             m_ConfigManager = Config::ConfigManager::createShared();
             m_MessageBus = std::make_shared<MessageBus>();
             m_MessageQueue = std::make_shared<QueueWrapper>();
-            m_DeviceManager = DeviceManager::createShared(m_MessageBus);
+            m_DeviceManager = DeviceManager::createShared(m_MessageBus, m_ConfigManager);
 
             auto max_thread = GetConfig("config/server").value<int>("maxthread", 10);
             m_ThreadManager = Thread::ThreadManager::createShared(max_thread);
@@ -65,6 +65,7 @@ namespace Lithium
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Failed to load Lithium App , error : %s", e.what());
+            throw std::runtime_error("Failed to load Lithium App");
         }
     }
 

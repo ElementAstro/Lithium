@@ -44,7 +44,7 @@ Description: Lithium App Enter
 #include "modules/server/message_bus.hpp"
 #include "modules/server/message_queue.hpp"
 #include "modules/property/imessage.hpp"
-#include "modules/module/plugin_manager.hpp"
+#include "modules/plugin/plugin_manager.hpp"
 
 namespace Lithium
 {

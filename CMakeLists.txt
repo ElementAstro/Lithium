@@ -232,6 +232,9 @@ set(server_SRC
     ${lithium_src_dir}/modules/server/commander.cpp
     ${lithium_src_dir}/modules/server/commander.hpp
 
+    ${lithium_src_dir}/server/StaticFileManager.cpp
+    ${lithium_src_dir}/server/StaticFileManager.hpp
+
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
@@ -352,6 +355,7 @@ if(WIN32)
     target_link_libraries(lithium_server PRIVATE pugixml-static)
     target_link_libraries(lithium_server PRIVATE sqlite3)
     target_link_libraries(lithium_server PRIVATE cpp_httplib)
+    target_link_libraries(lithium_server PRIVATE bustache)
 
     # Set output name for Lithium executable
     set_target_properties(

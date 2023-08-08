@@ -37,7 +37,7 @@ Description: Task Generator
 #include <fstream>
 
 #include "modules/device/device_manager.hpp"
-#include "modules/module/plugin_manager.hpp"
+#include "modules/plugin/plugin_manager.hpp"
 #include "modules/task/task.hpp"
 
 namespace Lithium

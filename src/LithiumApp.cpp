@@ -53,7 +53,7 @@ namespace Lithium
 
             m_ProcessManager = Process::ProcessManager::createShared(max_process);
 
-            m_PluginManager = PluginManager::createShared();
+            m_PluginManager = PluginManager::createShared(m_ProcessManager);
             m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
             m_TaskGenerator = std::make_shared<TaskGenerator>(m_DeviceManager);
 

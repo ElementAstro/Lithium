@@ -9,6 +9,8 @@
 
 #include "plugin.hpp"
 
+#include "modules/system/process.hpp"
+
 namespace Lithium
 {
     /**
@@ -21,13 +23,13 @@ namespace Lithium
         /**
          * @brief 构造函数，初始化插件管理器
          */
-        PluginManager();
+        PluginManager(std::shared_ptr<Process::ProcessManager> processManager);
 
         /**
          * @brief 创建并返回共享的PluginManager指针
          * @return 共享的PluginManager指针
          */
-        static std::shared_ptr<PluginManager> CreateShared();
+        static std::shared_ptr<PluginManager> createShared(std::shared_ptr<Process::ProcessManager> processManager);
 
         /**
          * @brief 加载插件
@@ -68,6 +70,8 @@ namespace Lithium
         mutable std::mutex mutex_;                                              ///< 互斥锁，用于保护plugins_的访问
         std::map<std::string, std::shared_ptr<Plugin>> plugins_;                ///< 已加载的插件容器，以插件名称为键值存储
         std::string GetPluginType(const std::shared_ptr<Plugin> &plugin) const; ///< 获取插件类型的辅助函数
+
+        std::shared_ptr<Process::ProcessManager> m_ProcessManager;
     };
 
 }

@@ -8,13 +8,14 @@
 
 namespace Lithium
 {
-    PluginManager::PluginManager()
+    PluginManager::PluginManager(std::shared_ptr<Process::ProcessManager> processManager)
     {
+        m_ProcessManager = processManager;
     }
 
-    std::shared_ptr<PluginManager> PluginManager::CreateShared()
+    std::shared_ptr<PluginManager> PluginManager::createShared(std::shared_ptr<Process::ProcessManager> processManager)
     {
-        return std::make_shared<PluginManager>();
+        return std::make_shared<PluginManager>(processManager);
     }
 
     void PluginManager::LoadPlugin(const std::string &pluginName, const std::string &pluginPath, const std::string &version, const std::string &author, const std::string &description, const std::string &type)
@@ -35,7 +36,7 @@ namespace Lithium
         }
         else if (type == "ExecutablePlugin")
         {
-            plugin = std::make_shared<ExecutablePlugin>(pluginPath, version, author, description);
+            plugin = std::make_shared<ExecutablePlugin>(pluginPath, version, author, description, m_ProcessManager);
         }
         else if (type == "ChaiScriptPlugin")
         {

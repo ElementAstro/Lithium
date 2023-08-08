@@ -32,6 +32,8 @@ Description: Configor
 #pragma once
 
 #include <fstream>
+#include <mutex>
+#include <shared_mutex>
 
 #include "achievement_list.hpp"
 
@@ -127,9 +129,13 @@ namespace Lithium::Config
             }
         }
 
+        void tidyConfig();
+
     private:
         // JSON配置项
         nlohmann::json config_;
+        std::mutex mutex_;
+        mutable std::shared_timed_mutex rw_mutex_;
 
         std::shared_ptr<AAchievement::AchievementList> m_AchievementManager;
 

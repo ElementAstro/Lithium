@@ -39,6 +39,8 @@ Description: App Components
 
 #include "ErrorHandler.hpp"
 
+#include "server/StaticFileManager.hpp"
+
 #include "components/SwaggerComponent.hpp"
 #include "components/DatabaseComponent.hpp"
 
@@ -55,6 +57,9 @@ Description: App Components
 #endif
 
 #include "oatpp/web/server/HttpRouter.hpp"
+#include "oatpp/network/monitor/ConnectionMaxAgeChecker.hpp"
+#include "oatpp/network/monitor/ConnectionInactivityChecker.hpp"
+#include "oatpp/network/monitor/ConnectionMonitor.hpp"
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
 
 #if ENABLE_DEBUG
@@ -85,7 +90,7 @@ private:
     oatpp::String m_host;
 
 public:
-    AppComponent(oatpp::String host,v_uint16 port)
+    AppComponent(oatpp::String host, v_uint16 port)
         : m_host(host), m_port(port)
     {
     }
@@ -238,6 +243,10 @@ public:
 #endif
         connectionHandler->setSocketInstanceListener(std::make_shared<WsDeviceServer>());
         return connectionHandler; }());
+
+    OATPP_CREATE_COMPONENT(std::shared_ptr<StaticFileManager>, staticFilesManager)
+    ([]
+     { return std::make_shared<StaticFileManager>(); }());
 };
 
 #endif /* AppComponent_hpp */

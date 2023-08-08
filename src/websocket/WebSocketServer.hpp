@@ -74,6 +74,10 @@ private:
 	 * Lock for synchronization of writes to the web socket.
 	 */
 	oatpp::async::Lock m_writeLock;
+	/**
+	 * Inject async executor object.
+	 */
+	OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
 #else
 public:
 	int add_connection(const oatpp::websocket::WebSocket *recv);
@@ -84,11 +88,6 @@ private:
 #endif
 
 private:
-	/**
-	 * Inject async executor object.
-	 */
-	OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
-
 	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
 
 	template <typename ClassType>

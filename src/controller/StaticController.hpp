@@ -8,7 +8,13 @@
 
 #include "config.h"
 
-#include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
+#include "server/StaticFileManager.hpp"
+
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <unordered_set>
 
 class StaticController : public oatpp::web::server::api::ApiController
 {
@@ -17,6 +23,8 @@ public:
         : oatpp::web::server::api::ApiController(objectMapper)
     {
     }
+public:
+    OATPP_COMPONENT(std::shared_ptr<StaticFileManager>, staticFileManager);
 
 public:
     static std::shared_ptr<StaticController> createShared(
@@ -25,6 +33,43 @@ public:
     {
         return std::make_shared<StaticController>(objectMapper);
     }
+
+    static std::string loadResource(const std::string &path, const std::unordered_set<std::string> &allowedExtensions)
+    {
+        std::string fullPath;
+        if (std::filesystem::path(path).is_absolute())
+        {
+            fullPath = path;
+        }
+        else
+        {
+            // 获取当前路径
+            std::filesystem::path currentPath = std::filesystem::current_path();
+            fullPath = (currentPath / path).string();
+        }
+
+        std::string fileExtension = fullPath.substr(fullPath.find_last_of(".") + 1);
+
+        if (allowedExtensions.find(fileExtension) == allowedExtensions.end())
+        {
+            OATPP_LOGE("StaticFileManager", "File type not allowed: %s", fileExtension.c_str());
+            return "";
+        }
+
+        std::ifstream file(fullPath);
+
+        if (!file.is_open())
+        {
+            OATPP_LOGE("StaticFileManager", "Failed to open file: %s", fullPath.c_str());
+            return "";
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
+
+#include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 
     ENDPOINT_INFO(root)
     {
@@ -69,8 +114,36 @@ public:
         return response;
     }
 #endif
-};
+
+#if ENABLE_ASYNC
+    ENDPOINT_ASYNC("GET", "/static/*", Static) {
+    
+        ENDPOINT_ASYNC_INIT(Static)
+        
+        Action act() override
+        {
+            auto tail = request->getPathTail();
+            OATPP_ASSERT_HTTP(tail, Status::CODE_400, "Empty filename");
+
+            oatpp::parser::Caret caret(tail);
+
+            auto pathLabel = caret.putLabel();
+            caret.findChar('?');
+
+            auto path = pathLabel.toString();
+            auto buffer = loadResource(path.getValue(""), {".json",".js",".css",".html",".jpg",".png",".robot"});
+            OATPP_ASSERT_HTTP(buffer != "", Status::CODE_500, "Can't read file");
+
+            return _return(controller->createResponse(Status::CODE_200, buffer));
+        }
+        
+    };
+#else
+
+#endif
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen
+
+};
 
 #endif // Lithium_STATICCONTROLLER_HPP

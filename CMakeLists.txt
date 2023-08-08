@@ -182,11 +182,20 @@ set(module_SRC
     ${lithium_src_dir}/modules/module/modloader.cpp
     ${lithium_src_dir}/modules/module/modloader.hpp
 
-    ${lithium_src_dir}/modules/module/plugin.cpp
-    ${lithium_src_dir}/modules/module/plugin.hpp
+    ${lithium_src_dir}/modules/plugin/plugin.cpp
+    ${lithium_src_dir}/modules/plugin/plugin.hpp
 
-    ${lithium_src_dir}/modules/module/plugin_manager.cpp
-    ${lithium_src_dir}/modules/module/plugin_manager.hpp
+    ${lithium_src_dir}/modules/plugin/exe_plugin.cpp
+    ${lithium_src_dir}/modules/plugin/exe_plugin.hpp
+
+    ${lithium_src_dir}/modules/plugin/chai_plugin.cpp
+    ${lithium_src_dir}/modules/plugin/chai_plugin.hpp
+
+    ${lithium_src_dir}/modules/plugin/script_plugin.cpp
+    ${lithium_src_dir}/modules/plugin/script_plugin.hpp
+
+    ${lithium_src_dir}/modules/plugin/plugin_manager.cpp
+    ${lithium_src_dir}/modules/plugin/plugin_manager.hpp
 
     ${lithium_src_dir}/modules/module/compiler.cpp
     ${lithium_src_dir}/modules/module/compiler.hpp
@@ -217,9 +226,6 @@ set(property_SRC
 
     ${lithium_src_dir}/modules/property/uuid.cpp
     ${lithium_src_dir}/modules/property/uuid.hpp
-
-    #${lithium_src_dir}/property/xml.cpp
-    #${lithium_src_dir}/property/xml.hpp
 )
 
 set(server_SRC

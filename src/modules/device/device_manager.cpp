@@ -54,6 +54,7 @@ namespace Lithium
     DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager)
     {
         m_ModuleLoader = ModuleLoader::createShared("drivers");
+        m_ConfigManager = configManager;
         m_MessageBus = messageBus;
         for (auto &devices : m_devices)
         {
@@ -227,7 +228,14 @@ namespace Lithium
         const std::string newNameKey = ss.str();
 #endif
         LOG_F(INFO, "%s", newNameKey.c_str());
-        m_ConfigManager->setValue(newNameKey, newName);
+        if (m_ConfigManager)
+        {
+            m_ConfigManager->setValue(newNameKey, newName);
+        }
+        else
+        {
+            LOG_F(ERROR, "Config manager not initialized");
+        }
         return true;
     }
 
@@ -284,7 +292,14 @@ namespace Lithium
                 ss << "driver/ << " << name;
                 const std::string NameKey = ss.str();
 #endif
-                m_ConfigManager->deleteValue(NameKey);
+                if (m_ConfigManager)
+                {
+                    m_ConfigManager->deleteValue(NameKey);
+                }
+                else
+                {
+                    LOG_F(ERROR, "Config manager not initialized");
+                }
                 return true;
             }
         }
@@ -310,7 +325,14 @@ namespace Lithium
         ss << "driver/ << " << name;
         const std::string NameKey = ss.str();
 #endif
-        m_ConfigManager->deleteValue(NameKey);
+        if (m_ConfigManager)
+        {
+            m_ConfigManager->deleteValue(NameKey);
+        }
+        else
+        {
+            LOG_F(ERROR, "Config manager not initialized");
+        }
         return true;
     }
 
@@ -430,7 +452,15 @@ namespace Lithium
     void DeviceManager::messageBusPublish(const Lithium::IMessage &message)
     {
         LOG_F(INFO, "Reviced device message with content %s", message.getValue<std::string>().c_str());
-        m_MessageBus->Publish<Lithium::IMessage>("main", message);
+        if (m_MessageBus)
+        {
+            m_MessageBus->Publish<Lithium::IMessage>("main", message);
+        }
+        if (!m_ConfigManager)
+        {
+            LOG_F(ERROR, "Config manager not initialized");
+            return;
+        }
         if (message.value.has_value())
         {
 #if __cplusplus >= 202002L

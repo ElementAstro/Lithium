@@ -285,6 +285,10 @@ int main(int argc, char *argv[])
 
         oatpp::base::Environment::init();
         run();
+        LOG_F(INFO, "Environment:");
+        LOG_F(INFO, "objectsCount = %d", oatpp::base::Environment::getObjectsCount());
+        LOG_F(INFO, "objectsCreated = %d", oatpp::base::Environment::getObjectsCreated());
+
         oatpp::base::Environment::destroy();
     }
     catch (const std::exception &e)

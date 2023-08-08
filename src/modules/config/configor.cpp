@@ -64,6 +64,7 @@ namespace Lithium::Config
 
     void ConfigManager::loadFromFile(const std::string &path)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         std::ifstream ifs(path);
         if (!ifs.is_open())
         {
@@ -88,6 +89,7 @@ namespace Lithium::Config
 
     void ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
         for (const auto &file : fs::directory_iterator(dir_path))
         {
             if (file.path().extension() == ".json")
@@ -122,8 +124,10 @@ namespace Lithium::Config
 
     void ConfigManager::setValue(const std::string &key_path, const json &value)
     {
+        std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
         json *p = &config_;
+
         for (const auto &key : keys)
         {
             if (!p->is_object())
@@ -131,13 +135,24 @@ namespace Lithium::Config
                 LOG_F(ERROR, "Invalid key path: %s", key_path.c_str());
                 return;
             }
-            p = &(*p)[key];
+
+            if (p->contains(key))
+            {
+                p = &(*p)[key];
+            }
+            else
+            {
+                (*p)[key] = json::object();
+                p = &(*p)[key];
+            }
         }
+
         *p = value;
     }
 
     json ConfigManager::getValue(const std::string &key_path) const
     {
+        std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
         const json *p = &config_;
         for (const auto &key : keys)
@@ -157,6 +172,7 @@ namespace Lithium::Config
 
     void ConfigManager::deleteValue(const std::string &key_path)
     {
+        std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
         json *p = &config_;
         for (const auto &key : keys)
@@ -191,6 +207,33 @@ namespace Lithium::Config
         {
             LOG_F(INFO, "%s: %s", key.c_str(), value.dump().c_str());
         }
+    }
+
+    void ConfigManager::tidyConfig()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        json updated_config;
+
+        for (const auto &[key, value] : config_.items())
+        {
+            std::vector<std::string> keys = split(key, "/");
+            json *p = &updated_config;
+
+            for (const auto &sub_key : keys)
+            {
+                if (!p->contains(sub_key))
+                {
+                    (*p)[sub_key] = json::object();
+                }
+
+                p = &(*p)[sub_key];
+            }
+
+            *p = value;
+        }
+
+        config_ = std::move(updated_config);
     }
 
     std::vector<std::string> ConfigManager::split(const std::string &s, const std::string &delimiter) const

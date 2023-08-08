@@ -17,6 +17,10 @@
 
 #include "oatpp/core/macro/component.hpp"
 
+#include "modules/server/commander.hpp"
+
+#include "LithiumApp.hpp"
+
 class WsDeviceHub; // FWD
 
 class WsDeviceInstance : public oatpp::websocket::AsyncWebSocket::Listener
@@ -31,6 +35,24 @@ private:
 	 * Lock for synchronization of writes to the web socket.
 	 */
 	oatpp::async::Lock m_writeLock;
+
+	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
+
+	template <typename ClassType>
+	void LiRegisterFunc(const std::string &name, const nlohmann::json (ClassType::*handler)(const nlohmann::json &))
+	{
+		m_CommandDispatcher->RegisterHandler(name, handler, this);
+	}
+
+	bool LiRunFunc(const std::string &name, const nlohmann::json &params)
+	{
+		if (m_CommandDispatcher->HasHandler(name))
+		{
+			m_CommandDispatcher->Dispatch(name, params);
+			return true;
+		}
+		return false;
+	}
 
 private:
 	std::shared_ptr<AsyncWebSocket> m_socket;

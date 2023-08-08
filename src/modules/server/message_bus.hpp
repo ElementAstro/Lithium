@@ -41,7 +41,8 @@ Description: Main Message Bus
 #include <atomic>
 #include <thread>
 #include <algorithm>
-#include "loguru/loguru.hpp"
+#include <mutex>
+#include <condition_variable>
 
 class MessageBus
 {
@@ -78,7 +79,7 @@ public:
                     }),
                 topicSubscribers.end());
 
-            // LOG_F(INFO, "Unsubscribed from topic: %s", topic.c_str());
+            LOG_F(INFO, "Unsubscribed from topic: %s", topic.c_str());
         }
         subscribersLock_.unlock();
     }
@@ -91,7 +92,30 @@ public:
         messageQueueLock_.unlock();
         messageAvailableFlag_.notify_one();
 
-        // LOG_F(INFO, "Published message to topic: %s", topic.c_str());
+        LOG_F(INFO, "Published message to topic: %s", topic.c_str());
+    }
+
+    template <typename T>
+    void GlobalSubscribe(std::function<void(const T &)> callback)
+    {
+        globalSubscribersLock_.lock();
+        globalSubscribers_.push_back({std::any(callback)});
+        globalSubscribersLock_.unlock();
+    }
+
+    template <typename T>
+    void GlobalUnsubscribe(std::function<void(const T &)> callback)
+    {
+        globalSubscribersLock_.lock();
+        globalSubscribers_.erase(
+            std::remove_if(
+                globalSubscribers_.begin(), globalSubscribers_.end(),
+                [&](const auto &subscriber)
+                {
+                    return subscriber.type() == typeid(callback);
+                }),
+            globalSubscribers_.end());
+        globalSubscribersLock_.unlock();
     }
 
     template <typename T>
@@ -141,7 +165,21 @@ public:
                     }
                     subscribersLock_.unlock();
 
-                    //LOG_F(INFO, "Processed message on topic: %s", topic.c_str());
+                    globalSubscribersLock_.lock();
+                    try {
+                        for (const auto& subscriber : globalSubscribers_) {
+                            if (subscriber.type() == typeid(std::function<void(const T&)>)) {
+                                std::any_cast<std::function<void(const T&)>>(subscriber)(std::any_cast<const T&>(data));
+                            }
+                        }
+                    } catch (const std::bad_any_cast& e) {
+                        LOG_F(ERROR, "Global message type mismatch: %s", e.what());
+                    } catch (...) {
+                        LOG_F(ERROR, "Unknown error occurred during global message processing");
+                    }
+                    globalSubscribersLock_.unlock();
+
+                    LOG_F(INFO, "Processed message on topic: %s", topic.c_str());
                 }
             } });
     }
@@ -167,51 +205,7 @@ private:
     std::mutex waitingMutex_;
     std::thread processingThread_;
     std::atomic<bool> isRunning_{true};
+
+    std::vector<std::any> globalSubscribers_;
+    std::mutex globalSubscribersLock_;
 };
-
-/*
-int main(int argc, char *argv[])
-{
-    loguru::init(argc, argv);
-    MessageBus bus;
-
-    auto callback1 = [](const std::string &message)
-    {
-        LOG_F(INFO, "Callback 1 received message: %s", message.c_str());
-    };
-    auto callback2 = [](const std::string &message)
-    {
-        LOG_F(INFO, "Callback 2 received message: %s", message.c_str());
-    };
-
-    OtherClass otherObj;
-    bus.Subscribe("my_topic", std::function<void(const std::string &)>(std::bind(&OtherClass::OnMyMessageReceived, &otherObj, std::placeholders::_1)));
-
-    bus.Subscribe("my_topic", static_cast<std::function<void(const std::string &)>>(callback1), 1);
-    bus.Subscribe("my_topic", static_cast<std::function<void(const std::string &)>>(callback2), -1);
-
-
-    bus.StartProcessingThread<std::string>();
-
-    for (int i = 0; i < 10; i++)
-    {
-        bus.Publish("my_topic", std::string("Hello, world!") + std::to_string(i));
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-   bus.Unsubscribe("my_topic", static_cast<std::function<void(const std::string &)>>(callback1));
-
-    for (int i = 0; i < 10; i++)
-    {
-        bus.Publish("my_topic", std::string("Hello again!") + std::to_string(i));
-    }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-    bus.StopProcessingThread();
-
-    return 0;
-}
-
-*/

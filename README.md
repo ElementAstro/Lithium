@@ -1,6 +1,15 @@
 Lithium
 =======
 
+<p align="center">
+    <a href="https://isocpp.org/">
+        <img src="https://img.shields.io/badge/language-C%2B%2B20-blue.svg">
+    </a>
+    <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" >
+        <img src="https://img.shields.io/github/license/ElementAstro/Lithium">
+    </a>
+</p>
+
 ## Introduction
 
 Lithium, a lively and lightweight astrophotography terminal.

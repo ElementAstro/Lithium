@@ -60,12 +60,19 @@ Description: C++ and Modules Loader
 #endif
 */
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json_fwd.hpp"
 #include "loguru/loguru.hpp"
 
 #include "thread/thread.hpp"
 #include "task/task.hpp"
 #include "device/device.hpp"
+#include "error/error_code.hpp"
+
+namespace tl
+{
+    template <class T, class E>
+    class expected;
+}
 
 namespace Lithium
 {
@@ -104,7 +111,7 @@ namespace Lithium
         static std::shared_ptr<ModuleLoader> createShared(std::shared_ptr<Thread::ThreadManager> threadManager);
         static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
 
-        bool LoadOnInit();
+        tl::expected<bool,IOError> LoadOnInit(const std::string &dir_name);
 
         /**
          * @brief   Loads a dynamic module from the given path.
@@ -116,7 +123,8 @@ namespace Lithium
          * @param[in]   name    The name of the dynamic module.
          * @return      true if the loading is successful, false otherwise.
          */
-        bool LoadModule(const std::string &path, const std::string &name);
+        tl::expected<bool,IOError> LoadModule(const std::string &path, const std::string &name);
+        
         /**
          * @brief 卸载指定名称的动态库
          *
@@ -124,7 +132,7 @@ namespace Lithium
          * @return true 动态库卸载成功
          * @return false 动态库卸载失败
          */
-        bool UnloadModule(const std::string &name);
+        tl::expected<bool,IOError> UnloadModule(const std::string &name);
 
         bool HasModule(const std::string &name) const;
 
@@ -137,7 +145,7 @@ namespace Lithium
          * @return true 成功允许模块
          * @return false 允许模块失败
          */
-        bool EnableModule(const std::string &module_name);
+        tl::expected<bool,IOError> EnableModule(const std::string &module_name);
 
         /**
          * @brief 禁用指定模块
@@ -146,7 +154,7 @@ namespace Lithium
          * @return true 成功禁用模块
          * @return false 禁用模块失败
          */
-        bool DisableModule(const std::string &module_name);
+        tl::expected<bool,IOError> DisableModule(const std::string &module_name);
 
         /**
          * @brief 获取指定模块中的函数指针
@@ -238,18 +246,9 @@ namespace Lithium
 
         std::string GetModulePath(const std::string& module_name);
 
-        const std::vector<std::string> GetAllExistedModules() const
-        {
-            std::vector<std::string> modules_name;
-            for (auto module_ : handles_)
-            {
-                modules_name.push_back(module_.first);
-            }
-            return modules_name;
-        }
+        const std::vector<std::string> GetAllExistedModules() const;
 
     private:
-        std::string m_dir_name;
         std::unordered_map<std::string, void *> handles_;
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
         std::unordered_map<std::string, std::string> disabled_modules_;

@@ -46,7 +46,7 @@ namespace Lithium
          */
         LoopTask(const std::function<void(const nlohmann::json &)> &item_fn,
                  const nlohmann::json &params,
-                 const std::function<void()> &stop_fn = nullptr);
+                 std::function<nlohmann::json(const nlohmann::json &)> &stop_fn);
 
         /**
          * @brief 执行任务的虚函数，由子类实现具体逻辑
@@ -58,7 +58,7 @@ namespace Lithium
          * @brief 将任务序列化为JSON对象
          * @return 表示任务的JSON对象
          */
-        virtual nlohmann::json ToJson() const override;
+        virtual const nlohmann::json ToJson() const override;
 
     private:
         // 单项任务函数，对每个参数执行一次

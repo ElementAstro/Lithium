@@ -31,6 +31,7 @@ Description: Achiement
 
 #include "achievement.hpp"
 #include <memory>
+#include "nlohmann/json.hpp"
 
 namespace Lithium::AAchievement
 {

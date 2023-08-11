@@ -39,6 +39,7 @@ Description: Configor
 #include "configor.hpp"
 
 #include "loguru/loguru.hpp"
+#include "tl/expected.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -48,8 +49,10 @@ namespace Lithium::Config
     ConfigManager::ConfigManager()
     {
         m_AchievementManager = std::make_unique<AAchievement::AchievementList>();
-        loadFromFile("config.json");
-        LOG_F(INFO, "%s", config_.dump(4));
+        if (loadFromFile("config.json").has_value())
+        {
+            LOG_F(INFO, "current config: %s", config_.dump(4));
+        }
     }
 
     ConfigManager::~ConfigManager()
@@ -62,14 +65,14 @@ namespace Lithium::Config
         return std::make_shared<ConfigManager>();
     }
 
-    void ConfigManager::loadFromFile(const std::string &path)
+    tl::expected<bool, IOError> ConfigManager::loadFromFile(const std::string &path)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         std::ifstream ifs(path);
         if (!ifs.is_open())
         {
             LOG_F(ERROR, "Failed to open file: %s", path.c_str());
-            return;
+            return tl::unexpected(IOError::OepnError);
         }
         json j;
         try
@@ -80,14 +83,16 @@ namespace Lithium::Config
             const std::string name_without_ext = basename.substr(0, basename.find_last_of('.'));
             config_[name_without_ext] = j["config"];
             LOG_F(INFO, "Loaded config file %s successfully", path.c_str());
+            return true;
         }
         catch (const json::exception &e)
         {
             LOG_F(ERROR, "Failed to parse file: %s, error message: %s", path.c_str(), e.what());
+            return tl::unexpected(IOError::ParseError);
         }
     }
 
-    void ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
+    tl::expected<bool, IOError> ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto &file : fs::directory_iterator(dir_path))
@@ -116,10 +121,15 @@ namespace Lithium::Config
                     {
                         LOG_F(ERROR, "Failed to parse file: %s, error message: %s", config_file_path.c_str(), e.what());
                     }
+                    catch (const std::exception &e)
+                    {
+                        LOG_F(ERROR, "Failed to open file %s", config_file_path.c_str());
+                    }
                 }
                 loadFromDir(subdir_path, true);
             }
         }
+        return true;
     }
 
     void ConfigManager::setValue(const std::string &key_path, const json &value)
@@ -234,6 +244,33 @@ namespace Lithium::Config
         }
 
         config_ = std::move(updated_config);
+    }
+
+    void ConfigManager::printAllValues() const
+    {
+        // spdlog::info("Current all configurations:");
+        for (auto &[key, value] : config_.items())
+        {
+            printValue(key, value);
+        }
+    }
+
+    void ConfigManager::mergeConfig(const nlohmann::json &j)
+    {
+        config_.merge_patch(j);
+    }
+
+    tl::expected<bool, IOError> ConfigManager::saveToFile(const std::string &file_path) const
+    {
+        std::ofstream ofs(file_path);
+        if (!ofs.is_open())
+        {
+            LOG_F(ERROR, "Failed to open file: %s", file_path.c_str());
+            return tl::unexpected(IOError::OepnError);
+        }
+        ofs << config_.dump(4);
+        ofs.close();
+        return true;
     }
 
     std::vector<std::string> ConfigManager::split(const std::string &s, const std::string &delimiter) const

@@ -61,31 +61,6 @@ bool Camera::reconnect()
     return true;
 }
 
-std::shared_ptr<Lithium::SimpleTask> Camera::getTask(const std::string &name, const nlohmann::json &params)
-{
-    if (name == "captureImage")
-    {
-        auto imageCaptureTask = std::make_shared<Lithium::SimpleTask>(
-            [this](const nlohmann::json &params) -> nlohmann::json
-            {
-                setProperty("gain", "10");
-                setProperty("offset", "10");
-                setProperty("is_exposure", "true");
-                std::cout << "Image captured" << std::endl;
-                setProperty("is_exposure", "false");
-                return {"result", "success"};
-            },
-            params,
-            [this]()
-            {
-                std::cout << "Image capture stopped" << std::endl;
-            },
-            true);
-        return imageCaptureTask;
-    }
-    return nullptr;
-}
-
 bool Camera::startExposure(const nlohmann::json &params)
 {
     return true;

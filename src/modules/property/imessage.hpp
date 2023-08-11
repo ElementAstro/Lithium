@@ -8,11 +8,11 @@
 
 namespace Lithium
 {
-    class IMessage
+    class IProperty
     {
     public:
-        IMessage();
-        virtual ~IMessage() = default;
+        IProperty();
+        virtual ~IProperty() = default;
 
         const std::string &GetName() const
         {
@@ -44,7 +44,7 @@ namespace Lithium
     };
 
     template <typename T>
-    T IMessage::getValue() const
+    T IProperty::getValue() const
     {
         try
         {
@@ -57,12 +57,12 @@ namespace Lithium
     }
 
     template <typename T>
-    void IMessage::setValue(const T &value)
+    void IProperty::setValue(const T &value)
     {
         this->value = value;
     }
 
-    class IImage : public IMessage
+    class IImage : public IProperty
     {
     public:
         int width;

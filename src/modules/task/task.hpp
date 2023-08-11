@@ -53,7 +53,7 @@ namespace Lithium
          * @param stop_fn 一个可选的停止函数，默认为nullptr
          * @param can_stop 指示任务是否可以停止，默认为false
          */
-        BasicTask(const std::function<void()> &stop_fn = nullptr, bool can_stop = false);
+        BasicTask(const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn, bool can_stop = false);
 
         /**
          * @brief BasicTask类析构函数
@@ -70,7 +70,7 @@ namespace Lithium
          * @brief 将任务序列化为JSON对象
          * @return 表示任务的JSON对象
          */
-        virtual nlohmann::json ToJson() const;
+        virtual const nlohmann::json ToJson() const;
 
         /**
          * @brief 获取任务ID
@@ -124,7 +124,7 @@ namespace Lithium
          * @brief 设置停止函数
          * @param stop_fn 停止函数
          */
-        void set_stop_function(const std::function<void()> &stop_fn);
+        void set_stop_function(const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn);
 
         /**
          * @brief 获取停止标志
@@ -176,7 +176,7 @@ namespace Lithium
         bool can_stop_;
 
         // Stop function
-        std::function<void()> stop_fn_;
+        std::function<nlohmann::json(const nlohmann::json &)> stop_fn_;
 
         // Stop flag
         bool stop_flag_ = false;
@@ -197,7 +197,7 @@ namespace Lithium
          */
         SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func,
                    const nlohmann::json &params_template,
-                   const std::function<void()> &stop_fn = nullptr,
+                   const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn,
                    bool can_stop = false);
 
         /**
@@ -216,13 +216,15 @@ namespace Lithium
          * @brief 将任务序列化为JSON对象
          * @return 表示任务的JSON对象
          */
-        virtual nlohmann::json ToJson() const override;
+        virtual const nlohmann::json ToJson() const override;
 
         /**
          * @brief 获取任务的执行结果
          * @return 任务的执行结果
          */
-        virtual nlohmann::json GetResult() const;
+        virtual const nlohmann::json GetResult() const;
+
+        virtual const nlohmann::json GetParamsTemplate() const;
 
     private:
         // 要执行的函数

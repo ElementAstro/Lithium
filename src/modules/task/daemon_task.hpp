@@ -44,7 +44,7 @@ namespace Lithium
          * @param stop_fn 任务停止函数
          */
         DaemonTask(const std::function<void()> &task_fn,
-                   const std::function<void()> &stop_fn = nullptr);
+                   std::function<nlohmann::json(const nlohmann::json &)> &stop_fn);
 
         /**
          * @brief 执行任务
@@ -56,7 +56,7 @@ namespace Lithium
          * @brief 将任务序列化为JSON对象
          * @return JSON对象表示的任务
          */
-        nlohmann::json ToJson() const override;
+        const nlohmann::json ToJson() const override;
 
     private:
         std::function<void()> task_fn_; // 任务函数

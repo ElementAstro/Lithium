@@ -35,9 +35,17 @@ Description: Configor
 #include <mutex>
 #include <shared_mutex>
 
+#include "error/error_code.hpp"
+
 #include "achievement_list.hpp"
 
 #include "nlohmann/json.hpp"
+
+namespace tl
+{
+    template <class T, class E>
+    class expected;
+}
 
 namespace Lithium::Config
 {
@@ -57,7 +65,7 @@ namespace Lithium::Config
          *
          * @param path 配置文件路径
          */
-        void loadFromFile(const std::string &path);
+        tl::expected<bool,IOError> loadFromFile(const std::string &path);
 
         /**
          * @brief 加载指定目录下的所有JSON配置文件
@@ -66,7 +74,7 @@ namespace Lithium::Config
          *
          * @param dir_path 配置文件所在目录的路径
          */
-        void loadFromDir(const std::string &dir_path, bool recursive);
+        tl::expected<bool,IOError> loadFromDir(const std::string &dir_path, bool recursive);
 
         /**
          * @brief 添加或更新一个配置项
@@ -104,30 +112,14 @@ namespace Lithium::Config
          *
          * @param file_path 目标文件路径
          */
-        void saveToFile(const std::string &file_path) const
-        {
-            std::ofstream ofs(file_path);
-            if (!ofs.is_open())
-            {
-                // spdlog::error("Failed to open file: {}", file_path);
-                return;
-            }
-            ofs << config_.dump(4);
-        }
+        tl::expected<bool,IOError> saveToFile(const std::string &file_path) const;
 
         /**
          * @brief 打印当前所有配置项
          *
          * Print all current configuration items.
          */
-        void printAllValues() const
-        {
-            // spdlog::info("Current all configurations:");
-            for (auto &[key, value] : config_.items())
-            {
-                printValue(key, value);
-            }
-        }
+        void printAllValues() const;
 
         void tidyConfig();
 
@@ -139,10 +131,7 @@ namespace Lithium::Config
 
         std::shared_ptr<AAchievement::AchievementList> m_AchievementManager;
 
-        void mergeConfig(const nlohmann::json &j)
-        {
-            config_.merge_patch(j);
-        }
+        void mergeConfig(const nlohmann::json &j);
 
         // 打印一个配置项的名称和值
         void printValue(const std::string &key, const nlohmann::json &value) const;

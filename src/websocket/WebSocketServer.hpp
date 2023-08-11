@@ -110,14 +110,6 @@ public:
 	WebSocketServer(const std::shared_ptr<AsyncWebSocket>& socket);
 	~WebSocketServer();
 
-#if ENABLE_ASYNC
-	void SendMessageNonBlocking(const oatpp::String &message);
-	void SendBinaryMessageNonBlocking(const void *binary_message, int size);
-#else
-	void SendMessage(const oatpp::String &message);
-	void SendBinaryMessage(const void *binary_message, int size);
-#endif
-
 public:
 	const nlohmann::json GetDeviceList(const nlohmann::json &m_params);
 	const nlohmann::json AddDevice(const nlohmann::json &m_params);
@@ -150,6 +142,13 @@ public:
 	const nlohmann::json SaveTasksToJson(const nlohmann::json &m_params);
 
 public:
+
+	const nlohmann::json runChaiCommand(const nlohmann::json &m_params);
+	const nlohmann::json runChaiMultiCommand(const nlohmann::json &m_params);
+	const nlohmann::json runChaiScript(const nlohmann::json &m_params);
+	const nlohmann::json loadChaiFile(const nlohmann::json &m_params);
+
+public:
 #if ENABLE_ASYNC
 	CoroutineStarter onPing(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;
 
@@ -167,8 +166,6 @@ public:
 
 	void readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 #endif
-private:
-	void OnMessageReceived(const Lithium::IMessage &message);
 };
 
 /**

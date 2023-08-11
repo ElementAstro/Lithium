@@ -33,7 +33,7 @@ Description: Basic and Simple Task Definition
 
 namespace Lithium
 {
-    BasicTask::BasicTask(const std::function<void()> &stop_fn, bool can_stop)
+    BasicTask::BasicTask(const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn, bool can_stop)
         : stop_fn_(stop_fn), can_stop_(stop_fn != nullptr), stop_flag_(false) {}
 
     BasicTask::~BasicTask()
@@ -45,7 +45,7 @@ namespace Lithium
     }
 
     // Serializes the task to a JSON object
-    nlohmann::json BasicTask::ToJson() const
+    const nlohmann::json BasicTask::ToJson() const
     {
         return {
             {"type", "basic"},
@@ -70,7 +70,7 @@ namespace Lithium
     bool BasicTask::can_execute() const { return can_execute_; }
 
     // Set the stop function
-    void BasicTask::set_stop_function(const std::function<void()> &stop_fn)
+    void BasicTask::set_stop_function(const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn)
     {
         stop_fn_ = stop_fn;
         can_stop_ = true;
@@ -86,7 +86,7 @@ namespace Lithium
         stop_flag_ = true;
         if (stop_fn_)
         {
-            stop_fn_();
+            stop_fn_({});
         }
     }
 
@@ -145,8 +145,9 @@ namespace Lithium
         return validateJsonValue(jsonData, templateData);
     }
 
-    SimpleTask::SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func, const nlohmann::json &params_template,
-                           const std::function<void()> &stop_fn, bool can_stop)
+    SimpleTask::SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func,
+                           const nlohmann::json &params_template,
+                           const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn, bool can_stop)
         : function_(func), params_template_(params_template), BasicTask(stop_fn, can_stop) {}
 
     nlohmann::json SimpleTask::Execute()
@@ -171,7 +172,7 @@ namespace Lithium
         params_ = params;
     }
 
-    nlohmann::json SimpleTask::ToJson() const
+    const nlohmann::json SimpleTask::ToJson() const
     {
         auto j = BasicTask::ToJson();
         j["type"] = "simple";
@@ -179,8 +180,13 @@ namespace Lithium
         return j;
     }
 
-    nlohmann::json SimpleTask::GetResult() const
+    const nlohmann::json SimpleTask::GetResult() const
     {
         return returns_;
+    }
+
+    const nlohmann::json SimpleTask::GetParamsTemplate() const
+    {
+        return params_template_;
     }
 }

@@ -5,13 +5,13 @@
 
 namespace Lithium
 {
-    IMessage::IMessage()
+    IProperty::IProperty()
     {
         UUID::UUIDGenerator generator;
         message_uuid = generator.generateUUIDWithFormat();
     }
 
-    std::string IMessage::toJson() const
+    std::string IProperty::toJson() const
     {
         std::stringstream ss;
         ss << "{";
@@ -42,7 +42,7 @@ namespace Lithium
         return ss.str();
     }
 
-    std::string IMessage::toXml() const
+    std::string IProperty::toXml() const
     {
         std::stringstream ss;
         ss << "<message>";
@@ -74,22 +74,22 @@ namespace Lithium
         return ss.str();
     }
 
-    const std::string &IMessage::GetMessageUUID() const
+    const std::string &IProperty::GetMessageUUID() const
     {
         return message_uuid;
     }
 
-    void IMessage::SetMessageUUID(const std::string &uuid)
+    void IProperty::SetMessageUUID(const std::string &uuid)
     {
         message_uuid = uuid;
     }
 
-    const std::string &IMessage::GetDeviceUUID() const
+    const std::string &IProperty::GetDeviceUUID() const
     {
         return device_uuid;
     }
 
-    void IMessage::SetDeviceUUID(const std::string &uuid)
+    void IProperty::SetDeviceUUID(const std::string &uuid)
     {
         device_uuid = uuid;
     }

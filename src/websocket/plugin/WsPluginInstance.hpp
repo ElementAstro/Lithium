@@ -1,6 +1,6 @@
 
-#ifndef WSDEVICEINSTANCE_HPP
-#define WSDEVICEINSTANCE_HPP
+#ifndef WsPluginINSTANCE_HPP
+#define WsPluginINSTANCE_HPP
 
 #include "config.h"
 
@@ -21,11 +21,9 @@
 
 #include "LithiumApp.hpp"
 
-#include "nlohmann/json.hpp"
+class WsPluginHub; // FWD
 
-class WsDeviceHub; // FWD
-
-class WsDeviceInstance : public oatpp::websocket::AsyncWebSocket::Listener
+class WsPluginInstance : public oatpp::websocket::AsyncWebSocket::Listener
 {
 private:
 	/**
@@ -58,8 +56,8 @@ private:
 
 private:
 	std::shared_ptr<AsyncWebSocket> m_socket;
-	std::shared_ptr<WsDeviceHub> m_hub;
-	oatpp::String m_device_name;
+	std::shared_ptr<WsPluginHub> m_hub;
+	oatpp::String m_plugin_name;
 	v_int32 m_userId;
 
 private:
@@ -69,17 +67,17 @@ private:
 	OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
 
 public:
-	WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket,
-					 const std::shared_ptr<WsDeviceHub> &hub,
-					 const oatpp::String &device_name,
+	WsPluginInstance(const std::shared_ptr<AsyncWebSocket> &socket,
+					 const std::shared_ptr<WsPluginHub> &hub,
+					 const oatpp::String &plugin_name,
 					 v_int32 userId)
-		: m_socket(socket), m_hub(hub), m_device_name(device_name), m_userId(userId)
+		: m_socket(socket), m_hub(hub), m_plugin_name(plugin_name), m_userId(userId)
 	{
-		OATPP_LOGD(m_device_name.getValue("").c_str(), "%s created", m_device_name.getValue("").c_str());
+		OATPP_LOGD(m_plugin_name.getValue("").c_str(), "%s created", m_plugin_name.getValue("").c_str());
 	}
 
 	/**
-	 * Send message to WsDeviceInstance (to user).
+	 * Send message to WsPluginInstance (to user).
 	 * @param message
 	 */
 	void sendMessage(const oatpp::String &message);
@@ -87,28 +85,22 @@ public:
 	void sendBinaryMessage(const void *binary_message, int size);
 
 	/**
-	 * Get hub of the WsDeviceInstance.
+	 * Get hub of the WsPluginInstance.
 	 * @return
 	 */
-	std::shared_ptr<WsDeviceHub> getHub();
+	std::shared_ptr<WsPluginHub> getHub();
 
 	/**
-	 * Get WsDeviceInstance device_name.
+	 * Get WsPluginInstance plugin_name.
 	 * @return
 	 */
-	oatpp::String getDeviceName();
+	oatpp::String getPluginName();
 
 	/**
-	 * Get WsDeviceInstance userId.
+	 * Get WsPluginInstance userId.
 	 * @return
 	 */
 	v_int32 getUserId();
-
-public:
-	const nlohmann::json setProperty(const nlohmann::json &m_params);
-	const nlohmann::json getProperty(const nlohmann::json &m_params);
-	const nlohmann::json runTask(const nlohmann::json &m_params);
-	const nlohmann::json 
 
 public: // WebSocket Listener methods
 	CoroutineStarter onPing(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;
@@ -117,4 +109,4 @@ public: // WebSocket Listener methods
 	CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 };
 
-#endif // WSDEVICEINSTANCE_HPP
+#endif // WsPluginINSTANCE_HPP

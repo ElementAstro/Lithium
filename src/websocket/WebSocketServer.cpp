@@ -48,8 +48,6 @@ WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 {
 	m_CommandDispatcher = std::make_unique<CommandDispatcher>();
 
-	Lithium::MyApp->MSSubscribe("main", std::function<void(const Lithium::IMessage &)>(std::bind(&WebSocketServer::OnMessageReceived, this, std::placeholders::_1)));
-
 	LiRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask);
 	LiRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo);
 	LiRegisterFunc("GetDeviceList", &WebSocketServer::GetDeviceList);
@@ -58,11 +56,13 @@ WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 	LiRegisterFunc("RemoveDevice", &WebSocketServer::RemoveDevice);
 	LiRegisterFunc("RemoveDeviceByName", &WebSocketServer::RemoveDevicesByName);
 	LiRegisterFunc("RemoveDeviceLibrary", &WebSocketServer::RemoveDeviceLibrary);
+
 	LiRegisterFunc("CreateProcess", &WebSocketServer::CreateProcessLi);
 	LiRegisterFunc("RunScript", &WebSocketServer::RunScript);
 	LiRegisterFunc("TerminateProcessByName", &WebSocketServer::TerminateProcessByName);
 	LiRegisterFunc("GetRunningProcesses", &WebSocketServer::GetRunningProcesses);
 	LiRegisterFunc("GetProcessOutput", &WebSocketServer::GetProcessOutput);
+	
 	LiRegisterFunc("AddTask", &WebSocketServer::AddTask);
 	LiRegisterFunc("InsertTask", &WebSocketServer::InsertTask);
 	LiRegisterFunc("ExecuteAllTasks", &WebSocketServer::ExecuteAllTasks);
@@ -73,20 +73,15 @@ WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 	LiRegisterFunc("DeleteTask", &WebSocketServer::DeleteTask);
 	LiRegisterFunc("DeleteTaskByName", &WebSocketServer::DeleteTaskByName);
 	LiRegisterFunc("QueryTaskByName", &WebSocketServer::QueryTaskByName);
+
+	LiRegisterFunc("RunChaiCommand", &WebSocketServer::runChaiCommand);
+	LiRegisterFunc("RunChaiMultiCommand", &WebSocketServer::runChaiMultiCommand);
+	LiRegisterFunc("RunChaiScript", &WebSocketServer::runChaiScript);
+	LiRegisterFunc("LoadChaiScript", &WebSocketServer::loadChaiFile);
 }
 
 WebSocketServer::~WebSocketServer()
 {
-	/*
-#if ENABLE_ASYNC
-	m_socket->sendCloseAsync();
-#else
-	for (auto &it : m_connections)
-	{
-		it->sendClose();
-	}
-#endif
-	*/
 }
 
 #if ENABLE_ASYNC
@@ -182,58 +177,6 @@ oatpp::async::CoroutineStarter WebSocketServer::readMessage(const std::shared_pt
 		m_messageBuffer.writeSimple(data, size);
 	}
 	return nullptr;
-}
-
-void WebSocketServer::SendMessageNonBlocking(const oatpp::String &message)
-{
-	class SendMessageCoroutine : public oatpp::async::Coroutine<SendMessageCoroutine>
-	{
-	private:
-		oatpp::async::Lock *m_lock;
-		std::shared_ptr<AsyncWebSocket> m_websocket;
-		oatpp::String m_message;
-
-	public:
-		SendMessageCoroutine(oatpp::async::Lock *lock,
-							 const std::shared_ptr<AsyncWebSocket> &websocket,
-							 const oatpp::String &message)
-			: m_lock(lock), m_websocket(websocket), m_message(message)
-		{
-		}
-
-		Action act() override
-		{
-			return oatpp::async::synchronize(m_lock, m_websocket->sendOneFrameTextAsync(m_message)).next(finish());
-		}
-	};
-	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, message);
-}
-
-void WebSocketServer::SendBinaryMessageNonBlocking(const void *binary_message, int size)
-{
-	oatpp::String binary((const char *)binary_message, size);
-	class SendMessageCoroutine : public oatpp::async::Coroutine<SendMessageCoroutine>
-	{
-	private:
-		oatpp::async::Lock *m_lock;
-		std::shared_ptr<AsyncWebSocket> m_websocket;
-		oatpp::String m_message;
-
-	public:
-		SendMessageCoroutine(oatpp::async::Lock *lock,
-							 const std::shared_ptr<AsyncWebSocket> &websocket,
-							 const oatpp::String &message)
-			: m_lock(lock), m_websocket(websocket), m_message(message)
-		{
-		}
-
-		Action act() override
-		{
-			return oatpp::async::synchronize(m_lock, m_websocket->sendOneFrameBinaryAsync(m_message)).next(finish());
-		}
-	};
-	if (m_socket)
-		m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, binary);
 }
 
 #else
@@ -392,28 +335,6 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 	}
 }
 #endif
-
-void WebSocketServer::OnMessageReceived(const Lithium::IMessage &message)
-{
-	try
-	{
-		// 处理接收到的消息
-		LOG_F(INFO, "WebSocketServer received message with content: %s", message.getValue<std::string>().c_str());
-#if ENABLE_ASYNC
-		SendMessageNonBlocking(message.toJson());
-#else
-		SendMessage(message.toJson());
-#endif
-	}
-	catch (const std::exception &e)
-	{
-		LOG_F(ERROR, "Exception caught in OnMessageReceived: %s", e.what());
-	}
-	catch (...)
-	{
-		LOG_F(ERROR, "Unknown exception caught in OnMessageReceived");
-	}
-}
 
 std::atomic<v_int32> WSInstanceListener::SOCKETS(0);
 

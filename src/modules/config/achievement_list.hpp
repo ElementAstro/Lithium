@@ -34,7 +34,7 @@ Description: Achiement List
 
 #include <vector>
 #include <memory>
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 #include "achievement.hpp"
 

@@ -37,10 +37,11 @@ Description: Basic Device Defination
 #include <nlohmann/json.hpp>
 #include <functional>
 #include <memory>
+#include <string_view>
 #include <map>
 
-#include "modules/property/imessage.hpp"
-#include "modules/task/task.hpp"
+#include "property/imessage.hpp"
+#include "task/device_task.hpp"
 
 class Device
 {
@@ -49,7 +50,6 @@ public:
     virtual ~Device();
 
 public:
-
     virtual bool connect(const std::string &name) = 0;
 
     virtual bool disconnect() = 0;
@@ -62,10 +62,14 @@ public:
 
     std::string getProperty(const std::string &name);
 
-    void insertTask(const std::string &name, std::any defaultValue,
+    void insertTask(const std::string &name, std::any defaultValue, nlohmann::json params_template,
+                    const std::function<nlohmann::json(const nlohmann::json &)> &func,
+                    const std::function<nlohmann::json(const nlohmann::json &)> &stop_func,
                     bool isBlock = false, std::shared_ptr<Lithium::SimpleTask> task = nullptr);
 
-    virtual std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params) = 0;
+    bool removeTask(const std::string &name);
+
+    std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params);
 
     void insertMessage(const std::string &name, std::any value);
 
@@ -75,9 +79,9 @@ public:
 
     std::any getMessageValue(const std::string &name, const std::string &identifier);
 
-    void addObserver(const std::function<void(const Lithium::IMessage &message)> &observer);
+    void addObserver(const std::function<void(const Lithium::IProperty &message)> &observer);
 
-    void removeObserver(const std::function<void(const Lithium::IMessage &message)> &observer);
+    void removeObserver(const std::function<void(const Lithium::IProperty &message)> &observer);
 
     void exportDeviceInfoToJson();
 
@@ -90,13 +94,14 @@ private:
     {
     public:
         std::map<std::string, std::string> properties;
-        std::map<std::string, Lithium::IMessage> messages;
+        std::map<std::string, Lithium::IProperty> messages;
     };
 
     std::string _name;
     std::string _uuid;
     DeviceInfo device_info;
-    std::vector<std::function<void(Lithium::IMessage)>> observers;
+    std::unordered_map<std::string,std::shared_ptr<DeviceTask>> task_map;
+    std::vector<std::function<void(Lithium::IProperty)>> observers;
 };
 
 #endif // DEVICE_H

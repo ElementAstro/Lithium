@@ -34,7 +34,7 @@ Description: Daemon Task Definition
 namespace Lithium
 {
     DaemonTask::DaemonTask(const std::function<void()> &task_fn,
-                           const std::function<void()> &stop_fn)
+                           std::function<nlohmann::json(const nlohmann::json &)>&stop_fn)
         : BasicTask(stop_fn, true), task_fn_(task_fn)
     {
     }
@@ -56,7 +56,7 @@ namespace Lithium
         return {{"status", "running"}};
     }
 
-    nlohmann::json DaemonTask::ToJson() const
+    const nlohmann::json DaemonTask::ToJson() const
     {
         auto json = BasicTask::ToJson();
         json["type"] = "daemon";

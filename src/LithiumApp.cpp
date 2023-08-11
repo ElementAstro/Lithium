@@ -32,6 +32,7 @@ Description: Lithium App Enter
 #include "LithiumApp.hpp"
 
 #include "loguru/loguru.hpp"
+#include "tl/expected.hpp"
 
 namespace Lithium
 {
@@ -43,7 +44,6 @@ namespace Lithium
         {
             m_ConfigManager = Config::ConfigManager::createShared();
             m_MessageBus = std::make_shared<MessageBus>();
-            m_MessageQueue = std::make_shared<QueueWrapper>();
             m_DeviceManager = DeviceManager::createShared(m_MessageBus, m_ConfigManager);
 
             auto max_thread = GetConfig("config/server").value<int>("maxthread", 10);
@@ -59,7 +59,9 @@ namespace Lithium
 
             m_cModuleLoader = ModuleLoader::createShared("controllers");
 
-            m_MessageBus->StartProcessingThread<IMessage>();
+            m_ScriptManager = ChaiScriptManager::createShared();
+
+            m_MessageBus->StartProcessingThread<IProperty>();
             LOG_F(INFO, "Lithium App Loaded.");
         }
         catch (const std::exception &e)
@@ -254,6 +256,63 @@ namespace Lithium
     bool LithiumApp::isThreadRunning(const std::string &name)
     {
         return m_ThreadManager->isThreadRunning(name);
+    }
+
+    bool LithiumApp::runChaiCommand(const std::string &command)
+    {
+        if (const auto res = m_ScriptManager->runCommand(command); res.has_value())
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to run chai command : %s with %s", command.c_str(), res.error().c_str());
+        }
+        return false;
+    }
+
+    bool LithiumApp::runChaiMultiCommand(const std::vector<std::string> &command)
+    {
+        if (const auto res = m_ScriptManager->runMultiCommand(command); res.has_value())
+        {
+            return true;
+        }
+        else
+        {
+            std::string result;
+            for (const std::string &str : command)
+            {
+                result += str + "\n";
+            }
+            LOG_F(ERROR, "Failed to run chai multi command %s with %s", result.c_str(), res.error());
+        }
+        return true;
+    }
+
+    bool LithiumApp::loadChaiScriptFile(const std::string &filename)
+    {
+        if (const auto res = m_ScriptManager->loadScriptFile(filename); res.has_value())
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to load chaiscript file %s with %s", filename.c_str(), res.error());
+            return false;
+        }
+    }
+
+    bool LithiumApp::runChaiScript(const std::string &filename)
+    {
+        if (const auto res = m_ScriptManager->runScript(filename); res.has_value())
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to run chai script %s with %s", filename.c_str(), res.error());
+            return false;
+        }
     }
 
 }

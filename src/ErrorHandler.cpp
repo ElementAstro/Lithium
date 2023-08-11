@@ -71,7 +71,6 @@ ErrorHandler::handleError(const Status &status, const oatpp::String &message, co
             </head>
             <body>
             <div class="container">
-                <img src="error-image.png" alt="Error Image" class="image">
                 <h1>Oops! 404</h1>
                 <p>抱歉，页面未找到。</p>
                 <p><a href="#" id="backButton">返回上一页</a></p>

@@ -188,9 +188,6 @@ set(module_SRC
     ${lithium_src_dir}/modules/plugin/exe_plugin.cpp
     ${lithium_src_dir}/modules/plugin/exe_plugin.hpp
 
-    ${lithium_src_dir}/modules/plugin/chai_plugin.cpp
-    ${lithium_src_dir}/modules/plugin/chai_plugin.hpp
-
     ${lithium_src_dir}/modules/plugin/script_plugin.cpp
     ${lithium_src_dir}/modules/plugin/script_plugin.hpp
 
@@ -239,6 +236,7 @@ set(server_SRC
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
     ${lithium_src_dir}/websocket/WsProcessComponent.cpp
+    ${lithium_src_dir}/websocket/WsScriptComponent.cpp
     ${lithium_src_dir}/websocket/WsTaskComponent.cpp
 
     ${lithium_src_dir}/websocket/device/WsDeviceHub.cpp
@@ -249,6 +247,20 @@ set(server_SRC
 
     ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
     ${lithium_src_dir}/websocket/device/WsDeviceServer.hpp
+
+    ${lithium_src_dir}/websocket/plugin/WsPluginHub.cpp
+    ${lithium_src_dir}/websocket/plugin/WsPluginHub.hpp
+
+    ${lithium_src_dir}/websocket/plugin/WsPluginInstance.cpp
+    ${lithium_src_dir}/websocket/plugin/WsPluginInstance.hpp
+
+    ${lithium_src_dir}/websocket/plugin/WsPluginServer.cpp
+    ${lithium_src_dir}/websocket/plugin/WsPluginServer.hpp
+)
+
+set(script_SRC
+    ${lithium_src_dir}/modules/script/script_manager.cpp
+    ${lithium_src_dir}/modules/script/script_manager.hpp
 )
 
 set(task_SRC
@@ -333,7 +345,7 @@ if(WIN32)
      #${image_SRC} ${logger_SRC} ${module_SRC} 
     #  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
     

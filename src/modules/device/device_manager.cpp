@@ -41,6 +41,7 @@ Description: Device Manager
 // #include "filterwheel.hpp"
 
 #include "loguru/loguru.hpp"
+#include "tl/expected.hpp"
 
 #if __cplusplus >= 202002L
 #include <format>
@@ -246,7 +247,7 @@ namespace Lithium
             LOG_F(ERROR, "Library path and name is required!");
             return false;
         }
-        if (!m_ModuleLoader->LoadModule(lib_path, lib_name))
+        if (const auto res = m_ModuleLoader->LoadModule(lib_path, lib_name); !res.has_value())
         {
             LOG_F(ERROR, "Failed to load device library : %s in %s", lib_name.c_str(), lib_path.c_str());
             return false;
@@ -263,7 +264,7 @@ namespace Lithium
         {
             if (*it && (*it)->getProperty("name") == name)
             {
-                (*it)->addObserver([this](const Lithium::IMessage &message)
+                (*it)->addObserver([this](const Lithium::IProperty &message)
                                    { messageBusPublish(message); });
                 LOG_F(INFO, "Add device %s observer successfully", name.c_str());
                 return true;
@@ -343,9 +344,9 @@ namespace Lithium
             LOG_F(ERROR, "Library name is required");
             return false;
         }
-        if (!m_ModuleLoader->UnloadModule(lib_name))
+        if (const auto res = m_ModuleLoader->UnloadModule(lib_name); !res.has_value())
         {
-            LOG_F(ERROR, "Failed to remove device library : %s", lib_name.c_str());
+            LOG_F(ERROR, "Failed to remove device library : %s with %s", lib_name.c_str(),res.error());
             return false;
         }
         return true;
@@ -449,12 +450,12 @@ namespace Lithium
         return nullptr;
     }
 
-    void DeviceManager::messageBusPublish(const Lithium::IMessage &message)
+    void DeviceManager::messageBusPublish(const Lithium::IProperty &message)
     {
         LOG_F(INFO, "Reviced device message with content %s", message.getValue<std::string>().c_str());
         if (m_MessageBus)
         {
-            m_MessageBus->Publish<Lithium::IMessage>("main", message);
+            m_MessageBus->Publish<Lithium::IProperty>("main", message);
         }
         if (!m_ConfigManager)
         {

@@ -33,7 +33,7 @@ Description: Achiement
 #define ACHIEVEMENT_H
 
 #include <string>
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 using json = nlohmann::json;
 

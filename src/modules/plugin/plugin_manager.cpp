@@ -2,7 +2,6 @@
 
 #include "exe_plugin.hpp"
 #include "script_plugin.hpp"
-#include "chai_plugin.hpp"
 
 #include "loguru/loguru.hpp"
 
@@ -32,15 +31,11 @@ namespace Lithium
 
         if (type == "ScriptPlugin")
         {
-            plugin = std::make_shared<ScriptPlugin>(pluginPath, version, author, description);
+            plugin = std::make_shared<ScriptPlugin>(pluginPath, version, author, description, m_ProcessManager);
         }
         else if (type == "ExecutablePlugin")
         {
             plugin = std::make_shared<ExecutablePlugin>(pluginPath, version, author, description, m_ProcessManager);
-        }
-        else if (type == "ChaiScriptPlugin")
-        {
-            plugin = std::make_shared<ChaiScriptPlugin>(pluginPath, version, author, description);
         }
         else
         {
@@ -143,10 +138,6 @@ namespace Lithium
         else if (dynamic_cast<const ExecutablePlugin *>(plugin.get()))
         {
             return "ExecutablePlugin";
-        }
-        else if (dynamic_cast<const ChaiScriptPlugin *>(plugin.get()))
-        {
-            return "ChaiScriptPlugin";
         }
         else
         {

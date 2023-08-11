@@ -35,7 +35,7 @@ namespace Lithium
 {
     LoopTask::LoopTask(const std::function<void(const nlohmann::json &)> &item_fn,
                        const nlohmann::json &params,
-                       const std::function<void()> &stop_fn)
+                       std::function<nlohmann::json(const nlohmann::json &)>&stop_fn)
         : BasicTask(stop_fn, stop_fn != nullptr), item_fn_(item_fn), params_(params) {}
 
     nlohmann::json LoopTask::Execute()
@@ -52,7 +52,7 @@ namespace Lithium
         return {{"status", "done"}};
     }
 
-    nlohmann::json LoopTask::ToJson() const
+    const nlohmann::json LoopTask::ToJson() const
     {
         auto json = BasicTask::ToJson();
         json["type"] = "loop";

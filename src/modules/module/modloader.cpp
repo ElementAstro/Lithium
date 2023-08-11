@@ -39,6 +39,9 @@ Description: C++ and Modules Loader
 #include <cxxabi.h>
 #include <regex>
 
+#include <nlohmann/json.hpp>
+#include <tl/expected.hpp>
+
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
@@ -150,25 +153,21 @@ namespace Lithium
             LOG_F(ERROR, "Failed to iterate modules directory: %s", e.what());
             return {{"error", "Failed to iterate modules directory"}};
         }
-
-        // If no module is found, append a message field to the JSON object
         if (config.empty())
         {
             config["message"] = "No module found";
         }
-
-        // Return the JSON object
         return config;
     }
 
-    ModuleLoader::ModuleLoader() : m_dir_name("modules")
+    ModuleLoader::ModuleLoader()
     {
         m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
         LOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this]()
-                                       { if(!LoadOnInit()){
+                                       { if(!LoadOnInit("modules")){
                                     LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
@@ -179,14 +178,14 @@ namespace Lithium
         }
     }
 
-    ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager) : m_dir_name("modules")
+    ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager)
     {
         m_ThreadManager = threadManager;
         LOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this]()
-                                       { if(!LoadOnInit()){
+                                       { if(!LoadOnInit("modules")){
                                     LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
@@ -197,14 +196,14 @@ namespace Lithium
         }
     }
 
-    ModuleLoader::ModuleLoader(const std::string &dir_name) : m_dir_name(dir_name)
+    ModuleLoader::ModuleLoader(const std::string &dir_name)
     {
         m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
         LOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
-            m_ThreadManager->addThread([this]()
-                                       { if(!LoadOnInit()){
+            m_ThreadManager->addThread([this, dir_name]()
+                                       { if(!LoadOnInit(dir_name)){
                                     LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
@@ -215,13 +214,14 @@ namespace Lithium
         }
     }
 
-    ModuleLoader::ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager) : m_dir_name(dir_name), m_ThreadManager(threadManager)
+    ModuleLoader::ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager)
     {
+        m_ThreadManager = threadManager;
         LOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
-            m_ThreadManager->addThread([this]()
-                                       { if(!LoadOnInit()){
+            m_ThreadManager->addThread([this, dir_name]()
+                                       { if(!LoadOnInit(dir_name)){
                                     LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
@@ -262,9 +262,14 @@ namespace Lithium
         }
     }
 
-    bool ModuleLoader::LoadOnInit()
+    tl::expected<bool, IOError> ModuleLoader::LoadOnInit(const std::string &dir_name)
     {
-        const nlohmann::json dir_info = iterator_modules_dir(m_dir_name);
+        if (dir_name.empty())
+        {
+            LOG_F(ERROR, "Directory name is empty");
+            return tl::unexpected(IOError::InvalidPath);
+        }
+        const nlohmann::json dir_info = iterator_modules_dir(dir_name);
         LOG_F(INFO, "%s", dir_info.dump(4).c_str());
         if (!dir_info.empty())
         {
@@ -284,7 +289,7 @@ namespace Lithium
         return true;
     }
 
-    bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)
+    tl::expected<bool, IOError> ModuleLoader::LoadModule(const std::string &path, const std::string &name)
     {
         try
         {
@@ -292,7 +297,7 @@ namespace Lithium
             if (!std::filesystem::exists(path))
             {
                 LOG_F(ERROR, "Library %s does not exist", path.c_str());
-                return false;
+                return tl::unexpected(IOError::NotFound);
             }
 
             // Load the library file
@@ -300,7 +305,7 @@ namespace Lithium
             if (!handle)
             {
                 LOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), LOAD_ERROR());
-                return false;
+                return tl::unexpected(IOError::LoadError);
             }
 
             // Read the configuration file in JSON format
@@ -339,11 +344,11 @@ namespace Lithium
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), e.what());
-            return false;
+            return tl::unexpected(IOError::LoadError);
         }
     }
 
-    bool ModuleLoader::UnloadModule(const std::string &filename)
+    tl::expected<bool, IOError> ModuleLoader::UnloadModule(const std::string &filename)
     {
         try
         {
@@ -351,12 +356,14 @@ namespace Lithium
             auto it = handles_.find(filename);
             if (it == handles_.end())
             {
-                throw std::runtime_error("Module " + filename + " is not loaded");
+                LOG_F(ERROR, "Module %s is not loaded", filename.c_str());
+                return tl::unexpected(IOError::NotFound);
             }
 
             if (!it->second)
             {
-                throw std::runtime_error("Module " + filename + "'s handle is null");
+                LOG_F(ERROR, "Module %s's handle is null", filename.c_str());
+                return tl::unexpected(IOError::UnLoadError);
             }
 
             // Unload the library and remove its handle from handles_ map
@@ -369,13 +376,14 @@ namespace Lithium
             }
             else
             {
-                throw std::runtime_error("Failed to unload module " + filename);
+                LOG_F(ERROR, "Failed to unload module %s", filename.c_str());
+                return tl::unexpected(IOError::UnLoadError);
             }
         }
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "%s", e.what());
-            return false;
+            return tl::unexpected(IOError::UnLoadError);
         }
     }
 
@@ -397,7 +405,7 @@ namespace Lithium
         return handles_.count(name) > 0;
     }
 
-    bool ModuleLoader::EnableModule(const std::string &module_name)
+    tl::expected<bool, IOError> ModuleLoader::EnableModule(const std::string &module_name)
     {
         auto it = disabled_modules_.find(module_name);
         if (it != disabled_modules_.end())
@@ -426,7 +434,7 @@ namespace Lithium
         return true;
     }
 
-    bool ModuleLoader::DisableModule(const std::string &module_name)
+    tl::expected<bool, IOError> ModuleLoader::DisableModule(const std::string &module_name)
     {
         auto it = handles_.find(module_name);
         if (it != handles_.end())
@@ -466,5 +474,19 @@ namespace Lithium
             }
         }
         return "";
+    }
+
+    const std::vector<std::string> ModuleLoader::GetAllExistedModules() const
+    {
+        std::vector<std::string> modules_name;
+        if (handles_.empty())
+        {
+            return modules_name;
+        }
+        for (auto module_ : handles_)
+        {
+            modules_name.push_back(module_.first);
+        }
+        return modules_name;
     }
 }

@@ -51,8 +51,6 @@ public:
 
     virtual bool reconnect() override;
 
-    virtual std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params) override;
-
 public:
     /**
      * @brief 启动曝光

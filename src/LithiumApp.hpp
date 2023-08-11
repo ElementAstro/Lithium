@@ -45,6 +45,7 @@ Description: Lithium App Enter
 #include "modules/server/message_queue.hpp"
 #include "modules/property/imessage.hpp"
 #include "modules/plugin/plugin_manager.hpp"
+#include "modules/script/script_manager.hpp"
 
 namespace Lithium
 {
@@ -114,11 +115,27 @@ namespace Lithium
         bool isThreadRunning(const std::string &name);
 
     public:
+        bool loadChaiScriptFile(const std::string &filename);
+        bool runChaiCommand(const std::string &command);
+        bool runChaiMultiCommand(const std::vector<std::string> &command);
+        bool runChaiScript(const std::string &filename);
+
+    public:
         template <typename T>
         std::vector<std::shared_ptr<T>> loadControllers()
         {
             std::vector<std::shared_ptr<T>> res;
-            for (auto lib_name : m_cModuleLoader->GetAllExistedModules())
+            if (!m_cModuleLoader)
+            {
+                LOG_F(ERROR, "Failed to initialize Controller module loader");
+                return res;
+            }
+            std::vector<std::string> lib_names = m_cModuleLoader->GetAllExistedModules();
+            if (lib_names.empty())
+            {
+                return res;
+            }
+            for (auto lib_name : lib_names)
             {
                 res.push_back(m_cModuleLoader->GetInstance<T>(lib_name, {}, "GetController"));
             }
@@ -134,12 +151,13 @@ namespace Lithium
         std::shared_ptr<TaskGenerator> m_TaskGenerator;
         std::shared_ptr<MessageBus> m_MessageBus;
         std::shared_ptr<PluginManager> m_PluginManager;
+        std::shared_ptr<ChaiScriptManager> m_ScriptManager;
         // This is special for dynamic load oatpp server controller before starting server
         std::shared_ptr<ModuleLoader> m_cModuleLoader;
 
         struct QueueWrapper
         {
-            moodycamel::ConcurrentQueue<IMessage> queue;
+            moodycamel::ConcurrentQueue<IProperty> queue;
         };
         std::shared_ptr<QueueWrapper> m_MessageQueue;
     };

@@ -50,7 +50,6 @@ const nlohmann::json WebSocketServer::runChaiCommand(const nlohmann::json &m_par
         }
         std::string command = m_params["command"].get<std::string>();
         if (!Lithium::MyApp->runChaiCommand(command))
-            ;
         {
             res["error"] = "ScriptError";
             res["message"] = "Failed to run command";

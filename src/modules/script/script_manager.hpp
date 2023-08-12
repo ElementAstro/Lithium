@@ -28,6 +28,7 @@ namespace Lithium
 
         void Init();
         void InitSubModules();
+        void InitMyApp();
 
         tl::expected<bool, std::string> loadScriptFile(const std::string &filename);
         tl::expected<bool, std::string> runCommand(const std::string &command);

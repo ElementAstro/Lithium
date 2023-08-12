@@ -134,7 +134,7 @@ namespace Lithium::Config
 
     void ConfigManager::setValue(const std::string &key_path, const json &value)
     {
-        std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
+        // std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
         json *p = &config_;
 
@@ -162,7 +162,7 @@ namespace Lithium::Config
 
     json ConfigManager::getValue(const std::string &key_path) const
     {
-        std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
+        // std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
         const json *p = &config_;
         for (const auto &key : keys)
@@ -182,7 +182,7 @@ namespace Lithium::Config
 
     void ConfigManager::deleteValue(const std::string &key_path)
     {
-        std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
+        // std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
         json *p = &config_;
         for (const auto &key : keys)

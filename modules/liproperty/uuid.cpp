@@ -1,6 +1,6 @@
 #include "uuid.hpp"
 
-namespace Lithium::UUID
+namespace UUID
 {
     UUIDGenerator::UUIDGenerator() : gen_(std::random_device{}()), dis_(0, 15)
     {
@@ -49,27 +49,4 @@ namespace Lithium::UUID
             ss << '}';
         return ss.str();
     }
-
 }
-
-/*
-#include <iostream>
-
-int main()
-{
-    Lithium::UUID::UUIDGenerator generator;
-
-    // 设置随机数种子
-    generator.seed(123);
-
-    // 生成一个 UUID
-    std::string uuid = generator.generateUUID();
-    std::cout << "Generated UUID: " << uuid << std::endl;
-
-    // 使用指定格式生成一个 UUID
-    std::string formattedUUID = generator.generateUUIDWithFormat();
-    std::cout << "Formatted UUID: " << formattedUUID << std::endl;
-
-    return 0;
-}
-*/

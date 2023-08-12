@@ -5,9 +5,9 @@
 #include "chaiscript/extras/math.hpp"
 #include "chaiscript/extras/string_methods.hpp"
 
-#include "modules/property/base64.hpp"
-#include "modules/property/imessage.hpp"
-#include "modules/property/uuid.hpp"
+#include "liproperty/base64.hpp"
+#include "liproperty/iproperty.hpp"
+#include "liproperty/uuid.hpp"
 
 #include "modules/system/system.hpp"
 
@@ -21,6 +21,8 @@
 #include "nlohmann/json.hpp"
 
 #include "error/error_code.hpp"
+
+#include "liscript/device.hpp"
 
 namespace Lithium
 {
@@ -58,11 +60,14 @@ namespace Lithium
         chai_->add(chaiscript::fun(&IProperty::SetDeviceUUID), "set_device_uuid");
         chai_->add(chaiscript::fun(&IProperty::getValue<std::string>), "get_value");
         chai_->add(chaiscript::fun(&IProperty::setValue<std::string>), "set_value");
+        chai_->add(chaiscript::constructor<IProperty()>(),"IProperty");
         chai_->add(chaiscript::user_type<IProperty>(), "IProperty");
 
+        // Add Base64 support
         chai_->add(chaiscript::fun(&Base64::base64Decode), "base64_decode");
         chai_->add(chaiscript::fun(&Base64::base64Encode), "base64_encode");
 
+        // Add UUID support
         chai_->add(chaiscript::fun(&UUID::UUIDGenerator::seed), "seed");
         chai_->add(chaiscript::fun(&UUID::UUIDGenerator::generateUUID), "generate_uuid");
         chai_->add(chaiscript::fun(&UUID::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
@@ -80,6 +85,8 @@ namespace Lithium
         chai_->add(chaiscript::fun(&File::move_directory), "move_directory");
         chai_->add(chaiscript::fun(&File::copy_file), "copy_file");
         chai_->add(chaiscript::fun(&File::move_file), "move_file");
+        chai_->add(chaiscript::fun(&File::remove_file),"remove_file");
+        chai_->add(chaiscript::fun(&File::rename_file),"rename_file");
 
         chai_->add(chaiscript::fun(&LithiumApp::addDevice), "add_device");
         chai_->add(chaiscript::fun(&LithiumApp::addDeviceLibrary), "add_device_library");
@@ -117,14 +124,25 @@ namespace Lithium
         chai_->add(chaiscript::fun(&LithiumApp::stopTask), "stop_task");
         chai_->add(chaiscript::fun(&LithiumApp::terminateProcess), "terminate_process");
         chai_->add(chaiscript::fun(&LithiumApp::terminateProcessByName), "terminate_process_by_name");
+        chai_->add(chaiscript::constructor<LithiumApp()>(), "LithiumApp");
+        chai_->add(chaiscript::user_type<LithiumApp>(), "LithiumApp");
 
-        chai_->add(chaiscript::var(MyApp), "app");
+        chai_->add(chaiscript::user_type<LIError>(), "LiError");
+
+        chai_->add(chaiscript::type_conversion<const char *, std::string>());
     }
 
     void ChaiScriptManager::InitSubModules()
     {
         chai_->add(chaiscript::extras::math::bootstrap());
         chai_->add(chaiscript::extras::string_methods::bootstrap());
+
+        chai_->add(create_chaiscript_device_module());
+    }
+
+    void ChaiScriptManager::InitMyApp()
+    {
+        chai_->add_global(chaiscript::var(MyApp),"app");
     }
 
     tl::expected<bool, std::string> ChaiScriptManager::loadScriptFile(const std::string &filename)

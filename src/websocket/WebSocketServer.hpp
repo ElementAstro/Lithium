@@ -50,7 +50,7 @@ Description: WebSocket Server
 #include "LithiumApp.hpp"
 
 #include "modules/server/commander.hpp"
-#include "modules/property/imessage.hpp"
+#include "liproperty/iproperty.hpp"
 
 #if ENABLE_ASYNC
 class WebSocketServer : public oatpp::websocket::AsyncWebSocket::Listener

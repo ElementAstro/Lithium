@@ -1,5 +1,5 @@
 /*
- * focuser.hpp
+ * filterwheel.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,21 +23,45 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-6-1
+Date: 2023-3-29
 
-Description: Basic Focuser Defination
+Description: Filterwheel Simulator and Basic Definition
 
-*************************************************/
+**************************************************/
 
-#pragma once
+#include "filterwheel.hpp"
 
-#include "device.hpp"
+#include "loguru/loguru.hpp"
 
-class Filterwheel : virtual public Device
+Filterwheel::Filterwheel(const std::string &name) : Device(name)
 {
-public:
-    Filterwheel(const std::string &name) : Device(name){}
-    ~Filterwheel() = default;
+    LOG_F(INFO, "Filterwheel Simulator Loaded : %s", name.c_str());
+    init();
+}
 
-    virtual bool moveTo(const int position) = 0;
-};
+Filterwheel::~Filterwheel()
+{
+    LOG_F(INFO, "Filterwheel Simulator Destructed");
+}
+
+bool Filterwheel::connect(const std::string &name)
+{
+    LOG_F(INFO, "%s is connected", name.c_str());
+    return true;
+}
+
+bool Filterwheel::disconnect()
+{
+    LOG_F(INFO, "%s is disconnected", getProperty("name").c_str());
+    return true;
+}
+
+bool Filterwheel::reconnect()
+{
+    return true;
+}
+
+bool Filterwheel::moveTo(const nlohmann::json &params)
+{
+    return true;
+}

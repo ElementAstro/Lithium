@@ -36,7 +36,7 @@ Description: App Components
 
 #include "websocket/WebSocketServer.hpp"
 #include "websocket/device/WsDeviceServer.hpp"
-#include "websocket/script/WsPluginServer.hpp"
+#include "websocket/plugin/WsPluginServer.hpp"
 
 #include "ErrorHandler.hpp"
 
@@ -245,7 +245,7 @@ public:
         connectionHandler->setSocketInstanceListener(std::make_shared<WsDeviceServer>());
         return connectionHandler; }());
 
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketDeviceConnectionHandler)
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketScriptConnectionHandler)
     ("websocket-script", []
      {
 #if ENABLE_ASYNC

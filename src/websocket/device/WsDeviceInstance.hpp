@@ -108,7 +108,6 @@ public:
 	const nlohmann::json setProperty(const nlohmann::json &m_params);
 	const nlohmann::json getProperty(const nlohmann::json &m_params);
 	const nlohmann::json runTask(const nlohmann::json &m_params);
-	const nlohmann::json 
 
 public: // WebSocket Listener methods
 	CoroutineStarter onPing(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;

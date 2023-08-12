@@ -42,8 +42,7 @@ Description: Lithium App Enter
 #include "modules/task/task_manager.hpp"
 #include "modules/task/task_generator.hpp"
 #include "modules/server/message_bus.hpp"
-#include "modules/server/message_queue.hpp"
-#include "modules/property/imessage.hpp"
+#include "liproperty/iproperty.hpp"
 #include "modules/plugin/plugin_manager.hpp"
 #include "modules/script/script_manager.hpp"
 
@@ -119,6 +118,7 @@ namespace Lithium
         bool runChaiCommand(const std::string &command);
         bool runChaiMultiCommand(const std::vector<std::string> &command);
         bool runChaiScript(const std::string &filename);
+        void initMyAppChai();
 
     public:
         template <typename T>
@@ -154,12 +154,6 @@ namespace Lithium
         std::shared_ptr<ChaiScriptManager> m_ScriptManager;
         // This is special for dynamic load oatpp server controller before starting server
         std::shared_ptr<ModuleLoader> m_cModuleLoader;
-
-        struct QueueWrapper
-        {
-            moodycamel::ConcurrentQueue<IProperty> queue;
-        };
-        std::shared_ptr<QueueWrapper> m_MessageQueue;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 } // namespace Lithium

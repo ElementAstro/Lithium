@@ -65,7 +65,7 @@ namespace Lithium::Config
          *
          * @param path 配置文件路径
          */
-        tl::expected<bool,IOError> loadFromFile(const std::string &path);
+        tl::expected<bool,LIError> loadFromFile(const std::string &path);
 
         /**
          * @brief 加载指定目录下的所有JSON配置文件
@@ -74,7 +74,7 @@ namespace Lithium::Config
          *
          * @param dir_path 配置文件所在目录的路径
          */
-        tl::expected<bool,IOError> loadFromDir(const std::string &dir_path, bool recursive);
+        tl::expected<bool,LIError> loadFromDir(const std::string &dir_path, bool recursive);
 
         /**
          * @brief 添加或更新一个配置项
@@ -112,7 +112,7 @@ namespace Lithium::Config
          *
          * @param file_path 目标文件路径
          */
-        tl::expected<bool,IOError> saveToFile(const std::string &file_path) const;
+        tl::expected<bool,LIError> saveToFile(const std::string &file_path) const;
 
         /**
          * @brief 打印当前所有配置项

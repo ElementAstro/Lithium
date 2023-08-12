@@ -41,12 +41,18 @@ public:
      *
      * @param name 电调名称
      */
-    Focuser(const std::string &name) : Device(name) {}
+    Focuser(const std::string &name);
 
     /**
      * @brief 析构函数，释放资源
      */
-    virtual ~Focuser() = default;
+    virtual ~Focuser();
+
+    virtual bool connect(const std::string& name) override;
+
+    virtual bool disconnect() override;
+
+    virtual bool reconnect() override;
 
 protected:
     /**
@@ -55,7 +61,7 @@ protected:
      * @param position 相对移动的步数
      * @return bool 移动是否成功
      */
-    virtual bool moveTo(const int position) = 0;
+    virtual bool moveTo(const nlohmann::json &params);
 
     /**
      * @brief 将电调移动到绝对位置 position
@@ -63,7 +69,7 @@ protected:
      * @param position 绝对位置步数
      * @return bool 移动是否成功
      */
-    virtual bool moveToAbsolute(const int position) = 0;
+    virtual bool moveToAbsolute(const nlohmann::json &params);
 
     /**
      * @brief 移动电调 step 个步长
@@ -71,7 +77,7 @@ protected:
      * @param step 移动步数
      * @return bool 移动是否成功
      */
-    virtual bool moveStep(const int step) = 0;
+    virtual bool moveStep(const nlohmann::json &params);
 
     /**
      * @brief 移动电调至绝对步数位置
@@ -79,21 +85,21 @@ protected:
      * @param step 绝对步数位置
      * @return bool 移动是否成功
      */
-    virtual bool moveStepAbsolute(const int step) = 0;
+    virtual bool moveStepAbsolute(const nlohmann::json &params);
 
     /**
      * @brief 中止电调移动
      *
      * @return bool 操作是否成功
      */
-    virtual bool AbortMove() = 0;
+    virtual bool AbortMove(const nlohmann::json &params);
 
     /**
      * @brief 获取电调最大位置
      *
      * @return int 电调最大位置
      */
-    virtual int getMaxPosition() = 0;
+    virtual int getMaxPosition(const nlohmann::json &params);
 
     /**
      * @brief 设置电调最大位置
@@ -101,49 +107,49 @@ protected:
      * @param max_position 电调最大位置
      * @return bool 操作是否成功
      */
-    virtual bool setMaxPosition(int max_position) = 0;
+    virtual bool setMaxPosition(const nlohmann::json &params);
 
     /**
      * @brief 判断是否支持获取温度功能
      *
      * @return bool 是否支持获取温度功能
      */
-    virtual bool isGetTemperatureAvailable() = 0;
+    virtual bool isGetTemperatureAvailable(const nlohmann::json &params);
 
     /**
      * @brief 获取电调当前温度
      *
      * @return double 当前温度
      */
-    virtual double getTemperature() = 0;
+    virtual double getTemperature(const nlohmann::json &params);
 
     /**
      * @brief 判断是否支持绝对移动功能
      *
      * @return bool 是否支持绝对移动功能
      */
-    virtual bool isAbsoluteMoveAvailable() = 0;
+    virtual bool isAbsoluteMoveAvailable(const nlohmann::json &params);
 
     /**
      * @brief 判断是否支持手动移动功能
      *
      * @return bool 是否支持手动移动功能
      */
-    virtual bool isManualMoveAvailable() = 0;
+    virtual bool isManualMoveAvailable(const nlohmann::json &params);
 
     /**
      * @brief 获取电调当前位置
      *
      * @return int 当前位置
      */
-    virtual int getCurrentPosition() = 0;
+    virtual int getCurrentPosition(const nlohmann::json &params);
 
     /**
      * @brief 判断电调是否存在反向间隙
      *
      * @return bool 是否存在反向间隙
      */
-    virtual bool haveBacklash() = 0;
+    virtual bool haveBacklash(const nlohmann::json &params);
 
     /**
      * @brief 设置电调反向间隙值
@@ -151,27 +157,5 @@ protected:
      * @param value 反向间隙值
      * @return bool 操作是否成功
      */
-    virtual bool setBacklash(int value) = 0;
-
-public:
-    bool is_moving; // 电调是否正在移动
-
-    int current_mode;     // 电调当前模式
-    int current_motion;   // 电调当前运动状态
-    double current_speed; // 电调当前速度
-
-    int current_position; // 电调当前位置
-    int max_position;     // 电调可移动的最大位置
-    int min_position;     // 电调可移动的最小位置
-    int max_step;         // 电调可移动的最大步长
-
-    bool can_get_temperature;   // 是否支持获取温度功能
-    double current_temperature; // 当前温度值
-
-    bool can_absolute_move; // 是否支持绝对移动功能
-    bool can_manual_move;   // 是否支持手动移动功能
-
-    int delay; // 电调延迟时间
-
-    bool has_backlash;
+    virtual bool setBacklash(const nlohmann::json &params);
 };

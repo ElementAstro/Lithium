@@ -81,6 +81,11 @@ add_subdirectory(libs/pugixml)
 
 add_subdirectory(tools)
 
+include_directories(modules)
+
+add_subdirectory(modules/lidriver)
+add_subdirectory(modules/liproperty)
+
 #add_subdirectory(src/indiserver)
 
 set(api_SRC
@@ -105,23 +110,7 @@ set(config_SRC
     ${lithium_src_dir}/modules/config/achievement_list.hpp
 )
 
-set(database_SRC
-    ${lithium_src_dir}/database/database.cpp
-    ${lithium_src_dir}/database/database.hpp
-)
-
-set(debug_SRC
-    ${lithium_src_dir}/debug/terminal.cpp
-    ${lithium_src_dir}/debug/terminal.hpp
-)
-
 set(device_SRC
-    ${lithium_src_dir}/modules/device/device.cpp
-    ${lithium_src_dir}/modules/device/device.hpp
-
-    ${lithium_src_dir}/modules/device/camera.cpp
-    ${lithium_src_dir}/modules/device/camera.hpp
-
     ${lithium_src_dir}/modules/device/device_manager.cpp
     ${lithium_src_dir}/modules/device/device_manager.hpp
 )
@@ -212,19 +201,6 @@ set(network_SRC
     # ${lithium_src_dir}/network/time.hpp
 )
 
-set(property_SRC
-    ${lithium_src_dir}/modules/property/base64.cpp
-    ${lithium_src_dir}/modules/property/base64.hpp
-
-    ${lithium_src_dir}/modules/property/imessage.cpp
-    ${lithium_src_dir}/modules/property/imessage.hpp
-
-    ${lithium_src_dir}/modules/property/sha256.hpp
-
-    ${lithium_src_dir}/modules/property/uuid.cpp
-    ${lithium_src_dir}/modules/property/uuid.hpp
-)
-
 set(server_SRC
     ${lithium_src_dir}/modules/server/commander.cpp
     ${lithium_src_dir}/modules/server/commander.hpp
@@ -286,9 +262,6 @@ set(task_SRC
 set(thread_SRC
     ${lithium_src_dir}/modules/thread/thread.cpp
     ${lithium_src_dir}/modules/thread/thread.hpp
-
-    ${lithium_src_dir}/modules/thread/threadpool.cpp
-    ${lithium_src_dir}/modules/thread/threadpool.hpp
 )
 
 set(system_module
@@ -345,7 +318,7 @@ if(WIN32)
      #${image_SRC} ${logger_SRC} ${module_SRC} 
     #  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
     
@@ -356,6 +329,8 @@ if(WIN32)
     target_link_libraries(lithium_server PRIVATE loguru)
 
     target_link_libraries(lithium_server PRIVATE libzippp)
+
+    target_link_libraries(lithium_server PRIVATE LithiumDriver LithiumProperty)
 
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server PRIVATE dlfcn-win32::dl)

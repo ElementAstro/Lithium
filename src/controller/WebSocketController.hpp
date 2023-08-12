@@ -63,7 +63,7 @@ public:
 			auto deviceName = request->getPathVariable("device-name");
 			auto deviceHub = request->getPathVariable("device-hub");
 			std::vector<std::string> available_plugins = {"camera", "telescope", "focuser", "filterwheel","solver","guider"};
-			auto it = std::find(available_plugins.begin(), available_plugins.end(), deviceHub);
+			auto it = std::find(available_plugins.begin(), available_plugins.end(), deviceHub.getValue(""));
 			OATPP_ASSERT_HTTP(it != available_plugins.end(), Status::CODE_500, "Invalid device type");
 			auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketDeviceConnectionHandler);
 			auto parameters = std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();

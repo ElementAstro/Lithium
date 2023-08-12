@@ -48,25 +48,36 @@ class MessageBus
 {
 public:
     template <typename T>
-    void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0)
+    void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0, const std::string &namespace_ = "")
     {
+        std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
         subscribersLock_.lock();
-        subscribers_[topic].push_back({priority, std::any(callback)});
-        std::sort(subscribers_[topic].begin(), subscribers_[topic].end(),
+        subscribers_[fullTopic].push_back({priority, std::any(callback)});
+        std::sort(subscribers_[fullTopic].begin(), subscribers_[fullTopic].end(),
                   [](const auto &a, const auto &b)
                   {
                       return a.first > b.first;
                   });
         subscribersLock_.unlock();
 
-        LOG_F(INFO, "Subscribed to topic: %s", topic.c_str());
+        LOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
     }
 
     template <typename T>
-    void Unsubscribe(const std::string &topic, std::function<void(const T &)> callback)
+    void SubscribeToNamespace(const std::string &namespaceName, std::function<void(const T &)> callback, int priority = 0)
     {
+        std::string topic = namespaceName + ".*";
+        Subscribe<T>(topic, callback, priority, namespaceName);
+    }
+
+    template <typename T>
+    void Unsubscribe(const std::string &topic, std::function<void(const T &)> callback, const std::string &namespace_ = "")
+    {
+        std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
         subscribersLock_.lock();
-        auto it = subscribers_.find(topic);
+        auto it = subscribers_.find(fullTopic);
         if (it != subscribers_.end())
         {
             auto &topicSubscribers = it->second;
@@ -79,20 +90,22 @@ public:
                     }),
                 topicSubscribers.end());
 
-            LOG_F(INFO, "Unsubscribed from topic: %s", topic.c_str());
+            LOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
         }
         subscribersLock_.unlock();
     }
 
     template <typename T>
-    void Publish(const std::string &topic, const T &message)
+    void Publish(const std::string &topic, const T &message, const std::string &namespace_ = "")
     {
+        std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
         messageQueueLock_.lock();
-        messageQueue_.push({topic, std::any(message)});
+        messageQueue_.push({fullTopic, std::any(message)});
         messageQueueLock_.unlock();
         messageAvailableFlag_.notify_one();
 
-        LOG_F(INFO, "Published message to topic: %s", topic.c_str());
+        LOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
     }
 
     template <typename T>
@@ -121,8 +134,8 @@ public:
     template <typename T>
     void StartProcessingThread()
     {
-        processingThread_ = std::thread([&]()
-                                        {
+        processingThread_ = std::jthread([&]()
+                                         {
             while (isRunning_.load()) {
                 std::pair<std::string, std::any> message;
                 bool hasMessage = false;
@@ -192,6 +205,7 @@ public:
         if (processingThread_.joinable())
         {
             processingThread_.join();
+            processingThread_.request_stop();
             LOG_F(INFO, "Processing thread stopped");
         }
     }
@@ -203,7 +217,7 @@ private:
     std::mutex messageQueueLock_;
     std::condition_variable messageAvailableFlag_;
     std::mutex waitingMutex_;
-    std::thread processingThread_;
+    std::jthread processingThread_;
     std::atomic<bool> isRunning_{true};
 
     std::vector<std::any> globalSubscribers_;

@@ -265,6 +265,7 @@ int main(int argc, char *argv[])
 #endif
         // Run oatpp server
         Lithium::MyApp = std::make_shared<Lithium::LithiumApp>();
+        Lithium::MyApp->initMyAppChai();
 
         auto cmd_port = program.get<int>("--port");
         if (cmd_port != 8000)

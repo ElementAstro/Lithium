@@ -36,10 +36,10 @@ Description: Device Manager
 #include <mutex>
 #include <functional>
 
-#include "device.hpp"
-#include "modules/config/configor.hpp"
-#include "modules/module/modloader.hpp"
-#include "modules/server/message_bus.hpp"
+#include "lidriver/core/device.hpp"
+#include "config/configor.hpp"
+#include "module/modloader.hpp"
+#include "server/message_bus.hpp"
 
 namespace Lithium
 {
@@ -85,7 +85,7 @@ namespace Lithium
 
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
-        void messageBusPublish(const Lithium::IProperty &message);
+        void messageBusPublish(const IProperty &message);
 
     private:
         std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.

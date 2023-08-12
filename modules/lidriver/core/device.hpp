@@ -40,7 +40,7 @@ Description: Basic Device Defination
 #include <string_view>
 #include <map>
 
-#include "property/imessage.hpp"
+#include "liproperty/iproperty.hpp"
 #include "task/device_task.hpp"
 
 class Device
@@ -50,11 +50,11 @@ public:
     virtual ~Device();
 
 public:
-    virtual bool connect(const std::string &name) = 0;
+    virtual bool connect(const std::string &name) { return true; };
 
-    virtual bool disconnect() = 0;
+    virtual bool disconnect() { return true; };
 
-    virtual bool reconnect() = 0;
+    virtual bool reconnect() { return true; };
 
     virtual void init();
 
@@ -79,9 +79,9 @@ public:
 
     std::any getMessageValue(const std::string &name, const std::string &identifier);
 
-    void addObserver(const std::function<void(const Lithium::IProperty &message)> &observer);
+    void addObserver(const std::function<void(const IProperty &message)> &observer);
 
-    void removeObserver(const std::function<void(const Lithium::IProperty &message)> &observer);
+    void removeObserver(const std::function<void(const IProperty &message)> &observer);
 
     void exportDeviceInfoToJson();
 
@@ -94,14 +94,14 @@ private:
     {
     public:
         std::map<std::string, std::string> properties;
-        std::map<std::string, Lithium::IProperty> messages;
+        std::map<std::string, IProperty> messages;
     };
 
     std::string _name;
     std::string _uuid;
     DeviceInfo device_info;
-    std::unordered_map<std::string,std::shared_ptr<DeviceTask>> task_map;
-    std::vector<std::function<void(Lithium::IProperty)>> observers;
+    std::unordered_map<std::string, std::shared_ptr<DeviceTask>> task_map;
+    std::vector<std::function<void(IProperty)>> observers;
 };
 
 #endif // DEVICE_H

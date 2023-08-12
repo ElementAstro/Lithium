@@ -10,13 +10,117 @@
 #include <semaphore>
 #include <thread>
 #include <type_traits>
+#include <algorithm>
+#include <mutex>
+#include <optional>
 #ifdef __has_include
 #if __has_include(<version>)
 #include <version>
 #endif
 #endif
 
-#include "thread_safe_queue.h"
+template <typename Lock>
+concept is_lockable = requires(Lock &&lock) {
+    lock.lock();
+    lock.unlock();
+    {
+        lock.try_lock()
+    } -> std::convertible_to<bool>;
+};
+
+template <typename T, typename Lock = std::mutex>
+    requires is_lockable<Lock>
+class thread_safe_queue
+{
+public:
+    using value_type = T;
+    using size_type = typename std::deque<T>::size_type;
+
+    thread_safe_queue() = default;
+
+    void push_back(T &&value)
+    {
+        std::scoped_lock lock(mutex_);
+        data_.push_back(std::forward<T>(value));
+    }
+
+    void push_front(T &&value)
+    {
+        std::scoped_lock lock(mutex_);
+        data_.push_front(std::forward<T>(value));
+    }
+
+    [[nodiscard]] bool empty() const
+    {
+        std::scoped_lock lock(mutex_);
+        return data_.empty();
+    }
+
+    [[nodiscard]] std::optional<T> pop_front()
+    {
+        std::scoped_lock lock(mutex_);
+        if (data_.empty())
+            return std::nullopt;
+
+        auto front = std::move(data_.front());
+        data_.pop_front();
+        return front;
+    }
+
+    [[nodiscard]] std::optional<T> pop_back()
+    {
+        std::scoped_lock lock(mutex_);
+        if (data_.empty())
+            return std::nullopt;
+
+        auto back = std::move(data_.back());
+        data_.pop_back();
+        return back;
+    }
+
+    [[nodiscard]] std::optional<T> steal()
+    {
+        std::scoped_lock lock(mutex_);
+        if (data_.empty())
+            return std::nullopt;
+
+        auto back = std::move(data_.back());
+        data_.pop_back();
+        return back;
+    }
+
+    void rotate_to_front(const T &item)
+    {
+        std::scoped_lock lock(mutex_);
+        auto iter = std::find(data_.begin(), data_.end(), item);
+
+        if (iter != data_.end())
+        {
+            std::ignore = data_.erase(iter);
+        }
+
+        data_.push_front(item);
+    }
+
+    [[nodiscard]] std::optional<T> copy_front_and_rotate_to_back()
+    {
+        std::scoped_lock lock(mutex_);
+
+        if (data_.empty())
+            return std::nullopt;
+
+        auto front = data_.front();
+        data_.pop_front();
+
+        data_.push_back(front);
+
+        return front;
+    }
+
+private:
+    std::deque<T> data_{};
+    mutable Lock mutex_{};
+};
 
 namespace details
 {
@@ -234,12 +338,12 @@ private:
 
     struct task_item
     {
-        dp::thread_safe_queue<FunctionType> tasks{};
+        thread_safe_queue<FunctionType> tasks{};
         std::binary_semaphore signal{0};
     };
 
     std::vector<ThreadType> threads_;
     std::deque<task_item> tasks_;
-    dp::thread_safe_queue<std::size_t> priority_queue_;
+    thread_safe_queue<std::size_t> priority_queue_;
     std::atomic_int_fast64_t pending_tasks_{};
 };

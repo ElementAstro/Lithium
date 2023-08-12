@@ -1,6 +1,6 @@
 #pragma once
 
-enum class IOError
+enum class LIError
 {
     None,              // 无错误
     NotFound,          // 文件未找到

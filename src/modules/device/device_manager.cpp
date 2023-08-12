@@ -31,14 +31,16 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
-#include "device_exception.hpp"
+#include "lidriver/core/device_exception.hpp"
 
 #include "nlohmann/json.hpp"
 
-#include "camera.hpp"
-// #include "telescope.hpp"
-// #include "focuser.hpp"
-// #include "filterwheel.hpp"
+#include "lidriver/core/camera.hpp"
+#include "lidriver/core/telescope.hpp"
+#include "lidriver/core/focuser.hpp"
+#include "lidriver/core/filterwheel.hpp"
+#include "lidriver/core/solver.hpp"
+#include "lidriver/core/guider.hpp"
 
 #include "loguru/loguru.hpp"
 #include "tl/expected.hpp"
@@ -136,21 +138,21 @@ namespace Lithium
                 case DeviceType::Telescope:
                 {
                     LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
-                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
                     LOG_F(INFO, "Added new telescope instance successfully");
                     break;
                 }
                 case DeviceType::Focuser:
                 {
                     LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
-                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
                     LOG_F(INFO, "Added new focuser instance successfully");
                     break;
                 }
                 case DeviceType::FilterWheel:
                 {
                     LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
-                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
                     LOG_F(INFO, "Added new filterwheel instance successfully");
                     break;
                 }
@@ -182,21 +184,21 @@ namespace Lithium
                 case DeviceType::Telescope:
                 {
                     LOG_F(INFO, "Trying to add a new telescope instance : %s", newName.c_str());
-                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
                     LOG_F(INFO, "Added new telescope instance successfully");
                     break;
                 }
                 case DeviceType::Focuser:
                 {
                     LOG_F(INFO, "Trying to add a new Focuser instance : %s", newName.c_str());
-                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
                     LOG_F(INFO, "Added new focuser instance successfully");
                     break;
                 }
                 case DeviceType::FilterWheel:
                 {
                     LOG_F(INFO, "Trying to add a new filterwheel instance : %s", newName.c_str());
-                    // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
+                    m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
                     LOG_F(INFO, "Added new filterwheel instance successfully");
                     break;
                 }
@@ -264,7 +266,7 @@ namespace Lithium
         {
             if (*it && (*it)->getProperty("name") == name)
             {
-                (*it)->addObserver([this](const Lithium::IProperty &message)
+                (*it)->addObserver([this](const IProperty &message)
                                    { messageBusPublish(message); });
                 LOG_F(INFO, "Add device %s observer successfully", name.c_str());
                 return true;
@@ -346,7 +348,7 @@ namespace Lithium
         }
         if (const auto res = m_ModuleLoader->UnloadModule(lib_name); !res.has_value())
         {
-            LOG_F(ERROR, "Failed to remove device library : %s with %s", lib_name.c_str(),res.error());
+            LOG_F(ERROR, "Failed to remove device library : %s with %s", lib_name.c_str(), res.error());
             return false;
         }
         return true;
@@ -450,12 +452,12 @@ namespace Lithium
         return nullptr;
     }
 
-    void DeviceManager::messageBusPublish(const Lithium::IProperty &message)
+    void DeviceManager::messageBusPublish(const IProperty &message)
     {
         LOG_F(INFO, "Reviced device message with content %s", message.getValue<std::string>().c_str());
         if (m_MessageBus)
         {
-            m_MessageBus->Publish<Lithium::IProperty>("main", message);
+            m_MessageBus->Publish<IProperty>("main", message);
         }
         if (!m_ConfigManager)
         {

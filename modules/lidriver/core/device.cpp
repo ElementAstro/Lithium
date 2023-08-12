@@ -1,9 +1,9 @@
 #include "device.hpp"
-#include "modules/property/uuid.hpp"
+#include "liproperty/uuid.hpp"
 
 Device::Device(const std::string &name) : _name(name)
 {
-    Lithium::UUID::UUIDGenerator generator;
+    UUID::UUIDGenerator generator;
     _uuid = generator.generateUUIDWithFormat();
 }
 
@@ -92,7 +92,7 @@ std::shared_ptr<Lithium::SimpleTask> Device::getTask(const std::string &name, co
 
 void Device::insertMessage(const std::string &name, std::any value)
 {
-    Lithium::IProperty message;
+    IProperty message;
     message.name = name;
     message.value = value;
     device_info.messages[name] = message;
@@ -107,7 +107,7 @@ void Device::updateMessage(const std::string &name, const std::string &identifie
 {
     if (device_info.messages.find(identifier) != device_info.messages.end())
     {
-        Lithium::IProperty message;
+        IProperty message;
         message.value = newValue;
         message.name = name;
         device_info.messages[identifier] = std::move(message);
@@ -123,7 +123,7 @@ void Device::removeMessage(const std::string &name, const std::string &identifie
 {
     if (device_info.messages.find(identifier) != device_info.messages.end())
     {
-        Lithium::IProperty message = device_info.messages[identifier];
+        IProperty message = device_info.messages[identifier];
         device_info.messages.erase(identifier);
 
         for (const auto &observer : observers)
@@ -143,17 +143,17 @@ std::any Device::getMessageValue(const std::string &name, const std::string &ide
     return nullptr;
 }
 
-void Device::addObserver(const std::function<void(const Lithium::IProperty &message)> &observer)
+void Device::addObserver(const std::function<void(const IProperty &message)> &observer)
 {
     observers.push_back(observer);
 }
 
-void Device::removeObserver(const std::function<void(const Lithium::IProperty &message)> &observer)
+void Device::removeObserver(const std::function<void(const IProperty &message)> &observer)
 {
     observers.erase(std::remove_if(observers.begin(), observers.end(),
-                                   [&observer](const std::function<void(const Lithium::IProperty &message)> &o)
+                                   [&observer](const std::function<void(const IProperty &message)> &o)
                                    {
-                                       return o.target<std::function<void(const Lithium::IProperty &message)>>() == observer.target<std::function<void(const Lithium::IProperty &message)>>();
+                                       return o.target<std::function<void(const IProperty &message)>>() == observer.target<std::function<void(const IProperty &message)>>();
                                    }),
                     observers.end());
 }

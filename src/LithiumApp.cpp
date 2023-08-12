@@ -50,7 +50,6 @@ namespace Lithium
             m_ThreadManager = Thread::ThreadManager::createShared(max_thread);
 
             auto max_process = GetConfig("config/server").value<int>("maxprocess", 10);
-
             m_ProcessManager = Process::ProcessManager::createShared(max_process);
 
             m_PluginManager = PluginManager::createShared(m_ProcessManager);
@@ -284,7 +283,7 @@ namespace Lithium
             {
                 result += str + "\n";
             }
-            LOG_F(ERROR, "Failed to run chai multi command %s with %s", result.c_str(), res.error());
+            LOG_F(ERROR, "Failed to run chai multi command %s with %s", result.c_str(), res.error().c_str());
         }
         return true;
     }
@@ -297,7 +296,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Failed to load chaiscript file %s with %s", filename.c_str(), res.error());
+            LOG_F(ERROR, "Failed to load chaiscript file %s with %s", filename.c_str(), res.error().c_str());
             return false;
         }
     }
@@ -310,9 +309,14 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Failed to run chai script %s with %s", filename.c_str(), res.error());
+            LOG_F(ERROR, "Failed to run chai script %s with %s", filename.c_str(), res.error().c_str());
             return false;
         }
+    }
+
+    void LithiumApp::initMyAppChai()
+    {
+        m_ScriptManager->InitMyApp();
     }
 
 }

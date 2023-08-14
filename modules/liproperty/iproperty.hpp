@@ -1,61 +1,94 @@
+/*
+ * iproperty.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-3-29
+
+Description: Property type definition
+
+**************************************************/
+
 #pragma once
 
-#include <iostream>
 #include <string>
-#include <sstream>
-#include <any>
 #include <vector>
 
-class IProperty
+enum class PossibleValueType
 {
-public:
-    IProperty();
-    virtual ~IProperty() = default;
-
-    const std::string &GetName() const
-    {
-        return name;
-    }
-
-    virtual std::string toJson() const;
-    virtual std::string toXml() const;
-
-    const std::string &GetMessageUUID() const;
-    void SetMessageUUID(const std::string &uuid);
-
-    const std::string &GetDeviceUUID() const;
-    void SetDeviceUUID(const std::string &uuid);
-
-    template <typename T>
-    T getValue() const;
-
-    template <typename T>
-    void setValue(const T &value);
-
-    std::string device_name;
-    std::string device_uuid;
-
-    std::string message_uuid;
-    std::string name;
-
-    std::any value;
+    None,
+    Range,
+    Value
 };
 
-template <typename T>
-T IProperty::getValue() const
+struct INumberProperty
 {
-    try
-    {
-        return std::any_cast<T>(value);
-    }
-    catch (const std::bad_any_cast &)
-    {
-        throw std::runtime_error("Failed to get value from the message.");
-    }
-}
+    INumberProperty();
+    std::string device_name;
+    std::string device_uuid;
+    std::string message_uuid;
+    std::string name;
+    std::vector<double> possible_values;
+    bool need_check;
+    PossibleValueType pv_type;
+    double value;
+};
 
-template <typename T>
-void IProperty::setValue(const T &value)
+struct IStringProperty
 {
-    this->value = value;
-}
+    IStringProperty();
+    std::string device_name;
+    std::string device_uuid;
+    std::string message_uuid;
+    std::string name;
+    std::vector<std::string> possible_values;
+    bool need_check;
+    PossibleValueType pv_type;
+    std::string value;
+};
+
+struct IBoolProperty
+{
+    IBoolProperty();
+    std::string device_name;
+    std::string device_uuid;
+    std::string message_uuid;
+    std::string name;
+    std::vector<bool> possible_values;
+    bool need_check;
+    PossibleValueType pv_type;
+    bool value;
+};
+
+struct INumberVector
+{
+    INumberVector();
+    std::string device_name;
+    std::string device_uuid;
+    std::string message_uuid;
+    std::string name;
+    std::vector<std::vector<double>> possible_values;
+    bool need_check;
+    PossibleValueType pv_type;
+    std::vector<double> value;
+};

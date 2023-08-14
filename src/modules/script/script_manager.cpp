@@ -5,6 +5,8 @@
 #include "chaiscript/extras/math.hpp"
 #include "chaiscript/extras/string_methods.hpp"
 
+#include "server/message_bus.hpp"
+
 #include "liproperty/base64.hpp"
 #include "liproperty/iproperty.hpp"
 #include "liproperty/uuid.hpp"
@@ -26,8 +28,9 @@
 
 namespace Lithium
 {
-    ChaiScriptManager::ChaiScriptManager() : chai_(std::make_unique<chaiscript::ChaiScript>())
+    ChaiScriptManager::ChaiScriptManager(std::shared_ptr<MessageBus> messageBus) : chai_(std::make_unique<chaiscript::ChaiScript>())
     {
+        m_MessageBus = messageBus;
         LOG_F(INFO, "ChaiScript Manager initializing ...");
         Init();
         InitSubModules();
@@ -38,9 +41,9 @@ namespace Lithium
     {
     }
 
-    std::shared_ptr<ChaiScriptManager> ChaiScriptManager::createShared()
+    std::shared_ptr<ChaiScriptManager> ChaiScriptManager::createShared(std::shared_ptr<MessageBus> messageBus)
     {
-        return std::make_shared<ChaiScriptManager>();
+        return std::make_shared<ChaiScriptManager>(messageBus);
     }
 
     void ChaiScriptManager::Init()
@@ -60,7 +63,7 @@ namespace Lithium
         chai_->add(chaiscript::fun(&IProperty::SetDeviceUUID), "set_device_uuid");
         chai_->add(chaiscript::fun(&IProperty::getValue<std::string>), "get_value");
         chai_->add(chaiscript::fun(&IProperty::setValue<std::string>), "set_value");
-        chai_->add(chaiscript::constructor<IProperty()>(),"IProperty");
+        chai_->add(chaiscript::constructor<IProperty()>(), "IProperty");
         chai_->add(chaiscript::user_type<IProperty>(), "IProperty");
 
         // Add Base64 support
@@ -85,8 +88,8 @@ namespace Lithium
         chai_->add(chaiscript::fun(&File::move_directory), "move_directory");
         chai_->add(chaiscript::fun(&File::copy_file), "copy_file");
         chai_->add(chaiscript::fun(&File::move_file), "move_file");
-        chai_->add(chaiscript::fun(&File::remove_file),"remove_file");
-        chai_->add(chaiscript::fun(&File::rename_file),"rename_file");
+        chai_->add(chaiscript::fun(&File::remove_file), "remove_file");
+        chai_->add(chaiscript::fun(&File::rename_file), "rename_file");
 
         chai_->add(chaiscript::fun(&LithiumApp::addDevice), "add_device");
         chai_->add(chaiscript::fun(&LithiumApp::addDeviceLibrary), "add_device_library");
@@ -142,7 +145,7 @@ namespace Lithium
 
     void ChaiScriptManager::InitMyApp()
     {
-        chai_->add_global(chaiscript::var(MyApp),"app");
+        chai_->add_global(chaiscript::var(MyApp), "app");
     }
 
     tl::expected<bool, std::string> ChaiScriptManager::loadScriptFile(const std::string &filename)

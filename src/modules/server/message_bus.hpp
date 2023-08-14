@@ -44,6 +44,8 @@ Description: Main Message Bus
 #include <mutex>
 #include <condition_variable>
 
+#include "loguru/loguru.hpp"
+
 class MessageBus
 {
 public:

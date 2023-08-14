@@ -52,7 +52,7 @@ bool Camera::connect(const std::string &name)
 
 bool Camera::disconnect()
 {
-    LOG_F(INFO, "%s is disconnected", getProperty("name").c_str());
+    LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
     return true;
 }
 

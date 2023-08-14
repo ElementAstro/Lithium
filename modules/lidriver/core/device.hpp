@@ -34,11 +34,13 @@ Description: Basic Device Defination
 
 #include <iostream>
 #include <any>
-#include <nlohmann/json.hpp>
 #include <functional>
 #include <memory>
 #include <string_view>
 #include <map>
+
+#include <nlohmann/json.hpp>
+#include "emhash/hash_table8.hpp"
 
 #include "liproperty/iproperty.hpp"
 #include "task/device_task.hpp"
@@ -58,50 +60,107 @@ public:
 
     virtual void init();
 
-    void setProperty(const std::string &name, const std::string &value);
+    void insertNumberProperty(const std::string &name, const double &value, std::vector<double> possible_values, PossibleValueType possible_type, bool need_check = false);
 
-    std::string getProperty(const std::string &name);
+    void setNumberProperty(const std::string &name, const double &value);
+
+    std::shared_ptr<INumberProperty> getNumberProperty(const std::string &name);
+
+    void insertStringProperty(const std::string &name, const std::string &value, std::vector<std::string> possible_values, PossibleValueType possible_type, bool need_check = false);
+
+    void setStringProperty(const std::string &name, const std::string &value);
+
+    std::shared_ptr<IStringProperty> getStringProperty(const std::string &name);
+
+    void insertBoolProperty(const std::string &name, const bool &value, std::vector<bool> possible_values, PossibleValueType possible_type, bool need_check = false);
+
+    void setBoolProperty(const std::string &name, const bool &value);
+
+    std::shared_ptr<IBoolProperty> getBoolProperty(const std::string &name);
+
+    void removeStringProperty(const std::string &name);
+
+    void removeNumberProperty(const std::string &name);
+
+    void removeBoolProperty(const std::string &name);
 
     void insertTask(const std::string &name, std::any defaultValue, nlohmann::json params_template,
                     const std::function<nlohmann::json(const nlohmann::json &)> &func,
                     const std::function<nlohmann::json(const nlohmann::json &)> &stop_func,
-                    bool isBlock = false, std::shared_ptr<Lithium::SimpleTask> task = nullptr);
+                    bool isBlock = false);
 
     bool removeTask(const std::string &name);
 
     std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params);
 
-    void insertMessage(const std::string &name, std::any value);
+    void addStringObserver(const std::function<void(const std::shared_ptr<IStringProperty> &message)> &observer);
 
-    void updateMessage(const std::string &name, const std::string &identifier, std::any newValue);
+    void removeStringObserver(const std::function<void(const std::shared_ptr<IStringProperty> &message)> &observer);
 
-    void removeMessage(const std::string &name, const std::string &identifier);
+    void addNumberObserver(const std::function<void(const std::shared_ptr<INumberProperty> &message)> &observer);
 
-    std::any getMessageValue(const std::string &name, const std::string &identifier);
+    void removeNumberObserver(const std::function<void(const std::shared_ptr<INumberProperty> &message)> &observer);
 
-    void addObserver(const std::function<void(const IProperty &message)> &observer);
+    void addBoolObserver(const std::function<void(const std::shared_ptr<IBoolProperty> &message)> &observer);
 
-    void removeObserver(const std::function<void(const IProperty &message)> &observer);
+    void removeBoolObserver(const std::function<void(const std::shared_ptr<IBoolProperty> &message)> &observer);
 
-    void exportDeviceInfoToJson();
-
-    Device &operator<<(const std::pair<std::string, std::string> &property);
-
-    friend std::ostream &operator<<(std::ostream &os, const Device &device);
+    const nlohmann::json exportDeviceInfoToJson();
 
 private:
-    class DeviceInfo
-    {
-    public:
-        std::map<std::string, std::string> properties;
-        std::map<std::string, IProperty> messages;
-    };
-
+    // Why we use emhash8 : because it is so fast!
+    // Different types of properties
+    emhash8::HashMap<std::string, std::shared_ptr<INumberProperty>> number_properties;
+    emhash8::HashMap<std::string, std::shared_ptr<IStringProperty>> string_properties;
+    emhash8::HashMap<std::string, std::shared_ptr<IBoolProperty>> bool_properties;
+    emhash8::HashMap<std::string, std::shared_ptr<INumberVector>> number_vector_properties;
+    // Observers of different properties
+    std::vector<std::function<void(std::shared_ptr<INumberProperty>)>> number_observers;
+    std::vector<std::function<void(std::shared_ptr<IStringProperty>)>> string_observers;
+    std::vector<std::function<void(std::shared_ptr<IBoolProperty>)>> bool_observers;
+    std::vector<std::function<void(std::shared_ptr<INumberVector>)>> number_vector_observers;
+    // Basic Device name and UUID
     std::string _name;
     std::string _uuid;
-    DeviceInfo device_info;
-    std::unordered_map<std::string, std::shared_ptr<DeviceTask>> task_map;
-    std::vector<std::function<void(IProperty)>> observers;
+    // Map of the task
+    emhash8::HashMap<std::string, std::shared_ptr<DeviceTask>> task_map;
+
+public:
+    // insertNumberProperty
+    typedef void (*INP)(const std::string &, const double &, std::vector<double>, PossibleValueType, bool);
+
+    // setNumberProperty
+    typedef void (*SNP)(const std::string &, const double &);
+
+    // getNumberProperty
+    typedef std::shared_ptr<INumberProperty> (*GNP)(const std::string &);
+
+    // insertStringProperty
+    typedef void (*ISP)(const std::string &, const std::string &, std::vector<std::string>, PossibleValueType, bool);
+
+    // setStringProperty
+    typedef void (*SSP)(const std::string &, const std::string &);
+
+    // getStringProperty
+    typedef std::shared_ptr<IStringProperty> (*GSP)(const std::string &);
+
+    // insertBoolProperty
+    typedef void (*IBP)(const std::string &, const bool &, std::vector<bool>, PossibleValueType, bool);
+
+    // setBoolProperty
+    typedef void (*SBP)(const std::string &, const bool &);
+
+    // getBoolProperty
+    typedef std::shared_ptr<IBoolProperty> (*GBP)(const std::string &);
+
+    // removeStringProperty
+    typedef void (*RSP)(const std::string &);
+
+    // removeNumberProperty
+    typedef void (*RNP)(const std::string &);
+
+    // removeBoolProperty
+    typedef void (*RBP)(const std::string &);
 };
 
 #endif // DEVICE_H

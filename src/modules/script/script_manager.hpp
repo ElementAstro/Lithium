@@ -16,15 +16,17 @@ namespace tl
     class expected;
 }
 
+class MessageBus;
+
 namespace Lithium
 {
     class ChaiScriptManager
     {
     public:
-        ChaiScriptManager();
+        ChaiScriptManager(std::shared_ptr<MessageBus> messageBus);
         ~ChaiScriptManager();
 
-        static std::shared_ptr<ChaiScriptManager> createShared();
+        static std::shared_ptr<ChaiScriptManager> createShared(std::shared_ptr<MessageBus> messageBus);
 
         void Init();
         void InitSubModules();
@@ -37,6 +39,7 @@ namespace Lithium
 
     private:
         std::unique_ptr<chaiscript::ChaiScript> chai_;
+        std::shared_ptr<MessageBus> m_MessageBus;
     };
 
 }

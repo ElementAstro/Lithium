@@ -1,5 +1,5 @@
 /*
- * filterwheel.cpp
+ * fifoclient.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,45 +23,43 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-3-29
+Date: 2023-6-1
 
-Description: Filterwheel Simulator and Basic Definition
+Description: FIFO CLient
 
-**************************************************/
+*************************************************/
 
-#include "filterwheel.hpp"
+#ifndef FIFOCLIENT_H
+#define FIFOCLIENT_H
 
-#include "loguru/loguru.hpp"
+#include <string>
 
-Filterwheel::Filterwheel(const std::string &name) : Device(name)
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
+class FifoClient
 {
-    LOG_F(INFO, "Filterwheel Simulator Loaded : %s", name.c_str());
-    init();
-}
+public:
+    FifoClient(const std::string &fifoPath);
 
-Filterwheel::~Filterwheel()
-{
-    LOG_F(INFO, "Filterwheel Simulator Destructed");
-}
+    void connect();
+    void sendMessage(const std::string &message);
+    void disconnect();
 
-bool Filterwheel::connect(const std::string &name)
-{
-    LOG_F(INFO, "%s is connected", name.c_str());
-    return true;
-}
+private:
+    std::string fifoPath;
 
-bool Filterwheel::disconnect()
-{
-    LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
-    return true;
-}
+#ifdef _WIN32
+    HANDLE pipeHandle;
+#else
+    int pipeFd;
+#endif
+};
 
-bool Filterwheel::reconnect()
-{
-    return true;
-}
-
-bool Filterwheel::moveTo(const nlohmann::json &params)
-{
-    return true;
-}
+#endif // FIFOSERVER_H

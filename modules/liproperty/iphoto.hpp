@@ -1,10 +1,45 @@
+/*
+ * iphoto.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-3-29
+
+Description: Photo type definition
+
+**************************************************/
+
 #pragma once
 
-#include "iproperty.hpp"
+#include <string>
 
-class IPhoto : public IProperty
+struct IPhoto
 {
-public:
+    IPhoto();
+    std::string device_name;
+    std::string device_uuid;
+    std::string message_uuid;
+    std::string name;
     int width;
     int height;
     int depth;
@@ -25,6 +60,6 @@ public:
     std::string time;
     std::string software = "Lithium-Server";
 
-    std::string toJson() const override;
-    std::string toXml() const override;
+    const std::string toJson() const;
+    const std::string toXml() const;
 };

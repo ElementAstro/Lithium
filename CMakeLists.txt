@@ -85,6 +85,7 @@ include_directories(modules)
 
 add_subdirectory(modules/lidriver)
 add_subdirectory(modules/liproperty)
+add_subdirectory(modules/libridge)
 
 #add_subdirectory(src/indiserver)
 
@@ -330,7 +331,7 @@ if(WIN32)
 
     target_link_libraries(lithium_server PRIVATE libzippp)
 
-    target_link_libraries(lithium_server PRIVATE LithiumDriver LithiumProperty)
+    target_link_libraries(lithium_server PRIVATE LithiumDriver LithiumProperty LithiumBridge)
 
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server PRIVATE dlfcn-win32::dl)

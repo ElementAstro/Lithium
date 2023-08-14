@@ -1,6 +1,44 @@
-#include "iphoto.hpp"
+/*
+ * iphoto.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
-std::string IPhoto::toJson() const
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-3-29
+
+Description: Photo type definition
+
+**************************************************/
+
+#include "iphoto.hpp"
+#include "uuid.hpp"
+
+IPhoto::IPhoto()
+{
+    UUID::UUIDGenerator generator;
+    message_uuid = generator.generateUUIDWithFormat();
+}
+
+const std::string IPhoto::toJson() const
 {
     std::stringstream ss;
     ss << "{";
@@ -28,7 +66,7 @@ std::string IPhoto::toJson() const
     return ss.str();
 }
 
-std::string IPhoto::toXml() const
+const std::string IPhoto::toXml() const
 {
     std::stringstream ss;
     ss << "<message>";

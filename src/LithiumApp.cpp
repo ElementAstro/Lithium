@@ -58,7 +58,7 @@ namespace Lithium
 
             m_cModuleLoader = ModuleLoader::createShared("controllers");
 
-            m_ScriptManager = ChaiScriptManager::createShared();
+            m_ScriptManager = ChaiScriptManager::createShared(m_MessageBus);
 
             m_MessageBus->StartProcessingThread<IProperty>();
             LOG_F(INFO, "Lithium App Loaded.");

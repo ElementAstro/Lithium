@@ -85,7 +85,11 @@ namespace Lithium
 
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
-        void messageBusPublish(const IProperty &message);
+        void messageBusPublishString(const IStringProperty &message);
+
+        void messageBusPublishNumber(const INumberProperty &message);
+
+        void messageBusPublishBool(const IBoolProperty &message);
 
     private:
         std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< An array of vectors of shared pointers to Device objects, one for each DeviceType.

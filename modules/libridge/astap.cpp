@@ -48,7 +48,7 @@ Description: Astap Solver Interface
 #include <unistd.h>
 #endif
 
-#include <spdlog/spdlog.h>
+#include <loguru/loguru.hpp>
 #include <fitsio.h>
 
 using namespace std;
@@ -65,7 +65,7 @@ namespace Lithium::API::ASTAP
      * @return true 如果文件存在且可以执行。
      * @return false 如果文件不存在或不可执行。
      */
-    bool check_executable_file(const string &file_name, const string &file_ext)
+    bool check_executable_file(const std::string &file_name, const std::string &file_ext)
     {
 #if defined(_WIN32)
         fs::path file_path = file_name + file_ext;
@@ -73,29 +73,29 @@ namespace Lithium::API::ASTAP
         fs::path file_path = file_name;
 #endif
 
-        spdlog::debug("Checking file '{}'.", file_path.string());
+        LOG_F(INFO, "Checking file '%s'.", file_path.string().c_str());
 
         if (!fs::exists(file_path))
         {
-            spdlog::warn("The file '{}' does not exist.", file_path.string());
+            LOG_F(WARNING, "The file '%s' does not exist.", file_path.string().c_str());
             return false;
         }
 
 #if defined(_WIN32)
         if (!fs::is_regular_file(file_path) || !(GetFileAttributesA(file_path.generic_string().c_str()) & FILE_ATTRIBUTE_DIRECTORY))
         {
-            spdlog::warn("The file '{}' is not a regular file or is not executable.", file_path.string());
+            LOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", file_path.string().c_str());
             return false;
         }
 #else
         if (!fs::is_regular_file(file_path) || access(file_path.c_str(), X_OK) != 0)
         {
-            spdlog::warn("The file '{}' is not a regular file or is not executable.", file_path.string());
+            LOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", file_path.string().c_str());
             return false;
         }
 #endif
 
-        spdlog::debug("The file '{}' exists and is executable.", file_path.string());
+        LOG_F(INFO, "The file '%s' exists and is executable.", file_path.string().c_str());
         return true;
     }
 
@@ -116,16 +116,16 @@ namespace Lithium::API::ASTAP
      * @param image 需要匹配的图像文件路径。如果不需要指定，请传入一个空字符串。
      * @return 如果执行成功，返回匹配结果的输出；否则返回一个空字符串。
      */
-    string execute_command(const string &command)
+    std::string execute_command(const std::string &command)
     {
-        array<char, 4096> buffer{};
+        std::array<char, 4096> buffer{};
         FILE *pipe = popen(command.c_str(), "r");
         if (!pipe)
         {
-            spdlog::error("Error: failed to run command '{}'.", command);
+            LOG_F(ERROR, "Error: failed to run command '%s'.", command.c_str());
             return "";
         }
-        string output = "";
+        std::string output = "";
         while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
         {
             output += buffer.data();
@@ -134,85 +134,80 @@ namespace Lithium::API::ASTAP
         return output;
     }
 
-    // 异步执行函数封装
     template <typename Func, typename... Args>
-    future<typename result_of<Func(Args...)>::type> async_retry(Func &&func, int attempts_left, chrono::seconds delay, Args &&...args)
+    std::future<typename std::result_of<Func(Args...)>::type> async_retry(Func &&func, int attempts_left, std::chrono::seconds delay, Args &&...args)
     {
-        typedef typename result_of<Func(Args...)>::type result_type;
+        typedef typename std::result_of<Func(Args...)>::type result_type;
 
         if (attempts_left < 1)
         {
-            spdlog::error("Exceeded maximum attempts");
-            throw runtime_error("Exceeded maximum attempts");
+            LOG_F(ERROR, "Exceeded maximum attempts");
+            throw std::runtime_error("Exceeded maximum attempts");
         }
 
         try
         {
-            return async(launch::async, forward<Func>(func), forward<Args>(args)...);
+            return std::async(std::launch::async, std::forward<Func>(func), std::forward<Args>(args)...);
         }
         catch (...)
         {
             if (attempts_left == 1)
             {
-                spdlog::error("Failed to execute function after multiple attempts");
+                LOG_F(ERROR, "Failed to execute function after multiple attempts");
                 throw;
             }
             else
             {
                 --attempts_left;
-                this_thread::sleep_for(delay);
-                return async_retry(forward<Func>(func), attempts_left, delay, forward<Args>(args)...);
+                std::this_thread::sleep_for(delay);
+                return async_retry(std::forward<Func>(func), attempts_left, delay, std::forward<Args>(args)...);
             }
         }
     }
 
-    // 命令行执行函数
-    string execute_astap_command(const string &command, const double &ra = 0.0, const double &dec = 0.0, const double &fov = 0.0,
-                                 const int &timeout = 30, const bool &update = true, const string &image = "")
+    std::string execute_astap_command(const std::string &command, const double &ra = 0.0, const double &dec = 0.0, const double &fov = 0.0,
+                                      const int &timeout = 30, const bool &update = true, const std::string &image = "")
     {
         // 输入参数合法性检查
         if (ra < 0.0 || ra > 360.0)
         {
-            spdlog::error("RA should be within [0, 360]");
+            LOG_F(ERROR, "RA should be within [0, 360]");
             return "";
         }
         if (dec < -90.0 || dec > 90.0)
         {
-            spdlog::error("DEC should be within [-90, 90]");
+            LOG_F(ERROR, "DEC should be within [-90, 90]");
             return "";
         }
         if (fov <= 0.0 || fov > 180.0)
         {
-            spdlog::error("FOV should be within (0, 180]");
+            LOG_F(ERROR, "FOV should be within (0, 180]");
             return "";
         }
         if (!image.empty())
         {
-            if (access(image.c_str(), F_OK) == -1)
+            file.open(image, std::ios::in | std::ios::out);
+            if (!file.good())
             {
-                spdlog::error("Error: image file '{}' does not exist.", image);
+                LOG_F(ERROR, "Error: image file '%s' is not accessible.", image.c_str());
                 return "";
             }
-            if (access(image.c_str(), R_OK | W_OK) == -1)
-            {
-                spdlog::error("Error: image file '{}' is not accessible.", image);
-                return "";
-            }
+            file.close();
         }
 
         // 构造命令行字符串
-        string cmd = command;
+        std::string cmd = command;
         if (ra != 0.0)
         {
-            cmd += " -ra " + to_string(ra);
+            cmd += " -ra " + std::to_string(ra);
         }
         if (dec != 0.0)
         {
-            cmd += " -spd " + to_string(dec + 90);
+            cmd += " -spd " + std::to_string(dec + 90);
         }
         if (fov != 0.0)
         {
-            cmd += " -fov " + to_string(fov);
+            cmd += " -fov " + std::to_string(fov);
         }
         if (!image.empty())
         {
@@ -224,25 +219,25 @@ namespace Lithium::API::ASTAP
         }
 
         // 执行命令行指令
-        auto result = async_retry([](const string &cmd)
+        auto result = async_retry([](const std::string &cmd)
                                   { return execute_command(cmd); },
-                                  3, chrono::seconds(5), cmd);
+                                  3, std::chrono::seconds(5), cmd);
 
         // 等待命令执行完成，或者超时
-        auto start_time = chrono::system_clock::now();
-        while (result.wait_for(chrono::seconds(1)) != future_status::ready)
+        auto start_time = std::chrono::system_clock::now();
+        while (result.wait_for(std::chrono::seconds(1)) != std::future_status::ready)
         {
-            auto elapsed_time = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now() - start_time).count();
+            auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count();
             if (elapsed_time > timeout)
             {
-                spdlog::error("Error: command timed out after {} seconds.", to_string(timeout));
+                LOG_F(ERROR, "Error: command timed out after %s seconds.", std::to_string(timeout).c_str());
                 return "";
             }
         }
 
         // 返回命令执行结果，并输出调试信息
         auto output = result.get();
-        spdlog::debug("Command '{}' returned: {}", cmd, output);
+        LOG_F(INFO, "Command '%s' returned: %s", cmd.c_str(), output.c_str());
         return output;
     }
 
@@ -258,9 +253,9 @@ namespace Lithium::API::ASTAP
      * - rotation: The rotation angle (string).
      * - focal_length: The average focal length in millimeters (string).
      */
-    map<string, string> read_astap_result(const string &image)
+    std::map<std::string, std::string> read_astap_result(const std::string &image)
     {
-        map<string, string> ret_struct;
+        std::map<std::string, std::string> ret_struct;
 
         // 打开 FITS 文件并读取头信息
         fitsfile *fptr;
@@ -269,7 +264,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: cannot open FITS file '" + image + "'.";
-            spdlog::error(ret_struct["message"]);
+            LOG_F(ERROR, "{}", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -304,7 +299,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: failed to close FITS file '" + image + "'.";
-            spdlog::error(ret_struct["message"]);
+            LOG_F(ERROR, "{}", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -312,17 +307,17 @@ namespace Lithium::API::ASTAP
         if (data_get_flag)
         {
             ret_struct["message"] = "Solve success";
-            ret_struct["ra"] = to_string(solved_ra);
-            ret_struct["dec"] = to_string(solved_dec);
-            ret_struct["rotation"] = to_string(rotation);
+            ret_struct["ra"] = std::to_string(solved_ra);
+            ret_struct["dec"] = std::to_string(solved_dec);
+            ret_struct["rotation"] = std::to_string(rotation);
             if (x_pixel_size > 0.0 && y_pixel_size > 0.0)
             {
                 double x_focal_length = x_pixel_size / x_pixel_arcsec * 206.625;
                 double y_focal_length = y_pixel_size / y_pixel_arcsec * 206.625;
                 double avg_focal_length = (x_focal_length + y_focal_length) / 2.0;
-                ret_struct["focal_length"] = to_string(avg_focal_length);
+                ret_struct["focal_length"] = std::to_string(avg_focal_length);
                 // 调试输出
-                spdlog::debug("avg_focal_length: {}", avg_focal_length);
+                LOG_F(INFO, "avg_focal_length: {}", avg_focal_length);
             }
         }
         else
@@ -331,7 +326,7 @@ namespace Lithium::API::ASTAP
         }
 
         // 最终输出
-        spdlog::info("Function solve_fits_header result: {}", ret_struct["message"]);
+        LOG_F(INFO, "Function solve_fits_header result: {}", ret_struct["message"].c_str());
 
         return ret_struct;
     }
@@ -347,27 +342,30 @@ namespace Lithium::API::ASTAP
      * @param image 需要匹配的图像文件路径。该参数必须提供。
      * @return 如果匹配成功，返回包含星表数据的映射；否则返回一个错误消息。
      * */
-    map<string, string> run_astap(double ra, double dec, double fov, int timeout, bool update, string image)
+    std::map<std::string, std::string> run_astap(double ra, double dec, double fov, int timeout, bool update, std::string image)
     {
-        map<string, string> ret_struct;
+        std::map<std::string, std::string> ret_struct;
+
         if (!check_executable_file("/usr/bin/astap", "") && !check_executable_file("/usr/local/bin/astap", ""))
         {
-            spdlog::debug("No Astap solver engine found , please install before trying to solve an image");
+            LOG_F(INFO, "No Astap solver engine found, please install before trying to solve an image");
             ret_struct["message"] = "No solver found!";
             return ret_struct;
         }
 
-        string result = execute_astap_command("astap", ra, dec, fov, timeout, update, image);
-        if (IsSubstring(result, "Solution found:"))
+        std::string result = execute_astap_command("astap", ra, dec, fov, timeout, update, image);
+        if (result.find("Solution found:") != std::string::npos)
         {
-            spdlog::info("Solved successfully");
+            LOG_F(INFO, "Solved successfully");
             ret_struct = read_astap_result(image);
         }
         else
         {
-            spdlog::error("Failed to solve the image");
+            LOG_F(ERROR, "Failed to solve the image");
             ret_struct["message"] = "Failed to solve the image";
         }
+
         return ret_struct;
     }
+
 }

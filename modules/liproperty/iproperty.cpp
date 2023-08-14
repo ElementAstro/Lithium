@@ -1,93 +1,57 @@
+/*
+ * iproperty.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-3-29
+
+Description: Property type definition
+
+**************************************************/
+
 #include "iproperty.hpp"
 #include "uuid.hpp"
 
-#include <random>
-
-IProperty::IProperty()
+INumberProperty::INumberProperty()
 {
     UUID::UUIDGenerator generator;
     message_uuid = generator.generateUUIDWithFormat();
 }
 
-std::string IProperty::toJson() const
+IStringProperty::IStringProperty()
 {
-    std::stringstream ss;
-    ss << "{";
-    ss << "\"device_name\":\"" << device_name << "\",";
-    ss << "\"device_uuid\":\"" << device_uuid << "\",";
-    ss << "\"message_uuid\":\"" << message_uuid << "\",";
-    ss << "\"name\":\"" << name << "\",";
-    ss << "\"value\":";
-
-    if (value.type() == typeid(int))
-    {
-        ss << std::any_cast<int>(value);
-    }
-    else if (value.type() == typeid(double))
-    {
-        ss << std::any_cast<double>(value);
-    }
-    else if (value.type() == typeid(bool))
-    {
-        ss << std::boolalpha << std::any_cast<bool>(value);
-    }
-    else if (value.type() == typeid(std::string))
-    {
-        ss << "\"" << std::any_cast<std::string>(value) << "\"";
-    }
-
-    ss << "}";
-    return ss.str();
+    UUID::UUIDGenerator generator;
+    message_uuid = generator.generateUUIDWithFormat();
 }
 
-std::string IProperty::toXml() const
+IBoolProperty::IBoolProperty()
 {
-    std::stringstream ss;
-    ss << "<message>";
-    ss << "<device_name>" << device_name << "</device_name>";
-    ss << "<device_uuid>" << device_uuid << "</device_uuid>";
-    ss << "<message_uuid>" << message_uuid << "</message_uuid>";
-    ss << "<name>" << name << "</name>";
-    ss << "<value>";
-
-    if (value.type() == typeid(int))
-    {
-        ss << std::any_cast<int>(value);
-    }
-    else if (value.type() == typeid(double))
-    {
-        ss << std::any_cast<double>(value);
-    }
-    else if (value.type() == typeid(bool))
-    {
-        ss << std::boolalpha << std::any_cast<bool>(value);
-    }
-    else if (value.type() == typeid(std::string))
-    {
-        ss << std::any_cast<std::string>(value);
-    }
-
-    ss << "</value>";
-    ss << "</message>";
-    return ss.str();
+    UUID::UUIDGenerator generator;
+    message_uuid = generator.generateUUIDWithFormat();
 }
 
-const std::string &IProperty::GetMessageUUID() const
+INumberVector::INumberVector()
 {
-    return message_uuid;
-}
-
-void IProperty::SetMessageUUID(const std::string &uuid)
-{
-    message_uuid = uuid;
-}
-
-const std::string &IProperty::GetDeviceUUID() const
-{
-    return device_uuid;
-}
-
-void IProperty::SetDeviceUUID(const std::string &uuid)
-{
-    device_uuid = uuid;
+    UUID::UUIDGenerator generator;
+    message_uuid = generator.generateUUIDWithFormat();
 }

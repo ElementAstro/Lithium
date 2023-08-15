@@ -1,5 +1,5 @@
 /*
- * base64.hpp
+ * ascom_device.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,40 +23,23 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-4-5
+Date: 2023-8-15
 
-Description: Base64
+Description: ASCOM Basic Device
 
 **************************************************/
 
 #pragma once
 
-#include <string>
-#include <vector>
-#include <stdexcept>
-#include <cstdint>
+#include "lidriver/core/device.hpp
 
-namespace Lithium::Base64
+class ASCOMDevice : public Device
 {
+    public:
+        ASCOMDevice(const std::string &name);
+        ~ASCOMDevice();
 
-    /**
-     * @brief Base64编码函数
-     *
-     * @param bytes_to_encode 待编码数据
-     * @return std::string 编码后的字符串
-     */
-    std::string base64Encode(const std::vector<unsigned char> &bytes_to_encode);
-
-    /**
-     * @brief Base64解码函数
-     *
-     * @param encoded_string 待解码字符串
-     * @return std::vector<unsigned char> 解码后的数据
-     */
-    std::vector<unsigned char> base64Decode(const std::string &encoded_string);
-
-    std::string base64EncodeEnhance(const std::vector<uint8_t> &bytes_to_encode);
-
-    std::vector<uint8_t> base64DecodeEnhance(const std::string &encoded_string);
-
-}
+        virtual bool connect(const std::string &name) override;
+        virtual bool disconnect() override;
+        virtual bool reconnect() override;
+};

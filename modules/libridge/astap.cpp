@@ -35,10 +35,10 @@ Description: Astap Solver Interface
 #include <future>
 #include <chrono>
 #include <stdexcept>
-#include <iostream>
 #include <cstring>
 #include <filesystem>
 #include <map>
+#include <fstream>
 
 #include "astap.hpp"
 
@@ -186,6 +186,7 @@ namespace Lithium::API::ASTAP
         }
         if (!image.empty())
         {
+            std::fstream file;
             file.open(image, std::ios::in | std::ios::out);
             if (!file.good())
             {

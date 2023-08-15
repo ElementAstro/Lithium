@@ -3,6 +3,8 @@
 
 #include <functional>
 #include <string>
+#include <condition_variable>
+#include <thread>
 #include <nlohmann/json.hpp>
 
 #ifdef _WIN32

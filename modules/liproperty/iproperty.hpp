@@ -52,6 +52,9 @@ struct INumberProperty
     bool need_check;
     PossibleValueType pv_type;
     double value;
+
+    std::string get_func;
+    std::string set_func;
 };
 
 struct IStringProperty
@@ -65,6 +68,9 @@ struct IStringProperty
     bool need_check;
     PossibleValueType pv_type;
     std::string value;
+
+    std::string get_func;
+    std::string set_func;
 };
 
 struct IBoolProperty
@@ -78,6 +84,9 @@ struct IBoolProperty
     bool need_check;
     PossibleValueType pv_type;
     bool value;
+
+    std::string get_func;
+    std::string set_func;
 };
 
 struct INumberVector
@@ -91,4 +100,7 @@ struct INumberVector
     bool need_check;
     PossibleValueType pv_type;
     std::vector<double> value;
+
+    std::string get_func;
+    std::string set_func;
 };

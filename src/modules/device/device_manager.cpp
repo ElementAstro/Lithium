@@ -45,9 +45,7 @@ Description: Device Manager
 #include "loguru/loguru.hpp"
 #include "tl/expected.hpp"
 
-#if __cplusplus >= 202002L
 #include <format>
-#endif
 #include <typeinfo>
 
 namespace Lithium
@@ -63,6 +61,7 @@ namespace Lithium
         {
             devices.emplace_back();
         }
+        m_EventLoop->start();
     }
 
     DeviceManager::~DeviceManager()
@@ -485,5 +484,77 @@ namespace Lithium
         {
             m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
         }
+    }
+
+    tl::expected<bool, std::string> DeviceManager::setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value)
+    {
+        m_EventLoop->addTask([this, &value, &type, &name, &value_name]()
+                             {
+                                 auto device = getDevice(type, name);
+                                 if (!device)
+                                 {
+                                     LOG_F(ERROR, "%s not found");
+                                     return;
+                                 }
+                                 try
+                                 {
+                                     if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
+                                     {
+                                         device->setStringProperty(value_name, std::any_cast<std::string>(value));
+                                     }
+                                     else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
+                                     {
+                                         device->setNumberProperty(value_name, std::any_cast<double>(value));
+                                     }
+                                     else if (value.type() == typeid(bool))
+                                     {
+                                        device->setBoolProperty(value_name,std::any_cast<bool>(value));
+                                     }
+                                     else
+                                     {
+                                        LOG_F(ERROR,"Unknown type of the value : %s",value_name.c_str());
+                                     }
+                                 }
+                                 catch (const std::bad_any_cast &e)
+                                 {
+                                     LOG_F(ERROR, "Failed to convert %s of %s with %s", value_name.c_str(), name.c_str(), e.what());
+                                 } });
+        return true;
+    }
+
+    tl::expected<bool, std::string> DeviceManager::setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value)
+    {
+        m_EventLoop->addTask([this, &value, &name, &value_name]()
+                             {
+                                 auto device = findDeviceByName(name);
+                                 if (!device)
+                                 {
+                                     LOG_F(ERROR, "%s not found");
+                                     return;
+                                 }
+                                 try
+                                 {
+                                     if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
+                                     {
+                                         device->setStringProperty(value_name, std::any_cast<std::string>(value));
+                                     }
+                                     else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
+                                     {
+                                         device->setNumberProperty(value_name, std::any_cast<double>(value));
+                                     }
+                                     else if (value.type() == typeid(bool))
+                                     {
+                                        device->setBoolProperty(value_name,std::any_cast<bool>(value));
+                                     }
+                                     else
+                                     {
+                                        LOG_F(ERROR,"Unknown type of the value : %s",value_name.c_str());
+                                     }
+                                 }
+                                 catch (const std::bad_any_cast &e)
+                                 {
+                                     LOG_F(ERROR, "Failed to convert %s of %s with %s", value_name.c_str(), name.c_str(), e.what());
+                                 } });
+        return true;
     }
 }

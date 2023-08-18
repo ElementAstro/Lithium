@@ -1,6 +1,8 @@
 #include "device.hpp"
 #include "liproperty/uuid.hpp"
 
+#include <format>
+
 Device::Device(const std::string &name) : _name(name)
 {
     UUID::UUIDGenerator generator;
@@ -34,6 +36,25 @@ void Device::insertStringProperty(const std::string &name, const std::string &va
     }
 }
 
+void Device::insertNumberBindProperty(const std::string &name, const std::string &bind_get_func, const std::string &bind_set_func, const double &value, std::vector<double> possible_values, PossibleValueType possible_type, bool need_check)
+{
+    std::shared_ptr<INumberProperty> property = std::make_shared<INumberProperty>();
+    property->device_name = _name;
+    property->name = name;
+    property->device_uuid = _uuid;
+    property->value = value;
+    property->need_check = need_check;
+    property->pv_type = possible_type;
+    property->possible_values = possible_values;
+    property->get_func = bind_get_func;
+    property->set_func = bind_set_func;
+    number_properties[name] = property;
+    for (const auto &observer : number_observers)
+    {
+        observer(property);
+    }
+}
+
 void Device::insertNumberProperty(const std::string &name, const double &value,
                                   std::vector<double> possible_values,
                                   PossibleValueType possible_type, bool need_check)
@@ -48,6 +69,25 @@ void Device::insertNumberProperty(const std::string &name, const double &value,
     property->possible_values = possible_values;
     number_properties[name] = property;
     for (const auto &observer : number_observers)
+    {
+        observer(property);
+    }
+}
+
+void Device::insertStringBindProperty(const std::string &name, const std::string &bind_get_func, const std::string &bind_set_func, const std::string &value, std::vector<std::string> possible_values, PossibleValueType possible_type, bool need_check)
+{
+    std::shared_ptr<IStringProperty> property = std::make_shared<IStringProperty>();
+    property->device_name = _name;
+    property->name = name;
+    property->device_uuid = _uuid;
+    property->value = value;
+    property->need_check = need_check;
+    property->pv_type = possible_type;
+    property->possible_values = possible_values;
+    property->get_func = bind_get_func;
+    property->set_func = bind_set_func;
+    string_properties[name] = property;
+    for (const auto &observer : string_observers)
     {
         observer(property);
     }
@@ -72,10 +112,33 @@ void Device::insertBoolProperty(const std::string &name, const bool &value,
     }
 }
 
+void Device::insertBoolBindProperty(const std::string &name, const std::string &bind_get_func, const std::string &bind_set_func, const bool &value, std::vector<bool> possible_values, PossibleValueType possible_type, bool need_check)
+{
+    std::shared_ptr<IBoolProperty> property = std::make_shared<IBoolProperty>();
+    property->device_name = _name;
+    property->name = name;
+    property->device_uuid = _uuid;
+    property->value = value;
+    property->need_check = need_check;
+    property->pv_type = possible_type;
+    property->possible_values = possible_values;
+    bool_properties[name] = property;
+    property->get_func = bind_get_func;
+    property->set_func = bind_set_func;
+    for (const auto &observer : bool_observers)
+    {
+        observer(property);
+    }
+}
+
 std::shared_ptr<IStringProperty> Device::getStringProperty(const std::string &name)
 {
     if (string_properties.find(name) != string_properties.end())
     {
+        if (!string_properties[name]->get_func.empty())
+        {
+            invokeCommand(std::format("get_{}", name));
+        }
         return string_properties[name];
     }
     return nullptr;
@@ -85,6 +148,10 @@ std::shared_ptr<INumberProperty> Device::getNumberProperty(const std::string &na
 {
     if (number_properties.find(name) != number_properties.end())
     {
+        if (!number_properties[name]->get_func.empty())
+        {
+            invokeCommand(std::format("get_{}", name));
+        }
         return number_properties[name];
     }
     return nullptr;
@@ -94,6 +161,10 @@ std::shared_ptr<IBoolProperty> Device::getBoolProperty(const std::string &name)
 {
     if (bool_properties.find(name) != bool_properties.end())
     {
+        if (!bool_properties[name]->get_func.empty())
+        {
+            invokeCommand(std::format("get_{}", name));
+        }
         return bool_properties[name];
     }
     return nullptr;
@@ -104,6 +175,10 @@ void Device::setNumberProperty(const std::string &name, const double &value)
     if (number_properties.find(name) != number_properties.end())
     {
         number_properties[name]->value = value;
+        if (!number_properties[name]->set_func.empty())
+        {
+            invokeCommand(std::format("set_{}", name));
+        }
     }
 }
 
@@ -112,6 +187,10 @@ void Device::setStringProperty(const std::string &name, const std::string &value
     if (string_properties.find(name) != string_properties.end())
     {
         string_properties[name]->value = value;
+        if (!string_properties[name]->set_func.empty())
+        {
+            invokeCommand(std::format("set_{}", name));
+        }
     }
 }
 
@@ -120,6 +199,10 @@ void Device::setBoolProperty(const std::string &name, const bool &value)
     if (bool_properties.find(name) != bool_properties.end())
     {
         bool_properties[name]->value = value;
+        if (!bool_properties[name]->set_func.empty())
+        {
+            invokeCommand(std::format("set_{}", name));
+        }
     }
 }
 

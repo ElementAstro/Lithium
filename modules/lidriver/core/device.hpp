@@ -43,7 +43,10 @@ Description: Basic Device Defination
 #include "emhash/hash_table8.hpp"
 
 #include "liproperty/iproperty.hpp"
-#include "task/device_task.hpp"
+#include "liproperty/task/device_task.hpp"
+
+#define REGISTER_COMMAND_MEMBER(commandName, memberFunction) \
+    registerCommand(commandName, [this]() { memberFunction(); })
 
 class Device
 {
@@ -62,17 +65,23 @@ public:
 
     void insertNumberProperty(const std::string &name, const double &value, std::vector<double> possible_values, PossibleValueType possible_type, bool need_check = false);
 
+    void insertNumberBindProperty(const std::string &name, const std::string &bind_get_func, const std::string &bind_set_func, const double &value, std::vector<double> possible_values, PossibleValueType possible_type, bool need_check = false);
+
     void setNumberProperty(const std::string &name, const double &value);
 
     std::shared_ptr<INumberProperty> getNumberProperty(const std::string &name);
 
     void insertStringProperty(const std::string &name, const std::string &value, std::vector<std::string> possible_values, PossibleValueType possible_type, bool need_check = false);
 
+    void insertStringBindProperty(const std::string &name, const std::string &bind_get_func, const std::string &bind_set_func, const std::string &value, std::vector<std::string> possible_values, PossibleValueType possible_type, bool need_check = false);
+
     void setStringProperty(const std::string &name, const std::string &value);
 
     std::shared_ptr<IStringProperty> getStringProperty(const std::string &name);
 
     void insertBoolProperty(const std::string &name, const bool &value, std::vector<bool> possible_values, PossibleValueType possible_type, bool need_check = false);
+
+    void insertBoolBindProperty(const std::string &name, const std::string &bind_get_func, const std::string &bind_set_func, const bool &value, std::vector<bool> possible_values, PossibleValueType possible_type, bool need_check = false);
 
     void setBoolProperty(const std::string &name, const bool &value);
 
@@ -107,6 +116,53 @@ public:
 
     const nlohmann::json exportDeviceInfoToJson();
 
+    template <typename Function>
+    void registerCommand(const std::string &commandName, Function &&handler)
+    {
+        commandMap[commandName] = [handler]()
+        {
+            try
+            {
+                handler();
+            }
+            catch (const std::exception &e)
+            {
+            }
+        };
+    }
+
+    template <typename Function, typename... Args>
+    void registerCommand(const std::string &commandName, Function &&handler, Args &&...args)
+    {
+        auto boundHandler = std::bind(std::forward<Function>(handler), std::forward<Args>(args)...);
+        commandMap[commandName] = [boundHandler]()
+        {
+            try
+            {
+                boundHandler();
+            }
+            catch (const std::exception &e)
+            {
+            }
+        };
+    }
+
+    template <typename... Args>
+    void invokeCommand(const std::string &commandName, Args &&...args)
+    {
+        auto it = commandMap.find(commandName);
+        if (it != commandMap.end())
+        {
+            try
+            {
+                it->second();
+            }
+            catch (const std::exception &e)
+            {
+            }
+        }
+    }
+
 private:
     // Why we use emhash8 : because it is so fast!
     // Different types of properties
@@ -114,6 +170,12 @@ private:
     emhash8::HashMap<std::string, std::shared_ptr<IStringProperty>> string_properties;
     emhash8::HashMap<std::string, std::shared_ptr<IBoolProperty>> bool_properties;
     emhash8::HashMap<std::string, std::shared_ptr<INumberVector>> number_vector_properties;
+
+    emhash8::HashMap<std::string, std::function<void()>> commandMap;
+    emhash8::HashMap<std::string, std::function<void(const std::string &)>> stringCommandMap;
+    emhash8::HashMap<std::string, std::function<void(const double &)>> numberCommandMap;
+    emhash8::HashMap<std::string, std::function<void(const bool &)>> boolCommandMap;
+
     // Observers of different properties
     std::vector<std::function<void(std::shared_ptr<INumberProperty>)>> number_observers;
     std::vector<std::function<void(std::shared_ptr<IStringProperty>)>> string_observers;

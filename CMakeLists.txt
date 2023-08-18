@@ -246,18 +246,6 @@ set(task_SRC
 
     ${lithium_src_dir}/modules/task/task_generator.cpp
     ${lithium_src_dir}/modules/task/task_generator.hpp
-
-    ${lithium_src_dir}/modules/task/conditional_task.cpp
-    ${lithium_src_dir}/modules/task/conditional_task.hpp
-
-    ${lithium_src_dir}/modules/task/daemon_task.cpp
-    ${lithium_src_dir}/modules/task/daemon_task.hpp
-
-    ${lithium_src_dir}/modules/task/loop_task.cpp
-    ${lithium_src_dir}/modules/task/loop_task.hpp
-
-    ${lithium_src_dir}/modules/task/task.cpp
-    ${lithium_src_dir}/modules/task/task.hpp
 )
 
 set(thread_SRC

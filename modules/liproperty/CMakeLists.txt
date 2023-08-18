@@ -12,4 +12,16 @@ add_library(LithiumProperty
 
     uuid.cpp
     uuid.hpp
+
+    task/conditional_task.cpp
+    task/conditional_task.hpp
+
+    task/daemon_task.cpp
+    task/daemon_task.hpp
+
+    task/loop_task.cpp
+    task/loop_task.hpp
+
+    task/task.cpp
+    task/task.hpp
 )

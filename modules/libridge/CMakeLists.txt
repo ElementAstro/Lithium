@@ -8,3 +8,5 @@ add_library(
     phd2client.cpp
     phd2client.hpp
 )
+
+add_subdirectory(ascom)

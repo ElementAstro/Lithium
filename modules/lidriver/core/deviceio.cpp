@@ -107,6 +107,7 @@ void SocketServer::start()
                                    { acceptClientConnection(); });
 
     LOG_F(INFO, "Server started on port %d", port);
+    running = true;
 }
 
 void SocketServer::stop()
@@ -119,6 +120,12 @@ void SocketServer::stop()
 #endif
         serverSocket = INVALID_SOCKET;
     }
+    running = false;
+}
+
+bool SocketServer::is_running()
+{
+    return running;
 }
 
 void SocketServer::setMessageHandler(MessageHandler handler)

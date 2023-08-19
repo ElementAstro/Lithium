@@ -34,6 +34,8 @@ Description: Device IO Module
 
 #include <functional>
 
+#include "lidriver/event/eventloop.hpp"
+
 class EventLoop;
 
 class SocketServer
@@ -46,6 +48,8 @@ public:
     void start();
     void stop();
 
+    bool is_running();
+
     void setMessageHandler(MessageHandler handler);
     void sendMessage(int clientSocket, const std::string &message);
 
@@ -53,6 +57,7 @@ private:
     EventLoop &eventLoop;
     int port;
     int serverSocket;
+    bool running;
     MessageHandler messageHandler;
 
     void acceptClientConnection();

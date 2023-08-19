@@ -39,14 +39,13 @@ public:
     Solver(const std::string &name);
     ~Solver();
 
-    virtual bool connect(const std::string& name) override;
+    virtual bool connect(const std::string &name) override;
 
     virtual bool disconnect() override;
 
     virtual bool reconnect() override;
 
 public:
-
     virtual bool solve_image(const nlohmann::json &params);
 
     virtual bool get_solve_result(const nlohmann::json &params);

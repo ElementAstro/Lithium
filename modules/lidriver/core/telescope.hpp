@@ -47,7 +47,7 @@ public:
      */
     virtual ~Telescope();
 
-    virtual bool connect(const std::string& name) override;
+    virtual bool connect(const std::string &name) override;
 
     virtual bool disconnect() override;
 

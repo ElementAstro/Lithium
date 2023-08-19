@@ -29,7 +29,6 @@ Description: IOLoop
 
 **************************************************/
 
-
 #include "ioloop.hpp"
 
 IOLoop::IOLoop() : running(true), loopThread(&IOLoop::run, this) {}

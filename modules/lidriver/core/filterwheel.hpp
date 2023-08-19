@@ -39,7 +39,7 @@ public:
     Filterwheel(const std::string &name);
     ~Filterwheel();
 
-    virtual bool connect(const std::string& name) override;
+    virtual bool connect(const std::string &name) override;
 
     virtual bool disconnect() override;
 

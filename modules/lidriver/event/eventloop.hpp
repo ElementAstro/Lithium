@@ -42,17 +42,17 @@ Description: EventLoop
 
 /**
  * @brief EventPriority enum
- * 
+ *
  * This enum defines the priority levels for events.
  * The priority levels are used to determine the order in which events are processed by the EventLoop.
- * 
- * @details 
+ *
+ * @details
  * The priority levels are defined as follows:
  * - EventPriority::Low: Low priority events are processed first, and are suitable for tasks that do not require immediate attention.
  * - EventPriority::Medium: Medium priority events are processed next, and are suitable for tasks that require some attention, but can be delayed if necessary.
  * - EventPriority::High: High priority events are processed last, and are suitable for tasks that require immediate attention.
- * 
- * @note 
+ *
+ * @note
  * The priority levels are designed to be flexible, and can be customized as needed.
  */
 enum class EventPriority
@@ -64,7 +64,7 @@ enum class EventPriority
 
 /**
  * @brief EventHandler typedef
- * 
+ *
  * This typedef defines a function pointer to a void function that can be used as an event handler.
  * The event handler is called when an event is triggered.
  */
@@ -72,7 +72,7 @@ using EventHandler = std::function<void()>;
 
 /**
  * @brief Event struct
- * 
+ *
  * This struct defines a single event that can be triggered by the EventTrigger class.
  * It contains a reference to the event handler, and the priority of the event.
  * The priority is used to determine the order in which events are processed by the EventLoop.
@@ -90,17 +90,17 @@ struct Event
 
 /**
  * @brief EventTrigger class
- * 
+ *
  * This class provides a way to trigger events in an EventLoop.
  * It uses a priority queue to manage the events, with low priority events being processed first.
  * Events can be added using the addEvent() method, and then triggered using the triggerEvents() method.
- * 
- * @details 
+ *
+ * @details
  * The EventTrigger class is designed to be easy to use and flexible.
  * It allows for registering events with different priorities, making it possible to handle events in the order they were registered.
  * The events are processed by the EventLoop in the order they were added, making it possible to handle events based on their priority.
- * 
- * @note 
+ *
+ * @note
  * This class is designed to be thread-safe.
  */
 class EventTrigger
@@ -108,10 +108,10 @@ class EventTrigger
 public:
     /**
      * @brief Add an event to the event trigger
-     * 
+     *
      * Add an event to the event trigger to be triggered.
      * The event will be triggered when the triggerEvents() method is called.
-     * 
+     *
      * @tparam F The type of the event handler
      * @param priority The priority of the event
      * @param f The event handler
@@ -128,7 +128,7 @@ public:
 
     /**
      * @brief Trigger all events
-     * 
+     *
      * Trigger all events in the event trigger.
      * This method should be called from the event loop thread.
      */
@@ -136,22 +136,22 @@ public:
 
 private:
     std::priority_queue<Event> eventQueue; ///< The queue of events
-    std::mutex mutex; ///< The mutex for thread synchronization
+    std::mutex mutex;                      ///< The mutex for thread synchronization
 };
 
 /**
  * @brief EventLoop class
- * 
+ *
  * This class provides an event loop for asynchronous tasks.
  * It allows for registering events and tasks, and then running the event loop to process them.
- * 
- * @details 
+ *
+ * @details
  * The EventLoop class is designed to be easy to use and flexible.
  * It uses a priority queue to manage events, with low priority events being processed first.
  * Tasks can be added to the event loop as either synchronous or asynchronous.
  * Synchronous tasks are executed immediately by the event loop, while asynchronous tasks are executed in a separate thread.
- * 
- * @note 
+ *
+ * @note
  * This class is designed to be thread-safe.
  */
 class EventLoop
@@ -159,7 +159,7 @@ class EventLoop
 public:
     /**
      * @brief Start the event loop
-     * 
+     *
      * Start the event loop running in a separate thread.
      * This method should be called after all events and tasks have been registered.
      */
@@ -167,7 +167,7 @@ public:
 
     /**
      * @brief Stop the event loop
-     * 
+     *
      * Stop the event loop from running.
      * This method should be called when the event loop is no longer needed.
      */
@@ -175,10 +175,10 @@ public:
 
     /**
      * @brief Add a task to the event loop
-     * 
+     *
      * Add a task to the event loop to be executed.
      * The task can be a synchronous function or a coroutine.
-     * 
+     *
      * @tparam F The type of the task to add
      * @param task The task to add
      */
@@ -191,10 +191,10 @@ public:
 
     /**
      * @brief Add an event to the event loop
-     * 
+     *
      * Add an event to the event loop to be processed.
      * The event will be executed when the event loop is running.
-     * 
+     *
      * @tparam F The type of the event handler
      * @param priority The priority of the event
      * @param f The event handler
@@ -214,10 +214,10 @@ public:
 
     /**
      * @brief Register an event trigger
-     * 
+     *
      * Register an event trigger with the event loop.
      * The event trigger will be called when an event is triggered.
-     * 
+     *
      * @tparam F The type of the event trigger
      * @param f The event trigger
      * @param args The arguments to pass to the event trigger
@@ -231,7 +231,7 @@ public:
 private:
     /**
      * @brief Process events in the event queue
-     * 
+     *
      * Process all events in the event queue, sorted by priority.
      * Low priority events are processed first.
      */
@@ -239,7 +239,7 @@ private:
 
     /**
      * @brief Process asynchronous tasks
-     * 
+     *
      * Process all asynchronous tasks, executing them one at a time.
      * This method is called from the event loop thread.
      */
@@ -247,33 +247,33 @@ private:
 
     /**
      * @brief Thread function for the event loop
-     * 
+     *
      * This method is called from the event loop thread.
      * It runs the event loop, processing events and tasks as needed.
      */
     void eventLoopThreadFunc();
 
-    bool running; ///< Flag indicating if the event loop is running
-    std::mutex mutex; ///< Mutex for thread synchronization
+    bool running;                              ///< Flag indicating if the event loop is running
+    std::mutex mutex;                          ///< Mutex for thread synchronization
     std::vector<std::future<void>> asyncTasks; ///< Queue of asynchronous tasks
-    EventTrigger eventTrigger; ///< Event trigger for registered events
-    std::jthread eventLoopThread; ///< Thread for the event loop
+    EventTrigger eventTrigger;                 ///< Event trigger for registered events
+    std::jthread eventLoopThread;              ///< Thread for the event loop
 };
 
 // 定义协程类
 /**
  * @brief Coroutine class
- * 
+ *
  * This class provides a way to write asynchronous code using coroutines.
  * A coroutine is a lightweight thread that can be suspended and resumed at will.
  * It allows for writing asynchronous code that looks like synchronous code, making it easier to read and debug.
- * 
- * @details 
+ *
+ * @details
  * The Coroutine class is designed to be easy to use and flexible.
  * It allows for defining a coroutine as a regular function, and then starting it using the start() method.
  * The coroutine can be stopped using the stop() method, and it will automatically be stopped when the function returns.
- * 
- * @note 
+ *
+ * @note
  * This class is designed to be thread-safe.
  */
 class Coroutine
@@ -281,7 +281,7 @@ class Coroutine
 public:
     /**
      * @brief Construct a new Coroutine object
-     * 
+     *
      * @param loop The event loop to use for scheduling the coroutine
      */
     Coroutine(EventLoop &loop) : eventLoop(loop), task(nullptr), stopFlag(false) {}
@@ -296,10 +296,10 @@ public:
 
     /**
      * @brief Start the coroutine
-     * 
+     *
      * Start the coroutine running.
      * This method should be called after the coroutine has been defined.
-     * 
+     *
      * @tparam F The type of the coroutine function
      * @param f The coroutine function
      */
@@ -312,7 +312,7 @@ public:
 
     /**
      * @brief Stop the coroutine
-     * 
+     *
      * Stop the coroutine from running.
      * This method should be called when the coroutine is no longer needed.
      */
@@ -324,7 +324,7 @@ public:
 private:
     /**
      * @brief Run the coroutine
-     * 
+     *
      * This method is called from the event loop thread.
      * It runs the coroutine until it is stopped.
      */
@@ -338,7 +338,7 @@ private:
             } });
     }
 
-    EventLoop &eventLoop; ///< The event loop used for scheduling the coroutine
+    EventLoop &eventLoop;                        ///< The event loop used for scheduling the coroutine
     std::shared_ptr<std::function<void()>> task; ///< The coroutine function
-    bool stopFlag; ///< Flag indicating if the coroutine should be stopped
+    bool stopFlag;                               ///< Flag indicating if the coroutine should be stopped
 };

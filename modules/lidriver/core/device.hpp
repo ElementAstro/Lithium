@@ -32,18 +32,19 @@ Description: Basic Device Defination
 #ifndef DEVICE_H
 #define DEVICE_H
 
-#include <iostream>
 #include <any>
 #include <functional>
 #include <memory>
-#include <string_view>
-#include <map>
+#include <thread>
 
 #include <nlohmann/json.hpp>
 #include "emhash/hash_table8.hpp"
 
 #include "liproperty/iproperty.hpp"
-#include "task/device_task.hpp"
+#include "liproperty/task/device_task.hpp"
+
+#include "device_exception.hpp"
+#include "deviceio.hpp"
 
 class Device
 {
@@ -52,37 +53,27 @@ public:
     virtual ~Device();
 
 public:
-    virtual bool connect(const std::string &name) { return true; };
+    virtual bool connect(const IParams &params) { return true; };
 
-    virtual bool disconnect() { return true; };
+    virtual bool disconnect(const IParams &params) { return true; };
 
-    virtual bool reconnect() { return true; };
+    virtual bool reconnect(const IParams &params) { return true; };
 
     virtual void init();
 
-    void insertNumberProperty(const std::string &name, const double &value, std::vector<double> possible_values, PossibleValueType possible_type, bool need_check = false);
+    void insertProperty(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check = false);
 
-    void setNumberProperty(const std::string &name, const double &value);
+    void setProperty(const std::string &name, const std::any &value);
+
+    std::any getProperty(const std::string &name, bool need_refresh = true);
+
+    void removeProperty(const std::string &name);
 
     std::shared_ptr<INumberProperty> getNumberProperty(const std::string &name);
 
-    void insertStringProperty(const std::string &name, const std::string &value, std::vector<std::string> possible_values, PossibleValueType possible_type, bool need_check = false);
-
-    void setStringProperty(const std::string &name, const std::string &value);
-
     std::shared_ptr<IStringProperty> getStringProperty(const std::string &name);
 
-    void insertBoolProperty(const std::string &name, const bool &value, std::vector<bool> possible_values, PossibleValueType possible_type, bool need_check = false);
-
-    void setBoolProperty(const std::string &name, const bool &value);
-
     std::shared_ptr<IBoolProperty> getBoolProperty(const std::string &name);
-
-    void removeStringProperty(const std::string &name);
-
-    void removeNumberProperty(const std::string &name);
-
-    void removeBoolProperty(const std::string &name);
 
     void insertTask(const std::string &name, std::any defaultValue, nlohmann::json params_template,
                     const std::function<nlohmann::json(const nlohmann::json &)> &func,
@@ -93,74 +84,104 @@ public:
 
     std::shared_ptr<Lithium::SimpleTask> getTask(const std::string &name, const nlohmann::json &params);
 
-    void addStringObserver(const std::function<void(const std::shared_ptr<IStringProperty> &message)> &observer);
+    void addObserver(const std::function<void(const std::any &message)> &observer);
 
-    void removeStringObserver(const std::function<void(const std::shared_ptr<IStringProperty> &message)> &observer);
-
-    void addNumberObserver(const std::function<void(const std::shared_ptr<INumberProperty> &message)> &observer);
-
-    void removeNumberObserver(const std::function<void(const std::shared_ptr<INumberProperty> &message)> &observer);
-
-    void addBoolObserver(const std::function<void(const std::shared_ptr<IBoolProperty> &message)> &observer);
-
-    void removeBoolObserver(const std::function<void(const std::shared_ptr<IBoolProperty> &message)> &observer);
+    void removeObserver(const std::function<void(const std::any &message)> &observer);
 
     const nlohmann::json exportDeviceInfoToJson();
 
 private:
     // Why we use emhash8 : because it is so fast!
-    // Different types of properties
-    emhash8::HashMap<std::string, std::shared_ptr<INumberProperty>> number_properties;
-    emhash8::HashMap<std::string, std::shared_ptr<IStringProperty>> string_properties;
-    emhash8::HashMap<std::string, std::shared_ptr<IBoolProperty>> bool_properties;
-    emhash8::HashMap<std::string, std::shared_ptr<INumberVector>> number_vector_properties;
-    // Observers of different properties
-    std::vector<std::function<void(std::shared_ptr<INumberProperty>)>> number_observers;
-    std::vector<std::function<void(std::shared_ptr<IStringProperty>)>> string_observers;
-    std::vector<std::function<void(std::shared_ptr<IBoolProperty>)>> bool_observers;
-    std::vector<std::function<void(std::shared_ptr<INumberVector>)>> number_vector_observers;
+    // Map of the properties
+    emhash8::HashMap<std::string, std::any> m_properties;
+    // Vector of the observers, though one driver will only have one observer one time, but this is necessary
+    std::vector<std::function<void(const std::any &)>> m_observers;
+    // Map of the task
+    emhash8::HashMap<std::string, std::shared_ptr<DeviceTask>> task_map;
     // Basic Device name and UUID
     std::string _name;
     std::string _uuid;
-    // Map of the task
-    emhash8::HashMap<std::string, std::shared_ptr<DeviceTask>> task_map;
 
 public:
-    // insertNumberProperty
-    typedef void (*INP)(const std::string &, const double &, std::vector<double>, PossibleValueType, bool);
+    EventLoop eventLoop;
 
-    // setNumberProperty
-    typedef void (*SNP)(const std::string &, const double &);
+    std::jthread loopThread;
 
-    // getNumberProperty
-    typedef std::shared_ptr<INumberProperty> (*GNP)(const std::string &);
+    std::shared_ptr<SocketServer> deviceIOServer;
 
-    // insertStringProperty
-    typedef void (*ISP)(const std::string &, const std::string &, std::vector<std::string>, PossibleValueType, bool);
+public:
+    typedef emhash8::HashMap<std::string, std::any> IParams;
 
-    // setStringProperty
-    typedef void (*SSP)(const std::string &, const std::string &);
+    typedef emhash8::HashMap<std::string, std::any> IReturns;
 
-    // getStringProperty
-    typedef std::shared_ptr<IStringProperty> (*GSP)(const std::string &);
+    typedef bool (*ConnectFunc)(const IParams &params);
+    typedef bool (*DisconnectFunc)(const IParams &params);
+    typedef bool (*ReconnectFunc)(const IParams &params);
+    typedef void (*InitFunc)();
+    typedef void (*InsertPropertyFunc)(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check = false);
+    typedef void (*SetPropertyFunc)(const std::string &name, const std::any &value);
+    typedef std::any (*GetPropertyFunc)(const std::string &name);
+    typedef void (*RemovePropertyFunc)(const std::string &name);
+    typedef void (*InsertTaskFunc)(const std::string &name, std::any defaultValue, nlohmann::json params_template, const std::function<nlohmann::json(const nlohmann::json &)> &func, const std::function<nlohmann::json(const nlohmann::json &)> &stop_func, bool isBlock = false);
+    typedef bool (*RemoveTaskFunc)(const std::string &name);
+    typedef std::shared_ptr<Lithium::SimpleTask> (*GetTaskFunc)(const std::string &name, const nlohmann::json &params);
+    typedef void (*AddObserverFunc)(const std::function<void(const std::any &message)> &observer);
+    typedef void (*RemoveObserverFunc)(const std::function<void(const std::any &message)> &observer);
+    typedef const nlohmann::json (*ExportDeviceInfoToJsonFunc)();
 
-    // insertBoolProperty
-    typedef void (*IBP)(const std::string &, const bool &, std::vector<bool>, PossibleValueType, bool);
+    /**
+     * @brief HandlerFunc 是用于处理命令的函数类型。
+     *
+     * 该函数应该接受一个 `json` 类型的参数，表示命令所携带的数据。
+     */
+    using HandlerFunc = std::function<const IReturns(const IParams &)>;
 
-    // setBoolProperty
-    typedef void (*SBP)(const std::string &, const bool &);
+    /**
+     * @brief RegisterHandler 函数用于将一个命令处理程序注册到 `CommandDispatcher` 中。
+     *
+     * @tparam ClassType 命令处理程序所属的类类型。
+     * @param name 命令的名称。
+     * @param handler 处理命令的成员函数指针。
+     * @param instance 处理命令的对象指针。
+     */
+    template <typename ClassType>
+    void RegisterHandler(const std::string &name, const IReturns (ClassType::*handler)(const IParams &), ClassType *instance)
+    {
+        auto hash_value = Djb2Hash(name.c_str());
+        command_handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);
+    }
 
-    // getBoolProperty
-    typedef std::shared_ptr<IBoolProperty> (*GBP)(const std::string &);
+    /**
+     * @brief HasHandler 函数用于检查是否有名为 `name` 的命令处理程序。
+     *
+     * @param name 要检查的命令名称。
+     * @return 如果存在名为 `name` 的命令处理程序，则返回 `true`；否则返回 `false`。
+     */
+    bool HasHandler(const std::string &name);
 
-    // removeStringProperty
-    typedef void (*RSP)(const std::string &);
+    /**
+     * @brief Dispatch 函数用于派发一个命令，并将它交给相应的处理程序处理。
+     *
+     * @param name 要派发的命令的名称。
+     * @param data 命令所携带的数据。
+     */
+    IReturns Dispatch(const std::string &name, const IParams &data);
 
-    // removeNumberProperty
-    typedef void (*RNP)(const std::string &);
+private:
+    /**
+     * @brief command_handlers_ 是一个哈希表，存储了所有已注册的命令处理程序。
+     *
+     * 键值为哈希值，值为命令处理程序本身。
+     */
+    std::unordered_map<std::size_t, HandlerFunc> command_handlers_;
 
-    // removeBoolProperty
-    typedef void (*RBP)(const std::string &);
+    /**
+     * @brief Djb2Hash 函数是一个字符串哈希函数，用于将字符串转换成哈希值。
+     *
+     * @param str 要转换的字符串。
+     * @return 转换后的哈希值。
+     */
+    static std::size_t Djb2Hash(const char *str);
 };
 
 #endif // DEVICE_H

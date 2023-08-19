@@ -60,7 +60,9 @@ namespace Lithium
 
             m_ScriptManager = ChaiScriptManager::createShared(m_MessageBus);
 
-            m_MessageBus->StartProcessingThread<IProperty>();
+            m_MessageBus->StartProcessingThread<IStringProperty>();
+            m_MessageBus->StartProcessingThread<IBoolProperty>();
+            m_MessageBus->StartProcessingThread<INumberProperty>();
             LOG_F(INFO, "Lithium App Loaded.");
         }
         catch (const std::exception &e)
@@ -72,6 +74,7 @@ namespace Lithium
 
     LithiumApp::~LithiumApp()
     {
+        m_MessageBus->StopAllProcessingThreads();
     }
 
     nlohmann::json LithiumApp::GetConfig(const std::string &key_path) const

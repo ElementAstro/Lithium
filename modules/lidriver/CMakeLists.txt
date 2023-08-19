@@ -19,4 +19,16 @@ add_library(LithiumDriver
 
     core/solver.cpp
     core/solver.hpp
+
+    event/eventloop.cpp
+    event/eventloop.hpp
+
+    event/ioloop.cpp
+    event/ioloop.hpp
+
+    network/fifoclient.cpp
+    network/fifoclient.hpp
+
+    network/fifoserver.cpp
+    network/fifoserver.hpp
 )

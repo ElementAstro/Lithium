@@ -1,5 +1,5 @@
 /*
- * focuser.hpp
+ * filterwheel.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-6-1
 
-Description: Basic Focuser Defination
+Description: Basic FilterWheel Defination
 
 *************************************************/
 

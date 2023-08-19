@@ -45,9 +45,7 @@ Description: Device Manager
 #include "loguru/loguru.hpp"
 #include "tl/expected.hpp"
 
-#if __cplusplus >= 202002L
 #include <format>
-#endif
 #include <typeinfo>
 
 namespace Lithium
@@ -63,6 +61,7 @@ namespace Lithium
         {
             devices.emplace_back();
         }
+        m_EventLoop->start();
     }
 
     DeviceManager::~DeviceManager()
@@ -92,7 +91,7 @@ namespace Lithium
         {
             if (device)
             {
-                deviceList.emplace_back(device->getProperty("name"));
+                deviceList.emplace_back(device->getStringProperty("name")->value);
             }
         }
         return deviceList;
@@ -223,17 +222,9 @@ namespace Lithium
             LOG_F(ERROR, "Failed to add device %s , error : %s", newName.c_str(), e.what());
             return false;
         }
-#if __cplusplus >= 202002L
-        const std::string newNameKey = std::format("driver/{}/name", newName);
-#else
-        std::stringstream ss;
-        ss << "driver/ << " << newName << "/name";
-        const std::string newNameKey = ss.str();
-#endif
-        LOG_F(INFO, "%s", newNameKey.c_str());
         if (m_ConfigManager)
         {
-            m_ConfigManager->setValue(newNameKey, newName);
+            m_ConfigManager->setValue(std::format("driver/{}/name", newName), newName);
         }
         else
         {
@@ -264,11 +255,17 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it)
         {
-            if (*it && (*it)->getProperty("name") == name)
+            if (*it && (*it)->getStringProperty("name")->value == name)
             {
-                (*it)->addObserver([this](const IProperty &message)
-                                   { messageBusPublish(message); });
-                LOG_F(INFO, "Add device %s observer successfully", name.c_str());
+                (*it)->addStringObserver([this](const std::shared_ptr<IStringProperty> &message)
+                                         { messageBusPublishString(message); });
+                LOG_F(INFO, "Add device %s string observer successfully", name.c_str());
+                (*it)->addBoolObserver([this](const std::shared_ptr<IBoolProperty> &message)
+                                       { messageBusPublishBool(message); });
+                LOG_F(INFO, "Add device %s bool observer successfully", name.c_str());
+                (*it)->addNumberObserver([this](const std::shared_ptr<INumberProperty> &message)
+                                         { messageBusPublishNumber(message); });
+                LOG_F(INFO, "Add device %s number observer successfully", name.c_str());
                 return true;
             }
         }
@@ -283,21 +280,14 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it)
         {
-            if (*it && (*it)->getProperty("name") == name)
+            if (*it && (*it)->getStringProperty("name")->value == name)
             {
                 (*it)->getTask("disconnect", {});
                 devices.erase(it);
                 LOG_F(INFO, "Remove device %s successfully", name.c_str());
-#if __cplusplus >= 202002L
-                const std::string NameKey = std::format("driver/{}", name);
-#else
-                std::stringstream ss;
-                ss << "driver/ << " << name;
-                const std::string NameKey = ss.str();
-#endif
                 if (m_ConfigManager)
                 {
-                    m_ConfigManager->deleteValue(NameKey);
+                    m_ConfigManager->deleteValue(std::format("driver/{}", name));
                 }
                 else
                 {
@@ -318,19 +308,12 @@ namespace Lithium
         {
             devices.erase(std::remove_if(devices.begin(), devices.end(),
                                          [&](const std::shared_ptr<Device> &device)
-                                         { return device && device->getProperty("name") == name; }),
+                                         { return device && device->getStringProperty("name")->value == name; }),
                           devices.end());
         }
-#if __cplusplus >= 202002L
-        const std::string NameKey = std::format("driver/{}", name);
-#else
-        std::stringstream ss;
-        ss << "driver/ << " << name;
-        const std::string NameKey = ss.str();
-#endif
         if (m_ConfigManager)
         {
-            m_ConfigManager->deleteValue(NameKey);
+            m_ConfigManager->deleteValue(std::format("driver/{}", name));
         }
         else
         {
@@ -375,7 +358,7 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (size_t i = 0; i < devices.size(); ++i)
         {
-            if (devices[i] && devices[i]->getProperty("name") == name)
+            if (devices[i] && devices[i]->getStringProperty("name")->value == name)
             {
                 return i;
             }
@@ -389,7 +372,7 @@ namespace Lithium
         {
             for (const auto &device : devices)
             {
-                if (device && device->getProperty("name") == name)
+                if (device && device->getStringProperty("name")->value == name)
                 {
                     return device;
                 }
@@ -416,20 +399,20 @@ namespace Lithium
             }
             case DeviceType::Telescope:
             {
-                // LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, device_type);
-                //  return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
+                LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, task_name.c_str());
+                return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Focuser:
             {
-                // LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, device_type);
-                //  return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
+                LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, task_name.c_str());
+                return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::FilterWheel:
             {
-                // LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, device_type);
-                //  return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
+                LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, task_name.c_str());
+                return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Solver:
@@ -452,50 +435,126 @@ namespace Lithium
         return nullptr;
     }
 
-    void DeviceManager::messageBusPublish(const IProperty &message)
+    void DeviceManager::messageBusPublishString(const std::shared_ptr<IStringProperty> &message)
     {
-        LOG_F(INFO, "Reviced device message with content %s", message.getValue<std::string>().c_str());
         if (m_MessageBus)
         {
-            m_MessageBus->Publish<IProperty>("main", message);
+            m_MessageBus->Publish<std::shared_ptr<IStringProperty>>("main", message);
         }
         if (!m_ConfigManager)
         {
             LOG_F(ERROR, "Config manager not initialized");
-            return;
         }
-        if (message.value.has_value())
+        else
         {
-#if __cplusplus >= 202002L
-            const std::string NameKey = std::format("driver/{}/{}", message.device_name, message.name);
-#else
-            std::stringstream ss;
-            ss << "driver/" << name << "/" << message.device_name << "/" << message.name;
-            const std::string NameKey = ss.str();
-#endif
-            try
+            if (!message->value.empty())
             {
-                if (message.value.type() == typeid(int))
-                {
-                    m_ConfigManager->setValue(NameKey, std::any_cast<int>(message.value));
-                }
-                else if (message.value.type() == typeid(double))
-                {
-                    m_ConfigManager->setValue(NameKey, std::any_cast<double>(message.value));
-                }
-                else if (message.value.type() == typeid(std::string))
-                {
-                    m_ConfigManager->setValue(NameKey, std::any_cast<std::string>(message.value));
-                }
-                else
-                {
-                    LOG_F(WARNING, "Unknown type of message value is received from %s %s", message.device_name.c_str(), message.name.c_str());
-                }
-            }
-            catch (std::bad_any_cast &e)
-            {
-                LOG_F(ERROR, "Failed to convert value in %s from %s", message.name.c_str(), message.device_name.c_str());
+                m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
             }
         }
+    }
+
+    void DeviceManager::messageBusPublishNumber(const std::shared_ptr<INumberProperty> &message)
+    {
+        if (m_MessageBus)
+        {
+            m_MessageBus->Publish<std::shared_ptr<INumberProperty>>("main", message);
+        }
+        if (!m_ConfigManager)
+        {
+            LOG_F(ERROR, "Config manager not initialized");
+        }
+        else
+        {
+            m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
+        }
+    }
+
+    void DeviceManager::messageBusPublishBool(const std::shared_ptr<IBoolProperty> &message)
+    {
+        if (m_MessageBus)
+        {
+            m_MessageBus->Publish<std::shared_ptr<IBoolProperty>>("main", message);
+        }
+        if (!m_ConfigManager)
+        {
+            LOG_F(ERROR, "Config manager not initialized");
+        }
+        else
+        {
+            m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
+        }
+    }
+
+    tl::expected<bool, std::string> DeviceManager::setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value)
+    {
+        m_EventLoop->addTask([this, &value, &type, &name, &value_name]()
+                             {
+                                 auto device = getDevice(type, name);
+                                 if (!device)
+                                 {
+                                     LOG_F(ERROR, "%s not found");
+                                     return;
+                                 }
+                                 try
+                                 {
+                                     if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
+                                     {
+                                         device->setStringProperty(value_name, std::any_cast<std::string>(value));
+                                     }
+                                     else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
+                                     {
+                                         device->setNumberProperty(value_name, std::any_cast<double>(value));
+                                     }
+                                     else if (value.type() == typeid(bool))
+                                     {
+                                        device->setBoolProperty(value_name,std::any_cast<bool>(value));
+                                     }
+                                     else
+                                     {
+                                        LOG_F(ERROR,"Unknown type of the value : %s",value_name.c_str());
+                                     }
+                                 }
+                                 catch (const std::bad_any_cast &e)
+                                 {
+                                     LOG_F(ERROR, "Failed to convert %s of %s with %s", value_name.c_str(), name.c_str(), e.what());
+                                 } });
+        return true;
+    }
+
+    tl::expected<bool, std::string> DeviceManager::setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value)
+    {
+        m_EventLoop->addTask([this, &value, &name, &value_name]()
+                             {
+                                 auto device = findDeviceByName(name);
+                                 if (!device)
+                                 {
+                                     LOG_F(ERROR, "%s not found");
+                                     return;
+                                 }
+                                 try
+                                 {
+                                     if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
+                                     {
+                                         device->setStringProperty(value_name, std::any_cast<std::string>(value));
+                                     }
+                                     else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
+                                     {
+                                         device->setNumberProperty(value_name, std::any_cast<double>(value));
+                                     }
+                                     else if (value.type() == typeid(bool))
+                                     {
+                                        device->setBoolProperty(value_name,std::any_cast<bool>(value));
+                                     }
+                                     else
+                                     {
+                                        LOG_F(ERROR,"Unknown type of the value : %s",value_name.c_str());
+                                     }
+                                 }
+                                 catch (const std::bad_any_cast &e)
+                                 {
+                                     LOG_F(ERROR, "Failed to convert %s of %s with %s", value_name.c_str(), name.c_str(), e.what());
+                                 } });
+        return true;
     }
 }

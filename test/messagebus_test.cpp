@@ -9,6 +9,7 @@
 #include <thread>
 #include <algorithm>
 #include <mutex>
+#include <typeindex>
 #include <condition_variable>
 
 #include "loguru/loguru.hpp"
@@ -103,8 +104,9 @@ public:
     template <typename T>
     void StartProcessingThread()
     {
-        processingThread_ = std::jthread([&]()
-                                         {
+        std::type_index typeIndex = typeid(T);
+        processingThreads_.emplace(typeIndex, std::jthread([&]()
+                                                           {
             while (isRunning_.load()) {
                 std::pair<std::string, std::any> message;
                 bool hasMessage = false;
@@ -163,20 +165,34 @@ public:
 
                     LOG_F(INFO, "Processed message on topic: %s", topic.c_str());
                 }
-            } });
+            } }));
     }
 
+    template <typename T>
     void StopProcessingThread()
+    {
+        std::type_index typeIndex = typeid(T);
+        auto it = processingThreads_.find(typeIndex);
+        if (it != processingThreads_.end())
+        {
+            it->second.request_stop();
+            it->second.join();
+            processingThreads_.erase(it);
+            LOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+        }
+    }
+
+    void StopAllProcessingThreads()
     {
         isRunning_.store(false);
         messageAvailableFlag_.notify_one();
-
-        if (processingThread_.joinable())
+        for (auto &thread : processingThreads_)
         {
-            processingThread_.join();
-            processingThread_.request_stop();
-            LOG_F(INFO, "Processing thread stopped");
+            thread.second.request_stop();
+            thread.second.join();
         }
+        processingThreads_.clear();
+        LOG_F(INFO, "All processing threads stopped");
     }
 
 private:
@@ -186,76 +202,58 @@ private:
     std::mutex messageQueueLock_;
     std::condition_variable messageAvailableFlag_;
     std::mutex waitingMutex_;
-    std::jthread processingThread_;
+    std::unordered_map<std::type_index, std::jthread> processingThreads_;
     std::atomic<bool> isRunning_{true};
 
     std::vector<std::any> globalSubscribers_;
     std::mutex globalSubscribersLock_;
 };
 
-void callback1(const std::string &message)
+struct MessageA
 {
-    LOG_F(INFO, "Callback 1: %s", message.c_str());
+    std::string content;
+};
+
+struct MessageB
+{
+    int value;
+};
+
+void CallbackA(const MessageA &message)
+{
+    LOG_F(INFO, "Received MessageA: %s", message.content.c_str());
 }
 
-void callback2(const std::string &message)
+void CallbackB(const MessageB &message)
 {
-    LOG_F(INFO, "Callback 2: %s", message.c_str());
-}
-
-void callback3(const std::string &message)
-{
-    LOG_F(INFO, "Callback 3: %s", message.c_str());
+    LOG_F(INFO, "Received MessageB: %d", message.value);
 }
 
 int main()
 {
-    // 创建 MessageBus 对象
-    MessageBus messageBus;
+    MessageBus bus;
 
-    // 定义回调函数
+    // 订阅 MessageA 类型的消息
+    bus.Subscribe<MessageA>("topicA", CallbackA);
 
-    messageBus.StartProcessingThread<std::string>();
+    // 订阅 MessageB 类型的消息
+    bus.Subscribe<MessageB>("topicB", CallbackB);
 
-    // 订阅主题 'topic1' 的回调函数 callback1，属于命名空间 'NamespaceA'
-    messageBus.Subscribe<std::string>("topic1", callback1, 0, "NamespaceA");
+    bus.StartProcessingThread<MessageA>();
 
-    // 订阅主题 'topic1' 的回调函数 callback2，属于命名空间 'NamespaceB'
-    messageBus.Subscribe<std::string>("topic1", callback2, 0, "NamespaceB");
+    bus.StartProcessingThread<MessageB>();
 
-    // 订阅主题 'topic2' 的回调函数 callback3，属于命名空间 'NamespaceB'
-    messageBus.Subscribe<std::string>("topic2", callback3, 0, "NamespaceB");
+    // 发布 MessageA 类型的消息
+    MessageA messageA;
+    messageA.content = "Hello, MessageA!";
+    bus.Publish("topicA", messageA);
 
-    // 订阅命名空间 'NamespaceA' 的所有主题的回调函数 callback1
-    messageBus.SubscribeToNamespace<std::string>("NamespaceA", callback1);
+    // 发布 MessageB 类型的消息
+    MessageB messageB;
+    messageB.value = 42;
+    bus.Publish("topicB", messageB);
 
-    // 订阅命名空间 'NamespaceB' 的所有主题的回调函数 callback2
-    messageBus.SubscribeToNamespace<std::string>("NamespaceB", callback2);
-
-    // 发布消息到命名空间 'NamespaceA' 的主题 'topic1'
-    messageBus.Publish("topic1", std::string("Message for topic1 in NamespaceA"), "NamespaceA");
-    // 输出:
-    // Callback 1: Message for topic1 in NamespaceA
-
-    // 发布消息到命名空间 'NamespaceB' 的主题 'topic1'
-    messageBus.Publish("topic1", std::string("Message for topic1 in NamespaceB"), "NamespaceB");
-    // 输出:
-    // Callback 2: Message for topic1 in NamespaceB
-
-    // 发布消息到命名空间 'NamespaceB' 的主题 'topic2'
-    messageBus.Publish("topic2", std::string("Message for topic2 in NamespaceB"), "NamespaceB");
-    // 输出:
-    // Callback 3: Message for topic2 in NamespaceB
-
-    // 取消订阅命名空间 'NamespaceB' 的主题 'topic1' 的 callback2
-    messageBus.Unsubscribe<std::string>("topic1", callback2, "NamespaceB");
-
-    // 再次发布消息到命名空间 'NamespaceB' 的主题 'topic1'
-    messageBus.Publish("topic1", std::string("Another message for topic1 in NamespaceB"), "NamespaceB");
-    // 输出为空，因为 callback2 已被取消订阅
-
-    // 停止消息处理线程
-    messageBus.StopProcessingThread();
+    bus.StopAllProcessingThreads();
 
     return 0;
 }

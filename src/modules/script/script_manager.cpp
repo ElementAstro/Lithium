@@ -21,6 +21,7 @@
 #include "loguru/loguru.hpp"
 #include "tl/expected.hpp"
 #include "nlohmann/json.hpp"
+#include "utf8/utf8.h"
 
 #include "error/error_code.hpp"
 
@@ -48,27 +49,11 @@ namespace Lithium
 
     void ChaiScriptManager::Init()
     {
-        // Inject IProperty
-        chai_->add(chaiscript::fun(&IProperty::device_name), "device_name");
-        chai_->add(chaiscript::fun(&IProperty::device_uuid), "device_uuid");
-        chai_->add(chaiscript::fun(&IProperty::message_uuid), "message_uuid");
-        chai_->add(chaiscript::fun(&IProperty::name), "name");
-        chai_->add(chaiscript::fun(&IProperty::value), "value");
-        chai_->add(chaiscript::fun(&IProperty::GetName), "get_name");
-        chai_->add(chaiscript::fun(&IProperty::toJson), "to_json");
-        chai_->add(chaiscript::fun(&IProperty::toXml), "to_xml");
-        chai_->add(chaiscript::fun(&IProperty::GetMessageUUID), "get_message_uuid");
-        chai_->add(chaiscript::fun(&IProperty::SetMessageUUID), "set_message_uuid");
-        chai_->add(chaiscript::fun(&IProperty::GetDeviceUUID), "get_device_uuid");
-        chai_->add(chaiscript::fun(&IProperty::SetDeviceUUID), "set_device_uuid");
-        chai_->add(chaiscript::fun(&IProperty::getValue<std::string>), "get_value");
-        chai_->add(chaiscript::fun(&IProperty::setValue<std::string>), "set_value");
-        chai_->add(chaiscript::constructor<IProperty()>(), "IProperty");
-        chai_->add(chaiscript::user_type<IProperty>(), "IProperty");
-
         // Add Base64 support
         chai_->add(chaiscript::fun(&Base64::base64Decode), "base64_decode");
         chai_->add(chaiscript::fun(&Base64::base64Encode), "base64_encode");
+        chai_->add(chaiscript::fun(&Base64::base64EncodeEnhance), "base64encode_e");
+        chai_->add(chaiscript::fun(&Base64::base64DecodeEnhance), "base64decode_e");
 
         // Add UUID support
         chai_->add(chaiscript::fun(&UUID::UUIDGenerator::seed), "seed");

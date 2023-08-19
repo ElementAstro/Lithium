@@ -30,183 +30,156 @@ Description: Device IO Module
 *************************************************/
 
 #include "deviceio.hpp"
+#include "lidriver/event/eventloop.hpp"
 
 #include <loguru/loguru.hpp>
 
-SocketServer::SocketServer(int port)
-    : port_(port), listenSocket_(INVALID_SOCKET), isRunning_(false)
+#include <iostream>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <unistd.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#define SOCKET int
+#define INVALID_SOCKET -1
+#define SOCKET_ERROR -1
+#define closesocket(s) close(s)
+#endif
+
+SocketServer::SocketServer(EventLoop &eventLoop, int port)
+    : eventLoop(eventLoop), port(port), serverSocket(INVALID_SOCKET) {}
+
+void SocketServer::start()
 {
+    LOG_F(INFO, "Starting server on port %d", port);
+
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
         LOG_F(ERROR, "Failed to initialize Winsock");
-    }
-#endif
-}
-
-SocketServer::~SocketServer()
-{
-    Stop();
-}
-
-void SocketServer::Start()
-{
-    if (isRunning_)
-    {
         return;
     }
-
-#ifdef _WIN32
-    listenSocket_ = socket(AF_INET, SOCK_STREAM, 0);
-#else
-    listenSocket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 #endif
-    if (listenSocket_ == INVALID_SOCKET)
+
+    serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (serverSocket == INVALID_SOCKET)
     {
+        LOG_F(ERROR, "Failed to create socket");
 #ifdef _WIN32
         WSACleanup();
 #endif
-        LOG_F(ERROR, "Failed to create socket");
+        return;
     }
 
     sockaddr_in serverAddress{};
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = INADDR_ANY;
-    serverAddress.sin_port = htons(port_);
+    serverAddress.sin_port = htons(port);
 
-    if (bind(listenSocket_, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
+    if (bind(serverSocket, (sockaddr *)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
     {
-#ifdef _WIN32
-        closesocket(listenSocket_);
-        WSACleanup();
-#else
-        close(listenSocket_);
-#endif
         LOG_F(ERROR, "Failed to bind socket");
-    }
-
-    if (listen(listenSocket_, SOMAXCONN) < 0)
-    {
+        closesocket(serverSocket);
 #ifdef _WIN32
-        closesocket(listenSocket_);
         WSACleanup();
-#else
-        close(listenSocket_);
 #endif
-        LOG_F(ERROR, "Failed to listen");
-    }
-
-    isRunning_ = true;
-    acceptThread_ = std::thread([&]()
-                                { AcceptThread(); });
-}
-
-void SocketServer::Stop()
-{
-    if (!isRunning_)
-    {
         return;
     }
 
-    isRunning_ = false;
-
+    if (listen(serverSocket, 5) == SOCKET_ERROR)
+    {
+        LOG_F(ERROR, "Failed to listen on socket");
+        closesocket(serverSocket);
 #ifdef _WIN32
-    closesocket(listenSocket_);
-    WSACleanup();
-#else
-    close(listenSocket_);
+        WSACleanup();
 #endif
-
-    if (acceptThread_.joinable())
-    {
-        acceptThread_.join();
+        return;
     }
 
-    for (auto &thread : clientThreads_)
-    {
-        if (thread.joinable())
-        {
-            thread.join();
-        }
-    }
-    clientThreads_.clear();
+    eventLoop.registerEventTrigger([this]()
+                                   { acceptClientConnection(); });
+
+    LOG_F(INFO, "Server started on port %d", port);
+    running = true;
 }
 
-void SocketServer::SetMessageHandler(std::function<void(const std::string &, SOCKET)> handler)
+void SocketServer::stop()
 {
-    messageHandler_ = std::move(handler);
+    if (serverSocket != INVALID_SOCKET)
+    {
+        closesocket(serverSocket);
+#ifdef _WIN32
+        WSACleanup();
+#endif
+        serverSocket = INVALID_SOCKET;
+    }
+    running = false;
 }
 
-void SocketServer::SendMessage(const std::string &message, SOCKET clientSocket)
+bool SocketServer::is_running()
+{
+    return running;
+}
+
+void SocketServer::setMessageHandler(MessageHandler handler)
+{
+    messageHandler = std::move(handler);
+}
+
+void SocketServer::sendMessage(int clientSocket, const std::string &message)
 {
     send(clientSocket, message.c_str(), message.length(), 0);
 }
 
-void SocketServer::AcceptThread()
+void SocketServer::acceptClientConnection()
 {
-    while (isRunning_)
+    sockaddr_in clientAddress{};
+    socklen_t clientAddressLength = sizeof(clientAddress);
+
+    SOCKET clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientAddressLength);
+    if (clientSocket == INVALID_SOCKET)
     {
-        sockaddr_in clientAddress;
-        int clientAddressLength = sizeof(clientAddress);
-
-        SOCKET clientSocket = accept(listenSocket_, (struct sockaddr *)&clientAddress, (socklen_t *)&clientAddressLength);
-        if (clientSocket == INVALID_SOCKET)
-        {
-            LOG_F(ERROR, "Failed to accept client connection");
-            continue;
-        }
-
-        try
-        {
-            clientThreads_.emplace_back([&]()
-                                        { ClientThread(clientSocket); });
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Error occurred in client thread: %s", e.what());
-
-#ifdef _WIN32
-            closesocket(clientSocket);
-#else
-            close(clientSocket);
-#endif
-        }
+        LOG_F(ERROR, "Failed to accept client connection");
+        return;
     }
+
+    eventLoop.addTask([this, clientSocket]()
+                      { handleClientMessage(clientSocket); });
 }
 
-void SocketServer::ClientThread(SOCKET clientSocket)
+void SocketServer::handleClientMessage(int clientSocket)
 {
     char buffer[1024];
-    std::string clientIP = inet_ntoa(((struct sockaddr_in *)&clientSocket)->sin_addr);
-    int bytesRead;
 
-    try
+    int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+    if (bytesRead == SOCKET_ERROR)
     {
-        while ((bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0)) > 0)
-        {
-            buffer[bytesRead] = '\0';
+        LOG_F(ERROR, "Failed to read from client socket");
+    }
+    else if (bytesRead == 0)
+    {
+        closesocket(clientSocket);
+    }
+    else
+    {
+        std::string message(buffer, bytesRead);
+        LOG_F(INFO, "Received message from client: %s", message.c_str());
 
-            if (messageHandler_)
-            {
-                messageHandler_(std::string(buffer), clientSocket);
-            }
+        if (messageHandler)
+        {
+            messageHandler(message);
         }
 
-#ifdef _WIN32
-        closesocket(clientSocket);
-#else
-        close(clientSocket);
-#endif
-    }
-    catch (const std::exception &e)
-    {
-        LOG_F(ERROR, "Error occurred in client thread: %s", e.what());
+        std::string response = "Server response: " + message;
+        sendMessage(clientSocket, response);
 
-#ifdef _WIN32
-        closesocket(clientSocket);
-#else
-        close(clientSocket);
-#endif
+        handleClientMessage(clientSocket);
     }
 }

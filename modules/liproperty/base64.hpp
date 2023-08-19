@@ -34,6 +34,7 @@ Description: Base64
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cstdint>
 
 namespace Lithium::Base64
 {
@@ -53,5 +54,9 @@ namespace Lithium::Base64
      * @return std::vector<unsigned char> 解码后的数据
      */
     std::vector<unsigned char> base64Decode(const std::string &encoded_string);
+
+    std::string base64EncodeEnhance(const std::vector<uint8_t> &bytes_to_encode);
+
+    std::vector<uint8_t> base64DecodeEnhance(const std::string &encoded_string);
 
 }

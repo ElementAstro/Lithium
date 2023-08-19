@@ -31,6 +31,8 @@ Description: Main Message Bus
 
 #pragma once
 
+#define HAS_MESSAGE_BUS
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -42,6 +44,7 @@ Description: Main Message Bus
 #include <thread>
 #include <algorithm>
 #include <mutex>
+#include <typeindex>
 #include <condition_variable>
 
 #include "loguru/loguru.hpp"
@@ -136,8 +139,9 @@ public:
     template <typename T>
     void StartProcessingThread()
     {
-        processingThread_ = std::jthread([&]()
-                                         {
+        std::type_index typeIndex = typeid(T);
+        processingThreads_.emplace(typeIndex, std::jthread([&]()
+                                                           {
             while (isRunning_.load()) {
                 std::pair<std::string, std::any> message;
                 bool hasMessage = false;
@@ -196,20 +200,34 @@ public:
 
                     LOG_F(INFO, "Processed message on topic: %s", topic.c_str());
                 }
-            } });
+            } }));
     }
 
+    template <typename T>
     void StopProcessingThread()
+    {
+        std::type_index typeIndex = typeid(T);
+        auto it = processingThreads_.find(typeIndex);
+        if (it != processingThreads_.end())
+        {
+            it->second.request_stop();
+            it->second.join();
+            processingThreads_.erase(it);
+            LOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+        }
+    }
+
+    void StopAllProcessingThreads()
     {
         isRunning_.store(false);
         messageAvailableFlag_.notify_one();
-
-        if (processingThread_.joinable())
+        for (auto &thread : processingThreads_)
         {
-            processingThread_.join();
-            processingThread_.request_stop();
-            LOG_F(INFO, "Processing thread stopped");
+            thread.second.request_stop();
+            thread.second.join();
         }
+        processingThreads_.clear();
+        LOG_F(INFO, "All processing threads stopped");
     }
 
 private:
@@ -219,7 +237,7 @@ private:
     std::mutex messageQueueLock_;
     std::condition_variable messageAvailableFlag_;
     std::mutex waitingMutex_;
-    std::jthread processingThread_;
+    std::unordered_map<std::type_index, std::jthread> processingThreads_;
     std::atomic<bool> isRunning_{true};
 
     std::vector<std::any> globalSubscribers_;

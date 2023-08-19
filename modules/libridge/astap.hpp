@@ -46,6 +46,19 @@ namespace Lithium::API::ASTAP
      * @param update 是否在执行匹配后更新图片。默认为true。
      * @param image 需要匹配的图像文件路径。该参数必须提供。
      * @return 如果匹配成功，返回包含星表数据的映射；否则返回一个错误消息。
+     * @brief run_astap function
+     *
+     * This function uses the ASTAP algorithm to perform image matching and returns the matching results.
+     * If the matching is successful, it returns a map containing the star catalog data; otherwise, it returns an error message.
+     *
+     * @param ra The right ascension of the image region (degrees). If not specified
+     * @param dec The declination of the image region (degrees). If not specified
+     * @param fov The field of view of the image (degrees). If not specified
+     * @param timeout The timeout for executing the command (in seconds). The default value is 30 seconds.
+     * @param update Whether to update the image after matching. The default value is true.
+     * @param image The path of the image file to be matched. This parameter is required.
+     * @return If the matching is successful, it returns a map containing the star catalog data; otherwise, it returns an error message.
+     *
      * */
     std::map<std::string, std::string> run_astap(double ra = 0.0, double dec = 0.0, double fov = 0.0, int timeout = 30, bool update = true, std::string image = "");
 } // namespace Lithium::API::ASTAP

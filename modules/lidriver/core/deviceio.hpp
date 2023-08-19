@@ -29,43 +29,39 @@ Description: Device IO Module
 
 *************************************************/
 
-#include <string>
-#include <thread>
-#include <vector>
-#include <nlohmann/json.hpp>
+#ifndef SOCKET_SERVER_H
+#define SOCKET_SERVER_H
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#define SOCKET int
-#define INVALID_SOCKET -1
-#endif
+#include <functional>
 
-using json = nlohmann::json;
+#include "lidriver/event/eventloop.hpp"
+
+class EventLoop;
 
 class SocketServer
 {
 public:
-    SocketServer(int port);
-    ~SocketServer();
+    using MessageHandler = std::function<void(const std::string &)>;
 
-    void Start();
-    void Stop();
-    void SetMessageHandler(std::function<void(const std::string &, SOCKET)> handler);
-    void SendMessage(const std::string &message, SOCKET clientSocket);
+    SocketServer(EventLoop &eventLoop, int port);
+
+    void start();
+    void stop();
+
+    bool is_running();
+
+    void setMessageHandler(MessageHandler handler);
+    void sendMessage(int clientSocket, const std::string &message);
 
 private:
-    int port_;
-    SOCKET listenSocket_;
-    std::thread acceptThread_;
-    std::function<void(const std::string &, SOCKET)> messageHandler_;
-    std::vector<std::thread> clientThreads_;
-    bool isRunning_;
+    EventLoop &eventLoop;
+    int port;
+    int serverSocket;
+    bool running;
+    MessageHandler messageHandler;
 
-    void AcceptThread();
-    void ClientThread(SOCKET clientSocket);
+    void acceptClientConnection();
+    void handleClientMessage(int clientSocket);
 };
+
+#endif // SOCKET_SERVER_H

@@ -33,7 +33,11 @@ Description: Camera Simulator and Basic Definition
 
 #include "device.hpp"
 
-class Camera : public Device
+#ifdef ENABLE_SHARED_MEMORY
+#include "shared_memory.hpp"
+#endif
+
+class Camera : virtual public Device
 {
 public:
     /**

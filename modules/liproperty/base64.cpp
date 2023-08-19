@@ -31,6 +31,8 @@ Description: Base64
 
 #include "base64.hpp"
 
+#include <algorithm>
+
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -141,5 +143,93 @@ namespace Lithium::Base64
             }
         }
         return ret;
+    }
+
+    std::string base64EncodeEnhance(const std::vector<uint8_t> &bytes_to_encode)
+    {
+        const std::string base64_chars =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789+/";
+
+        std::string encoded_data;
+        size_t input_length = bytes_to_encode.size();
+
+        for (size_t i = 0; i < input_length; i += 3)
+        {
+            uint32_t padded_value = 0;
+            int padding_count = 0;
+
+            for (size_t j = 0; j < 3; ++j)
+            {
+                if (i + j < input_length)
+                {
+                    padded_value <<= 8;
+                    padded_value |= bytes_to_encode[i + j];
+                }
+                else
+                {
+                    padded_value <<= 8;
+                    ++padding_count;
+                }
+            }
+
+            for (int k = 0; k < 4 - padding_count; ++k)
+            {
+                uint8_t index = (padded_value >> (6 * (3 - k))) & 0x3F;
+                encoded_data += base64_chars[index];
+            }
+
+            for (int k = 0; k < padding_count; ++k)
+            {
+                encoded_data += '=';
+            }
+        }
+
+        return encoded_data;
+    }
+
+    std::vector<uint8_t> base64DecodeEnhance(const std::string &encoded_string)
+    {
+        const std::string base64_chars =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789+/";
+
+        std::vector<uint8_t> decoded_data;
+        size_t input_length = encoded_string.length();
+        size_t padding_count = std::count(encoded_string.begin(), encoded_string.end(), '=');
+        size_t output_length = (3 * input_length) / 4 - padding_count;
+
+        uint32_t padded_value = 0;
+        int padding_index = 0;
+
+        for (size_t i = 0; i < input_length; ++i)
+        {
+            if (encoded_string[i] == '=')
+            {
+                padded_value <<= 6;
+                ++padding_index;
+            }
+            else
+            {
+                uint8_t value = base64_chars.find(encoded_string[i]);
+                padded_value <<= 6;
+                padded_value |= value;
+            }
+
+            if ((i + 1) % 4 == 0 && padding_index < padding_count)
+            {
+                for (int j = 0; j < 3 - padding_index; ++j)
+                {
+                    uint8_t byte = (padded_value >> (16 - (j + 1) * 8)) & 0xFF;
+                    decoded_data.push_back(byte);
+                }
+                padding_index = 0;
+                padded_value = 0;
+            }
+        }
+
+        return decoded_data;
     }
 }

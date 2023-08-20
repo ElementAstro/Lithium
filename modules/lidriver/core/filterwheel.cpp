@@ -44,19 +44,19 @@ Filterwheel::~Filterwheel()
     LOG_F(INFO, "Filterwheel Simulator Destructed");
 }
 
-bool Filterwheel::connect(const std::string &name)
+bool Filterwheel::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", name.c_str());
+    LOG_F(INFO, "%s is connected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Filterwheel::disconnect()
+bool Filterwheel::disconnect(const IParams &params)
 {
     LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Filterwheel::reconnect()
+bool Filterwheel::reconnect(const IParams &params)
 {
     return true;
 }

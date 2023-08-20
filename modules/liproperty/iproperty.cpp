@@ -32,26 +32,23 @@ Description: Property type definition
 #include "iproperty.hpp"
 #include "uuid.hpp"
 
-INumberProperty::INumberProperty()
+IPropertyBase::IPropertyBase()
 {
-    UUID::UUIDGenerator generator;
-    message_uuid = generator.generateUUIDWithFormat();
+    message_uuid = UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 
-IStringProperty::IStringProperty()
+INumberProperty::INumberProperty() : IPropertyBase()
 {
-    UUID::UUIDGenerator generator;
-    message_uuid = generator.generateUUIDWithFormat();
 }
 
-IBoolProperty::IBoolProperty()
+IStringProperty::IStringProperty() : IPropertyBase()
 {
-    UUID::UUIDGenerator generator;
-    message_uuid = generator.generateUUIDWithFormat();
 }
 
-INumberVector::INumberVector()
+IBoolProperty::IBoolProperty() : IPropertyBase()
 {
-    UUID::UUIDGenerator generator;
-    message_uuid = generator.generateUUIDWithFormat();
+}
+
+INumberVector::INumberVector() : IPropertyBase()
+{
 }

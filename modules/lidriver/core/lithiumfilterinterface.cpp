@@ -18,9 +18,9 @@
 
 */
 
-#include "indifilterinterface.h"
+#include "lithiumfilterinterface.h"
 #include <cstring>
-#include "indilogger.h"
+#include "lithiumlogger.h"
 
 namespace LITHIUM
 {

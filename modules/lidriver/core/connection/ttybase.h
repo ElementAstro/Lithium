@@ -25,7 +25,7 @@
 #pragma once
 
 #include <string>
-#include <indilogger.h>
+#include <lithiumlogger.h>
 
 /** \class TTYBase
     \brief Base class for serial communications

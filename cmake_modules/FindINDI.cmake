@@ -1,5 +1,5 @@
 macro(_INDI_check_version)
-    file(READ "${INDI_INCLUDE_DIR}/indiapi.h" _INDI_version_header)
+    file(READ "${INDI_INCLUDE_DIR}/lithiumapi.h" _INDI_version_header)
 
     string(REGEX MATCH "#define INDI_VERSION_MAJOR[ \t]+([0-9]+)" _INDI_version_major_match "${_INDI_version_header}")
     set(INDI_VERSION_MAJOR "${CMAKE_MATCH_1}")

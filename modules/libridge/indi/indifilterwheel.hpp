@@ -51,7 +51,7 @@ namespace Lithium
         INumberVectorProperty *filterinfo_prop;
         ITextVectorProperty *filter_port;
         ISwitchVectorProperty *rate_prop;
-        INDI::BaseDevice *filter_device;
+        LITHIUM::BaseDevice *filter_device;
 
         bool is_ready;
         bool has_blob;
@@ -84,14 +84,14 @@ namespace Lithium
         void ClearStatus();
 
     protected:
-        void newDevice(INDI::BaseDevice *dp) override;
-        void removeDevice(INDI::BaseDevice *dp) override;
-        void newProperty(INDI::Property *property) override;
-        void removeProperty(INDI::Property *property) override {}
+        void newDevice(LITHIUM::BaseDevice *dp) override;
+        void removeDevice(LITHIUM::BaseDevice *dp) override;
+        void newProperty(LITHIUM::Property *property) override;
+        void removeProperty(LITHIUM::Property *property) override {}
         void newBLOB(IBLOB *bp) override;
         void newSwitch(ISwitchVectorProperty *svp) override;
         void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(INDI::BaseDevice *dp, int messageID) override;
+        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
         void newText(ITextVectorProperty *tvp) override;
         void newLight(ILightVectorProperty *lvp) override {}
         void IndiServerConnected() override;

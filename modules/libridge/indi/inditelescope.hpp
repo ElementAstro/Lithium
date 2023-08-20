@@ -51,7 +51,7 @@ namespace Lithium
         INumberVectorProperty *telescopeinfo_prop; // 望远镜信息属性指针
         ITextVectorProperty *telescope_port;       // 望远镜端口属性指针
         ISwitchVectorProperty *rate_prop;          // 望远镜速率属性指针
-        INDI::BaseDevice *telescope_device;        // 望远镜设备指针
+        LITHIUM::BaseDevice *telescope_device;        // 望远镜设备指针
 
         bool is_ready; // 是否连接成功标志
         bool has_blob; // 是否接收 blob 数据标志
@@ -258,14 +258,14 @@ namespace Lithium
 
     protected:
         // INDI 回调函数
-        void newDevice(INDI::BaseDevice *dp) override;
-        void removeDevice(INDI::BaseDevice *dp) override;
-        void newProperty(INDI::Property *property) override;
-        void removeProperty(INDI::Property *property) override {}
+        void newDevice(LITHIUM::BaseDevice *dp) override;
+        void removeDevice(LITHIUM::BaseDevice *dp) override;
+        void newProperty(LITHIUM::Property *property) override;
+        void removeProperty(LITHIUM::Property *property) override {}
         void newBLOB(IBLOB *bp) override;
         void newSwitch(ISwitchVectorProperty *svp) override;
         void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(INDI::BaseDevice *dp, int messageID) override;
+        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
         void newText(ITextVectorProperty *tvp) override;
         void newLight(ILightVectorProperty *lvp) override {}
         void IndiServerConnected() override;

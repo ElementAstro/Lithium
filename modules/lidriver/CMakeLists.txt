@@ -32,3 +32,14 @@ add_library(LithiumDriver
     network/fifoserver.cpp
     network/fifoserver.hpp
 )
+
+include_directories(.)
+include_directories(dsp)
+include_directories(fpack)
+include_directories(event)
+
+add_subdirectory(core)
+add_subdirectory(fpack)
+add_subdirectory(event)
+add_subdirectory(dsp)
+add_subdirectory(hid)

@@ -31,7 +31,7 @@ Description: Timer (indielapsedtimer)
 
 #include "elapsedtimer.hpp"
 
-namespace Lithium
+namespace LITHIUM
 {
     ElapsedTimer::ElapsedTimer()
         : d_ptr(std::make_shared<ElapsedTimerPrivate>())

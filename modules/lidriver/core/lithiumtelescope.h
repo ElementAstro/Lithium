@@ -20,7 +20,7 @@
 
 #include "defaultdevice.h"
 #include "libastro.h"
-#include "indipropertyswitch.h"
+#include "lithiumpropertyswitch.h"
 #include <libnova/julian_day.h>
 
 #include <string>

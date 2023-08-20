@@ -38,8 +38,6 @@ Description: LITHIUM Macro (Copy from LITHIUM)
 #ifdef _MSC_VER
 #include <BaseTsd.h>
 typedef SSIZE_T ssize_t;
-#else
-#include <cstddef>
 #endif
 
 #ifndef LITHIUM_HAS_CPP_ATTRIBUTE

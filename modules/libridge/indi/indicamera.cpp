@@ -29,16 +29,16 @@ Description: INDI Camera
 
 **************************************************/
 
-#define INDI_CAMERA
+#define LITHIUM_CAMERA
 
-#ifdef INDI_CAMERA
+#ifdef LITHIUM_CAMERA
 
-#include "indicamera.hpp"
+#include "lithiumcamera.hpp"
 
 namespace Lithium
 {
 
-    void INDICamera::newDevice(INDI::BaseDevice *dp)
+    void INDICamera::newDevice(LITHIUM::BaseDevice *dp)
     {
         if (strcmp(dp->getDeviceName(), device_name.c_str()) == 0)
         {
@@ -142,9 +142,9 @@ namespace Lithium
         {
             bool mode;
 
-            if (auto enabledswitch = IUFindSwitch(svp, "INDI_ENABLED"); enabledswitch->s == ISS_ON)
+            if (auto enabledswitch = IUFindSwitch(svp, "LITHIUM_ENABLED"); enabledswitch->s == ISS_ON)
                 mode = true;
-            else if (auto disabledswitch = IUFindSwitch(svp, "INDI_DISABLED"); disabledswitch->s == ISS_ON)
+            else if (auto disabledswitch = IUFindSwitch(svp, "LITHIUM_DISABLED"); disabledswitch->s == ISS_ON)
                 mode = false;
 
             camera_info["frame"]["fast_read"] = mode;
@@ -170,7 +170,7 @@ namespace Lithium
         }
     }
 
-    void INDICamera::newMessage(INDI::BaseDevice *dp, int messageID)
+    void INDICamera::newMessage(LITHIUM::BaseDevice *dp, int messageID)
     {
         // spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
     }
@@ -316,14 +316,14 @@ namespace Lithium
         }
     }
 
-    void INDICamera::newProperty(INDI::Property *property)
+    void INDICamera::newProperty(LITHIUM::Property *property)
     {
         std::string PropName(property->getName());
-        INDI_PROPERTY_TYPE Proptype = property->getType();
+        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
 
         // // spdlog::debug("{} Property: {}", _name, property->getName());
 
-        if (Proptype == INDI_BLOB)
+        if (Proptype == LITHIUM_BLOB)
         {
 
             if (PropName == indi_blob_name.c_str())
@@ -332,33 +332,33 @@ namespace Lithium
                 // set option to receive blob and messages for the selected CCD
                 setBLOBMode(B_ALSO, device_name.c_str(), indi_blob_name.c_str());
 
-#ifdef INDI_SHARED_BLOB_SUPPORT
+#ifdef LITHIUM_SHARED_BLOB_SUPPORT
                 // Allow faster mode provided we don't modify the blob content or free/realloc it
                 enableDirectBlobAccess(device_name.c_str(), indi_blob_name.c_str());
 #endif
             }
         }
-        else if (PropName == indi_camera_cmd + "EXPOSURE" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_camera_cmd + "EXPOSURE" && Proptype == LITHIUM_NUMBER)
         {
             expose_prop = property->getNumber();
             newNumber(expose_prop);
         }
-        else if (PropName == indi_camera_cmd + "FRAME" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_camera_cmd + "FRAME" && Proptype == LITHIUM_NUMBER)
         {
             frame_prop = property->getNumber();
             newNumber(frame_prop);
         }
-        else if (PropName == indi_camera_cmd + "FRAME_TYPE" && Proptype == INDI_SWITCH)
+        else if (PropName == indi_camera_cmd + "FRAME_TYPE" && Proptype == LITHIUM_SWITCH)
         {
             frame_type_prop = property->getSwitch();
             newSwitch(frame_type_prop);
         }
-        else if (PropName == indi_camera_cmd + "BINNING" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_camera_cmd + "BINNING" && Proptype == LITHIUM_NUMBER)
         {
             binning_prop = property->getNumber();
             newNumber(binning_prop);
         }
-        else if (PropName == indi_camera_cmd + "CFA" && Proptype == INDI_TEXT)
+        else if (PropName == indi_camera_cmd + "CFA" && Proptype == LITHIUM_TEXT)
         {
             ITextVectorProperty *cfa_prop = property->getText();
             IText *cfa_type = IUFindText(cfa_prop, "CFA_TYPE");
@@ -368,33 +368,33 @@ namespace Lithium
                 is_color = true;
             }
         }
-        else if (PropName == indi_camera_cmd + "VIDEO_STREAM" && Proptype == INDI_SWITCH)
+        else if (PropName == indi_camera_cmd + "VIDEO_STREAM" && Proptype == LITHIUM_SWITCH)
         {
             video_prop = property->getSwitch();
             newSwitch(video_prop);
         }
-        else if (PropName == "STREAM_DELAY" && Proptype == INDI_NUMBER)
+        else if (PropName == "STREAM_DELAY" && Proptype == LITHIUM_NUMBER)
         {
             video_delay_prop = property->getNumber();
             newNumber(video_delay_prop);
         }
-        else if (PropName == "STREAMING_EXPOSURE" && Proptype == INDI_NUMBER)
+        else if (PropName == "STREAMING_EXPOSURE" && Proptype == LITHIUM_NUMBER)
         {
             video_exposure_prop = property->getNumber();
             newNumber(video_exposure_prop);
         }
-        else if (PropName == "FPS" && Proptype == INDI_NUMBER)
+        else if (PropName == "FPS" && Proptype == LITHIUM_NUMBER)
         {
             video_fps_prop = property->getNumber();
             newNumber(video_fps_prop);
         }
-        else if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
+        else if (PropName == "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
         {
             camera_port = property->getText();
             camera_info["network"]["port"] = camera_port->tp->text;
             // spdlog::debug("Current device port of {} is {}", _name, camera_port->tp->text);
         }
-        else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
+        else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
         {
             connection_prop = property->getSwitch();
             ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
@@ -406,7 +406,7 @@ namespace Lithium
             }
             // spdlog::debug("{} Connected {}", _name, is_connected);
         }
-        else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
+        else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
         {
             device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
             indi_camera_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
@@ -418,95 +418,95 @@ namespace Lithium
             camera_info["driver"]["interfaces"] = indi_camera_interface;
             // spdlog::debug("Camera Name : {} connected exec {}", _name, device_name, indi_camera_exec);
         }
-        else if (PropName == indi_camera_cmd + "INFO" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_camera_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
         {
             ccdinfo_prop = property->getNumber();
             newNumber(ccdinfo_prop);
         }
-        else if (PropName == "DEBUG" && Proptype == INDI_SWITCH)
+        else if (PropName == "DEBUG" && Proptype == LITHIUM_SWITCH)
         {
             debug_prop = property->getSwitch();
             newSwitch(debug_prop);
         }
-        else if (PropName == "POLLING_PERIOD" && Proptype == INDI_NUMBER)
+        else if (PropName == "POLLING_PERIOD" && Proptype == LITHIUM_NUMBER)
         {
             polling_prop = property->getNumber();
             newNumber(polling_prop);
         }
-        else if (PropName == "ACTIVE_DEVICES" && Proptype == INDI_TEXT)
+        else if (PropName == "ACTIVE_DEVICES" && Proptype == LITHIUM_TEXT)
         {
             active_device_prop = property->getText();
             newText(active_device_prop);
         }
-        else if (PropName == "CCD_COMPRESSION" && Proptype == INDI_SWITCH)
+        else if (PropName == "CCD_COMPRESSION" && Proptype == LITHIUM_SWITCH)
         {
             compression_prop = property->getSwitch();
             newSwitch(compression_prop);
         }
-        else if (PropName == "UPLOAD_MODE" && Proptype == INDI_SWITCH)
+        else if (PropName == "UPLOAD_MODE" && Proptype == LITHIUM_SWITCH)
         {
             image_upload_mode_prop = property->getSwitch();
             newSwitch(image_upload_mode_prop);
         }
-        else if (PropName == "CCD_FAST_TOGGLE" && Proptype == INDI_SWITCH)
+        else if (PropName == "CCD_FAST_TOGGLE" && Proptype == LITHIUM_SWITCH)
         {
             fast_read_out_prop = property->getSwitch();
             newSwitch(fast_read_out_prop);
         }
-        else if (PropName == "LIMITS" && Proptype == INDI_NUMBER)
+        else if (PropName == "LIMITS" && Proptype == LITHIUM_NUMBER)
         {
             camera_limit_prop = property->getNumber();
             newNumber(camera_limit_prop);
         }
         // The following properties are for ASI Camera
-        else if (PropName == "FLIP" && Proptype == INDI_SWITCH)
+        else if (PropName == "FLIP" && Proptype == LITHIUM_SWITCH)
         {
             asi_image_flip_prop = property->getSwitch();
             newSwitch(asi_image_flip_prop);
         }
-        else if (PropName == "CCD_CONTROLS" && Proptype == INDI_SWITCH)
+        else if (PropName == "CCD_CONTROLS" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "CCD_CONTROLS_MODE" && Proptype == INDI_SWITCH)
+        else if (PropName == "CCD_CONTROLS_MODE" && Proptype == LITHIUM_SWITCH)
         {
         }
         // The following properties are for Toup Camera
-        else if (PropName == "TC_FAN_CONTROL" && Proptype == INDI_SWITCH)
+        else if (PropName == "TC_FAN_CONTROL" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "TC_FAN_Speed" && Proptype == INDI_SWITCH)
+        else if (PropName == "TC_FAN_Speed" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "TC_AUTO_WB" && Proptype == INDI_SWITCH)
+        else if (PropName == "TC_AUTO_WB" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "TC_HEAT_CONTROL" && Proptype == INDI_SWITCH)
+        else if (PropName == "TC_HEAT_CONTROL" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "TC_HCG_CONTROL" && Proptype == INDI_SWITCH)
+        else if (PropName == "TC_HCG_CONTROL" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "TC_HGC_SET" && Proptype == INDI_NUMBER)
+        else if (PropName == "TC_HGC_SET" && Proptype == LITHIUM_NUMBER)
         {
         }
-        else if (PropName == "TC_LOW_NOISE_CONTROL" && Proptype == INDI_SWITCH)
+        else if (PropName == "TC_LOW_NOISE_CONTROL" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "SIMULATION" && Proptype == INDI_SWITCH)
+        else if (PropName == "SIMULATION" && Proptype == LITHIUM_SWITCH)
         {
             toupcam_simulation_prop = property->getSwitch();
             newSwitch(toupcam_simulation_prop);
         }
-        else if (PropName == "CCD_LEVEL_RANGE" && Proptype == INDI_NUMBER)
+        else if (PropName == "CCD_LEVEL_RANGE" && Proptype == LITHIUM_NUMBER)
         {
         }
-        else if (PropName == "CCD_BINNING_MODE" && Proptype == INDI_SWITCH)
+        else if (PropName == "CCD_BINNING_MODE" && Proptype == LITHIUM_SWITCH)
         {
         }
-        else if (PropName == "CCD_BLACK_BALANCE" && Proptype == INDI_NUMBER)
+        else if (PropName == "CCD_BLACK_BALANCE" && Proptype == LITHIUM_NUMBER)
         {
         }
-        else if (PropName == "Firmware" && Proptype == INDI_NUMBER)
+        else if (PropName == "Firmware" && Proptype == LITHIUM_NUMBER)
         {
         }
     }
@@ -527,7 +527,7 @@ namespace Lithium
             // spdlog::debug("{} : INDI server disconnected", _name);
     }
 
-    void INDICamera::removeDevice(INDI::BaseDevice *dp)
+    void INDICamera::removeDevice(LITHIUM::BaseDevice *dp)
     {
         ClearStatus();
         // spdlog::info("{} disconnected", _name);

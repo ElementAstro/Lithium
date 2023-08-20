@@ -18,9 +18,9 @@
 
 */
 
-#include "indifocuserinterface.h"
+#include "lithiumfocuserinterface.h"
 
-#include "indilogger.h"
+#include "lithiumlogger.h"
 
 #include <cstring>
 #include <cmath>

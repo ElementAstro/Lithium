@@ -36,7 +36,7 @@ Description: Timer (indielapsedtimer)
 
 #include "util/macro.hpp"
 
-namespace Lithium
+namespace LITHIUM
 {
 
     class ElapsedTimerPrivate

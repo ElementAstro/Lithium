@@ -49,4 +49,34 @@ namespace UUID
             ss << '}';
         return ss.str();
     }
+
+    std::string UUIDGenerator::generateEnhancedUUID()
+    {
+        std::stringstream ss;
+
+        for (int i = 0; i < 8; ++i)
+            ss << std::hex << getRandomNumber();
+
+        ss << '-';
+
+        for (int i = 0; i < 4; ++i)
+            ss << std::hex << getRandomNumber();
+
+        ss << '-';
+
+        for (int i = 0; i < 4; ++i)
+            ss << std::hex << getRandomNumber();
+
+        ss << '-';
+
+        for (int i = 0; i < 4; ++i)
+            ss << std::hex << getRandomNumber();
+
+        ss << '-';
+
+        for (int i = 0; i < 12; ++i)
+            ss << std::hex << getRandomNumber();
+
+        return ss.str();
+    }
 }

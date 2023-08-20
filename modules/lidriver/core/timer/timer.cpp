@@ -31,7 +31,10 @@ Description: Timer (inditimer)
 
 #include "timer.hpp"
 
-namespace Lithium
+#include <thread>
+#include <atomic>
+
+namespace LITHIUM
 {
 
     void Timer::callOnTimeout(const std::function<void()> &callback)
@@ -47,19 +50,19 @@ namespace Lithium
 
         if (singleShot)
         {
-            std::thread([this, stopFlag = stopFlag]
+            std::jthread([this, stopFlag = stopFlag]
                         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+            std::this_thread::sleep_for(std::chrono::milliseconds(_interval));
             if (!stopFlag->load())
                 timeout(); })
                 .detach();
         }
         else
         {
-            std::thread([this, stopFlag = stopFlag]()
+            std::jthread([this, stopFlag = stopFlag]()
                         {
             while (!stopFlag->load()) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+                std::this_thread::sleep_for(std::chrono::milliseconds(_interval));
                 if (!stopFlag->load())
                     timeout();
             } })
@@ -84,12 +87,12 @@ namespace Lithium
 
     void Timer::setInterval(int msec)
     {
-        interval = msec;
+        _interval = msec;
     }
 
     void Timer::setSingleShot(bool singleShot)
     {
-        this->singleShot = singleShot;
+        this->_singleShot = singleShot;
     }
 
     bool Timer::isActive() const
@@ -104,12 +107,12 @@ namespace Lithium
 
     int Timer::remainingTime() const
     {
-        return active ? interval : 0;
+        return active ? _interval : 0;
     }
 
     int Timer::interval() const
     {
-        return interval;
+        return _interval;
     }
 
     void Timer::timeout()

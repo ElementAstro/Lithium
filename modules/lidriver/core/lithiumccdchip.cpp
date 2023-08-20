@@ -15,9 +15,9 @@
  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
-#include "indiccdchip.h"
-#include "indidevapi.h"
-#include "locale_compat.h"
+#include "lithiumccdchip.h"
+#include "lithiumdevapi.h"
+#include "locale/locale_compat.hpp"
 
 #include <cstring>
 #include <ctime>

@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "indiapi.h"
+#include "lithiumapi.h"
 #include "recorder/recordermanager.h"
 #include "encoder/encodermanager.h"
 #include "fpsmeter.h"
@@ -35,14 +35,14 @@
 #include <map>
 #include <thread>
 
-#include "indiccdchip.h"
-#include "indisensorinterface.h"
+#include "lithiumccdchip.h"
+#include "lithiumsensorinterface.h"
 
 /* Smart Widget-Property */
-#include "indipropertytext.h"
-#include "indipropertynumber.h"
-#include "indipropertyswitch.h"
-#include "indipropertyblob.h"
+#include "lithiumpropertytext.h"
+#include "lithiumpropertynumber.h"
+#include "lithiumpropertyswitch.h"
+#include "lithiumpropertyblob.h"
 namespace LITHIUM
 {
 

@@ -88,7 +88,7 @@ namespace Lithium
         // 相机端口
         ITextVectorProperty *camera_port;
         // 相机设备
-        INDI::BaseDevice *camera_device;
+        LITHIUM::BaseDevice *camera_device;
         // 调试模式
         ISwitchVectorProperty *debug_prop;
         // 信息刷新间隔
@@ -218,13 +218,13 @@ namespace Lithium
         // INDI Client API
     protected:
         // 新设备
-        void newDevice(INDI::BaseDevice *dp) override;
+        void newDevice(LITHIUM::BaseDevice *dp) override;
         // 删除设备
-        void removeDevice(INDI::BaseDevice *dp) override;
+        void removeDevice(LITHIUM::BaseDevice *dp) override;
         // 新属性
-        void newProperty(INDI::Property *property) override;
+        void newProperty(LITHIUM::Property *property) override;
         // 删除属性
-        void removeProperty(INDI::Property *property) override {}
+        void removeProperty(LITHIUM::Property *property) override {}
         // 新 BLOB 数据
         void newBLOB(IBLOB *bp) override;
         // 新开关属性
@@ -232,7 +232,7 @@ namespace Lithium
         // 新数值属性
         void newNumber(INumberVectorProperty *nvp) override;
         // 新消息
-        void newMessage(INDI::BaseDevice *dp, int messageID) override;
+        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
         // 新文本属性
         void newText(ITextVectorProperty *tvp) override;
         // 新灯属性

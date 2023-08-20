@@ -17,9 +17,9 @@
 *******************************************************************************/
 
 #include "transforms.h"
-#include "indistandardproperty.h"
-#include "indicom.h"
-#include "indilogger.h"
+#include "lithiumstandardproperty.h"
+#include "lithiumcom.h"
+#include "lithiumlogger.h"
 #include "dsp.h"
 
 #include <dirent.h>

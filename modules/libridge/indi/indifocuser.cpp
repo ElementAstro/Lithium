@@ -29,13 +29,13 @@ Description: {}
 
 **************************************************/
 
-#include "indifocuser.hpp"
+#include "lithiumfocuser.hpp"
 
 #include <spdlog/spdlog.h>
 
 namespace Lithium
 {
-    void INDIFocuser::newDevice(INDI::BaseDevice *dp)
+    void INDIFocuser::newDevice(LITHIUM::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
@@ -115,7 +115,7 @@ namespace Lithium
         }
     }
 
-    void INDIFocuser::newMessage(INDI::BaseDevice *dp, int messageID)
+    void INDIFocuser::newMessage(LITHIUM::BaseDevice *dp, int messageID)
     {
         spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
     }
@@ -169,12 +169,12 @@ namespace Lithium
         spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDIFocuser::newProperty(INDI::Property *property)
+    void INDIFocuser::newProperty(LITHIUM::Property *property)
     {
         std::string PropName(property->getName());
-        INDI_PROPERTY_TYPE Proptype = property->getType();
+        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
 
-        if (Proptype != INDI_TEXT && Proptype != INDI_SWITCH && Proptype != INDI_NUMBER)
+        if (Proptype != LITHIUM_TEXT && Proptype != LITHIUM_SWITCH && Proptype != LITHIUM_NUMBER)
         {
             spdlog::warn("{} Unknown property type: {}", _name, Proptype);
             return;
@@ -187,7 +187,7 @@ namespace Lithium
         }
 
         bool switch_on = false;
-        if (Proptype == INDI_SWITCH)
+        if (Proptype == LITHIUM_SWITCH)
         {
             ISwitchVectorProperty *switch_prop = property->getSwitch();
             ISwitch *switch_connect = IUFindSwitch(switch_prop, "CONNECT");
@@ -198,7 +198,7 @@ namespace Lithium
         }
 
         double prop_value = 0;
-        if (Proptype == INDI_NUMBER)
+        if (Proptype == LITHIUM_NUMBER)
         {
             INumberVectorProperty *num_prop = property->getNumber();
             INumber *num_value = IUFindNumber(num_prop, "FOCUS_ABSOLUTE_POSITION");
@@ -215,7 +215,7 @@ namespace Lithium
 
         switch (property->getType())
         {
-        case INDI_TEXT:
+        case LITHIUM_TEXT:
         {
             if (PropName == "DEVICE_PORT")
             {
@@ -241,7 +241,7 @@ namespace Lithium
             }
             break;
         }
-        case INDI_SWITCH:
+        case LITHIUM_SWITCH:
         {
             if (PropName == "CONNECTION")
             {
@@ -284,12 +284,12 @@ namespace Lithium
             }
             else if (PropName == indi_focuser_cmd + "FOCUS_BACKLASH_TOGGLE")
             {
-                has_backlash = (IUFindSwitch(backlash_prop, "INDI_ENABLED")->s == ISS_ON);
+                has_backlash = (IUFindSwitch(backlash_prop, "LITHIUM_ENABLED")->s == ISS_ON);
                 spdlog::debug("{} Has Backlash : {}", _name, has_backlash);
             }
             break;
         }
-        case INDI_NUMBER:
+        case LITHIUM_NUMBER:
         {
             if (PropName == indi_focuser_cmd + "INFO")
             {
@@ -356,7 +356,7 @@ namespace Lithium
             spdlog::debug("{} : INDI server disconnected", _name);
     }
 
-    void INDIFocuser::removeDevice(INDI::BaseDevice *dp)
+    void INDIFocuser::removeDevice(LITHIUM::BaseDevice *dp)
     {
         ClearStatus();
         spdlog::info("{} disconnected", _name);

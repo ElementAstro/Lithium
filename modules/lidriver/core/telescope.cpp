@@ -44,19 +44,19 @@ Telescope::~Telescope()
     LOG_F(INFO, "Telescope Simulator Destructed");
 }
 
-bool Telescope::connect(const std::string &name)
+bool Telescope::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", name.c_str());
+    LOG_F(INFO, "%s is connected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Telescope::disconnect()
+bool Telescope::disconnect(const IParams &params)
 {
     LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Telescope::reconnect()
+bool Telescope::reconnect(const IParams &params)
 {
     return true;
 }

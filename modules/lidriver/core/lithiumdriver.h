@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "indiapi.h"
+#include "lithiumapi.h"
 #include "lilxml.h"
-#include "indicom.h"
+#include "lithiumcom.h"
 
 #include <stdio.h>
 

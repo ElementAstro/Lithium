@@ -61,7 +61,7 @@ namespace Lithium
         INumber *indi_focuser_temperature;             // 焦距器 indi 温度属性指针
         INumberVectorProperty *focuserinfo_prop;       // 焦距器用户信息属性指针
         ITextVectorProperty *focuser_port;             // 焦距器端口属性指针
-        INDI::BaseDevice *focuser_device;              // 焦距器设备指针
+        LITHIUM::BaseDevice *focuser_device;              // 焦距器设备指针
 
         bool is_ready; // 是否连接成功标志
         bool has_blob; // 是否接收 blob 数据标志
@@ -235,14 +235,14 @@ namespace Lithium
         void ClearStatus();
 
     protected:
-        void newDevice(INDI::BaseDevice *dp) override;
-        void removeDevice(INDI::BaseDevice *dp) override;
-        void newProperty(INDI::Property *property) override;
-        void removeProperty(INDI::Property *property) override {}
+        void newDevice(LITHIUM::BaseDevice *dp) override;
+        void removeDevice(LITHIUM::BaseDevice *dp) override;
+        void newProperty(LITHIUM::Property *property) override;
+        void removeProperty(LITHIUM::Property *property) override {}
         void newBLOB(IBLOB *bp) override;
         void newSwitch(ISwitchVectorProperty *svp) override;
         void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(INDI::BaseDevice *dp, int messageID) override;
+        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
         void newText(ITextVectorProperty *tvp) override;
         void newLight(ILightVectorProperty *lvp) override {}
         void IndiServerConnected() override;

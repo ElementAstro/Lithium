@@ -21,7 +21,7 @@
 
 #include "mjpegencoder.h"
 #include "stream/streammanager.h"
-#include "indiccd.h"
+#include "lithiumccd.h"
 #include <cmath>
 #include <zlib.h>
 #include <jpeglib.h>

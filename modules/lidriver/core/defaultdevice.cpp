@@ -19,16 +19,16 @@
 #include "defaultdevice.h"
 #include "defaultdevice_p.h"
 
-#include "indicom.h"
-#include "indiapi.h"
+#include "lithiumcom.h"
+#include "lithiumapi.h"
 
-#include "indistandardproperty.h"
-#include "connectionplugins/connectionserial.h"
+#include "lithiumstandardproperty.h"
+#include "connection/connectionserial.h"
 
-#include "indipropertyswitch.h"
-#include "indipropertytext.h"
-#include "indipropertynumber.h"
-#include "indipropertyblob.h"
+#include "lithiumpropertyswitch.h"
+#include "lithiumpropertytext.h"
+#include "lithiumpropertynumber.h"
+#include "lithiumpropertyblob.h"
 
 #include <cstdlib>
 #include <cstring>

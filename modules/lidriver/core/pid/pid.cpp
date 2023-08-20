@@ -31,6 +31,8 @@ Description: PID (pid)
 
 #include "pid.hpp"
 
+#include <algorithm>
+
 PID::PID(double dt, double max, double min, double Kp, double Kd, double Ki) : pimpl(std::make_unique<PIDImpl>(dt, max, min, Kp, Kd, Ki)) {}
 
 void PID::setIntegratorLimits(double min, double max)

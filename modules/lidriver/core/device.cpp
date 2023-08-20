@@ -55,16 +55,17 @@ Device::~Device()
 
 void Device::init()
 {
-    setStringProperty("name", _name);
-    setStringProperty("uuid", _uuid);
+    setProperty("name", _name);
+    setProperty("uuid", _uuid);
 
-    loopThread = ([&eventLoop]()
-                  { eventLoop.start(); });
+    std::jthread loop([this]()
+                  { this->eventLoop.start(); });
+    loopThread = std::move(loop);
     deviceIOServer = std::make_shared<SocketServer>(eventLoop, generateRandomNumber(10000, 60000));
     deviceIOServer->start();
 }
 
-void Device::insertProperty(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check = false)
+void Device::insertProperty(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check)
 {
     if (name.empty() || !value.has_value())
         throw InvalidParameters("Property name and value are required.");
@@ -103,7 +104,7 @@ void Device::insertProperty(const std::string &name, const std::any &value, cons
                 property->possible_values = std::any_cast<std::vector<double>>(possible_values);
             property->get_func = bind_get_func;
             property->set_func = bind_set_func;
-            number_properties[name] = property;
+            m_properties[name] = property;
             if (!m_observers.empty())
                 for (const auto &observer : m_observers)
                 {
@@ -122,7 +123,7 @@ void Device::insertProperty(const std::string &name, const std::any &value, cons
             property->pv_type = possible_type;
             if (possible_values.has_value() && possible_type != PossibleValueType::None)
                 property->possible_values = std::any_cast<std::vector<bool>>(possible_values);
-            bool_properties[name] = property;
+            m_properties[name] = property;
             if (!m_observers.empty())
                 for (const auto &observer : m_observers)
                 {
@@ -143,27 +144,72 @@ void Device::setProperty(const std::string &name, const std::any &value)
 {
     if (m_properties.find(name) != m_properties.end())
     {
-        m_properties[name]->value = value;
-        if (!m_properties[name]->set_func.empty())
+        try
         {
-            auto res = Dispatch(std::format("set_{}", name), {{name, value}});
-            if (res.find("error") != res.end())
+            if (m_properties[name].type() == typeid(std::shared_ptr<IStringProperty>) ||
+                m_properties[name].type() == typeid(std::shared_ptr<INumberProperty>) ||
+                m_properties[name].type() == typeid(std::shared_ptr<IBoolProperty>) ||
+                m_properties[name].type() == typeid(std::shared_ptr<INumberVector>))
             {
-                try
+                const auto property = m_properties[name];
+                if (!std::any_cast<std::shared_ptr<IPropertyBase>>(property)->set_func.empty())
                 {
-                    throw DispatchError(std::any_cast<std::string>(res["error"]))
+                    auto res = Dispatch(std::format("set_{}", name), {{name, value}});
+                    if (res.find("error") != res.end())
+                    {
+                        try
+                        {
+                            throw DispatchError(std::any_cast<std::string>(res["error"]));
+                        }
+                        catch (const std::bad_any_cast &e)
+                        {
+                            throw InvalidReturn(e.what());
+                        }
+                    }
                 }
-                catch (const std::bad_any_cast &e)
+                if (property.type() == typeid(std::shared_ptr<IStringProperty>))
                 {
-                    throw InvalidReturn(e.what());
+                    auto pp = std::any_cast<std::shared_ptr<IStringProperty>>(property);
+                    pp->value = std::any_cast<std::string>(value);
+                    m_properties[name] = pp;
+                }
+                else if (property.type() == typeid(std::shared_ptr<INumberProperty>))
+                {
+                    auto pp = std::any_cast<std::shared_ptr<INumberProperty>>(property);
+                    pp->value = std::any_cast<double>(value);
+                    m_properties[name] = pp;
+                }
+                else if (property.type() == typeid(std::shared_ptr<IBoolProperty>))
+                {
+                    auto pp = std::any_cast<std::shared_ptr<IBoolProperty>>(property);
+                    pp->value = std::any_cast<bool>(value);
+                    m_properties[name] = pp;
+                }
+                else if (property.type() == typeid(std::shared_ptr<INumberVector>))
+                {
+                    auto pp = std::any_cast<std::shared_ptr<INumberVector>>(property);
+                    pp->value = std::any_cast<std::vector<double>>(value);
+                    m_properties[name] = pp;
+                }
+                else
+                {
+                    throw InvalidProperty(std::format("Unknown type of property {}", name));
                 }
             }
+            else
+            {
+                throw InvalidProperty(std::format("Unknown type of property {}", name));
+            }
+        }
+        catch (const std::bad_any_cast &e)
+        {
+            throw InvalidProperty(std::format("Failed to convert property {} with {}", name, e.what()));
         }
         if (!m_observers.empty())
         {
             for (const auto &observer : m_observers)
             {
-                observer(getProperty(name), false);
+                observer(getProperty(name, false));
             }
         }
     }
@@ -175,7 +221,31 @@ std::any Device::getProperty(const std::string &name, bool need_refresh)
     {
         if (need_refresh)
         {
-            if (!m_properties[name]->get_func.empty())
+            std::any property = m_properties[name];
+            bool has_func = false;
+
+            try
+            {
+                if (property.type() == typeid(std::shared_ptr<IStringProperty>) ||
+                    property.type() == typeid(std::shared_ptr<INumberProperty>) ||
+                    property.type() == typeid(std::shared_ptr<IBoolProperty>) ||
+                    property.type() == typeid(std::shared_ptr<INumberVector>))
+                {
+                    if (!std::any_cast<std::shared_ptr<IPropertyBase>>(property)->get_func.empty())
+                    {
+                        has_func = true;
+                    }
+                }
+                else
+                {
+                    throw InvalidProperty(std::format("Unknown type of property {}", name));
+                }
+            }
+            catch (const std::bad_any_cast &e)
+            {
+                throw InvalidProperty(std::format("Failed to convert property {} with {}", name, e.what()));
+            }
+            if (has_func)
             {
                 Dispatch(std::format("get_{}", name), {});
             }
@@ -194,11 +264,11 @@ std::shared_ptr<INumberProperty> Device::getNumberProperty(const std::string &na
         {
             try
             {
-                return std::any_cast<std::shared_ptr<INumberProperty>>();
+                return std::any_cast<std::shared_ptr<INumberProperty>>(property);
             }
-            catch (const std::exception &e)
+            catch (const std::bad_any_cast &e)
             {
-                throw InvalidPproperty(e.what());
+                throw InvalidProperty(e.what());
             }
         }
         else
@@ -206,7 +276,7 @@ std::shared_ptr<INumberProperty> Device::getNumberProperty(const std::string &na
     }
     catch (const std::bad_any_cast &e)
     {
-        throw InvalidPproperty(e.what());
+        throw InvalidProperty(e.what());
     }
 }
 
@@ -219,11 +289,11 @@ std::shared_ptr<IStringProperty> Device::getStringProperty(const std::string &na
         {
             try
             {
-                return std::any_cast<std::shared_ptr<IStringProperty>>();
+                return std::any_cast<std::shared_ptr<IStringProperty>>(property);
             }
             catch (const std::exception &e)
             {
-                throw InvalidPproperty(e.what());
+                throw InvalidProperty(e.what());
             }
         }
         else
@@ -231,7 +301,7 @@ std::shared_ptr<IStringProperty> Device::getStringProperty(const std::string &na
     }
     catch (const std::bad_any_cast &e)
     {
-        throw InvalidPproperty(e.what());
+        throw InvalidProperty(e.what());
     }
 }
 
@@ -244,11 +314,11 @@ std::shared_ptr<IBoolProperty> Device::getBoolProperty(const std::string &name)
         {
             try
             {
-                return std::any_cast<std::shared_ptr<IBoolProperty>>();
+                return std::any_cast<std::shared_ptr<IBoolProperty>>(property);
             }
             catch (const std::exception &e)
             {
-                throw InvalidPproperty(e.what());
+                throw InvalidProperty(e.what());
             }
         }
         else
@@ -256,7 +326,7 @@ std::shared_ptr<IBoolProperty> Device::getBoolProperty(const std::string &name)
     }
     catch (const std::bad_any_cast &e)
     {
-        throw InvalidPproperty(e.what());
+        throw InvalidProperty(e.what());
     }
 }
 
@@ -336,17 +406,28 @@ void Device::removeObserver(const std::function<void(const std::any &message)> &
 const nlohmann::json Device::exportDeviceInfoToJson()
 {
     nlohmann::json jsonInfo;
-    for (const auto &kv : string_properties)
+    for (const auto &property : m_properties)
     {
-        jsonInfo[kv.first] = kv.second->value;
-    }
-    for (const auto &kv : number_properties)
-    {
-        jsonInfo[kv.first] = kv.second->value;
-    }
-    for (const auto &kv : bool_properties)
-    {
-        jsonInfo[kv.first] = kv.second->value;
+        if (property.second.type() == typeid(std::shared_ptr<IStringProperty>))
+        {
+            jsonInfo[property.first] = std::any_cast<std::shared_ptr<IStringProperty>>(property.second)->value;
+        }
+        else if (property.second.type() == typeid(std::shared_ptr<INumberProperty>))
+        {
+            jsonInfo[property.first] = std::any_cast<std::shared_ptr<INumberProperty>>(property.second)->value;
+        }
+        else if (property.second.type() == typeid(std::shared_ptr<IBoolProperty>))
+        {
+            jsonInfo[property.first] = std::any_cast<std::shared_ptr<IBoolProperty>>(property.second)->value;
+        }
+        else if (property.second.type() == typeid(std::shared_ptr<INumberVector>))
+        {
+            jsonInfo[property.first] = std::any_cast<std::shared_ptr<INumberVector>>(property.second)->value;
+        }
+        else
+        {
+            throw InvalidProperty(std::format("Unknown type of property {}", property.first));
+        }
     }
     std::cout << jsonInfo.dump(4) << std::endl;
     return jsonInfo;

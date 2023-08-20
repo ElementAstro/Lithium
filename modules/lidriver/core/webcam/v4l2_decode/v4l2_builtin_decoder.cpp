@@ -59,7 +59,7 @@
 
 #include "v4l2_builtin_decoder.h"
 
-// #include "indilogger.h"
+// #include "lithiumlogger.h"
 #include "ccvt.h"
 #include "v4l2_colorspace.h"
 

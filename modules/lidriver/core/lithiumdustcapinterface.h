@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "indibase.h"
-#include "indidriver.h"
+#include "lithiumbase.h"
+#include "lithiumdriver.h"
 
 /**
  * \class DustCapInterface

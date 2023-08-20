@@ -16,10 +16,10 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#include "indirotator.h"
+#include "lithiumrotator.h"
 
-#include "connectionplugins/connectionserial.h"
-#include "connectionplugins/connectiontcp.h"
+#include "connection/connectionserial.h"
+#include "connection/connectiontcp.h"
 
 #include <cstring>
 

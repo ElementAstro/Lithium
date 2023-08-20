@@ -41,66 +41,44 @@ enum class PossibleValueType
     Value
 };
 
-struct INumberProperty
+struct IPropertyBase
+{
+    IPropertyBase();
+    std::string device_name;
+    std::string device_uuid;
+    std::string message_uuid;
+    std::string name;
+    bool need_check;
+    PossibleValueType pv_type;
+
+    std::string get_func;
+    std::string set_func;
+};
+
+struct INumberProperty : public IPropertyBase
 {
     INumberProperty();
-    std::string device_name;
-    std::string device_uuid;
-    std::string message_uuid;
-    std::string name;
-    std::vector<double> possible_values;
-    bool need_check;
-    PossibleValueType pv_type;
     double value;
-
-    std::string get_func;
-    std::string set_func;
+    std::vector<double> possible_values;
 };
 
-struct IStringProperty
+struct IStringProperty : public IPropertyBase
 {
     IStringProperty();
-    std::string device_name;
-    std::string device_uuid;
-    std::string message_uuid;
-    std::string name;
-    std::vector<std::string> possible_values;
-    bool need_check;
-    PossibleValueType pv_type;
     std::string value;
-
-    std::string get_func;
-    std::string set_func;
+    std::vector<std::string> possible_values;
 };
 
-struct IBoolProperty
+struct IBoolProperty : public IPropertyBase
 {
     IBoolProperty();
-    std::string device_name;
-    std::string device_uuid;
-    std::string message_uuid;
-    std::string name;
-    std::vector<bool> possible_values;
-    bool need_check;
-    PossibleValueType pv_type;
     bool value;
-
-    std::string get_func;
-    std::string set_func;
+    std::vector<bool> possible_values;
 };
 
-struct INumberVector
+struct INumberVector : public IPropertyBase
 {
     INumberVector();
-    std::string device_name;
-    std::string device_uuid;
-    std::string message_uuid;
-    std::string name;
-    std::vector<std::vector<double>> possible_values;
-    bool need_check;
-    PossibleValueType pv_type;
     std::vector<double> value;
-
-    std::string get_func;
-    std::string set_func;
+    std::vector<std::vector<double>> possible_values;
 };

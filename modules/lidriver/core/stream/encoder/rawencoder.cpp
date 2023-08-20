@@ -21,7 +21,7 @@
 
 #include "rawencoder.h"
 #include "stream/streammanager.h"
-#include "indiccd.h"
+#include "lithiumccd.h"
 
 #include <zlib.h>
 

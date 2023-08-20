@@ -18,9 +18,9 @@
 
 */
 
-#include "indilightboxinterface.h"
+#include "lithiumlightboxinterface.h"
 
-#include "indilogger.h"
+#include "lithiumlogger.h"
 
 #include <cstring>
 

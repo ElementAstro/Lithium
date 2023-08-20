@@ -38,7 +38,7 @@ Description: Single Thread Pool (indisinglethreadpool)
 #include <mutex>
 #include <thread>
 
-namespace Lithium
+namespace LITHIUM
 {
 
     class SingleThreadPool

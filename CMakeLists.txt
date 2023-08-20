@@ -87,6 +87,8 @@ add_subdirectory(modules/lidriver)
 add_subdirectory(modules/liproperty)
 add_subdirectory(modules/libridge)
 
+add_subdirectory(drivers)
+
 #add_subdirectory(src/indiserver)
 
 set(api_SRC

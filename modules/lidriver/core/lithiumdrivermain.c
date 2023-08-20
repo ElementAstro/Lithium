@@ -31,9 +31,9 @@
  */
 
 #include "base64.h"
-#include "eventloop.h"
-#include "indidevapi.h"
-#include "indidriver.h"
+#include "event/eventloop.h"
+#include "lithiumdevapi.h"
+#include "lithiumdriver.h"
 #include "lilxml.h"
 
 #include <errno.h>
@@ -47,6 +47,11 @@
 #include <sys/stat.h>
 #include <pthread.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <windows.h>
+#endif
+
 #define MAXRBUF 2048
 
 static void usage(void);
@@ -59,9 +64,9 @@ static LilXML *clixml = NULL;
 #define PROCEED_DEFERRED 0
 static int messageHandling = PROCEED_IMMEDIATE;
 
-/* callback when LITHIUM client message arrives on stdin.
+/* callback when INDI client message arrives on stdin.
  * collect and dispatch when see outter element closure.
- * exit if OS trouble or see incompatable LITHIUM version.
+ * exit if OS trouble or see incompatable INDI version.
  * arg is not used.
  */
 static void clientMsgCB(int fd, void *arg)
@@ -267,7 +272,7 @@ static void waitPingReplyFromOtherThread(const char *uid)
     int fd = 0;
     fd_set rfd;
 
-    messageHandling = PROCEED_DEFERRED;
+    messageHandling = 0;
     pthread_mutex_lock(&pingReplyMutex);
     while (!consumePingReply(uid))
     {
@@ -277,10 +282,18 @@ static void waitPingReplyFromOtherThread(const char *uid)
         FD_ZERO(&rfd);
         FD_SET(fd, &rfd);
 
+#ifdef _WIN32
         int ns = select(fd + 1, &rfd, NULL, NULL, NULL);
+#else
+        int ns = pselect(fd + 1, &rfd, NULL, NULL, NULL, NULL);
+#endif
+
         if (ns < 0)
         {
             perror("select");
+#ifdef _WIN32
+            WSACleanup();
+#endif
             exit(1);
         }
 
@@ -289,7 +302,11 @@ static void waitPingReplyFromOtherThread(const char *uid)
         pthread_mutex_lock(&pingReplyMutex);
     }
     pthread_mutex_unlock(&pingReplyMutex);
-    messageHandling = PROCEED_IMMEDIATE;
+    messageHandling = 1;
+
+#ifdef _WIN32
+    WSACleanup();
+#endif
 }
 
 void waitPingReply(const char *uid)
@@ -362,7 +379,7 @@ int main(int ac, char *av[])
 static void usage(void)
 {
     fprintf(stderr, "Usage: %s [options]\n", me);
-    fprintf(stderr, "Purpose: LITHIUM Device driver framework.\n");
+    fprintf(stderr, "Purpose: INDI Device driver framework.\n");
     fprintf(stderr, "Options:\n");
     fprintf(stderr, " -v    : more verbose to stderr\n");
 

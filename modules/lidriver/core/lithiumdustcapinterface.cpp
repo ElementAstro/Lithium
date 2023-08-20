@@ -18,7 +18,7 @@
 
 */
 
-#include "indidustcapinterface.h"
+#include "lithiumdustcapinterface.h"
 
 #include <cstring>
 

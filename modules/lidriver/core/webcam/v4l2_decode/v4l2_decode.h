@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "indidevapi.h"
+#include "lithiumdevapi.h"
 
 #include <vector>
 

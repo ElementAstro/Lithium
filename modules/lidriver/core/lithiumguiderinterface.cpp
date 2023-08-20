@@ -18,7 +18,7 @@
 
 */
 
-#include "indiguiderinterface.h"
+#include "lithiumguiderinterface.h"
 
 #include <cstring>
 

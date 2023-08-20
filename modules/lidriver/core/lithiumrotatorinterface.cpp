@@ -18,10 +18,10 @@
 
 */
 
-#include "indirotatorinterface.h"
+#include "lithiumrotatorinterface.h"
 #include "defaultdevice.h"
 
-#include "indilogger.h"
+#include "lithiumlogger.h"
 
 #include <cstring>
 

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "indibase.h"
+#include "lithiumbase.h"
 
 #include <libusb.h>
 

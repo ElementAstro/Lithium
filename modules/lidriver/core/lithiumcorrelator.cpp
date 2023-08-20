@@ -18,10 +18,10 @@
 *******************************************************************************/
 
 #include "defaultdevice.h"
-#include "indicorrelator.h"
+#include "lithiumcorrelator.h"
 
-#include "indicom.h"
-#include "locale_compat.h"
+#include "lithiumcom.h"
+#include "locale/locale_compat.hpp"
 
 #include <fitsio.h>
 

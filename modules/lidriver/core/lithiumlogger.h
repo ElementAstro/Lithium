@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "indiapi.h"
+#include "lithiumapi.h"
 #include "defaultdevice.h"
 
 #include <stdarg.h>

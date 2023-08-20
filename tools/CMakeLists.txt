@@ -22,3 +22,17 @@ target_link_libraries(xml2json pugixml-static)
 
 add_executable(csv2json csv2json.cpp)
 target_link_libraries(csv2json loguru)
+
+# ########## getLithium ##############
+add_executable(lithium_getprop getLithiumproperty.c)
+
+target_link_libraries(lithium_getprop lithiumcore eventloop ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY} wsock32 ws2_32)
+
+install(TARGETS lithium_getprop RUNTIME DESTINATION bin)
+
+# ########## setLithium ##############
+add_executable(lithium_setprop setLithiumproperty.c)
+
+target_link_libraries(lithium_setprop lithiumcore eventloop ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY} wsock32 ws2_32)
+
+install(TARGETS lithium_setprop RUNTIME DESTINATION bin)

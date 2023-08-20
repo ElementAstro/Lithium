@@ -20,13 +20,13 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#include "indidome.h"
+#include "lithiumdome.h"
 
-#include "indicom.h"
-#include "indicontroller.h"
-#include "inditimer.h"
-#include "connectionplugins/connectionserial.h"
-#include "connectionplugins/connectiontcp.h"
+#include "lithiumcom.h"
+#include "lithiumcontroller.h"
+#include "timer.hpp"
+#include "connection/connectionserial.h"
+#include "connection/connectiontcp.h"
 
 #include <libnova/julian_day.h>
 #include <libnova/sidereal_time.h>
@@ -35,10 +35,18 @@
 #include <cerrno>
 #include <cmath>
 #include <cstring>
-#include <wordexp.h>
-#include <pwd.h>
 #include <unistd.h>
 #include <limits>
+#if __cplusplus >= 2017
+#include <filesystem>
+#endif
+#ifdef _WIN32
+#include <windows.h>
+#include <shlobj.h>
+#else
+#include <pwd.h>
+#include <wordexp.h>
+#endif
 
 #define DOME_SLAVING_TAB "Slaving"
 #define DOME_COORD_THRESHOLD \
@@ -77,6 +85,19 @@ namespace LITHIUM
         delete tcpConnection;
     }
 
+#ifdef _WIN32
+    std::string Dome::GetHomeDirectory() const
+    {
+        PWSTR pszPath;
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Profile, 0, NULL, &pszPath)))
+        {
+            std::wstring wstr(pszPath);
+            CoTaskMemFree(pszPath);
+            return std::string(wstr.begin(), wstr.end());
+        }
+        return "";
+    }
+#else
     std::string Dome::GetHomeDirectory() const
     {
         // Check first the HOME environmental variable
@@ -89,6 +110,7 @@ namespace LITHIUM
         }
         return (HomeDir ? std::string(HomeDir) : "");
     }
+#endif
 
     bool Dome::initProperties()
     {
@@ -1664,7 +1686,6 @@ namespace LITHIUM
 
     const char *Dome::LoadParkXML()
     {
-        wordexp_t wexp;
         FILE *fp;
         LilXML *lp;
         static char errmsg[512];
@@ -1679,18 +1700,18 @@ namespace LITHIUM
         ParkpositionXml = nullptr;
         ParkpositionAxis1Xml = nullptr;
 
-        if (wordexp(ParkDataFileName.c_str(), &wexp, 0))
+        std::filesystem::path filePath(ParkDataFileName);
+
+        if (!std::filesystem::exists(filePath))
         {
-            wordfree(&wexp);
-            return "Badly formed filename.";
+            return "File does not exist.";
         }
 
-        if (!(fp = fopen(wexp.we_wordv[0], "r")))
+        fp = std::fopen(filePath.string().c_str(), "r");
+        if (!fp)
         {
-            wordfree(&wexp);
             return strerror(errno);
         }
-        wordfree(&wexp);
 
         lp = newLilXML();
 
@@ -1698,26 +1719,26 @@ namespace LITHIUM
             delXMLEle(ParkdataXmlRoot);
 
         ParkdataXmlRoot = readXMLFile(fp, lp, errmsg);
-        fclose(fp);
+        std::fclose(fp);
 
         delLilXML(lp);
         if (!ParkdataXmlRoot)
             return errmsg;
 
-        if (!strcmp(tagXMLEle(nextXMLEle(ParkdataXmlRoot, 1)), "parkdata"))
+        if (std::strcmp(tagXMLEle(nextXMLEle(ParkdataXmlRoot, 1)), "parkdata") == 0)
             return "Not a park data file";
 
         parkxml = nextXMLEle(ParkdataXmlRoot, 1);
 
         while (parkxml)
         {
-            if (strcmp(tagXMLEle(parkxml), "device"))
+            if (std::strcmp(tagXMLEle(parkxml), "device") != 0)
             {
                 parkxml = nextXMLEle(ParkdataXmlRoot, 0);
                 continue;
             }
             ap = findXMLAtt(parkxml, "name");
-            if (ap && (!strcmp(valuXMLAtt(ap), ParkDeviceName)))
+            if (ap && (std::strcmp(valuXMLAtt(ap), ParkDeviceName) == 0))
             {
                 devicefound = true;
                 break;
@@ -1785,24 +1806,39 @@ namespace LITHIUM
         if (LoadParkXML() != nullptr)
             LOG_DEBUG("Failed to refresh parking data.");
 
-        wordexp_t wexp;
-        FILE *fp;
-        char pcdata[30];
+        std::string pcdata;
         ParkDeviceName = getDeviceName();
 
-        if (wordexp(ParkDataFileName.c_str(), &wexp, 0))
+        std::string expandedFileName;
+#ifdef _WIN32
         {
-            wordfree(&wexp);
-            LOGF_INFO("WriteParkData: can not write file %s: Badly formed filename.",
-                      ParkDataFileName.c_str());
-            return false;
+            std::vector<char> buf(PATH_MAX);
+            DWORD len = ExpandEnvironmentStringsA(ParkDataFileName.c_str(), buf.data(), buf.size());
+            if (len == 0 || len > buf.size())
+            {
+                LOGF_INFO("WriteParkData: can not expand file name %s: Error occurred.", ParkDataFileName.c_str());
+                return false;
+            }
+            expandedFileName = buf.data();
         }
-
-        if (!(fp = fopen(wexp.we_wordv[0], "w")))
+#else
         {
+            wordexp_t wexp;
+            if (wordexp(ParkDataFileName.c_str(), &wexp, 0))
+            {
+                wordfree(&wexp);
+                LOGF_INFO("WriteParkData: can not expand file name %s: Badly formed filename.", ParkDataFileName.c_str());
+                return false;
+            }
+            expandedFileName = wexp.we_wordv[0];
             wordfree(&wexp);
-            LOGF_INFO("WriteParkData: can not write file %s: %s", ParkDataFileName.c_str(),
-                      strerror(errno));
+        }
+#endif
+
+        FILE *fp = fopen(expandedFileName.c_str(), "w");
+        if (!fp)
+        {
+            LOGF_INFO("WriteParkData: can not write file %s: %s", expandedFileName.c_str(), strerror(errno));
             return false;
         }
 
@@ -1829,13 +1865,12 @@ namespace LITHIUM
 
         if (parkDataType != PARK_NONE)
         {
-            snprintf(pcdata, sizeof(pcdata), "%lf", Axis1ParkPosition);
-            editXMLEle(ParkpositionAxis1Xml, pcdata);
+            pcdata = std::to_string(Axis1ParkPosition);
+            editXMLEle(ParkpositionAxis1Xml, pcdata.c_str());
         }
 
         prXMLEle(fp, ParkdataXmlRoot, 0);
         fclose(fp);
-        wordfree(&wexp);
 
         return true;
     }

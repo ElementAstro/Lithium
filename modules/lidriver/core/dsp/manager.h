@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "indidevapi.h"
+#include "lithiumdevapi.h"
 #include "convolution.h"
 #include "transforms.h"
 

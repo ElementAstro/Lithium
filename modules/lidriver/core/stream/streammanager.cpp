@@ -24,12 +24,12 @@
 #include <config.h>
 #include "streammanager.h"
 #include "streammanager_p.h"
-#include "indiccd.h"
-#include "indisensorinterface.h"
-#include "indilogger.h"
-#include "indiutility.h"
-#include "indisinglethreadpool.h"
-#include "indielapsedtimer.h"
+#include "lithiumccd.h"
+#include "lithiumsensorinterface.h"
+#include "lithiumlogger.h"
+#include "lithiumutility.h"
+#include "single_thread.hpp"
+#include "elapsedtimer.hpp"
 
 #include <cerrno>
 #include <sys/stat.h>
@@ -122,7 +122,7 @@ namespace LITHIUM
         /* File */
         std::string defaultDirectory = std::string(getenv("HOME")) + std::string("/indi__D_");
         RecordFileTP[0].fill("RECORD_FILE_DIR", "Dir.", defaultDirectory.data());
-        RecordFileTP[1].fill("RECORD_FILE_NAME", "Name", "indi_record__T_");
+        RecordFileTP[1].fill("RECORD_FILE_NAME", "Name", "lithium_record__T_");
         RecordFileTP.fill(getDeviceName(), "RECORD_FILE", "Record File",
                           STREAM_TAB, IP_RW, 0, IPS_IDLE);
 

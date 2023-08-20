@@ -25,11 +25,11 @@
 
 // #include "videodev2.h"
 #include "eventloop.h"
-#include "indidevapi.h"
+#include "lithiumdevapi.h"
 // this adds add dependency to indidriver for v4l_legacy, meade_lpi
 
 // Can't use logger as legacy drivers don't use defaultdevice
-// #include "indilogger.h"
+// #include "lithiumlogger.h"
 #include "v4l2_decode/v4l2_decode.h"
 // for direct recording
 #include "stream/streammanager.h"

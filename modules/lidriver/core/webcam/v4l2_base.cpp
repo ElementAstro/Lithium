@@ -24,8 +24,8 @@
 
 #include "ccvt.h"
 #include "eventloop.h"
-#include "indidevapi.h"
-#include "indilogger.h"
+#include "lithiumdevapi.h"
+#include "lithiumlogger.h"
 #include "lilxml.h"
 // PWC framerate support
 #include "pwc-ioctl.h"

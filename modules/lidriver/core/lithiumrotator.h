@@ -19,7 +19,7 @@
 #pragma once
 
 #include "defaultdevice.h"
-#include "indirotatorinterface.h"
+#include "lithiumrotatorinterface.h"
 
 namespace Connection
 {

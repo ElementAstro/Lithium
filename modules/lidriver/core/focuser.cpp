@@ -44,23 +44,22 @@ Focuser::~Focuser()
     LOG_F(INFO, "Focuser Simulator Destructed");
 }
 
-bool Focuser::connect(const std::string &name)
+bool Focuser::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", name.c_str());
+    LOG_F(INFO, "%s is connected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Focuser::disconnect()
+bool Focuser::disconnect(const IParams &params)
 {
     LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Focuser::reconnect()
+bool Focuser::reconnect(const IParams &params)
 {
     return true;
 }
-
 
 bool Focuser::moveTo(const nlohmann::json &params)
 {

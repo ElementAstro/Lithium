@@ -62,10 +62,10 @@ private:
     std::string m_message;
 };
 
-class InvalidPproperty : public std::exception
+class InvalidProperty : public std::exception
 {
 public:
-    InvalidPproperty(const std::string &message) : m_message(message) {}
+    InvalidProperty(const std::string &message) : m_message(message) {}
 
     const char *what() const noexcept override
     {

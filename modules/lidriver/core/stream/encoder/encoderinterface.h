@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "indidevapi.h"
-#include "indibasetypes.h"
-#include "indiwidgetview.h"
+#include "lithiumdevapi.h"
+#include "lithiumbasetypes.h"
+#include "lithiumwidgetview.h"
 
 #include <stdio.h>
 #include <cstdlib>

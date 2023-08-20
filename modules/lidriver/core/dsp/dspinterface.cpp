@@ -19,13 +19,13 @@
 #include "dspinterface.h"
 
 #include "defaultdevice.h"
-#include "indiccd.h"
-#include "indisensorinterface.h"
-#include "indilogger.h"
-#include "locale_compat.h"
-#include "indicom.h"
+#include "lithiumccd.h"
+#include "lithiumsensorinterface.h"
+#include "lithiumlogger.h"
+#include "locale/locale_compat.hpp"
+#include "lithiumcom.h"
 #include "libastro.h"
-#include "indiutility.h"
+#include "lithiumutility.h"
 
 #include <fitsio.h>
 
@@ -376,7 +376,7 @@ namespace DSP
         switch (getBPS())
         {
         case 8:
-            byte_type = TBYTE;
+            byte_type = 11;
             img_type = BYTE_IMG;
             bit_depth = "8 bits per sample";
             break;

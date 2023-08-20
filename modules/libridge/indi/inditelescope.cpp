@@ -29,13 +29,13 @@ Description: INDI Telescope
 
 **************************************************/
 
-#include "inditelescope.hpp"
+#include "lithiumtelescope.hpp"
 
 #include <spdlog/spdlog.h>
 
 namespace Lithium
 {
-    void INDITelescope::newDevice(INDI::BaseDevice *dp)
+    void INDITelescope::newDevice(LITHIUM::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
@@ -91,7 +91,7 @@ namespace Lithium
         }
     }
 
-    void INDITelescope::newMessage(INDI::BaseDevice *dp, int messageID)
+    void INDITelescope::newMessage(LITHIUM::BaseDevice *dp, int messageID)
     {
         spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
     }
@@ -139,19 +139,19 @@ namespace Lithium
         spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDITelescope::newProperty(INDI::Property *property)
+    void INDITelescope::newProperty(LITHIUM::Property *property)
     {
         std::string PropName(property->getName());
-        INDI_PROPERTY_TYPE Proptype = property->getType();
+        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
 
         spdlog::debug("{} Property: {}", _name, property->getName());
 
-        if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
+        if (PropName == "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
         {
             spdlog::debug("{} Found device port for {} ", _name, property->getDeviceName());
             telescope_port = property->getText();
         }
-        else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
+        else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
         {
             spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
             connection_prop = property->getSwitch();
@@ -164,7 +164,7 @@ namespace Lithium
             }
             spdlog::debug("{} Connected {}", _name, is_connected);
         }
-        else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
+        else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
         {
             device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
             indi_telescope_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
@@ -172,12 +172,12 @@ namespace Lithium
             indi_telescope_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
             spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_telescope_exec);
         }
-        else if (PropName == indi_telescope_cmd + "INFO" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_telescope_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
         {
             telescopeinfo_prop = property->getNumber();
             newNumber(telescopeinfo_prop);
         }
-        else if (PropName == indi_telescope_cmd + "DEVICE_BAUD_RATE" && Proptype == INDI_SWITCH)
+        else if (PropName == indi_telescope_cmd + "DEVICE_BAUD_RATE" && Proptype == LITHIUM_SWITCH)
         {
             rate_prop = property->getSwitch();
             if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
@@ -194,7 +194,7 @@ namespace Lithium
                 indi_telescope_rate = "230400";
             spdlog::debug("{} baud rate : {}", _name, indi_telescope_rate);
         }
-        else if (PropName == indi_telescope_cmd + "DEVICE_PORT" && Proptype == INDI_TEXT)
+        else if (PropName == indi_telescope_cmd + "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
         {
             indi_telescope_port = IUFindText(property->getText(), "PORT")->text;
             spdlog::debug("{} USB Port : {}", _name, indi_telescope_port);
@@ -217,7 +217,7 @@ namespace Lithium
             spdlog::debug("{} : INDI server disconnected", _name);
     }
 
-    void INDITelescope::removeDevice(INDI::BaseDevice *dp)
+    void INDITelescope::removeDevice(LITHIUM::BaseDevice *dp)
     {
         ClearStatus();
         spdlog::info("{} disconnected", _name);

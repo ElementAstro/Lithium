@@ -26,10 +26,10 @@
 #include <list>
 #include <mutex>
 
-#include "indipropertyswitch.h"
-#include "indipropertynumber.h"
-#include "indipropertytext.h"
-#include "inditimer.h"
+#include "lithiumpropertyswitch.h"
+#include "lithiumpropertynumber.h"
+#include "lithiumpropertytext.h"
+#include "timer.hpp"
 
 namespace LITHIUM
 {

@@ -27,12 +27,12 @@
 // use 64-bit values when calling stat()
 #define _FILE_OFFSET_BITS 64
 
-#include "indiccd.h"
+#include "lithiumccd.h"
 
 #include "fpack/fpack.h"
-#include "indicom.h"
-#include "locale_compat.h"
-#include "indiutility.h"
+#include "lithiumcom.h"
+#include "locale/locale_compat.hpp"
+#include "lithiumutility.h"
 
 #ifdef HAVE_XISF
 #include <libxisf.h>
@@ -2279,7 +2279,7 @@ namespace LITHIUM
                 switch (targetChip->getBPP())
                 {
                 case 8:
-                    byte_type = TBYTE;
+                    byte_type = 11;
                     img_type = BYTE_IMG;
                     break;
 

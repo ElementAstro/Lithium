@@ -27,8 +27,8 @@
 
 #include "encoderinterface.h"
 #include "defaultdevice.h"
-#include "indiccd.h"
-#include "indidetector.h"
+#include "lithiumccd.h"
+#include "lithiumdetector.h"
 
 namespace LITHIUM
 {

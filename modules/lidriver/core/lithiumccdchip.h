@@ -18,12 +18,13 @@
 
 #pragma once
 
-#include "indiapi.h"
-#include "indidriver.h"
+#include "lithiumapi.h"
+#include "lithiumdriver.h"
 
 #include <sys/time.h>
 #include <stdint.h>
 #include <fitsio.h>
+#undef TBYTE
 
 namespace LITHIUM
 {

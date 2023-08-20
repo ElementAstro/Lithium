@@ -22,10 +22,10 @@
   file called LICENSE.
 *******************************************************************************/
 
-#include "indiweather.h"
+#include "lithiumweather.h"
 
-#include "connectionplugins/connectionserial.h"
-#include "connectionplugins/connectiontcp.h"
+#include "connection/connectionserial.h"
+#include "connection/connectiontcp.h"
 
 #include <cstring>
 

@@ -31,7 +31,7 @@ Description: Single Thread Pool (indisinglethreadpool)
 
 #include "single_thread.hpp"
 
-namespace Lithium
+namespace LITHIUM
 {
 
     SingleThreadPool::SingleThreadPool()

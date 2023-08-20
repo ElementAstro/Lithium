@@ -67,16 +67,18 @@ namespace UUID
          * @param use_hyphens 是否使用连字符分隔
          * @return 生成的 UUID 字符串
          */
-        std::string generateUUIDWithFormat(bool use_braces = true, bool use_hyphens = true);
+        static std::string generateUUIDWithFormat(bool use_braces = true, bool use_hyphens = true);
 
-    private:
-        std::mt19937 gen_;                       ///< 随机数生成器
-        std::uniform_int_distribution<int> dis_; ///< 均匀分布器
+        static std::string generateEnhancedUUID();
 
         /**
          * @brief 生成一个随机数
          * @return 生成的随机数
          */
-        unsigned int getRandomNumber();
+        static unsigned int getRandomNumber();
+
+    private:
+        std::mt19937 gen_;                       ///< 随机数生成器
+        std::uniform_int_distribution<int> dis_; ///< 均匀分布器
     };
 } // namespace Lithium::UUID

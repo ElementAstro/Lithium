@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include "indidevapi.h"
-#include "indibasetypes.h"
+#include "lithiumdevapi.h"
+#include "lithiumbasetypes.h"
 
 #include <stdio.h>
 #include <cstdlib>

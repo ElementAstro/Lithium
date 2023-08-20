@@ -59,7 +59,7 @@
 
 #include "ccvt.h"
 #include "ccvt_types.h"
-// #include "indidevapi.h"
+// #include "lithiumdevapi.h"
 #include "jpegutils.h"
 
 #include <stdlib.h>

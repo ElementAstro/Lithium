@@ -18,15 +18,15 @@
 *******************************************************************************/
 
 #include "defaultdevice.h"
-#include "indisensorinterface.h"
-#include "connectionplugins/connectionserial.h"
-#include "connectionplugins/connectiontcp.h"
+#include "lithiumsensorinterface.h"
+#include "connection/connectionserial.h"
+#include "connection/connectiontcp.h"
 
-#include "indicom.h"
+#include "lithiumcom.h"
 #include "libastro.h"
 #include "stream/streammanager.h"
-#include "locale_compat.h"
-#include "indiutility.h"
+#include "locale/locale_compat.hpp"
+#include "lithiumutility.h"
 
 #include <fitsio.h>
 
@@ -764,7 +764,7 @@ namespace LITHIUM
         switch (getBPS())
         {
         case 8:
-            byte_type = TBYTE;
+            byte_type = 11;
             img_type = BYTE_IMG;
             bit_depth = "8 bits per sample";
             break;

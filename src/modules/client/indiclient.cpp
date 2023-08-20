@@ -59,7 +59,7 @@ void LithiumIndiClient::serverConnected()
 bool LithiumIndiClient::connectServer()
 {
     // Call the original function.
-    bool ok = INDI::BaseClient::connectServer();
+    bool ok = LITHIUM::BaseClient::connectServer();
 
     // After the original function was completed,
     // the device information request was made in the INDI Core library.

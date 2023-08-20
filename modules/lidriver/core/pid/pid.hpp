@@ -31,6 +31,8 @@ Description: PID (pid)
 
 #pragma once
 
+#include <memory>
+
 class PIDImpl;
 
 class PID

@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "indibase.h"
-#include "indipropertynumber.h"
-#include "indipropertyswitch.h"
-#include "inditimer.h"
+#include "lithiumbase.h"
+#include "lithiumpropertynumber.h"
+#include "lithiumpropertyswitch.h"
+#include "timer.hpp"
 
 #include <stdint.h>
 #include <string>

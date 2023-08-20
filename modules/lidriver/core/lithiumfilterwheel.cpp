@@ -16,11 +16,11 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#include "indifilterwheel.h"
+#include "lithiumfilterwheel.h"
 
-#include "indicontroller.h"
-#include "connectionplugins/connectionserial.h"
-#include "connectionplugins/connectiontcp.h"
+#include "lithiumcontroller.h"
+#include "connection/connectionserial.h"
+#include "connection/connectiontcp.h"
 
 #include <cstring>
 

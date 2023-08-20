@@ -35,7 +35,7 @@ Description: Timer (inditimer)
 #include <functional>
 #include <memory>
 
-namespace Lithium
+namespace LITHIUM
 {
 
     class Timer
@@ -59,8 +59,8 @@ namespace Lithium
 
     private:
         std::function<void()> callback;
-        int interval{1000};
-        bool singleShot{false};
+        int _interval{1000};
+        bool _singleShot{false};
         bool active{false};
         std::shared_ptr<std::atomic<bool>> stopFlag;
 

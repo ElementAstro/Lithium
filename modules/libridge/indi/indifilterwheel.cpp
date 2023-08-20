@@ -29,13 +29,13 @@ Description: INDI Filterwheel
 
 **************************************************/
 
-#include "indifilterwheel.hpp"
+#include "lithiumfilterwheel.hpp"
 
 #include <spdlog/spdlog.h>
 
 namespace Lithium
 {
-    void INDIFilterwheel::newDevice(INDI::BaseDevice *dp)
+    void INDIFilterwheel::newDevice(LITHIUM::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
@@ -91,7 +91,7 @@ namespace Lithium
         }
     }
 
-    void INDIFilterwheel::newMessage(INDI::BaseDevice *dp, int messageID)
+    void INDIFilterwheel::newMessage(LITHIUM::BaseDevice *dp, int messageID)
     {
         spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
     }
@@ -139,19 +139,19 @@ namespace Lithium
         spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDIFilterwheel::newProperty(INDI::Property *property)
+    void INDIFilterwheel::newProperty(LITHIUM::Property *property)
     {
         std::string PropName(property->getName());
-        INDI_PROPERTY_TYPE Proptype = property->getType();
+        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
 
         spdlog::debug("{} Property: {}", _name, property->getName());
 
-        if (PropName == "DEVICE_PORT" && Proptype == INDI_TEXT)
+        if (PropName == "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
         {
             spdlog::debug("{} Found device port for {} ", _name, property->getDeviceName());
             filter_port = property->getText();
         }
-        else if (PropName == "CONNECTION" && Proptype == INDI_SWITCH)
+        else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
         {
             spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
             connection_prop = property->getSwitch();
@@ -164,7 +164,7 @@ namespace Lithium
             }
             spdlog::debug("{} Connected {}", _name, is_connected);
         }
-        else if (PropName == "DRIVER_INFO" && Proptype == INDI_TEXT)
+        else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
         {
             device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
             indi_filter_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
@@ -172,12 +172,12 @@ namespace Lithium
             indi_filter_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
             spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_filter_exec);
         }
-        else if (PropName == indi_filter_cmd + "INFO" && Proptype == INDI_NUMBER)
+        else if (PropName == indi_filter_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
         {
             filterinfo_prop = property->getNumber();
             newNumber(filterinfo_prop);
         }
-        else if (PropName == indi_filter_cmd + "DEVICE_BAUD_RATE" && Proptype == INDI_SWITCH)
+        else if (PropName == indi_filter_cmd + "DEVICE_BAUD_RATE" && Proptype == LITHIUM_SWITCH)
         {
             rate_prop = property->getSwitch();
             if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
@@ -194,7 +194,7 @@ namespace Lithium
                 indi_filter_rate = "230400";
             spdlog::debug("{} baud rate : {}", _name, indi_filter_rate);
         }
-        else if (PropName == indi_filter_cmd + "DEVICE_PORT" && Proptype == INDI_TEXT)
+        else if (PropName == indi_filter_cmd + "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
         {
             indi_filter_port = IUFindText(property->getText(), "PORT")->text;
             spdlog::debug("{} USB Port : {}", _name, indi_filter_port);
@@ -217,7 +217,7 @@ namespace Lithium
             spdlog::debug("{} : INDI server disconnected", _name);
     }
 
-    void INDIFilterwheel::removeDevice(INDI::BaseDevice *dp)
+    void INDIFilterwheel::removeDevice(LITHIUM::BaseDevice *dp)
     {
         ClearStatus();
         spdlog::info("{} disconnected", _name);

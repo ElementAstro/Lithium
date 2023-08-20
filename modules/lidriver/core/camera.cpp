@@ -44,19 +44,19 @@ Camera::~Camera()
     LOG_F(INFO, "Camera Simulator Destructed");
 }
 
-bool Camera::connect(const std::string &name)
+bool Camera::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", name.c_str());
+    LOG_F(INFO, "%s is connected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Camera::disconnect()
+bool Camera::disconnect(const IParams &params)
 {
     LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
     return true;
 }
 
-bool Camera::reconnect()
+bool Camera::reconnect(const IParams &params)
 {
     return true;
 }

@@ -25,7 +25,7 @@
 #pragma once
 
 #include "defaultdevice.h"
-#include "indiweatherinterface.h"
+#include "lithiumweatherinterface.h"
 
 #include <list>
 

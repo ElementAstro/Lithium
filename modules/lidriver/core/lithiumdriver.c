@@ -24,12 +24,12 @@ if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #endif
-#include "indidriver.h"
+#include "lithiumdriver.h"
 
 #include "base64.h"
-#include "indicom.h"
-#include "indidevapi.h"
-#include "locale_compat.h"
+#include "lithiumcom.h"
+#include "lithiumdevapi.h"
+#include "locale/locale_compat.hpp"
 
 #include <errno.h>
 #include <pthread.h>
@@ -47,8 +47,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <assert.h>
 
 #include "userio.h"
-#include "indiuserio.h"
-#include "indidriverio.h"
+#include "lithiumuserio.h"
+#include "lithiumdriverio.h"
 
 int verbose;   /* chatty */
 char *me = ""; /* a.out name */
@@ -308,7 +308,7 @@ int dispatch(XMLEle *root, char msg[])
         static int maxn = 0;
 
         // Set locale to C and save previous value
-        locale_char_t *orig = indi_locale_C_numeric_push();
+        locale_char_t *orig = lithium_locale_C_numeric_push();
 
         /* pull out each name/value pair */
         for (n = 0, ep = nextXMLEle(root, 1); ep; ep = nextXMLEle(root, 0))
@@ -334,7 +334,7 @@ int dispatch(XMLEle *root, char msg[])
         }
 
         // Reset locale settings to original value
-        indi_locale_C_numeric_pop(orig);
+        lithium_locale_C_numeric_pop(orig);
 
         /* invoke driver if something to do, but not an error if not */
         if (n > 0)
@@ -1034,8 +1034,8 @@ FILE *IUGetConfigFP(const char *filename, const char *dev, const char *mode, cha
         strncpy(configFileName, filename, MAXRBUF);
     else
     {
-        if (getenv("LITHIUMCONFIG"))
-            strncpy(configFileName, getenv("LITHIUMCONFIG"), MAXRBUF);
+        if (getenv("INDICONFIG"))
+            strncpy(configFileName, getenv("INDICONFIG"), MAXRBUF);
         else
             snprintf(configFileName, MAXRBUF, "%s%s_config.xml", configDir, dev);
     }

@@ -18,11 +18,11 @@
 *******************************************************************************/
 
 #include "defaultdevice.h"
-#include "indireceiver.h"
+#include "lithiumreceiver.h"
 
-#include "indicom.h"
+#include "lithiumcom.h"
 #include "stream/streammanager.h"
-#include "locale_compat.h"
+#include "locale/locale_compat.hpp"
 
 #include <fitsio.h>
 

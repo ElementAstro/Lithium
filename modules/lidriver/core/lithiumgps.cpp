@@ -22,7 +22,7 @@
   file called LICENSE.
 *******************************************************************************/
 
-#include "indigps.h"
+#include "lithiumgps.h"
 
 #include <cstring>
 

@@ -29,13 +29,13 @@ Description: INDI CLient Interface
 
 **************************************************/
 
-#ifndef _INDI_CLIENT_HPP_
-#define _INDI_CLIENT_HPP_
+#ifndef _LITHIUM_CLIENT_HPP_
+#define _LITHIUM_CLIENT_HPP_
 
 #include <libindi/baseclient.h>
 #include <libindi/basedevice.h>
 
-class LithiumIndiClient : public INDI::BaseClient
+class LithiumIndiClient : public LITHIUM::BaseClient
 {
     bool m_disconnecting;
 
@@ -45,7 +45,7 @@ public:
 
 public:
     bool connectServer()
-#if INDI_VERSION_MAJOR >= 2 || (INDI_VERSION_MINOR == 9 && INDI_VERSION_RELEASE == 9)
+#if LITHIUM_VERSION_MAJOR >= 2 || (LITHIUM_VERSION_MINOR == 9 && LITHIUM_VERSION_RELEASE == 9)
         override // use override since 1.9.9
 #endif
         ;
@@ -60,14 +60,14 @@ protected:
     // must use this in LGuider2 rather than BaseClient::disconnectServer()
     bool DisconnectIndiServer();
 
-#if INDI_VERSION_MAJOR >= 2
+#if LITHIUM_VERSION_MAJOR >= 2
 protected: // old deprecated interface INDI Version < 2.0.0
-    virtual void newDevice(INDI::BaseDevice *dp) = 0;
-    virtual void removeDevice(INDI::BaseDevice *dp) = 0;
-    virtual void newProperty(INDI::Property *property) = 0;
-    virtual void removeProperty(INDI::Property *property) = 0;
+    virtual void newDevice(LITHIUM::BaseDevice *dp) = 0;
+    virtual void removeDevice(LITHIUM::BaseDevice *dp) = 0;
+    virtual void newProperty(LITHIUM::Property *property) = 0;
+    virtual void removeProperty(LITHIUM::Property *property) = 0;
 
-    virtual void newMessage(INDI::BaseDevice *dp, int messageID) = 0;
+    virtual void newMessage(LITHIUM::BaseDevice *dp, int messageID) = 0;
     virtual void newBLOB(IBLOB *bp) = 0;
     virtual void newSwitch(ISwitchVectorProperty *svp) = 0;
     virtual void newNumber(INumberVectorProperty *nvp) = 0;
@@ -75,46 +75,46 @@ protected: // old deprecated interface INDI Version < 2.0.0
     virtual void newLight(ILightVectorProperty *lvp) = 0;
 
 protected: // new interface INDI Version >= 2.0.0
-    void newDevice(INDI::BaseDevice device) override
+    void newDevice(LITHIUM::BaseDevice device) override
     {
-        return newDevice((INDI::BaseDevice *)device);
+        return newDevice((LITHIUM::BaseDevice *)device);
     }
 
-    void removeDevice(INDI::BaseDevice device) override
+    void removeDevice(LITHIUM::BaseDevice device) override
     {
-        return removeDevice((INDI::BaseDevice *)device);
+        return removeDevice((LITHIUM::BaseDevice *)device);
     }
 
-    void newProperty(INDI::Property property) override
+    void newProperty(LITHIUM::Property property) override
     {
-        return newProperty((INDI::Property *)property);
+        return newProperty((LITHIUM::Property *)property);
     }
 
-    void removeProperty(INDI::Property property) override
+    void removeProperty(LITHIUM::Property property) override
     {
-        return removeProperty((INDI::Property *)property);
+        return removeProperty((LITHIUM::Property *)property);
     }
 
-    void updateProperty(INDI::Property property) override
+    void updateProperty(LITHIUM::Property property) override
     {
         switch (property.getType())
         {
-        case INDI_NUMBER:
+        case LITHIUM_NUMBER:
             return newNumber((INumberVectorProperty *)property);
-        case INDI_SWITCH:
+        case LITHIUM_SWITCH:
             return newSwitch((ISwitchVectorProperty *)property);
-        case INDI_LIGHT:
+        case LITHIUM_LIGHT:
             return newLight((ILightVectorProperty *)property);
-        case INDI_BLOB:
-            return newBLOB((IBLOB *)INDI::PropertyBlob(property)[0].cast());
-        case INDI_TEXT:
+        case LITHIUM_BLOB:
+            return newBLOB((IBLOB *)LITHIUM::PropertyBlob(property)[0].cast());
+        case LITHIUM_TEXT:
             return newText((ITextVectorProperty *)property);
         }
     }
 
-    void newMessage(INDI::BaseDevice device, int messageID) override
+    void newMessage(LITHIUM::BaseDevice device, int messageID) override
     {
-        return newMessage((INDI::BaseDevice *)device, messageID);
+        return newMessage((LITHIUM::BaseDevice *)device, messageID);
     }
 #endif
 };

@@ -24,7 +24,7 @@
 
 #include "defaultdevice.h"
 #include "libastro.h"
-#include "inditimer.h"
+#include "timer.hpp"
 
 #include <string>
 

@@ -39,17 +39,17 @@ Solver::~Solver()
 {
 }
 
-bool Solver::connect(const std::string &name)
+bool Solver::connect(const IParams &params)
 {
     return true;
 }
 
-bool Solver::disconnect()
+bool Solver::disconnect(const IParams &params)
 {
     return true;
 }
 
-bool Solver::reconnect()
+bool Solver::reconnect(const IParams &params)
 {
     return true;
 }

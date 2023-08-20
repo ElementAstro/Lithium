@@ -19,7 +19,7 @@
 #pragma once
 
 #include "defaultdevice.h"
-#include "indifilterinterface.h"
+#include "lithiumfilterinterface.h"
 
 /**
  * \class FilterWheel

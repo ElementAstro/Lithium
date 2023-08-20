@@ -28,7 +28,7 @@
 
 #include "ttybase.h"
 
-#include "locale/locale_compat.hpp"
+#include "locale/locale/locale_compat.hpppp"
 
 #include <errno.h>
 #include <fcntl.h>

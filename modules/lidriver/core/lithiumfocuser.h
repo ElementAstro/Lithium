@@ -19,7 +19,7 @@
 #pragma once
 
 #include "defaultdevice.h"
-#include "indifocuserinterface.h"
+#include "lithiumfocuserinterface.h"
 
 namespace Connection
 {

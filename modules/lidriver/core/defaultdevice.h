@@ -18,9 +18,9 @@
 
 #pragma once
 
-#include "parentdevice.h"
-#include "indidriver.h"
-#include "indilogger.h"
+#include "base/parentdevice.h"
+#include "lithiumdriver.h"
+#include "lithiumlogger.h"
 
 #include <stdint.h>
 

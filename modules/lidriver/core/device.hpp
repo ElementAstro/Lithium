@@ -46,6 +46,10 @@ Description: Basic Device Defination
 #include "device_exception.hpp"
 #include "deviceio.hpp"
 
+typedef emhash8::HashMap<std::string, std::any> IParams;
+
+typedef emhash8::HashMap<std::string, std::any> IReturns;
+
 class Device
 {
 public:
@@ -110,19 +114,15 @@ public:
     std::shared_ptr<SocketServer> deviceIOServer;
 
 public:
-    typedef emhash8::HashMap<std::string, std::any> IParams;
-
-    typedef emhash8::HashMap<std::string, std::any> IReturns;
-
     typedef bool (*ConnectFunc)(const IParams &params);
     typedef bool (*DisconnectFunc)(const IParams &params);
     typedef bool (*ReconnectFunc)(const IParams &params);
     typedef void (*InitFunc)();
-    typedef void (*InsertPropertyFunc)(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check = false);
+    typedef void (*InsertPropertyFunc)(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check);
     typedef void (*SetPropertyFunc)(const std::string &name, const std::any &value);
     typedef std::any (*GetPropertyFunc)(const std::string &name);
     typedef void (*RemovePropertyFunc)(const std::string &name);
-    typedef void (*InsertTaskFunc)(const std::string &name, std::any defaultValue, nlohmann::json params_template, const std::function<nlohmann::json(const nlohmann::json &)> &func, const std::function<nlohmann::json(const nlohmann::json &)> &stop_func, bool isBlock = false);
+    typedef void (*InsertTaskFunc)(const std::string &name, std::any defaultValue, nlohmann::json params_template, const std::function<nlohmann::json(const nlohmann::json &)> &func, const std::function<nlohmann::json(const nlohmann::json &)> &stop_func, bool isBlock);
     typedef bool (*RemoveTaskFunc)(const std::string &name);
     typedef std::shared_ptr<Lithium::SimpleTask> (*GetTaskFunc)(const std::string &name, const nlohmann::json &params);
     typedef void (*AddObserverFunc)(const std::function<void(const std::any &message)> &observer);

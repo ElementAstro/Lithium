@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "indidevapi.h"
-#include "indibasetypes.h"
-#include "indimacros.h"
+#include "lithiumdevapi.h"
+#include "lithiumbasetypes.h"
+#include "util/macro.hpp"
 #include <memory>
 
 /**

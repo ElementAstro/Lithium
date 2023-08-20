@@ -17,9 +17,9 @@
 *******************************************************************************/
 
 #include "connectionserial.h"
-#include "indistandardproperty.h"
-#include "indicom.h"
-#include "indilogger.h"
+#include "lithiumstandardproperty.h"
+#include "lithiumcom.h"
+#include "lithiumlogger.h"
 
 #include <dirent.h>
 #include <cerrno>
@@ -29,6 +29,10 @@
 #include <chrono>
 #include <regex>
 #include <random>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace Connection
 {
@@ -440,6 +444,40 @@ namespace Connection
         {
             struct dirent **namelist;
             std::vector<std::string> detectedDevices;
+
+#ifdef _WIN32
+            WIN32_FIND_DATAA fileInfo;
+            HANDLE hFind = INVALID_HANDLE_VALUE;
+            std::string searchPattern;
+
+            if (searchType == SERIAL_DEV)
+                searchPattern = prefix + "*";
+            else if (searchType == USB_ID_DEV)
+                searchPattern = prefix + "usb*";
+            else
+                searchPattern = prefix + "bluetooth*";
+
+            hFind = FindFirstFileA(searchPattern.c_str(), &fileInfo);
+            if (hFind != INVALID_HANDLE_VALUE)
+            {
+                do
+                {
+                    if (detectedDevices.size() < 10)
+                    {
+                        std::string deviceName(fileInfo.cFileName);
+                        detectedDevices.push_back(prefix + deviceName);
+                    }
+                    else
+                    {
+                        LOGF_DEBUG("Ignoring devices over %d : %s", detectedDevices.size(),
+                                   fileInfo.cFileName);
+                    }
+                } while (FindNextFileA(hFind, &fileInfo) != 0);
+
+                FindClose(hFind);
+            }
+
+#else
             int devCount = 0;
             if (searchType == SERIAL_DEV)
                 devCount = scandir(prefix.c_str(), &namelist, serial_dev_file_select, alphasort);
@@ -466,7 +504,7 @@ namespace Connection
                 }
                 free(namelist);
             }
-
+#endif
             return detectedDevices;
         };
 

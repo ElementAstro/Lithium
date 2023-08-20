@@ -25,7 +25,7 @@
 #include <fitsio.h>
 
 #ifdef HAVE_WEBSOCKET
-#include "indiwsserver.h"
+#include "lithiumwsserver.h"
 #endif
 
 #include <fitsio.h>
@@ -37,8 +37,8 @@
 #include <mutex>
 #include <thread>
 #include <stream/streammanager.h>
-#include <connectionplugins/connectionserial.h>
-#include <connectionplugins/connectiontcp.h>
+#include <connection/connectionserial.h>
+#include <connection/connectiontcp.h>
 
 // JM 2019-01-17: Disabled until further notice
 // #define WITH_EXPOSURE_LOOPING

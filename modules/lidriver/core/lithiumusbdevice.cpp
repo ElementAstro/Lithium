@@ -19,9 +19,9 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#include "indiusbdevice.h"
+#include "lithiumusbdevice.h"
 
-#include <config-usb.h>
+#define USB1_HAS_LIBUSB_ERROR_NAME
 
 #ifndef USB1_HAS_LIBUSB_ERROR_NAME
 const char *LIBUSB_CALL libusb_error_name(int errcode)

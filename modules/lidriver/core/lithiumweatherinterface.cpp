@@ -18,9 +18,9 @@
 
 */
 
-#include "indiweatherinterface.h"
+#include "lithiumweatherinterface.h"
 
-#include "indilogger.h"
+#include "lithiumlogger.h"
 
 #include <cstring>
 

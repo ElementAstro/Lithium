@@ -18,12 +18,12 @@
 
 #pragma once
 
-#include "indisensorinterface.h"
+#include "lithiumsensorinterface.h"
 #include "dsp.h"
 #include <fitsio.h>
 
 #ifdef HAVE_WEBSOCKET
-#include "indiwsserver.h"
+#include "lithiumwsserver.h"
 #endif
 
 #include <fitsio.h>

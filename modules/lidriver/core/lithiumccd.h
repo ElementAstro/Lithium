@@ -26,19 +26,19 @@
 
 #pragma once
 
-#include "indiccdchip.h"
+#include "lithiumccdchip.h"
 #include "defaultdevice.h"
-#include "indiguiderinterface.h"
-#include "indipropertynumber.h"
-#include "indipropertyswitch.h"
-#include "inditimer.h"
-#include "indielapsedtimer.h"
+#include "lithiumguiderinterface.h"
+#include "lithiumpropertynumber.h"
+#include "lithiumpropertyswitch.h"
+#include "timer.hpp"
+#include "elapsedtimer.hpp"
 #include "fitskeyword.h"
 #include "dsp/manager.h"
 #include "stream/streammanager.h"
 
 #ifdef HAVE_WEBSOCKET
-#include "indiwsserver.h"
+#include "lithiumwsserver.h"
 #endif
 
 #include <fitsio.h>

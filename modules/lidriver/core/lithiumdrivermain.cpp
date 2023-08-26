@@ -52,6 +52,8 @@
 #include <windows.h>
 #endif
 
+#include <argparse/argparse.hpp>
+
 #define MAXRBUF 2048
 
 static void usage(void);
@@ -308,25 +310,73 @@ static void waitPingReplyFromOtherThread(const char *uid)
     WSACleanup();
 #endif
 }
-
-void waitPingReply(const char *uid)
+extern "C"
 {
-    // Check if same thread than eventloop
+    void waitPingReply(const char *uid)
+    {
+        // Check if same thread than eventloop
 
-    pthread_t currentThread = pthread_self();
-    if (!pthread_equal(currentThread, eventLoopThread))
-    {
-        waitPingReplyFromOtherThread(uid);
-    }
-    else
-    {
-        waitPingReplyFromEventLoopThread(uid);
+        pthread_t currentThread = pthread_self();
+        if (!pthread_equal(currentThread, eventLoopThread))
+        {
+            waitPingReplyFromOtherThread(uid);
+        }
+        else
+        {
+            waitPingReplyFromEventLoopThread(uid);
+        }
     }
 }
 
-int main(int ac, char *av[])
+int main(int argc, const char **argv)
 {
-#ifndef _WIN32
+#ifdef _WIN32
+    HANDLE token;
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_DEFAULT | TOKEN_ADJUST_SESSIONID | TOKEN_QUERY | TOKEN_DUPLICATE, &token))
+    {
+        // 错误处理
+        return 1;
+    }
+
+    TOKEN_USER *user = NULL;
+    DWORD bufferSize = 0;
+    if (!GetTokenInformation(token, TokenUser, NULL, 0, &bufferSize) && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+    {
+        // 错误处理
+        CloseHandle(token);
+        return 1;
+    }
+
+    user = (TOKEN_USER *)malloc(bufferSize);
+    if (!GetTokenInformation(token, TokenUser, user, bufferSize, &bufferSize))
+    {
+        // 错误处理
+        free(user);
+        CloseHandle(token);
+        return 1;
+    }
+
+    if (!ImpersonateLoggedOnUser(token))
+    {
+        // 错误处理
+        free(user);
+        CloseHandle(token);
+        return 1;
+    }
+
+    CloseHandle(token);
+
+    if (!RevertToSelf())
+    {
+        // 错误处理
+        free(user);
+        return 1;
+    }
+
+    // 设置用户身份成功
+
+    free(user);
+#else
     int ret = 0;
 
     if ((ret = setgid(getgid())) != 0)
@@ -339,29 +389,30 @@ int main(int ac, char *av[])
         exit(255);
 #endif
 
-    eventLoopThread = pthread_self();
+    argparse::ArgumentParser parser("INDI Device driver framework.");
+    parser.add_argument("-v")
+        .default_value(false)
+        .implicit_value(true)
+        .help("more verbose to stderr");
 
-    /* save handy pointer to our base name */
-    // #PS: maybe use 'program_invocation_short_name'?
-    for (me = av[0]; av[0][0]; av[0]++)
-        if (av[0][0] == '/')
-            me = &av[0][1];
-
-    /* crack args */
-    while (--ac && (*++av)[0] == '-')
-        while (*++(*av))
-            switch (*(*av))
-            {
-            case 'v': /* verbose */
-                verbose++;
-                break;
-            default:
-                usage();
-            }
-
-    /* ac remaining args starting at av[0] */
-    if (ac > 0)
+    try
+    {
+        parser.parse_args(argc, argv);
+    }
+    catch (const std::runtime_error &err)
+    {
+        std::cerr << err.what() << std::endl;
         usage();
+    }
+
+    bool verbose_ = parser.get<bool>("-v");
+
+    if (verbose_)
+    {
+        verbose++;
+    }
+
+    eventLoopThread = pthread_self();
 
     /* init */
     clixml = newLilXML();

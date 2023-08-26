@@ -39,14 +39,6 @@ Description: ASCOM Basic Device
 
 ASCOMDevice::ASCOMDevice(const std::string &name) : rqs("localhost"), Device(name)
 {
-    REGISTER_COMMAND_MEMBER("get_name", getName);
-    REGISTER_COMMAND_MEMBER("get_connected", getConnected);
-    REGISTER_COMMAND_MEMBER("get_description", getDescription);
-    REGISTER_COMMAND_MEMBER("get_driverinfo", getDriverInfo);
-    REGISTER_COMMAND_MEMBER("get_interfaceversion", getInterfaceVersion);
-    REGISTER_COMMAND_MEMBER("get_supportedactions", getSupportedActions);
-
-    insertBoolProperty("connection", false, {}, PossibleValueType::None);
 }
 
 ASCOMDevice::~ASCOMDevice()
@@ -61,7 +53,7 @@ void ASCOMDevice::setBasicInfo(const std::string &address, const std::string &de
     this->base_url = std::format("http://{}/api/v{}/{}/{}", this->address, API_VERSION, this->device_type, this->device_number);
 }
 
-bool ASCOMDevice::connect(const std::string &name)
+bool ASCOMDevice::connect(const IParams &params)
 {
     if (getConnected())
     {
@@ -71,14 +63,14 @@ bool ASCOMDevice::connect(const std::string &name)
     setConnected(true);
     if (!getConnected())
     {
-        LOG_F(ERROR, "Failed to establish connection with %s", name.c_str());
+        //LOG_F(ERROR, "Failed to establish connection with %s", name.c_str());
         return false;
     }
-    LOG_F(INFO, "Connected to %s", name.c_str());
+    //LOG_F(INFO, "Connected to %s", name.c_str());
     return true;
 }
 
-bool ASCOMDevice::disconnect()
+bool ASCOMDevice::disconnect(const IParams &params)
 {
     if (!getConnected())
     {
@@ -94,13 +86,13 @@ bool ASCOMDevice::disconnect()
     return true;
 }
 
-bool ASCOMDevice::reconnect()
+bool ASCOMDevice::reconnect(const IParams &params)
 {
-    if (!disconnect())
+    if (!disconnect(params))
     {
         LOG_F(ERROR, "Failed to reconnect with %s, falied when trying to disconnect with", getStringProperty("name")->value.c_str());
     }
-    if (!connect(getStringProperty("name")->value))
+    if (!connect(params))
     {
         LOG_F(ERROR, "Failed to reconnect %s, falied when trying to connect to", getStringProperty("name")->value.c_str());
     }

@@ -87,9 +87,9 @@ namespace LITHIUM
     {
         char cstr[32];
 
-        size_t size = strftime(cstr, sizeof(cstr), format, &tm);
+        std::strftime(cstr, sizeof(cstr), format, &tm);
 
-        return std::string(cstr, size);
+        return std::string(cstr);
     }
 
     void replace_all(std::string &subject, const std::string &search, const std::string &replace)

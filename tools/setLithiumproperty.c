@@ -1,10 +1,10 @@
-/* connect to an INDI server and set one or more device.property.element.
+/* connect to an LITHIUM server and set one or more device.property.element.
  */
 
 #define _GNU_SOURCE // needed for fdopen
 
-#include "indiapi.h"
-#include "indidevapi.h"
+#include "lithiumapi.h"
+#include "lithiumdevapi.h"
 #include "lilxml.h"
 
 #include <errno.h>
@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-/* table of INDI definition elements we can set
+/* table of LITHIUM definition elements we can set
  * N.B. do not change defs[] order, they are indexed via -x/-n/-s args
  */
 typedef struct
@@ -34,20 +34,20 @@ typedef struct
     char *defOne;  /* defXXX name */
     char *newType; /* newXXXVector name */
     char *oneType; /* oneXXX name */
-} INDIDef;
-static INDIDef defs[] = {
+} LITHIUMDef;
+static LITHIUMDef defs[] = {
     { "defTextVector", "defText", "newTextVector", "oneText" },
     { "defNumberVector", "defNumber", "newNumberVector", "oneNumber" },
     { "defSwitchVector", "defSwitch", "newSwitchVector", "oneSwitch" },
 };
 #define NDEFS (sizeof(defs) / sizeof(defs[0]))
 
-#define INDIPORT 7624                 /* default port */
+#define LITHIUMPORT 7624                 /* default port */
 static char host_def[] = "localhost"; /* default host name */
 
 static char *me;              /* our name for usage message */
 static char *host = host_def; /* working host name */
-static int port   = INDIPORT; /* working port number */
+static int port   = LITHIUMPORT; /* working port number */
 static int verbose;           /* report extra info */
 static int directfd = -1;     /* direct filedes to server, if >= 0 */
 #define TIMEOUT 2             /* default timeout, secs */
@@ -66,7 +66,7 @@ typedef struct
     char *p;     /* property */
     SetEV *ev;   /* elements */
     int nev;     /* n elements */
-    INDIDef *dp; /* one of defs if known, else NULL */
+    LITHIUMDef *dp; /* one of defs if known, else NULL */
 } SetSpec;
 
 static SetSpec *sets; /* set of properties to set */
@@ -74,8 +74,8 @@ static int nsets;
 
 static void usage(void);
 static int crackSpec(int *acp, char **avp[]);
-static void openINDIServer(FILE **rfpp, FILE **wfpp);
-static void listenINDI(FILE *rfp, FILE *wfp);
+static void openLITHIUMServer(FILE **rfpp, FILE **wfpp);
+static void listenLITHIUM(FILE *rfp, FILE *wfp);
 static int finished(void);
 static void onAlarm(int dummy);
 static int readServerChar(FILE *fp);
@@ -83,7 +83,7 @@ static void findSet(XMLEle *root, FILE *fp);
 static void scanEV(SetSpec *specp, char ev[]);
 static void scanEEVV(SetSpec *specp, char *ep, char ev[]);
 static void scanEVEV(SetSpec *specp, char ev[]);
-static void sendNew(FILE *fp, INDIDef *dp, SetSpec *sp);
+static void sendNew(FILE *fp, LITHIUMDef *dp, SetSpec *sp);
 static void sendSpecs(FILE *wfp);
 
 int main(int ac, char *av[])
@@ -199,7 +199,7 @@ int main(int ac, char *av[])
     }
     else
     {
-        openINDIServer(&rfp, &wfp);
+        openLITHIUMServer(&rfp, &wfp);
         if (verbose)
             fprintf(stderr, "Connected to %s on port %d\n", host, port);
     }
@@ -217,11 +217,11 @@ int main(int ac, char *av[])
         /* issue getProperties */
         if (verbose)
             fprintf(stderr, "Querying for properties\n");
-        fprintf(wfp, "<getProperties version='%g'/>\n", INDIV);
+        fprintf(wfp, "<getProperties version='%g'/>\n", LITHIUMV);
         fflush(wfp);
 
         /* listen for properties, set when see any we recognize */
-        listenINDI(rfp, wfp);
+        listenLITHIUM(rfp, wfp);
     }
 
     return (0);
@@ -229,18 +229,17 @@ int main(int ac, char *av[])
 
 static void usage()
 {
-    fprintf(stderr, "Purpose: set one or more writable INDI properties\n");
-    fprintf(stderr, "%s\n", GIT_TAG_STRING);
+    fprintf(stderr, "Purpose: set one or more writable LITHIUM properties\n");
     fprintf(stderr, "Usage: %s [options] {[type] spec} ...\n", me);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
     fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
-    fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
+    fprintf(stderr, "  -p p  : alternate port, default is %d\n", LITHIUMPORT);
     fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n", TIMEOUT);
     fprintf(stderr, "  -v    : verbose (more are cumulative)\n");
     fprintf(stderr, "Each spec optionally preceded by its type is sent without first confirming\n");
     fprintf(stderr, "its structure. This is much more efficient but there is no error checking.\n");
-    fprintf(stderr, "Types are indicated with the following flags:\n");
+    fprintf(stderr, "Types are lithiumcated with the following flags:\n");
     fprintf(stderr, "  -x    : Text\n");
     fprintf(stderr, "  -n    : Number\n");
     fprintf(stderr, "  -s    : Switch\n");
@@ -263,9 +262,9 @@ static int crackSpec(int *acp, char **avp[])
 {
     char d[128], p[128], ev[2048];
     char *spec  = *avp[0];
-    INDIDef *dp = NULL;
+    LITHIUMDef *dp = NULL;
 
-    /* check if first arg is type indicator */
+    /* check if first arg is type lithiumcator */
     if ((*acp > 0) && (spec[0] == '-'))
     {
         switch (spec[1])
@@ -321,7 +320,7 @@ static int crackSpec(int *acp, char **avp[])
 /* open a read and write connection to host and port or die.
  * exit if trouble.
  */
-static void openINDIServer(FILE **rfpp, FILE **wfpp)
+static void openLITHIUMServer(FILE **rfpp, FILE **wfpp)
 {
     struct sockaddr_in serv_addr;
     struct hostent *hp;
@@ -335,7 +334,7 @@ static void openINDIServer(FILE **rfpp, FILE **wfpp)
         exit(2);
     }
 
-    /* create a socket to the INDI server */
+    /* create a socket to the LITHIUM server */
     (void)memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family      = AF_INET;
     serv_addr.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
@@ -367,7 +366,7 @@ static void CALLBACK onTimer(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTim
 }
 
 /* listen for property reports, send new sets if match */
-static void listenINDI(FILE *rfp, FILE *wfp)
+static void listenLITHIUM(FILE *rfp, FILE *wfp)
 {
     char msg[1024];
 
@@ -424,7 +423,7 @@ static int finished()
  */
 static void onAlarm(int dummy)
 {
-    INDI_UNUSED(dummy);
+    LITHIUM_UNUSED(dummy);
     int i, j;
 
     for (i = 0; i < nsets; i++)
@@ -444,7 +443,7 @@ static int readServerChar(FILE *fp)
         if (ferror(fp))
             perror("read");
         else
-            fprintf(stderr, "INDI server %s:%d disconnected\n", host, port);
+            fprintf(stderr, "LITHIUM server %s:%d disconnected\n", host, port);
         exit(2);
     }
 
@@ -510,8 +509,8 @@ static void findSet(XMLEle *root, FILE *fp)
     }
 }
 
-/* send the given set specification of the given INDI type to channel on fp */
-static void sendNew(FILE *fp, INDIDef *dp, SetSpec *sp)
+/* send the given set specification of the given LITHIUM type to channel on fp */
+static void sendNew(FILE *fp, LITHIUMDef *dp, SetSpec *sp)
 {
     int i;
 

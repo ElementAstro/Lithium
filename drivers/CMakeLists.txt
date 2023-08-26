@@ -14,3 +14,9 @@ target_link_libraries(lithium_astrometry lithiumcore lithiumdevice dsp eventloop
 install(TARGETS lithium_astrometry RUNTIME DESTINATION bin)
 
 add_subdirectory(lithium-simulator)
+
+add_subdirectory(lithium-weather)
+
+add_subdirectory(lithium-ioptron)
+
+add_subdirectory(hydrogen-onstep)

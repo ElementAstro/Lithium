@@ -52,6 +52,17 @@ namespace tl
 
 namespace Lithium
 {
+    enum class DeviceType
+    {
+        Camera,
+        Telescope,
+        Focuser,
+        FilterWheel,
+        Solver,
+        Guider,
+        NumDeviceTypes
+    };
+    
     /**
      * @class DeviceManager
      * @brief 设备管理器类，用于管理各种设备对象。

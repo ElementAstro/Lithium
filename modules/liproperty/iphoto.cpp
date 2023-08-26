@@ -34,8 +34,7 @@ Description: Photo type definition
 
 IPhoto::IPhoto()
 {
-    UUID::UUIDGenerator generator;
-    message_uuid = generator.generateUUIDWithFormat();
+    message_uuid = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 
 const std::string IPhoto::toJson() const

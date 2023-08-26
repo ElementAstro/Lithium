@@ -50,6 +50,12 @@ extern "C"
     size_t userio_xml_escape(const struct userio *io, void *user, const char *src);
     void userio_xmlv1(const userio *io, void *user);
 
+    // JSON support
+    ssize_t userio_json_write_string(const struct userio *io, void *user, const char *str);
+    ssize_t userio_json_write_number(const struct userio *io, void *user, double number);
+    ssize_t userio_json_write_boolean(const struct userio *io, void *user, int value);
+    ssize_t userio_json_write_null(const struct userio *io, void *user);
+
 #ifdef __cplusplus
 }
 #endif

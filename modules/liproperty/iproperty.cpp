@@ -34,7 +34,7 @@ Description: Property type definition
 
 IPropertyBase::IPropertyBase()
 {
-    message_uuid = UUID::UUIDGenerator::generateUUIDWithFormat();
+    message_uuid = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 
 INumberProperty::INumberProperty() : IPropertyBase()

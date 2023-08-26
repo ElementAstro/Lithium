@@ -1,6 +1,6 @@
 #include "uuid.hpp"
 
-namespace UUID
+namespace LITHIUM::UUID
 {
     UUIDGenerator::UUIDGenerator() : gen_(std::random_device{}()), dis_(0, 15)
     {
@@ -13,7 +13,10 @@ namespace UUID
 
     unsigned int UUIDGenerator::getRandomNumber()
     {
-        return dis_(gen_);
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<int> dis(0, 15);
+        return dis(gen);
     }
 
     std::string UUIDGenerator::generateUUID()

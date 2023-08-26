@@ -417,13 +417,27 @@ int tty_timeout(int fd, int timeout)
 
 int tty_timeout_microseconds(int fd, long timeout_seconds, long timeout_microseconds)
 {
-#if defined(_WIN32) || defined(ANDROID)
-    LITHIUM_UNUSED(fd);
-    LITHIUM_UNUSED(timeout_seconds);
-    LITHIUM_UNUSED(timeout_microseconds);
-    return TTY_ERRNO;
-#else
+#ifdef _WIN32
+    if (fd == -1)
+        return TTY_ERRNO;
 
+    struct timeval tv;
+    tv.tv_sec = timeout_seconds;
+    tv.tv_usec = timeout_microseconds;
+
+    fd_set readout;
+    FD_ZERO(&readout);
+    FD_SET(fd, &readout);
+
+    int retval = select(fd + 1, &readout, NULL, NULL, &tv);
+
+    if (retval > 0)
+        return TTY_OK;
+    else if (retval == 0)
+        return TTY_TIME_OUT;
+    else
+        return TTY_SELECT_ERROR;
+#else
     if (fd == -1)
         return TTY_ERRNO;
 
@@ -434,73 +448,60 @@ int tty_timeout_microseconds(int fd, long timeout_seconds, long timeout_microsec
     FD_ZERO(&readout);
     FD_SET(fd, &readout);
 
-    /* wait for 'timeout' seconds + microseconds */
     tv.tv_sec = timeout_seconds;
     tv.tv_usec = timeout_microseconds;
 
-    /* Wait till we have a change in the fd status */
     retval = select(fd + 1, &readout, NULL, NULL, &tv);
 
-    /* Return 0 on successful fd change */
     if (retval > 0)
         return TTY_OK;
-    /* Return -1 due to an error */
-    else if (retval == -1)
-        return TTY_SELECT_ERROR;
-    /* Return -2 if time expires before anything interesting happens */
-    else
+    else if (retval == 0)
         return TTY_TIME_OUT;
-
+    else
+        return TTY_SELECT_ERROR;
 #endif
 }
 
 int tty_write(int fd, const char *buf, int nbytes, int *nbytes_written)
 {
 #ifdef _WIN32
-    return TTY_ERRNO;
-#else
-    int geminiBuffer[66] = {0};
-    char *buffer = (char *)buf;
-
-    if (tty_gemini_udp_format)
-    {
-        buffer = (char *)geminiBuffer;
-        geminiBuffer[0] = ++tty_sequence_number;
-        geminiBuffer[1] = 0;
-        memcpy((char *)&geminiBuffer[2], buf, nbytes);
-        // Add on the 8 bytes for the header and 1 byte for the null terminator
-        nbytes += 9;
-    }
-
     if (fd == -1)
         return TTY_ERRNO;
 
     int bytes_w = 0;
     *nbytes_written = 0;
 
-    if (tty_debug)
-    {
-        int i = 0;
-        for (i = 0; i < nbytes; i++)
-            IDLog("%s: buffer[%d]=%#X (%c)\n", __FUNCTION__, i, (unsigned char)buf[i], buf[i]);
-    }
-
     while (nbytes > 0)
     {
-        bytes_w = write(fd, buffer + (*nbytes_written), nbytes);
+        bytes_w = send(fd, buf + (*nbytes_written), nbytes, 0);
 
-        if (bytes_w < 0)
-            return TTY_WRITE_ERROR;
+        if (bytes_w == SOCKET_ERROR)
+            return TTY_ERRNO;
 
         *nbytes_written += bytes_w;
         nbytes -= bytes_w;
     }
 
-    if (tty_gemini_udp_format)
-        *nbytes_written -= 9;
+    return TTY_OK;
+#else
+    if (fd == -1)
+        return TTY_ERRNO;
+
+    int bytes_w = 0;
+    *nbytes_written = 0;
+
+    while (nbytes > 0)
+    {
+        bytes_w = write(fd, buf + (*nbytes_written), nbytes);
+
+        if (bytes_w < 0)
+            return TTY_ERRNO;
+
+        *nbytes_written += bytes_w;
+        nbytes -= bytes_w;
+    }
 
     return TTY_OK;
-
 #endif
 }
 
@@ -516,11 +517,80 @@ int tty_read(int fd, char *buf, int nbytes, int timeout, int *nbytes_read)
 {
     return tty_read_expanded(fd, buf, nbytes, timeout, 0, nbytes_read);
 }
-
 int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long timeout_microseconds, int *nbytes_read)
 {
 #ifdef _WIN32
-    return TTY_ERRNO;
+
+    if (fd == -1)
+        return TTY_ERRNO;
+
+    DWORD numBytesToRead = nbytes;
+    DWORD bytesRead = 0;
+    int err = 0;
+    *nbytes_read = 0;
+
+    if (nbytes <= 0)
+        return TTY_PARAM_ERROR;
+
+    if (tty_debug)
+        IDLog("%s: Request to read %d bytes with %ld s, %ld us timeout for fd %d\n", __FUNCTION__, nbytes, timeout_seconds, timeout_microseconds, fd);
+
+    char geminiBuffer[257] = {0};
+    char *buffer = buf;
+
+    if (tty_gemini_udp_format)
+    {
+        numBytesToRead = nbytes + 8;
+        buffer = geminiBuffer;
+    }
+
+    while (numBytesToRead > 0)
+    {
+        if ((err = tty_timeout_microseconds(fd, timeout_seconds, timeout_microseconds)))
+            return err;
+
+        if (!ReadFile((HANDLE)_get_osfhandle(fd), buffer + (*nbytes_read), numBytesToRead, &bytesRead, NULL))
+            return TTY_READ_ERROR;
+
+        if (bytesRead < 0)
+            return TTY_READ_ERROR;
+
+        if (tty_debug)
+        {
+            IDLog("%d bytes read and %d bytes remaining...\n", bytesRead, numBytesToRead - bytesRead);
+            int i = 0;
+            for (i = *nbytes_read; i < (*nbytes_read + bytesRead); i++)
+                IDLog("%s: buffer[%d]=%#X (%c)\n", __FUNCTION__, i, (unsigned char)buf[i], buf[i]);
+        }
+
+        if (*nbytes_read == 0 && tty_clear_trailing_lf && *buffer == 0x0A)
+        {
+            if (tty_debug)
+                IDLog("%s: Cleared LF char left in buf\n", __FUNCTION__);
+
+            memcpy(buffer, buffer + 1, bytesRead);
+            --bytesRead;
+        }
+
+        *nbytes_read += bytesRead;
+        numBytesToRead -= bytesRead;
+    }
+
+    if (tty_gemini_udp_format)
+    {
+        int *intSizedBuffer = (int *)geminiBuffer;
+        if (intSizedBuffer[0] != tty_sequence_number)
+        {
+            // Not the right reply just do the read again.
+            return tty_read_expanded(fd, buf, nbytes, timeout_seconds, timeout_microseconds, nbytes_read);
+        }
+
+        *nbytes_read -= 8;
+        memcpy(buf, geminiBuffer + 8, *nbytes_read);
+    }
+
+    return TTY_OK;
+
 #else
 
     if (fd == -1)
@@ -603,13 +673,113 @@ int tty_read_section(int fd, char *buf, char stop_char, int timeout, int *nbytes
 int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_seconds, long timeout_microseconds, int *nbytes_read)
 {
 #ifdef _WIN32
-    return TTY_ERRNO;
-#else
-
-    char readBuffer[257] = {0};
 
     if (fd == -1)
         return TTY_ERRNO;
+
+    DWORD bytesRead = 0;
+    int err = TTY_OK;
+    *nbytes_read = 0;
+
+    char readBuffer[257] = {0};
+
+    if (tty_debug)
+        IDLog("%s: Request to read until stop char '%#02X' with %ld s %ld us timeout for fd %d\n", __FUNCTION__, stop_char, timeout_seconds, timeout_microseconds, fd);
+
+    if (tty_gemini_udp_format)
+    {
+        if ((err = tty_timeout_microseconds(fd, timeout_seconds, timeout_microseconds)))
+            return err;
+
+        if (!ReadFile((HANDLE)_get_osfhandle(fd), readBuffer, 255, &bytesRead, NULL))
+            return TTY_READ_ERROR;
+
+        if (bytesRead < 0)
+            return TTY_READ_ERROR;
+
+        int *intSizedBuffer = (int *)readBuffer;
+        if (intSizedBuffer[0] != tty_sequence_number)
+        {
+            // Not the right reply just do the read again.
+            return tty_read_section_expanded(fd, buf, stop_char, timeout_seconds, timeout_microseconds, nbytes_read);
+        }
+
+        for (int index = 8; index < bytesRead; index++)
+        {
+            (*nbytes_read)++;
+
+            if (*(readBuffer + index) == stop_char)
+            {
+                strncpy(buf, readBuffer + 8, *nbytes_read);
+                return TTY_OK;
+            }
+        }
+    }
+    else if (tty_generic_udp_format)
+    {
+        if ((err = tty_timeout_microseconds(fd, timeout_seconds, timeout_microseconds)))
+            return err;
+
+        if (!ReadFile((HANDLE)_get_osfhandle(fd), readBuffer, 255, &bytesRead, NULL))
+            return TTY_READ_ERROR;
+
+        if (bytesRead < 0)
+            return TTY_READ_ERROR;
+
+        for (int index = 0; index < bytesRead; index++)
+        {
+            (*nbytes_read)++;
+
+            if (*(readBuffer + index) == stop_char)
+            {
+                strncpy(buf, readBuffer, *nbytes_read);
+                return TTY_OK;
+            }
+        }
+    }
+    else
+    {
+        uint8_t *read_char = 0;
+
+        for (;;)
+        {
+            if ((err = tty_timeout_microseconds(fd, timeout_seconds, timeout_microseconds)))
+                return err;
+
+            read_char = (uint8_t *)(buf + *nbytes_read);
+
+            if (!ReadFile((HANDLE)_get_osfhandle(fd), read_char, 1, &bytesRead, NULL))
+                return TTY_READ_ERROR;
+
+            if (bytesRead < 0)
+                return TTY_READ_ERROR;
+
+            if (tty_debug)
+                IDLog("%s: buffer[%d]=%#X (%c)\n", __FUNCTION__, (*nbytes_read), *read_char, *read_char);
+
+            if (!(tty_clear_trailing_lf && *read_char == 0X0A && *nbytes_read == 0))
+                (*nbytes_read)++;
+            else
+            {
+                if (tty_debug)
+                    IDLog("%s: Cleared LF char left in buf\n", __FUNCTION__);
+            }
+
+            if (*read_char == stop_char)
+            {
+                return TTY_OK;
+            }
+        }
+    }
+
+    return TTY_TIME_OUT;
+
+#else
+
+    if (fd == -1)
+        return TTY_ERRNO;
+
+    char readBuffer[257] = {0};
 
     int bytesRead = 0;
     int err = TTY_OK;
@@ -700,13 +870,56 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
 int tty_nread_section(int fd, char *buf, int nsize, char stop_char, int timeout, int *nbytes_read)
 {
 #ifdef _WIN32
-    return TTY_ERRNO;
-#else
-
     if (fd == -1)
         return TTY_ERRNO;
 
-    // For Gemini
+    DWORD bytesRead = 0;
+    int err = TTY_OK;
+    *nbytes_read = 0;
+    uint8_t *read_char = 0;
+
+    if (tty_gemini_udp_format || tty_generic_udp_format)
+        return tty_read_section(fd, buf, stop_char, timeout, nbytes_read);
+
+    if (tty_debug)
+        IDLog("%s: Request to read until stop char '%#02X' with %d timeout for fd %d\n", __FUNCTION__, stop_char, timeout, fd);
+
+    memset(buf, 0, nsize);
+
+    for (;;)
+    {
+        if ((err = tty_timeout(fd, timeout)))
+            return err;
+
+        read_char = (uint8_t *)(buf + *nbytes_read);
+
+        if (!ReadFile((HANDLE)_get_osfhandle(fd), read_char, 1, &bytesRead, NULL))
+            return TTY_READ_ERROR;
+
+        if (bytesRead < 0)
+            return TTY_READ_ERROR;
+
+        if (tty_debug)
+            IDLog("%s: buffer[%d]=%#X (%c)\n", __FUNCTION__, (*nbytes_read), *read_char, *read_char);
+
+        if (!(tty_clear_trailing_lf && *read_char == 0X0A && *nbytes_read == 0))
+            (*nbytes_read)++;
+        else
+        {
+            if (tty_debug)
+                IDLog("%s: Cleared LF char left in buf\n", __FUNCTION__);
+        }
+
+        if (*read_char == stop_char)
+            return TTY_OK;
+        else if (*nbytes_read >= nsize)
+            return TTY_OVERFLOW;
+    }
+
+#else
+    if (fd == -1)
+        return TTY_ERRNO;
+
     if (tty_gemini_udp_format || tty_generic_udp_format)
         return tty_read_section(fd, buf, stop_char, timeout, nbytes_read);
 
@@ -714,10 +927,11 @@ int tty_nread_section(int fd, char *buf, int nsize, char stop_char, int timeout,
     int err = TTY_OK;
     *nbytes_read = 0;
     uint8_t *read_char = 0;
-    memset(buf, 0, nsize);
 
     if (tty_debug)
         IDLog("%s: Request to read until stop char '%#02X' with %d timeout for fd %d\n", __FUNCTION__, stop_char, timeout, fd);
+
+    memset(buf, 0, nsize);
 
     for (;;)
     {
@@ -746,7 +960,6 @@ int tty_nread_section(int fd, char *buf, int nsize, char stop_char, int timeout,
         else if (*nbytes_read >= nsize)
             return TTY_OVERFLOW;
     }
-
 #endif
 }
 
@@ -1033,7 +1246,100 @@ error:
 int tty_connect(const char *device, int bit_rate, int word_size, int parity, int stop_bits, int *fd)
 {
 #ifdef _WIN32
-    return TTY_PORT_FAILURE;
+    HANDLE hComm; // 声明一个HANDLE类型的变量hComm
+    // 使用&操作符获取hComm的地址
+    hComm = CreateFile(device, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    if (hComm == INVALID_HANDLE_VALUE) // 检查hComm是否等于INVALID_HANDLE_VALUE
+    {
+        printf("Failed to open serial port.\n");
+        return TTY_PORT_FAILURE;
+    }
+
+    DCB dcbSerialParams = {0};
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+    if (!GetCommState(hComm, &dcbSerialParams))
+    {
+        printf("Failed to get serial port state.\n");
+        CloseHandle(hComm);
+        return TTY_PORT_FAILURE;
+    }
+
+    // 设置波特率
+    switch (bit_rate)
+    {
+    case 9600:
+        dcbSerialParams.BaudRate = CBR_9600;
+        break;
+    case 19200:
+        dcbSerialParams.BaudRate = CBR_19200;
+        break;
+    case 38400:
+        dcbSerialParams.BaudRate = CBR_38400;
+        break;
+    case 57600:
+        dcbSerialParams.BaudRate = CBR_57600;
+        break;
+    case 115200:
+        dcbSerialParams.BaudRate = CBR_115200;
+        break;
+    default:
+        printf("Invalid bit rate.\n");
+        CloseHandle(hComm);
+        return TTY_PORT_FAILURE;
+    }
+
+    // 设置数据位、校验位和停止位
+    dcbSerialParams.ByteSize = word_size;
+    switch (parity)
+    {
+    case 0:
+        dcbSerialParams.Parity = NOPARITY;
+        break;
+    case 1:
+        dcbSerialParams.Parity = EVENPARITY;
+        break;
+    case 2:
+        dcbSerialParams.Parity = ODDPARITY;
+        break;
+    default:
+        printf("Invalid parity.\n");
+        CloseHandle(hComm);
+        return TTY_PORT_FAILURE;
+    }
+    if (stop_bits == 1)
+        dcbSerialParams.StopBits = ONESTOPBIT;
+    else if (stop_bits == 2)
+        dcbSerialParams.StopBits = TWOSTOPBITS;
+    else
+    {
+        printf("Invalid stop bits.\n");
+        CloseHandle(hComm);
+        return TTY_PORT_FAILURE;
+    }
+
+    if (!SetCommState(hComm, &dcbSerialParams))
+    {
+        printf("Failed to set serial port state.\n");
+        CloseHandle(hComm);
+        return TTY_PORT_FAILURE;
+    }
+
+    COMMTIMEOUTS timeouts = {0};
+    timeouts.ReadIntervalTimeout = 1000;
+    timeouts.ReadTotalTimeoutConstant = 1000;
+    timeouts.ReadTotalTimeoutMultiplier = 1000;
+    timeouts.WriteTotalTimeoutConstant = 1000;
+    timeouts.WriteTotalTimeoutMultiplier = 1000;
+    if (!SetCommTimeouts(hComm, &timeouts))
+    {
+        printf("Failed to set serial port timeouts.\n");
+        CloseHandle(hComm);
+        return TTY_PORT_FAILURE;
+    }
+
+    *fd = (int)(intptr_t)hComm;
+
+    return TTY_OK;
 
 #else
     int t_fd = -1;
@@ -1289,17 +1595,21 @@ int tty_disconnect(int fd)
         return TTY_ERRNO;
 
 #ifdef _WIN32
-    return TTY_ERRNO;
+    HANDLE hComm = (HANDLE)_get_osfhandle(fd);
+
+    if (!CloseHandle(hComm))
+        return TTY_ERRNO;
 #else
     int err;
+
     tcflush(fd, TCIOFLUSH);
     err = close(fd);
 
     if (err != 0)
         return TTY_ERRNO;
+#endif
 
     return TTY_OK;
-#endif
 }
 
 void tty_error_msg(int err_code, char *err_msg, int err_msg_len)
@@ -1564,4 +1874,23 @@ double baseline_delay(double alt, double az, double baseline[3])
 #if defined(_MSC_VER)
 #undef snprintf
 #pragma warning(pop)
+#endif
+
+#ifdef _WIN32
+HANDLE convertToHandle(int PortFd)
+{
+    HANDLE hSerial = (HANDLE)_get_osfhandle(PortFd);
+    if (hSerial == INVALID_HANDLE_VALUE)
+    {
+        return NULL;
+    }
+    DCB dcbSerialParams = {0};
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+
+    if (!GetCommState(hSerial, &dcbSerialParams))
+    {
+        return NULL;
+    }
+    return hSerial;
+}
 #endif

@@ -5,10 +5,7 @@ find_package(USB1 REQUIRED)
 find_package(JPEG REQUIRED)
 include_directories(${USB1_INCLUDE_DIRS})
 
-option(LITHIUM_BUILD_STATIC ON)
-
 add_subdirectory(io)
-
 
 include_directories(.)
 include_directories(timer)
@@ -24,6 +21,7 @@ find_package(FFTW3 REQUIRED)
 
 list(APPEND ${PROJECT_NAME}_LIBS
     lithiumcore
+    lithiumdevice
     eventloop
     dsp
     fpack
@@ -125,7 +123,7 @@ endif()
 list(APPEND ${PROJECT_NAME}_SOURCES
     lithiumdriver.c
     lithiumdriverio.c
-    lithiumdrivermain.c
+    lithiumdrivermain.cpp
     defaultdevice.cpp
     timer/timer.cpp
     timer/elapsedtimer.cpp
@@ -282,8 +280,6 @@ install(FILES
     COMPONENT Devel
 )
 
-# Build Static Library
-if(LITHIUM_BUILD_STATIC)
     add_library(${PROJECT_NAME}static STATIC)
 
     target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
@@ -298,10 +294,7 @@ if(LITHIUM_BUILD_STATIC)
     install(TARGETS ${PROJECT_NAME}static
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
-endif()
 
-# Build Shared Library
-if(LITHIUM_BUILD_SHARED)
     add_library(${PROJECT_NAME} SHARED)
 
     target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
@@ -317,4 +310,3 @@ if(LITHIUM_BUILD_SHARED)
     install(TARGETS ${PROJECT_NAME}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
-endif()

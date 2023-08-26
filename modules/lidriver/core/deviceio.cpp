@@ -39,21 +39,10 @@ Description: Device IO Module
 #include <cstdio>
 #include <cstdlib>
 #include <unistd.h>
-
-#ifdef _WIN32
-#include <winsock2.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <sys/socket.h>
-#include <netinet/in.h>
-#define SOCKET int
-#define INVALID_SOCKET -1
-#define SOCKET_ERROR -1
-#define closesocket(s) close(s)
-#endif
+#include <sys/types.h>
 
 SocketServer::SocketServer(EventLoop &eventLoop, int port)
-    : eventLoop(eventLoop), port(port), serverSocket(INVALID_SOCKET) {}
+    : eventLoop(eventLoop), port(port), serverSocket(INVALID_SOCKET), running(false) {}
 
 void SocketServer::start()
 {
@@ -68,7 +57,7 @@ void SocketServer::start()
     }
 #endif
 
-    serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0); // 修改 IPPROTO_TCP 为 0
     if (serverSocket == INVALID_SOCKET)
     {
         LOG_F(ERROR, "Failed to create socket");
@@ -133,7 +122,7 @@ void SocketServer::setMessageHandler(MessageHandler handler)
     messageHandler = std::move(handler);
 }
 
-void SocketServer::sendMessage(int clientSocket, const std::string &message)
+void SocketServer::sendMessage(SOCKET clientSocket, const std::string &message)
 {
     send(clientSocket, message.c_str(), message.length(), 0);
 }
@@ -141,7 +130,11 @@ void SocketServer::sendMessage(int clientSocket, const std::string &message)
 void SocketServer::acceptClientConnection()
 {
     sockaddr_in clientAddress{};
+#ifdef _WIN32
+    int clientAddressLength = sizeof(clientAddress);
+#else
     socklen_t clientAddressLength = sizeof(clientAddress);
+#endif
 
     SOCKET clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientAddressLength);
     if (clientSocket == INVALID_SOCKET)
@@ -154,7 +147,7 @@ void SocketServer::acceptClientConnection()
                       { handleClientMessage(clientSocket); });
 }
 
-void SocketServer::handleClientMessage(int clientSocket)
+void SocketServer::handleClientMessage(SOCKET clientSocket)
 {
     char buffer[1024];
 

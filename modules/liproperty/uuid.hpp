@@ -35,7 +35,7 @@ Description: UUID Generator
 #include <sstream>
 #include <iomanip>
 
-namespace UUID
+namespace LITHIUM::UUID
 {
     /**
      * @class UUIDGenerator

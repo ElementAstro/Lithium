@@ -36,6 +36,18 @@ Description: Device IO Module
 
 #include "lidriver/event/eventloop.hpp"
 
+#ifdef _WIN32
+#include <winsock2.h>
+using SOCKET = SOCKET;
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+using SOCKET = int;
+constexpr SOCKET INVALID_SOCKET = -1;
+#define SOCKET_ERROR -1
+#define closesocket(s) close(s)
+#endif
+
 class EventLoop;
 
 class SocketServer
@@ -51,17 +63,17 @@ public:
     bool is_running();
 
     void setMessageHandler(MessageHandler handler);
-    void sendMessage(int clientSocket, const std::string &message);
+    void sendMessage(SOCKET clientSocket, const std::string &message);
 
 private:
     EventLoop &eventLoop;
     int port;
-    int serverSocket;
+    SOCKET serverSocket;
     bool running;
     MessageHandler messageHandler;
 
     void acceptClientConnection();
-    void handleClientMessage(int clientSocket);
+    void handleClientMessage(SOCKET clientSocket);
 };
 
 #endif // SOCKET_SERVER_H

@@ -10,9 +10,9 @@ public:
     ~ASCOMCamera();
 
 public:
-    virtual bool connect(const std::string &name) override;
-    virtual bool disconnect() override;
-    virtual bool reconnect() override;
+    virtual bool connect(const IParams &params) override;
+    virtual bool disconnect(const IParams &params) override;
+    virtual bool reconnect(const IParams &params) override;
 
 public:
     virtual bool startExposure(const nlohmann::json &params) override;

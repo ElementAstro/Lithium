@@ -2,6 +2,9 @@ add_library(LithiumDriver
     core/device.cpp
     core/device.hpp
 
+    core/deviceio.cpp
+    core/deviceio.hpp
+
     core/camera.cpp
     core/camera.hpp
 
@@ -31,6 +34,9 @@ add_library(LithiumDriver
 
     network/fifoserver.cpp
     network/fifoserver.hpp
+
+    util/utils.cpp
+    util/utils.hpp
 )
 
 include_directories(.)

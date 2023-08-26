@@ -116,3 +116,75 @@ void userio_xmlv1(const userio *io, void *user)
 {
     userio_prints(io, user, "<?xml version='1.0'?>\n");
 }
+
+ssize_t userio_json_write_string(const struct userio *io, void *user, const char *str)
+{
+    ssize_t ret;
+    ret = userio_putc(io, user, '\"');
+    if (ret < 0)
+        return ret;
+
+    const char *ptr = str;
+    while (*ptr)
+    {
+        char c = *ptr++;
+        switch (c)
+        {
+        case '\"':
+            ret = userio_prints(io, user, "\\\"");
+            break;
+        case '\\':
+            ret = userio_prints(io, user, "\\\\");
+            break;
+        case '\b':
+            ret = userio_prints(io, user, "\\b");
+            break;
+        case '\f':
+            ret = userio_prints(io, user, "\\f");
+            break;
+        case '\n':
+            ret = userio_prints(io, user, "\\n");
+            break;
+        case '\r':
+            ret = userio_prints(io, user, "\\r");
+            break;
+        case '\t':
+            ret = userio_prints(io, user, "\\t");
+            break;
+        default:
+            if (c < ' ')
+            {
+                ret = userio_printf(io, user, "\\u%04x", c);
+            }
+            else
+            {
+                ret = userio_putc(io, user, c);
+            }
+            break;
+        }
+
+        if (ret < 0)
+            return ret;
+    }
+
+    ret = userio_putc(io, user, '\"');
+    return ret >= 0 ? ret + 2 : ret;
+}
+
+ssize_t userio_json_write_number(const struct userio *io, void *user, double number)
+{
+    return userio_printf(io, user, "%g", number);
+}
+
+ssize_t userio_json_write_boolean(const struct userio *io, void *user, int value)
+{
+    if (value)
+        return userio_prints(io, user, "true");
+    else
+        return userio_prints(io, user, "false");
+}
+
+ssize_t userio_json_write_null(const struct userio *io, void *user)
+{
+    return userio_prints(io, user, "null");
+}

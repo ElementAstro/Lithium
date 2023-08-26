@@ -65,14 +65,14 @@ namespace Lithium::Config
         return std::make_shared<ConfigManager>();
     }
 
-    tl::expected<bool, IOError> ConfigManager::loadFromFile(const std::string &path)
+    tl::expected<bool, LIError> ConfigManager::loadFromFile(const std::string &path)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         std::ifstream ifs(path);
         if (!ifs.is_open())
         {
             LOG_F(ERROR, "Failed to open file: %s", path.c_str());
-            return tl::unexpected(IOError::OepnError);
+            return tl::unexpected(LIError::OepnError);
         }
         json j;
         try
@@ -88,11 +88,11 @@ namespace Lithium::Config
         catch (const json::exception &e)
         {
             LOG_F(ERROR, "Failed to parse file: %s, error message: %s", path.c_str(), e.what());
-            return tl::unexpected(IOError::ParseError);
+            return tl::unexpected(LIError::ParseError);
         }
     }
 
-    tl::expected<bool, IOError> ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
+    tl::expected<bool, LIError> ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto &file : fs::directory_iterator(dir_path))
@@ -260,13 +260,13 @@ namespace Lithium::Config
         config_.merge_patch(j);
     }
 
-    tl::expected<bool, IOError> ConfigManager::saveToFile(const std::string &file_path) const
+    tl::expected<bool, LIError> ConfigManager::saveToFile(const std::string &file_path) const
     {
         std::ofstream ofs(file_path);
         if (!ofs.is_open())
         {
             LOG_F(ERROR, "Failed to open file: %s", file_path.c_str());
-            return tl::unexpected(IOError::OepnError);
+            return tl::unexpected(LIError::OepnError);
         }
         ofs << config_.dump(4);
         ofs.close();

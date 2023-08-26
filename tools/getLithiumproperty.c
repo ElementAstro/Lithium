@@ -1,4 +1,4 @@
-/* connect to an INDI server and show all desired device.property.element
+/* connect to an LITHIUM server and show all desired device.property.element
  *   with possible wild card * in any category.
  * All types but BLOBs are handled from their defXXX messages. Receipt of a
  *   defBLOB sends enableBLOB then uses setBLOBVector for the value. BLOBs
@@ -7,7 +7,7 @@
  */
 
 #include "base64.h"
-#include "indiapi.h"
+#include "lithiumapi.h"
 #include "lilxml.h"
 #include "zlib.h"
 
@@ -30,15 +30,15 @@
 #include <sys/types.h>
 #include <string.h>
 
-/* table of INDI definition elements, plus setBLOB.
+/* table of LITHIUM definition elements, plus setBLOB.
  * we also look for set* if -m
  */
 typedef struct
 {
     char *vec; /* vector name */
     char *one; /* one element name */
-} INDIDef;
-static INDIDef defs[] = {
+} LITHIUMDef;
+static LITHIUMDef defs[] = {
     { "defTextVector", "defText" },   { "defNumberVector", "defNumber" }, { "defSwitchVector", "defSwitch" },
     { "defLightVector", "defLight" }, { "defBLOBVector", "defBLOB" },     { "setBLOBVector", "oneBLOB" },
     { "setTextVector", "oneText" },   { "setNumberVector", "oneNumber" }, { "setSwitchVector", "oneSwitch" },
@@ -46,13 +46,13 @@ static INDIDef defs[] = {
 };
 static int ndefs = 6; /* or 10 if -m */
 
-/* table of keyword to use in query vs name of INDI defXXX attribute */
+/* table of keyword to use in query vs name of LITHIUM defXXX attribute */
 typedef struct
 {
     char *keyword;
-    char *indiattr;
-} INDIkwattr;
-static INDIkwattr kwattr[] = {
+    char *lithiumattr;
+} LITHIUMkwattr;
+static LITHIUMkwattr kwattr[] = {
     { "_LABEL", "label" }, { "_GROUP", "group" }, { "_STATE", "state" },
     { "_PERM", "perm" },   { "_TO", "timeout" },  { "_TS", "timestamp" },
 };
@@ -72,9 +72,9 @@ static int nsrchs;
 static void usage(void);
 static void crackDPE(char *spec);
 static void addSearchDef(char *dev, char *prop, char *ele);
-static void openINDIServer(void);
+static void openLITHIUMServer(void);
 static void getprops(void);
-static void listenINDI(void);
+static void listenLITHIUM(void);
 static int finished(void);
 static void onAlarm(int dummy);
 static int readServerChar(void);
@@ -86,8 +86,8 @@ static void oneBLOB(XMLEle *root, char *dev, char *nam, char *enam, char *p, int
 static char *me;                      /* our name for usage() message */
 static char host_def[] = "localhost"; /* default host name */
 static char *host      = host_def;    /* working host name */
-#define INDIPORT 7624                 /* default port */
-static int port = INDIPORT;           /* working port number */
+#define LITHIUMPORT 7624                 /* default port */
+static int port = LITHIUMPORT;           /* working port number */
 #define TIMEOUT 2                     /* default timeout, secs */
 static int timeout = TIMEOUT;         /* working timeout, secs */
 static int verbose;                   /* report extra info */
@@ -205,7 +205,7 @@ int main(int ac, char *av[])
     }
     else
     {
-        openINDIServer();
+        openLITHIUMServer();
         if (verbose)
             fprintf(stderr, "Connected to %s on port %d\n", host, port);
     }
@@ -217,23 +217,22 @@ int main(int ac, char *av[])
     getprops();
 
     /* listen for responses, looking for d.p.e or timeout */
-    listenINDI();
+    listenLITHIUM();
 
     return (0);
 }
 
 static void usage()
 {
-    fprintf(stderr, "Purpose: retrieve readable properties from an INDI server\n");
-    fprintf(stderr, "%s\n", GIT_TAG_STRING);
+    fprintf(stderr, "Purpose: retrieve readable properties from an LITHIUM server\n");
     fprintf(stderr, "Usage: %s [options] [device.property.element ...]\n", me);
     fprintf(stderr, "  Any component may be \"*\" to match all (beware shell metacharacters).\n");
     fprintf(stderr, "  Reports all properties if none specified.\n");
     fprintf(stderr, "  BLOBs are saved in file named device.property.element.format\n");
-    fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getINDI`);");
+    fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getLITHIUM`);");
     fprintf(stderr, "  Set element to one of following to return property attribute:\n");
     for (int i = 0; i < (int)NKWA; i++)
-        fprintf(stderr, "    %10s to report %s\n", kwattr[i].keyword, kwattr[i].indiattr);
+        fprintf(stderr, "    %10s to report %s\n", kwattr[i].keyword, kwattr[i].lithiumattr);
     fprintf(stderr, "Output format: output is fully qualified name=value one per line\n");
     fprintf(stderr, "  or just value if -1 and exactly one query without wildcards.\n");
     fprintf(stderr, "Options:\n");
@@ -241,7 +240,7 @@ static void usage()
     fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
     fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
     fprintf(stderr, "  -m    : keep monitoring for more updates\n");
-    fprintf(stderr, "  -p p  : alternate port, default is %d\n", INDIPORT);
+    fprintf(stderr, "  -p p  : alternate port, default is %d\n", LITHIUMPORT);
     fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n", TIMEOUT);
     fprintf(stderr, "  -v    : verbose (cumulative)\n");
     fprintf(stderr, "  -w    : show write-only properties too\n");
@@ -284,7 +283,7 @@ static void addSearchDef(char *dev, char *prop, char *ele)
 /* open a connection to the given host and port.
  * set svrwfp and svrrfp or die.
  */
-static void openINDIServer(void)
+static void openLITHIUMServer(void)
 {
     struct sockaddr_in serv_addr;
     struct hostent *hp;
@@ -317,7 +316,7 @@ static void openINDIServer(void)
 #endif
 
 
-    /* create a socket to the INDI server */
+    /* create a socket to the LITHIUM server */
     (void)memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family      = AF_INET;
     serv_addr.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
@@ -360,9 +359,9 @@ static void getprops()
     }
 
     if (onedev)
-        fprintf(svrwfp, "<getProperties version='%g' device='%s'/>\n", INDIV, onedev);
+        fprintf(svrwfp, "<getProperties version='%g' device='%s'/>\n", LITHIUMV, onedev);
     else
-        fprintf(svrwfp, "<getProperties version='%g'/>\n", INDIV);
+        fprintf(svrwfp, "<getProperties version='%g'/>\n", LITHIUMV);
     fflush(svrwfp);
 
     if (verbose)
@@ -378,11 +377,11 @@ static void CALLBACK onTimer(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTim
 }
 
 
-/* listen for INDI traffic on svrrfp.
+/* listen for LITHIUM traffic on svrrfp.
  * print matching srchs[] and return when see all.
  * timeout and exit if any trouble.
  */
-static void listenINDI()
+static void listenLITHIUM()
 {
     char msg[1024];
 
@@ -459,7 +458,7 @@ static int readServerChar()
         if (ferror(svrrfp))
             perror("read");
         else
-            fprintf(stderr, "INDI server %s/%d disconnected\n", host, port);
+            fprintf(stderr, "LITHIUM server %s/%d disconnected\n", host, port);
         exit(2);
     }
 
@@ -532,7 +531,7 @@ static void findEle(XMLEle *root, char *dev, char *nam, char *defone, SearchDef 
         if (strcmp(iele, kwattr[i].keyword) == 0)
         {
             /* just print the property state, not the element values */
-            char *s = (char *)findXMLAttValu(root, kwattr[i].indiattr);
+            char *s = (char *)findXMLAttValu(root, kwattr[i].lithiumattr);
             sp->ok  = 1; /* progress */
             if (onematch && justvalue)
                 printf("%s\n", s);

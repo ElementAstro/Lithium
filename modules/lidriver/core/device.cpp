@@ -40,8 +40,7 @@ Description: Basic Device Defination
 
 Device::Device(const std::string &name) : _name(name)
 {
-    UUID::UUIDGenerator generator;
-    _uuid = generator.generateUUIDWithFormat();
+    _uuid = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 
 Device::~Device()

@@ -23,6 +23,11 @@
 #include <unistd.h>
 #include <lithiumlogger.h>
 #include <memory>
+#ifdef _WIN32
+#include <sys/timeb.h>
+#else
+#include <sys/time.h>
+#endif
 
 #define SPECTRUM_SIZE (256)
 #define min(a,b) \
@@ -308,11 +313,20 @@ bool RadioSim::StopStreaming()
 
 void RadioSim::streamCaptureHelper()
 {
-    struct itimerval tframe1, tframe2;
     double deltas;
-    getitimer(ITIMER_REAL, &tframe1);
-    auto s1 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
-    auto s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
+    double s1, s2;
+
+    #ifdef _WIN32
+        struct _timeb tframe1, tframe2;
+        _ftime_s(&tframe1);
+        s1 = tframe1.time + (tframe1.millitm / 1000.0);
+        s2 = tframe1.time + (tframe1.millitm / 1000.0);
+    #else
+        struct timeval tframe1, tframe2;
+        gettimeofday(&tframe1, nullptr);
+        s1 = tframe1.tv_sec + (tframe1.tv_usec / 1e6);
+        s2 = tframe1.tv_sec + (tframe1.tv_usec / 1e6);
+    #endif
 
     while (true)
     {
@@ -333,9 +347,15 @@ void RadioSim::streamCaptureHelper()
         // Simulate exposure time
         //usleep(ExposureRequest*1e5);
         grabData();
-        getitimer(ITIMER_REAL, &tframe1);
+        
+        #ifdef _WIN32
+            _ftime_s(&tframe2);
+            s2 = tframe2.time + (tframe2.millitm / 1000.0);
+        #else
+            gettimeofday(&tframe2, nullptr);
+            s2 = tframe2.tv_sec + (tframe2.tv_usec / 1e6);
+        #endif
 
-        s2 = ((double)tframe2.it_value.tv_sec) + ((double)tframe2.it_value.tv_usec / 1e6);
         deltas = fabs(s2 - s1);
 
         if (deltas < IntegrationTime)
@@ -344,9 +364,13 @@ void RadioSim::streamCaptureHelper()
         int32_t size = getBufferSize();
         Streamer->newFrame(getBuffer(), size);
 
-        s1 = ((double)tframe1.it_value.tv_sec) + ((double)tframe1.it_value.tv_usec / 1e6);
-
-        getitimer(ITIMER_REAL, &tframe2);
+        #ifdef _WIN32
+            s1 = tframe1.time + (tframe1.millitm / 1000.0);
+            _ftime_s(&tframe1);
+        #else
+            s1 = s2;
+            gettimeofday(&tframe1, nullptr);
+        #endif
     }
 
     pthread_mutex_unlock(&condMutex);

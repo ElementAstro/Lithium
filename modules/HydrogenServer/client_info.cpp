@@ -2,11 +2,14 @@
 
 #include <cstring>
 
+#include <unistd.h>
+
 #include "hydrogen_server.hpp"
 
 #include "property.hpp"
 #include "message.hpp"
 #include "driver_info.hpp"
+#include "io.hpp"
 
 #include "loguru/loguru.hpp"
 
@@ -27,7 +30,7 @@ ClInfo::~ClInfo()
 
 void ClInfo::log(const std::string &str) const
 {
-    LOG_F(INFO, "Client %d: %s", this->getRFd(), str);
+    LOG_F(INFO, "Client %d: %s", this->getRFd(), str.c_str());
 }
 
 // root will be released
@@ -73,7 +76,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
     Msg *mp = Msg::fromXml(this, root, sharedBuffers);
     if (!mp)
     {
-        log("Closing after malformed message\n");
+        LOG_F(ERROR, "Closing after malformed message\n");
         close();
         return;
     }
@@ -81,7 +84,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
     /* send message to driver(s) responsible for dev */
     DvrInfo::q2RDrivers(dev, mp, root);
 
-    /* JM 2016-05-18: Upstream client can be a chained INDI server. If any driver locally is snooping
+    /* JM 2016-05-18: Upstream client can be a chained HYDROGEN server. If any driver locally is snooping
      * on any remote drivers, we should catch it and forward it to the responsible snooping driver. */
     /* send to snooping drivers. */
     // JM 2016-05-26: Only forward setXXX messages
@@ -100,7 +103,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
 void ClInfo::close()
 {
     if (verbose > 0)
-        log("shut down complete - bye!\n");
+        LOG_F(ERROR, "shut down complete - bye!\n");
 
     delete (this);
 
@@ -188,7 +191,7 @@ void ClInfo::q2Clients(ClInfo *notme, int isblob, const std::string &dev, const 
 
         if (verbose > 1)
             LOG_F(INFO, "queuing <%s device='%s' name='%s'>\n",
-                  tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
+                           tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
 
         // pushmsg can kill cp. do at end
         cp->pushMsg(mp);
@@ -249,7 +252,7 @@ void ClInfo::q2Servers(DvrInfo *me, Msg *mp, XMLEle *root)
         /* ok: queue message to this client */
         if (verbose > 1)
             LOG_F(INFO, "queuing <%s device='%s' name='%s'>\n",
-                  tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
+                           tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
 
         // pushmsg can kill cp. do at end
         cp->pushMsg(mp);
@@ -362,7 +365,7 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
         int sockErrno = readFdError(this->efd);
         if (sockErrno)
         {
-            log("Error on stderr: %s\n", strerror(sockErrno)));
+            LOG_F(ERROR,"Error on stderr: %s\n", strerror(sockErrno));
             closeEfd();
         }
         return;
@@ -381,10 +384,10 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     return;
 
-                log("stderr %s\n", strerror(errno)));
+                LOG_F(ERROR, "stderr %s\n", strerror(errno));
             }
             else
-                log("stderr EOF\n");
+                LOG_F(ERROR, "stderr EOF\n");
             closeEfd();
             return;
         }
@@ -394,7 +397,7 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
         {
             if (errbuff[i] == '\n')
             {
-                log("%.*s\n", (int)i, errbuff));
+                LOG_F(ERROR,"%.*s\n", (int)i, errbuff);
                 i++;                                       /* count including nl */
                 errbuffpos -= i;                           /* remove from nexbuf */
                 memmove(errbuff, errbuff + i, errbuffpos); /* slide remaining to front */
@@ -404,18 +407,18 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
     }
 }
 
-void LocalDvrInfo::onPidEvent(ev_child &, int revents)
+void LocalDvrInfo::onPidEvent(ev::child &, int revents)
 {
     if (revents & EV_CHILD)
     {
         if (WIFEXITED(pidwatcher.rstatus))
         {
-            log("process %d exited with status %d\n", pid, WEXITSTATUS(pidwatcher.rstatus)));
+            LOG_F(ERROR,"process %d exited with status %d\n", pid, WEXITSTATUS(pidwatcher.rstatus));
         }
         else if (WIFSIGNALED(pidwatcher.rstatus))
         {
             int signum = WTERMSIG(pidwatcher.rstatus);
-            log("process %d killed with signal %d - %s\n", pid, signum, strsignal(signum)));
+            LOG_F(ERROR,"process %d killed with signal %d - %s\n", pid, signum, strsignal(signum));
         }
         pid = 0;
         this->pidwatcher.stop();

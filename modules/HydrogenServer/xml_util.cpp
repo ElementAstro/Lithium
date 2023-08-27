@@ -1,6 +1,11 @@
 #include "xml_util.hpp"
 
-static int xmlReplacementMapFind(void *self, XMLEle *source, XMLEle **replace)
+#include <cstring>
+
+#include "time.hpp"
+#include "hydrogen_server.hpp"
+
+int xmlReplacementMapFind(void *self, XMLEle *source, XMLEle **replace)
 {
     auto map = (const std::unordered_map<XMLEle *, XMLEle *> *)self;
     auto idx = map->find(source);
@@ -18,7 +23,7 @@ XMLEle *cloneXMLEleWithReplacementMap(XMLEle *root, const std::unordered_map<XML
 }
 
 
-static std::vector<XMLEle *> findBlobElements(XMLEle *root)
+std::vector<XMLEle *> findBlobElements(XMLEle *root)
 {
     std::vector<XMLEle *> result;
     for (auto ep = nextXMLEle(root, 1); ep; ep = nextXMLEle(root, 0))
@@ -33,7 +38,7 @@ static std::vector<XMLEle *> findBlobElements(XMLEle *root)
 
 /* log message in root known to be from device dev to ldir, if any.
  */
-static void logDMsg(XMLEle *root, const char *dev)
+void logDMsg(XMLEle *root, const char *dev)
 {
     char stamp[64];
     char logfn[1024];

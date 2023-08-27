@@ -26,9 +26,6 @@ add_library(LithiumDriver
     event/eventloop.cpp
     event/eventloop.hpp
 
-    event/ioloop.cpp
-    event/ioloop.hpp
-
     network/fifoclient.cpp
     network/fifoclient.hpp
 

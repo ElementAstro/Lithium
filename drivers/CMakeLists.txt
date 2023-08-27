@@ -1,10 +1,10 @@
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen)
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen/core)
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen/core/base)
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen/core/io)
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen/core/property)
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen/core/timer)
-include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen/core/thread)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/base)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/io)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/property)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
 
 SET(astrometry_SRC
     lithium-astrometry/astrometrydriver.cpp)

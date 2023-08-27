@@ -3,9 +3,16 @@
 #include <thread>
 #include <unordered_map>
 
+#include <unistd.h>
+
+#include "base64.h"
+
+#include "io.hpp"
 #include "message.hpp"
 #include "message_queue.hpp"
 #include "xml_util.hpp"
+
+#include "loguru/loguru.hpp"
 
 SerializedMsg::SerializedMsg(Msg *parent) : asyncProgress(), owner(parent), awaiters(), chuncks(), ownBuffers()
 {
@@ -241,7 +248,6 @@ SerializedMsgWithSharedBuffer::~SerializedMsgWithSharedBuffer()
     }
 }
 
-
 bool SerializedMsgWithSharedBuffer::detectInlineBlobs()
 {
     for (auto blobContent : findBlobElements(owner->xmlContent))
@@ -255,7 +261,6 @@ bool SerializedMsgWithSharedBuffer::detectInlineBlobs()
     }
     return false;
 }
-
 
 bool SerializedMsgWithoutSharedBuffer::generateContentAsync() const
 {
@@ -483,24 +488,24 @@ void SerializedMsgWithSharedBuffer::generateContent()
             ssize_t size;
             if (!parseBlobSize(blobContent, size))
             {
-                log("Missing size value for blob");
+                LOG_F(WARNING, "Missing size value for blob");
                 size = 1;
             }
 
             void *blob = IDSharedBlobAlloc(size);
             if (blob == nullptr)
             {
-                log(fmt("Unable to allocate shared buffer of size %d : %s\n", size, strerror(errno)));
+                LOG_F(ERROR, "Unable to allocate shared buffer of size %ld : %s\n", size, strerror(errno));
                 ::exit(1);
             }
-            log(fmt("Blob allocated at %p\n", blob));
+            LOG_F(INFO, "Blob allocated at %p\n", blob);
 
             int actualLen = from64tobits_fast((char *)blob, base64data, base64datalen);
 
             if (actualLen != size)
             {
                 // FIXME: WTF ? at least prevent overflow ???
-                log(fmt("Blob size mismatch after base64dec: %lld vs %lld\n", (long long int)actualLen, (long long int)size));
+                LOG_F(INFO, "Blob size mismatch after base64dec: %lld vs %lld\n", (long long int)actualLen, (long long int)size);
             }
 
             int newFd = IDSharedBlobGetFd(blob);

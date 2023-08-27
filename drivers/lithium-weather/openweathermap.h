@@ -2,7 +2,7 @@
 
   Copyright(c) 2015 Jasem Mutlaq. All rights reserved.
 
-  LITHIUM Weather Underground (TM) Weather Driver
+  HYDROGEN Weather Underground (TM) Weather Driver
 
   Modified for OpenWeatherMap API by Jarno Paananen
 
@@ -30,7 +30,7 @@
 #include "lithiumweather.h"
 #include "lithiumpropertytext.h"
 
-class OpenWeatherMap : public LITHIUM::Weather
+class OpenWeatherMap : public HYDROGEN::Weather
 {
     public:
         OpenWeatherMap();
@@ -52,7 +52,7 @@ class OpenWeatherMap : public LITHIUM::Weather
         virtual bool updateLocation(double latitude, double longitude, double elevation) override;
 
     private:
-        LITHIUM::PropertyText owmAPIKeyTP{1};
+        HYDROGEN::PropertyText owmAPIKeyTP{1};
 
         double owmLat, owmLong;
 };

@@ -51,35 +51,35 @@ private:
     static const char DRIVER_STOP_CHAR{0x23};
     static constexpr const uint8_t DRIVER_TIMEOUT{3};
 
-    LITHIUM::PropertySwitch MountTypeSP{2};
+    HYDROGEN::PropertySwitch MountTypeSP{2};
     enum MountType
     {
         AltAz,
         Equatorial
     };
-    LITHIUM::PropertySwitch GuideRateSP{3};
-    LITHIUM::PropertySwitch HomeSP{1};
-    LITHIUM::PropertySwitch ResetHomeSP{1};
-    LITHIUM::PropertyText Report{1};
-    LITHIUM::PropertySwitch VerboseReportSP{2};
-    LITHIUM::PropertyText IsTracking{1};
-    LITHIUM::PropertyText IsSlewCompleted{1};
-    LITHIUM::PropertyText IsParked{1};
-    LITHIUM::PropertyText IsParkginInProgress{1};
-    LITHIUM::PropertyText IsAtHomePosition{1};
-    LITHIUM::PropertyText TrackSidereal{1};
-    LITHIUM::PropertyText TrackLunar{1};
-    LITHIUM::PropertyText TrackSolar{1};
-    LITHIUM::PropertyText MountAltAz{1};
-    LITHIUM::PropertyText MountEquatorial{1};
-    LITHIUM::PropertyText PierNone{1};
-    LITHIUM::PropertyText PierEast{1};
-    LITHIUM::PropertyText PierWest{1};
-    LITHIUM::PropertyText DoesRefractionComp{1};
-    LITHIUM::PropertyText WaitingAtHome{1};
-    LITHIUM::PropertyText IsHomePaused{1};
-    LITHIUM::PropertyText ParkFailed{1};
-    LITHIUM::PropertyText SlewingHome{1};
+    HYDROGEN::PropertySwitch GuideRateSP{3};
+    HYDROGEN::PropertySwitch HomeSP{1};
+    HYDROGEN::PropertySwitch ResetHomeSP{1};
+    HYDROGEN::PropertyText Report{1};
+    HYDROGEN::PropertySwitch VerboseReportSP{2};
+    HYDROGEN::PropertyText IsTracking{1};
+    HYDROGEN::PropertyText IsSlewCompleted{1};
+    HYDROGEN::PropertyText IsParked{1};
+    HYDROGEN::PropertyText IsParkginInProgress{1};
+    HYDROGEN::PropertyText IsAtHomePosition{1};
+    HYDROGEN::PropertyText TrackSidereal{1};
+    HYDROGEN::PropertyText TrackLunar{1};
+    HYDROGEN::PropertyText TrackSolar{1};
+    HYDROGEN::PropertyText MountAltAz{1};
+    HYDROGEN::PropertyText MountEquatorial{1};
+    HYDROGEN::PropertyText PierNone{1};
+    HYDROGEN::PropertyText PierEast{1};
+    HYDROGEN::PropertyText PierWest{1};
+    HYDROGEN::PropertyText DoesRefractionComp{1};
+    HYDROGEN::PropertyText WaitingAtHome{1};
+    HYDROGEN::PropertyText IsHomePaused{1};
+    HYDROGEN::PropertyText ParkFailed{1};
+    HYDROGEN::PropertyText SlewingHome{1};
 
     bool sendCommand(const char *cmd, char *res = nullptr, int cmd_len = -1, int res_len = -1);
     void hexDump(char *buf, const char *data, int size);
@@ -89,5 +89,5 @@ private:
     bool setMountType(int type);
     bool setGuideRate(int rate);
     bool verboseReport = false;
-    void SetPropertyText(LITHIUM::PropertyText propertyTxt, IPState state);
+    void SetPropertyText(HYDROGEN::PropertyText propertyTxt, IPState state);
 };

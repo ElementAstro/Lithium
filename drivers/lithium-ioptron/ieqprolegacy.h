@@ -1,5 +1,5 @@
 /*
-    LITHIUM IEQ Pro driver
+    HYDROGEN IEQ Pro driver
 
     Copyright (C) 2015 Jasem Mutlaq
 
@@ -21,10 +21,10 @@
 #pragma once
 
 #include "ieqprolegacydriver.h"
-#include "lithiumguiderinterface.h"
-#include "lithiumtelescope.h"
+#include "HYDROGENguiderinterface.h"
+#include "HYDROGENtelescope.h"
 
-class IEQProLegacy : public LITHIUM::Telescope, public LITHIUM::GuiderInterface
+class IEQProLegacy : public HYDROGEN::Telescope, public HYDROGEN::GuiderInterface
 {
 public:
     IEQProLegacy();
@@ -42,8 +42,8 @@ protected:
 
     virtual bool ReadScopeStatus() override;
 
-    virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-    virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+    virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+    virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
 
     virtual bool saveConfigItems(FILE *fp) override;
 

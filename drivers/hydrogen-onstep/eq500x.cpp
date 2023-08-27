@@ -234,7 +234,7 @@ bool EQ500X::checkConnection()
 
 bool EQ500X::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     LOGF_INFO("Location updated: Longitude (%g) Latitude (%g)", longitude, latitude);
 
     // Only update LST if the mount is connected and "parked" looking at the pole
@@ -759,12 +759,12 @@ bool EQ500X::Abort()
 
 void EQ500X::setPierSide(TelescopePierSide side)
 {
-    LITHIUM_UNUSED(side);
+    HYDROGEN_UNUSED(side);
     PierSideSP.s = IPS_ALERT;
     IDSetSwitch(&PierSideSP, "Not supported");
 }
 
-bool EQ500X::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool EQ500X::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     // EQ500X has North/South directions inverted
     int current_move = (dir == DIRECTION_NORTH) ? LX200_SOUTH : LX200_NORTH;

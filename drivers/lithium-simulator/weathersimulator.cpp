@@ -1,7 +1,7 @@
 /*******************************************************************************
   Copyright(c) 2018 Jasem Mutlaq. All rights reserved.
 
-  LITHIUM Weather Simulator
+  HYDROGEN Weather Simulator
 
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the Free
@@ -54,7 +54,7 @@ bool WeatherSimulator::Disconnect()
 
 bool WeatherSimulator::initProperties()
 {
-    LITHIUM::Weather::initProperties();
+    HYDROGEN::Weather::initProperties();
 
     IUFillNumber(&ControlWeatherN[CONTROL_WEATHER], "Weather", "Weather", "%.f", 0, 1, 1, 0);
     IUFillNumber(&ControlWeatherN[CONTROL_TEMPERATURE], "Temperature", "Temperature", "%.2f", -50, 70, 10, 15);
@@ -82,7 +82,7 @@ bool WeatherSimulator::initProperties()
 
 bool WeatherSimulator::updateProperties()
 {
-    LITHIUM::Weather::updateProperties();
+    HYDROGEN::Weather::updateProperties();
 
     if (isConnected())
         defineProperty(&ControlWeatherNP);
@@ -117,12 +117,12 @@ bool WeatherSimulator::ISNewNumber(const char *dev, const char *name, double val
         }
     }
 
-    return LITHIUM::Weather::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::Weather::ISNewNumber(dev, name, values, names, n);
 }
 
 bool WeatherSimulator::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Weather::saveConfigItems(fp);
+    HYDROGEN::Weather::saveConfigItems(fp);
 
     IUSaveConfigNumber(fp, &ControlWeatherNP);
 

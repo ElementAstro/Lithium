@@ -67,7 +67,7 @@ void FocusSim::ISGetProperties(const char *dev)
     if (dev != nullptr && strcmp(dev, getDeviceName()) != 0)
         return;
 
-    LITHIUM::Focuser::ISGetProperties(dev);
+    HYDROGEN::Focuser::ISGetProperties(dev);
 
     defineProperty(&ModeSP);
     loadConfig(true, "Mode");
@@ -78,7 +78,7 @@ void FocusSim::ISGetProperties(const char *dev)
 ************************************************************************************/
 bool FocusSim::initProperties()
 {
-    LITHIUM::Focuser::initProperties();
+    HYDROGEN::Focuser::initProperties();
 
     IUFillNumber(&SeeingN[0], "SIM_SEEING", "arcseconds", "%4.2f", 0, 60, 0, 3.5);
     IUFillNumberVector(&SeeingNP, SeeingN, 1, getDeviceName(), "SEEING_SETTINGS", "Seeing", MAIN_CONTROL_TAB, IP_RW, 60,
@@ -120,7 +120,7 @@ bool FocusSim::initProperties()
 ************************************************************************************/
 bool FocusSim::updateProperties()
 {
-    LITHIUM::Focuser::updateProperties();
+    HYDROGEN::Focuser::updateProperties();
 
     if (isConnected())
     {
@@ -185,7 +185,7 @@ bool FocusSim::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         }
     }
 
-    return LITHIUM::Focuser::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::Focuser::ISNewSwitch(dev, name, states, names, n);
 }
 
 /************************************************************************************
@@ -224,8 +224,8 @@ bool FocusSim::ISNewNumber(const char *dev, const char *name, double values[], c
         }
     }
 
-    // Let LITHIUM::Focuser handle any other number properties
-    return LITHIUM::Focuser::ISNewNumber(dev, name, values, names, n);
+    // Let HYDROGEN::Focuser handle any other number properties
+    return HYDROGEN::Focuser::ISNewNumber(dev, name, values, names, n);
 }
 
 /************************************************************************************
@@ -319,7 +319,7 @@ IPState FocusSim::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 ************************************************************************************/
 bool FocusSim::SetFocuserSpeed(int speed)
 {
-    LITHIUM_UNUSED(speed);
+    HYDROGEN_UNUSED(speed);
     return true;
 }
 
@@ -328,7 +328,7 @@ bool FocusSim::SetFocuserSpeed(int speed)
 ************************************************************************************/
 bool FocusSim::SetFocuserBacklash(int32_t steps)
 {
-    LITHIUM_UNUSED(steps);
+    HYDROGEN_UNUSED(steps);
     return true;
 }
 
@@ -337,7 +337,7 @@ bool FocusSim::SetFocuserBacklash(int32_t steps)
 ************************************************************************************/
 bool FocusSim::SetFocuserBacklashEnabled(bool enabled)
 {
-    LITHIUM_UNUSED(enabled);
+    HYDROGEN_UNUSED(enabled);
     return true;
 }
 
@@ -346,7 +346,7 @@ bool FocusSim::SetFocuserBacklashEnabled(bool enabled)
 ************************************************************************************/
 bool FocusSim::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Focuser::saveConfigItems(fp);
+    HYDROGEN::Focuser::saveConfigItems(fp);
 
     DelayNP.save(fp);
 

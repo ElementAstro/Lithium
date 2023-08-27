@@ -1,5 +1,5 @@
 /*
-    ZEQ25 LITHIUM driver
+    ZEQ25 HYDROGEN driver
 
     Copyright (C) 2015 Jasem Mutlaq
 
@@ -80,18 +80,18 @@ private:
     /// Properties
     //////////////////////////////////////////////////////////////////////////////////
     // Go Home
-    LITHIUM::PropertySwitch HomeSP{1};
+    HYDROGEN::PropertySwitch HomeSP{1};
     // Mount Type
-    LITHIUM::PropertySwitch MountTypeSP{2};
+    HYDROGEN::PropertySwitch MountTypeSP{2};
     enum
     {
         Azimuth,
         Equatorial
     };
     // Guide Rate
-    LITHIUM::PropertyNumber GuideRateNP{1};
+    HYDROGEN::PropertyNumber GuideRateNP{1};
     // Buzzer control
-    LITHIUM::PropertySwitch BuzzerSP{3};
+    HYDROGEN::PropertySwitch BuzzerSP{3};
     enum
     {
         Off,

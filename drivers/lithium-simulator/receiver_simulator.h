@@ -1,5 +1,5 @@
 ﻿/*
-    lithium_rtlsdr_detector - a software defined radio driver for LITHIUM
+    lithium_rtlsdr_detector - a software defined radio driver for HYDROGEN
     Copyright (C) 2017  Ilia Platone
 
     This library is free software; you can redistribute it and/or
@@ -31,7 +31,7 @@ enum Settings
     BANDWIDTH_N,
     NUM_SETTINGS
 };
-class RadioSim : public LITHIUM::Receiver
+class RadioSim : public HYDROGEN::Receiver
 {
     public:
         RadioSim();

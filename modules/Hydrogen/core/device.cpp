@@ -32,9 +32,13 @@ Description: Basic Device Defination
 #include "device.hpp"
 #include "liproperty/uuid.hpp"
 
-#include "hydrogen/util/utils.hpp"
+#include "Hydrogen/util/utils.hpp"
 
+#ifdef __cpp_lib_format
 #include <format>
+#else
+#include <fmt/format.h>
+#endif
 #include <typeinfo>
 #include <typeindex>
 
@@ -58,7 +62,7 @@ void Device::init()
     setProperty("uuid", _uuid);
 
     std::jthread loop([this]()
-                  { this->eventLoop.start(); });
+                      { this->eventLoop.start(); });
     loopThread = std::move(loop);
     deviceIOServer = std::make_shared<SocketServer>(eventLoop, generateRandomNumber(10000, 60000));
     deviceIOServer->start();
@@ -153,7 +157,11 @@ void Device::setProperty(const std::string &name, const std::any &value)
                 const auto property = m_properties[name];
                 if (!std::any_cast<std::shared_ptr<IPropertyBase>>(property)->set_func.empty())
                 {
+#ifdef __cpp_lib_format
                     auto res = Dispatch(std::format("set_{}", name), {{name, value}});
+#else
+                    auto res = Dispatch(fmt::format("set_{}", name), {{name, value}});
+#endif
                     if (res.find("error") != res.end())
                     {
                         try
@@ -192,17 +200,29 @@ void Device::setProperty(const std::string &name, const std::any &value)
                 }
                 else
                 {
+#ifdef __cpp_lib_format
                     throw InvalidProperty(std::format("Unknown type of property {}", name));
+#else
+
+#endif
                 }
             }
             else
             {
+#ifdef __cpp_lib_format
                 throw InvalidProperty(std::format("Unknown type of property {}", name));
+#else
+                throw InvalidProperty(fmt::format("Unknown type of property {}", name));
+#endif
             }
         }
         catch (const std::bad_any_cast &e)
         {
+#ifdef __cpp_lib_format
             throw InvalidProperty(std::format("Failed to convert property {} with {}", name, e.what()));
+#else
+            throw InvalidProperty(fmt::format("Failed to convert property {} with {}", name, e.what()));
+#endif
         }
         if (!m_observers.empty())
         {
@@ -237,16 +257,28 @@ std::any Device::getProperty(const std::string &name, bool need_refresh)
                 }
                 else
                 {
+#ifdef __cpp_lib_format
                     throw InvalidProperty(std::format("Unknown type of property {}", name));
+#else
+                    throw InvalidProperty(fmt::format("Unknown type of property {}", name));
+#endif
                 }
             }
             catch (const std::bad_any_cast &e)
             {
+#ifdef __cpp_lib_format
                 throw InvalidProperty(std::format("Failed to convert property {} with {}", name, e.what()));
+#else
+                throw InvalidProperty(fmt::format("Failed to convert property {} with {}", name, e.what()));
+#endif
             }
             if (has_func)
             {
+#ifdef __cpp_lib_format
                 Dispatch(std::format("get_{}", name), {});
+#else
+                Dispatch(fmt::format("get_{}", name), {});
+#endif
             }
         }
         return m_properties[name];
@@ -425,7 +457,11 @@ const nlohmann::json Device::exportDeviceInfoToJson()
         }
         else
         {
+#ifdef __cpp_lib_format
             throw InvalidProperty(std::format("Unknown type of property {}", property.first));
+#else
+            throw InvalidProperty(fmt::format("Unknown type of property {}", property.first));
+#endif
         }
     }
     std::cout << jsonInfo.dump(4) << std::endl;

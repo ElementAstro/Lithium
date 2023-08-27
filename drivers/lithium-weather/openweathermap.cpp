@@ -1,7 +1,7 @@
 /*******************************************************************************
   Copyright(c) 2015 Jasem Mutlaq. All rights reserved.
 
-  LITHIUM Weather Underground (TM) Weather Driver
+  HYDROGEN Weather Underground (TM) Weather Driver
 
   Modified for OpenWeatherMap API by Jarno Paananen
 
@@ -27,7 +27,7 @@
 #include "openweathermap.h"
 
 #include "nlohmann/json.hpp"
-#include "hydrogen/locale/locale_compat.hpp"
+#include "Hydrogen/locale/locale_compat.hpp"
 
 #include <curl/curl.h>
 
@@ -68,7 +68,7 @@ const char *OpenWeatherMap::getDefaultName()
 
 void OpenWeatherMap::ISGetProperties(const char *dev)
 {
-    LITHIUM::Weather::ISGetProperties(dev);
+    HYDROGEN::Weather::ISGetProperties(dev);
     defineProperty(owmAPIKeyTP);
 }
 
@@ -91,7 +91,7 @@ bool OpenWeatherMap::Disconnect()
 
 bool OpenWeatherMap::initProperties()
 {
-    LITHIUM::Weather::initProperties();
+    HYDROGEN::Weather::initProperties();
 
     char api_key[256] = {0};
     IUGetConfigText(getDeviceName(), "OWM_API_KEY", "API_KEY", api_key, 256);
@@ -133,12 +133,12 @@ bool OpenWeatherMap::ISNewText(const char *dev, const char *name, char *texts[],
         }
     }
 
-    return LITHIUM::Weather::ISNewText(dev, name, texts, names, n);
+    return HYDROGEN::Weather::ISNewText(dev, name, texts, names, n);
 }
 
 bool OpenWeatherMap::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     owmLat  = latitude;
     owmLong = (longitude > 180) ? (longitude - 360) : longitude;
@@ -280,7 +280,7 @@ IPState OpenWeatherMap::updateWeather()
 
 bool OpenWeatherMap::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Weather::saveConfigItems(fp);
+    HYDROGEN::Weather::saveConfigItems(fp);
 
     owmAPIKeyTP.save(fp);
 

@@ -37,7 +37,7 @@ static pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static std::unique_ptr<CCDSim> ccdsim(new CCDSim());
 
-CCDSim::CCDSim() : LITHIUM::FilterInterface(this)
+CCDSim::CCDSim() : HYDROGEN::FilterInterface(this)
 {
     currentRA  = RA;
     currentDE = Dec;
@@ -77,7 +77,7 @@ bool CCDSim::setupParameters()
     uint32_t nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
 
-    Streamer->setPixelFormat(LITHIUM_MONO, 16);
+    Streamer->setPixelFormat(HYDROGEN_MONO, 16);
     Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
 
     return true;
@@ -110,9 +110,9 @@ const char * CCDSim::getDefaultName()
 
 bool CCDSim::initProperties()
 {
-    LITHIUM::CCD::initProperties();
+    HYDROGEN::CCD::initProperties();
 
-    CaptureFormat format = {"LITHIUM_MONO", "Mono", 16, true};
+    CaptureFormat format = {"HYDROGEN_MONO", "Mono", 16, true};
     addCaptureFormat(format);
 
     IUFillNumber(&SimulatorSettingsN[SIM_XRES], "SIM_XRES", "CCD X resolution", "%4.0f", 512, 8192, 512, 1280);
@@ -136,8 +136,8 @@ bool CCDSim::initProperties()
                        "Settings", SIMULATOR_TAB, IP_RW, 60, IPS_IDLE);
 
     // RGB Simulation
-    IUFillSwitch(&SimulateBayerS[LITHIUM_ENABLED], "LITHIUM_ENABLED", "Enabled", ISS_OFF);
-    IUFillSwitch(&SimulateBayerS[LITHIUM_DISABLED], "LITHIUM_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitch(&SimulateBayerS[HYDROGEN_ENABLED], "HYDROGEN_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&SimulateBayerS[HYDROGEN_DISABLED], "HYDROGEN_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&SimulateBayerSP, SimulateBayerS, 2, getDeviceName(), "SIMULATE_BAYER", "Bayer", SIMULATOR_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
@@ -164,8 +164,8 @@ bool CCDSim::initProperties()
     IUFillNumberVector(&FWHMNP, FWHMN, 1, ActiveDeviceT[ACTIVE_FOCUSER].text, "FWHM", "FWHM", OPTIONS_TAB, IP_RO, 60, IPS_IDLE);
 
     // Cooler
-    IUFillSwitch(&CoolerS[LITHIUM_ENABLED], "COOLER_ON", "ON", ISS_OFF);
-    IUFillSwitch(&CoolerS[LITHIUM_DISABLED], "COOLER_OFF", "OFF", ISS_ON);
+    IUFillSwitch(&CoolerS[HYDROGEN_ENABLED], "COOLER_ON", "ON", ISS_OFF);
+    IUFillSwitch(&CoolerS[HYDROGEN_DISABLED], "COOLER_OFF", "OFF", ISS_ON);
     IUFillSwitchVector(&CoolerSP, CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO,
                        ISR_1OFMANY, 0, IPS_IDLE);
 
@@ -184,8 +184,8 @@ bool CCDSim::initProperties()
     DirectoryTP.load();
 
     // Toggle Directory Reading. If enabled. The simulator will just read images from the directory and not generate them.
-    DirectorySP[LITHIUM_ENABLED].fill("LITHIUM_ENABLED", "Enabled", ISS_OFF);
-    DirectorySP[LITHIUM_DISABLED].fill("LITHIUM_DISABLED", "Disabled", ISS_ON);
+    DirectorySP[HYDROGEN_ENABLED].fill("HYDROGEN_ENABLED", "Enabled", ISS_OFF);
+    DirectorySP[HYDROGEN_DISABLED].fill("HYDROGEN_DISABLED", "Disabled", ISS_ON);
     DirectorySP.fill(getDeviceName(), "CCD_DIRECTORY_TOGGLE", "Use Dir.", SIMULATOR_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
 #ifdef USE_EQUATORIAL_PE
@@ -219,7 +219,7 @@ bool CCDSim::initProperties()
     // as it modifies the capabilities.
     setBayerEnabled(m_SimulateBayer);
 
-    LITHIUM::FilterInterface::initProperties(FILTER_TAB);
+    HYDROGEN::FilterInterface::initProperties(FILTER_TAB);
 
     FilterSlotN[0].min = 1;
     FilterSlotN[0].max = 8;
@@ -248,7 +248,7 @@ void CCDSim::setBayerEnabled(bool onOff)
 
 void CCDSim::ISGetProperties(const char * dev)
 {
-    LITHIUM::CCD::ISGetProperties(dev);
+    HYDROGEN::CCD::ISGetProperties(dev);
 
     defineProperty(&SimulatorSettingsNP);
     defineProperty(&EqPENP);
@@ -259,7 +259,7 @@ void CCDSim::ISGetProperties(const char * dev)
 
 bool CCDSim::updateProperties()
 {
-    LITHIUM::CCD::updateProperties();
+    HYDROGEN::CCD::updateProperties();
 
     if (isConnected())
     {
@@ -281,7 +281,7 @@ bool CCDSim::updateProperties()
         }
 
         // Define the Filter Slot and name properties
-        LITHIUM::FilterInterface::updateProperties();
+        HYDROGEN::FilterInterface::updateProperties();
     }
     else
     {
@@ -293,7 +293,7 @@ bool CCDSim::updateProperties()
         deleteProperty(DirectoryTP);
         deleteProperty(DirectorySP);
 
-        LITHIUM::FilterInterface::updateProperties();
+        HYDROGEN::FilterInterface::updateProperties();
     }
 
     return true;
@@ -326,7 +326,7 @@ bool CCDSim::StartExposure(float duration)
     PrimaryCCD.setExposureDuration(duration);
     gettimeofday(&ExpStart, nullptr);
     //  Leave the proper time showing for the draw routines
-    if (PrimaryCCD.getFrameType() == LITHIUM::CCDChip::LIGHT_FRAME && DirectorySP[LITHIUM_ENABLED].getState() == ISS_ON)
+    if (PrimaryCCD.getFrameType() == HYDROGEN::CCDChip::LIGHT_FRAME && DirectorySP[HYDROGEN_ENABLED].getState() == ISS_ON)
     {
         if (loadNextImage() == false)
             return false;
@@ -419,7 +419,7 @@ void CCDSim::TimerHit()
                 {
                     InExposure = false;
                     // We don't bin for raw images.
-                    if (DirectorySP[LITHIUM_DISABLED].getState() == ISS_ON)
+                    if (DirectorySP[HYDROGEN_DISABLED].getState() == ISS_ON)
                         PrimaryCCD.binFrame();
                     ExposureComplete(&PrimaryCCD);
                 }
@@ -508,7 +508,7 @@ double CCDSim::flux(double mag) const
     return pow(10, (z - mag) * k / 2.5);
 }
 
-int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
+int CCDSim::DrawCcdFrame(HYDROGEN::CCDChip * targetChip)
 {
     //  CCD frame is 16 bit data
     float exposure_time;
@@ -586,7 +586,7 @@ int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
 
 #if 0
         DEBUGF(
-            LITHIUM::Logger::DBG_DEBUG,
+            HYDROGEN::Logger::DBG_DEBUG,
             "pprx: %g pixels per radian ppry: %g pixels per radian ScaleX: %g arcsecs/pixel ScaleY: %g arcsecs/pixel",
             pprx, ppry, Scalex, Scaley);
 #endif
@@ -627,7 +627,7 @@ int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
                 currentDE = 0;
             }
 
-            LITHIUM::IEquatorialCoordinates epochPos { 0, 0 }, J2000Pos { 0, 0 };
+            HYDROGEN::IEquatorialCoordinates epochPos { 0, 0 }, J2000Pos { 0, 0 };
 
             double jd = ln_get_julian_from_sys();
 
@@ -635,14 +635,14 @@ int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
             epochPos.declination = currentDE;
 
             // Convert from JNow to J2000
-            LITHIUM::ObservedToJ2000(&epochPos, jd, &J2000Pos);
+            HYDROGEN::ObservedToJ2000(&epochPos, jd, &J2000Pos);
 
             currentRA  = J2000Pos.rightascension;
             currentDE = J2000Pos.declination;
 
             //LOGF_DEBUG("DrawCcdFrame JNow %f, %f J2000 %f, %f", epochPos.ra, epochPos.dec, J2000Pos.ra, J2000Pos.dec);
-            //LITHIUM::IEquatorialCoordinates jnpos;
-            //LITHIUM::J2000toObserved(&J2000Pos, jd, &jnpos);
+            //HYDROGEN::IEquatorialCoordinates jnpos;
+            //HYDROGEN::J2000toObserved(&J2000Pos, jd, &jnpos);
             //LOGF_DEBUG("J2000toObserved JNow %f, %f J2000 %f, %f", jnpos.ra, jnpos.dec, J2000Pos.ra, J2000Pos.dec);
 
             currentDE += guideNSOffset;
@@ -691,14 +691,14 @@ int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
             lookuplimit = 11;
 
         //  if this is a light frame, we need a star field drawn
-        LITHIUM::CCDChip::CCD_FRAME ftype = targetChip->getFrameType();
+        HYDROGEN::CCDChip::CCD_FRAME ftype = targetChip->getFrameType();
 
         std::unique_lock<std::mutex> guard(ccdBufferLock);
 
         //  Start by clearing the frame buffer
         memset(targetChip->getFrameBuffer(), 0, targetChip->getFrameBufferSize());
 
-        if (ftype == LITHIUM::CCDChip::LIGHT_FRAME)
+        if (ftype == HYDROGEN::CCDChip::LIGHT_FRAME)
         {
             AutoCNumeric locale;
             char gsccmd[250];
@@ -796,12 +796,12 @@ int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
         //  this is essentially the same math as drawing a dim star with
         //  fwhm equivalent to the full field of view
 
-        if (ftype == LITHIUM::CCDChip::LIGHT_FRAME || ftype == LITHIUM::CCDChip::FLAT_FRAME)
+        if (ftype == HYDROGEN::CCDChip::LIGHT_FRAME || ftype == HYDROGEN::CCDChip::FLAT_FRAME)
         {
             //  calculate flux from our zero point and gain values
             float glow = m_SkyGlow * 1.3;
 
-            if (ftype == LITHIUM::CCDChip::FLAT_FRAME)
+            if (ftype == HYDROGEN::CCDChip::FLAT_FRAME)
             {
                 //  Assume flats are done with a diffuser
                 //  in broad daylight, so, the sky magnitude
@@ -890,7 +890,7 @@ int CCDSim::DrawCcdFrame(LITHIUM::CCDChip * targetChip)
     return 0;
 }
 
-int CCDSim::DrawImageStar(LITHIUM::CCDChip * targetChip, float mag, float x, float y, float exposure_time)
+int CCDSim::DrawImageStar(HYDROGEN::CCDChip * targetChip, float mag, float x, float y, float exposure_time)
 {
     int sx, sy;
     int drew     = 0;
@@ -958,7 +958,7 @@ int CCDSim::DrawImageStar(LITHIUM::CCDChip * targetChip, float mag, float x, flo
     return drew;
 }
 
-int CCDSim::AddToPixel(LITHIUM::CCDChip * targetChip, int x, int y, int val)
+int CCDSim::AddToPixel(HYDROGEN::CCDChip * targetChip, int x, int y, int val)
 {
     int nwidth  = targetChip->getSubW();
     int nheight = targetChip->getSubH();
@@ -1041,13 +1041,13 @@ bool CCDSim::ISNewText(const char * dev, const char * name, char * texts[], char
         //  Now lets see if it's something we process here
         if (strcmp(name, FilterNameTP->name) == 0)
         {
-            LITHIUM::FilterInterface::processText(dev, name, texts, names, n);
+            HYDROGEN::FilterInterface::processText(dev, name, texts, names, n);
             return true;
         }
         else if (DirectoryTP.isNameMatch(name))
         {
             DirectoryTP.update(texts, names, n);
-            if (DirectorySP[LITHIUM_ENABLED].getState() == ISS_OFF || (DirectorySP[LITHIUM_ENABLED].getState() == ISS_ON && watchDirectory()))
+            if (DirectorySP[HYDROGEN_ENABLED].getState() == ISS_OFF || (DirectorySP[HYDROGEN_ENABLED].getState() == ISS_ON && watchDirectory()))
                 DirectoryTP.setState(IPS_OK);
             else
                 DirectoryTP.setState(IPS_ALERT);
@@ -1058,7 +1058,7 @@ bool CCDSim::ISNewText(const char * dev, const char * name, char * texts[], char
 
     }
 
-    return LITHIUM::CCD::ISNewText(dev, name, texts, names, n);
+    return HYDROGEN::CCD::ISNewText(dev, name, texts, names, n);
 }
 
 bool CCDSim::ISNewNumber(const char * dev, const char * name, double values[], char * names[], int n)
@@ -1099,14 +1099,14 @@ bool CCDSim::ISNewNumber(const char * dev, const char * name, double values[], c
             IUUpdateNumber(&EqPENP, values, names, n);
             EqPENP.s = IPS_OK;
 
-            LITHIUM::IEquatorialCoordinates epochPos { 0, 0 }, J2000Pos { 0, 0 };
+            HYDROGEN::IEquatorialCoordinates epochPos { 0, 0 }, J2000Pos { 0, 0 };
             epochPos.rightascension  = EqPEN[AXIS_RA].value;
             epochPos.declination = EqPEN[AXIS_DE].value;
 
             RA = EqPEN[AXIS_RA].value;
             Dec = EqPEN[AXIS_DE].value;
 
-            LITHIUM::ObservedToJ2000(&epochPos, ln_get_julian_from_sys(), &J2000Pos);
+            HYDROGEN::ObservedToJ2000(&epochPos, ln_get_julian_from_sys(), &J2000Pos);
             currentRA  = J2000Pos.rightascension;
             currentDE = J2000Pos.declination;
             usePE = true;
@@ -1116,7 +1116,7 @@ bool CCDSim::ISNewNumber(const char * dev, const char * name, double values[], c
         }
         else if (!strcmp(name, FilterSlotNP.name))
         {
-            LITHIUM::FilterInterface::processNumber(dev, name, values, names, n);
+            HYDROGEN::FilterInterface::processNumber(dev, name, values, names, n);
             return true;
         }
         else if (!strcmp(name, FocusSimulationNP.name))
@@ -1128,7 +1128,7 @@ bool CCDSim::ISNewNumber(const char * dev, const char * name, double values[], c
         }
     }
 
-    return LITHIUM::CCD::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::CCD::ISNewNumber(dev, name, values, names, n);
 }
 
 bool CCDSim::ISNewSwitch(const char * dev, const char * name, ISState * states, char * names[], int n)
@@ -1151,8 +1151,8 @@ bool CCDSim::ISNewSwitch(const char * dev, const char * name, ISState * states, 
             m_SimulateBayer = index == 0;
             setBayerEnabled(m_SimulateBayer);
 
-            SimulateBayerS[LITHIUM_ENABLED].s = m_SimulateBayer ? ISS_ON : ISS_OFF;
-            SimulateBayerS[LITHIUM_DISABLED].s = m_SimulateBayer ? ISS_OFF : ISS_ON;
+            SimulateBayerS[HYDROGEN_ENABLED].s = m_SimulateBayer ? ISS_ON : ISS_OFF;
+            SimulateBayerS[HYDROGEN_DISABLED].s = m_SimulateBayer ? ISS_OFF : ISS_ON;
             SimulateBayerSP.s   = IPS_OK;
             IDSetSwitch(&SimulateBayerSP, nullptr);
 
@@ -1182,12 +1182,12 @@ bool CCDSim::ISNewSwitch(const char * dev, const char * name, ISState * states, 
             DirectorySP.update(states, names, n);
             m_AllFiles.clear();
             m_RemainingFiles.clear();
-            if (DirectorySP[LITHIUM_ENABLED].getState() == ISS_ON)
+            if (DirectorySP[HYDROGEN_ENABLED].getState() == ISS_ON)
             {
                 if (watchDirectory() == false)
                 {
-                    DirectorySP[LITHIUM_ENABLED].setState(ISS_OFF);
-                    DirectorySP[LITHIUM_DISABLED].setState(ISS_ON);
+                    DirectorySP[HYDROGEN_ENABLED].setState(ISS_OFF);
+                    DirectorySP[HYDROGEN_DISABLED].setState(ISS_ON);
                     DirectorySP.setState(IPS_ALERT);
                 }
             }
@@ -1195,7 +1195,7 @@ bool CCDSim::ISNewSwitch(const char * dev, const char * name, ISState * states, 
             {
                 m_RemainingFiles.clear();
                 DirectorySP.setState(IPS_OK);
-                setBayerEnabled(SimulateBayerS[LITHIUM_ENABLED].s == ISS_ON);
+                setBayerEnabled(SimulateBayerS[HYDROGEN_ENABLED].s == ISS_ON);
                 LOG_INFO("Directory-based images are disabled.");
             }
             DirectorySP.apply(nullptr);
@@ -1208,7 +1208,7 @@ bool CCDSim::ISNewSwitch(const char * dev, const char * name, ISState * states, 
     }
 
     //  Nobody has claimed this, so, ignore it
-    return LITHIUM::CCD::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool CCDSim::watchDirectory()
@@ -1258,7 +1258,7 @@ void CCDSim::activeDevicesUpdated()
 #endif
     IDSnoopDevice(ActiveDeviceT[ACTIVE_FOCUSER].text, "FWHM");
 
-    strncpy(FWHMNP.device, ActiveDeviceT[ACTIVE_FOCUSER].text, MAXLITHIUMDEVICE);
+    strncpy(FWHMNP.device, ActiveDeviceT[ACTIVE_FOCUSER].text, MAXHYDROGENDEVICE);
 }
 
 bool CCDSim::ISSnoopDevice(XMLEle * root)
@@ -1317,7 +1317,7 @@ bool CCDSim::ISSnoopDevice(XMLEle * root)
 
         if (rc_ra == 0 && rc_de == 0 && ((newra != raPE) || (newdec != decPE)))
         {
-            LITHIUM::IEquatorialCoordinates epochPos { 0, 0 }, J2000Pos { 0, 0 };
+            HYDROGEN::IEquatorialCoordinates epochPos { 0, 0 }, J2000Pos { 0, 0 };
             epochPos.ra  = newra * 15.0;
             epochPos.dec = newdec;
             ln_get_equ_prec2(&epochPos, ln_get_julian_from_sys(), JD2000, &J2000Pos);
@@ -1336,16 +1336,16 @@ bool CCDSim::ISSnoopDevice(XMLEle * root)
     }
 #endif
 
-    return LITHIUM::CCD::ISSnoopDevice(root);
+    return HYDROGEN::CCD::ISSnoopDevice(root);
 }
 
 bool CCDSim::saveConfigItems(FILE * fp)
 {
     // Save CCD Config
-    LITHIUM::CCD::saveConfigItems(fp);
+    HYDROGEN::CCD::saveConfigItems(fp);
 
     // Save Filter Wheel Config
-    LITHIUM::FilterInterface::saveConfigItems(fp);
+    HYDROGEN::FilterInterface::saveConfigItems(fp);
 
     // Save CCD Simulator Config
     IUSaveConfigNumber(fp, &SimulatorSettingsNP);
@@ -1409,7 +1409,7 @@ bool CCDSim::UpdateCCDFrame(int x, int y, int w, int h)
 
     Streamer->setSize(bin_width, bin_height);
 
-    return LITHIUM::CCD::UpdateCCDFrame(x, y, w, h);
+    return HYDROGEN::CCD::UpdateCCDFrame(x, y, w, h);
 }
 
 bool CCDSim::UpdateCCDBin(int hor, int ver)
@@ -1424,7 +1424,7 @@ bool CCDSim::UpdateCCDBin(int hor, int ver)
     uint32_t bin_height = PrimaryCCD.getSubH() / ver;
     Streamer->setSize(bin_width, bin_height);
 
-    return LITHIUM::CCD::UpdateCCDBin(hor, ver);
+    return HYDROGEN::CCD::UpdateCCDBin(hor, ver);
 }
 
 bool CCDSim::UpdateGuiderBin(int hor, int ver)
@@ -1435,7 +1435,7 @@ bool CCDSim::UpdateGuiderBin(int hor, int ver)
         return false;
     }
 
-    return LITHIUM::CCD::UpdateGuiderBin(hor, ver);
+    return HYDROGEN::CCD::UpdateGuiderBin(hor, ver);
 }
 
 void * CCDSim::streamVideoHelper(void * context)
@@ -1485,9 +1485,9 @@ void * CCDSim::streamVideo()
     return nullptr;
 }
 
-void CCDSim::addFITSKeywords(LITHIUM::CCDChip *targetChip, std::vector<LITHIUM::FITSRecord> &fitsKeyword)
+void CCDSim::addFITSKeywords(HYDROGEN::CCDChip *targetChip, std::vector<HYDROGEN::FITSRecord> &fitsKeyword)
 {
-    LITHIUM::CCD::addFITSKeywords(targetChip, fitsKeyword);
+    HYDROGEN::CCD::addFITSKeywords(targetChip, fitsKeyword);
 
     fitsKeyword.push_back({"GAIN", GainN[0].value, 3, "Gain"});
 }
@@ -1568,6 +1568,6 @@ bool CCDSim::loadNextImage()
 
 bool CCDSim::SetCaptureFormat(uint8_t index)
 {
-    LITHIUM_UNUSED(index);
+    HYDROGEN_UNUSED(index);
     return true;
 }

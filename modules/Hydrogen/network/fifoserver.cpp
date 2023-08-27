@@ -33,7 +33,11 @@ Description: FIFO Server
 #include <stdexcept>
 #include <loguru/loguru.hpp>
 
+#ifdef _WIN32
 FifoServer::FifoServer(const std::string &fifoPath) : fifoPath(fifoPath), pipeHandle(INVALID_HANDLE_VALUE)
+#else
+FifoServer::FifoServer(const std::string &fifoPath) : fifoPath(fifoPath), pipeFd()
+#endif
 {
 }
 

@@ -1,6 +1,7 @@
 #include "message.hpp"
 
 #include <cassert>
+#include <unistd.h>
 
 #include "lilxml.h"
 
@@ -135,7 +136,7 @@ bool parseBlobSize(XMLEle *blobWithAttachedBuffer, ssize_t &size)
     size = std::stoll(sizeStr, &pos, 10);
     if (pos != sizeStr.size())
     {
-        LOG_F(ERROR,"Invalid size attribute value %s",sizeStr);
+        LOG_F(ERROR, "Invalid size attribute value %s", sizeStr.c_str());
         return false;
     }
     return true;
@@ -150,7 +151,7 @@ bool Msg::fetchBlobs(std::list<int> &incomingSharedBuffers)
         ssize_t blobSize;
         if (!parseBlobSize(blobContent, blobSize))
         {
-            LOG_F(ERROR,"Attached blob misses the size attribute");
+            LOG_F(ERROR, "Attached blob misses the size attribute");
             return false;
         }
 
@@ -159,7 +160,7 @@ bool Msg::fetchBlobs(std::list<int> &incomingSharedBuffers)
         {
             if (incomingSharedBuffers.empty())
             {
-                LOG_F(ERROR,"Missing shared buffer...\n");
+                LOG_F(ERROR, "Missing shared buffer...\n");
                 return false;
             }
 

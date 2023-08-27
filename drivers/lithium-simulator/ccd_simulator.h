@@ -39,7 +39,7 @@
  * @author Gerry Rozema
  * @author Jasem Mutlaq
  */
-class CCDSim : public LITHIUM::CCD, public LITHIUM::FilterInterface
+class CCDSim : public HYDROGEN::CCD, public HYDROGEN::FilterInterface
 {
     public:
 
@@ -95,10 +95,10 @@ class CCDSim : public LITHIUM::CCD, public LITHIUM::FilterInterface
 
         void TimerHit() override;
 
-        int DrawCcdFrame(LITHIUM::CCDChip *targetChip);
+        int DrawCcdFrame(HYDROGEN::CCDChip *targetChip);
 
-        int DrawImageStar(LITHIUM::CCDChip *targetChip, float, float, float, float ExposureTime);
-        int AddToPixel(LITHIUM::CCDChip *targetChip, int, int, int);
+        int DrawImageStar(HYDROGEN::CCDChip *targetChip, float, float, float, float ExposureTime);
+        int AddToPixel(HYDROGEN::CCDChip *targetChip, int, int, int);
 
         virtual IPState GuideNorth(uint32_t) override;
         virtual IPState GuideSouth(uint32_t) override;
@@ -106,7 +106,7 @@ class CCDSim : public LITHIUM::CCD, public LITHIUM::FilterInterface
         virtual IPState GuideWest(uint32_t) override;
 
         virtual bool saveConfigItems(FILE *fp) override;
-        virtual void addFITSKeywords(LITHIUM::CCDChip *targetChip, std::vector<LITHIUM::FITSRecord> &fitsKeyword) override;
+        virtual void addFITSKeywords(HYDROGEN::CCDChip *targetChip, std::vector<HYDROGEN::FITSRecord> &fitsKeyword) override;
         virtual void activeDevicesUpdated() override;
         virtual int SetTemperature(double temperature) override;
         virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
@@ -234,8 +234,8 @@ class CCDSim : public LITHIUM::CCD, public LITHIUM::FilterInterface
         INumber OffsetN[1];
         INumberVectorProperty OffsetNP;
 
-        LITHIUM::PropertyText DirectoryTP {1};
-        LITHIUM::PropertySwitch DirectorySP {2};
+        HYDROGEN::PropertyText DirectoryTP {1};
+        HYDROGEN::PropertySwitch DirectorySP {2};
 
         ISwitchVectorProperty CrashSP;
         ISwitch CrashS[1];

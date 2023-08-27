@@ -34,7 +34,7 @@ Description: Device IO Module
 
 #include <functional>
 
-#include "hydrogen/event/eventloop.hpp"
+#include "Hydrogen/event/eventloop.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>

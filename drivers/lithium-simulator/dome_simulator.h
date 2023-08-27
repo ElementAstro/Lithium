@@ -28,9 +28,9 @@
  * The dome parameters must be set before slaving is enabled. Furthermore, the dome listens to changes in the TARGET_EOD_COORS of the mount driver
  * in order to make the decision to move to a new target location.
  *
- * All the mathematical models are taken care of in the base LITHIUM::Dome class.
+ * All the mathematical models are taken care of in the base HYDROGEN::Dome class.
  */
-class DomeSim : public LITHIUM::Dome
+class DomeSim : public HYDROGEN::Dome
 {
     public:
         DomeSim();

@@ -19,7 +19,11 @@
 #pragma once
 
 #include <stdarg.h>
+#ifdef _WIN32
 #include <corecrt.h>
+#else
+#include <sys/types.h>
+#endif
 #include <util/macro.hpp>
 
 #ifdef __cplusplus

@@ -20,8 +20,8 @@
 
 #include "ieqprolegacydriver.h"
 
-#include "lithiumcom.h"
-#include "lithiumlogger.h"
+#include "HYDROGENcom.h"
+#include "HYDROGENlogger.h"
 
 #include <libnova/julian_day.h>
 
@@ -35,7 +35,7 @@
 
 static bool ieqpro_debug = false;
 static bool ieqpro_simulation = false;
-static char ieqpro_device[MAXLITHIUMDEVICE] = "iEQ";
+static char ieqpro_device[MAXHYDROGENDEVICE] = "iEQ";
 static IEQInfo simInfo;
 
 struct
@@ -63,7 +63,7 @@ void set_ieqpro_simulation(bool enable)
 
 void set_ieqpro_device(const char *name)
 {
-    strncpy(ieqpro_device, name, MAXLITHIUMDEVICE);
+    strncpy(ieqpro_device, name, MAXHYDROGENDEVICE);
 }
 
 void set_sim_gps_status(IEQ_GPS_STATUS value)
@@ -121,7 +121,7 @@ bool check_ieqpro_connection(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "Initializing IOptron using :V# CMD...");
+    DEBUGDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "Initializing IOptron using :V# CMD...");
 
     for (int i = 0; i < 2; i++)
     {
@@ -137,7 +137,7 @@ bool check_ieqpro_connection(int fd)
             if ((errcode = tty_write(fd, initCMD, 3, &nbytes_written)) != TTY_OK)
             {
                 tty_error_msg(errcode, errmsg, MAXRBUF);
-                DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+                DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
                 usleep(50000);
                 continue;
             }
@@ -145,7 +145,7 @@ bool check_ieqpro_connection(int fd)
             if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
             {
                 tty_error_msg(errcode, errmsg, MAXRBUF);
-                DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+                DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
                 usleep(50000);
                 continue;
             }
@@ -154,7 +154,7 @@ bool check_ieqpro_connection(int fd)
         if (nbytes_read > 0)
         {
             response[nbytes_read] = '\0';
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
             if (!strcmp(response, "V1.00#"))
                 return true;
@@ -175,7 +175,7 @@ bool get_ieqpro_status(int fd, IEQInfo *info)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_EXTRA_1, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_EXTRA_1, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -190,14 +190,14 @@ bool get_ieqpro_status(int fd, IEQInfo *info)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -205,7 +205,7 @@ bool get_ieqpro_status(int fd, IEQInfo *info)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_EXTRA_1, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_EXTRA_1, "RES <%s>", response);
 
         if (nbytes_read == 7)
         {
@@ -222,7 +222,7 @@ bool get_ieqpro_status(int fd, IEQInfo *info)
         }
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 7.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 7.", nbytes_read);
     return false;
 }
 
@@ -254,7 +254,7 @@ bool get_ieqpro_model(int fd, FirmwareInfo *info)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -268,14 +268,14 @@ bool get_ieqpro_model(int fd, FirmwareInfo *info)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 4, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -283,7 +283,7 @@ bool get_ieqpro_model(int fd, FirmwareInfo *info)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         if (nbytes_read == 4)
         {
@@ -320,7 +320,7 @@ bool get_ieqpro_model(int fd, FirmwareInfo *info)
         }
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 4.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 4.", nbytes_read);
     return false;
 }
 
@@ -333,7 +333,7 @@ bool get_ieqpro_main_firmware(int fd, FirmwareInfo *info)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -347,14 +347,14 @@ bool get_ieqpro_main_firmware(int fd, FirmwareInfo *info)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -362,7 +362,7 @@ bool get_ieqpro_main_firmware(int fd, FirmwareInfo *info)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         if (nbytes_read == 13)
         {
@@ -380,7 +380,7 @@ bool get_ieqpro_main_firmware(int fd, FirmwareInfo *info)
         }
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 13.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 13.", nbytes_read);
     return false;
 }
 
@@ -393,7 +393,7 @@ bool get_ieqpro_radec_firmware(int fd, FirmwareInfo *info)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -407,14 +407,14 @@ bool get_ieqpro_radec_firmware(int fd, FirmwareInfo *info)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -422,7 +422,7 @@ bool get_ieqpro_radec_firmware(int fd, FirmwareInfo *info)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         if (nbytes_read == 13)
         {
@@ -440,7 +440,7 @@ bool get_ieqpro_radec_firmware(int fd, FirmwareInfo *info)
         }
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 13.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 13.", nbytes_read);
     return false;
 }
 
@@ -474,7 +474,7 @@ bool start_ieqpro_motion(int fd, IEQ_DIRECTION dir)
         break;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
         return true;
@@ -484,7 +484,7 @@ bool start_ieqpro_motion(int fd, IEQ_DIRECTION dir)
     if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
     {
         tty_error_msg(errcode, errmsg, MAXRBUF);
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
         return false;
     }
 
@@ -514,7 +514,7 @@ bool stop_ieqpro_motion(int fd, IEQ_DIRECTION dir)
         break;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -528,14 +528,14 @@ bool stop_ieqpro_motion(int fd, IEQ_DIRECTION dir)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -543,13 +543,13 @@ bool stop_ieqpro_motion(int fd, IEQ_DIRECTION dir)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -562,7 +562,7 @@ bool find_ieqpro_home(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -576,14 +576,14 @@ bool find_ieqpro_home(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -591,13 +591,13 @@ bool find_ieqpro_home(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -610,7 +610,7 @@ bool goto_ieqpro_home(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -624,14 +624,14 @@ bool goto_ieqpro_home(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -639,13 +639,13 @@ bool goto_ieqpro_home(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -658,7 +658,7 @@ bool set_ieqpro_current_home(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -672,14 +672,14 @@ bool set_ieqpro_current_home(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -687,13 +687,13 @@ bool set_ieqpro_current_home(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -708,7 +708,7 @@ bool set_ieqpro_slew_rate(int fd, IEQ_SLEW_RATE rate)
 
     snprintf(cmd, 16, ":SR%d#", ((int)rate) + 1);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -723,14 +723,14 @@ bool set_ieqpro_slew_rate(int fd, IEQ_SLEW_RATE rate)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -738,13 +738,13 @@ bool set_ieqpro_slew_rate(int fd, IEQ_SLEW_RATE rate)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -776,7 +776,7 @@ bool set_ieqpro_track_mode(int fd, IEQ_TRACK_RATE rate)
         break;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -791,14 +791,14 @@ bool set_ieqpro_track_mode(int fd, IEQ_TRACK_RATE rate)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -806,13 +806,13 @@ bool set_ieqpro_track_mode(int fd, IEQ_TRACK_RATE rate)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -833,7 +833,7 @@ bool set_ieqpro_custom_ra_track_rate(int fd, double rate)
 
     snprintf(cmd, 16, ":RR%c%07.4f#", sign, fabs(rate));
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -847,14 +847,14 @@ bool set_ieqpro_custom_ra_track_rate(int fd, double rate)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -862,13 +862,13 @@ bool set_ieqpro_custom_ra_track_rate(int fd, double rate)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -889,7 +889,7 @@ bool set_ieqpro_custom_de_track_rate(int fd, double rate)
 
     snprintf(cmd, 16, ":RD%c%07.4f#", sign, fabs(rate));
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -903,14 +903,14 @@ bool set_ieqpro_custom_de_track_rate(int fd, double rate)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -918,13 +918,13 @@ bool set_ieqpro_custom_de_track_rate(int fd, double rate)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -939,7 +939,7 @@ bool set_ieqpro_guide_rate(int fd, double raRate, double deRate)
 
     snprintf(cmd, 16, ":RG%02d%02d#", static_cast<int>(raRate * 100.0), static_cast<int>(deRate * 100.0));
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -955,14 +955,14 @@ bool set_ieqpro_guide_rate(int fd, double raRate, double deRate)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -970,13 +970,13 @@ bool set_ieqpro_guide_rate(int fd, double raRate, double deRate)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -989,7 +989,7 @@ bool get_ieqpro_guide_rate(int fd, double *raRate, double *deRate)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1004,14 +1004,14 @@ bool get_ieqpro_guide_rate(int fd, double *raRate, double *deRate)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1019,7 +1019,7 @@ bool get_ieqpro_guide_rate(int fd, double *raRate, double *deRate)
     if (nbytes_read > 0)
     {
         response[nbytes_read - 1] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         char raRateStr[8] = {0}, deRateStr[8] = {0};
         strncpy(response, raRateStr, 2);
@@ -1030,7 +1030,7 @@ bool get_ieqpro_guide_rate(int fd, double *raRate, double *deRate)
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1064,7 +1064,7 @@ bool start_ieqpro_guide(int fd, IEQ_DIRECTION dir, uint32_t ms)
 
     snprintf(cmd, 16, ":M%c%05d#", dir_c, ms);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
         return true;
@@ -1075,7 +1075,7 @@ bool start_ieqpro_guide(int fd, IEQ_DIRECTION dir, uint32_t ms)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1093,7 +1093,7 @@ bool park_ieqpro(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1109,14 +1109,14 @@ bool park_ieqpro(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1124,7 +1124,7 @@ bool park_ieqpro(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         if (!strcmp(response, "1"))
         {
@@ -1133,12 +1133,12 @@ bool park_ieqpro(int fd)
         }
         else
         {
-            DEBUGDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Error: Requested parking position is below horizon.");
+            DEBUGDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Error: Requested parking position is below horizon.");
             return false;
         }
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1151,7 +1151,7 @@ bool unpark_ieqpro(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1166,14 +1166,14 @@ bool unpark_ieqpro(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1181,13 +1181,13 @@ bool unpark_ieqpro(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1200,7 +1200,7 @@ bool abort_ieqpro(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1216,14 +1216,14 @@ bool abort_ieqpro(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1231,13 +1231,13 @@ bool abort_ieqpro(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1250,7 +1250,7 @@ bool slew_ieqpro(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1266,14 +1266,14 @@ bool slew_ieqpro(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1281,7 +1281,7 @@ bool slew_ieqpro(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         if (!strcmp(response, "1"))
         {
@@ -1290,13 +1290,13 @@ bool slew_ieqpro(int fd)
         }
         else
         {
-            DEBUGDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Requested object is below horizon.");
+            DEBUGDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Requested object is below horizon.");
             tcflush(fd, TCIFLUSH);
             return false;
         }
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1309,7 +1309,7 @@ bool sync_ieqpro(int fd)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1323,14 +1323,14 @@ bool sync_ieqpro(int fd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1338,13 +1338,13 @@ bool sync_ieqpro(int fd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1359,7 +1359,7 @@ bool set_ieqpro_track_enabled(int fd, bool enabled)
 
     snprintf(cmd, 32, ":ST%d#", enabled ? 1 : 0);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1374,14 +1374,14 @@ bool set_ieqpro_track_enabled(int fd, bool enabled)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1389,13 +1389,13 @@ bool set_ieqpro_track_enabled(int fd, bool enabled)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1413,7 +1413,7 @@ bool set_ieqpro_ra(int fd, double ra)
 
     snprintf(cmd, 32, ":Sr%08d#", ieqValue);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1428,14 +1428,14 @@ bool set_ieqpro_ra(int fd, double ra)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1443,13 +1443,13 @@ bool set_ieqpro_ra(int fd, double ra)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1473,7 +1473,7 @@ bool set_ieqpro_dec(int fd, double dec)
 
     snprintf(cmd, 32, ":Sd%c%08d#", sign, ieqValue);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1488,14 +1488,14 @@ bool set_ieqpro_dec(int fd, double dec)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1503,13 +1503,13 @@ bool set_ieqpro_dec(int fd, double dec)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1531,7 +1531,7 @@ bool set_ieqpro_longitude(int fd, double longitude)
     int longitude_arcsecs = fabs(longitude) * 60 * 60;
     snprintf(cmd, 16, ":Sg%c%06d#", sign, longitude_arcsecs);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1545,14 +1545,14 @@ bool set_ieqpro_longitude(int fd, double longitude)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1560,13 +1560,13 @@ bool set_ieqpro_longitude(int fd, double longitude)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1588,7 +1588,7 @@ bool set_ieqpro_latitude(int fd, double latitude)
     int latitude_arcsecs = fabs(latitude) * 60 * 60;
     snprintf(cmd, 16, ":St%c%06d#", sign, latitude_arcsecs);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1602,14 +1602,14 @@ bool set_ieqpro_latitude(int fd, double latitude)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1617,13 +1617,13 @@ bool set_ieqpro_latitude(int fd, double latitude)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1638,7 +1638,7 @@ bool get_ieqpro_longitude(int fd, double *longitude)
 
     strcpy(cmd, ":Gg#");
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1652,13 +1652,13 @@ bool get_ieqpro_longitude(int fd, double *longitude)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1666,7 +1666,7 @@ bool get_ieqpro_longitude(int fd, double *longitude)
     if (nbytes_read > 0)
     {
         response[nbytes_read - 1] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
 
@@ -1678,11 +1678,11 @@ bool get_ieqpro_longitude(int fd, double *longitude)
             return true;
         }
 
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Error: Malformed result (%s).", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Error: Malformed result (%s).", response);
         return false;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 8.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 8.", nbytes_read);
     return false;
 }
 
@@ -1697,7 +1697,7 @@ bool get_ieqpro_latitude(int fd, double *latitude)
 
     strcpy(cmd, ":Gt#");
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1711,13 +1711,13 @@ bool get_ieqpro_latitude(int fd, double *latitude)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1725,7 +1725,7 @@ bool get_ieqpro_latitude(int fd, double *latitude)
     if (nbytes_read > 0)
     {
         response[nbytes_read - 1] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
 
@@ -1737,11 +1737,11 @@ bool get_ieqpro_latitude(int fd, double *latitude)
             return true;
         }
 
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Error: Malformed result (%s).", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Error: Malformed result (%s).", response);
         return false;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 8.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 8.", nbytes_read);
     return false;
 }
 
@@ -1756,7 +1756,7 @@ bool set_ieqpro_local_date(int fd, int yy, int mm, int dd)
 
     snprintf(cmd, 16, ":SC%02d%02d%02d#", yy, mm, dd);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1770,14 +1770,14 @@ bool set_ieqpro_local_date(int fd, int yy, int mm, int dd)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1785,13 +1785,13 @@ bool set_ieqpro_local_date(int fd, int yy, int mm, int dd)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1806,7 +1806,7 @@ bool set_ieqpro_local_time(int fd, int hh, int mm, int ss)
 
     snprintf(cmd, 16, ":SL%02d%02d%02d#", hh, mm, ss);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1820,14 +1820,14 @@ bool set_ieqpro_local_time(int fd, int hh, int mm, int ss)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1835,13 +1835,13 @@ bool set_ieqpro_local_time(int fd, int hh, int mm, int ss)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1859,7 +1859,7 @@ bool set_ieqpro_daylight_saving(int fd, bool enabled)
     else
         strcpy(cmd, ":SDS0#");
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1873,14 +1873,14 @@ bool set_ieqpro_daylight_saving(int fd, bool enabled)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1888,13 +1888,13 @@ bool set_ieqpro_daylight_saving(int fd, bool enabled)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1917,7 +1917,7 @@ bool set_ieqpro_utc_offset(int fd, double offset)
 
     snprintf(cmd, 16, ":SG%c%03d#", sign, offset_minutes);
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1931,14 +1931,14 @@ bool set_ieqpro_utc_offset(int fd, double offset)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read(fd, response, 1, IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -1946,13 +1946,13 @@ bool set_ieqpro_utc_offset(int fd, double offset)
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         tcflush(fd, TCIFLUSH);
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -1965,7 +1965,7 @@ bool get_ieqpro_coords(int fd, double *ra, double *dec)
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_EXTRA_1, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_EXTRA_1, "CMD <%s>", cmd);
 
     if (ieqpro_simulation)
     {
@@ -1994,14 +1994,14 @@ bool get_ieqpro_coords(int fd, double *ra, double *dec)
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -2010,7 +2010,7 @@ bool get_ieqpro_coords(int fd, double *ra, double *dec)
     {
         tcflush(fd, TCIFLUSH);
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_EXTRA_1, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_EXTRA_1, "RES <%s>", response);
 
         char ra_str[16] = {0}, dec_str[16] = {0};
 
@@ -2026,7 +2026,7 @@ bool get_ieqpro_coords(int fd, double *ra, double *dec)
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }
 
@@ -2039,10 +2039,10 @@ bool get_ieqpro_utc_date_time(int fd, double *utc_hours, int *yy, int *mm, int *
     int nbytes_read = 0;
     int nbytes_written = 0;
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "CMD <%s>", cmd);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "CMD <%s>", cmd);
 
     // Format according to Manual is sMMMYYMMDDHHMMSS#
-    // However as pointed out by user Shepherd on LITHIUM forums, actual format is
+    // However as pointed out by user Shepherd on HYDROGEN forums, actual format is
     // sMMMxYYMMDDHHMMSS#
     // Where x is either 0 or 1 denoting daying savings
     if (ieqpro_simulation)
@@ -2057,14 +2057,14 @@ bool get_ieqpro_utc_date_time(int fd, double *utc_hours, int *yy, int *mm, int *
         if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
 
         if ((errcode = tty_read_section(fd, response, '#', IEQPRO_TIMEOUT, &nbytes_read)))
         {
             tty_error_msg(errcode, errmsg, MAXRBUF);
-            DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+            DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
             return false;
         }
     }
@@ -2073,7 +2073,7 @@ bool get_ieqpro_utc_date_time(int fd, double *utc_hours, int *yy, int *mm, int *
     {
         tcflush(fd, TCIFLUSH);
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_DEBUG, "RES <%s>", response);
+        DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_DEBUG, "RES <%s>", response);
 
         char utc_str[8] = {0}, yy_str[8] = {0}, mm_str[8] = {0}, dd_str[8] = {0}, hh_str[8] = {0}, minute_str[8] = {0}, ss_str[8] = {0},
              dst_str[8] = {0};
@@ -2127,6 +2127,6 @@ bool get_ieqpro_utc_date_time(int fd, double *utc_hours, int *yy, int *mm, int *
         return true;
     }
 
-    DEBUGFDEVICE(ieqpro_device, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(ieqpro_device, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return false;
 }

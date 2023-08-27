@@ -156,16 +156,16 @@ bool LX200NYX101::initProperties()
     SlewingHome.fill(getDeviceName(), "SlewingHome", "SlewingHome", STATUS_TAB, IP_RO, 60, IPS_IDLE);
 
     // Slew Rates
-    strncpy(SlewRateS[0].label, "2x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[1].label, "8x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[2].label, "16x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[3].label, "64x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[4].label, "128x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[5].label, "200x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[6].label, "300x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[7].label, "600x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[8].label, "900x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[9].label, "1200x", MAXLITHIUMLABEL);
+    strncpy(SlewRateS[0].label, "2x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[1].label, "8x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[2].label, "16x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[3].label, "64x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[4].label, "128x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[5].label, "200x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[6].label, "300x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[7].label, "600x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[8].label, "900x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[9].label, "1200x", MAXHYDROGENLABEL);
     IUResetSwitch(&SlewRateSP);
 
     SlewRateS[9].s = ISS_ON;
@@ -270,7 +270,7 @@ const char *LX200NYX101::getDefaultName()
 const char *ON = "ON";
 const char *OFF = "OFF";
 
-void LX200NYX101::SetPropertyText(LITHIUM::PropertyText propertyTxt, IPState state)
+void LX200NYX101::SetPropertyText(HYDROGEN::PropertyText propertyTxt, IPState state)
 {
     if (!verboseReport)
         return;
@@ -422,38 +422,38 @@ bool LX200NYX101::ReadScopeStatus()
 
     switch (_TrackingMode)
     {
-    case LITHIUM::Telescope::TRACK_SIDEREAL:
+    case HYDROGEN::Telescope::TRACK_SIDEREAL:
         SetPropertyText(TrackSidereal, IPS_OK);
         SetPropertyText(TrackLunar, IPS_BUSY);
         SetPropertyText(TrackSolar, IPS_BUSY);
         break;
-    case LITHIUM::Telescope::TRACK_LUNAR:
+    case HYDROGEN::Telescope::TRACK_LUNAR:
         SetPropertyText(TrackLunar, IPS_OK);
         SetPropertyText(TrackSidereal, IPS_BUSY);
         SetPropertyText(TrackSolar, IPS_BUSY);
         break;
-    case LITHIUM::Telescope::TRACK_SOLAR:
+    case HYDROGEN::Telescope::TRACK_SOLAR:
         SetPropertyText(TrackSolar, IPS_OK);
         SetPropertyText(TrackSidereal, IPS_BUSY);
         SetPropertyText(TrackLunar, IPS_BUSY);
         break;
-    case LITHIUM::Telescope::TRACK_CUSTOM:
+    case HYDROGEN::Telescope::TRACK_CUSTOM:
         break;
     }
 
     switch (_PierSide)
     {
-    case LITHIUM::Telescope::PIER_UNKNOWN:
+    case HYDROGEN::Telescope::PIER_UNKNOWN:
         SetPropertyText(PierNone, IPS_OK);
         SetPropertyText(PierEast, IPS_BUSY);
         SetPropertyText(PierWest, IPS_BUSY);
         break;
-    case LITHIUM::Telescope::PIER_EAST:
+    case HYDROGEN::Telescope::PIER_EAST:
         SetPropertyText(PierEast, IPS_OK);
         SetPropertyText(PierNone, IPS_BUSY);
         SetPropertyText(PierWest, IPS_BUSY);
         break;
-    case LITHIUM::Telescope::PIER_WEST:
+    case HYDROGEN::Telescope::PIER_WEST:
         SetPropertyText(PierWest, IPS_OK);
         SetPropertyText(PierEast, IPS_BUSY);
         SetPropertyText(PierNone, IPS_BUSY);
@@ -474,7 +474,7 @@ bool LX200NYX101::ReadScopeStatus()
     }
     else
     {
-        auto wasTracking = TrackStateS[LITHIUM_ENABLED].s == ISS_ON;
+        auto wasTracking = TrackStateS[HYDROGEN_ENABLED].s == ISS_ON;
         if (wasTracking != _IsTracking)
             TrackState = _IsTracking ? SCOPE_TRACKING : SCOPE_IDLE;
     }
@@ -727,10 +727,10 @@ bool LX200NYX101::setLocalDate(uint8_t days, uint8_t months, uint16_t years)
 
 bool LX200NYX101::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     int d{0}, m{0}, s{0};
 
-    // JM 2021-04-10: MUST convert from LITHIUM longitude to standard longitude.
+    // JM 2021-04-10: MUST convert from HYDROGEN longitude to standard longitude.
     // DO NOT REMOVE
     if (longitude > 180)
         longitude = longitude - 360;

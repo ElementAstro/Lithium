@@ -1,9 +1,12 @@
 #pragma once
 
 #include "fifo_server.hpp"
+#include "driver_info.hpp"
+#include "client_info.hpp"
+#include "concurrent.hpp"
 
-#define INDIPORT 7624                      /* default TCP/IP port to listen */
-#define INDIUNIXSOCK "/tmp/hydrogenserver" /* default unix socket path (local connections) */
+#define HYDROGENPORT 7624                      /* default TCP/IP port to listen */
+#define HYDROGENUNIXSOCK "/tmp/hydrogenserver" /* default unix socket path (local connections) */
 #define MAXSBUF 512
 #define MAXRBUF 49152        /* max read buffering here */
 #define MAXWSIZ 49152        /* max bytes/write */
@@ -23,7 +26,7 @@
 static ev::default_loop loop;
 static Fifo *fifo = nullptr;
 static const char *me;                                         /* our name */
-static int port = INDIPORT;                                    /* public INDI port */
+static int port = HYDROGENPORT;                                    /* public HYDROGEN port */
 static int verbose;                                            /* chattiness */
 static char *ldir;                                             /* where to log driver messages */
 static unsigned int maxqsiz = (DEFMAXQSIZ * 1024 * 1024);      /* kill if these bytes behind */

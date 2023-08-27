@@ -66,6 +66,69 @@
 
 #include <ev++.h>
 
+#include "loguru/loguru.hpp"
+#include "argparse/argparse.hpp"
+
+extern ConcurrentSet<ClInfo> ClInfo::clients;
+extern ConcurrentSet<DvrInfo> DvrInfo::drivers;
+
+/* record we have started and our args */
+static void logStartup(int ac, char *av[])
+{
+    int i;
+
+    std::string startupMsg = "startup:";
+    for (i = 0; i < ac; i++)
+    {
+        startupMsg += " ";
+        startupMsg += av[i];
+    }
+    startupMsg += '\n';
+    LOG_F(INFO, "%s", startupMsg.c_str());
+}
+
+/* print usage message and exit (2) */
+static void usage(void)
+{
+    fprintf(stderr, "Usage: %s [options] driver [driver ...]\n", me);
+    fprintf(stderr, "Purpose: server for local and remote HYDROGEN drivers\n");
+    fprintf(stderr, "HYDROGEN Protocol %g.\n", HYDROGENV);
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, " -l d     : log driver messages to <d>/YYYY-MM-DD.islog\n");
+    fprintf(stderr, " -m m     : kill client if gets more than this many MB behind, default %d\n", DEFMAXQSIZ);
+    fprintf(stderr,
+            " -d m     : drop streaming blobs if client gets more than this many MB behind, default %d. 0 to disable\n",
+            DEFMAXSSIZ);
+#ifdef ENABLE_HYDROGEN_SHARED_MEMORY
+    fprintf(stderr, " -u path  : Path for the local connection socket (abstract), default %s\n", HYDROGENUNIXSOCK);
+#endif
+    fprintf(stderr, " -p p     : alternate IP port, default %d\n", HYDROGENPORT);
+    fprintf(stderr, " -r r     : maximum driver restarts on error, default %d\n", DEFMAXRESTART);
+    fprintf(stderr, " -f path  : Path to fifo for dynamic startup and shutdown of drivers.\n");
+    fprintf(stderr, " -v       : show key events, no traffic\n");
+    fprintf(stderr, " -vv      : -v + key message content\n");
+    fprintf(stderr, " -vvv     : -vv + complete xml\n");
+    fprintf(stderr, "driver    : executable or [device]@host[:port]\n");
+
+    exit(2);
+}
+
+#ifdef _WIN32
+static void noSIGPIPE()
+{
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+}
+#else
+static void noSIGPIPE()
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = SIG_IGN;
+    sigemptyset(&sa.sa_mask);
+    (void)sigaction(SIGPIPE, &sa, NULL);
+}
+#endif
+
 int main(int ac, char *av[])
 {
     /* log startup */
@@ -131,7 +194,7 @@ int main(int ac, char *av[])
                 maxstreamsiz = 1024 * 1024 * atoi(*++av);
                 ac--;
                 break;
-#ifdef ENABLE_INDI_SHARED_MEMORY
+#ifdef ENABLE_HYDROGEN_SHARED_MEMORY
             case 'u':
                 if (ac < 2)
                 {
@@ -141,7 +204,7 @@ int main(int ac, char *av[])
                 UnixServer::unixSocketPath = *++av;
                 ac--;
                 break;
-#endif // ENABLE_INDI_SHARED_MEMORY
+#endif // ENABLE_HYDROGEN_SHARED_MEMORY
             case 'f':
                 if (ac < 2)
                 {
@@ -198,7 +261,7 @@ int main(int ac, char *av[])
     /* announce we are online */
     (new TcpServer(port))->listen();
 
-#ifdef ENABLE_INDI_SHARED_MEMORY
+#ifdef ENABLE_HYDROGEN_SHARED_MEMORY
     /* create a new unix server */
     (new UnixServer(UnixServer::unixSocketPath))->listen();
 #endif
@@ -208,7 +271,7 @@ int main(int ac, char *av[])
         // New started drivers will not inherit server's prefix anymore
 
         // JM 2022.07.23: This causes an issue on MacOS. Disabled for now until investigated further.
-        // unsetenv("INDIPREFIX");
+        // unsetenv("HYDROGENPREFIX");
         fifo->listen();
     }
 
@@ -216,64 +279,6 @@ int main(int ac, char *av[])
     loop.loop();
 
     /* will not happen unless no more listener left ! */
-    log("unexpected return from event loop\n");
+    LOG_F(ERROR, "unexpected return from event loop\n");
     return (1);
 }
-
-/* record we have started and our args */
-static void logStartup(int ac, char *av[])
-{
-    int i;
-
-    std::string startupMsg = "startup:";
-    for (i = 0; i < ac; i++)
-    {
-        startupMsg += " ";
-        startupMsg += av[i];
-    }
-    startupMsg += '\n';
-    log(startupMsg);
-}
-
-/* print usage message and exit (2) */
-static void usage(void)
-{
-    fprintf(stderr, "Usage: %s [options] driver [driver ...]\n", me);
-    fprintf(stderr, "Purpose: server for local and remote INDI drivers\n");
-    fprintf(stderr, "INDI Library: %s\nCode %s. Protocol %g.\n", CMAKE_INDI_VERSION_STRING, GIT_TAG_STRING, INDIV);
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, " -l d     : log driver messages to <d>/YYYY-MM-DD.islog\n");
-    fprintf(stderr, " -m m     : kill client if gets more than this many MB behind, default %d\n", DEFMAXQSIZ);
-    fprintf(stderr,
-            " -d m     : drop streaming blobs if client gets more than this many MB behind, default %d. 0 to disable\n",
-            DEFMAXSSIZ);
-#ifdef ENABLE_INDI_SHARED_MEMORY
-    fprintf(stderr, " -u path  : Path for the local connection socket (abstract), default %s\n", INDIUNIXSOCK);
-#endif
-    fprintf(stderr, " -p p     : alternate IP port, default %d\n", INDIPORT);
-    fprintf(stderr, " -r r     : maximum driver restarts on error, default %d\n", DEFMAXRESTART);
-    fprintf(stderr, " -f path  : Path to fifo for dynamic startup and shutdown of drivers.\n");
-    fprintf(stderr, " -v       : show key events, no traffic\n");
-    fprintf(stderr, " -vv      : -v + key message content\n");
-    fprintf(stderr, " -vvv     : -vv + complete xml\n");
-    fprintf(stderr, "driver    : executable or [device]@host[:port]\n");
-
-    exit(2);
-}
-
-#ifdef _WIN32
-/* turn off SIGPIPE on bad write so we can handle it inline */
-#else
-static void noSIGPIPE()
-{
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = SIG_IGN;
-    sigemptyset(&sa.sa_mask);
-    (void)sigaction(SIGPIPE, &sa, NULL);
-}
-#endif
-
-ConcurrentSet<DvrInfo> DvrInfo::drivers;
-
-ConcurrentSet<ClInfo> ClInfo::clients;

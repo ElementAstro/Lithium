@@ -1,5 +1,5 @@
 /*
-    LITHIUM IOptron v3 Driver for firmware version 20171001 or later.
+    HYDROGEN IOptron v3 Driver for firmware version 20171001 or later.
 
     Copyright (C) 2018 Jasem Mutlaq
 
@@ -22,7 +22,7 @@
 
 #include <string>
 #include <map>
-#include "lithiumlogger.h"
+#include "HYDROGENlogger.h"
 
 /**
  * @namespace IOPv3
@@ -161,7 +161,7 @@ namespace IOPv3
          Communication
         **************************************************************************/
         bool sendCommand(const char *command, int count = 1, char *response = nullptr, uint8_t timeout = IOP_TIMEOUT,
-                         uint8_t debugLog = LITHIUM::Logger::DBG_DEBUG);
+                         uint8_t debugLog = HYDROGEN::Logger::DBG_DEBUG);
         bool sendCommandOk(const char *command);
         bool checkConnection(int fd);
 

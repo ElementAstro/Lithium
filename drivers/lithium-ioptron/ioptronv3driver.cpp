@@ -1,5 +1,5 @@
 /*
-    LITHIUM IOptron v3 Driver for firmware version 20171001 or later.
+    HYDROGEN IOptron v3 Driver for firmware version 20171001 or later.
 
     Copyright (C) 2018 Jasem Mutlaq
 
@@ -19,7 +19,7 @@
 */
 
 #include "ioptronv3driver.h"
-#include "lithiumcom.h"
+#include "HYDROGENcom.h"
 
 #include <libnova/julian_day.h>
 #include <cinttypes>
@@ -120,7 +120,7 @@ namespace IOPv3
             {
                 FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, GetLastError(),
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errMsg, MAXRBUF, nullptr);
-                DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Write Command Error: %s", errMsg);
+                DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Write Command Error: %s", errMsg);
                 return false;
             }
 
@@ -132,7 +132,7 @@ namespace IOPv3
             if ((errCode = tty_write(PortFD, command, strlen(command), &nbytes_written)) != TTY_OK)
             {
                 tty_error_msg(errCode, errMsg, MAXRBUF);
-                DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Write Command Error: %s", errMsg);
+                DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Write Command Error: %s", errMsg);
                 return false;
             }
 #endif
@@ -147,7 +147,7 @@ namespace IOPv3
             {
                 FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, GetLastError(),
                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), errMsg, MAXRBUF, nullptr);
-                DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Read Command Error: %s", errMsg);
+                DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Read Command Error: %s", errMsg);
                 return false;
             }
 
@@ -168,7 +168,7 @@ namespace IOPv3
         if (errCode != TTY_OK)
         {
             tty_error_msg(errCode, errMsg, MAXRBUF);
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Read Command Error: %s", errMsg);
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Read Command Error: %s", errMsg);
             return false;
         }
 #endif
@@ -198,7 +198,7 @@ namespace IOPv3
     {
         char res[IOP_BUFFER] = {0};
 
-        DEBUGDEVICE(m_DeviceName, LITHIUM::Logger::DBG_DEBUG, "Initializing IOptron using :MountInfo# CMD...");
+        DEBUGDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_DEBUG, "Initializing IOptron using :MountInfo# CMD...");
 
         // Set FD for use
         PortFD = fd;
@@ -218,7 +218,7 @@ namespace IOPv3
         }
 
         return false;
-        DEBUGDEVICE(m_DeviceName, LITHIUM::Logger::DBG_DEBUG, res);
+        DEBUGDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_DEBUG, res);
     }
 
     void Driver::setDebug(bool enable)
@@ -318,7 +318,7 @@ namespace IOPv3
 
         if (strlen(res) != 23)
         {
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "%s: Expected 23 bytes but received %d.", __PRETTY_FUNCTION__,
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "%s: Expected 23 bytes but received %d.", __PRETTY_FUNCTION__,
                          strlen(res));
             return false;
         }
@@ -774,12 +774,12 @@ namespace IOPv3
                      static_cast<uint32_t>(fabs(simData.de) * 60 * 60 * 100),
                      static_cast<uint32_t>(simData.ra * 15 * 60 * 60 * 100), simData.pier_state, simData.cw_state);
         }
-        else if (sendCommand(":GEP#", -1, res, IOP_TIMEOUT, LITHIUM::Logger::DBG_EXTRA_1) == false)
+        else if (sendCommand(":GEP#", -1, res, IOP_TIMEOUT, HYDROGEN::Logger::DBG_EXTRA_1) == false)
             return false;
 
         if (strlen(res) != 20)
         {
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "%s: Expected 20 bytes but received %d.", __PRETTY_FUNCTION__,
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "%s: Expected 20 bytes but received %d.", __PRETTY_FUNCTION__,
                          strlen(res));
             return false;
         }
@@ -796,7 +796,7 @@ namespace IOPv3
         }
         catch (...)
         {
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Failed to parse coordinates RA: %s DE: %s", raStr, deStr);
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Failed to parse coordinates RA: %s DE: %s", raStr, deStr);
             return false;
         }
 
@@ -820,7 +820,7 @@ namespace IOPv3
 
         if (strlen(res) != 18)
         {
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "%s: Expected 18 bytes but received %d.", __PRETTY_FUNCTION__,
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "%s: Expected 18 bytes but received %d.", __PRETTY_FUNCTION__,
                          strlen(res));
             return false;
         }
@@ -840,7 +840,7 @@ namespace IOPv3
         }
         catch (...)
         {
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Failed to parse JD String: %s", JDStr);
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Failed to parse JD String: %s", JDStr);
             return false;
         }
 
@@ -864,7 +864,7 @@ namespace IOPv3
         }
         catch (...)
         {
-            DEBUGFDEVICE(m_DeviceName, LITHIUM::Logger::DBG_ERROR, "Failed to parse MF Behavior: %s", res);
+            DEBUGFDEVICE(m_DeviceName, HYDROGEN::Logger::DBG_ERROR, "Failed to parse MF Behavior: %s", res);
             return false;
         }
         return true;

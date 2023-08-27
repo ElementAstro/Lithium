@@ -1,5 +1,5 @@
 /*
-    LITHIUM IEQ Pro driver
+    HYDROGEN IEQ Pro driver
 
     Copyright (C) 2015 Jasem Mutlaq
 
@@ -19,7 +19,7 @@
 */
 
 #include "ieqprolegacy.h"
-#include "lithiumcom.h"
+#include "HYDROGENcom.h"
 #include "connection/connectionserial.h"
 
 #include <libnova/sidereal_time.h>
@@ -49,7 +49,7 @@ IEQProLegacy::IEQProLegacy()
     scopeInfo.timeSource = TS_RS232;
     scopeInfo.hemisphere = HEMI_NORTH;
 
-    DBG_SCOPE = LITHIUM::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
+    DBG_SCOPE = HYDROGEN::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
 
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
                                TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION | TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK |
@@ -64,7 +64,7 @@ const char *IEQProLegacy::getDefaultName()
 
 bool IEQProLegacy::initProperties()
 {
-    LITHIUM::Telescope::initProperties();
+    HYDROGEN::Telescope::initProperties();
 
     /* Firmware */
     IUFillText(&FirmwareT[FW_MODEL], "Model", "", nullptr);
@@ -83,15 +83,15 @@ bool IEQProLegacy::initProperties()
     AddTrackMode("TRACK_CUSTOM", "Custom");
 
     // Slew Rates
-    strncpy(SlewRateS[0].label, "1x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[1].label, "2x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[2].label, "8x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[3].label, "16x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[4].label, "64x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[5].label, "128x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[6].label, "256x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[7].label, "512x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[8].label, "MAX", MAXLITHIUMLABEL);
+    strncpy(SlewRateS[0].label, "1x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[1].label, "2x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[2].label, "8x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[3].label, "16x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[4].label, "64x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[5].label, "128x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[6].label, "256x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[7].label, "512x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[8].label, "MAX", MAXHYDROGENLABEL);
     IUResetSwitch(&SlewRateSP);
     // 64x is the default
     SlewRateS[4].s = ISS_ON;
@@ -158,7 +158,7 @@ bool IEQProLegacy::initProperties()
 
 bool IEQProLegacy::updateProperties()
 {
-    LITHIUM::Telescope::updateProperties();
+    HYDROGEN::Telescope::updateProperties();
 
     if (isConnected())
     {
@@ -239,7 +239,7 @@ void IEQProLegacy::getStartupData()
     double longitude = 0, latitude = 0;
     if (get_ieqpro_latitude(PortFD, &latitude) && get_ieqpro_longitude(PortFD, &longitude))
     {
-        // Convert to LITHIUM standard longitude (0 to 360 Eastward)
+        // Convert to HYDROGEN standard longitude (0 to 360 Eastward)
         if (longitude < 0)
             longitude += 360;
 
@@ -313,7 +313,7 @@ bool IEQProLegacy::ISNewNumber(const char *dev, const char *name, double values[
         }
     }
 
-    return LITHIUM::Telescope::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
 bool IEQProLegacy::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -382,7 +382,7 @@ bool IEQProLegacy::ISNewSwitch(const char *dev, const char *name, ISState *state
         }
     }
 
-    return LITHIUM::Telescope::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::Telescope::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool IEQProLegacy::ReadScopeStatus()
@@ -577,9 +577,9 @@ bool IEQProLegacy::Park()
     fs_sexa(AltStr, parkAlt, 2, 3600);
     LOGF_DEBUG("Parking to Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-    LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+    HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
 
     if (Goto(equatorialCoords.rightascension, equatorialCoords.declination))
     {
@@ -659,7 +659,7 @@ bool IEQProLegacy::updateTime(ln_date *utc, double utc_offset)
 
 bool IEQProLegacy::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (longitude > 180)
         longitude -= 360;
@@ -695,7 +695,7 @@ void IEQProLegacy::simulationTriggered(bool enable)
     set_ieqpro_simulation(enable);
 }
 
-bool IEQProLegacy::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool IEQProLegacy::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     if (TrackState == SCOPE_PARKED)
     {
@@ -729,7 +729,7 @@ bool IEQProLegacy::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool IEQProLegacy::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool IEQProLegacy::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     if (TrackState == SCOPE_PARKED)
     {
@@ -795,7 +795,7 @@ bool IEQProLegacy::SetSlewRate(int index)
 
 bool IEQProLegacy::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Telescope::saveConfigItems(fp);
+    HYDROGEN::Telescope::saveConfigItems(fp);
 
     return true;
 }
@@ -890,9 +890,9 @@ void IEQProLegacy::mountSim()
 
 bool IEQProLegacy::SetCurrentPark()
 {
-    LITHIUM::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{0, 0};
-    LITHIUM::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{0, 0};
+    HYDROGEN::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
     double parkAZ = horizontalCoords.azimuth;
     double parkAlt = horizontalCoords.altitude;
 

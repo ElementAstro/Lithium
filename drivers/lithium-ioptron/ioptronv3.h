@@ -1,5 +1,5 @@
 /*
-    LITHIUM IOptron v3 Driver for firmware version 20171001 or later.
+    HYDROGEN IOptron v3 Driver for firmware version 20171001 or later.
 
     Copyright (C) 2018 Jasem Mutlaq
 
@@ -25,10 +25,10 @@
 #include <memory>
 
 #include "ioptronv3driver.h"
-#include "lithiumguiderinterface.h"
-#include "lithiumtelescope.h"
+#include "HYDROGENguiderinterface.h"
+#include "HYDROGENtelescope.h"
 
-class IOptronV3 : public LITHIUM::Telescope, public LITHIUM::GuiderInterface
+class IOptronV3 : public HYDROGEN::Telescope, public HYDROGEN::GuiderInterface
 {
 public:
     IOptronV3();
@@ -46,8 +46,8 @@ protected:
 
     virtual bool ReadScopeStatus() override;
 
-    virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-    virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+    virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+    virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
 
     virtual bool saveConfigItems(FILE *fp) override;
 
@@ -150,10 +150,10 @@ private:
     ISwitchVectorProperty DaylightSP;
 
     // Meridian Behavior
-    LITHIUM::PropertySwitch MeridianActionSP{2};
+    HYDROGEN::PropertySwitch MeridianActionSP{2};
 
     // Meridian Limit
-    LITHIUM::PropertyNumber MeridianLimitNP{1};
+    HYDROGEN::PropertyNumber MeridianLimitNP{1};
 
     uint32_t DBG_SCOPE;
 

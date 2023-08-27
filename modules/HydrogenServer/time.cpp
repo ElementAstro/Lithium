@@ -1,9 +1,13 @@
+#include "time.hpp"
+
+#include <ctime>
+
 /* fill s with current UT string.
  * if no s, use a static buffer
  * return s or buffer.
  * N.B. if use our buffer, be sure to use before calling again
  */
-static char *hydrogen_tstamp(char *s)
+char *hydrogen_tstamp(char *s)
 {
     static char sbuf[64];
     struct tm *tp;

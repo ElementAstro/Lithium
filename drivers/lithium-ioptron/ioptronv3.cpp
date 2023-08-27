@@ -1,5 +1,5 @@
 /*
-    LITHIUM IOptron v3 Driver for firmware version 20171001 or later.
+    HYDROGEN IOptron v3 Driver for firmware version 20171001 or later.
 
     Copyright (C) 2018 Jasem Mutlaq
 
@@ -23,7 +23,7 @@
 #include "ioptronv3.h"
 #include "connection/connectionserial.h"
 #include "connection/connectiontcp.h"
-#include "lithiumcom.h"
+#include "HYDROGENcom.h"
 
 #include <libnova/transform.h>
 #include <libnova/sidereal_time.h>
@@ -55,7 +55,7 @@ IOptronV3::IOptronV3()
     scopeInfo.timeSource = TS_RS232;
     scopeInfo.hemisphere = HEMI_NORTH;
 
-    DBG_SCOPE = LITHIUM::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
+    DBG_SCOPE = HYDROGEN::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
 
     SetTelescopeCapability(TELESCOPE_CAN_PARK |
                                TELESCOPE_CAN_SYNC |
@@ -78,18 +78,18 @@ const char *IOptronV3::getDefaultName()
 
 bool IOptronV3::initProperties()
 {
-    LITHIUM::Telescope::initProperties();
+    HYDROGEN::Telescope::initProperties();
 
     // Slew Rates
-    strncpy(SlewRateS[0].label, "1x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[1].label, "2x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[2].label, "8x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[3].label, "16x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[4].label, "64x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[5].label, "128x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[6].label, "256x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[7].label, "512x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[8].label, "MAX", MAXLITHIUMLABEL);
+    strncpy(SlewRateS[0].label, "1x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[1].label, "2x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[2].label, "8x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[3].label, "16x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[4].label, "64x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[5].label, "128x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[6].label, "256x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[7].label, "512x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[8].label, "MAX", MAXHYDROGENLABEL);
     IUResetSwitch(&SlewRateSP);
     // Max is the default
     SlewRateS[8].s = ISS_ON;
@@ -218,7 +218,7 @@ bool IOptronV3::initProperties()
 
 bool IOptronV3::updateProperties()
 {
-    LITHIUM::Telescope::updateProperties();
+    HYDROGEN::Telescope::updateProperties();
 
     if (isConnected())
     {
@@ -339,7 +339,7 @@ void IOptronV3::getStartupData()
     if (driver->getStatus(&scopeInfo))
     {
         LocationN[LOCATION_LATITUDE].value = scopeInfo.latitude;
-        // Convert to LITHIUM standard longitude (0 to 360 Eastward)
+        // Convert to HYDROGEN standard longitude (0 to 360 Eastward)
         LocationN[LOCATION_LONGITUDE].value = (scopeInfo.longitude < 0) ? scopeInfo.longitude + 360 : scopeInfo.longitude;
         LocationNP.s = IPS_OK;
 
@@ -485,7 +485,7 @@ bool IOptronV3::ISNewNumber(const char *dev, const char *name, double values[], 
         }
     }
 
-    return LITHIUM::Telescope::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
 bool IOptronV3::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -701,7 +701,7 @@ bool IOptronV3::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         }
     }
 
-    return LITHIUM::Telescope::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::Telescope::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool IOptronV3::ReadScopeStatus()
@@ -804,8 +804,8 @@ bool IOptronV3::ReadScopeStatus()
             else
             {
                 PECTime = PECTime + 1 * getCurrentPollingPeriod() / 1000;
-                char PECText[MAXLITHIUMLABEL] = {0};
-                snprintf(PECText, MAXLITHIUMLABEL, "Recording: %d s", PECTime);
+                char PECText[MAXHYDROGENLABEL] = {0};
+                snprintf(PECText, MAXHYDROGENLABEL, "Recording: %d s", PECTime);
                 IUSaveText(&PECInfoT[0], PECText);
             }
         }
@@ -830,7 +830,7 @@ bool IOptronV3::ReadScopeStatus()
     {
         // 2021.11.30 JM: This is a hack to circumvent a bug in iOptorn firmware
         // the "system status" bit is set to SLEWING even when parking is done (2), it never
-        // changes to (6) which lithiumcates it has parked. So we use a counter to check if there
+        // changes to (6) which HYDROGENcates it has parked. So we use a counter to check if there
         // is no longer any motion.
         if (TrackState == SCOPE_PARKING)
         {
@@ -987,7 +987,7 @@ bool IOptronV3::updateTime(ln_date *utc, double utc_offset)
 
 bool IOptronV3::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (longitude > 180)
         longitude -= 360;
@@ -1023,7 +1023,7 @@ void IOptronV3::simulationTriggered(bool enable)
     driver->setSimulation(enable);
 }
 
-bool IOptronV3::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool IOptronV3::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     if (TrackState == SCOPE_PARKED)
     {
@@ -1057,7 +1057,7 @@ bool IOptronV3::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool IOptronV3::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool IOptronV3::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     if (TrackState == SCOPE_PARKED)
     {
@@ -1123,7 +1123,7 @@ bool IOptronV3::SetSlewRate(int index)
 
 bool IOptronV3::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Telescope::saveConfigItems(fp);
+    HYDROGEN::Telescope::saveConfigItems(fp);
 
     IUSaveConfigSwitch(fp, &SlewModeSP);
     IUSaveConfigSwitch(fp, &DaylightSP);
@@ -1225,9 +1225,9 @@ void IOptronV3::mountSim()
 
 bool IOptronV3::SetCurrentPark()
 {
-    LITHIUM::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{0, 0};
-    LITHIUM::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{0, 0};
+    HYDROGEN::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
     double parkAZ = horizontalCoords.azimuth;
     double parkAlt = horizontalCoords.altitude;
     char AzStr[16], AltStr[16];
@@ -1264,7 +1264,7 @@ bool IOptronV3::SetTrackMode(uint8_t mode)
 
 bool IOptronV3::SetTrackRate(double raRate, double deRate)
 {
-    LITHIUM_UNUSED(deRate);
+    HYDROGEN_UNUSED(deRate);
 
     // Convert to arcsecs/s to rate
     double ieqRARate = raRate / TRACKRATE_SIDEREAL;

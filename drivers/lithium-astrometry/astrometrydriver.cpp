@@ -1,7 +1,7 @@
 /*******************************************************************************
   Copyright(c) 2017 Jasem Mutlaq. All rights reserved.
 
-  LITHIUM Astrometry.net Driver
+  HYDROGEN Astrometry.net Driver
 
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the Free
@@ -41,7 +41,7 @@ AstrometryDriver::AstrometryDriver()
 
 bool AstrometryDriver::initProperties()
 {
-    LITHIUM::DefaultDevice::initProperties();
+    HYDROGEN::DefaultDevice::initProperties();
 
     /**********************************************/
     /**************** Astrometry ******************/
@@ -111,7 +111,7 @@ void AstrometryDriver::ISGetProperties(const char *dev)
 
 bool AstrometryDriver::updateProperties()
 {
-    LITHIUM::DefaultDevice::updateProperties();
+    HYDROGEN::DefaultDevice::updateProperties();
 
     if (isConnected())
     {
@@ -150,7 +150,7 @@ bool AstrometryDriver::Disconnect()
 
 bool AstrometryDriver::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    return LITHIUM::DefaultDevice::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
 
 bool AstrometryDriver::ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[],
@@ -180,7 +180,7 @@ bool AstrometryDriver::ISNewBLOB(const char *dev, const char *name, int sizes[],
         }
     }
 
-    return LITHIUM::DefaultDevice::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
+    return HYDROGEN::DefaultDevice::ISNewBLOB(dev, name, sizes, blobsizes, blobs, formats, names, n);
 }
 
 bool AstrometryDriver::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
@@ -196,7 +196,7 @@ bool AstrometryDriver::ISNewText(const char *dev, const char *name, char *texts[
             IDSetText(&ActiveDeviceTP, nullptr);
 
             // Update the property name!
-            strncpy(CCDDataBP.device, ActiveDeviceT[0].text, MAXLITHIUMDEVICE);
+            strncpy(CCDDataBP.device, ActiveDeviceT[0].text, MAXHYDROGENDEVICE);
             IDSnoopDevice(ActiveDeviceT[0].text, "CCD1");
             IDSnoopBLOBs(ActiveDeviceT[0].text, "CCD1", B_ONLY);
 
@@ -213,7 +213,7 @@ bool AstrometryDriver::ISNewText(const char *dev, const char *name, char *texts[
         }
     }
 
-    return LITHIUM::DefaultDevice::ISNewText(dev, name, texts, names, n);
+    return HYDROGEN::DefaultDevice::ISNewText(dev, name, texts, names, n);
 }
 
 bool AstrometryDriver::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -246,7 +246,7 @@ bool AstrometryDriver::ISNewSwitch(const char *dev, const char *name, ISState *s
         }
     }
 
-    return LITHIUM::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::DefaultDevice::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool AstrometryDriver::ISSnoopDevice(XMLEle *root)
@@ -258,7 +258,7 @@ bool AstrometryDriver::ISSnoopDevice(XMLEle *root)
         return true;
     }
 
-    return LITHIUM::DefaultDevice::ISSnoopDevice(root);
+    return HYDROGEN::DefaultDevice::ISSnoopDevice(root);
 }
 
 bool AstrometryDriver::saveConfigItems(FILE *fp)

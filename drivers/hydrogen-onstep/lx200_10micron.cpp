@@ -1,5 +1,5 @@
 /*
-    10micron LITHIUM driver
+    10micron HYDROGEN driver
     GM1000HPS GM2000QCI GM2000HPS GM3000HPS GM4000QCI GM4000HPS AZ2000
     Mount Command Protocol 2.14.11
 
@@ -45,7 +45,7 @@
 #define ALIGNMENT_TAB "Alignment"
 #define LX200_TIMEOUT 5 /* FD timeout in seconds */
 
-// LITHIUM Number and Text names
+// HYDROGEN Number and Text names
 #define REFRACTION_MODEL_TEMPERATURE "REFRACTION_MODEL_TEMPERATURE"
 #define REFRACTION_MODEL_PRESSURE "REFRACTION_MODEL_PRESSURE"
 #define MODEL_COUNT "MODEL_COUNT"
@@ -84,14 +84,14 @@ LX200_10MICRON::LX200_10MICRON() : LX200Generic()
     setVersion(1, 1);
 }
 
-// Called by LITHIUM::DefaultDevice::ISGetProperties
+// Called by HYDROGEN::DefaultDevice::ISGetProperties
 // Note that getDriverName calls ::getDefaultName which returns LX200 Generic
 const char *LX200_10MICRON::getDefaultName()
 {
     return "10micron";
 }
 
-// Called by LITHIUM::Telescope::callHandshake, either TCP Connect or Serial Port Connect
+// Called by HYDROGEN::Telescope::callHandshake, either TCP Connect or Serial Port Connect
 bool LX200_10MICRON::Handshake()
 {
     fd = PortFD;
@@ -125,7 +125,7 @@ bool LX200_10MICRON::initProperties()
     const bool result = LX200Generic::initProperties();
     if (result)
     {
-        // TODO initialize properties additional to LITHIUM::Telescope
+        // TODO initialize properties additional to HYDROGEN::Telescope
         IUFillSwitch(&UnattendedFlipS[UNATTENDED_FLIP_DISABLED], "Disabled", "Disabled", ISS_ON);
         IUFillSwitch(&UnattendedFlipS[UNATTENDED_FLIP_ENABLED], "Enabled", "Enabled", ISS_OFF);
         IUFillSwitchVector(&UnattendedFlipSP, UnattendedFlipS, UNATTENDED_FLIP_COUNT, getDeviceName(),
@@ -192,12 +192,12 @@ bool LX200_10MICRON::initProperties()
 
 bool LX200_10MICRON::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Telescope::saveConfigItems(fp);
+    HYDROGEN::Telescope::saveConfigItems(fp);
     IUSaveConfigSwitch(fp, &UnattendedFlipSP);
     return true;
 }
 
-// Called by LITHIUM::Telescope when connected state changes to add/remove properties
+// Called by HYDROGEN::Telescope when connected state changes to add/remove properties
 bool LX200_10MICRON::updateProperties()
 {
     bool result = LX200Generic::updateProperties();
@@ -385,7 +385,7 @@ bool LX200_10MICRON::getMountInfo()
     return true;
 }
 
-// LITHIUM::Telescope calls ReadScopeStatus() every POLLMS to check the link to the telescope and update its state and position.
+// HYDROGEN::Telescope calls ReadScopeStatus() every POLLMS to check the link to the telescope and update its state and position.
 // The child class should call newRaDec() whenever a new value is read from the telescope.
 bool LX200_10MICRON::ReadScopeStatus()
 {
@@ -521,7 +521,7 @@ bool LX200_10MICRON::ReadScopeStatus()
     default:
         return false;
     }
-    setPierSide((toupper(Ginfo.SideOfPier) == 'E') ? LITHIUM::Telescope::PIER_EAST : LITHIUM::Telescope::PIER_WEST);
+    setPierSide((toupper(Ginfo.SideOfPier) == 'E') ? HYDROGEN::Telescope::PIER_EAST : HYDROGEN::Telescope::PIER_WEST);
 
     OldGstat = Ginfo.Gstat;
     NewRaDec(Ginfo.RA_JNOW, Ginfo.DEC_JNOW);
@@ -1108,7 +1108,7 @@ bool LX200_10MICRON::ISNewNumber(const char *dev, const char *name, double value
         }
     }
 
-    // Let LITHIUM::LX200Generic handle any other number properties
+    // Let HYDROGEN::LX200Generic handle any other number properties
     return LX200Generic::ISNewNumber(dev, name, values, names, n);
 }
 

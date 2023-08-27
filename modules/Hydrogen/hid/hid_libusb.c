@@ -34,7 +34,7 @@
 #define _GNU_SOURCE // needed for wcsdup() before glibc 2.10
 
 #include "hidapi.h"
-#include "locale_compat.h"
+#include "locale/locale_compat.hpp"
 
 /* GNU / LibUSB */
 #include <libusb.h>

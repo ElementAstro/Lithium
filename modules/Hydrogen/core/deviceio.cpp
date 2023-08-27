@@ -30,7 +30,7 @@ Description: Device IO Module
 *************************************************/
 
 #include "deviceio.hpp"
-#include "hydrogen/event/eventloop.hpp"
+#include "Hydrogen/event/eventloop.hpp"
 
 #include <loguru/loguru.hpp>
 

@@ -1,5 +1,5 @@
 /*
-    LITHIUM Rotator Simulator
+    HYDROGEN Rotator Simulator
     Copyright (C) 2020 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
     This library is free software; you can redistribute it and/or
@@ -50,7 +50,7 @@ bool RotatorSimulator::Disconnect()
 
 IPState RotatorSimulator::MoveRotator(double angle)
 {
-    if (ReverseRotatorS[LITHIUM_ENABLED].s == ISS_ON)
+    if (ReverseRotatorS[HYDROGEN_ENABLED].s == ISS_ON)
         m_TargetAngle = range360(360 - angle);
     else
         m_TargetAngle = range360(angle);
@@ -59,7 +59,7 @@ IPState RotatorSimulator::MoveRotator(double angle)
 
 bool RotatorSimulator::SyncRotator(double angle)
 {
-    LITHIUM_UNUSED(angle);
+    HYDROGEN_UNUSED(angle);
     return true;
 }
 
@@ -70,7 +70,7 @@ bool RotatorSimulator::AbortRotator()
 
 bool RotatorSimulator::ReverseRotator(bool enabled)
 {
-    LITHIUM_UNUSED(enabled);
+    HYDROGEN_UNUSED(enabled);
     return true;
 }
 

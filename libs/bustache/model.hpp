@@ -14,12 +14,13 @@
 #include <concepts>
 #include <functional>
 #include <variant>
+#ifndef __cpp_lib_format
+#define BUSTACHE_USE_FMT
+#endif
 #ifdef BUSTACHE_USE_FMT
 #include <fmt/format.h>
-#elif defined(__cpp_lib_format)
-#include <format>
 #else
-#error "format is not supported"
+#include <format>
 #endif
 #ifdef __cpp_lib_ranges
 #include <ranges>

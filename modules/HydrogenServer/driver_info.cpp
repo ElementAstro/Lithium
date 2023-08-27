@@ -1,6 +1,26 @@
 #include "driver_info.hpp"
 
-/* start the given local INDI driver process.
+#include <unistd.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <sys/socket.h>
+#include <libgen.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+
+#endif
+
+#include "lilxml.h"
+#include "client_info.hpp"
+#include "xml_util.hpp"
+#include "hydrogen_server.hpp"
+
+#include "loguru/loguru.hpp"
+
+/* start the given local HYDROGEN driver process.
  * exit if trouble.
  */
 void LocalDvrInfo::start()
@@ -75,22 +95,22 @@ void LocalDvrInfo::start()
             (void)::close(fd);
 
         if (!envDev.empty())
-            setenv("INDIDEV", envDev.c_str(), 1);
+            setenv("HYDROGENDEV", envDev.c_str(), 1);
         /* Only reset environment variable in case of FIFO */
         else if (fifo)
-            unsetenv("INDIDEV");
+            unsetenv("HYDROGENDEV");
         if (!envConfig.empty())
-            setenv("INDICONFIG", envConfig.c_str(), 1);
+            setenv("HYDROGENCONFIG", envConfig.c_str(), 1);
         else if (fifo)
-            unsetenv("INDICONFIG");
+            unsetenv("HYDROGENCONFIG");
         if (!envSkel.empty())
-            setenv("INDISKEL", envSkel.c_str(), 1);
+            setenv("HYDROGENSKEL", envSkel.c_str(), 1);
         else if (fifo)
-            unsetenv("INDISKEL");
+            unsetenv("HYDROGENSKEL");
         std::string executable;
         if (!envPrefix.empty())
         {
-            setenv("INDIPREFIX", envPrefix.c_str(), 1);
+            setenv("HYDROGENPREFIX", envPrefix.c_str(), 1);
 #if defined(OSX_EMBEDED_MODE)
             executable = envPrefix + "/Contents/MacOS/" + name;
 #elif defined(__APPLE__)
@@ -160,10 +180,10 @@ void LocalDvrInfo::start()
      * if restarting
      */
     if (verbose > 0)
-        // log(fmt("pid=%d rfd=%d wfd=%d efd=%d\n", pid, rp[0], wp[1], ep[0]));
+        LOG_F(INFO, "pid=%d rfd=%d wfd=%d efd=%d\n", pid, rp[0], wp[1], ep[0]);
 
     XMLEle *root = addXMLEle(NULL, "getProperties");
-    addXMLAtt(root, "version", TO_STRING(INDIV));
+    addXMLAtt(root, "version", TO_STRING(HYDROGENV));
     mp = new Msg(nullptr, root);
 
     // pushmsg can kill mp. do at end
@@ -172,11 +192,11 @@ void LocalDvrInfo::start()
 
 void RemoteDvrInfo::extractRemoteId(const std::string &name, std::string &o_host, int &o_port, std::string &o_dev) const
 {
-    char dev[MAXINDIDEVICE] = {0};
+    char dev[MAXHYDROGENDEVICE] = {0};
     char host[MAXSBUF] = {0};
 
     /* extract host and port from name*/
-    int hydrogen_port = INDIPORT;
+    int hydrogen_port = HYDROGENPORT;
     if (sscanf(name.c_str(), "%[^@]@%[^:]:%d", dev, host, &hydrogen_port) < 2)
     {
         // Device missing? Try a different syntax for all devices
@@ -192,7 +212,7 @@ void RemoteDvrInfo::extractRemoteId(const std::string &name, std::string &o_host
     o_dev = dev;
 }
 
-/* start the given remote INDI driver connection.
+/* start the given remote HYDROGEN driver connection.
  * exit if trouble.
  */
 void RemoteDvrInfo::start()
@@ -202,14 +222,14 @@ void RemoteDvrInfo::start()
     extractRemoteId(name, host, port, dev);
 
     /* connect */
-    sockfd = openINDIServer();
+    sockfd = openHYDROGENServer();
 
     /* record flag pid, io channels, init lp and snoop list */
 
     this->setFds(sockfd, sockfd);
 
     if (verbose > 0)
-        // log(fmt("socket=%d\n", sockfd));
+        LOG_F(INFO, "socket=%d\n", sockfd);
 
     /* N.B. storing name now is key to limiting outbound traffic to this
      * dev.
@@ -225,7 +245,7 @@ void RemoteDvrInfo::start()
     if (!dev.empty())
     {
         addXMLAtt(root, "device", dev.c_str());
-        addXMLAtt(root, "version", TO_STRING(INDIV));
+        addXMLAtt(root, "version", TO_STRING(HYDROGENV));
     }
     else
     {
@@ -233,7 +253,7 @@ void RemoteDvrInfo::start()
         // and not a regular client. The difference is in how it treats snooping properties
         // among properties.
         addXMLAtt(root, "device", "*");
-        addXMLAtt(root, "version", TO_STRING(INDIV));
+        addXMLAtt(root, "version", TO_STRING(HYDROGENV));
     }
 
     Msg *mp = new Msg(nullptr, root);
@@ -242,7 +262,7 @@ void RemoteDvrInfo::start()
     pushMsg(mp);
 }
 
-int RemoteDvrInfo::openINDIServer()
+int RemoteDvrInfo::openHYDROGENServer()
 {
     struct sockaddr_in serv_addr;
     struct hostent *hp;
@@ -252,32 +272,31 @@ int RemoteDvrInfo::openINDIServer()
     hp = gethostbyname(host.c_str());
     if (!hp)
     {
-        // log(fmt("gethostbyname(%s): %s\n", host.c_str(), strerror(errno)));
+        LOG_F(ERROR, "gethostbyname(%s): %s\n", host.c_str(), strerror(errno));
         // Bye();
     }
 
-    /* create a socket to the INDI server */
+    /* create a socket to the HYDROGEN server */
     (void)memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
     serv_addr.sin_port = htons(port);
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        // log(fmt("socket(%s,%d): %s\n", host.c_str(), port, strerror(errno)));
+        LOG_F(ERROR, "socket(%s,%d): %s\n", host.c_str(), port, strerror(errno));
         // Bye();
     }
 
     /* connect */
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-        // log(fmt("connect(%s,%d): %s\n", host.c_str(), port, strerror(errno)));
+        LOG_F(ERROR, "connect(%s,%d): %s\n", host.c_str(), port, strerror(errno));
         // Bye();
     }
 
     /* ok */
     return (sockfd);
 }
-
 
 void DvrInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
 {
@@ -290,8 +309,7 @@ void DvrInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
         traceMsg("read ", root);
     else if (verbose > 1)
     {
-        // log(fmt("read <%s device='%s' name='%s'>\n",
-                tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name")));
+        LOG_F(ERROR, "read <%s device='%s' name='%s'>\n",tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
     }
 
     /* that's all if driver is just registering a snoop */
@@ -371,7 +389,6 @@ void DvrInfo::closeWritePart()
     close();
 }
 
-
 void DvrInfo::close()
 {
     // Tell client driver is dead.
@@ -419,7 +436,7 @@ void DvrInfo::close()
         delete (this);
         if ((!fifo) && (drivers.ids().empty()))
             // Bye();
-        return;
+            return;
     }
     else
     {
@@ -467,13 +484,6 @@ void DvrInfo::q2RDrivers(const std::string &dev, Msg *mp, XMLEle *root)
         if (isRemote == 0 && !strcmp(roottag, "enableBLOB"))
             continue;
 
-        /* ok: queue message to this driver */
-        if (verbose > 1)
-        {
-            dp->// log(fmt("queuing responsible for <%s device='%s' name='%s'>\n",
-                        tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name")));
-        }
-
         // pushmsg can kill dp. do at end
         dp->pushMsg(mp);
     }
@@ -501,13 +511,6 @@ void DvrInfo::q2SDrivers(DvrInfo *me, int isblob, const std::string &dev, const 
         if ((!meRemoteServerUid.empty()) && dp->remoteServerUid() == meRemoteServerUid)
             continue;
 
-        /* ok: queue message to this device */
-        if (verbose > 1)
-        {
-            dp->// log(fmt("queuing snooped <%s device='%s' name='%s'>\n",
-                        tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name")));
-        }
-
         // pushmsg can kill dp. do at end
         dp->pushMsg(mp);
     }
@@ -528,7 +531,7 @@ void DvrInfo::addSDevice(const std::string &dev, const std::string &name)
     sprops.push_back(sp);
 
     if (verbose)
-        // log(fmt("snooping on %s.%s\n", dev.c_str(), name.c_str()));
+        LOG_F(INFO, "snooping on %s.%s\n", dev.c_str(), name.c_str());
 }
 
 Property *DvrInfo::findSDevice(const std::string &dev, const std::string &name) const
@@ -541,7 +544,6 @@ Property *DvrInfo::findSDevice(const std::string &dev, const std::string &name) 
 
     return nullptr;
 }
-
 
 DvrInfo::DvrInfo(bool useSharedBuffer) : MsgQueue(useSharedBuffer),
                                          restarts(0)
@@ -576,5 +578,5 @@ void DvrInfo::log(const std::string &str) const
     logLine += name;
     logLine += ": ";
     logLine += str;
-    ::log(logLine);
+    LOG_F(INFO, "%s", logLine.c_str());
 }

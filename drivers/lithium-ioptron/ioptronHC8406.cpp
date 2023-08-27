@@ -1,5 +1,5 @@
 /*
-    ioptronHC8406 LITHIUM driver
+    ioptronHC8406 HYDROGEN driver
 
     Copyright (C) 2017 Nacho Mas. Base on GotoNova driver by Jasem Mutlaq
 
@@ -89,7 +89,7 @@ socat  -v  PTY,link=/tmp/serial,wait-slave,raw /dev/ttyUSB0,raw
 
 #include "ioptronHC8406.h"
 
-#include "lithiumcom.h"
+#include "HYDROGENcom.h"
 #include "lx200driver.h"
 
 #include <libnova/transform.h>
@@ -615,7 +615,7 @@ int ioptronHC8406::setCalenderDate(int fd, int dd, int mm, int yy)
 
 bool ioptronHC8406::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (isSimulation())
         return true;
@@ -718,7 +718,7 @@ int ioptronHC8406::setioptronHC8406StandardProcedure(int fd, const char *data)
 
     error_type = tty_read(fd, bool_return, 1, 5, &nbytes_read);
 
-    // JM: Hack from Jon in the LITHIUM forums to fix longitude/latitude settings failure
+    // JM: Hack from Jon in the HYDROGEN forums to fix longitude/latitude settings failure
 
     nanosleep(&timeout, nullptr);
     tcflush(fd, TCIFLUSH);
@@ -1088,9 +1088,9 @@ void ioptronHC8406::syncSideOfPier()
     LOGF_DEBUG("RES: <%s>", response);
 
     if (!strcmp(response, "East"))
-        setPierSide(LITHIUM::Telescope::PIER_EAST);
+        setPierSide(HYDROGEN::Telescope::PIER_EAST);
     else
-        setPierSide(LITHIUM::Telescope::PIER_WEST);
+        setPierSide(HYDROGEN::Telescope::PIER_WEST);
 }
 
 bool ioptronHC8406::saveConfigItems(FILE *fp)

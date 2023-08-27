@@ -32,7 +32,7 @@
  * The driver defines FWHM property that is used in the @ref CCDSim "CCD Simulator" driver to simulate the fuzziness of star images.
  * It can be used to test AutoFocus routines among other applications.
  */
-class FocusSim : public LITHIUM::Focuser
+class FocusSim : public HYDROGEN::Focuser
 {
     public:
         FocusSim();
@@ -78,7 +78,7 @@ class FocusSim : public LITHIUM::Focuser
         INumberVectorProperty TemperatureNP;
         INumber TemperatureN[1];
 
-        LITHIUM::PropertyNumber DelayNP {1};
+        HYDROGEN::PropertyNumber DelayNP {1};
 
         // Current mode of Focus simulator for testing purposes
         enum

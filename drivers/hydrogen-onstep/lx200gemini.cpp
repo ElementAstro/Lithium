@@ -1,5 +1,5 @@
 /*
-    Losmandy Gemini LITHIUM driver
+    Losmandy Gemini HYDROGEN driver
 
     Copyright (C) 2017 Jasem Mutlaq
     Copyright (C) 2018 Eric Vickery
@@ -2035,7 +2035,7 @@ bool LX200Gemini::wakeupMount()
     return true;
 }
 
-void LX200Gemini::setTrackState(LITHIUM::Telescope::TelescopeStatus state)
+void LX200Gemini::setTrackState(HYDROGEN::Telescope::TelescopeStatus state)
 {
     if (TrackState != state)
         TrackState = state;

@@ -31,7 +31,7 @@
 #include "lithiumfocuserinterface.h"
 #include "lithiumtelescope.h"
 
-class LX200Telescope : public LITHIUM::Telescope, public LITHIUM::GuiderInterface, public LITHIUM::FocuserInterface
+class LX200Telescope : public HYDROGEN::Telescope, public HYDROGEN::GuiderInterface, public HYDROGEN::FocuserInterface
 {
 public:
     LX200Telescope();
@@ -78,8 +78,8 @@ protected:
     virtual bool SetTrackMode(uint8_t mode) override;
 
     // NSWE Motion Commands
-    virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-    virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+    virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+    virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
 
     // Abort ALL motion
     virtual bool Abort() override;

@@ -2,11 +2,18 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <cerrno>
 #endif
 
 #include <error.h>
 
-static int readFdError(int fd)
+int readFdError(int fd)
 {
 #ifdef MSG_ERRQUEUE
     char rcvbuf[128]; /* Buffer for normal data (not expected here...) */
@@ -52,7 +59,7 @@ static int readFdError(int fd)
 }
 
 #ifdef _WIN32
-static void* attachSharedBuffer(HANDLE fileHandle, size_t& size)
+void* attachSharedBuffer(HANDLE fileHandle, size_t& size)
 {
     SIZE_T fileSize;
     if (!GetFileSizeEx(fileHandle, reinterpret_cast<PLARGE_INTEGER>(&fileSize)))
@@ -81,7 +88,7 @@ static void* attachSharedBuffer(HANDLE fileHandle, size_t& size)
     return ret;
 }
 
-static void detachSharedBuffer(void* ptr)
+void detachSharedBuffer(void* ptr)
 {
     if (!UnmapViewOfFile(ptr))
     {
@@ -91,7 +98,7 @@ static void detachSharedBuffer(void* ptr)
 }
 
 #else
-static void *attachSharedBuffer(int fd, size_t &size)
+void *attachSharedBuffer(int fd, size_t &size)
 {
     struct stat sb;
     if (fstat(fd, &sb) == -1)
@@ -111,7 +118,7 @@ static void *attachSharedBuffer(int fd, size_t &size)
     return ret;
 }
 
-static void dettachSharedBuffer(int fd, void *ptr, size_t size)
+void dettachSharedBuffer(int fd, void *ptr, size_t size)
 {
     (void)fd;
     if (munmap(ptr, size) == -1)

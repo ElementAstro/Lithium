@@ -1,5 +1,5 @@
 /*
-    lithium_RadioSim_detector - a software defined radio driver for LITHIUM
+    lithium_RadioSim_detector - a software defined radio driver for HYDROGEN
     Copyright (C) 2017  Ilia Platone
 
     This library is free software; you can redistribute it and/or
@@ -86,7 +86,7 @@ bool RadioSim::Disconnect()
 }
 
 /**************************************************************************************
-** LITHIUM is asking us for our default device name
+** HYDROGEN is asking us for our default device name
 ***************************************************************************************/
 const char *RadioSim::getDefaultName()
 {
@@ -94,7 +94,7 @@ const char *RadioSim::getDefaultName()
 }
 
 /**************************************************************************************
-** LITHIUM is asking us to init our properties.
+** HYDROGEN is asking us to init our properties.
 ***************************************************************************************/
 bool RadioSim::initProperties()
 {
@@ -103,7 +103,7 @@ bool RadioSim::initProperties()
     SetCapability(cap);
 
     // Must init parent properties first!
-    LITHIUM::Receiver::initProperties();
+    HYDROGEN::Receiver::initProperties();
 
     setMinMaxStep("SENSOR_INTEGRATION", "SENSOR_INTEGRATION_VALUE", 0.001, 86164.092, 0.001, false);
     setMinMaxStep("RECEIVER_SETTINGS", "RECEIVER_FREQUENCY", 2.4e+7, 2.0e+9, 1, false);
@@ -121,7 +121,7 @@ bool RadioSim::initProperties()
 }
 
 /********************************************************************************************
-** LITHIUM is asking us to update the properties because there is a change in CONNECTION status
+** HYDROGEN is asking us to update the properties because there is a change in CONNECTION status
 ** This fucntion is called whenever the device is connected or disconnected.
 *********************************************************************************************/
 bool RadioSim::updateProperties()
@@ -135,7 +135,7 @@ bool RadioSim::updateProperties()
         SetTimer(getCurrentPollingPeriod());
     }
 
-    return LITHIUM::Receiver::updateProperties();
+    return HYDROGEN::Receiver::updateProperties();
 }
 
 /**************************************************************************************
@@ -198,7 +198,7 @@ bool RadioSim::StartIntegration(double duration)
     gettimeofday(&CapStart, nullptr);
     if(HasStreaming())
     {
-        Streamer->setPixelFormat(LITHIUM_MONO, getBPS());
+        Streamer->setPixelFormat(HYDROGEN_MONO, getBPS());
         Streamer->setSize(getBufferSize() * 8 / abs(getBPS()), 1);
     }
 

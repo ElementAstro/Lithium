@@ -45,7 +45,7 @@ DomeSim::DomeSim()
 * ***********************************************************************************/
 bool DomeSim::initProperties()
 {
-    LITHIUM::Dome::initProperties();
+    HYDROGEN::Dome::initProperties();
 
     SetParkDataType(PARK_AZ);
 
@@ -88,7 +88,7 @@ const char *DomeSim::getDefaultName()
 
 bool DomeSim::updateProperties()
 {
-    LITHIUM::Dome::updateProperties();
+    HYDROGEN::Dome::updateProperties();
 
     if (isConnected())
     {
@@ -224,7 +224,7 @@ IPState DomeSim::UnPark()
 
 IPState DomeSim::ControlShutter(ShutterOperation operation)
 {
-    LITHIUM_UNUSED(operation);
+    HYDROGEN_UNUSED(operation);
     shutterTimer = SHUTTER_TIMER;
     return IPS_BUSY;
 }

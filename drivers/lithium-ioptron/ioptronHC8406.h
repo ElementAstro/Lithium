@@ -1,5 +1,5 @@
 /*
-    ioptronHC8406 LITHIUM driver
+    ioptronHC8406 HYDROGEN driver
     Copyright (C) 2017 Nacho Mas. Base on GotoNova driver by Jasem Mutlaq
 
 

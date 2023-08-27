@@ -49,7 +49,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 int eq_format;                           /* For possible values see enum TEquatorialFormat */
 int geo_format = LX200_GEO_SHORT_FORMAT; /* For possible values see enum TGeographicFormat */
-char lx200Name[MAXLITHIUMDEVICE];
+char lx200Name[MAXHYDROGENDEVICE];
 /* ESN DEBUG */
 unsigned int DBG_SCOPE = 8;
 
@@ -58,7 +58,7 @@ std::mutex lx200CommsLock;
 
 void setLX200Debug(const char *deviceName, unsigned int debug_level)
 {
-    strncpy(lx200Name, deviceName, MAXLITHIUMDEVICE);
+    strncpy(lx200Name, deviceName, MAXHYDROGENDEVICE);
     DBG_SCOPE = debug_level;
 }
 
@@ -70,7 +70,7 @@ int check_lx200_connection(int in_fd)
     char MountAlign[64];
     int nbytes_read = 0;
 
-    DEBUGDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Testing telescope connection using ACK...");
+    DEBUGDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Testing telescope connection using ACK...");
 
     /* Add mutex */
     std::unique_lock<std::mutex> guard(lx200CommsLock);
@@ -92,13 +92,13 @@ int check_lx200_connection(int in_fd)
         tty_read(in_fd, MountAlign, 1, LX200_TIMEOUT, &nbytes_read);
         if (nbytes_read == 1)
         {
-            DEBUGDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Testing successful!");
+            DEBUGDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Testing successful!");
             return 0;
         }
         nanosleep(&timeout, nullptr);
     }
 
-    DEBUGDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Failure. Telescope is not responding to ACK!");
+    DEBUGDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Failure. Telescope is not responding to ACK!");
     return -1;
 }
 
@@ -551,7 +551,7 @@ int getSiteName(int fd, char *siteName, int siteNum)
     if (term)
         strcpy(siteName, "unused site");
 
-    DEBUGFDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Site Name <%s>", siteName);
+    DEBUGFDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Site Name <%s>", siteName);
 
     return 0;
 }

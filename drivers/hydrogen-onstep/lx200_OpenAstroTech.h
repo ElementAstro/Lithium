@@ -85,5 +85,5 @@ private:
   char MeadeCommandResult[1024];
   int32_t FocuserBacklash;
   bool PolarActive;
-  LITHIUM::FocuserInterface::FocusDirection FocuserDirectionLast;
+  HYDROGEN::FocuserInterface::FocusDirection FocuserDirectionLast;
 };

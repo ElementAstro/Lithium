@@ -31,21 +31,25 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
-#include "hydrogen/core/device_exception.hpp"
+#include "Hydrogen/core/device_exception.hpp"
 
 #include "nlohmann/json.hpp"
 
-#include "hydrogen/core/camera.hpp"
-#include "hydrogen/core/telescope.hpp"
-#include "hydrogen/core/focuser.hpp"
-#include "hydrogen/core/filterwheel.hpp"
-#include "hydrogen/core/solver.hpp"
-#include "hydrogen/core/guider.hpp"
+#include "Hydrogen/core/camera.hpp"
+#include "Hydrogen/core/telescope.hpp"
+#include "Hydrogen/core/focuser.hpp"
+#include "Hydrogen/core/filterwheel.hpp"
+#include "Hydrogen/core/solver.hpp"
+#include "Hydrogen/core/guider.hpp"
 
 #include "loguru/loguru.hpp"
 #include "tl/expected.hpp"
 
+#ifdef __cpp_lib_format
 #include <format>
+#else
+#include <fmt/format.h>
+#endif
 #include <typeinfo>
 
 namespace Lithium
@@ -114,7 +118,11 @@ namespace Lithium
         while (findDevice(type, newName) != -1)
         {
 #if __cplusplus >= 202002L
+#ifdef __cpp_lib_format
             newName = std::format("{}-{}", name, index++);
+#else
+
+#endif
 #else
             std::stringstream ss;
             ss << name << "-" << index++;
@@ -224,7 +232,10 @@ namespace Lithium
         }
         if (m_ConfigManager)
         {
+#ifdef __cpp_lib_format
             m_ConfigManager->setValue(std::format("driver/{}/name", newName), newName);
+#else
+#endif
         }
         else
         {
@@ -313,7 +324,10 @@ namespace Lithium
         }
         if (m_ConfigManager)
         {
+#ifdef __cpp_lib_format
             m_ConfigManager->deleteValue(std::format("driver/{}", name));
+#else
+#endif
         }
         else
         {
@@ -449,7 +463,11 @@ namespace Lithium
         {
             if (!message->value.empty())
             {
+#ifdef __cpp_lib_format
                 m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
+#else
+
+#endif
             }
         }
     }

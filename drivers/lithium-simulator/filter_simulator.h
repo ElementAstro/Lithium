@@ -23,7 +23,7 @@
 /**
  * @brief The FilterSim class provides a simple simulator to change filters. The filter names are saved to a config file when updated.
  */
-class FilterSim : public LITHIUM::FilterWheel
+class FilterSim : public HYDROGEN::FilterWheel
 {
     public:
         FilterSim() = default;

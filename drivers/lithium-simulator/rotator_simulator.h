@@ -1,5 +1,5 @@
 /*
-    LITHIUM Rotator Simulator
+    HYDROGEN Rotator Simulator
     Copyright (C) 2020 Jasem Mutlaq (mutlaqja@ikarustech.com)
 
     This library is free software; you can redistribute it and/or
@@ -22,7 +22,7 @@
 
 #include "lithiumrotator.h"
 
-class RotatorSimulator : public LITHIUM::Rotator
+class RotatorSimulator : public HYDROGEN::Rotator
 {
     public:
 

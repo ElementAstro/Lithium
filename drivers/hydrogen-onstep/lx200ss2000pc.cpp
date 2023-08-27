@@ -254,7 +254,7 @@ bool LX200SS2000PC::setUTCOffset(double offset)
 
 bool LX200SS2000PC::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (isSimulation())
         return true;
@@ -331,9 +331,9 @@ bool LX200SS2000PC::Park()
     if (isSimulation())
     {
 
-        LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-        LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-        LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+        HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+        HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+        HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
         Goto(equatorialCoords.rightascension, equatorialCoords.declination);
     }
     else
@@ -385,9 +385,9 @@ bool LX200SS2000PC::UnPark()
 
     if (isSimulation())
     {
-        LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-        LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-        LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+        HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+        HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+        HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
         currentRA = equatorialCoords.rightascension;
         currentDEC = equatorialCoords.declination;
     }
@@ -413,9 +413,9 @@ bool LX200SS2000PC::UnPark()
 
 bool LX200SS2000PC::SetCurrentPark()
 {
-    LITHIUM::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{0, 0};
-    LITHIUM::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{0, 0};
+    HYDROGEN::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
     double parkAZ = horizontalCoords.azimuth;
     double parkAlt = horizontalCoords.altitude;
 

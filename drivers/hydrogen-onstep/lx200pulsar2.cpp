@@ -1,5 +1,5 @@
 /*
-    Pulsar2 LITHIUM driver
+    Pulsar2 HYDROGEN driver
 
     Copyright (C) 2016, 2017 Jasem Mutlaq and Camiel Severijns
     Minor Changes (C) 2021 James Lancaster
@@ -35,7 +35,7 @@
 #include <unistd.h>
 #include <mutex>
 
-extern char lx200Name[MAXLITHIUMDEVICE];
+extern char lx200Name[MAXHYDROGENDEVICE];
 extern unsigned int DBG_SCOPE;
 
 namespace PulsarTX
@@ -1294,7 +1294,7 @@ const char *LX200Pulsar2::getDefaultName()
 
 bool LX200Pulsar2::Connect()
 {
-    const bool success = LITHIUM::Telescope::Connect(); // takes care of hardware connection
+    const bool success = HYDROGEN::Telescope::Connect(); // takes care of hardware connection
     if (success)
     {
         if (Pulsar2Commands::isParked(PortFD))
@@ -1325,7 +1325,7 @@ bool LX200Pulsar2::Disconnect()
 
 bool LX200Pulsar2::Handshake()
 {
-    // Anything needs to be done besides this? LITHIUM::Telescope would call ReadScopeStatus but
+    // Anything needs to be done besides this? HYDROGEN::Telescope would call ReadScopeStatus but
     // maybe we need to UnPark() before ReadScopeStatus() can return valid results?
     return true;
 }
@@ -2410,10 +2410,10 @@ bool LX200Pulsar2::SetSlewRate(int index)
     return success;
 }
 
-bool LX200Pulsar2::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand motionCommand)
+bool LX200Pulsar2::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand motionCommand)
 {
     Pulsar2Commands::Direction motionDirection;
-    switch (dir) // map LITHIUM directions to Pulsar2 directions
+    switch (dir) // map HYDROGEN directions to Pulsar2 directions
     {
     case DIRECTION_NORTH:
         motionDirection = Pulsar2Commands::North;
@@ -2449,10 +2449,10 @@ bool LX200Pulsar2::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand motionComma
     return success;
 }
 
-bool LX200Pulsar2::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool LX200Pulsar2::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     Pulsar2Commands::Direction motionDirection;
-    switch (dir) // map LITHIUM directions to Pulsar2 directions
+    switch (dir) // map HYDROGEN directions to Pulsar2 directions
     {
     case DIRECTION_WEST:
         motionDirection = Pulsar2Commands::West;
@@ -2685,7 +2685,7 @@ IPState LX200Pulsar2::GuideWest(uint32_t ms)
 
 bool LX200Pulsar2::updateTime(ln_date *utc, double utc_offset)
 {
-    LITHIUM_UNUSED(utc_offset);
+    HYDROGEN_UNUSED(utc_offset);
     bool success = true;
     if (!isSimulation())
     {
@@ -2712,7 +2712,7 @@ bool LX200Pulsar2::updateTime(ln_date *utc, double utc_offset)
 
 bool LX200Pulsar2::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     bool success = true;
     if (!isSimulation())
     {

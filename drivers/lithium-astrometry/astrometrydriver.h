@@ -1,7 +1,7 @@
 /*******************************************************************************
   Copyright(c) 2017 Jasem Mutlaq. All rights reserved.
 
-  LITHIUM Astrometry.net Driver
+  HYDROGEN Astrometry.net Driver
 
   This program is free software; you can redistribute it and/or modify it
   under the terms of the GNU General Public License as published by the Free
@@ -24,12 +24,12 @@
 
 #pragma once
 
-#include "hydrogen/core/defaultdevice.h"
+#include "Hydrogen/core/defaultdevice.h"
 
 #include <pthread.h>
 
 /**
- * @brief The AstrometryDriver class is an LITHIUM driver frontend for astrometry.net
+ * @brief The AstrometryDriver class is an HYDROGEN driver frontend for astrometry.net
  *
  * There are two supported methods to solve an image:
  *
@@ -48,7 +48,7 @@
  *
  * @author Jasem Mutlaq
  */
-class AstrometryDriver : public LITHIUM::DefaultDevice
+class AstrometryDriver : public HYDROGEN::DefaultDevice
 {
     public:
         enum
@@ -129,7 +129,7 @@ class AstrometryDriver : public LITHIUM::DefaultDevice
          */
         bool processBLOB(uint8_t *data, uint32_t size, uint32_t len);
 
-        // Thread for listenLITHIUM()
+        // Thread for listenHYDROGEN()
         pthread_t solverThread;
         pthread_mutex_t lock;
 };

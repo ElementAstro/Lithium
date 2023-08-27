@@ -16,8 +16,16 @@ set(server_SRC
     xml_util.cpp
 )
 
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/base)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/io)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/property)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
+include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
+
 if(ANDROID)
-    message(WARNING "INDI Server is only supported under Linux, BSD, MacOS, and Cygwin while current system is " ${CMAKE_SYSTEM_NAME})
+    message(WARNING "HYDROGEN Server is only supported under Linux, BSD, MacOS, and Cygwin while current system is " ${CMAKE_SYSTEM_NAME})
 else()
     find_package(Threads REQUIRED)
     find_package(Libev REQUIRED)
@@ -26,6 +34,8 @@ else()
 
     target_link_libraries(hydrogenserver hydrogencore ${CMAKE_THREAD_LIBS_INIT} ${LIBEV_LIBRARIES})
     target_include_directories(hydrogenserver SYSTEM PRIVATE ${LIBEV_INCLUDE_DIRS})
+
+    target_link_libraries(hydrogenserver loguru)
 
     install(TARGETS hydrogenserver RUNTIME DESTINATION bin)
 endif(ANDROID)

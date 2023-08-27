@@ -1,6 +1,6 @@
 add_subdirectory(oatpp)
 
-add_library(oatpp-swagger SHARED
+add_library(oatpp-swagger
     oatpp-swagger/AsyncController.hpp
     oatpp-swagger/Controller.hpp
     oatpp-swagger/ControllerPaths.hpp
@@ -15,7 +15,7 @@ add_library(oatpp-swagger SHARED
 
 target_link_libraries(oatpp-swagger PRIVATE oatpp)
 
-add_library(oatpp-websocket SHARED
+add_library(oatpp-websocket
     oatpp-websocket/AsyncConnectionHandler.cpp
     oatpp-websocket/AsyncConnectionHandler.hpp
     oatpp-websocket/AsyncWebSocket.cpp
@@ -39,7 +39,7 @@ add_library(oatpp-websocket SHARED
 
 target_link_libraries(oatpp-websocket PRIVATE oatpp)
 
-add_library(oatpp-openssl SHARED
+add_library(oatpp-openssl
     oatpp-openssl/Config.cpp
     oatpp-openssl/Config.hpp
     oatpp-openssl/Connection.cpp
@@ -78,7 +78,7 @@ find_package(OpenSSL REQUIRED)
 target_link_libraries(oatpp-openssl PRIVATE oatpp)
 target_link_libraries(oatpp-openssl PRIVATE ${OPENSSL_LIBRARIES})
 
-add_library(oatpp-sqlite SHARED
+add_library(oatpp-sqlite
     oatpp-sqlite/mapping/type/Blob.cpp
     oatpp-sqlite/mapping/type/Blob.hpp
     oatpp-sqlite/mapping/Deserializer.cpp
@@ -108,7 +108,7 @@ find_package(SQLite3 REQUIRED)
 target_link_libraries(oatpp-sqlite PRIVATE oatpp)
 target_link_libraries(oatpp-sqlite PRIVATE sqlite3)
 
-add_library(oatpp-zlib SHARED
+add_library(oatpp-zlib
     oatpp-zlib/Processor.cpp
     oatpp-zlib/Processor.hpp
     oatpp-zlib/EncoderProvider.cpp
@@ -118,7 +118,7 @@ find_package(ZLIB REQUIRED)
 target_link_libraries(oatpp-zlib PRIVATE oatpp)
 target_link_libraries(oatpp-zlib PRIVATE ${ZLIB_LIBRARIES})
 
-add_library(oatpp-curl SHARED
+add_library(oatpp-curl
         oatpp-curl/RequestExecutor.cpp
         oatpp-curl/RequestExecutor.hpp
         oatpp-curl/io/BodyDecoder.cpp
@@ -141,6 +141,10 @@ target_link_libraries(oatpp-curl PRIVATE oatpp)
 target_link_libraries(oatpp-curl PRIVATE CURL::libcurl)
 
 add_library(loguru loguru/loguru.cpp)
+if(LINUX)
+    find_package(Threads REQUIRED)
+    target_link_libraries(loguru Threads::Threads dl)
+endif()
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
 target_link_libraries(cpp_httplib PRIVATE ${OPENSSL_LIBRARIES})

@@ -21,7 +21,7 @@ if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 2013 - 10 - 27:
-Updated driver to use LITHIUM::Telescope (JM)
+Updated driver to use HYDROGEN::Telescope (JM)
 2015 - 11 - 25:
     Use variable POLLMS instead of static POLLMS
 
@@ -179,7 +179,7 @@ LX200Generic::LX200Generic()
     GuideNSTID = 0;
     GuideWETID = 0;
 
-    DBG_SCOPE = LITHIUM::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
+    DBG_SCOPE = HYDROGEN::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE");
 
     setLX200Capability(LX200_HAS_FOCUS | LX200_HAS_TRACKING_FREQ | LX200_HAS_ALIGNMENT_TYPE | LX200_HAS_SITES |
                        LX200_HAS_PULSE_GUIDING);

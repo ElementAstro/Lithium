@@ -1,5 +1,15 @@
 #include "fifo_server.hpp"
 
+#include <unistd.h>
+#ifdef _WIN32
+
+#else
+#include <fcntl.h>
+#include <string.h>
+#endif
+
+#include "io.hpp"
+#include "driver_info.hpp"
 #include "hydrogen_server.hpp"
 
 Fifo::Fifo(const std::string &name) : name(name)
@@ -37,11 +47,10 @@ void Fifo::open()
 void Fifo::processLine(const char *line)
 {
 
-    if (verbose)
-        // log(fmt("FIFO: %s\n", line));
+    // log(fmt("FIFO: %s\n", line));
 
-        char cmd[MAXSBUF], arg[4][1], var[4][MAXSBUF], tDriver[MAXSBUF], tName[MAXSBUF], envConfig[MAXSBUF],
-            envSkel[MAXSBUF], envPrefix[MAXSBUF];
+    char cmd[MAXSBUF], arg[4][1], var[4][MAXSBUF], tDriver[MAXSBUF], tName[MAXSBUF], envConfig[MAXSBUF],
+        envSkel[MAXSBUF], envPrefix[MAXSBUF];
 
     memset(&tDriver[0], 0, sizeof(char) * MAXSBUF);
     memset(&tName[0], 0, sizeof(char) * MAXSBUF);
@@ -83,33 +92,21 @@ void Fifo::processLine(const char *line)
         {
             strncpy(tName, var[j], MAXSBUF - 1);
             tName[MAXSBUF - 1] = '\0';
-
-            if (verbose)
-            // log(fmt("With name: %s\n", tName));
         }
         else if (arg[j][0] == 'c')
         {
             strncpy(envConfig, var[j], MAXSBUF - 1);
             envConfig[MAXSBUF - 1] = '\0';
-
-            if (verbose)
-            // log(fmt("With config: %s\n", envConfig));
         }
         else if (arg[j][0] == 's')
         {
             strncpy(envSkel, var[j], MAXSBUF - 1);
             envSkel[MAXSBUF - 1] = '\0';
-
-            if (verbose)
-            // log(fmt("With skeketon: %s\n", envSkel));
         }
         else if (arg[j][0] == 'p')
         {
             strncpy(envPrefix, var[j], MAXSBUF - 1);
             envPrefix[MAXSBUF - 1] = '\0';
-
-            if (verbose)
-            // log(fmt("With prefix: %s\n", envPrefix));
         }
     }
 
@@ -121,15 +118,13 @@ void Fifo::processLine(const char *line)
 
     if (startCmd)
     {
-        if (verbose)
-            // log(fmt("FIFO: Starting driver %s\n", tDriver));
 
             DvrInfo *dp;
         if (remoteDriver == 0)
         {
             auto *localDp = new LocalDvrInfo();
             dp = localDp;
-            // strncpy(dp->dev, tName, MAXINDIDEVICE);
+            // strncpy(dp->dev, tName, MAXHYDROGENDEVICE);
             localDp->envDev = tName;
             localDp->envConfig = envConfig;
             localDp->envSkel = envSkel;

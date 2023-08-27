@@ -39,7 +39,7 @@
  *
  * @author Jasem Mutlaq
  */
-class ScopeSim : public LITHIUM::Telescope, public LITHIUM::GuiderInterface
+class ScopeSim : public HYDROGEN::Telescope, public HYDROGEN::GuiderInterface
 {
     public:
         ScopeSim();
@@ -58,8 +58,8 @@ class ScopeSim : public LITHIUM::Telescope, public LITHIUM::GuiderInterface
 
     protected:
         // Slew Rate
-        virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-        virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+        virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+        virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
         virtual bool Abort() override;
 
         virtual IPState GuideNorth(uint32_t ms) override;

@@ -91,6 +91,4 @@ public:
     {
         return useSharedBuffer;
     }
-
-    virtual void log(const std::string &log) const;
 };

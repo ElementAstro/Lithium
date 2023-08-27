@@ -45,7 +45,7 @@ public:
 
     bool isHandlingDevice(const std::string &dev) const;
 
-    /* start the INDI driver process or connection.
+    /* start the HYDROGEN driver process or connection.
      * exit if trouble.
      */
     virtual void start() = 0;
@@ -85,9 +85,9 @@ class LocalDvrInfo : public DvrInfo
     char errbuff[1024]; /* buffer for stderr pipe. line too long will be clipped */
     int errbuffpos = 0; /* first free pos in buffer */
     ev::io eio;         /* Event loop io events */
-    ev::io pidwatcher;
+    ev::child pidwatcher;
     void onEfdEvent(ev::io &watcher, int revents); /* callback for data on efd */
-    void onPidEvent(ev_child &watcher, int revents);
+    void onPidEvent(ev::child &watcher, int revents);
 
     int pid = 0;  /* process id or 0 for N/A (not started/terminated) */
     int efd = -1; /* stderr from driver, or -1 when N/A */
@@ -122,7 +122,7 @@ class RemoteDvrInfo : public DvrInfo
     /* open a connection to the given host and port or die.
      * return socket fd.
      */
-    int openINDIServer();
+    int openHYDROGENServer();
 
     void extractRemoteId(const std::string &name, std::string &o_host, int &o_port, std::string &o_dev) const;
 

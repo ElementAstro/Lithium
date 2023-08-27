@@ -1,3 +1,12 @@
+#pragma once
+
+#ifdef _WIN32
+
+#else
+#include <sys/socket.h>
+#endif
+
+#include <ev++.h>
 
 class TcpServer
 {
@@ -14,13 +23,13 @@ class TcpServer
 public:
     TcpServer(int port);
 
-    /* create the public INDI Driver endpoint lsocket on port.
+    /* create the public HYDROGEN Driver endpoint lsocket on port.
      * return server socket else exit.
      */
     void listen();
 };
 
-#ifdef ENABLE_INDI_SHARED_MEMORY
+#ifdef ENABLE_HYDROGEN_SHARED_MEMORY
 
 class UnixServer
 {
@@ -36,7 +45,7 @@ class UnixServer
 public:
     UnixServer(const std::string &path);
 
-    /* create the public INDI Driver endpoint over UNIX (local) domain.
+    /* create the public HYDROGEN Driver endpoint over UNIX (local) domain.
      * exit on failure
      */
     void listen();
@@ -44,6 +53,6 @@ public:
     static std::string unixSocketPath;
 };
 
-std::string UnixServer::unixSocketPath = INDIUNIXSOCK;
+std::string UnixServer::unixSocketPath = HYDROGENUNIXSOCK;
 
 #endif

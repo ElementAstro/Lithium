@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 project(hid C)
 
+find_package(USB1 REQUIRED)
+include_directories(${USB1_INCLUDE_DIRS})
+
 add_library(${PROJECT_NAME} OBJECT "")
 
 # Headers

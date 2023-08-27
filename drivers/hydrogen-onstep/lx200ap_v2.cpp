@@ -1,11 +1,11 @@
 /*
-    Astro-Physics LITHIUM driver
+    Astro-Physics HYDROGEN driver
 
     Copyright (C) 2014 Jasem Mutlaq, Mike Fulbright
     Copyright (C) 2020 lithiumlib.org, by Markus Wildi
     Copyright (C) 2022 Hy Murveit
 
-    Based on LITHIUM Astrophysics Driver by Markus Wildi
+    Based on HYDROGEN Astrophysics Driver by Markus Wildi
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -651,7 +651,7 @@ bool LX200AstroPhysicsV2::ApInitialize()
             LOG_DEBUG("could not load config data for ParkTo.name");
         if (UnparkFromS[PARK_LAST].s == ISS_ON)
             LOG_INFO("Driver's config 'Unpark From ?' is set to Last Parked");
-        // forcing mount being parked from LITHIUM's perspective
+        // forcing mount being parked from HYDROGEN's perspective
         LOG_INFO("ApInitialize, parked.");
         SetParked(true);
     }
@@ -963,23 +963,23 @@ bool LX200AstroPhysicsV2::ISNewSwitch(const char *dev, const char *name, ISState
     return LX200Generic::ISNewSwitch(dev, name, states, names, n);
 }
 
-char *trackStateString(LITHIUM::Telescope::TelescopeStatus state)
+char *trackStateString(HYDROGEN::Telescope::TelescopeStatus state)
 {
     switch (state)
     {
-    case LITHIUM::Telescope::SCOPE_IDLE:
+    case HYDROGEN::Telescope::SCOPE_IDLE:
         static char idleStr[] = "Idle";
         return idleStr;
-    case LITHIUM::Telescope::SCOPE_SLEWING:
+    case HYDROGEN::Telescope::SCOPE_SLEWING:
         static char slewStr[] = "Slewing";
         return slewStr;
-    case LITHIUM::Telescope::SCOPE_TRACKING:
+    case HYDROGEN::Telescope::SCOPE_TRACKING:
         static char trackStr[] = "Tracking";
         return trackStr;
-    case LITHIUM::Telescope::SCOPE_PARKING:
+    case HYDROGEN::Telescope::SCOPE_PARKING:
         static char parkingStr[] = "Parking";
         return parkingStr;
-    case LITHIUM::Telescope::SCOPE_PARKED:
+    case HYDROGEN::Telescope::SCOPE_PARKED:
         static char parkStr[] = "Parked";
         return parkStr;
     }
@@ -1691,7 +1691,7 @@ bool LX200AstroPhysicsV2::updateTime(ln_date *utc, double utc_offset)
 
 bool LX200AstroPhysicsV2::updateAPLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     LOG_DEBUG("LX200AstroPhysicsV2::updateLocation entry");
 
     if ((latitude == 0.) && (longitude == 0.))
@@ -1786,9 +1786,9 @@ bool LX200AstroPhysicsV2::Park()
     fs_sexa(AltStr, parkAlt, 2, 3600);
     LOGF_INFO("Parking to Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-    LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+    HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
     double lst = get_local_sidereal_time(m_Location.longitude);
     double ha = get_local_hour_angle(lst, equatorialCoords.rightascension);
 
@@ -1964,9 +1964,9 @@ bool LX200AstroPhysicsV2::UnPark()
 
     if (!unpark_from_last_config)
     {
-        LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-        LITHIUM::IHorizontalCoordinates horizontalCoords{unparkAz, unparkAlt};
-        LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+        HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+        HYDROGEN::IHorizontalCoordinates horizontalCoords{unparkAz, unparkAlt};
+        HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
 
         char AzStr[16], AltStr[16];
         fs_sexa(AzStr, unparkAz, 2, 3600);
@@ -2095,9 +2095,9 @@ void LX200AstroPhysicsV2::syncSideOfPier()
     LOGF_DEBUG("RES: <%s>", response);
 
     if (!strcmp(response, "East"))
-        setPierSide(LITHIUM::Telescope::PIER_EAST);
+        setPierSide(HYDROGEN::Telescope::PIER_EAST);
     else if (!strcmp(response, "West"))
-        setPierSide(LITHIUM::Telescope::PIER_WEST);
+        setPierSide(HYDROGEN::Telescope::PIER_WEST);
     else
         LOGF_ERROR("Invalid pier side response from device-> %s", response);
 }
@@ -2192,7 +2192,7 @@ bool LX200AstroPhysicsV2::getUTFOffset(double *offset)
     return (getAPUTCOffset(PortFD, offset) == 0);
 }
 
-bool LX200AstroPhysicsV2::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool LX200AstroPhysicsV2::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     // If we are not guiding and we need to restore slew rate, then let's restore it.
     if (command == MOTION_START && GuideNSTID == 0 && rememberSlewRate >= 0)
@@ -2209,7 +2209,7 @@ bool LX200AstroPhysicsV2::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand comm
     return rc;
 }
 
-bool LX200AstroPhysicsV2::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool LX200AstroPhysicsV2::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     // If we are not guiding and we need to restore slew rate, then let's restore it.
     if (command == MOTION_START && GuideWETID == 0 && rememberSlewRate >= 0)
@@ -2226,7 +2226,7 @@ bool LX200AstroPhysicsV2::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand comm
     return rc;
 }
 
-bool LX200AstroPhysicsV2::GuideNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool LX200AstroPhysicsV2::GuideNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     if (!isAPReady())
         return false;
@@ -2238,7 +2238,7 @@ bool LX200AstroPhysicsV2::GuideNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand com
     return rc;
 }
 
-bool LX200AstroPhysicsV2::GuideWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool LX200AstroPhysicsV2::GuideWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     if (!isAPReady())
         return false;

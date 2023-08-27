@@ -1,5 +1,5 @@
 /*
-    ZEQ25 LITHIUM driver
+    ZEQ25 HYDROGEN driver
 
     Copyright (C) 2015 Jasem Mutlaq
 
@@ -63,15 +63,15 @@ bool LX200ZEQ25::initProperties()
     SetParkDataType(PARK_NONE);
 
     // Slew Rates
-    strncpy(SlewRateS[0].label, "1x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[1].label, "2x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[2].label, "8x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[3].label, "16x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[4].label, "64x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[5].label, "128x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[6].label, "256x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[7].label, "512x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[8].label, "MAX", MAXLITHIUMLABEL);
+    strncpy(SlewRateS[0].label, "1x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[1].label, "2x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[2].label, "8x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[3].label, "16x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[4].label, "64x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[5].label, "128x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[6].label, "256x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[7].label, "512x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[8].label, "MAX", MAXHYDROGENLABEL);
     IUResetSwitch(&SlewRateSP);
     // 64x is the default
     SlewRateS[4].s = ISS_ON;
@@ -236,7 +236,7 @@ bool LX200ZEQ25::isZEQ25Home()
 
     error_type = tty_read(PortFD, bool_return, 1, 5, &nbytes_read);
 
-    // JM: Hack from Jon in the LITHIUM forums to fix longitude/latitude settings failure on ZEQ25
+    // JM: Hack from Jon in the HYDROGEN forums to fix longitude/latitude settings failure on ZEQ25
     nanosleep(&timeout, nullptr);
 #ifdef _WIN32
     PurgeComm((HANDLE)_get_osfhandle(PortFD), PURGE_RXCLEAR);
@@ -687,7 +687,7 @@ bool LX200ZEQ25::updateTime(ln_date *utc, double utc_offset)
 
 bool LX200ZEQ25::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (isSimulation())
         return true;
@@ -795,7 +795,7 @@ int LX200ZEQ25::setZEQ25StandardProcedure(int fd, const char *data)
 
     error_type = tty_read(fd, bool_return, 1, 5, &nbytes_read);
 
-    // JM: Hack from Jon in the LITHIUM forums to fix longitude/latitude settings failure on ZEQ25
+    // JM: Hack from Jon in the HYDROGEN forums to fix longitude/latitude settings failure on ZEQ25
     nanosleep(&timeout, nullptr);
 #ifdef _WIN32
     PurgeComm((HANDLE)_get_osfhandle(fd), PURGE_RXCLEAR);
@@ -820,7 +820,7 @@ int LX200ZEQ25::setZEQ25StandardProcedure(int fd, const char *data)
     return 0;
 }
 
-bool LX200ZEQ25::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool LX200ZEQ25::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     int current_move = (dir == DIRECTION_NORTH) ? LX200_NORTH : LX200_SOUTH;
 
@@ -852,7 +852,7 @@ bool LX200ZEQ25::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool LX200ZEQ25::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool LX200ZEQ25::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     int current_move = (dir == DIRECTION_WEST) ? LX200_WEST : LX200_EAST;
 
@@ -1040,11 +1040,11 @@ bool LX200ZEQ25::isZEQ25Parked()
 
 bool LX200ZEQ25::SetCurrentPark()
 {
-    LITHIUM::IHorizontalCoordinates horizontalPos;
-    LITHIUM::IEquatorialCoordinates equatorialPos;
+    HYDROGEN::IHorizontalCoordinates horizontalPos;
+    HYDROGEN::IEquatorialCoordinates equatorialPos;
     equatorialPos.rightascension = currentRA;
     equatorialPos.declination = currentDEC;
-    LITHIUM::EquatorialToHorizontal(&equatorialPos, &m_Location, ln_get_julian_from_sys(), &horizontalPos);
+    HYDROGEN::EquatorialToHorizontal(&equatorialPos, &m_Location, ln_get_julian_from_sys(), &horizontalPos);
     double parkAZ = horizontalPos.azimuth;
     double parkAlt = horizontalPos.altitude;
 
@@ -1101,7 +1101,7 @@ bool LX200ZEQ25::Park()
 
     LOGF_DEBUG("Parking to Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IHorizontalCoordinates horizontalPos;
+    HYDROGEN::IHorizontalCoordinates horizontalPos;
     // Libnova south = 0, west = 90, north = 180, east = 270
 
     horizontalPos.alt = parkAlt;
@@ -1115,7 +1115,7 @@ bool LX200ZEQ25::Park()
     if (observer.lng > 180)
         observer.lng -= 360;
 
-    LITHIUM::IEquatorialCoordinates equatorialPos;
+    HYDROGEN::IEquatorialCoordinates equatorialPos;
     ln_get_equ_from_hrz(&horizontalPos, &observer, ln_get_julian_from_sys(), &equatorialPos);
     equatorialPos.rightascension /= 15.0;
 
@@ -1163,7 +1163,7 @@ bool LX200ZEQ25::UnPark()
     fs_sexa(AltStr, parkAlt, 2, 3600);
     LOGF_DEBUG("Syncing to parked coordinates Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IHorizontalCoordinates horizontalPos;
+    HYDROGEN::IHorizontalCoordinates horizontalPos;
     // Libnova south = 0, west = 90, north = 180, east = 270
 
     horizontalPos.alt = parkAlt;
@@ -1177,7 +1177,7 @@ bool LX200ZEQ25::UnPark()
     if (observer.lng > 180)
         observer.lng -= 360;
 
-    LITHIUM::IEquatorialCoordinates equatorialPos;
+    HYDROGEN::IEquatorialCoordinates equatorialPos;
     ln_get_equ_from_hrz(&horizontalPos, &observer, ln_get_julian_from_sys(), &equatorialPos);
     equatorialPos.rightascension /= 15.0;
 

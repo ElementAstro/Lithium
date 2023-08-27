@@ -1,5 +1,20 @@
+#include "tcp_server.hpp"
 
-#ifdef ENABLE_INDI_SHARED_MEMORY
+#ifdef _WIN32
+
+#else
+#include <fcntl.h>
+#include <netdb.h>
+#include <unistd.h>
+#endif
+
+#include "io.hpp"
+#include "client_info.hpp"
+#include "hydrogen_server.hpp"
+
+#include "loguru/loguru.hpp"
+
+#ifdef ENABLE_HYDROGEN_SHARED_MEMORY
 
 UnixServer::UnixServer(const std::string &path) : path(path)
 {
@@ -21,7 +36,7 @@ void UnixServer::ioCb(ev::io &, int revents)
         if (sockErrno)
         {
             log(fmt("Error on unix socket: %s\n", strerror(sockErrno)));
-            Bye();
+            // Bye();
         }
     }
     if (revents & EV_READ)
@@ -66,14 +81,14 @@ void UnixServer::listen()
     if ((sfd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
         log(fmt("socket: %s\n", strerror(errno)));
-        Bye();
+        // Bye();
     }
 
     int reuse = 1;
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
         log(fmt("setsockopt: %s\n", strerror(errno)));
-        Bye();
+        // Bye();
     }
 
     /* bind to given path as unix address */
@@ -83,14 +98,14 @@ void UnixServer::listen()
     if (bind(sfd, (struct sockaddr *)&serv_socket, len) < 0)
     {
         log(fmt("bind: %s\n", strerror(errno)));
-        Bye();
+        // Bye();
     }
 
     /* willing to accept connections with a backlog of 5 pending */
     if (::listen(sfd, 5) < 0)
     {
         log(fmt("listen: %s\n", strerror(errno)));
-        Bye();
+        // Bye();
     }
 
     fcntl(sfd, F_SETFL, fcntl(sfd, F_GETFL, 0) | O_NONBLOCK);
@@ -113,7 +128,7 @@ void UnixServer::accept()
             return;
 
         log(fmt("accept: %s\n", strerror(errno)));
-        Bye();
+        // Bye();
     }
 
     ClInfo *cp = new ClInfo(true);
@@ -130,7 +145,7 @@ void UnixServer::accept()
         if (getsockopt(cli_fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1)
         {
             log(fmt("getsockopt failed: %s\n", strerror(errno)));
-            Bye();
+            // Bye();
         }
 
         cp->log(fmt("new arrival from local pid %ld (user: %ld:%ld) - welcome!\n", (long)ucred.pid, (long)ucred.uid,
@@ -146,7 +161,7 @@ void UnixServer::accept()
 #endif
 }
 
-#endif // ENABLE_INDI_SHARED_MEMORY
+#endif // ENABLE_HYDROGEN_SHARED_MEMORY
 
 TcpServer::TcpServer(int port) : port(port)
 {
@@ -160,8 +175,8 @@ void TcpServer::ioCb(ev::io &, int revents)
         int sockErrno = readFdError(this->sfd);
         if (sockErrno)
         {
-            log(fmt("Error on tcp server socket: %s\n", strerror(sockErrno)));
-            Bye();
+            LOG_F(ERROR, "Error on tcp server socket: %s\n", strerror(sockErrno));
+            // Bye();
         }
     }
     if (revents & EV_READ)
@@ -178,8 +193,8 @@ void TcpServer::listen()
     /* make socket endpoint */
     if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        log(fmt("socket: %s\n", strerror(errno)));
-        Bye();
+        LOG_F(ERROR, "socket: %s\n", strerror(errno));
+        // Bye();
     }
 
     /* bind to given port for any IP address */
@@ -193,20 +208,20 @@ void TcpServer::listen()
     serv_socket.sin_port = htons((unsigned short)port);
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
-        log(fmt("setsockopt: %s\n", strerror(errno)));
-        Bye();
+        LOG_F(ERROR, "setsockopt: %s\n", strerror(errno));
+        // Bye();
     }
     if (bind(sfd, (struct sockaddr *)&serv_socket, sizeof(serv_socket)) < 0)
     {
-        log(fmt("bind: %s\n", strerror(errno)));
-        Bye();
+        LOG_F(ERROR, "bind: %s\n", strerror(errno));
+        // Bye();
     }
 
     /* willing to accept connections with a backlog of 5 pending */
     if (::listen(sfd, 5) < 0)
     {
-        log(fmt("listen: %s\n", strerror(errno)));
-        Bye();
+        LOG_F(ERROR, "listen: %s\n", strerror(errno));
+        // Bye();
     }
 
     fcntl(sfd, F_SETFL, fcntl(sfd, F_GETFL, 0) | O_NONBLOCK);
@@ -214,7 +229,7 @@ void TcpServer::listen()
 
     /* ok */
     if (verbose > 0)
-        log(fmt("listening to port %d on fd %d\n", port, sfd));
+        LOG_F(INFO, "listening to port %d on fd %d\n", port, sfd);
 }
 
 void TcpServer::accept()
@@ -231,8 +246,8 @@ void TcpServer::accept()
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
 
-        log(fmt("accept: %s\n", strerror(errno)));
-        Bye();
+        LOG_F(ERROR, "accept: %s\n", strerror(errno));
+        // Bye();
     }
 
     ClInfo *cp = new ClInfo(false);
@@ -240,11 +255,6 @@ void TcpServer::accept()
     /* rig up new clinfo entry */
     cp->setFds(cli_fd, cli_fd);
 
-    if (verbose > 0)
-    {
-        cp->log(fmt("new arrival from %s:%d - welcome!\n",
-                    inet_ntoa(cli_socket.sin_addr), ntohs(cli_socket.sin_port)));
-    }
 #ifdef OSX_EMBEDED_MODE
     fprintf(stderr, "CLIENTS %d\n", clients.size());
     fflush(stderr);

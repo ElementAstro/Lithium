@@ -1,5 +1,5 @@
 /*
-    ZWO AM5 LITHIUM driver
+    ZWO AM5 HYDROGEN driver
 
     Copyright (C) 2022 Jasem Mutlaq
 
@@ -81,16 +81,16 @@ bool LX200AM5::initProperties()
         SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_PIER_SIDE, SLEW_MODES);
 
     // Slew Rates
-    strncpy(SlewRateS[0].label, "0.25x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[1].label, "0.50x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[2].label, "1x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[3].label, "2x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[4].label, "4x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[5].label, "8x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[6].label, "20x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[7].label, "60x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[8].label, "720x", MAXLITHIUMLABEL);
-    strncpy(SlewRateS[9].label, "1440x", MAXLITHIUMLABEL);
+    strncpy(SlewRateS[0].label, "0.25x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[1].label, "0.50x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[2].label, "1x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[3].label, "2x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[4].label, "4x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[5].label, "8x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[6].label, "20x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[7].label, "60x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[8].label, "720x", MAXHYDROGENLABEL);
+    strncpy(SlewRateS[9].label, "1440x", MAXHYDROGENLABEL);
     IUResetSwitch(&SlewRateSP);
     // 1440x is the default
     SlewRateS[9].s = ISS_ON;
@@ -430,10 +430,10 @@ bool LX200AM5::goHome()
 /////////////////////////////////////////////////////////////////////////////
 bool LX200AM5::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     int d{0}, m{0}, s{0};
 
-    // JM 2021-04-10: MUST convert from LITHIUM longitude to standard longitude.
+    // JM 2021-04-10: MUST convert from HYDROGEN longitude to standard longitude.
     // DO NOT REMOVE
     if (longitude > 180)
         longitude = longitude - 360;
@@ -514,7 +514,7 @@ bool LX200AM5::ReadScopeStatus()
     else
     {
         // Tracking changed?
-        auto wasTracking = TrackStateS[LITHIUM_ENABLED].s == ISS_ON;
+        auto wasTracking = TrackStateS[HYDROGEN_ENABLED].s == ISS_ON;
         auto nowTracking = isTracking();
         if (wasTracking != nowTracking)
             TrackState = nowTracking ? SCOPE_TRACKING : SCOPE_IDLE;

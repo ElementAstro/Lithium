@@ -37,7 +37,7 @@ static std::unique_ptr<ScopeSim> telescope_sim(new ScopeSim());
 
 ScopeSim::ScopeSim()
 {
-    DBG_SCOPE = static_cast<uint32_t>(LITHIUM::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE"));
+    DBG_SCOPE = static_cast<uint32_t>(HYDROGEN::Logger::getInstance().addDebugLevel("Scope Verbose", "SCOPE"));
 
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
                            TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION | TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK |
@@ -61,7 +61,7 @@ const char *ScopeSim::getDefaultName()
 bool ScopeSim::initProperties()
 {
     /* Make sure to init parent properties first */
-    LITHIUM::Telescope::initProperties();
+    HYDROGEN::Telescope::initProperties();
 
 #ifdef USE_SIM_TAB
     // mount type and alignment properties, these are in the Simulation tab
@@ -138,7 +138,7 @@ bool ScopeSim::initProperties()
 void ScopeSim::ISGetProperties(const char *dev)
 {
     /* First we let our parent populate */
-    LITHIUM::Telescope::ISGetProperties(dev);
+    HYDROGEN::Telescope::ISGetProperties(dev);
 
 #ifdef USE_SIM_TAB
     defineProperty(&mountTypeSP);
@@ -168,7 +168,7 @@ bool ScopeSim::updateProperties()
 {
     updateMountAndPierSide();
 
-    LITHIUM::Telescope::updateProperties();
+    HYDROGEN::Telescope::updateProperties();
 
     if (isConnected())
     {
@@ -284,7 +284,7 @@ bool ScopeSim::ReadScopeStatus()
     {
         GuideWENP.np[0].value = 0;
         GuideWENP.np[1].value = 0;
-        GuideComplete(LITHIUM_EQ_AXIS::AXIS_RA);
+        GuideComplete(HYDROGEN_EQ_AXIS::AXIS_RA);
         guidingEW = false;
     }
 
@@ -292,7 +292,7 @@ bool ScopeSim::ReadScopeStatus()
     {
         GuideNSNP.np[0].value = 0;
         GuideNSNP.np[1].value = 0;
-        GuideComplete(LITHIUM_EQ_AXIS::AXIS_DE);
+        GuideComplete(HYDROGEN_EQ_AXIS::AXIS_DE);
         guidingNS = false;
     }
 
@@ -445,7 +445,7 @@ bool ScopeSim::ISNewNumber(const char *dev, const char *name, double values[], c
 
     //  if we didn't process it, continue up the chain, let somebody else
     //  give it a shot
-    return LITHIUM::Telescope::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
 bool ScopeSim::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -487,7 +487,7 @@ bool ScopeSim::ISNewSwitch(const char *dev, const char *name, ISState *states, c
     }
 
     //  Nobody has claimed this, so, ignore it
-    return LITHIUM::Telescope::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::Telescope::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool ScopeSim::Abort()
@@ -497,7 +497,7 @@ bool ScopeSim::Abort()
     return true;
 }
 
-bool ScopeSim::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool ScopeSim::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     if (TrackState == SCOPE_PARKED)
     {
@@ -506,7 +506,7 @@ bool ScopeSim::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
     }
     mcRate = static_cast<int>(IUFindOnSwitchIndex(&SlewRateSP)) + 1;
 
-    int rate = (dir == LITHIUM_DIR_NS::DIRECTION_NORTH) ? mcRate : -mcRate;
+    int rate = (dir == HYDROGEN_DIR_NS::DIRECTION_NORTH) ? mcRate : -mcRate;
     LOGF_DEBUG("MoveNS dir %s, motion %s, rate %d", dir == DIRECTION_NORTH ? "N" : "S", command == 0 ? "start" : "stop", rate);
 
     axisSecondary.mcRate = command == MOTION_START ? rate : 0;
@@ -514,7 +514,7 @@ bool ScopeSim::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool ScopeSim::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool ScopeSim::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     if (TrackState == SCOPE_PARKED)
     {
@@ -523,7 +523,7 @@ bool ScopeSim::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
     }
 
     mcRate = static_cast<int>(IUFindOnSwitchIndex(&SlewRateSP)) + 1;
-    int rate = (dir == LITHIUM_DIR_WE::DIRECTION_EAST) ? -mcRate : mcRate;
+    int rate = (dir == HYDROGEN_DIR_WE::DIRECTION_EAST) ? -mcRate : mcRate;
     LOGF_DEBUG("MoveWE dir %d, motion %s, rate %d", dir == DIRECTION_EAST ? "E" : "W", command == 0 ? "start" : "stop", rate);
 
     axisPrimary.mcRate = command == MOTION_START ? rate : 0;
@@ -621,7 +621,7 @@ bool ScopeSim::SetTrackRate(double raRate, double deRate)
 
 bool ScopeSim::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Telescope::saveConfigItems(fp);
+    HYDROGEN::Telescope::saveConfigItems(fp);
 
 #ifdef USE_SIM_TAB
     IUSaveConfigNumber(fp, &GuideRateNP);
@@ -640,7 +640,7 @@ bool ScopeSim::updateLocation(double latitude, double longitude, double elevatio
     alignment.latitude = Angle(latitude);
     alignment.longitude = Angle(longitude);
 
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     return true;
 }
 

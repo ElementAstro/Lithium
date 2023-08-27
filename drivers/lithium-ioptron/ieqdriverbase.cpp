@@ -20,8 +20,8 @@
 
 #include "ieqdriverbase.h"
 
-#include "lithiumcom.h"
-#include "lithiumlogger.h"
+#include "HYDROGENcom.h"
+#include "HYDROGENlogger.h"
 
 #include <libnova/julian_day.h>
 
@@ -628,7 +628,7 @@ namespace iEQ
         char res[DRIVER_LEN] = {0};
 
         // use the GEA command, hoping that it returns the dec and polar angle axis positions
-        // see https://www.lithiumlib.org/forum/mounts/6720-ioptron-cem60-question.html#52154
+        // see https://www.HYDROGENlib.org/forum/mounts/6720-ioptron-cem60-question.html#52154
         // the polar angle is in units of 1/100 arc second, signed, and the hour angle is in milliseconds,
         // possibly with an offset. The home axis positions are PA +0.0, HA 12.0.
         // For the West pointing state the ha = 18 - haAxis.
@@ -860,7 +860,7 @@ namespace iEQ
                 m_FirmwareInfo.Model.find("GEM45") == std::string::npos)
             {
                 if (!silent)
-                    LOG_ERROR("Flithiumng home is only supported on CEM40, GEM45 and CEM60 mounts.");
+                    LOG_ERROR("FHYDROGENng home is only supported on CEM40, GEM45 and CEM60 mounts.");
                 return false;
             }
         }

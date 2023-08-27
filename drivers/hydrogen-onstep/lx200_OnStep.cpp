@@ -1292,7 +1292,7 @@ bool LX200_OnStep::ISNewSwitch(const char *dev, const char *name, ISState *state
                 IDSetSwitch(&ReticSP, "Dark");
             }
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             IUResetSwitch(&ReticSP);
             IDSetSwitch(&ReticSP, nullptr);
             return true;
@@ -1603,14 +1603,14 @@ bool LX200_OnStep::ISNewSwitch(const char *dev, const char *name, ISState *state
             if (IUUpdateSwitch(&OSFocusSelectSP, states, names, n) < 0)
                 return false;
             index = IUFindOnSwitchIndex(&OSFocusSelectSP);
-            LOGF_INFO("Primary focuser set: Focuser 1 in LITHIUM/Controllable Focuser = OnStep Focuser %d", index + 1);
+            LOGF_INFO("Primary focuser set: Focuser 1 in HYDROGEN/Controllable Focuser = OnStep Focuser %d", index + 1);
             if (index == 0 && OSNumFocusers <= 2)
             {
-                LOG_INFO("If using OnStep: Focuser 2 in LITHIUM = OnStep Focuser 2");
+                LOG_INFO("If using OnStep: Focuser 2 in HYDROGEN = OnStep Focuser 2");
             }
             if (index == 1 && OSNumFocusers <= 2)
             {
-                LOG_INFO("If using OnStep: Focuser 2 in LITHIUM = OnStep Focuser 1");
+                LOG_INFO("If using OnStep: Focuser 2 in HYDROGEN = OnStep Focuser 1");
             }
             if (OSNumFocusers > 2)
             {
@@ -1897,7 +1897,7 @@ bool LX200_OnStep::ISNewSwitch(const char *dev, const char *name, ISState *state
                 IDSetSwitch(&TFCCompensationSP, "Idle");
             }
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             IUResetSwitch(&TFCCompensationSP);
             IDSetSwitch(&TFCCompensationSP, nullptr);
             return true;
@@ -2763,7 +2763,7 @@ bool LX200_OnStep::ReadScopeStatus()
         {
             // Pier side none
             setPierSide(PIER_UNKNOWN);
-            // LITHIUM doesn't account for 'None'
+            // HYDROGEN doesn't account for 'None'
         }
         if (OSStat[3] & 0b10100000 == 0b10100000)
         {
@@ -3686,7 +3686,7 @@ int LX200_OnStep::getCommandSingleCharErrorOrLongResponse(int fd, char *data, co
 
 bool LX200_OnStep::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (isSimulation())
         return true;
@@ -3806,7 +3806,7 @@ AbortFocuser all focus motion. More...
 
 IPState LX200_OnStep::MoveFocuser(FocusDirection dir, int speed, uint16_t duration)
 {
-    LITHIUM_UNUSED(speed);
+    HYDROGEN_UNUSED(speed);
     //  :FRsnnn#  Set focuser target position relative (in microns)
     //            Returns: Nothing
     double output;
@@ -4324,7 +4324,7 @@ bool LX200_OnStep::SetRotatorBacklash(int32_t steps)
 bool LX200_OnStep::SetRotatorBacklashEnabled(bool enabled)
 {
     // Nothing required here.
-    LITHIUM_UNUSED(enabled);
+    HYDROGEN_UNUSED(enabled);
     return true;
     //     As it's always enabled, which would mean setting it like SetRotatorBacklash to 0, and losing any saved values. So for now, leave it as is (always enabled)
 }
@@ -4347,7 +4347,7 @@ IPState LX200_OnStep::StartPECPlayback(int axis)
 {
     //  :$QZ+  Enable RA PEC compensation
     //         Returns: nothing
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSMountType != MOUNTTYPE_ALTAZ)
     {
         if (OSPECEnabled == true)
@@ -4376,7 +4376,7 @@ IPState LX200_OnStep::StopPECPlayback(int axis)
 {
     //  :$QZ-  Disable RA PEC Compensation
     //         Returns: nothing
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSPECEnabled == true)
     {
         char cmd[CMD_MAX_LEN] = {0};
@@ -4396,7 +4396,7 @@ IPState LX200_OnStep::StartPECRecord(int axis)
 {
     //  :$QZ/  Ready Record PEC
     //         Returns: nothing
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSPECEnabled == true)
     {
         char cmd[CMD_MAX_LEN] = {0};
@@ -4416,7 +4416,7 @@ IPState LX200_OnStep::ClearPECBuffer(int axis)
 {
     //  :$QZZ  Clear the PEC data buffer
     //         Return: Nothing
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSPECEnabled == true)
     {
         char cmd[CMD_MAX_LEN] = {0};
@@ -4436,7 +4436,7 @@ IPState LX200_OnStep::SavePECBuffer(int axis)
 {
     //  :$QZ!  Write PEC data to EEPROM
     //         Returns: nothing
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSPECEnabled == true)
     {
         char cmd[CMD_MAX_LEN] = {0};
@@ -4455,7 +4455,7 @@ IPState LX200_OnStep::SavePECBuffer(int axis)
 IPState LX200_OnStep::PECStatus(int axis)
 {
     //     if (!OSPECviaGU) {
-    LITHIUM_UNUSED(axis);                            // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis);                            // We only have RA on OnStep
     if (OSPECEnabled == true && OSPECviaGU == false) // All current versions report via #GU
     {
         if (OSMountType == MOUNTTYPE_ALTAZ || OSMountType == MOUNTTYPE_FORK_ALT)
@@ -4551,7 +4551,7 @@ IPState LX200_OnStep::PECStatus(int axis)
 
 IPState LX200_OnStep::ReadPECBuffer(int axis)
 {
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSPECEnabled == true)
     {
         LOG_WARN("PEC Reading NOT Implemented");
@@ -4566,7 +4566,7 @@ IPState LX200_OnStep::ReadPECBuffer(int axis)
 
 IPState LX200_OnStep::WritePECBuffer(int axis)
 {
-    LITHIUM_UNUSED(axis); // We only have RA on OnStep
+    HYDROGEN_UNUSED(axis); // We only have RA on OnStep
     if (OSPECEnabled == true)
     {
         LOG_WARN("PEC Writing NOT Implemented");
@@ -5011,7 +5011,7 @@ void LX200_OnStep::Init_Outputs()
         // Features names and type are accessed via :GXYn (where n 1 to 8)
         // we take these names to display in Output tab
         // return value is ssssss,n where ssssss is the name and n is the type
-        char port_name[MAXLITHIUMNAME] = {0}, getoutp[MAXLITHIUMNAME] = {0}, configured[MAXLITHIUMNAME] = {0}, p_name[MAXLITHIUMNAME] = {0};
+        char port_name[MAXHYDROGENNAME] = {0}, getoutp[MAXHYDROGENNAME] = {0}, configured[MAXHYDROGENNAME] = {0}, p_name[MAXHYDROGENNAME] = {0};
         size_t k{0};
         int error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, configured,
                                                                     ":GXY0#"); // returns a string with 1 where Feature is configured
@@ -5079,8 +5079,8 @@ bool parseDateTime(const char *datetime, tm &ltm)
 #endif
 bool LX200_OnStep::sendScopeTime()
 {
-    char cdate[MAXLITHIUMNAME] = {0};
-    char ctime[MAXLITHIUMNAME] = {0};
+    char cdate[MAXHYDROGENNAME] = {0};
+    char ctime[MAXHYDROGENNAME] = {0};
     struct tm ltm;
     struct tm utm;
     time_t time_epoch;
@@ -5113,8 +5113,8 @@ bool LX200_OnStep::sendScopeTime()
     }
 
     // To ISO 8601 format in LOCAL TIME!
-    char datetime[MAXLITHIUMNAME] = {0};
-    snprintf(datetime, MAXLITHIUMNAME, "%sT%s", cdate, ctime);
+    char datetime[MAXHYDROGENNAME] = {0};
+    snprintf(datetime, MAXHYDROGENNAME, "%sT%s", cdate, ctime);
 
 #ifdef _WIN32
     if (!parseDateTime(datetime, ltm))
@@ -5139,7 +5139,7 @@ bool LX200_OnStep::sendScopeTime()
     localtime_r(&time_epoch, &utm);
 
     // Format it into the final UTC ISO 8601
-    strftime(cdate, MAXLITHIUMNAME, "%Y-%m-%dT%H:%M:%S", &utm);
+    strftime(cdate, MAXHYDROGENNAME, "%Y-%m-%dT%H:%M:%S", &utm);
     IUSaveText(&TimeT[0], cdate);
 
     LOGF_DEBUG("Mount controller UTC Time: %s", TimeT[0].text);
@@ -5156,8 +5156,8 @@ bool LX200_OnStep::sendScopeLocation()
 {
     int lat_dd = 0, lat_mm = 0, long_dd = 0, long_mm = 0;
     double lat_ssf = 0.0, long_ssf = 0.0;
-    char lat_sexagesimal[MAXLITHIUMFORMAT];
-    char lng_sexagesimal[MAXLITHIUMFORMAT];
+    char lat_sexagesimal[MAXHYDROGENFORMAT];
+    char lng_sexagesimal[MAXHYDROGENFORMAT];
 
     if (isSimulation())
     {
@@ -5182,14 +5182,14 @@ bool LX200_OnStep::sendScopeLocation()
             else
             {
                 OSHighPrecision = false; // Don't check using :GtH again
-                snprintf(lat_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
+                snprintf(lat_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
                 f_scansexa(lat_sexagesimal, &(LocationNP.np[LOCATION_LATITUDE].value));
             }
         }
         else
         {
             // Got High precision coordinates
-            snprintf(lat_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
+            snprintf(lat_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
             f_scansexa(lat_sexagesimal, &(LocationNP.np[LOCATION_LATITUDE].value));
         }
     }
@@ -5202,7 +5202,7 @@ bool LX200_OnStep::sendScopeLocation()
         }
         else
         {
-            snprintf(lat_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
+            snprintf(lat_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
             f_scansexa(lat_sexagesimal, &(LocationNP.np[LOCATION_LATITUDE].value));
         }
     }
@@ -5221,14 +5221,14 @@ bool LX200_OnStep::sendScopeLocation()
             else
             {
                 OSHighPrecision = false;
-                snprintf(lng_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
+                snprintf(lng_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
                 f_scansexa(lng_sexagesimal, &(LocationNP.np[LOCATION_LONGITUDE].value));
             }
         }
         else
         {
             // Got High precision coordinates
-            snprintf(lng_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
+            snprintf(lng_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
             f_scansexa(lng_sexagesimal, &(LocationNP.np[LOCATION_LONGITUDE].value));
         }
     }
@@ -5241,7 +5241,7 @@ bool LX200_OnStep::sendScopeLocation()
         }
         else
         {
-            snprintf(lng_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
+            snprintf(lng_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
             f_scansexa(lng_sexagesimal, &(LocationNP.np[LOCATION_LONGITUDE].value));
         }
     }

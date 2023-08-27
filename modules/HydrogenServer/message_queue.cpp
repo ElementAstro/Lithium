@@ -1,5 +1,18 @@
 #include "message_queue.hpp"
 
+#ifdef _WIN32
+
+#else
+#include <sys/socket.h>
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+
+#include "io.hpp"
+#include "hydrogen_server.hpp"
+
+#include "loguru/loguru.hpp"
+
 MsgQueue::MsgQueue(bool useSharedBuffer) : useSharedBuffer(useSharedBuffer)
 {
     lp = newLilXML();
@@ -49,7 +62,7 @@ void MsgQueue::closeWritePart()
         {
             if (errno != ENOTCONN)
             {
-                // log(fmt("socket shutdown failed: %s\n", strerror(errno)));
+                LOG_F(ERROR, "socket shutdown failed: %s\n", strerror(errno));
                 close();
             }
         }
@@ -299,9 +312,9 @@ void MsgQueue::readFromFd()
             return;
 
         if (nr < 0)
-            // log(fmt("read: %s\n", strerror(errno)));
+            LOG_F(ERROR, "read: %s\n", strerror(errno));
         else if (verbose > 0)
-            // log(fmt("read EOF\n"));
+            LOG_F(ERROR, "read EOF\n");
         close();
         return;
     }
@@ -330,8 +343,7 @@ void MsgQueue::readFromFd()
                 traceMsg("read ", root);
             else if (verbose > 1)
             {
-                // log(fmt("read <%s device='%s' name='%s'>\n",
-                        tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name")));
+                LOG_F(INFO, "read <%s device='%s' name='%s'>\n", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
             }
 
             onMessage(root, incomingSharedBuffers);
@@ -359,7 +371,7 @@ void MsgQueue::writeToFd()
     auto mp = headMsg();
     if (mp == nullptr)
     {
-        // log("Unexpected write notification");
+        LOG_F(ERROR, "Unexpected write notification");
         return;
     }
 
@@ -402,7 +414,7 @@ void MsgQueue::writeToFd()
         {
             if (fdCount > MAXFD_PER_MESSAGE)
             {
-                // log(fmt("attempt to send too many FD\n"));
+                LOG_F(ERROR, "attempt to send too many FD\n");
                 close();
                 return;
             }
@@ -449,24 +461,13 @@ void MsgQueue::writeToFd()
     if (nw <= 0)
     {
         if (nw == 0)
-            // log("write returned 0\n");
+            LOG_F(INFO, "write returned 0\n");
         else
-            // log(fmt("write: %s\n", strerror(errno)));
+            LOG_F(ERROR, "write: %s\n", strerror(errno));
 
         // Keep the read part open
         closeWritePart();
         return;
-    }
-
-    /* trace */
-    if (verbose > 2)
-    {
-        // log(fmt("sending msg nq %ld:\n%.*s\n",
-                msgq.size(), (int)nw, data));
-    }
-    else if (verbose > 1)
-    {
-        // log(fmt("sending %.*s\n", (int)nw, data));
     }
 
     /* update amount sent. when complete: free message if we are the last
@@ -475,15 +476,6 @@ void MsgQueue::writeToFd()
     mp->advance(nsent, nw);
     if (nsent.done())
         consumeHeadMsg();
-}
-
-void MsgQueue::// log(const std::string &str) const
-{
-    // This is only invoked from destructor
-    std::string // logLine = "Dying Connection ";
-    // logLine += ": ";
-    // logLine += str;
-    ::// log(// logLine);
 }
 
 void MsgQueue::crackBLOB(const char *enableBLOB, BLOBHandling *bp)
@@ -496,10 +488,9 @@ void MsgQueue::crackBLOB(const char *enableBLOB, BLOBHandling *bp)
         *bp = B_NEVER;
 }
 
-
-void MsgQueue::traceMsg(const std::string &// logMsg, XMLEle *root)
+void MsgQueue::traceMsg(const std::string &logMsg, XMLEle *root)
 {
-    // log(// logMsg);
+    LOG_F(INFO, "%s", logMsg.c_str());
 
     static const char *prtags[] =
         {

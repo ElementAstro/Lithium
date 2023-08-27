@@ -1,5 +1,5 @@
 /*
-    Losmandy Gemini LITHIUM driver
+    Losmandy Gemini HYDROGEN driver
 
     Copyright (C) 2017 Jasem Mutlaq
     Copyright (C) 2018 Eric Vickery
@@ -264,7 +264,7 @@ private:
 
     const uint8_t GEMINI_TIMEOUT = 3;
 
-    void setTrackState(LITHIUM::Telescope::TelescopeStatus state);
+    void setTrackState(HYDROGEN::Telescope::TelescopeStatus state);
     void updateParkingState();
     void updateMovementState();
     MovementState getMovementState();

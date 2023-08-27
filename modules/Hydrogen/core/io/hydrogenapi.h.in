@@ -32,7 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 \section Introduction
 
 <p>HYDROGEN is a simple XML-like communications protocol described for interactive and automated remote control of diverse instrumentation. HYDROGEN is small, easy to parse, and stateless.</p>
-<p>A full description of the HYDROGEN protocol is detailed in the HYDROGEN <a href="http://www.clearskyinstitute.com/HYDROGEN/HYDROGEN.pdf">white paper</a></p>
+<p>A full description of the HYDROGEN protocol is detailed in the HYDROGEN <a href="http://www.clearskyinstitute.com/Hydrogen/HYDROGEN.pdf">white paper</a></p>
 
 <p>Under HYDROGEN, any number of clients can connect to any number of drivers running one or more devices. It is a true N-to-N server/client architecture topology
 allowing for reliable deployments of several HYDROGEN server, client, and driver instances distrubted across different systems in different physical and logical locations.</p>

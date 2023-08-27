@@ -360,9 +360,11 @@ elseif(UNIX OR LINUX OR APPLE)
 
     target_link_libraries(lithium_server PRIVATE libzippp)
 
-    find_package(INDI 2.0.0 REQUIRED)
-    include_directories(${INDI_INCLUDE_DIR})
-    target_link_libraries(lithium_server PRIVATE ${INDI_CLIENT_LIBRARIES})
+    target_link_libraries(lithium_server PRIVATE LithiumDriver LithiumProperty LithiumBridge)
+
+    # find_package(INDI 2.0.0 REQUIRED)
+    # include_directories(${INDI_INCLUDE_DIR})
+    # target_link_libraries(lithium_server PRIVATE ${INDI_CLIENT_LIBRARIES})
 
     target_link_libraries(lithium_server PRIVATE ${CFITSIO_LIBRARIES})
     target_link_libraries(lithium_server PRIVATE ${OPENSSL_LIBRARIES})

@@ -33,7 +33,7 @@ Description: ASCOM Basic Device
 
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 
-#include "lidriver/core/device.hpp"
+#include "hydrogen/core/device.hpp"
 #include "cpp_httplib/httplib.h"
 
 #include <any>

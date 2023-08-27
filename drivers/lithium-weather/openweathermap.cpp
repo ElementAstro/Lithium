@@ -27,7 +27,7 @@
 #include "openweathermap.h"
 
 #include "nlohmann/json.hpp"
-#include "lidriver/locale/locale_compat.hpp"
+#include "hydrogen/locale/locale_compat.hpp"
 
 #include <curl/curl.h>
 

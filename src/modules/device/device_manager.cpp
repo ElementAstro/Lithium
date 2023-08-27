@@ -31,16 +31,16 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
-#include "lidriver/core/device_exception.hpp"
+#include "hydrogen/core/device_exception.hpp"
 
 #include "nlohmann/json.hpp"
 
-#include "lidriver/core/camera.hpp"
-#include "lidriver/core/telescope.hpp"
-#include "lidriver/core/focuser.hpp"
-#include "lidriver/core/filterwheel.hpp"
-#include "lidriver/core/solver.hpp"
-#include "lidriver/core/guider.hpp"
+#include "hydrogen/core/camera.hpp"
+#include "hydrogen/core/telescope.hpp"
+#include "hydrogen/core/focuser.hpp"
+#include "hydrogen/core/filterwheel.hpp"
+#include "hydrogen/core/solver.hpp"
+#include "hydrogen/core/guider.hpp"
 
 #include "loguru/loguru.hpp"
 #include "tl/expected.hpp"

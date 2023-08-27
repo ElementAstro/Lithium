@@ -1,14 +1,14 @@
 #include <chaiscript/chaiscript.hpp>
 #include <string>
 
-#include "lidriver/core/camera.hpp"
-#include "lidriver/core/device.hpp"
-#include "lidriver/core/device_exception.hpp"
-#include "lidriver/core/filterwheel.hpp"
-#include "lidriver/core/focuser.hpp"
-#include "lidriver/core/guider.hpp"
-#include "lidriver/core/solver.hpp"
-#include "lidriver/core/telescope.hpp"
+#include "hydrogen/core/camera.hpp"
+#include "hydrogen/core/device.hpp"
+#include "hydrogen/core/device_exception.hpp"
+#include "hydrogen/core/filterwheel.hpp"
+#include "hydrogen/core/focuser.hpp"
+#include "hydrogen/core/guider.hpp"
+#include "hydrogen/core/solver.hpp"
+#include "hydrogen/core/telescope.hpp"
 
 CHAISCRIPT_MODULE_EXPORT chaiscript::ModulePtr create_chaiscript_device_module()
 {

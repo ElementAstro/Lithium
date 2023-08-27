@@ -37,12 +37,12 @@ Description: Device Manager
 #include <thread>
 #include <functional>
 
-#include "lidriver/core/device.hpp"
+#include "hydrogen/core/device.hpp"
 #include "config/configor.hpp"
 #include "module/modloader.hpp"
 #include "server/message_bus.hpp"
 
-#include "lidriver/event/eventloop.hpp"
+#include "hydrogen/event/eventloop.hpp"
 
 namespace tl
 {

@@ -83,7 +83,8 @@ add_subdirectory(tools)
 
 include_directories(modules)
 
-add_subdirectory(modules/lidriver)
+add_subdirectory(modules/Hydrogen)
+add_subdirectory(modules/HydrogenServer)
 add_subdirectory(modules/liproperty)
 add_subdirectory(modules/libridge)
 

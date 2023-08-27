@@ -29,7 +29,7 @@ ELSE()
     target_compile_definitions(hydrogen_lx200generic PRIVATE -D_XOPEN_SOURCE=600 -D_POSIX_C_SOURCE=200809L)
 ENDIF()
 
-target_link_libraries(hydrogen_lx200generic lithiumcore lithiumdevice dsp eventloop fpack lithiumdriver_OBJECT)
+target_link_libraries(hydrogen_lx200generic hydrogendriverstatic)
 
 install(TARGETS hydrogen_lx200generic RUNTIME DESTINATION bin)
 

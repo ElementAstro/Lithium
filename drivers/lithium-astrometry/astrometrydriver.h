@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "lidriver/core/defaultdevice.h"
+#include "hydrogen/core/defaultdevice.h"
 
 #include <pthread.h>
 

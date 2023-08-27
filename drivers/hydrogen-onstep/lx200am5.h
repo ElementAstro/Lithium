@@ -21,8 +21,8 @@
 #pragma once
 
 #include "lx200generic.h"
-#include "lithiumpropertyswitch.h"
-#include "lithiumpropertynumber.h"
+#include "hydrogenpropertyswitch.h"
+#include "hydrogenpropertynumber.h"
 
 class LX200AM5 : public LX200Generic
 {
@@ -56,6 +56,7 @@ protected:
 
     // Parking
     virtual bool Park() override;
+    virtual bool UnPark() override;
 
 private:
     ///////////////////////////////////////////////////////////////////////////////////////////////

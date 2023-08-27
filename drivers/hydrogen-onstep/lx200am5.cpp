@@ -22,7 +22,7 @@
 
 #include "connection/connectiontcp.h"
 #include "lx200driver.h"
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 
 #include <libnova/transform.h>
 
@@ -469,6 +469,15 @@ bool LX200AM5::Park()
     if (rc)
         TrackState = SCOPE_PARKING;
     return rc;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+bool LX200AM5::UnPark()
+{
+    TrackState = SCOPE_IDLE;
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////

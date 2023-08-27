@@ -268,15 +268,36 @@ namespace Lithium
         {
             if (*it && (*it)->getStringProperty("name")->value == name)
             {
-                (*it)->addStringObserver([this](const std::shared_ptr<IStringProperty> &message)
-                                         { messageBusPublishString(message); });
-                LOG_F(INFO, "Add device %s string observer successfully", name.c_str());
-                (*it)->addBoolObserver([this](const std::shared_ptr<IBoolProperty> &message)
-                                       { messageBusPublishBool(message); });
-                LOG_F(INFO, "Add device %s bool observer successfully", name.c_str());
-                (*it)->addNumberObserver([this](const std::shared_ptr<INumberProperty> &message)
-                                         { messageBusPublishNumber(message); });
-                LOG_F(INFO, "Add device %s number observer successfully", name.c_str());
+                (*it)->addObserver([this](const std::any &message)
+                                   { 
+                                    if(message.has_value())
+                                    {
+                                        try
+                                        {
+                                            if (message.type() == typeid(std::shared_ptr<IStringProperty>))
+                                            {
+                                                messageBusPublishString(std::any_cast<std::shared_ptr<IStringProperty>>(message));
+                                            }
+                                            else if(message.type() == typeid(std::shared_ptr<INumberProperty>))
+                                            {
+                                                messageBusPublishNumber(std::any_cast<std::shared_ptr<INumberProperty>>(message));
+                                            }
+                                            else if (message.type() == typeid(std::shared_ptr<IBoolProperty>))
+                                            {
+                                                messageBusPublishBool(std::any_cast<std::shared_ptr<IBoolProperty>>(message));
+                                            }
+                                            else
+                                            {
+                                                LOG_F(ERROR,"Unknown property type!");
+                                            }
+                                        }
+                                        catch(const std::bad_any_cast &e)
+                                        {
+                                            LOG_F(ERROR,"Failed to cast property %s",e.what());
+                                        }
+                                    } });
+                LOG_F(INFO, "Add device %s observer successfully", name.c_str());
+
                 return true;
             }
         }
@@ -298,7 +319,11 @@ namespace Lithium
                 LOG_F(INFO, "Remove device %s successfully", name.c_str());
                 if (m_ConfigManager)
                 {
+#ifdef __cpp_lib_format
                     m_ConfigManager->deleteValue(std::format("driver/{}", name));
+#else
+                    m_ConfigManager->deleteValue(fmt::format("driver/{}", name));
+#endif
                 }
                 else
                 {
@@ -345,7 +370,10 @@ namespace Lithium
         }
         if (const auto res = m_ModuleLoader->UnloadModule(lib_name); !res.has_value())
         {
-            LOG_F(ERROR, "Failed to remove device library : %s with %s", lib_name.c_str(), res.error());
+            if(res.error() == LIError::UnLoadError)
+            {
+                LOG_F(ERROR, "Failed to remove device library : %s with unload error", lib_name.c_str());
+            }
             return false;
         }
         return true;
@@ -413,19 +441,19 @@ namespace Lithium
             }
             case DeviceType::Telescope:
             {
-                LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, task_name.c_str());
+                LOG_F(INFO, "Found Telescope device: %s with driver: %s", device_name.c_str(), task_name.c_str());
                 return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Focuser:
             {
-                LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, task_name.c_str());
+                LOG_F(INFO, "Found Focuser device: %s with driver: %s", device_name.c_str(), task_name.c_str());
                 return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::FilterWheel:
             {
-                LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, task_name.c_str());
+                LOG_F(INFO, "Found FilterWheel device: %s with driver: %s", device_name.c_str(), task_name.c_str());
                 return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
                 break;
             }
@@ -466,7 +494,7 @@ namespace Lithium
 #ifdef __cpp_lib_format
                 m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
 #else
-
+                m_ConfigManager->setValue(fmt::format("driver/{}/{}", message->device_name, message->name), message->value);
 #endif
             }
         }
@@ -484,7 +512,11 @@ namespace Lithium
         }
         else
         {
+#ifdef __cpp_lib_format
             m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
+#else
+            m_ConfigManager->setValue(fmt::format("driver/{}/{}", message->device_name, message->name), message->value);
+#endif
         }
     }
 
@@ -500,7 +532,11 @@ namespace Lithium
         }
         else
         {
+#ifdef __cpp_lib_format
             m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
+#else
+            m_ConfigManager->setValue(fmt::format("driver/{}/{}", message->device_name, message->name), message->value);
+#endif
         }
     }
 
@@ -511,27 +547,12 @@ namespace Lithium
                                  auto device = getDevice(type, name);
                                  if (!device)
                                  {
-                                     LOG_F(ERROR, "%s not found");
+                                     LOG_F(ERROR, "%s not found",name.c_str());
                                      return;
                                  }
                                  try
                                  {
-                                     if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
-                                     {
-                                         device->setStringProperty(value_name, std::any_cast<std::string>(value));
-                                     }
-                                     else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
-                                     {
-                                         device->setNumberProperty(value_name, std::any_cast<double>(value));
-                                     }
-                                     else if (value.type() == typeid(bool))
-                                     {
-                                        device->setBoolProperty(value_name,std::any_cast<bool>(value));
-                                     }
-                                     else
-                                     {
-                                        LOG_F(ERROR,"Unknown type of the value : %s",value_name.c_str());
-                                     }
+                                     device->setProperty(value_name,value);
                                  }
                                  catch (const std::bad_any_cast &e)
                                  {
@@ -547,27 +568,12 @@ namespace Lithium
                                  auto device = findDeviceByName(name);
                                  if (!device)
                                  {
-                                     LOG_F(ERROR, "%s not found");
+                                     LOG_F(ERROR, "%s not found",name.c_str());
                                      return;
                                  }
                                  try
                                  {
-                                     if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
-                                     {
-                                         device->setStringProperty(value_name, std::any_cast<std::string>(value));
-                                     }
-                                     else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
-                                     {
-                                         device->setNumberProperty(value_name, std::any_cast<double>(value));
-                                     }
-                                     else if (value.type() == typeid(bool))
-                                     {
-                                        device->setBoolProperty(value_name,std::any_cast<bool>(value));
-                                     }
-                                     else
-                                     {
-                                        LOG_F(ERROR,"Unknown type of the value : %s",value_name.c_str());
-                                     }
+                                     device->setProperty(value_name,value);
                                  }
                                  catch (const std::bad_any_cast &e)
                                  {

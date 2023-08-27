@@ -20,7 +20,7 @@
 
 #include "lx200_OpenAstroTech.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <cmath>

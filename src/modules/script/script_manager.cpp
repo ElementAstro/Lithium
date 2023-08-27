@@ -56,10 +56,10 @@ namespace Lithium
         chai_->add(chaiscript::fun(&Base64::base64DecodeEnhance), "base64decode_e");
 
         // Add UUID support
-        chai_->add(chaiscript::fun(&UUID::UUIDGenerator::seed), "seed");
-        chai_->add(chaiscript::fun(&UUID::UUIDGenerator::generateUUID), "generate_uuid");
-        chai_->add(chaiscript::fun(&UUID::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
-        chai_->add(chaiscript::user_type<UUID::UUIDGenerator>(), "UUIDGenerator");
+        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::seed), "seed");
+        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::generateUUID), "generate_uuid");
+        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
+        chai_->add(chaiscript::user_type<LITHIUM::UUID::UUIDGenerator>(), "UUIDGenerator");
 
         chai_->add(chaiscript::fun(&File::compress_file), "compress_file");
         chai_->add(chaiscript::fun(&File::decompress_file), "decompress_file");

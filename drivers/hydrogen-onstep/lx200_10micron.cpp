@@ -28,7 +28,7 @@
 */
 
 #include "lx200_10micron.h"
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <cstring>
@@ -409,7 +409,7 @@ bool LX200_10MICRON::ReadScopeStatus()
     //          true equinox and equator of date of observation (i.e. Jnow).
     // 2        The telescope declination in degrees and decimals (from –90.0000 to +90.0000),
     //          true equinox and equator of date of observation (i.e. Jnow).
-    // 3        A flag lithiumcating the side of the pier on which the telescope is currently positioned
+    // 3        A flag hydrogencating the side of the pier on which the telescope is currently positioned
     //          ("E" or "W").
     // 4        The telescope azimuth in degrees and decimals (from 000.0000 to 359.9999).
     // 5        The telescope altitude in degrees and decimals (from -90.0000 to +90.0000).

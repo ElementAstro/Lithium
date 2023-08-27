@@ -84,6 +84,7 @@ add_subdirectory(tools)
 include_directories(modules)
 
 add_subdirectory(modules/Hydrogen)
+add_subdirectory(modules/HydrogenClient)
 add_subdirectory(modules/HydrogenServer)
 add_subdirectory(modules/liproperty)
 add_subdirectory(modules/libridge)
@@ -352,7 +353,7 @@ if(WIN32)
     install(TARGETS oatpp-websocket)
 elseif(UNIX OR LINUX OR APPLE)
     
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${property_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_libraries(lithium_server PRIVATE oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
 
@@ -361,6 +362,10 @@ elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server PRIVATE libzippp)
 
     target_link_libraries(lithium_server PRIVATE LithiumDriver LithiumProperty LithiumBridge)
+
+    find_package(fmt REQUIRED)
+
+    target_link_libraries(lithium_server PRIVATE fmt::fmt)
 
     # find_package(INDI 2.0.0 REQUIRED)
     # include_directories(${INDI_INCLUDE_DIR})
@@ -373,6 +378,7 @@ elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server PRIVATE pugixml-static)
     target_link_libraries(lithium_server PRIVATE sqlite3)
     target_link_libraries(lithium_server PRIVATE cpp_httplib)
+    target_link_libraries(lithium_server PRIVATE bustache)
 
     target_link_libraries(lithium_server PRIVATE dl)
 

@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "lx200generic.h"
 #include "eq500x.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 typedef struct _simEQ500X
@@ -96,7 +96,7 @@ struct _adjustment
     {
         {":RG#", 0, 1 * ARCSECOND, 0.7 * ARCMINUTE, 100},   // Guiding speed
         {":RC#", 1, 0.7 * ARCMINUTE, 10 * ARCMINUTE, 200},  // Centering speed
-        {":RM#", 2, 10 * ARCMINUTE, 5 * ONEDEGREE, 500},    // Flithiumng speed
+        {":RM#", 2, 10 * ARCMINUTE, 5 * ONEDEGREE, 500},    // Fhydrogenng speed
         {":RS#", 3, 5 * ONEDEGREE, 360 * ONEDEGREE, 1000}}; // Slew speed
 
 /**************************************************************************************

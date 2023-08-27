@@ -51,7 +51,7 @@ namespace Lithium::Config
         m_AchievementManager = std::make_unique<AAchievement::AchievementList>();
         if (loadFromFile("config.json").has_value())
         {
-            LOG_F(INFO, "current config: %s", config_.dump(4));
+            LOG_F(INFO, "current config: %s", config_.dump(4).c_str());
         }
     }
 

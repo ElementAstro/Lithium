@@ -25,8 +25,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <cmath>
 #include "lx200apdriver.h"
 
-#include "lithiumcom.h"
-#include "lithiumlogger.h"
+#include "hydrogencom.h"
+#include "hydrogenlogger.h"
 #include "lx200driver.h"
 
 #include <cstring>
@@ -1017,7 +1017,7 @@ APRateTableState apRateTable(const char *statusString)
 // 1      2       0 = Normal Speed Range, 2 = Slew Scaling on Standard Rates ( >= 600x)
 //                This function has been eliminated beginning P02-01, in favor of the rate tables.
 // 2      4       0 = Encoders not Supported, 4 = Encoders Supported
-// 3-5            Bit encoded lithiumcation of what encoder types are supported
+// 3-5            Bit encoded hydrogencation of what encoder types are supported
 // 6     64       Motor Type:  0 = Servo Motors, 64 = Stepper Motors
 // 7    128       Encoder Reference: 0 = Clutch Dependent, 128 = Clutch Independent (ex. Mach2GTO)
 //                This bit is only meaningful if bit 2 is set.

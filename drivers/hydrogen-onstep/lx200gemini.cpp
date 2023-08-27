@@ -33,7 +33,7 @@
 */
 #include "lx200gemini.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 #include "connection/connectioninterface.h"
 #include "connection/connectiontcp.h"
@@ -1886,7 +1886,7 @@ void LX200Gemini::syncSideOfPier()
     // LOGF_DEBUG("RES: <%s>", response);
 
     // fix to pier side read from the mount using the hour angle as a guide
-    // see https://www.lithiumlib.org/forum/general/6785-side-of-pier-problem-bug.html?start=12#52492
+    // see https://www.hydrogenlib.org/forum/general/6785-side-of-pier-problem-bug.html?start=12#52492
     // for a description of the problem and the proposed fix
     //
     auto lst = get_local_sidereal_time(this->LocationN[LOCATION_LONGITUDE].value);

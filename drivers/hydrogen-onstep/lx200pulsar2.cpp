@@ -21,7 +21,7 @@
 
 #include "lx200pulsar2.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <cmath>
@@ -51,7 +51,7 @@ namespace PulsarTX
         static constexpr int TimeOut = 1; // tenths of a second
         static constexpr int MaxAttempts = 5;
 
-        // The following lithiumcates whether the input and output on the port
+        // The following hydrogencates whether the input and output on the port
         // needs to be resynchronized due to a timeout error.
         static bool resynchronize_needed = false;
 
@@ -275,7 +275,7 @@ namespace PulsarTX
         return _send_(fd, cmd);
     }
 
-    // Send a command string and wait for a single character response lithiumcating
+    // Send a command string and wait for a single character response hydrogencating
     // success or failure.  Ignore leading # characters.
     bool confirmed(const int fd, const char *cmd, char &response)
     {
@@ -1274,7 +1274,7 @@ LX200Pulsar2::LX200Pulsar2() : LX200Generic(), just_started_slewing(false)
     // setLX200Capability(0);
     setLX200Capability(LX200_HAS_PULSE_GUIDING);
 
-    // Note that we do not have TELESCOPE_PIER_SIDE lithiumcated here, since we re-implement it --
+    // Note that we do not have TELESCOPE_PIER_SIDE hydrogencated here, since we re-implement it --
     // there is just too much confusion surrounding that value, so we preempt it.
     SetTelescopeCapability(TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_PARK | TELESCOPE_CAN_ABORT |
                                TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION,
@@ -1505,7 +1505,7 @@ bool LX200Pulsar2::initProperties()
         IUFillSwitchVector(&MountTypeSP, MountTypeS, 3, getDeviceName(), "MOUNT_TYPE", "Mount Type",
                            MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
-        // pier side (lithiumcator)
+        // pier side (hydrogencator)
         IUFillSwitch(&PierSideS[Pulsar2Commands::EastOfPier], "PIER_EAST", "OTA on East side (-> west)", ISS_OFF); // no default
         IUFillSwitch(&PierSideS[Pulsar2Commands::WestOfPier], "PIER_WEST", "OTA on West side (-> east)", ISS_OFF); // no default
         IUFillSwitchVector(&PierSideSP, PierSideS, 2, getDeviceName(), "TELESCOPE_PIER_SIDE", "Pier Side Ind",
@@ -1644,7 +1644,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
                     if (!Pulsar2Commands::setGuideSpeedInd(PortFD, ival))
                     {
                         GuideSpeedIndNP.s = IPS_ALERT;
-                        IDSetNumber(&GuideSpeedIndNP, "Unable to set guide speed lithiumcator to mount controller");
+                        IDSetNumber(&GuideSpeedIndNP, "Unable to set guide speed hydrogencator to mount controller");
                         return false; // early exit
                     }
                 }
@@ -1655,7 +1655,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
             else
             {
                 GuideSpeedIndNP.s = IPS_ALERT;
-                IDSetNumber(&GuideSpeedIndNP, "Value out of bounds for guide speed lithiumcator");
+                IDSetNumber(&GuideSpeedIndNP, "Value out of bounds for guide speed hydrogencator");
                 return false; // early exit
             }
             return true; // early exit
@@ -1673,7 +1673,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
                     if (!Pulsar2Commands::setCenterSpeedInd(PortFD, ival))
                     {
                         CenterSpeedIndNP.s = IPS_ALERT;
-                        IDSetNumber(&CenterSpeedIndNP, "Unable to set center speed lithiumcator to mount controller");
+                        IDSetNumber(&CenterSpeedIndNP, "Unable to set center speed hydrogencator to mount controller");
                         return false; // early exit
                     }
                 }
@@ -1684,7 +1684,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
             else
             {
                 CenterSpeedIndNP.s = IPS_ALERT;
-                IDSetNumber(&CenterSpeedIndNP, "Value out of bounds for center speed lithiumcator");
+                IDSetNumber(&CenterSpeedIndNP, "Value out of bounds for center speed hydrogencator");
                 return false; // early exit
             }
             return true; // early exit
@@ -1702,7 +1702,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
                     if (!Pulsar2Commands::setFindSpeedInd(PortFD, ival))
                     {
                         FindSpeedIndNP.s = IPS_ALERT;
-                        IDSetNumber(&FindSpeedIndNP, "Unable to set find speed lithiumcator to mount controller");
+                        IDSetNumber(&FindSpeedIndNP, "Unable to set find speed hydrogencator to mount controller");
                         return false; // early exit
                     }
                 }
@@ -1713,7 +1713,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
             else
             {
                 FindSpeedIndNP.s = IPS_ALERT;
-                IDSetNumber(&FindSpeedIndNP, "Value out of bounds for find speed lithiumcator");
+                IDSetNumber(&FindSpeedIndNP, "Value out of bounds for find speed hydrogencator");
                 return false; // early exit
             }
             return true; // early exit
@@ -1731,7 +1731,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
                     if (!Pulsar2Commands::setSlewSpeedInd(PortFD, ival))
                     {
                         SlewSpeedIndNP.s = IPS_ALERT;
-                        IDSetNumber(&SlewSpeedIndNP, "Unable to set slew speed lithiumcator to mount controller");
+                        IDSetNumber(&SlewSpeedIndNP, "Unable to set slew speed hydrogencator to mount controller");
                         return false; // early exit
                     }
                 }
@@ -1742,7 +1742,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
             else
             {
                 SlewSpeedIndNP.s = IPS_ALERT;
-                IDSetNumber(&SlewSpeedIndNP, "Value out of bounds for slew speed lithiumcator");
+                IDSetNumber(&SlewSpeedIndNP, "Value out of bounds for slew speed hydrogencator");
                 return false; // early exit
             }
             return true; // early exit
@@ -1760,7 +1760,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
                     if (!Pulsar2Commands::setGoToSpeedInd(PortFD, ival))
                     {
                         GoToSpeedIndNP.s = IPS_ALERT;
-                        IDSetNumber(&GoToSpeedIndNP, "Unable to set goto speed lithiumcator to mount controller");
+                        IDSetNumber(&GoToSpeedIndNP, "Unable to set goto speed hydrogencator to mount controller");
                         return false; // early exit
                     }
                 }
@@ -1771,7 +1771,7 @@ bool LX200Pulsar2::ISNewNumber(const char *dev, const char *name, double values[
             else
             {
                 GoToSpeedIndNP.s = IPS_ALERT;
-                IDSetNumber(&GoToSpeedIndNP, "Value out of bounds for goto speed lithiumcator");
+                IDSetNumber(&GoToSpeedIndNP, "Value out of bounds for goto speed hydrogencator");
                 return false; // early exit
             }
             return true; // early exit
@@ -2346,7 +2346,7 @@ bool LX200Pulsar2::ISNewSwitch(const char *dev, const char *name, ISState *state
             }
         }
 
-        // tracking rate lithiumcator
+        // tracking rate hydrogencator
         if (strcmp(name, TrackingRateIndSP.name) == 0)
         {
             if (IUUpdateSwitch(&TrackingRateIndSP, states, names, n) < 0)
@@ -3078,7 +3078,7 @@ void LX200Pulsar2::getBasicData()
         // Motion Control Tab
         // - - - - - - - - - - - - - - - - - -
 
-        // tracking rate lithiumcator
+        // tracking rate hydrogencator
         Pulsar2Commands::TrackingRateInd tracking_rate_ind = Pulsar2Commands::getTrackingRateInd(PortFD);
         for (int i = 0; i < static_cast<int>(LX200Pulsar2::numPulsarTrackingRates); i++)
             TrackingRateIndS[i].s = ISS_OFF;
@@ -3090,11 +3090,11 @@ void LX200Pulsar2::getBasicData()
         else
         {
             TrackingRateIndSP.s = IPS_ALERT;
-            IDSetSwitch(&TrackingRateIndSP, "Can't get the tracking rate lithiumcator.");
+            IDSetSwitch(&TrackingRateIndSP, "Can't get the tracking rate hydrogencator.");
         }
         defineProperty(&TrackingRateIndSP); // defined here for consistency
 
-        // guide speed lithiumcator
+        // guide speed hydrogencator
         int guide_speed_ind = Pulsar2Commands::getGuideSpeedInd(PortFD);
         if (guide_speed_ind > 0)
         {
@@ -3104,7 +3104,7 @@ void LX200Pulsar2::getBasicData()
         }
         defineProperty(&GuideSpeedIndNP); // defined here, in order to match input value with controller value
 
-        // center speed lithiumcator
+        // center speed hydrogencator
         int center_speed_ind = Pulsar2Commands::getCenterSpeedInd(PortFD);
         if (center_speed_ind > 0)
         {
@@ -3117,7 +3117,7 @@ void LX200Pulsar2::getBasicData()
         }
         defineProperty(&CenterSpeedIndNP); // defined here, in order to match input value with controller value
 
-        // find speed lithiumcator
+        // find speed hydrogencator
         int find_speed_ind = Pulsar2Commands::getFindSpeedInd(PortFD);
         if (find_speed_ind > 0)
         {
@@ -3130,7 +3130,7 @@ void LX200Pulsar2::getBasicData()
         }
         defineProperty(&FindSpeedIndNP); // defined here, in order to match input value with controller value
 
-        // slew speed lithiumcator
+        // slew speed hydrogencator
         int slew_speed_ind = Pulsar2Commands::getSlewSpeedInd(PortFD);
         if (slew_speed_ind > 0)
         {
@@ -3143,7 +3143,7 @@ void LX200Pulsar2::getBasicData()
         }
         defineProperty(&SlewSpeedIndNP); // defined here, in order to match input value with controller value
 
-        // goto speed lithiumcator
+        // goto speed hydrogencator
         int goto_speed_ind = Pulsar2Commands::getGoToSpeedInd(PortFD);
         if (goto_speed_ind > 0)
         {
@@ -3349,7 +3349,7 @@ bool LX200Pulsar2::storeScopeLocation()
     return true;
 }
 
-// Old-style lithiumvidual latitude/longitude retrieval
+// Old-style hydrogenvidual latitude/longitude retrieval
 // void LX200Pulsar2::sendScopeLocation()
 //{
 //    LocationNP.s = IPS_OK;
@@ -3442,7 +3442,7 @@ bool LX200Pulsar2::isSlewing()
         int is_slewing = -1;
         if (PulsarTX::sendReceiveInt(PortFD, "#:YGi#", &is_slewing))
         {
-            if (is_slewing == 1) // We can rely on the Pulsar "is slewing" lithiumcator from here on
+            if (is_slewing == 1) // We can rely on the Pulsar "is slewing" hydrogencator from here on
             {
                 just_started_slewing = false;
                 result = true;

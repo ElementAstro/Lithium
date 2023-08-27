@@ -7,16 +7,16 @@ include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
 include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
 
 SET(astrometry_SRC
-    lithium-astrometry/astrometrydriver.cpp)
+    hydrogen-astrometry/astrometrydriver.cpp)
 
-add_executable(lithium_astrometry ${astrometry_SRC})
-target_link_libraries(lithium_astrometry hydrogendriverstatic)
-install(TARGETS lithium_astrometry RUNTIME DESTINATION bin)
+add_executable(hydrogen_astrometry ${astrometry_SRC})
+target_link_libraries(hydrogen_astrometry hydrogendriverstatic)
+install(TARGETS hydrogen_astrometry RUNTIME DESTINATION bin)
 
-add_subdirectory(lithium-simulator)
+add_subdirectory(hydrogen-simulator)
 
-add_subdirectory(lithium-weather)
+add_subdirectory(hydrogen-weather)
 
-add_subdirectory(lithium-ioptron)
+add_subdirectory(hydrogen-ioptron)
 
 add_subdirectory(hydrogen-onstep)

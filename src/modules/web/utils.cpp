@@ -60,7 +60,11 @@ Description: Network Utils
 #endif
 
 #if __cplusplus >= 202002L
+#ifdef __cpp_lib_format
 #include <format>
+#endif
+#else
+#include <fmt/format.h>
 #endif
 #include "loguru/loguru.hpp"
 
@@ -203,9 +207,17 @@ bool CheckAndKillProgramOnPort(int port)
             // 获取占用端口的进程 ID
             std::string cmd;
 #ifdef _WIN32
+#ifdef __cpp_lib_format
             cmd = std::format("netstat -ano | find \"LISTENING\" | find \"{}\"", port);
 #else
+            cmd = fmt::format("netstat -ano | find \"LISTENING\" | find \"{}\"", port);
+#endif
+#else
+#ifdef __cpp_lib_format
             cmd = std::format("lsof -i :{} -t", port);
+#else
+            cmd = fmt::format("lsof -i :{} -t", port);
+#endif
 #endif
 
             FILE *fp = popen(cmd.c_str(), "r");
@@ -234,9 +246,17 @@ bool CheckAndKillProgramOnPort(int port)
                 LOG_F(INFO, "Killing the process on port(%d): PID=%s", port, pid_str.c_str());
 
 #ifdef _WIN32
+#ifdef __cpp_lib_format
                 ret = std::system(std::format("taskkill /F /PID {}", pid_str).c_str());
 #else
+                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
+#endif
+#else
+#ifdef __cpp_lib_format
                 int ret = std::system(std::format("kill {}", pid_str).c_str());
+#else
+                int ret = std::system(fmt::format("kill {}", pid_str).c_str());
+#endif
 #endif
 
                 if (ret != 0)

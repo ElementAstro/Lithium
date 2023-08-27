@@ -2,7 +2,7 @@
     Astro-Physics HYDROGEN driver
 
     Copyright (C) 2014 Jasem Mutlaq, Mike Fulbright
-    Copyright (C) 2020 lithiumlib.org, by Markus Wildi
+    Copyright (C) 2020 hydrogenlib.org, by Markus Wildi
     Copyright (C) 2022 Hy Murveit
 
     Based on HYDROGEN Astrophysics Driver by Markus Wildi
@@ -41,7 +41,7 @@ Horizon check during slewing functions :ho# and :hq#
 
 #include "lx200ap_v2.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 #include "lx200apdriver.h"
 #include "connection/connectiontcp.h"
@@ -1106,7 +1106,7 @@ bool LX200AstroPhysicsV2::ReadScopeStatus()
 
         if (slewcomplete && (dx > PARKTHRES || dy > PARKTHRES))
         {
-            LOG_WARN("Parking... slew status lithiumcates mount stopped by dx/dy too far from mount - continuing!");
+            LOG_WARN("Parking... slew status hydrogencates mount stopped by dx/dy too far from mount - continuing!");
             slewcomplete = false;
         }
 

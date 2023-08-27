@@ -144,11 +144,21 @@ add_library(loguru loguru/loguru.cpp)
 if(LINUX)
     find_package(Threads REQUIRED)
     target_link_libraries(loguru Threads::Threads dl)
+    set_target_properties(loguru PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    )
 endif()
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
 target_link_libraries(cpp_httplib PRIVATE ${OPENSSL_LIBRARIES})
+if(WIN32)
 target_link_libraries(cpp_httplib PRIVATE crypt32)
+endif()
+if(LINUX)
+    set_target_properties(cpp_httplib PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 add_library(libzippp zippp/libzippp.cpp)
 

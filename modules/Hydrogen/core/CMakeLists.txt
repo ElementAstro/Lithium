@@ -3,6 +3,7 @@ project(hydrogendriver C CXX)
 
 find_package(USB1 REQUIRED)
 find_package(JPEG REQUIRED)
+find_package(Threads REQUIRED)
 include_directories(${USB1_INCLUDE_DIRS})
 
 add_subdirectory(io)
@@ -283,6 +284,7 @@ install(FILES
     add_library(${PROJECT_NAME}static STATIC)
 
     target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+    target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
     target_include_directories(${PROJECT_NAME}static PUBLIC .)
 
     set_target_properties(${PROJECT_NAME}static PROPERTIES

@@ -20,7 +20,7 @@
 
 #include "lx200zeq25.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <libnova/transform.h>

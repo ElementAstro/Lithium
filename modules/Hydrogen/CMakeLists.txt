@@ -36,6 +36,12 @@ add_library(LithiumDriver
     util/utils.hpp
 )
 
+if(LINUX)
+set_target_properties(LithiumDriver PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+)
+endif()
+
 include_directories(.)
 include_directories(dsp)
 include_directories(fpack)
@@ -46,3 +52,4 @@ add_subdirectory(fpack)
 add_subdirectory(event)
 add_subdirectory(dsp)
 add_subdirectory(hid)
+add_subdirectory(alignment)

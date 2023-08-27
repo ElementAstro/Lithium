@@ -27,9 +27,9 @@
    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
  */
 
-#include "lithiumguiderinterface.h"
-#include "lithiumfocuserinterface.h"
-#include "lithiumtelescope.h"
+#include "hydrogenguiderinterface.h"
+#include "hydrogenfocuserinterface.h"
+#include "hydrogentelescope.h"
 
 class LX200Telescope : public HYDROGEN::Telescope, public HYDROGEN::GuiderInterface, public HYDROGEN::FocuserInterface
 {

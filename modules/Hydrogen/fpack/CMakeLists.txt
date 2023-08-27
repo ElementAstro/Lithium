@@ -35,3 +35,9 @@ install(FILES
     ${INCLUDE_INSTALL_DIR}/libindi
     COMPONENT Devel
 )
+
+if(LINUX)
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+)
+endif()

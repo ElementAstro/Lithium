@@ -132,10 +132,10 @@
 
 #include "lx200generic.h"
 #include "lx200driver.h"
-#include "lithiumcom.h"
-#include "lithiumfocuserinterface.h"
-#include "lithiumweatherinterface.h"
-#include "lithiumrotatorinterface.h"
+#include "hydrogencom.h"
+#include "hydrogenfocuserinterface.h"
+#include "hydrogenweatherinterface.h"
+#include "hydrogenrotatorinterface.h"
 #include "connection/connectiontcp.h"
 
 #include <cstring>
@@ -522,7 +522,7 @@ protected:
 
     /**
      * @brief SetParked Change the mount parking status. The data park file (stored in
-     * ~/.lithium/ParkData.xml) is updated in the process.
+     * ~/.hydrogen/ParkData.xml) is updated in the process.
      * @param isparked set to true if parked, false otherwise.
      */
     virtual void SetParked(bool isparked) override;

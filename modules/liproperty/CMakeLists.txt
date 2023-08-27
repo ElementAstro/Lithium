@@ -25,3 +25,9 @@ add_library(LithiumProperty
     task/task.cpp
     task/task.hpp
 )
+
+if(LINUX)
+set_target_properties(LithiumProperty PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+)
+endif()

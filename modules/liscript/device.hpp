@@ -31,23 +31,13 @@ CHAISCRIPT_MODULE_EXPORT chaiscript::ModulePtr create_chaiscript_device_module()
     m->add(chaiscript::base_class<Device, Filterwheel>());
 
     m->add(chaiscript::fun(&Device::getStringProperty), "getStringProperty");
-    m->add(chaiscript::fun(&Device::setStringProperty), "setStringProperty");
-    m->add(chaiscript::fun(&Device::removeStringProperty), "removeStringProperty");
     m->add(chaiscript::fun(&Device::getNumberProperty), "getNumberProperty");
-    m->add(chaiscript::fun(&Device::setNumberProperty), "setNumberProperty");
-    m->add(chaiscript::fun(&Device::removeNumberProperty), "removeNumberProperty");
     m->add(chaiscript::fun(&Device::getBoolProperty), "getBoolProperty");
-    m->add(chaiscript::fun(&Device::setBoolProperty), "setBoolProperty");
-    m->add(chaiscript::fun(&Device::removeBoolProperty), "removeBoolProperty");
     m->add(chaiscript::fun(&Device::getTask), "getTask");
     m->add(chaiscript::fun(&Device::removeTask), "removeTask");
     m->add(chaiscript::fun(&Device::insertTask), "insertTask");
-    m->add(chaiscript::fun(&Device::addStringObserver), "addStringObserver");
-    m->add(chaiscript::fun(&Device::removeStringObserver), "removeStringObserver");
-    m->add(chaiscript::fun(&Device::addNumberObserver), "addNumberObserver");
-    m->add(chaiscript::fun(&Device::removeNumberObserver), "removeNumberObserver");
-    m->add(chaiscript::fun(&Device::addBoolObserver), "addBoolObserver");
-    m->add(chaiscript::fun(&Device::removeBoolObserver), "removeBoolObserver");
+    m->add(chaiscript::fun(&Device::addObserver), "addObserver");
+    m->add(chaiscript::fun(&Device::removeObserver), "removeObserver");
     m->add(chaiscript::fun(&Device::connect), "connect");
     m->add(chaiscript::fun(&Device::disconnect), "disconnect");
     m->add(chaiscript::fun(&Device::reconnect), "reconnect");

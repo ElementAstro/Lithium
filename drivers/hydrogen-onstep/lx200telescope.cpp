@@ -25,7 +25,7 @@
 
 #include "lx200telescope.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <libnova/sidereal_time.h>

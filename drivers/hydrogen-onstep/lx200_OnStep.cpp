@@ -51,7 +51,7 @@ LX200_OnStep::LX200_OnStep() : LX200Generic(), WI(this), RotatorInterface(this)
     currentCatalog = LX200_STAR_C;
     currentSubCatalog = 0;
 
-    setVersion(1, 19); // don't forget to update liblithium/drivers.xml
+    setVersion(1, 19); // don't forget to update libhydrogen/drivers.xml
 
     setLX200Capability(LX200_HAS_TRACKING_FREQ | LX200_HAS_SITES | LX200_HAS_ALIGNMENT_TYPE | LX200_HAS_PULSE_GUIDING |
                        LX200_HAS_PRECISE_TRACKING_FREQ);
@@ -777,7 +777,7 @@ bool LX200_OnStep::ISNewNumber(const char *dev, const char *name, double values[
             return RI::processNumber(dev, name, values, names, n);
 
         if (strcmp(name, "EQUATORIAL_EOD_COORD") == 0)
-        // Replace this from lithiumtelescope so it doesn't change state
+        // Replace this from hydrogentelescope so it doesn't change state
         // Most of this needs to be handled by our updates, or it breaks things
         {
             //  this is for us, and it is a goto
@@ -1233,8 +1233,8 @@ bool LX200_OnStep::ISNewSwitch(const char *dev, const char *name, ISState *state
 
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
-        // Intercept Before lithiumtelescope base can set TrackState
-        // Next one modification of lithiumtelescope.cpp function
+        // Intercept Before hydrogentelescope base can set TrackState
+        // Next one modification of hydrogentelescope.cpp function
         if (!strcmp(name, TrackStateSP.name))
         {
             //             int previousState = IUFindOnSwitchIndex(&TrackStateSP);
@@ -3027,7 +3027,7 @@ bool LX200_OnStep::ReadScopeStatus()
             else if (strstr(preferredpierside_response, "%"))
             {
                 // NOTE: This bug is only present in very early OnStepX, and should be fixed shortly after 10.03k
-                LOG_DEBUG(":GX96 returned \% lithiumcating early OnStepX bug");
+                LOG_DEBUG(":GX96 returned \% hydrogencating early OnStepX bug");
                 IUResetSwitch(&PreferredPierSideSP);
                 PreferredPierSideSP.s = IPS_ALERT;
                 IDSetSwitch(&PreferredPierSideSP, nullptr);
@@ -3328,7 +3328,7 @@ bool LX200_OnStep::ReadScopeStatus()
     return true;
 }
 
-bool LX200_OnStep::SetTrackEnabled(bool enabled) // track On/Off events handled by lithiumtelescope       Tested
+bool LX200_OnStep::SetTrackEnabled(bool enabled) // track On/Off events handled by hydrogentelescope       Tested
 {
     char response[RB_MAX_LEN];
 
@@ -4103,7 +4103,7 @@ int LX200_OnStep::OSUpdateFocuser()
             }
             else if (temp_value > 9 || temp_value < 0) // TODO: Check if completely redundant
             {
-                // To solve issue mentioned https://www.lithiumlib.org/forum/development/1406-driver-onstep-lx200-like-for-lithium.html?start=624#71572
+                // To solve issue mentioned https://www.hydrogenlib.org/forum/development/1406-driver-onstep-lx200-like-for-hydrogen.html?start=624#71572
                 OSFocusSelectSP.s = IPS_ALERT;
                 LOGF_WARN("Active focuser returned out of range: %s, should be 0-9", temp_value);
                 IDSetSwitch(&OSFocusSelectSP, nullptr);
@@ -4341,7 +4341,7 @@ bool LX200_OnStep::SetRotatorBacklashEnabled(bool enabled)
 // End Rotator stuff
 
 // PEC Support
-// Should probably be added to lithiumtelescope or another interface, because the PEC that's there... is very limited.
+// Should probably be added to hydrogentelescope or another interface, because the PEC that's there... is very limited.
 
 IPState LX200_OnStep::StartPECPlayback(int axis)
 {
@@ -4467,7 +4467,7 @@ IPState LX200_OnStep::PECStatus(int axis)
         // LOG_INFO("Getting PEC Status");
         //   :$QZ?  Get PEC status
         //          Returns: S#
-        //  Returns status (pecSense) In the form: Status is one of "IpPrR" (I)gnore, get ready to (p)lay, (P)laying, get ready to (r)ecord, (R)ecording.  Or an optional (.) to lithiumcate an index detect.
+        //  Returns status (pecSense) In the form: Status is one of "IpPrR" (I)gnore, get ready to (p)lay, (P)laying, get ready to (r)ecord, (R)ecording.  Or an optional (.) to hydrogencate an index detect.
         //  IUFillSwitch(&OSPECStatusS[0], "OFF", "OFF", ISS_ON);
         //  IUFillSwitch(&OSPECStatusS[1], "Playing", "Playing", ISS_OFF);
         //  IUFillSwitch(&OSPECStatusS[2], "Recording", "Recording", ISS_OFF);

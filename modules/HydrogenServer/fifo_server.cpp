@@ -1,12 +1,8 @@
 #include "fifo_server.hpp"
 
 #include <unistd.h>
-#ifdef _WIN32
-
-#else
-#include <fcntl.h>
 #include <string.h>
-#endif
+#include <fcntl.h>
 
 #include "io.hpp"
 #include "driver_info.hpp"
@@ -32,7 +28,11 @@ void Fifo::close(void)
 void Fifo::open()
 {
     /* Open up FIFO, if available */
+#ifdef _WIN32
+    fd = ::open(name.c_str(), O_RDONLY);
+#else
     fd = ::open(name.c_str(), O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+#endif
 
     if (fd < 0)
     {

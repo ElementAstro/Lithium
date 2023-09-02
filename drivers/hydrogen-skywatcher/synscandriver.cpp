@@ -18,8 +18,8 @@
 
 #include "synscandriver.h"
 #include "libastro.h"
-#include "connectionplugins/connectioninterface.h"
-#include "connectionplugins/connectiontcp.h"
+#include "connection/connectioninterface.h"
+#include "connection/connectiontcp.h"
 #include "hydrogencom.h"
 
 #include <libnova/transform.h>
@@ -31,7 +31,11 @@
 #include <cmath>
 #include <map>
 #include <memory>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <termios.h>
+#endif
 #include <cstring>
 #include <assert.h>
 
@@ -1216,7 +1220,11 @@ bool SynscanDriver::sendCommand(const char * cmd, char * res, int cmd_len, int r
 {
     int nbytes_written = 0, nbytes_read = 0, rc = -1;
 
+#ifdef _WIN32
+    PurgeComm((HANDLE)_get_osfhandle(PortFD), PURGE_RXCLEAR | PURGE_TXCLEAR);
+#else
     tcflush(PortFD, TCIOFLUSH);
+#endif
 
     if (cmd_len > 0)
     {
@@ -1266,7 +1274,11 @@ bool SynscanDriver::sendCommand(const char * cmd, char * res, int cmd_len, int r
         LOGF_DEBUG("RES <%s>", res);
     }
 
+#ifdef _WIN32
+    PurgeComm((HANDLE)_get_osfhandle(PortFD), PURGE_RXCLEAR | PURGE_TXCLEAR);
+#else
     tcflush(PortFD, TCIOFLUSH);
+#endif
 
     return true;
 }

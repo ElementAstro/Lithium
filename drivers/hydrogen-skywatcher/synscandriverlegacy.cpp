@@ -18,8 +18,8 @@
 *******************************************************************************/
 
 #include "synscandriverlegacy.h"
-#include "connectionplugins/connectioninterface.h"
-#include "connectionplugins/connectiontcp.h"
+#include "connection/connectioninterface.h"
+#include "connection/connectiontcp.h"
 #include "hydrogencom.h"
 #include "libastro.h"
 

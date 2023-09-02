@@ -43,7 +43,6 @@ Description: Device Manager
 #include "Hydrogen/core/guider.hpp"
 
 #include "loguru/loguru.hpp"
-#include "tl/expected.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>
@@ -251,7 +250,7 @@ namespace Lithium
             LOG_F(ERROR, "Library path and name is required!");
             return false;
         }
-        if (const auto res = m_ModuleLoader->LoadModule(lib_path, lib_name); !res.has_value())
+        if (!m_ModuleLoader->LoadModule(lib_path, lib_name))
         {
             LOG_F(ERROR, "Failed to load device library : %s in %s", lib_name.c_str(), lib_path.c_str());
             return false;
@@ -368,12 +367,9 @@ namespace Lithium
             LOG_F(ERROR, "Library name is required");
             return false;
         }
-        if (const auto res = m_ModuleLoader->UnloadModule(lib_name); !res.has_value())
+        if (!m_ModuleLoader->UnloadModule(lib_name))
         {
-            if(res.error() == LIError::UnLoadError)
-            {
-                LOG_F(ERROR, "Failed to remove device library : %s with unload error", lib_name.c_str());
-            }
+            LOG_F(ERROR, "Failed to remove device library : %s with unload error", lib_name.c_str());
             return false;
         }
         return true;
@@ -540,7 +536,7 @@ namespace Lithium
         }
     }
 
-    tl::expected<bool, std::string> DeviceManager::setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value)
+    bool DeviceManager::setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value)
     {
         m_EventLoop->addTask([this, &value, &type, &name, &value_name]()
                              {
@@ -561,7 +557,7 @@ namespace Lithium
         return true;
     }
 
-    tl::expected<bool, std::string> DeviceManager::setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value)
+    bool DeviceManager::setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value)
     {
         m_EventLoop->addTask([this, &value, &name, &value_name]()
                              {

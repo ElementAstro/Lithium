@@ -44,12 +44,6 @@ Description: Device Manager
 
 #include "Hydrogen/event/eventloop.hpp"
 
-namespace tl
-{
-    template <class T, class E>
-    class expected;
-}
-
 namespace Lithium
 {
     enum class DeviceType
@@ -203,7 +197,7 @@ namespace Lithium
          * @param value 属性值。
          * @return 如果设置成功返回true，否则返回错误信息。
          */
-        tl::expected<bool, std::string> setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value);
+        bool setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value);
 
         /**
          * @brief 根据设备名称设置设备属性值。
@@ -212,7 +206,7 @@ namespace Lithium
          * @param value 属性值。
          * @return 如果设置成功返回true，否则返回错误信息。
          */
-        tl::expected<bool, std::string> setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value);
+        bool setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value);
 
     private:
         std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< 存储设备对象的数组，每个设备类型对应一个向量。

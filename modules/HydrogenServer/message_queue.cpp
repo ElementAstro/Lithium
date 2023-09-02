@@ -4,9 +4,10 @@
 
 #else
 #include <sys/socket.h>
+#endif
+
 #include <unistd.h>
 #include <fcntl.h>
-#endif
 
 #include "io.hpp"
 #include "hydrogen_server.hpp"

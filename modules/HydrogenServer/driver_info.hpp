@@ -85,9 +85,17 @@ class LocalDvrInfo : public DvrInfo
     char errbuff[1024]; /* buffer for stderr pipe. line too long will be clipped */
     int errbuffpos = 0; /* first free pos in buffer */
     ev::io eio;         /* Event loop io events */
+#ifdef _WIN32
+    ev_child pidwatcher;
+#else
     ev::child pidwatcher;
+#endif
     void onEfdEvent(ev::io &watcher, int revents); /* callback for data on efd */
+#ifdef _WIN32
+    void onPidEvent(ev_child &watcher, int revents);
+#else
     void onPidEvent(ev::child &watcher, int revents);
+#endif
 
     int pid = 0;  /* process id or 0 for N/A (not started/terminated) */
     int efd = -1; /* stderr from driver, or -1 when N/A */

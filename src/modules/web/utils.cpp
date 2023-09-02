@@ -62,6 +62,8 @@ Description: Network Utils
 #if __cplusplus >= 202002L
 #ifdef __cpp_lib_format
 #include <format>
+#else
+#include <fmt/format.h>
 #endif
 #else
 #include <fmt/format.h>

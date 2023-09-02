@@ -13,8 +13,6 @@ add_library(oatpp-swagger
     oatpp-swagger/Types.hpp
     oatpp-swagger/oas3/Model.hpp)
 
-target_link_libraries(oatpp-swagger PRIVATE oatpp)
-
 add_library(oatpp-websocket
     oatpp-websocket/AsyncConnectionHandler.cpp
     oatpp-websocket/AsyncConnectionHandler.hpp
@@ -36,8 +34,6 @@ add_library(oatpp-websocket
     oatpp-websocket/WebSocket.cpp
     oatpp-websocket/WebSocket.hpp
 )
-
-target_link_libraries(oatpp-websocket PRIVATE oatpp)
 
 add_library(oatpp-openssl
     oatpp-openssl/Config.cpp
@@ -74,9 +70,6 @@ add_library(oatpp-openssl
     oatpp-openssl/configurer/TrustStore.cpp
     oatpp-openssl/configurer/TrustStore.hpp
 )
-find_package(OpenSSL REQUIRED)
-target_link_libraries(oatpp-openssl PRIVATE oatpp)
-target_link_libraries(oatpp-openssl PRIVATE ${OPENSSL_LIBRARIES})
 
 add_library(oatpp-sqlite
     oatpp-sqlite/mapping/type/Blob.cpp
@@ -104,9 +97,6 @@ add_library(oatpp-sqlite
     oatpp-sqlite/Utils.cpp
     oatpp-sqlite/Utils.hpp
 )
-find_package(SQLite3 REQUIRED)
-target_link_libraries(oatpp-sqlite PRIVATE oatpp)
-target_link_libraries(oatpp-sqlite PRIVATE sqlite3)
 
 add_library(oatpp-zlib
     oatpp-zlib/Processor.cpp
@@ -114,9 +104,6 @@ add_library(oatpp-zlib
     oatpp-zlib/EncoderProvider.cpp
     oatpp-zlib/EncoderProvider.hpp
 )
-find_package(ZLIB REQUIRED)
-target_link_libraries(oatpp-zlib PRIVATE oatpp)
-target_link_libraries(oatpp-zlib PRIVATE ${ZLIB_LIBRARIES})
 
 add_library(oatpp-curl
         oatpp-curl/RequestExecutor.cpp
@@ -136,9 +123,6 @@ add_library(oatpp-curl
         oatpp-curl/io/CurlHeadersReader.cpp
         oatpp-curl/io/CurlHeadersReader.hpp
 )
-find_package(CURL REQUIRED)
-target_link_libraries(oatpp-curl PRIVATE oatpp)
-target_link_libraries(oatpp-curl PRIVATE CURL::libcurl)
 
 add_library(loguru loguru/loguru.cpp)
 if(LINUX)
@@ -150,9 +134,9 @@ if(LINUX)
 endif()
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
-target_link_libraries(cpp_httplib PRIVATE ${OPENSSL_LIBRARIES})
+target_link_libraries(cpp_httplib ${OPENSSL_LIBRARIES})
 if(WIN32)
-target_link_libraries(cpp_httplib PRIVATE crypt32)
+target_link_libraries(cpp_httplib crypt32)
 endif()
 if(LINUX)
     set_target_properties(cpp_httplib PROPERTIES
@@ -161,9 +145,3 @@ if(LINUX)
 endif()
 
 add_library(libzippp zippp/libzippp.cpp)
-
-add_library(
-  bustache
-  bustache/format.cpp
-  bustache/render.cpp
-)

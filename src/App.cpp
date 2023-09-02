@@ -35,7 +35,6 @@ Description: Main
 #include "controller/SystemController.hpp"
 #include "controller/WebSocketController.hpp"
 #include "controller/IOController.hpp"
-#include "controller/AuthController.hpp"
 #include "controller/ProcessController.hpp"
 #include "controller/PHD2Controller.hpp"
 #include "controller/TaskController.hpp"
@@ -127,11 +126,6 @@ void run()
     docEndpoints.append(star_controller->getEndpoints());
     router->addController(star_controller);
     LOG_F(INFO, "Star search controller loaded");
-
-    auto auth_controller = AuthController::createShared();
-    docEndpoints.append(auth_controller->getEndpoints());
-    router->addController(auth_controller);
-    LOG_F(INFO, "Auth controller loaded");
 
     // LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC

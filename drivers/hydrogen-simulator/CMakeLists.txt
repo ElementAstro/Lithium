@@ -63,3 +63,27 @@ SET(rotatorsim_SRC
 add_executable(hydrogen_simulator_rotator ${rotatorsim_SRC})
 target_link_libraries(hydrogen_simulator_rotator hydrogendriverstatic)
 install(TARGETS hydrogen_simulator_rotator RUNTIME DESTINATION bin)
+
+# ########## GPS Simulator Driver ###############
+SET(gpssimulator_SRC
+    gps_simulator.cpp)
+
+add_executable(hydrogen_simulator_gps ${gpssimulator_SRC})
+target_link_libraries(hydrogen_simulator_gps hydrogendriverstatic)
+install(TARGETS hydrogen_simulator_gps RUNTIME DESTINATION bin)
+
+# ########## Sky Quality Meter Simulator ###############
+SET(sqm_simulator_SRC
+    sqm_simulator.cpp)
+
+add_executable(hydrogen_simulator_sqm ${sqm_simulator_SRC})
+target_link_libraries(hydrogen_simulator_sqm hydrogendriverstatic)
+install(TARGETS hydrogen_simulator_sqm RUNTIME DESTINATION bin)
+
+# ########## Light Panel Simulator ###############
+SET(lightpanelsimulator_SRC
+    light_panel_simulator.cpp)
+
+add_executable(hydrogen_simulator_lightpanel ${lightpanelsimulator_SRC})
+target_link_libraries(hydrogen_simulator_lightpanel hydrogendriverstatic)
+install(TARGETS hydrogen_simulator_lightpanel RUNTIME DESTINATION bin)

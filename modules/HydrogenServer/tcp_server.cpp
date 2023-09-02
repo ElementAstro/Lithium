@@ -1,12 +1,14 @@
 #include "tcp_server.hpp"
 
 #ifdef _WIN32
-
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #else
-#include <fcntl.h>
 #include <netdb.h>
-#include <unistd.h>
 #endif
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "io.hpp"
 #include "client_info.hpp"
@@ -206,11 +208,21 @@ void TcpServer::listen()
     serv_socket.sin_addr.s_addr = htonl(INADDR_ANY);
 #endif
     serv_socket.sin_port = htons((unsigned short)port);
+#ifdef _WIN32
+    if (setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&reuse, sizeof(reuse)) < 0)
+    {
+        LOG_F(ERROR,"Failed to set receive timeout.");
+        close(sfd);
+        sfd = -1;
+        return;
+    }
+#else
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
         LOG_F(ERROR, "setsockopt: %s\n", strerror(errno));
         // Bye();
     }
+#endif
     if (bind(sfd, (struct sockaddr *)&serv_socket, sizeof(serv_socket)) < 0)
     {
         LOG_F(ERROR, "bind: %s\n", strerror(errno));

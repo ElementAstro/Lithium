@@ -1,16 +1,16 @@
 #include "driver_info.hpp"
 
 #include <unistd.h>
+#include <fcntl.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
+#include <windows.h>
 #else
 #include <sys/socket.h>
 #include <libgen.h>
-#include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
-
 #endif
 
 #include "lilxml.h"
@@ -579,4 +579,140 @@ void DvrInfo::log(const std::string &str) const
     logLine += ": ";
     logLine += str;
     LOG_F(INFO, "%s", logLine.c_str());
+}
+
+
+LocalDvrInfo::LocalDvrInfo() : DvrInfo(true)
+{
+    eio.set<LocalDvrInfo, &LocalDvrInfo::onEfdEvent>(this);
+    pidwatcher.set<LocalDvrInfo, &LocalDvrInfo::onPidEvent>(this);
+}
+
+LocalDvrInfo::LocalDvrInfo(const LocalDvrInfo &model) : DvrInfo(model),
+                                                        envDev(model.envDev),
+                                                        envConfig(model.envConfig),
+                                                        envSkel(model.envSkel),
+                                                        envPrefix(model.envPrefix)
+{
+    eio.set<LocalDvrInfo, &LocalDvrInfo::onEfdEvent>(this);
+    pidwatcher.set<LocalDvrInfo, &LocalDvrInfo::onPidEvent>(this);
+}
+
+LocalDvrInfo::~LocalDvrInfo()
+{
+    closeEfd();
+    if (pid != 0)
+    {
+        kill(pid, SIGKILL); /* libev insures there will be no zombies */
+        pid = 0;
+    }
+    closePid();
+}
+
+LocalDvrInfo *LocalDvrInfo::clone() const
+{
+    return new LocalDvrInfo(*this);
+}
+
+void LocalDvrInfo::closeEfd()
+{
+    ::close(efd);
+    efd = -1;
+    eio.stop();
+}
+
+void LocalDvrInfo::closePid()
+{
+    pid = 0;
+    pidwatcher.stop();
+}
+
+void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
+{
+    if (EV_ERROR & revents)
+    {
+        int sockErrno = readFdError(this->efd);
+        if (sockErrno)
+        {
+            LOG_F(ERROR,"Error on stderr: %s\n", strerror(sockErrno));
+            closeEfd();
+        }
+        return;
+    }
+
+    if (revents & EV_READ)
+    {
+        ssize_t nr;
+
+        /* read more */
+        nr = read(efd, errbuff + errbuffpos, sizeof(errbuff) - errbuffpos);
+        if (nr <= 0)
+        {
+            if (nr < 0)
+            {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    return;
+
+                LOG_F(ERROR, "stderr %s\n", strerror(errno));
+            }
+            else
+                LOG_F(ERROR, "stderr EOF\n");
+            closeEfd();
+            return;
+        }
+        errbuffpos += nr;
+
+        for (int i = 0; i < errbuffpos; ++i)
+        {
+            if (errbuff[i] == '\n')
+            {
+                LOG_F(ERROR,"%.*s\n", (int)i, errbuff);
+                i++;                                       /* count including nl */
+                errbuffpos -= i;                           /* remove from nexbuf */
+                memmove(errbuff, errbuff + i, errbuffpos); /* slide remaining to front */
+                i = -1;                                    /* restart for loop scan */
+            }
+        }
+    }
+}
+
+#ifdef _WIN32
+void LocalDvrInfo::onPidEvent(ev_child &, int revents)
+#else
+void LocalDvrInfo::onPidEvent(ev::child &, int revents)
+#endif
+{
+    if (revents & EV_CHILD)
+    {
+        if (WIFEXITED(pidwatcher.rstatus))
+        {
+            LOG_F(ERROR,"process %d exited with status %d\n", pid, WEXITSTATUS(pidwatcher.rstatus));
+        }
+        else if (WIFSIGNALED(pidwatcher.rstatus))
+        {
+            int signum = WTERMSIG(pidwatcher.rstatus);
+            LOG_F(ERROR,"process %d killed with signal %d - %s\n", pid, signum, strsignal(signum));
+        }
+        pid = 0;
+        this->pidwatcher.stop();
+    }
+}
+
+RemoteDvrInfo::RemoteDvrInfo() : DvrInfo(false)
+{
+}
+
+RemoteDvrInfo::RemoteDvrInfo(const RemoteDvrInfo &model) : DvrInfo(model),
+                                                           host(model.host),
+                                                           port(model.port)
+{
+}
+
+RemoteDvrInfo::~RemoteDvrInfo()
+{
+}
+
+RemoteDvrInfo *RemoteDvrInfo::clone() const
+{
+    return new RemoteDvrInfo(*this);
 }

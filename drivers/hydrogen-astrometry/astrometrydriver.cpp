@@ -32,7 +32,7 @@
 #include <zlib.h>
 
 // We declare an auto pointer to AstrometryDriver.
-std::unique_ptr<AstrometryDriver> astrometry(new AstrometryDriver());
+std::unique_ptr<AstrometryDriver> astrometry = std::make_unique<AstrometryDriver>();
 
 AstrometryDriver::AstrometryDriver()
 {

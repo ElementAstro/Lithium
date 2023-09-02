@@ -32,7 +32,6 @@ Description: Lithium App Enter
 #include "LithiumApp.hpp"
 
 #include "loguru/loguru.hpp"
-#include "tl/expected.hpp"
 
 namespace Lithium
 {
@@ -262,20 +261,20 @@ namespace Lithium
 
     bool LithiumApp::runChaiCommand(const std::string &command)
     {
-        if (const auto res = m_ScriptManager->runCommand(command); res.has_value())
+        if (m_ScriptManager->runCommand(command))
         {
             return true;
         }
         else
         {
-            LOG_F(ERROR, "Failed to run chai command : %s with %s", command.c_str(), res.error().c_str());
+            LOG_F(ERROR, "Failed to run chai command : %s", command.c_str());
         }
         return false;
     }
 
     bool LithiumApp::runChaiMultiCommand(const std::vector<std::string> &command)
     {
-        if (const auto res = m_ScriptManager->runMultiCommand(command); res.has_value())
+        if (m_ScriptManager->runMultiCommand(command))
         {
             return true;
         }
@@ -286,33 +285,33 @@ namespace Lithium
             {
                 result += str + "\n";
             }
-            LOG_F(ERROR, "Failed to run chai multi command %s with %s", result.c_str(), res.error().c_str());
+            LOG_F(ERROR, "Failed to run chai multi command %s", result.c_str());
         }
         return true;
     }
 
     bool LithiumApp::loadChaiScriptFile(const std::string &filename)
     {
-        if (const auto res = m_ScriptManager->loadScriptFile(filename); res.has_value())
+        if (m_ScriptManager->loadScriptFile(filename))
         {
             return true;
         }
         else
         {
-            LOG_F(ERROR, "Failed to load chaiscript file %s with %s", filename.c_str(), res.error().c_str());
+            LOG_F(ERROR, "Failed to load chaiscript file %s", filename.c_str());
             return false;
         }
     }
 
     bool LithiumApp::runChaiScript(const std::string &filename)
     {
-        if (const auto res = m_ScriptManager->runScript(filename); res.has_value())
+        if (m_ScriptManager->runScript(filename))
         {
             return true;
         }
         else
         {
-            LOG_F(ERROR, "Failed to run chai script %s with %s", filename.c_str(), res.error().c_str());
+            LOG_F(ERROR, "Failed to run chai script %s", filename.c_str());
             return false;
         }
     }

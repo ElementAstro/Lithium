@@ -24,9 +24,9 @@
 #include "skywatcherAPIMount.h"
 
 #include "hydrogencom.h"
-#include "connectionplugins/connectiontcp.h"
+#include "connection/connectiontcp.h"
 #include "alignment/DriverCommon.h"
-#include "connectionplugins/connectionserial.h"
+#include "connection/connectionserial.h"
 
 #include <chrono>
 #include <thread>

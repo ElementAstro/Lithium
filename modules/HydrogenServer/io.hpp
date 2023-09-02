@@ -2,6 +2,10 @@
 
 #include <unistd.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 int readFdError(int fd);
 #ifdef _WIN32
 void* attachSharedBuffer(HANDLE fileHandle, size_t& size);

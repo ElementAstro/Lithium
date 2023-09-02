@@ -50,7 +50,7 @@ ELSE()
     )
 ENDIF()
 
-target_link_libraries(AlignmentDriver hydrogendevice hydrogenclientstatic)
+target_link_libraries(AlignmentDriver hydrogendriverstatic hydrogenclientstatic)
 
 if(HYDROGEN_BUILD_QT5)
     target_link_libraries(AlignmentDriver Qt5::Network)

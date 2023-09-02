@@ -7,7 +7,7 @@ add_library(${PROJECT_NAME} OBJECT "")
 
 include(CPack)
 
-configure_file(hydrogenapi.h.in hydrogenapi.h @ONLY)
+configure_file(hydrogenapi.h.in ${CMAKE_BINARY_DIR}/hydrogenapi.h @ONLY)
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS

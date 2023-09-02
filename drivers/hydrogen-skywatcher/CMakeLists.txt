@@ -1,10 +1,10 @@
-
+include_directories({$HE})
 # ########## Syncscan ###############
 add_executable(hydrogen_synscan_telescope
     synscandriver.cpp
     synscanmount.cpp)
 
-target_link_libraries(hydrogen_synscan_telescope hydrogendriver AlignmentDriver)
+target_link_libraries(hydrogen_synscan_telescope hydrogendriverstatic AlignmentDriver)
 
 install(TARGETS hydrogen_synscan_telescope RUNTIME DESTINATION bin)
 
@@ -13,7 +13,7 @@ add_executable(hydrogen_synscanlegacy_telescope
     synscandriverlegacy.cpp
     synscanmountlegacy.cpp)
 
-target_link_libraries(hydrogen_synscanlegacy_telescope hydrogendriver AlignmentDriver)
+target_link_libraries(hydrogen_synscanlegacy_telescope hydrogendriverstatic AlignmentDriver)
 
 install(TARGETS hydrogen_synscanlegacy_telescope RUNTIME DESTINATION bin)
 

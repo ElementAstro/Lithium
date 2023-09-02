@@ -7,6 +7,10 @@
 
 #include "base64.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "io.hpp"
 #include "message.hpp"
 #include "message_queue.hpp"
@@ -370,7 +374,11 @@ void SerializedMsgWithoutSharedBuffer::generateContent()
                 fds[i] = sharedBuffers[i];
 
                 size_t dataSize;
+#ifdef _WIN32
+                blobs[i] = attachSharedBuffer((HANDLE)_get_osfhandle(fds[i]), dataSize);
+#else
                 blobs[i] = attachSharedBuffer(fds[i], dataSize);
+#endif
                 attachedSizes[i] = dataSize;
 
                 // check dataSize is compatible with the blob element's size
@@ -427,8 +435,11 @@ void SerializedMsgWithoutSharedBuffer::generateContent()
                 }
 
                 // Dettach blobs ASAP
-                dettachSharedBuffer(fds[i], blobs[i], attachedSizes[i]);
-
+#ifdef _WIN32
+                detachSharedBuffer(blobs[i]);
+#else
+                detachSharedBuffer(fds[i], blobs[i], attachedSizes[i]);
+#endif
                 // requirements.sharedBuffers.erase(fds[i]);
             }
             else

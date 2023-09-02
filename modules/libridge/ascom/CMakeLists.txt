@@ -21,6 +21,8 @@ add_library(
 
 target_link_libraries(ascom_remote PRIVATE LithiumDriver LithiumProperty loguru cpp_httplib)
 
+target_link_libraries(ascom_remote PRIVATE ${OPENSSL_LIBRARIES})
+
 if(WIN32)
 target_link_libraries(ascom_remote PRIVATE wsock32 ws2_32)
 endif()

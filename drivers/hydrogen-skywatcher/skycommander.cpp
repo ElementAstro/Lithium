@@ -23,7 +23,11 @@
 #include "hydrogencom.h"
 
 #include <memory>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <termios.h>
+#endif
 
 #define SKYCOMMANDER_TIMEOUT 3
 
@@ -47,12 +51,16 @@ bool SkyCommander::Handshake()
 
 bool SkyCommander::ReadScopeStatus()
 {
-    char CR[1] = { 0x0D };
+    char CR[1] = {0x0D};
     int rc = 0, nbytes_read = 0, nbytes_written = 0;
 
     LOGF_DEBUG("CMD: %#02X", CR[0]);
 
+#ifdef _WIN32
+    PurgeComm((HANDLE)_get_osfhandle(PortFD), PURGE_RXCLEAR);
+#else
     tcflush(PortFD, TCIFLUSH);
+#endif
 
     if ((rc = tty_write(PortFD, CR, 1, &nbytes_written)) != TTY_OK)
     {

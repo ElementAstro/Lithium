@@ -40,7 +40,6 @@ Description: C++ and Modules Loader
 #include <regex>
 
 #include <nlohmann/json.hpp>
-#include <tl/expected.hpp>
 
 namespace fs = std::filesystem;
 
@@ -262,12 +261,12 @@ namespace Lithium
         }
     }
 
-    tl::expected<bool, LIError> ModuleLoader::LoadOnInit(const std::string &dir_name)
+    bool ModuleLoader::LoadOnInit(const std::string &dir_name)
     {
         if (dir_name.empty())
         {
             LOG_F(ERROR, "Directory name is empty");
-            return tl::unexpected(LIError::InvalidPath);
+            return false;
         }
         const nlohmann::json dir_info = iterator_modules_dir(dir_name);
         LOG_F(INFO, "%s", dir_info.dump(4).c_str());
@@ -289,7 +288,7 @@ namespace Lithium
         return true;
     }
 
-    tl::expected<bool, LIError> ModuleLoader::LoadModule(const std::string &path, const std::string &name)
+    bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)
     {
         try
         {
@@ -297,7 +296,7 @@ namespace Lithium
             if (!std::filesystem::exists(path))
             {
                 LOG_F(ERROR, "Library %s does not exist", path.c_str());
-                return tl::unexpected(LIError::NotFound);
+                return false;
             }
 
             // Load the library file
@@ -305,7 +304,7 @@ namespace Lithium
             if (!handle)
             {
                 LOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), LOAD_ERROR());
-                return tl::unexpected(LIError::LoadError);
+                return false;
             }
 
             // Read the configuration file in JSON format
@@ -344,11 +343,11 @@ namespace Lithium
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), e.what());
-            return tl::unexpected(LIError::LoadError);
+            return false;
         }
     }
 
-    tl::expected<bool, LIError> ModuleLoader::UnloadModule(const std::string &filename)
+    bool ModuleLoader::UnloadModule(const std::string &filename)
     {
         try
         {
@@ -357,13 +356,13 @@ namespace Lithium
             if (it == handles_.end())
             {
                 LOG_F(ERROR, "Module %s is not loaded", filename.c_str());
-                return tl::unexpected(LIError::NotFound);
+                return false;
             }
 
             if (!it->second)
             {
                 LOG_F(ERROR, "Module %s's handle is null", filename.c_str());
-                return tl::unexpected(LIError::UnLoadError);
+                return false;
             }
 
             // Unload the library and remove its handle from handles_ map
@@ -377,13 +376,13 @@ namespace Lithium
             else
             {
                 LOG_F(ERROR, "Failed to unload module %s", filename.c_str());
-                return tl::unexpected(LIError::UnLoadError);
+                return false;
             }
         }
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "%s", e.what());
-            return tl::unexpected(LIError::UnLoadError);
+            return false;
         }
     }
 
@@ -405,7 +404,7 @@ namespace Lithium
         return handles_.count(name) > 0;
     }
 
-    tl::expected<bool, LIError> ModuleLoader::EnableModule(const std::string &module_name)
+    bool ModuleLoader::EnableModule(const std::string &module_name)
     {
         auto it = disabled_modules_.find(module_name);
         if (it != disabled_modules_.end())
@@ -434,7 +433,7 @@ namespace Lithium
         return true;
     }
 
-    tl::expected<bool, LIError> ModuleLoader::DisableModule(const std::string &module_name)
+    bool ModuleLoader::DisableModule(const std::string &module_name)
     {
         auto it = handles_.find(module_name);
         if (it != handles_.end())

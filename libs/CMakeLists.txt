@@ -71,57 +71,11 @@ add_library(oatpp-openssl
     oatpp-openssl/configurer/TrustStore.hpp
 )
 
-add_library(oatpp-sqlite
-    oatpp-sqlite/mapping/type/Blob.cpp
-    oatpp-sqlite/mapping/type/Blob.hpp
-    oatpp-sqlite/mapping/Deserializer.cpp
-    oatpp-sqlite/mapping/Deserializer.hpp
-    oatpp-sqlite/mapping/ResultMapper.cpp
-    oatpp-sqlite/mapping/ResultMapper.hpp
-    oatpp-sqlite/mapping/Serializer.cpp
-    oatpp-sqlite/mapping/Serializer.hpp
-    oatpp-sqlite/ql_template/Parser.cpp
-    oatpp-sqlite/ql_template/Parser.hpp
-    oatpp-sqlite/ql_template/TemplateValueProvider.cpp
-    oatpp-sqlite/ql_template/TemplateValueProvider.hpp
-    oatpp-sqlite/Connection.cpp
-    oatpp-sqlite/Connection.hpp
-    oatpp-sqlite/ConnectionProvider.cpp
-    oatpp-sqlite/ConnectionProvider.hpp
-    oatpp-sqlite/Executor.cpp
-    oatpp-sqlite/Executor.hpp
-    oatpp-sqlite/QueryResult.cpp
-    oatpp-sqlite/QueryResult.hpp
-    oatpp-sqlite/Types.hpp
-    oatpp-sqlite/orm.hpp
-    oatpp-sqlite/Utils.cpp
-    oatpp-sqlite/Utils.hpp
-)
-
 add_library(oatpp-zlib
     oatpp-zlib/Processor.cpp
     oatpp-zlib/Processor.hpp
     oatpp-zlib/EncoderProvider.cpp
     oatpp-zlib/EncoderProvider.hpp
-)
-
-add_library(oatpp-curl
-        oatpp-curl/RequestExecutor.cpp
-        oatpp-curl/RequestExecutor.hpp
-        oatpp-curl/io/BodyDecoder.cpp
-        oatpp-curl/io/BodyDecoder.hpp
-        oatpp-curl/io/BodyInputStream.cpp
-        oatpp-curl/io/BodyInputStream.hpp
-        oatpp-curl/io/BodyOutputStream.cpp
-        oatpp-curl/io/BodyOutputStream.hpp
-        oatpp-curl/io/Curl.cpp
-        oatpp-curl/io/Curl.hpp
-        oatpp-curl/io/CurlBodyReader.cpp
-        oatpp-curl/io/CurlBodyReader.hpp
-        oatpp-curl/io/CurlBodyWriter.cpp
-        oatpp-curl/io/CurlBodyWriter.hpp
-        oatpp-curl/io/CurlHeadersReader.cpp
-        oatpp-curl/io/CurlHeadersReader.hpp
 )
 
 add_library(loguru loguru/loguru.cpp)
@@ -145,3 +99,5 @@ if(LINUX)
 endif()
 
 add_library(libzippp zippp/libzippp.cpp)
+
+add_subdirectory(backward)

@@ -211,7 +211,7 @@ void TcpServer::listen()
 #ifdef _WIN32
     if (setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&reuse, sizeof(reuse)) < 0)
     {
-        LOG_F(ERROR,"Failed to set receive timeout.");
+        LOG_F(ERROR, "Failed to set receive timeout.");
         close(sfd);
         sfd = -1;
         return;
@@ -236,7 +236,12 @@ void TcpServer::listen()
         // Bye();
     }
 
+#ifdef _WIN32
+    int fd = _fileno(reinterpret_cast<FILE*>(_get_osfhandle(sfd)));
+    _setmode(fd, _O_BINARY);
+#else
     fcntl(sfd, F_SETFL, fcntl(sfd, F_GETFL, 0) | O_NONBLOCK);
+#endif
     sfdev.start(sfd, EV_READ);
 
     /* ok */

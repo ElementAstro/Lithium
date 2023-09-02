@@ -39,7 +39,6 @@ Description: Main
 #include "controller/PHD2Controller.hpp"
 #include "controller/TaskController.hpp"
 #include "controller/UploadController.hpp"
-#include "controller/StarController.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -50,6 +49,7 @@ Description: Main
 #include "oatpp/network/Server.hpp"
 
 #include <argparse/argparse.hpp>
+#include <backward/backward.hpp>
 
 #include "LithiumApp.hpp"
 
@@ -121,11 +121,6 @@ void run()
     docEndpoints.append(upload_controller->getEndpoints());
     router->addController(upload_controller);
     LOG_F(INFO, "Upload controller loaded");
-
-    auto star_controller = StarController::createShared();
-    docEndpoints.append(star_controller->getEndpoints());
-    router->addController(star_controller);
-    LOG_F(INFO, "Star search controller loaded");
 
     // LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC

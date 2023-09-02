@@ -23,6 +23,124 @@
 /* start the given local HYDROGEN driver process.
  * exit if trouble.
  */
+#ifdef _WIN32
+void LocalDvrInfo::start()
+{
+    Msg *mp;
+    HANDLE hReadPipe, hWritePipe, hErrorPipe;
+    SECURITY_ATTRIBUTES sa;
+    PROCESS_INFORMATION pi;
+    STARTUPINFO si;
+    HANDLE hEfd;
+    DWORD pid;
+
+#ifdef OSX_EMBEDED_MODE
+    fprintf(stderr, "STARTING \"%s\"\n", name.c_str());
+    fflush(stderr);
+#endif
+
+    HANDLE hRp, hWp, hEp; // 修改变量声明为HANDLE类型
+
+    /* build three pipes: r, w and error*/
+    if (useSharedBuffer)
+    {
+        // FIXME: lots of FD are opened by hydrogenserver. FD_CLOEXEC is a must + check other fds
+        sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+        sa.bInheritHandle = TRUE;
+        sa.lpSecurityDescriptor = NULL;
+        if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0))
+        {
+            // log(fmt("CreatePipe: %d\n", GetLastError()));
+            // Bye();
+        }
+        hErrorPipe = hWritePipe;
+    }
+    else
+    {
+
+        if (!CreatePipe(&hRp, &hWp, NULL, 4096))
+        {
+            // log(fmt("CreatePipe read: %d\n", GetLastError()));
+            // Bye();
+        }
+        if (!CreatePipe(&hRp, &hEp, NULL, 4096))
+        {
+            // log(fmt("CreatePipe error: %d\n", GetLastError()));
+            // Bye();
+        }
+        hReadPipe = hRp;
+        hWritePipe = hWp;
+        hErrorPipe = hEp;
+    }
+
+    /* fork&exec new process */
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    si.cb = sizeof(STARTUPINFO);
+    si.hStdInput = hReadPipe;
+    si.hStdOutput = hWritePipe;
+    si.hStdError = hErrorPipe;
+    si.dwFlags |= STARTF_USESTDHANDLES;
+
+    if (!CreateProcess(NULL, (LPSTR)name.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+    {
+        // log(fmt("CreateProcess: %d\n", GetLastError()));
+        // Bye();
+    }
+
+    if (useSharedBuffer)
+    {
+        /* don't need child's other socket end */
+        CloseHandle(hReadPipe);
+
+        /* record pid, io channels, init lp and snoop list */
+        setFds(reinterpret_cast<intptr_t>(hWritePipe), reinterpret_cast<intptr_t>(hWritePipe));
+    }
+    else
+    {
+        /* don't need child's side of pipes */
+        CloseHandle(hWritePipe);
+        CloseHandle(hReadPipe);
+
+        /* record pid, io channels, init lp and snoop list */
+        setFds(reinterpret_cast<intptr_t>(int) hRp, reinterpret_cast<intptr_t>(int) hWp); // 修改为使用新的变量名
+    }
+
+    CloseHandle(hErrorPipe);
+
+    // Watch pid
+    this->pid = pi.dwProcessId;
+    do
+    {
+        (this->pidwatcher).pid = (this->pid);
+        (this->pidwatcher).flags = !!(1);
+    } while (0);
+    ev_child_set()
+    this->pidwatcher.set(this->pid);
+    //this->pidwatcher.start();
+
+    // Watch input on efd
+    hEfd = hEp; // 修改为使用新的变量名
+    SetHandleInformation(hEfd, HANDLE_FLAG_INHERIT, 0);
+    this->efd = _open_osfhandle(reinterpret_cast<intptr_t>(hEfd), _O_RDONLY | _O_BINARY);
+    unsigned long mode = 1;
+    ioctlsocket(this->efd, FIONBIO, &mode);
+    this->eio.start(this->efd, ev::READ);
+
+    /* first message primes driver to report its properties -- dev known
+     * if restarting
+     */
+    if (verbose > 0)
+        LOG_F(INFO, "pid=%d rfd=%d wfd=%d efd=%d\n", pid, (int)hRp, (int)hWp, (int)hEp);
+
+    XMLEle *root = addXMLEle(NULL, "getProperties");
+    addXMLAtt(root, "version", TO_STRING(HYDROGENV));
+    mp = new Msg(nullptr, root);
+
+    // pushmsg can kill mp. do at end
+    pushMsg(mp);
+}
+
+#else
 void LocalDvrInfo::start()
 {
     Msg *mp;
@@ -189,6 +307,7 @@ void LocalDvrInfo::start()
     // pushmsg can kill mp. do at end
     pushMsg(mp);
 }
+#endif
 
 void RemoteDvrInfo::extractRemoteId(const std::string &name, std::string &o_host, int &o_port, std::string &o_dev) const
 {
@@ -309,7 +428,7 @@ void DvrInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
         traceMsg("read ", root);
     else if (verbose > 1)
     {
-        LOG_F(ERROR, "read <%s device='%s' name='%s'>\n",tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
+        LOG_F(ERROR, "read <%s device='%s' name='%s'>\n", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
     }
 
     /* that's all if driver is just registering a snoop */
@@ -581,7 +700,6 @@ void DvrInfo::log(const std::string &str) const
     LOG_F(INFO, "%s", logLine.c_str());
 }
 
-
 LocalDvrInfo::LocalDvrInfo() : DvrInfo(true)
 {
     eio.set<LocalDvrInfo, &LocalDvrInfo::onEfdEvent>(this);
@@ -634,7 +752,7 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
         int sockErrno = readFdError(this->efd);
         if (sockErrno)
         {
-            LOG_F(ERROR,"Error on stderr: %s\n", strerror(sockErrno));
+            LOG_F(ERROR, "Error on stderr: %s\n", strerror(sockErrno));
             closeEfd();
         }
         return;
@@ -666,7 +784,7 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
         {
             if (errbuff[i] == '\n')
             {
-                LOG_F(ERROR,"%.*s\n", (int)i, errbuff);
+                LOG_F(ERROR, "%.*s\n", (int)i, errbuff);
                 i++;                                       /* count including nl */
                 errbuffpos -= i;                           /* remove from nexbuf */
                 memmove(errbuff, errbuff + i, errbuffpos); /* slide remaining to front */
@@ -686,12 +804,12 @@ void LocalDvrInfo::onPidEvent(ev::child &, int revents)
     {
         if (WIFEXITED(pidwatcher.rstatus))
         {
-            LOG_F(ERROR,"process %d exited with status %d\n", pid, WEXITSTATUS(pidwatcher.rstatus));
+            LOG_F(ERROR, "process %d exited with status %d\n", pid, WEXITSTATUS(pidwatcher.rstatus));
         }
         else if (WIFSIGNALED(pidwatcher.rstatus))
         {
             int signum = WTERMSIG(pidwatcher.rstatus);
-            LOG_F(ERROR,"process %d killed with signal %d - %s\n", pid, signum, strsignal(signum));
+            LOG_F(ERROR, "process %d killed with signal %d - %s\n", pid, signum, strsignal(signum));
         }
         pid = 0;
         this->pidwatcher.stop();

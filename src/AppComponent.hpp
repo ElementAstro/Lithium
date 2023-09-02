@@ -41,7 +41,6 @@ Description: App Components
 #include "ErrorHandler.hpp"
 
 #include "components/SwaggerComponent.hpp"
-#include "components/DatabaseComponent.hpp"
 
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-openssl/configurer/TrustStore.hpp"
@@ -94,11 +93,6 @@ public:
      *  Swagger component
      */
     SwaggerComponent swaggerComponent;
-
-    /**
-     * Database component
-     */
-    DatabaseComponent databaseComponent;
 
 #if ENABLE_ASYNC
     /**

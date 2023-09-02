@@ -9,6 +9,10 @@
 #include "message.hpp"
 #include "concurrent.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <ev++.h>
 
 class MsgQueue : public Collectable
@@ -23,8 +27,12 @@ class MsgQueue : public Collectable
 
     std::set<SerializedMsg *> readBlocker; /* The message that block this queue */
 
-    std::list<SerializedMsg *> msgq;      /* To send msg queue */
+    std::list<SerializedMsg *> msgq; /* To send msg queue */
+#ifdef _WIN32
+    std::list<HANDLE> incomingSharedBuffers;
+#else
     std::list<int> incomingSharedBuffers; /* During reception, fds accumulate here */
+#endif
 
     // Position in the head message
     MsgChunckIterator nsent;

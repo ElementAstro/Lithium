@@ -97,6 +97,11 @@ if(ENABLE_ASYNC)
     set(ENABLE_ASYNC_FLAG "1")
 endif()
 
+option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
+if(ENABLE_NATIVE_SERVER)
+    set(ENABLE_NATIVE_SERVER_FLAG "1")
+endif()
+
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -323,12 +328,8 @@ set(system_module
 )
 
 set(Lithium_SRC
-
 	${lithium_src_dir}/ErrorHandler.cpp
     ${lithium_src_dir}/ErrorHandler.hpp
-
-    ${lithium_src_dir}/service/StarService.cpp
-    ${lithium_src_dir}/service/StarService.hpp
 
     ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp
@@ -360,7 +361,7 @@ if(WIN32)
     
     target_link_libraries(lithium_server pdh iphlpapi winmm crypt32 wsock32 ws2_32)
 
-    target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib)
+    target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
 
     target_link_libraries(lithium_server loguru)
 
@@ -379,12 +380,15 @@ if(WIN32)
     endif()
 
     target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
-    target_link_libraries(lithium_server ${OPENSSL_LIBRARIES})
+    target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
     target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
     target_link_libraries(lithium_server libzip::zip)
     target_link_libraries(lithium_server pugixml-static)
     target_link_libraries(lithium_server sqlite3)
     target_link_libraries(lithium_server cpp_httplib)
+    target_link_libraries(lithium_server backward)
+
+    find_package(libuv REQUIRED)
 
     # Set output name for Lithium executable
     set_target_properties(
@@ -397,14 +401,12 @@ if(WIN32)
     install(TARGETS oatpp)
     install(TARGETS oatpp-zlib)
     install(TARGETS oatpp-openssl)
-    install(TARGETS oatpp-sqlite)
-    install(TARGETS oatpp-curl)
     install(TARGETS oatpp-websocket)
 elseif(UNIX OR LINUX OR APPLE)
     
     add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
 
-    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-sqlite oatpp-zlib oatpp)
+    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 
     target_link_libraries(lithium_server loguru)
 
@@ -426,6 +428,7 @@ elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server pugixml-static)
     target_link_libraries(lithium_server sqlite3)
     target_link_libraries(lithium_server cpp_httplib)
+    target_link_libraries(lithium_server backward)
 
     target_link_libraries(lithium_server dl)
 

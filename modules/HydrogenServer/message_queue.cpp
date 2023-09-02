@@ -1,7 +1,10 @@
 #include "message_queue.hpp"
 
 #ifdef _WIN32
-
+#include <WinSock2.h> // 包含 WinSock2 库
+#include <MSWSock.h>  // 包含 MSWSock 库
+#include <ws2def.h>
+#include <windows.h>
 #else
 #include <sys/socket.h>
 #endif
@@ -59,7 +62,11 @@ void MsgQueue::closeWritePart()
 
     if (oldWFd == rFd)
     {
+#ifdef _WIN32
+        if (shutdown(static_cast<SOCKET>(oldWFd), SD_SEND) == SOCKET_ERROR)
+#else
         if (shutdown(oldWFd, SHUT_WR) == -1)
+#endif
         {
             if (errno != ENOTCONN)
             {
@@ -102,10 +109,21 @@ void MsgQueue::setFds(int rFd, int wFd)
 
     if (rFd != -1)
     {
+#ifdef _WIN32
+        int fd = _fileno(reinterpret_cast<FILE *>(_get_osfhandle(rFd)));
+        _setmode(fd, _O_BINARY);
+#else
         fcntl(rFd, F_SETFL, fcntl(rFd, F_GETFL, 0) | O_NONBLOCK);
+#endif
+
         if (wFd != rFd)
         {
+#ifdef _WIN32
+            int fd = _fileno(reinterpret_cast<FILE *>(_get_osfhandle(wFd)));
+            _setmode(fd, _O_BINARY);
+#else
             fcntl(wFd, F_SETFL, fcntl(wFd, F_GETFL, 0) | O_NONBLOCK);
+#endif
         }
 
         rio.set(rFd, ev::READ);
@@ -229,6 +247,83 @@ void MsgQueue::ioCb(ev::io &, int revents)
         writeToFd();
 }
 
+#ifdef _WIN32
+size_t MsgQueue::doRead(char *buf, size_t nr)
+{
+    if (!useSharedBuffer)
+    {
+        // 非共享缓冲区方式
+        DWORD bytesToRead = static_cast<DWORD>(nr);
+        DWORD bytesRead = 0;
+        if (!ReadFile(reinterpret_cast<HANDLE>(rFd), buf, bytesToRead, &bytesRead, NULL))
+        {
+            // 错误处理
+            return -1;
+        }
+        return bytesRead;
+    }
+    else
+    {
+        // 使用共享缓冲区方式
+        WSABUF wsaBuf{nr, buf};
+        DWORD bytesReceived = 0;
+        DWORD flags = 0;
+        WSAMSG wsaMsg;
+        memset(&wsaMsg, 0x0, sizeof(wsaMsg));
+        wsaMsg.name = nullptr;
+        wsaMsg.namelen = 0;
+        wsaMsg.lpBuffers = &wsaBuf;
+        wsaMsg.dwBufferCount = 1;
+
+        std::vector<char> controlBuffer(sizeof(WSACMSGHDR) + WSA_CMSG_SPACE(MAXFD_PER_MESSAGE * sizeof(HANDLE)));
+        wsaMsg.Control.len = static_cast<ULONG>(controlBuffer.size());
+        wsaMsg.Control.buf = controlBuffer.data();
+
+        LPFN_WSARECVMSG pfnWSARecvMsg = nullptr;
+        GUID guidWSARecvMsg = WSAID_WSARECVMSG;
+        DWORD dwBytes = 0;
+        SOCKET sock;
+        if (WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guidWSARecvMsg, sizeof(guidWSARecvMsg),
+                     &pfnWSARecvMsg, sizeof(pfnWSARecvMsg), &dwBytes, nullptr, nullptr) != 0)
+        {
+            // 错误处理
+            return -1;
+        }
+
+        int result = pfnWSARecvMsg(sock, &wsaMsg, &bytesReceived, nullptr, nullptr);
+        if (result == SOCKET_ERROR)
+        {
+            // 错误处理
+            return -1;
+        }
+
+        for (char *pData = (wsaMsg.Control.buf); pData < (wsaMsg.Control.buf + wsaMsg.Control.len);)
+        {
+            WSACMSGHDR *pHdr = reinterpret_cast<WSACMSGHDR *>(pData);
+            if (pHdr->cmsg_level == SOL_SOCKET)
+            {
+                DWORD fdCount = 0;
+                while (WSA_CMSG_NXTHDR(&wsaMsg, pHdr) != nullptr)
+                {
+                    pHdr = WSA_CMSG_NXTHDR(&wsaMsg, pHdr);
+                    if (pHdr->cmsg_level == SOL_SOCKET)
+                    {
+                        fdCount++;
+                    }
+                }
+
+                int *pfds = reinterpret_cast<int *>(WSA_CMSG_DATA(pHdr));
+                for (int i = 0; i < fdCount; ++i)
+                {
+                    incomingSharedBuffers.push_back(reinterpret_cast<HANDLE>(static_cast<INT_PTR>(pfds[i])));
+                }
+            }
+            pData += pHdr->cmsg_len;
+        }
+        return bytesReceived;
+    }
+}
+#else
 size_t MsgQueue::doRead(char *buf, size_t nr)
 {
     if (!useSharedBuffer)
@@ -299,6 +394,7 @@ size_t MsgQueue::doRead(char *buf, size_t nr)
         return size;
     }
 }
+#endif
 
 void MsgQueue::readFromFd()
 {
@@ -361,6 +457,123 @@ void MsgQueue::readFromFd()
     free(nodes);
 }
 
+#ifdef _WIN32
+void MsgQueue::writeToFd()
+{
+    ssize_t nw;
+    void *data;
+    ssize_t nsend;
+    std::vector<int> sharedBuffers;
+
+    // 获取当前消息
+    auto mp = headMsg();
+    if (mp == nullptr)
+    {
+        LOG_F(ERROR, "Unexpected write notification");
+        return;
+    }
+
+    do
+    {
+        if (!mp->getContent(nsent, data, nsend, sharedBuffers))
+        {
+            wio.stop();
+            return;
+        }
+
+        if (nsend == 0)
+        {
+            consumeHeadMsg();
+            mp = headMsg();
+            if (mp == nullptr)
+            {
+                return;
+            }
+        }
+    } while (nsend == 0);
+
+    // 发送下一个块，不超过MAXWSIZ以减少阻塞
+    if (nsend > MAXWSIZ)
+        nsend = MAXWSIZ;
+
+    if (!useSharedBuffer)
+    {
+        nw = write(static_cast<SOCKET>(wFd), reinterpret_cast<const char *>(data), static_cast<int>(nsend));
+    }
+    else
+    {
+        WSAMSG msgh{};
+        WSABUF iov[1]{};
+        int cmsghdrlength;
+        std::vector<char> controlBuffer;
+
+        int fdCount = sharedBuffers.size();
+        if (fdCount > 0)
+        {
+            if (fdCount > MAXFD_PER_MESSAGE)
+            {
+                LOG_F(ERROR, "attempt to send too many FD\n");
+                close();
+                return;
+            }
+
+            cmsghdrlength = WSA_CMSG_SPACE(fdCount * sizeof(int));
+            controlBuffer.resize(cmsghdrlength);
+
+            // 填充控制信息
+            msgh.Control.buf = controlBuffer.data();
+            msgh.Control.len = cmsghdrlength;
+            LPWSACMSGHDR pCmsgHdr = WSA_CMSG_FIRSTHDR(&msgh);
+            pCmsgHdr->cmsg_level = SOL_SOCKET;
+            pCmsgHdr->cmsg_len = cmsghdrlength;
+
+            int *fdPtr = reinterpret_cast<int *>(WSA_CMSG_DATA(pCmsgHdr));
+            for (int i = 0; i < fdCount; ++i)
+            {
+                fdPtr[i] = sharedBuffers[i];
+            }
+        }
+        else
+        {
+            cmsghdrlength = 0;
+            msgh.Control.buf = nullptr;
+            msgh.Control.len = cmsghdrlength;
+        }
+
+        iov[0].buf = reinterpret_cast<char *>(data);
+        iov[0].len = static_cast<ULONG>(nsend);
+
+        msgh.dwFlags = 0;
+        msgh.name = nullptr;
+        msgh.namelen = 0;
+        msgh.lpBuffers = iov;
+        msgh.dwBufferCount = 1;
+
+        nw = WSASendMsg(static_cast<SOCKET>(wFd), &msgh, 0, nullptr, nullptr, nullptr);
+
+        controlBuffer.clear();
+    }
+
+    // 发生错误时关闭写入部分
+    if (nw <= 0)
+    {
+        if (nw == 0)
+            LOG_F(INFO, "write returned 0\n");
+        else
+            LOG_F(ERROR, "write: %s\n", strerror(errno));
+
+        // 保持读取部分打开
+        closeWritePart();
+        return;
+    }
+
+    // 更新发送量，完成后释放消息并从队列中弹出
+    mp->advance(nsent, nw);
+    if (nsent.done())
+        consumeHeadMsg();
+}
+
+#else
 void MsgQueue::writeToFd()
 {
     ssize_t nw;
@@ -478,6 +691,7 @@ void MsgQueue::writeToFd()
     if (nsent.done())
         consumeHeadMsg();
 }
+#endif
 
 void MsgQueue::crackBLOB(const char *enableBLOB, BLOBHandling *bp)
 {

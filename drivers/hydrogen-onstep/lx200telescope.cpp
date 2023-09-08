@@ -25,7 +25,7 @@
 
 #include "lx200telescope.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <libnova/sidereal_time.h>
@@ -46,7 +46,7 @@ LX200Telescope::LX200Telescope() : FI(this)
 
 void LX200Telescope::debugTriggered(bool enable)
 {
-    LITHIUM_UNUSED(enable);
+    HYDROGEN_UNUSED(enable);
     setLX200Debug(getDeviceName(), DBG_SCOPE);
 }
 
@@ -63,7 +63,7 @@ const char *LX200Telescope::getDefaultName()
 bool LX200Telescope::initProperties()
 {
     /* Make sure to init parent properties first */
-    LITHIUM::Telescope::initProperties();
+    HYDROGEN::Telescope::initProperties();
 
     IUFillSwitch(&AlignmentS[0], "Polar", "", ISS_ON);
     IUFillSwitch(&AlignmentS[1], "AltAz", "", ISS_OFF);
@@ -162,7 +162,7 @@ void LX200Telescope::ISGetProperties(const char *dev)
     if (dev != nullptr && strcmp(dev, getDeviceName()) != 0)
         return;
 
-    LITHIUM::Telescope::ISGetProperties(dev);
+    HYDROGEN::Telescope::ISGetProperties(dev);
 
     /*
     if (isConnected())
@@ -197,7 +197,7 @@ void LX200Telescope::ISGetProperties(const char *dev)
 
 bool LX200Telescope::updateProperties()
 {
-    LITHIUM::Telescope::updateProperties();
+    HYDROGEN::Telescope::updateProperties();
 
     if (isConnected())
     {
@@ -484,7 +484,7 @@ bool LX200Telescope::Park()
     return true;
 }
 
-bool LX200Telescope::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool LX200Telescope::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     int current_move = (dir == DIRECTION_NORTH) ? LX200_NORTH : LX200_SOUTH;
 
@@ -516,7 +516,7 @@ bool LX200Telescope::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
     return true;
 }
 
-bool LX200Telescope::MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command)
+bool LX200Telescope::MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command)
 {
     int current_move = (dir == DIRECTION_WEST) ? LX200_WEST : LX200_EAST;
 
@@ -638,9 +638,9 @@ bool LX200Telescope::updateTime(ln_date *utc, double utc_offset)
 
 bool LX200Telescope::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
-    // JM 2021-04-10: MUST convert from LITHIUM longitude to standard longitude.
+    // JM 2021-04-10: MUST convert from HYDROGEN longitude to standard longitude.
     // DO NOT REMOVE
     if (longitude > 180)
         longitude = longitude - 360;
@@ -660,7 +660,7 @@ bool LX200Telescope::updateLocation(double latitude, double longitude, double el
         }
     }
 
-    char l[MAXLITHIUMNAME] = {0}, L[MAXLITHIUMNAME] = {0};
+    char l[MAXHYDROGENNAME] = {0}, L[MAXHYDROGENNAME] = {0};
     fs_sexa(l, latitude, 2, 36000);
     fs_sexa(L, longitude, 2, 36000);
 
@@ -692,7 +692,7 @@ bool LX200Telescope::ISNewText(const char *dev, const char *name, char *texts[],
         }
     }
 
-    return LITHIUM::Telescope::ISNewText(dev, name, texts, names, n);
+    return HYDROGEN::Telescope::ISNewText(dev, name, texts, names, n);
 }
 
 bool LX200Telescope::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -782,7 +782,7 @@ bool LX200Telescope::ISNewNumber(const char *dev, const char *name, double value
 
     //  if we didn't process it, continue up the chain, let somebody else
     //  give it a shot
-    return LITHIUM::Telescope::ISNewNumber(dev, name, values, names, n);
+    return HYDROGEN::Telescope::ISNewNumber(dev, name, values, names, n);
 }
 
 bool LX200Telescope::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -939,7 +939,7 @@ bool LX200Telescope::ISNewSwitch(const char *dev, const char *name, ISState *sta
     }
 
     //  Nobody has claimed this, so pass it to the parent
-    return LITHIUM::Telescope::ISNewSwitch(dev, name, states, names, n);
+    return HYDROGEN::Telescope::ISNewSwitch(dev, name, states, names, n);
 }
 
 bool LX200Telescope::SetTrackMode(uint8_t mode)
@@ -1177,7 +1177,7 @@ void LX200Telescope::getBasicData()
                 {
                     // Toggle format and suppress gcc warning
                     int rc = toggleTimeFormat(PortFD);
-                    LITHIUM_UNUSED(rc);
+                    HYDROGEN_UNUSED(rc);
                 }
             }
         }
@@ -1259,7 +1259,7 @@ bool LX200Telescope::getLocalTime(char *timeString)
     if (isSimulation())
     {
         time_t now = time(nullptr);
-        strftime(timeString, MAXLITHIUMNAME, "%T", localtime(&now));
+        strftime(timeString, MAXHYDROGENNAME, "%T", localtime(&now));
     }
     else
     {
@@ -1267,7 +1267,7 @@ bool LX200Telescope::getLocalTime(char *timeString)
         int h, m, s;
         getLocalTime24(PortFD, &ctime);
         getSexComponents(ctime, &h, &m, &s);
-        snprintf(timeString, MAXLITHIUMNAME, "%02d:%02d:%02d", h, m, s);
+        snprintf(timeString, MAXHYDROGENNAME, "%02d:%02d:%02d", h, m, s);
     }
 
     return true;
@@ -1278,7 +1278,7 @@ bool LX200Telescope::getLocalDate(char *dateString)
     if (isSimulation())
     {
         time_t now = time(nullptr);
-        strftime(dateString, MAXLITHIUMNAME, "%F", localtime(&now));
+        strftime(dateString, MAXHYDROGENNAME, "%F", localtime(&now));
     }
     else
     {
@@ -1327,8 +1327,8 @@ bool parseDateTime(const char *datetime, struct tm *tm)
 
 bool LX200Telescope::sendScopeTime()
 {
-    char cdate[MAXLITHIUMNAME] = {0};
-    char ctime[MAXLITHIUMNAME] = {0};
+    char cdate[MAXHYDROGENNAME] = {0};
+    char ctime[MAXHYDROGENNAME] = {0};
     struct tm ltm;
     struct tm utm;
 
@@ -1363,8 +1363,8 @@ bool LX200Telescope::sendScopeTime()
     }
 
     // To ISO 8601 format in LOCAL TIME!
-    char datetime[MAXLITHIUMNAME] = {0};
-    snprintf(datetime, MAXLITHIUMNAME, "%sT%s", cdate, ctime);
+    char datetime[MAXHYDROGENNAME] = {0};
+    snprintf(datetime, MAXHYDROGENNAME, "%sT%s", cdate, ctime);
 
     // Now that date+time are combined, let's get tm representation of it.
     if (!parseDateTime(datetime, &ltm))
@@ -1395,7 +1395,7 @@ bool LX200Telescope::sendScopeTime()
 #endif
 
     // Format it into the final UTC ISO 8601
-    strftime(cdate, MAXLITHIUMNAME, "%Y-%m-%dT%H:%M:%S", &utm);
+    strftime(cdate, MAXHYDROGENNAME, "%Y-%m-%dT%H:%M:%S", &utm);
     IUSaveText(&TimeT[0], cdate);
 
     LOGF_DEBUG("Mount controller UTC Time: %s", TimeT[0].text);
@@ -1412,8 +1412,8 @@ bool LX200Telescope::sendScopeLocation()
 {
     int lat_dd = 0, lat_mm = 0, long_dd = 0, long_mm = 0;
     double lat_ssf = 0.0, long_ssf = 0.0;
-    char lat_sexagesimal[MAXLITHIUMFORMAT];
-    char lng_sexagesimal[MAXLITHIUMFORMAT];
+    char lat_sexagesimal[MAXHYDROGENFORMAT];
+    char lng_sexagesimal[MAXHYDROGENFORMAT];
 
     if (isSimulation())
     {
@@ -1432,7 +1432,7 @@ bool LX200Telescope::sendScopeLocation()
     }
     else
     {
-        snprintf(lat_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
+        snprintf(lat_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", lat_dd, lat_mm, lat_ssf);
         f_scansexa(lat_sexagesimal, &(LocationNP.np[LOCATION_LATITUDE].value));
     }
 
@@ -1443,7 +1443,7 @@ bool LX200Telescope::sendScopeLocation()
     }
     else
     {
-        snprintf(lng_sexagesimal, MAXLITHIUMFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
+        snprintf(lng_sexagesimal, MAXHYDROGENFORMAT, "%02d:%02d:%02.1lf", long_dd, long_mm, long_ssf);
         f_scansexa(lng_sexagesimal, &(LocationNP.np[LOCATION_LONGITUDE].value));
     }
 
@@ -1665,7 +1665,7 @@ void LX200Telescope::guideTimeoutNS()
 
 bool LX200Telescope::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Telescope::saveConfigItems(fp);
+    HYDROGEN::Telescope::saveConfigItems(fp);
 
     if (genericCapability & LX200_HAS_PULSE_GUIDING)
         IUSaveConfigSwitch(fp, &UsePulseCmdSP);
@@ -1678,7 +1678,7 @@ bool LX200Telescope::saveConfigItems(FILE *fp)
 
 bool LX200Telescope::ReverseFocuser(bool enabled)
 {
-    LITHIUM_UNUSED(enabled);
+    HYDROGEN_UNUSED(enabled);
     return true;
 }
 
@@ -1691,7 +1691,7 @@ IPState LX200Telescope::MoveFocuser(FocusDirection dir, int speed, uint16_t dura
 {
     FocusDirection finalDirection = dir;
     // Reverse final direction if necessary
-    if (FocusReverseS[LITHIUM_ENABLED].s == ISS_ON)
+    if (FocusReverseS[HYDROGEN_ENABLED].s == ISS_ON)
         finalDirection = (dir == FOCUS_INWARD) ? FOCUS_OUTWARD : FOCUS_INWARD;
 
     SetFocuserSpeed(speed);

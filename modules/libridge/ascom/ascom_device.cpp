@@ -35,7 +35,11 @@ Description: ASCOM Basic Device
 #include "loguru/loguru.hpp"
 
 #include <exception>
+#ifdef __cpp_lib_format
 #include <format>
+#else
+#include <fmt/format.h>
+#endif
 
 ASCOMDevice::ASCOMDevice(const std::string &name) : rqs("localhost"), Device(name)
 {
@@ -50,7 +54,11 @@ void ASCOMDevice::setBasicInfo(const std::string &address, const std::string &de
     this->address = address;
     this->device_number = device_number;
     this->device_type = device_type;
+#ifdef __cpp_lib_format
     this->base_url = std::format("http://{}/api/v{}/{}/{}", this->address, API_VERSION, this->device_type, this->device_number);
+#else
+    this->base_url = fmt::format("http://{}/api/v{}/{}/{}", this->address, API_VERSION, this->device_type, this->device_number);
+#endif
 }
 
 bool ASCOMDevice::connect(const IParams &params)
@@ -182,8 +190,11 @@ const std::string ASCOMDevice::get(const std::string &attribute, const json &dat
     try
     {
         std::lock_guard<std::mutex> lock(ctid_lock);
-
+#ifdef __cpp_lib_format
         auto response = rqs.Get(std::format("{}/{}", base_url, attribute));
+#else
+        auto response = rqs.Get(fmt::format("{}/{}", base_url, attribute));
+#endif
         client_trans_id++;
 
         check_error(response);

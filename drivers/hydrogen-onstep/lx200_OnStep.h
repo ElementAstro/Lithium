@@ -24,7 +24,7 @@
 
     ===========================================
 
-    Version not yet updated/No LITHIUM release:
+    Version not yet updated/No HYDROGEN release:
     Version 1.19
     - fixed typo on debug information saying error instead of nbchar causing confusion
     - fixed Autoflip Off update
@@ -55,8 +55,8 @@
 
     Past Versions:
 
-    Version 1.12: (LITHIUM 1.9.3)
-    - New timeout functions in LITHIUM which significantly reduce startup times waiting for detection to fail. (Min time before was 1 second, current timeout for those is now set to 100 ms (100000 us which works well even with an Arduino Mega (Ramps) setup)
+    Version 1.12: (HYDROGEN 1.9.3)
+    - New timeout functions in HYDROGEN which significantly reduce startup times waiting for detection to fail. (Min time before was 1 second, current timeout for those is now set to 100 ms (100000 us which works well even with an Arduino Mega (Ramps) setup)
     - Cleanup and completely control TrackState. (Should eliminate various issues.)
     - Behind the scenes: More consistent command declarations (Should eliminate a type of error that's happened in the past when changing commands.)
     - Don't report capability for PierSide and PEC unless supported (This will cause a call to updateProperties so a bunch of messages will be repeated.)
@@ -65,9 +65,9 @@
     - Detects OnStep or OnStepX version (doesn't do much with it.)
 
 
-    Version 1.11: (LITHIUM 1.9.2)
+    Version 1.11: (HYDROGEN 1.9.2)
     - Fixed one issue with tracking (Jamie Flinn/jamiecflinn)
-    Version 1.10: (finalized: LITHIUM 1.9.1)
+    Version 1.10: (finalized: HYDROGEN 1.9.1)
     - Weather support for setting temperature/humidity/pressure, values will be overridden in OnStep by any sensor values.
     - Ability to swap primary focuser.
     - High precision on location, and not overridding GPS even when marked for Mount > KStars.
@@ -132,10 +132,10 @@
 
 #include "lx200generic.h"
 #include "lx200driver.h"
-#include "lithiumcom.h"
-#include "lithiumfocuserinterface.h"
-#include "lithiumweatherinterface.h"
-#include "lithiumrotatorinterface.h"
+#include "hydrogencom.h"
+#include "hydrogenfocuserinterface.h"
+#include "hydrogenweatherinterface.h"
+#include "hydrogenrotatorinterface.h"
 #include "connection/connectiontcp.h"
 
 #include <cstring>
@@ -210,7 +210,7 @@ enum OnStepVersion
     OSV_OnStepX
 };
 
-class LX200_OnStep : public LX200Generic, public LITHIUM::WeatherInterface, public LITHIUM::RotatorInterface
+class LX200_OnStep : public LX200Generic, public HYDROGEN::WeatherInterface, public HYDROGEN::RotatorInterface
 {
 public:
     LX200_OnStep();
@@ -522,7 +522,7 @@ protected:
 
     /**
      * @brief SetParked Change the mount parking status. The data park file (stored in
-     * ~/.lithium/ParkData.xml) is updated in the process.
+     * ~/.hydrogen/ParkData.xml) is updated in the process.
      * @param isparked set to true if parked, false otherwise.
      */
     virtual void SetParked(bool isparked) override;

@@ -64,15 +64,7 @@ Description: C++ and Modules Loader
 #include "loguru/loguru.hpp"
 
 #include "thread/thread.hpp"
-#include "liproperty/task/task.hpp"
-#include "lidriver/core/device.hpp"
 #include "error/error_code.hpp"
-
-namespace tl
-{
-    template <class T, class E>
-    class expected;
-}
 
 namespace Lithium
 {
@@ -111,7 +103,7 @@ namespace Lithium
         static std::shared_ptr<ModuleLoader> createShared(std::shared_ptr<Thread::ThreadManager> threadManager);
         static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
 
-        tl::expected<bool,LIError> LoadOnInit(const std::string &dir_name);
+        bool LoadOnInit(const std::string &dir_name);
 
         /**
          * @brief   Loads a dynamic module from the given path.
@@ -123,7 +115,7 @@ namespace Lithium
          * @param[in]   name    The name of the dynamic module.
          * @return      true if the loading is successful, false otherwise.
          */
-        tl::expected<bool,LIError> LoadModule(const std::string &path, const std::string &name);
+        bool LoadModule(const std::string &path, const std::string &name);
         
         /**
          * @brief 卸载指定名称的动态库
@@ -132,7 +124,7 @@ namespace Lithium
          * @return true 动态库卸载成功
          * @return false 动态库卸载失败
          */
-        tl::expected<bool,LIError> UnloadModule(const std::string &name);
+        bool UnloadModule(const std::string &name);
 
         bool HasModule(const std::string &name) const;
 
@@ -145,7 +137,7 @@ namespace Lithium
          * @return true 成功允许模块
          * @return false 允许模块失败
          */
-        tl::expected<bool,LIError> EnableModule(const std::string &module_name);
+        bool EnableModule(const std::string &module_name);
 
         /**
          * @brief 禁用指定模块
@@ -154,7 +146,7 @@ namespace Lithium
          * @return true 成功禁用模块
          * @return false 禁用模块失败
          */
-        tl::expected<bool,LIError> DisableModule(const std::string &module_name);
+        bool DisableModule(const std::string &module_name);
 
         /**
          * @brief 获取指定模块中的函数指针

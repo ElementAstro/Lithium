@@ -8,8 +8,6 @@
 
 #include "config.h"
 
-#include "server/StaticFileManager.hpp"
-
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -23,8 +21,6 @@ public:
         : oatpp::web::server::api::ApiController(objectMapper)
     {
     }
-public:
-    OATPP_COMPONENT(std::shared_ptr<StaticFileManager>, staticFileManager);
 
 public:
     static std::shared_ptr<StaticController> createShared(

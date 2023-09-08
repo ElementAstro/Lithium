@@ -41,12 +41,6 @@ Description: Configor
 
 #include "nlohmann/json.hpp"
 
-namespace tl
-{
-    template <class T, class E>
-    class expected;
-}
-
 namespace Lithium::Config
 {
     class ConfigManager
@@ -65,7 +59,7 @@ namespace Lithium::Config
          *
          * @param path 配置文件路径
          */
-        tl::expected<bool,LIError> loadFromFile(const std::string &path);
+        bool loadFromFile(const std::string &path);
 
         /**
          * @brief 加载指定目录下的所有JSON配置文件
@@ -74,7 +68,7 @@ namespace Lithium::Config
          *
          * @param dir_path 配置文件所在目录的路径
          */
-        tl::expected<bool,LIError> loadFromDir(const std::string &dir_path, bool recursive);
+        bool loadFromDir(const std::string &dir_path, bool recursive);
 
         /**
          * @brief 添加或更新一个配置项
@@ -112,7 +106,7 @@ namespace Lithium::Config
          *
          * @param file_path 目标文件路径
          */
-        tl::expected<bool,LIError> saveToFile(const std::string &file_path) const;
+        bool saveToFile(const std::string &file_path) const;
 
         /**
          * @brief 打印当前所有配置项

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ascom_device.hpp"
-#include "lidriver/core/camera.hpp"
+#include "Hydrogen/core/camera.hpp"
 
 class ASCOMCamera : public Camera, public ASCOMDevice
 {

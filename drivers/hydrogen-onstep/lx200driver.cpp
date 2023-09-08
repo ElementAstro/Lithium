@@ -24,8 +24,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #include "lx200driver.h"
 
-#include "lithiumcom.h"
-#include "lithiumlogger.h"
+#include "hydrogencom.h"
+#include "hydrogenlogger.h"
 
 #include <cstring>
 #include <unistd.h>
@@ -49,7 +49,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 int eq_format;                           /* For possible values see enum TEquatorialFormat */
 int geo_format = LX200_GEO_SHORT_FORMAT; /* For possible values see enum TGeographicFormat */
-char lx200Name[MAXLITHIUMDEVICE];
+char lx200Name[MAXHYDROGENDEVICE];
 /* ESN DEBUG */
 unsigned int DBG_SCOPE = 8;
 
@@ -58,7 +58,7 @@ std::mutex lx200CommsLock;
 
 void setLX200Debug(const char *deviceName, unsigned int debug_level)
 {
-    strncpy(lx200Name, deviceName, MAXLITHIUMDEVICE);
+    strncpy(lx200Name, deviceName, MAXHYDROGENDEVICE);
     DBG_SCOPE = debug_level;
 }
 
@@ -70,7 +70,7 @@ int check_lx200_connection(int in_fd)
     char MountAlign[64];
     int nbytes_read = 0;
 
-    DEBUGDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Testing telescope connection using ACK...");
+    DEBUGDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Testing telescope connection using ACK...");
 
     /* Add mutex */
     std::unique_lock<std::mutex> guard(lx200CommsLock);
@@ -92,13 +92,13 @@ int check_lx200_connection(int in_fd)
         tty_read(in_fd, MountAlign, 1, LX200_TIMEOUT, &nbytes_read);
         if (nbytes_read == 1)
         {
-            DEBUGDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Testing successful!");
+            DEBUGDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Testing successful!");
             return 0;
         }
         nanosleep(&timeout, nullptr);
     }
 
-    DEBUGDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Failure. Telescope is not responding to ACK!");
+    DEBUGDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Failure. Telescope is not responding to ACK!");
     return -1;
 }
 
@@ -334,14 +334,14 @@ int isSlewComplete(int fd)
 
     // Meade Telescope Serial Command Protocol Revision 2010.10
     // :D#
-    // Requests a string of bars lithiumcating the distance to the current target location.
+    // Requests a string of bars hydrogencating the distance to the current target location.
     // Returns:
-    // LX200's – a string of bar characters lithiumcating the distance.
+    // LX200's – a string of bar characters hydrogencating the distance.
     // Autostars and Autostar II – a string containing one bar until a slew is complete, then a null string is returned
     //
     // 10Micron Mount Command Protocol software version 2.14.11 2016.11
     // :D#
-    // Requests a string lithiumcating the progress of the current slew operation.
+    // Requests a string hydrogencating the progress of the current slew operation.
     // Returns:
     // the string “■#”, where the block character has ascii code 127 (0x7F), if a slew is in
     // progress or a slew has ended from less than the settle time set in command :Sstm.
@@ -551,7 +551,7 @@ int getSiteName(int fd, char *siteName, int siteNum)
     if (term)
         strcpy(siteName, "unused site");
 
-    DEBUGFDEVICE(lx200Name, LITHIUM::Logger::DBG_DEBUG, "Site Name <%s>", siteName);
+    DEBUGFDEVICE(lx200Name, HYDROGEN::Logger::DBG_DEBUG, "Site Name <%s>", siteName);
 
     return 0;
 }
@@ -852,7 +852,7 @@ int getOTATemp(int fd, double *value)
     // :fT#
     // Autostar II – Return Optical Tube Assembly Temperature
     // Max/RCX – Return OTA Temperature
-    // Returns <sdd.ddd># - a ‘#’ terminated signed ASCII real number lithiumcating the Celsius ambient temperature.
+    // Returns <sdd.ddd># - a ‘#’ terminated signed ASCII real number hydrogencating the Celsius ambient temperature.
     // All others – Not supported
     if ((error_type = tty_write_string(fd, ":fT#", &nbytes_write)) != TTY_OK)
         return error_type;
@@ -1826,7 +1826,7 @@ int SendPulseCmd(int fd, int direction, int duration_msec, bool wait_after_comma
     // :MgsDDDD#
     // :MgeDDDD#
     // :MgwDDDD#
-    // Guide telescope in the commanded direction (nsew) for the number of milliseconds lithiumcated by the unsigned number
+    // Guide telescope in the commanded direction (nsew) for the number of milliseconds hydrogencated by the unsigned number
     // passed in the command. These commands support serial port driven guiding.
     // Returns – Nothing
     // LX200 – Not Supported

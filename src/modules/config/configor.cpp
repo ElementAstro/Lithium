@@ -39,7 +39,6 @@ Description: Configor
 #include "configor.hpp"
 
 #include "loguru/loguru.hpp"
-#include "tl/expected.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -49,9 +48,9 @@ namespace Lithium::Config
     ConfigManager::ConfigManager()
     {
         m_AchievementManager = std::make_unique<AAchievement::AchievementList>();
-        if (loadFromFile("config.json").has_value())
+        if (loadFromFile("config.json"))
         {
-            LOG_F(INFO, "current config: %s", config_.dump(4));
+            LOG_F(INFO, "current config: %s", config_.dump(4).c_str());
         }
     }
 
@@ -65,14 +64,14 @@ namespace Lithium::Config
         return std::make_shared<ConfigManager>();
     }
 
-    tl::expected<bool, LIError> ConfigManager::loadFromFile(const std::string &path)
+    bool ConfigManager::loadFromFile(const std::string &path)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         std::ifstream ifs(path);
         if (!ifs.is_open())
         {
             LOG_F(ERROR, "Failed to open file: %s", path.c_str());
-            return tl::unexpected(LIError::OepnError);
+            return false;
         }
         json j;
         try
@@ -88,11 +87,11 @@ namespace Lithium::Config
         catch (const json::exception &e)
         {
             LOG_F(ERROR, "Failed to parse file: %s, error message: %s", path.c_str(), e.what());
-            return tl::unexpected(LIError::ParseError);
+            return false;
         }
     }
 
-    tl::expected<bool, LIError> ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
+    bool ConfigManager::loadFromDir(const std::string &dir_path, bool recursive)
     {
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto &file : fs::directory_iterator(dir_path))
@@ -260,13 +259,13 @@ namespace Lithium::Config
         config_.merge_patch(j);
     }
 
-    tl::expected<bool, LIError> ConfigManager::saveToFile(const std::string &file_path) const
+    bool ConfigManager::saveToFile(const std::string &file_path) const
     {
         std::ofstream ofs(file_path);
         if (!ofs.is_open())
         {
             LOG_F(ERROR, "Failed to open file: %s", file_path.c_str());
-            return tl::unexpected(LIError::OepnError);
+            return false;
         }
         ofs << config_.dump(4);
         ofs.close();

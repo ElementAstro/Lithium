@@ -91,7 +91,7 @@ class EQ500X : public LX200Generic
             virtual bool Sync(double, double) override;
             virtual bool Abort() override;
             virtual void setPierSide(TelescopePierSide);
-            virtual bool MoveNS(LITHIUM_DIR_NS, TelescopeMotionCommand) override;
+            virtual bool MoveNS(HYDROGEN_DIR_NS, TelescopeMotionCommand) override;
         private:
             MechanicalPoint currentMechPosition, targetMechPosition;
             double previousRA = {0}, previousDEC = {0};

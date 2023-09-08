@@ -169,7 +169,7 @@ bool LX200GPS::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             else
                 ret = turnGPSOff(PortFD);
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             GPSPowerSP.s = IPS_OK;
             IDSetSwitch(&GPSPowerSP, index == 0 ? "GPS System is ON" : "GPS System is OFF");
             return true;
@@ -203,7 +203,7 @@ bool LX200GPS::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 sendScopeLocation();
             }
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             GPSStatusSP.s = IPS_OK;
             IDSetSwitch(&GPSStatusSP, "%s", msg);
             return true;
@@ -264,7 +264,7 @@ bool LX200GPS::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 strncpy(msg, "Alt/Dec Compensation Disabled.", 64);
             }
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             AltDecPecSP.s = IPS_OK;
             IDSetSwitch(&AltDecPecSP, "%s", msg);
 
@@ -292,7 +292,7 @@ bool LX200GPS::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 strncpy(msg, "Ra/Az Compensation Disabled.", 64);
             }
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             AzRaPecSP.s = IPS_OK;
             IDSetSwitch(&AzRaPecSP, "%s", msg);
 
@@ -304,7 +304,7 @@ bool LX200GPS::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             int ret = 0;
 
             ret = activateAltDecAntiBackSlash(PortFD);
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             AltDecBacklashSP.s = IPS_OK;
             IDSetSwitch(&AltDecBacklashSP, "Alt/Dec Anti-backlash enabled");
             return true;
@@ -316,7 +316,7 @@ bool LX200GPS::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 
             ret = activateAzRaAntiBackSlash(PortFD);
             AzRaBacklashSP.s = IPS_OK;
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             IDSetSwitch(&AzRaBacklashSP, "Az/Ra Anti-backlash enabled");
             return true;
         }
@@ -393,7 +393,7 @@ bool LX200GPS::UnPark()
 
     ret = initTelescope(PortFD);
 
-    LITHIUM_UNUSED(ret);
+    HYDROGEN_UNUSED(ret);
     TrackState = SCOPE_IDLE;
     return true;
 }

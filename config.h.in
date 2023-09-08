@@ -1,1 +1,2 @@
 #cmakedefine01 ENABLE_ASYNC
+#cmakedefine01 ENABLE_NATIVE_SERVER

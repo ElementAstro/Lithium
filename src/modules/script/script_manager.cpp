@@ -7,9 +7,9 @@
 
 #include "server/message_bus.hpp"
 
-#include "liproperty/base64.hpp"
-#include "liproperty/iproperty.hpp"
-#include "liproperty/uuid.hpp"
+#include "core/property/base64.hpp"
+#include "core/property/iproperty.hpp"
+#include "core/property/uuid.hpp"
 
 #include "modules/system/system.hpp"
 
@@ -19,23 +19,16 @@
 #include "LithiumApp.hpp"
 
 #include "loguru/loguru.hpp"
-#include "tl/expected.hpp"
 #include "nlohmann/json.hpp"
-#include "utf8/utf8.h"
-
 #include "error/error_code.hpp"
 
-#include "liscript/device.hpp"
+#include "script/hydrogen_script.hpp"
 
 namespace Lithium
 {
     ChaiScriptManager::ChaiScriptManager(std::shared_ptr<MessageBus> messageBus) : chai_(std::make_unique<chaiscript::ChaiScript>())
     {
         m_MessageBus = messageBus;
-        LOG_F(INFO, "ChaiScript Manager initializing ...");
-        Init();
-        InitSubModules();
-        LOG_F(INFO, "ChaiScriptManager initialized");
     }
 
     ChaiScriptManager::~ChaiScriptManager()
@@ -56,10 +49,10 @@ namespace Lithium
         chai_->add(chaiscript::fun(&Base64::base64DecodeEnhance), "base64decode_e");
 
         // Add UUID support
-        chai_->add(chaiscript::fun(&UUID::UUIDGenerator::seed), "seed");
-        chai_->add(chaiscript::fun(&UUID::UUIDGenerator::generateUUID), "generate_uuid");
-        chai_->add(chaiscript::fun(&UUID::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
-        chai_->add(chaiscript::user_type<UUID::UUIDGenerator>(), "UUIDGenerator");
+        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::seed), "seed");
+        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::generateUUID), "generate_uuid");
+        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
+        chai_->add(chaiscript::user_type<LITHIUM::UUID::UUIDGenerator>(), "UUIDGenerator");
 
         chai_->add(chaiscript::fun(&File::compress_file), "compress_file");
         chai_->add(chaiscript::fun(&File::decompress_file), "decompress_file");
@@ -130,10 +123,14 @@ namespace Lithium
 
     void ChaiScriptManager::InitMyApp()
     {
+        LOG_F(INFO, "ChaiScript Manager initializing ...");
+        Init();
+        InitSubModules();
+        LOG_F(INFO, "ChaiScriptManager initialized");
         chai_->add_global(chaiscript::var(MyApp), "app");
     }
 
-    tl::expected<bool, std::string> ChaiScriptManager::loadScriptFile(const std::string &filename)
+    bool ChaiScriptManager::loadScriptFile(const std::string &filename)
     {
         std::ifstream file(filename);
         if (file)
@@ -146,12 +143,12 @@ namespace Lithium
         else
         {
             LOG_F(ERROR, "Failed to open script file: %s", filename.c_str());
-            return tl::unexpected("Failed to open script file");
+            return false;
         }
         return true;
     }
 
-    tl::expected<bool, std::string> ChaiScriptManager::runCommand(const std::string &command)
+    bool ChaiScriptManager::runCommand(const std::string &command)
     {
         try
         {
@@ -160,12 +157,12 @@ namespace Lithium
         catch (chaiscript::exception::eval_error &e)
         {
             LOG_F(ERROR, "Failed to eval %s : %s", e.filename.c_str(), e.what());
-            return tl::unexpected("Failed to eval script command");
+            return false;
         };
         return true;
     }
 
-    tl::expected<bool, std::string> ChaiScriptManager::runScript(const std::string &filename)
+    bool ChaiScriptManager::runScript(const std::string &filename)
     {
         try
         {
@@ -174,12 +171,12 @@ namespace Lithium
         catch (chaiscript::exception::eval_error &e)
         {
             LOG_F(ERROR, "Failed to run %s : %s", e.filename.c_str(), e.what());
-            return tl::unexpected("Failed to run script file");
+            return false;
         }
         return true;
     }
 
-    tl::expected<bool, std::string> ChaiScriptManager::runMultiCommand(const std::vector<std::string> &commands)
+    bool ChaiScriptManager::runMultiCommand(const std::vector<std::string> &commands)
     {
         for (auto command : commands)
         {
@@ -190,7 +187,7 @@ namespace Lithium
             catch (chaiscript::exception::eval_error &e)
             {
                 LOG_F(ERROR, "Failed to run: %s", e.what());
-                return tl::unexpected("Failed to run multi commands");
+                return false;
             }
         }
         return true;

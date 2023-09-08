@@ -1,5 +1,5 @@
 /*
-    GotoNova LITHIUM driver
+    GotoNova HYDROGEN driver
 
     Copyright (C) 2017 Jasem Mutlaq
 
@@ -20,7 +20,7 @@
 
 #include "lx200gotonova.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <libnova/transform.h>
@@ -582,7 +582,7 @@ int LX200GotoNova::setCalenderDate(int fd, int dd, int mm, int yy)
 
 bool LX200GotoNova::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
 
     if (isSimulation())
         return true;
@@ -683,7 +683,7 @@ int LX200GotoNova::setGotoNovaStandardProcedure(int fd, const char *data)
 
     error_type = tty_read(fd, bool_return, 1, 5, &nbytes_read);
 
-    // JM: Hack from Jon in the LITHIUM forums to fix longitude/latitude settings failure on GotoNova
+    // JM: Hack from Jon in the HYDROGEN forums to fix longitude/latitude settings failure on GotoNova
     nanosleep(&timeout, nullptr);
 #ifdef _WIN32
     PurgeComm((HANDLE)_get_osfhandle(fd), PURGE_RXCLEAR);
@@ -998,9 +998,9 @@ void LX200GotoNova::syncSideOfPier()
     LOGF_DEBUG("RES: <%s>", response);
 
     if (!strcmp(response, "East"))
-        setPierSide(LITHIUM::Telescope::PIER_EAST);
+        setPierSide(HYDROGEN::Telescope::PIER_EAST);
     else
-        setPierSide(LITHIUM::Telescope::PIER_WEST);
+        setPierSide(HYDROGEN::Telescope::PIER_WEST);
 }
 
 bool LX200GotoNova::saveConfigItems(FILE *fp)

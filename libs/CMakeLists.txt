@@ -1,6 +1,6 @@
 add_subdirectory(oatpp)
 
-add_library(oatpp-swagger SHARED
+add_library(oatpp-swagger
     oatpp-swagger/AsyncController.hpp
     oatpp-swagger/Controller.hpp
     oatpp-swagger/ControllerPaths.hpp
@@ -13,9 +13,7 @@ add_library(oatpp-swagger SHARED
     oatpp-swagger/Types.hpp
     oatpp-swagger/oas3/Model.hpp)
 
-target_link_libraries(oatpp-swagger PRIVATE oatpp)
-
-add_library(oatpp-websocket SHARED
+add_library(oatpp-websocket
     oatpp-websocket/AsyncConnectionHandler.cpp
     oatpp-websocket/AsyncConnectionHandler.hpp
     oatpp-websocket/AsyncWebSocket.cpp
@@ -37,9 +35,7 @@ add_library(oatpp-websocket SHARED
     oatpp-websocket/WebSocket.hpp
 )
 
-target_link_libraries(oatpp-websocket PRIVATE oatpp)
-
-add_library(oatpp-openssl SHARED
+add_library(oatpp-openssl
     oatpp-openssl/Config.cpp
     oatpp-openssl/Config.hpp
     oatpp-openssl/Connection.cpp
@@ -74,82 +70,36 @@ add_library(oatpp-openssl SHARED
     oatpp-openssl/configurer/TrustStore.cpp
     oatpp-openssl/configurer/TrustStore.hpp
 )
-find_package(OpenSSL REQUIRED)
-target_link_libraries(oatpp-openssl PRIVATE oatpp)
-target_link_libraries(oatpp-openssl PRIVATE ${OPENSSL_LIBRARIES})
 
-add_library(oatpp-sqlite SHARED
-    oatpp-sqlite/mapping/type/Blob.cpp
-    oatpp-sqlite/mapping/type/Blob.hpp
-    oatpp-sqlite/mapping/Deserializer.cpp
-    oatpp-sqlite/mapping/Deserializer.hpp
-    oatpp-sqlite/mapping/ResultMapper.cpp
-    oatpp-sqlite/mapping/ResultMapper.hpp
-    oatpp-sqlite/mapping/Serializer.cpp
-    oatpp-sqlite/mapping/Serializer.hpp
-    oatpp-sqlite/ql_template/Parser.cpp
-    oatpp-sqlite/ql_template/Parser.hpp
-    oatpp-sqlite/ql_template/TemplateValueProvider.cpp
-    oatpp-sqlite/ql_template/TemplateValueProvider.hpp
-    oatpp-sqlite/Connection.cpp
-    oatpp-sqlite/Connection.hpp
-    oatpp-sqlite/ConnectionProvider.cpp
-    oatpp-sqlite/ConnectionProvider.hpp
-    oatpp-sqlite/Executor.cpp
-    oatpp-sqlite/Executor.hpp
-    oatpp-sqlite/QueryResult.cpp
-    oatpp-sqlite/QueryResult.hpp
-    oatpp-sqlite/Types.hpp
-    oatpp-sqlite/orm.hpp
-    oatpp-sqlite/Utils.cpp
-    oatpp-sqlite/Utils.hpp
-)
-find_package(SQLite3 REQUIRED)
-target_link_libraries(oatpp-sqlite PRIVATE oatpp)
-target_link_libraries(oatpp-sqlite PRIVATE sqlite3)
-
-add_library(oatpp-zlib SHARED
+add_library(oatpp-zlib
     oatpp-zlib/Processor.cpp
     oatpp-zlib/Processor.hpp
     oatpp-zlib/EncoderProvider.cpp
     oatpp-zlib/EncoderProvider.hpp
 )
-find_package(ZLIB REQUIRED)
-target_link_libraries(oatpp-zlib PRIVATE oatpp)
-target_link_libraries(oatpp-zlib PRIVATE ${ZLIB_LIBRARIES})
-
-add_library(oatpp-curl SHARED
-        oatpp-curl/RequestExecutor.cpp
-        oatpp-curl/RequestExecutor.hpp
-        oatpp-curl/io/BodyDecoder.cpp
-        oatpp-curl/io/BodyDecoder.hpp
-        oatpp-curl/io/BodyInputStream.cpp
-        oatpp-curl/io/BodyInputStream.hpp
-        oatpp-curl/io/BodyOutputStream.cpp
-        oatpp-curl/io/BodyOutputStream.hpp
-        oatpp-curl/io/Curl.cpp
-        oatpp-curl/io/Curl.hpp
-        oatpp-curl/io/CurlBodyReader.cpp
-        oatpp-curl/io/CurlBodyReader.hpp
-        oatpp-curl/io/CurlBodyWriter.cpp
-        oatpp-curl/io/CurlBodyWriter.hpp
-        oatpp-curl/io/CurlHeadersReader.cpp
-        oatpp-curl/io/CurlHeadersReader.hpp
-)
-find_package(CURL REQUIRED)
-target_link_libraries(oatpp-curl PRIVATE oatpp)
-target_link_libraries(oatpp-curl PRIVATE CURL::libcurl)
 
 add_library(loguru loguru/loguru.cpp)
+if(LINUX)
+    find_package(Threads REQUIRED)
+    target_link_libraries(loguru Threads::Threads dl)
+    set_target_properties(loguru PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 add_library(cpp_httplib cpp_httplib/httplib.cpp)
-target_link_libraries(cpp_httplib PRIVATE ${OPENSSL_LIBRARIES})
-target_link_libraries(cpp_httplib PRIVATE crypt32)
+target_link_libraries(cpp_httplib ${OPENSSL_LIBRARIES})
+if(WIN32)
+target_link_libraries(cpp_httplib crypt32)
+endif()
+if(LINUX)
+    set_target_properties(cpp_httplib PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    )
+endif()
 
 add_library(libzippp zippp/libzippp.cpp)
 
-add_library(
-  bustache
-  bustache/format.cpp
-  bustache/render.cpp
-)
+add_subdirectory(backward)
+
+add_subdirectory(pugixml)

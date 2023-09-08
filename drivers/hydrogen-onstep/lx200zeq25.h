@@ -1,5 +1,5 @@
 /*
-    ZEQ25 LITHIUM driver
+    ZEQ25 HYDROGEN driver
 
     Copyright (C) 2015 Jasem Mutlaq
 
@@ -49,8 +49,8 @@ protected:
     virtual bool Sync(double, double) override;
     virtual bool updateTime(ln_date *utc, double utc_offset) override;
     virtual bool updateLocation(double latitude, double longitude, double elevation) override;
-    virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-    virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+    virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+    virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
 
     // Parking
     virtual bool SetCurrentPark() override;

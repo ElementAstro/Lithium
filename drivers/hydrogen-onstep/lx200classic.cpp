@@ -20,7 +20,7 @@
 
 #include "lx200classic.h"
 #include "lx200driver.h"
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 
 #include <cstring>
 
@@ -381,9 +381,9 @@ bool LX200Classic::Park()
     fs_sexa(AltStr, parkAlt, 2, 3600);
     LOGF_DEBUG("Parking to Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-    LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+    HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
 
     // save the current AlignmentMode to UnparkAlignment
     LX200Generic::getAlignment();
@@ -436,9 +436,9 @@ bool LX200Classic::UnPark()
     double parkRA = 0.0;
     double parkDEC = 0.0;
     // azAltToRaDecNow(parkAz, parkAlt, parkRA, parkDEC);
-    LITHIUM::IEquatorialCoordinates equatorialCoords{parkRA, parkDEC};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-    LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{parkRA, parkDEC};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+    HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
 
     if (isSimulation())
     {
@@ -467,9 +467,9 @@ bool LX200Classic::UnPark()
 
 bool LX200Classic::SetCurrentPark()
 {
-    LITHIUM::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{0, 0};
-    LITHIUM::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{0, 0};
+    HYDROGEN::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
 
     char AzStr[16], AltStr[16];
     fs_sexa(AzStr, horizontalCoords.azimuth, 2, 3600);

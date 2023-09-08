@@ -20,7 +20,7 @@
 
 #include "lx200_16.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <cmath>
@@ -208,7 +208,7 @@ bool LX200_16::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             else
                 ret = seekHomeAndSet(PortFD);
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             HomeSearchSP.s = IPS_BUSY;
             IDSetSwitch(&HomeSearchSP, index == 0 ? "Seek Home and Save" : "Seek Home and Set");
             return true;
@@ -227,7 +227,7 @@ bool LX200_16::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             else
                 ret = turnFieldDeRotatorOff(PortFD);
 
-            LITHIUM_UNUSED(ret);
+            HYDROGEN_UNUSED(ret);
             FieldDeRotatorSP.s = IPS_OK;
             IDSetSwitch(&FieldDeRotatorSP, index == 0 ? "Field deRotator is ON" : "Field deRotator is OFF");
             return true;

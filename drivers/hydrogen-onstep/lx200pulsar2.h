@@ -1,5 +1,5 @@
 /*
-    Pulsar 2 LITHIUM driver
+    Pulsar 2 HYDROGEN driver
 
     Copyright (C) 2016, 2017 Jasem Mutlaq and Camiel Severijns
 
@@ -49,8 +49,8 @@ public:
 
 protected:
     virtual bool SetSlewRate(int index) override;
-    virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-    virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+    virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+    virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
     virtual bool Abort() override;
 
     virtual IPState GuideNorth(uint32_t ms) override;

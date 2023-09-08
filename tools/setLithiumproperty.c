@@ -1,10 +1,10 @@
-/* connect to an LITHIUM server and set one or more device.property.element.
+/* connect to an HYDROGEN server and set one or more device.property.element.
  */
 
 #define _GNU_SOURCE // needed for fdopen
 
-#include "lithiumapi.h"
-#include "lithiumdevapi.h"
+#include "hydrogenapi.h"
+#include "hydrogendevapi.h"
 #include "lilxml.h"
 
 #include <errno.h>
@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-/* table of LITHIUM definition elements we can set
+/* table of HYDROGEN definition elements we can set
  * N.B. do not change defs[] order, they are indexed via -x/-n/-s args
  */
 typedef struct
@@ -34,20 +34,20 @@ typedef struct
     char *defOne;  /* defXXX name */
     char *newType; /* newXXXVector name */
     char *oneType; /* oneXXX name */
-} LITHIUMDef;
-static LITHIUMDef defs[] = {
+} HYDROGENDef;
+static HYDROGENDef defs[] = {
     { "defTextVector", "defText", "newTextVector", "oneText" },
     { "defNumberVector", "defNumber", "newNumberVector", "oneNumber" },
     { "defSwitchVector", "defSwitch", "newSwitchVector", "oneSwitch" },
 };
 #define NDEFS (sizeof(defs) / sizeof(defs[0]))
 
-#define LITHIUMPORT 7624                 /* default port */
+#define HYDROGENPORT 7624                 /* default port */
 static char host_def[] = "localhost"; /* default host name */
 
 static char *me;              /* our name for usage message */
 static char *host = host_def; /* working host name */
-static int port   = LITHIUMPORT; /* working port number */
+static int port   = HYDROGENPORT; /* working port number */
 static int verbose;           /* report extra info */
 static int directfd = -1;     /* direct filedes to server, if >= 0 */
 #define TIMEOUT 2             /* default timeout, secs */
@@ -66,7 +66,7 @@ typedef struct
     char *p;     /* property */
     SetEV *ev;   /* elements */
     int nev;     /* n elements */
-    LITHIUMDef *dp; /* one of defs if known, else NULL */
+    HYDROGENDef *dp; /* one of defs if known, else NULL */
 } SetSpec;
 
 static SetSpec *sets; /* set of properties to set */
@@ -74,8 +74,8 @@ static int nsets;
 
 static void usage(void);
 static int crackSpec(int *acp, char **avp[]);
-static void openLITHIUMServer(FILE **rfpp, FILE **wfpp);
-static void listenLITHIUM(FILE *rfp, FILE *wfp);
+static void openHYDROGENServer(FILE **rfpp, FILE **wfpp);
+static void listenHYDROGEN(FILE *rfp, FILE *wfp);
 static int finished(void);
 static void onAlarm(int dummy);
 static int readServerChar(FILE *fp);
@@ -83,7 +83,7 @@ static void findSet(XMLEle *root, FILE *fp);
 static void scanEV(SetSpec *specp, char ev[]);
 static void scanEEVV(SetSpec *specp, char *ep, char ev[]);
 static void scanEVEV(SetSpec *specp, char ev[]);
-static void sendNew(FILE *fp, LITHIUMDef *dp, SetSpec *sp);
+static void sendNew(FILE *fp, HYDROGENDef *dp, SetSpec *sp);
 static void sendSpecs(FILE *wfp);
 
 int main(int ac, char *av[])
@@ -199,7 +199,7 @@ int main(int ac, char *av[])
     }
     else
     {
-        openLITHIUMServer(&rfp, &wfp);
+        openHYDROGENServer(&rfp, &wfp);
         if (verbose)
             fprintf(stderr, "Connected to %s on port %d\n", host, port);
     }
@@ -217,11 +217,11 @@ int main(int ac, char *av[])
         /* issue getProperties */
         if (verbose)
             fprintf(stderr, "Querying for properties\n");
-        fprintf(wfp, "<getProperties version='%g'/>\n", LITHIUMV);
+        fprintf(wfp, "<getProperties version='%g'/>\n", HYDROGENV);
         fflush(wfp);
 
         /* listen for properties, set when see any we recognize */
-        listenLITHIUM(rfp, wfp);
+        listenHYDROGEN(rfp, wfp);
     }
 
     return (0);
@@ -229,12 +229,12 @@ int main(int ac, char *av[])
 
 static void usage()
 {
-    fprintf(stderr, "Purpose: set one or more writable LITHIUM properties\n");
+    fprintf(stderr, "Purpose: set one or more writable HYDROGEN properties\n");
     fprintf(stderr, "Usage: %s [options] {[type] spec} ...\n", me);
     fprintf(stderr, "Options:\n");
     fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
     fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
-    fprintf(stderr, "  -p p  : alternate port, default is %d\n", LITHIUMPORT);
+    fprintf(stderr, "  -p p  : alternate port, default is %d\n", HYDROGENPORT);
     fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n", TIMEOUT);
     fprintf(stderr, "  -v    : verbose (more are cumulative)\n");
     fprintf(stderr, "Each spec optionally preceded by its type is sent without first confirming\n");
@@ -262,7 +262,7 @@ static int crackSpec(int *acp, char **avp[])
 {
     char d[128], p[128], ev[2048];
     char *spec  = *avp[0];
-    LITHIUMDef *dp = NULL;
+    HYDROGENDef *dp = NULL;
 
     /* check if first arg is type lithiumcator */
     if ((*acp > 0) && (spec[0] == '-'))
@@ -320,7 +320,7 @@ static int crackSpec(int *acp, char **avp[])
 /* open a read and write connection to host and port or die.
  * exit if trouble.
  */
-static void openLITHIUMServer(FILE **rfpp, FILE **wfpp)
+static void openHYDROGENServer(FILE **rfpp, FILE **wfpp)
 {
     struct sockaddr_in serv_addr;
     struct hostent *hp;
@@ -334,7 +334,7 @@ static void openLITHIUMServer(FILE **rfpp, FILE **wfpp)
         exit(2);
     }
 
-    /* create a socket to the LITHIUM server */
+    /* create a socket to the HYDROGEN server */
     (void)memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family      = AF_INET;
     serv_addr.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
@@ -358,15 +358,16 @@ static void openLITHIUMServer(FILE **rfpp, FILE **wfpp)
 }
 
 #define TIMEOUT_MS 5000
-
+#ifdef _WIN32
 static void CALLBACK onTimer(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
     printf("Timer expired!\n");
     exit(0);
 }
+#endif
 
 /* listen for property reports, send new sets if match */
-static void listenLITHIUM(FILE *rfp, FILE *wfp)
+static void listenHYDROGEN(FILE *rfp, FILE *wfp)
 {
     char msg[1024];
 
@@ -423,7 +424,7 @@ static int finished()
  */
 static void onAlarm(int dummy)
 {
-    LITHIUM_UNUSED(dummy);
+    HYDROGEN_UNUSED(dummy);
     int i, j;
 
     for (i = 0; i < nsets; i++)
@@ -443,7 +444,7 @@ static int readServerChar(FILE *fp)
         if (ferror(fp))
             perror("read");
         else
-            fprintf(stderr, "LITHIUM server %s:%d disconnected\n", host, port);
+            fprintf(stderr, "HYDROGEN server %s:%d disconnected\n", host, port);
         exit(2);
     }
 
@@ -509,8 +510,8 @@ static void findSet(XMLEle *root, FILE *fp)
     }
 }
 
-/* send the given set specification of the given LITHIUM type to channel on fp */
-static void sendNew(FILE *fp, LITHIUMDef *dp, SetSpec *sp)
+/* send the given set specification of the given HYDROGEN type to channel on fp */
+static void sendNew(FILE *fp, HYDROGENDef *dp, SetSpec *sp)
 {
     int i;
 

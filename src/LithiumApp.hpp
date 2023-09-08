@@ -42,7 +42,7 @@ Description: Lithium App Enter
 #include "modules/task/task_manager.hpp"
 #include "modules/task/task_generator.hpp"
 #include "modules/server/message_bus.hpp"
-#include "liproperty/iproperty.hpp"
+#include "core/property/iproperty.hpp"
 #include "modules/plugin/plugin_manager.hpp"
 #include "modules/script/script_manager.hpp"
 

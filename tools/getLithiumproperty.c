@@ -1,4 +1,4 @@
-/* connect to an LITHIUM server and show all desired device.property.element
+/* connect to an HYDROGEN server and show all desired device.property.element
  *   with possible wild card * in any category.
  * All types but BLOBs are handled from their defXXX messages. Receipt of a
  *   defBLOB sends enableBLOB then uses setBLOBVector for the value. BLOBs
@@ -7,7 +7,7 @@
  */
 
 #include "base64.h"
-#include "lithiumapi.h"
+#include "hydrogenapi.h"
 #include "lilxml.h"
 #include "zlib.h"
 
@@ -30,15 +30,15 @@
 #include <sys/types.h>
 #include <string.h>
 
-/* table of LITHIUM definition elements, plus setBLOB.
+/* table of HYDROGEN definition elements, plus setBLOB.
  * we also look for set* if -m
  */
 typedef struct
 {
     char *vec; /* vector name */
     char *one; /* one element name */
-} LITHIUMDef;
-static LITHIUMDef defs[] = {
+} HYDROGENDef;
+static HYDROGENDef defs[] = {
     { "defTextVector", "defText" },   { "defNumberVector", "defNumber" }, { "defSwitchVector", "defSwitch" },
     { "defLightVector", "defLight" }, { "defBLOBVector", "defBLOB" },     { "setBLOBVector", "oneBLOB" },
     { "setTextVector", "oneText" },   { "setNumberVector", "oneNumber" }, { "setSwitchVector", "oneSwitch" },
@@ -46,13 +46,13 @@ static LITHIUMDef defs[] = {
 };
 static int ndefs = 6; /* or 10 if -m */
 
-/* table of keyword to use in query vs name of LITHIUM defXXX attribute */
+/* table of keyword to use in query vs name of HYDROGEN defXXX attribute */
 typedef struct
 {
     char *keyword;
     char *lithiumattr;
-} LITHIUMkwattr;
-static LITHIUMkwattr kwattr[] = {
+} HYDROGENkwattr;
+static HYDROGENkwattr kwattr[] = {
     { "_LABEL", "label" }, { "_GROUP", "group" }, { "_STATE", "state" },
     { "_PERM", "perm" },   { "_TO", "timeout" },  { "_TS", "timestamp" },
 };
@@ -72,9 +72,9 @@ static int nsrchs;
 static void usage(void);
 static void crackDPE(char *spec);
 static void addSearchDef(char *dev, char *prop, char *ele);
-static void openLITHIUMServer(void);
+static void openHYDROGENServer(void);
 static void getprops(void);
-static void listenLITHIUM(void);
+static void listenHYDROGEN(void);
 static int finished(void);
 static void onAlarm(int dummy);
 static int readServerChar(void);
@@ -86,8 +86,8 @@ static void oneBLOB(XMLEle *root, char *dev, char *nam, char *enam, char *p, int
 static char *me;                      /* our name for usage() message */
 static char host_def[] = "localhost"; /* default host name */
 static char *host      = host_def;    /* working host name */
-#define LITHIUMPORT 7624                 /* default port */
-static int port = LITHIUMPORT;           /* working port number */
+#define HYDROGENPORT 7624                 /* default port */
+static int port = HYDROGENPORT;           /* working port number */
 #define TIMEOUT 2                     /* default timeout, secs */
 static int timeout = TIMEOUT;         /* working timeout, secs */
 static int verbose;                   /* report extra info */
@@ -205,7 +205,7 @@ int main(int ac, char *av[])
     }
     else
     {
-        openLITHIUMServer();
+        openHYDROGENServer();
         if (verbose)
             fprintf(stderr, "Connected to %s on port %d\n", host, port);
     }
@@ -217,19 +217,19 @@ int main(int ac, char *av[])
     getprops();
 
     /* listen for responses, looking for d.p.e or timeout */
-    listenLITHIUM();
+    listenHYDROGEN();
 
     return (0);
 }
 
 static void usage()
 {
-    fprintf(stderr, "Purpose: retrieve readable properties from an LITHIUM server\n");
+    fprintf(stderr, "Purpose: retrieve readable properties from an HYDROGEN server\n");
     fprintf(stderr, "Usage: %s [options] [device.property.element ...]\n", me);
     fprintf(stderr, "  Any component may be \"*\" to match all (beware shell metacharacters).\n");
     fprintf(stderr, "  Reports all properties if none specified.\n");
     fprintf(stderr, "  BLOBs are saved in file named device.property.element.format\n");
-    fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getLITHIUM`);");
+    fprintf(stderr, "  In perl try: %s\n", "%props = split (/[=\\n]/, `getHYDROGEN`);");
     fprintf(stderr, "  Set element to one of following to return property attribute:\n");
     for (int i = 0; i < (int)NKWA; i++)
         fprintf(stderr, "    %10s to report %s\n", kwattr[i].keyword, kwattr[i].lithiumattr);
@@ -240,7 +240,7 @@ static void usage()
     fprintf(stderr, "  -d f  : use file descriptor f already open to server\n");
     fprintf(stderr, "  -h h  : alternate host, default is %s\n", host_def);
     fprintf(stderr, "  -m    : keep monitoring for more updates\n");
-    fprintf(stderr, "  -p p  : alternate port, default is %d\n", LITHIUMPORT);
+    fprintf(stderr, "  -p p  : alternate port, default is %d\n", HYDROGENPORT);
     fprintf(stderr, "  -t t  : max time to wait, default is %d secs\n", TIMEOUT);
     fprintf(stderr, "  -v    : verbose (cumulative)\n");
     fprintf(stderr, "  -w    : show write-only properties too\n");
@@ -283,7 +283,7 @@ static void addSearchDef(char *dev, char *prop, char *ele)
 /* open a connection to the given host and port.
  * set svrwfp and svrrfp or die.
  */
-static void openLITHIUMServer(void)
+static void openHYDROGENServer(void)
 {
     struct sockaddr_in serv_addr;
     struct hostent *hp;
@@ -316,7 +316,7 @@ static void openLITHIUMServer(void)
 #endif
 
 
-    /* create a socket to the LITHIUM server */
+    /* create a socket to the HYDROGEN server */
     (void)memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family      = AF_INET;
     serv_addr.sin_addr.s_addr = ((struct in_addr *)(hp->h_addr_list[0]))->s_addr;
@@ -359,9 +359,9 @@ static void getprops()
     }
 
     if (onedev)
-        fprintf(svrwfp, "<getProperties version='%g' device='%s'/>\n", LITHIUMV, onedev);
+        fprintf(svrwfp, "<getProperties version='%g' device='%s'/>\n", HYDROGENV, onedev);
     else
-        fprintf(svrwfp, "<getProperties version='%g'/>\n", LITHIUMV);
+        fprintf(svrwfp, "<getProperties version='%g'/>\n", HYDROGENV);
     fflush(svrwfp);
 
     if (verbose)
@@ -370,18 +370,20 @@ static void getprops()
 
 #define TIMEOUT_MS 5000
 
+#ifdef _WIN32
 static void CALLBACK onTimer(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
 {
     printf("Timer expired!\n");
     exit(0);
 }
+#endif
 
 
-/* listen for LITHIUM traffic on svrrfp.
+/* listen for HYDROGEN traffic on svrrfp.
  * print matching srchs[] and return when see all.
  * timeout and exit if any trouble.
  */
-static void listenLITHIUM()
+static void listenHYDROGEN()
 {
     char msg[1024];
 
@@ -458,7 +460,7 @@ static int readServerChar()
         if (ferror(svrrfp))
             perror("read");
         else
-            fprintf(stderr, "LITHIUM server %s/%d disconnected\n", host, port);
+            fprintf(stderr, "HYDROGEN server %s/%d disconnected\n", host, port);
         exit(2);
     }
 

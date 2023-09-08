@@ -1,9 +1,9 @@
 /*
-    Astro-Physics LITHIUM driver
+    Astro-Physics HYDROGEN driver
 
     Copyright (C) 2014 Jasem Mutlaq
 
-    Based on LITHIUM Astrophysics Driver by Markus Wildi
+    Based on HYDROGEN Astrophysics Driver by Markus Wildi
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -116,8 +116,8 @@ protected:
     virtual IPState GuideEast(uint32_t ms) override;
     virtual IPState GuideWest(uint32_t ms) override;
     virtual int SendPulseCmd(int8_t direction, uint32_t duration_msec) override;
-    virtual bool GuideNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command);
-    virtual bool GuideWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command);
+    virtual bool GuideNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command);
+    virtual bool GuideWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command);
 
     // Pulse Guide specific to AstroPhysics
     static void pulseGuideTimeoutHelperWE(void *p);
@@ -134,8 +134,8 @@ protected:
     virtual bool SetTrackRate(double raRate, double deRate) override;
 
     // NSWE Motion Commands
-    virtual bool MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command) override;
-    virtual bool MoveWE(LITHIUM_DIR_WE dir, TelescopeMotionCommand command) override;
+    virtual bool MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command) override;
+    virtual bool MoveWE(HYDROGEN_DIR_WE dir, TelescopeMotionCommand command) override;
 
     virtual bool saveConfigItems(FILE *fp) override;
 

@@ -19,7 +19,7 @@
 
 #include "lx200fs2.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <libnova/transform.h>
@@ -129,7 +129,7 @@ bool LX200FS2::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             int currentIndex = IUFindOnSwitchIndex(&StopAfterParkSP);
             if (!strcmp(actionName, StopAfterParkS[currentIndex].name))
             {
-                DEBUGF(LITHIUM::Logger::DBG_SESSION, "Stop After Park is already %s", StopAfterParkS[currentIndex].label);
+                DEBUGF(HYDROGEN::Logger::DBG_SESSION, "Stop After Park is already %s", StopAfterParkS[currentIndex].label);
                 StopAfterParkSP.s = IPS_IDLE;
                 IDSetSwitch(&StopAfterParkSP, NULL);
                 return true;
@@ -138,7 +138,7 @@ bool LX200FS2::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             // Otherwise, let us update the switch state
             IUUpdateSwitch(&StopAfterParkSP, states, names, n);
             currentIndex = IUFindOnSwitchIndex(&StopAfterParkSP);
-            DEBUGF(LITHIUM::Logger::DBG_SESSION, "Stop After Park is now %s", StopAfterParkS[currentIndex].label);
+            DEBUGF(HYDROGEN::Logger::DBG_SESSION, "Stop After Park is now %s", StopAfterParkS[currentIndex].label);
             StopAfterParkSP.s = IPS_OK;
             IDSetSwitch(&StopAfterParkSP, NULL);
             return true;
@@ -167,7 +167,7 @@ bool LX200FS2::checkConnection()
 
 bool LX200FS2::saveConfigItems(FILE *fp)
 {
-    LITHIUM::Telescope::saveConfigItems(fp);
+    HYDROGEN::Telescope::saveConfigItems(fp);
 
     IUSaveConfigNumber(fp, &SlewAccuracyNP);
     IUSaveConfigSwitch(fp, &StopAfterParkSP);
@@ -185,9 +185,9 @@ bool LX200FS2::Park()
     fs_sexa(AltStr, parkAlt, 2, 3600);
     LOGF_DEBUG("Parking to Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-    LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+    HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
 
     char RAStr[16], DEStr[16];
     fs_sexa(RAStr, equatorialCoords.rightascension, 2, 3600);
@@ -321,9 +321,9 @@ bool LX200FS2::UnPark()
     fs_sexa(AltStr, parkAlt, 2, 3600);
     LOGF_DEBUG("Unparking from Az (%s) Alt (%s)...", AzStr, AltStr);
 
-    LITHIUM::IEquatorialCoordinates equatorialCoords{0, 0};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
-    LITHIUM::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{0, 0};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{parkAz, parkAlt};
+    HYDROGEN::HorizontalToEquatorial(&horizontalCoords, &m_Location, ln_get_julian_from_sys(), &equatorialCoords);
 
     char RAStr[16], DEStr[16];
     fs_sexa(RAStr, equatorialCoords.rightascension, 2, 3600);
@@ -345,9 +345,9 @@ bool LX200FS2::UnPark()
 
 bool LX200FS2::SetCurrentPark()
 {
-    LITHIUM::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
-    LITHIUM::IHorizontalCoordinates horizontalCoords{0, 0};
-    LITHIUM::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
+    HYDROGEN::IEquatorialCoordinates equatorialCoords{currentRA, currentDEC};
+    HYDROGEN::IHorizontalCoordinates horizontalCoords{0, 0};
+    HYDROGEN::EquatorialToHorizontal(&equatorialCoords, &m_Location, ln_get_julian_from_sys(), &horizontalCoords);
     double parkAZ = horizontalCoords.azimuth;
     double parkAlt = horizontalCoords.altitude;
     char AzStr[16], AltStr[16];
@@ -372,9 +372,9 @@ bool LX200FS2::SetDefaultPark()
 
 bool LX200FS2::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(latitude);
-    LITHIUM_UNUSED(longitude);
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(latitude);
+    HYDROGEN_UNUSED(longitude);
+    HYDROGEN_UNUSED(elevation);
     return true;
 }
 

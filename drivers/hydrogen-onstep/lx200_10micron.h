@@ -1,5 +1,5 @@
 /*
-    10micron LITHIUM driver
+    10micron HYDROGEN driver
 
     Copyright (C) 2017 Hans Lambermont
 

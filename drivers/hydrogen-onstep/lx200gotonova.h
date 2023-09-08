@@ -1,5 +1,5 @@
 /*
-    GotoNova LITHIUM driver
+    GotoNova HYDROGEN driver
 
     Copyright (C) 2017 Jasem Mutlaq
 

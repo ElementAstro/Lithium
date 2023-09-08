@@ -39,7 +39,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "lx200generic.h"
 #include "eq500x.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 typedef struct _simEQ500X
@@ -96,7 +96,7 @@ struct _adjustment
     {
         {":RG#", 0, 1 * ARCSECOND, 0.7 * ARCMINUTE, 100},   // Guiding speed
         {":RC#", 1, 0.7 * ARCMINUTE, 10 * ARCMINUTE, 200},  // Centering speed
-        {":RM#", 2, 10 * ARCMINUTE, 5 * ONEDEGREE, 500},    // Flithiumng speed
+        {":RM#", 2, 10 * ARCMINUTE, 5 * ONEDEGREE, 500},    // Fhydrogenng speed
         {":RS#", 3, 5 * ONEDEGREE, 360 * ONEDEGREE, 1000}}; // Slew speed
 
 /**************************************************************************************
@@ -234,7 +234,7 @@ bool EQ500X::checkConnection()
 
 bool EQ500X::updateLocation(double latitude, double longitude, double elevation)
 {
-    LITHIUM_UNUSED(elevation);
+    HYDROGEN_UNUSED(elevation);
     LOGF_INFO("Location updated: Longitude (%g) Latitude (%g)", longitude, latitude);
 
     // Only update LST if the mount is connected and "parked" looking at the pole
@@ -759,12 +759,12 @@ bool EQ500X::Abort()
 
 void EQ500X::setPierSide(TelescopePierSide side)
 {
-    LITHIUM_UNUSED(side);
+    HYDROGEN_UNUSED(side);
     PierSideSP.s = IPS_ALERT;
     IDSetSwitch(&PierSideSP, "Not supported");
 }
 
-bool EQ500X::MoveNS(LITHIUM_DIR_NS dir, TelescopeMotionCommand command)
+bool EQ500X::MoveNS(HYDROGEN_DIR_NS dir, TelescopeMotionCommand command)
 {
     // EQ500X has North/South directions inverted
     int current_move = (dir == DIRECTION_NORTH) ? LX200_SOUTH : LX200_NORTH;

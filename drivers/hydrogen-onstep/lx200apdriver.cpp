@@ -25,8 +25,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <cmath>
 #include "lx200apdriver.h"
 
-#include "lithiumcom.h"
-#include "lithiumlogger.h"
+#include "hydrogencom.h"
+#include "hydrogenlogger.h"
 #include "lx200driver.h"
 
 #include <cstring>
@@ -43,12 +43,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 // maximum guide pulse request to send to controller
 #define MAX_LX200AP_PULSE_LEN 999
 
-char lx200ap_name[MAXLITHIUMDEVICE];
+char lx200ap_name[MAXHYDROGENDEVICE];
 unsigned int AP_DBG_SCOPE;
 
 void set_lx200ap_name(const char *deviceName, unsigned int debug_level)
 {
-    strncpy(lx200ap_name, deviceName, MAXLITHIUMDEVICE);
+    strncpy(lx200ap_name, deviceName, MAXHYDROGENDEVICE);
     AP_DBG_SCOPE = debug_level;
 }
 
@@ -61,11 +61,11 @@ int check_lx200ap_connection(int fd)
     int nbytes_write = 0;
     int nbytes_read = 0;
 
-    DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "Testing telescope's connection using #:GG#...");
+    DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "Testing telescope's connection using #:GG#...");
 
     if (fd <= 0)
     {
-        DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+        DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                     "check_lx200ap_connection: not a valid file descriptor received");
 
         return -1;
@@ -75,7 +75,7 @@ int check_lx200ap_connection(int fd)
         // This is the command to get the UTC offset. Used as a connection test.
         if ((error_type = tty_write_string(fd, "#:GG#", &nbytes_write)) != TTY_OK)
         {
-            DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+            DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                          "check_lx200ap_connection: unsuccessful write to telescope, %d", nbytes_write);
 
             return error_type;
@@ -90,7 +90,7 @@ int check_lx200ap_connection(int fd)
         {
             temp_string[nbytes_read - 1] = '\0';
 
-            DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "check_lx200ap_connection: received bytes %d, [%s]",
+            DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "check_lx200ap_connection: received bytes %d, [%s]",
                          nbytes_write, temp_string);
 
             return 0;
@@ -98,7 +98,7 @@ int check_lx200ap_connection(int fd)
         nanosleep(&timeout, nullptr);
     }
 
-    DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "check_lx200ap_connection: wrote, but nothing received.");
+    DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "check_lx200ap_connection: wrote, but nothing received.");
 
     return -1;
 }
@@ -122,7 +122,7 @@ int getAPUTCOffset(int fd, double *value)
 
     if ((error_type = tty_read_section(fd, temp_string, '#', LX200_TIMEOUT, &nbytes_read)) != TTY_OK)
     {
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPUTCOffset: saying good bye %d, %d", error_type,
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPUTCOffset: saying good bye %d, %d", error_type,
                      nbytes_read);
         return error_type;
     }
@@ -172,7 +172,7 @@ int getAPUTCOffset(int fd, double *value)
                 temp_string[2] = '5';
                 break;
             default:
-                DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPUTCOffset: string not handled %s",
+                DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPUTCOffset: string not handled %s",
                              temp_string);
                 return -1;
                 break;
@@ -214,7 +214,7 @@ int getAPUTCOffset(int fd, double *value)
                 temp_string[2] = '2';
                 break;
             default:
-                DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPUTCOffset: string not handled %s",
+                DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPUTCOffset: string not handled %s",
                              temp_string);
                 return -1;
                 break;
@@ -222,7 +222,7 @@ int getAPUTCOffset(int fd, double *value)
         }
         else
         {
-            DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPUTCOffset: string not handled %s", temp_string);
+            DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPUTCOffset: string not handled %s", temp_string);
         }
     }
     else
@@ -232,7 +232,7 @@ int getAPUTCOffset(int fd, double *value)
 
     if (f_scansexa(temp_string, value))
     {
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPUTCOffset: unable to process %s", temp_string);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPUTCOffset: unable to process %s", temp_string);
         return -1;
     }
     return 0;
@@ -364,7 +364,7 @@ int sendAPCommand(int fd, const char *cmd, const char *comment)
     int error_type;
     int nbytes_write = 0;
 
-    DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, comment);
+    DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, comment);
     DEBUGFDEVICE(lx200ap_name, AP_DBG_SCOPE, "CMD <%s>", cmd);
 
     if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
@@ -400,7 +400,7 @@ int getAPWormPosition(int fd, int *position)
     int res = sendAPCommand(fd, "#:Gp#", "getAWormPosition");
     if (res != TTY_OK)
     {
-        DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPWormPosition: write failed.");
+        DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPWormPosition: write failed.");
         return res;
     }
 
@@ -408,7 +408,7 @@ int getAPWormPosition(int fd, int *position)
     if (res != TTY_OK)
     {
         // This does happen occasionally, not sure why, but isn't critical.
-        // DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPWormPosition: read failed.");
+        // DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPWormPosition: read failed.");
         return res;
     }
 
@@ -422,10 +422,10 @@ int getAPWormPosition(int fd, int *position)
         response[nbytes_read - 1] = '\0';
         response[3] = '\0';
         sscanf(response, "%d", position);
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "getAPWormPosition: response: %d", *position);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "getAPWormPosition: response: %d", *position);
         return TTY_OK;
     }
-    DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getAPWormPosition: wrote, but bad response.");
+    DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getAPWormPosition: wrote, but bad response.");
     return -1;
 }
 
@@ -474,7 +474,7 @@ int selectAPTrackingMode(int fd, int trackMode)
     case AP_TRACKING_LUNAR:
         return sendAPCommand(fd, "#:RT0#", "selectAPTrackingMode: Setting tracking mode to lunar.");
     case AP_TRACKING_CUSTOM:
-        DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG,
+        DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG,
                     "selectAPTrackingMode: Setting tracking mode to Custom -- NOT IMPLEMENTED!.");
         break;
     case AP_TRACKING_OFF:
@@ -606,7 +606,7 @@ int setAPRATrackRate(int fd, double rate)
 
     snprintf(cmd, 16, "#:RR%c%03.4f#", sign, fabs(rate));
 
-    DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "CMD (%s)", cmd);
+    DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "CMD (%s)", cmd);
 
 #ifdef _WIN32
     PurgeComm((HANDLE)_get_osfhandle(fd), PURGE_RXCLEAR);
@@ -617,21 +617,21 @@ int setAPRATrackRate(int fd, double rate)
     if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
     {
         tty_error_msg(errcode, errmsg, MAXRBUF);
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
         return errcode;
     }
 
     if ((errcode = tty_read(fd, response, 1, LX200_TIMEOUT, &nbytes_read)))
     {
         tty_error_msg(errcode, errmsg, MAXRBUF);
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
         return errcode;
     }
 
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "RES (%s)", response);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "RES (%s)", response);
 
 #ifdef _WIN32
         PurgeComm((HANDLE)_get_osfhandle(fd), PURGE_RXCLEAR);
@@ -641,7 +641,7 @@ int setAPRATrackRate(int fd, double rate)
         return 0;
     }
 
-    DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return -1;
 }
 
@@ -662,7 +662,7 @@ int setAPDETrackRate(int fd, double rate)
 
     snprintf(cmd, 16, "#:RD%c%03.4f#", sign, fabs(rate));
 
-    DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "CMD (%s)", cmd);
+    DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "CMD (%s)", cmd);
 
 #ifdef _WIN32
     PurgeComm((HANDLE)_get_osfhandle(fd), PURGE_RXCLEAR);
@@ -673,21 +673,21 @@ int setAPDETrackRate(int fd, double rate)
     if ((errcode = tty_write(fd, cmd, strlen(cmd), &nbytes_written)) != TTY_OK)
     {
         tty_error_msg(errcode, errmsg, MAXRBUF);
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
         return errcode;
     }
 
     if ((errcode = tty_read(fd, response, 1, LX200_TIMEOUT, &nbytes_read)))
     {
         tty_error_msg(errcode, errmsg, MAXRBUF);
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "%s", errmsg);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "%s", errmsg);
         return errcode;
     }
 
     if (nbytes_read > 0)
     {
         response[nbytes_read] = '\0';
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "RES (%s)", response);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "RES (%s)", response);
 
 #ifdef _WIN32
         PurgeComm((HANDLE)_get_osfhandle(fd), PURGE_RXCLEAR);
@@ -697,7 +697,7 @@ int setAPDETrackRate(int fd, double rate)
         return 0;
     }
 
-    DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
+    DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "Only received #%d bytes, expected 1.", nbytes_read);
     return -1;
 }
 
@@ -708,7 +708,7 @@ int APSendPulseCmd(int fd, int direction, int duration_msec)
     // GTOCP3 supports 3 digits for msec duration
     if (duration_msec > MAX_LX200AP_PULSE_LEN)
     {
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "APSendPulseCmd requested %d msec limited to 999 msec!", duration_msec);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "APSendPulseCmd requested %d msec limited to 999 msec!", duration_msec);
         duration_msec = 999;
     }
 
@@ -857,7 +857,7 @@ int getApStatusStringInternal(int fd, char *statusString, bool complain)
     if (fd <= 0)
     {
         if (complain)
-            DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+            DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                         "getApStatusString: not a valid file descriptor received");
         return -1;
     }
@@ -866,7 +866,7 @@ int getApStatusStringInternal(int fd, char *statusString, bool complain)
     if (res != TTY_OK)
     {
         if (complain)
-            DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+            DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                          "getApStatusString: unsuccessful write to telescope, %d", nbytes_write);
         return res;
     }
@@ -881,14 +881,14 @@ int getApStatusStringInternal(int fd, char *statusString, bool complain)
     {
         statusString[nbytes_read - 1] = '\0';
 
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "getApStatusString: received bytes %d, [%s]",
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "getApStatusString: received bytes %d, [%s]",
                      nbytes_write, statusString);
 
         return 0;
     }
 
     if (complain)
-        DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getApStatusString: wrote, but nothing received.");
+        DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getApStatusString: wrote, but nothing received.");
 
     return -1;
 }
@@ -1017,7 +1017,7 @@ APRateTableState apRateTable(const char *statusString)
 // 1      2       0 = Normal Speed Range, 2 = Slew Scaling on Standard Rates ( >= 600x)
 //                This function has been eliminated beginning P02-01, in favor of the rate tables.
 // 2      4       0 = Encoders not Supported, 4 = Encoders Supported
-// 3-5            Bit encoded lithiumcation of what encoder types are supported
+// 3-5            Bit encoded hydrogencation of what encoder types are supported
 // 6     64       Motor Type:  0 = Servo Motors, 64 = Stepper Motors
 // 7    128       Encoder Reference: 0 = Clutch Dependent, 128 = Clutch Independent (ex. Mach2GTO)
 //                This bit is only meaningful if bit 2 is set.
@@ -1038,7 +1038,7 @@ int getApMountFeatures(int fd, bool *hasEncoder, bool *clutchAware)
     if (fd <= 0)
     {
         if (complain)
-            DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+            DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                         "getApStatusString: not a valid file descriptor received");
         return TTY_READ_ERROR;
     }
@@ -1047,7 +1047,7 @@ int getApMountFeatures(int fd, bool *hasEncoder, bool *clutchAware)
     if (res != TTY_OK)
     {
         if (complain)
-            DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+            DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                          "getApMountFeatures: unsuccessful write to telescope, %d", nbytes_write);
         return res;
     }
@@ -1062,7 +1062,7 @@ int getApMountFeatures(int fd, bool *hasEncoder, bool *clutchAware)
     {
         readBuffer[nbytes_read - 1] = '\0';
 
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "getApMountFeatures: received bytes %d, [%s]",
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "getApMountFeatures: received bytes %d, [%s]",
                      nbytes_write, readBuffer);
         int value;
         if (sscanf(readBuffer, "%d", &value) > 0)
@@ -1075,7 +1075,7 @@ int getApMountFeatures(int fd, bool *hasEncoder, bool *clutchAware)
     }
 
     if (complain)
-        DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR, "getApReadBuffer: wrote, but nothing received.");
+        DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR, "getApReadBuffer: wrote, but nothing received.");
 
     return TTY_READ_ERROR;
 }
@@ -1102,11 +1102,11 @@ int isAPInitialized(int fd, bool *isInitialized)
     int nbytes_write = 0;
     int nbytes_read = 0;
 
-    DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "Check initialized...");
+    DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "Check initialized...");
 
     if (fd <= 0)
     {
-        DEBUGDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+        DEBUGDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                     "isAPInitialized: not a valid file descriptor received");
 
         return -1;
@@ -1114,7 +1114,7 @@ int isAPInitialized(int fd, bool *isInitialized)
 
     if ((error_type = tty_write_string(fd, "#:GR#", &nbytes_write)) != TTY_OK)
     {
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_ERROR,
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_ERROR,
                      "isAPInitialized: unsuccessful write to telescope, %d", nbytes_write);
 
         return error_type;
@@ -1124,7 +1124,7 @@ int isAPInitialized(int fd, bool *isInitialized)
 
     if (nbytes_read < 1)
     {
-        DEBUGFDEVICE(lx200ap_name, LITHIUM::Logger::DBG_DEBUG, "RES ERROR <%d>", error_type);
+        DEBUGFDEVICE(lx200ap_name, HYDROGEN::Logger::DBG_DEBUG, "RES ERROR <%d>", error_type);
         return error_type;
     }
 

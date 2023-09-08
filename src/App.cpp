@@ -35,12 +35,10 @@ Description: Main
 #include "controller/SystemController.hpp"
 #include "controller/WebSocketController.hpp"
 #include "controller/IOController.hpp"
-#include "controller/AuthController.hpp"
 #include "controller/ProcessController.hpp"
 #include "controller/PHD2Controller.hpp"
 #include "controller/TaskController.hpp"
 #include "controller/UploadController.hpp"
-#include "controller/StarController.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -51,6 +49,7 @@ Description: Main
 #include "oatpp/network/Server.hpp"
 
 #include <argparse/argparse.hpp>
+#include <backward/backward.hpp>
 
 #include "LithiumApp.hpp"
 
@@ -122,16 +121,6 @@ void run()
     docEndpoints.append(upload_controller->getEndpoints());
     router->addController(upload_controller);
     LOG_F(INFO, "Upload controller loaded");
-
-    auto star_controller = StarController::createShared();
-    docEndpoints.append(star_controller->getEndpoints());
-    router->addController(star_controller);
-    LOG_F(INFO, "Star search controller loaded");
-
-    auto auth_controller = AuthController::createShared();
-    docEndpoints.append(auth_controller->getEndpoints());
-    router->addController(auth_controller);
-    LOG_F(INFO, "Auth controller loaded");
 
     // LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
@@ -286,10 +275,6 @@ int main(int argc, char *argv[])
 
         oatpp::base::Environment::init();
         run();
-        
-        LOG_F(INFO, "Environment:");
-        LOG_F(INFO, "objectsCount = %d", oatpp::base::Environment::getObjectsCount());
-        LOG_F(INFO, "objectsCreated = %d", oatpp::base::Environment::getObjectsCreated());
 
         oatpp::base::Environment::destroy();
     }

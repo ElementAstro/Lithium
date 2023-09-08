@@ -20,7 +20,7 @@
 
 #include "lx200_OpenAstroTech.h"
 
-#include "lithiumcom.h"
+#include "hydrogencom.h"
 #include "lx200driver.h"
 
 #include <cmath>
@@ -237,7 +237,7 @@ bool LX200_OpenAstroTech::ISNewText(const char *dev, const char *name, char *tex
         }
     }
 
-    return LITHIUM::Telescope::ISNewText(dev, name, texts, names, n);
+    return HYDROGEN::Telescope::ISNewText(dev, name, texts, names, n);
 }
 
 bool LX200_OpenAstroTech::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -425,7 +425,7 @@ int LX200_OpenAstroTech::flushIO(int fd)
 
 IPState LX200_OpenAstroTech::MoveFocuser(FocusDirection dir, int speed, uint16_t duration)
 {
-    LITHIUM_UNUSED(speed);
+    HYDROGEN_UNUSED(speed);
     //  :FRsnnn#  Set focuser target position relative (in microns)
     //            Returns: Nothing
     LOGF_ERROR("MoveFocuser shouldn't be called: %d at %d for %d", dir, speed, duration);
@@ -557,15 +557,15 @@ void LX200_OpenAstroTech::initFocuserProperties(const char *groupName)
                        ISR_ATMOST1, 60, IPS_IDLE);
 
     // Revese
-    IUFillSwitch(&FocusReverseS[DefaultDevice::LITHIUM_ENABLED], "LITHIUM_ENABLED", "Enabled", ISS_OFF);
-    IUFillSwitch(&FocusReverseS[DefaultDevice::LITHIUM_DISABLED], "LITHIUM_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitch(&FocusReverseS[DefaultDevice::HYDROGEN_ENABLED], "HYDROGEN_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&FocusReverseS[DefaultDevice::HYDROGEN_DISABLED], "HYDROGEN_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&FocusReverseSP, FocusReverseS, 2, m_defaultDevice->getDeviceName(), "FOCUS_REVERSE_MOTION",
                        "Reverse Motion", groupName, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
 
     // Backlash Compensation
-    IUFillSwitch(&FocusBacklashS[DefaultDevice::LITHIUM_ENABLED], "LITHIUM_ENABLED", "Enabled", ISS_OFF);
-    IUFillSwitch(&FocusBacklashS[DefaultDevice::LITHIUM_DISABLED], "LITHIUM_DISABLED", "Disabled", ISS_ON);
+    IUFillSwitch(&FocusBacklashS[DefaultDevice::HYDROGEN_ENABLED], "HYDROGEN_ENABLED", "Enabled", ISS_OFF);
+    IUFillSwitch(&FocusBacklashS[DefaultDevice::HYDROGEN_DISABLED], "HYDROGEN_DISABLED", "Disabled", ISS_ON);
     IUFillSwitchVector(&FocusBacklashSP, FocusBacklashS, 2, m_defaultDevice->getDeviceName(), "FOCUS_BACKLASH_TOGGLE",
                        "Backlash", groupName, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);

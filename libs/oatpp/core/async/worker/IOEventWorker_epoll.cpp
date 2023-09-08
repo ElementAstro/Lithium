@@ -54,7 +54,7 @@ void IOEventWorker::initEventQueue() {
 
   if(!m_outEvents) {
     OATPP_LOGE("[oatpp::async::worker::IOEventWorker::initEventQueue()]",
-               "Error. Unable to allocate %d bytes for events.", MAX_EVENTS * sizeof(epoll_event));
+               "Error. Unable to allocate %lu bytes for events.", MAX_EVENTS * sizeof(epoll_event));
     throw std::runtime_error("[oatpp::async::worker::IOEventWorker::initEventQueue()]: Error. Unable to allocate memory for events.");
   }
 
@@ -155,17 +155,17 @@ void IOEventWorker::consumeBacklog() {
 
 void IOEventWorker::waitEvents() {
 
-  epoll_event* outEvents = (epoll_event*)m_outEvents.get();
+  epoll_event* outEvents = reinterpret_cast<epoll_event*>(m_outEvents.get());
   auto eventsCount = epoll_wait(m_eventQueueHandle, outEvents, MAX_EVENTS, -1);
 
   if((eventsCount < 0) && (errno != EINTR)) {
     OATPP_LOGE("[oatpp::async::worker::IOEventWorker::waitEvents()]", "Error:\n"
                "errno=%d\n"
                "in-events=%d\n"
-               "foreman=%d\n"
-               "this=%d\n"
+               "foreman=%lx\n"
+               "this=%lx\n"
                "specialization=%d",
-               errno, m_inEventsCount, m_foreman, this, m_specialization);
+               errno, m_inEventsCount, reinterpret_cast<v_buff_usize>(m_foreman), reinterpret_cast<v_buff_usize>(this), m_specialization);
     throw std::runtime_error("[oatpp::async::worker::IOEventWorker::waitEvents()]: Error. Event loop failed.");
   }
 
@@ -184,7 +184,7 @@ void IOEventWorker::waitEvents() {
 
       } else {
 
-        auto coroutine = (CoroutineHandle*) dataPtr;
+        auto coroutine = reinterpret_cast<CoroutineHandle*>(dataPtr);
 
         Action action = coroutine->iterate();
 

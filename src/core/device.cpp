@@ -30,9 +30,9 @@ Description: Basic Device Defination
 *************************************************/
 
 #include "device.hpp"
-#include "liproperty/uuid.hpp"
+#include "core/property/uuid.hpp"
 
-#include "Hydrogen/util/utils.hpp"
+#include "util/utils.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>

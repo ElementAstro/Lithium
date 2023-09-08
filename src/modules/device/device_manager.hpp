@@ -37,12 +37,12 @@ Description: Device Manager
 #include <thread>
 #include <functional>
 
-#include "Hydrogen/core/device.hpp"
+#include "core/device.hpp"
 #include "config/configor.hpp"
 #include "module/modloader.hpp"
 #include "server/message_bus.hpp"
 
-#include "Hydrogen/event/eventloop.hpp"
+#include "core/event/eventloop.hpp"
 
 namespace Lithium
 {

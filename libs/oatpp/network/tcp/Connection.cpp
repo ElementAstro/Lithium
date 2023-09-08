@@ -76,6 +76,11 @@ Connection::~Connection(){
   close();
 }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wlogical-op"
+#endif
+
 v_io_size Connection::write(const void *buff, v_buff_size count, async::Action& action){
 
 #if defined(WIN32) || defined(_WIN32)
@@ -111,11 +116,14 @@ v_io_size Connection::write(const void *buff, v_buff_size count, async::Action& 
   flags |= MSG_NOSIGNAL;
 #endif
 
-  auto result = ::send(m_handle, buff, (size_t)count, flags);
+  auto result = ::send(m_handle, buff, static_cast<size_t>(count), flags);
 
   if(result < 0) {
     auto e = errno;
-    if(e == EAGAIN || e == EWOULDBLOCK){
+
+    bool retry = ((e == EAGAIN) || (e == EWOULDBLOCK));
+
+    if(retry){
       if(m_mode == data::stream::ASYNCHRONOUS) {
         action = oatpp::async::Action::createIOWaitAction(m_handle, oatpp::async::Action::IOEventType::IO_EVENT_WRITE);
       }
@@ -138,6 +146,15 @@ v_io_size Connection::write(const void *buff, v_buff_size count, async::Action& 
 #endif
 
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wlogical-op"
+#endif
 
 v_io_size Connection::read(void *buff, v_buff_size count, async::Action& action){
 
@@ -169,11 +186,14 @@ v_io_size Connection::read(void *buff, v_buff_size count, async::Action& action)
 
   errno = 0;
 
-  auto result = ::read(m_handle, buff, (size_t)count);
+  auto result = ::read(m_handle, buff, static_cast<size_t>(count));
 
   if(result < 0) {
     auto e = errno;
-    if(e == EAGAIN || e == EWOULDBLOCK){
+
+    bool retry = ((e == EAGAIN) || (e == EWOULDBLOCK));
+
+    if(retry){
       if(m_mode == data::stream::ASYNCHRONOUS) {
         action = oatpp::async::Action::createIOWaitAction(m_handle, oatpp::async::Action::IOEventType::IO_EVENT_READ);
       }
@@ -197,6 +217,10 @@ v_io_size Connection::read(void *buff, v_buff_size count, async::Action& action)
 
 }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 #if defined(WIN32) || defined(_WIN32)
 void Connection::setStreamIOMode(oatpp::data::stream::IOMode ioMode) {
 
@@ -216,6 +240,8 @@ void Connection::setStreamIOMode(oatpp::data::stream::IOMode ioMode) {
           throw std::runtime_error("[oatpp::network::tcp::Connection::setStreamIOMode()]: Error. Can't set stream I/O mode to IOMode::ASYNCHRONOUS.");
       }
       m_mode = data::stream::ASYNCHRONOUS;
+      break;
+    default:
       break;
   }
 
@@ -244,6 +270,9 @@ void Connection::setStreamIOMode(oatpp::data::stream::IOMode ioMode) {
         throw std::runtime_error("[oatpp::network::tcp::Connection::setStreamIOMode()]: Error. Can't set stream I/O mode to IOMode::ASYNCHRONOUS.");
       }
       m_mode = data::stream::ASYNCHRONOUS;
+      break;
+
+    default:
       break;
 
   }

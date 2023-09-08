@@ -281,62 +281,46 @@ install(FILES
     COMPONENT Devel
 )
 
-    add_library(${PROJECT_NAME}static STATIC)
+add_library(${PROJECT_NAME}static STATIC)
 
-    target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-    target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
-    target_include_directories(${PROJECT_NAME}static PUBLIC .)
+target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
+target_include_directories(${PROJECT_NAME}static PUBLIC .)
 
-    set_target_properties(${PROJECT_NAME}static PROPERTIES
-        VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-        SOVERSION ${HYDROGEN_SOVERSION}
-        OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
-    )
+set_target_properties(${PROJECT_NAME}static PROPERTIES
+    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
+    SOVERSION ${HYDROGEN_SOVERSION}
+    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
+)
 
-    install(TARGETS ${PROJECT_NAME}static
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
+install(TARGETS ${PROJECT_NAME}static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
 
-    add_library(${PROJECT_NAME} SHARED)
+add_library(LithiumDriver
+    device.cpp
+    device.hpp
 
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+    deviceio.cpp
+    deviceio.hpp
 
-    target_include_directories(${PROJECT_NAME} PUBLIC .)
+    camera.cpp
+    camera.hpp
 
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-        VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-        SOVERSION ${HYDROGEN_SOVERSION}
-        OUTPUT_NAME ${PROJECT_NAME}
-    )
+    telescope.cpp
+    telescope.hpp
 
-    install(TARGETS ${PROJECT_NAME}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    )
+    focuser.cpp
+    focuser.hpp
 
-    add_library(LithiumDriver
-    core/device.cpp
-    core/device.hpp
+    filterwheel.cpp
+    filterwheel.hpp
 
-    core/deviceio.cpp
-    core/deviceio.hpp
+    guider.cpp
+    guider.hpp
 
-    core/camera.cpp
-    core/camera.hpp
-
-    core/telescope.cpp
-    core/telescope.hpp
-
-    core/focuser.cpp
-    core/focuser.hpp
-
-    core/filterwheel.cpp
-    core/filterwheel.hpp
-
-    core/guider.cpp
-    core/guider.hpp
-
-    core/solver.cpp
-    core/solver.hpp
+    solver.cpp
+    solver.hpp
 
     event/eventloop.cpp
     event/eventloop.hpp
@@ -362,7 +346,6 @@ include_directories(dsp)
 include_directories(fpack)
 include_directories(event)
 
-add_subdirectory(core)
 add_subdirectory(fpack)
 add_subdirectory(event)
 add_subdirectory(dsp)

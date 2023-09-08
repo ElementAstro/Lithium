@@ -64,15 +64,7 @@ Description: C++ and Modules Loader
 #include "loguru/loguru.hpp"
 
 #include "thread/thread.hpp"
-#include "liproperty/task/task.hpp"
-#include "Hydrogen/core/device.hpp"
 #include "error/error_code.hpp"
-
-namespace tl
-{
-    template <class T, class E>
-    class expected;
-}
 
 namespace Lithium
 {

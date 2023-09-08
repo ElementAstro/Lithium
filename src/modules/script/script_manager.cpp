@@ -7,9 +7,9 @@
 
 #include "server/message_bus.hpp"
 
-#include "liproperty/base64.hpp"
-#include "liproperty/iproperty.hpp"
-#include "liproperty/uuid.hpp"
+#include "core/property/base64.hpp"
+#include "core/property/iproperty.hpp"
+#include "core/property/uuid.hpp"
 
 #include "modules/system/system.hpp"
 

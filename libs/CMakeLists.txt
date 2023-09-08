@@ -101,3 +101,5 @@ endif()
 add_library(libzippp zippp/libzippp.cpp)
 
 add_subdirectory(backward)
+
+add_subdirectory(pugixml)

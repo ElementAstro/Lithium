@@ -130,30 +130,28 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
 
 # TODO : 更好的构建系统，不需要这样引用
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/base)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/io)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/property)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
+include_directories(${lithium_src_dir}/)
+include_directories(${lithium_src_dir}/core)
+include_directories(${lithium_src_dir}/core/base)
+include_directories(${lithium_src_dir}/core/dsp)
+include_directories(${lithium_src_dir}/core/io)
+include_directories(${lithium_src_dir}/core/property)
+include_directories(${lithium_src_dir}/core/timer)
+include_directories(${lithium_src_dir}/core/thread)
 
 add_subdirectory(libs/)
-add_subdirectory(libs/pugixml)
 
 add_subdirectory(tools)
 
 include_directories(modules)
 
-add_subdirectory(modules/Hydrogen)
 add_subdirectory(modules/HydrogenClient)
 add_subdirectory(modules/HydrogenServer)
-add_subdirectory(modules/liproperty)
 add_subdirectory(modules/libridge)
 
 add_subdirectory(drivers)
 
-#add_subdirectory(src/indiserver)
+add_subdirectory(${lithium_src_dir}/core)
 
 set(api_SRC
 	${lithium_src_dir}/api/astap.cpp
@@ -367,7 +365,9 @@ if(WIN32)
 
     target_link_libraries(lithium_server libzippp)
 
-    target_link_libraries(lithium_server LithiumDriver LithiumProperty LithiumBridge)
+    target_link_libraries(lithium_server LithiumDriver LithiumBridge)
+
+    target_link_libraries(lithium_server hydrogendriverstatic)
 
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server dlfcn-win32::dl)

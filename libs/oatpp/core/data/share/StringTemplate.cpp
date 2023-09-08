@@ -65,7 +65,7 @@ StringTemplate::StringTemplate(const oatpp::String& text, std::vector<Variable>&
   , m_variables(variables)
 {
   v_buff_size prevPos = 0;
-  for(v_int32 i = 0; i < m_variables.size(); i++) {
+  for(size_t i = 0; i < m_variables.size(); i++) {
     const auto& var = m_variables[i];
 
     if(var.posStart < prevPos) {
@@ -76,7 +76,7 @@ StringTemplate::StringTemplate(const oatpp::String& text, std::vector<Variable>&
       throw std::runtime_error("[oatpp::data::share::StringTemplate::StringTemplate()]: Error. The template variable can't have a negative size.");
     }
 
-    if((size_t) var.posEnd >= m_text->size()) {
+    if(static_cast<size_t>(var.posEnd) >= m_text->size()) {
       throw std::runtime_error("[oatpp::data::share::StringTemplate::StringTemplate()]: Error. The template variable can't out-bound the template text.");
     }
   }
@@ -105,7 +105,7 @@ void StringTemplate::format(stream::ConsistentOutputStream* stream, ValueProvide
 
   }
 
-  if((size_t) prevPos < m_text->size()) {
+  if(static_cast<size_t>(prevPos) < m_text->size()) {
     stream->writeSimple(m_text->data() + prevPos, m_text->size() - prevPos);
   }
 

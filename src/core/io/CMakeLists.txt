@@ -11,7 +11,7 @@ configure_file(hydrogenapi.h.in ${CMAKE_BINARY_DIR}/hydrogenapi.h @ONLY)
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    ${CMAKE_CURRENT_BINARY_DIR}/hydrogenapi.h
+    ${CMAKE_BINARY_DIR}/hydrogenapi.h
     hydrogendevapi.h
     hydrogenutility.h
     lilxml.h

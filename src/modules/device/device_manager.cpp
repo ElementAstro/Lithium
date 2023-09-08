@@ -31,16 +31,16 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 
-#include "Hydrogen/core/device_exception.hpp"
+#include "core/device_exception.hpp"
 
 #include "nlohmann/json.hpp"
 
-#include "Hydrogen/core/camera.hpp"
-#include "Hydrogen/core/telescope.hpp"
-#include "Hydrogen/core/focuser.hpp"
-#include "Hydrogen/core/filterwheel.hpp"
-#include "Hydrogen/core/solver.hpp"
-#include "Hydrogen/core/guider.hpp"
+#include "core/camera.hpp"
+#include "core/telescope.hpp"
+#include "core/focuser.hpp"
+#include "core/filterwheel.hpp"
+#include "core/solver.hpp"
+#include "core/guider.hpp"
 
 #include "loguru/loguru.hpp"
 

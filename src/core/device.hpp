@@ -40,8 +40,8 @@ Description: Basic Device Defination
 #include <nlohmann/json.hpp>
 #include "emhash/hash_table8.hpp"
 
-#include "liproperty/iproperty.hpp"
-#include "liproperty/task/device_task.hpp"
+#include "property/iproperty.hpp"
+#include "property/task/device_task.hpp"
 
 #include "device_exception.hpp"
 #include "deviceio.hpp"

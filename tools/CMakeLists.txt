@@ -21,29 +21,3 @@ target_link_libraries(xml2json pugixml-static)
 
 add_executable(csv2json csv2json.cpp)
 target_link_libraries(csv2json loguru)
-
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/base)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/io)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/property)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
-
-# ########## getLithium ##############
-add_executable(hydrogen_getprop getLithiumproperty.c)
-
-target_link_libraries(hydrogen_getprop hydrogendriverstatic ${CFITSIO_LIBRARIES} ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
-if(WIN32)
-    target_link_libraries(hydrogen_getprop wsock32 ws2_32)
-endif()
-install(TARGETS hydrogen_getprop RUNTIME DESTINATION bin)
-
-# ########## setLithium ##############
-add_executable(hydrogen_setprop setLithiumproperty.c)
-
-target_link_libraries(hydrogen_setprop hydrogendriverstatic ${CFITSIO_LIBRARIES} ${NOVA_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
-if(WIN32)
-    target_link_libraries(hydrogen_setprop wsock32 ws2_32)
-endif()
-install(TARGETS hydrogen_setprop RUNTIME DESTINATION bin)

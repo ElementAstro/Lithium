@@ -7,6 +7,7 @@ find_package(Threads REQUIRED)
 include_directories(${USB1_INCLUDE_DIRS})
 
 add_subdirectory(io)
+add_subdirectory(property)
 
 include_directories(.)
 include_directories(timer)
@@ -16,6 +17,12 @@ include_directories(base)
 include_directories(property)
 
 add_subdirectory(base)
+
+CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
+
+if(NOT HAS_STD_FORMAT)
+    find_package(fmt REQUIRED)
+endif()
 
 # Dependency
 find_package(FFTW3 REQUIRED)
@@ -35,6 +42,7 @@ list(APPEND ${PROJECT_NAME}_LIBS
     ${JPEG_LIBRARY}
     ${FFTW3_LIBRARIES}
     ${M_LIB}
+    fmt::fmt
     $<$<PLATFORM_ID:CYGWIN>:${ICONV_LIBRARIES}>
 )
 
@@ -122,8 +130,8 @@ endif()
 
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
-    hydrogendriver.c
-    hydrogendriverio.c
+    hydrogendriver.cpp
+    hydrogendriverio.cpp
     hydrogendrivermain.cpp
     defaultdevice.cpp
     timer/timer.cpp

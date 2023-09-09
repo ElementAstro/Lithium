@@ -100,7 +100,7 @@ if(NOT WIN32)
     SET_TARGET_PROPERTIES(AlignmentClient PROPERTIES COMPILE_FLAGS "-fPIC")
 endif(NOT WIN32)
 
-target_link_libraries(AlignmentClient hydrogenclient hydrogendriver hydrogendevice)
+target_link_libraries(AlignmentClient hydrogenclient hydrogendriverstatic hydrogendevice)
 
 set_target_properties(AlignmentClient PROPERTIES OUTPUT_NAME hydrogenAlignmentClient)
 install(TARGETS AlignmentClient ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
@@ -159,7 +159,7 @@ target_include_directories(hydrogen_Nearest_MathPlugin
         ${libhydrogen_SOURCE_DIR}/libs/hydrogencore
 )
 target_link_libraries(hydrogen_Nearest_MathPlugin
-    hydrogendriver
+    hydrogendriverstatic
     $<$<PLATFORM_ID:CYGWIN>:AlignmentDriver>
 )
 
@@ -178,7 +178,7 @@ set(SVDMathPlugin_SRCS
 add_library(hydrogen_SVD_MathPlugin SHARED ${SVDMathPlugin_SRCS})
 set_property(TARGET hydrogen_SVD_MathPlugin APPEND PROPERTY COMPILE_DEFINITIONS SVD_TRANSFORM_MATRIX)
 target_link_libraries(hydrogen_SVD_MathPlugin
-    hydrogendriver
+    hydrogendriverstatic
     $<$<PLATFORM_ID:CYGWIN>:AlignmentDriver>
 )
 

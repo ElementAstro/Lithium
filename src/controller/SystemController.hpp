@@ -200,7 +200,7 @@ public:
             nlohmann::json res;
             for (const auto &disk : Lithium::System::GetDiskUsage())
             {
-                OATPP_LOGD("System", "Disk %s Usage: %f %", disk.first.c_str(), disk.second);
+                OATPP_LOGD("System", "Disk %s Usage: %f", disk.first.c_str(), disk.second);
                 res["value"][disk.first] = disk.second;
             }
             auto response = controller->createResponse(Status::CODE_200, res.dump());

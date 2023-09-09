@@ -13,7 +13,8 @@
 #include <netinet/in.h>
 #endif
 
-#include "lilxml.h"
+#include "io.hpp"
+#include "lilxml.hpp"
 #include "client_info.hpp"
 #include "xml_util.hpp"
 #include "hydrogen_server.hpp"

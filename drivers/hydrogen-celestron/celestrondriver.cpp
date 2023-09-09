@@ -23,7 +23,7 @@
     Version with experimental pulse guide support. GC 04.12.2015
 */
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenlogger.h"
 #include "celestrondriver.h"
 

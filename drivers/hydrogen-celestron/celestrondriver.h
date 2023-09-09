@@ -26,7 +26,7 @@
 #pragma once
 
 #include <string>
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <stdint.h>
 

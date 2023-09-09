@@ -20,7 +20,7 @@
 #include "defaultdevice.h"
 #include "hydrogencorrelator.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "locale/locale_compat.hpp"
 
 #include <fitsio.h>

@@ -9,7 +9,7 @@
 #include "InMemoryDatabase.h"
 
 #include "basedevice.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <cerrno>
 #include <cstdlib>

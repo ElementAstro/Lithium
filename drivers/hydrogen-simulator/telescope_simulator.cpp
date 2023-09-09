@@ -19,7 +19,7 @@
 #include "telescope_simulator.h"
 #include "scopesim_helper.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <cmath>
 #include <cstring>

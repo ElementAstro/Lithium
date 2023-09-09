@@ -30,11 +30,11 @@
  * This requires liblilxml.
  */
 
-#include "base64.h"
+#include "base64.hpp"
 #include "event/eventloop.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "hydrogendriver.h"
-#include "lilxml.h"
+#include "lilxml.hpp"
 
 #include <errno.h>
 #include <stdarg.h>
@@ -56,7 +56,6 @@
 
 #define MAXRBUF 2048
 
-static void usage(void);
 static void deferMessage(XMLEle *root);
 static void handlePingReply(XMLEle *root);
 
@@ -310,21 +309,18 @@ static void waitPingReplyFromOtherThread(const char *uid)
     WSACleanup();
 #endif
 }
-extern "C"
+void waitPingReply(const char *uid)
 {
-    void waitPingReply(const char *uid)
-    {
-        // Check if same thread than eventloop
+    // Check if same thread than eventloop
 
-        pthread_t currentThread = pthread_self();
-        if (!pthread_equal(currentThread, eventLoopThread))
-        {
-            waitPingReplyFromOtherThread(uid);
-        }
-        else
-        {
-            waitPingReplyFromEventLoopThread(uid);
-        }
+    pthread_t currentThread = pthread_self();
+    if (!pthread_equal(currentThread, eventLoopThread))
+    {
+        waitPingReplyFromOtherThread(uid);
+    }
+    else
+    {
+        waitPingReplyFromEventLoopThread(uid);
     }
 }
 
@@ -402,7 +398,6 @@ int main(int argc, const char **argv)
     catch (const std::runtime_error &err)
     {
         std::cerr << err.what() << std::endl;
-        usage();
     }
 
     bool verbose_ = parser.get<bool>("-v");
@@ -424,15 +419,4 @@ int main(int argc, const char **argv)
     /* eh?? */
     fprintf(stderr, "%s: inf loop ended\n", me);
     return (1);
-}
-
-/* print usage message and exit (1) */
-static void usage(void)
-{
-    fprintf(stderr, "Usage: %s [options]\n", me);
-    fprintf(stderr, "Purpose: INDI Device driver framework.\n");
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, " -v    : more verbose to stderr\n");
-
-    exit(1);
 }

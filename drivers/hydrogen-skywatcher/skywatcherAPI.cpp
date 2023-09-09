@@ -22,7 +22,7 @@
  */
 
 #include "skywatcherAPI.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <cmath>
 #include <iomanip>

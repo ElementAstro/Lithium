@@ -20,7 +20,7 @@
 #pragma once
 
 #include "hydrogenbase.h"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 
 #include "hydrogenpropertyview.h"
 

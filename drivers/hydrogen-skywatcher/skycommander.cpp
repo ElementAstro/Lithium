@@ -20,7 +20,7 @@
 
 #include "skycommander.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <memory>
 #ifdef _WIN32

@@ -6,8 +6,8 @@
 #include "concurrent.hpp"
 #include "message_queue.hpp"
 
-#include "hydrogendevapi.h"
-#include "lilxml.h"
+#include "hydrogendevapi.hpp"
+#include "lilxml.hpp"
 
 class Msg;
 class Property;

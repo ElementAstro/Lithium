@@ -19,7 +19,7 @@
 #pragma once
 
 #include "hydrogenapi.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "hydrogenwidgettraits.h"
 #include "hydrogenwidgetview.h"
 

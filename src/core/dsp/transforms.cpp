@@ -18,7 +18,7 @@
 
 #include "transforms.h"
 #include "hydrogenstandardproperty.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenlogger.h"
 #include "dsp.h"
 

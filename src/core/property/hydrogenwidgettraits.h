@@ -19,7 +19,7 @@
 #pragma once
 
 #include "hydrogenapi.h"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 
 namespace HYDROGEN
 {

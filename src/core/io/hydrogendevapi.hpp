@@ -51,7 +51,7 @@
  *
  *  <p>These functions are the interface to the HYDROGEN C-language Device Driver
  *  reference implementation library. Any driver that uses this interface is
- *  expected to \#include "hydrogendevapi.h" and to link with indidrivermain.o and
+ *  expected to \#include "hydrogendevapi.hpp" and to link with indidrivermain.o and
  *  eventloop.o. Indidevapi.h further includes hydrogenapi.h. The former contains
  *  the prototypes for the functions documented here, although many functions
  *  take arguments defined in the latter.</p>
@@ -94,7 +94,7 @@
  */
 
 #include "hydrogenapi.h"
-#include "lilxml.h"
+#include "lilxml.hpp"
 
 /*******************************************************************************
  *******************************************************************************

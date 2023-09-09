@@ -3,8 +3,8 @@
 #include <set>
 #include <list>
 
-#include "lilxml.h"
-#include "hydrogendevapi.h"
+#include "lilxml.hpp"
+#include "hydrogendevapi.hpp"
 
 #include "message.hpp"
 #include "concurrent.hpp"

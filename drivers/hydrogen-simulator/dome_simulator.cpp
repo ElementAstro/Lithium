@@ -18,7 +18,7 @@
 *******************************************************************************/
 #include "dome_simulator.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <cmath>
 #include <memory>

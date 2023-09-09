@@ -1,34 +1,39 @@
-#if 0
-HYDROGEN Driver Functions
+/*
+ * hydrogendriver.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
-Copyright (C) 2020 by Pawel Soja <kernel32.pl@gmail.com>
-Copyright (C) 2003 - 2020 Jasem Mutlaq
-Copyright (C) 2003 - 2006 Elwood C. Downey
+/*************************************************
 
-This library is free software;
-you can redistribute it and / or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation;
-either
-version 2.1 of the License, or (at your option) any later version.
+Copyright: 2023 Max Qian. All rights reserved
 
-This library is distributed in the hope that it will be useful,
-     but WITHOUT ANY WARRANTY;
-without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
+Author: Max Qian
 
-You should have received a copy of the GNU Lesser General Public
-License along with this library;
-if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
+E-mail: astro_air@126.com
 
-#endif
+Date: 2023-4-5
+
+Description: Hydrogen Driver
+
+**************************************************/
+
 #include "hydrogendriver.h"
 
-#include "base64.h"
-#include "hydrogencom.h"
-#include "hydrogendevapi.h"
+#include "base64.hpp"
+#include "hydrogencom.hpp"
+#include "hydrogendevapi.hpp"
 #include "locale/locale_compat.hpp"
 
 #include <errno.h>
@@ -38,6 +43,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __cpp_lib_fmt
+#include <format>
+#else
+#include <fmt/format.h>
+#endif
 #ifdef _WIN32
 #include <direct.h>
 #define mkdir(dir) _mkdir(dir)
@@ -46,8 +56,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include <sys/types.h>
 #include <assert.h>
 
-#include "userio.h"
-#include "hydrogenuserio.h"
+#include "userio.hpp"
+#include "hydrogenuserio.hpp"
 #include "hydrogendriverio.h"
 
 int verbose;   /* chatty */
@@ -505,7 +515,7 @@ int IUReadConfig(const char *filename, const char *dev, const char *property, in
 
     if (fproot == NULL)
     {
-        snprintf(errmsg, MAXRBUF, "Unable to parse config XML: %s", whynot);
+        std::string errorMsg = fmt::format("Unable to parse config XML: {}", whynot);
         fclose(fp);
         return -1;
     }
@@ -1007,12 +1017,13 @@ int IUPurgeConfig(const char *filename, const char *dev, char errmsg[])
         if (getenv("HYDROGENCONFIG"))
             strncpy(configFileName, getenv("HYDROGENCONFIG"), MAXRBUF);
         else
-            snprintf(configFileName, MAXRBUF, "%s%s_config.xml", configDir, dev);
+            std::string configFileName = fmt::format("{}{}_config.xml", configDir, dev);
     }
 
     if (remove(configFileName) != 0)
     {
-        snprintf(errmsg, MAXRBUF, "Unable to purge configuration file %s. Error %s", configFileName, strerror(errno));
+        std::string errMsg = fmt::format("Unable to purge configuration file {}. Error {}",
+                                 configFileName, std::strerror(errno));
         return -1;
     }
 
@@ -1037,7 +1048,7 @@ FILE *IUGetConfigFP(const char *filename, const char *dev, const char *mode, cha
         if (getenv("INDICONFIG"))
             strncpy(configFileName, getenv("INDICONFIG"), MAXRBUF);
         else
-            snprintf(configFileName, MAXRBUF, "%s%s_config.xml", configDir, dev);
+            std::string configFileName = fmt::format("{}{}_config.xml", configDir, dev);
     }
 
 #ifdef _WIN32
@@ -1073,7 +1084,8 @@ FILE *IUGetConfigFP(const char *filename, const char *dev, const char *mode, cha
     fp = fopen(configFileName, mode);
     if (fp == NULL)
     {
-        snprintf(errmsg, MAXRBUF, "Unable to open config file. Error loading file %s: %s", configFileName, strerror(errno));
+        std::string errMsg = fmt::format("Unable to open config file. Error loading file {}: {}",
+                                 configFileName, std::strerror(errno));
         return NULL;
     }
 

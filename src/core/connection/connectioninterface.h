@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 
 #include <functional>
 #include <string>

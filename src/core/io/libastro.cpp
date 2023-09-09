@@ -29,8 +29,8 @@
 // Chris Rowland April 2020
 //
 
-#include "libastro.h"
-#include "hydrogencom.h"
+#include "libastro.hpp"
+#include "hydrogencom.hpp"
 
 #include <math.h>
 

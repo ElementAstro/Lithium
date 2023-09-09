@@ -30,9 +30,9 @@
 #include "hydrogenccd.h"
 
 #include "fpack/fpack.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "locale/locale_compat.hpp"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 
 #ifdef HAVE_XISF
 #include <libxisf.h>
@@ -45,7 +45,7 @@
 #include <libnova/airmass.h>
 #include <libnova/transform.h>
 #include <libnova/ln_types.h>
-#include <libastro.h>
+#include "libastro.hpp"
 
 #include <iomanip>
 #include <cmath>

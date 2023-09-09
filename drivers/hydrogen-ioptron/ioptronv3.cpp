@@ -23,7 +23,7 @@
 #include "ioptronv3.h"
 #include "connection/connectionserial.h"
 #include "connection/connectiontcp.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <libnova/transform.h>
 #include <libnova/sidereal_time.h>

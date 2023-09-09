@@ -118,7 +118,7 @@ void *attachSharedBuffer(int fd, size_t &size)
     return ret;
 }
 
-void dettachSharedBuffer(int fd, void *ptr, size_t size)
+void detachSharedBuffer(int fd, void *ptr, size_t size)
 {
     (void)fd;
     if (munmap(ptr, size) == -1)

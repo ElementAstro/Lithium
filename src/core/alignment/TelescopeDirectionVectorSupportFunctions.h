@@ -9,8 +9,8 @@
 #pragma once
 
 #include "Common.h"
-#include "libastro.h"
-#include "hydrogencom.h"
+#include "libastro.hpp"
+#include "hydrogencom.hpp"
 
 namespace HYDROGEN
 {

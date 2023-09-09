@@ -24,7 +24,7 @@
 
 #include "lx200_pegasus_nyx101.h"
 #include "lx200driver.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "connection/connectionserial.h"
 #include <libnova/transform.h>
 

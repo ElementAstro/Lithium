@@ -1,7 +1,7 @@
 #pragma once
 
 #include "abstractbaseclient_p.h"
-#include "hydrogenlilxml.h"
+#include "hydrogenlilxml.hpp"
 
 #include <tcpsocket.h>
 

@@ -20,8 +20,8 @@
 #include "synscandriverlegacy.h"
 #include "connection/connectioninterface.h"
 #include "connection/connectiontcp.h"
-#include "hydrogencom.h"
-#include "libastro.h"
+#include "hydrogencom.hpp"
+#include "libastro.hpp"
 
 #include <libnova/transform.h>
 #include <libnova/precession.h>

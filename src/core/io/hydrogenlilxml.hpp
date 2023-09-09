@@ -17,11 +17,11 @@
 */
 #pragma once
 
-#include "lilxml.h"
+#include "lilxml.hpp"
 #include "hydrogenapi.h"
 #include "hydrogenbase.h"
-#include "hydrogencom.h"
-#include "hydrogendevapi.h"
+#include "hydrogencom.hpp"
+#include "hydrogendevapi.hpp"
 
 #include <string>
 #include <functional>

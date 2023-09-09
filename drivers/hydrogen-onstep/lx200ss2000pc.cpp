@@ -20,7 +20,7 @@
 
 #include "lx200ss2000pc.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "lx200driver.h"
 
 #include <cmath>

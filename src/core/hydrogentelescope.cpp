@@ -18,7 +18,7 @@
 
 #include "hydrogentelescope.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogencontroller.h"
 #include "connection/connectionserial.h"
 #include "connection/connectiontcp.h"

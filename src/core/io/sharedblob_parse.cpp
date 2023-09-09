@@ -16,7 +16,7 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 
-#include "sharedblob_parse.h"
+#include "sharedblob_parse.hpp"
 
 #define HYDROGEN_SHARED_BLOB_SUPPORT
 #include "sharedblob.h"

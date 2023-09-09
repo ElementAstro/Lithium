@@ -1,31 +1,39 @@
-/** HYDROGEN Driver Functions
- *  Copyright (C) 2003 - 2015 Jasem Mutlaq
- *  Copyright (C) 2003 - 2006 Elwood C. Downey
+/*
+ * hydrogendriver.h
  *
- *  This library is free software;
- *  you can redistribute it and / or
- *  modify it under the terms of the GNU Lesser General Public
- *  License as published by the Free Software Foundation;
- *  either
- *  version 2.1 of the License, or (at your option) any later version.
+ * Copyright (C) 2023 Max Qian <lightapt.com>
  *
- *  This library is distributed in the hope that it will be useful,
- *       but WITHOUT ANY WARRANTY;
- *  without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  Lesser General Public License for more details.
- *
- *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library;
- *  if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-4-5
+
+Description: Hydrogen Driver
+
+**************************************************/
 
 #pragma once
 
 #include "hydrogenapi.h"
-#include "lilxml.h"
-#include "hydrogencom.h"
+#include "lilxml.hpp"
+#include "hydrogencom.hpp"
 
 #include <stdio.h>
 

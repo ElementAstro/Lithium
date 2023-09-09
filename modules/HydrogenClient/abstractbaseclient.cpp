@@ -25,7 +25,7 @@
 #include "basedevice.h"
 #include "basedevice_p.h"
 
-#include "hydrogenuserio.h"
+#include "hydrogenuserio.hpp"
 #include "locale/locale_compat.hpp"
 #include "hydrogenstandardproperty.h"
 

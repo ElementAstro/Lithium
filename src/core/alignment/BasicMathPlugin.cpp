@@ -5,14 +5,14 @@
 #include "BasicMathPlugin.h"
 
 #include "DriverCommon.h"
-#include "libastro.h"
+#include "libastro.hpp"
 #include <libnova/julian_day.h>
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <limits>
 #include <iostream>

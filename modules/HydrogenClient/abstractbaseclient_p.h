@@ -22,9 +22,9 @@
 #pragma once
 
 #include "watchdeviceproperty.h"
-#include "hydrogendevapi.h"
-#include "hydrogenuserio.h"
-#include "hydrogenlilxml.h"
+#include "hydrogendevapi.hpp"
+#include "hydrogenuserio.hpp"
+#include "hydrogenlilxml.hpp"
 
 #include <atomic>
 #include <string>

@@ -33,7 +33,7 @@
 */
 #include "lx200gemini.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "lx200driver.h"
 #include "connection/connectioninterface.h"
 #include "connection/connectiontcp.h"

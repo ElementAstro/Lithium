@@ -26,7 +26,7 @@ Version with experimental pulse guide support. GC 04.12.2015
 
 #include "celestrongps.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <libnova/transform.h>
 
@@ -38,7 +38,7 @@ Version with experimental pulse guide support. GC 04.12.2015
 #include <sys/stat.h>
 
 #include "hydrogenlogger.h"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 
 //#include <time.h>
 

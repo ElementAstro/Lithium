@@ -8,7 +8,7 @@
 
 #include "ClientAPIForAlignmentDatabase.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 namespace HYDROGEN
 {

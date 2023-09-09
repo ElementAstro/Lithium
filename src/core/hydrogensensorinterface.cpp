@@ -22,11 +22,11 @@
 #include "connection/connectionserial.h"
 #include "connection/connectiontcp.h"
 
-#include "hydrogencom.h"
-#include "libastro.h"
+#include "hydrogencom.hpp"
+#include "libastro.hpp"
 #include "stream/streammanager.h"
 #include "locale/locale_compat.hpp"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 
 #include <fitsio.h>
 

@@ -265,7 +265,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: cannot open FITS file '" + image + "'.";
-            LOG_F(ERROR, "{}", ret_struct["message"].c_str());
+            LOG_F(ERROR, "%s", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -300,7 +300,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: failed to close FITS file '" + image + "'.";
-            LOG_F(ERROR, "{}", ret_struct["message"].c_str());
+            LOG_F(ERROR, "%s", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -318,7 +318,7 @@ namespace Lithium::API::ASTAP
                 double avg_focal_length = (x_focal_length + y_focal_length) / 2.0;
                 ret_struct["focal_length"] = std::to_string(avg_focal_length);
                 // 调试输出
-                LOG_F(INFO, "avg_focal_length: {}", avg_focal_length);
+                LOG_F(INFO, "avg_focal_length: %f", avg_focal_length);
             }
         }
         else
@@ -327,7 +327,7 @@ namespace Lithium::API::ASTAP
         }
 
         // 最终输出
-        LOG_F(INFO, "Function solve_fits_header result: {}", ret_struct["message"].c_str());
+        LOG_F(INFO, "Function solve_fits_header result: %s", ret_struct["message"].c_str());
 
         return ret_struct;
     }

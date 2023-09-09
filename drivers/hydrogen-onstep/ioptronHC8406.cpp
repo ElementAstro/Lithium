@@ -89,7 +89,7 @@ socat  -v  PTY,link=/tmp/serial,wait-slave,raw /dev/ttyUSB0,raw
 
 #include "ioptronHC8406.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "lx200driver.h"
 
 #include <libnova/transform.h>

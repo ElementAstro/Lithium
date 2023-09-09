@@ -23,7 +23,7 @@
 
 #include "skywatcherAPIMount.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "connection/connectiontcp.h"
 #include "alignment/DriverCommon.h"
 #include "connection/connectionserial.h"

@@ -28,7 +28,7 @@
 */
 
 #include "lx200_10micron.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "lx200driver.h"
 
 #include <cstring>

@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "lilxml.h"
+#include "lilxml.hpp"
 
 int xmlReplacementMapFind(void *self, XMLEle *source, XMLEle **replace);
 

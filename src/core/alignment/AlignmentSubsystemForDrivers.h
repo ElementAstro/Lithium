@@ -11,7 +11,7 @@
 
 #pragma once
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include "MapPropertiesToInMemoryDatabase.h"
 #include "MathPluginManagement.h"

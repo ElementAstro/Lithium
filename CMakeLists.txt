@@ -422,7 +422,7 @@ elseif(UNIX OR LINUX OR APPLE)
     endif()
 
     target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
-    target_link_libraries(lithium_server ${OPENSSL_LIBRARIES})
+    target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
     target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
     target_link_libraries(lithium_server libzip::zip)
     target_link_libraries(lithium_server pugixml-static)

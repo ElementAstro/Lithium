@@ -20,7 +20,7 @@
 
 #include "hydrogentelescope.h"
 #include "hydrogenguiderinterface.h"
-#include "libastro.h"
+#include "libastro.hpp"
 
 class SynscanDriver : public HYDROGEN::Telescope, public HYDROGEN::GuiderInterface
 {

@@ -16,13 +16,12 @@ set(server_SRC
     xml_util.cpp
 )
 
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/base)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/io)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/property)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
+include_directories(${CMAKE_SOURCE_DIR}/src/core)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/base)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/io)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/property)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/timer)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/thread)
 
 if(ANDROID)
     message(WARNING "HYDROGEN Server is only supported under Linux, BSD, MacOS, and Cygwin while current system is " ${CMAKE_SYSTEM_NAME})
@@ -32,7 +31,7 @@ else()
 
     add_executable(${PROJECT_NAME} ${server_SRC} hydrogen_server.cpp)
 
-    target_link_libraries(hydrogenserver hydrogencore ${CMAKE_THREAD_LIBS_INIT} ${LIBEV_LIBRARIES})
+    target_link_libraries(hydrogenserver hydrogendriverstatic ${CMAKE_THREAD_LIBS_INIT} ${LIBEV_LIBRARIES})
     target_include_directories(hydrogenserver SYSTEM PRIVATE ${LIBEV_INCLUDE_DIRS})
 
     target_link_libraries(hydrogenserver loguru)

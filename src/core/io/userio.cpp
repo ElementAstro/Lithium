@@ -15,25 +15,25 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "userio.h"
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
+#include "userio.hpp"
+
+#include <cstdio>
+#include <string_view>
 
 static ssize_t s_file_write(void *user, const void *ptr, size_t count)
 {
-    return fwrite(ptr, 1, count, (FILE *)user);
+    return std::fwrite(ptr, 1, count, reinterpret_cast<FILE *>(user));
 }
 
 static int s_file_printf(void *user, const char *format, va_list arg)
 {
-    return vfprintf((FILE *)user, format, arg);
+    return std::vfprintf(reinterpret_cast<FILE *>(user), format, arg);
 }
 
 static const struct userio s_userio_file = {
     .write = s_file_write,
     .vprintf = s_file_printf,
-    .joinbuff = NULL,
+    .joinbuff = nullptr,
 };
 
 const struct userio *userio_file()
@@ -61,9 +61,9 @@ ssize_t userio_write(const struct userio *io, void *user, const void *ptr, size_
     return io->write(user, ptr, count);
 }
 
-ssize_t userio_prints(const struct userio *io, void *user, const char *str)
+ssize_t userio_prints(const struct userio *io, void *user, std::string_view str)
 {
-    return io->write(user, str, strlen(str));
+    return io->write(user, str.data(), str.size());
 }
 
 ssize_t userio_putc(const struct userio *io, void *user, int ch)
@@ -72,13 +72,13 @@ ssize_t userio_putc(const struct userio *io, void *user, int ch)
     return io->write(user, &c, sizeof(c));
 }
 
-size_t userio_xml_escape(const struct userio *io, void *user, const char *src)
+size_t userio_xml_escape(const struct userio *io, void *user, std::string_view src)
 {
     size_t total = 0;
-    const char *ptr = src;
+    const char *ptr = src.data();
     const char *replacement;
 
-    for (; *ptr; ++ptr)
+    for (; ptr < src.data() + src.size(); ++ptr)
     {
         switch (*ptr)
         {
@@ -98,17 +98,17 @@ size_t userio_xml_escape(const struct userio *io, void *user, const char *src)
             replacement = "&gt;";
             break;
         default:
-            replacement = NULL;
+            replacement = nullptr;
         }
 
-        if (replacement != NULL)
+        if (replacement != nullptr)
         {
-            total += userio_write(io, user, src, (size_t)(ptr - src));
-            src = ptr + 1;
-            total += userio_write(io, user, replacement, strlen(replacement));
+            total += userio_write(io, user, src.data(), ptr - src.data());
+            src = {ptr + 1, src.size() - (ptr - src.data() + 1)};
+            total += userio_write(io, user, replacement, std::strlen(replacement));
         }
     }
-    total += userio_write(io, user, src, (size_t)(ptr - src));
+    total += userio_write(io, user, src.data(), ptr - src.data());
     return total;
 }
 
@@ -117,17 +117,15 @@ void userio_xmlv1(const userio *io, void *user)
     userio_prints(io, user, "<?xml version='1.0'?>\n");
 }
 
-ssize_t userio_json_write_string(const struct userio *io, void *user, const char *str)
+ssize_t userio_json_write_string(const struct userio *io, void *user, std::string_view str)
 {
     ssize_t ret;
     ret = userio_putc(io, user, '\"');
     if (ret < 0)
         return ret;
 
-    const char *ptr = str;
-    while (*ptr)
+    for (const auto c : str)
     {
-        char c = *ptr++;
         switch (c)
         {
         case '\"':
@@ -176,7 +174,7 @@ ssize_t userio_json_write_number(const struct userio *io, void *user, double num
     return userio_printf(io, user, "%g", number);
 }
 
-ssize_t userio_json_write_boolean(const struct userio *io, void *user, int value)
+ssize_t userio_json_write_boolean(const struct userio *io, void *user, bool value)
 {
     if (value)
         return userio_prints(io, user, "true");

@@ -19,7 +19,7 @@
 
 #include "lx200fs2.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "lx200driver.h"
 
 #include <libnova/transform.h>

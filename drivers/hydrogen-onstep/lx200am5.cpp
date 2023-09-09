@@ -22,7 +22,7 @@
 
 #include "connection/connectiontcp.h"
 #include "lx200driver.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <libnova/transform.h>
 

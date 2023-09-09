@@ -5,7 +5,7 @@
 
 #include <unistd.h>
 
-#include "base64.h"
+#include "base64.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

@@ -41,7 +41,7 @@ Horizon check during slewing functions :ho# and :hq#
 
 #include "lx200ap_v2.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "lx200driver.h"
 #include "lx200apdriver.h"
 #include "connection/connectiontcp.h"

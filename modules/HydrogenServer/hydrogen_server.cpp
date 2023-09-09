@@ -11,10 +11,10 @@
 #include <assert.h>
 
 #include "hydrogenapi.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "sharedblob.h"
-#include "lilxml.h"
-#include "base64.h"
+#include "lilxml.hpp"
+#include "base64.hpp"
 
 #include "client_info.hpp"
 #include "concurrent.hpp"

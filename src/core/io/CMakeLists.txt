@@ -7,45 +7,47 @@ add_library(${PROJECT_NAME} OBJECT "")
 
 include(CPack)
 
+set(CMAKE_CXX_STANDARD 20)
+
 configure_file(hydrogenapi.h.in ${CMAKE_BINARY_DIR}/hydrogenapi.h @ONLY)
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     ${CMAKE_BINARY_DIR}/hydrogenapi.h
-    hydrogendevapi.h
-    hydrogenutility.h
-    lilxml.h
-    base64.h
-    hydrogencom.h
+    hydrogendevapi.hpp
+    hydrogenutility.hpp
+    lilxml.hpp
+    base64.hpp
+    hydrogencom.hpp
     sharedblob.h
 )
 
 list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
-    base64_luts.h
-    hydrogenlilxml.h
-    hydrogenuserio.h
-    userio.h
+    base64_luts.hpp
+    hydrogenlilxml.hpp
+    hydrogenuserio.hpp
+    userio.cpp
 )
 
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
     hydrogenutility.cpp
-    base64.c
-    userio.c
+    base64.cpp
+    userio.cpp
     hydrogencom.cpp
-    hydrogendevapi.c
+    hydrogendevapi.cpp
     lilxml.cpp
-    hydrogenuserio.c
+    hydrogenuserio.cpp
+    sharedblob.c
 )
 
-if(UNIX OR WIN32)
+if(UNIX OR WIN32 OR LINUX)
     list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
-        sharedblob_parse.h
-        shm_open_anon.h)
+        sharedblob_parse.hpp
+        shm_open_anon.hpp)
     list(APPEND ${PROJECT_NAME}_SOURCES
-        sharedblob.c
         sharedblob_parse.cpp
-        shm_open_anon.c)
+        shm_open_anon.cpp)
 endif()
 
 target_compile_definitions(${PROJECT_NAME}
@@ -59,7 +61,7 @@ if(NOVA_FOUND)
     target_include_directories(${PROJECT_NAME} PRIVATE ${NOVA_INCLUDE_DIR})
 
     list(APPEND ${PROJECT_NAME}_HEADERS
-        libastro.h
+        libastro.hpp
     )
 
     list(APPEND ${PROJECT_NAME}_SOURCES
@@ -89,9 +91,3 @@ install(FILES
     ${INCLUDE_INSTALL_DIR}/libhydrogen
     COMPONENT Devel
 )
-
-if(LINUX)
-set_target_properties(${PROJECT_NAME} PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-)
-endif()

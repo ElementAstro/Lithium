@@ -24,7 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 
 #include "lx200driver.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenlogger.h"
 
 #include <cstring>

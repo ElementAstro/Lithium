@@ -25,11 +25,11 @@
 
 #define _GNU_SOURCE 1
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "locale/locale_compat.hpp"
-#include "base64.h"
+#include "base64.hpp"
 
 #include "config.h"
 
@@ -90,8 +90,8 @@
 #define PARITY_ODD 2
 #endif
 
-#include "userio.h"
-#include "hydrogenuserio.h"
+#include "userio.hpp"
+#include "hydrogenuserio.hpp"
 
 #if defined(_MSC_VER)
 #define snprintf _snprintf

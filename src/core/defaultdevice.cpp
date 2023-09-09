@@ -19,7 +19,7 @@
 #include "defaultdevice.h"
 #include "defaultdevice_p.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenapi.h"
 
 #include "hydrogenstandardproperty.h"

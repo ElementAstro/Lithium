@@ -2,7 +2,7 @@
 #pragma once
 
 #include "hydrogenapi.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "hydrogenbasetypes.h"
 
 #define MAXRBUF 2048

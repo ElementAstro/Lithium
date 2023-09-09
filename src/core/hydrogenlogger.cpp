@@ -19,7 +19,7 @@
 *******************************************************************************/
 
 #include "hydrogenlogger.h"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 
 #include <dirent.h>
 #include <cerrno>

@@ -24,9 +24,9 @@
 
 #include "ccvt.h"
 #include "eventloop.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "hydrogenlogger.h"
-#include "lilxml.h"
+#include "lilxml.hpp"
 // PWC framerate support
 #include "pwc-ioctl.h"
 

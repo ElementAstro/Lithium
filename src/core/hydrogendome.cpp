@@ -22,7 +22,7 @@
 
 #include "hydrogendome.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogencontroller.h"
 #include "timer.hpp"
 #include "connection/connectionserial.h"

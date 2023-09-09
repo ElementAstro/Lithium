@@ -19,7 +19,7 @@
 */
 
 #include "ioptronv3driver.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <libnova/julian_day.h>
 #include <cinttypes>

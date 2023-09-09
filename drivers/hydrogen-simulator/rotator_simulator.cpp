@@ -19,7 +19,7 @@
 */
 
 #include "rotator_simulator.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <memory>
 #include <cmath>

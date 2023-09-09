@@ -18,7 +18,7 @@
 
 #include "connectionserial.h"
 #include "hydrogenstandardproperty.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenlogger.h"
 
 #include <dirent.h>

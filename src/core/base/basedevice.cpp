@@ -19,9 +19,9 @@
 #include "basedevice.h"
 #include "basedevice_p.h"
 
-#include "base64.h"
+#include "base64.hpp"
 #include "config.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenstandardproperty.h"
 #include "locale/locale_compat.hpp"
 
@@ -32,7 +32,7 @@
 #include "hydrogenpropertyblob.h"
 
 #ifdef ENABLE_HYDROGEN_SHARED_MEMORY
-#include "sharedblob_parse.h"
+#include "sharedblob_parse.hpp"
 #endif
 
 #include <cerrno>

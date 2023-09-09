@@ -23,9 +23,9 @@
 #include "hydrogensensorinterface.h"
 #include "hydrogenlogger.h"
 #include "locale/locale_compat.hpp"
-#include "hydrogencom.h"
-#include "libastro.h"
-#include "hydrogenutility.h"
+#include "hydrogencom.hpp"
+#include "libastro.hpp"
+#include "hydrogenutility.hpp"
 
 #include <fitsio.h>
 

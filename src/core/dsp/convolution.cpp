@@ -18,10 +18,10 @@
 
 #include "convolution.h"
 #include "hydrogenstandardproperty.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "hydrogenlogger.h"
 #include "dsp.h"
-#include "base64.h"
+#include "base64.hpp"
 
 #define _USE_MATH_DEFINES
 #include <cmath>

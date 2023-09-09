@@ -20,7 +20,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 */
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 #include <cerrno>
 
 #ifdef _MSC_VER

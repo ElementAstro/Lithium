@@ -16,7 +16,7 @@
  Boston, MA 02110-1301, USA.
 *******************************************************************************/
 #include "hydrogenccdchip.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "locale/locale_compat.hpp"
 
 #include <cstring>
@@ -250,7 +250,7 @@ namespace HYDROGEN
         strftime(iso8601, sizeof(iso8601), "%Y-%m-%dT%H:%M:%S", tp);
 
         // Add millisecond
-        snprintf(ts, 32, "%s.%03d", iso8601, static_cast<int>(StartExposureTime.tv_usec / 1000.0));
+        snprintf(ts, sizeof(ts), "%s.%03d", iso8601, static_cast<int>(StartExposureTime.tv_usec / 1000.0));
 
         return (ts);
     }

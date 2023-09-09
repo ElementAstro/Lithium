@@ -17,10 +17,10 @@
 *******************************************************************************/
 
 #include "synscandriver.h"
-#include "libastro.h"
+#include "libastro.hpp"
 #include "connection/connectioninterface.h"
 #include "connection/connectiontcp.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 
 #include <libnova/transform.h>
 #include <libnova/precession.h>

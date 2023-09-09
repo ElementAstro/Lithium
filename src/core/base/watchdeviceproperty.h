@@ -20,7 +20,7 @@
 
 #include "basedevice.h"
 #include "parentdevice.h"
-#include "hydrogenlilxml.h"
+#include "hydrogenlilxml.hpp"
 
 #include <functional>
 #include <map>

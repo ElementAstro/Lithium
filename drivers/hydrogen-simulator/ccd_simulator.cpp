@@ -17,13 +17,13 @@
 *******************************************************************************/
 
 #include "ccd_simulator.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "stream/streammanager.h"
 
 #include "locale/locale_compat.hpp"
 
 #include <libnova/julian_day.h>
-#include <libastro.h>
+#include <libastro.hpp>
 
 #include <cmath>
 #include <unistd.h>

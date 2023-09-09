@@ -20,7 +20,7 @@
 #include "defaultdevice.h"
 #include "hydrogenreceiver.h"
 
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "stream/streammanager.h"
 #include "locale/locale_compat.hpp"
 

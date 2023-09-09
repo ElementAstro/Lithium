@@ -37,7 +37,7 @@
 #include <sys/time.h>
 #include <cmath>
 
-#include <hydrogencom.h>
+#include <hydrogencom.hpp>
 
 static char device_str[64] = "Telescope Simulator";
 

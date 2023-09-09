@@ -43,7 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
 #pragma warning(disable : 4996)
 #endif
 
-#include "lilxml.h"
+#include "lilxml.hpp"
 
 /* used to efficiently manage growing malloced string space */
 typedef struct

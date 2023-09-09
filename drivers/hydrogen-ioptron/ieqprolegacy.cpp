@@ -19,7 +19,7 @@
 */
 
 #include "ieqprolegacy.h"
-#include "hydrogencom.h"
+#include "hydrogencom.hpp"
 #include "connection/connectionserial.h"
 
 #include <libnova/sidereal_time.h>

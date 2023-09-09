@@ -59,7 +59,7 @@
 
 #include "ccvt.h"
 #include "ccvt_types.h"
-// #include "hydrogendevapi.h"
+// #include "hydrogendevapi.hpp"
 #include "jpegutils.h"
 
 #include <stdlib.h>

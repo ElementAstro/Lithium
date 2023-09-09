@@ -23,7 +23,7 @@
 #pragma once
 
 #include "defaultdevice.h"
-#include "libastro.h"
+#include "libastro.hpp"
 #include "timer.hpp"
 
 #include <string>

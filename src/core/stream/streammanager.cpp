@@ -27,7 +27,7 @@
 #include "hydrogenccd.h"
 #include "hydrogensensorinterface.h"
 #include "hydrogenlogger.h"
-#include "hydrogenutility.h"
+#include "hydrogenutility.hpp"
 #include "single_thread.hpp"
 #include "elapsedtimer.hpp"
 

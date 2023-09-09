@@ -15,12 +15,12 @@
     License along with this library; if not, write to the Free Software
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include "hydrogenuserio.h"
+#include "hydrogenuserio.hpp"
 #include "hydrogenapi.h"
-#include "hydrogendevapi.h"
-#include "hydrogencom.h"
+#include "hydrogendevapi.hpp"
+#include "hydrogencom.hpp"
 #include "locale/locale_compat.hpp"
-#include "base64.h"
+#include "base64.hpp"
 
 #include <stdlib.h>
 #include <string.h>
@@ -133,7 +133,7 @@ void IUUserIOBLOBContextOne(
         {
             size_t sz = 4 * bloblen / 3 + 4;
             assert_mem(encblob = (unsigned char *)malloc(sz)); // #PS: TODO
-            l = to64frombits_s(encblob, blob, bloblen, sz);
+            l = to64frombits_s(encblob, reinterpret_cast<const unsigned char*>(blob), bloblen, sz);
             if (l == 0)
             {
                 fprintf(stderr, "%s: Not enough memory for decoding.\n", __func__);

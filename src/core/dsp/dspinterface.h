@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "dsp.h"
 
 #include <fitsio.h>

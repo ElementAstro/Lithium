@@ -20,7 +20,7 @@
 
 #include "util/macro.hpp"
 #include "basedevice.h"
-#include "lilxml.h"
+#include "lilxml.hpp"
 #include "hydrogenbase.h"
 
 #include <deque>
@@ -30,7 +30,7 @@
 #include <functional>
 
 #include "hydrogenpropertyblob.h"
-#include "hydrogenlilxml.h"
+#include "hydrogenlilxml.hpp"
 
 namespace HYDROGEN
 {

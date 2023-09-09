@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 #include "hydrogenbasetypes.h"
 #include "hydrogenwidgetview.h"
 

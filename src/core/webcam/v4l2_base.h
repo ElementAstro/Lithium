@@ -25,7 +25,7 @@
 
 // #include "videodev2.h"
 #include "eventloop.h"
-#include "hydrogendevapi.h"
+#include "hydrogendevapi.hpp"
 // this adds add dependency to indidriver for v4l_legacy, meade_lpi
 
 // Can't use logger as legacy drivers don't use defaultdevice

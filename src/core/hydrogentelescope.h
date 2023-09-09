@@ -19,7 +19,7 @@
 #pragma once
 
 #include "defaultdevice.h"
-#include "libastro.h"
+#include "libastro.hpp"
 #include "hydrogenpropertyswitch.h"
 #include <libnova/julian_day.h>
 

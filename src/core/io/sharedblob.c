@@ -20,7 +20,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
  */
 
-#define _GNU_SOURCE
+#include "sharedblob.h"
 
 #ifdef __linux__
 #include <linux/unistd.h>
@@ -37,7 +37,7 @@
 #include <sys/mman.h>
 #endif
 #ifdef ENABLE_HYDROGEN_SHARED_MEMORY
-#include "shm_open_anon.h"
+#include "shm_open_anon.hpp"
 #endif
 
 // A shared buffer will be allocated by chunk of at least 1M (must be ^ 2)

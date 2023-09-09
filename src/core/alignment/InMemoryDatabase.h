@@ -10,7 +10,7 @@
 
 #include "Common.h"
 
-#include "libastro.h"
+#include "libastro.hpp"
 
 #include <vector>
 

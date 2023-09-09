@@ -1,14 +1,15 @@
-#include "hydrogendevapi.h"
-#include "hydrogencom.h"
+#include "hydrogendevapi.hpp"
+#include "hydrogencom.hpp"
 #include "locale/locale_compat.hpp"
-#include "base64.h"
-#include "userio.h"
-#include "hydrogenuserio.h"
-#include "hydrogenutility.h"
+#include "base64.hpp"
+#include "userio.hpp"
+#include "hydrogenuserio.hpp"
+#include "hydrogenutility.hpp"
 
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
 #include <sys/stat.h>
 #ifdef _WIN32
 #include <direct.h>
@@ -42,7 +43,7 @@ void IUSaveText(IText *tp, const char *newtext)
 {
     /* copy in fresh string */
     size_t size = strlen(newtext) + 1;
-    tp->text = realloc(tp->text, size);
+    tp->text = (char*)realloc((void*)tp->text, size);
     memcpy(tp->text, newtext, size);
 }
 
@@ -71,7 +72,12 @@ XMLEle *configRootFP(const char *device)
     if (getenv("HYDROGENCONFIG"))
         strncpy(configFileName, getenv("HYDROGENCONFIG"), MAXRBUF);
     else
-        snprintf(configFileName, MAXRBUF, "%s%s_config.xml", configDir, device);
+    {
+        int len = snprintf(configFileName, MAXRBUF, "%s%s_config.xml", configDir, device);
+        if (len >= MAXRBUF)
+        {
+        }
+    }
 
     if (stat(configDir, &st) != 0)
     {
@@ -734,7 +740,7 @@ int IUSnoopBLOB(XMLEle *root, IBLOBVectorProperty *bvp)
             {
                 int base64datalen = pcdatalenXMLEle(ep);
                 assert_mem(bp->blob = realloc(bp->blob, 3 * base64datalen / 4));
-                bp->bloblen = from64tobits_fast(bp->blob, pcdataXMLEle(ep), base64datalen);
+                bp->bloblen = from64tobits_fast((char*)bp->blob, pcdataXMLEle(ep), base64datalen);
                 indi_strlcpy(bp->format, valuXMLAtt(fa), MAXHYDROGENFORMAT);
                 bp->size = atoi(valuXMLAtt(sa));
             }

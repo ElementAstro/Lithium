@@ -60,3 +60,28 @@ std::size_t CommandDispatcher::Djb2Hash(const char *str)
     }
     return hash;
 }
+
+bool VCommandDispatcher::HasHandler(const std::string &name)
+{
+    return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
+}
+
+void VCommandDispatcher::Dispatch(const std::string &name, const json &data)
+{
+    auto it = handlers_.find(Djb2Hash(name.c_str()));
+    if (it != handlers_.end())
+    {
+        it->second(data);
+    }
+}
+
+std::size_t VCommandDispatcher::Djb2Hash(const char *str)
+{
+    std::size_t hash = 5381;
+    char c;
+    while ((c = *str++) != '\0')
+    {
+        hash = ((hash << 5) + hash) + static_cast<unsigned char>(c);
+    }
+    return hash;
+}

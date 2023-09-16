@@ -66,6 +66,12 @@ class StatusDto : public oatpp::DTO
   }
   DTO_FIELD(String, error);
 
+  DTO_FIELD_INFO(warning)
+  {
+    info->description = "Verbose warning messsage";
+  }
+  DTO_FIELD(String, warning);
+
   DTO_FIELD_INFO(command)
   {
     info->description = "Command";

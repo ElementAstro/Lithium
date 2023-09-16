@@ -41,8 +41,7 @@ Description: Device Manager
 #include "config/configor.hpp"
 #include "module/modloader.hpp"
 #include "server/message_bus.hpp"
-
-#include "core/event/eventloop.hpp"
+#include "thread/thread.hpp"
 
 namespace Lithium
 {
@@ -215,8 +214,8 @@ namespace Lithium
 
         std::shared_ptr<ModuleLoader> m_ModuleLoader;           ///< 模块加载器对象的共享指针。
         std::shared_ptr<MessageBus> m_MessageBus;               ///< 消息总线对象的共享指针。
-        std::shared_ptr<EventLoop> m_EventLoop;                 ///< 事件循环对象的共享指针。
         std::shared_ptr<Config::ConfigManager> m_ConfigManager; ///< 配置管理器对象的共享指针。
+        std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
     };
 
 }

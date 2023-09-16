@@ -1,68 +1,85 @@
-#include <uv.h>
 #include <iostream>
 #include <string>
-#include <thread>
+#include <uv.h>
 #include <functional>
-#include <vector>
 
 class TcpServer
 {
 public:
     TcpServer(const std::string &address, int port)
-        : loop_(uv_default_loop()), server_handle_(), client_handles_(), loop_thread_(),
+        : loop_(uv_default_loop()),
+          server_addr_(),
+          server_handle_(),
           on_receive_data(nullptr)
     {
+
+        uv_ip4_addr(address.c_str(), port, &server_addr_);
         server_handle_.data = this;
-        uv_tcp_init(loop_, &server_handle_);
-
-        sockaddr_in addr;
-        uv_ip4_addr(address.c_str(), port, &addr);
-
-        if (uv_tcp_bind(&server_handle_, reinterpret_cast<const sockaddr *>(&addr), 0) != 0)
-        {
-            std::cerr << "Failed to bind server." << std::endl;
-        }
     }
 
     ~TcpServer()
     {
         uv_stop(loop_);
-        loop_thread_.join();
+        uv_loop_close(loop_);
     }
 
-    // 启动服务器
     bool Start()
     {
-        if (uv_listen(reinterpret_cast<uv_stream_t *>(&server_handle_), SOMAXCONN, OnNewConnection) != 0)
+        if (uv_tcp_init(loop_, &server_handle_) != 0)
+        {
+            std::cerr << "Failed to initialize server." << std::endl;
+            return false;
+        }
+
+        if (uv_tcp_bind(&server_handle_, (const struct sockaddr *)&server_addr_, 0) != 0)
+        {
+            std::cerr << "Failed to bind server." << std::endl;
+            return false;
+        }
+
+        if (uv_listen((uv_stream_t *)&server_handle_, SOMAXCONN, OnNewConnection) != 0)
         {
             std::cerr << "Failed to listen on server." << std::endl;
             return false;
         }
 
-        loop_thread_ = std::thread([&]()
-                                   { uv_run(loop_, UV_RUN_DEFAULT); });
-
+        std::cout << "Server started listening on " << GetAddress() << ":" << GetPort() << std::endl;
+        uv_run(loop_, UV_RUN_DEFAULT);
         return true;
     }
 
-    // 发送数据
     bool Send(uv_stream_t *client, const void *data, size_t size)
     {
         uv_buf_t buffer = uv_buf_init(const_cast<char *>(reinterpret_cast<const char *>(data)), size);
-        uv_write_t *request = new uv_write_t;
+        uv_write_t *write_req = new uv_write_t();
+        write_req->data = nullptr;
 
-        if (uv_write(request, client, &buffer, 1, OnWrite) != 0)
+        if (uv_write(write_req, client, &buffer, 1, OnWrite) != 0)
         {
             std::cerr << "Failed to send data." << std::endl;
-            delete request;
+            delete write_req;
             return false;
         }
 
         return true;
     }
 
-    // 接收数据回调函数
-    std::function<void(uv_stream_t *, ssize_t, const uv_buf_t *)> on_receive_data;
+    std::string GetAddress() const
+    {
+        char ip[17] = {'\0'};
+        uv_ip4_name(&server_addr_, ip, sizeof(ip));
+        return std::string(ip);
+    }
+
+    int GetPort() const
+    {
+        return ntohs(server_addr_.sin_port);
+    }
+
+    void SetOnReceiveData(const std::function<void(uv_stream_t *, ssize_t, const uv_buf_t *)> &callback)
+    {
+        on_receive_data = callback;
+    }
 
 private:
     static void OnNewConnection(uv_stream_t *server, int status)
@@ -73,50 +90,48 @@ private:
             return;
         }
 
-        TcpServer *tcp_server = reinterpret_cast<TcpServer *>(server->data);
+        TcpServer *tcp_server = static_cast<TcpServer *>(server->data);
 
-        uv_tcp_t client_handle;
-        uv_tcp_init(tcp_server->loop_, &client_handle);
+        uv_tcp_t *client_handle = new uv_tcp_t();
+        uv_tcp_init(tcp_server->loop_, client_handle);
 
-        if (uv_accept(server, reinterpret_cast<uv_stream_t *>(&client_handle)) == 0)
+        if (uv_accept(server, (uv_stream_t *)client_handle) == 0)
         {
-            tcp_server->client_handles_.push_back(client_handle);
-            uv_read_start(reinterpret_cast<uv_stream_t *>(&client_handle), OnAllocBuffer, OnRead);
+            uv_read_start((uv_stream_t *)client_handle, AllocBuffer, OnRead);
         }
         else
         {
-            uv_close(reinterpret_cast<uv_handle_t *>(&client_handle), nullptr);
+            uv_close((uv_handle_t *)client_handle, OnClientClose);
         }
     }
 
-    static void OnAllocBuffer(uv_handle_t *handle, size_t size, uv_buf_t *buffer)
+    static void AllocBuffer(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf)
     {
-        *buffer = uv_buf_init(new char[size], size);
+        buf->base = new char[suggested_size];
+        buf->len = suggested_size;
     }
 
-    static void OnRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buffer)
+    static void OnRead(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf)
     {
         if (nread > 0)
         {
-            TcpServer *tcp_server = reinterpret_cast<TcpServer *>(client->data);
+            TcpServer *tcp_server = static_cast<TcpServer *>(client->data);
             if (tcp_server->on_receive_data)
             {
-                tcp_server->on_receive_data(client, nread, buffer);
+                tcp_server->on_receive_data(client, nread, buf);
             }
         }
         else if (nread < 0)
         {
-
-            uv_close(reinterpret_cast<uv_handle_t *>(client), OnClientClose);
+            delete[] buf->base;
+            uv_close((uv_handle_t *)client, OnClientClose);
         }
-
-        delete[] buffer->base;
     }
 
-    static void OnWrite(uv_write_t *request, int status)
+    static void OnWrite(uv_write_t *req, int status)
     {
-        delete request->bufs[0].base;
-    delete request;
+        delete[] req->data;
+        delete req;
     }
 
     static void OnClientClose(uv_handle_t *handle)
@@ -125,40 +140,28 @@ private:
     }
 
     uv_loop_t *loop_;
+    sockaddr_in server_addr_;
     uv_tcp_t server_handle_;
-    std::vector<uv_tcp_t> client_handles_;
-
-    std::thread loop_thread_;
+    std::function<void(uv_stream_t *, ssize_t, const uv_buf_t *)> on_receive_data;
 };
 
 int main()
 {
     TcpServer server("0.0.0.0", 12345);
 
-    // 设置接收数据的回调函数
-    server.on_receive_data = [&server](uv_stream_t *client, ssize_t size, const uv_buf_t *buffer)
-    {
-        std::cout << "Received data: " << std::string(buffer->base, size) << std::endl;
-        // 处理接收到的数据
+    server.SetOnReceiveData([&server](uv_stream_t *client, ssize_t size, const uv_buf_t *buf)
+                            {
+        std::cout << "Received data: " << std::string(buf->base, size) << std::endl;
 
-        // 发送响应数据
         std::string response = "Response";
         server.Send(client, response.data(), response.size());
-    };
+        
+        delete[] buf->base; });
 
-    // 启动服务器
     if (!server.Start())
     {
         return 1;
     }
-
-    char input;
-    std::cout << "请输入一个字符：";
-
-    std::cin >> input;
-
-    // 主线程执行其他逻辑
-    // ...
 
     return 0;
 }

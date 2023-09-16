@@ -1,3 +1,34 @@
+/*
+ * ProcessController.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-7-13
+
+Description: Process Route
+
+**************************************************/
+
 #ifndef Lithium_PROCESSCONTROLLER_HPP
 #define Lithium_PROCESSCONTROLLER_HPP
 
@@ -51,8 +82,6 @@ public:
         info->pathParams.add<String>("process-name").description = "Name of the process want to start (must be available to execute)";
         info->pathParams.add<String>("process-id").description = "ID of the process , used to stop or get output";
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "process/start/{process-name}/{process-id}", getUICreateProcess){
 
         ENDPOINT_ASYNC_INIT(getUICreateProcess)
@@ -72,22 +101,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-    ENDPOINT("GET", "process/start/{process-name}/{process-id}", getUIStopProcess)
-    {
-        auto res = StatusDto::createShared();
-        res->commnad = "CreateProcess"
-        auto processName = request->getPathVariable("process-name");
-        auto processId = request->getPathVariable("process-id");
-        OATPP_ASSERT_HTTP(processName && processId, Status::CODE_400, "process name and id should not be null");
-        if (!Lithium::MyApp->createProcess(processName, processId))
-        {
-            res->error = "Operate Error";
-            res->message = "Failed to create process";
-        }
-        return createDtoResponse(Status::CODE_200, res);
-    }
-#endif
 
     ENDPOINT_INFO(getUICreateProcessAPI)
     {
@@ -96,8 +109,6 @@ public:
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "/api/process/start", getUICreateProcessAPI){
 
         ENDPOINT_ASYNC_INIT(getUICreateProcessAPI)
@@ -120,9 +131,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIStopProcess)
     {
@@ -131,7 +139,6 @@ public:
         info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
         info->pathParams.add<String>("process-id").description = "ID of the process";
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "process/stop/{process-id}", getUIStopProcess)
     {
         ENDPOINT_ASYNC_INIT(getUIStopProcess)
@@ -149,21 +156,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-    ENDPOINT("GET", "process/stop/{process-id}", getUIStopProcess,
-            PATH(String,processId))
-    {
-        auto res = StatusDto::createShared();
-        res->command = "TerminateProcess";
-        OATPP_ASSERT_HTTP(processId, Status::CODE_400, "process id should not be null");
-        if (!Lithium::MyApp->terminateProcess(processId->getValue()))
-        {
-            res->error = "Operate Error";
-            res->message = "Failed to create process";
-        }
-        return createDtoResponse(Status::CODE_200, res);
-    }
-#endif
 
     ENDPOINT_INFO(getUITerminateProcessAPI)
     {
@@ -172,8 +164,6 @@ public:
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "/api/process/stop", getUITerminateProcessAPI){
 
         ENDPOINT_ASYNC_INIT(getUITerminateProcessAPI)
@@ -197,9 +187,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIRunScript)
     {
@@ -209,8 +196,6 @@ public:
         info->pathParams.add<String>("script-name").description = "Name of the script want to start (must be available to execute)";
         info->pathParams.add<String>("script-id").description = "ID of the script , used to stop or get output";
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "process/start/{script-name}/{script-id}", getUIRunScript){
 
         ENDPOINT_ASYNC_INIT(getUIRunScript)
@@ -230,22 +215,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-    ENDPOINT_ASYNC("GET", "process/start/{script-name}/{script-id}", getUIRunScript)
-    {
-        auto res = StatusDto::createShared();
-        res->command = "RunScript";
-        auto scriptName = request->getPathVariable("script-name");
-        auto scriptId = request->getPathVariable("script-id");
-        OATPP_ASSERT_HTTP(scriptName && scriptId, Status::CODE_400, "script name and id should not be null");
-        if (!Lithium::MyApp->runScript(scriptName, scriptId))
-        {
-            res->error = "Operate Error";
-            res->message = "Failed to run script";
-        }
-        return createDtoResponse(Status::CODE_200, res);
-    }
-#endif
 
     ENDPOINT_INFO(getUIRunScriptAPI)
     {
@@ -254,8 +223,6 @@ public:
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/plain");
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "/api/process/run", getUIRunScriptAPI){
 
         ENDPOINT_ASYNC_INIT(getUIRunScriptAPI)
@@ -280,10 +247,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
-
 };
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen

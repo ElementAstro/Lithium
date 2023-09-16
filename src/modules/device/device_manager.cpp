@@ -64,7 +64,6 @@ namespace Lithium
         {
             devices.emplace_back();
         }
-        m_EventLoop->start();
     }
 
     DeviceManager::~DeviceManager()
@@ -538,8 +537,8 @@ namespace Lithium
 
     bool DeviceManager::setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value)
     {
-        m_EventLoop->addTask([this, &value, &type, &name, &value_name]()
-                             {
+        m_ThreadManager->addThread([this, &value, &type, &name, &value_name]()
+                                   {
                                  auto device = getDevice(type, name);
                                  if (!device)
                                  {
@@ -553,14 +552,15 @@ namespace Lithium
                                  catch (const std::bad_any_cast &e)
                                  {
                                      LOG_F(ERROR, "Failed to convert %s of %s with %s", value_name.c_str(), name.c_str(), e.what());
-                                 } });
+                                 } },
+                                   m_ThreadManager->generateRandomString(16));
         return true;
     }
 
     bool DeviceManager::setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value)
     {
-        m_EventLoop->addTask([this, &value, &name, &value_name]()
-                             {
+        m_ThreadManager->addThread([this, &value, &name, &value_name]()
+                                   {
                                  auto device = findDeviceByName(name);
                                  if (!device)
                                  {
@@ -574,7 +574,8 @@ namespace Lithium
                                  catch (const std::bad_any_cast &e)
                                  {
                                      LOG_F(ERROR, "Failed to convert %s of %s with %s", value_name.c_str(), name.c_str(), e.what());
-                                 } });
+                                 } },
+                                   m_ThreadManager->generateRandomString(16));
         return true;
     }
 }

@@ -1,3 +1,34 @@
+/*
+ * StaticController.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-7-13
+
+Description: Static Route
+
+**************************************************/
+
 #ifndef Lithium_STATICCONTROLLER_HPP
 #define Lithium_STATICCONTROLLER_HPP
 
@@ -71,7 +102,6 @@ public:
     {
         info->summary = "'Root' endpoint";
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/", root)
     {
         ENDPOINT_ASYNC_INIT(root)
@@ -92,26 +122,7 @@ public:
             return _return(response);
         }
     };
-#else
-    ENDPOINT("GET", "/", root)
-    {
-        const char *html =
-            "<html lang='en'>"
-            "  <head>"
-            "    <meta charset=utf-8/>"
-            "  </head>"
-            "  <body>"
-            "    <p>Hello Lithium example project!</p>"
-            "    <a href='swagger/ui'>Checkout Swagger-UI page</a>"
-            "  </body>"
-            "</html>";
-        auto response = createResponse(Status::CODE_200, html);
-        response->putHeader(Header::CONTENT_TYPE, "text/html");
-        return response;
-    }
-#endif
 
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/static/*", Static) {
     
         ENDPOINT_ASYNC_INIT(Static)
@@ -127,17 +138,14 @@ public:
             caret.findChar('?');
 
             auto path = pathLabel.toString();
-            auto buffer = loadResource(path.getValue(""), {".json",".js",".css",".html",".jpg",".png",".robot"});
+            auto buffer = loadResource(path.getValue(""), {"json","js","css","html","jpg","png","robot"});
             OATPP_ASSERT_HTTP(buffer != "", Status::CODE_500, "Can't read file");
 
             return _return(controller->createResponse(Status::CODE_200, buffer));
         }
         
     };
-#else
-
-#endif
-
+    
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen
 
 };

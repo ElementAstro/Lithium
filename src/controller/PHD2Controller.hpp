@@ -1,3 +1,34 @@
+/*
+ * PHD2Controller.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-7-13
+
+Description: PHD2 Route
+
+**************************************************/
+
 #ifndef Lithium_PHD2CONTROLLER_HPP
 #define Lithium_PHD2CONTROLLER_HPP
 
@@ -40,8 +71,6 @@ public:
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_400, "text/json");
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "/api/phd2/start", getUIStartPHD2API){
 
         ENDPOINT_ASYNC_INIT(getUIStartPHD2API)
@@ -82,17 +111,12 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200,res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIStopPHD2ParamAPI)
     {
         info->summary = "Stop PHD2";
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "/api/phd2/stop", getUIStopPHD2ParamAPI){
 
         ENDPOINT_ASYNC_INIT(getUIStopPHD2ParamAPI)
@@ -109,19 +133,13 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIModifyPHD2ParamAPI)
     {
         info->summary = "Modify PHD2 Parameter with name and value";
         info->addConsumes<Object<ModifyPHD2ParamDTO>>("application/json");
-        info->addResponse<String>(Status::CODE_200, "text/json");
-        info->addResponse<String>(Status::CODE_400, "text/plain");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "text/json");
     }
-#if ENABLE_ASYNC
-
     ENDPOINT_ASYNC("GET", "/api/phd2/modify", getUIModifyPHD2ParamAPI){
 
         ENDPOINT_ASYNC_INIT(getUIModifyPHD2ParamAPI)
@@ -133,12 +151,12 @@ public:
 
         Action returnResponse(const oatpp::Object<ModifyPHD2ParamDTO>& body)
         {
-            nlohmann::json res;
-            res["command"] = "ModifyPHD2Param";
+            auto res = StatusDto::createShared();
+            res->command = "ModifyPHD2Param";
+            res->code = 200;
             auto param_name = body->param_name.getValue("");
             auto param_value = body->param_value.getValue("");
             // OATPP_ASSERT_HTTP(param_name && param_value, Status::CODE_400, "parameter name and id should not be null");
-
             bool phd2_running = false;
             for (auto process : Lithium::MyApp->getRunningProcesses())
             {
@@ -155,14 +173,9 @@ public:
             {
                 // PHD2参数冷更新，主要是修改配置文件
             }
-            auto response = controller->createResponse(Status::CODE_200, res.dump());
-            response->putHeader(Header::CONTENT_TYPE, "text/json");
-            return _return(response);
+            return _return(controller->createDtoResponse(Status::CODE_200,res));
         }
     };
-#else
-
-#endif
 
 };
 

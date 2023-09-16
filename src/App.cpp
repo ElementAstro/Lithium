@@ -122,13 +122,13 @@ void run()
     router->addController(upload_controller);
     LOG_F(INFO, "Upload controller loaded");
 
-    // LOG_F(INFO, "Starting to load API doc controller");
+    LOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
-    // router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
+    router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
 #else
-    // router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
+    router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
 #endif
-    // LOG_F(INFO, "API doc controller loaded");
+    LOG_F(INFO, "API doc controller loaded");
 
     router->addController(WebSocketController::createShared());
 
@@ -274,14 +274,30 @@ int main(int argc, char *argv[])
         auto cmd_web_panel = program.get<bool>("--web-panel");
 
         oatpp::base::Environment::init();
+        // Run the main server
         run();
-
+        // Clean up all
         oatpp::base::Environment::destroy();
     }
     catch (const std::exception &e)
     {
         LOG_F(ERROR, "Error: %s", e.what());
         Lithium::CrashReport::saveCrashLog(e.what());
+        using namespace backward;
+        StackTrace st;
+        st.load_here(32);
+
+        TraceResolver tr;
+        tr.load_stacktrace(st);
+        for (size_t i = 0; i < st.size(); ++i)
+        {
+            ResolvedTrace trace = tr.resolve(st[i]);
+            std::cout << "#" << i
+                      << " " << trace.object_filename
+                      << " " << trace.object_function
+                      << " [" << trace.addr << "]"
+                      << std::endl;
+        }
         std::exit(EXIT_FAILURE);
     }
     return 0;

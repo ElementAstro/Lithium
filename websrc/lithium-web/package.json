@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/vue": "^3.0.0",
     "admin-lte": "^4.0.0-alpha2",
+    "aladin-lite": "^3.2.0",
     "astro": "^3.1.0",
     "jsvectormap": "^1.5.3",
     "sortablejs": "^1.15.0"

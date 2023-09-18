@@ -134,6 +134,29 @@ const htmlPath = convertPathToHtml(path);
             </li>
           </ul>
         </li>
+        <li class:list={["nav-item", mainPage === "help" && "menu-open"]}>
+          <a
+            href="#"
+            class:list={["nav-link", mainPage === "help" && "active"]}
+          >
+            <i class="nav-icon bi bi-box-seam-fill"></i>
+            <p>
+              Help
+              <i class="nav-arrow bi bi-chevron-right"></i>
+            </p>
+          </a>
+          <ul class="nav nav-treeview">
+            <li class="nav-item">
+              <a
+                href={htmlPath + "/help/license.astro"}
+                class:list={["nav-link", page === "license" && "active"]}
+              >
+                <i class="nav-icon bi bi-gear"></i>
+                <p>License</p>
+              </a>
+            </li>
+          </ul>
+        </li>
       </ul>
       <!--end::Sidebar Menu-->
     </nav>

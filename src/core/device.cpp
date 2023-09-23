@@ -239,7 +239,7 @@ void Device::setProperty(const std::string &name, const std::any &value)
     }
     else
     {
-        insertProperty(name, value, nullptr, nullptr, {}, PossibleValueType::None);
+        insertProperty(name, value, "","", {}, PossibleValueType::None);
     }
 }
 

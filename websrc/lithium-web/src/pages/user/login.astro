@@ -1,0 +1,123 @@
+<!--
+
+   Copyright(c) 2022-2023 Max Qian  <astroair.cn>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+   
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+
+    <title>登录</title>
+
+    <link rel="icon" sizes="16x16" type="image/icon" href="/textures/icon.ico">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="/css/adminlte.min.css">
+    <!-- overlayScrollbars -->
+    <link rel="stylesheet" href="../../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css" />
+
+    <!-- icheck bootstrap -->
+    <link rel="stylesheet" href="../../../node_modules/icheck-bootstrap/icheck-bootstrap.min.css">
+
+</head>
+
+<body class="hold-transition login-page dark-mode">
+    <div class="login-box">
+        <!-- /.login-logo -->
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <b>Light</b>APT
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg">登陆开始星空之旅</p>
+
+                <form action="/login" method="post">
+                    <div class="input-group mb-3 input-group-sm">
+                        <input id="username" name="username" type="text" class="form-control form-control-sm"
+                            placeholder="用户名">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-envelope"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-3 input-group-sm">
+                        <input id="password" type="password" name="password" class="form-control form-control-sm"
+                            placeholder="密码">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-lock"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="icheck-primary">
+                                <input type="checkbox" id="remember">
+                                <label for="remember">
+                                    记住我
+                                </label>
+                            </div>
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-primary btn-block">登录</button>
+                        </div>
+                        <!-- /.col -->
+                    </div>
+                </form>
+                <br>
+                <p class="mb-1">
+                    <a href="/forget-password">忘记密码？</a>
+                </p>
+                <p class="mb-0">
+                    <a href="/register" class="text-center">注册</a>
+                </p>
+            </div>
+            <!-- /.card-body -->
+        </div>
+        <!-- /.card -->
+    </div>
+    <!-- /.login-box -->
+
+    <!-- jQuery -->
+    <script src="../../../node_modules/jquery/dist/jquery.min.js" is:inline></script>
+    <!-- Bootstrap 4 -->
+    <script src="../../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" is:inline></script>
+    <!-- overlayScrollbars -->
+    <script src="../../../node_modules/overlayscrollbars/js/jquery.overlayScrollbars.min.js" is:inline
+    ></script>
+    <script is:inline>
+        $(function () {
+            $("body").overlayScrollbars({});
+        });
+    </script>
+    <!-- AdminLTE App -->
+    <script src="/js/adminlte.min.js" is:inline></script>
+
+</body>
+
+</html>

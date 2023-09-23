@@ -1,0 +1,230 @@
+input,
+textarea {
+    background-color: #1a1a1a ;
+}
+
+.mount-panel-item {
+    font-size: x-small;
+    text-transform: uppercase;
+    overflow-wrap: break-word;
+}
+
+.slider {
+    width: 100%;
+    margin: 20px 0;
+    height: 8px;
+    border-radius: 2px;
+    background: #666;
+    outline: none;
+    opacity: 1;
+    -webkit-transition: 0.2s;
+    transition: opacity 0.2s;
+}
+
+.slider#fdb-brightness::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    background-size: cover;
+    cursor: pointer;
+    border: none;
+}
+
+.slider#fdb-brightness::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    background-size: cover;
+    cursor: pointer;
+    border: none;
+}
+
+.slider#fdb-pAng::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    background-size: cover;
+    cursor: pointer;
+    border: none;
+}
+
+.slider#fdb-pAng::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    background-size: cover;
+    cursor: pointer;
+    border: none;
+}
+
+#sliderContBrightness>span>span,
+#rotateSliderCont>span>span,
+#sliderOverlapCont>span>span {
+    display: none;
+}
+
+#aladin-lite-div {
+    margin: auto;
+    width: 100%;
+    border-radius: 5px;
+    border: grey 2px solid;
+    min-width: 200px;
+    height: 70vh;
+    min-height: 200px;
+    overflow: hidden;
+}
+
+@media screen and (max-width: 992px) {
+    #aladin-lite-div {
+        height: 50vh;
+    }
+}
+
+#aladin-lite-div canvas {
+    height: 100%;
+    width: 100%;
+}
+
+.aladin-location,
+.aladin-fov {
+    background: rgba(10, 10, 10, 0.5);
+}
+
+.aladin-location {
+    position: relative;
+    top: -30px;
+    bottom: 0;
+    height: 30px;
+    width: 250px;
+    left: 50%;
+    margin-left: -125px;
+    text-align: center;
+    display: inline-block;
+    background-color: transparent ;
+}
+
+.aladin-location-text,
+.aladin-reticleColor,
+.aladin-fov {
+    color: white ;
+    font-weight: normal ;
+    font-size: 0.9rem;
+    line-height: 1.5rem;
+    font-family: Roboto, sans-serif;
+    background-color: rgba(15, 71, 255, 0.5) ;
+}
+
+.aladin-location-text {
+    margin-left: 0 ;
+    padding: 5px;
+}
+
+@media (max-width: 40em) {
+    .aladin-location-text {
+        display: none;
+    }
+}
+
+button:hover {
+    transition: .5s;
+}
+
+.buttonPA {
+    margin: 0 ;
+}
+
+.btn-deep-purple {
+    background-color: #5b32bc;
+    color: #fff;
+}
+
+.deep-purple {
+    background-color: #673ab7;
+}
+
+.btn-blue-grey {
+    background-color: #78909c;
+    color: #fff;
+}
+
+.btn-primary {
+    background-color: #4285f4;
+    color: #fff;
+}
+
+.btn-indigo {
+    background-color: #4d5ec1;
+    color: #fff;
+}
+
+.btn-voy-item {
+    width: 50%;
+}
+
+.btn-outline-yellow {
+    border: 2px solid #fbc02d;
+    background-color: transparent;
+    color: #fbc02d;
+}
+
+.btn-outline-blue-grey {
+    border: 2px solid #78909c;
+    background-color: transparent;
+    color: #78909c;
+}
+
+.dropdown-menu {
+    transform: translate3d(66px, 37px, 0px) ;
+}
+
+.dropdown-menu-profile {
+    background-color: #fb3;
+    font-size: 80%;
+    font-weight: 400;
+}
+
+.extraSmallText {
+    font-size: x-small ;
+}
+
+.waves-effect {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.switch label .lever {
+    content: "";
+    display: inline-block;
+    position: relative;
+    background-color: #818181;
+    border-radius: .9375rem;
+    margin: 0 1rem;
+    width: 2.5rem;
+    height: .9375rem;
+    transition: background .3s ease;
+}
+
+.btn-floating, .card-wrapper .card-up img, .picker .picker__box, .picker__date-display .clockpicker-display, .product-table td, .switch label .lever {
+    vertical-align: middle;
+}
+
+.blindSwitch label {
+    text-transform: uppercase;
+    font-size: x-small;
+}
+
+.bounceIn {
+    animation-name: bounceIn;
+}
+
+.bounceIn, .bounceOut, .flipOutX, .flipOutY {
+    animation-duration: .75s;
+}
+
+.animated {
+    animation-duration: 1s;
+    animation-fill-mode: both;
+}

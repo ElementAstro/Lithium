@@ -1,0 +1,70 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Max Qian
+# This file is distributed under the same license as the Lithium package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Lithium \n"
+"Report-Msgid-Bugs-To: astro_air@126.com\n"
+"POT-Creation-Date: 2023-09-23 18:18+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:221
+msgid "port the server running on"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:222
+msgid "host the server running on"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:223
+msgid "path to the config file"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:224
+msgid "path to the modules directory"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:225
+msgid "web panel"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:226
+msgid "path to log file"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:228
+msgid "Lithium Command Line Interface:"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:229
+msgid "End."
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:237
+#, c-format
+msgid "Failed to parser command line : %s"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:258
+#, c-format
+msgid "Command line server port : %d"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:264
+#, c-format
+msgid "Set server port to %d"
+msgstr ""
+
+#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:280
+#, c-format
+msgid "Error: %s"
+msgstr ""

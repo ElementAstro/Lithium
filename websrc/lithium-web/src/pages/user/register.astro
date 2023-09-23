@@ -1,0 +1,118 @@
+<!--
+
+   Copyright(c) 2022-2023 Max Qian  <lightapt.com>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+   
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+
+    <title>注册</title>
+
+    <link rel="icon" sizes="16x16" type="image/icon" href="/textures/icon.ico">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="/css/adminlte.min.css">
+    <!-- icheck bootstrap -->
+    <link rel="stylesheet" href="../../node_modules/icheck-bootstrap/icheck-bootstrap.min.css">
+    <!-- overlayScrollbars -->
+    <link rel="stylesheet" href="../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css" />
+
+</head>
+
+<body class="hold-transition register-page dark-mode">
+    <div class="register-box">
+        <div class="card card-outline card-primary">
+            <div class="card-header text-center">
+                <b>Light</b>APT
+            </div>
+            <div class="card-body">
+                <p class="login-box-msg">注册</p>
+
+                <form action="/register" method="post">
+                    
+                    <div class="input-group mb-3 input-group-sm">
+                        <input id="username" name="username" type="text" class="form-control form-control-sm"
+                            placeholder="用户名">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-user"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-3 input-group-sm">
+                        <input id="password" name="password" type="password" autocomplete="off"
+                            class="form-control form-control-sm" placeholder="请输入密码">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-lock"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group mb-3 input-group-sm">
+                        <input id="v_password" name="v_password" type="password" autocomplete="off"
+                            class="form-control form-control-sm" placeholder="请再次输入密码">
+                        <div class="input-group-append">
+                            <div class="input-group-text">
+                                <span class="fas fa-lock"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8">
+                            <div class="icheck-primary">
+                                <input type="checkbox" id="agreeTerms" name="terms" value="agree" checked>
+                                <label for="agreeTerms">
+                                    我同意<a href="/license">协议</a>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-primary btn-block">注册</button>
+                        </div>
+                        <!-- /.col -->
+                    </div>
+                </form>
+                <br>
+
+                <a href="login.html" class="text-center">我已经有账号</a>
+            </div>
+            <!-- /.form-box -->
+        </div><!-- /.card -->
+    </div>
+    <!-- /.register-box -->
+
+    <!-- jQuery -->
+    <script src="../../node_modules/jquery/dist/jquery.min.js" is:inline></script>
+    <!-- Bootstrap 4 -->
+    <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" is:inline></script>
+    <!-- AdminLTE App -->
+    <script src="/js/adminlte.min.js" is:inline></script>
+
+</body>
+
+</html>

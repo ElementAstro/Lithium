@@ -34,3 +34,9 @@ Description: Device Utilities
 #include <string>
 
 std::string execute_command(const std::string &cmd);
+
+bool checkTimeFormat(const std::string &str);
+
+std::string convertToTimeFormat(int num);
+
+bool checkDigits(const std::string &str);

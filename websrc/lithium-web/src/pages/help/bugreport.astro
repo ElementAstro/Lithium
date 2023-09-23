@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1,user-scalable=no"
+        />
+
+        <title>问题反馈</title>
+
+        <link
+            rel="icon"
+            sizes="16x16"
+            type="image/icon"
+            href="/textures/icon.ico"
+        />
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css" />
+        <!-- Theme style -->
+        <link rel="stylesheet" href="/css/adminlte.min.css" />
+        <!-- overlayScrollbars -->
+        <link
+            rel="stylesheet"
+            href="../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css"
+        />
+    </head>
+
+    <body style="height: auto;" class="dark-mode">
+        <!-- Content Wrapper. Contains page content -->
+        <div class="wrapper">
+            <section class="content">
+                <div class="container-fluid">
+                    <!-- Default box -->
+                    <div class="card">
+                        <div class="card-body row">
+                            <div
+                                class="col-5 text-center d-flex align-items-center justify-content-center"
+                            >
+                                <div class="">
+                                    <h2>Light<strong>APT</strong></h2>
+                                    <p class="lead mb-5">
+                                        邮箱：astro_air@126.com<br />
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-7">
+                                <div class="form-group">
+                                    <label for="inputName">姓名</label>
+                                    <input
+                                        type="text"
+                                        id="inputName"
+                                        class="form-control"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail">邮箱</label>
+                                    <input
+                                        type="email"
+                                        id="inputEmail"
+                                        class="form-control"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputSubject">BUG</label>
+                                    <input
+                                        type="text"
+                                        id="inputSubject"
+                                        class="form-control"
+                                    />
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputMessage">信息</label>
+                                    <textarea
+                                        id="inputMessage"
+                                        class="form-control"
+                                        rows="4"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <input
+                                        type="submit"
+                                        class="btn btn-primary"
+                                        value="发送"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- /.content -->
+        </div>
+        <!-- /.content-wrapper -->
+
+        <!-- jQuery -->
+        <script src="../../node_modules/jquery/dist/jquery.min.js" is:inline
+        ></script>
+        <!-- Bootstrap 4 -->
+        <script
+            src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js"
+            is:inline></script>
+        <!-- overlayScrollbars -->
+        <script
+            src="../../node_modules/overlayscrollbars/js/jquery.overlayScrollbars.min.js"
+            is:inline></script>
+        <script is:inline>
+            $(function () {
+                $("body").overlayScrollbars({});
+            });
+        </script>
+        <!-- AdminLTE App -->
+        <script src="/js/adminlte.min.js" is:inline></script>
+    </body>
+</html>

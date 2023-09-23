@@ -19,7 +19,7 @@ endif()
 
 # root directory of the project
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
-set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src/)
+set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -106,9 +106,7 @@ configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 #################################################################################
-#
-# main project
-# this should appear after setting the architecture
+
 if(WIN32)
     set(CMAKE_INSTALL_PREFIX "C:/Program Files/LithiumServer")
 elseif(LINUX)
@@ -149,21 +147,20 @@ add_subdirectory(modules/HydrogenClient)
 if(NOT WIN32)
 add_subdirectory(modules/HydrogenServer)
 endif()
-add_subdirectory(modules/libridge)
 
 add_subdirectory(drivers)
 
 add_subdirectory(${lithium_src_dir}/core)
 
 set(api_SRC
-	${lithium_src_dir}/api/astap.cpp
-	${lithium_src_dir}/api/astap.hpp
+	${lithium_src_dir}/client/astap.cpp
+	${lithium_src_dir}/client/astap.hpp
 
-	${lithium_src_dir}/api/astrometry.cpp
-	${lithium_src_dir}/api/astrometry.hpp
+	${lithium_src_dir}/client/astrometry.cpp
+	${lithium_src_dir}/client/astrometry.hpp
 
-    ${lithium_src_dir}/api/phd2client.cpp
-	${lithium_src_dir}/api/phd2client.hpp
+    ${lithium_src_dir}/client/phd2client.cpp
+	${lithium_src_dir}/client/phd2client.hpp
 )
 
 set(config_SRC
@@ -195,8 +192,8 @@ set(device_SRC
 )
 
 set(driver_indi_SRC
-    ${lithium_src_dir}/api/indiclient.cpp
-    ${lithium_src_dir}/api/indiclient.hpp
+    ${lithium_src_dir}/client/indiclient.cpp
+    ${lithium_src_dir}/client/indiclient.hpp
 
     ${lithium_src_dir}/driver/indi/indi_exception.hpp
 
@@ -365,12 +362,29 @@ find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(LIBZIP REQUIRED)
 
+#################################################################################
+# i18n
+include(cmake_modules/Gettext_helpers.cmake)
+configure_gettext(
+    DOMAIN "lithium"
+    TARGET_NAME "lithium-gettext"
+    SOURCES "${api_SRC}" "${config_SRC}" "${io_SRC}" "${module_SRC}" "${network_SRC}" "${device_SRC}" "${thread_SRC}" "${task_SRC}" "${server_SRC}" "${script_SRC}" "${system_module}" "${Lithium_SRC}"
+    POTFILE_DESTINATION "locale"
+    XGETTEXT_ARGS 
+        "--keyword=_" "--keyword=N_" "--keyword=P_:1,2"
+        "--package-name=${PROJECT_NAME}" "--package-version=${PROJECT_VERSION}"
+        "--copyright-holder=Max Qian" "--msgid-bugs-address=astro_air@126.com"
+    LANGUAGES "en_US.UTF-8" "fr_FR" "es")
+
+find_package(Intl REQUIRED)
+
+
 if(WIN32)
     #add_executable(lithium_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
      #${image_SRC} ${logger_SRC} ${module_SRC} 
     #  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
 
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${api_SRC} ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
 
     target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
     
@@ -406,6 +420,10 @@ if(WIN32)
     target_link_libraries(lithium_server backward)
 
     find_package(libuv REQUIRED)
+
+    target_link_libraries(lithium_server ${Libintl_LIBRARY})
+    target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})
+    add_dependencies(lithium_server lithium-gettext)
 
     # Set output name for Lithium executable
     set_target_properties(

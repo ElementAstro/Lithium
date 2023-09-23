@@ -36,11 +36,12 @@ Description: Device Utilities
 #else
 
 #endif
+#include <regex>
 #include <iostream>
 #include <array>
 #include <memory>
 #include <stdexcept>
-
+#include <iomanip>
 #include <sstream>
 
 std::string execute_command(const std::string &cmd)
@@ -86,4 +87,34 @@ std::string execute_command(const std::string &cmd)
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
     return result;
+}
+
+bool checkTimeFormat(const std::string &str)
+{
+    std::regex timeRegex(R"(\d{1,2}(:\d{1,2}){0,2})");
+    return std::regex_match(str, timeRegex);
+}
+
+std::string convertToTimeFormat(int num)
+{
+    int hours = num / 3600;
+    int minutes = (num % 3600) / 60;
+    int seconds = num % 60;
+    std::ostringstream oss;
+    oss << std::setw(2) << std::setfill('0') << hours << ":"
+        << std::setw(2) << std::setfill('0') << minutes << ":"
+        << std::setw(2) << std::setfill('0') << seconds;
+    return oss.str();
+}
+
+bool checkDigits(const std::string &str)
+{
+    for (char c : str)
+    {
+        if (!std::isdigit(c))
+        {
+            return false;
+        }
+    }
+    return true;
 }

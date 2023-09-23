@@ -35,5 +35,8 @@ enum class DeviceError
     GainError,
     OffsetError,
     ISOError,
-    CoolingError
+    CoolingError,
+
+    // For Telescope
+    GotoError
 };

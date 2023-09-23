@@ -1,0 +1,601 @@
+<!--
+
+   Copyright(c) 2022 Max Qian  <astroair.cn>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+   
+--><!doctype html>
+<html lang="en">
+    <!-- HTML Head-->
+
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1,user-scalable=no"
+        />
+
+        <title>Lithium WebUI</title>
+
+        <link
+            rel="icon"
+            sizes="16x16"
+            type="image/icon"
+            href="/textures/icon.ico"
+        />
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css" />
+        <!-- Theme style -->
+        <link rel="stylesheet" href="/css/adminlte.min.css" />
+
+        <!-- overlayScrollbars -->
+        <link rel="stylesheet" href="../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css" />
+        <!-- Loading animation -->
+        <link rel="stylesheet" href="/css/client/loading.css" />
+    </head>
+    <!-- Body Part -->
+
+    <body
+        class="hold-transition sidebar-mini layout-fixed dark-mode"
+        data-panel-auto-height-mode="height"
+    >
+        <!-- loading开始 -->
+        <div id="loading-animation">
+            <div id="loading-animation-center">
+                <div id="loading-animation-center-absolute">
+                    <div class="loading_object" id="loading_four"></div>
+                    <div class="loading_object" id="loading_three"></div>
+                    <div class="loading_object" id="loading_two"></div>
+                    <div class="loading_object" id="loading_one"></div>
+                </div>
+            </div>
+        </div>
+        <script>
+            !(function () {
+                function e() {
+                    setTimeout(() => {
+                        $("#loading-animation").fadeOut(540);
+                    }, 500);
+                }
+                window.jQuery
+                    ? $(document).ready(() => {
+                          e();
+                      })
+                    : (document.onreadystatechange = () => {
+                          "interactive" === document.readyState && e();
+                      });
+            })();
+        </script>
+        <!-- loading 结束 -->
+
+        <div class="wrapper">
+            <!-- Navbar -->
+            <nav class="main-header navbar navbar-expand navbar-dark">
+                <!-- Left navbar links -->
+                <ul class="navbar-nav">
+                    <!-- Control of Silder Bar -->
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            data-widget="pushmenu"
+                            href="#"
+                            role="button"><i class="fas fa-bars"></i></a
+                        >
+                    </li>
+                    <!-- Home -->
+                    <li class="nav-item d-none d-sm-inline-block">
+                        <a href="#" class="nav-link">主页</a>
+                    </li>
+                </ul>
+
+                <!-- Right navbar links -->
+                <ul class="navbar-nav ml-auto">
+                    <!-- Fullscreen Toggle -->
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            data-widget="fullscreen"
+                            href="#"
+                            role="button"
+                        >
+                            <i class="fas fa-expand-arrows-alt"></i>
+                        </a>
+                    </li>
+                    <!-- ./ Fullscreen Toggle -->
+                    <li class="nav-item">
+                        <a
+                            class="nav-link"
+                            data-widget="control-sidebar"
+                            data-slide="true"
+                            href="#"
+                            role="button"
+                        >
+                            <i class="fas fa-table"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Main Sidebar Container -->
+            <aside class="main-sidebar sidebar-dark-primary elevation-4">
+                <!-- Lithium Logo -->
+                <a href="/client" class="brand-link">
+                    <img
+                        src="/textures/icon.ico"
+                        alt="AdminLTE Logo"
+                        class="brand-image img-circle elevation-3"
+                        style="opacity: .8"
+                    />
+                    <span class="brand-text font-weight-light">Lithium</span>
+                </a>
+
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <!-- Sidebar Menu -->
+                    <nav class="mt-2">
+                        <!-- Don't forget this from doc -->
+                        <!-- Add icons to the links using the .nav-icon class
+                        with font-awesome or any other icon font library -->
+                        <ul
+                            class="nav nav-pills nav-sidebar flex-column"
+                            data-widget="treeview"
+                            role="menu"
+                            data-accordion="false"
+                        >
+                            <!-- Sidebar Item Device Hub -->
+                            <li class="nav-item">
+                                <a href="/devices" class="nav-link">
+                                    <i class="nav-icon fas fa-plug"></i>
+                                    <p>设备管理</p>
+                                </a>
+                            </li>
+                            <!-- ./ Sidebar Item Device Hub -->
+
+                            <!-- Sky Object Search -->
+                            <li class="nav-item">
+                                <a href="/search" class="nav-link">
+                                    <i class="fas fa-search nav-icon"></i>
+                                    <p>天体搜索</p>
+                                </a>
+                            </li>
+
+                            <!-- Image Viewer -->
+                            <li class="nav-item">
+                                <a href="/imageviewer" class="nav-link">
+                                    <i class="fas fa-image nav-icon"></i>
+                                    <p>图像查看</p>
+                                </a>
+                            </li>
+
+                            <!-- Online Skymap -->
+                            <li class="nav-item">
+                                <a href="/scripteditor" class="nav-link">
+                                    <i class="fas fa-pen nav-icon"></i>
+                                    <p>脚本编辑</p>
+                                </a>
+                            </li>
+
+                            <!-- Sidebar Item Tools -->
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">
+                                    <i class="nav-icon fas fa-toolbox"></i>
+                                    <p>
+                                        工具组件
+                                        <i class="right fas fa-angle-left"></i>
+                                    </p>
+                                </a>
+                                <!-- Items in Tools -->
+                                <ul class="nav nav-treeview">
+                                    <!-- Online Skymap -->
+                                    <li class="nav-item">
+                                        <a href="/skymap" class="nav-link">
+                                            <i class="fas fa-map nav-icon"></i>
+                                            <p>在线星图</p>
+                                        </a>
+                                    </li>
+                                    <!-- INDI Starter -->
+                                    <li class="nav-item">
+                                        <a href='/indiweb"' class="nav-link">
+                                            <i class="fas fa-server nav-icon"
+                                            ></i>
+                                            <p>INDI启动器</p>
+                                        </a>
+                                    </li>
+                                    <!-- WebSSH -->
+                                    <li class="nav-item">
+                                        <a href='/webssh"' class="nav-link">
+                                            <i class="fas fa-terminal nav-icon"
+                                            ></i>
+                                            <p>WebSSH</p>
+                                        </a>
+                                    </li>
+                                    <!-- novnc -->
+                                    <li class="nav-item">
+                                        <a href='/novnc"' class="nav-link">
+                                            <i class="fas fa-desktop nav-icon"
+                                            ></i>
+                                            <p>noVNC</p>
+                                        </a>
+                                    </li>
+                                    <!-- System Monitor -->
+                                    <li class="nav-item">
+                                        <a href="/system" class="nav-link">
+                                            <i class="fas fa-computer nav-icon"
+                                            ></i>
+                                            <p>系统信息</p>
+                                        </a>
+                                    </li>
+                                    <!-- Tools -->
+                                    <li class="nav-item">
+                                        <a href="/tools" class="nav-link">
+                                            <i class="fas fa-tools nav-icon"
+                                            ></i>
+                                            <p>工具</p>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <!-- ./ Sidebar Item Tools -->
+
+                            <!-- Sidebar Item Setting -->
+                            <li class="nav-item">
+                                <a href="/settings" class="nav-link">
+                                    <i class="nav-icon fas fa-gear"></i>
+                                    <p>设置</p>
+                                </a>
+                            </li>
+                            <!-- ./ Sidebar Item Setting -->
+
+                            <!-- Sidebar Item FAQ -->
+                            <li class="nav-item">
+                                <a href="/help/faq" class="nav-link">
+                                    <i class="nav-icon fas fa-book"></i>
+                                    <p>FAQ</p>
+                                </a>
+                            </li>
+                            <!-- ./ Sidebar Item FAQ -->
+
+                            <!-- Sidebar Item Bug Report -->
+                            <li class="nav-item">
+                                <a href="/help/bugreport" class="nav-link">
+                                    <i class="nav-icon fas fa-mail-forward"></i>
+                                    <p>问题反馈</p>
+                                </a>
+                            </li>
+                            <!-- ./ Sidebar Item Bug Report -->
+
+                            <!-- Sidebar Item Setting -->
+                            <li class="nav-item">
+                                <a href="/debug" class="nav-link">
+                                    <i class="nav-icon fas fa-debug"></i>
+                                    <p>调试</p>
+                                </a>
+                            </li>
+                            <!-- ./ Sidebar Item Setting -->
+                        </ul>
+                    </nav>
+                </div>
+            </aside>
+
+            <!-- Content Wrapper. Contains page content -->
+            <div
+                class="content-wrapper iframe-mode bg-dark"
+                data-widget="iframe"
+                data-auto-dark-mode="true"
+                data-loading-screen="750"
+            >
+                <!-- Close button to close opened frames -->
+                <div
+                    class="nav navbar navbar-expand navbar-dark border-bottom border-dark p-0"
+                >
+                    <div class="nav-item dropdown">
+                        <a
+                            class="nav-link bg-danger dropdown-toggle"
+                            data-toggle="dropdown"
+                            href="#"
+                            role="button"
+                            aria-haspopup="true"
+                            aria-expanded="false">关闭</a
+                        >
+                        <div class="dropdown-menu mt-0">
+                            <a
+                                class="dropdown-item"
+                                href="#"
+                                data-widget="iframe-close"
+                                data-type="all">关闭所有</a
+                            >
+                            <a
+                                class="dropdown-item"
+                                href="#"
+                                data-widget="iframe-close"
+                                data-type="all-other">关闭除外所有</a
+                            >
+                        </div>
+                    </div>
+                    <a
+                        class="nav-link bg-dark"
+                        href="#"
+                        data-widget="iframe-scrollleft"
+                        ><i class="fas fa-angle-double-left"></i></a
+                    >
+                    <ul class="navbar-nav overflow-hidden" role="tablist"></ul>
+                    <a
+                        class="nav-link bg-dark"
+                        href="#"
+                        data-widget="iframe-scrollright"
+                        ><i class="fas fa-angle-double-right"></i></a
+                    >
+                    <a
+                        class="nav-link bg-dark"
+                        href="#"
+                        data-widget="iframe-fullscreen"
+                        ><i class="fas fa-expand"></i></a
+                    >
+                </div>
+
+                <div class="tab-content">
+                    <div class="tab-empty">
+                        <h2 class="display-4">未选择组件</h2>
+                    </div>
+                    <div class="tab-loading">
+                        <div>
+                            <h2 class="display-4">
+                                组件正在加载中
+                                <i class="fa fa-sync fa-spin"></i>
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="main-footer dark-mode text-sm">
+                <strong
+                    >Copyright &copy; 2022-2023 <a href="https://lightapt.cn"
+                        >Lithium</a
+                    >.</strong
+                >
+                Max Qian All rights reserved.
+                <div class="float-right d-none d-sm-inline-block">
+                    <b>Version</b> 1.0.0
+                </div>
+            </footer>
+
+            <!-- Control Sidebar -->
+            <aside class="control-sidebar control-sidebar-dark">
+                <!-- Control sidebar content goes here -->
+            </aside>
+            <!-- /.control-sidebar -->
+        </div>
+
+        <!-- Modal container -->
+        <div class="container">
+            <!-- Central Modal Medium Danger -->
+            <div
+                class="modal fade"
+                id="centralModalDanger"
+                tabindex="-1"
+                role="dialog"
+                aria-labelledby="myModalLabel"
+                aria-hidden="true"
+            >
+                <div
+                    class="modal-dialog modal-notify modal-danger"
+                    role="document"
+                >
+                    <!--Content-->
+                    <div class="modal-content">
+                        <!--Header-->
+                        <div class="modal-header">
+                            <p class="heading lead" id="errorModalTitle">
+                                错误信息
+                            </p>
+                            <button
+                                type="button"
+                                class="close modal-voy-btn"
+                                data-dismiss="modal"
+                                aria-label="Close"
+                            >
+                                <span aria-hidden="true" class="white-text"
+                                    >&times;</span
+                                >
+                            </button>
+                        </div>
+                        <!--Body-->
+                        <div class="modal-body">
+                            <div class="text-center">
+                                <i
+                                    class="fas fa-exclamation-triangle fa-4x mb-3 animated bounceIn"
+                                ></i>
+                                <p id="errorMessage" class="note note-danger">
+                                    未知错误
+                                </p>
+                                <p id="contactMessage" class="text-muted">
+                                    <small
+                                        >如果你有任何问题，请将详细细节告知开发者</small
+                                    >
+                                </p>
+                            </div>
+                        </div>
+                        <!--Footer-->
+                        <div class="modal-footer justify-content-center">
+                            <a
+                                class="btn btn-outline-danger modal-voy-btn"
+                                href="mailto:astro_air@126.com,fran.dibiase@gmail.com"
+                            >
+                                <i class="fas fa-envelope mr-1"></i>联系我们</a
+                            >
+                            <button
+                                type="button"
+                                class="btn btn-danger waves-effect modal-voy-btn"
+                                data-dismiss="modal"
+                            >
+                                Ok
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Modal container end -->
+
+        <div class="container">
+            <!-- Central Modal Medium Warning -->
+            <div class="modal fade" id="modalDoubleWarning" aria-hidden="true">
+                <div
+                    class="modal-dialog modal-notify modal-warning modal-lg"
+                    role="document"
+                >
+                    <!--Content-->
+                    <div class="modal-content">
+                        <!--Header-->
+                        <div class="modal-header">
+                            <p class="heading lead" id="modalWarnTit">
+                                确认操作?
+                            </p>
+                            <button
+                                type="button"
+                                class="close"
+                                data-dismiss="modal"
+                                aria-label="Close"
+                            >
+                                <span aria-hidden="true" class="white-text"
+                                    >&times;</span
+                                >
+                            </button>
+                        </div>
+                        <!--Body-->
+                        <div class="modal-body">
+                            <div class="text-center">
+                                <i
+                                    class="fas fa-question fa-4x mb-3 animated rotateIn text-danger"
+                                ></i>
+                                <p id="contWarnModal" class="text-warning"></p>
+                                <p>你确定要执行这步操作吗?</p>
+                            </div>
+                        </div>
+                        <!--Footer-->
+                        <div class="modal-footer justify-content-center">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <a
+                                        type="button"
+                                        id="confirmDoubleWarn"
+                                        class="btn btn-sm btn-warning btn-block"
+                                    >
+                                        确认
+                                        <i class="fas fa-check"></i>
+                                    </a>
+                                </div>
+                                <div class="col-sm-6">
+                                    <a
+                                        type="button"
+                                        class="btn btn-sm btn-outline-warning waves-effect btn-block"
+                                        data-dismiss="modal"
+                                    >
+                                        Nope
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Central Modal Medium Warning-->
+        </div>
+
+        <!-- Container Modal -->
+        <div class="container">
+            <!-- Central Modal Medium Generic info -->
+            <div
+                class="modal fade"
+                id="infoModalGeneric"
+                tabindex="-1"
+                role="dialog"
+                aria-labelledby="myModalLabel2"
+                aria-hidden="true"
+            >
+                <div
+                    class="modal-dialog modal-notify modal-info"
+                    role="document"
+                >
+                    <!--Content-->
+                    <div class="modal-content">
+                        <!--Header-->
+                        <div class="modal-header">
+                            <p class="heading lead">信息</p>
+                            <button
+                                type="button"
+                                id="closeModalInfo"
+                                class="close modal-voy-btn"
+                                data-dismiss="modal"
+                                aria-label="Close"
+                            >
+                                <span aria-hidden="true" class="white-text"
+                                    >&times;</span
+                                >
+                            </button>
+                        </div>
+
+                        <!--Body-->
+                        <div class="modal-body">
+                            <div class="text-center">
+                                <div
+                                    class="spinner-border text-primary m-5"
+                                    role="status"
+                                >
+                                    <span class="sr-only">常规信息</span>
+                                </div>
+                                <p id="infoModalMessage" class="note note-info">
+                                    常规消息...
+                                </p>
+                                <p id="genericMessageinfo" class="text-muted">
+                                    <small></small>
+                                </p>
+                            </div>
+                        </div>
+                        <!--Footer-->
+                        <div class="modal-footer justify-content-center">
+                            <button
+                                type="button"
+                                class="btn btn-primary modal-voy-btn"
+                                data-dismiss="modal"
+                            >
+                                Ok
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Central Modal Medium Danger-->
+        </div>
+        <!-- Container Modal end -->
+
+        <!-- jQuery -->
+        <script src="../../node_modules/jquery/dist/jquery.min.js" is:inline></script>
+        <!-- Bootstrap 4 -->
+        <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" is:inline></script>
+        <!-- AdminLTE App -->
+        <script src="/js/adminlte.min.js" is:inline></script>
+
+        <!-- overlayScrollbars -->
+        <script src="../../node_modules/overlayscrollbars/js/jquery.overlayScrollbars.min.js" is:inline
+        ></script>
+        <!-- UI custom -->
+        <script src="/js/client/client.js" is:inline></script>
+    </body>
+</html>

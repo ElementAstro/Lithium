@@ -44,7 +44,8 @@ Description: Device Manager
 
 #include "core/camera_utils.hpp"
 
-#define LOGURU_USE_FMTLIB
+#include "device_utils.hpp"
+
 #include "loguru/loguru.hpp"
 
 #ifdef __cpp_lib_format
@@ -175,7 +176,7 @@ namespace Lithium
         {
             if (device)
             {
-                deviceList.emplace_back(device->getDeviceName()->value);
+                deviceList.emplace_back(device->getDeviceName());
             }
         }
         return deviceList;
@@ -346,7 +347,7 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it)
         {
-            if (*it && (*it)->getDeviceName()->value == name)
+            if (*it && (*it)->getDeviceName() == name)
             {
                 (*it)->addObserver([this](const std::any &message)
                                    { 
@@ -392,7 +393,7 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it)
         {
-            if (*it && (*it)->getDeviceName()->value == name)
+            if (*it && (*it)->getDeviceName() == name)
             {
                 (*it)->getTask("disconnect", {});
                 devices.erase(it);
@@ -424,7 +425,7 @@ namespace Lithium
         {
             devices.erase(std::remove_if(devices.begin(), devices.end(),
                                          [&](const std::shared_ptr<Device> &device)
-                                         { return device && device->getDeviceName()->value == name; }),
+                                         { return device && device->getDeviceName() == name; }),
                           devices.end());
         }
         if (m_ConfigManager)
@@ -478,7 +479,7 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (size_t i = 0; i < devices.size(); ++i)
         {
-            if (devices[i] && devices[i]->getDeviceName()->value == name)
+            if (devices[i] && devices[i]->getDeviceName() == name)
             {
                 return i;
             }
@@ -492,7 +493,7 @@ namespace Lithium
         {
             for (const auto &device : devices)
             {
-                if (device && device->getDeviceName()->value == name)
+                if (device && device->getDeviceName() == name)
                 {
                     return device;
                 }
@@ -784,25 +785,25 @@ namespace Lithium
             LOG_F(WARNING, "Main camera is exposed, please do not restart it again!");
             return DeviceError::Busy;
         }
-        if (!m_params.find("exposure"))
+        if (!m_params.contains("exposure"))
         {
             LOG_F(ERROR, "Missing exposure time.");
-            return DeviceError::MissingExposureTime;
+            return DeviceError::MissingValue;
         }
         // 必须先指定是提前设置才会触发，不然所有功能均在startExposure中完成
-        if (m_params.find("preset"))
+        if (m_params.contains("preset"))
         {
-            if (m_params.get<bool>("preset"))
+            if (m_params["preset"].get<bool>())
             {
-                if (m_params.find("gain"))
+                if (m_params.contains("gain"))
                 {
                     setGain({"gain", m_params["gain"]});
                 }
-                if (m_params.find("offset"))
+                if (m_params.contains("offset"))
                 {
                     setOffset({"offset", m_params["offset"]});
                 }
-                if (m_params.find("iso"))
+                if (m_params.contains("iso"))
                 {
                     setISO({"iso", m_params["iso"]});
                 }
@@ -872,7 +873,7 @@ namespace Lithium
     DEVICE_FUNC(DeviceManager::setGain)
     {
         CHECK_MAIN_CAMERA;
-        if (!m_params.find("gain"))
+        if (!m_params.contains("gain"))
         {
             LOG_F(ERROR, "Failed to set gain: No gain value provided");
             return DeviceError::MissingValue;
@@ -886,7 +887,7 @@ namespace Lithium
             }
             else
             {
-                int value = m_params.get<int>("gain");
+                int value = m_params["gain"].get<int>();
                 if (value < 0 || value > 100)
                 {
                     LOG_F(ERROR, "Invalid gain value {}, would not set", value);
@@ -908,7 +909,7 @@ namespace Lithium
     DEVICE_FUNC(DeviceManager::setOffset)
     {
         CHECK_MAIN_CAMERA;
-        if (!m_params.find("offset"))
+        if (!m_params.contains("offset"))
         {
             LOG_F(ERROR, "Failed to set offset: No offset value provided");
             return DeviceError::MissingValue;
@@ -922,7 +923,7 @@ namespace Lithium
             }
             else
             {
-                int value = m_params.get<int>("offset");
+                int value = m_params["offset"].get<int>();
                 if (value < 0 || value > 255)
                 {
                     LOG_F(ERROR, "Invalid offset value {}, would not set", value);
@@ -944,7 +945,7 @@ namespace Lithium
     DEVICE_FUNC(DeviceManager::setISO)
     {
         CHECK_MAIN_CAMERA;
-        if (!m_params.find("iso"))
+        if (!m_params.contains("iso"))
         {
             LOG_F(ERROR, "Failed to set iso: No iso value provided");
             return DeviceError::MissingValue;
@@ -958,15 +959,12 @@ namespace Lithium
             }
             else
             {
-                int value = m_params.get<int>("iso");
+                int value = m_params["iso"].get<int>();
                 // TODO: There needs a ISO value check
-                else
+                if (!m_main_camera->setISO({"iso", value}))
                 {
-                    if (!m_main_camera->setISO({"iso", value}))
-                    {
-                        LOG_F(ERROR, "Failed to set iso of main camera {}", m_main_camera->getDeviceName());
-                        return DeviceError::ISOError;
-                    }
+                    LOG_F(ERROR, "Failed to set iso of main camera {}", m_main_camera->getDeviceName());
+                    return DeviceError::ISOError;
                 }
             }
         }
@@ -993,7 +991,7 @@ namespace Lithium
             "offset" : 25
         }
         */
-        if (m_params.type() == json::array_t)
+        if (m_params.is_array())
         {
             for (auto &params : m_params)
             {
@@ -1010,6 +1008,7 @@ namespace Lithium
                 m_main_camera->setProperty(it.key(), it.value());
             }
         }
+        return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getCameraParams)
@@ -1021,16 +1020,16 @@ namespace Lithium
         */
         CHECK_MAIN_CAMERA_J;
         json res;
-        if (m_params.type() == json::array_t)
+        if (m_params.is_array())
         {
             for (auto it = m_params.begin(); it != m_params.end(); ++it)
             {
-                res[it.key()] = m_main_camera->getStringProperty(it.key());
+                res[it.key()] = m_main_camera->getStringProperty(it.key())->value;
             }
         }
         else
         {
-            res["value"] = m_main_camera->getStringProperty(m_params["name"]);
+            res["value"] = m_main_camera->getStringProperty(m_params["name"])->value;
         }
         return res;
     }
@@ -1039,106 +1038,210 @@ namespace Lithium
     DEVICE_FUNC(DeviceManager::gotoTarget)
     {
         CHECK_TELESCOPE;
+        if (!m_params.contains("ra") || !m_params.contains("dec"))
+        {
+            LOG_F(ERROR, "{} failed to goto: Missing RA or DEC value", m_telescope->getDeviceName());
+            return DeviceError::MissingValue;
+        }
+        std::string ra = m_params["ra"];
+        std::string dec = m_params["dec"];
+        if (ra.empty() || dec.empty())
+        {
+            LOG_F(ERROR, "RA or DEC value is missing");
+            return DeviceError::MissingValue;
+        }
+        try
+        {
+            if (checkDigits(ra))
+            {
+                ra = convertToTimeFormat(std::stoi(ra));
+            }
+            if (!checkTimeFormat(ra))
+            {
+                LOG_F(ERROR, "Error Format of RA value {}", ra);
+                return DeviceError::InvalidValue;
+            }
+            if (checkDigits(dec))
+            {
+                dec = convertToTimeFormat(std::stoi(dec));
+            }
+            if (!checkTimeFormat(dec))
+            {
+                LOG_F(ERROR, "Error Format of DEC value {}", ra);
+                return DeviceError::InvalidValue;
+            }
+        }
+        catch (const std::out_of_range &e)
+        {
+            LOG_F(ERROR, "Failed to check RA and DEC value: {}", e.what());
+            return DeviceError::InvalidValue;
+        }
+        if (!m_telescope->SlewTo(m_params))
+        {
+            LOG_F(ERROR, "{} failed to slew to {} {}", m_telescope->getDeviceName(), ra, dec);
+            return DeviceError::GotoError;
+        }
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::park)
     {
         CHECK_TELESCOPE;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::unpark)
     {
         CHECK_TELESCOPE;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::goHome)
     {
         CHECK_TELESCOPE;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::sync)
     {
         CHECK_TELESCOPE;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC_J(DeviceManager::getCroods)
     {
         CHECK_TELESCOPE_J;
+        return {};
     }
-    DEVICE_FUNC_J(DeviceManager::getObserver) { CHECK_TELESCOPE_J; }
-    DEVICE_FUNC_J(DeviceManager::getTime) { CHECK_TELESCOPE_J; }
-    DEVICE_FUNC(DeviceManager::setTelescopeParams) { CHECK_TELESCOPE; }
-    DEVICE_FUNC_J(DeviceManager::getTelescopeParams) { CHECK_TELESCOPE_J; }
+
+    DEVICE_FUNC_J(DeviceManager::getObserver)
+    {
+        CHECK_TELESCOPE_J;
+        return {};
+    }
+
+    DEVICE_FUNC_J(DeviceManager::getTime)
+    {
+        CHECK_TELESCOPE_J;
+        return {};
+    }
+
+    DEVICE_FUNC(DeviceManager::setTelescopeParams)
+    {
+        CHECK_TELESCOPE;
+        return DeviceError::None;
+    }
+
+    DEVICE_FUNC_J(DeviceManager::getTelescopeParams)
+    {
+        CHECK_TELESCOPE_J;
+        return {};
+    }
 
     // For focuser
     DEVICE_FUNC(DeviceManager::moveStep)
     {
         CHECK_FOCUSER;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::moveTo)
     {
         CHECK_FOCUSER;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC_J(DeviceManager::getTemperatrue)
     {
         CHECK_FOCUSER_J;
+        return {};
     }
+
     DEVICE_FUNC_J(DeviceManager::getFocuserPosition)
     {
         CHECK_FOCUSER_J;
+        return {};
     }
+
     DEVICE_FUNC_J(DeviceManager::getBacklash)
     {
         CHECK_FOCUSER_J;
+        return {};
     }
+
     DEVICE_FUNC(DeviceManager::setFocuserParams)
     {
         CHECK_FOCUSER;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC_J(DeviceManager::getFocuserParams)
     {
         CHECK_FOCUSER_J;
+        return {};
     }
 
     // For filterwheel
     DEVICE_FUNC(DeviceManager::slewTo)
     {
         CHECK_FILTERWHEEL;
+        return DeviceError::None;
     }
-    DEVICE_FUNC_J(DeviceManager::getFilterwheelPosition)
 
+    DEVICE_FUNC_J(DeviceManager::getFilterwheelPosition)
     {
         CHECK_FILTERWHEEL_J;
+        return {};
     }
+
     DEVICE_FUNC_J(DeviceManager::getFilters)
     {
         CHECK_FILTERWHEEL_J;
+        return {};
     }
     DEVICE_FUNC_J(DeviceManager::getOffsets)
     {
         CHECK_FILTERWHEEL_J;
+        return {};
     }
+
     DEVICE_FUNC(DeviceManager::setFilterwheelParams)
     {
         CHECK_FILTERWHEEL;
+        return DeviceError::None;
     }
+
     DEVICE_FUNC_J(DeviceManager::getFilterwheelParams)
     {
         CHECK_FILTERWHEEL_J;
+        return {};
     }
 
     // For guider
     DEVICE_FUNC(DeviceManager::startGuiding)
     {
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::stopGuiding)
     {
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::startCalibration)
     {
+        return DeviceError::None;
     }
+
     DEVICE_FUNC(DeviceManager::stopCalibration)
     {
+        return DeviceError::None;
     }
 
     // For astrometry and astap
     DEVICE_FUNC_J(DeviceManager::solveImage)
     {
+        return DeviceError::None;
     }
 
     bool DeviceManager::startINDIServer()
@@ -1158,6 +1261,7 @@ namespace Lithium
         }
         return true;
     }
+
     bool DeviceManager::startINDIDevice()
     {
         if (!m_indimanager->is_running())
@@ -1167,20 +1271,29 @@ namespace Lithium
         }
         return true;
     }
+
     bool DeviceManager::stopINDIDevice()
     {
+        return true;
     }
 
     bool DeviceManager::startASCOMServer()
     {
+        return true;
     }
+
     bool DeviceManager::stopASCOMServer()
     {
+        return true;
     }
+
     bool DeviceManager::startASCOMDevice()
     {
+        return true;
     }
+
     bool DeviceManager::stopASCOMDevice()
     {
+        return true;
     }
 }

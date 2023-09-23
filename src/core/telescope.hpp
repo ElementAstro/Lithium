@@ -53,7 +53,7 @@ public:
 
     virtual bool reconnect(const IParams &params) override;
 
-protected:
+public:
     /**
      * @brief 指向新目标
      * @param ra 目标赤经

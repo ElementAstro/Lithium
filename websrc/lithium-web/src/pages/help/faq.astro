@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+    <!-- HTML Head-->
+
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1,user-scalable=no"
+        />
+
+        <title>Lithium FAQ</title>
+
+        <link
+            rel="icon"
+            sizes="16x16"
+            type="image/icon"
+            href="/textures/icon.ico"
+        />
+        <!-- Theme style -->
+        <link rel="stylesheet" href="/css/adminlte.min.css" />
+
+        <!-- overlayScrollbars -->
+        <link rel="stylesheet" href="../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css" />
+        <!-- Loading animation -->
+        <link rel="stylesheet" href="/css/client/loading.css" />
+
+        <!-- overlayScrollbars -->
+        <link rel="stylesheet" href="../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css" />
+        <!-- Loading animation -->
+        <link rel="stylesheet" href="/css/client/loading.css" />
+    </head>
+    <!-- Body Part -->
+
+    <body class="dark-mode" data-panel-auto-height-mode="height">
+        <div class="wrapper">
+            <!-- Main content -->
+            <section class="content" data-widget="iframe">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12" id="accordion">
+                            <div class="card card-primary card-outline">
+                                <a
+                                    class="d-block w-100"
+                                    data-toggle="collapse"
+                                    href="#collapseOne"
+                                >
+                                    <div class="card-header">
+                                        <h4 class="card-title w-100">
+                                            1.
+                                            为什么我的软件里没有客户端,只有一些软件的整合?
+                                        </h4>
+                                    </div>
+                                </a>
+                                <div
+                                    id="collapseOne"
+                                    class="collapse"
+                                    data-parent="#accordion"
+                                >
+                                    <div class="card-body">
+                                        目前LihgtAPT处于内侧状态,软件尚不完善,为了保障您的使用体验和设备安全,我们暂时没有加入,日后更新会引入客户端.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12" id="accordion">
+                            <div class="card card-primary card-outline">
+                                <a
+                                    class="d-block w-100"
+                                    data-toggle="collapse"
+                                    href="#collapseTwo"
+                                >
+                                    <div class="card-header">
+                                        <h4 class="card-title w-100">
+                                            2. 软件挂了怎么办?
+                                        </h4>
+                                    </div>
+                                </a>
+                                <div
+                                    id="collapseTwo"
+                                    class="collapse"
+                                    data-parent="#accordion"
+                                >
+                                    <div class="card-body">
+                                        一般情况下,客户端不会挂掉,但是不排除出现什么意外情况,有备用方法Kstars+VNC.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12" id="accordion">
+                            <div class="card card-danger card-outline">
+                                <a
+                                    class="d-block w-100"
+                                    data-toggle="collapse"
+                                    href="#collapseThree"
+                                >
+                                    <div class="card-header">
+                                        <h4 class="card-title w-100">
+                                            3. VNC无法连接桌面怎么办?
+                                        </h4>
+                                    </div>
+                                </a>
+                                <div
+                                    id="collapseThree"
+                                    class="collapse"
+                                    data-parent="#accordion"
+                                >
+                                    <div class="card-body">
+                                        检查VNC服务是否正常开启,并且看看VNC端口是否正确.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12" id="accordion">
+                            <div class="card card-primary card-outline">
+                                <a
+                                    class="d-block w-100"
+                                    data-toggle="collapse"
+                                    href="#collapseFour"
+                                >
+                                    <div class="card-header">
+                                        <h4 class="card-title w-100">
+                                            4.INDI服务器启动异常怎么办?
+                                        </h4>
+                                    </div>
+                                </a>
+                                <div
+                                    id="collapseFour"
+                                    class="collapse"
+                                    data-parent="#accordion"
+                                >
+                                    <div class="card-body">
+                                        请将INDI服务器的错误日志发送给开发者,能够获得更好的解决.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- jQuery -->
+        <script src="../../../node_modules/jquery/dist/jquery.min.js" is:inline
+        ></script>
+        <!-- Bootstrap 4 -->
+        <script src="../../node_modules/bootstrap/dist/js/bootstrap.bundle.min.js" is:inline></script>
+        <!-- AdminLTE App -->
+        <script src="/js/adminlte.min.js" is:inline></script>
+
+        <!-- overlayScrollbars -->
+        <script
+            src="../../../node_modules/overlayscrollbars/js/jquery.overlayScrollbars.min.js"
+            is:inline></script>
+        <script is:inline>
+            $(function () {
+                $("body").overlayScrollbars({});
+            });
+        </script>
+    </body>
+</html>

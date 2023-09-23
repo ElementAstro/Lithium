@@ -65,6 +65,15 @@ Description: Main
 #include <signal.h>
 #endif
 
+// I18n
+#include <libintl.h>
+#include <locale.h>
+#include <locale>
+
+#define _(STRING) gettext(STRING)
+#define N_(STRING) STRING
+#define P_(SINGULAR, PLURAL, N) ngettext(SINGULAR, PLURAL, N)
+
 #include "loguru/loguru.hpp"
 
 void run()
@@ -203,17 +212,22 @@ void registerInterruptHandler()
  */
 int main(int argc, char *argv[])
 {
+    bindtextdomain("lithium", "locale");
+    /* Only write the following 2 lines if creating an executable */
+    setlocale(LC_ALL, "");
+    textdomain("lithium");
+
     argparse::ArgumentParser program("Lithium Server");
 
-    program.add_argument("-P", "--port").help("port the server running on").default_value(8000);
-    program.add_argument("-H", "--host").help("host the server running on").default_value("0.0.0.0");
-    program.add_argument("-C", "--config").help("path to the config file").default_value("cpnfig.json");
-    program.add_argument("-M", "--module-path").help("path to the modules directory").default_value("modules");
-    program.add_argument("-W", "--web-panel").help("web panel").default_value(true);
-    program.add_argument("-L", "--log-file").help("path to log file");
+    program.add_argument("-P", "--port").help(_("port the server running on")).default_value(8000);
+    program.add_argument("-H", "--host").help(_("host the server running on")).default_value("0.0.0.0");
+    program.add_argument("-C", "--config").help(_("path to the config file")).default_value("cpnfig.json");
+    program.add_argument("-M", "--module-path").help(_("path to the modules directory")).default_value("modules");
+    program.add_argument("-W", "--web-panel").help(_("web panel")).default_value(true);
+    program.add_argument("-L", "--log-file").help(_("path to log file"));
 
-    program.add_description("Lithium Command Line Interface:");
-    program.add_epilog("End.");
+    program.add_description(_("Lithium Command Line Interface:"));
+    program.add_epilog(_("End."));
 
     try
     {
@@ -221,7 +235,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error &e)
     {
-        LOG_F(ERROR, "Failed to parser command line : %s", e.what());
+        LOG_F(ERROR, _("Failed to parser command line : %s"), e.what());
         std::exit(1);
     }
 
@@ -242,13 +256,13 @@ int main(int argc, char *argv[])
         auto cmd_port = program.get<int>("--port");
         if (cmd_port != 8000)
         {
-            LOG_F(INFO, "Command line server port : %d", cmd_port);
+            LOG_F(INFO, _("Command line server port : %d"), cmd_port);
 
             auto port = Lithium::MyApp->GetConfig("config/server").value<int>("port", 8000);
             if (port != cmd_port)
             {
                 Lithium::MyApp->SetConfig("config/server/port", cmd_port);
-                LOG_F(INFO, "Set server port to %d", cmd_port);
+                LOG_F(INFO, _("Set server port to %d"), cmd_port);
             }
         }
         auto cmd_host = program.get<std::string>("--host");
@@ -264,12 +278,11 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Error: %s", e.what());
+        LOG_F(ERROR, _("Error: %s"), e.what());
         Lithium::CrashReport::saveCrashLog(e.what());
         using namespace backward;
         StackTrace st;
         st.load_here(32);
-
         TraceResolver tr;
         tr.load_stacktrace(st);
         for (size_t i = 0; i < st.size(); ++i)

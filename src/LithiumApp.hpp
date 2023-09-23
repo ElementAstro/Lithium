@@ -41,6 +41,7 @@ Description: Lithium App Enter
 #include "modules/system/process.hpp"
 #include "modules/task/task_manager.hpp"
 #include "modules/task/task_generator.hpp"
+#include "modules/task/task_stack.hpp"
 #include "modules/server/message_bus.hpp"
 #include "core/property/iproperty.hpp"
 #include "modules/plugin/plugin_manager.hpp"
@@ -72,6 +73,9 @@ namespace Lithium
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
 
     public:
+
+        
+    public:
         bool createProcess(const std::string &command, const std::string &identifier);
         bool runScript(const std::string &script, const std::string &identifier);
         bool terminateProcess(pid_t pid, int signal = SIGTERM);
@@ -92,6 +96,8 @@ namespace Lithium
         bool queryTaskByName(const std::string &name);
         const std::vector<std::shared_ptr<BasicTask>> &getTaskList() const;
         bool saveTasksToJson() const;
+
+        bool checkTaskExecutable(const std::string &name);
 
     public:
         template <typename T>
@@ -120,28 +126,6 @@ namespace Lithium
         bool runChaiScript(const std::string &filename);
         void initMyAppChai();
 
-    public:
-        template <typename T>
-        std::vector<std::shared_ptr<T>> loadControllers()
-        {
-            std::vector<std::shared_ptr<T>> res;
-            if (!m_cModuleLoader)
-            {
-                LOG_F(ERROR, "Failed to initialize Controller module loader");
-                return res;
-            }
-            std::vector<std::string> lib_names = m_cModuleLoader->GetAllExistedModules();
-            if (lib_names.empty())
-            {
-                return res;
-            }
-            for (auto lib_name : lib_names)
-            {
-                res.push_back(m_cModuleLoader->GetInstance<T>(lib_name, {}, "GetController"));
-            }
-            return res;
-        }
-
     private:
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
         std::shared_ptr<Config::ConfigManager> m_ConfigManager;
@@ -149,11 +133,10 @@ namespace Lithium
         std::shared_ptr<Process::ProcessManager> m_ProcessManager;
         std::shared_ptr<Task::TaskManager> m_TaskManager;
         std::shared_ptr<TaskGenerator> m_TaskGenerator;
+        std::shared_ptr<Task::TaskStack> m_TaskStack;
         std::shared_ptr<MessageBus> m_MessageBus;
         std::shared_ptr<PluginManager> m_PluginManager;
         std::shared_ptr<ChaiScriptManager> m_ScriptManager;
-        // This is special for dynamic load oatpp server controller before starting server
-        std::shared_ptr<ModuleLoader> m_cModuleLoader;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 } // namespace Lithium

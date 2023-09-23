@@ -88,7 +88,7 @@ bool ASCOMDevice::disconnect(const IParams &params)
     setConnected(false);
     if (getConnected())
     {
-        LOG_F(ERROR, "Failed to disconnect with %s", getStringProperty("name")->value.c_str());
+        LOG_F(ERROR, "Failed to disconnect with %s", getDeviceName());
         return false;
     }
     return true;
@@ -98,11 +98,11 @@ bool ASCOMDevice::reconnect(const IParams &params)
 {
     if (!disconnect(params))
     {
-        LOG_F(ERROR, "Failed to reconnect with %s, falied when trying to disconnect with", getStringProperty("name")->value.c_str());
+        LOG_F(ERROR, "Failed to reconnect with %s, falied when trying to disconnect with", getDeviceName());
     }
     if (!connect(params))
     {
-        LOG_F(ERROR, "Failed to reconnect %s, falied when trying to connect to", getStringProperty("name")->value.c_str());
+        LOG_F(ERROR, "Failed to reconnect %s, falied when trying to connect to", getDeviceName());
     }
     return true;
 }

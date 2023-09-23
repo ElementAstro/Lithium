@@ -319,6 +319,9 @@ set(task_SRC
     ${lithium_src_dir}/modules/task/task_manager.cpp
     ${lithium_src_dir}/modules/task/task_manager.hpp
 
+    ${lithium_src_dir}/modules/task/task_stack.cpp
+    ${lithium_src_dir}/modules/task/task_stack.hpp
+
     ${lithium_src_dir}/modules/task/task_generator.cpp
     ${lithium_src_dir}/modules/task/task_generator.hpp
 )
@@ -381,7 +384,7 @@ if(WIN32)
 
     target_link_libraries(lithium_server LithiumDriver LithiumBridge)
 
-    target_link_libraries(lithium_server hydrogendriverstatic)
+    target_link_libraries(lithium_server hydrogencore)
 
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server dlfcn-win32::dl)

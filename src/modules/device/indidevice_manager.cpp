@@ -293,7 +293,7 @@ std::map<std::string, std::shared_ptr<INDIDeviceContainer>> INDIManager::get_run
     return running_drivers;
 }
 
-static std::vector<std::map<std::string, std::string>> INDIManager::get_devices()
+std::vector<std::map<std::string, std::string>> INDIManager::get_devices()
 {
     std::vector<std::map<std::string, std::string>> devices;
     std::string cmd = "indi_getprop *.CONNECTION.CONNECT";
@@ -309,7 +309,7 @@ static std::vector<std::map<std::string, std::string>> INDIManager::get_devices(
         result += buffer.data();
     }
     std::vector<std::string> lines = {"", ""};
-    for (std::string token : result)
+    for (char token : result)
     {
         if (token == '\n')
         {

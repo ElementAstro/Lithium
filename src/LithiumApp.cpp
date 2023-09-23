@@ -54,8 +54,7 @@ namespace Lithium
             m_PluginManager = PluginManager::createShared(m_ProcessManager);
             m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
             m_TaskGenerator = std::make_shared<TaskGenerator>(m_DeviceManager);
-
-            m_cModuleLoader = ModuleLoader::createShared("controllers");
+            m_TaskStack = std::make_shared<Task::TaskStack>();
 
             m_ScriptManager = ChaiScriptManager::createShared(m_MessageBus);
 
@@ -233,6 +232,15 @@ namespace Lithium
     {
         return m_TaskManager->saveTasksToJson();
     }
+
+    bool LithiumApp::checkTaskExecutable(const std::string &name)
+    {
+        
+    }
+
+    /*
+     * Thread Manager Functions Wrapper
+     */
 
     void LithiumApp::addThread(std::function<void()> func, const std::string &name)
     {

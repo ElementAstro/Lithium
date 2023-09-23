@@ -53,7 +53,6 @@ Description: Script Manager
 #include "nlohmann/json.hpp"
 #include "error/error_code.hpp"
 
-#include "script/hydrogen_script.hpp"
 #include "script/lithium_script.hpp"
 
 namespace Lithium

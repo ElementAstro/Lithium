@@ -46,13 +46,13 @@ Camera::~Camera()
 
 bool Camera::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", getStringProperty("name")->value.c_str());
+    LOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Camera::disconnect(const IParams &params)
 {
-    LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
+    LOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
@@ -121,6 +121,11 @@ bool Camera::stopCooling(const nlohmann::json &params)
     return true;
 }
 
+bool Camera::isCoolingAvailable()
+{
+    return true;
+}
+
 bool Camera::getTemperature(const nlohmann::json &params)
 {
     return true;
@@ -151,12 +156,22 @@ bool Camera::setGain(const nlohmann::json &params)
     return true;
 }
 
+bool Camera::isGainAvailable()
+{
+    return true;
+}
+
 bool Camera::getOffset(const nlohmann::json &params)
 {
     return true;
 }
 
 bool Camera::setOffset(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool Camera::isOffsetAvailable()
 {
     return true;
 }
@@ -171,12 +186,22 @@ bool Camera::setISO(const nlohmann::json &params)
     return true;
 }
 
+bool Camera::isISOAvailable()
+{
+    return true;
+}
+
 bool Camera::getFrame(const nlohmann::json &params)
 {
     return true;
 }
 
 bool Camera::setFrame(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool Camera::isFrameSettingAvailable()
 {
     return true;
 }

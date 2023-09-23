@@ -65,6 +65,8 @@ public:
 
     virtual void init();
 
+    const std::string getDeviceName();
+
     void insertProperty(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check = false);
 
     void setProperty(const std::string &name, const std::any &value);

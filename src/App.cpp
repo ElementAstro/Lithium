@@ -132,23 +132,6 @@ void run()
 
     router->addController(WebSocketController::createShared());
 
-    LOG_F(INFO, "Start loading controllers from dynamic library");
-    std::vector<std::shared_ptr<oatpp::web::server::api::ApiController>> d_controllers = Lithium::MyApp->loadControllers<oatpp::web::server::api::ApiController>();
-    LOG_F(INFO, "Start loading controllers from dynamic library");
-    if (!d_controllers.empty())
-    {
-        for (auto controller : d_controllers)
-        {
-            docEndpoints.append(controller->getEndpoints());
-            router->addController(controller);
-        }
-    }
-    else
-    {
-        LOG_F(INFO, "No dynamic controller loaded");
-    }
-    LOG_F(INFO, "Dynamic controllers loaded successfully");
-
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, connectionHandler, "http");
 

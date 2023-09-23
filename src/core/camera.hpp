@@ -152,6 +152,8 @@ public:
      */
     virtual bool stopCooling(const nlohmann::json &params);
 
+    virtual bool isCoolingAvailable();
+
     /**
      * @brief 获取温度
      *
@@ -200,6 +202,8 @@ public:
      */
     virtual bool setGain(const nlohmann::json &params);
 
+    virtual bool isGainAvailable();
+
     /**
      * @brief 获取偏移量
      *
@@ -215,6 +219,8 @@ public:
      * @return 成功返回true，失败返回false
      */
     virtual bool setOffset(const nlohmann::json &params);
+
+    virtual bool isOffsetAvailable();
 
     /**
      * @brief 获取ISO值
@@ -232,6 +238,8 @@ public:
      */
     virtual bool setISO(const nlohmann::json &params);
 
+    virtual bool isISOAvailable();
+
     /**
      * @brief 获取帧数
      *
@@ -247,4 +255,6 @@ public:
      * @return 成功返回true，失败返回false
      */
     virtual bool setFrame(const nlohmann::json &params);
+
+    virtual bool isFrameSettingAvailable();
 };

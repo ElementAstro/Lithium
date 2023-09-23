@@ -46,13 +46,13 @@ Filterwheel::~Filterwheel()
 
 bool Filterwheel::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", getStringProperty("name")->value.c_str());
+    LOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Filterwheel::disconnect(const IParams &params)
 {
-    LOG_F(INFO, "%s is disconnected", getStringProperty("name")->value.c_str());
+    LOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

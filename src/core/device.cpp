@@ -68,6 +68,11 @@ void Device::init()
     deviceIOServer->start();
 }
 
+const std::string Device::getDeviceName()
+{
+    return _name;
+}
+
 void Device::insertProperty(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check)
 {
     if (name.empty() || !value.has_value())
@@ -231,6 +236,10 @@ void Device::setProperty(const std::string &name, const std::any &value)
                 observer(getProperty(name, false));
             }
         }
+    }
+    else
+    {
+        insertProperty(name, value, nullptr, nullptr, {}, PossibleValueType::None);
     }
 }
 

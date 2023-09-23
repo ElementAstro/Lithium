@@ -242,6 +242,9 @@ namespace Lithium
         // For camera
         DEVICE_FUNC(startExposure);
         DEVICE_FUNC(stopExposure);
+        DEVICE_FUNC(setGain);
+        DEVICE_FUNC(setOffset);
+        DEVICE_FUNC(setISO);
         DEVICE_FUNC(startCooling);
         DEVICE_FUNC(stopCooling);
         DEVICE_FUNC(setCamareParams);

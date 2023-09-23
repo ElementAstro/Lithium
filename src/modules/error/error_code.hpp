@@ -15,8 +15,8 @@ enum class LIError
     DirectoryNotEmpty, // 目录非空
     TooManyOpenFiles,  // 打开的文件过多
     DiskFull,          // 磁盘已满
-    LoadError,          // 动态库加载错误
-    UnLoadError         // 动态卸载错误
+    LoadError,         // 动态库加载错误
+    UnLoadError        // 动态卸载错误
 };
 
 enum class DeviceError
@@ -24,6 +24,16 @@ enum class DeviceError
     None,
     NotSpecific,
     NotFound,
+    NotSupported,
     NotConnected,
-    Busy
+    MissingValue,
+    InvalidValue,
+    Busy,
+
+    // For Camera
+    ExposureError,
+    GainError,
+    OffsetError,
+    ISOError,
+    CoolingError
 };

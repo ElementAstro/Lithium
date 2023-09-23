@@ -40,7 +40,7 @@ Description: Compressor using ZLib
 #include <zlib.h>
 
 #include "loguru/loguru.hpp"
-#include "zippp/libzippp.h"
+#include "libzippp/libzippp.h"
 #include "nlohmann/json.hpp"
 
 #include "io.hpp"

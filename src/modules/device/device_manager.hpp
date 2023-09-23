@@ -43,6 +43,25 @@ Description: Device Manager
 #include "server/message_bus.hpp"
 #include "thread/thread.hpp"
 
+#include "error/error_code.hpp"
+
+class INDIManager;
+class HydrogenManager;
+class INDIDriverCollection;
+
+class Camera;
+class Telescope;
+class Focuser;
+class Filterwheel;
+class Guider;
+class Solver;
+
+#define DEVICE_FUNC(func_name) \
+    DeviceError func_name(const nlohmann::json &m_params)
+
+#define DEVICE_FUNC_J(func_name) \
+    const nlohmann::json func_name(const nlohmann::json &m_params)
+
 namespace Lithium
 {
     enum class DeviceType
@@ -207,6 +226,79 @@ namespace Lithium
          */
         bool setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value);
 
+    // Device Dispatch
+    public:
+
+        bool setMainCamera(const std::string & name);
+        bool setGuidingCamera(const std::string &name);
+        bool setTelescope(const std::string &name);
+        bool setFocuser(const std::string &name);
+        bool setFilterwheel(const std::string &name);
+        bool setGuider(const std::string &name);
+
+    // Device Function
+    public:
+
+        // For camera
+        DEVICE_FUNC(startExposure);
+        DEVICE_FUNC(stopExposure);
+        DEVICE_FUNC(startCooling);
+        DEVICE_FUNC(stopCooling);
+        DEVICE_FUNC(setCamareParams);
+        DEVICE_FUNC_J(getCameraParams);
+
+        // For telescope
+        DEVICE_FUNC(gotoTarget);
+        DEVICE_FUNC(park);
+        DEVICE_FUNC(unpark);
+        DEVICE_FUNC(goHome);
+        DEVICE_FUNC(sync);
+        DEVICE_FUNC_J(getCroods);
+        DEVICE_FUNC_J(getObserver);
+        DEVICE_FUNC_J(getTime);
+        DEVICE_FUNC(setTelescopeParams);
+        DEVICE_FUNC_J(getTelescopeParams);
+
+        // For focuser
+        DEVICE_FUNC(moveStep);
+        DEVICE_FUNC(moveTo);
+        DEVICE_FUNC_J(getTemperatrue);
+        DEVICE_FUNC_J(getFocuserPosition);
+        DEVICE_FUNC_J(getBacklash);
+        DEVICE_FUNC(setFocuserParams);
+        DEVICE_FUNC_J(getFocuserParams);
+        
+        // For filterwheel
+        DEVICE_FUNC(slewTo);
+        DEVICE_FUNC_J(getFilterwheelPosition);
+        DEVICE_FUNC_J(getFilters);
+        DEVICE_FUNC_J(getOffsets);
+        DEVICE_FUNC(setFilterwheelParams);
+        DEVICE_FUNC_J(getFilterwheelParams);
+
+        // For guider
+        DEVICE_FUNC(startGuiding);
+        DEVICE_FUNC(stopGuiding);
+        DEVICE_FUNC(startCalibration);
+        DEVICE_FUNC(stopCalibration);
+
+        // For astrometry and astap
+        DEVICE_FUNC_J(solveImage);
+
+    public:
+
+        bool startINDIServer();
+        bool stopINDIServer();
+        bool startINDIDevice();
+        bool stopINDIDevice();
+
+        
+
+        bool startASCOMServer();
+        bool stopASCOMServer();
+        bool startASCOMDevice();
+        bool stopASCOMDevice();
+
     private:
         std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< 存储设备对象的数组，每个设备类型对应一个向量。
 
@@ -216,6 +308,20 @@ namespace Lithium
         std::shared_ptr<MessageBus> m_MessageBus;               ///< 消息总线对象的共享指针。
         std::shared_ptr<Config::ConfigManager> m_ConfigManager; ///< 配置管理器对象的共享指针。
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
+
+    // Device for quick performance
+    private:
+        std::shared_ptr<Camera> m_main_camera;
+        std::shared_ptr<Camera> m_guiding_camera;
+        std::shared_ptr<Telescope> m_telescope;
+        std::shared_ptr<Focuser> m_focuser;
+        std::shared_ptr<Filterwheel> m_filterwheel;
+        std::shared_ptr<Guider> m_guider;
+        std::shared_ptr<Solver> m_solver;
+
+        std::shared_ptr<INDIManager> m_indimanager;
+        std::shared_ptr<INDIDriverCollection> m_indicollection;
+        // std::shared_ptr<HydrogenManager> m_hydrogenmanager;
     };
 
 }

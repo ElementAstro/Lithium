@@ -116,6 +116,7 @@ message("-- oatpp version: '${OATPP_THIS_MODULE_VERSION}'")
 #######################################################################################################
 ## oatpp
 
+
 add_library(oatpp
         algorithm/CRC.cpp
         algorithm/CRC.hpp
@@ -285,6 +286,7 @@ add_library(oatpp
         network/monitor/StatCollector.hpp
         network/tcp/Connection.cpp
         network/tcp/Connection.hpp
+        network/tcp/ConnectionConfigurer.hpp
         network/tcp/client/ConnectionProvider.cpp
         network/tcp/client/ConnectionProvider.hpp
         network/tcp/server/ConnectionProvider.cpp

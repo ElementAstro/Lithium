@@ -60,7 +60,7 @@ ConnectionMonitor::ConnectionProxy::~ConnectionProxy() {
 
     for(auto& pair : m_stats.metricsData) {
       OATPP_LOGE("[oatpp::network::ConnectionMonitor::ConnectionProxy::~ConnectionProxy()]",
-                 "Error. Memory leak. Metric data was not deleted: Metric name - '%s'", pair.first->c_str());
+                 "Error. Memory leak. Metric data was not deleted: Metric name - '%s'", pair.first->c_str())
     }
 
   }
@@ -187,7 +187,7 @@ void ConnectionMonitor::Monitor::freeConnectionStats(ConnectionStats& stats) {
       it->second->deleteMetricData(metric.second);
     } else {
       OATPP_LOGE("[oatpp::network::ConnectionMonitor::Monitor::freeConnectionStats]",
-                 "Error. Can't free Metric data. Unknown Metric: name - '%s'", it->first->c_str());
+                 "Error. Can't free Metric data. Unknown Metric: name - '%s'", it->first->c_str())
     }
   }
 
@@ -274,6 +274,7 @@ ConnectionMonitor::ConnectionMonitor(const std::shared_ptr<ConnectionProvider>& 
   , m_monitor(Monitor::createShared())
   , m_connectionProvider(connectionProvider)
 {
+  m_properties = m_connectionProvider->getProperties();
 }
 
 provider::ResourceHandle<data::stream::IOStream> ConnectionMonitor::get() {

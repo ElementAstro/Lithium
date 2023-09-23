@@ -98,7 +98,7 @@ set(libs)
 if (BUILD_SHARED_LIBS)
   add_library(pugixml-shared SHARED
     ${PROJECT_SOURCE_DIR}/scripts/pugixml_dll.rc
-    ${PROJECT_SOURCE_DIR}/src/pugixml.cpp)
+    ${PROJECT_SOURCE_DIR}/pugixml.cpp)
   add_library(pugixml::shared ALIAS pugixml-shared)
   list(APPEND libs pugixml-shared)
   string(CONCAT pugixml.msvc $<OR:

@@ -5,7 +5,8 @@ import Topbar from "../../components/dashboard/_topbar.astro";
 import Sidenav from "../../components/dashboard/_sidenav.astro";
 import Scripts from "../../components/_scripts.astro";
 
-const title = "AdminLTE v4 | Dashboard";
+
+const title = "License";
 const path = "../../node_modules/admin-lte/dist";
 const mainPage = "dashboard";
 const page = "license";
@@ -21,22 +22,29 @@ const page = "license";
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
 
-    <title>用户协议</title>
+    <Head title={title} path={path} />
 
-    <link rel="icon" sizes="16x16" type="image/icon" href="/static/textures/icon.ico">
-    <!-- Theme style -->
-    <link rel="stylesheet" href="/static/css/adminlte.min.css">
-
-    <!-- overlayScrollbars -->
-    <link rel="stylesheet" href="/static/css/plugins/OverlayScrollbars.min.css">
-    <!-- Loading animation -->
-    <link rel="stylesheet" href="/static/css/client/loading.css">
-    
 </head>
 <!-- Body Part -->
 
 <body class="dark-mode" data-panel-auto-height-mode="height">
     
+    
+    <!-- loading开始 -->
+    <div id="loading-animation">
+        <div id="loading-animation-center">
+            <div id="loading-animation-center-absolute">
+                <div class="loading_object" id="loading_four"></div>
+                <div class="loading_object" id="loading_three"></div>
+                <div class="loading_object" id="loading_two"></div>
+                <div class="loading_object" id="loading_one"></div>
+            </div>
+        </div>
+    </div>
+    <script>!function () { function e() { setTimeout(() => { $("#loading-animation").fadeOut(540) }, 500) } window.jQuery ? $(document).ready(() => { e() }) : document.onreadystatechange = (() => { "interactive" === document.readyState && e() }) }();</script>
+    <!-- loading 结束 -->
+
+
     <!-- loading开始 -->
     <div id="loading-animation">
         <div id="loading-animation-center">
@@ -219,14 +227,10 @@ const page = "license";
     </div>
 
     <!-- jQuery -->
-    <script src="/static/js/jquery/jquery.min.js"></script>
-    <!-- Bootstrap 4 -->
-    <script src="/static/js/bootstrap/bootstrap.bundle.min.js"></script>
-    <!-- AdminLTE App -->
-    <script src="/static/js/adminlte.min.js"></script>
+    <script src="../../../node_modules/jquery/dist/jquery.min.js"></script>\
 
     <!-- overlayScrollbars -->
-	<script src="/static/js/jquery/jquery.overlayScrollbars.min.js"></script>
+	<script src="../../../node_modules/overlayscrollbars/js/jquery.overlayScrollbars.min.js"></script>
 	<script>
 		$(function () {
 			$('body').overlayScrollbars({});

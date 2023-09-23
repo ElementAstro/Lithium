@@ -49,6 +49,7 @@ Description: Hydrogen Driver
 #include <fmt/format.h>
 #endif
 #ifdef _WIN32
+#include <windows.h>
 #include <direct.h>
 #define mkdir(dir) _mkdir(dir)
 #endif
@@ -60,8 +61,8 @@ Description: Hydrogen Driver
 #include "hydrogenuserio.hpp"
 #include "hydrogendriverio.h"
 
-int verbose;   /* chatty */
-char *me = ""; /* a.out name */
+int verbose; /* chatty */
+char *me;    /* a.out name */
 
 #define MAXRBUF 2048
 
@@ -1023,7 +1024,7 @@ int IUPurgeConfig(const char *filename, const char *dev, char errmsg[])
     if (remove(configFileName) != 0)
     {
         std::string errMsg = fmt::format("Unable to purge configuration file {}. Error {}",
-                                 configFileName, std::strerror(errno));
+                                         configFileName, std::strerror(errno));
         return -1;
     }
 
@@ -1034,7 +1035,12 @@ FILE *IUGetConfigFP(const char *filename, const char *dev, const char *mode, cha
 {
     char configFileName[MAXRBUF];
     char configDir[MAXRBUF];
+#ifdef _WIN32
+    struct _stat64i32 st;
+#else
     struct stat st;
+#endif
+
     FILE *fp = NULL;
 
     char *homeDir = getenv("HOME");
@@ -1069,7 +1075,7 @@ FILE *IUGetConfigFP(const char *filename, const char *dev, const char *mode, cha
     }
 
 #ifdef _WIN32
-    if (_stat(configFileName, &st) == 0 && (st.st_uid == 0 || st.st_gid == 0))
+    if (_stat64i32(configFileName, &st) == 0 && (st.st_uid == 0 || st.st_gid == 0))
 #else
     if (stat(configFileName, &st) == 0 && (st.st_uid == 0 || st.st_gid == 0))
 #endif
@@ -1085,7 +1091,7 @@ FILE *IUGetConfigFP(const char *filename, const char *dev, const char *mode, cha
     if (fp == NULL)
     {
         std::string errMsg = fmt::format("Unable to open config file. Error loading file {}: {}",
-                                 configFileName, std::strerror(errno));
+                                         configFileName, std::strerror(errno));
         return NULL;
     }
 

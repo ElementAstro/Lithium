@@ -146,7 +146,9 @@ add_subdirectory(tools)
 include_directories(modules)
 
 add_subdirectory(modules/HydrogenClient)
+if(NOT WIN32)
 add_subdirectory(modules/HydrogenServer)
+endif()
 add_subdirectory(modules/libridge)
 
 add_subdirectory(drivers)
@@ -178,6 +180,18 @@ set(config_SRC
 set(device_SRC
     ${lithium_src_dir}/modules/device/device_manager.cpp
     ${lithium_src_dir}/modules/device/device_manager.hpp
+
+    ${lithium_src_dir}/modules/device/indidevice_manager.cpp
+    ${lithium_src_dir}/modules/device/indidevice_manager.hpp
+
+    ${lithium_src_dir}/modules/device/device_utils.cpp
+    ${lithium_src_dir}/modules/device/device_utils.hpp
+
+    ${lithium_src_dir}/modules/device/indi_device.cpp
+    ${lithium_src_dir}/modules/device/indi_device.hpp
+
+    ${lithium_src_dir}/modules/device/hydrogen_device.cpp
+    ${lithium_src_dir}/modules/device/hydrogen_device.hpp
 )
 
 set(driver_indi_SRC

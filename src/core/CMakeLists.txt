@@ -4,6 +4,7 @@ project(hydrogendriver C CXX)
 find_package(USB1 REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(Threads REQUIRED)
+find_package(NOVA REQUIRED)
 include_directories(${USB1_INCLUDE_DIRS})
 
 add_subdirectory(io)
@@ -343,6 +344,8 @@ add_library(LithiumDriver
     util/utils.hpp
 )
 
+target_link_libraries(LithiumDriver loguru LithiumProperty) 
+target_link_libraries(LithiumDriver wsock32 ws2_32)
 if(LINUX)
 set_target_properties(LithiumDriver PROPERTIES
   POSITION_INDEPENDENT_CODE ON

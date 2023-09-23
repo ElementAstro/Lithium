@@ -43,6 +43,9 @@ pacman -S mingw-w64-x86_64-cfitsio
 pacman -S mingw-w64-x86_64-cmake
 pacman -S mingw-w64-x86_64-libzip
 pacman -S mingw-w64-x86_64-zlib
+pacman -S mingw-w64-x86_64-fftw
+pacman -S mingw-w64-x86_64-fmt
+pacman -S mingw-w64-x86_64-libnova
 ```
 
 On Ubuntu or other similar Linux platforms:

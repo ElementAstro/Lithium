@@ -18,3 +18,12 @@ enum class LIError
     LoadError,          // 动态库加载错误
     UnLoadError         // 动态卸载错误
 };
+
+enum class DeviceError
+{
+    None,
+    NotSpecific,
+    NotFound,
+    NotConnected,
+    Busy
+};

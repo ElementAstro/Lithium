@@ -43,7 +43,7 @@ Description: Base64
 
 #include <cstdint>
 #ifdef _WIN32
-    constexpr bool IS_BIG_ENDIAN = (*(uint16_t*)"\0\xff" < 0x100);
+    constexpr bool IS_BIG_ENDIAN = false;
 #else
     constexpr bool IS_BIG_ENDIAN = (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__);
     #include <arpa/inet.h>

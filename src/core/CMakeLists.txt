@@ -4,7 +4,6 @@ project(hydrogendriver C CXX)
 find_package(USB1 REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(Threads REQUIRED)
-find_package(NOVA REQUIRED)
 include_directories(${USB1_INCLUDE_DIRS})
 
 add_subdirectory(io)

@@ -145,15 +145,14 @@ add_subdirectory(tools)
 
 include_directories(modules)
 
-add_subdirectory(modules/HydrogenClient)
-if(NOT WIN32)
-add_subdirectory(modules/HydrogenServer)
-endif()
-add_subdirectory(modules/libridge)
+add_subdirectory(modules/hydrogen_client)
 
 add_subdirectory(drivers)
 
 add_subdirectory(${lithium_src_dir}/core)
+if(NOT WIN32)
+add_subdirectory(${lithium_src_dir}/modules/deviceloader)
+endif()
 
 set(api_SRC
 	${lithium_src_dir}/api/astap.cpp

@@ -20,16 +20,28 @@
 MsgQueue::MsgQueue(bool useSharedBuffer) : useSharedBuffer(useSharedBuffer)
 {
     lp = newLilXML();
+#ifdef USE_LIBUV
+    uv_poll_init(uv_default_loop(), &rio, rFd);
+    uv_poll_init(uv_default_loop(), &wio, wFd);
+    rio.data = this;
+    wio.data = this;
+#else
     rio.set<MsgQueue, &MsgQueue::ioCb>(this);
     wio.set<MsgQueue, &MsgQueue::ioCb>(this);
+#endif
     rFd = -1;
     wFd = -1;
 }
 
 MsgQueue::~MsgQueue()
 {
+#ifdef USE_LIBUV
+    uv_poll_stop(&rio);
+    uv_poll_stop(&wio);
+#else
     rio.stop();
     wio.stop();
+#endif
 
     clearMsgQueue();
     delLilXML(lp);
@@ -85,6 +97,56 @@ void MsgQueue::closeWritePart()
     }
 }
 
+#ifdef USE_LIBUV
+void MsgQueue::setFds(int rFd, int wFd)
+{
+    if (this->rFd != -1)
+    {
+        uv_poll_stop(&rio);
+        uv_poll_stop(&wio);
+        ::close(this->rFd);
+        if (this->rFd != this->wFd)
+        {
+            ::close(this->wFd);
+        }
+    }
+    else if (this->wFd != -1)
+    {
+        uv_poll_stop(&wio);
+        ::close(this->wFd);
+    }
+
+    this->rFd = rFd;
+    this->wFd = wFd;
+    this->nsent.reset();
+
+    if (rFd != -1)
+    {
+#ifdef _WIN32
+        int fd = _fileno(reinterpret_cast<FILE *>(_get_osfhandle(rFd)));
+        _setmode(fd, _O_BINARY);
+#else
+        fcntl(rFd, F_SETFL, fcntl(rFd, F_GETFL, 0) | O_NONBLOCK);
+#endif
+
+        if (wFd != rFd)
+        {
+#ifdef _WIN32
+            int fd = _fileno(reinterpret_cast<FILE *>(_get_osfhandle(wFd)));
+            _setmode(fd, _O_BINARY);
+#else
+            fcntl(wFd, F_SETFL, fcntl(wFd, F_GETFL, 0) | O_NONBLOCK);
+#endif
+        }
+
+        uv_poll_init(uv_default_loop(), &rio, rFd);
+        uv_poll_init(uv_default_loop(), &wio, wFd);
+        rio.data = this;
+        wio.data = this;
+        updateIos();
+    }
+}
+#else
 void MsgQueue::setFds(int rFd, int wFd)
 {
     if (this->rFd != -1)
@@ -131,6 +193,7 @@ void MsgQueue::setFds(int rFd, int wFd)
         updateIos();
     }
 }
+#endif
 
 SerializedMsg *MsgQueue::headMsg() const
 {
@@ -166,6 +229,48 @@ void MsgQueue::pushMsg(Msg *mp)
     updateIos();
 }
 
+#ifdef USE_LIBUV
+void MsgQueue::updateIos()
+{
+    if (wFd != -1)
+    {
+        if (msgq.empty() || !msgq.front()->requestContent(nsent))
+        {
+            uv_poll_stop(&wio);
+        }
+        else
+        {
+            uv_poll_start(&wio, UV_WRITABLE, IOCallback);
+        }
+    }
+    if (rFd != -1)
+    {
+        uv_poll_start(&rio, UV_READABLE, IOCallback);
+    }
+}
+
+// IO事件回调函数
+void MsgQueue::IOCallback(uv_poll_t *handle, int status, int events)
+{
+    MsgQueue *msgQueue = static_cast<MsgQueue *>(handle->data);
+    if (status < 0)
+    {
+        // 处理错误情况
+        return;
+    }
+
+    if (events & UV_READABLE)
+    {
+        // 处理可读事件
+    }
+
+    if (events & UV_WRITABLE)
+    {
+        // 处理可写事件
+    }
+}
+
+#else
 void MsgQueue::updateIos()
 {
     if (wFd != -1)
@@ -184,6 +289,7 @@ void MsgQueue::updateIos()
         rio.start();
     }
 }
+#endif
 
 void MsgQueue::messageMayHaveProgressed(const SerializedMsg *msg)
 {
@@ -206,7 +312,11 @@ void MsgQueue::clearMsgQueue()
 
     // Cancel io write events
     updateIos();
+#ifdef USE_LIBUV
+    uv_poll_stop(&wio);
+#else
     wio.stop();
+#endif
 }
 
 unsigned long MsgQueue::msgQSize() const
@@ -222,6 +332,42 @@ unsigned long MsgQueue::msgQSize() const
     return (l);
 }
 
+#ifdef USE_LIBUV
+void MsgQueue::ioCb(uv_poll_t *handle, int status, int revents)
+{
+    if (status < 0)
+    {
+        int sockErrno = readFdError(this->rFd);
+        if ((!sockErrno) && this->wFd != this->rFd)
+        {
+            sockErrno = readFdError(this->wFd);
+        }
+
+        if (sockErrno)
+        {
+            // log(fmt("Communication error: %s\n", strerror(sockErrno)));
+            close();
+            return;
+        }
+    }
+
+    if (UV_READABLE & revents)
+        readFromFd();
+
+    if (UV_WRITABLE & revents)
+        writeToFd();
+}
+
+void MsgQueue::setReadWriteCallback()
+{
+    uv_poll_init(uv_default_loop(), &rio, rFd);
+    uv_poll_init(uv_default_loop(), &wio, wFd);
+    rio.data = this;
+    wio.data = this;
+    uv_poll_start(&rio, UV_READABLE, IOCallback);
+    uv_poll_start(&wio, UV_WRITABLE, IOCallback);
+}
+#else
 void MsgQueue::ioCb(ev::io &, int revents)
 {
     if (EV_ERROR & revents)
@@ -246,6 +392,7 @@ void MsgQueue::ioCb(ev::io &, int revents)
     if (revents & EV_WRITE)
         writeToFd();
 }
+#endif
 
 #ifdef _WIN32
 size_t MsgQueue::doRead(char *buf, size_t nr)
@@ -593,7 +740,11 @@ void MsgQueue::writeToFd()
     {
         if (!mp->getContent(nsent, data, nsend, sharedBuffers))
         {
+#ifdef USE_LIBUV
+            uv_poll_stop(&wio);
+#else
             wio.stop();
+#endif
             return;
         }
 
@@ -705,7 +856,7 @@ void MsgQueue::crackBLOB(const char *enableBLOB, BLOBHandling *bp)
 
 void MsgQueue::traceMsg(const std::string &logMsg, XMLEle *root)
 {
-    LOG_F(INFO, "%s", logMsg.c_str());
+    LOG_F(INFO, "{}", logMsg);
 
     static const char *prtags[] =
         {
@@ -723,23 +874,27 @@ void MsgQueue::traceMsg(const std::string &logMsg, XMLEle *root)
     unsigned int i;
 
     /* print tag header */
-    fprintf(stderr, "%s %s %s %s", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"),
-            findXMLAttValu(root, "state"));
+    // fprintf(stderr, "%s %s %s %s", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"),
+    //         findXMLAttValu(root, "state"));
+    LOG_F(ERROR, "{} {} {} {}", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"),
+          findXMLAttValu(root, "state"));
     pcd = pcdataXMLEle(root);
     if (pcd[0])
-        fprintf(stderr, " %s", pcd);
+        // fprintf(stderr, " %s", pcd);
+        LOG_F(ERROR, "{}", pcd);
     perm = findXMLAttValu(root, "perm");
     if (perm[0])
-        fprintf(stderr, " %s", perm);
+        // fprintf(stderr, " %s", perm);
+        LOG_F(ERROR, "{}", perm);
     msg = findXMLAttValu(root, "message");
     if (msg[0])
-        fprintf(stderr, " '%s'", msg);
+        // fprintf(stderr, " '%s'", msg);
+        LOG_F(ERROR, "{}", msg);
 
     /* print each array value */
     for (e = nextXMLEle(root, 1); e; e = nextXMLEle(root, 0))
         for (i = 0; i < sizeof(prtags) / sizeof(prtags[0]); i++)
             if (strcmp(prtags[i], tagXMLEle(e)) == 0)
-                fprintf(stderr, "\n %10s='%s'", findXMLAttValu(e, "name"), pcdataXMLEle(e));
-
-    fprintf(stderr, "\n");
+                // fprintf(stderr, "\n %10s='%s'", findXMLAttValu(e, "name"), pcdataXMLEle(e));
+                LOG_F(ERROR, "{:<10}='{}'", findXMLAttValu(e, "name"), pcdataXMLEle(e));
 }

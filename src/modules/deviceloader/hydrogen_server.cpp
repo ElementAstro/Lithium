@@ -19,6 +19,8 @@
 #include "client_info.hpp"
 #include "concurrent.hpp"
 #include "driver_info.hpp"
+#include "local_driver.hpp"
+#include "remote_driver.hpp"
 
 #include "io.hpp"
 #include "message_queue.hpp"
@@ -28,6 +30,7 @@
 #include "tcp_server.hpp"
 #include "time.hpp"
 #include "xml_util.hpp"
+#include "signal.hpp"
 
 #include "hydrogen_server.hpp"
 
@@ -64,28 +67,17 @@
 #endif
 #endif
 
+#ifdef USE_LIBUV
+#include <uv.h>
+#else
 #include <ev++.h>
+#endif
 
 #include "loguru/loguru.hpp"
-#include "argparse/argparse.hpp"
+#include "backward/backward.hpp"
 
 extern ConcurrentSet<ClInfo> ClInfo::clients;
 extern ConcurrentSet<DvrInfo> DvrInfo::drivers;
-
-/* record we have started and our args */
-static void logStartup(int ac, char *av[])
-{
-    int i;
-
-    std::string startupMsg = "startup:";
-    for (i = 0; i < ac; i++)
-    {
-        startupMsg += " ";
-        startupMsg += av[i];
-    }
-    startupMsg += '\n';
-    LOG_F(INFO, "%s", startupMsg.c_str());
-}
 
 /* print usage message and exit (2) */
 static void usage(void)
@@ -113,6 +105,7 @@ static void usage(void)
     exit(2);
 }
 
+/*
 #ifdef _WIN32
 static void noSIGPIPE()
 {
@@ -128,12 +121,19 @@ static void noSIGPIPE()
     (void)sigaction(SIGPIPE, &sa, NULL);
 }
 #endif
+*/
+void noSIGPIPE()
+{
+    SignalHandler::registerHandler(SIGPIPE, []() {});
+}
+
+void cleanup()
+{
+    SignalHandler::unregisterHandler(SIGPIPE);
+}
 
 int main(int ac, char *av[])
 {
-    /* log startup */
-    logStartup(ac, av);
-
     /* save our name */
     me = av[0];
 
@@ -152,7 +152,9 @@ int main(int ac, char *av[])
 #else
 
     /* crack args */
-    while ((--ac > 0) && ((*++av)[0] == '-'))
+    /*
+        Old:
+        while ((--ac > 0) && ((*++av)[0] == '-'))
     {
         char *s;
         for (s = av[0] + 1; *s != '\0'; s++)
@@ -232,6 +234,45 @@ int main(int ac, char *av[])
                 usage();
             }
     }
+    */
+    int opt;
+    while ((opt = getopt(ac, av, "l:m:p:d:u:f:r:v")) != -1)
+    {
+        switch (opt)
+        {
+        case 'l':
+            ldir = optarg;
+            break;
+        case 'm':
+            maxqsiz = std::stoi(optarg) * 1024 * 1024;
+            break;
+        case 'p':
+            port = std::stoi(optarg);
+            break;
+        case 'd':
+            maxstreamsiz = std::stoi(optarg) * 1024 * 1024;
+            break;
+#ifdef ENABLE_HYDROGEN_SHARED_MEMORY
+        case 'u':
+            UnixServer::unixSocketPath = optarg;
+            break;
+#endif // ENABLE_HYDROGEN_SHARED_MEMORY
+        case 'f':
+            fifo = new Fifo(optarg);
+            break;
+        case 'r':
+            maxrestarts = std::stoi(optarg);
+            if (maxrestarts < 0)
+                maxrestarts = 0;
+            break;
+        case 'v':
+            verbose++;
+            break;
+        default: // '?'
+            usage();
+        }
+    }
+
 #endif
 
     /* at this point there are ac args in av[] to name our drivers */
@@ -242,24 +283,49 @@ int main(int ac, char *av[])
     noSIGPIPE();
 
     /* start each driver */
-    while (ac-- > 0)
+    /* Old:
+        while (ac-- > 0)
+        {
+            std::string dvrName = *av++;
+            DvrInfo *dr;
+            if (dvrName.find('@') != std::string::npos)
+            {
+                dr = new RemoteDvrInfo();
+            }
+            else
+            {
+                dr = new LocalDvrInfo();
+            }
+            dr->name = dvrName;
+            dr->start();
+        }
+    */
+    LOG_F(INFO, "Start loading driver...");
+    int count = ac - 1;
+    std::vector<std::shared_ptr<DvrInfo>> drivers;
+    for (int i = 0; i < count; i++)
     {
-        std::string dvrName = *av++;
-        DvrInfo *dr;
+        std::string dvrName = av[i + 1];
+        std::shared_ptr<DvrInfo> driver;
         if (dvrName.find('@') != std::string::npos)
         {
-            dr = new RemoteDvrInfo();
+            driver = std::make_unique<RemoteDvrInfo>();
         }
         else
         {
-            dr = new LocalDvrInfo();
+            driver = std::make_unique<LocalDvrInfo>();
         }
-        dr->name = dvrName;
-        dr->start();
+        driver->name = dvrName;
+        drivers.push_back(driver);
+        drivers[i]->start();
+        LOG_F(INFO, "Started {}", driver->name);
     }
 
     /* announce we are online */
-    (new TcpServer(port))->listen();
+    // Old: (new TcpServer(port))->listen();
+    std::shared_ptr<TcpServer> tcp_server;
+    tcp_server = std::make_shared<TcpServer>(port);
+    tcp_server->listen();
 
 #ifdef ENABLE_HYDROGEN_SHARED_MEMORY
     /* create a new unix server */
@@ -272,13 +338,19 @@ int main(int ac, char *av[])
 
         // JM 2022.07.23: This causes an issue on MacOS. Disabled for now until investigated further.
         // unsetenv("HYDROGENPREFIX");
+        LOG_F(INFO, "Starting FIFO server");
         fifo->listen();
     }
 
     /* handle new clients and all io */
+    LOG_F(INFO, "Main loop started");
+#ifdef USE_LIBUV
+    uv_run(loop, UV_RUN_DEFAULT);
+#else
     loop.loop();
+#endif
 
     /* will not happen unless no more listener left ! */
-    LOG_F(ERROR, "unexpected return from event loop\n");
+    LOG_F(ERROR, "unexpected return from event loop");
     return (1);
 }

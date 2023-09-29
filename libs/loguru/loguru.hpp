@@ -172,7 +172,7 @@ Website: www.ilikebigbits.com
 #endif
 
 #ifndef LOGURU_USE_FMTLIB
-	#define LOGURU_USE_FMTLIB 0
+	#define LOGURU_USE_FMTLIB 1
 #endif
 
 #ifndef LOGURU_USE_LOCALE

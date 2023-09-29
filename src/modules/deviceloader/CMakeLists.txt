@@ -14,6 +14,9 @@ set(server_SRC
     tcp_server.cpp
     time.cpp
     xml_util.cpp
+    signal.cpp
+    remote_driver.cpp
+    local_driver.cpp
 )
 
 include_directories(${CMAKE_SOURCE_DIR}/src/core)
@@ -28,13 +31,23 @@ if(ANDROID)
 else()
     find_package(Threads REQUIRED)
     find_package(Libev REQUIRED)
+    find_package(UV REQUIRED)
+    find_package(fmt REQUIRED)
 
     add_executable(${PROJECT_NAME} ${server_SRC} hydrogen_server.cpp)
+
+    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBUV=1)
 
     target_link_libraries(hydrogenserver hydrogendriverstatic ${CMAKE_THREAD_LIBS_INIT} ${LIBEV_LIBRARIES})
     target_include_directories(hydrogenserver SYSTEM PRIVATE ${LIBEV_INCLUDE_DIRS})
 
-    target_link_libraries(hydrogenserver loguru)
+    target_link_libraries(hydrogenserver loguru fmt ${UV_LIBRARY} backward)
+
+    set_target_properties(
+        hydrogenserver
+        PROPERTIES
+        OUTPUT_NAME ../../../hydrogenserver
+    )
 
     install(TARGETS hydrogenserver RUNTIME DESTINATION bin)
 endif(ANDROID)

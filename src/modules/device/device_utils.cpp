@@ -31,18 +31,21 @@ Description: Device Utilities
 
 #include "device_utils.hpp"
 
+#include <array>
+#include <memory>
+#include <string>
+#include <stdexcept>
+#include <sstream>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
-
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #endif
-#include <iostream>
-#include <array>
-#include <memory>
-#include <stdexcept>
 
-#include <sstream>
-
+#ifdef _WIN32
 std::string execute_command(const std::string &cmd)
 {
     std::array<char, 128> buffer;
@@ -87,3 +90,63 @@ std::string execute_command(const std::string &cmd)
     CloseHandle(pi.hThread);
     return result;
 }
+#else
+std::string execute_command(const std::string &cmd)
+{
+    std::array<char, 128> buffer;
+    std::string result = "";
+
+    int pipeOut[2];
+    if (pipe(pipeOut) == -1)
+    {
+        throw std::runtime_error("Failed to create pipe!");
+    }
+
+    pid_t childPid = fork();
+    if (childPid == -1)
+    {
+        throw std::runtime_error("Failed to fork process!");
+    }
+    else if (childPid == 0)
+    {
+        // Child process
+        close(pipeOut[0]);  // Close unused read end of the pipe
+
+        // Redirect stdout and stderr to the write end of the pipe
+        if (dup2(pipeOut[1], STDOUT_FILENO) == -1 || dup2(pipeOut[1], STDERR_FILENO) == -1)
+        {
+            throw std::runtime_error("Failed to redirect output!");
+        }
+        close(pipeOut[1]);  // Close the write end of the pipe
+
+        // Execute the command
+        execl("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
+
+        // This point is reached only if execl fails
+        throw std::runtime_error("Failed to execute command!");
+    }
+    else
+    {
+        // Parent process
+        close(pipeOut[1]);  // Close unused write end of the pipe
+
+        ssize_t bytesRead;
+        while ((bytesRead = read(pipeOut[0], buffer.data(), buffer.size())) > 0)
+        {
+            result.append(buffer.data(), bytesRead);
+        }
+        close(pipeOut[0]);  // Close the read end of the pipe
+
+        int status;
+        waitpid(childPid, &status, 0);  // Wait for the child process to exit
+
+        // Handle any error status
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+        {
+            throw std::runtime_error("Command execution failed with non-zero exit status!");
+        }
+    }
+
+    return result;
+}
+#endif

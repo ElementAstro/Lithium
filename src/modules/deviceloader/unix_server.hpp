@@ -1,33 +1,3 @@
-#pragma once
-
-#ifdef _WIN32
-
-#else
-#include <sys/socket.h>
-#endif
-
-#include <ev++.h>
-
-class TcpServer
-{
-    int port;
-    int sfd = -1;
-    ev::io sfdev;
-
-    /* prepare for new client arriving on socket.
-     * exit if trouble.
-     */
-    void accept();
-    void ioCb(ev::io &watcher, int revents);
-
-public:
-    TcpServer(int port);
-
-    /* create the public HYDROGEN Driver endpoint lsocket on port.
-     * return server socket else exit.
-     */
-    void listen();
-};
 
 #ifdef ENABLE_HYDROGEN_SHARED_MEMORY
 

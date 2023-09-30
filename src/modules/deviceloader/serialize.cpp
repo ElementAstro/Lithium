@@ -15,6 +15,7 @@
 #include "message.hpp"
 #include "message_queue.hpp"
 #include "xml_util.hpp"
+#include "hydrogen_server.hpp"
 
 #include "loguru/loguru.hpp"
 
@@ -31,7 +32,12 @@ SerializedMsg::SerializedMsg(Msg *parent) : asyncProgress(), owner(parent), awai
     }
     requirements.xml = true;
     asyncStatus = PENDING;
+#ifdef USE_LIBUV
+    uv_async_init(loop, &asyncProgress, (uv_async_cb)&SerializedMsg::async_progressed);
+    asyncProgress.data = this;
+#else
     asyncProgress.set<SerializedMsg, &SerializedMsg::async_progressed>(this);
+#endif
 }
 
 // Delete occurs when no async task is running and no awaiters are left
@@ -57,7 +63,11 @@ void SerializedMsg::async_updateRequirement(const SerializationRequirement &req)
         return;
     }
     this->requirements = req;
+#ifdef USE_LIBUV
+    uv_async_send(&asyncProgress);
+#else
     asyncProgress.send();
+#endif
 }
 
 void SerializedMsg::async_pushChunck(const MsgChunck &m)
@@ -65,14 +75,22 @@ void SerializedMsg::async_pushChunck(const MsgChunck &m)
     std::lock_guard<std::recursive_mutex> guard(lock);
 
     this->chuncks.push_back(m);
+#ifdef USE_LIBUV
+    uv_async_send(&asyncProgress);
+#else
     asyncProgress.send();
+#endif
 }
 
 void SerializedMsg::async_done()
 {
     std::lock_guard<std::recursive_mutex> guard(lock);
     asyncStatus = TERMINATED;
+#ifdef USE_LIBUV
+    uv_async_send(&asyncProgress);
+#else
     asyncProgress.send();
+#endif
 }
 
 void SerializedMsg::async_start()
@@ -86,7 +104,11 @@ void SerializedMsg::async_start()
     asyncStatus = RUNNING;
     if (generateContentAsync())
     {
+#ifdef USE_LIBUV
+        uv_async_send(&asyncProgress);
+#else
         asyncProgress.start();
+#endif
 
         std::thread t([this]()
                       { generateContent(); });
@@ -104,8 +126,12 @@ void SerializedMsg::async_progressed()
 
     if (asyncStatus == TERMINATED)
     {
-        // FIXME: unblock ?
+// FIXME: unblock ?
+#ifdef USE_LIBUV
+        uv_close((uv_handle_t *)&this->asyncProgress, NULL);
+#else
         asyncProgress.stop();
+#endif
     }
 
     // Update ios of awaiters

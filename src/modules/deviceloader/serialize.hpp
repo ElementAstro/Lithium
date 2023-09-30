@@ -5,7 +5,11 @@
 #include <vector>
 #include <list>
 
+#ifdef USE_LIBUV
+#include <uv.h>
+#else
 #include <ev++.h>
+#endif
 
 class Msg;
 class MsgQueue;
@@ -56,7 +60,11 @@ class SerializedMsg
     friend class MsgChunckIterator;
 
     std::recursive_mutex lock;
+#ifdef USE_LIBUV
+    uv_async_t asyncProgress;
+#else
     ev::async asyncProgress;
+#endif
 
     // Start a thread for execution of asyncRun
     void async_start();

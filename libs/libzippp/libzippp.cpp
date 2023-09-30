@@ -385,7 +385,7 @@ int ZipArchive::close(void) {
 
         if(!listeners.empty()) {
             zip_register_progress_callback_with_state(zipHandle, progressPrecision, progress_callback, nullptr, this);
-            zip_register_cancel_callback_with_state(zipHandle, progress_cancel_callback, nullptr, this);
+            // zip_register_cancel_callback_with_state(zipHandle, progress_cancel_callback, nullptr, this);
         }
 
         //avoid to reset the progress when unzipping

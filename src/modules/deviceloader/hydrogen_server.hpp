@@ -23,7 +23,11 @@
 #define STRINGIFY_TOK(x) #x
 #define TO_STRING(x) STRINGIFY_TOK(x)
 
+#ifdef USE_LIBUV
+static uv_loop_t* loop = uv_default_loop();
+#else
 static ev::default_loop loop;
+#endif
 static Fifo *fifo = nullptr;
 static const char *me;                                         /* our name */
 static int port = HYDROGENPORT;                                    /* public HYDROGEN port */

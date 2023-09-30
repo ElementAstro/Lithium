@@ -13,14 +13,25 @@
 #include <windows.h>
 #endif
 
+#ifdef USE_LIBUV
+#include <uv.h>
+#else
 #include <ev++.h>
+#endif
 
 class MsgQueue : public Collectable
 {
     int rFd, wFd;
     LilXML *lp;      /* XML parsing context */
+#ifdef USE_LIBUV
+    uv_poll_t rio, wio; // Event loop io events
+    void ioCb(uv_poll_t *handle, int status, int revents);
+    static void IOCallback(uv_poll_t* handle, int status, int events);
+    void setReadWriteCallback();
+#else
     ev::io rio, wio; /* Event loop io events */
     void ioCb(ev::io &watcher, int revents);
+#endif
 
     // Update the status of FD read/write ability
     void updateIos();

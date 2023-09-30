@@ -44,8 +44,7 @@ Description: Device Manager
 
 #include "core/camera_utils.hpp"
 
-#include "device_utils.hpp"
-
+#define LOGURU_USE_FMTLIB
 #include "loguru/loguru.hpp"
 
 #ifdef __cpp_lib_format

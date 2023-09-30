@@ -81,14 +81,6 @@ namespace Lithium::Thread
 		void joinThreadByName(const std::string &name);
 
 		/**
-		 * @brief 根据名称让指定线程休眠一定时间
-		 * @param name 线程名称
-		 * @param seconds 休眠时间（秒）
-		 * @return 是否成功休眠线程
-		 */
-		bool sleepThreadByName(const std::string &name, int seconds);
-
-		/**
 		 * @brief 判断指定线程是否正在运行
 		 * @param name 线程名称
 		 * @return 是否正在运行

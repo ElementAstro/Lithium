@@ -1,7 +1,8 @@
 #include "fifo_server.hpp"
 
 #include <unistd.h>
-#include <string.h>
+#include <cstring>
+#include <string>
 #include <fcntl.h>
 
 #include "io.hpp"
@@ -129,7 +130,7 @@ void Fifo::processLine(const char *line)
         {
             auto *localDp = new LocalDvrInfo();
             dp = localDp;
-            // strncpy(dp->dev, tName, MAXHYDROGENDEVICE);
+            // strncpy(dp->dev, tName, MAXSBUF);
             localDp->envDev = tName;
             localDp->envConfig = envConfig;
             localDp->envSkel = envSkel;
@@ -273,41 +274,38 @@ void Fifo::open()
 /* Handle one fifo command. Start/stop drivers accordingly */
 void Fifo::processLine(const char *line)
 {
+    char cmd[MAXSBUF], arg[4][2], var[4][MAXSBUF], tDriver[MAXSBUF], tName[MAXSBUF],
+        envConfig[MAXSBUF], envSkel[MAXSBUF], envPrefix[MAXSBUF];
 
-    // log(fmt("FIFO: %s\n", line));
-
-    char cmd[MAXSBUF], arg[4][1], var[4][MAXSBUF], tDriver[MAXSBUF], tName[MAXSBUF], envConfig[MAXSBUF],
-        envSkel[MAXSBUF], envPrefix[MAXSBUF];
-
-    memset(&tDriver[0], 0, sizeof(char) * MAXSBUF);
-    memset(&tName[0], 0, sizeof(char) * MAXSBUF);
-    memset(&envConfig[0], 0, sizeof(char) * MAXSBUF);
-    memset(&envSkel[0], 0, sizeof(char) * MAXSBUF);
-    memset(&envPrefix[0], 0, sizeof(char) * MAXSBUF);
+    std::memset(&tDriver[0], 0, sizeof(char) * MAXSBUF);
+    std::memset(&tName[0], 0, sizeof(char) * MAXSBUF);
+    std::memset(&envConfig[0], 0, sizeof(char) * MAXSBUF);
+    std::memset(&envSkel[0], 0, sizeof(char) * MAXSBUF);
+    std::memset(&envPrefix[0], 0, sizeof(char) * MAXSBUF);
 
     int n = 0;
 
-    bool remoteDriver = !!strstr(line, "@");
+    bool remoteDriver = !!std::strstr(line, "@");
 
     // If remote driver
     if (remoteDriver)
     {
-        n = sscanf(line, "%s %511[^\n]", cmd, tDriver);
+        n = std::sscanf(line, "%s %511[^\n]", cmd, tDriver);
 
         // Remove quotes if any
         char *ptr = tDriver;
-        int len = strlen(tDriver);
-        while ((ptr = strstr(tDriver, "\"")))
+        int len = std::strlen(tDriver);
+        while ((ptr = std::strstr(tDriver, "\"")))
         {
-            memmove(ptr, ptr + 1, --len);
+            std::memmove(ptr, ptr + 1, --len);
             ptr[len] = '\0';
         }
     }
     // If local driver
     else
     {
-        n = sscanf(line, "%s %s -%1c \"%511[^\"]\" -%1c \"%511[^\"]\" -%1c \"%511[^\"]\" -%1c \"%511[^\"]\"", cmd,
-                   tDriver, arg[0], var[0], arg[1], var[1], arg[2], var[2], arg[3], var[3]);
+        n = std::sscanf(line, "%s %s -%1c \"%511[^\"]\" -%1c \"%511[^\"]\" -%1c \"%511[^\"]\" -%1c \"%511[^\"]\"",
+                        cmd, tDriver, arg[0], var[0], arg[1], var[1], arg[2], var[2], arg[3], var[3]);
     }
 
     int n_args = (n - 2) / 2;
@@ -338,20 +336,18 @@ void Fifo::processLine(const char *line)
     }
 
     bool startCmd;
-    if (!strcmp(cmd, "start"))
-        startCmd = 1;
+    if (!std::strcmp(cmd, "start"))
+        startCmd = true;
     else
-        startCmd = 0;
+        startCmd = false;
 
     if (startCmd)
     {
-
         DvrInfo *dp;
-        if (remoteDriver == 0)
+        if (remoteDriver == false)
         {
             auto *localDp = new LocalDvrInfo();
             dp = localDp;
-            // strncpy(dp->dev, tName, MAXHYDROGENDEVICE);
             localDp->envDev = tName;
             localDp->envConfig = envConfig;
             localDp->envSkel = envSkel;
@@ -373,13 +369,11 @@ void Fifo::processLine(const char *line)
 
             if (dp->name == tDriver)
             {
-                /* If device name is given, check against it before shutting down */
+                // If device name is given, check against it before shutting down
                 if (tName[0] && !dp->isHandlingDevice(tName))
                     continue;
-                if (verbose)
-                    // log(fmt("FIFO: Shutting down driver: %s\n", tDriver));
 
-                    dp->restart = false;
+                dp->restart = false;
                 dp->close();
                 break;
             }

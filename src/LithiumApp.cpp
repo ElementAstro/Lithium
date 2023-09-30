@@ -38,7 +38,6 @@ namespace Lithium
     std::shared_ptr<LithiumApp> MyApp = nullptr;
     LithiumApp::LithiumApp()
     {
-        LOG_F(INFO, "Loading Lithium App and preparing ...");
         try
         {
             m_ConfigManager = Config::ConfigManager::createShared();
@@ -61,11 +60,10 @@ namespace Lithium
             m_MessageBus->StartProcessingThread<IStringProperty>();
             m_MessageBus->StartProcessingThread<IBoolProperty>();
             m_MessageBus->StartProcessingThread<INumberProperty>();
-            LOG_F(INFO, "Lithium App Loaded.");
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to load Lithium App , error : %s", e.what());
+            LOG_F(ERROR, _("Failed to load Lithium App , error : {}"), e.what());
             throw std::runtime_error("Failed to load Lithium App");
         }
     }
@@ -77,13 +75,13 @@ namespace Lithium
 
     nlohmann::json LithiumApp::GetConfig(const std::string &key_path) const
     {
-        LOG_F(INFO, "Get value : %s", key_path.c_str());
+        DLOG_F(INFO, _("Get config value: {}"), key_path);
         return m_ConfigManager->getValue(key_path);
     }
 
     void LithiumApp::SetConfig(const std::string &key_path, const nlohmann::json &value)
     {
-        LOG_F(INFO, "Set %s to %s", key_path.c_str(), value.dump().c_str());
+        DLOG_F(INFO, _("Set {} to {}"), key_path, value.dump());
         m_ConfigManager->setValue(key_path, value);
     }
 
@@ -257,11 +255,6 @@ namespace Lithium
         m_ThreadManager->joinThreadByName(name);
     }
 
-    bool LithiumApp::sleepThreadByName(const std::string &name, int seconds)
-    {
-        return m_ThreadManager->sleepThreadByName(name, seconds);
-    }
-
     bool LithiumApp::isThreadRunning(const std::string &name)
     {
         return m_ThreadManager->isThreadRunning(name);
@@ -275,7 +268,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Failed to run chai command : %s", command.c_str());
+            LOG_F(ERROR, _("Failed to run chai command : {}"), command);
         }
         return false;
     }
@@ -293,7 +286,7 @@ namespace Lithium
             {
                 result += str + "\n";
             }
-            LOG_F(ERROR, "Failed to run chai multi command %s", result.c_str());
+            LOG_F(ERROR, _("Failed to run chai multi command {}"), result);
         }
         return true;
     }
@@ -306,7 +299,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Failed to load chaiscript file %s", filename.c_str());
+            LOG_F(ERROR, _("Failed to load chaiscript file {}"), filename);
             return false;
         }
     }
@@ -319,7 +312,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Failed to run chai script %s", filename.c_str());
+            LOG_F(ERROR, _("Failed to run chai script {}"), filename);
             return false;
         }
     }

@@ -31,6 +31,22 @@ Description: Process Manager
 
 #include "process.hpp"
 
+#if defined(_WIN32)
+#include <windows.h>
+#include <tlhelp32.h>
+#elif defined(__linux__)
+#include <dirent.h>
+#include <cstring>
+#include <cerrno>
+#include <cstdlib>
+#include <fstream>
+#elif defined(__APPLE__)
+#include <sys/sysctl.h>
+#include <libproc.h>
+#else
+#error "不支持的操作系统"
+#endif
+
 #include "loguru/loguru.hpp"
 
 namespace Lithium::Process
@@ -39,7 +55,7 @@ namespace Lithium::Process
     {
         return std::make_shared<ProcessManager>();
     }
-    
+
     std::shared_ptr<ProcessManager> ProcessManager::createShared(int maxProcess)
     {
         return std::make_shared<ProcessManager>(maxProcess);
@@ -55,7 +71,7 @@ namespace Lithium::Process
         std::string cmd = "powershell.exe -Command \"" + command + "\"";
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            LOG_F(ERROR, "Failed to create PowerShell process");
+            LOG_F(ERROR, _("Failed to create PowerShell process"));
             return false;
         }
         pid = pi.dwProcessId;
@@ -65,7 +81,7 @@ namespace Lithium::Process
         if (pid == 0)
         {
             // Child process code
-            LOG_F(INFO, "Running command: %s", command.c_str());
+            LOG_F(INFO, _("Running command: {}"), command);
             int pipefd[2];
             pipe(pipefd);
             dup2(pipefd[1], STDOUT_FILENO);
@@ -78,7 +94,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            LOG_F(ERROR, "Failed to create process");
+            LOG_F(ERROR, _("Failed to create process"));
             return false;
         }
 #endif
@@ -88,7 +104,7 @@ namespace Lithium::Process
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        LOG_F(INFO, "Process created: %s (PID: %d)", identifier.c_str(), pid);
+        LOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
         return true;
     }
 
@@ -102,7 +118,7 @@ namespace Lithium::Process
         PROCESS_INFORMATION pi{};
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            LOG_F(ERROR, "Failed to create process");
+            LOG_F(ERROR, _("Failed to create process"));
             return false;
         }
         pid = pi.dwProcessId;
@@ -112,7 +128,7 @@ namespace Lithium::Process
         if (pid == 0)
         {
             // Child process code
-            LOG_F(INFO, "Running script: %s", script.c_str());
+            LOG_F(INFO, _("Running script: {}"), script);
 
 #ifdef __APPLE__
             execl("/bin/sh", "sh", "-c", script.c_str(), NULL);
@@ -123,7 +139,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            LOG_F(ERROR, "Failed to create process");
+            LOG_F(ERROR, _("Failed to create process"));
             return false;
         }
 #endif
@@ -133,7 +149,7 @@ namespace Lithium::Process
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        LOG_F(INFO, "Process created: %s (PID: %d)", identifier.c_str(), pid);
+        LOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
         return true;
     }
 
@@ -150,11 +166,11 @@ namespace Lithium::Process
             {
                 TerminateProcess(hProcess, 0);
                 CloseHandle(hProcess);
-                LOG_F(INFO, "Process terminated: %s (PID: %d)", it->name.c_str(), pid);
+                LOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
             }
             else
             {
-                LOG_F(ERROR, "Failed to terminate process");
+                LOG_F(ERROR, _("Failed to terminate process"));
                 return false;
             }
 #else
@@ -162,7 +178,7 @@ namespace Lithium::Process
             kill(pid, signal);
             waitpid(pid, &status, 0);
 
-            LOG_F(INFO, "Process terminated: %s (PID: %d)", it->name.c_str(), pid);
+            LOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
 #endif
 
             processes.erase(it);
@@ -170,7 +186,7 @@ namespace Lithium::Process
         }
         else
         {
-            LOG_F(ERROR, "Process not found");
+            LOG_F(ERROR, _("Process not found"));
             return false;
         }
         return true;
@@ -185,18 +201,18 @@ namespace Lithium::Process
         {
             return terminateProcess(it->pid, signal);
         }
-        LOG_F(ERROR, "Process not found by name: %s", name.c_str());
+        LOG_F(ERROR, _("Process not found by name: {}"), name);
         return false;
     }
 
     void ProcessManager::listProcesses()
     {
         std::lock_guard<std::mutex> lock(mtx);
-        LOG_F(INFO, "Currently running processes:");
+        LOG_F(INFO, _("Currently running processes:"));
 
         for (const auto &process : processes)
         {
-            LOG_F(INFO, "%s (PID: %d)", process.name.c_str(), process.pid);
+            LOG_F(INFO, _("{} (PID: {})"), process.name, process.pid);
         }
     }
 
@@ -226,7 +242,7 @@ namespace Lithium::Process
         }
         else
         {
-            LOG_F(ERROR, "Process not found");
+            LOG_F(ERROR, _("Process not found"));
             return std::vector<std::string>();
         }
     }
@@ -241,22 +257,154 @@ namespace Lithium::Process
             {
                 WaitForSingleObject(hProcess, INFINITE);
                 CloseHandle(hProcess);
-                LOG_F(INFO, "Process completed: %s (PID: %d)", process.name.c_str(), process.pid);
+                LOG_F(INFO, _("Process completed: {} (PID: {})"), process.name, process.pid);
             }
             else
             {
-                LOG_F(ERROR, "Failed to wait for process completion");
+                LOG_F(ERROR, _("Failed to wait for process completion"));
             }
 #else
             int status;
             waitpid(process.pid, &status, 0);
 
-            LOG_F(INFO, "Process completed: %s (PID: %d)", process.name.c_str(), process.pid);
+            LOG_F(INFO, _("Process completed: %s (PID: %d)"), process.name.c_str(), process.pid);
 #endif
         }
 
         processes.clear();
-        LOG_F(INFO, "All processes completed.");
+        LOG_F(INFO, _("All processes completed."));
     }
+
+#if defined(_WIN32)
+    std::vector<std::pair<int, std::string>> GetAllProcesses()
+    {
+        std::vector<std::pair<int, std::string>> processes;
+
+        HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == INVALID_HANDLE_VALUE)
+        {
+            LOG_F(ERROR, _("Failed to create process snapshot"));
+            return processes;
+        }
+
+        PROCESSENTRY32 processEntry;
+        processEntry.dwSize = sizeof(processEntry);
+
+        if (Process32First(snapshot, &processEntry))
+        {
+            do
+            {
+                int pid = processEntry.th32ProcessID;
+                std::string name = processEntry.szExeFile;
+                processes.push_back(std::make_pair(pid, name));
+            } while (Process32Next(snapshot, &processEntry));
+        }
+
+        CloseHandle(snapshot);
+        return processes;
+    }
+#elif defined(__linux__)
+    std::string GetProcessName(int pid)
+    {
+        std::string name;
+        std::string path = "/proc/" + std::to_string(pid) + "/comm";
+        std::ifstream commFile(path);
+        if (commFile)
+        {
+            std::getline(commFile, name);
+        }
+        commFile.close();
+        return name;
+    }
+
+    std::vector<std::pair<int, std::string>> GetAllProcesses()
+    {
+        std::vector<std::pair<int, std::string>> processes;
+
+        DIR *procDir = opendir("/proc");
+        if (!procDir)
+        {
+            LOG_F(ERROR, _("Failed to open /proc directory"));
+            return processes;
+        }
+
+        dirent *entry;
+        while ((entry = readdir(procDir)) != nullptr)
+        {
+            if (entry->d_type == DT_DIR)
+            {
+                char *end;
+                long pid = strtol(entry->d_name, &end, 10);
+                if (*end == '\0')
+                {
+                    std::string name = GetProcessName(pid);
+                    processes.push_back(std::make_pair(pid, name));
+                }
+            }
+        }
+
+        closedir(procDir);
+        return processes;
+    }
+
+#elif defined(__APPLE__)
+    std::string GetProcessName(int pid)
+    {
+        char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+        if (proc_pidpath(pid, pathbuf, sizeof(pathbuf)) <= 0)
+        {
+            LOG_F(ERROR, _("Failed to get process path"));
+            return "";
+        }
+        std::string path(pathbuf);
+        size_t slashPos = path.rfind('/');
+        if (slashPos != std::string::npos)
+        {
+            return path.substr(slashPos + 1);
+        }
+        return path;
+    }
+
+    std::vector<std::pair<int, std::string>> GetAllProcesses()
+    {
+        std::vector<std::pair<int, std::string>> processes;
+
+        int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0};
+        size_t length = 0;
+
+        if (sysctl(mib, 4, nullptr, &length, nullptr, 0) == -1)
+        {
+            LOG_F(ERROR, _("Failed to get process info length"));
+            return processes;
+        }
+
+        struct kinfo_proc *procBuf = (struct kinfo_proc *)malloc(length);
+        if (!procBuf)
+        {
+            LOG_F(ERROR, _("Failed to allocate memory"));
+            return processes;
+        }
+
+        if (sysctl(mib, 4, procBuf, &length, nullptr, 0) == -1)
+        {
+            LOG_F(ERROR, _("Failed to get process info"));
+            free(procBuf);
+            return processes;
+        }
+
+        int procCount = length / sizeof(struct kinfo_proc);
+        for (int i = 0; i < procCount; ++i)
+        {
+            int pid = procBuf[i].kp_proc.p_pid;
+            std::string name = GetProcessName(pid);
+            processes.push_back(std::make_pair(pid, name));
+        }
+
+        free(procBuf);
+        return processes;
+    }
+#else
+#error "Unsupported operating system"
+#endif
 
 }

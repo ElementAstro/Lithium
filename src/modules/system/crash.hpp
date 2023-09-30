@@ -29,6 +29,8 @@ Description: Crash Report
 
 **************************************************/
 
+#pragma once
+
 #include <string>
 
 namespace Lithium::CrashReport

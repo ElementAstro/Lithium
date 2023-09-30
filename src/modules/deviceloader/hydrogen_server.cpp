@@ -132,6 +132,8 @@ void cleanup()
     SignalHandler::unregisterHandler(SIGPIPE);
 }
 
+#ifdef MAIN_FUNC
+
 int main(int ac, char *av[])
 {
     /* save our name */
@@ -354,3 +356,63 @@ int main(int ac, char *av[])
     LOG_F(ERROR, "unexpected return from event loop");
     return (1);
 }
+
+#else
+
+void run_hydrogen_server(std::unordered_map<std::string, std::string> m_params)
+{
+    /* save our name */
+    me = "hydrogen_server_inside";
+
+    std::shared_ptr<TcpServer> tcp_server;
+    tcp_server = std::make_shared<TcpServer>(port);
+    tcp_server->listen();
+
+    fifo = new Fifo();
+    fifo->name = "/tmp/hydrogenserverFIFO";
+    /* Load up FIFO, if available */
+    if (fifo)
+    {
+        LOG_F(INFO, "Starting FIFO server");
+        fifo->listen();
+    }
+
+    /* handle new clients and all io */
+    LOG_F(INFO, "Main loop started");
+#ifdef USE_LIBUV
+    uv_run(loop, UV_RUN_DEFAULT);
+#else
+    loop.loop();
+#endif
+    /* will not happen unless no more listener left ! */
+    LOG_F(ERROR, "unexpected return from event loop");
+}
+
+void start_hydrogen_driver(const std::string &driver_binary,const std::string &driver_skeleton)
+{
+    std::string cmd = "start " + driver->binary;
+    if (!driver_skeleton.empty())
+    {
+        cmd += " -s \"" + driver->skeleton + "\"";
+    }
+    cmd = std::regex_replace(cmd, std::regex("\""), "\\\"");
+    if (fifo)
+    {
+        fifo->processLine(cmd.c_str());
+    }
+}
+
+void stop_hydrogen_driver(const std::string &driver_binary, const std::string &driver_lable = "")
+{
+    std::string cmd = "stop " + driver_binary;
+    if (driver_binary.find("@") == std::string::npos)
+    {
+        cmd += " -n \"" + driver_label + "\"";
+    }
+    cmd = std::regex_replace(cmd, std::regex("\""), "\\\"");
+    if (fifo)
+    {
+        fifo->processLine(cmd.c_str());
+    }
+}
+#endif

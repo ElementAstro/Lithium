@@ -31,17 +31,10 @@ Description: Device Utilities
 
 #include "device_utils.hpp"
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-
-#endif
-#include <iostream>
 #include <array>
 #include <memory>
 #include <string>
 #include <stdexcept>
-
 #include <sstream>
 
 #ifdef _WIN32
@@ -51,6 +44,13 @@ Description: Device Utilities
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
+#include <regex>
+#include <iostream>
+#include <array>
+#include <memory>
+#include <stdexcept>
+#include <iomanip>
+#include <sstream>
 
 #ifdef _WIN32
 std::string execute_command(const std::string &cmd)
@@ -95,5 +95,93 @@ std::string execute_command(const std::string &cmd)
     WaitForSingleObject(pi.hProcess, INFINITE);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
+    return result;
+}
+bool checkTimeFormat(const std::string &str)
+{
+    std::regex timeRegex(R"(\d{1,2}(:\d{1,2}){0,2})");
+    return std::regex_match(str, timeRegex);
+}
+
+std::string convertToTimeFormat(int num)
+{
+    int hours = num / 3600;
+    int minutes = (num % 3600) / 60;
+    int seconds = num % 60;
+    std::ostringstream oss;
+    oss << std::setw(2) << std::setfill('0') << hours << ":"
+        << std::setw(2) << std::setfill('0') << minutes << ":"
+        << std::setw(2) << std::setfill('0') << seconds;
+    return oss.str();
+}
+
+bool checkDigits(const std::string &str)
+{
+    for (char c : str)
+    {
+        if (!std::isdigit(c))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+#else
+std::string execute_command(const std::string &cmd)
+{
+    std::array<char, 128> buffer;
+    std::string result = "";
+
+    int pipeOut[2];
+    if (pipe(pipeOut) == -1)
+    {
+        throw std::runtime_error("Failed to create pipe!");
+    }
+
+    pid_t childPid = fork();
+    if (childPid == -1)
+    {
+        throw std::runtime_error("Failed to fork process!");
+    }
+    else if (childPid == 0)
+    {
+        // Child process
+        close(pipeOut[0]);  // Close unused read end of the pipe
+
+        // Redirect stdout and stderr to the write end of the pipe
+        if (dup2(pipeOut[1], STDOUT_FILENO) == -1 || dup2(pipeOut[1], STDERR_FILENO) == -1)
+        {
+            throw std::runtime_error("Failed to redirect output!");
+        }
+        close(pipeOut[1]);  // Close the write end of the pipe
+
+        // Execute the command
+        execl("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
+
+        // This point is reached only if execl fails
+        throw std::runtime_error("Failed to execute command!");
+    }
+    else
+    {
+        // Parent process
+        close(pipeOut[1]);  // Close unused write end of the pipe
+
+        ssize_t bytesRead;
+        while ((bytesRead = read(pipeOut[0], buffer.data(), buffer.size())) > 0)
+        {
+            result.append(buffer.data(), bytesRead);
+        }
+        close(pipeOut[0]);  // Close the read end of the pipe
+
+        int status;
+        waitpid(childPid, &status, 0);  // Wait for the child process to exit
+
+        // Handle any error status
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
+        {
+            throw std::runtime_error("Command execution failed with non-zero exit status!");
+        }
+    }
+
     return result;
 }

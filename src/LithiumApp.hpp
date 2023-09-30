@@ -116,7 +116,6 @@ namespace Lithium
         void addThread(std::function<void()> func, const std::string &name);
         void joinAllThreads();
         void joinThreadByName(const std::string &name);
-        bool sleepThreadByName(const std::string &name, int seconds);
         bool isThreadRunning(const std::string &name);
 
     public:

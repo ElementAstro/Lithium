@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef MAIN_FUNC
+#include <unordered_map>
+#endif
+
 #include "fifo_server.hpp"
 #include "driver_info.hpp"
 #include "client_info.hpp"
@@ -36,3 +40,9 @@ static char *ldir;                                             /* where to log d
 static unsigned int maxqsiz = (DEFMAXQSIZ * 1024 * 1024);      /* kill if these bytes behind */
 static unsigned int maxstreamsiz = (DEFMAXSSIZ * 1024 * 1024); /* drop blobs if these bytes behind while streaming*/
 static int maxrestarts = DEFMAXRESTART;
+
+#ifndef MAIN_FUNC
+void run_hydrogen_server(std::unordered_map<std::string,std::string> m_params);
+void start_hydrogen_driver(const std::string &driver_binary,const std::string &driver_skeleton);
+void stop_hydrogen_driver(const std::string &driver_binary, const std::string &driver_lable);
+#endif

@@ -143,12 +143,6 @@ add_subdirectory(tools)
 
 include_directories(modules)
 
-add_subdirectory(modules/HydrogenClient)
-if(NOT WIN32)
-add_subdirectory(modules/HydrogenServer)
-endif()
-add_subdirectory(modules/libridge)
-
 add_subdirectory(drivers)
 
 add_subdirectory(${lithium_src_dir}/core)

@@ -121,4 +121,6 @@ namespace Lithium::Process
         std::mutex mtx;                 ///< 互斥锁，用于操作进程列表。 // Mutex used for manipulating the process list.
     };
 
+    std::vector<std::pair<int, std::string>> GetAllProcesses();
+
 }

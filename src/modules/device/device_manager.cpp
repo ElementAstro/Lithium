@@ -44,7 +44,8 @@ Description: Device Manager
 
 #include "core/camera_utils.hpp"
 
-#define LOGURU_USE_FMTLIB
+#include "device_utils.hpp"
+
 #include "loguru/loguru.hpp"
 
 #ifdef __cpp_lib_format
@@ -56,6 +57,10 @@ Description: Device Manager
 
 #include "indi_device.hpp"
 #include "indidevice_manager.hpp"
+
+#ifndef _WIN32
+#include "deviceloader/hydrogen_server.hpp"
+#endif
 
 // For DEVICE_FUNC
 
@@ -1294,5 +1299,30 @@ namespace Lithium
     bool DeviceManager::stopASCOMDevice()
     {
         return true;
+    }
+
+    bool DeviceManager::runHydrogenServer(const nlohmann::json &m_params);
+    {
+#ifdef _WIN32
+
+#else
+        
+#endif
+    }
+    bool DeviceManager::startHydrogenDriver(const nlohmann::json &m_params)
+    {
+#ifdef _WIN32
+
+#else
+
+#endif
+    }
+    bool DeviceManager::stopHydrogenDriver(const nlohmann::json &m_params)
+    {
+#ifdef _WIN32
+
+#else
+
+#endif
     }
 }

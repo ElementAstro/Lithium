@@ -324,7 +324,14 @@ namespace Lithium
 
         std::shared_ptr<INDIManager> m_indimanager;
         std::shared_ptr<INDIDriverCollection> m_indicollection;
-        // std::shared_ptr<HydrogenManager> m_hydrogenmanager;
+    
+    // For Hydrogen Inside Server
+    public:
+        bool runHydrogenServer(const nlohmann::json &m_params);
+        bool startHydrogenDriver(const nlohmann::json &m_params);
+        bool stopHydrogenDriver(const nlohmann::json &m_params);
+    private:
+        std::jthread m_hydrogen_server_thread;
     };
 
 }

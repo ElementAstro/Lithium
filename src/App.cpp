@@ -31,6 +31,16 @@ Description: Main
 
 #include "AppComponent.hpp"
 
+#ifdef ENABLE_ASYNC
+#include "controller/AsyncStaticController.hpp"
+#include "controller/AsyncSystemController.hpp"
+#include "controller/AsyncWebSocketController.hpp"
+#include "controller/IOController.hpp"
+#include "controller/AsyncProcessController.hpp"
+#include "controller/AsyncPHD2Controller.hpp"
+#include "controller/AsyncTaskController.hpp"
+#include "controller/AsyncUploadController.hpp"
+#else
 #include "controller/StaticController.hpp"
 #include "controller/SystemController.hpp"
 #include "controller/WebSocketController.hpp"
@@ -39,6 +49,7 @@ Description: Main
 #include "controller/PHD2Controller.hpp"
 #include "controller/TaskController.hpp"
 #include "controller/UploadController.hpp"
+#endif
 
 #if ENABLE_ASYNC
 #include "oatpp-swagger/AsyncController.hpp"
@@ -49,7 +60,6 @@ Description: Main
 #include "oatpp/network/Server.hpp"
 
 #include <argparse/argparse.hpp>
-#include <backward/backward.hpp>
 
 #include "LithiumApp.hpp"
 
@@ -278,22 +288,8 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, _("Error: %s"), e.what());
         Lithium::CrashReport::saveCrashLog(e.what());
-        using namespace backward;
-        StackTrace st;
-        st.load_here(32);
-        TraceResolver tr;
-        tr.load_stacktrace(st);
-        for (size_t i = 0; i < st.size(); ++i)
-        {
-            ResolvedTrace trace = tr.resolve(st[i]);
-            std::cout << "#" << i
-                      << " " << trace.object_filename
-                      << " " << trace.object_function
-                      << " [" << trace.addr << "]"
-                      << std::endl;
-        }
+        loguru::shutdown();
         std::exit(EXIT_FAILURE);
     }
     return 0;

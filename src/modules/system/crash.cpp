@@ -67,6 +67,8 @@ Description: Crash Report
 #include <unistd.h>
 #endif
 
+#include <backward/backward.hpp>
+
 namespace Lithium::CrashReport
 {
 
@@ -476,6 +478,22 @@ namespace Lithium::CrashReport
             std::stringstream ss;
             ss << "Program crashed at: " << time_str << std::endl;
             ss << "Error message: " << error_msg << std::endl;
+
+            ss << "==================== StackTrace ====================" << std::endl;
+            using namespace backward;
+            StackTrace st;
+            st.load_here(32);
+            TraceResolver tr;
+            tr.load_stacktrace(st);
+            for (size_t i = 0; i < st.size(); ++i)
+            {
+                ResolvedTrace trace = tr.resolve(st[i]);
+                ss << "#" << i
+                          << " " << trace.object_filename
+                          << " " << trace.object_function
+                          << " [" << trace.addr << "]"
+                          << std::endl;
+            }
             ss << "==================== System Information ====================" << std::endl;
             ss << system_info << std::endl;
             ss << "================= Environment Variables Information ==================" << std::endl;

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lithium \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2023-09-23 18:18+0800\n"
+"POT-Creation-Date: 2023-09-27 18:12+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,54 +17,49 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:221
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:232
 msgid "port the server running on"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:222
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:233
 msgid "host the server running on"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:223
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:234
 msgid "path to the config file"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:224
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:235
 msgid "path to the modules directory"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:225
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:236
 msgid "web panel"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:226
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:237
 msgid "path to log file"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:228
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:239
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:229
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:240
 msgid "End."
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:237
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:248
 #, c-format
 msgid "Failed to parser command line : %s"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:258
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:269
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:264
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:275
 #, c-format
 msgid "Set server port to %d"
-msgstr ""
-
-#: H:/msys64/home/Qrm/OpenAPT/src/App.cpp:280
-#, c-format
-msgid "Error: %s"
 msgstr ""

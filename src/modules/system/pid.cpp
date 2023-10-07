@@ -30,18 +30,23 @@ Description: PID Watcher
 **************************************************/
 
 #include "pid.hpp"
+#include "config.h"
 
 #include <chrono>
+#include <codecvt>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <tlhelp32.h>
 #else
 #include <unistd.h>
+#include <sys/types.h> 
+#include <sys/wait.h>
 #endif
 
 #include "loguru/loguru.hpp"
 
+#ifdef _WIN32
 std::wstring charToWchar(const CHAR *str)
 {
     int length = MultiByteToWideChar(CP_ACP, 0, str, -1, nullptr, 0);
@@ -49,6 +54,7 @@ std::wstring charToWchar(const CHAR *str)
     MultiByteToWideChar(CP_ACP, 0, str, -1, &wideStr[0], length);
     return wideStr;
 }
+#endif
 
 PIDWatcher::PIDWatcher(const std::string &processName)
     : processName_(processName), isRunning_(false), shouldStop_(false)

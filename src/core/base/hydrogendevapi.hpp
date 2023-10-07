@@ -823,7 +823,7 @@ extern "C"
 
 // Advertize support for shared blob on this platform
 #define HYDROGEN_SHARED_BLOB_SUPPORT
-#include "sharedblob.h"
+#include "sharedblob.hpp"
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+   <kcfgfile name="LithiumWebManagerApprc" />
+   <include>src/mainwindow.h</include>
+
+    <group name="PythonAndGSCOptions">
+        <entry name="PythonExecFolderDefault" type="Bool">
+            <label>Use the default Python executable folder.</label>
+            <tooltip>This option determines whether to use the default path for your system or a user specified path.</tooltip>
+            <whatsthis>This option determines whether to use the default path for your system or a user specified path.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="PythonExecFolder" type="String">
+            <label>Path to the python executable folder.</label>
+            <tooltip>This is the path to the folder the python executables are in, such as /usr/bin/ it will be added to the PATH.</tooltip>
+            <whatsthis>This is the path to the folder the python executables are in, such as /usr/bin/ it will be added to the PATH.</whatsthis>
+            <default code="true">MainWindow::getDefault("PythonExecFolder")</default>
+        </entry>
+        <entry name="indiwebPathDefault" type="Bool">
+            <label>Use the default path to the indiweb executable.</label>
+            <tooltip>This option determines whether to use the default path to INDIWeb on your system or a custom path.</tooltip>
+            <whatsthis>This option determines whether to use the default path to INDIWeb on your system or a custom path.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="indiwebPath" type="String">
+            <label>Path to the indiweb executable.</label>
+            <tooltip>This is the path to the indi-web executable, which is typically installed in the Python User Base Directory.</tooltip>
+            <whatsthis>This is the path to the indi-web executable, which is typically installed in the Python User Base Directory.</whatsthis>
+            <default code="true">MainWindow::getDefault("indiwebPath")</default>
+        </entry>
+        <entry name="GSCPathDefault" type="Bool">
+            <label>Use the default path to the GSC Data Folder.</label>
+            <tooltip>This option determines whether to use the default path to the GSC Data folder for your system or use a user specified path.</tooltip>
+            <whatsthis>This option determines whether to use the default path to the GSC Data folder for your system or use a user specified path.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="GSCPath" type="String">
+            <label>Path to the GSC Data folder.</label>
+            <tooltip>This is the path to the GSC Data folder, it will set in an environment variable called GSCDAT to allow you to view stars in CCD Simulator.  GSC data can be installed anywhere on your system.  This is NOT the path to the gsc executable, which on Linux is in your bin folder and on Mac OS X is included in the indi folder of the app bundle.</tooltip>
+            <whatsthis>This is the path to the GSC Data folder, it will set in an environment variable called GSCDAT to allow you to view stars in CCD Simulator.  GSC data can be installed anywhere on your system.  This is NOT the path to the gsc executable, which on Linux is in your bin folder and on Mac OS X is included in the indi folder of the app bundle.</whatsthis>
+            <default code="true">MainWindow::getDefault("GSCPath")</default>
+        </entry>
+    </group>
+    <group name="INDIOptions">
+        <entry name="INDIPrefixDefault" type="Bool">
+            <label>Use the default INDIPrefix on your system.</label>
+            <tooltip>This determines whether to use the default INDI Prefix for your system. Note that this is a Mac OS X only option.  When default is selected, it will update automatically as the app bundle is moved.</tooltip>
+            <whatsthis>This determines whether to use the default INDI Prefix for your system. Note that this is a Mac OS X only option.  When default is selected, it will update automatically as the app bundle is moved.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="INDIPrefix" type="String">
+            <label>The path for the INDI Prefix.</label>
+            <tooltip>This option allows INDI to be placed in different paths in app bundles on an OS X system. It is an OS X only option.  If you want to use INDI in homebrew, uncheck the default button and leave this blank. If default is checked, it will update automatically.</tooltip>
+            <whatsthis>This option allows INDI to be placed in different paths in app bundles on an OS X system. It is an OS X only option.  If you want to use INDI in homebrew, uncheck the default button and leave this blank. If default is checked, it will update automatically.</whatsthis>
+            <default code="true">MainWindow::getDefault("INDIPrefix")</default>
+        </entry>
+        <entry name="INDIServerDefault" type="Bool">
+            <label>Use the default INDI Server Location.</label>
+            <tooltip>This option determines whether to use the default location of the INDI Server on your operating system or a user specified one in a different folder.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</tooltip>
+            <whatsthis>This option determines whether to use the default location of the INDI Server on your operating system or a user specified one in a different folder.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="INDIServerPath" type="String">
+            <label>Path to the INDI Server.</label>
+            <tooltip>This is the path to the directory containing the INDI Server, it will be added to the PATH.  On OS X, this is located in the indi folder in the app bundle, on Linux, it is in the bin folder.  If you are using a different INDI installation or install location, such as /usr/local/bin, homebrew, or craft, you will want to change this.</tooltip>
+            <whatsthis>This is the path to the directory containing the INDI Server, it will be added to the PATH.  On OS X, this is located in the indi folder in the app bundle, on Linux, it is in the bin folder.  If you are using a different INDI installation or install location, such as /usr/local/bin, homebrew, or craft, you will want to change this.</whatsthis>
+        	<default code="true">MainWindow::getDefault("INDIServerPath")</default>
+        </entry>
+        <entry name="INDIDriversDefault" type="Bool">
+            <label>Use the default INDI Drivers location.</label>
+            <tooltip>This option determines whether to use the default INDI Drivers on your operating system or user specified one in a different folder.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</tooltip>
+            <whatsthis>This option determines whether to use the default INDI Drivers on your operating system or user specified one in a different folder.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="INDIDriversPath" type="String">
+            <label>Path to the INDI Drivers.</label>
+            <tooltip>This is the path to the INDI Drivers Directory, it will be added to the PATH for the INDI Server and the xmlPath for the INDI Web Manager.  On OS X, this is located in the Resources folder in the app bundle, on Linux, it is in the bin folder.  If you are using a different INDI installation or install location, such as /usr/local/bin, homebrew, or craft, you will want to change this.</tooltip>
+            <whatsthis>This is the path to the INDI Drivers Directory, it will be added to the PATH for the INDI Server and the xmlPath for the INDI Web Manager.  On OS X, this is located in the Resources folder in the app bundle, on Linux, it is in the bin folder.  If you are using a different INDI installation or install location, such as /usr/local/bin, homebrew, or craft, you will want to change this.</whatsthis>
+        	<default code="true">MainWindow::getDefault("INDIDriversPath")</default>
+        </entry>
+        <entry name="INDIConfigPathDefault" type="Bool">
+            <label>Use the default INDI Config Path.</label>
+            <tooltip>This option determines whether to use the default INDI Configuration Path or a user specified folder.</tooltip>
+            <whatsthis>This option determines whether to use the default INDI Configuration Path or a user specified folder.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="INDIConfigPath" type="String">
+            <label>Path to the INDI Configuration Files.</label>
+            <tooltip>This is the path to the INDI Configuration Files.  It will be set as an option for the Web Manager.  It is by default a hidden folder called .indi in the user's home folder.</tooltip>
+            <whatsthis>This is the path to the INDI Configuration Files.  It will be set as an option for the Web Manager.  It is by default a hidden folder called .indi in the user's home folder.</whatsthis>
+        	<default code="true">MainWindow::getDefault("INDIConfigPath")</default>
+        </entry>
+        <entry name="GPhotoIOLIBSDefault" type="Bool">
+            <label>Use the default path to GPhotos's IOLIBS Location.</label>
+            <tooltip>This option determines whether to use the default location for GPhoto's IOLIBS on your system.  This is an OS X only option.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</tooltip>
+            <whatsthis>This option determines whether to use the default location for GPhoto's IOLIBS on your system.  This is an OS X only option.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="GPhotoIOLIBS" type="String">
+            <label>Path to GPhotos IOLIBS.</label>
+            <tooltip>This is the path to the IOLIBS for GPhoto.  It is an OS X only option because GPhoto claims that this variable is not needed on Linux unless you have a broken installation.  On OS X, it will be added as the IOLIBS Environment variable and by default it points inside the Resources/DriverSupport/GPhoto folder in the app bundle.  If you are using GPhoto in some other loction like homebrew or craft, you will need to change this.</tooltip>
+            <whatsthis>This is the path to the IOLIBS for GPhoto.  It is an OS X only option because GPhoto claims that this variable is not needed on Linux unless you have a broken installation.  On OS X, it will be added as the IOLIBS Environment variable and by default it points inside the Resources/DriverSupport/GPhoto folder in the app bundle.  If you are using GPhoto in some other loction like homebrew or craft, you will need to change this.</whatsthis>
+        	<default code="true">MainWindow::getDefault("GPhotoIOLIBS")</default>
+        </entry>
+        <entry name="GPhotoCAMLIBSDefault" type="Bool">
+            <label>Use the default path to GPhotos's CAMLIBS Location.</label>
+            <tooltip>This option determines whether to use the default location for GPhoto's CAMLIBS on your system.  This is an OS X only option.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</tooltip>
+            <whatsthis>This option determines whether to use the default location for GPhoto's CAMLIBS on your system.  This is an OS X only option.  On OS X, if default is checked, it will update automatically as the app bundle is moved.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="GPhotoCAMLIBS" type="String">
+            <label>Path to Gphoto's CAMLIBS.</label>
+            <tooltip>This is the path to the CAMLIBS for GPhoto.  It is an OS X only option because GPhoto claims that this variable is not needed on Linux unless you have a broken installation.  On OS X, it will be added as the CAMLIBS Environment variable and by default it points inside the Resources/DriverSupport/GPhoto folder in the app bundle.  If you are using GPhoto in some other loction like homebrew or craft, you will need to change this.</tooltip>
+            <whatsthis>This is the path to the CAMLIBS for GPhoto.  It is an OS X only option because GPhoto claims that this variable is not needed on Linux unless you have a broken installation.  On OS X, it will be added as the CAMLIBS Environment variable and by default it points inside the Resources/DriverSupport/GPhoto folder in the app bundle.  If you are using GPhoto in some other loction like homebrew or craft, you will need to change this.</whatsthis>
+       		<default code="true">MainWindow::getDefault("GPhotoCAMLIBS")</default>
+        </entry>
+    </group>
+    <group name="NetworkConfiguration">
+        <entry name="ManagerHostNameOrIP" type="String">
+            <label>INDI Web Manager Hostname or IP Address.</label>
+            <tooltip>This is the computer hostname or IP Address that LithiumWebManagerApp is using to access the INDI Web Manager.  It does not affect the actual computer hostname or IP address and will not affect how other clients access the INDI Server.  For that you need to change your system settings.</tooltip>
+            <whatsthis>This is the computer hostname or IP Address that LithiumWebManagerApp is using to access the INDI Web Manager.  It does not affect the actual computer hostname or IP address and will not affect how other clients access the INDI Server.  For that you need to change your system settings.</whatsthis>
+            <default code="true">MainWindow::getDefault("ManagerHostNameOrIP")</default>
+        </entry>
+        <entry name="CustomHostNameOrIP" type="String">
+            <label>Custom INDI Web Manager Hostname or IP Address.</label>
+            <tooltip>This is where you can add a custom IP address or host name for your computer.  You should make sure that the addresss you enter is valid.</tooltip>
+            <whatsthis>This is where you can add a custom IP address or host name for your computer.  You should make sure that the addresss you enter is valid.</whatsthis>
+            <default></default>
+        </entry>
+    </group>
+    <group name="ManagerConfiguration">
+        <entry name="ManagerPortNumberDefault" type="Bool">
+            <label>Use the Default Manager Port Number.</label>
+            <tooltip>This determines whether to use the default port number to host the Web Manager, or allow a user configured one.</tooltip>
+            <whatsthis>This determines whether to use the default port number to host the Web Manager, or allow a user configured one.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="ManagerPortNumber" type="String">
+            <label>Web Manager Port Number.</label>
+            <tooltip>This determines which port number to use for launching the INDI Web Manager.</tooltip>
+            <whatsthis>This determines which port number to use for launching the INDI Web Manager</whatsthis>
+            <default>8624</default>
+        </entry>
+        <entry name="ManagerOpeningMethod" type="Int">
+            <label>How should this program launch the INDI Web Manager in a browser?</label>
+            <tooltip>This determines what address to use to launch the INDI Web Manager in the default browser using the big button in the Main Window.  0 = Host Name, 1 = IP Address</tooltip>
+            <whatsthis>This determines what address to use to launch the INDI Web Manager in the default browser using the big button in the Main Window.  0 = Host Name, 1 = IP Address</whatsthis>
+            <default>0</default>
+        </entry>
+        <entry name="LogFilePathDefault" type="Bool">
+            <label>Use the Default Log File Path.</label>
+            <tooltip>This determines whether to use the default file path for the Web Manager Log, or allow a user configured one.</tooltip>
+            <whatsthis>This determines whether to use the default file path for the Web Manager Log, or allow a user configured one.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="LogFilePath" type="String">
+            <label>The Path to the log file that will be generated.</label>
+            <tooltip>This determines what path will be used for generating the log file.</tooltip>
+            <whatsthis>This determines what path will be used for generating the log file.</whatsthis>
+            <default code="true">MainWindow::getDefault("LogFilePath")</default>
+        </entry>
+        <entry name="EnableWebManagerLogFile" type="Bool">
+            <label>Enable the log file?</label>
+            <tooltip>Determines whether to save the INDI Web Manager program output to a log file.  Note that if INDI Web Manager outputs to a log file, it will not display this information in the log of the main window of INDI Web Manager App.</tooltip>
+            <whatsthis>Determines whether to save the INDI Web Manager program output to a log file.  Note that if INDI Web Manager outputs to a log file, it will not display this information in the log of the main window of INDI Web Manager App.</whatsthis>
+            <default>false</default>
+        </entry>
+        <entry name="EnableVerboseMode" type="Bool">
+            <label>Enables verbose output from the INDI Web Manager</label>
+            <tooltip>Determines whether to display more details in the log as the INDI Web Manager is running.</tooltip>
+            <whatsthis>Determines whether to display more details in the log as the INDI Web Manager is running.</whatsthis>
+            <default>true</default>
+        </entry>
+        <entry name="AutoLaunchManager" type="Bool">
+            <label>Automatically launch the INDI Web Manager on program open</label>
+            <tooltip>Determines whether to automatically launch the INDI Web Manager when INDI Web Manager App is opened. Note: this does NOT start INDI Web Manager App or INDI Web Manager at system startup.  For that you need the other option.</tooltip>
+            <whatsthis>Determines whether to automatically launch the INDI Web Manager when INDI Web Manager App is opened. Note: this does NOT start INDI Web Manager App or INDI Web Manager at system startup.  For that you need the other option.</whatsthis>
+            <default>false</default>
+        </entry>
+        <entry name="AutoHideManagerApp" type="Bool">
+            <label>Automatically hide the INDI Web Manager App on program open</label>
+            <tooltip>Determines whether to hide the INDI Web Manager App when it opens, thus using it as a System Tray Program</tooltip>
+            <whatsthis>Determines whether to hide the INDI Web Manager App when it opens, thus using it as a System Tray Program</whatsthis>
+            <default>false</default>
+        </entry>
+    </group>
+</kcfg>

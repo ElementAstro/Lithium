@@ -19,7 +19,7 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     lilxml.hpp
     base64.hpp
     hydrogencom.hpp
-    sharedblob.h
+    sharedblob.hpp
 
     hydrogenbase.h
     hydrogenbasetypes.h
@@ -51,7 +51,7 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     hydrogendevapi.cpp
     lilxml.cpp
     hydrogenuserio.cpp
-    sharedblob.c
+    sharedblob.cpp
 
     hydrogenbase.cpp
 

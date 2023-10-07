@@ -362,7 +362,7 @@ configure_gettext(
         "--keyword=_" "--keyword=N_" "--keyword=P_:1,2"
         "--package-name=${PROJECT_NAME}" "--package-version=${PROJECT_VERSION}"
         "--copyright-holder=Max Qian" "--msgid-bugs-address=astro_air@126.com"
-    LANGUAGES "en_US.UTF-8" "fr_FR" "es")
+    LANGUAGES "en_US.UTF-8")
 
 find_package(Intl REQUIRED)
 
@@ -384,7 +384,7 @@ if(WIN32)
 
     target_link_libraries(lithium_server libzippp)
 
-    target_link_libraries(lithium_server LithiumDriver LithiumBridge)
+    target_link_libraries(lithium_server lithiumcorestatic)
 
     target_link_libraries(lithium_server hydrogencore)
 
@@ -435,7 +435,9 @@ elseif(UNIX OR LINUX OR APPLE)
 
     target_link_libraries(lithium_server libzippp)
 
-    target_link_libraries(lithium_server LithiumDriver LithiumProperty LithiumBridge)
+    target_link_libraries(lithium_server lithiumcorestatic)
+
+    target_link_libraries(lithium_server hydrogencore)
 
     CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 

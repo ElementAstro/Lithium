@@ -19,7 +19,7 @@
 #include "sharedblob_parse.hpp"
 
 #define HYDROGEN_SHARED_BLOB_SUPPORT
-#include "sharedblob.h"
+#include "sharedblob.hpp"
 
 #include <map>
 #include <sstream>

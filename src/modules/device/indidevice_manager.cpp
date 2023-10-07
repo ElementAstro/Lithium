@@ -32,6 +32,7 @@ Description: INDI Device Manager
 #include "indidevice_manager.hpp"
 #include "indi_device.hpp"
 #include "device_utils.hpp"
+#include "config.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -92,7 +93,7 @@ void INDIManager::start_server()
     // Just start the server without driver
     std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
 
-    LOG_F(INFO,"Started INDI server on port " ,port);
+    LOG_F(INFO, "Started INDI server on port ", port);
     system(cmd.c_str());
 }
 #endif
@@ -217,16 +218,16 @@ void INDIManager::stop_driver(std::shared_ptr<INDIDeviceContainer> driver)
     {
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
-        LOG_F(INFO,"Stop running driver: {}",driver->label );
+        LOG_F(INFO, "Stop running driver: {}", driver->label);
         running_drivers.erase(driver->label);
     }
     else
     {
-        LOG_F(ERROR,"Failed to stop driver: {}", driver->label);
+        LOG_F(ERROR, "Failed to stop driver: {}", driver->label);
     }
 #else
     system(full_cmd.c_str());
-    LOG_F(INFO,"Stop running driver: {}",driver->label );
+    LOG_F(INFO, "Stop running driver: {}", driver->label);
     running_drivers.erase(driver->label);
 #endif
 }
@@ -259,7 +260,11 @@ void INDIManager::set_prop(const std::string &dev, const std::string &prop, cons
     std::stringstream ss;
     ss << "indi_setprop " << dev << "." << prop << "." << element << "=" << value;
     std::string cmd = ss.str();
-    system(cmd.c_str());
+    int result = system(cmd.c_str());
+    if (result != 0)
+    {
+        LOG_F(ERROR, _("Failed to run command: {}"), cmd);
+    }
 }
 
 std::string INDIManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)

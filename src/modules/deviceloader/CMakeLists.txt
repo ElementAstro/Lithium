@@ -33,6 +33,7 @@ else()
     find_package(Libev REQUIRED)
     find_package(UV REQUIRED)
     find_package(fmt REQUIRED)
+    find_package(ZLIB REQUIRED)
 
     add_executable(${PROJECT_NAME} ${server_SRC} hydrogen_server.cpp)
 
@@ -43,6 +44,8 @@ else()
     target_include_directories(hydrogenserver SYSTEM PRIVATE ${LIBEV_INCLUDE_DIRS})
 
     target_link_libraries(hydrogenserver loguru fmt ${UV_LIBRARY} backward)
+
+    target_link_libraries(hydrogenserver ${ZLIB_LIBRARIES})
 
     set_target_properties(
         hydrogenserver

@@ -1,0 +1,7 @@
+File=LithiumWebManagerApp.kcfg
+ClassName=Options
+Singleton=true
+Mutators=true
+ItemAccessors=false
+SetUserTexts=true
+TranslationSystem=kde

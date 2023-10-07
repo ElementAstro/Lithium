@@ -12,7 +12,7 @@
 
 #include "hydrogenapi.h"
 #include "hydrogendevapi.hpp"
-#include "sharedblob.h"
+#include "sharedblob.hpp"
 #include "lilxml.hpp"
 #include "base64.hpp"
 

@@ -47,15 +47,15 @@ Description: PID Watcher with Network
 
 #include "loguru/loguru.hpp"
 
-ProcessMonitor::ProcessMonitor(const std::string &processName) : processName_(processName), isMonitoring_(false) {}
+PidWWatcher::PidWWatcher(const std::string &processName) : processName_(processName), isMonitoring_(false) {}
 
-void ProcessMonitor::StartMonitoring()
+void PidWWatcher::start()
 {
     isMonitoring_ = true;
-    thread_ = std::thread(&ProcessMonitor::MonitorThread, this);
+    thread_ = std::thread(&PidWWatcher::MonitorThread, this);
 }
 
-void ProcessMonitor::stop()
+void PidWWatcher::stop()
 {
     isMonitoring_ = false;
     if (thread_.joinable())
@@ -64,7 +64,7 @@ void ProcessMonitor::stop()
     }
 }
 
-double ProcessMonitor::GetNetworkUsage()
+double PidWWatcher::GetNetworkUsage()
 {
 #ifdef _WIN32
     // TODO: 在Windows平台上获取网络访问量
@@ -93,7 +93,7 @@ double ProcessMonitor::GetNetworkUsage()
 #endif
 }
 
-double ProcessMonitor::GetMemoryUsage()
+double PidWWatcher::GetMemoryUsage()
 {
 #ifdef _WIN32
     HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid_);
@@ -138,7 +138,7 @@ double ProcessMonitor::GetMemoryUsage()
 #endif
 }
 
-void ProcessMonitor::MonitorThread()
+void PidWWatcher::MonitorThread()
 {
 #ifdef _WIN32
     // 获取进程ID

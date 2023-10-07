@@ -20,7 +20,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110 - 1301  USA
  */
 
-#include "sharedblob.h"
+#include "sharedblob.hpp"
 
 #ifdef __linux__
 #include <linux/unistd.h>

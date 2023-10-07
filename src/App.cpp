@@ -75,15 +75,6 @@ Description: Main
 #include <signal.h>
 #endif
 
-// I18n
-#include <libintl.h>
-#include <locale.h>
-#include <locale>
-
-#define _(STRING) gettext(STRING)
-#define N_(STRING) STRING
-#define P_(SINGULAR, PLURAL, N) ngettext(SINGULAR, PLURAL, N)
-
 #include "loguru/loguru.hpp"
 
 void run()

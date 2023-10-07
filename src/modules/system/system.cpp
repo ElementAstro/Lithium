@@ -449,7 +449,10 @@ namespace Lithium::System
                         if (statusFile != NULL)
                         {
                             char name[1024];
-                            fscanf(statusFile, "%*d %s", name);
+                            int result = fscanf(statusFile, "%*d %s", name);
+                            if (result != 1)
+                            {
+                            }
                             fclose(statusFile);
 
                             std::string processName(name);

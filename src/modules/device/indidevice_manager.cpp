@@ -92,8 +92,7 @@ void INDIManager::start_server()
     // Just start the server without driver
     std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
 
-    std::cout << cmd << std::endl;
-    std::cout << "Started INDI server on port " << port << std::endl;
+    LOG_F(INFO,"Started INDI server on port " ,port);
     system(cmd.c_str());
 }
 #endif
@@ -148,7 +147,7 @@ bool INDIManager::is_running()
 bool INDIManager::is_running()
 {
     std::string output = "";
-    FILE *pipe = popen(("ps -ef | grep indiserver | grep -v grep | wc -l").c_str(), "r");
+    FILE *pipe = popen("ps -ef | grep indiserver | grep -v grep | wc -l", "r");
     if (!pipe)
         return false;
     char buffer[128];

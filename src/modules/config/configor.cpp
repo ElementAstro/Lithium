@@ -29,7 +29,6 @@ Description: Configor
 
 **************************************************/
 
-#include <iostream>
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
@@ -47,10 +46,9 @@ namespace Lithium::Config
 {
     ConfigManager::ConfigManager()
     {
-        m_AchievementManager = std::make_unique<AAchievement::AchievementList>();
         if (loadFromFile("config.json"))
         {
-            LOG_F(INFO, "current config: %s", config_.dump(4).c_str());
+            DLOG_F(INFO, "current config: {}", config_.dump(4));
         }
     }
 
@@ -70,23 +68,23 @@ namespace Lithium::Config
         std::ifstream ifs(path);
         if (!ifs.is_open())
         {
-            LOG_F(ERROR, "Failed to open file: %s", path.c_str());
+            LOG_F(ERROR, "Failed to open file: {}", path);
             return false;
         }
         json j;
         try
         {
             ifs >> j;
-            LOG_F(INFO, "%s", j.dump(4).c_str());
+            LOG_F(INFO, "{}", j.dump(4));
             const std::string basename = path.substr(path.find_last_of("/\\") + 1);
             const std::string name_without_ext = basename.substr(0, basename.find_last_of('.'));
             config_[name_without_ext] = j["config"];
-            LOG_F(INFO, "Loaded config file %s successfully", path.c_str());
+            LOG_F(INFO, "Loaded config file {} successfully", path);
             return true;
         }
         catch (const json::exception &e)
         {
-            LOG_F(ERROR, "Failed to parse file: %s, error message: %s", path.c_str(), e.what());
+            LOG_F(ERROR, "Failed to parse file: {}, error message: {}", path, e.what());
             return false;
         }
     }
@@ -118,11 +116,11 @@ namespace Lithium::Config
                     }
                     catch (const json::exception &e)
                     {
-                        LOG_F(ERROR, "Failed to parse file: %s, error message: %s", config_file_path.c_str(), e.what());
+                        LOG_F(ERROR, "Failed to parse file: {}, error message: {}", config_file_path, e.what());
                     }
                     catch (const std::exception &e)
                     {
-                        LOG_F(ERROR, "Failed to open file %s", config_file_path.c_str());
+                        LOG_F(ERROR, "Failed to open file {}", config_file_path);
                     }
                 }
                 loadFromDir(subdir_path, true);
@@ -141,7 +139,7 @@ namespace Lithium::Config
         {
             if (!p->is_object())
             {
-                LOG_F(ERROR, "Invalid key path: %s", key_path.c_str());
+                LOG_F(ERROR, "Invalid key path: {}", key_path);
                 return;
             }
 
@@ -162,21 +160,29 @@ namespace Lithium::Config
     json ConfigManager::getValue(const std::string &key_path) const
     {
         // std::shared_lock<std::shared_timed_mutex> lock(rw_mutex_);
-        std::vector<std::string> keys = split(key_path, "/");
-        const json *p = &config_;
-        for (const auto &key : keys)
+        try
         {
-            if (p->is_object() && p->contains(key))
+            std::vector<std::string> keys = split(key_path, "/");
+            const json *p = &config_;
+            for (const auto &key : keys)
             {
-                p = &(*p)[key];
+                if (p->is_object() && p->contains(key))
+                {
+                    p = &(*p)[key];
+                }
+                else
+                {
+                    LOG_F(ERROR, "Key not found: {}", key_path);
+                    return nullptr;
+                }
             }
-            else
-            {
-                LOG_F(ERROR, "Key not found: %s", key_path.c_str());
-                return nullptr;
-            }
+            return *p;
         }
-        return *p;
+        catch (const std::exception &e)
+        {
+            LOG_F(ERROR, "Failed to get value: {} {}", key_path, e.what());
+            return nullptr;
+        }
     }
 
     void ConfigManager::deleteValue(const std::string &key_path)
@@ -188,14 +194,14 @@ namespace Lithium::Config
         {
             if (!p->is_object())
             {
-                LOG_F(ERROR, "Invalid key path: %s", key_path.c_str());
+                LOG_F(ERROR, "Invalid key path: {}", key_path);
                 return;
             }
             p = &(*p)[key];
         }
         if (p->is_null())
         {
-            LOG_F(ERROR, "Key not found: %s", key_path.c_str());
+            LOG_F(ERROR, "Key not found: {}", key_path);
             return;
         }
         p->clear();
@@ -214,7 +220,7 @@ namespace Lithium::Config
         }
         else
         {
-            LOG_F(INFO, "%s: %s", key.c_str(), value.dump().c_str());
+            LOG_F(INFO, "{}: {}", key, value.dump());
         }
     }
 
@@ -264,7 +270,7 @@ namespace Lithium::Config
         std::ofstream ofs(file_path);
         if (!ofs.is_open())
         {
-            LOG_F(ERROR, "Failed to open file: %s", file_path.c_str());
+            LOG_F(ERROR, "Failed to open file: {}", file_path);
             return false;
         }
         ofs << config_.dump(4);

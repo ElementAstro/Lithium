@@ -132,7 +132,6 @@ namespace Lithium
         chai_->add(chaiscript::fun(&LithiumApp::runScript), "run_script");
         chai_->add(chaiscript::fun(&LithiumApp::saveTasksToJson), "save_tasks_to_json");
         chai_->add(chaiscript::fun(&LithiumApp::SetConfig), "set_config");
-        chai_->add(chaiscript::fun(&LithiumApp::sleepThreadByName), "sleep_thread_by_name");
         chai_->add(chaiscript::fun(&LithiumApp::stopTask), "stop_task");
         chai_->add(chaiscript::fun(&LithiumApp::terminateProcess), "terminate_process");
         chai_->add(chaiscript::fun(&LithiumApp::terminateProcessByName), "terminate_process_by_name");

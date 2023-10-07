@@ -130,21 +130,19 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
 # TODO : 更好的构建系统，不需要这样引用
 include_directories(${lithium_src_dir}/)
 include_directories(${lithium_src_dir}/core)
+include_directories(${lithium_src_dir}/core/image)
 include_directories(${lithium_src_dir}/core/base)
-include_directories(${lithium_src_dir}/core/dsp)
-include_directories(${lithium_src_dir}/core/io)
 include_directories(${lithium_src_dir}/core/property)
-include_directories(${lithium_src_dir}/core/timer)
-include_directories(${lithium_src_dir}/core/thread)
 
 add_subdirectory(libs/)
 
+# 所有的工具组件
 add_subdirectory(tools)
 
+# 内置的模组
 include_directories(modules)
 
-add_subdirectory(drivers)
-
+# 构建Lithium内核
 add_subdirectory(${lithium_src_dir}/core)
 if(NOT WIN32)
 add_subdirectory(${lithium_src_dir}/modules/deviceloader)
@@ -164,12 +162,6 @@ set(api_SRC
 set(config_SRC
     ${lithium_src_dir}/modules/config/configor.cpp
     ${lithium_src_dir}/modules/config/configor.hpp
-
-    ${lithium_src_dir}/modules/config/achievement.cpp
-    ${lithium_src_dir}/modules/config/achievement.hpp
-
-    ${lithium_src_dir}/modules/config/achievement_list.cpp
-    ${lithium_src_dir}/modules/config/achievement_list.hpp
 )
 
 set(device_SRC
@@ -231,14 +223,6 @@ set(io_SRC
 set(launcher_SRC
     ${lithium_src_dir}/launcher/crash.cpp
     ${lithium_src_dir}/launcher/crash.hpp
-)
-
-set(logger_SRC
-    ${lithium_src_dir}/logger/aptlogger.cpp
-    ${lithium_src_dir}/logger/aptlogger.hpp
-
-    ${lithium_src_dir}/logger/log_manager.cpp
-    ${lithium_src_dir}/logger/log_manager.hpp
 )
 
 set(module_SRC
@@ -335,6 +319,12 @@ set(system_module
 
     ${lithium_src_dir}/modules/system/process.cpp
     ${lithium_src_dir}/modules/system/process.hpp
+
+    ${lithium_src_dir}/modules/system/pid.cpp
+    ${lithium_src_dir}/modules/system/pid.hpp
+
+    ${lithium_src_dir}/modules/system/pidw.cpp
+    ${lithium_src_dir}/modules/system/pidw.cpp
 )
 
 set(Lithium_SRC

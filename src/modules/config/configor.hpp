@@ -37,8 +37,6 @@ Description: Configor
 
 #include "error/error_code.hpp"
 
-#include "achievement_list.hpp"
-
 #include "nlohmann/json.hpp"
 
 namespace Lithium::Config
@@ -122,8 +120,6 @@ namespace Lithium::Config
         nlohmann::json config_;
         std::mutex mutex_;
         mutable std::shared_timed_mutex rw_mutex_;
-
-        std::shared_ptr<AAchievement::AchievementList> m_AchievementManager;
 
         void mergeConfig(const nlohmann::json &j);
 

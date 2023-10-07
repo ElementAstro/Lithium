@@ -1,5 +1,5 @@
 /*
- * pid.hpp
+ * pidw.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,54 +25,35 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-4
 
-Description: PID Watcher
+Description: PID Watcher with Network
 
 **************************************************/
 
 #pragma once
 
-#include <functional>
-#include <mutex>
-#include <atomic>
+#include <string>
 #include <thread>
-#include <memory>
-#include <vector>
 
-class PIDWatcher
+class PidWWatcher
 {
 public:
-    PIDWatcher(const std::string &processName);
-    ~PIDWatcher();
+    PidWWatcher(const std::string &processName);
 
     void start();
     void stop();
-    void watch();
-
-    void setCallback(const std::function<void(int, int)> &callback);
-
-private:
-    std::wstring getWideString(const std::string &str);
 
 private:
     std::string processName_;
-    std::jthread thread_;
-    std::mutex callbackMutex_;
-    std::function<void(int, int)> callback_;
-    std::atomic<bool> isRunning_;
-    std::atomic<bool> shouldStop_;
-};
+#ifdef _WIN32
+    DWORD pid_ = 0;
+#else
+    int pid_ = 0;
+#endif
+    std::thread thread_;
+    bool isMonitoring_;
 
-class PIDWatcherManager
-{
-public:
-    PIDWatcherManager() = default;
-    ~PIDWatcherManager();
+    double GetNetworkUsage();
+    double GetMemoryUsage();
 
-    void addWatcher(const std::string &processName);
-    void startAll();
-    void stopAll();
-    void setCallbackForAll(const std::function<void(int, int)> &callback);
-
-private:
-    std::vector<std::shared_ptr<PIDWatcher>> watchers_;
+    void MonitorThread();
 };

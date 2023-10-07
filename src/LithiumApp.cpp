@@ -30,6 +30,7 @@ Description: Lithium App Enter
 **************************************************/
 
 #include "LithiumApp.hpp"
+#include "config.h"
 
 #include "loguru/loguru.hpp"
 

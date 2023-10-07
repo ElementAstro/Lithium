@@ -1,175 +1,50 @@
 cmake_minimum_required(VERSION 3.13)
-project(hydrogendriver C CXX)
+project(lithiumcore C CXX)
 
 find_package(USB1 REQUIRED)
 find_package(JPEG REQUIRED)
 find_package(Threads REQUIRED)
 include_directories(${USB1_INCLUDE_DIRS})
 
-add_subdirectory(io)
-add_subdirectory(property)
-
-include_directories(.)
-include_directories(timer)
-include_directories(thread)
-include_directories(stream)
-include_directories(base)
-include_directories(property)
-
 add_subdirectory(base)
 
+include_directories(.)
+include_directories(base)
+include_directories(property)
+include_directories(utils)
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
 endif()
-
-# Dependency
-find_package(FFTW3 REQUIRED)
-
-list(APPEND ${PROJECT_NAME}_LIBS
-    hydrogencore
-    hydrogendevice
-    eventloop
-    dsp
-    fpack
-    hid
-    ${USB1_LIBRARIES}
-    ${NOVA_LIBRARIES}
-    ${CMAKE_THREAD_LIBS_INIT}
-    ${CFITSIO_LIBRARIES}
-    ${ZLIB_LIBRARY}
-    ${JPEG_LIBRARY}
-    ${FFTW3_LIBRARIES}
-    ${M_LIB}
-    fmt::fmt
-    $<$<PLATFORM_ID:CYGWIN>:${ICONV_LIBRARIES}>
-)
-
-# Add Iconv
-if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
-    # FreeBSD needs to find the correct GNU iconv library.
-    find_package(Iconv REQUIRED)
-    list(APPEND ${PROJECT_NAME}_LIBS ${ICONV_LIBRARIES})
-endif()
-
-# Add LibXISF
-find_package(LibXISF)
-if(LibXISF_FOUND)
-    list(APPEND ${PROJECT_NAME}_LIBS ${LibXISF_LIBRARY})
-    include_directories(${LibXISF_INCLUDE_DIR})
-    add_definitions(-DHAVE_XISF)
-endif()
-
-# Add OggTheora, StreamManager, v4l2
-if(UNIX OR WIN32)
-    list(APPEND ${PROJECT_NAME}_SOURCES
-        stream/streammanager.cpp
-        stream/fpsmeter.cpp
-        stream/gammalut16.cpp
-        stream/recorder/recorderinterface.cpp
-        stream/recorder/recordermanager.cpp
-        stream/recorder/serrecorder.cpp
-        stream/encoder/encodermanager.cpp
-        stream/encoder/encoderinterface.cpp
-        stream/encoder/rawencoder.cpp
-        stream/encoder/mjpegencoder.cpp
-        stream/jpegutils.c
-        stream/ccvt_c2.c
-        stream/ccvt_misc.c
-    )
-
-    install(FILES
-        stream/streammanager.h
-        stream/fpsmeter.h
-        stream/uniquequeue.h
-        stream/gammalut16.h
-        stream/jpegutils.h
-        stream/ccvt.h
-        stream/ccvt_types.h
-        DESTINATION ${INCLUDE_INSTALL_DIR}/libhydrogen/stream
-        COMPONENT Devel
-    )
-
-    install(FILES
-        stream/encoder/encodermanager.h
-        stream/encoder/encoderinterface.h
-        stream/encoder/rawencoder.h
-        stream/encoder/mjpegencoder.h
-        DESTINATION ${INCLUDE_INSTALL_DIR}/libhydrogen/stream/encoder
-        COMPONENT Devel
-    )
-
-    install(FILES
-        stream/recorder/recordermanager.h
-        stream/recorder/recorderinterface.h
-        stream/recorder/serrecorder.h
-        DESTINATION ${INCLUDE_INSTALL_DIR}/libhydrogen/stream/recorder
-        COMPONENT Devel
-    )
-
-    if(${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
-        list(APPEND ${PROJECT_NAME}_SOURCES
-            webcam/v4l2_colorspace.c
-            webcam/v4l2_base.cpp
-            webcam/v4l2_decode/v4l2_decode.cpp
-            webcam/v4l2_decode/v4l2_builtin_decoder.cpp
-        )
-
-        install(FILES
-            webcam/v4l2_decode/v4l2_decode.h
-            webcam/v4l2_decode/v4l2_builtin_decoder.h
-            webcam/v4l2_colorspace.h
-            DESTINATION ${INCLUDE_INSTALL_DIR}/libhydrogen
-            COMPONENT Devel
-        )
-
-        include_directories(webcam)
-    endif()
-endif()
-
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
-    hydrogendriver.cpp
-    hydrogendriverio.cpp
-    hydrogendrivermain.cpp
-    defaultdevice.cpp
-    timer/timer.cpp
-    timer/elapsedtimer.cpp
-    thread/single_thread.cpp
-    hydrogenccd.cpp
-    hydrogenccdchip.cpp
-    hydrogensensorinterface.cpp
-    hydrogencorrelator.cpp
-    hydrogendetector.cpp
-    hydrogenspectrograph.cpp
-    hydrogenreceiver.cpp
-    hydrogentelescope.cpp
-    hydrogenfilterwheel.cpp
-    hydrogenfocuserinterface.cpp
-    hydrogenweatherinterface.cpp
-    hydrogenfocuser.cpp
-    hydrogenrotator.cpp
-    hydrogenusbdevice.cpp
-    hydrogenguiderinterface.cpp
-    hydrogenfilterinterface.cpp
-    hydrogenrotatorinterface.cpp
-    hydrogendome.cpp
-    hydrogengps.cpp
-    hydrogenweather.cpp
-    hydrogendustcapinterface.cpp
-    hydrogenlightboxinterface.cpp
-    hydrogenlogger.cpp
-    hydrogencontroller.cpp
-    connection/connectioninterface.cpp
-    connection/connectionserial.cpp
-    connection/connectiontcp.cpp
-    dsp/manager.cpp
-    dsp/dspinterface.cpp
-    dsp/transforms.cpp
-    dsp/convolution.cpp
-    pid/pid.cpp
     fitskeyword.cpp
+
+    device.cpp
+    deviceio.cpp
+    camera.cpp
+    telescope.cpp
+    focuser.cpp
+    filterwheel.cpp
+    guider.cpp
+    network/fifoclient.cpp
+    network/fifoserver.cpp
+    util/utils.cpp
+    event/eventloop.cpp
+
+    util/math.cpp
+    util/reflection.cpp
+
+    property/base64.cpp
+    property/iproperty.cpp
+    property/iphoto.cpp
+    property/uuid.cpp
+
+    property/task/conditional_task.cpp
+    property/task/daemon_task.cpp
+    property/task/loop_task.cpp
+    property/task/task.cpp
 
     property/hydrogenproperties.cpp
     property/hydrogenproperty.cpp
@@ -186,36 +61,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    hydrogendriver.h
-    pid/pid.hpp
-    defaultdevice.h
-    hydrogenccd.h
-    hydrogenccdchip.h
-    hydrogensensorinterface.h
-    hydrogencorrelator.h
-    hydrogendetector.h
-    hydrogenspectrograph.h
-    hydrogenreceiver.h
-    hydrogenfilterwheel.h
-    hydrogenfocuserinterface.h
-    hydrogenweatherinterface.h
-    hydrogenfocuser.h
-    hydrogenrotator.h
-    hydrogentelescope.h
-    hydrogenguiderinterface.h
-    hydrogenfilterinterface.h
-    hydrogenrotatorinterface.h
-    timer/timer.hpp
-    timer/elapsedtimer.hpp
-    thread/single_thread.hpp
-    hydrogendome.h
-    hydrogengps.h
-    hydrogenlightboxinterface.h
-    hydrogendustcapinterface.h
-    hydrogenweather.h
-    hydrogenlogger.h
-    hydrogencontroller.h
-    hydrogenusbdevice.h
     fitskeyword.h
 
     property/hydrogenproperties.h
@@ -230,6 +75,33 @@ list(APPEND ${PROJECT_NAME}_HEADERS
 
     property/hydrogenwidgetview.h
     property/hydrogenwidgettraits.h
+
+    device.hpp
+    deviceio.hpp
+    camera.hpp
+    telescope.hpp
+    focuser.hpp
+    filterwheel.hpp
+    guider.hpp
+    solver.hpp
+    network/fifoclient.hpp
+    network/fifoserver.hpp
+    util/utils.hpp
+
+    property/base64.hpp
+    property/iproperty.hpp
+    property/iphoto.hpp
+    property/sha256.hpp
+    property/uuid.hpp
+
+    property/task/conditional_task.hpp
+    property/task/device_task.hpp
+    property/task/daemon_task.hpp
+    property/task/loop_task.hpp
+    property/task/task.hpp
+
+    util/math.hpp
+    util/reflection.hpp
 )
 
 # Private Headers
@@ -265,30 +137,6 @@ target_sources(${PROJECT_NAME}_OBJECT
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
-install(FILES
-    ${${PROJECT_NAME}_HEADERS}
-    DESTINATION
-    ${INCLUDE_INSTALL_DIR}/libhydrogen
-    COMPONENT Devel
-)
-
-install(FILES
-    connection/connectioninterface.h
-    connection/connectionserial.h
-    connection/connectiontcp.h
-    DESTINATION ${INCLUDE_INSTALL_DIR}/libhydrogen/connection
-    COMPONENT Devel
-)
-
-install(FILES
-    dsp/manager.h
-    dsp/dspinterface.h
-    dsp/transforms.h
-    dsp/convolution.h
-    DESTINATION ${INCLUDE_INSTALL_DIR}/libhydrogen/dsp
-    COMPONENT Devel
-)
-
 add_library(${PROJECT_NAME}static STATIC)
 
 target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
@@ -304,60 +152,3 @@ set_target_properties(${PROJECT_NAME}static PROPERTIES
 install(TARGETS ${PROJECT_NAME}static
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-add_library(LithiumDriver
-    device.cpp
-    device.hpp
-
-    deviceio.cpp
-    deviceio.hpp
-
-    camera.cpp
-    camera.hpp
-
-    telescope.cpp
-    telescope.hpp
-
-    focuser.cpp
-    focuser.hpp
-
-    filterwheel.cpp
-    filterwheel.hpp
-
-    guider.cpp
-    guider.hpp
-
-    solver.cpp
-    solver.hpp
-
-    event/eventloop.cpp
-    event/eventloop.hpp
-
-    network/fifoclient.cpp
-    network/fifoclient.hpp
-
-    network/fifoserver.cpp
-    network/fifoserver.hpp
-
-    util/utils.cpp
-    util/utils.hpp
-)
-
-target_link_libraries(LithiumDriver loguru LithiumProperty) 
-target_link_libraries(LithiumDriver wsock32 ws2_32)
-if(LINUX)
-set_target_properties(LithiumDriver PROPERTIES
-  POSITION_INDEPENDENT_CODE ON
-)
-endif()
-
-include_directories(.)
-include_directories(dsp)
-include_directories(fpack)
-include_directories(event)
-
-add_subdirectory(fpack)
-add_subdirectory(event)
-add_subdirectory(dsp)
-add_subdirectory(hid)
-add_subdirectory(alignment)

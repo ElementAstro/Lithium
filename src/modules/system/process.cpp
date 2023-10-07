@@ -30,6 +30,7 @@ Description: Process Manager
 **************************************************/
 
 #include "process.hpp"
+#include "config.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -83,7 +84,7 @@ namespace Lithium::Process
             // Child process code
             LOG_F(INFO, _("Running command: {}"), command);
             int pipefd[2];
-            pipe(pipefd);
+            int result = pipe(pipefd);
             dup2(pipefd[1], STDOUT_FILENO);
             close(pipefd[0]);
             close(pipefd[1]);

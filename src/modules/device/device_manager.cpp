@@ -1301,13 +1301,14 @@ namespace Lithium
         return true;
     }
 
-    bool DeviceManager::runHydrogenServer(const nlohmann::json &m_params);
+    bool DeviceManager::runHydrogenServer(const nlohmann::json &m_params)
     {
 #ifdef _WIN32
 
 #else
-        
+
 #endif
+        return true;
     }
     bool DeviceManager::startHydrogenDriver(const nlohmann::json &m_params)
     {
@@ -1316,6 +1317,7 @@ namespace Lithium
 #else
 
 #endif
+        return true;
     }
     bool DeviceManager::stopHydrogenDriver(const nlohmann::json &m_params)
     {
@@ -1324,5 +1326,6 @@ namespace Lithium
 #else
 
 #endif
+        return true;
     }
 }

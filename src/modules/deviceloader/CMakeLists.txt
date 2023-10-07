@@ -36,10 +36,10 @@ else()
 
     add_executable(${PROJECT_NAME} ${server_SRC} hydrogen_server.cpp)
 
-    target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBUV=1)
+    # target_compile_definitions(${PROJECT_NAME} PRIVATE USE_LIBUV=1)
     target_compile_definitions(${PROJECT_NAME} PRIVATE MAIN_FUNC=1)
 
-    target_link_libraries(hydrogenserver hydrogendriverstatic ${CMAKE_THREAD_LIBS_INIT} ${LIBEV_LIBRARIES})
+    target_link_libraries(hydrogenserver lithiumcorestatic hydrogencore ${CMAKE_THREAD_LIBS_INIT} ${LIBEV_LIBRARIES})
     target_include_directories(hydrogenserver SYSTEM PRIVATE ${LIBEV_INCLUDE_DIRS})
 
     target_link_libraries(hydrogenserver loguru fmt ${UV_LIBRARY} backward)

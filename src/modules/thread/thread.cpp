@@ -30,6 +30,7 @@ Description: Thread Manager
 **************************************************/
 
 #include "thread.hpp"
+#include "config.h"
 
 #include <sstream>
 #include <iostream>

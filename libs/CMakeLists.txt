@@ -4,14 +4,7 @@ add_subdirectory(oatpp-websocket)
 add_subdirectory(oatpp-openssl)
 add_subdirectory(oatpp-zlib)
 
-add_library(loguru loguru/loguru.cpp)
-if(LINUX)
-    find_package(Threads REQUIRED)
-    target_link_libraries(loguru Threads::Threads dl)
-    set_target_properties(loguru PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-    )
-endif()
+add_subdirectory(loguru)
 
 find_package(OpenSSL REQUIRED)
 add_library(cpp_httplib cpp_httplib/httplib.cpp)

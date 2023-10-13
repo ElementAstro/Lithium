@@ -35,24 +35,24 @@ Description: Filterwheel Simulator and Basic Definition
 
 Filterwheel::Filterwheel(const std::string &name) : Device(name)
 {
-    LOG_F(INFO, "Filterwheel Simulator Loaded : %s", name.c_str());
+    DLOG_F(INFO, "Filterwheel Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Filterwheel::~Filterwheel()
 {
-    LOG_F(INFO, "Filterwheel Simulator Destructed");
+    DLOG_F(INFO, "Filterwheel Simulator Destructed");
 }
 
 bool Filterwheel::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", getDeviceName());
+    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Filterwheel::disconnect(const IParams &params)
 {
-    LOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

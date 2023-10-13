@@ -83,7 +83,7 @@ void ErrorStack::PrintFilteredErrorStack() const
     {
         if (std::find(filteredModules.begin(), filteredModules.end(), error.moduleName) == filteredModules.end())
         {
-            LOG_F(ERROR, "%s", error.errorMessage.c_str());
+            DLOG_F(ERROR, "%s", error.errorMessage.c_str());
         }
     }
 }

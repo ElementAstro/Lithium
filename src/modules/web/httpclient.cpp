@@ -44,7 +44,7 @@ using namespace httplib;
 HttpClient::HttpClient(const std::string &host, int port)
     : host_(host), port_(port), ssl_enabled_(false)
 {
-    LOG_F(INFO, "Initializing HttpClient for %s:%d", host_.c_str(), port_);
+    DLOG_F(INFO, "Initializing HttpClient for %s:%d", host_.c_str(), port_);
 }
 
 bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
@@ -64,18 +64,18 @@ bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::str
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send GET request to %s%s. Error message: %s", host_.c_str(), path.c_str(), err.c_str());
+        DLOG_F(ERROR, "Failed to send GET request to %s%s. Error message: %s", host_.c_str(), path.c_str(), err.c_str());
         return false;
     }
 
     try
     {
         response = json::parse(res->body);
-        LOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
+        DLOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
+        DLOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
         return false;
     }
 
@@ -99,18 +99,18 @@ bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::st
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send POST request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), data.dump().c_str(), err.c_str());
+        DLOG_F(ERROR, "Failed to send POST request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), data.dump().c_str(), err.c_str());
         return false;
     }
 
     try
     {
         response = json::parse(res->body);
-        LOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
+        DLOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
+        DLOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
         return false;
     }
 
@@ -134,18 +134,18 @@ bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::str
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send PUT request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), data.dump().c_str(), err.c_str());
+        DLOG_F(ERROR, "Failed to send PUT request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), data.dump().c_str(), err.c_str());
         return false;
     }
 
     try
     {
         response = json::parse(res->body);
-        LOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
+        DLOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
+        DLOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
         return false;
     }
 
@@ -169,18 +169,18 @@ bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send DELETE request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), res->body.c_str(), err.c_str());
+        DLOG_F(ERROR, "Failed to send DELETE request to %s%s, data %s. Error message: %s", host_.c_str(), path.c_str(), res->body.c_str(), err.c_str());
         return false;
     }
 
     try
     {
         response = json::parse(res->body);
-        LOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
+        DLOG_F(INFO, "Received response from %s%s: %s", host_.c_str(), path.c_str(), response.dump().c_str());
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
+        DLOG_F(ERROR, "Failed to parse response from %s%s. Error message: %s", host_.c_str(), path.c_str(), e.what());
         return false;
     }
 
@@ -209,7 +209,7 @@ void HttpClient::SetClientKeyPath(const std::string &path)
 
 bool HttpClient::ScanPort(int start_port, int end_port, std::vector<int> &open_ports)
 {
-    LOG_F(INFO, "Scanning ports from %d to %d on %s:%d", start_port, end_port, host_.c_str(), port_);
+    DLOG_F(INFO, "Scanning ports from %d to %d on %s:%d", start_port, end_port, host_.c_str(), port_);
 
     open_ports.clear();
     Client client(host_.c_str(), port_);
@@ -226,7 +226,7 @@ bool HttpClient::ScanPort(int start_port, int end_port, std::vector<int> &open_p
         if (res && res->status == 200)
         {
             open_ports.push_back(port);
-            LOG_F(INFO, "Port %d is open on %s:%d", port, host_.c_str(), port_);
+            DLOG_F(INFO, "Port %d is open on %s:%d", port, host_.c_str(), port_);
         }
     }
 
@@ -235,13 +235,13 @@ bool HttpClient::ScanPort(int start_port, int end_port, std::vector<int> &open_p
 
 bool HttpClient::CheckServerStatus(std::string &status)
 {
-    LOG_F(INFO, "Checking server status on %s:%d", host_.c_str(), port_);
+    DLOG_F(INFO, "Checking server status on %s:%d", host_.c_str(), port_);
     Client client(host_.c_str(), port_);
     auto res = client.Head("/");
     if (!res || res->status != 200)
     {
         status = res ? std::to_string(res->status) : "Unknown error";
-        LOG_F(ERROR, "Failed to check server status on %s:%d with error message: %s", host_.c_str(), port_, status.c_str());
+        DLOG_F(ERROR, "Failed to check server status on %s:%d with error message: %s", host_.c_str(), port_, status.c_str());
         return false;
     }
 

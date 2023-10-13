@@ -55,6 +55,8 @@ public:
 
     virtual bool reconnect(const IParams &params) override;
 
+    virtual bool isConnected(const IParams &params) override;
+
 public:
     /**
      * @brief 启动曝光

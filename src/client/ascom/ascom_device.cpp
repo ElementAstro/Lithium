@@ -65,16 +65,16 @@ bool ASCOMDevice::connect(const IParams &params)
 {
     if (getConnected())
     {
-        LOG_F(WARNING, "Connection had already been established , please do not connect again");
+        DLOG_F(WARNING, "Connection had already been established , please do not connect again");
         return true;
     }
     setConnected(true);
     if (!getConnected())
     {
-        //LOG_F(ERROR, "Failed to establish connection with %s", name.c_str());
+        //DLOG_F(ERROR, "Failed to establish connection with %s", name.c_str());
         return false;
     }
-    //LOG_F(INFO, "Connected to %s", name.c_str());
+    //DLOG_F(INFO, "Connected to %s", name.c_str());
     return true;
 }
 
@@ -82,13 +82,13 @@ bool ASCOMDevice::disconnect(const IParams &params)
 {
     if (!getConnected())
     {
-        LOG_F(WARNING, "Connection is not established, please do not run disconnect command");
+        DLOG_F(WARNING, "Connection is not established, please do not run disconnect command");
         return true;
     }
     setConnected(false);
     if (getConnected())
     {
-        LOG_F(ERROR, "Failed to disconnect with %s", getDeviceName());
+        DLOG_F(ERROR, "Failed to disconnect with %s", getDeviceName());
         return false;
     }
     return true;
@@ -98,11 +98,11 @@ bool ASCOMDevice::reconnect(const IParams &params)
 {
     if (!disconnect(params))
     {
-        LOG_F(ERROR, "Failed to reconnect with %s, falied when trying to disconnect with", getDeviceName());
+        DLOG_F(ERROR, "Failed to reconnect with %s, falied when trying to disconnect with", getDeviceName());
     }
     if (!connect(params))
     {
-        LOG_F(ERROR, "Failed to reconnect %s, falied when trying to connect to", getDeviceName());
+        DLOG_F(ERROR, "Failed to reconnect %s, falied when trying to connect to", getDeviceName());
     }
     return true;
 }
@@ -202,7 +202,7 @@ const std::string ASCOMDevice::get(const std::string &attribute, const json &dat
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Exception occurred during GET request: %s", e.what());
+        DLOG_F(ERROR, "Exception occurred during GET request: %s", e.what());
         throw;
     }
 }
@@ -232,7 +232,7 @@ const std::string ASCOMDevice::put(const std::string &attribute, const json &dat
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Exception occurred during PUT request: %s", e.what());
+        DLOG_F(ERROR, "Exception occurred during PUT request: %s", e.what());
         throw;
     }
 }

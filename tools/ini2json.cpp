@@ -85,8 +85,8 @@ std::string trim(const std::string &line, const std::string &symbols = " \n\r\t"
 
 void usage(const std::string &binaryName)
 {
-    LOG_F(ERROR, "Invalid number of arguments");
-    LOG_F(INFO, "Usage: %s <INI filename> [output filename]", binaryName.c_str());
+    DLOG_F(ERROR, "Invalid number of arguments");
+    DLOG_F(INFO, "Usage: %s <INI filename> [output filename]", binaryName.c_str());
 }
 
 int main(int argc, char **argv)
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
 
     if (argc < 2 || argc > 3)
     {
-        LOG_F(ERROR, "Invalid number of arguments");
+        DLOG_F(ERROR, "Invalid number of arguments");
         usage(argv[0]);
         return 1;
     }
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
 
     if (!in.is_open())
     {
-        LOG_F(ERROR, "Can't open file: %s", inputFilename.c_str());
+        DLOG_F(ERROR, "Can't open file: %s", inputFilename.c_str());
         return 1;
     }
 
@@ -123,12 +123,12 @@ int main(int argc, char **argv)
         outputFilename = "output_" + ss.str() + ".json";
     }
 
-    LOG_F(INFO, "Converting %s to %s", inputFilename.c_str(), outputFilename.c_str());
+    DLOG_F(INFO, "Converting %s to %s", inputFilename.c_str(), outputFilename.c_str());
 
     std::ofstream out(outputFilename);
     if (!out.is_open())
     {
-        LOG_F(ERROR, "Can't create file: %s", outputFilename.c_str());
+        DLOG_F(ERROR, "Can't create file: %s", outputFilename.c_str());
         return 1;
     }
 
@@ -231,7 +231,7 @@ int main(int argc, char **argv)
 
     out << "}" << std::endl;
 
-    LOG_F(INFO, "Conversion completed. Result has been saved to %s", outputFilename.c_str());
+    DLOG_F(INFO, "Conversion completed. Result has been saved to %s", outputFilename.c_str());
 
     return 0;
 }

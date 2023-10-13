@@ -101,16 +101,16 @@ int main(int argc, char *argv[])
 
     try
     {
-        LOG_F(INFO, "Converting CSV to JSON...");
+        DLOG_F(INFO, "Converting CSV to JSON...");
 
         json jsonData = csvToJson(csvFilePath);
         saveJsonToFile(jsonData, jsonFilePath);
 
-        LOG_F(INFO, "CSV to JSON conversion succeeded.");
+        DLOG_F(INFO, "CSV to JSON conversion succeeded.");
     }
     catch (const std::exception &ex)
     {
-        LOG_F(ERROR, "CSV to JSON conversion failed: %s", ex.what());
+        DLOG_F(ERROR, "CSV to JSON conversion failed: %s", ex.what());
         return 1;
     }
 

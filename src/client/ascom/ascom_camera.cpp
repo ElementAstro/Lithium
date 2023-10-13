@@ -4,12 +4,12 @@
 
 ASCOMCamera::ASCOMCamera(const std::string &name) :Device(name), Camera(name), ASCOMDevice(name)
 {
-    LOG_F(INFO, "ASCOMCamera Simulator Loaded : %s", name.c_str());
+    DLOG_F(INFO, "ASCOMCamera Simulator Loaded : %s", name.c_str());
 }
 
 ASCOMCamera::~ASCOMCamera()
 {
-    LOG_F(INFO, "ASCOMCamera Simulator Destructed");
+    DLOG_F(INFO, "ASCOMCamera Simulator Destructed");
 }
 
 bool ASCOMCamera::connect(const IParams &params)

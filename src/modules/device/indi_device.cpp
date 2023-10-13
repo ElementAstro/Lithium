@@ -75,7 +75,7 @@ void INDIDriverCollection::parseDrivers()
         pugi::xml_document doc;
         if (!doc.load_file(fname.c_str()))
         {
-            LOG_F(ERROR, "Error loading file {}", fname);
+            DLOG_F(ERROR, "Error loading file {}", fname);
             continue;
         }
 

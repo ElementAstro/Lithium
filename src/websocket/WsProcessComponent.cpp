@@ -43,7 +43,7 @@ const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_pa
 	{
 		if (!m_params.contains("command") || !m_params.contains("cmd_id"))
 		{
-			LOG_F(ERROR, "CreateProcess() : Command and ID are required");
+			DLOG_F(ERROR, "CreateProcess() : Command and ID are required");
 			res["error"] = "Command and ID are required";
 			return res;
 		}
@@ -57,13 +57,13 @@ const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_pa
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::CreateProcess() json exception: %s", e.what());
+		DLOG_F(ERROR, "WebSocketServer::CreateProcess() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
 	catch (const std::exception &e)
 	{
-		LOG_F(ERROR, "Error occurred in CreateProcess: %s", e.what());
+		DLOG_F(ERROR, "Error occurred in CreateProcess: %s", e.what());
 		res["error"] = "Error occurred in CreateProcess";
 		res["message"] = e.what();
 	}
@@ -78,7 +78,7 @@ const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 	{
 		if (!m_params.contains("script_name") || !m_params.contains("script_id"))
 		{
-			LOG_F(ERROR, "RunScript() : Script name and ID are required");
+			DLOG_F(ERROR, "RunScript() : Script name and ID are required");
 			res["error"] = "Script name and ID are required";
 			return res;
 		}
@@ -92,13 +92,13 @@ const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::RunScript() json exception: %s", e.what());
+		DLOG_F(ERROR, "WebSocketServer::RunScript() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
 	catch (const std::exception &e)
 	{
-		LOG_F(ERROR, "Error occurred in RunScript: %s", e.what());
+		DLOG_F(ERROR, "Error occurred in RunScript: %s", e.what());
 		res["error"] = "Error occurred in RunScript";
 		res["message"] = e.what();
 	}
@@ -113,7 +113,7 @@ const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::jso
 	{
 		if (!m_params.contains("process_name"))
 		{
-			LOG_F(ERROR, "TerminateProcessByName() : Process name is required");
+			DLOG_F(ERROR, "TerminateProcessByName() : Process name is required");
 			res["error"] = "Process name is required";
 			return res;
 		}
@@ -126,13 +126,13 @@ const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::jso
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::TerminateProcessByName() json exception: %s", e.what());
+		DLOG_F(ERROR, "WebSocketServer::TerminateProcessByName() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
 	catch (const std::exception &e)
 	{
-		LOG_F(ERROR, "Error occurred in TerminateProcessByName: %s", e.what());
+		DLOG_F(ERROR, "Error occurred in TerminateProcessByName: %s", e.what());
 		res["error"] = "Error occurred in TerminateProcessByName";
 		res["message"] = e.what();
 	}
@@ -154,13 +154,13 @@ const nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::GetRunningProcesses() json exception: %s", e.what());
+		DLOG_F(ERROR, "WebSocketServer::GetRunningProcesses() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
 	catch (const std::exception &e)
 	{
-		LOG_F(ERROR, "Error occurred in GetRunningProcesses: %s", e.what());
+		DLOG_F(ERROR, "Error occurred in GetRunningProcesses: %s", e.what());
 		res["error"] = "Error occurred in GetRunningProcesses";
 		res["message"] = e.what();
 	}
@@ -175,7 +175,7 @@ const nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_p
 	{
 		if (!m_params.contains("process_name") || !m_params.contains("cmd_id"))
 		{
-			LOG_F(ERROR, "GetProcessOutput() : Process name is required");
+			DLOG_F(ERROR, "GetProcessOutput() : Process name is required");
 			res["error"] = "Process name is required";
 			return res;
 		}
@@ -187,13 +187,13 @@ const nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_p
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::GetProcessOutput() json exception: %s", e.what());
+		DLOG_F(ERROR, "WebSocketServer::GetProcessOutput() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
 	catch (const std::exception &e)
 	{
-		LOG_F(ERROR, "Error occurred in GetProcessOutput: %s", e.what());
+		DLOG_F(ERROR, "Error occurred in GetProcessOutput: %s", e.what());
 		res["error"] = "Error occurred in GetProcessOutput";
 		res["message"] = e.what();
 	}

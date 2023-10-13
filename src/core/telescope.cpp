@@ -35,24 +35,24 @@ Description: Telescope Simulator and Basic Definition
 
 Telescope::Telescope(const std::string &name) : Device(name)
 {
-    LOG_F(INFO, "Telescope Simulator Loaded : %s", name.c_str());
+    DLOG_F(INFO, "Telescope Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Telescope::~Telescope()
 {
-    LOG_F(INFO, "Telescope Simulator Destructed");
+    DLOG_F(INFO, "Telescope Simulator Destructed");
 }
 
 bool Telescope::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", getDeviceName());
+    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Telescope::disconnect(const IParams &params)
 {
-    LOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

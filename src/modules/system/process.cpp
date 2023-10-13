@@ -72,7 +72,7 @@ namespace Lithium::Process
         std::string cmd = "powershell.exe -Command \"" + command + "\"";
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            LOG_F(ERROR, _("Failed to create PowerShell process"));
+            DLOG_F(ERROR, _("Failed to create PowerShell process"));
             return false;
         }
         pid = pi.dwProcessId;
@@ -82,7 +82,7 @@ namespace Lithium::Process
         if (pid == 0)
         {
             // Child process code
-            LOG_F(INFO, _("Running command: {}"), command);
+            DLOG_F(INFO, _("Running command: {}"), command);
             int pipefd[2];
             int result = pipe(pipefd);
             dup2(pipefd[1], STDOUT_FILENO);
@@ -95,7 +95,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            LOG_F(ERROR, _("Failed to create process"));
+            DLOG_F(ERROR, _("Failed to create process"));
             return false;
         }
 #endif
@@ -105,7 +105,7 @@ namespace Lithium::Process
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        LOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
+        DLOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
         return true;
     }
 
@@ -119,7 +119,7 @@ namespace Lithium::Process
         PROCESS_INFORMATION pi{};
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            LOG_F(ERROR, _("Failed to create process"));
+            DLOG_F(ERROR, _("Failed to create process"));
             return false;
         }
         pid = pi.dwProcessId;
@@ -129,7 +129,7 @@ namespace Lithium::Process
         if (pid == 0)
         {
             // Child process code
-            LOG_F(INFO, _("Running script: {}"), script);
+            DLOG_F(INFO, _("Running script: {}"), script);
 
 #ifdef __APPLE__
             execl("/bin/sh", "sh", "-c", script.c_str(), NULL);
@@ -140,7 +140,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            LOG_F(ERROR, _("Failed to create process"));
+            DLOG_F(ERROR, _("Failed to create process"));
             return false;
         }
 #endif
@@ -150,7 +150,7 @@ namespace Lithium::Process
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        LOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
+        DLOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
         return true;
     }
 
@@ -167,11 +167,11 @@ namespace Lithium::Process
             {
                 TerminateProcess(hProcess, 0);
                 CloseHandle(hProcess);
-                LOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
+                DLOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
             }
             else
             {
-                LOG_F(ERROR, _("Failed to terminate process"));
+                DLOG_F(ERROR, _("Failed to terminate process"));
                 return false;
             }
 #else
@@ -179,7 +179,7 @@ namespace Lithium::Process
             kill(pid, signal);
             waitpid(pid, &status, 0);
 
-            LOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
+            DLOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
 #endif
 
             processes.erase(it);
@@ -187,7 +187,7 @@ namespace Lithium::Process
         }
         else
         {
-            LOG_F(ERROR, _("Process not found"));
+            DLOG_F(ERROR, _("Process not found"));
             return false;
         }
         return true;
@@ -202,18 +202,18 @@ namespace Lithium::Process
         {
             return terminateProcess(it->pid, signal);
         }
-        LOG_F(ERROR, _("Process not found by name: {}"), name);
+        DLOG_F(ERROR, _("Process not found by name: {}"), name);
         return false;
     }
 
     void ProcessManager::listProcesses()
     {
         std::lock_guard<std::mutex> lock(mtx);
-        LOG_F(INFO, _("Currently running processes:"));
+        DLOG_F(INFO, _("Currently running processes:"));
 
         for (const auto &process : processes)
         {
-            LOG_F(INFO, _("{} (PID: {})"), process.name, process.pid);
+            DLOG_F(INFO, _("{} (PID: {})"), process.name, process.pid);
         }
     }
 
@@ -243,7 +243,7 @@ namespace Lithium::Process
         }
         else
         {
-            LOG_F(ERROR, _("Process not found"));
+            DLOG_F(ERROR, _("Process not found"));
             return std::vector<std::string>();
         }
     }
@@ -258,22 +258,22 @@ namespace Lithium::Process
             {
                 WaitForSingleObject(hProcess, INFINITE);
                 CloseHandle(hProcess);
-                LOG_F(INFO, _("Process completed: {} (PID: {})"), process.name, process.pid);
+                DLOG_F(INFO, _("Process completed: {} (PID: {})"), process.name, process.pid);
             }
             else
             {
-                LOG_F(ERROR, _("Failed to wait for process completion"));
+                DLOG_F(ERROR, _("Failed to wait for process completion"));
             }
 #else
             int status;
             waitpid(process.pid, &status, 0);
 
-            LOG_F(INFO, _("Process completed: %s (PID: %d)"), process.name.c_str(), process.pid);
+            DLOG_F(INFO, _("Process completed: %s (PID: %d)"), process.name.c_str(), process.pid);
 #endif
         }
 
         processes.clear();
-        LOG_F(INFO, _("All processes completed."));
+        DLOG_F(INFO, _("All processes completed."));
     }
 
 #if defined(_WIN32)
@@ -284,7 +284,7 @@ namespace Lithium::Process
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            LOG_F(ERROR, _("Failed to create process snapshot"));
+            DLOG_F(ERROR, _("Failed to create process snapshot"));
             return processes;
         }
 
@@ -325,7 +325,7 @@ namespace Lithium::Process
         DIR *procDir = opendir("/proc");
         if (!procDir)
         {
-            LOG_F(ERROR, _("Failed to open /proc directory"));
+            DLOG_F(ERROR, _("Failed to open /proc directory"));
             return processes;
         }
 
@@ -354,7 +354,7 @@ namespace Lithium::Process
         char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
         if (proc_pidpath(pid, pathbuf, sizeof(pathbuf)) <= 0)
         {
-            LOG_F(ERROR, _("Failed to get process path"));
+            DLOG_F(ERROR, _("Failed to get process path"));
             return "";
         }
         std::string path(pathbuf);
@@ -375,20 +375,20 @@ namespace Lithium::Process
 
         if (sysctl(mib, 4, nullptr, &length, nullptr, 0) == -1)
         {
-            LOG_F(ERROR, _("Failed to get process info length"));
+            DLOG_F(ERROR, _("Failed to get process info length"));
             return processes;
         }
 
         struct kinfo_proc *procBuf = (struct kinfo_proc *)malloc(length);
         if (!procBuf)
         {
-            LOG_F(ERROR, _("Failed to allocate memory"));
+            DLOG_F(ERROR, _("Failed to allocate memory"));
             return processes;
         }
 
         if (sysctl(mib, 4, procBuf, &length, nullptr, 0) == -1)
         {
-            LOG_F(ERROR, _("Failed to get process info"));
+            DLOG_F(ERROR, _("Failed to get process info"));
             free(procBuf);
             return processes;
         }

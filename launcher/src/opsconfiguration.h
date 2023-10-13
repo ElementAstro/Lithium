@@ -7,7 +7,6 @@
     version 2 of the License, or (at your option) any later version.
 */
 
-
 #ifndef OPSCONFIGURATION_H
 #define OPSCONFIGURATION_H
 
@@ -18,7 +17,6 @@
 class KConfigDialog;
 
 class MainWindow;
-
 
 class OpsConfiguration : public QWidget
 {

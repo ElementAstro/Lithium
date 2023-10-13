@@ -16,11 +16,12 @@
 
 class KConfigDialog;
 
-namespace Ui {
-class OpsManager;
+namespace Ui
+{
+    class OpsManager;
 }
 
-class OpsManager: public QWidget
+class OpsManager : public QWidget
 {
     Q_OBJECT
 

@@ -38,5 +38,9 @@ enum class DeviceError
     CoolingError,
 
     // For Telescope
-    GotoError
+    GotoError,
+    ParkError,
+    UnParkError,
+    ParkedError,
+    HomeError
 };

@@ -21,7 +21,7 @@ SocketClient::SocketClient()
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
-        LOG_F(ERROR, "Failed to initialize Winsock");
+        DLOG_F(ERROR, "Failed to initialize Winsock");
         throw std::runtime_error("Failed to initialize Winsock");
     }
 #endif
@@ -41,7 +41,7 @@ bool SocketClient::Connect(const std::string &serverIP, int serverPort)
 #endif
     if (socket_ == INVALID_SOCKET)
     {
-        LOG_F(ERROR, "Failed to create socket");
+        DLOG_F(ERROR, "Failed to create socket");
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -55,7 +55,7 @@ bool SocketClient::Connect(const std::string &serverIP, int serverPort)
 #ifdef _WIN32
     if (InetPton(AF_INET, serverIP.c_str(), &(serverAddress.sin_addr)) <= 0)
     {
-        LOG_F(ERROR, "Invalid server IP address");
+        DLOG_F(ERROR, "Invalid server IP address");
         closesocket(socket_);
         WSACleanup();
         throw std::runtime_error("Invalid server IP address");
@@ -63,14 +63,14 @@ bool SocketClient::Connect(const std::string &serverIP, int serverPort)
 #else
     if (inet_pton(AF_INET, serverIP.c_str(), &(serverAddress.sin_addr)) <= 0)
     {
-        LOG_F(ERROR, "Invalid server IP address");
+        DLOG_F(ERROR, "Invalid server IP address");
         throw std::runtime_error("Invalid server IP address");
     }
 #endif
 
     if (connect(socket_, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
     {
-        LOG_F(ERROR, "Failed to connect to server");
+        DLOG_F(ERROR, "Failed to connect to server");
         throw std::runtime_error("Failed to connect to server");
     }
 
@@ -107,13 +107,13 @@ void SocketClient::Send(const std::string &message)
 {
     if (socket_ == INVALID_SOCKET)
     {
-        LOG_F(ERROR, "Not connected to server");
+        DLOG_F(ERROR, "Not connected to server");
         return;
     }
 
     if (send(socket_, message.c_str(), message.length(), 0) < 0)
     {
-        LOG_F(ERROR, "Failed to send data");
+        DLOG_F(ERROR, "Failed to send data");
         throw std::runtime_error("Failed to send data");
     }
 }
@@ -152,11 +152,11 @@ void SocketClient::ReceiveThread()
         {
             if (bytesRead < 0)
             {
-                LOG_F(ERROR, "Failed to receive data: %d", bytesRead);
+                DLOG_F(ERROR, "Failed to receive data: %d", bytesRead);
             }
             else
             {
-                LOG_F(INFO, "Connection closed by server");
+                DLOG_F(INFO, "Connection closed by server");
             }
             break;
         }
@@ -262,14 +262,22 @@ bool PHD2Client::RunFunc(const std::string &name, const json &params)
 
 bool PHD2Client::connect(const std::string &host, int port)
 {
+    return true;
 }
 
 bool PHD2Client::disconnect()
 {
+    return true;
 }
 
 bool PHD2Client::reconnect()
 {
+    return true;
+}
+
+bool PHD2Client::is_connected()
+{
+    return _is_connected.load();
 }
 
 void PHD2Client::parser_json(const json &message)
@@ -281,11 +289,7 @@ void PHD2Client::parser_json(const json &message)
             const std::string name = message["Event"].get<std::string>();
             if (m_CommandDispatcher->HasHandler(name))
             {
-                json res = m_CommandDispatcher->Dispatch(name, message);
-                if (res.contains("error"))
-                {
-                    LOG_F(ERROR, "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
-                }
+                m_CommandDispatcher->Dispatch(name, message);
             }
         }
     }
@@ -406,7 +410,7 @@ void PHD2Client::_calibration_data_flipped(const json &message)
 
 void PHD2Client::_lock_position_shift_limit_reached(const json &message)
 {
-    LOG_F(WARNING, "Star locked position reached the edge of the camera frame");
+    DLOG_F(WARNING, "Star locked position reached the edge of the camera frame");
 }
 
 void PHD2Client::_looping_exposures(const json &message)
@@ -438,13 +442,13 @@ void PHD2Client::_settle_done(const json &message)
 
     if (status == 0)
     {
-        LOG_F(INFO, "Settle succeeded");
+        DLOG_F(INFO, "Settle succeeded");
         _is_settled = true;
     }
     else
     {
         _settle_error = message["Error"];
-        LOG_F(INFO, "Settle failed, error: {}", message["Error"]);
+        DLOG_F(INFO, "Settle failed, error: {}", message["Error"].dump(4));
         _is_settled = false;
     }
     _is_settling = false;
@@ -457,7 +461,7 @@ void PHD2Client::_star_lost(const json &message)
     _starlost_status["avg_dist"] = message["AvgDist"];
     _starlost_error = message["Status"];
 
-    LOG_F(ERROR, "Star Lost, SNR: {}, StarMass: {}, AvgDist: {}",
+    DLOG_F(ERROR, "Star Lost, SNR: {}, StarMass: {}, AvgDist: {}",
           _starlost_status["snr"], _starlost_status["star_mass"], _starlost_status["avg_dist"]);
 
     _is_guiding = false;
@@ -467,56 +471,56 @@ void PHD2Client::_star_lost(const json &message)
 void PHD2Client::_guiding_stopped(const json &message)
 {
     _is_guiding = false;
-    LOG_F(INFO, "Guiding Stopped");
+    DLOG_F(INFO, "Guiding Stopped");
 }
 
 void PHD2Client::_resumed(const json &message)
 {
-    LOG_F(INFO, "Guiding Resumed");
+    DLOG_F(INFO, "Guiding Resumed");
     _is_guiding = true;
 }
 
 void PHD2Client::_guide_step(const json &message)
 {
     _mount = message["Mount"];
-    LOG_F(INFO, "Guide step mount: %d", _mount);
+    DLOG_F(INFO, "Guide step mount: %d", _mount);
     _guiding_error = message["ErrorCode"];
-    LOG_F(INFO, "Guide step error: %d", _guiding_error);
+    DLOG_F(INFO, "Guide step error: %d", _guiding_error);
 
     _guiding_status["avg_dist"] = message["AvgDist"];
-    LOG_F(INFO, "Guide step average distance: %f", _guiding_status["avg_dist"]);
+    DLOG_F(INFO, "Guide step average distance: %f", _guiding_status["avg_dist"]);
 
     _guiding_status["dx"] = message["dx"];
-    LOG_F(INFO, "Guide step dx: %f", _guiding_status["dx"]);
+    DLOG_F(INFO, "Guide step dx: %f", _guiding_status["dx"]);
     _guiding_status["dy"] = message["dy"];
-    LOG_F(INFO, "Guide step dy: %f", _guiding_status["dy"]);
+    DLOG_F(INFO, "Guide step dy: %f", _guiding_status["dy"]);
 
     _guiding_status["ra_raw_distance"] = message["RADistanceRaw"];
-    LOG_F(INFO, "Guide step RADistanceRaw: %f", _guiding_status["ra_raw_distance"]);
+    DLOG_F(INFO, "Guide step RADistanceRaw: %f", _guiding_status["ra_raw_distance"]);
     _guiding_status["dec_raw_distance"] = message["DECDistanceRaw"];
-    LOG_F(INFO, "Guide step DECDistanceRaw: %f", _guiding_status["dec_raw_distance"]);
+    DLOG_F(INFO, "Guide step DECDistanceRaw: %f", _guiding_status["dec_raw_distance"]);
 
     _guiding_status["ra_distance"] = message["RADistanceGuide"];
-    LOG_F(INFO, "Guide step RADistanceGuide: %f", _guiding_status["ra_distance"]);
+    DLOG_F(INFO, "Guide step RADistanceGuide: %f", _guiding_status["ra_distance"]);
     _guiding_status["dec_distance"] = message["DECDistanceGuide"];
-    LOG_F(INFO, "Guide step DECDistanceGuide: %f", _guiding_status["dec_distance"]);
+    DLOG_F(INFO, "Guide step DECDistanceGuide: %f", _guiding_status["dec_distance"]);
 
     _guiding_status["ra_duration"] = message["RADuration"];
-    LOG_F(INFO, "Guide step RADuration: %f", _guiding_status["ra_duration"]);
+    DLOG_F(INFO, "Guide step RADuration: %f", _guiding_status["ra_duration"]);
     _guiding_status["dec_duration"] = message["DECDuration"];
-    LOG_F(INFO, "Guide step DECDuration: %f", _guiding_status["dec_duration"]);
+    DLOG_F(INFO, "Guide step DECDuration: %f", _guiding_status["dec_duration"]);
 
     _guiding_status["ra_direction"] = message["RADirection"];
-    LOG_F(INFO, "Guide step RADirection: %f", _guiding_status["ra_direction"]);
+    DLOG_F(INFO, "Guide step RADirection: %f", _guiding_status["ra_direction"]);
     _guiding_status["dec_direction"] = message["DECDirection"];
-    LOG_F(INFO, "Guide step DECDirection: %f", _guiding_status["dec_direction"]);
+    DLOG_F(INFO, "Guide step DECDirection: %f", _guiding_status["dec_direction"]);
 
     _guiding_status["snr"] = message["SNR"];
-    LOG_F(INFO, "Guide step SNR: %f", _guiding_status["snr"]);
+    DLOG_F(INFO, "Guide step SNR: %f", _guiding_status["snr"]);
     _guiding_status["starmass"] = message["StarMass"];
-    LOG_F(INFO, "Guide step StarMass: %f", _guiding_status["starmass"]);
+    DLOG_F(INFO, "Guide step StarMass: %f", _guiding_status["starmass"]);
     _guiding_status["hfd"] = message["HFD"];
-    LOG_F(INFO, "Guide step HFD: %f", _guiding_status["hfd"]);
+    DLOG_F(INFO, "Guide step HFD: %f", _guiding_status["hfd"]);
 }
 
 void PHD2Client::_guiding_dithered(const json &message)
@@ -528,13 +532,13 @@ void PHD2Client::_guiding_dithered(const json &message)
 void PHD2Client::_lock_position_lost(const json &message)
 {
     _is_star_locked = true;
-    LOG_F(ERROR, "Star Lock Position Lost");
+    DLOG_F(ERROR, "Star Lock Position Lost");
 }
 
 void PHD2Client::_alert(const json &message)
 {
     _last_error = message["Msg"];
-    LOG_F(ERROR, "Alert: %s", _last_error.c_str());
+    DLOG_F(ERROR, "Alert: %s", _last_error.c_str());
 }
 
 void PHD2Client::_guide_param_change(const json &message)

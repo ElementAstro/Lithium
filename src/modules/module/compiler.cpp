@@ -57,12 +57,12 @@ namespace fs = std::filesystem;
 
 bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string &moduleName, const std::string &functionName)
 {
-    LOG_F(ERROR, "Compiling module %s::%s...", moduleName.c_str(), functionName.c_str());
+    DLOG_F(ERROR, "Compiling module %s::%s...", moduleName.c_str(), functionName.c_str());
 
     // 参数校验
     if (code.empty() || moduleName.empty() || functionName.empty())
     {
-        LOG_F(ERROR, "Invalid parameters.");
+        DLOG_F(ERROR, "Invalid parameters.");
         return false;
     }
 
@@ -70,7 +70,7 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     auto cachedResult = cache_.find(moduleName + "::" + functionName);
     if (cachedResult != cache_.end())
     {
-        LOG_F(WARNING, "Module %s::%s is already compiled, returning cached result.", moduleName.c_str(), functionName.c_str());
+        DLOG_F(WARNING, "Module %s::%s is already compiled, returning cached result.", moduleName.c_str(), functionName.c_str());
         return true;
     }
 
@@ -78,14 +78,14 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     const std::string outputDir = "modules/global/";
     if (!fs::exists(outputDir))
     {
-        LOG_F(WARNING, "Output directory does not exist, creating it: %s", outputDir.c_str());
+        DLOG_F(WARNING, "Output directory does not exist, creating it: %s", outputDir.c_str());
         try
         {
             fs::create_directories(outputDir);
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to create output directory: %s", e.what());
+            DLOG_F(ERROR, "Failed to create output directory: %s", e.what());
             return false;
         }
     }
@@ -107,13 +107,13 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
             }
             else
             {
-                LOG_F(ERROR, "Invalid format in compile_options.json.");
+                DLOG_F(ERROR, "Invalid format in compile_options.json.");
                 return false;
             }
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Error reading compile_options.json: %s", e.what());
+            DLOG_F(ERROR, "Error reading compile_options.json: %s", e.what());
             return false;
         }
     }
@@ -127,19 +127,19 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
     std::string syntaxCheckOutput;
     if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0)
     {
-        LOG_F(ERROR, "Syntax error in C++ code: %s", syntaxCheckOutput.c_str());
+        DLOG_F(ERROR, "Syntax error in C++ code: %s", syntaxCheckOutput.c_str());
         return false;
     }
 
     // Compile code
     std::string compilationOutput;
     std::string cmd = std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
-    LOG_F(INFO, "%s", cmd.c_str());
+    DLOG_F(INFO, "%s", cmd.c_str());
 
     int exitCode = RunShellCommand(cmd, code, compilationOutput);
     if (exitCode != 0)
     {
-        LOG_F(ERROR, "Failed to compile C++ code: %s", compilationOutput.c_str());
+        DLOG_F(ERROR, "Failed to compile C++ code: %s", compilationOutput.c_str());
         return false;
     }
 
@@ -152,7 +152,7 @@ bool Compiler::CompileToSharedLibrary(const std::string &code, const std::string
         LOG_S(INFO) << "Module " << moduleName << "::" << functionName << " compiled successfully.";
         return true;
     } else {
-        LOG_F(ERROR, "Failed to load the compiled module: %s", output.c_str());
+        DLOG_F(ERROR, "Failed to load the compiled module: %s", output.c_str());
         return false;
     }
     */
@@ -194,17 +194,17 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     sa.bInheritHandle = TRUE;
     if (!CreatePipe(&hStdinRead, &hStdoutWrite, &sa, 0))
     {
-        LOG_F(ERROR, "Failed to create input pipe for shell command: %s", command.c_str());
+        DLOG_F(ERROR, "Failed to create input pipe for shell command: %s", command.c_str());
         return exitCode;
     }
     if (!SetHandleInformation(hStdoutWrite, HANDLE_FLAG_INHERIT, 0))
     {
-        LOG_F(ERROR, "Failed to set input handle information for shell command: %s", command.c_str());
+        DLOG_F(ERROR, "Failed to set input handle information for shell command: %s", command.c_str());
         return exitCode;
     }
     if (!SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0))
     {
-        LOG_F(ERROR, "Failed to set output handle information for shell command: %s", command.c_str());
+        DLOG_F(ERROR, "Failed to set output handle information for shell command: %s", command.c_str());
         return exitCode;
     }
     si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
@@ -218,7 +218,7 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
 
     if (!CreateProcess(NULL, &commandBuffer[0], NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
-        LOG_F(ERROR, "Failed to launch shell command: %s", command.c_str());
+        DLOG_F(ERROR, "Failed to launch shell command: %s", command.c_str());
         CloseHandle(hStdinRead);
         CloseHandle(hStdoutWrite);
         CloseHandle(hStdoutRead);
@@ -242,7 +242,7 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     DWORD bytesWritten;
     if (!WriteFile(hStdoutWrite, input.c_str(), input.size(), &bytesWritten, NULL))
     {
-        LOG_F(ERROR, "Failed to write input for shell command: %s", command.c_str());
+        DLOG_F(ERROR, "Failed to write input for shell command: %s", command.c_str());
         return exitCode;
     }
     CloseHandle(hStdoutWrite);
@@ -261,7 +261,7 @@ int Compiler::RunShellCommand(const std::string &command, const std::string &inp
     FILE *pipe = popen(command.c_str(), "w");
     if (!pipe)
     {
-        LOG_F(ERROR, "Failed to popen shell command: %s", command.c_str());
+        DLOG_F(ERROR, "Failed to popen shell command: %s", command.c_str());
         return exitCode;
     }
 

@@ -32,10 +32,15 @@ Description: INDI CLient Interface
 #ifndef _LITHIUM_CLIENT_HPP_
 #define _LITHIUM_CLIENT_HPP_
 
+#ifdef NATIVE_INDI
 #include <libindi/baseclient.h>
 #include <libindi/basedevice.h>
+#else
+#include "hydrogen_client/baseclient.h"
+#include "core/base/basedevice.h"
+#endif
 
-class LithiumIndiClient : public LITHIUM::BaseClient
+class LithiumIndiClient : public HYDROGEN::BaseClient
 {
     bool m_disconnecting;
 

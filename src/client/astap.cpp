@@ -73,29 +73,29 @@ namespace Lithium::API::ASTAP
         fs::path file_path = file_name;
 #endif
 
-        LOG_F(INFO, "Checking file '%s'.", file_path.string().c_str());
+        DLOG_F(INFO, "Checking file '%s'.", file_path.string().c_str());
 
         if (!fs::exists(file_path))
         {
-            LOG_F(WARNING, "The file '%s' does not exist.", file_path.string().c_str());
+            DLOG_F(WARNING, "The file '%s' does not exist.", file_path.string().c_str());
             return false;
         }
 
 #if defined(_WIN32)
         if (!fs::is_regular_file(file_path) || !(GetFileAttributesA(file_path.generic_string().c_str()) & FILE_ATTRIBUTE_DIRECTORY))
         {
-            LOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", file_path.string().c_str());
+            DLOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", file_path.string().c_str());
             return false;
         }
 #else
         if (!fs::is_regular_file(file_path) || access(file_path.c_str(), X_OK) != 0)
         {
-            LOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", file_path.string().c_str());
+            DLOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", file_path.string().c_str());
             return false;
         }
 #endif
 
-        LOG_F(INFO, "The file '%s' exists and is executable.", file_path.string().c_str());
+        DLOG_F(INFO, "The file '%s' exists and is executable.", file_path.string().c_str());
         return true;
     }
 
@@ -122,7 +122,7 @@ namespace Lithium::API::ASTAP
         FILE *pipe = popen(command.c_str(), "r");
         if (!pipe)
         {
-            LOG_F(ERROR, "Error: failed to run command '%s'.", command.c_str());
+            DLOG_F(ERROR, "Error: failed to run command '%s'.", command.c_str());
             return "";
         }
         std::string output = "";
@@ -141,7 +141,7 @@ namespace Lithium::API::ASTAP
 
         if (attempts_left < 1)
         {
-            LOG_F(ERROR, "Exceeded maximum attempts");
+            DLOG_F(ERROR, "Exceeded maximum attempts");
             throw std::runtime_error("Exceeded maximum attempts");
         }
 
@@ -153,7 +153,7 @@ namespace Lithium::API::ASTAP
         {
             if (attempts_left == 1)
             {
-                LOG_F(ERROR, "Failed to execute function after multiple attempts");
+                DLOG_F(ERROR, "Failed to execute function after multiple attempts");
                 throw;
             }
             else
@@ -171,17 +171,17 @@ namespace Lithium::API::ASTAP
         // 输入参数合法性检查
         if (ra < 0.0 || ra > 360.0)
         {
-            LOG_F(ERROR, "RA should be within [0, 360]");
+            DLOG_F(ERROR, "RA should be within [0, 360]");
             return "";
         }
         if (dec < -90.0 || dec > 90.0)
         {
-            LOG_F(ERROR, "DEC should be within [-90, 90]");
+            DLOG_F(ERROR, "DEC should be within [-90, 90]");
             return "";
         }
         if (fov <= 0.0 || fov > 180.0)
         {
-            LOG_F(ERROR, "FOV should be within (0, 180]");
+            DLOG_F(ERROR, "FOV should be within (0, 180]");
             return "";
         }
         if (!image.empty())
@@ -190,7 +190,7 @@ namespace Lithium::API::ASTAP
             file.open(image, std::ios::in | std::ios::out);
             if (!file.good())
             {
-                LOG_F(ERROR, "Error: image file '%s' is not accessible.", image.c_str());
+                DLOG_F(ERROR, "Error: image file '%s' is not accessible.", image.c_str());
                 return "";
             }
             file.close();
@@ -231,14 +231,14 @@ namespace Lithium::API::ASTAP
             auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count();
             if (elapsed_time > timeout)
             {
-                LOG_F(ERROR, "Error: command timed out after %s seconds.", std::to_string(timeout).c_str());
+                DLOG_F(ERROR, "Error: command timed out after %s seconds.", std::to_string(timeout).c_str());
                 return "";
             }
         }
 
         // 返回命令执行结果，并输出调试信息
         auto output = result.get();
-        LOG_F(INFO, "Command '%s' returned: %s", cmd.c_str(), output.c_str());
+        DLOG_F(INFO, "Command '%s' returned: %s", cmd.c_str(), output.c_str());
         return output;
     }
 
@@ -265,7 +265,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: cannot open FITS file '" + image + "'.";
-            LOG_F(ERROR, "%s", ret_struct["message"].c_str());
+            DLOG_F(ERROR, "%s", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -300,7 +300,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: failed to close FITS file '" + image + "'.";
-            LOG_F(ERROR, "%s", ret_struct["message"].c_str());
+            DLOG_F(ERROR, "%s", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -318,7 +318,7 @@ namespace Lithium::API::ASTAP
                 double avg_focal_length = (x_focal_length + y_focal_length) / 2.0;
                 ret_struct["focal_length"] = std::to_string(avg_focal_length);
                 // 调试输出
-                LOG_F(INFO, "avg_focal_length: %f", avg_focal_length);
+                DLOG_F(INFO, "avg_focal_length: %f", avg_focal_length);
             }
         }
         else
@@ -327,7 +327,7 @@ namespace Lithium::API::ASTAP
         }
 
         // 最终输出
-        LOG_F(INFO, "Function solve_fits_header result: %s", ret_struct["message"].c_str());
+        DLOG_F(INFO, "Function solve_fits_header result: %s", ret_struct["message"].c_str());
 
         return ret_struct;
     }
@@ -349,7 +349,7 @@ namespace Lithium::API::ASTAP
 
         if (!check_executable_file("/usr/bin/astap", "") && !check_executable_file("/usr/local/bin/astap", ""))
         {
-            LOG_F(INFO, "No Astap solver engine found, please install before trying to solve an image");
+            DLOG_F(INFO, "No Astap solver engine found, please install before trying to solve an image");
             ret_struct["message"] = "No solver found!";
             return ret_struct;
         }
@@ -357,12 +357,12 @@ namespace Lithium::API::ASTAP
         std::string result = execute_astap_command("astap", ra, dec, fov, timeout, update, image);
         if (result.find("Solution found:") != std::string::npos)
         {
-            LOG_F(INFO, "Solved successfully");
+            DLOG_F(INFO, "Solved successfully");
             ret_struct = read_astap_result(image);
         }
         else
         {
-            LOG_F(ERROR, "Failed to solve the image");
+            DLOG_F(ERROR, "Failed to solve the image");
             ret_struct["message"] = "Failed to solve the image";
         }
 

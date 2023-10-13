@@ -25,7 +25,7 @@ public:
         handle_ = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(T) + sizeof(bool), name.c_str());
         if (handle_ == nullptr)
         {
-            LOG_F(ERROR, "Failed to create file mapping.");
+            DLOG_F(ERROR, "Failed to create file mapping.");
             throw std::runtime_error("Failed to create file mapping.");
         }
 
@@ -33,14 +33,14 @@ public:
         if (buffer_ == nullptr)
         {
             CloseHandle(handle_);
-            LOG_F(ERROR, "Failed to map view of file.");
+            DLOG_F(ERROR, "Failed to map view of file.");
             throw std::runtime_error("Failed to map view of file.");
         }
 #else // Unix-like
         fd_ = shm_open(name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd_ == -1)
         {
-            LOG_F(ERROR, "Failed to create shared memory.");
+            DLOG_F(ERROR, "Failed to create shared memory.");
             throw std::runtime_error("Failed to create shared memory.");
         }
 
@@ -51,7 +51,7 @@ public:
         if (buffer_ == MAP_FAILED)
         {
             shm_unlink(name.c_str());
-            LOG_F(ERROR, "Failed to map shared memory.");
+            DLOG_F(ERROR, "Failed to map shared memory.");
             throw std::runtime_error("Failed to map shared memory.");
         }
 #endif
@@ -80,7 +80,7 @@ public:
 
         std::memcpy(static_cast<char *>(buffer_) + sizeof(bool), &data, sizeof(T));
 
-        LOG_F(INFO, "Data written to shared memory.");
+        DLOG_F(INFO, "Data written to shared memory.");
         *reinterpret_cast<bool *>(buffer_) = true;
     }
 
@@ -98,7 +98,7 @@ public:
             std::memcpy(&data, static_cast<const char *>(buffer_) + sizeof(bool), sizeof(T));
             *reinterpret_cast<bool *>(buffer_) = false;
 
-            LOG_F(INFO, "Data read from shared memory.");
+            DLOG_F(INFO, "Data read from shared memory.");
         }
         return data;
     }
@@ -108,7 +108,7 @@ public:
         std::unique_lock<std::mutex> lock(mutex_);
         *reinterpret_cast<bool *>(buffer_) = false;
 
-        LOG_F(INFO, "Shared memory cleared.");
+        DLOG_F(INFO, "Shared memory cleared.");
     }
 
 private:

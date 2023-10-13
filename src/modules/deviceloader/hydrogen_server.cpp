@@ -302,7 +302,7 @@ int main(int ac, char *av[])
             dr->start();
         }
     */
-    LOG_F(INFO, "Start loading driver...");
+    DLOG_F(INFO, "Start loading driver...");
     int count = ac - 1;
     std::vector<std::shared_ptr<DvrInfo>> drivers;
     for (int i = 0; i < count; i++)
@@ -320,7 +320,7 @@ int main(int ac, char *av[])
         driver->name = dvrName;
         drivers.push_back(driver);
         drivers[i]->start();
-        LOG_F(INFO, "Started {}", driver->name);
+        DLOG_F(INFO, "Started {}", driver->name);
     }
 
     /* announce we are online */
@@ -340,12 +340,12 @@ int main(int ac, char *av[])
 
         // JM 2022.07.23: This causes an issue on MacOS. Disabled for now until investigated further.
         // unsetenv("HYDROGENPREFIX");
-        LOG_F(INFO, "Starting FIFO server");
+        DLOG_F(INFO, "Starting FIFO server");
         fifo->listen();
     }
 
     /* handle new clients and all io */
-    LOG_F(INFO, "Main loop started");
+    DLOG_F(INFO, "Main loop started");
 #ifdef USE_LIBUV
     uv_run(loop, UV_RUN_DEFAULT);
 #else
@@ -353,7 +353,7 @@ int main(int ac, char *av[])
 #endif
 
     /* will not happen unless no more listener left ! */
-    LOG_F(ERROR, "unexpected return from event loop");
+    DLOG_F(ERROR, "unexpected return from event loop");
     return (1);
 }
 
@@ -373,19 +373,19 @@ void run_hydrogen_server(std::unordered_map<std::string, std::string> m_params)
     /* Load up FIFO, if available */
     if (fifo)
     {
-        LOG_F(INFO, "Starting FIFO server");
+        DLOG_F(INFO, "Starting FIFO server");
         fifo->listen();
     }
 
     /* handle new clients and all io */
-    LOG_F(INFO, "Main loop started");
+    DLOG_F(INFO, "Main loop started");
 #ifdef USE_LIBUV
     uv_run(loop, UV_RUN_DEFAULT);
 #else
     loop.loop();
 #endif
     /* will not happen unless no more listener left ! */
-    LOG_F(ERROR, "unexpected return from event loop");
+    DLOG_F(ERROR, "unexpected return from event loop");
 }
 
 void start_hydrogen_driver(const std::string &driver_binary,const std::string &driver_skeleton)

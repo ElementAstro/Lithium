@@ -43,7 +43,7 @@ FifoServer::FifoServer(const std::string &fifoPath) : fifoPath(fifoPath), pipeFd
 
 void FifoServer::start()
 {
-    LOG_F(INFO, "Starting FIFO server...");
+    DLOG_F(INFO, "Starting FIFO server...");
 
 #ifdef _WIN32
     if (!WaitNamedPipeA(fifoPath.c_str(), NMPWAIT_WAIT_FOREVER))
@@ -85,12 +85,12 @@ void FifoServer::start()
     pipeFd = fd;
 #endif
 
-    LOG_F(INFO, "FIFO server started");
+    DLOG_F(INFO, "FIFO server started");
 }
 
 std::string FifoServer::receiveMessage()
 {
-    LOG_F(INFO, "Receiving message...");
+    DLOG_F(INFO, "Receiving message...");
 
     char buffer[bufferSize];
 
@@ -117,14 +117,14 @@ std::string FifoServer::receiveMessage()
     buffer[numBytesRead] = '\0';
     std::string receivedMessage(buffer);
 
-    LOG_F(INFO, "Received message: %s", receivedMessage.c_str());
+    DLOG_F(INFO, "Received message: %s", receivedMessage.c_str());
 
     return receivedMessage;
 }
 
 void FifoServer::stop()
 {
-    LOG_F(INFO, "Stopping FIFO server...");
+    DLOG_F(INFO, "Stopping FIFO server...");
 
 #ifdef _WIN32
     DisconnectNamedPipe(pipeHandle);
@@ -135,5 +135,5 @@ void FifoServer::stop()
     unlink(fifoPath.c_str());
 #endif
 
-    LOG_F(INFO, "FIFO server stopped");
+    DLOG_F(INFO, "FIFO server stopped");
 }

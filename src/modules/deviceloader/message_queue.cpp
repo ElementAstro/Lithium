@@ -82,7 +82,7 @@ void MsgQueue::closeWritePart()
         {
             if (errno != ENOTCONN)
             {
-                LOG_F(ERROR, "socket shutdown failed: %s\n", strerror(errno));
+                DLOG_F(ERROR, "socket shutdown failed: %s\n", strerror(errno));
                 close();
             }
         }
@@ -556,9 +556,9 @@ void MsgQueue::readFromFd()
             return;
 
         if (nr < 0)
-            LOG_F(ERROR, "read: %s\n", strerror(errno));
+            DLOG_F(ERROR, "read: %s\n", strerror(errno));
         else if (verbose > 0)
-            LOG_F(ERROR, "read EOF\n");
+            DLOG_F(ERROR, "read EOF\n");
         close();
         return;
     }
@@ -587,7 +587,7 @@ void MsgQueue::readFromFd()
                 traceMsg("read ", root);
             else if (verbose > 1)
             {
-                LOG_F(INFO, "read <%s device='%s' name='%s'>\n", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
+                DLOG_F(INFO, "read <%s device='%s' name='%s'>\n", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
             }
 
             onMessage(root, incomingSharedBuffers);
@@ -616,7 +616,7 @@ void MsgQueue::writeToFd()
     auto mp = headMsg();
     if (mp == nullptr)
     {
-        LOG_F(ERROR, "Unexpected write notification");
+        DLOG_F(ERROR, "Unexpected write notification");
         return;
     }
 
@@ -659,7 +659,7 @@ void MsgQueue::writeToFd()
         {
             if (fdCount > MAXFD_PER_MESSAGE)
             {
-                LOG_F(ERROR, "attempt to send too many FD\n");
+                DLOG_F(ERROR, "attempt to send too many FD\n");
                 close();
                 return;
             }
@@ -705,9 +705,9 @@ void MsgQueue::writeToFd()
     if (nw <= 0)
     {
         if (nw == 0)
-            LOG_F(INFO, "write returned 0\n");
+            DLOG_F(INFO, "write returned 0\n");
         else
-            LOG_F(ERROR, "write: %s\n", strerror(errno));
+            DLOG_F(ERROR, "write: %s\n", strerror(errno));
 
         // 保持读取部分打开
         closeWritePart();
@@ -732,7 +732,7 @@ void MsgQueue::writeToFd()
     auto mp = headMsg();
     if (mp == nullptr)
     {
-        LOG_F(ERROR, "Unexpected write notification");
+        DLOG_F(ERROR, "Unexpected write notification");
         return;
     }
 
@@ -779,7 +779,7 @@ void MsgQueue::writeToFd()
         {
             if (fdCount > MAXFD_PER_MESSAGE)
             {
-                LOG_F(ERROR, "attempt to send too many FD\n");
+                DLOG_F(ERROR, "attempt to send too many FD\n");
                 close();
                 return;
             }
@@ -826,9 +826,9 @@ void MsgQueue::writeToFd()
     if (nw <= 0)
     {
         if (nw == 0)
-            LOG_F(INFO, "write returned 0\n");
+            DLOG_F(INFO, "write returned 0\n");
         else
-            LOG_F(ERROR, "write: %s\n", strerror(errno));
+            DLOG_F(ERROR, "write: %s\n", strerror(errno));
 
         // Keep the read part open
         closeWritePart();
@@ -856,7 +856,7 @@ void MsgQueue::crackBLOB(const char *enableBLOB, BLOBHandling *bp)
 
 void MsgQueue::traceMsg(const std::string &logMsg, XMLEle *root)
 {
-    LOG_F(INFO, "{}", logMsg);
+    DLOG_F(INFO, "{}", logMsg);
 
     static const char *prtags[] =
         {
@@ -876,25 +876,25 @@ void MsgQueue::traceMsg(const std::string &logMsg, XMLEle *root)
     /* print tag header */
     // fprintf(stderr, "%s %s %s %s", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"),
     //         findXMLAttValu(root, "state"));
-    LOG_F(ERROR, "{} {} {} {}", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"),
+    DLOG_F(ERROR, "{} {} {} {}", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"),
           findXMLAttValu(root, "state"));
     pcd = pcdataXMLEle(root);
     if (pcd[0])
         // fprintf(stderr, " %s", pcd);
-        LOG_F(ERROR, "{}", pcd);
+        DLOG_F(ERROR, "{}", pcd);
     perm = findXMLAttValu(root, "perm");
     if (perm[0])
         // fprintf(stderr, " %s", perm);
-        LOG_F(ERROR, "{}", perm);
+        DLOG_F(ERROR, "{}", perm);
     msg = findXMLAttValu(root, "message");
     if (msg[0])
         // fprintf(stderr, " '%s'", msg);
-        LOG_F(ERROR, "{}", msg);
+        DLOG_F(ERROR, "{}", msg);
 
     /* print each array value */
     for (e = nextXMLEle(root, 1); e; e = nextXMLEle(root, 0))
         for (i = 0; i < sizeof(prtags) / sizeof(prtags[0]); i++)
             if (strcmp(prtags[i], tagXMLEle(e)) == 0)
                 // fprintf(stderr, "\n %10s='%s'", findXMLAttValu(e, "name"), pcdataXMLEle(e));
-                LOG_F(ERROR, "{:<10}='{}'", findXMLAttValu(e, "name"), pcdataXMLEle(e));
+                DLOG_F(ERROR, "{:<10}='{}'", findXMLAttValu(e, "name"), pcdataXMLEle(e));
 }

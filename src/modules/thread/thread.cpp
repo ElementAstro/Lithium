@@ -60,7 +60,7 @@ namespace Lithium::Thread
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to destroy ThreadManager: {}"), e.what());
+            DLOG_F(ERROR, _("Failed to destroy ThreadManager: {}"), e.what());
         }
     }
 
@@ -97,7 +97,7 @@ namespace Lithium::Thread
                 }
                 catch (const std::exception &e)
                 {
-                    LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
+                    DLOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
                 } }),
                     name,
                     false);
@@ -119,18 +119,18 @@ namespace Lithium::Thread
                 }
                 catch (const std::exception &e)
                 {
-                    LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
+                    DLOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
                 } }),
                     generateRandomString(16),
                     false);
                 m_threads.emplace_back(std::move(t));
             }
-            LOG_F(INFO, _("Added thread: {}"), name);
+            DLOG_F(INFO, _("Added thread: {}"), name);
             m_cv.notify_all();
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to add thread {}: {}"), name, e.what());
+            DLOG_F(ERROR, _("Failed to add thread {}: {}"), name, e.what());
         }
     }
 
@@ -146,11 +146,11 @@ namespace Lithium::Thread
                 joinThread(lock, t);
             }
             m_threads.clear();
-            LOG_F(INFO, _("All threads joined"));
+            DLOG_F(INFO, _("All threads joined"));
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to join all threads: {}"), e.what());
+            DLOG_F(ERROR, _("Failed to join all threads: {}"), e.what());
         }
     }
 
@@ -160,7 +160,7 @@ namespace Lithium::Thread
         {
             if (m_threads.empty())
             {
-                LOG_F(WARNING, _("Thread {} not found"), name);
+                DLOG_F(WARNING, _("Thread {} not found"), name);
                 return;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -169,7 +169,7 @@ namespace Lithium::Thread
                 if (std::get<1>(t) == name)
                 {
                     joinThread(lock, t);
-                    LOG_F(INFO, _("Thread {} joined"), name);
+                    DLOG_F(INFO, _("Thread {} joined"), name);
                     m_threads.erase(std::remove_if(m_threads.begin(), m_threads.end(),
                                                    [&](auto &x)
                                                    { return !std::get<0>(x); }),
@@ -177,11 +177,11 @@ namespace Lithium::Thread
                     return;
                 }
             }
-            LOG_F(WARNING, _("Thread {} not found"), name);
+            DLOG_F(WARNING, _("Thread {} not found"), name);
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
+            DLOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
         }
     }
 
@@ -191,7 +191,7 @@ namespace Lithium::Thread
         {
             if (m_threads.empty())
             {
-                LOG_F(WARNING, _("Thread {} not found"), name);
+                DLOG_F(WARNING, _("Thread {} not found"), name);
                 return false;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -202,12 +202,12 @@ namespace Lithium::Thread
                     return !std::get<2>(t);
                 }
             }
-            LOG_F(WARNING, _("Thread {} not found"), name);
+            DLOG_F(WARNING, _("Thread {} not found"), name);
             return false;
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to check if thread {} is running: {}"), name, e.what());
+            DLOG_F(ERROR, _("Failed to check if thread {} is running: {}"), name, e.what());
             return false;
         }
     }

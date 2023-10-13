@@ -35,7 +35,7 @@ Description: Hydorgen Camera
 
 void HydrogenCamera::newDevice(HYDROGEN::BaseDevice *dp)
 {
-    if (strcmp(dp->getDeviceName(), device_name.c_str()) == 0)
+    if (strcmp(dp->getDeviceName(), devicegetDeviceName().c_str()) == 0)
     {
         camera_device = dp;
     }
@@ -45,7 +45,7 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
 {
     std::string name = svp->name;
 
-    DLOG_F(INFO, "{} Received Switch: {}", _name, name);
+    DLOG_F(INFO, "{} Received Switch: {}", getDeviceName(), name);
 
     if (name == "CONNECTION")
     {
@@ -53,15 +53,18 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
         {
             setProperty("connect", true);
             device_info["connect"] = true;
-            DLOG_F(INFO, "{} is connected", _name);
+            is_connected.store(true);
+            DLOG_F(INFO, "{} is connected", getDeviceName());
         }
         else
         {
             if (is_ready)
             {
                 ClearStatus();
+                setProperty("connect", false);
                 device_info["connect"] = false;
-                DLOG_F(INFO, "{} is disconnected", _name);
+                is_connected.store(true);
+                DLOG_F(INFO, "{} is disconnected", getDeviceName());
             }
         }
     }
@@ -71,13 +74,13 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
         {
             setProperty("debug", true);
             device_info["debug"] = true;
-            DLOG_F(INFO, "DEBUG mode of {} is enabled", _name);
+            DLOG_F(INFO, "DEBUG mode of {} is enabled", getDeviceName());
         }
         else
         {
             setProperty("debug", false);
             device_info["debug"] = false;
-            DLOG_F(INFO, "DEBUG mode of {} is disabled", _name);
+            DLOG_F(INFO, "DEBUG mode of {} is disabled", getDeviceName());
         }
     }
     else if (name == "CCD_FRAME_TYPE")
@@ -93,7 +96,7 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
             type = "Bias";
         setProperty("frame_type", type);
         device_info["frame_type"] = type;
-        DLOG_F(INFO, "Current frame type of {} is {}", _name, device_info["frame_type"].dump());
+        DLOG_F(INFO, "Current frame type of {} is {}", getDeviceName(), device_info["frame_type"].dump());
     }
     else if (name == "CCD_TRANSFER_FORMAT")
     {
@@ -104,9 +107,9 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
             format = "Raw";
         else if (auto xisfswitch = IUFindSwitch(svp, "FORMAT_XISF"); xisfswitch->s == ISS_ON)
             format = "Xisf";
-        setProperty("frame_format", foramt);
+        setProperty("frame_format", format);
         device_info["frame_format"] = format;
-        DLOG_F(INFO, "Current frame format of {} is {}", _name, device_info["frame_format"].dump());
+        DLOG_F(INFO, "Current frame format of {} is {}", getDeviceName(), device_info["frame_format"].dump());
     }
     else if (name == "CCD_ABORT_EXPOSURE")
     {
@@ -114,7 +117,7 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
         {
             setProperty("is_exposure", false);
             device_info["is_exposure"] = false;
-            DLOG_F(INFO, "{} is stopped", _name);
+            DLOG_F(INFO, "{} is stopped", getDeviceName());
             is_exposuring = false;
         }
     }
@@ -130,7 +133,7 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
             mode = "Both";
 
         device_info["network"]["mode"] = mode;
-        DLOG_F(INFO, "Current upload mode of {} is {}", _name, device_info["network"]["mode"].dump());
+        DLOG_F(INFO, "Current upload mode of {} is {}", getDeviceName(), device_info["network"]["mode"].dump());
     }
     else if (name == "CCD_FAST_TOGGLE")
     {
@@ -142,21 +145,21 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
             mode = false;
 
         device_info["frame"]["fast_read"] = mode;
-        DLOG_F(INFO, "Current readout mode of {} is {}", _name, device_info["frame"]["fast_read"].dump());
+        DLOG_F(INFO, "Current readout mode of {} is {}", getDeviceName(), device_info["frame"]["fast_read"].dump());
     }
     else if (name == "CCD_VIDEO_STREAM")
     {
         if (auto onswitch = IUFindSwitch(svp, "STREAM_ON"); onswitch->s == ISS_ON)
         {
             device_info["video"]["is_video"] = true;
-            is_video = true;
-            DLOG_F(INFO, "{} start video capture", _name);
+            is_video.store(true);
+            DLOG_F(INFO, "{} start video capture", getDeviceName());
         }
         else if (auto offswitch = IUFindSwitch(svp, "STREAM_OFF"); offswitch->s == ISS_ON)
         {
             device_info["video"]["is_video"] = false;
-            is_video = false;
-            DLOG_F(INFO, "{} stop video capture", _name);
+            is_video.store(false);
+            DLOG_F(INFO, "{} stop video capture", getDeviceName());
         }
     }
     else if (name == "FLIP")
@@ -166,7 +169,7 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
 
 void HydrogenCamera::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
 {
-    DLOG_F(INFO, "{} Received message: {}", _name, dp->messageQueue(messageID));
+    DLOG_F(INFO, "{} Received message: {}", getDeviceName(), dp->messageQueue(messageID));
 }
 
 inline static const char *StateStr(IPState st)
@@ -193,7 +196,7 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
     {
         const double exposure = nvp->np->value;
         device_info["exposure"]["current"] = exposure;
-        DLOG_F(INFO, "Current CCD_EXPOSURE for {} is {}", _name, exposure);
+        DLOG_F(INFO, "Current CCD_EXPOSURE for {} is {}", getDeviceName(), exposure);
     }
     else if (name == "CCD_INFO")
     {
@@ -210,7 +213,7 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
             {"pixel_depth", pixel_depth},
             {"max_frame_x", max_frame_x},
             {"max_frame_y", max_frame_y}};
-        DLOG_F(INFO, "{} pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}", _name, pixel, pixel_x, pixel_y, max_frame_x, max_frame_y, pixel_depth);
+        DLOG_F(INFO, "{} pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}", getDeviceName(), pixel, pixel_x, pixel_y, max_frame_x, max_frame_y, pixel_depth);
     }
     else if (name == "BINNING")
     {
@@ -219,7 +222,7 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
         device_info["exposure"] = {
             {"binning_x", indi_binning_x->value},
             {"binning_y", indi_binning_y->value}};
-        DLOG_F(INFO, "Current binning_x and y of {} are {} {}", _name, indi_binning_x->value, indi_binning_y->value);
+        DLOG_F(INFO, "Current binning_x and y of {} are {} {}", getDeviceName(), indi_binning_x->value, indi_binning_y->value);
     }
     else if (name == "FRAME")
     {
@@ -233,62 +236,62 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
             {"y", indi_frame_y->value},
             {"width", indi_frame_width->value},
             {"height", indi_frame_height->value}};
-        DLOG_F(INFO, "Current frame of {} are {} {} {} {}", _name, indi_frame_width->value, indi_frame_y->value, indi_frame_width->value, indi_frame_height->value);
+        DLOG_F(INFO, "Current frame of {} are {} {} {} {}", getDeviceName(), indi_frame_width->value, indi_frame_y->value, indi_frame_width->value, indi_frame_height->value);
     }
     else if (name == "CCD_TEMPERATURE")
     {
         current_temperature = IUFindNumber(nvp, "CCD_TEMPERATURE_VALUE")->value;
         device_info["temperature"]["current"] = current_temperature;
-        DLOG_F(INFO, "Current temperature of {} is {}", _name, current_temperature);
+        DLOG_F(INFO, "Current temperature of {} is {}", getDeviceName(), current_temperature);
     }
     else if (name == "CCD_GAIN")
     {
         gain = IUFindNumber(nvp, "GAIN")->value;
         device_info["exposure"]["gain"] = gain;
-        DLOG_F(INFO, "Current camera gain of {} is {}", _name, gain);
+        DLOG_F(INFO, "Current camera gain of {} is {}", getDeviceName(), gain);
     }
     else if (name == "CCD_OFFSET")
     {
         offset = IUFindNumber(nvp, "OFFSET")->value;
         device_info["exposure"]["offset"] = offset;
-        DLOG_F(INFO, "Current camera offset of {} is {}", _name, offset);
+        DLOG_F(INFO, "Current camera offset of {} is {}", getDeviceName(), offset);
     }
     else if (name == "POLLING_PERIOD")
     {
         device_info["network"]["period"] = IUFindNumber(nvp, "PERIOD_MS")->value;
-        DLOG_F(INFO, "Current period of {} is {}", _name, device_info["network"]["period"].dump());
+        DLOG_F(INFO, "Current period of {} is {}", getDeviceName(), device_info["network"]["period"].dump());
     }
     else if (name == "LIMITS")
     {
         device_info["limits"]["maxbuffer"] = IUFindNumber(nvp, "LIMITS_BUFFER_MAX")->value;
-        DLOG_F(INFO, "Current max buffer of {} is {}", _name, device_info["limits"]["maxbuffer"].dump());
+        DLOG_F(INFO, "Current max buffer of {} is {}", getDeviceName(), device_info["limits"]["maxbuffer"].dump());
         device_info["limits"]["maxfps"] = IUFindNumber(nvp, "LIMITS_PREVIEW_FPS")->value;
-        DLOG_F(INFO, "Current max fps of {} is {}", _name, device_info["limits"]["maxfps"].dump());
+        DLOG_F(INFO, "Current max fps of {} is {}", getDeviceName(), device_info["limits"]["maxfps"].dump());
     }
     else if (name == "STREAM_DELAY")
     {
         device_info["video"]["delay"] = IUFindNumber(nvp, "STREAM_DELAY_TIME")->value;
-        DLOG_F(INFO, "Current stream delay of {} is {}", _name, device_info["video"]["delay"].dump());
+        DLOG_F(INFO, "Current stream delay of {} is {}", getDeviceName(), device_info["video"]["delay"].dump());
     }
     else if (name == "STREAMING_EXPOSURE")
     {
         device_info["video"]["exposure"] = IUFindNumber(nvp, "STREAMING_EXPOSURE_VALUE")->value;
-        DLOG_F(INFO, "Current streaming exposure of {} is {}", _name, device_info["video"]["exposure"].dump());
+        DLOG_F(INFO, "Current streaming exposure of {} is {}", getDeviceName(), device_info["video"]["exposure"].dump());
         device_info["video"]["division"] = IUFindNumber(nvp, "STREAMING_DIVISOR_VALUE")->value;
-        DLOG_F(INFO, "Current streaming division of {} is {}", _name, device_info["video"]["division"].dump());
+        DLOG_F(INFO, "Current streaming division of {} is {}", getDeviceName(), device_info["video"]["division"].dump());
     }
     else if (name == "FPS")
     {
         device_info["video"]["fps"] = IUFindNumber(nvp, "EST_FPS")->value;
-        DLOG_F(INFO, "Current fps of {} is {}", _name, device_info["video"]["fps"].dump());
+        DLOG_F(INFO, "Current fps of {} is {}", getDeviceName(), device_info["video"]["fps"].dump());
         device_info["video"]["avgfps"] = IUFindNumber(nvp, "AVG_FPS")->value;
-        DLOG_F(INFO, "Current average fps of {} is {}", _name, device_info["video"]["avgfps"].dump());
+        DLOG_F(INFO, "Current average fps of {} is {}", getDeviceName(), device_info["video"]["avgfps"].dump());
     }
 }
 
 void HydrogenCamera::newText(ITextVectorProperty *tvp)
 {
-    DLOG_F(INFO, "{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
+    DLOG_F(INFO, "{} Received Text: {} = {}", getDeviceName(), tvp->name, tvp->tp->text);
 }
 
 void HydrogenCamera::newBLOB(IBLOB *bp)
@@ -296,11 +299,11 @@ void HydrogenCamera::newBLOB(IBLOB *bp)
     // we go here every time a new blob is available
     // this is normally the image from the camera
 
-    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", getDeviceName(), bp->name, bp->bloblen, bp->size);
 
     if (expose_prop)
     {
-        if (bp->name == indi_blob_name.c_str())
+        if (bp->name == indi_blobgetDeviceName().c_str())
         {
             // updateLastFrame(bp);
         }
@@ -315,20 +318,20 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
     std::string PropName(property->getName());
     LITHIUM_PROPERTY_TYPE Proptype = property->getType();
 
-    // DLOG_F(INFO,"{} Property: {}", _name, property->getName());
+    // DLOG_F(INFO,"{} Property: {}", getDeviceName(), property->getName());
 
     if (Proptype == LITHIUM_BLOB)
     {
 
-        if (PropName == indi_blob_name.c_str())
+        if (PropName == indi_blobgetDeviceName().c_str())
         {
             has_blob = 1;
             // set option to receive blob and messages for the selected CCD
-            setBLOBMode(B_ALSO, device_name.c_str(), indi_blob_name.c_str());
+            setBLOBMode(B_ALSO, devicegetDeviceName().c_str(), indi_blobgetDeviceName().c_str());
 
 #ifdef LITHIUM_SHARED_BLOB_SUPPORT
             // Allow faster mode provided we don't modify the blob content or free/realloc it
-            enableDirectBlobAccess(device_name.c_str(), indi_blob_name.c_str());
+            enableDirectBlobAccess(devicegetDeviceName().c_str(), indi_blobgetDeviceName().c_str());
 #endif
         }
     }
@@ -358,7 +361,7 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
         IText *cfa_type = IUFindText(cfa_prop, "CFA_TYPE");
         if (cfa_type && cfa_type->text && *cfa_type->text)
         {
-            DLOG_F(INFO, "{} CFA_TYPE is {}", _name, cfa_type->text);
+            DLOG_F(INFO, "{} CFA_TYPE is {}", getDeviceName(), cfa_type->text);
             is_color = true;
         }
     }
@@ -386,7 +389,7 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
     {
         camera_port = property->getText();
         device_info["network"]["port"] = camera_port->tp->text;
-        DLOG_F(INFO, "Current device port of {} is {}", _name, camera_port->tp->text);
+        DLOG_F(INFO, "Current device port of {} is {}", getDeviceName(), camera_port->tp->text);
     }
     else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
     {
@@ -398,19 +401,19 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
             connection_prop->sp->s = ISS_ON;
             sendNewSwitch(connection_prop);
         }
-        DLOG_F(INFO, "{} Connected {}", _name, is_connected);
+        DLOG_F(INFO, "{} Connected {}", getDeviceName(), is_connected);
     }
     else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
     {
-        device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
+        devicegetDeviceName() = IUFindText(property->getText(), "DRIVERgetDeviceName()")->text;
         indi_camera_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
         indi_camera_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
         indi_camera_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-        device_info["driver"]["name"] = device_name;
+        device_info["driver"]["name"] = devicegetDeviceName();
         device_info["driver"]["exec"] = indi_camera_exec;
         device_info["driver"]["version"] = indi_camera_version;
         device_info["driver"]["interfaces"] = indi_camera_interface;
-        DLOG_F(INFO, "Camera Name : {} connected exec {}", _name, device_name, indi_camera_exec);
+        DLOG_F(INFO, "Camera Name : {} connected exec {}", getDeviceName(), devicegetDeviceName(), indi_camera_exec);
     }
     else if (PropName == indi_camera_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
     {
@@ -507,24 +510,24 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
 
 void HydrogenCamera::IndiServerConnected()
 {
-    DLOG_F(INFO, "{} connection succeeded", _name);
+    DLOG_F(INFO, "{} connection succeeded", getDeviceName());
     is_connected = true;
 }
 
 void HydrogenCamera::IndiServerDisconnected(int exit_code)
 {
-    DLOG_F(INFO, "{}: serverDisconnected", _name);
+    DLOG_F(INFO, "{}: serverDisconnected", getDeviceName());
     // after disconnection we reset the connection status and the properties pointers
     ClearStatus();
     // in case the connection lost we must reset the client socket
     if (exit_code == -1)
-        DLOG_F(INFO, "{} : Hydorgen server disconnected", _name);
+        DLOG_F(INFO, "{} : Hydorgen server disconnected", getDeviceName());
 }
 
 void HydrogenCamera::removeDevice(HYDROGEN::BaseDevice *dp)
 {
     ClearStatus();
-    DLOG_F(INFO, "{} disconnected", _name);
+    DLOG_F(INFO, "{} disconnected", getDeviceName());
 }
 
 void HydrogenCamera::ClearStatus()
@@ -568,8 +571,11 @@ HydrogenCamera::~HydrogenCamera()
 {
 }
 
-bool HydrogenCamera::connect(std::string name)
+bool HydrogenCamera::connect(const IParams &params)
 {
+    std::string name = params["name"];
+    int port = std::stoi(params["port"]);
+    std::string hostname = params["host"];
     DLOG_F(INFO, "Trying to connect to {}", name);
     setServer(hostname.c_str(), port);
     // Receive messages only for our camera.
@@ -577,264 +583,176 @@ bool HydrogenCamera::connect(std::string name)
     // Connect to server.
     if (connectServer())
     {
-        DLOG_F(INFO, "{}: connectServer done ready = {}", _name, is_ready);
+        DLOG_F(INFO, "{}: connectServer done ready = {}", getDeviceName(), is_ready);
         connectDevice(name.c_str());
         return !is_ready;
     }
     return false;
 }
 
-bool HydrogenCamera::disconnect()
+bool HydrogenCamera::connect(const IParams &params)
+{
+    DLOG_F(INFO, "%s is connected", getDeviceName());
+    return true;
+}
+
+bool HydrogenCamera::disconnect(const IParams &params)
+{
+    DLOG_F(INFO, "%s is disconnected", getDeviceName());
+    return true;
+}
+
+bool HydrogenCamera::reconnect(const IParams &params)
 {
     return true;
 }
 
-bool HydrogenCamera::reconnect()
+bool HydrogenCamera::isConnected(const IParams &params)
 {
     return true;
 }
 
-bool HydrogenCamera::scanForAvailableDevices()
+bool HydrogenCamera::startExposure(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::getParameter(const std::string &paramName)
-{
-    if (paramName.empty())
-    {
-        // spdlog::error("HydrogenCamera::getParameter : Parameter name is required");
-        return false;
-    }
-    return false;
-}
-
-bool HydrogenCamera::setParameter(const std::string &paramName, const std::string &paramValue)
-{
-    if (paramName.empty() || paramValue.empty())
-    {
-        // spdlog::error("HydrogenCamera::setParameter : Parameter name and value are required");
-        return false;
-        ;
-    }
-    return false;
-}
-
-bool HydrogenCamera::startExposure(int duration_ms)
+bool HydrogenCamera::abortExposure(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::stopExposure()
+bool HydrogenCamera::getExposureStatus(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::waitForExposureComplete()
+bool HydrogenCamera::getExposureResult(const nlohmann::json &params)
 {
     return true;
 }
 
-// bool readImage(Image& image);
-
-bool HydrogenCamera::startLiveView()
+bool HydrogenCamera::saveExposureResult(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::stopLiveView()
-{
-    return true;
-}
-// bool readLiveView(Image& image);
-
-bool HydrogenCamera::setCoolingOn(bool on)
+bool HydrogenCamera::startVideo(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::setTemperature(double temperature)
+bool HydrogenCamera::stopVideo(const nlohmann::json &params)
 {
     return true;
 }
 
-double HydrogenCamera::getTemperature()
+bool HydrogenCamera::getVideoStatus(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::setShutterOpen(bool open)
+bool HydrogenCamera::getVideoResult(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::setBinning(int binning)
+bool HydrogenCamera::saveVideoResult(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::setGain(int gain)
+bool HydrogenCamera::startCooling(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::setOffset(int offset)
+bool HydrogenCamera::stopCooling(const nlohmann::json &params)
 {
     return true;
 }
 
-bool HydrogenCamera::setROIFrame(int start_x, int start_y, int frame_x, int frame_y)
+bool HydrogenCamera::isCoolingAvailable()
 {
     return true;
 }
 
-std::shared_ptr<Lithium::SimpleTask> HydrogenCamera::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+bool HydrogenCamera::getTemperature(const nlohmann::json &params)
 {
-    // 定义任务名称与逻辑之间的映射关系
-    std::map<std::string, std::function<void(const nlohmann::json &)>> task_map = {
-        {"Connect", [this](const nlohmann::json &tparams)
-         {
-             if (tparams["name"].empty())
-             {
-                 // spdlog::error("No camera name specified");
-                 return;
-             }
-             if (!this->connect(tparams["name"]))
-             {
-                 // spdlog::error("Failed to connect to camera {}", _name);
-                 return;
-             }
-         }},
-        {"Disconnect", [this](const nlohmann::json &tparams)
-         {
-             if (!this->is_connected && !this->device_info["connected"].empty())
-             {
-                 // spdlog::warn("Camera is not connected, please do not execute disconnect command");
-                 return;
-             }
-             if (!this->disconnect())
-             {
-                 // spdlog::error("Failed to disconnect from camera {}", _name);
-             }
-         }},
-        {"Reconnect", [this](const nlohmann::json &tparams)
-         {
-             if (!this->is_connected && !this->device_info["connected"].empty())
-             {
-                 // spdlog::warn("Camera is not connected, please do not execute reconnect command");
-                 return;
-             }
-             if (!this->reconnect())
-             {
-                 // spdlog::error("Failed to reconnect from camera {}", _name);
-             }
-         }},
-
-        {"Scanning", [this](const nlohmann::json &tparams)
-         {
-             if (!this->scanForAvailableDevices())
-             {
-                 // spdlog::error("Failed to scan for available devices from camera {}", _name);
-             }
-         }},
-        {"GetParameter", [this](const nlohmann::json &tparams)
-         {
-             if (!this->getParameter(tparams["name"].get<std::string>()))
-             {
-                 // spdlog::error("Failed to get parameter from camera {}", _name);
-             }
-         }},
-        {"SetParameter", [this](const nlohmann::json &tparams)
-         {
-             if (!this->setParameter(tparams["name"].get<std::string>(), tparams["value"].get<std::string>()))
-             {
-                 // spdlog::error("Failed to set parameter to camera {}", _name);
-             }
-         }},
-        {"SingleShot", [this](const nlohmann::json &tparams)
-         {
-             DLOG_F(INFO, "{} SingleShot task is called", this->_name);
-         }},
-
-        {"AbortShot", [this](const nlohmann::json &tparams)
-         {
-             DLOG_F(INFO, "{} AbortShot task is called", this->_name);
-         }},
-        {"StartLiveView", [this](const nlohmann::json &tparams)
-         {
-             this->startLiveView();
-         }},
-        {"StopLiveView", [this](const nlohmann::json &tparams)
-         {
-             this->stopLiveView();
-         }},
-        {"Cooling", [this](const nlohmann::json &tparams)
-         {
-             if (!this->can_cooling)
-             {
-                 // spdlog::error("Can't cool while cooling is unsupported");
-                 return;
-             }
-             if (!this->setCoolingOn(tparams["enable"].get<bool>()))
-             {
-                 // spdlog::error("Failed to change the mode of cooling");
-             }
-         }},
-        {"GetTemperature", [this](const nlohmann::json &tparams)
-         {
-             this->getTemperature();
-         }},
-        {"SetTemperature", [this](const nlohmann::json &tparams)
-         {
-             if (!this->can_cooling)
-             {
-                 // spdlog::error("Can't set temperature while cooling is unsupported");
-                 return;
-             }
-         }},
-        {"SetGain", [this](const nlohmann::json &tparams)
-         {
-             DLOG_F(INFO, "{} SetGain task is called", this->_name);
-         }},
-        {"SetOffset", [this](const nlohmann::json &tparams)
-         {
-             DLOG_F(INFO, "{} SetOffset task is called", this->_name);
-         }},
-        {"SetBinning", [this](const nlohmann::json &tparams)
-         {
-             if (!this->can_binning)
-             {
-                 // spdlog::error("Can't bin while binning is unsupported");
-                 return;
-             }
-             if (!this->setBinning(tparams["binning"].get<int>()))
-             {
-                 // spdlog::error("Failed to change the mode of binning");
-             }
-         }},
-        {"SetROIFrame", [this](const nlohmann::json &tparams)
-         {
-             if (!this->setROIFrame(tparams["start_x"].get<int>(), tparams["start_y"].get<int>(), tparams["frame_x"].get<int>(), tparams["frame_y"].get<int>()))
-             {
-                 // spdlog::error("Failed to change the mode of ROI");
-             }
-         }}};
-
-    auto it = task_map.find(task_name);
-    if (it != task_map.end())
-    {
-        return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(it->second, {params}));
-    }
-    // spdlog::error("Unknown type of the {} task : {}", _name, task_name);
-    return nullptr;
+    return true;
 }
 
-std::shared_ptr<Lithium::ConditionalTask> HydrogenCamera::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+bool HydrogenCamera::getCoolingPower(const nlohmann::json &params)
 {
-    return nullptr;
+    return true;
 }
 
-std::shared_ptr<Lithium::LoopTask> HydrogenCamera::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+bool HydrogenCamera::setTemperature(const nlohmann::json &params)
 {
-    return nullptr;
+    return true;
+}
+
+bool HydrogenCamera::setCoolingPower(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::getGain(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::setGain(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::isGainAvailable()
+{
+    return true;
+}
+
+bool HydrogenCamera::getOffset(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::setOffset(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::isOffsetAvailable()
+{
+    return true;
+}
+
+bool HydrogenCamera::getISO(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::setISO(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::isISOAvailable()
+{
+    return true;
+}
+
+bool HydrogenCamera::getFrame(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::setFrame(const nlohmann::json &params)
+{
+    return true;
+}
+
+bool HydrogenCamera::isFrameSettingAvailable()
+{
+    return true;
 }

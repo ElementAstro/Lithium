@@ -167,7 +167,7 @@ void LocalDvrInfo::start()
      * if restarting
      */
     if (verbose > 0)
-        LOG_F(INFO, "pid=%d rfd=%d wfd=%d efd=%d\n", pid, (int)hRp, (int)hWp, (int)hEp);
+        DLOG_F(INFO, "pid=%d rfd=%d wfd=%d efd=%d\n", pid, (int)hRp, (int)hWp, (int)hEp);
 
     XMLEle *root = addXMLEle(NULL, "getProperties");
     addXMLAtt(root, "version", TO_STRING(HYDROGENV));
@@ -352,7 +352,7 @@ void LocalDvrInfo::start()
      * if restarting
      */
     if (verbose > 0)
-        LOG_F(INFO, "pid=%d rfd=%d wfd=%d efd=%d\n", pid, rp[0], wp[1], ep[0]);
+        DLOG_F(INFO, "pid=%d rfd=%d wfd=%d efd=%d\n", pid, rp[0], wp[1], ep[0]);
 
     XMLEle *root = addXMLEle(NULL, "getProperties");
     addXMLAtt(root, "version", TO_STRING(HYDROGENV));
@@ -397,7 +397,7 @@ void LocalDvrInfo::onEfdEvent(uv_poll_t *handle, int status, int events)
     {
         // 处理错误情况
         const char *error = uv_strerror(status);
-        LOG_F(ERROR, "Error on stderr: {}", error);
+        DLOG_F(ERROR, "Error on stderr: {}", error);
         closeEfd();
         return;
     }
@@ -415,10 +415,10 @@ void LocalDvrInfo::onEfdEvent(uv_poll_t *handle, int status, int events)
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     return;
 
-                LOG_F(ERROR, "stderr {}", strerror(errno));
+                DLOG_F(ERROR, "stderr {}", strerror(errno));
             }
             else
-                LOG_F(ERROR, "stderr EOF");
+                DLOG_F(ERROR, "stderr EOF");
             closeEfd();
             return;
         }
@@ -428,7 +428,7 @@ void LocalDvrInfo::onEfdEvent(uv_poll_t *handle, int status, int events)
         {
             if (errbuff[i] == '\n')
             {
-                LOG_F(ERROR, "{}{}", (int)i, errbuff);
+                DLOG_F(ERROR, "{}{}", (int)i, errbuff);
                 i++;                                       /* count including nl */
                 errbuffpos -= i;                           /* remove from nexbuf */
                 memmove(errbuff, errbuff + i, errbuffpos); /* slide remaining to front */
@@ -449,12 +449,12 @@ void LocalDvrInfo::onPidEvent(uv_process_t *handle, int exit_status, int term_si
     {
         if (WIFEXITED(pidwatcher.signum))
         {
-            LOG_F(ERROR, "process {} exited with status {}", pid, WEXITSTATUS(pidwatcher.signum));
+            DLOG_F(ERROR, "process {} exited with status {}", pid, WEXITSTATUS(pidwatcher.signum));
         }
         else if (WIFSIGNALED(pidwatcher.signum))
         {
             int exit_status = WTERMSIG(pidwatcher.signum);
-            LOG_F(ERROR, "process {} killed with signal {} - {}", pid, exit_status, strsignal(exit_status));
+            DLOG_F(ERROR, "process {} killed with signal {} - {}", pid, exit_status, strsignal(exit_status));
         }
         pid = 0;
         uv_signal_stop(&pidwatcher);
@@ -469,7 +469,7 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
         int sockErrno = readFdError(this->efd);
         if (sockErrno)
         {
-            LOG_F(ERROR, "Error on stderr: {}", strerror(sockErrno));
+            DLOG_F(ERROR, "Error on stderr: {}", strerror(sockErrno));
             closeEfd();
         }
         return;
@@ -488,10 +488,10 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     return;
 
-                LOG_F(ERROR, "stderr {}", strerror(errno));
+                DLOG_F(ERROR, "stderr {}", strerror(errno));
             }
             else
-                LOG_F(ERROR, "stderr EOF");
+                DLOG_F(ERROR, "stderr EOF");
             closeEfd();
             return;
         }
@@ -501,7 +501,7 @@ void LocalDvrInfo::onEfdEvent(ev::io &, int revents)
         {
             if (errbuff[i] == '\n')
             {
-                LOG_F(ERROR, "{}{}", (int)i, errbuff);
+                DLOG_F(ERROR, "{}{}", (int)i, errbuff);
                 i++;                                       /* count including nl */
                 errbuffpos -= i;                           /* remove from nexbuf */
                 memmove(errbuff, errbuff + i, errbuffpos); /* slide remaining to front */
@@ -521,12 +521,12 @@ void LocalDvrInfo::onPidEvent(ev::child &, int revents)
     {
         if (WIFEXITED(pidwatcher.rstatus))
         {
-            LOG_F(ERROR, "process {} exited with status {}", pid, WEXITSTATUS(pidwatcher.rstatus));
+            DLOG_F(ERROR, "process {} exited with status {}", pid, WEXITSTATUS(pidwatcher.rstatus));
         }
         else if (WIFSIGNALED(pidwatcher.rstatus))
         {
             int exit_status = WTERMSIG(pidwatcher.rstatus);
-            LOG_F(ERROR, "process {} killed with signal {} - {}", pid, exit_status, strsignal(exit_status));
+            DLOG_F(ERROR, "process {} killed with signal {} - {}", pid, exit_status, strsignal(exit_status));
         }
         pid = 0;
         this->pidwatcher.stop();

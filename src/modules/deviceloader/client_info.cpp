@@ -30,7 +30,7 @@ ClInfo::~ClInfo()
 
 void ClInfo::log(const std::string &str) const
 {
-    LOG_F(INFO, "Client %d: %s", this->getRFd(), str.c_str());
+    DLOG_F(INFO, "Client %d: %s", this->getRFd(), str.c_str());
 }
 
 // root will be released
@@ -76,7 +76,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
     Msg *mp = Msg::fromXml(this, root, sharedBuffers);
     if (!mp)
     {
-        LOG_F(ERROR, "Closing after malformed message\n");
+        DLOG_F(ERROR, "Closing after malformed message\n");
         close();
         return;
     }
@@ -103,7 +103,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
 void ClInfo::close()
 {
     if (verbose > 0)
-        LOG_F(ERROR, "shut down complete - bye!\n");
+        DLOG_F(ERROR, "shut down complete - bye!\n");
 
     delete (this);
 
@@ -177,20 +177,20 @@ void ClInfo::q2Clients(ClInfo *notme, int isblob, const std::string &dev, const 
             if (streamFound)
             {
                 if (verbose > 1)
-                    LOG_F(INFO, "%ld bytes behind. Dropping stream BLOB...\n", ql);
+                    DLOG_F(INFO, "%ld bytes behind. Dropping stream BLOB...\n", ql);
                 continue;
             }
         }
         if (ql > maxqsiz)
         {
             if (verbose)
-                LOG_F(INFO, "%ld bytes behind, shutting down\n", ql);
+                DLOG_F(INFO, "%ld bytes behind, shutting down\n", ql);
             cp->close();
             continue;
         }
 
         if (verbose > 1)
-            LOG_F(INFO, "queuing <%s device='%s' name='%s'>\n",
+            DLOG_F(INFO, "queuing <%s device='%s' name='%s'>\n",
                            tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
 
         // pushmsg can kill cp. do at end
@@ -244,14 +244,14 @@ void ClInfo::q2Servers(DvrInfo *me, Msg *mp, XMLEle *root)
         if (ql > maxqsiz)
         {
             if (verbose)
-                LOG_F(INFO, "%ld bytes behind, shutting down\n", ql);
+                DLOG_F(INFO, "%ld bytes behind, shutting down\n", ql);
             cp->close();
             continue;
         }
 
         /* ok: queue message to this client */
         if (verbose > 1)
-            LOG_F(INFO, "queuing <%s device='%s' name='%s'>\n",
+            DLOG_F(INFO, "queuing <%s device='%s' name='%s'>\n",
                            tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
 
         // pushmsg can kill cp. do at end

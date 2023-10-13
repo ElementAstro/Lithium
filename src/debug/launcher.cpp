@@ -38,13 +38,13 @@ Description: Lithium Server Launcher
 #include <iostream>
 #include <openssl/sha.h>
 
-ServerLauncher::ServerLauncher(const std::string &config_file_path, const std::string &log_file_path)
-    : _config_file_path(config_file_path), _log_file_path(log_file_path)
+ServerLauncher::ServerLauncher(const std::string &config_file_path, const std::string &DLOG_File_path)
+    : _config_file_path(config_file_path), _DLOG_File_path(DLOG_File_path)
 {
     try
     {
         // 初始化日志
-        ////spdlog::set_default_logger(//spdlog::basic_logger_mt("server_launcher", log_file_path));
+        ////spdlog::set_default_logger(//spdlog::basic_logger_mt("server_launcher", DLOG_File_path));
 
         // 加载配置文件
         load_config();

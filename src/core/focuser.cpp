@@ -35,24 +35,24 @@ Description: Focuser Simulator and Basic Definition
 
 Focuser::Focuser(const std::string &name) : Device(name)
 {
-    LOG_F(INFO, "Focuser Simulator Loaded : %s", name.c_str());
+    DLOG_F(INFO, "Focuser Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Focuser::~Focuser()
 {
-    LOG_F(INFO, "Focuser Simulator Destructed");
+    DLOG_F(INFO, "Focuser Simulator Destructed");
 }
 
 bool Focuser::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", getDeviceName());
+    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Focuser::disconnect(const IParams &params)
 {
-    LOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

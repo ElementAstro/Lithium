@@ -145,7 +145,7 @@ void PidWWatcher::MonitorThread()
     DWORD aProcesses[1024], cbNeeded, cProcesses;
     if (!EnumProcesses(aProcesses, sizeof(aProcesses), &cbNeeded))
     {
-        LOG_F(ERROR, "Failed to enumerate processes!");
+        DLOG_F(ERROR, "Failed to enumerate processes!");
         return;
     }
 
@@ -179,7 +179,7 @@ void PidWWatcher::MonitorThread()
 
     if (pid_ == 0)
     {
-        LOG_F(ERROR, "Failed to find process!");
+        DLOG_F(ERROR, "Failed to find process!");
         return;
     }
 #else
@@ -187,7 +187,7 @@ void PidWWatcher::MonitorThread()
     std::ifstream file("/proc/self/stat");
     if (!file)
     {
-        LOG_F(ERROR, "Failed to read /proc/self/stat");
+        DLOG_F(ERROR, "Failed to read /proc/self/stat");
         return;
     }
 
@@ -201,7 +201,7 @@ void PidWWatcher::MonitorThread()
     DIR *procDir = opendir("/proc");
     if (procDir == nullptr)
     {
-        LOG_F(ERROR, "Failed to open /proc");
+        DLOG_F(ERROR, "Failed to open /proc");
         return;
     }
 
@@ -247,7 +247,7 @@ void PidWWatcher::MonitorThread()
 
     if (pid_ == 0)
     {
-        LOG_F(ERROR, "Failed to find process!");
+        DLOG_F(ERROR, "Failed to find process!");
         return;
     }
 #endif

@@ -162,7 +162,7 @@ namespace Lithium
             auto handle_it = handles_.find(module_name);
             if (handle_it == handles_.end())
             {
-                LOG_F(ERROR, "Failed to find module %s", module_name.c_str());
+                DLOG_F(ERROR, "Failed to find module %s", module_name.c_str());
                 return nullptr;
             }
 
@@ -170,7 +170,7 @@ namespace Lithium
 
             if (!func_ptr)
             {
-                LOG_F(ERROR, "Failed to get symbol %s from module %s: %s", function_name.c_str(), module_name.c_str(), dlerror());
+                DLOG_F(ERROR, "Failed to get symbol %s from module %s: %s", function_name.c_str(), module_name.c_str(), dlerror());
                 return nullptr;
             }
 
@@ -193,14 +193,14 @@ namespace Lithium
             auto handle_it = handles_.find(module_name);
             if (handle_it == handles_.end())
             {
-                LOG_F(ERROR, "Failed to find module %s", module_name.c_str());
+                DLOG_F(ERROR, "Failed to find module %s", module_name.c_str());
                 return nullptr;
             }
 
             auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const nlohmann::json &)>(module_name, symbol_name);
             if (!get_instance_func)
             {
-                LOG_F(ERROR, "Failed to get symbol %s from module %s: %s", symbol_name.c_str(), module_name.c_str(), dlerror());
+                DLOG_F(ERROR, "Failed to get symbol %s from module %s: %s", symbol_name.c_str(), module_name.c_str(), dlerror());
                 return nullptr;
             }
 

@@ -58,83 +58,48 @@ Description: Device Manager
 #include "indi_device.hpp"
 #include "indidevice_manager.hpp"
 
+#include "config.h"
+
 #ifndef _WIN32
 #include "deviceloader/hydrogen_server.hpp"
 #endif
 
 // For DEVICE_FUNC
 
-#define CHECK_MAIN_CAMERA                                                  \
-    if (!m_main_camera)                                                    \
-    {                                                                      \
-        LOG_F(ERROR, "Main camera not specified on calling {}", __func__); \
-        return DeviceError::NotSpecific;                                   \
-    }
-
-#define CHECK_TELESCOPE                                                       \
-    if (!m_telescope)                                                         \
-    {                                                                         \
-        LOG_F(ERROR, "Main telescope not specified on calling {}", __func__); \
-        return DeviceError::NotSpecific;                                      \
-    }
-
-#define CHECK_FOCUSER                                                       \
-    if (!m_focuser)                                                         \
-    {                                                                       \
-        LOG_F(ERROR, "Main focuser not specified on calling {}", __func__); \
-        return DeviceError::NotSpecific;                                    \
-    }
-
-#define CHECK_FILTERWHEEL                                                       \
-    if (!m_filterwheel)                                                         \
-    {                                                                           \
-        LOG_F(ERROR, "Main filterwheel not specified on calling {}", __func__); \
-        return DeviceError::NotSpecific;                                        \
-    }
-
-#define CHECK_GUIDER                                                       \
-    if (!m_guider)                                                         \
-    {                                                                      \
-        LOG_F(ERROR, "Main guider not specified on calling {}", __func__); \
-        return DeviceError::NotSpecific;                                   \
-    }
+#define CHECK_DEVICE(device)                                     \
+    do                                                           \
+    {                                                            \
+        if (!(device))                                           \
+        {                                                        \
+            DLOG_F(ERROR, "Main {} not specified on calling {}", \
+                   #device, __func__);                           \
+            return DeviceError::NotSpecific;                     \
+        }                                                        \
+    } while (false)
 
 // For DEVICE_FUNC_J
 
-#define CHECK_MAIN_CAMERA_J                                                \
-    if (!m_main_camera)                                                    \
-    {                                                                      \
-        LOG_F(ERROR, "Main camera not specified on calling {}", __func__); \
-        return {{"error", "no camera specified"}};                         \
-    }
+#define CHECK_DEVICE_J(device, error_message)                    \
+    do                                                           \
+    {                                                            \
+        if (!(device))                                           \
+        {                                                        \
+            DLOG_F(ERROR, "Main {} not specified on calling {}", \
+                   #device, __func__);                           \
+            return {{"error", error_message}};                   \
+        }                                                        \
+    } while (false)
 
-#define CHECK_TELESCOPE_J                                                     \
-    if (!m_telescope)                                                         \
-    {                                                                         \
-        LOG_F(ERROR, "Main telescope not specified on calling {}", __func__); \
-        return {{"error", "no telescope specified"}};                         \
-    }
-
-#define CHECK_FOCUSER_J                                                     \
-    if (!m_focuser)                                                         \
-    {                                                                       \
-        LOG_F(ERROR, "Main focuser not specified on calling {}", __func__); \
-        return {{"error", "no focuser specified"}};                         \
-    }
-
-#define CHECK_FILTERWHEEL_J                                                     \
-    if (!m_filterwheel)                                                         \
-    {                                                                           \
-        LOG_F(ERROR, "Main filterwheel not specified on calling {}", __func__); \
-        return {{"error", "no filterwheel specified"}};                         \
-    }
-
-#define CHECK_GUIDER_J                                                     \
-    if (!m_guider)                                                         \
-    {                                                                      \
-        LOG_F(ERROR, "Main guider not specified on calling {}", __func__); \
-        return {{"error", "no guider specified"}};                         \
-    }
+#define CHECK_CONNECTED(device)                               \
+    do                                                        \
+    {                                                         \
+        if (!(device)->isConnected())                         \
+        {                                                     \
+            DLOG_F(ERROR, "{} is not connected when call {}", \
+                   (device)->getDeviceName(), __func__);      \
+            return DeviceError::NotConnected;                 \
+        }                                                     \
+    } while (false)
 
 namespace Lithium
 {
@@ -195,7 +160,7 @@ namespace Lithium
         }
         if (findDeviceByName(name))
         {
-            LOG_F(ERROR, "A device with name {} already exists, please choose a different name", name.c_str());
+            DLOG_F(ERROR, _("A device with name {} already exists, please choose a different name"), name);
             return false;
         }
         std::string newName = name;
@@ -222,30 +187,30 @@ namespace Lithium
                 {
                 case DeviceType::Camera:
                 {
-                    LOG_F(INFO, "Trying to add a new camera instance : {}", newName.c_str());
+                    DLOG_F(INFO, _("Trying to add a new camera instance : {}"), newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Camera>(newName));
-                    LOG_F(INFO, "Added new camera {} instance successfully", newName.c_str());
+                    DLOG_F(INFO, _("Added new camera {} instance successfully"), newName);
                     break;
                 }
                 case DeviceType::Telescope:
                 {
-                    LOG_F(INFO, "Trying to add a new telescope instance : {}", newName.c_str());
+                    DLOG_F(INFO, _("Trying to add a new telescope instance : {}"), newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
-                    LOG_F(INFO, "Added new telescope instance successfully");
+                    DLOG_F(INFO, _("Added new telescope instance successfully"));
                     break;
                 }
                 case DeviceType::Focuser:
                 {
-                    LOG_F(INFO, "Trying to add a new Focuser instance : {}", newName.c_str());
+                    DLOG_F(INFO, _("Trying to add a new Focuser instance : {}"), newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
-                    LOG_F(INFO, "Added new focuser instance successfully");
+                    DLOG_F(INFO, _("Added new focuser instance successfully"));
                     break;
                 }
                 case DeviceType::FilterWheel:
                 {
-                    LOG_F(INFO, "Trying to add a new filterwheel instance : {}", newName.c_str());
+                    DLOG_F(INFO, "Trying to add a new filterwheel instance : {}", newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
-                    LOG_F(INFO, "Added new filterwheel instance successfully");
+                    DLOG_F(INFO, "Added new filterwheel instance successfully");
                     break;
                 }
                 case DeviceType::Solver:
@@ -255,9 +220,11 @@ namespace Lithium
                     // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
                     break;
                 default:
-                    LOG_F(ERROR, "Invalid device type");
+                {
+                    DLOG_F(ERROR, "Invalid device type");
                     throw InvalidDeviceType("Invalid device type");
                     break;
+                }
                 }
             }
             else
@@ -268,35 +235,35 @@ namespace Lithium
                 {
                 case DeviceType::Camera:
                 {
-                    LOG_F(INFO, "Trying to add a new camera instance : {} from {}", newName.c_str(), lib_name.c_str());
+                    DLOG_F(INFO, "Trying to add a new camera instance : {} from {}", newName, lib_name);
                     m_devices[static_cast<int>(type)].emplace_back(m_ModuleLoader->GetInstance<Camera>(lib_name, params, "GetInstance"));
-                    LOG_F(INFO, "Added new camera {} instance successfully", newName.c_str());
+                    DLOG_F(INFO, "Added new camera {} instance successfully", newName);
                     break;
                 }
                 case DeviceType::Telescope:
                 {
-                    LOG_F(INFO, "Trying to add a new telescope instance : {}", newName.c_str());
+                    DLOG_F(INFO, "Trying to add a new telescope instance : {}", newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Telescope>(newName));
-                    LOG_F(INFO, "Added new telescope instance successfully");
+                    DLOG_F(INFO, "Added new telescope instance successfully");
                     break;
                 }
                 case DeviceType::Focuser:
                 {
-                    LOG_F(INFO, "Trying to add a new Focuser instance : {}", newName.c_str());
+                    DLOG_F(INFO, "Trying to add a new Focuser instance : {}", newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Focuser>(newName));
-                    LOG_F(INFO, "Added new focuser instance successfully");
+                    DLOG_F(INFO, "Added new focuser instance successfully");
                     break;
                 }
                 case DeviceType::FilterWheel:
                 {
-                    LOG_F(INFO, "Trying to add a new filterwheel instance : {}", newName.c_str());
+                    DLOG_F(INFO, "Trying to add a new filterwheel instance : {}", newName);
                     m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Filterwheel>(newName));
-                    LOG_F(INFO, "Added new filterwheel instance successfully");
+                    DLOG_F(INFO, "Added new filterwheel instance successfully");
                     break;
                 }
                 case DeviceType::Solver:
                 {
-                    LOG_F(INFO, "Trying to add a new solver instance : {} from {}", newName.c_str(), lib_name.c_str());
+                    DLOG_F(INFO, "Trying to add a new solver instance : {} from {}", newName, lib_name);
                     // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Solver>(newName));
                     break;
                 }
@@ -304,7 +271,7 @@ namespace Lithium
                     // m_devices[static_cast<int>(type)].emplace_back(std::make_shared<Guider>(newName));
                     break;
                 default:
-                    LOG_F(ERROR, "Invalid device type");
+                    DLOG_F(ERROR, "Invalid device type");
                     throw InvalidDeviceType("Invalid device type");
                     break;
                 }
@@ -312,7 +279,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to add device {} , error : {}", newName.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to add device {} , error : {}", newName, e.what());
             return false;
         }
         if (m_ConfigManager)
@@ -324,7 +291,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Config manager not initialized");
+            DLOG_F(ERROR, "Config manager not initialized");
         }
         return true;
     }
@@ -333,12 +300,12 @@ namespace Lithium
     {
         if (lib_path.empty() || lib_name.empty())
         {
-            LOG_F(ERROR, "Library path and name is required!");
+            DLOG_F(ERROR, "Library path and name is required!");
             return false;
         }
         if (!m_ModuleLoader->LoadModule(lib_path, lib_name))
         {
-            LOG_F(ERROR, "Failed to load device library : {} in {}", lib_name.c_str(), lib_path.c_str());
+            DLOG_F(ERROR, "Failed to load device library : {} in {}", lib_name, lib_path);
             return false;
         }
         return true;
@@ -373,20 +340,20 @@ namespace Lithium
                                             }
                                             else
                                             {
-                                                LOG_F(ERROR,"Unknown property type!");
+                                                DLOG_F(ERROR,"Unknown property type!");
                                             }
                                         }
                                         catch(const std::bad_any_cast &e)
                                         {
-                                            LOG_F(ERROR,"Failed to cast property {}",e.what());
+                                            DLOG_F(ERROR,"Failed to cast property {}",e.what());
                                         }
                                     } });
-                LOG_F(INFO, "Add device {} observer successfully", name.c_str());
+                DLOG_F(INFO, "Add device {} observer successfully", name);
 
                 return true;
             }
         }
-        LOG_F(ERROR, "Could not find device {} of type %d", name.c_str(), static_cast<int>(type));
+        DLOG_F(ERROR, "Could not find device {} of type %d", name, static_cast<int>(type));
         return false;
     }
 
@@ -401,7 +368,7 @@ namespace Lithium
             {
                 (*it)->getTask("disconnect", {});
                 devices.erase(it);
-                LOG_F(INFO, "Remove device {} successfully", name.c_str());
+                DLOG_F(INFO, "Remove device {} successfully", name);
                 if (m_ConfigManager)
                 {
 #ifdef __cpp_lib_format
@@ -412,12 +379,12 @@ namespace Lithium
                 }
                 else
                 {
-                    LOG_F(ERROR, "Config manager not initialized");
+                    DLOG_F(ERROR, "Config manager not initialized");
                 }
                 return true;
             }
         }
-        LOG_F(ERROR, "Could not find device {} of type %d", name.c_str(), static_cast<int>(type));
+        DLOG_F(ERROR, "Could not find device {} of type %d", name, static_cast<int>(type));
         return false;
     }
 
@@ -442,7 +409,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Config manager not initialized");
+            DLOG_F(ERROR, "Config manager not initialized");
         }
         return true;
     }
@@ -451,12 +418,12 @@ namespace Lithium
     {
         if (lib_name.empty())
         {
-            LOG_F(ERROR, "Library name is required");
+            DLOG_F(ERROR, "Library name is required");
             return false;
         }
         if (!m_ModuleLoader->UnloadModule(lib_name))
         {
-            LOG_F(ERROR, "Failed to remove device library : {} with unload error", lib_name.c_str());
+            DLOG_F(ERROR, "Failed to remove device library : {} with unload error", lib_name);
             return false;
         }
         return true;
@@ -473,7 +440,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(WARNING, "Could not find device {} of type %d", name.c_str(), static_cast<int>(type));
+            DLOG_F(WARNING, "Could not find device {} of type %d", name, static_cast<int>(type));
             return nullptr;
         }
     }
@@ -509,7 +476,7 @@ namespace Lithium
     std::shared_ptr<SimpleTask> DeviceManager::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        LOG_F(INFO, "Trying to find {} and get {} task", device_name.c_str(), task_name.c_str());
+        DLOG_F(INFO, "Trying to find {} and get {} task", device_name, task_name);
         auto device = findDeviceByName(device_name);
 
         if (device != nullptr)
@@ -518,25 +485,25 @@ namespace Lithium
             {
             case DeviceType::Camera:
             {
-                LOG_F(INFO, "Found Camera device: {} with task: {}", device_name.c_str(), task_name.c_str());
+                DLOG_F(INFO, "Found Camera device: {} with task: {}", device_name, task_name);
                 return std::dynamic_pointer_cast<Camera>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Telescope:
             {
-                LOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name.c_str(), task_name.c_str());
+                DLOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, task_name);
                 return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::Focuser:
             {
-                LOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name.c_str(), task_name.c_str());
+                DLOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, task_name);
                 return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
                 break;
             }
             case DeviceType::FilterWheel:
             {
-                LOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name.c_str(), task_name.c_str());
+                DLOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, task_name);
                 return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
                 break;
             }
@@ -549,13 +516,13 @@ namespace Lithium
                 break;
             }
             default:
-                LOG_F(ERROR, "Invalid device type");
+                DLOG_F(ERROR, "Invalid device type");
                 break;
             }
         }
         else
         {
-            LOG_F(INFO, "Device {} not found", device_name.c_str());
+            DLOG_F(INFO, "Device {} not found", device_name);
         }
         return nullptr;
     }
@@ -568,7 +535,7 @@ namespace Lithium
         }
         if (!m_ConfigManager)
         {
-            LOG_F(ERROR, "Config manager not initialized");
+            DLOG_F(ERROR, "Config manager not initialized");
         }
         else
         {
@@ -591,7 +558,7 @@ namespace Lithium
         }
         if (!m_ConfigManager)
         {
-            LOG_F(ERROR, "Config manager not initialized");
+            DLOG_F(ERROR, "Config manager not initialized");
         }
         else
         {
@@ -611,7 +578,7 @@ namespace Lithium
         }
         if (!m_ConfigManager)
         {
-            LOG_F(ERROR, "Config manager not initialized");
+            DLOG_F(ERROR, "Config manager not initialized");
         }
         else
         {
@@ -630,7 +597,7 @@ namespace Lithium
                                  auto device = getDevice(type, name);
                                  if (!device)
                                  {
-                                     LOG_F(ERROR, "{} not found",name.c_str());
+                                     DLOG_F(ERROR, "{} not found",name);
                                      return;
                                  }
                                  try
@@ -639,7 +606,7 @@ namespace Lithium
                                  }
                                  catch (const std::bad_any_cast &e)
                                  {
-                                     LOG_F(ERROR, "Failed to convert {} of {} with {}", value_name.c_str(), name.c_str(), e.what());
+                                     DLOG_F(ERROR, "Failed to convert {} of {} with {}", value_name, name, e.what());
                                  } },
                                    m_ThreadManager->generateRandomString(16));
         return true;
@@ -652,7 +619,7 @@ namespace Lithium
                                  auto device = findDeviceByName(name);
                                  if (!device)
                                  {
-                                     LOG_F(ERROR, "{} not found",name.c_str());
+                                     DLOG_F(ERROR, "{} not found",name);
                                      return;
                                  }
                                  try
@@ -661,7 +628,7 @@ namespace Lithium
                                  }
                                  catch (const std::bad_any_cast &e)
                                  {
-                                     LOG_F(ERROR, "Failed to convert {} of {} with {}", value_name.c_str(), name.c_str(), e.what());
+                                     DLOG_F(ERROR, "Failed to convert {} of {} with {}", value_name, name, e.what());
                                  } },
                                    m_ThreadManager->generateRandomString(16));
         return true;
@@ -679,7 +646,7 @@ namespace Lithium
             }
             catch (const std::bad_alloc &e)
             {
-                LOG_F(ERROR, "Failed to set main camera to: {} with {}", name.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to set main camera to: {} with {}", name, e.what());
                 return false;
             }
         }
@@ -698,7 +665,7 @@ namespace Lithium
             }
             catch (const std::bad_alloc &e)
             {
-                LOG_F(ERROR, "Failed to set main camera to: {} with {}", name.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to set main camera to: {} with {}", name, e.what());
                 return false;
             }
         }
@@ -717,7 +684,7 @@ namespace Lithium
             }
             catch (const std::bad_alloc &e)
             {
-                LOG_F(ERROR, "Failed to set telescope to: {} with {}", name.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to set telescope to: {} with {}", name, e.what());
                 return false;
             }
         }
@@ -736,7 +703,7 @@ namespace Lithium
             }
             catch (const std::bad_alloc &e)
             {
-                LOG_F(ERROR, "Failed to set focuser to: {} with {}", name.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to set focuser to: {} with {}", name, e.what());
                 return false;
             }
         }
@@ -755,7 +722,7 @@ namespace Lithium
             }
             catch (const std::bad_alloc &e)
             {
-                LOG_F(ERROR, "Failed to set filterwheel to: {} with {}", name.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to set filterwheel to: {} with {}", name, e.what());
                 return false;
             }
         }
@@ -774,7 +741,7 @@ namespace Lithium
             }
             catch (const std::bad_alloc &e)
             {
-                LOG_F(ERROR, "Failed to set guider to: {} with {}", name.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to set guider to: {} with {}", name, e.what());
                 return false;
             }
         }
@@ -783,15 +750,15 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::startExposure)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (m_main_camera->getExposureStatus({}))
         {
-            LOG_F(WARNING, "Main camera is exposed, please do not restart it again!");
+            DLOG_F(WARNING, "Main camera is exposed, please do not restart it again!");
             return DeviceError::Busy;
         }
         if (!m_params.contains("exposure"))
         {
-            LOG_F(ERROR, "Missing exposure time.");
+            DLOG_F(ERROR, "Missing exposure time.");
             return DeviceError::MissingValue;
         }
         // 必须先指定是提前设置才会触发，不然所有功能均在startExposure中完成
@@ -815,7 +782,7 @@ namespace Lithium
         }
         if (!m_main_camera->startExposure(m_params))
         {
-            LOG_F(ERROR, "{} failed to start exposure", m_main_camera->getDeviceName());
+            DLOG_F(ERROR, "{} failed to start exposure", m_main_camera->getDeviceName());
             return DeviceError::ExposureError;
         }
         return DeviceError::None;
@@ -823,36 +790,36 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::stopExposure)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (!m_main_camera->getExposureStatus({}))
         {
             // TODO: 这里需要一个错误返回吗？
-            LOG_F(WARNING, "{} is not exposed", m_main_camera->getDeviceName());
+            DLOG_F(WARNING, "{} is not exposed", m_main_camera->getDeviceName());
         }
         else
         {
             if (!m_main_camera->abortExposure(m_params))
             {
-                LOG_F(ERROR, "{} failed to stop exposure", m_main_camera->getDeviceName());
+                DLOG_F(ERROR, "{} failed to stop exposure", m_main_camera->getDeviceName());
                 return DeviceError::ExposureError;
             }
-            LOG_F(INFO, "{} is aborted successfully", m_main_camera->getDeviceName());
+            DLOG_F(INFO, "{} is aborted successfully", m_main_camera->getDeviceName());
         }
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::startCooling)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (!m_main_camera->isCoolingAvailable())
         {
-            LOG_F(ERROR, "{} did not support cooling mode", m_main_camera->getDeviceName());
+            DLOG_F(ERROR, "{} did not support cooling mode", m_main_camera->getDeviceName());
             return DeviceError::NotSupported;
         }
         // TODO: 这里是否需要一个温度的检查，或者说是在启动制冷时是否需要指定问温度
         if (!m_main_camera->startCooling(m_params))
         {
-            LOG_F(ERROR, "{} failed to start cooling mode", m_main_camera->getDeviceName());
+            DLOG_F(ERROR, "{} failed to start cooling mode", m_main_camera->getDeviceName());
             return DeviceError::CoolingError;
         }
         return DeviceError::None;
@@ -860,15 +827,15 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::stopCooling)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (!m_main_camera->isCoolingAvailable())
         {
-            LOG_F(ERROR, "{} did not support cooling mode", m_main_camera->getDeviceName());
+            DLOG_F(ERROR, "{} did not support cooling mode", m_main_camera->getDeviceName());
             return DeviceError::NotSupported;
         }
         if (!m_main_camera->stopCooling(m_params))
         {
-            LOG_F(ERROR, "{} failed to stop cooling mode", m_main_camera->getDeviceName());
+            DLOG_F(ERROR, "{} failed to stop cooling mode", m_main_camera->getDeviceName());
             return DeviceError::CoolingError;
         }
         return DeviceError::None;
@@ -876,17 +843,17 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::setGain)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (!m_params.contains("gain"))
         {
-            LOG_F(ERROR, "Failed to set gain: No gain value provided");
+            DLOG_F(ERROR, "Failed to set gain: No gain value provided");
             return DeviceError::MissingValue;
         }
         else
         {
             if (!m_main_camera->isGainAvailable())
             {
-                LOG_F(WARNING, "{} did not support set gain", m_main_camera->getDeviceName());
+                DLOG_F(WARNING, "{} did not support set gain", m_main_camera->getDeviceName());
                 return DeviceError::NotSupported;
             }
             else
@@ -894,14 +861,14 @@ namespace Lithium
                 int value = m_params["gain"].get<int>();
                 if (value < 0 || value > 100)
                 {
-                    LOG_F(ERROR, "Invalid gain value {}, would not set", value);
+                    DLOG_F(ERROR, "Invalid gain value {}, would not set", value);
                     return DeviceError::InvalidValue;
                 }
                 else
                 {
                     if (!m_main_camera->setGain({"gain", value}))
                     {
-                        LOG_F(ERROR, "Failed to set gain of main camera {}", m_main_camera->getDeviceName());
+                        DLOG_F(ERROR, "Failed to set gain of main camera {}", m_main_camera->getDeviceName());
                         return DeviceError::GainError;
                     }
                 }
@@ -912,17 +879,17 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::setOffset)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (!m_params.contains("offset"))
         {
-            LOG_F(ERROR, "Failed to set offset: No offset value provided");
+            DLOG_F(ERROR, "Failed to set offset: No offset value provided");
             return DeviceError::MissingValue;
         }
         else
         {
             if (!m_main_camera->isOffsetAvailable())
             {
-                LOG_F(WARNING, "{} did not support set offset", m_main_camera->getDeviceName());
+                DLOG_F(WARNING, "{} did not support set offset", m_main_camera->getDeviceName());
                 return DeviceError::NotSupported;
             }
             else
@@ -930,14 +897,14 @@ namespace Lithium
                 int value = m_params["offset"].get<int>();
                 if (value < 0 || value > 255)
                 {
-                    LOG_F(ERROR, "Invalid offset value {}, would not set", value);
+                    DLOG_F(ERROR, "Invalid offset value {}, would not set", value);
                     return DeviceError::InvalidValue;
                 }
                 else
                 {
                     if (!m_main_camera->setOffset({"offset", value}))
                     {
-                        LOG_F(ERROR, "Failed to set offset of main camera {}", m_main_camera->getDeviceName());
+                        DLOG_F(ERROR, "Failed to set offset of main camera {}", m_main_camera->getDeviceName());
                         return DeviceError::OffsetError;
                     }
                 }
@@ -948,17 +915,17 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::setISO)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         if (!m_params.contains("iso"))
         {
-            LOG_F(ERROR, "Failed to set iso: No iso value provided");
+            DLOG_F(ERROR, "Failed to set iso: No iso value provided");
             return DeviceError::MissingValue;
         }
         else
         {
             if (!m_main_camera->isISOAvailable())
             {
-                LOG_F(WARNING, "{} did not support set iso", m_main_camera->getDeviceName());
+                DLOG_F(WARNING, "{} did not support set iso", m_main_camera->getDeviceName());
                 return DeviceError::NotSupported;
             }
             else
@@ -967,7 +934,7 @@ namespace Lithium
                 // TODO: There needs a ISO value check
                 if (!m_main_camera->setISO({"iso", value}))
                 {
-                    LOG_F(ERROR, "Failed to set iso of main camera {}", m_main_camera->getDeviceName());
+                    DLOG_F(ERROR, "Failed to set iso of main camera {}", m_main_camera->getDeviceName());
                     return DeviceError::ISOError;
                 }
             }
@@ -977,7 +944,7 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::setCamareParams)
     {
-        CHECK_MAIN_CAMERA;
+        CHECK_DEVICE(m_main_camera);
         /*
         [
             {
@@ -1041,17 +1008,22 @@ namespace Lithium
     // For telescope
     DEVICE_FUNC(DeviceManager::gotoTarget)
     {
-        CHECK_TELESCOPE;
+        CHECK_DEVICE(m_telescope);
+        if (m_telescope->isAtPark({}))
+        {
+            DLOG_F(ERROR, "{} had already parked, please unpark before {}", m_telescope->getDeviceName(), __func__);
+            return DeviceError::ParkedError;
+        }
         if (!m_params.contains("ra") || !m_params.contains("dec"))
         {
-            LOG_F(ERROR, "{} failed to goto: Missing RA or DEC value", m_telescope->getDeviceName());
+            DLOG_F(ERROR, "{} failed to goto: Missing RA or DEC value", m_telescope->getDeviceName());
             return DeviceError::MissingValue;
         }
         std::string ra = m_params["ra"];
         std::string dec = m_params["dec"];
         if (ra.empty() || dec.empty())
         {
-            LOG_F(ERROR, "RA or DEC value is missing");
+            DLOG_F(ERROR, "RA or DEC value is missing");
             return DeviceError::MissingValue;
         }
         try
@@ -1062,7 +1034,7 @@ namespace Lithium
             }
             if (!checkTimeFormat(ra))
             {
-                LOG_F(ERROR, "Error Format of RA value {}", ra);
+                DLOG_F(ERROR, "Error Format of RA value {}", ra);
                 return DeviceError::InvalidValue;
             }
             if (checkDigits(dec))
@@ -1071,18 +1043,18 @@ namespace Lithium
             }
             if (!checkTimeFormat(dec))
             {
-                LOG_F(ERROR, "Error Format of DEC value {}", ra);
+                DLOG_F(ERROR, "Error Format of DEC value {}", ra);
                 return DeviceError::InvalidValue;
             }
         }
         catch (const std::out_of_range &e)
         {
-            LOG_F(ERROR, "Failed to check RA and DEC value: {}", e.what());
+            DLOG_F(ERROR, "Failed to check RA and DEC value: {}", e.what());
             return DeviceError::InvalidValue;
         }
         if (!m_telescope->SlewTo(m_params))
         {
-            LOG_F(ERROR, "{} failed to slew to {} {}", m_telescope->getDeviceName(), ra, dec);
+            DLOG_F(ERROR, "{} failed to slew to {} {}", m_telescope->getDeviceName(), ra, dec);
             return DeviceError::GotoError;
         }
         return DeviceError::None;
@@ -1090,161 +1062,219 @@ namespace Lithium
 
     DEVICE_FUNC(DeviceManager::park)
     {
-        CHECK_TELESCOPE;
+        CHECK_DEVICE(m_telescope);
+        if (!m_telescope->isParkAvailable(m_params))
+        {
+            DLOG_F(ERROR, "{} is not support park function", m_telescope->getDeviceName());
+            return DeviceError::NotSupported;
+        }
+        if (m_telescope->isAtPark(m_params))
+        {
+            DLOG_F(WARNING, "{} is already parked, please do not park again!", m_telescope->getDeviceName());
+            return DeviceError::None;
+        }
+        if (m_telescope->Park(m_params))
+        {
+            DLOG_F(ERROR, "{} failed to park", m_telescope->getDeviceName());
+            return DeviceError::ParkError;
+        }
+        DLOG_F(INFO, "{} parked successfully", m_telescope->getDeviceName());
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::unpark)
     {
-        CHECK_TELESCOPE;
+        CHECK_DEVICE(m_telescope);
+        if (!m_telescope->isParkAvailable(m_params))
+        {
+            DLOG_F(ERROR, "{} is not support park function", m_telescope->getDeviceName());
+            return DeviceError::NotSupported;
+        }
+        if (!m_telescope->isAtPark(m_params))
+        {
+            DLOG_F(WARNING, "{} is not parked, please do not unpark before!", m_telescope->getDeviceName());
+            return DeviceError::None;
+        }
+        if (m_telescope->Unpark(m_params))
+        {
+            DLOG_F(ERROR, "{} failed to unpark", m_telescope->getDeviceName());
+            return DeviceError::ParkError;
+        }
+        DLOG_F(INFO, "{} parked successfully", m_telescope->getDeviceName());
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::goHome)
     {
-        CHECK_TELESCOPE;
+        CHECK_DEVICE(m_telescope);
+        if (!m_telescope->isConnected())
+        {
+            DLOG_F(ERROR, "{} is not connected when call {}", m_telescope->getDeviceName(), __func__);
+            return DeviceError::NotConnected;
+        }
+        if (!m_telescope->isHomeAvailable({}))
+        {
+            DLOG_F(ERROR, "{} is not support home", m_telescope->getDeviceName());
+            return DeviceError::NotSupported;
+        }
+        if (m_telescope->isAtPark({}))
+        {
+            DLOG_F(ERROR, "{} had already parked, please unpark before {}", m_telescope->getDeviceName(), __func__);
+            return DeviceError::ParkedError;
+        }
+        if (!m_telescope->Home(m_params))
+        {
+            DLOG_F(ERROR, "{} Failed to go home position");
+            return DeviceError::HomeError;
+        }
+        DLOG_F(INFO, "{} go home position successfully!", m_telescope->getDeviceName());
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::sync)
     {
-        CHECK_TELESCOPE;
+        CHECK_DEVICE(m_telescope);
         return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getCroods)
     {
-        CHECK_TELESCOPE_J;
+        CHECK_DEVICE_J(m_telescope, "no telescope specified");
         return {};
     }
 
     DEVICE_FUNC_J(DeviceManager::getObserver)
     {
-        CHECK_TELESCOPE_J;
+        CHECK_DEVICE_J(m_telescope, "no telescope specified");
         return {};
     }
 
     DEVICE_FUNC_J(DeviceManager::getTime)
     {
-        CHECK_TELESCOPE_J;
+        CHECK_DEVICE_J(m_telescope, "no telescope specified");
         return {};
     }
 
     DEVICE_FUNC(DeviceManager::setTelescopeParams)
     {
-        CHECK_TELESCOPE;
+        CHECK_DEVICE(m_telescope);
         return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getTelescopeParams)
     {
-        CHECK_TELESCOPE_J;
+        CHECK_DEVICE_J(m_telescope, "no telescope specified");
         return {};
     }
 
     // For focuser
     DEVICE_FUNC(DeviceManager::moveStep)
     {
-        CHECK_FOCUSER;
+        CHECK_DEVICE(m_focuser);
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::moveTo)
     {
-        CHECK_FOCUSER;
+        CHECK_DEVICE(m_focuser);
         return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getTemperatrue)
     {
-        CHECK_FOCUSER_J;
+        CHECK_DEVICE_J(m_focuser, "no focuser specified");
         return {};
     }
 
     DEVICE_FUNC_J(DeviceManager::getFocuserPosition)
     {
-        CHECK_FOCUSER_J;
+        CHECK_DEVICE_J(m_focuser, "no focuser specified");
         return {};
     }
 
     DEVICE_FUNC_J(DeviceManager::getBacklash)
     {
-        CHECK_FOCUSER_J;
+        CHECK_DEVICE_J(m_focuser, "no focuser specified");
         return {};
     }
 
     DEVICE_FUNC(DeviceManager::setFocuserParams)
     {
-        CHECK_FOCUSER;
+        CHECK_DEVICE(m_focuser);
         return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getFocuserParams)
     {
-        CHECK_FOCUSER_J;
+        CHECK_DEVICE_J(m_focuser, "no focuser specified");
         return {};
     }
 
     // For filterwheel
     DEVICE_FUNC(DeviceManager::slewTo)
     {
-        CHECK_FILTERWHEEL;
+        CHECK_DEVICE(m_filterwheel);
         return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getFilterwheelPosition)
     {
-        CHECK_FILTERWHEEL_J;
+        CHECK_DEVICE_J(m_filterwheel, "no filterwheel specified");
         return {};
     }
 
     DEVICE_FUNC_J(DeviceManager::getFilters)
     {
-        CHECK_FILTERWHEEL_J;
+        CHECK_DEVICE_J(m_filterwheel, "no filterwheel specified");
         return {};
     }
     DEVICE_FUNC_J(DeviceManager::getOffsets)
     {
-        CHECK_FILTERWHEEL_J;
+        CHECK_DEVICE_J(m_filterwheel, "no filterwheel specified");
         return {};
     }
 
     DEVICE_FUNC(DeviceManager::setFilterwheelParams)
     {
-        CHECK_FILTERWHEEL;
+        CHECK_DEVICE(m_filterwheel);
         return DeviceError::None;
     }
 
     DEVICE_FUNC_J(DeviceManager::getFilterwheelParams)
     {
-        CHECK_FILTERWHEEL_J;
+        CHECK_DEVICE_J(m_filterwheel, "no filterwheel specified");
         return {};
     }
 
     // For guider
     DEVICE_FUNC(DeviceManager::startGuiding)
     {
+        CHECK_DEVICE(m_guider);
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::stopGuiding)
     {
+        CHECK_DEVICE(m_guider);
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::startCalibration)
     {
+        CHECK_DEVICE(m_guider);
         return DeviceError::None;
     }
 
     DEVICE_FUNC(DeviceManager::stopCalibration)
     {
+        CHECK_DEVICE(m_guider);
         return DeviceError::None;
     }
 
     // For astrometry and astap
     DEVICE_FUNC_J(DeviceManager::solveImage)
     {
+        CHECK_DEVICE_J(m_guider, "no guider specified");
         return DeviceError::None;
     }
 
@@ -1270,7 +1300,7 @@ namespace Lithium
     {
         if (!m_indimanager->is_running())
         {
-            LOG_F(ERROR, "INDI server is not started(not by lithium server)");
+            DLOG_F(ERROR, "INDI server is not started(not by lithium server)");
             return false;
         }
         return true;

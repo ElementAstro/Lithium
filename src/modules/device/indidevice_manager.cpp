@@ -60,7 +60,7 @@ void INDIManager::start_server()
     {
         stop_server();
     }
-    LOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
+    DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
     DeleteFileA(fifo_path.c_str());
     CreateNamedPipeA(fifo_path.c_str(), PIPE_ACCESS_OUTBOUND, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 0, 0, 0, NULL);
     // Just start the server without driver
@@ -76,7 +76,7 @@ void INDIManager::start_server()
     }
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    LOG_F(INFO, "Started INDI server on port {}", port);
+    DLOG_F(INFO, "Started INDI server on port {}", port);
 }
 #else
 void INDIManager::start_server()
@@ -87,13 +87,13 @@ void INDIManager::start_server()
         stop_server();
     }
     // Clear old fifo pipe and create new one
-    LOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
+    DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
     system(("rm -f " + fifo_path).c_str());
     system(("mkfifo " + fifo_path).c_str());
     // Just start the server without driver
     std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
 
-    LOG_F(INFO, "Started INDI server on port ", port);
+    DLOG_F(INFO, "Started INDI server on port ", port);
     system(cmd.c_str());
 }
 #endif
@@ -108,11 +108,11 @@ void INDIManager::stop_server()
     int res = system(cmd.c_str());
     if (res == 0)
     {
-        LOG_F(INFO, "INDI server terminated successfully");
+        DLOG_F(INFO, "INDI server terminated successfully");
     }
     else
     {
-        LOG_F(ERROR, "Failed to terminate indiserver, error code is {}", res);
+        DLOG_F(ERROR, "Failed to terminate indiserver, error code is {}", res);
     }
 }
 
@@ -183,17 +183,17 @@ void INDIManager::start_driver(std::shared_ptr<INDIDeviceContainer> driver)
     {
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
-        LOG_F(INFO, "Started driver : {}", driver->name);
+        DLOG_F(INFO, "Started driver : {}", driver->name);
 
         running_drivers.emplace(driver->label, driver);
     }
     else
     {
-        LOG_F(ERROR, "Failed to start driver: {}", driver->name);
+        DLOG_F(ERROR, "Failed to start driver: {}", driver->name);
     }
 #else
     system(full_cmd.c_str());
-    LOG_F(INFO, "Started driver : {}", driver->name);
+    DLOG_F(INFO, "Started driver : {}", driver->name);
 #endif
 
     running_drivers.emplace(driver->label, driver);
@@ -218,16 +218,16 @@ void INDIManager::stop_driver(std::shared_ptr<INDIDeviceContainer> driver)
     {
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
-        LOG_F(INFO, "Stop running driver: {}", driver->label);
+        DLOG_F(INFO, "Stop running driver: {}", driver->label);
         running_drivers.erase(driver->label);
     }
     else
     {
-        LOG_F(ERROR, "Failed to stop driver: {}", driver->label);
+        DLOG_F(ERROR, "Failed to stop driver: {}", driver->label);
     }
 #else
     system(full_cmd.c_str());
-    LOG_F(INFO, "Stop running driver: {}", driver->label);
+    DLOG_F(INFO, "Stop running driver: {}", driver->label);
     running_drivers.erase(driver->label);
 #endif
 }
@@ -263,7 +263,7 @@ void INDIManager::set_prop(const std::string &dev, const std::string &prop, cons
     int result = system(cmd.c_str());
     if (result != 0)
     {
-        LOG_F(ERROR, _("Failed to run command: {}"), cmd);
+        DLOG_F(ERROR, _("Failed to run command: {}"), cmd);
     }
 }
 

@@ -64,7 +64,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to load Lithium App , error : {}"), e.what());
+            DLOG_F(ERROR, _("Failed to load Lithium App , error : {}"), e.what());
             throw std::runtime_error("Failed to load Lithium App");
         }
     }
@@ -269,7 +269,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, _("Failed to run chai command : {}"), command);
+            DLOG_F(ERROR, _("Failed to run chai command : {}"), command);
         }
         return false;
     }
@@ -287,7 +287,7 @@ namespace Lithium
             {
                 result += str + "\n";
             }
-            LOG_F(ERROR, _("Failed to run chai multi command {}"), result);
+            DLOG_F(ERROR, _("Failed to run chai multi command {}"), result);
         }
         return true;
     }
@@ -300,7 +300,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, _("Failed to load chaiscript file {}"), filename);
+            DLOG_F(ERROR, _("Failed to load chaiscript file {}"), filename);
             return false;
         }
     }
@@ -313,7 +313,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, _("Failed to run chai script {}"), filename);
+            DLOG_F(ERROR, _("Failed to run chai script {}"), filename);
             return false;
         }
     }

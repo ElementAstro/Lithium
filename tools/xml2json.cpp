@@ -46,11 +46,11 @@ bool convertXmlToJson(const std::string &xmlFilePath, const std::string &jsonFil
     loguru::add_file("conversion.log", loguru::Append, loguru::Verbosity_INFO);
 
     // 读取 XML 文件
-    LOG_F(INFO, "Reading XML file: %s", xmlFilePath.c_str());
+    DLOG_F(INFO, "Reading XML file: %s", xmlFilePath.c_str());
     pugi::xml_document xmlDoc;
     if (!xmlDoc.load_file(xmlFilePath.c_str()))
     {
-        LOG_F(ERROR, "Failed to load XML file: %s", xmlFilePath.c_str());
+        DLOG_F(ERROR, "Failed to load XML file: %s", xmlFilePath.c_str());
         return false;
     }
 
@@ -58,22 +58,22 @@ bool convertXmlToJson(const std::string &xmlFilePath, const std::string &jsonFil
     json jsonData;
 
     // 转换 XML 到 JSON
-    LOG_F(INFO, "Converting XML to JSON");
+    DLOG_F(INFO, "Converting XML to JSON");
     xmlToJson(xmlDoc, jsonData);
 
     // 保存 JSON 对象到文件
-    LOG_F(INFO, "Saving JSON file: %s", jsonFilePath.c_str());
+    DLOG_F(INFO, "Saving JSON file: %s", jsonFilePath.c_str());
     std::ofstream jsonFile(jsonFilePath);
     if (!jsonFile.is_open())
     {
-        LOG_F(ERROR, "Failed to open JSON file: %s", jsonFilePath.c_str());
+        DLOG_F(ERROR, "Failed to open JSON file: %s", jsonFilePath.c_str());
         return false;
     }
 
     jsonFile << std::setw(4) << jsonData << std::endl;
     jsonFile.close();
 
-    LOG_F(INFO, "XML to JSON conversion succeeded.");
+    DLOG_F(INFO, "XML to JSON conversion succeeded.");
     return true;
 }
 
@@ -105,11 +105,11 @@ int main(int argc, const char **argv)
 
     if (convertXmlToJson(xmlFilePath, jsonFilePath))
     {
-        LOG_F(INFO, "XML to JSON conversion succeeded.");
+        DLOG_F(INFO, "XML to JSON conversion succeeded.");
     }
     else
     {
-        LOG_F(INFO, "XML to JSON conversion failed.");
+        DLOG_F(INFO, "XML to JSON conversion failed.");
     }
 
     return 0;

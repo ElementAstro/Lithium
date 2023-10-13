@@ -5,6 +5,7 @@
 #include <string>
 #include <condition_variable>
 #include <map>
+#include <atomic>
 #include <thread>
 
 #include <modules/server/commander.hpp>
@@ -103,6 +104,7 @@ public:
     bool connect(const std::string &host = "127.0.0.1", int port = 4400);
     bool disconnect();
     bool reconnect();
+    bool is_connected();
 
     bool start_guiding();
 
@@ -154,12 +156,19 @@ private:
     std::unique_ptr<VCommandDispatcher> m_CommandDispatcher;
 
     template <typename ClassType>
-    void RegisterFunc(const std::string &name, const json (ClassType::*handler)(const json &))
+    void RegisterFunc(const std::string &name, void (ClassType::*handler)(const json &))
     {
         m_CommandDispatcher->RegisterHandler(name, handler, this);
     }
 
     bool RunFunc(const std::string &name, const json &params);
+
+    std::atomic_bool _is_connected;
+
+    std::string _host;
+    std::string _lightguiderversion;
+    std::string _subversion;
+    std::string _msgversion;
 
     // 与选星和校准相关的变量
     std::map<std::string, double> _star_position;

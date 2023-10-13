@@ -46,13 +46,13 @@ SocketServer::SocketServer(EventLoop &eventLoop, int port)
 
 void SocketServer::start()
 {
-    LOG_F(INFO, "Starting server on port %d", port);
+    DLOG_F(INFO, "Starting server on port %d", port);
 
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
-        LOG_F(ERROR, "Failed to initialize Winsock");
+        DLOG_F(ERROR, "Failed to initialize Winsock");
         return;
     }
 #endif
@@ -60,7 +60,7 @@ void SocketServer::start()
     serverSocket = socket(AF_INET, SOCK_STREAM, 0); // 修改 IPPROTO_TCP 为 0
     if (serverSocket == INVALID_SOCKET)
     {
-        LOG_F(ERROR, "Failed to create socket");
+        DLOG_F(ERROR, "Failed to create socket");
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -74,7 +74,7 @@ void SocketServer::start()
 
     if (bind(serverSocket, (sockaddr *)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
     {
-        LOG_F(ERROR, "Failed to bind socket");
+        DLOG_F(ERROR, "Failed to bind socket");
         closesocket(serverSocket);
 #ifdef _WIN32
         WSACleanup();
@@ -84,7 +84,7 @@ void SocketServer::start()
 
     if (listen(serverSocket, 5) == SOCKET_ERROR)
     {
-        LOG_F(ERROR, "Failed to listen on socket");
+        DLOG_F(ERROR, "Failed to listen on socket");
         closesocket(serverSocket);
 #ifdef _WIN32
         WSACleanup();
@@ -95,7 +95,7 @@ void SocketServer::start()
     eventLoop.registerEventTrigger([this]()
                                    { acceptClientConnection(); });
 
-    LOG_F(INFO, "Server started on port %d", port);
+    DLOG_F(INFO, "Server started on port %d", port);
     running = true;
 }
 
@@ -139,7 +139,7 @@ void SocketServer::acceptClientConnection()
     SOCKET clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientAddressLength);
     if (clientSocket == INVALID_SOCKET)
     {
-        LOG_F(ERROR, "Failed to accept client connection");
+        DLOG_F(ERROR, "Failed to accept client connection");
         return;
     }
 
@@ -154,7 +154,7 @@ void SocketServer::handleClientMessage(SOCKET clientSocket)
     int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
     if (bytesRead == SOCKET_ERROR)
     {
-        LOG_F(ERROR, "Failed to read from client socket");
+        DLOG_F(ERROR, "Failed to read from client socket");
     }
     else if (bytesRead == 0)
     {
@@ -163,7 +163,7 @@ void SocketServer::handleClientMessage(SOCKET clientSocket)
     else
     {
         std::string message(buffer, bytesRead);
-        LOG_F(INFO, "Received message from client: %s", message.c_str());
+        DLOG_F(INFO, "Received message from client: %s", message.c_str());
 
         if (messageHandler)
         {

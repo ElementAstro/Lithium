@@ -178,7 +178,7 @@ bool CheckAndKillProgramOnPort(int port)
     int ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (ret != 0)
     {
-        LOG_F(ERROR, "Failed to initialize Windows Socket API: %d", ret);
+        DLOG_F(ERROR, "Failed to initialize Windows Socket API: %d", ret);
         return false;
     }
 #endif
@@ -187,7 +187,7 @@ bool CheckAndKillProgramOnPort(int port)
     int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd < 0)
     {
-        LOG_F(ERROR, "Failed to create socket: %s", strerror(errno));
+        DLOG_F(ERROR, "Failed to create socket: %s", strerror(errno));
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -204,7 +204,7 @@ bool CheckAndKillProgramOnPort(int port)
     {
         if (errno == EADDRINUSE)
         {
-            LOG_F(WARNING, "The port(%d) is already in use", port);
+            DLOG_F(WARNING, "The port(%d) is already in use", port);
 
             // 获取占用端口的进程 ID
             std::string cmd;
@@ -225,7 +225,7 @@ bool CheckAndKillProgramOnPort(int port)
             FILE *fp = popen(cmd.c_str(), "r");
             if (fp == nullptr)
             {
-                LOG_F(ERROR, "Failed to execute command: %s", cmd.c_str());
+                DLOG_F(ERROR, "Failed to execute command: %s", cmd.c_str());
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -245,7 +245,7 @@ bool CheckAndKillProgramOnPort(int port)
             // 如果获取到了 PID，则杀死该进程
             if (!pid_str.empty())
             {
-                LOG_F(INFO, "Killing the process on port(%d): PID=%s", port, pid_str.c_str());
+                DLOG_F(INFO, "Killing the process on port(%d): PID=%s", port, pid_str.c_str());
 
 #ifdef _WIN32
 #ifdef __cpp_lib_format
@@ -263,7 +263,7 @@ bool CheckAndKillProgramOnPort(int port)
 
                 if (ret != 0)
                 {
-                    LOG_F(ERROR, "Failed to kill the process: %s", pid_str.c_str());
+                    DLOG_F(ERROR, "Failed to kill the process: %s", pid_str.c_str());
                     close(sockfd);
 #ifdef _WIN32
                     WSACleanup();
@@ -271,11 +271,11 @@ bool CheckAndKillProgramOnPort(int port)
                     return false;
                 }
 
-                LOG_F(INFO, "The process(%s) is killed successfully", pid_str.c_str());
+                DLOG_F(INFO, "The process(%s) is killed successfully", pid_str.c_str());
             }
             else
             {
-                LOG_F(ERROR, "Failed to get process ID on port(%d)", port);
+                DLOG_F(ERROR, "Failed to get process ID on port(%d)", port);
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -285,7 +285,7 @@ bool CheckAndKillProgramOnPort(int port)
         }
         else
         {
-            LOG_F(ERROR, "Failed to bind socket: %s", strerror(errno));
+            DLOG_F(ERROR, "Failed to bind socket: %s", strerror(errno));
             close(sockfd);
 #ifdef _WIN32
             WSACleanup();

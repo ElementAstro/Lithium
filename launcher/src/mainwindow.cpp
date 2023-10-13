@@ -34,10 +34,8 @@
 #include <QListWidget>
 #include <QClipboard>
 
-
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent),
+                                          ui(new Ui::MainWindow)
 {
     setWindowTitle(i18n("INDI Web Manager App"));
     ui->setupUi(this);
@@ -46,12 +44,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QMenu *trayIconMenu = new QMenu(this);
 
-    managerStatusinTray = new QAction("Web Manager: Offline",this);
+    managerStatusinTray = new QAction("Web Manager: Offline", this);
     managerStatusinTray->setIcon(QIcon(":/media/icons/red.png"));
     managerStatusinTray->setIconVisibleInMenu(true);
     trayIconMenu->addAction(managerStatusinTray);
 
-    serverStatusinTray = new QAction("INDI Server: Offline",this);
+    serverStatusinTray = new QAction("INDI Server: Offline", this);
     serverStatusinTray->setIcon(QIcon(":/media/icons/red.png"));
     serverStatusinTray->setIconVisibleInMenu(true);
     trayIconMenu->addAction(serverStatusinTray);
@@ -60,11 +58,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QAction *hideAction = new QAction("Hide App Window", this);
     trayIconMenu->addAction(hideAction);
-    connect(hideAction,&QAction::triggered, this, &QMainWindow::hide);
+    connect(hideAction, &QAction::triggered, this, &QMainWindow::hide);
 
     QAction *showAction = new QAction("Show App Window", this);
     trayIconMenu->addAction(showAction);
-    connect(showAction,&QAction::triggered, this, &MainWindow::showAndRaise);
+    connect(showAction, &QAction::triggered, this, &MainWindow::showAndRaise);
     trayIconMenu->addSeparator();
 
     QAction *openAction = new QAction("Open Web Manager", this);
@@ -73,32 +71,31 @@ MainWindow::MainWindow(QWidget *parent) :
 
     QAction *quitAction = new QAction("Quit", this);
     trayIconMenu->addAction(quitAction);
-    connect(quitAction,&QAction::triggered, this, &QApplication::quit);
+    connect(quitAction, &QAction::triggered, this, &QApplication::quit);
 
-    QSystemTrayIcon  *trayIcon = new QSystemTrayIcon(this);
+    QSystemTrayIcon *trayIcon = new QSystemTrayIcon(this);
     trayIcon->setContextMenu(trayIconMenu);
     trayIcon->setIcon(QIcon(":/media/images/indi_logo.png"));
-    connect(trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason r){
+    connect(trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason r)
+            {
         if (r == QSystemTrayIcon::Trigger)
-            showAndRaise();
-    });
+            showAndRaise(); });
     trayIcon->show();
 
-
-    //Note: This is for the tooltips AND the What's this
-    //I tried to use stylesheets, but what's this did not listen.
+    // Note: This is for the tooltips AND the What's this
+    // I tried to use stylesheets, but what's this did not listen.
     QPalette p = qApp->palette();
     p.setColor(QPalette::ColorRole::ToolTipBase, Qt::black);
     p.setColor(QPalette::ColorRole::ToolTipText, Qt::yellow);
-    //This is strange that the button text color didn't come through!
-    #ifdef Q_OS_OSX
-        p.setColor(QPalette::ColorRole::ButtonText,QApplication::palette().text().color());
-    #endif
+// This is strange that the button text color didn't come through!
+#ifdef Q_OS_OSX
+    p.setColor(QPalette::ColorRole::ButtonText, QApplication::palette().text().color());
+#endif
     qApp->setPalette(p);
 
-    //This should make the icons look good no matter what the theme or mode of the system is.
+    // This should make the icons look good no matter what the theme or mode of the system is.
     int backgroundBrightness = this->palette().color(QWidget::backgroundRole()).lightness();
-    if(backgroundBrightness < 100)
+    if (backgroundBrightness < 100)
     {
         ui->stopWebManager->setIcon(QIcon(":/media/icons/media-playback-stop-dark.svg"));
         ui->restartWebManager->setIcon(QIcon(":/media/icons/media-playback-start-dark.svg"));
@@ -109,7 +106,8 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->copyManagerToClipboard->setIcon(QIcon(":/media/icons/edit-copy-dark.svg"));
         ui->copyServerToClipboard->setIcon(QIcon(":/media/icons/edit-copy-dark.svg"));
     }
-    else {
+    else
+    {
         ui->stopWebManager->setIcon(QIcon(":/media/icons/media-playback-stop.svg"));
         ui->restartWebManager->setIcon(QIcon(":/media/icons/media-playback-start.svg"));
         ui->configureWebManager->setIcon(QIcon(":/media/icons/configure.svg"));
@@ -120,7 +118,7 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->copyServerToClipboard->setIcon(QIcon(":/media/icons/edit-copy.svg"));
     }
 
-    //This makes the buttons look nice on OS X.
+    // This makes the buttons look nice on OS X.
     /*
     ui->openWebManager->setAttribute(Qt::WA_LayoutUsesWidgetRect);
     ui->whatsThis->setAttribute(Qt::WA_LayoutUsesWidgetRect);
@@ -132,13 +130,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->stopINDIServer->setAttribute(Qt::WA_LayoutUsesWidgetRect);
     */
 
-
-    //This will hide the log and capture the window size to make the later algorithm for showing/hiding work properly.
+    // This will hide the log and capture the window size to make the later algorithm for showing/hiding work properly.
     ui->logViewer->setVisible(false);
     this->adjustSize();
     minimumWindowSize = this->window()->size();
 
-    //These set up the actions of the controls in the Main Window.
+    // These set up the actions of the controls in the Main Window.
     connect(ui->configureWebManager, &QPushButton::clicked, this, &MainWindow::showPreferences);
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showPreferences);
     connect(ui->restartWebManager, &QPushButton::clicked, this, &MainWindow::startWebManager);
@@ -147,113 +144,94 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->startINDIServer, &QPushButton::clicked, this, &MainWindow::startINDIServer);
     connect(ui->stopINDIServer, &QPushButton::clicked, this, &MainWindow::stopINDIServer);
     connect(ui->showLog, &QPushButton::toggled, this, &MainWindow::setLogVisible);
-    connect(ui->actionAbout,&QAction::triggered, this, []()
-    {
+    connect(ui->actionAbout, &QAction::triggered, this, []()
+            {
         QMessageBox about;
         about.setIconPixmap(QPixmap(":/media/images/indi_logo.png"));
         about.setText(i18n("<html>INDI Web Manager App<br>&nbsp;&nbsp;© 2019 Robert Lancaster<br>&nbsp;&nbsp;Version: %1<br>&nbsp;&nbsp;Build: %2<br><br>Please see the Github page:<br><a href=https://github.com/rlancaste/LithiumWebManagerApp>https://github.com/rlancaste/LithiumWebManagerApp</a> <br>for details and source code.</html>").arg(QString(LithiumWebManagerApp_VERSION)).arg(QString(INDI_WEB_MANAGER_APP_BUILD_TS)));
-        about.exec();
-    });
-    connect(ui->ipListDisplay,&QListWidget::itemSelectionChanged, this, [this]()
-    {
-        QString host = ui->ipListDisplay->currentItem()->text();
-        Options::setManagerHostNameOrIP(host);
-        ui->hostDisplay->setText(host);
-        ui->hostDisplay->setCursorPosition(0);
-        ui->displayWebManagerPath->setText(getWebManagerURL());
-        ui->displayWebManagerPath->setCursorPosition(0);
-        ui->ipInformation->setText(ui->ipListDisplay->currentItem()->toolTip());
-        checkINDIServerStatus(); //This will update the address for the indi server in the box
-    });
+        about.exec(); });
+    connect(ui->ipListDisplay, &QListWidget::itemSelectionChanged, this, [this]()
+            {
+                QString host = ui->ipListDisplay->currentItem()->text();
+                Options::setManagerHostNameOrIP(host);
+                ui->hostDisplay->setText(host);
+                ui->hostDisplay->setCursorPosition(0);
+                ui->displayWebManagerPath->setText(getWebManagerURL());
+                ui->displayWebManagerPath->setCursorPosition(0);
+                ui->ipInformation->setText(ui->ipListDisplay->currentItem()->toolTip());
+                checkINDIServerStatus(); // This will update the address for the indi server in the box
+            });
 
-    //These two connections enable the clipboard copy buttons
-    connect(ui->copyManagerToClipboard,&QPushButton::clicked, this, [this]()
-    {
-        qApp->clipboard()->setText(ui->displayWebManagerPath->text());
-    });
-    connect(ui->copyServerToClipboard,&QPushButton::clicked, this, [this]()
-    {
-        qApp->clipboard()->setText(ui->displayINDIServerPath->text());
-    });
+    // These two connections enable the clipboard copy buttons
+    connect(ui->copyManagerToClipboard, &QPushButton::clicked, this, [this]()
+            { qApp->clipboard()->setText(ui->displayWebManagerPath->text()); });
+    connect(ui->copyServerToClipboard, &QPushButton::clicked, this, [this]()
+            { qApp->clipboard()->setText(ui->displayINDIServerPath->text()); });
 
+    // These set up the actions in the help menu
+    connect(ui->actionINDI_Details, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://www.indilib.org")); });
 
-    //These set up the actions in the help menu
-    connect(ui->actionINDI_Details,&QAction::triggered, this, []()
-    {
-        QDesktopServices::openUrl(QUrl("https://www.indilib.org"));
-    });
+    connect(ui->actionINDI_Forum, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://www.indilib.org/forum.html")); });
 
-    connect(ui->actionINDI_Forum,&QAction::triggered, this, []()
-    {
-        QDesktopServices::openUrl(QUrl("https://www.indilib.org/forum.html"));
-    });
+    connect(ui->actionINDI_Web_Details, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://github.com/knro/indiwebmanager")); });
 
-    connect(ui->actionINDI_Web_Details,&QAction::triggered, this, []()
-    {
-        QDesktopServices::openUrl(QUrl("https://github.com/knro/indiwebmanager"));
-    });
+    connect(ui->actionINDI_Clients, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://www.indilib.org/about/clients.html")); });
 
-    connect(ui->actionINDI_Clients,&QAction::triggered, this, []()
-    {
-        QDesktopServices::openUrl(QUrl("https://www.indilib.org/about/clients.html"));
-    });
+    connect(ui->actionOS_X_Build_Script, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://github.com/rlancaste/kstars-on-osx-craft")); });
 
-    connect(ui->actionOS_X_Build_Script,&QAction::triggered, this, []()
-    {
-        QDesktopServices::openUrl(QUrl("https://github.com/rlancaste/kstars-on-osx-craft"));
-    });
+    connect(ui->actionWhat_s_This_2, &QAction::triggered, this, []()
+            { QWhatsThis::enterWhatsThisMode(); });
 
-    connect(ui->actionWhat_s_This_2,&QAction::triggered, this, []()
-    {
-        QWhatsThis::enterWhatsThisMode();
-    });
+    connect(ui->whatsThis, &QPushButton::clicked, this, []()
+            { QWhatsThis::enterWhatsThisMode(); });
 
-    connect(ui->whatsThis,&QPushButton::clicked, this, []()
-    {
-        QWhatsThis::enterWhatsThisMode();
-    });
-
-
-    //This sets up the Web Manager to launch in your favorite browser using either the host name or IP Address
+    // This sets up the Web Manager to launch in your favorite browser using either the host name or IP Address
     connect(ui->openWebManager, &QPushButton::clicked, this, &MainWindow::openWebManager);
 
-    //This sets up the INDI Logo to look nice in the app.
+    // This sets up the INDI Logo to look nice in the app.
     ui->INDILogo->setPixmap(QPixmap(":/media/images/indi_logo.png"));
 
-    //This sets up a timer to check the status of the IP Address List at 10 second intervals when it is running
+    // This sets up a timer to check the status of the IP Address List at 10 second intervals when it is running
     serverMonitor.setInterval(10000);
     connect(&serverMonitor, &QTimer::timeout, this, &MainWindow::updateIPAddressList);
     serverMonitor.start();
 
-    //This sets up a timer to check the status of the INDI Server at 1 second intervals when it is running.
+    // This sets up a timer to check the status of the INDI Server at 1 second intervals when it is running.
     serverMonitor.setInterval(1000);
     connect(&serverMonitor, &QTimer::timeout, this, &MainWindow::checkINDIServerStatus);
 
-    //This shows the main window.  For some reason if you don't do this before the check on the next line, it changes the window layout.
+    // This shows the main window.  For some reason if you don't do this before the check on the next line, it changes the window layout.
     this->show();
 
-    //This will initially set the status displays to false.
+    // This will initially set the status displays to false.
     displayServerStatusOnline(false);
     displayManagerStatusOnline(false);
 
-    //This will check if another Web Manager is running on this computer, and kill it if desired.
-    if(isWebManagerOnline())
+    // This will check if another Web Manager is running on this computer, and kill it if desired.
+    if (isWebManagerOnline())
     {
-        if(QMessageBox::question(nullptr, "Message", i18n("Alert, an INDI Webmanager is already running on this computer.  Do you want to quit it?")) == QMessageBox::Yes)
+        if (QMessageBox::question(nullptr, "Message", i18n("Alert, an INDI Webmanager is already running on this computer.  Do you want to quit it?")) == QMessageBox::Yes)
         {
             QProcess killWebManager;
             QStringList killParams;
-            killParams << "Python" << "indi-web" << "indiserver";
+            killParams << "Python"
+                       << "indi-web"
+                       << "indiserver";
             killWebManager.start("/usr/bin/killall", killParams);
             killWebManager.waitForFinished(300);
         }
     }
 
-     //This will finish setting up the Web Manager and launch it if the requirements are installed and auto launch is selected.
-    if(pythonInstalled() && indiWebInstalled())
+    // This will finish setting up the Web Manager and launch it if the requirements are installed and auto launch is selected.
+    if (pythonInstalled() && indiWebInstalled())
     {
         updateSettings();
-        if(Options::autoLaunchManager())
+        if (Options::autoLaunchManager())
             startWebManager();
     }
     else
@@ -266,15 +244,14 @@ MainWindow::MainWindow(QWidget *parent) :
         showPreferences();
     }
 
-    //This waits a moment for the options to load, and once they do, if the AutoHide function is selected, it autohides the window.
-    QTimer::singleShot(10, this, [this](){
+    // This waits a moment for the options to load, and once they do, if the AutoHide function is selected, it autohides the window.
+    QTimer::singleShot(10, this, [this]()
+                       {
         if(Options::autoHideManagerApp())
-            this->hide();
-    });
-
+            this->hide(); });
 }
 
-//This deletes the ui variable on shutdown
+// This deletes the ui variable on shutdown
 MainWindow::~MainWindow()
 {
     delete ui;
@@ -289,111 +266,111 @@ QString MainWindow::getDefault(QString option)
     QString snap = QProcessEnvironment::systemEnvironment().value("SNAP");
     QString flat = QProcessEnvironment::systemEnvironment().value("FLATPAK_DEST");
 
-    //This is the folder that python is installed or symlinked to.
+    // This is the folder that python is installed or symlinked to.
     if (option == "PythonExecFolder")
     {
-    #ifdef Q_OS_OSX
-        //Note this is the Path where python3 gets symlinked by homebrew.
+#ifdef Q_OS_OSX
+        // Note this is the Path where python3 gets symlinked by homebrew.
         return "/usr/local/opt/python/libexec/bin";
-    #endif
+#endif
         if (flat.isEmpty() == false)
             return flat + "/bin/";
         else
             return snap + "/usr/bin/";
     }
 
-    //This is the Path to the indiweb executable.  It is where indi-web is installed, typically in the Python Base User Directory.
+    // This is the Path to the indiweb executable.  It is where indi-web is installed, typically in the Python Base User Directory.
     else if (option == "indiwebPath")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         return "/usr/local/bin/indi-web";
-    #endif
+#endif
         return QDir::homePath() + "/.local/bin/indi-web";
     }
 
-    //This is the Path to the GSC data folder.  It includes gsc at the end.
+    // This is the Path to the GSC data folder.  It includes gsc at the end.
     else if (option == "GSCPath")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         return QStandardPaths::locate(QStandardPaths::GenericDataLocation, QString(), QStandardPaths::LocateDirectory) + "LithiumWebManagerApp/gsc";
-    #endif
+#endif
         if (flat.isEmpty() == false)
             return flat + "/share/GSC";
         else
             return snap + "/usr/share/GSC";
     }
 
-    //This is the path to the INDI Prefix.  This is the App bundle loction on OS X
+    // This is the path to the INDI Prefix.  This is the App bundle loction on OS X
     if (option == "INDIPrefix")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         QString appPath = QCoreApplication::applicationDirPath();
         return QDir(appPath + "/../../").absolutePath();
-    #endif
+#endif
         return "";
     }
 
-    //This is the path to the folder indiserver is present in, not the indiserver itself.
+    // This is the path to the folder indiserver is present in, not the indiserver itself.
     if (option == "INDIServerPath")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         return QDir(QCoreApplication::applicationDirPath()).absolutePath();
-    #endif
+#endif
         if (flat.isEmpty() == false)
             return flat + "/bin/";
         else
             return snap + "/usr/bin/";
     }
 
-    //This is the folder of the indi drivers and xml files.
+    // This is the folder of the indi drivers and xml files.
     else if (option == "INDIDriversPath")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         QString appPath = QCoreApplication::applicationDirPath();
         return QDir(appPath + "/../Resources/DriverSupport").absolutePath();
-    #elif defined(Q_OS_LINUX)
+#elif defined(Q_OS_LINUX)
         if (flat.isEmpty() == false)
             return flat + "/share/indi";
         else
             return snap + "/usr/share/indi";
-    #else
+#else
         return QStandardPaths::locate(QStandardPaths::GenericDataLocation, "indi", QStandardPaths::LocateDirectory);
-    #endif
+#endif
     }
 
-    //This is the default path to the INDI config files.
+    // This is the default path to the INDI config files.
     else if (option == "INDIConfigPath")
         return QDir::homePath() + "/.indi";
 
-    //This is the path to the folder indiserver is present in, not the indiserver itself.
+    // This is the path to the folder indiserver is present in, not the indiserver itself.
     if (option == "GPhotoIOLIBS")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         QString appPath = QCoreApplication::applicationDirPath();
         return QDir(appPath + "/../Resources/DriverSupport/gphoto/IOLIBS").absolutePath();
-    #endif
+#endif
         return "";
     }
 
-    //This is the path to the folder indiserver is present in, not the indiserver itself.
+    // This is the path to the folder indiserver is present in, not the indiserver itself.
     if (option == "GPhotoCAMLIBS")
     {
-    #ifdef Q_OS_OSX
+#ifdef Q_OS_OSX
         QString appPath = QCoreApplication::applicationDirPath();
         return QDir(appPath + "/../Resources/DriverSupport/gphoto/CAMLIBS").absolutePath();
-    #endif
+#endif
         return "";
     }
 
-    //This is the name of the computer on the local network.
+    // This is the name of the computer on the local network.
     else if (option == "ManagerHostNameOrIP")
         return QHostInfo::localHostName();
 
-    //This is the port the INDI Web Manager will be hosted on.
+    // This is the port the INDI Web Manager will be hosted on.
     else if (option == "ManagerPortNumber")
         return "8624";
 
-    //This is the path for the log file.
+    // This is the path for the log file.
     else if (option == "LogFilePath")
         return QDir::homePath() + "/.indi/webmanagerlog.txt";
 
@@ -405,18 +382,18 @@ QString MainWindow::getDefault(QString option)
  */
 void MainWindow::updateIPAddressList()
 {
-    QList<QHostAddress> newIPList= QNetworkInterface::allAddresses();
+    QList<QHostAddress> newIPList = QNetworkInterface::allAddresses();
     bool changed = false;
-    if(newIPList.count() == oldIPList.count())
+    if (newIPList.count() == oldIPList.count())
     {
-        for( int i = 0; i < newIPList.count(); i++ )
-            if(oldIPList.at(i).toString() != newIPList.at(i).toString())
+        for (int i = 0; i < newIPList.count(); i++)
+            if (oldIPList.at(i).toString() != newIPList.at(i).toString())
                 changed = true;
     }
     else
         changed = true;
 
-    if(changed)
+    if (changed)
     {
         oldIPList = newIPList;
         ui->ipListDisplay->clear();
@@ -425,71 +402,71 @@ void MainWindow::updateIPAddressList()
         hostItem->setToolTip("Local Hostname");
         hostItem->setTextColor(Qt::green);
         ui->ipListDisplay->addItem(hostItem);
-        for (const QNetworkInterface &interface: QNetworkInterface::allInterfaces()) {
-                QList<QNetworkAddressEntry> addressEntries = interface.addressEntries();
-                for (const QNetworkAddressEntry &address: addressEntries) {
-                    if(address.ip().protocol() != QAbstractSocket::IPv4Protocol)
-                        addressEntries.removeOne(address);
-                }
-                if(addressEntries.size() > 0 )
-                {
-                    QString type = "Unknown";
-                    #if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
-                        if(interface.type() == QNetworkInterface::Unknown)
-                            type = "Unknown";
-                        if(interface.type() == QNetworkInterface::Loopback)
-                            type = "Localhost";
-                        if(interface.type() == QNetworkInterface::Ethernet)
-                            type = "Ethernet";
-                        if(interface.type() == QNetworkInterface::Wifi)
-                            type = "Wifi";
-                        if(interface.type() == QNetworkInterface::Virtual)
-                            type = "Virtual";
-                        if(interface.type() == QNetworkInterface::Ppp)
-                            type = "Point to Point Protocol";
-                        if(interface.type() == QNetworkInterface::Slip)
-                            type = "Serial Line IP";
-                    #else
-                        if(interface.name().startsWith("eth"))
-                            type = "Ethernet";
-                        if(interface.name().startsWith("en"))
-                            type = "Ethernet";
-                        if(interface.name().startsWith("wl"))
-                            type = "Wifi";
-                        if(interface.name().startsWith("ww"))
-                            type = "Wifi";
-                        if(interface.name().startsWith("sl"))
-                            type = "Serial Line IP";
-                        if(interface.name().startsWith("lo"))
-                            type = "Localhost";
-                        if(interface.name().startsWith("ppp"))
-                            type = "Point to Point Protocol";
-                        if(interface.name().startsWith("vm"))
-                            type = "Virtual Machine IP";
-                        if(interface.name().startsWith("vbox"))
-                            type = "Virtual Machine IP";
-                    #endif
-                    for (const QNetworkAddressEntry &address: addressEntries)
-                    {
-                            QListWidgetItem *newItem = new QListWidgetItem();
-                            newItem->setText(address.ip().toString());
-                            newItem->setToolTip(interface.name() + ", " + type);
-                            QString firstOctet = address.ip().toString().split(".").first();
-                            if(!address.ip().isLoopback() || firstOctet == "172" || firstOctet == "192")
-                                newItem->setTextColor(Qt::green);
-                            else {
-                                newItem->setTextColor(Qt::blue);
-                            }
-                            ui->ipListDisplay->addItem(newItem);
-
-                    }
+        for (const QNetworkInterface &interface : QNetworkInterface::allInterfaces())
+        {
+            QList<QNetworkAddressEntry> addressEntries = interface.addressEntries();
+            for (const QNetworkAddressEntry &address : addressEntries)
+            {
+                if (address.ip().protocol() != QAbstractSocket::IPv4Protocol)
+                    addressEntries.removeOne(address);
             }
-
+            if (addressEntries.size() > 0)
+            {
+                QString type = "Unknown";
+#if QT_VERSION >= QT_VERSION_CHECK(5, 11, 0)
+                if (interface.type() == QNetworkInterface::Unknown)
+                    type = "Unknown";
+                if (interface.type() == QNetworkInterface::Loopback)
+                    type = "Localhost";
+                if (interface.type() == QNetworkInterface::Ethernet)
+                    type = "Ethernet";
+                if (interface.type() == QNetworkInterface::Wifi)
+                    type = "Wifi";
+                if (interface.type() == QNetworkInterface::Virtual)
+                    type = "Virtual";
+                if (interface.type() == QNetworkInterface::Ppp)
+                    type = "Point to Point Protocol";
+                if (interface.type() == QNetworkInterface::Slip)
+                    type = "Serial Line IP";
+#else
+                if (interface.name().startsWith("eth"))
+                    type = "Ethernet";
+                if (interface.name().startsWith("en"))
+                    type = "Ethernet";
+                if (interface.name().startsWith("wl"))
+                    type = "Wifi";
+                if (interface.name().startsWith("ww"))
+                    type = "Wifi";
+                if (interface.name().startsWith("sl"))
+                    type = "Serial Line IP";
+                if (interface.name().startsWith("lo"))
+                    type = "Localhost";
+                if (interface.name().startsWith("ppp"))
+                    type = "Point to Point Protocol";
+                if (interface.name().startsWith("vm"))
+                    type = "Virtual Machine IP";
+                if (interface.name().startsWith("vbox"))
+                    type = "Virtual Machine IP";
+#endif
+                for (const QNetworkAddressEntry &address : addressEntries)
+                {
+                    QListWidgetItem *newItem = new QListWidgetItem();
+                    newItem->setText(address.ip().toString());
+                    newItem->setToolTip(interface.name() + ", " + type);
+                    QString firstOctet = address.ip().toString().split(".").first();
+                    if (!address.ip().isLoopback() || firstOctet == "172" || firstOctet == "192")
+                        newItem->setTextColor(Qt::green);
+                    else
+                    {
+                        newItem->setTextColor(Qt::blue);
+                    }
+                    ui->ipListDisplay->addItem(newItem);
+                }
+            }
         }
 
-
-        QList<QListWidgetItem *> customItemList = ui->ipListDisplay->findItems(Options::customHostNameOrIP(),Qt::MatchExactly);
-        if(customItemList.size() == 0 && Options::customHostNameOrIP() != "")
+        QList<QListWidgetItem *> customItemList = ui->ipListDisplay->findItems(Options::customHostNameOrIP(), Qt::MatchExactly);
+        if (customItemList.size() == 0 && Options::customHostNameOrIP() != "")
         {
             QListWidgetItem *customItem = new QListWidgetItem();
             customItem->setText(Options::customHostNameOrIP());
@@ -498,10 +475,11 @@ void MainWindow::updateIPAddressList()
             ui->ipListDisplay->addItem(customItem);
         }
 
-        QList<QListWidgetItem *> currentItemList = ui->ipListDisplay->findItems(Options::managerHostNameOrIP(),Qt::MatchExactly);
-        if(currentItemList.count() == 1)
+        QList<QListWidgetItem *> currentItemList = ui->ipListDisplay->findItems(Options::managerHostNameOrIP(), Qt::MatchExactly);
+        if (currentItemList.count() == 1)
             ui->ipListDisplay->setCurrentItem(currentItemList.first());
-        else {
+        else
+        {
             ui->ipListDisplay->setCurrentItem(ui->ipListDisplay->item(0));
         }
     }
@@ -549,7 +527,7 @@ bool MainWindow::pythonInstalled(QString pythonExecFolder)
 
 bool MainWindow::pythonInstalled()
 {
-    return(pythonInstalled(Options::pythonExecFolder()));
+    return (pythonInstalled(Options::pythonExecFolder()));
 }
 
 /*
@@ -557,7 +535,7 @@ bool MainWindow::pythonInstalled()
  */
 bool MainWindow::pipInstalled()
 {
-    //Note, I had to add the last set for /usr/local because some people have python installed in /usr/bin and pip installed in /usr/local/bin
+    // Note, I had to add the last set for /usr/local because some people have python installed in /usr/bin and pip installed in /usr/local/bin
     return QFileInfo(Options::pythonExecFolder() + "/pip").exists() || QFileInfo(Options::pythonExecFolder() + "/pip2").exists() || QFileInfo(Options::pythonExecFolder() + "/pip3").exists() || QFileInfo("/usr/local/bin/pip").exists() || QFileInfo("/usr/local/bin/pip2").exists() || QFileInfo("/usr/local/bin/pip3").exists();
 }
 
@@ -587,13 +565,12 @@ void MainWindow::showPreferences()
     KPageWidgetItem *page1 = preferencesDialog->addPage(config1, i18n("Web Manager Options"));
     page1->setIcon(QIcon(":/media/images/indi_logo.png"));
 
-
     OpsConfiguration *config2 = new OpsConfiguration(this);
     KPageWidgetItem *page2 = preferencesDialog->addPage(config2, i18n("Configuration Options"));
 
-    //This should make the icon look good no matter what the theme or mode of the system is.
+    // This should make the icon look good no matter what the theme or mode of the system is.
     int backgroundBrightness = this->palette().color(QWidget::backgroundRole()).lightness();
-    if(backgroundBrightness < 100)
+    if (backgroundBrightness < 100)
         page2->setIcon(QIcon(":/media/icons/configure-dark.svg"));
     else
         page2->setIcon(QIcon(":/media/icons/configure.svg"));
@@ -601,10 +578,8 @@ void MainWindow::showPreferences()
     QPushButton *whatsThis = new QPushButton("?");
     whatsThis->setToolTip("What's This?");
 
-    connect(whatsThis,&QPushButton::clicked, this, []()
-    {
-        QWhatsThis::enterWhatsThisMode();
-    });
+    connect(whatsThis, &QPushButton::clicked, this, []()
+            { QWhatsThis::enterWhatsThisMode(); });
 
     preferencesDialog->addActionButton(whatsThis);
     preferencesDialog->show();
@@ -617,37 +592,37 @@ void MainWindow::showPreferences()
 void MainWindow::updateSettings()
 {
     bool webManagerWasRunning = webManagerRunning;
-    if(webManagerRunning)
+    if (webManagerRunning)
         stopWebManager();
 
     updateIPAddressList();
-    ui->ipListDisplay->adjustSize();  
+    ui->ipListDisplay->adjustSize();
     ui->displayWebManagerPath->setText(getWebManagerURL());
     ui->displayWebManagerPath->setCursorPosition(0);
-    if(Options::enableWebManagerLogFile())
+    if (Options::enableWebManagerLogFile())
     {
         managerLogFile = "";
-        qDebug()<<Options::logFilePath();
+        qDebug() << Options::logFilePath();
         QFileInfo logFileParentFolderInfo = QFileInfo(QFileInfo(Options::logFilePath()).dir().path());
-        if(logFileParentFolderInfo.exists() && logFileParentFolderInfo.isWritable())
+        if (logFileParentFolderInfo.exists() && logFileParentFolderInfo.isWritable())
             managerLogFile = Options::logFilePath().remove(".txt") + "_" + QDateTime::currentDateTime().toString("yyyy-MM-ddThh-mm") + ".txt";
         else
             QMessageBox::information(nullptr, "message", i18n("The path for the selected log file does not exist or is not writeable.  Please create it or select another path.  The log file will not be saved until you do."));
     }
 
-    //This prints lots of details to the log about the system.
-    createManagerLogEntry( i18n("Welcome to INDI Web Manager App ") + QString(LithiumWebManagerApp_VERSION));
-    createManagerLogEntry( i18n("Build: ") + QString(INDI_WEB_MANAGER_APP_BUILD_TS));
-    createManagerLogEntry( i18n("OS: ") + QSysInfo::productType() + " " + QSysInfo::productVersion());
-    createManagerLogEntry( i18n("API: ") + QSysInfo::buildAbi());
-    createManagerLogEntry( i18n("Arch: ") + QSysInfo::currentCpuArchitecture());
-    createManagerLogEntry( i18n("Kernel Type: ") + QSysInfo::kernelType());
-    createManagerLogEntry( i18n("Kernel Version: ") + QSysInfo::kernelVersion());
-    createManagerLogEntry( i18n("Qt Version: ") + QString(QT_VERSION_STR));
+    // This prints lots of details to the log about the system.
+    createManagerLogEntry(i18n("Welcome to INDI Web Manager App ") + QString(LithiumWebManagerApp_VERSION));
+    createManagerLogEntry(i18n("Build: ") + QString(INDI_WEB_MANAGER_APP_BUILD_TS));
+    createManagerLogEntry(i18n("OS: ") + QSysInfo::productType() + " " + QSysInfo::productVersion());
+    createManagerLogEntry(i18n("API: ") + QSysInfo::buildAbi());
+    createManagerLogEntry(i18n("Arch: ") + QSysInfo::currentCpuArchitecture());
+    createManagerLogEntry(i18n("Kernel Type: ") + QSysInfo::kernelType());
+    createManagerLogEntry(i18n("Kernel Version: ") + QSysInfo::kernelVersion());
+    createManagerLogEntry(i18n("Qt Version: ") + QString(QT_VERSION_STR));
 
     configureEnvironmentVariables();
 
-    if(webManagerWasRunning)
+    if (webManagerWasRunning)
         startWebManager();
 }
 
@@ -657,35 +632,35 @@ void MainWindow::updateSettings()
  * All are listed just to make sure none get forgotten.
  */
 void MainWindow::configureEnvironmentVariables()
-{  
-    //Note the Python Exec Variable does not dynamically change.
-    //Note the GSC Variable does not dynamically change.
-    if(Options::iNDIPrefixDefault())
+{
+    // Note the Python Exec Variable does not dynamically change.
+    // Note the GSC Variable does not dynamically change.
+    if (Options::iNDIPrefixDefault())
         Options::setINDIServerPath(getDefault("INDIPrefix"));
-    if(Options::iNDIServerDefault())
+    if (Options::iNDIServerDefault())
         Options::setINDIServerPath(getDefault("INDIServerPath"));
-    if(Options::iNDIDriversDefault())
+    if (Options::iNDIDriversDefault())
         Options::setINDIDriversPath(getDefault("INDIDriversPath"));
-    if(Options::gPhotoIOLIBSDefault())
+    if (Options::gPhotoIOLIBSDefault())
         Options::setGPhotoIOLIBS(getDefault("GPhotoIOLIBS"));
-    if(Options::gPhotoCAMLIBSDefault())
+    if (Options::gPhotoCAMLIBSDefault())
         Options::setGPhotoCAMLIBS(getDefault("GPhotoCAMLIBS"));
 
     QString newPATH = Options::pythonExecFolder() + ":" + Options::iNDIServerPath() + ':' + Options::iNDIDriversPath() + ":/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin";
     insertEnvironmentVariable("PATH", newPATH);
 
-    //Note that these environment variables only make sense on OS X.
-    //If they are blank, they are not to be set
-    #ifdef Q_OS_OSX
-        if(Options::iNDIPrefix() != "")
-            insertEnvironmentPath("INDIPREFIX", Options::iNDIPrefix());
-        if(Options::gPhotoIOLIBS() != "")
-            insertEnvironmentPath("IOLIBS", Options::gPhotoIOLIBS());
-        if(Options::gPhotoCAMLIBS() != "")
-            insertEnvironmentPath("CAMLIBS", Options::gPhotoCAMLIBS());
-    #endif
+// Note that these environment variables only make sense on OS X.
+// If they are blank, they are not to be set
+#ifdef Q_OS_OSX
+    if (Options::iNDIPrefix() != "")
+        insertEnvironmentPath("INDIPREFIX", Options::iNDIPrefix());
+    if (Options::gPhotoIOLIBS() != "")
+        insertEnvironmentPath("IOLIBS", Options::gPhotoIOLIBS());
+    if (Options::gPhotoCAMLIBS() != "")
+        insertEnvironmentPath("CAMLIBS", Options::gPhotoCAMLIBS());
+#endif
 
-    //This sets the path to the GSC Data
+    // This sets the path to the GSC Data
     insertEnvironmentPath("GSCDAT", Options::gSCPath());
 }
 
@@ -717,7 +692,7 @@ void MainWindow::insertEnvironmentPath(QString variable, QString filePath)
  */
 void MainWindow::startWebManager()
 {
-    if(webManagerRunning)
+    if (webManagerRunning)
     {
         stopWebManager();
         webManager.clear();
@@ -729,13 +704,13 @@ void MainWindow::startWebManager()
     webManager->setProcessChannelMode(QProcess::MergedChannels);
     connect(webManager, SIGNAL(readyReadStandardOutput()), this, SLOT(appendManagerLogEntry()));
     QStringList processArguments;
-    if(Options::enableVerboseMode())
-         processArguments << "--verbose";
-    //This one is not optional
+    if (Options::enableVerboseMode())
+        processArguments << "--verbose";
+    // This one is not optional
     processArguments << "--xmldir" << QDir(Options::iNDIDriversPath()).absolutePath();
-    if(!Options::managerPortNumberDefault())
+    if (!Options::managerPortNumberDefault())
         processArguments << "--port" << Options::managerPortNumber();
-    if(!Options::iNDIConfigPathDefault())
+    if (!Options::iNDIConfigPathDefault())
         processArguments << "--conf" << Options::iNDIConfigPath();
     createManagerLogEntry(Options::indiwebPath() + " " + processArguments.join(" "));
     webManager->start(Options::indiwebPath(), processArguments);
@@ -743,7 +718,6 @@ void MainWindow::startWebManager()
 
     serverMonitor.start();
     webManagerRunning = true;
-
 }
 
 /*
@@ -751,15 +725,15 @@ void MainWindow::startWebManager()
  */
 void MainWindow::stopWebManager()
 {
-    if(!webManager.isNull())
+    if (!webManager.isNull())
     {
         disconnect(webManager, SIGNAL(finished(int)), this, SLOT(managerClosed(int)));
         webManager->kill();
     }
-    webManagerRunning  = false;
+    webManagerRunning = false;
 
     QProcess killINDIServer;
-    killINDIServer.start("/usr/bin/killall", QStringList()<<"indiserver");
+    killINDIServer.start("/usr/bin/killall", QStringList() << "indiserver");
     killINDIServer.waitForFinished(300);
     createManagerLogEntry(i18n("INDI Web Manager Shut down successfully."));
     updateDisplaysforShutDown();
@@ -789,16 +763,16 @@ void MainWindow::createManagerLogEntry(QString text)
 void MainWindow::appendManagerLogEntry(QString entry)
 {
     ui->webManagerLog->appendPlainText(entry);
-    qDebug()<<entry;
+    qDebug() << entry;
 
-    if(Options::enableWebManagerLogFile() && managerLogFile != "")
+    if (Options::enableWebManagerLogFile() && managerLogFile != "")
     {
         QFile logFile;
         logFile.setFileName(managerLogFile);
-        if(logFile.open(QIODevice::ReadWrite | QIODevice::Append))
+        if (logFile.open(QIODevice::ReadWrite | QIODevice::Append))
         {
             QTextStream out(&logFile);
-            out<<entry<<endl;
+            out << entry << endl;
             logFile.close();
         }
     }
@@ -813,7 +787,7 @@ void MainWindow::appendManagerLogEntry(QString entry)
 void MainWindow::managerClosed(int result)
 {
     webManagerRunning = false;
-    if(result==0)
+    if (result == 0)
         createManagerLogEntry(i18n("INDI Web Manager Shut down successfully."));
     else
     {
@@ -847,11 +821,10 @@ void MainWindow::closeEvent(QCloseEvent *event)
     int response = closeOptionsBox.exec();
     if (response)
     {
-        
     }
-    if(closeOptionsBox.clickedButton() == quitButton)
+    if (closeOptionsBox.clickedButton() == quitButton)
     {
-        if(webManagerRunning)
+        if (webManagerRunning)
             stopWebManager();
         webManager->waitForFinished(300);
         event->accept();
@@ -859,8 +832,8 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
     else
     {
-       event->ignore();
-       this->hide();
+        event->ignore();
+        this->hide();
     }
 }
 
@@ -872,7 +845,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
  */
 void MainWindow::displayManagerStatusOnline(bool online)
 {
-    if(online)
+    if (online)
     {
         ui->statusDisplay->setText(i18n("Online"));
         ui->statusDisplay->setStyleSheet("QLineEdit {background-color: green;}");
@@ -894,20 +867,16 @@ void MainWindow::displayManagerStatusOnline(bool online)
 void MainWindow::setLogVisible(bool visible)
 {
     ui->logViewer->setVisible(visible);
-    if(visible)
+    if (visible)
         this->adjustSize();
     else
         this->setFixedSize(minimumWindowSize);
 
-    this->setMaximumSize(QWIDGETSIZE_MAX,QWIDGETSIZE_MAX);
-    this->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
-
-
+    this->setMaximumSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+    this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
 
-
 //*******************  The Following methods are for communicating with and updating the status of a runnning INDI Server.
-
 
 /*
  * This method checks on the Status of the INDI Server, gets the active profile, and any running drivers.
@@ -920,7 +889,7 @@ void MainWindow::checkINDIServerStatus()
     bool INDIServerOnline = isINDIServerOnline(activeProfile);
     displayServerStatusOnline(INDIServerOnline);
     QStringList profiles = getProfiles();
-    if(oldProfiles.join(",") != profiles.join(",") || ui->profileBox->count() == 0 || oldActiveProfile != activeProfile)
+    if (oldProfiles.join(",") != profiles.join(",") || ui->profileBox->count() == 0 || oldActiveProfile != activeProfile)
     {
         ui->profileBox->clear();
         ui->profileBox->addItems(profiles);
@@ -933,28 +902,26 @@ void MainWindow::checkINDIServerStatus()
     port = getINDIServerPort();
     ui->displayINDIServerPath->setText(getINDIServerURL(port));
     ui->displayINDIServerPath->setCursorPosition(0);
-    if(INDIServerOnline)
+    if (INDIServerOnline)
     {
-        QString webManagerDrivers="";
+        QString webManagerDrivers = "";
         getRunningDrivers(webManagerDrivers);
-        if(oldDrivers != webManagerDrivers || ui->driversDisplay->count() ==0)
+        if (oldDrivers != webManagerDrivers || ui->driversDisplay->count() == 0)
         {
             ui->driversDisplay->clear();
             QStringList activeDrivers = webManagerDrivers.split("\n");
-            foreach(QString driver, activeDrivers)
+            foreach (QString driver, activeDrivers)
             {
-                ui->driversDisplay->addItem(new QListWidgetItem(QIcon(":/media/icons/green.png"),driver));
+                ui->driversDisplay->addItem(new QListWidgetItem(QIcon(":/media/icons/green.png"), driver));
             }
             oldDrivers = webManagerDrivers;
         }
     }
     else
     {
-         ui->driversDisplay->clear();
-         oldDrivers.clear();
-
+        ui->driversDisplay->clear();
+        oldDrivers.clear();
     }
-
 }
 
 /*
@@ -962,7 +929,7 @@ void MainWindow::checkINDIServerStatus()
  */
 void MainWindow::displayServerStatusOnline(bool online)
 {
-    if(online)
+    if (online)
     {
         ui->serverStatusDisplay->setText(i18n("Online"));
         ui->serverStatusDisplay->setStyleSheet("QLineEdit {background-color: green;}");
@@ -986,13 +953,13 @@ bool MainWindow::isWebManagerOnline()
 {
     QUrl url1(QString("http://localhost:8624/api/server/status"));
     QJsonDocument json;
-    bool test1 = getWebManagerResponse( url1, &json);
+    bool test1 = getWebManagerResponse(url1, &json);
 
     QUrl url2(QString(getWebManagerURL() + "/api/server/status"));
     QJsonDocument json2;
-    bool test2 = getWebManagerResponse( url2, &json2);
+    bool test2 = getWebManagerResponse(url2, &json2);
 
-    if(test1 || test2)
+    if (test1 || test2)
         return true;
     else
         return false;
@@ -1006,7 +973,7 @@ bool MainWindow::isINDIServerOnline(QString &activeProfile)
     QUrl url(QString(getWebManagerURL() + "/api/server/status"));
 
     QJsonDocument json;
-    if (getWebManagerResponse( url, &json))
+    if (getWebManagerResponse(url, &json))
     {
         QJsonArray array = json.array();
         if (array.isEmpty())
@@ -1014,7 +981,7 @@ bool MainWindow::isINDIServerOnline(QString &activeProfile)
 
         QJsonObject jsonObj = array.first().toObject();
         QString status = jsonObj["status"].toString();
-        if(status=="True")
+        if (status == "True")
         {
             activeProfile = jsonObj["active_profile"].toString();
             return true;
@@ -1050,7 +1017,7 @@ QString MainWindow::getINDIServerPort()
     QUrl url(QString(getWebManagerURL() + "/api/profiles"));
 
     QJsonDocument json;
-    if (getWebManagerResponse( url, &json))
+    if (getWebManagerResponse(url, &json))
     {
         QJsonArray array = json.array();
 
@@ -1060,7 +1027,7 @@ QString MainWindow::getINDIServerPort()
         for (auto value : array)
         {
             QJsonObject profile = value.toObject();
-            if(profile["name"].toString() == ui->profileBox->currentText())
+            if (profile["name"].toString() == ui->profileBox->currentText())
                 return QString::number(profile["port"].toInt());
         }
     }
@@ -1076,7 +1043,7 @@ QStringList MainWindow::getProfiles()
     QUrl url(QString(getWebManagerURL() + "/api/profiles"));
 
     QJsonDocument json;
-    if (getWebManagerResponse( url, &json))
+    if (getWebManagerResponse(url, &json))
     {
         QJsonArray array = json.array();
 
@@ -1101,7 +1068,7 @@ bool MainWindow::getRunningDrivers(QString &webManagerDrivers)
     QUrl url(QString(getWebManagerURL() + "/api/server/drivers"));
 
     QJsonDocument json;
-    if (getWebManagerResponse( url, &json))
+    if (getWebManagerResponse(url, &json))
     {
         QJsonArray array = json.array();
 
@@ -1112,13 +1079,14 @@ bool MainWindow::getRunningDrivers(QString &webManagerDrivers)
         for (auto value : array)
         {
             QJsonObject driver = value.toObject();
-            if(driver["label"].toString() != "")
+            if (driver["label"].toString() != "")
                 webManagerDriversList << driver["label"].toString();
-            else {
+            else
+            {
                 webManagerDriversList << driver["name"].toString();
             }
         }
-        webManagerDrivers=webManagerDriversList.join("\n");
+        webManagerDrivers = webManagerDriversList.join("\n");
         return true;
     }
     return false;
@@ -1183,7 +1151,7 @@ bool MainWindow::getWebManagerResponse(const QUrl &url, QJsonDocument *reply)
 
             if (parseError.error != QJsonParseError::NoError)
             {
-                if(webManagerRunning) //This way it doesn't print errors when checking to see if the Web Manager is running at all
+                if (webManagerRunning) // This way it doesn't print errors when checking to see if the Web Manager is running at all
                     createManagerLogEntry(i18n("INDI: JSon error during parsing ") + parseError.errorString());
                 return false;
             }
@@ -1192,12 +1160,8 @@ bool MainWindow::getWebManagerResponse(const QUrl &url, QJsonDocument *reply)
     }
     else
     {
-        if(webManagerRunning)  //This way it doesn't print errors when checking to see if the Web Manager is running at all
+        if (webManagerRunning) // This way it doesn't print errors when checking to see if the Web Manager is running at all
             createManagerLogEntry(i18n("INDI: Error communicating with INDI Web Manager: ") + response->errorString());
         return false;
     }
 }
-
-
-
-

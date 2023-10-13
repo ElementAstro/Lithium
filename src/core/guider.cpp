@@ -35,24 +35,24 @@ Description: Guider Simulator and Basic Definition
 
 Guider::Guider(const std::string &name) : Device(name)
 {
-    LOG_F(INFO, "Guider Simulator Loaded : %s", name.c_str());
+    DLOG_F(INFO, "Guider Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Guider::~Guider()
 {
-    LOG_F(INFO, "Guider Simulator Destructed");
+    DLOG_F(INFO, "Guider Simulator Destructed");
 }
 
 bool Guider::connect(const IParams &params)
 {
-    LOG_F(INFO, "%s is connected", getDeviceName());
+    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Guider::disconnect(const IParams &params)
 {
-    LOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

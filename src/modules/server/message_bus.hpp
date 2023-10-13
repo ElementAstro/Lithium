@@ -66,7 +66,7 @@ public:
                   });
         subscribersLock_.unlock();
 
-        LOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
+        DLOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
     }
 
     template <typename T>
@@ -95,7 +95,7 @@ public:
                     }),
                 topicSubscribers.end());
 
-            LOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
+            DLOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
         }
         subscribersLock_.unlock();
     }
@@ -110,7 +110,7 @@ public:
         messageQueueLock_.unlock();
         messageAvailableFlag_.notify_one();
 
-        LOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
+        DLOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
     }
 
     template <typename T>
@@ -177,9 +177,9 @@ public:
                                 }
                             }
                         } catch (const std::bad_any_cast& e) {
-                            LOG_F(ERROR, "Message type mismatch: %s", e.what());
+                            DLOG_F(ERROR, "Message type mismatch: %s", e.what());
                         } catch (...) {
-                            LOG_F(ERROR, "Unknown error occurred during message processing");
+                            DLOG_F(ERROR, "Unknown error occurred during message processing");
                         }
                     }
                     subscribersLock_.unlock();
@@ -192,13 +192,13 @@ public:
                             }
                         }
                     } catch (const std::bad_any_cast& e) {
-                        LOG_F(ERROR, "Global message type mismatch: %s", e.what());
+                        DLOG_F(ERROR, "Global message type mismatch: %s", e.what());
                     } catch (...) {
-                        LOG_F(ERROR, "Unknown error occurred during global message processing");
+                        DLOG_F(ERROR, "Unknown error occurred during global message processing");
                     }
                     globalSubscribersLock_.unlock();
 
-                    LOG_F(INFO, "Processed message on topic: %s", topic.c_str());
+                    DLOG_F(INFO, "Processed message on topic: %s", topic.c_str());
                 }
             } }));
     }
@@ -213,7 +213,7 @@ public:
             it->second.request_stop();
             it->second.join();
             processingThreads_.erase(it);
-            LOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+            DLOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
         }
     }
 
@@ -227,7 +227,7 @@ public:
             thread.second.join();
         }
         processingThreads_.clear();
-        LOG_F(INFO, "All processing threads stopped");
+        DLOG_F(INFO, "All processing threads stopped");
     }
 
 private:
@@ -237,7 +237,11 @@ private:
     std::mutex messageQueueLock_;
     std::condition_variable messageAvailableFlag_;
     std::mutex waitingMutex_;
+#if __cplusplus >= 202002L
     std::unordered_map<std::type_index, std::jthread> processingThreads_;
+#else
+    std::unordered_map<std::type_index, std::thread> processingThreads_;
+#endif
     std::atomic<bool> isRunning_{true};
 
     std::vector<std::any> globalSubscribers_;

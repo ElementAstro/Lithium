@@ -72,7 +72,7 @@ namespace Lithium
             std::ifstream file_stream(file_path);
             if (!file_stream.is_open())
             {
-                LOG_F(ERROR, "Failed to open config file %s", file_path.c_str());
+                DLOG_F(ERROR, "Failed to open config file %s", file_path.c_str());
                 return {{"error", "Failed to open config file"}};
             }
 
@@ -85,7 +85,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to read config file %s: %s", file_path.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to read config file %s: %s", file_path.c_str(), e.what());
             return {{"error", "Failed to read config file"}};
         }
     }
@@ -94,7 +94,7 @@ namespace Lithium
     {
         if (dir_name == "")
         {
-            LOG_F(ERROR, "DIR name should not be null");
+            DLOG_F(ERROR, "DIR name should not be null");
             return {{"error", "dir name should not be null"}};
         }
         // Define the modules directory path
@@ -105,13 +105,13 @@ namespace Lithium
             // Create the modules directory if it does not exist
             if (!fs::exists(modules_dir) || !fs::is_directory(modules_dir))
             {
-                LOG_F(WARNING, "Warning: modules folder not found, creating a new one...");
+                DLOG_F(WARNING, "Warning: modules folder not found, creating a new one...");
                 fs::create_directory(modules_dir);
             }
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to create modules directory: %s", e.what());
+            DLOG_F(ERROR, "Failed to create modules directory: %s", e.what());
             return {{"error", "Failed to create modules directory"}};
         }
 
@@ -142,14 +142,14 @@ namespace Lithium
                         config[dir.path().string()]["license"] = module_config.value("license", "");
                         config[dir.path().string()]["description"] = module_config.value("description", "");
                         // Debug message
-                        LOG_F(INFO, "Module found: %s, config file: %s", dir.path().string().c_str(), info_file.string().c_str());
+                        DLOG_F(INFO, "Module found: %s, config file: %s", dir.path().string().c_str(), info_file.string().c_str());
                     }
                 }
             }
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to iterate modules directory: %s", e.what());
+            DLOG_F(ERROR, "Failed to iterate modules directory: %s", e.what());
             return {{"error", "Failed to iterate modules directory"}};
         }
         if (config.empty())
@@ -162,72 +162,72 @@ namespace Lithium
     ModuleLoader::ModuleLoader()
     {
         m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
-        LOG_F(INFO, "C++ module manager loaded successfully.");
+        DLOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this]()
                                        { if(!LoadOnInit("modules")){
-                                    LOG_F(ERROR,"Failed to load modules on init");
+                                    DLOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
     ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager)
     {
         m_ThreadManager = threadManager;
-        LOG_F(INFO, "C++ module manager loaded successfully.");
+        DLOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this]()
                                        { if(!LoadOnInit("modules")){
-                                    LOG_F(ERROR,"Failed to load modules on init");
+                                    DLOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
     ModuleLoader::ModuleLoader(const std::string &dir_name)
     {
         m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
-        LOG_F(INFO, "C++ module manager loaded successfully.");
+        DLOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this, dir_name]()
                                        { if(!LoadOnInit(dir_name)){
-                                    LOG_F(ERROR,"Failed to load modules on init");
+                                    DLOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
     ModuleLoader::ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager)
     {
         m_ThreadManager = threadManager;
-        LOG_F(INFO, "C++ module manager loaded successfully.");
+        DLOG_F(INFO, "C++ module manager loaded successfully.");
         if (m_ThreadManager)
         {
             m_ThreadManager->addThread([this, dir_name]()
                                        { if(!LoadOnInit(dir_name)){
-                                    LOG_F(ERROR,"Failed to load modules on init");
+                                    DLOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
@@ -265,11 +265,11 @@ namespace Lithium
     {
         if (dir_name.empty())
         {
-            LOG_F(ERROR, "Directory name is empty");
+            DLOG_F(ERROR, "Directory name is empty");
             return false;
         }
         const nlohmann::json dir_info = iterator_modules_dir(dir_name);
-        LOG_F(INFO, "%s", dir_info.dump(4).c_str());
+        DLOG_F(INFO, "%s", dir_info.dump(4).c_str());
         if (!dir_info.empty())
         {
             if (dir_info["message"].get<std::string>() != "No module found")
@@ -295,7 +295,7 @@ namespace Lithium
             // Check if the library file exists
             if (!std::filesystem::exists(path))
             {
-                LOG_F(ERROR, "Library %s does not exist", path.c_str());
+                DLOG_F(ERROR, "Library %s does not exist", path.c_str());
                 return false;
             }
 
@@ -303,7 +303,7 @@ namespace Lithium
             void *handle = LOAD_LIBRARY(path.c_str());
             if (!handle)
             {
-                LOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), LOAD_ERROR());
+                DLOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), LOAD_ERROR());
                 return false;
             }
 
@@ -323,17 +323,17 @@ namespace Lithium
                     std::string author = config["author"].get<std::string>();
                     std::string license = config.value("license", "");
 
-                    LOG_F(INFO, "Loaded Module : %s version %s written by %s%s",
+                    DLOG_F(INFO, "Loaded Module : %s version %s written by %s%s",
                           config.value("name", "Unknown").c_str(), version.c_str(), author.c_str(), license.empty() ? "" : (" under " + license).c_str());
                 }
                 else
                 {
-                    LOG_F(WARNING, "Missing required fields in %s", config_file_path.c_str());
+                    DLOG_F(WARNING, "Missing required fields in %s", config_file_path.c_str());
                 }
             }
             else
             {
-                LOG_F(WARNING, "Config file %s does not exist", config_file_path.c_str());
+                DLOG_F(WARNING, "Config file %s does not exist", config_file_path.c_str());
             }
 
             // Store the library handle in handles_ map with the module name as key
@@ -342,7 +342,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), e.what());
             return false;
         }
     }
@@ -355,13 +355,13 @@ namespace Lithium
             auto it = handles_.find(filename);
             if (it == handles_.end())
             {
-                LOG_F(ERROR, "Module %s is not loaded", filename.c_str());
+                DLOG_F(ERROR, "Module %s is not loaded", filename.c_str());
                 return false;
             }
 
             if (!it->second)
             {
-                LOG_F(ERROR, "Module %s's handle is null", filename.c_str());
+                DLOG_F(ERROR, "Module %s's handle is null", filename.c_str());
                 return false;
             }
 
@@ -369,19 +369,19 @@ namespace Lithium
             int result = UNLOAD_LIBRARY(it->second);
             if (result == 0)
             {
-                LOG_F(INFO, "Unloaded module : %s", filename.c_str());
+                DLOG_F(INFO, "Unloaded module : %s", filename.c_str());
                 handles_.erase(it);
                 return true;
             }
             else
             {
-                LOG_F(ERROR, "Failed to unload module %s", filename.c_str());
+                DLOG_F(ERROR, "Failed to unload module %s", filename.c_str());
                 return false;
             }
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "%s", e.what());
+            DLOG_F(ERROR, "%s", e.what());
             return false;
         }
     }
@@ -391,10 +391,10 @@ namespace Lithium
         void *handle = LOAD_LIBRARY(name.c_str());
         if (handle == nullptr)
         {
-            LOG_F(ERROR, "Module %s does not exist.", name.c_str());
+            DLOG_F(ERROR, "Module %s does not exist.", name.c_str());
             return false;
         }
-        LOG_F(INFO, "Module %s is existing.", name.c_str());
+        DLOG_F(INFO, "Module %s is existing.", name.c_str());
         UNLOAD_LIBRARY(handle);
         return true;
     }
@@ -426,7 +426,7 @@ namespace Lithium
             }
             else
             {
-                LOG_F(ERROR, "Enabled file not found for module %s", module_name.c_str());
+                DLOG_F(ERROR, "Enabled file not found for module %s", module_name.c_str());
                 return false;
             }
         }
@@ -442,7 +442,7 @@ namespace Lithium
             std::string module_path = GetModulePath(module_name);
             if (module_path.empty())
             {
-                LOG_F(ERROR, "Module path not found for module %s", module_name.c_str());
+                DLOG_F(ERROR, "Module path not found for module %s", module_name.c_str());
                 return false;
             }
             std::string disabled_file = module_path + ".disabled";
@@ -454,7 +454,7 @@ namespace Lithium
             }
             else
             {
-                LOG_F(ERROR, "Failed to disable module %s", module_name.c_str());
+                DLOG_F(ERROR, "Failed to disable module %s", module_name.c_str());
                 return false;
             }
         }

@@ -79,7 +79,7 @@ Description: Main
 
 void run()
 {
-    LOG_F(INFO, "Loading App component ...");
+    DLOG_F(INFO, "Loading App component ...");
 
 #if ENABLE_IPV6
     AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "::"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
@@ -87,58 +87,58 @@ void run()
     AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
 #endif
 
-    LOG_F(INFO, "App component loaded");
+    DLOG_F(INFO, "App component loaded");
     /* Get router component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);
 
     oatpp::web::server::api::Endpoints docEndpoints;
 
-    LOG_F(INFO, "Document endpoints loaded");
+    DLOG_F(INFO, "Document endpoints loaded");
 
     /* Add document */
 
     auto static_controller = StaticController::createShared();
     docEndpoints.append(static_controller->getEndpoints());
     router->addController(static_controller);
-    LOG_F(INFO, "Static file controller loaded");
+    DLOG_F(INFO, "Static file controller loaded");
 
     auto system_controller = SystemController::createShared();
     docEndpoints.append(system_controller->getEndpoints());
     router->addController(system_controller);
-    LOG_F(INFO, "System controller loaded");
+    DLOG_F(INFO, "System controller loaded");
 
     auto io_controller = IOController::createShared();
     docEndpoints.append(io_controller->getEndpoints());
     router->addController(io_controller);
-    LOG_F(INFO, "IO controller loaded");
+    DLOG_F(INFO, "IO controller loaded");
 
     auto process_controller = ProcessController::createShared();
     docEndpoints.append(process_controller->getEndpoints());
     router->addController(process_controller);
-    LOG_F(INFO, "System process controller loaded");
+    DLOG_F(INFO, "System process controller loaded");
 
     auto phd2_controller = PHD2Controller::createShared();
     docEndpoints.append(phd2_controller->getEndpoints());
     router->addController(phd2_controller);
-    LOG_F(INFO, "PHD2 controller loaded");
+    DLOG_F(INFO, "PHD2 controller loaded");
 
     auto task_controller = TaskController::createShared();
     docEndpoints.append(task_controller->getEndpoints());
     router->addController(task_controller);
-    LOG_F(INFO, "Task controller loaded");
+    DLOG_F(INFO, "Task controller loaded");
 
     auto upload_controller = UploadController::createShared();
     docEndpoints.append(upload_controller->getEndpoints());
     router->addController(upload_controller);
-    LOG_F(INFO, "Upload controller loaded");
+    DLOG_F(INFO, "Upload controller loaded");
 
-    LOG_F(INFO, "Starting to load API doc controller");
+    DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
     router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
 #else
     router->addController(oatpp::swagger::Controller::createShared(docEndpoints));
 #endif
-    LOG_F(INFO, "API doc controller loaded");
+    DLOG_F(INFO, "API doc controller loaded");
 
     router->addController(WebSocketController::createShared());
 
@@ -148,12 +148,12 @@ void run()
     /* Get connection provider component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ServerConnectionProvider>, connectionProvider);
 
-    LOG_F(INFO, "Loaded server components ... Prepare for starting ...");
+    DLOG_F(INFO, "Loaded server components ... Prepare for starting ...");
     /* create server */
     oatpp::network::Server server(connectionProvider,
                                   connectionHandler);
 
-    LOG_F(INFO, "Server running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
+    DLOG_F(INFO, "Server running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
 
     server.run();
 }
@@ -180,7 +180,7 @@ BOOL WINAPI interruptHandler(DWORD signalNumber)
 {
     if (signalNumber == CTRL_C_EVENT)
     {
-        LOG_F(INFO, "Ctrl+C pressed on Windows. Exiting...");
+        DLOG_F(INFO, "Ctrl+C pressed on Windows. Exiting...");
         throw std::runtime_error("KeyInterruption received");
     }
     return TRUE;
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error &e)
     {
-        LOG_F(ERROR, _("Failed to parser command line : %s"), e.what());
+        DLOG_F(ERROR, _("Failed to parser command line : %s"), e.what());
         std::exit(1);
     }
 
@@ -257,13 +257,13 @@ int main(int argc, char *argv[])
         auto cmd_port = program.get<int>("--port");
         if (cmd_port != 8000)
         {
-            LOG_F(INFO, _("Command line server port : %d"), cmd_port);
+            DLOG_F(INFO, _("Command line server port : %d"), cmd_port);
 
             auto port = Lithium::MyApp->GetConfig("config/server").value<int>("port", 8000);
             if (port != cmd_port)
             {
                 Lithium::MyApp->SetConfig("config/server/port", cmd_port);
-                LOG_F(INFO, _("Set server port to %d"), cmd_port);
+                DLOG_F(INFO, _("Set server port to %d"), cmd_port);
             }
         }
         auto cmd_host = program.get<std::string>("--host");

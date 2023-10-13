@@ -57,9 +57,9 @@ public:
     /**
      * @brief 构造函数，初始化配置文件路径和日志文件路径，但不进行任何初始化操作。
      * @param config_file_path 服务器配置文件路径
-     * @param log_file_path 服务器日志文件路径
+     * @param DLOG_File_path 服务器日志文件路径
      */
-    ServerLauncher(const std::string &config_file_path, const std::string &log_file_path);
+    ServerLauncher(const std::string &config_file_path, const std::string &DLOG_File_path);
 
     /**
      * @brief 启动服务器并开始监听连接请求。
@@ -91,9 +91,9 @@ public:
      *
      * 该函数在服务器启动后应当被调用，以便将服务器输出记录到日志文件中。
      * 
-     * @param log_file_path 日志文件路径。
+     * @param DLOG_File_path 日志文件路径。
      */
-    void redirect_stdout_stderr(const std::string &log_file_path);
+    void redirect_stdout_stderr(const std::string &DLOG_File_path);
 
     /**
      * @brief 计算指定文件的 SHA-256 哈希值。
@@ -209,7 +209,7 @@ private:
     void read_server_output();
 
     std::string _config_file_path;  ///< 配置文件路径
-    std::string _log_file_path;  ///< 日志文件路径
+    std::string _DLOG_File_path;  ///< 日志文件路径
     json _config;  ///< 服务器配置文件
     std::atomic_bool _stop_requested = false;  ///< 是否请求停止服务器的标志
     std::atomic_bool _server_running = false;  ///< 是否正在运行服务器的标志

@@ -21,8 +21,9 @@
 #include "Options.h"
 #include "version.h"
 
-namespace Ui {
-class MainWindow;
+namespace Ui
+{
+    class MainWindow;
 }
 
 class MainWindow : public QMainWindow
@@ -44,7 +45,6 @@ public:
     bool indiWebInstalled();
 
 private:
-
     Ui::MainWindow *ui;
     bool webManagerRunning = false;
     QPointer<QProcess> webManager;
@@ -70,8 +70,8 @@ private:
     QAction *managerStatusinTray;
     QAction *serverStatusinTray;
 
-    //Thse parameters are used to prevent the constant update of the UI.
-    //When these things don't change, there is no need to redraw or recreate UI components.
+    // Thse parameters are used to prevent the constant update of the UI.
+    // When these things don't change, there is no need to redraw or recreate UI components.
     QStringList oldProfiles;
     QString oldActiveProfile;
     QString oldDrivers;

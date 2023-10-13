@@ -48,20 +48,20 @@ void ScriptPlugin::Execute(const std::vector<std::string> &args) const
         oss << " " << arg;
     }
     std::string script = oss.str();
-    LOG_F(INFO, "Running script: %s", script.c_str());
+    DLOG_F(INFO, "Running script: %s", script.c_str());
     if (m_ProcessManager)
     {
         if (!m_ProcessManager->runScript(script, GetPath()))
         {
-            LOG_F(ERROR, "Failed to run executable plugin : %s", script.c_str());
+            DLOG_F(ERROR, "Failed to run executable plugin : %s", script.c_str());
         }
         else
         {
-            LOG_F(ERROR, "Started %s successfully", script.c_str());
+            DLOG_F(ERROR, "Started %s successfully", script.c_str());
         }
     }
     else
     {
-        LOG_F(ERROR, "Process manager is not initialized");
+        DLOG_F(ERROR, "Process manager is not initialized");
     }
 }

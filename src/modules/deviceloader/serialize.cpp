@@ -525,24 +525,24 @@ void SerializedMsgWithSharedBuffer::generateContent()
             ssize_t size;
             if (!parseBlobSize(blobContent, size))
             {
-                LOG_F(WARNING, "Missing size value for blob");
+                DLOG_F(WARNING, "Missing size value for blob");
                 size = 1;
             }
 
             void *blob = IDSharedBlobAlloc(size);
             if (blob == nullptr)
             {
-                LOG_F(ERROR, "Unable to allocate shared buffer of size %ld : %s\n", size, strerror(errno));
+                DLOG_F(ERROR, "Unable to allocate shared buffer of size %ld : %s\n", size, strerror(errno));
                 ::exit(1);
             }
-            LOG_F(INFO, "Blob allocated at %p\n", blob);
+            DLOG_F(INFO, "Blob allocated at %p\n", blob);
 
             int actualLen = from64tobits_fast((char *)blob, base64data, base64datalen);
 
             if (actualLen != size)
             {
                 // FIXME: WTF ? at least prevent overflow ???
-                LOG_F(INFO, "Blob size mismatch after base64dec: %lld vs %lld\n", (long long int)actualLen, (long long int)size);
+                DLOG_F(INFO, "Blob size mismatch after base64dec: %lld vs %lld\n", (long long int)actualLen, (long long int)size);
             }
 
             int newFd = IDSharedBlobGetFd(blob);

@@ -102,7 +102,7 @@ void RemoteDvrInfo::start()
     this->setFds(sockfd, sockfd);
 
     if (verbose > 0)
-        LOG_F(INFO, "socket={}", sockfd);
+        DLOG_F(INFO, "socket={}", sockfd);
 
     /* N.B. storing name now is key to limiting outbound traffic to this
      * dev.
@@ -145,7 +145,7 @@ int RemoteDvrInfo::openHYDROGENServer()
     hp = gethostbyname(host.c_str());
     if (!hp)
     {
-        LOG_F(ERROR, "gethostbyname({}): {}", host.c_str(), strerror(errno));
+        DLOG_F(ERROR, "gethostbyname({}): {}", host.c_str(), strerror(errno));
         // Bye();
     }
 
@@ -156,14 +156,14 @@ int RemoteDvrInfo::openHYDROGENServer()
     serv_addr.sin_port = htons(port);
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        LOG_F(ERROR, "socket({},{}): {}", host.c_str(), port, strerror(errno));
+        DLOG_F(ERROR, "socket({},{}): {}", host.c_str(), port, strerror(errno));
         // Bye();
     }
 
     /* connect */
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
-        LOG_F(ERROR, "connect({},{}): {}", host.c_str(), port, strerror(errno));
+        DLOG_F(ERROR, "connect({},{}): {}", host.c_str(), port, strerror(errno));
         // Bye();
     }
 

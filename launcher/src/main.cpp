@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     a.setApplicationVersion(LithiumWebManagerApp_VERSION);
 
-    //This checks to see if you are root and warns you if you are.
+    // This checks to see if you are root and warns you if you are.
     QString name = qgetenv("USER");
     if (name == "root")
     {

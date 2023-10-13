@@ -63,6 +63,8 @@ public:
 
     virtual bool reconnect(const IParams &params) { return true; };
 
+    virtual bool isConnected() { return true; }
+
     virtual void init();
 
     const std::string getDeviceName();

@@ -91,7 +91,7 @@ void PIDWatcher::watch()
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            LOG_F(ERROR, _("CreateToolhelp32Snapshot failed."));
+            DLOG_F(ERROR, _("CreateToolhelp32Snapshot failed."));
             return;
         }
 
@@ -110,7 +110,7 @@ void PIDWatcher::watch()
 
                 {
                     DWORD pid = entry.th32ProcessID;
-                    LOG_F(INFO, _("Watching process with PID: {}"), pid);
+                    DLOG_F(INFO, _("Watching process with PID: {}"), pid);
 
                     HANDLE process = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_INFORMATION, FALSE, pid);
                     if (process != NULL)
@@ -121,7 +121,7 @@ void PIDWatcher::watch()
                             DWORD exitCode;
                             if (GetExitCodeProcess(process, &exitCode))
                             {
-                                LOG_F(INFO, _("Process exited with code: {}"), exitCode);
+                                DLOG_F(INFO, _("Process exited with code: {}"), exitCode);
                                 // 触发回调函数
                                 if (callback_)
                                 {
@@ -130,7 +130,7 @@ void PIDWatcher::watch()
                             }
                             else
                             {
-                                LOG_F(ERROR, _("GetExitCodeProcess failed."));
+                                DLOG_F(ERROR, _("GetExitCodeProcess failed."));
                             }
                             CloseHandle(process);
                             stop();
@@ -140,7 +140,7 @@ void PIDWatcher::watch()
                     }
                     else
                     {
-                        LOG_F(ERROR, _("OpenProcess failed."));
+                        DLOG_F(ERROR, _("OpenProcess failed."));
                     }
 
                     break;
@@ -160,14 +160,14 @@ void PIDWatcher::watch()
             if (fgets(buffer, sizeof(buffer), fp) != nullptr)
             {
                 int pid = std::stoi(buffer);
-                LOG_F(INFO, "Watching process with PID: {}", pid);
+                DLOG_F(INFO, "Watching process with PID: {}", pid);
 
                 int status;
                 if (waitpid(pid, &status, WNOHANG) != 0)
                 {
                     if (WIFEXITED(status))
                     {
-                        LOG_F(INFO, _("Process exited with status: {}"), WEXITSTATUS(status));
+                        DLOG_F(INFO, _("Process exited with status: {}"), WEXITSTATUS(status));
                         // 触发回调函数
                         if (callback_)
                         {
@@ -176,7 +176,7 @@ void PIDWatcher::watch()
                     }
                     else if (WIFSIGNALED(status))
                     {
-                        LOG_F(INFO, _("Process terminated by signal: {}"), WTERMSIG(status));
+                        DLOG_F(INFO, _("Process terminated by signal: {}"), WTERMSIG(status));
                     }
                     stop();
                     return;
@@ -252,7 +252,7 @@ void PIDWatcherManager::setCallbackForAll(const std::function<void(int, int)> &c
 
     // 设置回调函数
     manager.setCallbackForAll([](int pid, int exitCode)
-                              { LOG_F(INFO, "Callback: Process with PID {} exited with code {}", pid, exitCode); });
+                              { DLOG_F(INFO, "Callback: Process with PID {} exited with code {}", pid, exitCode); });
 
     // 开始监视所有进程
     manager.startAll();

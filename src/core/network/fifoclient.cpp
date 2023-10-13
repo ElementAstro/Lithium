@@ -43,7 +43,7 @@ FifoClient::FifoClient(const std::string &fifoPath) : fifoPath(fifoPath), pipeFd
 
 void FifoClient::connect()
 {
-    LOG_F(INFO, "Connecting to FIFO...");
+    DLOG_F(INFO, "Connecting to FIFO...");
 
 #ifdef _WIN32
     if (!WaitNamedPipeA(fifoPath.c_str(), NMPWAIT_WAIT_FOREVER))
@@ -74,12 +74,12 @@ void FifoClient::connect()
     pipeFd = fd;
 #endif
 
-    LOG_F(INFO, "Connected to FIFO");
+    DLOG_F(INFO, "Connected to FIFO");
 }
 
 void FifoClient::sendMessage(const std::string &message)
 {
-    LOG_F(INFO, "Sending message...");
+    DLOG_F(INFO, "Sending message...");
 
 #ifdef _WIN32
     DWORD numBytesWritten;
@@ -101,12 +101,12 @@ void FifoClient::sendMessage(const std::string &message)
     }
 #endif
 
-    LOG_F(INFO, "Message sent");
+    DLOG_F(INFO, "Message sent");
 }
 
 void FifoClient::disconnect()
 {
-    LOG_F(INFO, "Disconnecting from FIFO...");
+    DLOG_F(INFO, "Disconnecting from FIFO...");
 
 #ifdef _WIN32
     CloseHandle(pipeHandle);
@@ -114,5 +114,5 @@ void FifoClient::disconnect()
     close(pipeFd);
 #endif
 
-    LOG_F(INFO, "Disconnected from FIFO");
+    DLOG_F(INFO, "Disconnected from FIFO");
 }

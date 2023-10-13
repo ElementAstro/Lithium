@@ -153,10 +153,10 @@ namespace Lithium
 
     void ChaiScriptManager::InitMyApp()
     {
-        LOG_F(INFO, "ChaiScript Manager initializing ...");
+        DLOG_F(INFO, "ChaiScript Manager initializing ...");
         Init();
         InitSubModules();
-        LOG_F(INFO, "ChaiScriptManager initialized");
+        DLOG_F(INFO, "ChaiScriptManager initialized");
         chai_->add_global(chaiscript::var(MyApp), "app");
     }
 
@@ -172,7 +172,7 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Failed to open script file: %s", filename.c_str());
+            DLOG_F(ERROR, "Failed to open script file: %s", filename.c_str());
             return false;
         }
         return true;
@@ -186,7 +186,7 @@ namespace Lithium
         }
         catch (chaiscript::exception::eval_error &e)
         {
-            LOG_F(ERROR, "Failed to eval %s : %s", e.filename.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to eval %s : %s", e.filename.c_str(), e.what());
             return false;
         };
         return true;
@@ -200,7 +200,7 @@ namespace Lithium
         }
         catch (chaiscript::exception::eval_error &e)
         {
-            LOG_F(ERROR, "Failed to run %s : %s", e.filename.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to run %s : %s", e.filename.c_str(), e.what());
             return false;
         }
         return true;
@@ -216,7 +216,7 @@ namespace Lithium
             }
             catch (chaiscript::exception::eval_error &e)
             {
-                LOG_F(ERROR, "Failed to run: %s", e.what());
+                DLOG_F(ERROR, "Failed to run: %s", e.what());
                 return false;
             }
         }

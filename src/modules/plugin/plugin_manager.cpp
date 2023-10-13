@@ -54,7 +54,7 @@ namespace Lithium
 
         if (plugins_.count(pluginName))
         {
-            LOG_F(ERROR, "Error: Plugin '%s' already exists.", pluginName.c_str());
+            DLOG_F(ERROR, "Error: Plugin '%s' already exists.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' already exists.");
         }
 
@@ -70,13 +70,13 @@ namespace Lithium
         }
         else
         {
-            LOG_F(ERROR, "Error: Unknown plugin type '%s'.", type.c_str());
+            DLOG_F(ERROR, "Error: Unknown plugin type '%s'.", type.c_str());
             throw std::runtime_error("Error: Unknown plugin type '" + type + "'.");
         }
 
         plugins_[pluginName] = plugin;
 
-        LOG_F(INFO, "Plugin '%s' loaded successfully.", pluginName.c_str());
+        DLOG_F(INFO, "Plugin '%s' loaded successfully.", pluginName.c_str());
     }
 
     void PluginManager::UnloadPlugin(const std::string &pluginName)
@@ -87,11 +87,11 @@ namespace Lithium
         if (it != plugins_.end())
         {
             plugins_.erase(it);
-            LOG_F(INFO, "Plugin '%s' unloaded successfully.", pluginName.c_str());
+            DLOG_F(INFO, "Plugin '%s' unloaded successfully.", pluginName.c_str());
         }
         else
         {
-            LOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
+            DLOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' does not exist.");
         }
     }
@@ -105,17 +105,17 @@ namespace Lithium
         {
             const std::shared_ptr<Plugin> &plugin = it->second;
 
-            LOG_F(INFO, "Running Plugin '%s' with args:", pluginName.c_str());
+            DLOG_F(INFO, "Running Plugin '%s' with args:", pluginName.c_str());
             for (const std::string &arg : args)
             {
-                LOG_F(INFO, "- %s", arg.c_str());
+                DLOG_F(INFO, "- %s", arg.c_str());
             }
 
             plugin->Execute(args);
         }
         else
         {
-            LOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
+            DLOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' does not exist.");
         }
     }
@@ -124,17 +124,17 @@ namespace Lithium
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        LOG_F(INFO, "Loaded Plugins:");
+        DLOG_F(INFO, "Loaded Plugins:");
         for (const auto &pair : plugins_)
         {
             const std::string &pluginName = pair.first;
             const std::shared_ptr<Plugin> &plugin = pair.second;
-            LOG_F(INFO, "- Name: %s", pluginName.c_str());
-            LOG_F(INFO, "  Path: %s", plugin->GetPath().c_str());
-            LOG_F(INFO, "  Type: %s", GetPluginType(plugin).c_str());
-            LOG_F(INFO, "  Version: %s", plugin->GetVersion().c_str());
-            LOG_F(INFO, "  Author: %s", plugin->GetAuthor().c_str());
-            LOG_F(INFO, "  Description: %s", plugin->GetDescription().c_str());
+            DLOG_F(INFO, "- Name: %s", pluginName.c_str());
+            DLOG_F(INFO, "  Path: %s", plugin->GetPath().c_str());
+            DLOG_F(INFO, "  Type: %s", GetPluginType(plugin).c_str());
+            DLOG_F(INFO, "  Version: %s", plugin->GetVersion().c_str());
+            DLOG_F(INFO, "  Author: %s", plugin->GetAuthor().c_str());
+            DLOG_F(INFO, "  Description: %s", plugin->GetDescription().c_str());
         }
     }
 
@@ -146,16 +146,16 @@ namespace Lithium
         if (it != plugins_.end())
         {
             const std::shared_ptr<Plugin> &plugin = it->second;
-            LOG_F(INFO, "Plugin info for '%s':", pluginName.c_str());
-            LOG_F(INFO, "- Path: %s", plugin->GetPath().c_str());
-            LOG_F(INFO, "- Type: %s", GetPluginType(plugin).c_str());
-            LOG_F(INFO, "- Version: %s", plugin->GetVersion().c_str());
-            LOG_F(INFO, "- Author: %s", plugin->GetAuthor().c_str());
-            LOG_F(INFO, "- Description: %s", plugin->GetDescription().c_str());
+            DLOG_F(INFO, "Plugin info for '%s':", pluginName.c_str());
+            DLOG_F(INFO, "- Path: %s", plugin->GetPath().c_str());
+            DLOG_F(INFO, "- Type: %s", GetPluginType(plugin).c_str());
+            DLOG_F(INFO, "- Version: %s", plugin->GetVersion().c_str());
+            DLOG_F(INFO, "- Author: %s", plugin->GetAuthor().c_str());
+            DLOG_F(INFO, "- Description: %s", plugin->GetDescription().c_str());
         }
         else
         {
-            LOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
+            DLOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' does not exist.");
         }
     }

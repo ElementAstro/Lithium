@@ -49,7 +49,7 @@ void ConvertJsonToToml(const std::string &inputFile, const std::string &outputFi
 
         if (!fs::exists(infile))
         {
-            LOG_F(ERROR, "Input file %s does not exist!", infile.c_str());
+            DLOG_F(ERROR, "Input file %s does not exist!", infile.c_str());
             return;
         }
 
@@ -63,21 +63,21 @@ void ConvertJsonToToml(const std::string &inputFile, const std::string &outputFi
             std::ofstream out{outputFile};
             if (!out)
             {
-                LOG_F(ERROR, "Failed to open output file: %s", outputFile.c_str());
+                DLOG_F(ERROR, "Failed to open output file: %s", outputFile.c_str());
                 return;
             }
             out << data << std::endl;
-            LOG_F(INFO, "Conversion completed. Output saved to %s", outputFile.c_str());
+            DLOG_F(INFO, "Conversion completed. Output saved to %s", outputFile.c_str());
         }
         else
         {
             std::cout << data << std::endl;
-            LOG_F(INFO, "Conversion completed. Result printed to stdout");
+            DLOG_F(INFO, "Conversion completed. Result printed to stdout");
         }
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "An exception occurred during conversion: %s", e.what());
+        DLOG_F(ERROR, "An exception occurred during conversion: %s", e.what());
     }
 }
 
@@ -99,7 +99,7 @@ int main(int argc, char **argv)
     }
     catch (const std::runtime_error &err)
     {
-        LOG_F(ERROR, "%s", err.what());
+        DLOG_F(ERROR, "%s", err.what());
         std::cout << program;
         return 1;
     }

@@ -51,20 +51,20 @@ void ExecutablePlugin::Execute(const std::vector<std::string> &args) const
         oss << " " << arg;
     }
     std::string command = oss.str();
-    LOG_F(INFO, "Running command: %s", command.c_str());
+    DLOG_F(INFO, "Running command: %s", command.c_str());
     if (m_ProcessManager)
     {
         if (!m_ProcessManager->createProcess(command, GetPath()))
         {
-            LOG_F(ERROR, "Failed to run executable plugin : %s", command.c_str());
+            DLOG_F(ERROR, "Failed to run executable plugin : %s", command.c_str());
         }
         else
         {
-            LOG_F(ERROR, "Started %s successfully", command.c_str());
+            DLOG_F(ERROR, "Started %s successfully", command.c_str());
         }
     }
     else
     {
-        LOG_F(ERROR, "Process manager is not initialized");
+        DLOG_F(ERROR, "Process manager is not initialized");
     }
 }

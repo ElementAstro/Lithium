@@ -25,7 +25,7 @@ void jsonToIni(const std::string &jsonFileName, const std::string &iniFileName)
     std::ifstream jsonFile(jsonFileName);
     if (!jsonFile.is_open())
     {
-        LOG_F(ERROR, "Failed to open JSON file: %s", jsonFileName.c_str());
+        DLOG_F(ERROR, "Failed to open JSON file: %s", jsonFileName.c_str());
         return;
     }
 
@@ -36,7 +36,7 @@ void jsonToIni(const std::string &jsonFileName, const std::string &iniFileName)
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, "Failed to parse JSON file: %s. Error: %s", jsonFileName.c_str(), e.what());
+        DLOG_F(ERROR, "Failed to parse JSON file: %s. Error: %s", jsonFileName.c_str(), e.what());
         return;
     }
 
@@ -44,7 +44,7 @@ void jsonToIni(const std::string &jsonFileName, const std::string &iniFileName)
     std::ofstream iniFile(iniFileName);
     if (!iniFile.is_open())
     {
-        LOG_F(ERROR, "Failed to create INI file: %s", iniFileName.c_str());
+        DLOG_F(ERROR, "Failed to create INI file: %s", iniFileName.c_str());
         return;
     }
 
@@ -60,11 +60,11 @@ void jsonToIni(const std::string &jsonFileName, const std::string &iniFileName)
     iniFile.close();
     if (!iniFile)
     {
-        LOG_F(ERROR, "Failed to save INI file: %s", iniFileName.c_str());
+        DLOG_F(ERROR, "Failed to save INI file: %s", iniFileName.c_str());
     }
     else
     {
-        LOG_F(INFO, "INI file is saved: %s", iniFileName.c_str());
+        DLOG_F(INFO, "INI file is saved: %s", iniFileName.c_str());
     }
 }
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 
     if (argc < 3)
     {
-        LOG_F(ERROR, "Usage: %s <json_file> <ini_file>", argv[0]);
+        DLOG_F(ERROR, "Usage: %s <json_file> <ini_file>", argv[0]);
         return 1;
     }
 
@@ -87,14 +87,14 @@ int main(int argc, char *argv[])
     std::ifstream inputFile(jsonFileName);
     if (!inputFile.is_open())
     {
-        LOG_F(ERROR, "JSON file not found: %s", jsonFileName.c_str());
+        DLOG_F(ERROR, "JSON file not found: %s", jsonFileName.c_str());
         return 1;
     }
     inputFile.close();
 
     jsonToIni(jsonFileName, iniFileName);
 
-    LOG_F(INFO, "JSON to INI conversion is completed.");
+    DLOG_F(INFO, "JSON to INI conversion is completed.");
 
     // 释放日志资源
     loguru::shutdown();

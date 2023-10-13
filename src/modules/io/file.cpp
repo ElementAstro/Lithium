@@ -57,18 +57,18 @@ namespace Lithium::File
     {
         if (fileExists(filename))
         {
-            LOG_F(ERROR, "File \"%s\" already exists!", filename.c_str());
+            DLOG_F(ERROR, "File \"%s\" already exists!", filename.c_str());
             return false;
         }
         std::ofstream outfile(filename);
         if (!outfile)
         {
-            LOG_F(ERROR, "Error creating file \"%s\"!", filename.c_str());
+            DLOG_F(ERROR, "Error creating file \"%s\"!", filename.c_str());
             return false;
         }
         outfile.close();
         std::fclose(std::fopen(filename.c_str(), "a")); // create a link to the file
-        LOG_F(INFO, "Created file \"%s\"", filename.c_str());
+        DLOG_F(INFO, "Created file \"%s\"", filename.c_str());
         return true;
     }
 
@@ -76,17 +76,17 @@ namespace Lithium::File
     {
         if (!fileExists(filename))
         {
-            LOG_F(ERROR, "File \"%s\" does not exist!", filename.c_str());
+            DLOG_F(ERROR, "File \"%s\" does not exist!", filename.c_str());
             return false;
         }
         m_filename = filename;
         m_file.open(filename, std::ios::in | std::ios::out);
         if (!m_file)
         {
-            LOG_F(ERROR, "Could not open file \"%s\"!", filename.c_str());
+            DLOG_F(ERROR, "Could not open file \"%s\"!", filename.c_str());
             return false;
         }
-        LOG_F(INFO, "Opened file \"%s\"", filename.c_str());
+        DLOG_F(INFO, "Opened file \"%s\"", filename.c_str());
         return true;
     }
 
@@ -94,13 +94,13 @@ namespace Lithium::File
     {
         if (!m_file.is_open())
         {
-            LOG_F(ERROR, "No file is currently open!");
+            DLOG_F(ERROR, "No file is currently open!");
             return false;
         }
         std::stringstream buffer;
         buffer << m_file.rdbuf();
         contents = buffer.str();
-        LOG_F(INFO, "Read contents of file \"%s\"", m_filename.c_str());
+        DLOG_F(INFO, "Read contents of file \"%s\"", m_filename.c_str());
         return true;
     }
 
@@ -108,11 +108,11 @@ namespace Lithium::File
     {
         if (!m_file.is_open())
         {
-            LOG_F(ERROR, "No file is currently open!");
+            DLOG_F(ERROR, "No file is currently open!");
             return false;
         }
         m_file << contents;
-        LOG_F(INFO, "Wrote contents to file \"%s\"", m_filename.c_str());
+        DLOG_F(INFO, "Wrote contents to file \"%s\"", m_filename.c_str());
         return true;
     }
 
@@ -120,21 +120,21 @@ namespace Lithium::File
     {
         if (!fileExists(oldFilename))
         {
-            LOG_F(ERROR, "File \"%s\" does not exist!", oldFilename.c_str());
+            DLOG_F(ERROR, "File \"%s\" does not exist!", oldFilename.c_str());
             return false;
         }
         if (fileExists(newFilename))
         {
-            LOG_F(ERROR, "File \"%s\" already exists!", newFilename.c_str());
+            DLOG_F(ERROR, "File \"%s\" already exists!", newFilename.c_str());
             return false;
         }
         int result = std::rename(oldFilename.c_str(), newFilename.c_str());
         if (result != 0)
         {
-            LOG_F(ERROR, "Could not move file from \"%s\" to \"%s\"!", oldFilename.c_str(), newFilename.c_str());
+            DLOG_F(ERROR, "Could not move file from \"%s\" to \"%s\"!", oldFilename.c_str(), newFilename.c_str());
             return false;
         }
-        LOG_F(INFO, "Moved file from \"%s\" to \"%s\"", oldFilename.c_str(), newFilename.c_str());
+        DLOG_F(INFO, "Moved file from \"%s\" to \"%s\"", oldFilename.c_str(), newFilename.c_str());
         return true;
     }
 
@@ -142,15 +142,15 @@ namespace Lithium::File
     {
         if (!fileExists(filename))
         {
-            LOG_F(ERROR, "File \"%s\" does not exist!", filename.c_str());
+            DLOG_F(ERROR, "File \"%s\" does not exist!", filename.c_str());
             return false;
         }
         if (std::remove(filename.c_str()) != 0)
         {
-            LOG_F(ERROR, "Could not delete file \"%s\"!", filename.c_str());
+            DLOG_F(ERROR, "Could not delete file \"%s\"!", filename.c_str());
             return false;
         }
-        LOG_F(INFO, "Deleted file \"%s\"", filename.c_str());
+        DLOG_F(INFO, "Deleted file \"%s\"", filename.c_str());
         return true;
     }
 
@@ -158,7 +158,7 @@ namespace Lithium::File
     {
         if (!m_file.is_open())
         {
-            LOG_F(ERROR, "No file is currently open!");
+            DLOG_F(ERROR, "No file is currently open!");
             return -1;
         }
         m_file.seekg(0, m_file.end);
@@ -166,11 +166,11 @@ namespace Lithium::File
         m_file.seekg(0, m_file.beg);
         if (fileSize == -1)
         {
-            LOG_F(ERROR, "Could not get file size of \"%s\"!", m_filename.c_str());
+            DLOG_F(ERROR, "Could not get file size of \"%s\"!", m_filename.c_str());
         }
         else
         {
-            LOG_F(INFO, "File size of \"%s\" is %ld bytes", m_filename.c_str(), fileSize);
+            DLOG_F(INFO, "File size of \"%s\" is %ld bytes", m_filename.c_str(), fileSize);
         }
         return fileSize;
     }
@@ -179,20 +179,20 @@ namespace Lithium::File
     {
         if (!m_file.is_open())
         {
-            LOG_F(ERROR, "No file is currently open!");
+            DLOG_F(ERROR, "No file is currently open!");
             return "";
         }
 
         EVP_MD_CTX *mdContext = EVP_MD_CTX_new();
         if (mdContext == nullptr)
         {
-            LOG_F(ERROR, "Failed to create EVP_MD_CTX");
+            DLOG_F(ERROR, "Failed to create EVP_MD_CTX");
             return "";
         }
 
         if (EVP_DigestInit_ex(mdContext, EVP_sha256(), nullptr) != 1)
         {
-            LOG_F(ERROR, "Failed to initialize EVP_MD_CTX");
+            DLOG_F(ERROR, "Failed to initialize EVP_MD_CTX");
             EVP_MD_CTX_free(mdContext);
             return "";
         }
@@ -202,7 +202,7 @@ namespace Lithium::File
         {
             if (EVP_DigestUpdate(mdContext, buffer, sizeof(buffer)) != 1)
             {
-                LOG_F(ERROR, "Failed to update EVP_MD_CTX");
+                DLOG_F(ERROR, "Failed to update EVP_MD_CTX");
                 EVP_MD_CTX_free(mdContext);
                 return "";
             }
@@ -212,7 +212,7 @@ namespace Lithium::File
         unsigned int hashLength = 0;
         if (EVP_DigestFinal_ex(mdContext, hash, &hashLength) != 1)
         {
-            LOG_F(ERROR, "Failed to finalize EVP_MD_CTX");
+            DLOG_F(ERROR, "Failed to finalize EVP_MD_CTX");
             EVP_MD_CTX_free(mdContext);
             return "";
         }
@@ -226,7 +226,7 @@ namespace Lithium::File
             sha256Stream << std::setw(2) << static_cast<int>(hash[i]);
         }
 
-        LOG_F(INFO, "SHA-256 value for file \"%s\" is %s", m_filename.c_str(), sha256Stream.str().c_str());
+        DLOG_F(INFO, "SHA-256 value for file \"%s\" is %s", m_filename.c_str(), sha256Stream.str().c_str());
         return sha256Stream.str();
     }
 
@@ -235,13 +235,13 @@ namespace Lithium::File
         size_t pos = filename.find_last_of("/\\");
         if (pos == std::string::npos)
         {
-            LOG_F(ERROR, "Could not get directory of file \"%s\"", filename.c_str());
+            DLOG_F(ERROR, "Could not get directory of file \"%s\"", filename.c_str());
             return "";
         }
         else
         {
             std::string directory = filename.substr(0, pos);
-            LOG_F(INFO, "Directory of file \"%s\" is \"%s\"", filename.c_str(), directory.c_str());
+            DLOG_F(INFO, "Directory of file \"%s\" is \"%s\"", filename.c_str(), directory.c_str());
             return directory;
         }
     }

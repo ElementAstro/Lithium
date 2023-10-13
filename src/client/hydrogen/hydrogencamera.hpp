@@ -41,6 +41,7 @@ Description: Hydrogen Camera
 #include "core/property/hydrogenproperty.h"
 
 #include <string>
+#include <atomic>
 
 #include "nlohmann/json.hpp"
 
@@ -115,6 +116,10 @@ private:
     std::string indi_camera_version;
     std::string indi_camera_interface;
 
+    std::atomic_bool is_connected;
+    std::atomic_bool is_exposure;
+    std::atomic_bool is_video;
+
     nlohmann::json device_info;
 
 private:
@@ -152,62 +157,216 @@ public:
     // 析构函数
     ~HydrogenCamera();
 
-    // 连接相机
-    bool connect(std::string name) override;
-    // 断开连接
-    bool disconnect() override;
-    // 重新连接
-    bool reconnect() override;
-    // 搜索可用设备
-    bool scanForAvailableDevices() override;
+    bool connect(const IParams &params) override;
 
-    bool getParameter(const std::string &paramName) override;
+    bool disconnect(const IParams &params) override;
 
-    bool setParameter(const std::string &paramName, const std::string &paramValue) override;
+    bool reconnect(const IParams &params) override;
 
-    // 开始曝光
-    bool startExposure(int duration_ms) override;
-    // 停止曝光
-    bool stopExposure() override;
-    // 等待曝光完成
-    bool waitForExposureComplete() override;
+    bool isConnected(const IParams &params) override;
 
-    // 开始实时预览
-    bool startLiveView() override;
-    // 停止实时预览
-    bool stopLiveView() override;
+public:
+    /**
+     * @brief 启动曝光
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool startExposure(const nlohmann::json &params);
 
-    // 设置制冷
-    bool setCoolingOn(bool on) override;
-    // 设置温度
-    bool setTemperature(double temperature) override;
-    // 获取当前温度
-    double getTemperature();
+    /**
+     * @brief 中止曝光
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool abortExposure(const nlohmann::json &params);
 
-    // 设置快门开关
-    bool setShutterOpen(bool open) override;
+    /**
+     * @brief 获取曝光状态
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getExposureStatus(const nlohmann::json &params);
 
-    // 设置图像子区域
-    // bool setSubframe(const ImageRect& rect);
+    /**
+     * @brief 获取曝光结果
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getExposureResult(const nlohmann::json &params);
 
-    // 设置二次取样
-    bool setBinning(int binning) override;
+    /**
+     * @brief 保存曝光结果
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool saveExposureResult(const nlohmann::json &params);
 
-    // 设置增益
-    bool setGain(int gain) override;
+    /**
+     * @brief 启动视频
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool startVideo(const nlohmann::json &params);
 
-    // 设置偏移
-    bool setOffset(int offset) override;
+    /**
+     * @brief 停止视频
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool stopVideo(const nlohmann::json &params);
 
-    // 设置帧区域
-    bool setROIFrame(int start_x, int start_y, int frame_x, int frame_y) override;
+    /**
+     * @brief 获取视频状态
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getVideoStatus(const nlohmann::json &params);
 
-    // 获取简单任务
-    std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
-    // 获取条件任务
-    std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
-    // 获取循环任务
-    std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
+    /**
+     * @brief 获取视频结果
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getVideoResult(const nlohmann::json &params);
+
+    /**
+     * @brief 保存视频结果
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool saveVideoResult(const nlohmann::json &params);
+
+    /**
+     * @brief 启动冷却
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool startCooling(const nlohmann::json &params);
+
+    /**
+     * @brief 停止冷却
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool stopCooling(const nlohmann::json &params);
+
+    bool isCoolingAvailable();
+
+    /**
+     * @brief 获取温度
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getTemperature(const nlohmann::json &params);
+
+    /**
+     * @brief 获取冷却功率
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getCoolingPower(const nlohmann::json &params);
+
+    /**
+     * @brief 设置温度
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool setTemperature(const nlohmann::json &params);
+
+    /**
+     * @brief 设置冷却功率
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool setCoolingPower(const nlohmann::json &params);
+
+    /**
+     * @brief 获取增益值
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getGain(const nlohmann::json &params);
+
+    /**
+     * @brief 设置增益值
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool setGain(const nlohmann::json &params);
+
+    bool isGainAvailable();
+
+    /**
+     * @brief 获取偏移量
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getOffset(const nlohmann::json &params);
+
+    /**
+     * @brief 设置偏移量
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool setOffset(const nlohmann::json &params);
+
+    bool isOffsetAvailable();
+
+    /**
+     * @brief 获取ISO值
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getISO(const nlohmann::json &params);
+
+    /**
+     * @brief 设置ISO值
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool setISO(const nlohmann::json &params);
+
+    bool isISOAvailable();
+
+    /**
+     * @brief 获取帧数
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool getFrame(const nlohmann::json &params);
+
+    /**
+     * @brief 设置帧数
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
+    bool setFrame(const nlohmann::json &params);
+
+    bool isFrameSettingAvailable();
 
 protected:
     // 清空状态

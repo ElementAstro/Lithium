@@ -141,6 +141,7 @@ add_subdirectory(tools)
 
 # 内置的模组
 include_directories(modules)
+add_subdirectory(modules/hydrogen_client)
 
 # 构建Lithium内核
 add_subdirectory(${lithium_src_dir}/core)
@@ -157,6 +158,9 @@ set(api_SRC
 
     ${lithium_src_dir}/client/phd2client.cpp
 	${lithium_src_dir}/client/phd2client.hpp
+
+    ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
+    ${lithium_src_dir}/client/hydrogen/hydrogencamera.hpp
 )
 
 set(config_SRC

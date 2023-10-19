@@ -8,7 +8,7 @@
 #ifndef CPPHTTPLIB_HTTPLIB_H
 #define CPPHTTPLIB_HTTPLIB_H
 
-#define CPPHTTPLIB_VERSION "0.13.3"
+#define CPPHTTPLIB_VERSION "0.14.1"
 
 /*
  * Configuration
@@ -233,7 +233,7 @@ using socket_t = int;
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#define CPPHTTPLIB_OPENSSL_SUPPORT
+
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 #ifdef _WIN32
 #include <wincrypt.h>
@@ -487,8 +487,7 @@ struct Request {
 
   bool has_header(const std::string &key) const;
   std::string get_header_value(const std::string &key, size_t id = 0) const;
-  template <typename T>
-  T get_header_value(const std::string &key, size_t id = 0) const;
+  uint64_t get_header_value_u64(const std::string &key, size_t id = 0) const;
   size_t get_header_value_count(const std::string &key) const;
   void set_header(const std::string &key, const std::string &val);
 
@@ -520,8 +519,7 @@ struct Response {
 
   bool has_header(const std::string &key) const;
   std::string get_header_value(const std::string &key, size_t id = 0) const;
-  template <typename T>
-  T get_header_value(const std::string &key, size_t id = 0) const;
+  uint64_t get_header_value_u64(const std::string &key, size_t id = 0) const;
   size_t get_header_value_count(const std::string &key) const;
   void set_header(const std::string &key, const std::string &val);
 
@@ -739,6 +737,8 @@ private:
   std::regex regex_;
 };
 
+ssize_t write_headers(Stream &strm, const Headers &headers);
+
 } // namespace detail
 
 class Server {
@@ -802,6 +802,8 @@ public:
   Server &set_socket_options(SocketOptions socket_options);
 
   Server &set_default_headers(Headers headers);
+  Server &
+  set_header_writer(std::function<ssize_t(Stream &, Headers &)> const &writer);
 
   Server &set_keep_alive_max_count(size_t count);
   Server &set_keep_alive_timeout(time_t sec);
@@ -936,6 +938,8 @@ private:
   SocketOptions socket_options_ = default_socket_options;
 
   Headers default_headers_;
+  std::function<ssize_t(Stream &, Headers &)> header_writer_ =
+      detail::write_headers;
 };
 
 enum class Error {
@@ -988,8 +992,8 @@ public:
   bool has_request_header(const std::string &key) const;
   std::string get_request_header_value(const std::string &key,
                                        size_t id = 0) const;
-  template <typename T>
-  T get_request_header_value(const std::string &key, size_t id = 0) const;
+  uint64_t get_request_header_value_u64(const std::string &key,
+                                        size_t id = 0) const;
   size_t get_request_header_value_count(const std::string &key) const;
 
 private:
@@ -1166,6 +1170,9 @@ public:
 
   void set_default_headers(Headers headers);
 
+  void
+  set_header_writer(std::function<ssize_t(Stream &, Headers &)> const &writer);
+
   void set_address_family(int family);
   void set_tcp_nodelay(bool on);
   void set_socket_options(SocketOptions socket_options);
@@ -1274,6 +1281,10 @@ protected:
 
   // Default headers
   Headers default_headers_;
+
+  // Header writer
+  std::function<ssize_t(Stream &, Headers &)> header_writer_ =
+      detail::write_headers;
 
   // Settings
   std::string client_cert_path_;
@@ -1541,6 +1552,9 @@ public:
 
   void set_default_headers(Headers headers);
 
+  void
+  set_header_writer(std::function<ssize_t(Stream &, Headers &)> const &writer);
+
   void set_address_family(int family);
   void set_tcp_nodelay(bool on);
   void set_socket_options(SocketOptions socket_options);
@@ -1710,15 +1724,9 @@ inline void duration_to_sec_and_usec(const T &duration, U callback) {
   callback(static_cast<time_t>(sec), static_cast<time_t>(usec));
 }
 
-template <typename T>
-inline T get_header_value(const Headers & /*headers*/,
-                          const std::string & /*key*/, size_t /*id*/ = 0,
-                          uint64_t /*def*/ = 0) {}
-
-template <>
-inline uint64_t get_header_value<uint64_t>(const Headers &headers,
-                                           const std::string &key, size_t id,
-                                           uint64_t def) {
+inline uint64_t get_header_value_u64(const Headers &headers,
+                                     const std::string &key, size_t id,
+                                     uint64_t def) {
   auto rng = headers.equal_range(key);
   auto it = rng.first;
   std::advance(it, static_cast<ssize_t>(id));
@@ -1730,14 +1738,14 @@ inline uint64_t get_header_value<uint64_t>(const Headers &headers,
 
 } // namespace detail
 
-template <typename T>
-inline T Request::get_header_value(const std::string &key, size_t id) const {
-  return detail::get_header_value<T>(headers, key, id, 0);
+inline uint64_t Request::get_header_value_u64(const std::string &key,
+                                              size_t id) const {
+  return detail::get_header_value_u64(headers, key, id, 0);
 }
 
-template <typename T>
-inline T Response::get_header_value(const std::string &key, size_t id) const {
-  return detail::get_header_value<T>(headers, key, id, 0);
+inline uint64_t Response::get_header_value_u64(const std::string &key,
+                                               size_t id) const {
+  return detail::get_header_value_u64(headers, key, id, 0);
 }
 
 template <typename... Args>
@@ -1906,10 +1914,9 @@ inline std::ostream &operator<<(std::ostream &os, const Error &obj) {
   return os;
 }
 
-template <typename T>
-inline T Result::get_request_header_value(const std::string &key,
-                                          size_t id) const {
-  return detail::get_header_value<T>(request_headers_, key, id, 0);
+inline uint64_t Result::get_request_header_value_u64(const std::string &key,
+                                                     size_t id) const {
+  return detail::get_header_value_u64(request_headers_, key, id, 0);
 }
 
 template <class Rep, class Period>

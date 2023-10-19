@@ -1723,7 +1723,7 @@ bool read_content(Stream &strm, T &x, size_t payload_max_length, int &status,
         } else if (!has_header(x.headers, "Content-Length")) {
           ret = read_content_without_length(strm, out);
         } else {
-          auto len = get_header_value<uint64_t>(x.headers, "Content-Length");
+          auto len = get_header_value_u64(x.headers, "Content-Length", 0, 0);
           if (len > payload_max_length) {
             exceed_payload_max_length = true;
             skip_content_with_length(strm, len);
@@ -2815,7 +2815,7 @@ bool parse_www_authenticate(const Response &res,
         s = s.substr(pos + 1);
         auto beg = std::sregex_iterator(s.begin(), s.end(), re);
         for (auto i = beg; i != std::sregex_iterator(); ++i) {
-          auto m = *i;
+          const auto &m = *i;
           auto key = s.substr(static_cast<size_t>(m.position(1)),
                               static_cast<size_t>(m.length(1)));
           auto val = m.length(2) > 0
@@ -3510,6 +3510,12 @@ Server &Server::set_default_headers(Headers headers) {
   return *this;
 }
 
+Server &Server::set_header_writer(
+    std::function<ssize_t(Stream &, Headers &)> const &writer) {
+  header_writer_ = writer;
+  return *this;
+}
+
 Server &Server::set_keep_alive_max_count(size_t count) {
   keep_alive_max_count_ = count;
   return *this;
@@ -3704,7 +3710,7 @@ bool Server::write_response_core(Stream &strm, bool close_connection,
       return false;
     }
 
-    if (!detail::write_headers(bstrm, res.headers)) { return false; }
+    if (!header_writer_(bstrm, res.headers)) { return false; }
 
     // Flush buffer
     auto &data = bstrm.get_buffer();
@@ -4552,9 +4558,9 @@ bool ClientImpl::read_response_line(Stream &strm, const Request &req,
   if (!line_reader.getline()) { return false; }
 
 #ifdef CPPHTTPLIB_ALLOW_LF_AS_LINE_TERMINATOR
-  const static std::regex re("(HTTP/1\\.[01]) (\\d{3})(?: (.*?))?\r\n");
-#else
   const static std::regex re("(HTTP/1\\.[01]) (\\d{3})(?: (.*?))?\r?\n");
+#else
+  const static std::regex re("(HTTP/1\\.[01]) (\\d{3})(?: (.*?))?\r\n");
 #endif
 
   std::cmatch m;
@@ -4943,7 +4949,7 @@ bool ClientImpl::write_request(Stream &strm, Request &req,
     const auto &path = url_encode_ ? detail::encode_url(req.path) : req.path;
     bstrm.write_format("%s %s HTTP/1.1\r\n", req.method.c_str(), path.c_str());
 
-    detail::write_headers(bstrm, req.headers);
+    header_writer_(bstrm, req.headers);
 
     // Flush buffer
     auto &data = bstrm.get_buffer();
@@ -5752,6 +5758,11 @@ ClientImpl::set_hostname_addr_map(std::map<std::string, std::string> addr_map) {
 
 void ClientImpl::set_default_headers(Headers headers) {
   default_headers_ = std::move(headers);
+}
+
+void ClientImpl::set_header_writer(
+    std::function<ssize_t(Stream &, Headers &)> const &writer) {
+  header_writer_ = writer;
 }
 
 void ClientImpl::set_address_family(int family) {
@@ -6946,6 +6957,11 @@ Client::set_hostname_addr_map(std::map<std::string, std::string> addr_map) {
 
 void Client::set_default_headers(Headers headers) {
   cli_->set_default_headers(std::move(headers));
+}
+
+void Client::set_header_writer(
+    std::function<ssize_t(Stream &, Headers &)> const &writer) {
+  cli_->set_header_writer(writer);
 }
 
 void Client::set_address_family(int family) {

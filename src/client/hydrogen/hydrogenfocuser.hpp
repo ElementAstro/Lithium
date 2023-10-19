@@ -25,27 +25,19 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Focuser
+Description: Hydrogen Focuser
 
 **************************************************/
 
 #pragma once
 
-#include "api/indiclient.hpp"
-#include "device/basic_device.hpp"
-
-#include <libindi/basedevice.h>
-#include <libindi/indiproperty.h>
-
-#include <string>
-
-#include "nlohmann/json.hpp"
+#include "hydrogendevice.hpp"
 
 namespace Lithium
 {
-    class INDIFocuser : public Focuser, public LithiumIndiClient
+    class HydrogenFocuser : public Focuser, public LithiumIndiClient
     {
-        // INDI 客户端参数
+        // Hydrogen 客户端参数
         ISwitchVectorProperty *connection_prop;        // 连接属性指针
         ISwitchVectorProperty *mode_prop;              // 焦距器模式（绝对或相对）属性指针
         ISwitchVectorProperty *motion_prop;            // 焦距器运动方向（向内或向外）属性指针
@@ -61,7 +53,7 @@ namespace Lithium
         INumber *indi_focuser_temperature;             // 焦距器 indi 温度属性指针
         INumberVectorProperty *focuserinfo_prop;       // 焦距器用户信息属性指针
         ITextVectorProperty *focuser_port;             // 焦距器端口属性指针
-        LITHIUM::BaseDevice *focuser_device;              // 焦距器设备指针
+        HYDROGEN::BaseDevice *focuser_device;              // 焦距器设备指针
 
         bool is_ready; // 是否连接成功标志
         bool has_blob; // 是否接收 blob 数据标志
@@ -69,26 +61,26 @@ namespace Lithium
         std::string indi_focuser_port = ""; // 焦距器所选端口
         std::string indi_focuser_rate = ""; // 焦距器所选速率
 
-        std::string indi_focuser_cmd;            // INDI 命令字符串
-        std::string indi_focuser_exec = "";      // INDI 设备执行文件路径
-        std::string indi_focuser_version = "";   // INDI 设备固件版本
-        std::string indi_focuser_interface = ""; // INDI 接口版本
+        std::string indi_focuser_cmd;            // Hydrogen 命令字符串
+        std::string indi_focuser_exec = "";      // Hydrogen 设备执行文件路径
+        std::string indi_focuser_version = "";   // Hydrogen 设备固件版本
+        std::string indi_focuser_interface = ""; // Hydrogen 接口版本
 
         nlohmann::json focuser_json;
 
     public:
         /**
-         * @brief 构造函数，初始化 INDIFocuser 类
+         * @brief 构造函数，初始化 HydrogenFocuser 类
          *
          * @param name 焦距器名字
          */
-        INDIFocuser(const std::string &name);
+        HydrogenFocuser(const std::string &name);
 
         /**
-         * @brief 析构函数，释放 INDIFocuser 类相关资源
+         * @brief 析构函数，释放 HydrogenFocuser 类相关资源
          *
          */
-        ~INDIFocuser();
+        ~HydrogenFocuser();
 
         /**
          * @brief 连接焦距器
@@ -235,14 +227,14 @@ namespace Lithium
         void ClearStatus();
 
     protected:
-        void newDevice(LITHIUM::BaseDevice *dp) override;
-        void removeDevice(LITHIUM::BaseDevice *dp) override;
-        void newProperty(LITHIUM::Property *property) override;
-        void removeProperty(LITHIUM::Property *property) override {}
+        void newDevice(HYDROGEN::BaseDevice *dp) override;
+        void removeDevice(HYDROGEN::BaseDevice *dp) override;
+        void newProperty(HYDROGEN::Property *property) override;
+        void removeProperty(HYDROGEN::Property *property) override {}
         void newBLOB(IBLOB *bp) override;
         void newSwitch(ISwitchVectorProperty *svp) override;
         void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
+        void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
         void newText(ITextVectorProperty *tvp) override;
         void newLight(ILightVectorProperty *lvp) override {}
         void IndiServerConnected() override;

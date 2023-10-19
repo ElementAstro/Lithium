@@ -185,7 +185,7 @@ namespace Lithium
 		*outBinImg = inImg;
 		// Create a copy
 		outBinImg->threshold(th);
-		spdlog::debug("Threshold Otsu finished");
+		DLOG_F(INFO,"Threshold Otsu finished");
 	}
 	/**
 	 * Removes all white neighbours around pixel from whitePixels
@@ -205,10 +205,10 @@ namespace Lithium
 				inoutPixelsToBeProcessed->push_back(curPixPos);
 				inoutWhitePixels->erase(itPixPos);
 				// Remove white pixel from "white set" since it has been now processed
-				spdlog::debug("Removed neighbor pixel at ({}, {})", std::get<0>(curPixPos), std::get<1>(curPixPos));
+				DLOG_F(INFO,"Removed neighbor pixel at ({}, {})", std::get<0>(curPixPos), std::get<1>(curPixPos));
 			}
 		}
-		spdlog::debug("Finished removing neighbours");
+		DLOG_F(INFO,"Finished removing neighbours");
 	}
 	template <typename T>
 	void clusterStars(const CImg<T> &inImg, StarInfoListT *outStarInfos)
@@ -256,9 +256,9 @@ namespace Lithium
 			StarInfoT starInfo;
 			starInfo.clusterFrame = frame;
 			outStarInfos->push_back(starInfo);
-			spdlog::debug("Cluster added with frame ({}, {}, {}, {})", std::get<0>(frame), std::get<1>(frame), std::get<2>(frame), std::get<3>(frame));
+			DLOG_F(INFO,"Cluster added with frame ({}, {}, {}, {})", std::get<0>(frame), std::get<1>(frame), std::get<2>(frame), std::get<3>(frame));
 		}
-		spdlog::debug("Clustering stars finished");
+		DLOG_F(INFO,"Clustering stars finished");
 	}
 	float calcIx2(const CImg<float> &img, int x)
 	{
@@ -406,18 +406,18 @@ namespace Lithium
 		float &yc = std::get<1>(*outPixelPos);
 		// 1. Calculate the IWC
 		calcIntensityWeightedCenter(subImg, &xc, &yc);
-		spdlog::debug("IWC: ({}, {})", xc, yc);
+		DLOG_F(INFO,"IWC: ({}, {})", xc, yc);
 		if (outSubPixelPos)
 		{
 			// 2. Round to nearest integer and then iteratively improve.
 			int xi = floor(xc + 0.5);
 			int yi = floor(yc + 0.5);
-			spdlog::debug("Integer pixel position: ({}, {})", xi, yi);
+			DLOG_F(INFO,"Integer pixel position: ({}, {})", xi, yi);
 			CImg<float> img3x3 = inImg.get_crop(xi - 1, yi - 1, xi + 1, yi + 1);
 			// 3. Interpolate using sub-pixel algorithm
 			float xsc = xi, ysc = yi;
 			calcSubPixelCenter(img3x3, &xsc, &ysc, inNumIterations);
-			spdlog::debug("Sub-pixel position: ({}, {})", xsc, ysc);
+			DLOG_F(INFO,"Sub-pixel position: ({}, {})", xsc, ysc);
 			std::get<0>(*outSubPixelPos) = xsc;
 			std::get<1>(*outSubPixelPos) = ysc;
 		}
@@ -450,7 +450,7 @@ namespace Lithium
 		}
 		// NOTE: Multiplying with 2 is required since actually just the HFR is calculated above
 		float hfd = (sum ? 2.0 * sumDist / sum : sqrt(2.0) * outerRadius);
-		spdlog::debug("HFD: {}", hfd);
+		DLOG_F(INFO,"HFD: {}", hfd);
 		return hfd;
 	}
 	/**********************************************************************
@@ -466,7 +466,7 @@ namespace Lithium
 		// 添加调试日志
 		void debug() const
 		{
-			spdlog::debug("Data point: ({}, {})", x, y);
+			DLOG_F(INFO,"Data point: ({}, {})", x, y);
 		}
 	};
 	typedef std::vector<DataPointT> DataPointsT;
@@ -488,8 +488,8 @@ namespace Lithium
 										   double inEpsAbs, double inEpsRel, size_t inNumMaxIter = 500)
 		{
 			// 添加调试日志
-			spdlog::debug("Fitting GSL Levenberg-Marquart");
-			spdlog::debug("inEpsAbs: {}, inEpsRel: {}, inNumMaxIter: {}", inEpsAbs, inEpsRel, inNumMaxIter);
+			DLOG_F(INFO,"Fitting GSL Levenberg-Marquart");
+			DLOG_F(INFO,"inEpsAbs: {}, inEpsRel: {}, inNumMaxIter: {}", inEpsAbs, inEpsRel, inNumMaxIter);
 			// 填充参数
 			GslMultiFitParmsT gslMultiFitParms(inData.size());
 			for (typename DataAccessorT::TypeT::const_iterator it = inData.begin(); it != inData.end(); ++it)
@@ -530,7 +530,7 @@ namespace Lithium
 				}
 				// 检查迭代误差
 				status = gsl_multifit_test_delta(solver->dx, solver->x, inEpsAbs, inEpsRel);
-				spdlog::debug("Iteration {}: dx norm = {}, x norm = {}, f norm = {}", i, gsl_blas_dnrm2(solver->dx),
+				DLOG_F(INFO,"Iteration {}: dx norm = {}, x norm = {}, f norm = {}", i, gsl_blas_dnrm2(solver->dx),
 							  gsl_blas_dnrm2(solver->x), gsl_blas_dnrm2(solver->f));
 			} while (status == GSL_CONTINUE && i < inNumMaxIter);
 			// 存储结果供用户返回（从gsl_vector复制到结果结构）
@@ -653,7 +653,7 @@ namespace Lithium
 		/* Invokes f(x) and f'(x) */
 		static int gslFdfx(const gsl_vector *x, void *params, gsl_vector *f, gsl_matrix *J)
 		{
-			spdlog::debug("gslFdfx");
+			DLOG_F(INFO,"gslFdfx");
 			gslFx(x, params, f);
 			gslDfx(x, params, J);
 			return GSL_SUCCESS;
@@ -769,9 +769,9 @@ namespace Lithium
 			calcCentroid(aiImg, squareFrame, &cogCentroid, &subPixelInterpCentroid, 10);
 			std::get<0>(cogCentroid) += std::get<0>(squareFrame);
 			std::get<1>(cogCentroid) += std::get<1>(squareFrame);
-			spdlog::debug("Cluster frame: ({}, {}, {}, {})", std::get<0>(frame), std::get<1>(frame), std::get<2>(frame), std::get<3>(frame));
-			spdlog::debug("Square frame: ({}, {}, {}, {})", std::get<0>(squareFrame), std::get<1>(squareFrame), std::get<2>(squareFrame), std::get<3>(squareFrame));
-			spdlog::debug("COG centroid: ({}, {})", std::get<0>(cogCentroid), std::get<1>(cogCentroid));
+			DLOG_F(INFO,"Cluster frame: ({}, {}, {}, {})", std::get<0>(frame), std::get<1>(frame), std::get<2>(frame), std::get<3>(frame));
+			DLOG_F(INFO,"Square frame: ({}, {}, {}, {})", std::get<0>(squareFrame), std::get<1>(squareFrame), std::get<2>(squareFrame), std::get<3>(squareFrame));
+			DLOG_F(INFO,"COG centroid: ({}, {})", std::get<0>(cogCentroid), std::get<1>(cogCentroid));
 			float maxClusterEdge = std::max(fabs(std::get<0>(frame) - std::get<2>(frame)), fabs(std::get<1>(frame) - std::get<3>(frame)));
 			float cogHalfEdge = ceil(maxClusterEdge / 2.0);
 			float cogX = std::get<0>(cogCentroid);
@@ -780,7 +780,7 @@ namespace Lithium
 			std::get<1>(cogFrame) = cogY - cogHalfEdge - 1;
 			std::get<2>(cogFrame) = cogX + cogHalfEdge + 1;
 			std::get<3>(cogFrame) = cogY + cogHalfEdge + 1;
-			spdlog::debug("COG frame: ({}, {}, {}, {})", std::get<0>(cogFrame), std::get<1>(cogFrame), std::get<2>(cogFrame), std::get<3>(cogFrame));
+			DLOG_F(INFO,"COG frame: ({}, {}, {}, {})", std::get<0>(cogFrame), std::get<1>(cogFrame), std::get<2>(cogFrame), std::get<3>(cogFrame));
 			size_t hfdRectDist = floor(outerHfdDiameter / 2.0);
 			std::get<0>(hfdFrame) = cogX - hfdRectDist;
 			std::get<1>(hfdFrame) = cogY - hfdRectDist;
@@ -796,7 +796,7 @@ namespace Lithium
 				imgHfdSubMean(x, y) = (hfdSubImg(x, y) < mean ? 0 : hfdSubImg(x, y) - mean);
 			}
 			hfd = calcHfd(imgHfdSubMean, outerHfdDiameter);
-			spdlog::debug("HFD: {}", hfd);
+			DLOG_F(INFO,"HFD: {}", hfd);
 			MyDataContainerT vertDataPoints, horzDataPoints;
 			cimg_forX(imgHfdSubMean, x)
 			{
@@ -813,8 +813,8 @@ namespace Lithium
 			fwhmHorz = gaussCurveParmsHorz[CurveParamsT::W_IDX];
 			GaussMatcherT::fitGslLevenbergMarquart<MyDataAccessorT>(vertDataPoints, &gaussCurveParmsVert, 0.1f, 0.1f);
 			fwhmVert = gaussCurveParmsVert[CurveParamsT::W_IDX];
-			spdlog::debug("FWHM(horizontal): {}", fwhmHorz);
-			spdlog::debug("FWHM(vertical): {}", fwhmVert);
+			DLOG_F(INFO,"FWHM(horizontal): {}", fwhmHorz);
+			DLOG_F(INFO,"FWHM(vertical): {}", fwhmVert);
 		}
 		// Create result image
 		const int factor = 4;
@@ -845,7 +845,7 @@ namespace Lithium
 			float &fwhmHorz = curStarInfo->fwhmHorz;
 			float &fwhmVert = curStarInfo->fwhmVert;
 			float &maxPixValue = curStarInfo->maxPixValue;
-			spdlog::info("cogCentroid=({},{}) maxPixValue: {} sat: {} hfd: {} fwhmHorz: {} fwhmVert: {}",
+			DLOG_F(INFO,"cogCentroid=({},{}) maxPixValue: {} sat: {} hfd: {} fwhmHorz: {} fwhmVert: {}",
 						 std::get<0>(curStarInfo->cogCentroid), std::get<1>(curStarInfo->cogCentroid),
 						 maxPixValue, curStarInfo->saturated ? "Y" : "N", hfd, fwhmHorz, fwhmVert);
 			const FrameT &frame = curStarInfo->clusterFrame;

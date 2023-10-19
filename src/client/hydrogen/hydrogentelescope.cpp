@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Telescope
+Description: Hydrogen Telescope
 
 **************************************************/
 
@@ -35,7 +35,7 @@ Description: INDI Telescope
 
 namespace Lithium
 {
-    void INDITelescope::newDevice(LITHIUM::BaseDevice *dp)
+    void HydrogenTelescope::newDevice(HYDROGEN::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
@@ -43,7 +43,7 @@ namespace Lithium
         }
     }
 
-    void INDITelescope::newSwitch(ISwitchVectorProperty *svp)
+    void HydrogenTelescope::newSwitch(ISwitchVectorProperty *svp)
     {
         std::string const connection_str{"CONNECTION"};
         std::string const baud_rate_str{"DEVICE_BAUD_RATE"};
@@ -54,14 +54,14 @@ namespace Lithium
             if (connectswitch->s == ISS_ON)
             {
                 is_connected = true;
-                spdlog::info("{} is connected", _name);
+                DLOG_F(INFO,"{} is connected", _name);
             }
             else
             {
                 if (is_ready)
                 {
                     ClearStatus();
-                    spdlog::info("{} is disconnected", _name);
+                    DLOG_F(INFO,"{} is disconnected", _name);
                 }
             }
         }
@@ -87,13 +87,13 @@ namespace Lithium
             else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
                 indi_telescope_rate = baud_230400;
 
-            spdlog::debug("{} baud rate : {}", _name, indi_telescope_rate);
+            DLOG_F(INFO,"{} baud rate : {}", _name, indi_telescope_rate);
         }
     }
 
-    void INDITelescope::newMessage(LITHIUM::BaseDevice *dp, int messageID)
+    void HydrogenTelescope::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
     {
-        spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
+        DLOG_F(INFO,"{} Received message: {}", _name, dp->messageQueue(messageID));
     }
 
     inline static const char *StateStr(IPState st)
@@ -112,7 +112,7 @@ namespace Lithium
         }
     }
 
-    void INDITelescope::newNumber(INumberVectorProperty *nvp)
+    void HydrogenTelescope::newNumber(INumberVectorProperty *nvp)
     {
         std::ostringstream os;
         for (int i = 0; i < nvp->nnp; i++)
@@ -121,7 +121,7 @@ namespace Lithium
                 os << ',';
             os << nvp->np[i].name << ':' << nvp->np[i].value;
         }
-        spdlog::debug("{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
+        DLOG_F(INFO,"{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
 
         if (nvp == telescopeinfo_prop)
         {
@@ -129,31 +129,31 @@ namespace Lithium
         }
     }
 
-    void INDITelescope::newText(ITextVectorProperty *tvp)
+    void HydrogenTelescope::newText(ITextVectorProperty *tvp)
     {
-        spdlog::debug("{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
+        DLOG_F(INFO,"{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
     }
 
-    void INDITelescope::newBLOB(IBLOB *bp)
+    void HydrogenTelescope::newBLOB(IBLOB *bp)
     {
-        spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+        DLOG_F(INFO,"{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDITelescope::newProperty(LITHIUM::Property *property)
+    void HydrogenTelescope::newProperty(HYDROGEN::Property *property)
     {
         std::string PropName(property->getName());
-        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
+        HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
 
-        spdlog::debug("{} Property: {}", _name, property->getName());
+        DLOG_F(INFO,"{} Property: {}", _name, property->getName());
 
-        if (PropName == "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
+        if (PropName == "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
         {
-            spdlog::debug("{} Found device port for {} ", _name, property->getDeviceName());
+            DLOG_F(INFO,"{} Found device port for {} ", _name, property->getDeviceName());
             telescope_port = property->getText();
         }
-        else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
+        else if (PropName == "CONNECTION" && Proptype == HYDROGEN_SWITCH)
         {
-            spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
+            DLOG_F(INFO,"{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
             connection_prop = property->getSwitch();
             ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
             is_connected = (connectswitch->s == ISS_ON);
@@ -162,22 +162,22 @@ namespace Lithium
                 connection_prop->sp->s = ISS_ON;
                 sendNewSwitch(connection_prop);
             }
-            spdlog::debug("{} Connected {}", _name, is_connected);
+            DLOG_F(INFO,"{} Connected {}", _name, is_connected);
         }
-        else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
+        else if (PropName == "DRIVER_INFO" && Proptype == HYDROGEN_TEXT)
         {
             device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
             indi_telescope_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
             indi_telescope_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
             indi_telescope_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-            spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_telescope_exec);
+            DLOG_F(INFO,"{} Name : {} connected exec {}", _name, device_name, indi_telescope_exec);
         }
-        else if (PropName == indi_telescope_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
+        else if (PropName == indi_telescope_cmd + "INFO" && Proptype == HYDROGEN_NUMBER)
         {
             telescopeinfo_prop = property->getNumber();
             newNumber(telescopeinfo_prop);
         }
-        else if (PropName == indi_telescope_cmd + "DEVICE_BAUD_RATE" && Proptype == LITHIUM_SWITCH)
+        else if (PropName == indi_telescope_cmd + "DEVICE_BAUD_RATE" && Proptype == HYDROGEN_SWITCH)
         {
             rate_prop = property->getSwitch();
             if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
@@ -192,38 +192,38 @@ namespace Lithium
                 indi_telescope_rate = "115200";
             else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
                 indi_telescope_rate = "230400";
-            spdlog::debug("{} baud rate : {}", _name, indi_telescope_rate);
+            DLOG_F(INFO,"{} baud rate : {}", _name, indi_telescope_rate);
         }
-        else if (PropName == indi_telescope_cmd + "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
+        else if (PropName == indi_telescope_cmd + "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
         {
             indi_telescope_port = IUFindText(property->getText(), "PORT")->text;
-            spdlog::debug("{} USB Port : {}", _name, indi_telescope_port);
+            DLOG_F(INFO,"{} USB Port : {}", _name, indi_telescope_port);
         }
     }
 
-    void INDITelescope::IndiServerConnected()
+    void HydrogenTelescope::IndiServerConnected()
     {
-        spdlog::debug("{} connection succeeded", _name);
+        DLOG_F(INFO,"{} connection succeeded", _name);
         is_connected = true;
     }
 
-    void INDITelescope::IndiServerDisconnected(int exit_code)
+    void HydrogenTelescope::IndiServerDisconnected(int exit_code)
     {
-        spdlog::debug("{}: serverDisconnected", _name);
+        DLOG_F(INFO,"{}: serverDisconnected", _name);
         // after disconnection we reset the connection status and the properties pointers
         ClearStatus();
         // in case the connection lost we must reset the client socket
         if (exit_code == -1)
-            spdlog::debug("{} : INDI server disconnected", _name);
+            DLOG_F(INFO,"{} : Hydrogen server disconnected", _name);
     }
 
-    void INDITelescope::removeDevice(LITHIUM::BaseDevice *dp)
+    void HydrogenTelescope::removeDevice(HYDROGEN::BaseDevice *dp)
     {
         ClearStatus();
-        spdlog::info("{} disconnected", _name);
+        DLOG_F(INFO,"{} disconnected", _name);
     }
 
-    void INDITelescope::ClearStatus()
+    void HydrogenTelescope::ClearStatus()
     {
         connection_prop = nullptr;
         telescope_port = nullptr;
@@ -235,18 +235,18 @@ namespace Lithium
         telescope_device = nullptr;
     }
 
-    INDITelescope::INDITelescope(const std::string &name) : Telescope(name)
+    HydrogenTelescope::HydrogenTelescope(const std::string &name) : Telescope(name)
     {
-        spdlog::debug("INDI telescope {} init successfully", name);
+        DLOG_F(INFO,"Hydrogen telescope {} init successfully", name);
     }
 
-    INDITelescope::~INDITelescope()
+    HydrogenTelescope::~HydrogenTelescope()
     {
     }
 
-    bool INDITelescope::connect(std::string name)
+    bool HydrogenTelescope::connect(std::string name)
     {
-        spdlog::debug("Trying to connect to {}", name);
+        DLOG_F(INFO,"Trying to connect to {}", name);
         if (is_connected)
         {
             spdlog::warn("{} is already connected", _name);
@@ -260,7 +260,7 @@ namespace Lithium
         watchDevice(name.c_str());
         if (connectServer())
         {
-            spdlog::debug("{}: connectServer done ready = {}", _name, is_ready);
+            DLOG_F(INFO,"{}: connectServer done ready = {}", _name, is_ready);
             connectDevice(name.c_str());
             is_connected = true;
             return true;
@@ -269,7 +269,7 @@ namespace Lithium
         return false;
     }
 
-    bool INDITelescope::disconnect()
+    bool HydrogenTelescope::disconnect()
     {
         if (!is_connected)
         {
@@ -281,32 +281,32 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::reconnect()
+    bool HydrogenTelescope::reconnect()
     {
         return disconnect() and connect(_name);
     }
 
-    bool INDITelescope::scanForAvailableDevices()
+    bool HydrogenTelescope::scanForAvailableDevices()
     {
         throw std::runtime_error("scanForAvailableDevices function not implemented");
     }
 
-    bool INDITelescope::SlewTo(const std::string &ra, const std::string &dec, const bool j2000)
+    bool HydrogenTelescope::SlewTo(const std::string &ra, const std::string &dec, const bool j2000)
     {
         throw std::runtime_error("SlewTo function not implemented");
     }
 
-    bool INDITelescope::Abort()
+    bool HydrogenTelescope::Abort()
     {
         throw std::runtime_error("Abort function not implemented");
     }
 
-    bool INDITelescope::StartTracking(const std::string &model, const std::string &speed)
+    bool HydrogenTelescope::StartTracking(const std::string &model, const std::string &speed)
     {
         throw std::runtime_error("StartTracking function not implemented");
     }
 
-    bool INDITelescope::StopTracking()
+    bool HydrogenTelescope::StopTracking()
     {
         if (!is_connected)
         {
@@ -316,7 +316,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::setTrackingMode(const std::string &mode)
+    bool HydrogenTelescope::setTrackingMode(const std::string &mode)
     {
         if (!is_connected)
         {
@@ -326,7 +326,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::setTrackingSpeed(const std::string &speed)
+    bool HydrogenTelescope::setTrackingSpeed(const std::string &speed)
     {
         if (!is_connected)
         {
@@ -336,7 +336,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::Home()
+    bool HydrogenTelescope::Home()
     {
         if (!is_connected)
         {
@@ -346,7 +346,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::isAtHome()
+    bool HydrogenTelescope::isAtHome()
     {
         if (!is_connected)
         {
@@ -356,7 +356,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::setHomePosition()
+    bool HydrogenTelescope::setHomePosition()
     {
         if (!is_connected)
         {
@@ -366,7 +366,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::Park()
+    bool HydrogenTelescope::Park()
     {
         if (!is_connected)
         {
@@ -376,7 +376,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::Unpark()
+    bool HydrogenTelescope::Unpark()
     {
         if (!is_connected)
         {
@@ -386,7 +386,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::isAtPark()
+    bool HydrogenTelescope::isAtPark()
     {
         if (!is_connected)
         {
@@ -396,7 +396,7 @@ namespace Lithium
         return true;
     }
 
-    bool INDITelescope::setParkPosition()
+    bool HydrogenTelescope::setParkPosition()
     {
         if (!is_connected)
         {
@@ -406,18 +406,18 @@ namespace Lithium
         return true;
     }
 
-    std::shared_ptr<Lithium::SimpleTask> INDITelescope::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> HydrogenTelescope::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
-        spdlog::error("Unknown type of the INDI telescope task: {}", task_name);
+        spdlog::error("Unknown type of the Hydrogen telescope task: {}", task_name);
         return nullptr;
     }
 
-    std::shared_ptr<Lithium::ConditionalTask> INDITelescope::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> HydrogenTelescope::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         throw std::runtime_error("getCondtionalTask function not implemented");
     }
 
-    std::shared_ptr<Lithium::LoopTask> INDITelescope::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> HydrogenTelescope::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         throw std::runtime_error("getLoopTask function not implemented");
     }

@@ -139,9 +139,9 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
     {
         bool mode;
 
-        if (auto enabledswitch = IUFindSwitch(svp, "LITHIUM_ENABLED"); enabledswitch->s == ISS_ON)
+        if (auto enabledswitch = IUFindSwitch(svp, "HYDROGEN_ENABLED"); enabledswitch->s == ISS_ON)
             mode = true;
-        else if (auto disabledswitch = IUFindSwitch(svp, "LITHIUM_DISABLED"); disabledswitch->s == ISS_ON)
+        else if (auto disabledswitch = IUFindSwitch(svp, "HYDROGEN_DISABLED"); disabledswitch->s == ISS_ON)
             mode = false;
 
         device_info["frame"]["fast_read"] = mode;
@@ -316,11 +316,11 @@ void HydrogenCamera::newBLOB(IBLOB *bp)
 void HydrogenCamera::newProperty(HYDROGEN::Property *property)
 {
     std::string PropName(property->getName());
-    LITHIUM_PROPERTY_TYPE Proptype = property->getType();
+    HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
 
     // DLOG_F(INFO,"{} Property: {}", getDeviceName(), property->getName());
 
-    if (Proptype == LITHIUM_BLOB)
+    if (Proptype == HYDROGEN_BLOB)
     {
 
         if (PropName == indi_blobgetDeviceName().c_str())
@@ -329,33 +329,33 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
             // set option to receive blob and messages for the selected CCD
             setBLOBMode(B_ALSO, devicegetDeviceName().c_str(), indi_blobgetDeviceName().c_str());
 
-#ifdef LITHIUM_SHARED_BLOB_SUPPORT
+#ifdef HYDROGEN_SHARED_BLOB_SUPPORT
             // Allow faster mode provided we don't modify the blob content or free/realloc it
             enableDirectBlobAccess(devicegetDeviceName().c_str(), indi_blobgetDeviceName().c_str());
 #endif
         }
     }
-    else if (PropName == indi_camera_cmd + "EXPOSURE" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == indi_camera_cmd + "EXPOSURE" && Proptype == HYDROGEN_NUMBER)
     {
         expose_prop = property->getNumber();
         newNumber(expose_prop);
     }
-    else if (PropName == indi_camera_cmd + "FRAME" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == indi_camera_cmd + "FRAME" && Proptype == HYDROGEN_NUMBER)
     {
         frame_prop = property->getNumber();
         newNumber(frame_prop);
     }
-    else if (PropName == indi_camera_cmd + "FRAME_TYPE" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == indi_camera_cmd + "FRAME_TYPE" && Proptype == HYDROGEN_SWITCH)
     {
         frame_type_prop = property->getSwitch();
         newSwitch(frame_type_prop);
     }
-    else if (PropName == indi_camera_cmd + "BINNING" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == indi_camera_cmd + "BINNING" && Proptype == HYDROGEN_NUMBER)
     {
         binning_prop = property->getNumber();
         newNumber(binning_prop);
     }
-    else if (PropName == indi_camera_cmd + "CFA" && Proptype == LITHIUM_TEXT)
+    else if (PropName == indi_camera_cmd + "CFA" && Proptype == HYDROGEN_TEXT)
     {
         ITextVectorProperty *cfa_prop = property->getText();
         IText *cfa_type = IUFindText(cfa_prop, "CFA_TYPE");
@@ -365,33 +365,33 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
             is_color = true;
         }
     }
-    else if (PropName == indi_camera_cmd + "VIDEO_STREAM" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == indi_camera_cmd + "VIDEO_STREAM" && Proptype == HYDROGEN_SWITCH)
     {
         video_prop = property->getSwitch();
         newSwitch(video_prop);
     }
-    else if (PropName == "STREAM_DELAY" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "STREAM_DELAY" && Proptype == HYDROGEN_NUMBER)
     {
         video_delay_prop = property->getNumber();
         newNumber(video_delay_prop);
     }
-    else if (PropName == "STREAMING_EXPOSURE" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "STREAMING_EXPOSURE" && Proptype == HYDROGEN_NUMBER)
     {
         video_exposure_prop = property->getNumber();
         newNumber(video_exposure_prop);
     }
-    else if (PropName == "FPS" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "FPS" && Proptype == HYDROGEN_NUMBER)
     {
         video_fps_prop = property->getNumber();
         newNumber(video_fps_prop);
     }
-    else if (PropName == "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
+    else if (PropName == "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
     {
         camera_port = property->getText();
         device_info["network"]["port"] = camera_port->tp->text;
         DLOG_F(INFO, "Current device port of {} is {}", getDeviceName(), camera_port->tp->text);
     }
-    else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "CONNECTION" && Proptype == HYDROGEN_SWITCH)
     {
         connection_prop = property->getSwitch();
         ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
@@ -403,7 +403,7 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
         }
         DLOG_F(INFO, "{} Connected {}", getDeviceName(), is_connected);
     }
-    else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
+    else if (PropName == "DRIVER_INFO" && Proptype == HYDROGEN_TEXT)
     {
         devicegetDeviceName() = IUFindText(property->getText(), "DRIVERgetDeviceName()")->text;
         indi_camera_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
@@ -415,95 +415,95 @@ void HydrogenCamera::newProperty(HYDROGEN::Property *property)
         device_info["driver"]["interfaces"] = indi_camera_interface;
         DLOG_F(INFO, "Camera Name : {} connected exec {}", getDeviceName(), devicegetDeviceName(), indi_camera_exec);
     }
-    else if (PropName == indi_camera_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == indi_camera_cmd + "INFO" && Proptype == HYDROGEN_NUMBER)
     {
         ccdinfo_prop = property->getNumber();
         newNumber(ccdinfo_prop);
     }
-    else if (PropName == "DEBUG" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "DEBUG" && Proptype == HYDROGEN_SWITCH)
     {
         debug_prop = property->getSwitch();
         newSwitch(debug_prop);
     }
-    else if (PropName == "POLLING_PERIOD" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "POLLING_PERIOD" && Proptype == HYDROGEN_NUMBER)
     {
         polling_prop = property->getNumber();
         newNumber(polling_prop);
     }
-    else if (PropName == "ACTIVE_DEVICES" && Proptype == LITHIUM_TEXT)
+    else if (PropName == "ACTIVE_DEVICES" && Proptype == HYDROGEN_TEXT)
     {
         active_device_prop = property->getText();
         newText(active_device_prop);
     }
-    else if (PropName == "CCD_COMPRESSION" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "CCD_COMPRESSION" && Proptype == HYDROGEN_SWITCH)
     {
         compression_prop = property->getSwitch();
         newSwitch(compression_prop);
     }
-    else if (PropName == "UPLOAD_MODE" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "UPLOAD_MODE" && Proptype == HYDROGEN_SWITCH)
     {
         image_upload_mode_prop = property->getSwitch();
         newSwitch(image_upload_mode_prop);
     }
-    else if (PropName == "CCD_FAST_TOGGLE" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "CCD_FAST_TOGGLE" && Proptype == HYDROGEN_SWITCH)
     {
         fast_read_out_prop = property->getSwitch();
         newSwitch(fast_read_out_prop);
     }
-    else if (PropName == "LIMITS" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "LIMITS" && Proptype == HYDROGEN_NUMBER)
     {
         camera_limit_prop = property->getNumber();
         newNumber(camera_limit_prop);
     }
     // The following properties are for ASI Camera
-    else if (PropName == "FLIP" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "FLIP" && Proptype == HYDROGEN_SWITCH)
     {
         asi_image_flip_prop = property->getSwitch();
         newSwitch(asi_image_flip_prop);
     }
-    else if (PropName == "CCD_CONTROLS" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "CCD_CONTROLS" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "CCD_CONTROLS_MODE" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "CCD_CONTROLS_MODE" && Proptype == HYDROGEN_SWITCH)
     {
     }
     // The following properties are for Toup Camera
-    else if (PropName == "TC_FAN_CONTROL" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "TC_FAN_CONTROL" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "TC_FAN_Speed" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "TC_FAN_Speed" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "TC_AUTO_WB" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "TC_AUTO_WB" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "TC_HEAT_CONTROL" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "TC_HEAT_CONTROL" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "TC_HCG_CONTROL" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "TC_HCG_CONTROL" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "TC_HGC_SET" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "TC_HGC_SET" && Proptype == HYDROGEN_NUMBER)
     {
     }
-    else if (PropName == "TC_LOW_NOISE_CONTROL" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "TC_LOW_NOISE_CONTROL" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "SIMULATION" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "SIMULATION" && Proptype == HYDROGEN_SWITCH)
     {
         toupcam_simulation_prop = property->getSwitch();
         newSwitch(toupcam_simulation_prop);
     }
-    else if (PropName == "CCD_LEVEL_RANGE" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "CCD_LEVEL_RANGE" && Proptype == HYDROGEN_NUMBER)
     {
     }
-    else if (PropName == "CCD_BINNING_MODE" && Proptype == LITHIUM_SWITCH)
+    else if (PropName == "CCD_BINNING_MODE" && Proptype == HYDROGEN_SWITCH)
     {
     }
-    else if (PropName == "CCD_BLACK_BALANCE" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "CCD_BLACK_BALANCE" && Proptype == HYDROGEN_NUMBER)
     {
     }
-    else if (PropName == "Firmware" && Proptype == LITHIUM_NUMBER)
+    else if (PropName == "Firmware" && Proptype == HYDROGEN_NUMBER)
     {
     }
 }

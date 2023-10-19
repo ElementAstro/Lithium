@@ -61,7 +61,7 @@ namespace Lithium::Logger
     {
         for (const auto &entry : std::filesystem::directory_iterator(folderPath))
         {
-            spdlog::info("Scanning log file: {}", entry.path().generic_string().c_str());
+            DLOG_F(INFO,"Scanning log file: {}", entry.path().generic_string().c_str());
             if (entry.is_regular_file())
             {
                 parseLog(entry.path().string());
@@ -107,7 +107,7 @@ namespace Lithium::Logger
         auto res = client.Post("/upload", filePath.c_str(), "application/octet-stream");
         if (res && res->status == 200)
         {
-            spdlog::info("File uploaded successfully");
+            DLOG_F(INFO,"File uploaded successfully");
         }
         else
         {
@@ -123,7 +123,7 @@ namespace Lithium::Logger
             if (logEntry.message.find("[ERROR]") != std::string::npos)
             {
                 errorMessages.push_back(logEntry.message);
-                spdlog::debug("{}", logEntry.message);
+                DLOG_F(INFO,"{}", logEntry.message);
             }
         }
         return errorMessages;
@@ -135,10 +135,10 @@ namespace Lithium::Logger
 
         if (errorMessages.empty())
         {
-            spdlog::info("No errors found in the logs.");
+            DLOG_F(INFO,"No errors found in the logs.");
             return;
         }
-        spdlog::info("Analyzing logs...");
+        DLOG_F(INFO,"Analyzing logs...");
 
         // 统计错误类型
         std::map<std::string, int> errorTypeCount;
@@ -147,15 +147,15 @@ namespace Lithium::Logger
             std::string errorType = getErrorType(errorMessage);
             errorTypeCount[errorType]++;
         }
-        spdlog::info("Error Type Count:");
+        DLOG_F(INFO,"Error Type Count:");
         for (const auto &[errorType, count] : errorTypeCount)
         {
-            spdlog::info("{} : {}", errorType, count);
+            DLOG_F(INFO,"{} : {}", errorType, count);
         }
 
         // 查找最常见的错误消息
         std::string mostCommonErrorMessage = getMostCommonErrorMessage(errorMessages);
-        spdlog::info("Most Common Error Message: {}", mostCommonErrorMessage);
+        DLOG_F(INFO,"Most Common Error Message: {}", mostCommonErrorMessage);
     }
 
     std::string computeMd5Hash(const std::string &filePath)

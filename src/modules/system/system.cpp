@@ -101,7 +101,7 @@ namespace Lithium::System
                     RegCloseKey(subkey_handle);
                     RegCloseKey(hKey);
                     is_installed = true;
-                    // spdlog::info("Software '{}' is installed.", software_name); // 记录日志
+                    // DLOG_F(INFO,"Software '{}' is installed.", software_name); // 记录日志
                     break;
                 }
             }
@@ -582,7 +582,7 @@ namespace Lithium::System
 
         if (pids.size() <= 1)
         {
-            // spdlog::info("No duplicate {} process found", program_name);
+            // DLOG_F(INFO,"No duplicate {} process found", program_name);
             return;
         }
 

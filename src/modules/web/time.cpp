@@ -80,7 +80,7 @@ namespace Lithium::Time
         }
         else
         {
-            spdlog::info("System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
+            DLOG_F(INFO,"System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
         }
     }
 
@@ -241,7 +241,7 @@ namespace Lithium::Time
 
         if (std::abs(std::difftime(now, std::mktime(&new_time))) < 2)
         {
-            spdlog::info("System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
+            DLOG_F(INFO,"System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
         }
         else
         {
@@ -428,7 +428,7 @@ namespace Lithium::Time
 
         timestamp -= 2208988800UL; // 将从 1900 年至今的秒数转换为从 1970 年至今的秒数
 
-        spdlog::info("从 {} 获取到的时间戳是：{}", hostname, timestamp);
+        DLOG_F(INFO,"从 {} 获取到的时间戳是：{}", hostname, timestamp);
 
         return (time_t)timestamp;
     }

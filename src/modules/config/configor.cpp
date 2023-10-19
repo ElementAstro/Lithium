@@ -253,7 +253,7 @@ namespace Lithium::Config
 
     void ConfigManager::printAllValues() const
     {
-        // spdlog::info("Current all configurations:");
+        // DLOG_F(INFO,"Current all configurations:");
         for (auto &[key, value] : config_.items())
         {
             printValue(key, value);

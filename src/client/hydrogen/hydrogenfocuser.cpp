@@ -35,7 +35,7 @@ Description: {}
 
 namespace Lithium
 {
-    void INDIFocuser::newDevice(LITHIUM::BaseDevice *dp)
+    void HydrogenFocuser::newDevice(HYDROGEN::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
@@ -43,7 +43,7 @@ namespace Lithium
         }
     }
 
-    void INDIFocuser::newSwitch(ISwitchVectorProperty *svp)
+    void HydrogenFocuser::newSwitch(ISwitchVectorProperty *svp)
     {
         std::string const connection_str{"CONNECTION"};
         std::string const mode_str{"Mode"};
@@ -55,14 +55,14 @@ namespace Lithium
             if (connectswitch->s == ISS_ON)
             {
                 is_connected = true;
-                spdlog::info("{} is connected", _name);
+                DLOG_F(INFO,"{} is connected", _name);
             }
             else
             {
                 if (is_ready)
                 {
                     ClearStatus();
-                    spdlog::info("{} is disconnected", _name);
+                    DLOG_F(INFO,"{} is disconnected", _name);
                 }
             }
         }
@@ -111,13 +111,13 @@ namespace Lithium
             else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
                 indi_focuser_rate = baud_230400;
 
-            spdlog::debug("{} baud rate : {}", _name, indi_focuser_rate);
+            DLOG_F(INFO,"{} baud rate : {}", _name, indi_focuser_rate);
         }
     }
 
-    void INDIFocuser::newMessage(LITHIUM::BaseDevice *dp, int messageID)
+    void HydrogenFocuser::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
     {
-        spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
+        DLOG_F(INFO,"{} Received message: {}", _name, dp->messageQueue(messageID));
     }
 
     inline static const char *StateStr(IPState st)
@@ -136,7 +136,7 @@ namespace Lithium
         }
     }
 
-    void INDIFocuser::newNumber(INumberVectorProperty *nvp)
+    void HydrogenFocuser::newNumber(INumberVectorProperty *nvp)
     {
         std::ostringstream os;
         for (int i = 0; i < nvp->nnp; i++)
@@ -145,7 +145,7 @@ namespace Lithium
                 os << ',';
             os << nvp->np[i].name << ':' << nvp->np[i].value;
         }
-        spdlog::debug("{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
+        DLOG_F(INFO,"{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
 
         if (nvp == focuserinfo_prop)
         {
@@ -157,24 +157,24 @@ namespace Lithium
         }
     }
 
-    void INDIFocuser::newText(ITextVectorProperty *tvp)
+    void HydrogenFocuser::newText(ITextVectorProperty *tvp)
     {
-        spdlog::debug("{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
+        DLOG_F(INFO,"{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
     }
 
-    void INDIFocuser::newBLOB(IBLOB *bp)
+    void HydrogenFocuser::newBLOB(IBLOB *bp)
     {
         // we go here every time a new blob is available
         // this is normally the image from the Focuser
-        spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+        DLOG_F(INFO,"{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDIFocuser::newProperty(LITHIUM::Property *property)
+    void HydrogenFocuser::newProperty(HYDROGEN::Property *property)
     {
         std::string PropName(property->getName());
-        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
+        HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
 
-        if (Proptype != LITHIUM_TEXT && Proptype != LITHIUM_SWITCH && Proptype != LITHIUM_NUMBER)
+        if (Proptype != HYDROGEN_TEXT && Proptype != HYDROGEN_SWITCH && Proptype != HYDROGEN_NUMBER)
         {
             spdlog::warn("{} Unknown property type: {}", _name, Proptype);
             return;
@@ -187,7 +187,7 @@ namespace Lithium
         }
 
         bool switch_on = false;
-        if (Proptype == LITHIUM_SWITCH)
+        if (Proptype == HYDROGEN_SWITCH)
         {
             ISwitchVectorProperty *switch_prop = property->getSwitch();
             ISwitch *switch_connect = IUFindSwitch(switch_prop, "CONNECT");
@@ -198,7 +198,7 @@ namespace Lithium
         }
 
         double prop_value = 0;
-        if (Proptype == LITHIUM_NUMBER)
+        if (Proptype == HYDROGEN_NUMBER)
         {
             INumberVectorProperty *num_prop = property->getNumber();
             INumber *num_value = IUFindNumber(num_prop, "FOCUS_ABSOLUTE_POSITION");
@@ -215,11 +215,11 @@ namespace Lithium
 
         switch (property->getType())
         {
-        case LITHIUM_TEXT:
+        case HYDROGEN_TEXT:
         {
             if (PropName == "DEVICE_PORT")
             {
-                spdlog::debug("{} Found device port for {}", _name, property->getDeviceName());
+                DLOG_F(INFO,"{} Found device port for {}", _name, property->getDeviceName());
                 focuser_port = property->getText();
             }
             else if (PropName == "DRIVER_INFO")
@@ -232,20 +232,20 @@ namespace Lithium
                 focuser_info["driver"]["exec"] = indi_focuser_exec;
                 focuser_info["driver"]["version"] = indi_focuser_version;
                 focuser_info["driver"]["interfaces"] = indi_focuser_interface;
-                spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_focuser_exec);
+                DLOG_F(INFO,"{} Name : {} connected exec {}", _name, device_name, indi_focuser_exec);
             }
             else if (PropName == indi_focuser_cmd + "DEVICE_PORT")
             {
                 indi_focuser_port = IUFindText(property->getText(), "PORT")->text;
-                spdlog::debug("{} USB Port : {}", _name, indi_focuser_port);
+                DLOG_F(INFO,"{} USB Port : {}", _name, indi_focuser_port);
             }
             break;
         }
-        case LITHIUM_SWITCH:
+        case HYDROGEN_SWITCH:
         {
             if (PropName == "CONNECTION")
             {
-                spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
+                DLOG_F(INFO,"{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
                 connection_prop = property->getSwitch();
                 is_connected = switch_on;
                 if (!is_connected)
@@ -253,7 +253,7 @@ namespace Lithium
                     connection_prop->sp->s = ISS_ON;
                     sendNewSwitch(connection_prop);
                 }
-                spdlog::debug("{} Connected {}", _name, is_connected);
+                DLOG_F(INFO,"{} Connected {}", _name, is_connected);
             }
             else if (PropName == indi_focuser_cmd + "Mode")
             {
@@ -275,21 +275,21 @@ namespace Lithium
                     indi_focuser_rate = "115200";
                 else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
                     indi_focuser_rate = "230400";
-                spdlog::debug("{} baud rate : {}", _name, indi_focuser_rate);
+                DLOG_F(INFO,"{} baud rate : {}", _name, indi_focuser_rate);
             }
             else if (PropName == indi_focuser_cmd + "FOCUS_MOTION")
             {
                 current_motion = (IUFindSwitch(motion_prop, "FOCUS_INWARD")->s == ISS_ON) ? 0 : 1;
-                spdlog::debug("{} is moving {}", _name, current_motion ? "outward" : "inward");
+                DLOG_F(INFO,"{} is moving {}", _name, current_motion ? "outward" : "inward");
             }
             else if (PropName == indi_focuser_cmd + "FOCUS_BACKLASH_TOGGLE")
             {
-                has_backlash = (IUFindSwitch(backlash_prop, "LITHIUM_ENABLED")->s == ISS_ON);
-                spdlog::debug("{} Has Backlash : {}", _name, has_backlash);
+                has_backlash = (IUFindSwitch(backlash_prop, "HYDROGEN_ENABLED")->s == ISS_ON);
+                DLOG_F(INFO,"{} Has Backlash : {}", _name, has_backlash);
             }
             break;
         }
-        case LITHIUM_NUMBER:
+        case HYDROGEN_NUMBER:
         {
             if (PropName == indi_focuser_cmd + "INFO")
             {
@@ -300,31 +300,31 @@ namespace Lithium
             {
                 speed_prop = property->getNumber();
                 current_speed = prop_value;
-                spdlog::debug("{} Current Speed : {}", _name, current_speed);
+                DLOG_F(INFO,"{} Current Speed : {}", _name, current_speed);
             }
             else if (PropName == indi_focuser_cmd + "ABS_FOCUS_POSITION")
             {
                 absolute_position_prop = property->getNumber();
                 current_position = prop_value;
-                spdlog::debug("{} Current Absolute Position : {}", _name, current_position);
+                DLOG_F(INFO,"{} Current Absolute Position : {}", _name, current_position);
             }
             else if (PropName == indi_focuser_cmd + "DELAY")
             {
                 delay_prop = property->getNumber();
                 delay = prop_value;
-                spdlog::debug("{} Current Delay : {}", _name, delay);
+                DLOG_F(INFO,"{} Current Delay : {}", _name, delay);
             }
             else if (PropName == indi_focuser_cmd + "FOCUS_TEMPERATURE")
             {
                 temperature_prop = property->getNumber();
                 current_temperature = prop_value;
-                spdlog::debug("{} Current Temperature : {}", _name, current_temperature);
+                DLOG_F(INFO,"{} Current Temperature : {}", _name, current_temperature);
             }
             else if (PropName == indi_focuser_cmd + "FOCUS_MAX")
             {
                 max_position_prop = property->getNumber();
                 max_position = prop_value;
-                spdlog::debug("{} Max Position : {}", _name, max_position);
+                DLOG_F(INFO,"{} Max Position : {}", _name, max_position);
             }
             else
             {
@@ -340,29 +340,29 @@ namespace Lithium
         }
     }
 
-    void INDIFocuser::IndiServerConnected()
+    void HydrogenFocuser::IndiServerConnected()
     {
-        spdlog::debug("{} connection succeeded", _name);
+        DLOG_F(INFO,"{} connection succeeded", _name);
         is_connected = true;
     }
 
-    void INDIFocuser::IndiServerDisconnected(int exit_code)
+    void HydrogenFocuser::IndiServerDisconnected(int exit_code)
     {
-        spdlog::debug("{}: serverDisconnected", _name);
+        DLOG_F(INFO,"{}: serverDisconnected", _name);
         // after disconnection we reset the connection status and the properties pointers
         ClearStatus();
         // in case the connection lost we must reset the client socket
         if (exit_code == -1)
-            spdlog::debug("{} : INDI server disconnected", _name);
+            DLOG_F(INFO,"{} : Hydrogen server disconnected", _name);
     }
 
-    void INDIFocuser::removeDevice(LITHIUM::BaseDevice *dp)
+    void HydrogenFocuser::removeDevice(HYDROGEN::BaseDevice *dp)
     {
         ClearStatus();
-        spdlog::info("{} disconnected", _name);
+        DLOG_F(INFO,"{} disconnected", _name);
     }
 
-    void INDIFocuser::ClearStatus()
+    void HydrogenFocuser::ClearStatus()
     {
         connection_prop = nullptr;
         focuser_port = nullptr;
@@ -385,18 +385,18 @@ namespace Lithium
         focuser_device = nullptr;
     }
 
-    INDIFocuser::INDIFocuser(const std::string &name) : Focuser(name)
+    HydrogenFocuser::HydrogenFocuser(const std::string &name) : Focuser(name)
     {
-        spdlog::debug("INDI Focuser {} init successfully", name);
+        DLOG_F(INFO,"Hydrogen Focuser {} init successfully", name);
     }
 
-    INDIFocuser::~INDIFocuser()
+    HydrogenFocuser::~HydrogenFocuser()
     {
     }
 
-    bool INDIFocuser::connect(std::string name)
+    bool HydrogenFocuser::connect(std::string name)
     {
-        spdlog::debug("Trying to connect to {}", name);
+        DLOG_F(INFO,"Trying to connect to {}", name);
         if (is_connected)
         {
             spdlog::warn("{} is already connected", _name);
@@ -408,7 +408,7 @@ namespace Lithium
         // Connect to server.
         if (connectServer())
         {
-            spdlog::debug("{}: connectServer done ready = {}", _name, is_ready);
+            DLOG_F(INFO,"{}: connectServer done ready = {}", _name, is_ready);
             connectDevice(name.c_str());
             is_connected = true;
             return true;
@@ -417,29 +417,29 @@ namespace Lithium
         return false;
     }
 
-    bool INDIFocuser::disconnect()
+    bool HydrogenFocuser::disconnect()
     {
         return true;
     }
 
-    bool INDIFocuser::reconnect()
+    bool HydrogenFocuser::reconnect()
     {
         disconnect();
         return connect(_name);
     }
 
-    bool INDIFocuser::scanForAvailableDevices()
+    bool HydrogenFocuser::scanForAvailableDevices()
     {
         spdlog::warn("scanForAvailableDevices function not implemented");
         return false;
     }
 
-    bool INDIFocuser::moveTo(const int position)
+    bool HydrogenFocuser::moveTo(const int position)
     {
         return moveToAbsolute(position);
     }
 
-    bool INDIFocuser::moveToAbsolute(const int position)
+    bool HydrogenFocuser::moveToAbsolute(const int position)
     {
         if (!is_connected)
         {
@@ -461,30 +461,30 @@ namespace Lithium
         return true;
     }
 
-    bool INDIFocuser::moveStep(const int step)
+    bool HydrogenFocuser::moveStep(const int step)
     {
         return moveStepAbsolute(step);
     }
 
-    bool INDIFocuser::moveStepAbsolute(const int step)
+    bool HydrogenFocuser::moveStepAbsolute(const int step)
     {
         spdlog::warn("moveStepAbsolute function not implemented");
         return false;
     }
 
-    bool INDIFocuser::AbortMove()
+    bool HydrogenFocuser::AbortMove()
     {
         spdlog::warn("AbortMove function not implemented");
         return false;
     }
 
-    bool INDIFocuser::setMaxPosition(int max_position)
+    bool HydrogenFocuser::setMaxPosition(int max_position)
     {
         spdlog::warn("setMaxPosition function not implemented");
         return false;
     }
 
-    double INDIFocuser::getTemperature()
+    double HydrogenFocuser::getTemperature()
     {
         if (temperature_prop == nullptr)
         {
@@ -494,23 +494,23 @@ namespace Lithium
         return temperature_prop->np->value;
     }
 
-    bool INDIFocuser::haveBacklash()
+    bool HydrogenFocuser::haveBacklash()
     {
         spdlog::warn("haveBacklash function not implemented");
         return false;
     }
 
-    bool INDIFocuser::setBacklash(int value)
+    bool HydrogenFocuser::setBacklash(int value)
     {
         spdlog::warn("setBacklash function not implemented");
         return false;
     }
 
-    std::shared_ptr<Lithium::SimpleTask> INDIFocuser::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> HydrogenFocuser::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
         if (task_name == "MoveToAbsolute")
         {
-            spdlog::debug("MoveToAbsolute task with parameters: {}", params.dump());
+            DLOG_F(INFO,"MoveToAbsolute task with parameters: {}", params.dump());
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
@@ -520,7 +520,7 @@ namespace Lithium
         }
         else if (task_name == "MoveStepAbsolute")
         {
-            spdlog::debug("MoveStepAbsolute task with parameters: {}", params.dump());
+            DLOG_F(INFO,"MoveStepAbsolute task with parameters: {}", params.dump());
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
@@ -530,7 +530,7 @@ namespace Lithium
         }
         else if (task_name == "AbortMove")
         {
-            spdlog::debug("AbortMove task");
+            DLOG_F(INFO,"AbortMove task");
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &)
                 {
@@ -540,7 +540,7 @@ namespace Lithium
         }
         else if (task_name == "GetMaxPosition")
         {
-            spdlog::debug("GetMaxPosition task");
+            DLOG_F(INFO,"GetMaxPosition task");
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &)
                 {
@@ -550,7 +550,7 @@ namespace Lithium
         }
         else if (task_name == "SetMaxPosition")
         {
-            spdlog::debug("SetMaxPosition task with parameters: {}", params.dump());
+            DLOG_F(INFO,"SetMaxPosition task with parameters: {}", params.dump());
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
@@ -560,7 +560,7 @@ namespace Lithium
         }
         else if (task_name == "HaveBacklash")
         {
-            spdlog::debug("HaveBacklash task");
+            DLOG_F(INFO,"HaveBacklash task");
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &)
                 {
@@ -570,7 +570,7 @@ namespace Lithium
         }
         else if (task_name == "SetBacklash")
         {
-            spdlog::debug("SetBacklash task with parameters: {}", params.dump());
+            DLOG_F(INFO,"SetBacklash task with parameters: {}", params.dump());
             return std::shared_ptr<Lithium::SimpleTask>(new Lithium::SimpleTask(
                 [this](const nlohmann::json &tpramas)
                 {
@@ -578,17 +578,17 @@ namespace Lithium
                 },
                 {params}));
         }
-        spdlog::error("Unknown type of the INDI Focuser task: {}", task_name);
+        spdlog::error("Unknown type of the Hydrogen Focuser task: {}", task_name);
         return nullptr;
     }
 
-    std::shared_ptr<Lithium::ConditionalTask> INDIFocuser::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> HydrogenFocuser::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getCondtionalTask function not implemented");
         return nullptr;
     }
 
-    std::shared_ptr<Lithium::LoopTask> INDIFocuser::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> HydrogenFocuser::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getLoopTask function not implemented");
         return nullptr;

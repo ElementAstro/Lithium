@@ -63,7 +63,7 @@ void ServerLauncher::run()
         // 检查服务器所需的资源文件是否存在
         if (!check_resources())
         {
-            // spdlog::info("Some resource files are missing, downloading now...");
+            // DLOG_F(INFO,"Some resource files are missing, downloading now...");
             std::cout << "Some resource files are missing, downloading now..." << std::endl;
             // 如果不完整则下载缺失的资源文件
             download_resources();
@@ -85,7 +85,7 @@ void ServerLauncher::run()
         // 等待服务器退出
         wait_for_server_to_exit();
 
-        // spdlog::info("Server stopped.");
+        // DLOG_F(INFO,"Server stopped.");
         std::cout << "Server stopped." << std::endl;
     }
     catch (const std::exception &e)
@@ -104,7 +104,7 @@ void ServerLauncher::stop()
     // 唤醒服务器条件变量，以便服务器检测到停止请求
     _server_cv.notify_all();
 
-    // spdlog::info("Stop command sent to server.");
+    // DLOG_F(INFO,"Stop command sent to server.");
     std::cout << "Stop command sent to server." << std::endl;
 }
 
@@ -123,7 +123,7 @@ void ServerLauncher::load_config()
     try
     {
         config_file >> _config;
-        // spdlog::info("Config file loaded successfully.");
+        // DLOG_F(INFO,"Config file loaded successfully.");
         std::cout << "Config file loaded successfully." << std::endl;
     }
     catch (const std::exception &e)
@@ -170,7 +170,7 @@ bool ServerLauncher::check_resources()
 
 void ServerLauncher::download_resources()
 {
-    // spdlog::info("Downloading missing resources...");
+    // DLOG_F(INFO,"Downloading missing resources...");
     std::cout << "Downloading missing resources..." << std::endl;
 
     // 创建线程池
@@ -201,7 +201,7 @@ void ServerLauncher::download_resources()
                 std::ofstream outfile(res_file);
                 outfile.write(res->body.c_str(), res->body.size());
 
-                //spdlog::info("Resource file '{}' downloaded.", res_file.get<std::string>());
+                //DLOG_F(INFO,"Resource file '{}' downloaded.", res_file.get<std::string>());
                 std::cout << "Resource file '" << res_file.get<std::string>() << "' downloaded." << std::endl;
                 return true;
             }
@@ -227,7 +227,7 @@ void ServerLauncher::download_resources()
         }
     }
 
-    // spdlog::info("Downloading finished.");
+    // DLOG_F(INFO,"Downloading finished.");
     std::cout << "Downloading finished." << std::endl;
 }
 
@@ -319,7 +319,7 @@ bool ServerLauncher::check_modules(const std::string &modules_dir, const json &m
 
 void ServerLauncher::start_server()
 {
-    // spdlog::info("Starting server...");
+    // DLOG_F(INFO,"Starting server...");
     std::cout << "Starting server..." << std::endl;
 
     // 执行启动服务器的命令
@@ -334,7 +334,7 @@ void ServerLauncher::start_server()
     }
     else
     {
-        // spdlog::info("Server process started with command: {}", cmd);
+        // DLOG_F(INFO,"Server process started with command: {}", cmd);
         std::cout << "Server process started with command: " << cmd << std::endl;
     }
 
@@ -352,24 +352,24 @@ void ServerLauncher::start_server()
         if (_stop_requested) {
             fprintf(_server_process.get(), "%c", _config["stop_command"]);
             fflush(_server_process.get());
-            //spdlog::debug("Stop command sent to server process.");
+            //DLOG_F(INFO,"Stop command sent to server process.");
             std::cout << "Stop command sent to server process." << std::endl;
         } });
 
-    // spdlog::info("Server started.");
+    // DLOG_F(INFO,"Server started.");
     std::cout << "Server started." << std::endl;
 }
 
 void ServerLauncher::stop_server()
 {
-    // spdlog::info("Stopping server...");
+    // DLOG_F(INFO,"Stopping server...");
     std::cout << "Stopping server..." << std::endl;
 
     // 发送停止命令给服务器
     fprintf(_server_process.get(), "%c", _config["stop_command"]);
     fflush(_server_process.get());
 
-    // spdlog::info("Stop command sent to server process.");
+    // DLOG_F(INFO,"Stop command sent to server process.");
     std::cout << "Stop command sent to server process." << std::endl;
 }
 

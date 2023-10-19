@@ -25,33 +25,25 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Telescope
+Description: Hydrogen Telescope
 
 **************************************************/
 
 #pragma once
 
-#include "api/indiclient.hpp"
-#include "device/basic_device.hpp"
-
-#include <libindi/basedevice.h>
-#include <libindi/indiproperty.h>
-
-#include <string>
-
-#include <spdlog/spdlog.h>
+#include "hydrogendevice.hpp"
 
 namespace Lithium
 {
-    class INDITelescope : public Telescope, public LithiumIndiClient
+    class HydrogenTelescope : public Telescope, public LithiumIndiClient
     {
     private:
-        // INDI 客户端参数
+        // Hydrogen 客户端参数
         ISwitchVectorProperty *connection_prop;    // 连接属性指针
         INumberVectorProperty *telescopeinfo_prop; // 望远镜信息属性指针
         ITextVectorProperty *telescope_port;       // 望远镜端口属性指针
         ISwitchVectorProperty *rate_prop;          // 望远镜速率属性指针
-        LITHIUM::BaseDevice *telescope_device;        // 望远镜设备指针
+        HYDROGEN::BaseDevice *telescope_device;        // 望远镜设备指针
 
         bool is_ready; // 是否连接成功标志
         bool has_blob; // 是否接收 blob 数据标志
@@ -59,10 +51,10 @@ namespace Lithium
         std::string indi_telescope_port = ""; // 望远镜所选端口
         std::string indi_telescope_rate = ""; // 望远镜所选速率
 
-        std::string indi_telescope_cmd;            // INDI 命令字符串
-        std::string indi_telescope_exec = "";      // INDI 设备执行文件路径
-        std::string indi_telescope_version = "";   // INDI 设备固件版本
-        std::string indi_telescope_interface = ""; // INDI 接口版本
+        std::string indi_telescope_cmd;            // Hydrogen 命令字符串
+        std::string indi_telescope_exec = "";      // Hydrogen 设备执行文件路径
+        std::string indi_telescope_version = "";   // Hydrogen 设备固件版本
+        std::string indi_telescope_interface = ""; // Hydrogen 接口版本
 
     public:
         /**
@@ -70,13 +62,13 @@ namespace Lithium
          *
          * @param name 望远镜名字
          */
-        INDITelescope(const std::string &name);
+        HydrogenTelescope(const std::string &name);
 
         /**
          * @brief 析构函数
          *
          */
-        ~INDITelescope();
+        ~HydrogenTelescope();
 
         /**
          * @brief 连接望远镜
@@ -257,15 +249,15 @@ namespace Lithium
         void ClearStatus();
 
     protected:
-        // INDI 回调函数
-        void newDevice(LITHIUM::BaseDevice *dp) override;
-        void removeDevice(LITHIUM::BaseDevice *dp) override;
-        void newProperty(LITHIUM::Property *property) override;
-        void removeProperty(LITHIUM::Property *property) override {}
+        // Hydrogen 回调函数
+        void newDevice(HYDROGEN::BaseDevice *dp) override;
+        void removeDevice(HYDROGEN::BaseDevice *dp) override;
+        void newProperty(HYDROGEN::Property *property) override;
+        void removeProperty(HYDROGEN::Property *property) override {}
         void newBLOB(IBLOB *bp) override;
         void newSwitch(ISwitchVectorProperty *svp) override;
         void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
+        void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
         void newText(ITextVectorProperty *tvp) override;
         void newLight(ILightVectorProperty *lvp) override {}
         void IndiServerConnected() override;

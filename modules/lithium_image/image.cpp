@@ -188,7 +188,7 @@ namespace Lithium::Image
     void crop_image(CImg<unsigned char> &img, int x, int y, int w, int h)
     {
         // 调用CImg库提供的crop()函数进行图像裁剪，并输出调试日志
-        spdlog::debug("Crop the image to ({}, {}), width = {}, height = {}.", x, y, w, h);
+        DLOG_F(INFO,"Crop the image to ({}, {}), width = {}, height = {}.", x, y, w, h);
         img.crop(x, y, x + w - 1, y + h - 1);
     }
 
@@ -201,7 +201,7 @@ namespace Lithium::Image
     void rotate_image(CImg<unsigned char> &img, float angle)
     {
         // 调用CImg库提供的rotate()函数进行图像旋转，并输出调试日志
-        spdlog::debug("Rotate the image by {} degrees.", angle);
+        DLOG_F(INFO,"Rotate the image by {} degrees.", angle);
         img.rotate(angle);
     }
 
@@ -214,7 +214,7 @@ namespace Lithium::Image
     void flip(CImg<unsigned char> &img, int direction)
     {
         // 添加spdlog的debug输出
-        spdlog::debug("Flipping image...");
+        DLOG_F(INFO,"Flipping image...");
 
         if (direction == 0)
         { // 水平翻转
@@ -234,7 +234,7 @@ namespace Lithium::Image
         }
 
         // 添加spdlog的debug输出
-        spdlog::debug("Image flipped.");
+        DLOG_F(INFO,"Image flipped.");
     }
 
     /**
@@ -246,7 +246,7 @@ namespace Lithium::Image
     std::vector<int> compute_histogram(CImg<unsigned char> &img)
     {
         // 使用vector<int>存储图像直方图，并输出调试日志
-        spdlog::debug("Compute the histogram of the image.");
+        DLOG_F(INFO,"Compute the histogram of the image.");
         std::vector<int> hist(256, 0);
         cimg_forXY(img, x, y)
         {
@@ -269,7 +269,7 @@ namespace Lithium::Image
         CImg<unsigned char> new_img(new_width, new_height, 1, img.spectrum());
 
         // 对每个新像素点，计算与原图像对应的多个像素的平均值，并输出调试日志
-        spdlog::debug("Compress the image with ratio {}.", compress_ratio);
+        DLOG_F(INFO,"Compress the image with ratio {}.", compress_ratio);
         cimg_forXY(new_img, x, y)
         {
             int sum_r = 0, sum_g = 0, sum_b = 0, count = 0;
@@ -311,7 +311,7 @@ namespace Lithium::Image
     {
         float kernel[9] = {1, 2, 1, 2, 4, 2, 1, 2, 1};
         CImg<float> filter(kernel, 3, 3);
-        spdlog::debug("Apply Gaussian filter to the image.");
+        DLOG_F(INFO,"Apply Gaussian filter to the image.");
         return image.get_convolve(filter);
     }
 
@@ -325,7 +325,7 @@ namespace Lithium::Image
     {
         float kernel[9] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
         CImg<float> filter(kernel, 3, 3);
-        spdlog::debug("Apply mean filter to the image.");
+        DLOG_F(INFO,"Apply mean filter to the image.");
         return image.get_convolve(filter);
     }
 
@@ -339,7 +339,7 @@ namespace Lithium::Image
     {
         float kernel[9] = {-1, -1, -1, -1, 9, -1, -1, -1, -1};
         CImg<float> filter(kernel, 3, 3);
-        spdlog::debug("Apply sharpen filter to the image.");
+        DLOG_F(INFO,"Apply sharpen filter to the image.");
         return image.get_convolve(filter);
     }
 
@@ -376,7 +376,7 @@ namespace Lithium::Image
     void detect_stars(const char *filename, int threshold, int max_radius)
     {
         // 读取图像并记录日志
-        spdlog::debug("Loading image: {}", filename);
+        DLOG_F(INFO,"Loading image: {}", filename);
         CImg<unsigned char> img(filename);
 
         // 转换成灰度图像
@@ -414,7 +414,7 @@ namespace Lithium::Image
                 }
             }
         }
-        spdlog::debug("Finished detecting {} stars in image: {}", count, filename);
+        DLOG_F(INFO,"Finished detecting {} stars in image: {}", count, filename);
     }
 
     /**
@@ -427,15 +427,15 @@ namespace Lithium::Image
         int depth = img.depth();
         if (depth == 1)
         {
-            spdlog::debug("The bit depth of the image is: 1 bit");
+            DLOG_F(INFO,"The bit depth of the image is: 1 bit");
         }
         else if (depth == 3)
         {
-            spdlog::debug("The bit depth of the image is: 24 bits");
+            DLOG_F(INFO,"The bit depth of the image is: 24 bits");
         }
         else
         {
-            spdlog::debug("The bit depth of the image is: {} bits", depth * 8);
+            DLOG_F(INFO,"The bit depth of the image is: {} bits", depth * 8);
         }
         return depth;
     }
@@ -459,7 +459,7 @@ namespace Lithium::Image
 
         // 计算曝光时间
         float exposure_time = 100.0f * iso * aperture * aperture / (shutter_speed * total_light);
-        spdlog::debug("The exposure time of the astronomy camera is: {}s", exposure_time);
+        DLOG_F(INFO,"The exposure time of the astronomy camera is: {}s", exposure_time);
         return exposure_time;
     }
 
@@ -475,7 +475,7 @@ namespace Lithium::Image
     {
         // 计算曝光时间
         float exposure_time = (gain * t) / (dark_noise * dark_noise - read_noise * read_noise);
-        spdlog::debug("The exposure time of the astronomy camera is: {}s", exposure_time);
+        DLOG_F(INFO,"The exposure time of the astronomy camera is: {}s", exposure_time);
         return exposure_time;
     }
 

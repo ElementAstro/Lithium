@@ -25,17 +25,19 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Filterwheel
+Description: Hydrogen Filterwheel
 
 **************************************************/
 
-#include "lithiumfilterwheel.hpp"
+#include "hydrogenfilterwheel.hpp"
 
-#include <spdlog/spdlog.h>
+#include "config.h"
+
+#include "loguru/loguru.hpp"
 
 namespace Lithium
 {
-    void INDIFilterwheel::newDevice(LITHIUM::BaseDevice *dp)
+    void HydrogenFilterwheel::newDevice(HYDROGEN::BaseDevice *dp)
     {
         if (dp->getDeviceName() == device_name)
         {
@@ -43,7 +45,7 @@ namespace Lithium
         }
     }
 
-    void INDIFilterwheel::newSwitch(ISwitchVectorProperty *svp)
+    void HydrogenFilterwheel::newSwitch(ISwitchVectorProperty *svp)
     {
         std::string const connection_str{"CONNECTION"};
         std::string const baud_rate_str{"DEVICE_BAUD_RATE"};
@@ -54,14 +56,14 @@ namespace Lithium
             if (connectswitch->s == ISS_ON)
             {
                 is_connected = true;
-                spdlog::info("{} is connected", _name);
+                DLOG_F(INFO, "{} is connected", _name);
             }
             else
             {
                 if (is_ready)
                 {
                     ClearStatus();
-                    spdlog::info("{} is disconnected", _name);
+                    DLOG_F(INFO, "{} is disconnected", _name);
                 }
             }
         }
@@ -87,13 +89,13 @@ namespace Lithium
             else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
                 indi_filter_rate = baud_230400;
 
-            spdlog::debug("{} baud rate : {}", _name, indi_filter_rate);
+            DLOG_F(INFO, "{} baud rate : {}", _name, indi_filter_rate);
         }
     }
 
-    void INDIFilterwheel::newMessage(LITHIUM::BaseDevice *dp, int messageID)
+    void HydrogenFilterwheel::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
     {
-        spdlog::debug("{} Received message: {}", _name, dp->messageQueue(messageID));
+        DLOG_F(INFO, "{} Received message: {}", _name, dp->messageQueue(messageID));
     }
 
     inline static const char *StateStr(IPState st)
@@ -112,7 +114,7 @@ namespace Lithium
         }
     }
 
-    void INDIFilterwheel::newNumber(INumberVectorProperty *nvp)
+    void HydrogenFilterwheel::newNumber(INumberVectorProperty *nvp)
     {
         std::ostringstream os;
         for (int i = 0; i < nvp->nnp; i++)
@@ -121,7 +123,7 @@ namespace Lithium
                 os << ',';
             os << nvp->np[i].name << ':' << nvp->np[i].value;
         }
-        spdlog::debug("{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
+        DLOG_F(INFO, "{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
 
         if (nvp == filterinfo_prop)
         {
@@ -129,31 +131,31 @@ namespace Lithium
         }
     }
 
-    void INDIFilterwheel::newText(ITextVectorProperty *tvp)
+    void HydrogenFilterwheel::newText(ITextVectorProperty *tvp)
     {
-        spdlog::debug("{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
+        DLOG_F(INFO, "{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
     }
 
-    void INDIFilterwheel::newBLOB(IBLOB *bp)
+    void HydrogenFilterwheel::newBLOB(IBLOB *bp)
     {
-        spdlog::debug("{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+        DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
     }
 
-    void INDIFilterwheel::newProperty(LITHIUM::Property *property)
+    void HydrogenFilterwheel::newProperty(HYDROGEN::Property *property)
     {
         std::string PropName(property->getName());
-        LITHIUM_PROPERTY_TYPE Proptype = property->getType();
+        HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
 
-        spdlog::debug("{} Property: {}", _name, property->getName());
+        DLOG_F(INFO, "{} Property: {}", _name, property->getName());
 
-        if (PropName == "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
+        if (PropName == "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
         {
-            spdlog::debug("{} Found device port for {} ", _name, property->getDeviceName());
+            DLOG_F(INFO, "{} Found device port for {} ", _name, property->getDeviceName());
             filter_port = property->getText();
         }
-        else if (PropName == "CONNECTION" && Proptype == LITHIUM_SWITCH)
+        else if (PropName == "CONNECTION" && Proptype == HYDROGEN_SWITCH)
         {
-            spdlog::debug("{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
+            DLOG_F(INFO, "{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
             connection_prop = property->getSwitch();
             ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
             is_connected = (connectswitch->s == ISS_ON);
@@ -162,22 +164,22 @@ namespace Lithium
                 connection_prop->sp->s = ISS_ON;
                 sendNewSwitch(connection_prop);
             }
-            spdlog::debug("{} Connected {}", _name, is_connected);
+            DLOG_F(INFO, "{} Connected {}", _name, is_connected);
         }
-        else if (PropName == "DRIVER_INFO" && Proptype == LITHIUM_TEXT)
+        else if (PropName == "DRIVER_INFO" && Proptype == HYDROGEN_TEXT)
         {
             device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
             indi_filter_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
             indi_filter_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
             indi_filter_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-            spdlog::debug("{} Name : {} connected exec {}", _name, device_name, indi_filter_exec);
+            DLOG_F(INFO, "{} Name : {} connected exec {}", _name, device_name, indi_filter_exec);
         }
-        else if (PropName == indi_filter_cmd + "INFO" && Proptype == LITHIUM_NUMBER)
+        else if (PropName == indi_filter_cmd + "INFO" && Proptype == HYDROGEN_NUMBER)
         {
             filterinfo_prop = property->getNumber();
             newNumber(filterinfo_prop);
         }
-        else if (PropName == indi_filter_cmd + "DEVICE_BAUD_RATE" && Proptype == LITHIUM_SWITCH)
+        else if (PropName == indi_filter_cmd + "DEVICE_BAUD_RATE" && Proptype == HYDROGEN_SWITCH)
         {
             rate_prop = property->getSwitch();
             if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
@@ -192,38 +194,38 @@ namespace Lithium
                 indi_filter_rate = "115200";
             else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
                 indi_filter_rate = "230400";
-            spdlog::debug("{} baud rate : {}", _name, indi_filter_rate);
+            DLOG_F(INFO, "{} baud rate : {}", _name, indi_filter_rate);
         }
-        else if (PropName == indi_filter_cmd + "DEVICE_PORT" && Proptype == LITHIUM_TEXT)
+        else if (PropName == indi_filter_cmd + "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
         {
             indi_filter_port = IUFindText(property->getText(), "PORT")->text;
-            spdlog::debug("{} USB Port : {}", _name, indi_filter_port);
+            DLOG_F(INFO, "{} USB Port : {}", _name, indi_filter_port);
         }
     }
 
-    void INDIFilterwheel::IndiServerConnected()
+    void HydrogenFilterwheel::IndiServerConnected()
     {
-        spdlog::debug("{} connection succeeded", _name);
+        DLOG_F(INFO, "{} connection succeeded", _name);
         is_connected = true;
     }
 
-    void INDIFilterwheel::IndiServerDisconnected(int exit_code)
+    void HydrogenFilterwheel::IndiServerDisconnected(int exit_code)
     {
-        spdlog::debug("{}: serverDisconnected", _name);
+        DLOG_F(INFO, "{}: serverDisconnected", _name);
         // after disconnection we reset the connection status and the properties pointers
         ClearStatus();
         // in case the connection lost we must reset the client socket
         if (exit_code == -1)
-            spdlog::debug("{} : INDI server disconnected", _name);
+            DLOG_F(INFO, "{} : Hydrogen server disconnected", _name);
     }
 
-    void INDIFilterwheel::removeDevice(LITHIUM::BaseDevice *dp)
+    void HydrogenFilterwheel::removeDevice(HYDROGEN::BaseDevice *dp)
     {
         ClearStatus();
-        spdlog::info("{} disconnected", _name);
+        DLOG_F(INFO, "{} disconnected", _name);
     }
 
-    void INDIFilterwheel::ClearStatus()
+    void HydrogenFilterwheel::ClearStatus()
     {
         connection_prop = nullptr;
         filter_port = nullptr;
@@ -235,18 +237,18 @@ namespace Lithium
         filter_device = nullptr;
     }
 
-    INDIFilterwheel::INDIFilterwheel(const std::string &name) : Filterwheel(name)
+    HydrogenFilterwheel::HydrogenFilterwheel(const std::string &name) : Filterwheel(name)
     {
-        spdlog::debug("INDI filterwheel {} init successfully", name);
+        DLOG_F(INFO, "Hydrogen filterwheel {} init successfully", name);
     }
 
-    INDIFilterwheel::~INDIFilterwheel()
+    HydrogenFilterwheel::~HydrogenFilterwheel()
     {
     }
 
-    bool INDIFilterwheel::connect(std::string name)
+    bool HydrogenFilterwheel::connect(std::string name)
     {
-        spdlog::debug("Trying to connect to {}", name);
+        DLOG_F(INFO, "Trying to connect to {}", name);
         if (is_connected)
         {
             spdlog::warn("{} is already connected", _name);
@@ -258,7 +260,7 @@ namespace Lithium
         // Connect to server.
         if (connectServer())
         {
-            spdlog::debug("{}: connectServer done ready = {}", _name, is_ready);
+            DLOG_F(INFO, "{}: connectServer done ready = {}", _name, is_ready);
             connectDevice(name.c_str());
             is_connected = true;
             return true;
@@ -267,36 +269,36 @@ namespace Lithium
         return false;
     }
 
-    bool INDIFilterwheel::disconnect()
+    bool HydrogenFilterwheel::disconnect()
     {
         return true;
     }
 
-    bool INDIFilterwheel::reconnect()
+    bool HydrogenFilterwheel::reconnect()
     {
         disconnect();
         return connect(_name);
     }
 
-    bool INDIFilterwheel::scanForAvailableDevices()
+    bool HydrogenFilterwheel::scanForAvailableDevices()
     {
         spdlog::warn("scanForAvailableDevices function not implemented");
         return false;
     }
 
-    std::shared_ptr<Lithium::SimpleTask> INDIFilterwheel::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::SimpleTask> HydrogenFilterwheel::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
     {
-        spdlog::error("Unknown type of the INDI filter task: {}", task_name);
+        spdlog::error("Unknown type of the Hydrogen filter task: {}", task_name);
         return nullptr;
     }
 
-    std::shared_ptr<Lithium::ConditionalTask> INDIFilterwheel::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::ConditionalTask> HydrogenFilterwheel::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getCondtionalTask function not implemented");
         return nullptr;
     }
 
-    std::shared_ptr<Lithium::LoopTask> INDIFilterwheel::getLoopTask(const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<Lithium::LoopTask> HydrogenFilterwheel::getLoopTask(const std::string &task_name, const nlohmann::json &params)
     {
         spdlog::warn("getLoopTask function not implemented");
         return nullptr;

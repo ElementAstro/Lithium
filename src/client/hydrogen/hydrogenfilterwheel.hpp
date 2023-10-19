@@ -25,33 +25,25 @@ E-mail: astro_air@126.com
 
 Date: 2023-4-10
 
-Description: INDI Filterwheel
+Description: Hydrogen Filterwheel
 
 **************************************************/
 
 #pragma once
 
-#include "api/indiclient.hpp"
-#include "device/basic_device.hpp"
-
-#include <libindi/basedevice.h>
-#include <libindi/indiproperty.h>
-
-#include <string>
-
-#include <spdlog/spdlog.h>
+#include "hydrogendevice.hpp"
 
 namespace Lithium
 {
-    class INDIFilterwheel : public Filterwheel, public LithiumIndiClient
+    class HydrogenFilterwheel : public Filterwheel, public LithiumIndiClient
     {
-        // INDI Parameters
+        // Hydrogen Parameters
     private:
         ISwitchVectorProperty *connection_prop;
         INumberVectorProperty *filterinfo_prop;
         ITextVectorProperty *filter_port;
         ISwitchVectorProperty *rate_prop;
-        LITHIUM::BaseDevice *filter_device;
+        HYDROGEN::BaseDevice *filter_device;
 
         bool is_ready;
         bool has_blob;
@@ -65,8 +57,8 @@ namespace Lithium
         std::string indi_filter_interface = "";
 
     public:
-        INDIFilterwheel(const std::string &name);
-        ~INDIFilterwheel();
+        HydrogenFilterwheel(const std::string &name);
+        ~HydrogenFilterwheel();
 
         bool connect(std::string name) override;
         bool disconnect() override;
@@ -84,14 +76,14 @@ namespace Lithium
         void ClearStatus();
 
     protected:
-        void newDevice(LITHIUM::BaseDevice *dp) override;
-        void removeDevice(LITHIUM::BaseDevice *dp) override;
-        void newProperty(LITHIUM::Property *property) override;
-        void removeProperty(LITHIUM::Property *property) override {}
+        void newDevice(HYDROGEN::BaseDevice *dp) override;
+        void removeDevice(HYDROGEN::BaseDevice *dp) override;
+        void newProperty(HYDROGEN::Property *property) override;
+        void removeProperty(HYDROGEN::Property *property) override {}
         void newBLOB(IBLOB *bp) override;
         void newSwitch(ISwitchVectorProperty *svp) override;
         void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
+        void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
         void newText(ITextVectorProperty *tvp) override;
         void newLight(ILightVectorProperty *lvp) override {}
         void IndiServerConnected() override;

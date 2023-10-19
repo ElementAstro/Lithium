@@ -31,19 +31,7 @@ Description: Hydrogen Camera
 
 #pragma once
 
-#include "modules/client/indiclient.hpp"
-#include "core/camera.hpp"
-#include "core/property/task/device_task.hpp"
-#include "core/property/task/conditional_task.hpp"
-#include "core/property/task/loop_task.hpp"
-
-#include "core/base/basedevice.h"
-#include "core/property/hydrogenproperty.h"
-
-#include <string>
-#include <atomic>
-
-#include "nlohmann/json.hpp"
+#include "hydrogendevice.hpp"
 
 class HydrogenCamera : public Camera, public LithiumIndiClient
 {
@@ -375,13 +363,13 @@ protected:
     // Hydrogen Client API
 protected:
     // 新设备
-    void newDevice(LITHIUM::BaseDevice *dp) override;
+    void newDevice(HYDROGEN::BaseDevice *dp) override;
     // 删除设备
-    void removeDevice(LITHIUM::BaseDevice *dp) override;
+    void removeDevice(HYDROGEN::BaseDevice *dp) override;
     // 新属性
-    void newProperty(LITHIUM::Property *property) override;
+    void newProperty(HYDROGEN::Property *property) override;
     // 删除属性
-    void removeProperty(LITHIUM::Property *property) override {}
+    void removeProperty(HYDROGEN::Property *property) override {}
     // 新 BLOB 数据
     void newBLOB(IBLOB *bp) override;
     // 新开关属性
@@ -389,7 +377,7 @@ protected:
     // 新数值属性
     void newNumber(INumberVectorProperty *nvp) override;
     // 新消息
-    void newMessage(LITHIUM::BaseDevice *dp, int messageID) override;
+    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
     // 新文本属性
     void newText(ITextVectorProperty *tvp) override;
     // 新灯属性

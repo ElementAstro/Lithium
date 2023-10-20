@@ -31,7 +31,11 @@ Description: Configor
 
 #include <fstream>
 #include <filesystem>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <sstream>
 #include <regex>
 

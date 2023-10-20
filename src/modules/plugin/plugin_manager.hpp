@@ -31,19 +31,27 @@ Description: Plugin Manager
 
 #pragma once
 
-#include <map>
 #include <string>
 #include <memory>
 #include <vector>
 #include <mutex>
 #include <stdexcept>
 
-#include "plugin.hpp"
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
 
-#include "modules/system/process.hpp"
+#include "plugin.hpp"
 
 namespace Lithium
 {
+    namespace Process
+    {
+        class ProcessManager;
+    } // namespace Process
+
     /**
      * @class PluginManager
      * @brief 插件管理器类，用于加载、卸载和运行插件
@@ -98,8 +106,13 @@ namespace Lithium
         void GetPluginInfo(const std::string &pluginName) const;
 
     private:
-        mutable std::mutex mutex_;                                              ///< 互斥锁，用于保护plugins_的访问
-        std::map<std::string, std::shared_ptr<Plugin>> plugins_;                ///< 已加载的插件容器，以插件名称为键值存储
+        mutable std::mutex mutex_; ///< 互斥锁，用于保护plugins_的访问
+#if ENABLE_FASTHASH
+        emhash8::HashMap<std::string, std::shared_ptr<Plugin>> plugins_;
+#else
+        std::unordered_map<std::string, std::shared_ptr<Plugin>> plugins_; ///< 已加载的插件容器，以插件名称为键值存储
+#endif
+
         std::string GetPluginType(const std::shared_ptr<Plugin> &plugin) const; ///< 获取插件类型的辅助函数
 
         std::shared_ptr<Process::ProcessManager> m_ProcessManager;

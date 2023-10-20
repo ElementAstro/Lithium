@@ -989,7 +989,7 @@ namespace Lithium
         or
         "name" : "gain"
         */
-        CHECK_MAIN_CAMERA_J;
+        CHECK_DEVICE_J(m_main_camera, "no main camera specific");
         json res;
         if (m_params.is_array())
         {

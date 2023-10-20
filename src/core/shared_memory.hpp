@@ -1,7 +1,7 @@
 #include <type_traits>
 #include <cstring>
 
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 
 #if defined(_WIN32) || defined(_WIN64) // Windows
 #include <windows.h>

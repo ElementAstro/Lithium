@@ -35,7 +35,7 @@ Description: Main
 #include "controller/AsyncStaticController.hpp"
 #include "controller/AsyncSystemController.hpp"
 #include "controller/AsyncWebSocketController.hpp"
-#include "controller/IOController.hpp"
+#include "controller/AsyncIOController.hpp"
 #include "controller/AsyncProcessController.hpp"
 #include "controller/AsyncPHD2Controller.hpp"
 #include "controller/AsyncTaskController.hpp"

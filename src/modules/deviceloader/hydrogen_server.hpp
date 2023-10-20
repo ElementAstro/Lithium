@@ -1,7 +1,11 @@
 #pragma once
 
 #ifndef MAIN_FUNC
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #endif
 
 #include "fifo_server.hpp"

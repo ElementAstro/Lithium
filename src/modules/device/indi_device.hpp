@@ -36,7 +36,7 @@ Description: INDI Web Driver
 #include <vector>
 #include <memory>
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 

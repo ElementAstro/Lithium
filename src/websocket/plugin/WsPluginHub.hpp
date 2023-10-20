@@ -4,7 +4,11 @@
 
 #include "WsPluginInstance.hpp"
 
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 
 class WsPluginHub
 {

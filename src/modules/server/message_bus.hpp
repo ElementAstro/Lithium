@@ -36,7 +36,11 @@ Description: Main Message Bus
 #include <iostream>
 #include <string>
 #include <vector>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <functional>
 #include <any>
 #include <queue>
@@ -140,8 +144,13 @@ public:
     void StartProcessingThread()
     {
         std::type_index typeIndex = typeid(T);
+#if __cplusplus >= 202002L
         processingThreads_.emplace(typeIndex, std::jthread([&]()
                                                            {
+#else
+        processingThreads_.emplace(typeIndex, std::thread([&]()
+                                                           {
+#endif
             while (isRunning_.load()) {
                 std::pair<std::string, std::any> message;
                 bool hasMessage = false;
@@ -210,7 +219,9 @@ public:
         auto it = processingThreads_.find(typeIndex);
         if (it != processingThreads_.end())
         {
+#if __cplusplus >= 202002L
             it->second.request_stop();
+#endif
             it->second.join();
             processingThreads_.erase(it);
             DLOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
@@ -223,7 +234,9 @@ public:
         messageAvailableFlag_.notify_one();
         for (auto &thread : processingThreads_)
         {
+#if __cplusplus >= 202002L
             thread.second.request_stop();
+#endif
             thread.second.join();
         }
         processingThreads_.clear();
@@ -238,9 +251,18 @@ private:
     std::condition_variable messageAvailableFlag_;
     std::mutex waitingMutex_;
 #if __cplusplus >= 202002L
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::type_index, std::thread> processingThreads_;
+#else
     std::unordered_map<std::type_index, std::jthread> processingThreads_;
+#endif
+#else
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::type_index, std::thread> processingThreads_;
 #else
     std::unordered_map<std::type_index, std::thread> processingThreads_;
+#endif
+
 #endif
     std::atomic<bool> isRunning_{true};
 

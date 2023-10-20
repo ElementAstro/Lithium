@@ -37,7 +37,7 @@ Description: Basic Device Defination
 #include <memory>
 #include <thread>
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 #include "emhash/hash_table8.hpp"
 
 #include "property/iproperty.hpp"

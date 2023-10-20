@@ -33,7 +33,11 @@ Description: Task Generator
 
 #define TASK_GENERATOR_ENABLE
 
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <fstream>
 
 #include "modules/device/device_manager.hpp"

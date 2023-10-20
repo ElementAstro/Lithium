@@ -57,18 +57,18 @@ namespace Lithium::File
     {
         if (fileExists(filename))
         {
-            DLOG_F(ERROR, "File \"%s\" already exists!", filename.c_str());
+            DLOG_F(ERROR, "File \"{}\" already exists!", filename);
             return false;
         }
         std::ofstream outfile(filename);
         if (!outfile)
         {
-            DLOG_F(ERROR, "Error creating file \"%s\"!", filename.c_str());
+            DLOG_F(ERROR, "Error creating file \"{}\"!", filename);
             return false;
         }
         outfile.close();
         std::fclose(std::fopen(filename.c_str(), "a")); // create a link to the file
-        DLOG_F(INFO, "Created file \"%s\"", filename.c_str());
+        DLOG_F(INFO, "Created file \"{}\"", filename);
         return true;
     }
 
@@ -76,17 +76,17 @@ namespace Lithium::File
     {
         if (!fileExists(filename))
         {
-            DLOG_F(ERROR, "File \"%s\" does not exist!", filename.c_str());
+            DLOG_F(ERROR, "File \"{}\" does not exist!", filename);
             return false;
         }
         m_filename = filename;
         m_file.open(filename, std::ios::in | std::ios::out);
         if (!m_file)
         {
-            DLOG_F(ERROR, "Could not open file \"%s\"!", filename.c_str());
+            DLOG_F(ERROR, "Could not open file \"{}\"!", filename);
             return false;
         }
-        DLOG_F(INFO, "Opened file \"%s\"", filename.c_str());
+        DLOG_F(INFO, "Opened file \"{}\"", filename);
         return true;
     }
 
@@ -100,7 +100,7 @@ namespace Lithium::File
         std::stringstream buffer;
         buffer << m_file.rdbuf();
         contents = buffer.str();
-        DLOG_F(INFO, "Read contents of file \"%s\"", m_filename.c_str());
+        DLOG_F(INFO, "Read contents of file \"{}\"", m_filename);
         return true;
     }
 
@@ -112,7 +112,7 @@ namespace Lithium::File
             return false;
         }
         m_file << contents;
-        DLOG_F(INFO, "Wrote contents to file \"%s\"", m_filename.c_str());
+        DLOG_F(INFO, "Wrote contents to file \"{}\"", m_filename);
         return true;
     }
 
@@ -120,21 +120,21 @@ namespace Lithium::File
     {
         if (!fileExists(oldFilename))
         {
-            DLOG_F(ERROR, "File \"%s\" does not exist!", oldFilename.c_str());
+            DLOG_F(ERROR, "File \"{}\" does not exist!", oldFilename);
             return false;
         }
         if (fileExists(newFilename))
         {
-            DLOG_F(ERROR, "File \"%s\" already exists!", newFilename.c_str());
+            DLOG_F(ERROR, "File \"{}\" already exists!", newFilename);
             return false;
         }
         int result = std::rename(oldFilename.c_str(), newFilename.c_str());
         if (result != 0)
         {
-            DLOG_F(ERROR, "Could not move file from \"%s\" to \"%s\"!", oldFilename.c_str(), newFilename.c_str());
+            DLOG_F(ERROR, "Could not move file from \"{}\" to \"{}\"!", oldFilename, newFilename);
             return false;
         }
-        DLOG_F(INFO, "Moved file from \"%s\" to \"%s\"", oldFilename.c_str(), newFilename.c_str());
+        DLOG_F(INFO, "Moved file from \"{}\" to \"{}\"", oldFilename, newFilename);
         return true;
     }
 
@@ -142,15 +142,15 @@ namespace Lithium::File
     {
         if (!fileExists(filename))
         {
-            DLOG_F(ERROR, "File \"%s\" does not exist!", filename.c_str());
+            DLOG_F(ERROR, "File \"{}\" does not exist!", filename);
             return false;
         }
         if (std::remove(filename.c_str()) != 0)
         {
-            DLOG_F(ERROR, "Could not delete file \"%s\"!", filename.c_str());
+            DLOG_F(ERROR, "Could not delete file \"{}\"!", filename);
             return false;
         }
-        DLOG_F(INFO, "Deleted file \"%s\"", filename.c_str());
+        DLOG_F(INFO, "Deleted file \"{}\"", filename);
         return true;
     }
 
@@ -166,11 +166,11 @@ namespace Lithium::File
         m_file.seekg(0, m_file.beg);
         if (fileSize == -1)
         {
-            DLOG_F(ERROR, "Could not get file size of \"%s\"!", m_filename.c_str());
+            DLOG_F(ERROR, "Could not get file size of \"{}\"!", m_filename);
         }
         else
         {
-            DLOG_F(INFO, "File size of \"%s\" is %ld bytes", m_filename.c_str(), fileSize);
+            DLOG_F(INFO, "File size of \"{}\" is %ld bytes", m_filename, fileSize);
         }
         return fileSize;
     }
@@ -226,7 +226,7 @@ namespace Lithium::File
             sha256Stream << std::setw(2) << static_cast<int>(hash[i]);
         }
 
-        DLOG_F(INFO, "SHA-256 value for file \"%s\" is %s", m_filename.c_str(), sha256Stream.str().c_str());
+        DLOG_F(INFO, "SHA-256 value for file \"{}\" is {}", m_filename, sha256Stream.str());
         return sha256Stream.str();
     }
 
@@ -235,13 +235,13 @@ namespace Lithium::File
         size_t pos = filename.find_last_of("/\\");
         if (pos == std::string::npos)
         {
-            DLOG_F(ERROR, "Could not get directory of file \"%s\"", filename.c_str());
+            DLOG_F(ERROR, "Could not get directory of file \"{}\"", filename);
             return "";
         }
         else
         {
             std::string directory = filename.substr(0, pos);
-            DLOG_F(INFO, "Directory of file \"%s\" is \"%s\"", filename.c_str(), directory.c_str());
+            DLOG_F(INFO, "Directory of file \"{}\" is \"{}\"", filename, directory);
             return directory;
         }
     }

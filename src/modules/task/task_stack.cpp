@@ -52,7 +52,6 @@ namespace Lithium::Task
             if (exclusiveTasks.find(taskName) != exclusiveTasks.end())
             {
                 // The task being added is mutually exclusive with an existing task
-                std::cout << "Cannot add task '" << taskName << "'. It is mutually exclusive with task '" << existingTaskName << "'." << std::endl;
                 canInsert = false;
                 break;
             }

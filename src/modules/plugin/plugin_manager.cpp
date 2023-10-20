@@ -34,6 +34,8 @@ Description: Plugin Manager
 #include "exe_plugin.hpp"
 #include "script_plugin.hpp"
 
+#include "modules/system/process.hpp"
+
 #include "loguru/loguru.hpp"
 
 namespace Lithium

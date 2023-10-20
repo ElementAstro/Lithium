@@ -53,7 +53,7 @@ namespace Lithium
         {
             if (!fs::exists(macroFileName))
             {
-                DLOG_F(ERROR, "Macro file not found : %s", macroFileName.c_str());
+                DLOG_F(ERROR, "Macro file not found : {}", macroFileName);
                 return false;
             }
             try
@@ -64,13 +64,13 @@ namespace Lithium
             }
             catch (const std::exception &e)
             {
-                DLOG_F(ERROR, "Failed to parse file %s , error : %s", macroFileName.c_str(), e.what());
+                DLOG_F(ERROR, "Failed to parse file {} , error : {}", macroFileName, e.what());
                 return false;
             }
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Error while loading macro file: %s", e.what());
+            DLOG_F(ERROR, "Error while loading macro file: {}", e.what());
             return false;
         }
 
@@ -83,7 +83,7 @@ namespace Lithium
         {
             if (!fs::is_directory(folderPath))
             {
-                DLOG_F(ERROR, "Invalid folder path: %s", folderPath.c_str());
+                DLOG_F(ERROR, "Invalid folder path: {}", folderPath);
                 return false;
             }
 
@@ -96,7 +96,7 @@ namespace Lithium
                     std::ifstream file(filePath);
                     if (!file)
                     {
-                        DLOG_F(ERROR, "Failed to open macro file: %s", filePath.c_str());
+                        DLOG_F(ERROR, "Failed to open macro file: {}", filePath);
                         continue;
                     }
 
@@ -107,7 +107,7 @@ namespace Lithium
                     }
                     catch (const std::exception &e)
                     {
-                        DLOG_F(ERROR, "Failed to parse macro file: %s, error: %s", filePath.c_str(), e.what());
+                        DLOG_F(ERROR, "Failed to parse macro file: {}, error: {}", filePath, e.what());
                         continue;
                     }
 
@@ -123,7 +123,7 @@ namespace Lithium
                     }
                     else
                     {
-                        DLOG_F(ERROR, "Invalid macro file format: %s", filePath.c_str());
+                        DLOG_F(ERROR, "Invalid macro file format: {}", filePath);
                         continue;
                     }
                 }
@@ -131,7 +131,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Error while loading macros from folder: %s", e.what());
+            DLOG_F(ERROR, "Error while loading macros from folder: {}", e.what());
             return false;
         }
 
@@ -187,14 +187,14 @@ namespace Lithium
             std::ifstream file(jsonFileName);
             if (!file)
             {
-                DLOG_F(ERROR, "Failed to open JSON file: %s", jsonFileName.c_str());
+                DLOG_F(ERROR, "Failed to open JSON file: {}", jsonFileName);
                 return false;
             }
             file >> jsonTasks;
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Error while parsing JSON file: %s", e.what());
+            DLOG_F(ERROR, "Error while parsing JSON file: {}", e.what());
             return false;
         }
 
@@ -208,14 +208,14 @@ namespace Lithium
             std::ofstream jsonFile(jsonFileName);
             if (!jsonFile)
             {
-                DLOG_F(ERROR, "Failed to open JSON file: %s", jsonFileName.c_str());
+                DLOG_F(ERROR, "Failed to open JSON file: {}", jsonFileName);
                 return;
             }
             jsonFile << jsonTasks.dump(4); // 使用四个空格缩进
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Error while saving JSON file: %s", e.what());
+            DLOG_F(ERROR, "Error while saving JSON file: {}", e.what());
             return;
         }
     }

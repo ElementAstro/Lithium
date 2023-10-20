@@ -74,13 +74,13 @@ namespace Lithium
         m_MessageBus->StopAllProcessingThreads();
     }
 
-    nlohmann::json LithiumApp::GetConfig(const std::string &key_path) const
+    json LithiumApp::GetConfig(const std::string &key_path) const
     {
         DLOG_F(INFO, _("Get config value: {}"), key_path);
         return m_ConfigManager->getValue(key_path);
     }
 
-    void LithiumApp::SetConfig(const std::string &key_path, const nlohmann::json &value)
+    void LithiumApp::SetConfig(const std::string &key_path, const json &value)
     {
         DLOG_F(INFO, _("Set {} to {}"), key_path, value.dump());
         m_ConfigManager->setValue(key_path, value);
@@ -136,7 +136,7 @@ namespace Lithium
         return m_DeviceManager->findDeviceByName(name);
     }
 
-    std::shared_ptr<SimpleTask> LithiumApp::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<SimpleTask> LithiumApp::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params)
     {
         return m_DeviceManager->getTask(type, device_name, task_name, params);
     }

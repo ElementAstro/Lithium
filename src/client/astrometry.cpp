@@ -35,7 +35,11 @@ Description: Astrometry Command Line
 #include <sstream>
 #include <string>
 #include <vector>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <stdexcept>
 #include <cstring>
 #include <cstdlib>

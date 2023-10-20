@@ -1,5 +1,5 @@
 /*
- * AppComponent.cpp
+ * AppComponent.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *

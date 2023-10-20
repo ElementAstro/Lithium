@@ -12,7 +12,11 @@
 #include "oatpp-websocket/ConnectionHandler.hpp"
 #endif
 
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <mutex>
 
 class WsPluginServer : public oatpp::websocket::AsyncConnectionHandler::SocketInstanceListener

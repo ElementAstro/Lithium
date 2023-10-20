@@ -49,6 +49,7 @@ Description: Lithium App Enter
 
 namespace Lithium
 {
+    
     class LithiumApp
     {
     public:

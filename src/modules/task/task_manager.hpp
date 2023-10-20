@@ -34,7 +34,11 @@ Description: Task Manager
 #include <vector>
 #include <memory>
 #include <string>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <stdexcept>
 #include <fstream>
 

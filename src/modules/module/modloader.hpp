@@ -32,9 +32,13 @@ Description: C++ and Modules Loader
 #pragma once
 
 #include <vector>
-#include <unordered_map>
 #include <cstdio>
 #include <functional>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
 
 /*
 #ifdef _WIN32
@@ -60,14 +64,18 @@ Description: C++ and Modules Loader
 #endif
 */
 
-#include "nlohmann/json_fwd.hpp"
+#include "nlohmann/json.hpp"
 #include "loguru/loguru.hpp"
-
-#include "thread/thread.hpp"
 #include "error/error_code.hpp"
+
+using json = nlohmann::json;
 
 namespace Lithium
 {
+    namespace Thread
+    {
+        class ThreadManager;
+    }
 
     /**
      * @brief Traverse the "modules" directory and create a JSON object containing the information of all modules.
@@ -85,24 +93,81 @@ namespace Lithium
      * @return json - A JSON object containing the module information or an error message.
      *                包含模块信息或错误消息的JSON对象。
      */
-    nlohmann::json iterator_modules_dir(const std::string &dir_name);
+    json iterator_modules_dir(const std::string &dir_name);
 
     class ModuleLoader
     {
     public:
+        /**
+         * @brief 默认构造函数，创建一个空的 ModuleLoader 对象。
+         */
         ModuleLoader();
+
+        /**
+         * @brief 使用给定的目录名称参数构造 ModuleLoader 对象。
+         *
+         * @param dir_name 模块所在的目录名称。
+         */
         ModuleLoader(const std::string &dir_name);
+
+        /**
+         * @brief 使用给定的线程管理器参数构造 ModuleLoader 对象。
+         *
+         * @param threadManager 线程管理器的共享指针。
+         */
         ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager);
+
+        /**
+         * @brief 使用给定的目录名称和线程管理器参数构造 ModuleLoader 对象。
+         *
+         * @param dir_name 模块所在的目录名称。
+         * @param threadManager 线程管理器的共享指针。
+         */
         ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
 
+        /**
+         * @brief 析构函数，释放 ModuleLoader 对象。
+         */
         ~ModuleLoader();
 
-    public:
+        /**
+         * @brief 创建一个共享的 ModuleLoader 指针对象。
+         *
+         * @return 新创建的共享 ModuleLoader 指针对象。
+         */
         static std::shared_ptr<ModuleLoader> createShared();
+
+        /**
+         * @brief 使用给定的目录名称参数创建一个共享的 ModuleLoader 指针对象。
+         *
+         * @param dir_name 模块所在的目录名称。
+         * @return 新创建的共享 ModuleLoader 指针对象。
+         */
         static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name);
+
+        /**
+         * @brief 使用给定的线程管理器参数创建一个共享的 ModuleLoader 指针对象。
+         *
+         * @param threadManager 线程管理器的共享指针。
+         * @return 新创建的共享 ModuleLoader 指针对象。
+         */
         static std::shared_ptr<ModuleLoader> createShared(std::shared_ptr<Thread::ThreadManager> threadManager);
+
+        /**
+         * @brief 使用给定的目录名称和线程管理器参数创建一个共享的 ModuleLoader 指针对象。
+         *
+         * @param dir_name 模块所在的目录名称。
+         * @param threadManager 线程管理器的共享指针。
+         * @return 新创建的共享 ModuleLoader 指针对象。
+         */
         static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
 
+        /**
+         * @brief 根据给定的目录名称加载模块。
+         *
+         * @param dir_name 模块所在的目录名称。
+         * @return 如果成功加载则返回 true，否则返回 false。
+         */
         bool LoadOnInit(const std::string &dir_name);
 
         /**
@@ -116,7 +181,7 @@ namespace Lithium
          * @return      true if the loading is successful, false otherwise.
          */
         bool LoadModule(const std::string &path, const std::string &name);
-        
+
         /**
          * @brief 卸载指定名称的动态库
          *
@@ -187,7 +252,7 @@ namespace Lithium
          * @return std::shared_ptr<T> 返回实例对象的智能指针，如果获取失败则返回nullptr
          */
         template <typename T>
-        std::shared_ptr<T> GetInstance(const std::string &module_name, const nlohmann::json &config,
+        std::shared_ptr<T> GetInstance(const std::string &module_name, const json &config,
                                        const std::string &symbol_name)
         {
             auto handle_it = handles_.find(module_name);
@@ -197,7 +262,7 @@ namespace Lithium
                 return nullptr;
             }
 
-            auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const nlohmann::json &)>(module_name, symbol_name);
+            auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const json &)>(module_name, symbol_name);
             if (!get_instance_func)
             {
                 DLOG_F(ERROR, "Failed to get symbol %s from module %s: %s", symbol_name.c_str(), module_name.c_str(), dlerror());
@@ -220,29 +285,44 @@ namespace Lithium
          * std::shared_ptr<Plugin> plugin = GetInstancePointer<Plugin>(module_name, config, "GetPluginInstance");
          */
         template <typename T>
-        std::shared_ptr<T> GetInstancePointer(const std::string &module_name, const nlohmann::json &config, const std::string &instance_function_name)
+        std::shared_ptr<T> GetInstancePointer(const std::string &module_name, const json &config, const std::string &instance_function_name)
         {
             return GetInstance<T>(module_name, config, instance_function_name);
         }
 
     public:
-        void *GetHandle(const std::string &name) const
-        {
-            auto it = handles_.find(name);
-            if (it == handles_.end())
-            {
-                return nullptr;
-            }
-            return it->second;
-        }
+        /**
+         * @brief 获取给定名称的句柄。
+         *
+         * @param name 句柄名称。
+         * @return 对应名称的句柄指针，如果未找到则返回空指针。
+         */
+        void *GetHandle(const std::string &name) const;
 
-        std::string GetModulePath(const std::string& module_name);
+        /**
+         * @brief 获取给定模块名称的模块路径。
+         *
+         * @param module_name 模块名称。
+         * @return 对应模块名称的模块路径。
+         */
+        std::string GetModulePath(const std::string &module_name);
 
+        /**
+         * @brief 获取所有存在的模块名称。
+         *
+         * @return 存在的模块名称的向量。
+         */
         const std::vector<std::string> GetAllExistedModules() const;
 
     private:
+#if ENABLE_FASTHASH
+        emhash8::HashMap<std::string, void *> handles_;
+        emhash8::HashMap<std::string, std::string> disabled_modules_;
+#else
         std::unordered_map<std::string, void *> handles_;
-        std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
         std::unordered_map<std::string, std::string> disabled_modules_;
+#endif
+
+        std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
     };
 }

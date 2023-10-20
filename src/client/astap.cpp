@@ -48,7 +48,7 @@ Description: Astap Solver Interface
 #include <unistd.h>
 #endif
 
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 #include <fitsio.h>
 
 using namespace std;

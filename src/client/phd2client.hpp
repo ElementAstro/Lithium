@@ -10,7 +10,7 @@
 
 #include <modules/server/commander.hpp>
 
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 #ifdef _WIN32
 #include <winsock2.h>

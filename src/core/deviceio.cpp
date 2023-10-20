@@ -32,7 +32,7 @@ Description: Device IO Module
 #include "deviceio.hpp"
 #include "event/eventloop.hpp"
 
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 
 #include <iostream>
 #include <cstring>

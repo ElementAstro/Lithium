@@ -39,7 +39,7 @@ Description: C++ and Modules Loader
 #include <cxxabi.h>
 #include <regex>
 
-#include <nlohmann/json.hpp>
+#include "thread/thread.hpp"
 
 namespace fs = std::filesystem;
 
@@ -64,7 +64,7 @@ namespace Lithium
      * @return json - A JSON object containing the configuration information or an error message.
      *                包含配置信息或错误消息的JSON对象。
      */
-    nlohmann::json read_config_file(const std::string &file_path)
+    json read_config_file(const std::string &file_path)
     {
         try
         {
@@ -72,12 +72,12 @@ namespace Lithium
             std::ifstream file_stream(file_path);
             if (!file_stream.is_open())
             {
-                DLOG_F(ERROR, "Failed to open config file %s", file_path.c_str());
+                DLOG_F(ERROR, "Failed to open config file {}", file_path);
                 return {{"error", "Failed to open config file"}};
             }
 
             // Read the configuration file content into a JSON object
-            nlohmann::json config = nlohmann::json::parse(file_stream);
+            json config = json::parse(file_stream);
 
             // Close the file stream
             file_stream.close();
@@ -85,12 +85,12 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to read config file %s: %s", file_path.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to read config file {}: {}", file_path, e.what());
             return {{"error", "Failed to read config file"}};
         }
     }
 
-    nlohmann::json iterator_modules_dir(const std::string &dir_name)
+    json iterator_modules_dir(const std::string &dir_name)
     {
         if (dir_name == "")
         {
@@ -111,12 +111,12 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to create modules directory: %s", e.what());
+            DLOG_F(ERROR, "Failed to create modules directory: {}", e.what());
             return {{"error", "Failed to create modules directory"}};
         }
 
         // Create a JSON object to store module information
-        nlohmann::json config;
+        json config;
 
         try
         {
@@ -135,21 +135,21 @@ namespace Lithium
                         config[dir.path().string()]["path"] = dir.path().string();
                         config[dir.path().string()]["config"] = info_file.string();
                         // Read the module configuration from the info.json file and append to the JSON object
-                        nlohmann::json module_config = read_config_file(info_file.string());
+                        json module_config = read_config_file(info_file.string());
                         config[dir.path().string()]["name"] = module_config["name"];
                         config[dir.path().string()]["version"] = module_config["version"];
                         config[dir.path().string()]["author"] = module_config["author"];
                         config[dir.path().string()]["license"] = module_config.value("license", "");
                         config[dir.path().string()]["description"] = module_config.value("description", "");
                         // Debug message
-                        DLOG_F(INFO, "Module found: %s, config file: %s", dir.path().string().c_str(), info_file.string().c_str());
+                        DLOG_F(INFO, "Module found: {}, config file: {}", dir.path().string(), info_file.string());
                     }
                 }
             }
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to iterate modules directory: %s", e.what());
+            DLOG_F(ERROR, "Failed to iterate modules directory: {}", e.what());
             return {{"error", "Failed to iterate modules directory"}};
         }
         if (config.empty())
@@ -268,8 +268,8 @@ namespace Lithium
             DLOG_F(ERROR, "Directory name is empty");
             return false;
         }
-        const nlohmann::json dir_info = iterator_modules_dir(dir_name);
-        DLOG_F(INFO, "%s", dir_info.dump(4).c_str());
+        const json dir_info = iterator_modules_dir(dir_name);
+        DLOG_F(INFO, "{}", dir_info.dump(4));
         if (!dir_info.empty())
         {
             if (dir_info["message"].get<std::string>() != "No module found")
@@ -295,7 +295,7 @@ namespace Lithium
             // Check if the library file exists
             if (!std::filesystem::exists(path))
             {
-                DLOG_F(ERROR, "Library %s does not exist", path.c_str());
+                DLOG_F(ERROR, "Library {} does not exist", path);
                 return false;
             }
 
@@ -303,7 +303,7 @@ namespace Lithium
             void *handle = LOAD_LIBRARY(path.c_str());
             if (!handle)
             {
-                DLOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), LOAD_ERROR());
+                DLOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
                 return false;
             }
 
@@ -312,7 +312,7 @@ namespace Lithium
             std::string config_file_path = p.replace_extension(".json").string();
             if (std::filesystem::exists(config_file_path))
             {
-                nlohmann::json config;
+                json config;
                 std::ifstream config_file(config_file_path);
                 config_file >> config;
 
@@ -323,17 +323,17 @@ namespace Lithium
                     std::string author = config["author"].get<std::string>();
                     std::string license = config.value("license", "");
 
-                    DLOG_F(INFO, "Loaded Module : %s version %s written by %s%s",
-                          config.value("name", "Unknown").c_str(), version.c_str(), author.c_str(), license.empty() ? "" : (" under " + license).c_str());
+                    DLOG_F(INFO, "Loaded Module : {} version {} written by {}{}",
+                           config.value("name", "Unknown"), version, author, license.empty() ? "" : (" under " + license));
                 }
                 else
                 {
-                    DLOG_F(WARNING, "Missing required fields in %s", config_file_path.c_str());
+                    DLOG_F(WARNING, "Missing required fields in {}", config_file_path);
                 }
             }
             else
             {
-                DLOG_F(WARNING, "Config file %s does not exist", config_file_path.c_str());
+                DLOG_F(WARNING, "Config file {} does not exist", config_file_path);
             }
 
             // Store the library handle in handles_ map with the module name as key
@@ -342,7 +342,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to load library %s: %s", path.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to load library {}: {}", path, e.what());
             return false;
         }
     }
@@ -355,13 +355,13 @@ namespace Lithium
             auto it = handles_.find(filename);
             if (it == handles_.end())
             {
-                DLOG_F(ERROR, "Module %s is not loaded", filename.c_str());
+                DLOG_F(ERROR, "Module {} is not loaded", filename);
                 return false;
             }
 
             if (!it->second)
             {
-                DLOG_F(ERROR, "Module %s's handle is null", filename.c_str());
+                DLOG_F(ERROR, "Module {}'s handle is null", filename);
                 return false;
             }
 
@@ -369,19 +369,19 @@ namespace Lithium
             int result = UNLOAD_LIBRARY(it->second);
             if (result == 0)
             {
-                DLOG_F(INFO, "Unloaded module : %s", filename.c_str());
+                DLOG_F(INFO, "Unloaded module : {}", filename);
                 handles_.erase(it);
                 return true;
             }
             else
             {
-                DLOG_F(ERROR, "Failed to unload module %s", filename.c_str());
+                DLOG_F(ERROR, "Failed to unload module {}", filename);
                 return false;
             }
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "%s", e.what());
+            DLOG_F(ERROR, "{}", e.what());
             return false;
         }
     }
@@ -391,12 +391,22 @@ namespace Lithium
         void *handle = LOAD_LIBRARY(name.c_str());
         if (handle == nullptr)
         {
-            DLOG_F(ERROR, "Module %s does not exist.", name.c_str());
+            DLOG_F(ERROR, "Module {} does not exist.", name);
             return false;
         }
-        DLOG_F(INFO, "Module %s is existing.", name.c_str());
+        DLOG_F(INFO, "Module {} is existing.", name);
         UNLOAD_LIBRARY(handle);
         return true;
+    }
+
+    void *ModuleLoader::GetHandle(const std::string &name) const
+    {
+        auto it = handles_.find(name);
+        if (it == handles_.end())
+        {
+            return nullptr;
+        }
+        return it->second;
     }
 
     bool ModuleLoader::HasModule(const std::string &name) const
@@ -426,7 +436,7 @@ namespace Lithium
             }
             else
             {
-                DLOG_F(ERROR, "Enabled file not found for module %s", module_name.c_str());
+                DLOG_F(ERROR, "Enabled file not found for module {}", module_name);
                 return false;
             }
         }
@@ -442,7 +452,7 @@ namespace Lithium
             std::string module_path = GetModulePath(module_name);
             if (module_path.empty())
             {
-                DLOG_F(ERROR, "Module path not found for module %s", module_name.c_str());
+                DLOG_F(ERROR, "Module path not found for module {}", module_name);
                 return false;
             }
             std::string disabled_file = module_path + ".disabled";
@@ -454,7 +464,7 @@ namespace Lithium
             }
             else
             {
-                DLOG_F(ERROR, "Failed to disable module %s", module_name.c_str());
+                DLOG_F(ERROR, "Failed to disable module {}", module_name);
                 return false;
             }
         }

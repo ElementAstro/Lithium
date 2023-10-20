@@ -29,8 +29,7 @@ Description: Script Plugin
 
 **************************************************/
 
-#ifndef SCRIPT_PLUGIN_H
-#define SCRIPT_PLUGIN_H
+#pragma once
 
 #include "plugin.hpp"
 
@@ -45,5 +44,3 @@ public:
 private:
     std::shared_ptr<Lithium::Process::ProcessManager> m_ProcessManager;
 };
-
-#endif

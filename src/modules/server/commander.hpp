@@ -32,7 +32,11 @@ Description: Commander
 #pragma once
 
 #include <string>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <functional>
 
 #include "nlohmann/json.hpp"
@@ -60,7 +64,7 @@ public:
      * @param instance 处理命令的对象指针。
      */
     template <typename ClassType>
-    void RegisterHandler(const std::string &name,const json (ClassType::*handler)(const json &), ClassType *instance)
+    void RegisterHandler(const std::string &name, const json (ClassType::*handler)(const json &), ClassType *instance)
     {
         auto hash_value = Djb2Hash(name.c_str());
         handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);
@@ -88,7 +92,11 @@ private:
      *
      * 键值为哈希值，值为命令处理程序本身。
      */
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
+#else
     std::unordered_map<std::size_t, HandlerFunc> handlers_;
+#endif
 
     /**
      * @brief Djb2Hash 函数是一个字符串哈希函数，用于将字符串转换成哈希值。
@@ -98,7 +106,6 @@ private:
      */
     static std::size_t Djb2Hash(const char *str);
 };
-
 
 /**
  * @brief 类 VCommandDispatcher 负责命令的派发和处理。
@@ -122,7 +129,7 @@ public:
      * @param instance 处理命令的对象指针。
      */
     template <typename ClassType>
-    void RegisterHandler(const std::string &name,void (ClassType::*handler)(const json &), ClassType *instance)
+    void RegisterHandler(const std::string &name, void (ClassType::*handler)(const json &), ClassType *instance)
     {
         auto hash_value = Djb2Hash(name.c_str());
         handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);
@@ -150,7 +157,11 @@ private:
      *
      * 键值为哈希值，值为命令处理程序本身。
      */
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
+#else
     std::unordered_map<std::size_t, HandlerFunc> handlers_;
+#endif
 
     /**
      * @brief Djb2Hash 函数是一个字符串哈希函数，用于将字符串转换成哈希值。

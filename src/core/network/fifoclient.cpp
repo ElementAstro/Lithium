@@ -31,7 +31,7 @@ Description: FIFO CLient
 
 #include "fifoclient.hpp"
 #include <stdexcept>
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 
 #ifdef _WIN32
 FifoClient::FifoClient(const std::string &fifoPath) : fifoPath(fifoPath), pipeHandle(INVALID_HANDLE_VALUE)

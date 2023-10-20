@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 
 #define CONNECT_CHECK(func)          \
     if (!phd2_client->IsConnected()) \

@@ -48,7 +48,7 @@ namespace Lithium::Task
         }
         m_TaskList.push_back(task);
         m_TaskMap[task->get_name()] = task;
-        DLOG_F(INFO, "Task added: %s", task->get_name().c_str());
+        DLOG_F(INFO, "Task added: {}", task->get_name());
         return true;
     }
 
@@ -68,7 +68,7 @@ namespace Lithium::Task
 
         auto it = m_TaskList.begin() + position;
         m_TaskList.insert(it, task);
-        DLOG_F(INFO, "Task inserted at position %d: %s", position, task->get_name().c_str());
+        DLOG_F(INFO, "Task inserted at position %d: {}", position, task->get_name());
         return true;
     }
 
@@ -83,7 +83,7 @@ namespace Lithium::Task
                 {
                     if (task->Execute())
                     {
-                        DLOG_F(INFO, "Task executed: %s", task->get_name().c_str());
+                        DLOG_F(INFO, "Task executed: {}", task->get_name());
                         it = m_TaskList.erase(it);
                     }
                     else
@@ -93,12 +93,12 @@ namespace Lithium::Task
                 }
                 catch (const std::exception &ex)
                 {
-                    DLOG_F(ERROR, "Error: Failed to execute task %s - %s", task->get_name().c_str(), ex.what());
+                    DLOG_F(ERROR, "Error: Failed to execute task {} - {}", task->get_name(), ex.what());
                     ++it;
                 }
                 catch (...)
                 {
-                    DLOG_F(ERROR, "Error: Failed to execute task %s", task->get_name().c_str());
+                    DLOG_F(ERROR, "Error: Failed to execute task {}", task->get_name());
                     ++it;
                 }
             }
@@ -124,21 +124,21 @@ namespace Lithium::Task
             {
                 if (it->second->Execute())
                 {
-                    DLOG_F(INFO, "Task executed: %s", it->second->get_name().c_str());
+                    DLOG_F(INFO, "Task executed: {}", it->second->get_name());
                 }
                 else
                 {
-                    DLOG_F(ERROR, "Error: Failed to execute task %s", it->second->get_name().c_str());
+                    DLOG_F(ERROR, "Error: Failed to execute task {}", it->second->get_name());
                 }
                 return true;
             }
             catch (const std::exception &ex)
             {
-                DLOG_F(ERROR, "Error: Failed to execute task %s - %s", it->second->get_name().c_str(), ex.what());
+                DLOG_F(ERROR, "Error: Failed to execute task {} - {}", it->second->get_name(), ex.what());
             }
             catch (...)
             {
-                DLOG_F(ERROR, "Error: Failed to execute task %s", it->second->get_name().c_str());
+                DLOG_F(ERROR, "Error: Failed to execute task {}", it->second->get_name());
             }
         }
         else
@@ -163,7 +163,7 @@ namespace Lithium::Task
         }
 
         m_TaskList[index] = task;
-        DLOG_F(INFO, "Task modified at index %d: %s", index, task->get_name().c_str());
+        DLOG_F(INFO, "Task modified at index %d: {}", index, task->get_name());
         return true;
     }
 
@@ -173,7 +173,7 @@ namespace Lithium::Task
         if (it != m_TaskMap.end() && task)
         {
             it->second = task;
-            DLOG_F(INFO, "Task modified : %s", task->get_name().c_str());
+            DLOG_F(INFO, "Task modified : {}", task->get_name());
             return true;
         }
         return false;
@@ -190,7 +190,7 @@ namespace Lithium::Task
         auto it = m_TaskList.begin() + index;
         auto task = *it;
         m_TaskList.erase(it);
-        DLOG_F(INFO, "Task deleted at index %d: %s", index, task->get_name().c_str());
+        DLOG_F(INFO, "Task deleted at index %d: {}", index, task->get_name());
         return true;
     }
 
@@ -202,7 +202,7 @@ namespace Lithium::Task
             auto task = it->second;
             m_TaskList.erase(std::remove(m_TaskList.begin(), m_TaskList.end(), task), m_TaskList.end());
             m_TaskMap.erase(it);
-            DLOG_F(INFO, "Task deleted: %s", task->get_name().c_str());
+            DLOG_F(INFO, "Task deleted: {}", task->get_name());
             return true;
         }
         DLOG_F(ERROR, "Error: Task not found!");
@@ -214,7 +214,7 @@ namespace Lithium::Task
         auto it = findTaskByName(name);
         if (it != m_TaskMap.end())
         {
-            DLOG_F(INFO, "Task found: %s", it->second->get_name().c_str());
+            DLOG_F(INFO, "Task found: {}", it->second->get_name());
             return true;
         }
         else
@@ -253,7 +253,7 @@ namespace Lithium::Task
 
         outputFile << jsonArray.dump(4);
         outputFile.close();
-        DLOG_F(INFO, "Tasks saved to JSON file: %s", m_FileName.c_str());
+        DLOG_F(INFO, "Tasks saved to JSON file: {}", m_FileName);
         return true;
     }
 

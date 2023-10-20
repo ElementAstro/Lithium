@@ -61,7 +61,7 @@ bool Camera::reconnect(const IParams &params)
     return true;
 }
 
-bool Camera::isConnected(const IParams &params)
+bool Camera::isConnected()
 {
     return true;
 }

@@ -40,7 +40,7 @@ Description: INDI Web Driver
 #include <pugixml/pugixml.hpp>
 
 #define LOGURU_USE_FMTLIB 1
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

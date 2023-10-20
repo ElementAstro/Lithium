@@ -187,7 +187,7 @@ bool CheckAndKillProgramOnPort(int port)
     int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd < 0)
     {
-        DLOG_F(ERROR, "Failed to create socket: %s", strerror(errno));
+        DLOG_F(ERROR, "Failed to create socket: {}", strerror(errno));
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -225,7 +225,7 @@ bool CheckAndKillProgramOnPort(int port)
             FILE *fp = popen(cmd.c_str(), "r");
             if (fp == nullptr)
             {
-                DLOG_F(ERROR, "Failed to execute command: %s", cmd.c_str());
+                DLOG_F(ERROR, "Failed to execute command: {}", cmd);
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -245,17 +245,17 @@ bool CheckAndKillProgramOnPort(int port)
             // 如果获取到了 PID，则杀死该进程
             if (!pid_str.empty())
             {
-                DLOG_F(INFO, "Killing the process on port(%d): PID=%s", port, pid_str.c_str());
+                DLOG_F(INFO, "Killing the process on port(%d): PID={}", port, pid_str);
 
 #ifdef _WIN32
 #ifdef __cpp_lib_format
-                ret = std::system(std::format("taskkill /F /PID {}", pid_str).c_str());
+                ret = std::system(std::format("taskkill /F /PID {}", pid_str));
 #else
-                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
+                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str));
 #endif
 #else
 #ifdef __cpp_lib_format
-                int ret = std::system(std::format("kill {}", pid_str).c_str());
+                int ret = std::system(std::format("kill {}", pid_str));
 #else
                 int ret = std::system(fmt::format("kill {}", pid_str).c_str());
 #endif
@@ -263,7 +263,7 @@ bool CheckAndKillProgramOnPort(int port)
 
                 if (ret != 0)
                 {
-                    DLOG_F(ERROR, "Failed to kill the process: %s", pid_str.c_str());
+                    DLOG_F(ERROR, "Failed to kill the process: {}", pid_str);
                     close(sockfd);
 #ifdef _WIN32
                     WSACleanup();
@@ -271,7 +271,7 @@ bool CheckAndKillProgramOnPort(int port)
                     return false;
                 }
 
-                DLOG_F(INFO, "The process(%s) is killed successfully", pid_str.c_str());
+                DLOG_F(INFO, "The process({}) is killed successfully", pid_str);
             }
             else
             {
@@ -285,7 +285,7 @@ bool CheckAndKillProgramOnPort(int port)
         }
         else
         {
-            DLOG_F(ERROR, "Failed to bind socket: %s", strerror(errno));
+            DLOG_F(ERROR, "Failed to bind socket: {}", strerror(errno));
             close(sockfd);
 #ifdef _WIN32
             WSACleanup();

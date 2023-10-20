@@ -37,7 +37,7 @@ Description: Camera Simulator and Basic Definition
 #include "shared_memory.hpp"
 #endif
 
-class Camera : virtual public Device
+class Camera : public Device
 {
 public:
     /**
@@ -55,7 +55,7 @@ public:
 
     virtual bool reconnect(const IParams &params) override;
 
-    virtual bool isConnected(const IParams &params) override;
+    virtual bool isConnected() override;
 
 public:
     /**

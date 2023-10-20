@@ -172,7 +172,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, "Failed to open script file: %s", filename.c_str());
+            DLOG_F(ERROR, "Failed to open script file: {}", filename);
             return false;
         }
         return true;
@@ -186,7 +186,7 @@ namespace Lithium
         }
         catch (chaiscript::exception::eval_error &e)
         {
-            DLOG_F(ERROR, "Failed to eval %s : %s", e.filename.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to eval {} : {}", e.filename, e.what());
             return false;
         };
         return true;
@@ -200,7 +200,7 @@ namespace Lithium
         }
         catch (chaiscript::exception::eval_error &e)
         {
-            DLOG_F(ERROR, "Failed to run %s : %s", e.filename.c_str(), e.what());
+            DLOG_F(ERROR, "Failed to run {} : {}", e.filename, e.what());
             return false;
         }
         return true;
@@ -216,7 +216,7 @@ namespace Lithium
             }
             catch (chaiscript::exception::eval_error &e)
             {
-                DLOG_F(ERROR, "Failed to run: %s", e.what());
+                DLOG_F(ERROR, "Failed to run: {}", e.what());
                 return false;
             }
         }

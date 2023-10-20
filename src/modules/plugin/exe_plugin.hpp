@@ -29,8 +29,7 @@ Description: Executable Plugin
 
 **************************************************/
 
-#ifndef EXECUTABLE_PLUGIN_H
-#define EXECUTABLE_PLUGIN_H
+#pragma once
 
 #include "plugin.hpp"
 
@@ -45,5 +44,3 @@ public:
 private:
     std::shared_ptr<Lithium::Process::ProcessManager> m_ProcessManager;
 };
-
-#endif

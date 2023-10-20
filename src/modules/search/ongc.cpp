@@ -34,9 +34,13 @@ Description: C++ Version of PyOngc
 #include <iostream>
 #include <cmath>
 #include <regex>
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
 #include <unordered_map>
+#endif
 #include <sqlite3.h>
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 

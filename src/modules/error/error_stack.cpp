@@ -32,7 +32,7 @@ Description: Error Stack
 #include "error_stack.hpp"
 
 #include <ctime>
-#include <loguru/loguru.hpp>
+#include "loguru/loguru.hpp"
 
 std::ostream &operator<<(std::ostream &os, const ErrorInfo &error)
 {

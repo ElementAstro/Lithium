@@ -43,7 +43,7 @@ Description: Lithium Server Launcher
 #include <future>
 #include <queue>
 #include <cpp_httplib/httplib.h>
-#include <nlohmann/json.hpp>
+#include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;

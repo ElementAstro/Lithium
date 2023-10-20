@@ -33,6 +33,9 @@ Description: Lithium App Enter
 #include "config.h"
 
 #include "loguru/loguru.hpp"
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 namespace Lithium
 {
@@ -64,7 +67,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, _("Failed to load Lithium App , error : {}"), e.what());
+            LOG_F(ERROR, _("Failed to load Lithium App , error : {}"), e.what());
             throw std::runtime_error("Failed to load Lithium App");
         }
     }
@@ -269,7 +272,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, _("Failed to run chai command : {}"), command);
+            LOG_F(ERROR, _("Failed to run chai command : {}"), command);
         }
         return false;
     }
@@ -287,7 +290,7 @@ namespace Lithium
             {
                 result += str + "\n";
             }
-            DLOG_F(ERROR, _("Failed to run chai multi command {}"), result);
+            LOG_F(ERROR, _("Failed to run chai multi command {}"), result);
         }
         return true;
     }
@@ -300,7 +303,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, _("Failed to load chaiscript file {}"), filename);
+            LOG_F(ERROR, _("Failed to load chaiscript file {}"), filename);
             return false;
         }
     }
@@ -313,7 +316,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, _("Failed to run chai script {}"), filename);
+            LOG_F(ERROR, _("Failed to run chai script {}"), filename);
             return false;
         }
     }

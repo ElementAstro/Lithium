@@ -53,15 +53,15 @@ void ScriptPlugin::Execute(const std::vector<std::string> &args) const
     {
         if (!m_ProcessManager->runScript(script, GetPath()))
         {
-            DLOG_F(ERROR, "Failed to run executable plugin : %s", script.c_str());
+            LOG_F(ERROR, "Failed to run executable plugin : %s", script.c_str());
         }
         else
         {
-            DLOG_F(ERROR, "Started %s successfully", script.c_str());
+            LOG_F(ERROR, "Started %s successfully", script.c_str());
         }
     }
     else
     {
-        DLOG_F(ERROR, "Process manager is not initialized");
+        LOG_F(ERROR, "Process manager is not initialized");
     }
 }

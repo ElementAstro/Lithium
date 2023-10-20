@@ -44,14 +44,14 @@ const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 	if (!m_params.contains("device_name") && !m_params.contains("device_uuid"))
 	{
 		res = {{"error", "Invalid Parameters"}, {"message", "Device name or uuid is required"}};
-		DLOG_F(ERROR, "WebSocketServer::AddTask() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::AddTask() : %s", res.dump().c_str());
 		return res;
 	}
 	// 检查任务的来源是否指定，主要是来自设备管理器和插件管理器
 	if (!m_params.contains("task_origin") || !m_params.contains("task_name"))
 	{
 		res = {{"error", "Invalid Parameters"}, {"message", "Task origin and name are required"}};
-		DLOG_F(ERROR, "WebSocketServer::AddTask() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::AddTask() : %s", res.dump().c_str());
 		return res;
 	}
 
@@ -68,7 +68,7 @@ const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 			if (it == DeviceTypeMap.end())
 			{
 				res["error"] = "Unsupport device type";
-				DLOG_F(ERROR, "Unsupport device type, AddTask() : %s", res.dump().c_str());
+				LOG_F(ERROR, "Unsupport device type, AddTask() : %s", res.dump().c_str());
 				return res;
 			}
 			device_type = it->second;
@@ -94,13 +94,13 @@ const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::AddTask() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::AddTask() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
 	}
 	catch (const std::exception &e)
 	{
 		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		DLOG_F(ERROR, "WebSocketServer::AddTask(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::AddTask(): %s", e.what());
 	}
 	return res;
 }
@@ -120,18 +120,18 @@ const nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_pa
 		if (!Lithium::MyApp->executeAllTasks())
 		{
 			res = {{"error", "Task Failed"}, {"message", "Failed to execute task in sequence"}};
-			DLOG_F(ERROR, "WebSocketServer::ExecuteAllTasks : Failed to start executing all tasks");
+			LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks : Failed to start executing all tasks");
 		}
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::ExecuteAllTasks() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
 	}
 	catch (const std::exception &e)
 	{
 		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		DLOG_F(ERROR, "WebSocketServer::ExecuteAllTasks(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks(): %s", e.what());
 	}
 	return res;
 }
@@ -146,18 +146,18 @@ const nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
 		if (!Lithium::MyApp->stopTask())
 		{
 			res = {{"error", "Task Failed"}, {"message", "Failed to stop current task"}};
-			DLOG_F(ERROR, "WebSocketServer::StopTask(): Failed to stop current task");
+			LOG_F(ERROR, "WebSocketServer::StopTask(): Failed to stop current task");
 		}
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::StopTask() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::StopTask() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
 	}
 	catch (const std::exception &e)
 	{
 		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		DLOG_F(ERROR, "WebSocketServer::StopTask(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::StopTask(): %s", e.what());
 	}
 	return res;
 }
@@ -170,7 +170,7 @@ const nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_
 	if (!m_params.contains("task_name"))
 	{
 		res = {{"error", "Invalid Parameters"}, {"message", "Task name is required"}};
-		DLOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() : %s", res.dump().c_str());
 		return res;
 	}
 
@@ -180,18 +180,18 @@ const nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_
 		if (!Lithium::MyApp->executeTaskByName(task_name))
 		{
 			res = {{"error", "Task Failed"}, {"message", "Failed to execute specific task"}};
-			DLOG_F(ERROR, "WebSocketServer::ExecuteTaskByName(): Failed to execute specific task");
+			LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName(): Failed to execute specific task");
 		}
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
 	}
 	catch (const std::exception &e)
 	{
 		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		DLOG_F(ERROR, "WebSocketServer::ExecuteTaskByName(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName(): %s", e.what());
 	}
 	return res;
 }
@@ -236,18 +236,18 @@ const nlohmann::json WebSocketServer::SaveTasksToJson(const nlohmann::json &m_pa
 		if (!Lithium::MyApp->saveTasksToJson())
 		{
 			res = {{"error", "Task Failed"}, {"message", "Failed to save task in sequence to a JSON file"}};
-			DLOG_F(ERROR, "WebSocketServer::SaveTasksToJson(): Failed to save task in sequence to a JSON file");
+			LOG_F(ERROR, "WebSocketServer::SaveTasksToJson(): Failed to save task in sequence to a JSON file");
 		}
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::SaveTasksToJson() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::SaveTasksToJson() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
 	}
 	catch (const std::exception &e)
 	{
 		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		DLOG_F(ERROR, "WebSocketServer::SaveTasksToJson(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::SaveTasksToJson(): %s", e.what());
 	}
 	return res;
 }

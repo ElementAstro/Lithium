@@ -72,7 +72,7 @@ namespace Lithium
             std::ifstream file_stream(file_path);
             if (!file_stream.is_open())
             {
-                DLOG_F(ERROR, "Failed to open config file {}", file_path);
+                LOG_F(ERROR, "Failed to open config file {}", file_path);
                 return {{"error", "Failed to open config file"}};
             }
 
@@ -85,7 +85,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to read config file {}: {}", file_path, e.what());
+            LOG_F(ERROR, "Failed to read config file {}: {}", file_path, e.what());
             return {{"error", "Failed to read config file"}};
         }
     }
@@ -94,7 +94,7 @@ namespace Lithium
     {
         if (dir_name == "")
         {
-            DLOG_F(ERROR, "DIR name should not be null");
+            LOG_F(ERROR, "DIR name should not be null");
             return {{"error", "dir name should not be null"}};
         }
         // Define the modules directory path
@@ -111,7 +111,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to create modules directory: {}", e.what());
+            LOG_F(ERROR, "Failed to create modules directory: {}", e.what());
             return {{"error", "Failed to create modules directory"}};
         }
 
@@ -149,7 +149,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to iterate modules directory: {}", e.what());
+            LOG_F(ERROR, "Failed to iterate modules directory: {}", e.what());
             return {{"error", "Failed to iterate modules directory"}};
         }
         if (config.empty())
@@ -167,13 +167,13 @@ namespace Lithium
         {
             m_ThreadManager->addThread([this]()
                                        { if(!LoadOnInit("modules")){
-                                    DLOG_F(ERROR,"Failed to load modules on init");
+                                    LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
@@ -185,13 +185,13 @@ namespace Lithium
         {
             m_ThreadManager->addThread([this]()
                                        { if(!LoadOnInit("modules")){
-                                    DLOG_F(ERROR,"Failed to load modules on init");
+                                    LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
@@ -203,13 +203,13 @@ namespace Lithium
         {
             m_ThreadManager->addThread([this, dir_name]()
                                        { if(!LoadOnInit(dir_name)){
-                                    DLOG_F(ERROR,"Failed to load modules on init");
+                                    LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
@@ -221,13 +221,13 @@ namespace Lithium
         {
             m_ThreadManager->addThread([this, dir_name]()
                                        { if(!LoadOnInit(dir_name)){
-                                    DLOG_F(ERROR,"Failed to load modules on init");
+                                    LOG_F(ERROR,"Failed to load modules on init");
                                    } },
                                        "LoadOnInit");
         }
         else
         {
-            DLOG_F(ERROR, "Failed to initialize thread manager in module loader");
+            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
         }
     }
 
@@ -265,7 +265,7 @@ namespace Lithium
     {
         if (dir_name.empty())
         {
-            DLOG_F(ERROR, "Directory name is empty");
+            LOG_F(ERROR, "Directory name is empty");
             return false;
         }
         const json dir_info = iterator_modules_dir(dir_name);
@@ -295,7 +295,7 @@ namespace Lithium
             // Check if the library file exists
             if (!std::filesystem::exists(path))
             {
-                DLOG_F(ERROR, "Library {} does not exist", path);
+                LOG_F(ERROR, "Library {} does not exist", path);
                 return false;
             }
 
@@ -303,7 +303,7 @@ namespace Lithium
             void *handle = LOAD_LIBRARY(path.c_str());
             if (!handle)
             {
-                DLOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
+                LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
                 return false;
             }
 
@@ -342,7 +342,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to load library {}: {}", path, e.what());
+            LOG_F(ERROR, "Failed to load library {}: {}", path, e.what());
             return false;
         }
     }
@@ -355,13 +355,13 @@ namespace Lithium
             auto it = handles_.find(filename);
             if (it == handles_.end())
             {
-                DLOG_F(ERROR, "Module {} is not loaded", filename);
+                LOG_F(ERROR, "Module {} is not loaded", filename);
                 return false;
             }
 
             if (!it->second)
             {
-                DLOG_F(ERROR, "Module {}'s handle is null", filename);
+                LOG_F(ERROR, "Module {}'s handle is null", filename);
                 return false;
             }
 
@@ -375,13 +375,13 @@ namespace Lithium
             }
             else
             {
-                DLOG_F(ERROR, "Failed to unload module {}", filename);
+                LOG_F(ERROR, "Failed to unload module {}", filename);
                 return false;
             }
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "{}", e.what());
+            LOG_F(ERROR, "{}", e.what());
             return false;
         }
     }
@@ -391,7 +391,7 @@ namespace Lithium
         void *handle = LOAD_LIBRARY(name.c_str());
         if (handle == nullptr)
         {
-            DLOG_F(ERROR, "Module {} does not exist.", name);
+            LOG_F(ERROR, "Module {} does not exist.", name);
             return false;
         }
         DLOG_F(INFO, "Module {} is existing.", name);
@@ -436,7 +436,7 @@ namespace Lithium
             }
             else
             {
-                DLOG_F(ERROR, "Enabled file not found for module {}", module_name);
+                LOG_F(ERROR, "Enabled file not found for module {}", module_name);
                 return false;
             }
         }
@@ -452,7 +452,7 @@ namespace Lithium
             std::string module_path = GetModulePath(module_name);
             if (module_path.empty())
             {
-                DLOG_F(ERROR, "Module path not found for module {}", module_name);
+                LOG_F(ERROR, "Module path not found for module {}", module_name);
                 return false;
             }
             std::string disabled_file = module_path + ".disabled";
@@ -464,7 +464,7 @@ namespace Lithium
             }
             else
             {
-                DLOG_F(ERROR, "Failed to disable module {}", module_name);
+                LOG_F(ERROR, "Failed to disable module {}", module_name);
                 return false;
             }
         }

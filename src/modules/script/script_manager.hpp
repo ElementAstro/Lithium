@@ -41,10 +41,10 @@ namespace chaiscript
     class ChaiScript;
 }
 
-class MessageBus;
-
 namespace Lithium
 {
+    class MessageBus;
+
     class ChaiScriptManager
     {
     public:

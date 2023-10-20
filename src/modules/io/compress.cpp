@@ -85,7 +85,7 @@ namespace Lithium::File
         std::filesystem::path input_path(file_name);
         if (!std::filesystem::exists(input_path))
         {
-            DLOG_F(ERROR, "Input file {} does not exist.", file_name);
+            LOG_F(ERROR, "Input file {} does not exist.", file_name);
             return false;
         }
 
@@ -93,14 +93,14 @@ namespace Lithium::File
         gzFile out = gzopen(output_path.string().c_str(), "wb");
         if (!out)
         {
-            DLOG_F(ERROR, "Failed to create compressed file {}", output_path.string());
+            LOG_F(ERROR, "Failed to create compressed file {}", output_path.string());
             return false;
         }
 
         std::ifstream in(file_name, std::ios::binary);
         if (!in)
         {
-            DLOG_F(ERROR, "Failed to open input file {}", file_name);
+            LOG_F(ERROR, "Failed to open input file {}", file_name);
             gzclose(out);
             return false;
         }
@@ -113,7 +113,7 @@ namespace Lithium::File
 
             if (gzwrite(out, buf, bytesRead) != bytesRead)
             {
-                DLOG_F(ERROR, "Failed to compress file {}", file_name);
+                LOG_F(ERROR, "Failed to compress file {}", file_name);
                 in.close();
                 gzclose(out);
                 return false;
@@ -131,7 +131,7 @@ namespace Lithium::File
         std::filesystem::path input_path(file_name);
         if (!std::filesystem::exists(input_path))
         {
-            DLOG_F(ERROR, "Input file {} does not exist.", file_name);
+            LOG_F(ERROR, "Input file {} does not exist.", file_name);
             return false;
         }
 
@@ -139,14 +139,14 @@ namespace Lithium::File
         FILE *out = fopen(output_path.string().c_str(), "wb");
         if (!out)
         {
-            DLOG_F(ERROR, "Failed to create decompressed file {}", output_path.string());
+            LOG_F(ERROR, "Failed to create decompressed file {}", output_path.string());
             return false;
         }
 
         gzFile in = gzopen(file_name.c_str(), "rb");
         if (!in)
         {
-            DLOG_F(ERROR, "Failed to open compressed file {}", file_name);
+            LOG_F(ERROR, "Failed to open compressed file {}", file_name);
             fclose(out);
             return false;
         }
@@ -157,7 +157,7 @@ namespace Lithium::File
         {
             if (fwrite(buf, 1, bytesRead, out) != static_cast<size_t>(bytesRead))
             {
-                DLOG_F(ERROR, "Failed to decompress file {}", file_name);
+                LOG_F(ERROR, "Failed to decompress file {}", file_name);
                 fclose(out);
                 gzclose(in);
                 return false;
@@ -172,13 +172,16 @@ namespace Lithium::File
 
     bool compress_folder(const char *folder_name)
     {
-        // Size of the read/write buffer
-        char outfile_name[256];
-        sprintf(outfile_name, "{}.gz", folder_name);
-        gzFile out = gzopen(outfile_name, "wb");
+// Size of the read/write buffer
+#ifdef __cpp_lib_format
+        std::string outfile_name = std::format("{}.gz", folder_name);
+#else
+        std::string outfile_name = fmt::format("{}.gz", folder_name);
+#endif
+        gzFile out = gzopen(outfile_name.c_str(), "wb");
         if (!out)
         {
-            DLOG_F(ERROR, "Failed to create compressed file {}", outfile_name);
+            LOG_F(ERROR, "Failed to create compressed file {}", outfile_name);
             return false;
         }
 #ifdef _WIN32
@@ -190,7 +193,7 @@ namespace Lithium::File
         hFind = FindFirstFileA(searchPath, &findData);
         if (hFind == INVALID_HANDLE_VALUE)
         {
-            DLOG_F(ERROR, "Failed to open folder {}", folder_name);
+            LOG_F(ERROR, "Failed to open folder {}", folder_name);
             gzclose(out);
             return false;
         }
@@ -234,7 +237,7 @@ namespace Lithium::File
                 {
                     fclose(in);
                     gzclose(out);
-                    DLOG_F(ERROR, "Failed to create compressed file {}", outfile_name);
+                    LOG_F(ERROR, "Failed to create compressed file {}", outfile_name);
                     return false;
                 }
             }
@@ -247,7 +250,7 @@ namespace Lithium::File
         dir = opendir(folder_name);
         if (!dir)
         {
-            DLOG_F(ERROR, "Failed to open folder {}", folder_name);
+            LOG_F(ERROR, "Failed to open folder {}", folder_name);
             gzclose(out);
             return false;
         }
@@ -256,10 +259,10 @@ namespace Lithium::File
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                 continue;
             char file_name[512];
-            int ret = snprintf(file_name, sizeof(file_name), "{}/{}", folder_name, entry->d_name);
+            int ret = snprintf(file_name, sizeof(file_name), "%s/%s", folder_name, entry->d_name);
             if (ret < 0 || ret >= sizeof(file_name))
             {
-                DLOG_F(ERROR, "Failed to compress file {} because the output was truncated or an error occurred in snprintf()", entry->d_name);
+                LOG_F(ERROR, "Failed to compress file {} because the output was truncated or an error occurred in snprintf()", entry->d_name);
                 closedir(dir);
                 gzclose(out);
                 return false;
@@ -296,7 +299,7 @@ namespace Lithium::File
                 {
                     fclose(in);
                     gzclose(out);
-                    DLOG_F(ERROR, "Failed to compress file {}", file_name);
+                    LOG_F(ERROR, "Failed to compress file {}", file_name);
                     return false;
                 }
             }
@@ -314,7 +317,7 @@ namespace Lithium::File
         std::ifstream file(zip_file, std::ios::binary);
         if (!file)
         {
-            DLOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
+            LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
             return false;
         }
         file.close();
@@ -324,7 +327,7 @@ namespace Lithium::File
                                        const std::string &strerror,
                                        int zip_error_code,
                                        int system_error_code)
-                                    { DLOG_F(ERROR, "Exract zip file failed : {} {}", message, strerror); });
+                                    { LOG_F(ERROR, "Exract zip file failed : {} {}", message, strerror); });
         zip.open(ZipArchive::ReadOnly);
         ProgressListener pl;
         zip.addProgressListener(&pl);
@@ -337,7 +340,7 @@ namespace Lithium::File
             {
                 std::string name = entry.getName();
                 int size = entry.getSize();
-                DLOG_F(ERROR, "Extracting file: {}, size: %d", name, size);
+                LOG_F(ERROR, "Extracting file: {}, size: %d", name, size);
                 std::string textData = entry.readAsText();
                 std::filesystem::path file_path = std::filesystem::path(destination_folder) / name;
                 std::ofstream file(file_path);
@@ -345,11 +348,11 @@ namespace Lithium::File
                 {
                     file << textData;
                     file.close();
-                    DLOG_F(INFO, "File extracted: {}", file_path);
+                    DLOG_F(INFO, "File extracted: {}", file_path.string());
                 }
                 else
                 {
-                    DLOG_F(ERROR, "Failed to create file: {}", file_path);
+                    LOG_F(ERROR, "Failed to create file: {}", file_path.string());
                 }
             }
             zip.close();
@@ -358,7 +361,7 @@ namespace Lithium::File
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to extract ZIP file: {}", e.what());
+            LOG_F(ERROR, "Failed to extract ZIP file: {}", e.what());
             return false;
         }
     }
@@ -372,7 +375,7 @@ namespace Lithium::File
                                            const std::string &strerror,
                                            int zip_error_code,
                                            int system_error_code)
-                                        { DLOG_F(ERROR, "Create zip file failed : {} {}", message, strerror); });
+                                        { LOG_F(ERROR, "Create zip file failed : {} {}", message, strerror); });
 
             zip.open(ZipArchive::Write);
             ProgressListener pl;
@@ -398,7 +401,7 @@ namespace Lithium::File
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, "Failed to create ZIP file: {}", e.what());
+            LOG_F(ERROR, "Failed to create ZIP file: {}", e.what());
             return false;
         }
     }

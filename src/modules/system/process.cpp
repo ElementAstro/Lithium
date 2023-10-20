@@ -72,7 +72,7 @@ namespace Lithium::Process
         std::string cmd = "powershell.exe -Command \"" + command + "\"";
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            DLOG_F(ERROR, _("Failed to create PowerShell process"));
+            LOG_F(ERROR, _("Failed to create PowerShell process"));
             return false;
         }
         pid = pi.dwProcessId;
@@ -95,7 +95,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            DLOG_F(ERROR, _("Failed to create process"));
+            LOG_F(ERROR, _("Failed to create process"));
             return false;
         }
 #endif
@@ -119,7 +119,7 @@ namespace Lithium::Process
         PROCESS_INFORMATION pi{};
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            DLOG_F(ERROR, _("Failed to create process"));
+            LOG_F(ERROR, _("Failed to create process"));
             return false;
         }
         pid = pi.dwProcessId;
@@ -140,7 +140,7 @@ namespace Lithium::Process
         else if (pid < 0)
         {
             // Error handling
-            DLOG_F(ERROR, _("Failed to create process"));
+            LOG_F(ERROR, _("Failed to create process"));
             return false;
         }
 #endif
@@ -171,7 +171,7 @@ namespace Lithium::Process
             }
             else
             {
-                DLOG_F(ERROR, _("Failed to terminate process"));
+                LOG_F(ERROR, _("Failed to terminate process"));
                 return false;
             }
 #else
@@ -187,7 +187,7 @@ namespace Lithium::Process
         }
         else
         {
-            DLOG_F(ERROR, _("Process not found"));
+            LOG_F(ERROR, _("Process not found"));
             return false;
         }
         return true;
@@ -202,7 +202,7 @@ namespace Lithium::Process
         {
             return terminateProcess(it->pid, signal);
         }
-        DLOG_F(ERROR, _("Process not found by name: {}"), name);
+        LOG_F(ERROR, _("Process not found by name: {}"), name);
         return false;
     }
 
@@ -243,7 +243,7 @@ namespace Lithium::Process
         }
         else
         {
-            DLOG_F(ERROR, _("Process not found"));
+            LOG_F(ERROR, _("Process not found"));
             return std::vector<std::string>();
         }
     }
@@ -262,7 +262,7 @@ namespace Lithium::Process
             }
             else
             {
-                DLOG_F(ERROR, _("Failed to wait for process completion"));
+                LOG_F(ERROR, _("Failed to wait for process completion"));
             }
 #else
             int status;
@@ -284,7 +284,7 @@ namespace Lithium::Process
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            DLOG_F(ERROR, _("Failed to create process snapshot"));
+            LOG_F(ERROR, _("Failed to create process snapshot"));
             return processes;
         }
 
@@ -325,7 +325,7 @@ namespace Lithium::Process
         DIR *procDir = opendir("/proc");
         if (!procDir)
         {
-            DLOG_F(ERROR, _("Failed to open /proc directory"));
+            LOG_F(ERROR, _("Failed to open /proc directory"));
             return processes;
         }
 
@@ -354,7 +354,7 @@ namespace Lithium::Process
         char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
         if (proc_pidpath(pid, pathbuf, sizeof(pathbuf)) <= 0)
         {
-            DLOG_F(ERROR, _("Failed to get process path"));
+            LOG_F(ERROR, _("Failed to get process path"));
             return "";
         }
         std::string path(pathbuf);
@@ -375,20 +375,20 @@ namespace Lithium::Process
 
         if (sysctl(mib, 4, nullptr, &length, nullptr, 0) == -1)
         {
-            DLOG_F(ERROR, _("Failed to get process info length"));
+            LOG_F(ERROR, _("Failed to get process info length"));
             return processes;
         }
 
         struct kinfo_proc *procBuf = (struct kinfo_proc *)malloc(length);
         if (!procBuf)
         {
-            DLOG_F(ERROR, _("Failed to allocate memory"));
+            LOG_F(ERROR, _("Failed to allocate memory"));
             return processes;
         }
 
         if (sysctl(mib, 4, procBuf, &length, nullptr, 0) == -1)
         {
-            DLOG_F(ERROR, _("Failed to get process info"));
+            LOG_F(ERROR, _("Failed to get process info"));
             free(procBuf);
             return processes;
         }

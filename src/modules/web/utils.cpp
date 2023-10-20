@@ -178,7 +178,7 @@ bool CheckAndKillProgramOnPort(int port)
     int ret = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (ret != 0)
     {
-        DLOG_F(ERROR, "Failed to initialize Windows Socket API: %d", ret);
+        LOG_F(ERROR, "Failed to initialize Windows Socket API: %d", ret);
         return false;
     }
 #endif
@@ -187,7 +187,7 @@ bool CheckAndKillProgramOnPort(int port)
     int sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sockfd < 0)
     {
-        DLOG_F(ERROR, "Failed to create socket: {}", strerror(errno));
+        LOG_F(ERROR, "Failed to create socket: {}", strerror(errno));
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -225,7 +225,7 @@ bool CheckAndKillProgramOnPort(int port)
             FILE *fp = popen(cmd.c_str(), "r");
             if (fp == nullptr)
             {
-                DLOG_F(ERROR, "Failed to execute command: {}", cmd);
+                LOG_F(ERROR, "Failed to execute command: {}", cmd);
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -263,7 +263,7 @@ bool CheckAndKillProgramOnPort(int port)
 
                 if (ret != 0)
                 {
-                    DLOG_F(ERROR, "Failed to kill the process: {}", pid_str);
+                    LOG_F(ERROR, "Failed to kill the process: {}", pid_str);
                     close(sockfd);
 #ifdef _WIN32
                     WSACleanup();
@@ -275,7 +275,7 @@ bool CheckAndKillProgramOnPort(int port)
             }
             else
             {
-                DLOG_F(ERROR, "Failed to get process ID on port(%d)", port);
+                LOG_F(ERROR, "Failed to get process ID on port(%d)", port);
                 close(sockfd);
 #ifdef _WIN32
                 WSACleanup();
@@ -285,7 +285,7 @@ bool CheckAndKillProgramOnPort(int port)
         }
         else
         {
-            DLOG_F(ERROR, "Failed to bind socket: {}", strerror(errno));
+            LOG_F(ERROR, "Failed to bind socket: {}", strerror(errno));
             close(sockfd);
 #ifdef _WIN32
             WSACleanup();

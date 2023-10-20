@@ -43,7 +43,7 @@ const nlohmann::json WebSocketServer::runChaiCommand(const nlohmann::json &m_par
     {
         if (!m_params.contains("command"))
         {
-            DLOG_F(ERROR, "runChaiCommand() : Command is required");
+            LOG_F(ERROR, "runChaiCommand() : Command is required");
             res["error"] = "Invalid parameters";
             res["message"] = "command content is required";
             return res;
@@ -57,13 +57,13 @@ const nlohmann::json WebSocketServer::runChaiCommand(const nlohmann::json &m_par
     }
     catch (const nlohmann::json::exception &e)
     {
-        DLOG_F(ERROR, "WebSocketServer::runChaiCommand() json exception: %s", e.what());
+        LOG_F(ERROR, "WebSocketServer::runChaiCommand() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
         res["message"] = e.what();
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error occurred in runChaiCommand: %s", e.what());
+        LOG_F(ERROR, "Error occurred in runChaiCommand: %s", e.what());
         res["error"] = "StdError";
         res["message"] = e.what();
     }
@@ -78,7 +78,7 @@ const nlohmann::json WebSocketServer::runChaiMultiCommand(const nlohmann::json &
     {
         if (!m_params.contains("command"))
         {
-            DLOG_F(ERROR, "runChaiMultiCommand() : Command is required");
+            LOG_F(ERROR, "runChaiMultiCommand() : Command is required");
             res["error"] = "Invalid parameters";
             res["message"] = "command content is required";
             return res;
@@ -91,13 +91,13 @@ const nlohmann::json WebSocketServer::runChaiMultiCommand(const nlohmann::json &
     }
     catch (const nlohmann::json::exception &e)
     {
-        DLOG_F(ERROR, "WebSocketServer::runChaiMultiCommand() json exception: %s", e.what());
+        LOG_F(ERROR, "WebSocketServer::runChaiMultiCommand() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
         res["message"] = e.what();
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error occurred in runChaiMultiCommand: %s", e.what());
+        LOG_F(ERROR, "Error occurred in runChaiMultiCommand: %s", e.what());
         res["error"] = "StdError";
         res["message"] = e.what();
     }
@@ -112,7 +112,7 @@ const nlohmann::json WebSocketServer::runChaiScript(const nlohmann::json &m_para
     {
         if (!m_params.contains("script"))
         {
-            DLOG_F(ERROR, "runChaiScript() : Command is required");
+            LOG_F(ERROR, "runChaiScript() : Command is required");
             res["error"] = "Invalid parameters";
             res["message"] = "script name is required";
             return res;
@@ -125,13 +125,13 @@ const nlohmann::json WebSocketServer::runChaiScript(const nlohmann::json &m_para
     }
     catch (const nlohmann::json::exception &e)
     {
-        DLOG_F(ERROR, "WebSocketServer::runChaiScript() json exception: %s", e.what());
+        LOG_F(ERROR, "WebSocketServer::runChaiScript() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
         res["message"] = e.what();
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error occurred in runChaiScript: %s", e.what());
+        LOG_F(ERROR, "Error occurred in runChaiScript: %s", e.what());
         res["error"] = "StdError";
         res["message"] = e.what();
     }
@@ -146,7 +146,7 @@ const nlohmann::json WebSocketServer::loadChaiFile(const nlohmann::json &m_param
     {
         if (!m_params.contains("command"))
         {
-            DLOG_F(ERROR, "loadChaiFile() : Command is required");
+            LOG_F(ERROR, "loadChaiFile() : Command is required");
             res["error"] = "Invalid parameters";
             res["message"] = "script name is required";
             return res;
@@ -159,13 +159,13 @@ const nlohmann::json WebSocketServer::loadChaiFile(const nlohmann::json &m_param
     }
     catch (const nlohmann::json::exception &e)
     {
-        DLOG_F(ERROR, "WebSocketServer::loadChaiFile() json exception: %s", e.what());
+        LOG_F(ERROR, "WebSocketServer::loadChaiFile() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
         res["message"] = e.what();
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error occurred in loadChaiFile: %s", e.what());
+        LOG_F(ERROR, "Error occurred in loadChaiFile: %s", e.what());
         res["error"] = "StdError";
         res["message"] = e.what();
     }

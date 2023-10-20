@@ -64,7 +64,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to create directory {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to create directory {}: {}", path, ex.what());
         }
         return false;
     }
@@ -79,7 +79,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to remove directory {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to remove directory {}: {}", path, ex.what());
         }
         return false;
     }
@@ -94,7 +94,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to rename directory from {} to {}: {}", old_path, new_path, ex.what());
+            LOG_F(ERROR, "Failed to rename directory from {} to {}: {}", old_path, new_path, ex.what());
         }
         return false;
     }
@@ -109,7 +109,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to move directory from {} to {}: {}", old_path, new_path, ex.what());
+            LOG_F(ERROR, "Failed to move directory from {} to {}: {}", old_path, new_path, ex.what());
         }
         return false;
     }
@@ -124,7 +124,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to copy file from {} to {}: {}", src_path, dst_path, ex.what());
+            LOG_F(ERROR, "Failed to copy file from {} to {}: {}", src_path, dst_path, ex.what());
         }
         return false;
     }
@@ -139,7 +139,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to move file from {} to {}: {}", src_path, dst_path, ex.what());
+            LOG_F(ERROR, "Failed to move file from {} to {}: {}", src_path, dst_path, ex.what());
         }
         return false;
     }
@@ -154,7 +154,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to rename file from {} to {}: {}", old_path, new_path, ex.what());
+            LOG_F(ERROR, "Failed to rename file from {} to {}: {}", old_path, new_path, ex.what());
         }
         return false;
     }
@@ -169,7 +169,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to remove file {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to remove file {}: {}", path, ex.what());
         }
         return false;
     }
@@ -184,7 +184,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to create symlink from {} to {}: {}", target_path, symlink_path, ex.what());
+            LOG_F(ERROR, "Failed to create symlink from {} to {}: {}", target_path, symlink_path, ex.what());
         }
         return false;
     }
@@ -199,7 +199,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to remove symlink {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to remove symlink {}: {}", path, ex.what());
         }
         return false;
     }
@@ -212,7 +212,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to get file size of {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to get file size of {}: {}", path, ex.what());
             return 0;
         }
     }
@@ -235,7 +235,7 @@ namespace Lithium::File
         }
         catch (const std::exception &ex)
         {
-            DLOG_F(ERROR, "Failed to traverse directory {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to traverse directory {}: {}", path, ex.what());
         }
     }
 

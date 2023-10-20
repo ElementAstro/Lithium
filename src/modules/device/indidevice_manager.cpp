@@ -112,7 +112,7 @@ void INDIManager::stop_server()
     }
     else
     {
-        DLOG_F(ERROR, "Failed to terminate indiserver, error code is {}", res);
+        LOG_F(ERROR, "Failed to terminate indiserver, error code is {}", res);
     }
 }
 
@@ -189,7 +189,7 @@ void INDIManager::start_driver(std::shared_ptr<INDIDeviceContainer> driver)
     }
     else
     {
-        DLOG_F(ERROR, "Failed to start driver: {}", driver->name);
+        LOG_F(ERROR, "Failed to start driver: {}", driver->name);
     }
 #else
     int res = system(full_cmd.c_str());
@@ -223,7 +223,7 @@ void INDIManager::stop_driver(std::shared_ptr<INDIDeviceContainer> driver)
     }
     else
     {
-        DLOG_F(ERROR, "Failed to stop driver: {}", driver->label);
+        LOG_F(ERROR, "Failed to stop driver: {}", driver->label);
     }
 #else
     int res = system(full_cmd.c_str());
@@ -263,7 +263,7 @@ void INDIManager::set_prop(const std::string &dev, const std::string &prop, cons
     int result = system(cmd.c_str());
     if (result != 0)
     {
-        DLOG_F(ERROR, _("Failed to run command: {}"), cmd);
+        LOG_F(ERROR, _("Failed to run command: {}"), cmd);
     }
 }
 

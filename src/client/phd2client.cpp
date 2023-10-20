@@ -21,7 +21,7 @@ SocketClient::SocketClient()
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
-        DLOG_F(ERROR, "Failed to initialize Winsock");
+        LOG_F(ERROR, "Failed to initialize Winsock");
         throw std::runtime_error("Failed to initialize Winsock");
     }
 #endif
@@ -41,7 +41,7 @@ bool SocketClient::Connect(const std::string &serverIP, int serverPort)
 #endif
     if (socket_ == INVALID_SOCKET)
     {
-        DLOG_F(ERROR, "Failed to create socket");
+        LOG_F(ERROR, "Failed to create socket");
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -55,7 +55,7 @@ bool SocketClient::Connect(const std::string &serverIP, int serverPort)
 #ifdef _WIN32
     if (InetPton(AF_INET, serverIP.c_str(), &(serverAddress.sin_addr)) <= 0)
     {
-        DLOG_F(ERROR, "Invalid server IP address");
+        LOG_F(ERROR, "Invalid server IP address");
         closesocket(socket_);
         WSACleanup();
         throw std::runtime_error("Invalid server IP address");
@@ -63,14 +63,14 @@ bool SocketClient::Connect(const std::string &serverIP, int serverPort)
 #else
     if (inet_pton(AF_INET, serverIP.c_str(), &(serverAddress.sin_addr)) <= 0)
     {
-        DLOG_F(ERROR, "Invalid server IP address");
+        LOG_F(ERROR, "Invalid server IP address");
         throw std::runtime_error("Invalid server IP address");
     }
 #endif
 
     if (connect(socket_, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0)
     {
-        DLOG_F(ERROR, "Failed to connect to server");
+        LOG_F(ERROR, "Failed to connect to server");
         throw std::runtime_error("Failed to connect to server");
     }
 
@@ -107,13 +107,13 @@ void SocketClient::Send(const std::string &message)
 {
     if (socket_ == INVALID_SOCKET)
     {
-        DLOG_F(ERROR, "Not connected to server");
+        LOG_F(ERROR, "Not connected to server");
         return;
     }
 
     if (send(socket_, message.c_str(), message.length(), 0) < 0)
     {
-        DLOG_F(ERROR, "Failed to send data");
+        LOG_F(ERROR, "Failed to send data");
         throw std::runtime_error("Failed to send data");
     }
 }
@@ -152,7 +152,7 @@ void SocketClient::ReceiveThread()
         {
             if (bytesRead < 0)
             {
-                DLOG_F(ERROR, "Failed to receive data: %d", bytesRead);
+                LOG_F(ERROR, "Failed to receive data: %d", bytesRead);
             }
             else
             {
@@ -461,7 +461,7 @@ void PHD2Client::_star_lost(const json &message)
     _starlost_status["avg_dist"] = message["AvgDist"];
     _starlost_error = message["Status"];
 
-    DLOG_F(ERROR, "Star Lost, SNR: {}, StarMass: {}, AvgDist: {}",
+    LOG_F(ERROR, "Star Lost, SNR: {}, StarMass: {}, AvgDist: {}",
           _starlost_status["snr"], _starlost_status["star_mass"], _starlost_status["avg_dist"]);
 
     _is_guiding = false;
@@ -532,13 +532,13 @@ void PHD2Client::_guiding_dithered(const json &message)
 void PHD2Client::_lock_position_lost(const json &message)
 {
     _is_star_locked = true;
-    DLOG_F(ERROR, "Star Lock Position Lost");
+    LOG_F(ERROR, "Star Lock Position Lost");
 }
 
 void PHD2Client::_alert(const json &message)
 {
     _last_error = message["Msg"];
-    DLOG_F(ERROR, "Alert: %s", _last_error.c_str());
+    LOG_F(ERROR, "Alert: %s", _last_error.c_str());
 }
 
 void PHD2Client::_guide_param_change(const json &message)

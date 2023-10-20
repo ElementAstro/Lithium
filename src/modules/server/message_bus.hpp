@@ -33,14 +33,8 @@ Description: Main Message Bus
 
 #define HAS_MESSAGE_BUS
 
-#include <iostream>
 #include <string>
 #include <vector>
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#else
-#include <unordered_map>
-#endif
 #include <functional>
 #include <any>
 #include <queue>
@@ -51,221 +45,230 @@ Description: Main Message Bus
 #include <typeindex>
 #include <condition_variable>
 
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
+
 #include "loguru/loguru.hpp"
 
-class MessageBus
+namespace Lithium
 {
-public:
-    template <typename T>
-    void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0, const std::string &namespace_ = "")
+    class MessageBus
     {
-        std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
-        subscribersLock_.lock();
-        subscribers_[fullTopic].push_back({priority, std::any(callback)});
-        std::sort(subscribers_[fullTopic].begin(), subscribers_[fullTopic].end(),
-                  [](const auto &a, const auto &b)
-                  {
-                      return a.first > b.first;
-                  });
-        subscribersLock_.unlock();
-
-        DLOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
-    }
-
-    template <typename T>
-    void SubscribeToNamespace(const std::string &namespaceName, std::function<void(const T &)> callback, int priority = 0)
-    {
-        std::string topic = namespaceName + ".*";
-        Subscribe<T>(topic, callback, priority, namespaceName);
-    }
-
-    template <typename T>
-    void Unsubscribe(const std::string &topic, std::function<void(const T &)> callback, const std::string &namespace_ = "")
-    {
-        std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
-        subscribersLock_.lock();
-        auto it = subscribers_.find(fullTopic);
-        if (it != subscribers_.end())
+    public:
+        template <typename T>
+        void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0, const std::string &namespace_ = "")
         {
-            auto &topicSubscribers = it->second;
-            topicSubscribers.erase(
+            std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
+            subscribersLock_.lock();
+            subscribers_[fullTopic].push_back({priority, std::any(callback)});
+            std::sort(subscribers_[fullTopic].begin(), subscribers_[fullTopic].end(),
+                    [](const auto &a, const auto &b)
+                    {
+                        return a.first > b.first;
+                    });
+            subscribersLock_.unlock();
+
+            DLOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
+        }
+
+        template <typename T>
+        void SubscribeToNamespace(const std::string &namespaceName, std::function<void(const T &)> callback, int priority = 0)
+        {
+            std::string topic = namespaceName + ".*";
+            Subscribe<T>(topic, callback, priority, namespaceName);
+        }
+
+        template <typename T>
+        void Unsubscribe(const std::string &topic, std::function<void(const T &)> callback, const std::string &namespace_ = "")
+        {
+            std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
+            subscribersLock_.lock();
+            auto it = subscribers_.find(fullTopic);
+            if (it != subscribers_.end())
+            {
+                auto &topicSubscribers = it->second;
+                topicSubscribers.erase(
+                    std::remove_if(
+                        topicSubscribers.begin(), topicSubscribers.end(),
+                        [&](const auto &subscriber)
+                        {
+                            return subscriber.second.type() == typeid(callback);
+                        }),
+                    topicSubscribers.end());
+
+                DLOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
+            }
+            subscribersLock_.unlock();
+        }
+
+        template <typename T>
+        void Publish(const std::string &topic, const T &message, const std::string &namespace_ = "")
+        {
+            std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
+            messageQueueLock_.lock();
+            messageQueue_.push({fullTopic, std::any(message)});
+            messageQueueLock_.unlock();
+            messageAvailableFlag_.notify_one();
+
+            DLOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
+        }
+
+        template <typename T>
+        void GlobalSubscribe(std::function<void(const T &)> callback)
+        {
+            globalSubscribersLock_.lock();
+            globalSubscribers_.push_back({std::any(callback)});
+            globalSubscribersLock_.unlock();
+        }
+
+        template <typename T>
+        void GlobalUnsubscribe(std::function<void(const T &)> callback)
+        {
+            globalSubscribersLock_.lock();
+            globalSubscribers_.erase(
                 std::remove_if(
-                    topicSubscribers.begin(), topicSubscribers.end(),
+                    globalSubscribers_.begin(), globalSubscribers_.end(),
                     [&](const auto &subscriber)
                     {
-                        return subscriber.second.type() == typeid(callback);
+                        return subscriber.type() == typeid(callback);
                     }),
-                topicSubscribers.end());
-
-            DLOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
+                globalSubscribers_.end());
+            globalSubscribersLock_.unlock();
         }
-        subscribersLock_.unlock();
-    }
 
-    template <typename T>
-    void Publish(const std::string &topic, const T &message, const std::string &namespace_ = "")
-    {
-        std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
-        messageQueueLock_.lock();
-        messageQueue_.push({fullTopic, std::any(message)});
-        messageQueueLock_.unlock();
-        messageAvailableFlag_.notify_one();
-
-        DLOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
-    }
-
-    template <typename T>
-    void GlobalSubscribe(std::function<void(const T &)> callback)
-    {
-        globalSubscribersLock_.lock();
-        globalSubscribers_.push_back({std::any(callback)});
-        globalSubscribersLock_.unlock();
-    }
-
-    template <typename T>
-    void GlobalUnsubscribe(std::function<void(const T &)> callback)
-    {
-        globalSubscribersLock_.lock();
-        globalSubscribers_.erase(
-            std::remove_if(
-                globalSubscribers_.begin(), globalSubscribers_.end(),
-                [&](const auto &subscriber)
-                {
-                    return subscriber.type() == typeid(callback);
-                }),
-            globalSubscribers_.end());
-        globalSubscribersLock_.unlock();
-    }
-
-    template <typename T>
-    void StartProcessingThread()
-    {
-        std::type_index typeIndex = typeid(T);
-#if __cplusplus >= 202002L
-        processingThreads_.emplace(typeIndex, std::jthread([&]()
-                                                           {
-#else
-        processingThreads_.emplace(typeIndex, std::thread([&]()
-                                                           {
-#endif
-            while (isRunning_.load()) {
-                std::pair<std::string, std::any> message;
-                bool hasMessage = false;
-
+        template <typename T>
+        void StartProcessingThread()
+        {
+            std::type_index typeIndex = typeid(T);
+    #if __cplusplus >= 202002L
+            processingThreads_.emplace(typeIndex, std::jthread([&]()
+                                                            {
+    #else
+            processingThreads_.emplace(typeIndex, std::thread([&]()
+                                                            {
+    #endif
                 while (isRunning_.load()) {
-                    messageQueueLock_.lock();
-                    if (!messageQueue_.empty()) {
-                        message = std::move(messageQueue_.front());
-                        messageQueue_.pop();
-                        hasMessage = true;
+                    std::pair<std::string, std::any> message;
+                    bool hasMessage = false;
+
+                    while (isRunning_.load()) {
+                        messageQueueLock_.lock();
+                        if (!messageQueue_.empty()) {
+                            message = std::move(messageQueue_.front());
+                            messageQueue_.pop();
+                            hasMessage = true;
+                        }
+                        messageQueueLock_.unlock();
+
+                        if (hasMessage) {
+                            break;
+                        }
+
+                        std::unique_lock<std::mutex> lock(waitingMutex_);
+                        messageAvailableFlag_.wait(lock);
                     }
-                    messageQueueLock_.unlock();
 
                     if (hasMessage) {
-                        break;
-                    }
+                        const std::string& topic = message.first;
+                        const std::any& data = message.second;
 
-                    std::unique_lock<std::mutex> lock(waitingMutex_);
-                    messageAvailableFlag_.wait(lock);
-                }
+                        subscribersLock_.lock();
+                        auto it = subscribers_.find(topic);
+                        if (it != subscribers_.end()) {
+                            try {
+                                for (const auto& subscriber : it->second) {
+                                    if (subscriber.second.type() == typeid(std::function<void(const T&)>)) {
+                                        std::any_cast<std::function<void(const T&)>>(subscriber.second)(std::any_cast<const T&>(data));
+                                    }
+                                }
+                            } catch (const std::bad_any_cast& e) {
+                                LOG_F(ERROR, "Message type mismatch: %s", e.what());
+                            } catch (...) {
+                                LOG_F(ERROR, "Unknown error occurred during message processing");
+                            }
+                        }
+                        subscribersLock_.unlock();
 
-                if (hasMessage) {
-                    const std::string& topic = message.first;
-                    const std::any& data = message.second;
-
-                    subscribersLock_.lock();
-                    auto it = subscribers_.find(topic);
-                    if (it != subscribers_.end()) {
+                        globalSubscribersLock_.lock();
                         try {
-                            for (const auto& subscriber : it->second) {
-                                if (subscriber.second.type() == typeid(std::function<void(const T&)>)) {
-                                    std::any_cast<std::function<void(const T&)>>(subscriber.second)(std::any_cast<const T&>(data));
+                            for (const auto& subscriber : globalSubscribers_) {
+                                if (subscriber.type() == typeid(std::function<void(const T&)>)) {
+                                    std::any_cast<std::function<void(const T&)>>(subscriber)(std::any_cast<const T&>(data));
                                 }
                             }
                         } catch (const std::bad_any_cast& e) {
-                            DLOG_F(ERROR, "Message type mismatch: %s", e.what());
+                            LOG_F(ERROR, "Global message type mismatch: %s", e.what());
                         } catch (...) {
-                            DLOG_F(ERROR, "Unknown error occurred during message processing");
+                            LOG_F(ERROR, "Unknown error occurred during global message processing");
                         }
+                        globalSubscribersLock_.unlock();
+
+                        DLOG_F(INFO, "Processed message on topic: %s", topic.c_str());
                     }
-                    subscribersLock_.unlock();
-
-                    globalSubscribersLock_.lock();
-                    try {
-                        for (const auto& subscriber : globalSubscribers_) {
-                            if (subscriber.type() == typeid(std::function<void(const T&)>)) {
-                                std::any_cast<std::function<void(const T&)>>(subscriber)(std::any_cast<const T&>(data));
-                            }
-                        }
-                    } catch (const std::bad_any_cast& e) {
-                        DLOG_F(ERROR, "Global message type mismatch: %s", e.what());
-                    } catch (...) {
-                        DLOG_F(ERROR, "Unknown error occurred during global message processing");
-                    }
-                    globalSubscribersLock_.unlock();
-
-                    DLOG_F(INFO, "Processed message on topic: %s", topic.c_str());
-                }
-            } }));
-    }
-
-    template <typename T>
-    void StopProcessingThread()
-    {
-        std::type_index typeIndex = typeid(T);
-        auto it = processingThreads_.find(typeIndex);
-        if (it != processingThreads_.end())
-        {
-#if __cplusplus >= 202002L
-            it->second.request_stop();
-#endif
-            it->second.join();
-            processingThreads_.erase(it);
-            DLOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+                } }));
         }
-    }
 
-    void StopAllProcessingThreads()
-    {
-        isRunning_.store(false);
-        messageAvailableFlag_.notify_one();
-        for (auto &thread : processingThreads_)
+        template <typename T>
+        void StopProcessingThread()
         {
-#if __cplusplus >= 202002L
-            thread.second.request_stop();
-#endif
-            thread.second.join();
+            std::type_index typeIndex = typeid(T);
+            auto it = processingThreads_.find(typeIndex);
+            if (it != processingThreads_.end())
+            {
+    #if __cplusplus >= 202002L
+                it->second.request_stop();
+    #endif
+                it->second.join();
+                processingThreads_.erase(it);
+                DLOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+            }
         }
-        processingThreads_.clear();
-        DLOG_F(INFO, "All processing threads stopped");
-    }
 
-private:
-    std::unordered_map<std::string, std::vector<std::pair<int, std::any>>> subscribers_;
-    std::mutex subscribersLock_;
-    std::queue<std::pair<std::string, std::any>> messageQueue_;
-    std::mutex messageQueueLock_;
-    std::condition_variable messageAvailableFlag_;
-    std::mutex waitingMutex_;
-#if __cplusplus >= 202002L
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::type_index, std::thread> processingThreads_;
-#else
-    std::unordered_map<std::type_index, std::jthread> processingThreads_;
-#endif
-#else
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::type_index, std::thread> processingThreads_;
-#else
-    std::unordered_map<std::type_index, std::thread> processingThreads_;
-#endif
+        void StopAllProcessingThreads()
+        {
+            isRunning_.store(false);
+            messageAvailableFlag_.notify_one();
+            for (auto &thread : processingThreads_)
+            {
+    #if __cplusplus >= 202002L
+                thread.second.request_stop();
+    #endif
+                thread.second.join();
+            }
+            processingThreads_.clear();
+            DLOG_F(INFO, "All processing threads stopped");
+        }
 
-#endif
-    std::atomic<bool> isRunning_{true};
+    private:
+        std::unordered_map<std::string, std::vector<std::pair<int, std::any>>> subscribers_;
+        std::mutex subscribersLock_;
+        std::queue<std::pair<std::string, std::any>> messageQueue_;
+        std::mutex messageQueueLock_;
+        std::condition_variable messageAvailableFlag_;
+        std::mutex waitingMutex_;
+    #if __cplusplus >= 202002L
+    #if ENABLE_FASTHASH
+        emhash8::HashMap<std::type_index, std::thread> processingThreads_;
+    #else
+        std::unordered_map<std::type_index, std::jthread> processingThreads_;
+    #endif
+    #else
+    #if ENABLE_FASTHASH
+        emhash8::HashMap<std::type_index, std::thread> processingThreads_;
+    #else
+        std::unordered_map<std::type_index, std::thread> processingThreads_;
+    #endif
 
-    std::vector<std::any> globalSubscribers_;
-    std::mutex globalSubscribersLock_;
-};
+    #endif
+        std::atomic<bool> isRunning_{true};
+
+        std::vector<std::any> globalSubscribers_;
+        std::mutex globalSubscribersLock_;
+    };
+}

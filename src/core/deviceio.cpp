@@ -52,7 +52,7 @@ void SocketServer::start()
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
     {
-        DLOG_F(ERROR, "Failed to initialize Winsock");
+        LOG_F(ERROR, "Failed to initialize Winsock");
         return;
     }
 #endif
@@ -60,7 +60,7 @@ void SocketServer::start()
     serverSocket = socket(AF_INET, SOCK_STREAM, 0); // 修改 IPPROTO_TCP 为 0
     if (serverSocket == INVALID_SOCKET)
     {
-        DLOG_F(ERROR, "Failed to create socket");
+        LOG_F(ERROR, "Failed to create socket");
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -74,7 +74,7 @@ void SocketServer::start()
 
     if (bind(serverSocket, (sockaddr *)&serverAddress, sizeof(serverAddress)) == SOCKET_ERROR)
     {
-        DLOG_F(ERROR, "Failed to bind socket");
+        LOG_F(ERROR, "Failed to bind socket");
         closesocket(serverSocket);
 #ifdef _WIN32
         WSACleanup();
@@ -84,7 +84,7 @@ void SocketServer::start()
 
     if (listen(serverSocket, 5) == SOCKET_ERROR)
     {
-        DLOG_F(ERROR, "Failed to listen on socket");
+        LOG_F(ERROR, "Failed to listen on socket");
         closesocket(serverSocket);
 #ifdef _WIN32
         WSACleanup();
@@ -139,7 +139,7 @@ void SocketServer::acceptClientConnection()
     SOCKET clientSocket = accept(serverSocket, (sockaddr *)&clientAddress, &clientAddressLength);
     if (clientSocket == INVALID_SOCKET)
     {
-        DLOG_F(ERROR, "Failed to accept client connection");
+        LOG_F(ERROR, "Failed to accept client connection");
         return;
     }
 
@@ -154,7 +154,7 @@ void SocketServer::handleClientMessage(SOCKET clientSocket)
     int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
     if (bytesRead == SOCKET_ERROR)
     {
-        DLOG_F(ERROR, "Failed to read from client socket");
+        LOG_F(ERROR, "Failed to read from client socket");
     }
     else if (bytesRead == 0)
     {

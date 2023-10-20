@@ -43,7 +43,7 @@ namespace Lithium::Task
     {
         if (!task)
         {
-            DLOG_F(ERROR, "Invalid task!");
+            LOG_F(ERROR, "Invalid task!");
             return false;
         }
         m_TaskList.push_back(task);
@@ -56,13 +56,13 @@ namespace Lithium::Task
     {
         if (!task)
         {
-            DLOG_F(ERROR, "Error: Invalid task!");
+            LOG_F(ERROR, "Error: Invalid task!");
             return false;
         }
 
         if (position < 0 || position >= m_TaskList.size())
         {
-            DLOG_F(ERROR, "Error: Invalid position!");
+            LOG_F(ERROR, "Error: Invalid position!");
             return false;
         }
 
@@ -93,12 +93,12 @@ namespace Lithium::Task
                 }
                 catch (const std::exception &ex)
                 {
-                    DLOG_F(ERROR, "Error: Failed to execute task {} - {}", task->get_name(), ex.what());
+                    LOG_F(ERROR, "Error: Failed to execute task {} - {}", task->get_name(), ex.what());
                     ++it;
                 }
                 catch (...)
                 {
-                    DLOG_F(ERROR, "Error: Failed to execute task {}", task->get_name());
+                    LOG_F(ERROR, "Error: Failed to execute task {}", task->get_name());
                     ++it;
                 }
             }
@@ -128,22 +128,22 @@ namespace Lithium::Task
                 }
                 else
                 {
-                    DLOG_F(ERROR, "Error: Failed to execute task {}", it->second->get_name());
+                    LOG_F(ERROR, "Error: Failed to execute task {}", it->second->get_name());
                 }
                 return true;
             }
             catch (const std::exception &ex)
             {
-                DLOG_F(ERROR, "Error: Failed to execute task {} - {}", it->second->get_name(), ex.what());
+                LOG_F(ERROR, "Error: Failed to execute task {} - {}", it->second->get_name(), ex.what());
             }
             catch (...)
             {
-                DLOG_F(ERROR, "Error: Failed to execute task {}", it->second->get_name());
+                LOG_F(ERROR, "Error: Failed to execute task {}", it->second->get_name());
             }
         }
         else
         {
-            DLOG_F(ERROR, "Error: Task not found or invalid!");
+            LOG_F(ERROR, "Error: Task not found or invalid!");
         }
         return false;
     }
@@ -152,13 +152,13 @@ namespace Lithium::Task
     {
         if (!task)
         {
-            DLOG_F(ERROR, "Error: Invalid task!");
+            LOG_F(ERROR, "Error: Invalid task!");
             return false;
         }
 
         if (index < 0 || index >= m_TaskList.size())
         {
-            DLOG_F(ERROR, "Error: Invalid index!");
+            LOG_F(ERROR, "Error: Invalid index!");
             return false;
         }
 
@@ -183,7 +183,7 @@ namespace Lithium::Task
     {
         if (index < 0 || index >= m_TaskList.size())
         {
-            DLOG_F(ERROR, "Error: Invalid index!");
+            LOG_F(ERROR, "Error: Invalid index!");
             return false;
         }
 
@@ -205,7 +205,7 @@ namespace Lithium::Task
             DLOG_F(INFO, "Task deleted: {}", task->get_name());
             return true;
         }
-        DLOG_F(ERROR, "Error: Task not found!");
+        LOG_F(ERROR, "Error: Task not found!");
         return false;
     }
 
@@ -247,7 +247,7 @@ namespace Lithium::Task
         std::ofstream outputFile(m_FileName);
         if (!outputFile.is_open())
         {
-            DLOG_F(ERROR, "Error: Failed to open file for writing!");
+            LOG_F(ERROR, "Error: Failed to open file for writing!");
             return false;
         }
 

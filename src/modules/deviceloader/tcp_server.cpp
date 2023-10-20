@@ -30,7 +30,7 @@ void TcpServer::ioCb(uv_poll_t *watcher, int status, int revents)
 {
     if (status < 0)
     {
-        DLOG_F(ERROR, "Error on tcp server socket: {}", uv_strerror(status));
+        LOG_F(ERROR, "Error on tcp server socket: {}", uv_strerror(status));
         // Bye();
     }
     else if (revents & UV_READABLE)
@@ -47,7 +47,7 @@ void TcpServer::listen()
     /* make socket endpoint */
     if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        DLOG_F(ERROR, "socket: %s\n", strerror(errno));
+        LOG_F(ERROR, "socket: %s\n", strerror(errno));
         // Bye();
     }
 
@@ -63,7 +63,7 @@ void TcpServer::listen()
 #ifdef _WIN32
     if (setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&reuse, sizeof(reuse)) < 0)
     {
-        DLOG_F(ERROR, "Failed to set receive timeout.");
+        LOG_F(ERROR, "Failed to set receive timeout.");
         close(sfd);
         sfd = -1;
         return;
@@ -71,20 +71,20 @@ void TcpServer::listen()
 #else
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
-        DLOG_F(ERROR, "setsockopt: %s\n", strerror(errno));
+        LOG_F(ERROR, "setsockopt: %s\n", strerror(errno));
         // Bye();
     }
 #endif
     if (bind(sfd, (struct sockaddr *)&serv_socket, sizeof(serv_socket)) < 0)
     {
-        DLOG_F(ERROR, "bind: %s\n", strerror(errno));
+        LOG_F(ERROR, "bind: %s\n", strerror(errno));
         // Bye();
     }
 
     /* willing to accept connections with a backlog of 5 pending */
     if (::listen(sfd, 5) < 0)
     {
-        DLOG_F(ERROR, "listen: %s\n", strerror(errno));
+        LOG_F(ERROR, "listen: %s\n", strerror(errno));
         // Bye();
     }
 
@@ -122,7 +122,7 @@ void TcpServer::accept()
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
 
-        DLOG_F(ERROR, "accept: %s\n", strerror(errno));
+        LOG_F(ERROR, "accept: %s\n", strerror(errno));
         // Bye();
     }
 
@@ -146,7 +146,7 @@ void TcpServer::ioCb(ev::io &, int revents)
         int sockErrno = readFdError(this->sfd);
         if (sockErrno)
         {
-            DLOG_F(ERROR, "Error on tcp server socket: %s\n", strerror(sockErrno));
+            LOG_F(ERROR, "Error on tcp server socket: %s\n", strerror(sockErrno));
             // Bye();
         }
     }
@@ -164,7 +164,7 @@ void TcpServer::listen()
     /* make socket endpoint */
     if ((sfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        DLOG_F(ERROR, "socket: %s\n", strerror(errno));
+        LOG_F(ERROR, "socket: %s\n", strerror(errno));
         // Bye();
     }
 
@@ -180,7 +180,7 @@ void TcpServer::listen()
 #ifdef _WIN32
     if (setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&reuse, sizeof(reuse)) < 0)
     {
-        DLOG_F(ERROR, "Failed to set receive timeout.");
+        LOG_F(ERROR, "Failed to set receive timeout.");
         close(sfd);
         sfd = -1;
         return;
@@ -188,20 +188,20 @@ void TcpServer::listen()
 #else
     if (setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0)
     {
-        DLOG_F(ERROR, "setsockopt: %s\n", strerror(errno));
+        LOG_F(ERROR, "setsockopt: %s\n", strerror(errno));
         // Bye();
     }
 #endif
     if (bind(sfd, (struct sockaddr *)&serv_socket, sizeof(serv_socket)) < 0)
     {
-        DLOG_F(ERROR, "bind: %s\n", strerror(errno));
+        LOG_F(ERROR, "bind: %s\n", strerror(errno));
         // Bye();
     }
 
     /* willing to accept connections with a backlog of 5 pending */
     if (::listen(sfd, 5) < 0)
     {
-        DLOG_F(ERROR, "listen: %s\n", strerror(errno));
+        LOG_F(ERROR, "listen: %s\n", strerror(errno));
         // Bye();
     }
 
@@ -232,7 +232,7 @@ void TcpServer::accept()
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
 
-        DLOG_F(ERROR, "accept: %s\n", strerror(errno));
+        LOG_F(ERROR, "accept: %s\n", strerror(errno));
         // Bye();
     }
 

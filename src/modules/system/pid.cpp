@@ -91,7 +91,7 @@ void PIDWatcher::watch()
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            DLOG_F(ERROR, _("CreateToolhelp32Snapshot failed."));
+            LOG_F(ERROR, _("CreateToolhelp32Snapshot failed."));
             return;
         }
 
@@ -130,7 +130,7 @@ void PIDWatcher::watch()
                             }
                             else
                             {
-                                DLOG_F(ERROR, _("GetExitCodeProcess failed."));
+                                LOG_F(ERROR, _("GetExitCodeProcess failed."));
                             }
                             CloseHandle(process);
                             stop();
@@ -140,7 +140,7 @@ void PIDWatcher::watch()
                     }
                     else
                     {
-                        DLOG_F(ERROR, _("OpenProcess failed."));
+                        LOG_F(ERROR, _("OpenProcess failed."));
                     }
 
                     break;

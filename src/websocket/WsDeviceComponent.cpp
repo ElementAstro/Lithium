@@ -43,7 +43,7 @@ const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_para
 		res["command"] = "GetDeviceList";
 		if (!m_params.contains("device_type"))
 		{
-			DLOG_F(ERROR, "GetDeviceList() : Device type is required");
+			LOG_F(ERROR, "GetDeviceList() : Device type is required");
 			res["error"] = "Device type is required";
 			return res;
 		}
@@ -52,7 +52,7 @@ const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_para
 		if (it == DeviceTypeMap.end())
 		{
 			res["error"] = "Unsupport device type";
-			DLOG_F(ERROR, "Unsupport device type, GetDeviceList() : %s", res.dump().c_str());
+			LOG_F(ERROR, "Unsupport device type, GetDeviceList() : %s", res.dump().c_str());
 			return res;
 		}
 		device_type = it->second;
@@ -64,7 +64,7 @@ const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_para
 	}
 	catch (const std::exception &e)
 	{
-		DLOG_F(ERROR, "Error occurred in GetDeviceList: %s", e.what());
+		LOG_F(ERROR, "Error occurred in GetDeviceList: %s", e.what());
 		return {{"error", "Error occurred in GetDeviceList"}, {"message", e.what()}};
 	}
 }
@@ -77,7 +77,7 @@ const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 	{
 		if (!m_params.contains("device_type") || !m_params.contains("device_name"))
 		{
-			DLOG_F(ERROR, "GetDeviceList() : Device type and name are required");
+			LOG_F(ERROR, "GetDeviceList() : Device type and name are required");
 			res["error"] = "Device type and name are required";
 			return res;
 		}
@@ -86,7 +86,7 @@ const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 		if (it == DeviceTypeMap.end())
 		{
 			res["error"] = "Unsupport device type";
-			DLOG_F(ERROR, "Unsupport device type, AddDevice() : %s", res.dump().c_str());
+			LOG_F(ERROR, "Unsupport device type, AddDevice() : %s", res.dump().c_str());
 			return res;
 		}
 		device_type = it->second;
@@ -102,12 +102,12 @@ const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::AddDevice() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::AddDevice() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 	}
 	catch (const std::exception &e)
 	{
-		DLOG_F(ERROR, "Error occurred in AddDevice: %s", e.what());
+		LOG_F(ERROR, "Error occurred in AddDevice: %s", e.what());
 		res["error"] = "Error occurred in AddDevice";
 		res["message"] = e.what();
 	}
@@ -120,7 +120,7 @@ const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_p
 	res["command"] = "AddDeviceLibrary";
 	if (!m_params.contains("lib_path") || !m_params.contains("lib_name"))
 	{
-		DLOG_F(ERROR, "WebSocketServer::AddDevice() : Device library path and name are required");
+		LOG_F(ERROR, "WebSocketServer::AddDevice() : Device library path and name are required");
 		res["error"] = "Invalid parameters";
 		res["message"] = "Device library path and name are required";
 		return res;
@@ -136,7 +136,7 @@ const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_p
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::AddDeviceLibrary() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::AddDeviceLibrary() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
@@ -144,7 +144,7 @@ const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_p
 	{
 		res["error"] = "Error occurred in WebSocketServer::AddDeviceLibrary";
 		res["message"] = e.what();
-		DLOG_F(ERROR, "WebSocketServer::AddDeviceLibrary: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::AddDeviceLibrary: %s", e.what());
 	}
 	return res;
 }
@@ -155,7 +155,7 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 	res["command"] = "RemoveDevice";
 	if (!m_params.contains("device_type") || !m_params.contains("device_name"))
 	{
-		DLOG_F(ERROR, "WebSocketServer::RemoveDevice() : Device type and name are required");
+		LOG_F(ERROR, "WebSocketServer::RemoveDevice() : Device type and name are required");
 		res["error"] = "Invalid parameters";
 		res["message"] = "Device type and name are required";
 		return res;
@@ -167,7 +167,7 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 		if (it == DeviceTypeMap.end())
 		{
 			res["error"] = "Unsupport device type";
-			DLOG_F(ERROR, "WebSocketServer::RemoveDevice() : Unsupport device type %s", res.dump().c_str());
+			LOG_F(ERROR, "WebSocketServer::RemoveDevice() : Unsupport device type %s", res.dump().c_str());
 			return res;
 		}
 		device_type = it->second;
@@ -181,7 +181,7 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::RemoveDevice() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::RemoveDevice() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
@@ -189,7 +189,7 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 	{
 		res["error"] = "Error occurred in WebSocketServer::RemoveDevice";
 		res["message"] = e.what();
-		DLOG_F(ERROR, "WebSocketServer::RemoveDevice(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::RemoveDevice(): %s", e.what());
 	}
 	return res;
 }
@@ -200,7 +200,7 @@ const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &
 	res["command"] = "RemoveDeviceByName";
 	if (!m_params.contains("device_name"))
 	{
-		DLOG_F(ERROR, "WebSocketServer::RemoveDevice() : Device name is required");
+		LOG_F(ERROR, "WebSocketServer::RemoveDevice() : Device name is required");
 		res["error"] = "Invalid parameters";
 		res["message"] = "Device name is required";
 		return res;
@@ -216,7 +216,7 @@ const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::RemoveDeviceByName() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::RemoveDeviceByName() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
@@ -224,7 +224,7 @@ const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &
 	{
 		res["error"] = "Error occurred in WebSocketServer::RemoveDeviceByName";
 		res["message"] = e.what();
-		DLOG_F(ERROR, "WebSocketServer::RemoveDeviceByName(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::RemoveDeviceByName(): %s", e.what());
 	}
 	return res;
 }
@@ -235,7 +235,7 @@ const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &
 	res["command"] = "RemoveDeviceLibrary";
 	if (!m_params.contains("lib_name"))
 	{
-		DLOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary() : Device name is required");
+		LOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary() : Device name is required");
 		res["error"] = "Invalid parameters";
 		res["message"] = "Device library name is required";
 		return res;
@@ -251,7 +251,7 @@ const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
@@ -259,7 +259,7 @@ const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &
 	{
 		res["error"] = "Error occurred in WebSocketServer::RemoveDeviceLibrary";
 		res["message"] = e.what();
-		DLOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary(): %s", e.what());
 	}
 	return res;
 }
@@ -275,7 +275,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	if (!(m_params.contains("device_name") || m_params.contains("device_uuid")) || !m_params.contains("device_type"))
 	{
 		res["error"] = "Device name or uuid is required";
-		DLOG_F(ERROR, "WebSocketServer::RunDeviceTask() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::RunDeviceTask() : %s", res.dump().c_str());
 		return res;
 	}
 
@@ -285,7 +285,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	if (it == DeviceTypeMap.end())
 	{
 		res["error"] = "Device type not supported";
-		DLOG_F(ERROR, "WebSocketServer::RunDeviceTask() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::RunDeviceTask() : %s", res.dump().c_str());
 		return res;
 	}
 	device_type = it->second;
@@ -294,7 +294,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	if (!m_params.contains("task_name"))
 	{
 		res["error"] = "Task name is required";
-		DLOG_F(ERROR, "WebSocketServer::RunDeviceTask() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::RunDeviceTask() : %s", res.dump().c_str());
 		return res;
 	}
 	std::string task_name = m_params["task_name"];
@@ -304,7 +304,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	if (task == nullptr)
 	{
 		res["error"] = "Failed to get task";
-		DLOG_F(ERROR, "WebSocketServer::RunDeviceTask() : Failed to get task %s ,error %s", task_name.c_str(), res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::RunDeviceTask() : Failed to get task %s ,error %s", task_name.c_str(), res.dump().c_str());
 		return res;
 	}
 	task->Execute();
@@ -314,7 +314,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	if (result.contains("error"))
 	{
 		res["error"] = result["error"];
-		DLOG_F(ERROR, "WebSocketServer::RunDeviceTask() : Error happened in task %s - %s", task_name.c_str(), result.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::RunDeviceTask() : Error happened in task %s - %s", task_name.c_str(), result.dump().c_str());
 	}
 	res["result"] = result;
 	return res;
@@ -329,7 +329,7 @@ const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_para
 	if (!m_params.contains("device_name") && !m_params.contains("device_uuid"))
 	{
 		res["error"] = "Device name or uuid is required";
-		DLOG_F(ERROR, "WebSocketServer::GetDeviceInfo() : %s", res.dump().c_str());
+		LOG_F(ERROR, "WebSocketServer::GetDeviceInfo() : %s", res.dump().c_str());
 		return res;
 	}
 
@@ -356,7 +356,7 @@ const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_para
 	}
 	catch (const nlohmann::json::exception &e)
 	{
-		DLOG_F(ERROR, "WebSocketServer::GetDeviceInfo() json exception: %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::GetDeviceInfo() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
 		res["message"] = e.what();
 	}
@@ -364,7 +364,7 @@ const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_para
 	{
 		res["error"] = "Error occurred in WebSocketServer::GetDeviceInfo";
 		res["message"] = e.what();
-		DLOG_F(ERROR, "WebSocketServer::GetDeviceInfo(): %s", e.what());
+		LOG_F(ERROR, "WebSocketServer::GetDeviceInfo(): %s", e.what());
 	}
 	return res;
 }

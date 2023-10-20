@@ -25,7 +25,7 @@ public:
         handle_ = CreateFileMappingA(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, sizeof(T) + sizeof(bool), name.c_str());
         if (handle_ == nullptr)
         {
-            DLOG_F(ERROR, "Failed to create file mapping.");
+            LOG_F(ERROR, "Failed to create file mapping.");
             throw std::runtime_error("Failed to create file mapping.");
         }
 
@@ -33,14 +33,14 @@ public:
         if (buffer_ == nullptr)
         {
             CloseHandle(handle_);
-            DLOG_F(ERROR, "Failed to map view of file.");
+            LOG_F(ERROR, "Failed to map view of file.");
             throw std::runtime_error("Failed to map view of file.");
         }
 #else // Unix-like
         fd_ = shm_open(name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd_ == -1)
         {
-            DLOG_F(ERROR, "Failed to create shared memory.");
+            LOG_F(ERROR, "Failed to create shared memory.");
             throw std::runtime_error("Failed to create shared memory.");
         }
 
@@ -51,7 +51,7 @@ public:
         if (buffer_ == MAP_FAILED)
         {
             shm_unlink(name.c_str());
-            DLOG_F(ERROR, "Failed to map shared memory.");
+            LOG_F(ERROR, "Failed to map shared memory.");
             throw std::runtime_error("Failed to map shared memory.");
         }
 #endif

@@ -46,7 +46,7 @@ DownloadManager::DownloadManager(const std::string &task_file) : task_file_(task
         std::ifstream infile(task_file_);
         if (!infile)
         {
-            DLOG_F(ERROR, "Failed to open task file {}", task_file_);
+            LOG_F(ERROR, "Failed to open task file {}", task_file_);
             throw std::runtime_error("Failed to open task file.");
         }
         while (infile >> std::ws && !infile.eof())
@@ -62,7 +62,7 @@ DownloadManager::DownloadManager(const std::string &task_file) : task_file_(task
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error: {}", e.what());
+        LOG_F(ERROR, "Error: {}", e.what());
         throw;
     }
 }
@@ -79,7 +79,7 @@ void DownloadManager::add_task(const std::string &url, const std::string &filepa
         std::ofstream outfile(task_file_, std::ios_base::app);
         if (!outfile)
         {
-            DLOG_F(ERROR, "Failed to open task file {}", task_file_);
+            LOG_F(ERROR, "Failed to open task file {}", task_file_);
             throw std::runtime_error("Failed to open task file.");
         }
         outfile << url << " " << filepath << std::endl;
@@ -87,7 +87,7 @@ void DownloadManager::add_task(const std::string &url, const std::string &filepa
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error: {}", e.what());
+        LOG_F(ERROR, "Error: {}", e.what());
         throw;
     }
     tasks_.push_back({url, filepath, false, false, 0, priority});
@@ -121,7 +121,7 @@ void DownloadManager::pause_task(size_t index)
 {
     if (index >= tasks_.size())
     {
-        DLOG_F(ERROR, "Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds!");
         return;
     }
 
@@ -133,7 +133,7 @@ void DownloadManager::resume_task(size_t index)
 {
     if (index >= tasks_.size())
     {
-        DLOG_F(ERROR, "Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds!");
         return;
     }
 
@@ -150,7 +150,7 @@ size_t DownloadManager::get_downloaded_bytes(size_t index)
 {
     if (index >= tasks_.size())
     {
-        DLOG_F(ERROR, "Index out of bounds!");
+        LOG_F(ERROR, "Index out of bounds!");
         return 0;
     }
 
@@ -214,14 +214,14 @@ void DownloadManager::download_task(DownloadTask &task, size_t download_speed)
     auto res = cli.Get("/");
     if (!res || res->status != 200)
     {
-        DLOG_F(ERROR, "Failed to download {}", task.url);
+        LOG_F(ERROR, "Failed to download {}", task.url);
         return;
     }
 
     std::ofstream outfile(task.filepath, std::ofstream::binary | std::ofstream::app);
     if (!outfile)
     {
-        DLOG_F(ERROR, "Failed to open file {}", task.filepath);
+        LOG_F(ERROR, "Failed to open file {}", task.filepath);
         return;
     }
 
@@ -299,7 +299,7 @@ void DownloadManager::save_task_list_to_file()
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Error: {}", e.what());
+        LOG_F(ERROR, "Error: {}", e.what());
         throw;
     }
 }

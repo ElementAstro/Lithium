@@ -536,7 +536,7 @@ void SerializedMsgWithSharedBuffer::generateContent()
             void *blob = IDSharedBlobAlloc(size);
             if (blob == nullptr)
             {
-                DLOG_F(ERROR, "Unable to allocate shared buffer of size %ld : %s\n", size, strerror(errno));
+                LOG_F(ERROR, "Unable to allocate shared buffer of size %ld : %s\n", size, strerror(errno));
                 ::exit(1);
             }
             DLOG_F(INFO, "Blob allocated at %p\n", blob);

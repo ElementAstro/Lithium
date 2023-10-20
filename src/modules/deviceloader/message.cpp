@@ -167,7 +167,7 @@ bool parseBlobSize(XMLEle *blobWithAttachedBuffer, ssize_t &size)
     size = std::stoll(sizeStr, &pos, 10);
     if (pos != sizeStr.size())
     {
-        DLOG_F(ERROR, "Invalid size attribute value %s", sizeStr.c_str());
+        LOG_F(ERROR, "Invalid size attribute value %s", sizeStr.c_str());
         return false;
     }
     return true;
@@ -182,7 +182,7 @@ bool Msg::fetchBlobs(std::list<int> &incomingSharedBuffers)
         ssize_t blobSize;
         if (!parseBlobSize(blobContent, blobSize))
         {
-            DLOG_F(ERROR, "Attached blob misses the size attribute");
+            LOG_F(ERROR, "Attached blob misses the size attribute");
             return false;
         }
 
@@ -191,12 +191,12 @@ bool Msg::fetchBlobs(std::list<int> &incomingSharedBuffers)
         {
             if (incomingSharedBuffers.empty())
             {
-                DLOG_F(ERROR, "Missing shared buffer...\n");
+                LOG_F(ERROR, "Missing shared buffer...\n");
                 return false;
             }
 
             queueSize += blobSize;
-            // DLOG_F(ERROR,"Found one fd !\n");
+            // LOG_F(ERROR,"Found one fd !\n");
             int fd = *incomingSharedBuffers.begin();
             incomingSharedBuffers.pop_front();
 

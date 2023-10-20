@@ -357,7 +357,7 @@ int main(int ac, char *av[])
 #endif
 
     /* will not happen unless no more listener left ! */
-    DLOG_F(ERROR, "unexpected return from event loop");
+    LOG_F(ERROR, "unexpected return from event loop");
     return (1);
 }
 
@@ -389,7 +389,7 @@ void run_hydrogen_server(std::unordered_map<std::string, std::string> m_params)
     loop.loop();
 #endif
     /* will not happen unless no more listener left ! */
-    DLOG_F(ERROR, "unexpected return from event loop");
+    LOG_F(ERROR, "unexpected return from event loop");
 }
 
 void start_hydrogen_driver(const std::string &driver_binary,const std::string &driver_skeleton)

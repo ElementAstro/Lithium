@@ -64,7 +64,7 @@ bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::str
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        DLOG_F(ERROR, "Failed to send GET request to {}{}. Error message: {}", host_, path, err);
+        LOG_F(ERROR, "Failed to send GET request to {}{}. Error message: {}", host_, path, err);
         return false;
     }
 
@@ -75,7 +75,7 @@ bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::str
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
+        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
         return false;
     }
 
@@ -99,7 +99,7 @@ bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::st
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        DLOG_F(ERROR, "Failed to send POST request to {}{}, data {}. Error message: {}", host_, path, data.dump(), err);
+        LOG_F(ERROR, "Failed to send POST request to {}{}, data {}. Error message: {}", host_, path, data.dump(), err);
         return false;
     }
 
@@ -110,7 +110,7 @@ bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::st
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
+        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
         return false;
     }
 
@@ -134,7 +134,7 @@ bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::str
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        DLOG_F(ERROR, "Failed to send PUT request to {}{}, data {}. Error message: {}", host_, path, data.dump(), err);
+        LOG_F(ERROR, "Failed to send PUT request to {}{}, data {}. Error message: {}", host_, path, data.dump(), err);
         return false;
     }
 
@@ -145,7 +145,7 @@ bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::str
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
+        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
         return false;
     }
 
@@ -169,7 +169,7 @@ bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::
     if (!res || res->status != 200)
     {
         err = res ? res->body : "Unknown error";
-        DLOG_F(ERROR, "Failed to send DELETE request to {}{}, data {}. Error message: {}", host_, path, res->body, err);
+        LOG_F(ERROR, "Failed to send DELETE request to {}{}, data {}. Error message: {}", host_, path, res->body, err);
         return false;
     }
 
@@ -180,7 +180,7 @@ bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::
     }
     catch (const std::exception &e)
     {
-        DLOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
+        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
         return false;
     }
 
@@ -241,7 +241,7 @@ bool HttpClient::CheckServerStatus(std::string &status)
     if (!res || res->status != 200)
     {
         status = res ? std::to_string(res->status) : "Unknown error";
-        DLOG_F(ERROR, "Failed to check server status on {}:%d with error message: {}", host_, port_, status);
+        LOG_F(ERROR, "Failed to check server status on {}:%d with error message: {}", host_, port_, status);
         return false;
     }
 

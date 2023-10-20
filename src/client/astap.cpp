@@ -122,7 +122,7 @@ namespace Lithium::API::ASTAP
         FILE *pipe = popen(command.c_str(), "r");
         if (!pipe)
         {
-            DLOG_F(ERROR, "Error: failed to run command '%s'.", command.c_str());
+            LOG_F(ERROR, "Error: failed to run command '%s'.", command.c_str());
             return "";
         }
         std::string output = "";
@@ -141,7 +141,7 @@ namespace Lithium::API::ASTAP
 
         if (attempts_left < 1)
         {
-            DLOG_F(ERROR, "Exceeded maximum attempts");
+            LOG_F(ERROR, "Exceeded maximum attempts");
             throw std::runtime_error("Exceeded maximum attempts");
         }
 
@@ -153,7 +153,7 @@ namespace Lithium::API::ASTAP
         {
             if (attempts_left == 1)
             {
-                DLOG_F(ERROR, "Failed to execute function after multiple attempts");
+                LOG_F(ERROR, "Failed to execute function after multiple attempts");
                 throw;
             }
             else
@@ -171,17 +171,17 @@ namespace Lithium::API::ASTAP
         // 输入参数合法性检查
         if (ra < 0.0 || ra > 360.0)
         {
-            DLOG_F(ERROR, "RA should be within [0, 360]");
+            LOG_F(ERROR, "RA should be within [0, 360]");
             return "";
         }
         if (dec < -90.0 || dec > 90.0)
         {
-            DLOG_F(ERROR, "DEC should be within [-90, 90]");
+            LOG_F(ERROR, "DEC should be within [-90, 90]");
             return "";
         }
         if (fov <= 0.0 || fov > 180.0)
         {
-            DLOG_F(ERROR, "FOV should be within (0, 180]");
+            LOG_F(ERROR, "FOV should be within (0, 180]");
             return "";
         }
         if (!image.empty())
@@ -190,7 +190,7 @@ namespace Lithium::API::ASTAP
             file.open(image, std::ios::in | std::ios::out);
             if (!file.good())
             {
-                DLOG_F(ERROR, "Error: image file '%s' is not accessible.", image.c_str());
+                LOG_F(ERROR, "Error: image file '%s' is not accessible.", image.c_str());
                 return "";
             }
             file.close();
@@ -231,7 +231,7 @@ namespace Lithium::API::ASTAP
             auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start_time).count();
             if (elapsed_time > timeout)
             {
-                DLOG_F(ERROR, "Error: command timed out after %s seconds.", std::to_string(timeout).c_str());
+                LOG_F(ERROR, "Error: command timed out after %s seconds.", std::to_string(timeout).c_str());
                 return "";
             }
         }
@@ -265,7 +265,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: cannot open FITS file '" + image + "'.";
-            DLOG_F(ERROR, "%s", ret_struct["message"].c_str());
+            LOG_F(ERROR, "%s", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -300,7 +300,7 @@ namespace Lithium::API::ASTAP
         if (status != 0)
         {
             ret_struct["message"] = "Error: failed to close FITS file '" + image + "'.";
-            DLOG_F(ERROR, "%s", ret_struct["message"].c_str());
+            LOG_F(ERROR, "%s", ret_struct["message"].c_str());
             return ret_struct;
         }
 
@@ -362,7 +362,7 @@ namespace Lithium::API::ASTAP
         }
         else
         {
-            DLOG_F(ERROR, "Failed to solve the image");
+            LOG_F(ERROR, "Failed to solve the image");
             ret_struct["message"] = "Failed to solve the image";
         }
 

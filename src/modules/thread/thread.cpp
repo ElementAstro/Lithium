@@ -60,7 +60,7 @@ namespace Lithium::Thread
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, _("Failed to destroy ThreadManager: {}"), e.what());
+            LOG_F(ERROR, _("Failed to destroy ThreadManager: {}"), e.what());
         }
     }
 
@@ -97,7 +97,7 @@ namespace Lithium::Thread
                 }
                 catch (const std::exception &e)
                 {
-                    DLOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
+                    LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
                 } }),
                     name,
                     false);
@@ -119,7 +119,7 @@ namespace Lithium::Thread
                 }
                 catch (const std::exception &e)
                 {
-                    DLOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
+                    LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
                 } }),
                     generateRandomString(16),
                     false);
@@ -130,7 +130,7 @@ namespace Lithium::Thread
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, _("Failed to add thread {}: {}"), name, e.what());
+            LOG_F(ERROR, _("Failed to add thread {}: {}"), name, e.what());
         }
     }
 
@@ -150,7 +150,7 @@ namespace Lithium::Thread
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, _("Failed to join all threads: {}"), e.what());
+            LOG_F(ERROR, _("Failed to join all threads: {}"), e.what());
         }
     }
 
@@ -181,7 +181,7 @@ namespace Lithium::Thread
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
+            LOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
         }
     }
 
@@ -207,7 +207,7 @@ namespace Lithium::Thread
         }
         catch (const std::exception &e)
         {
-            DLOG_F(ERROR, _("Failed to check if thread {} is running: {}"), name, e.what());
+            LOG_F(ERROR, _("Failed to check if thread {} is running: {}"), name, e.what());
             return false;
         }
     }

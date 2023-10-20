@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error &e)
     {
-        DLOG_F(ERROR, _("Failed to parser command line : %s"), e.what());
+        LOG_F(ERROR, _("Failed to parser command line : %s"), e.what());
         std::exit(1);
     }
 

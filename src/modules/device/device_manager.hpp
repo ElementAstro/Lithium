@@ -38,10 +38,6 @@ Description: Device Manager
 #include <functional>
 
 #include "core/device.hpp"
-#include "config/configor.hpp"
-#include "module/modloader.hpp"
-#include "server/message_bus.hpp"
-#include "thread/thread.hpp"
 
 #include "error/error_code.hpp"
 
@@ -74,6 +70,19 @@ namespace Lithium
         Guider,
         NumDeviceTypes
     };
+
+    class ModuleLoader;
+    class MessageBus;
+
+    namespace Thread
+    {
+        class ThreadManager;
+    }
+
+    namespace Config
+    {
+        class ConfigManager;
+    }
     
     /**
      * @class DeviceManager

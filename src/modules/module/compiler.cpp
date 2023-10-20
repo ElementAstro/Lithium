@@ -65,7 +65,7 @@ namespace Lithium
         // 参数校验
         if (code.empty() || moduleName.empty() || functionName.empty())
         {
-            DLOG_F(ERROR, "Invalid parameters.");
+            LOG_F(ERROR, "Invalid parameters.");
             return false;
         }
 
@@ -88,7 +88,7 @@ namespace Lithium
             }
             catch (const std::exception &e)
             {
-                DLOG_F(ERROR, "Failed to create output directory: {}", e.what());
+                LOG_F(ERROR, "Failed to create output directory: {}", e.what());
                 return false;
             }
         }
@@ -110,13 +110,13 @@ namespace Lithium
                 }
                 else
                 {
-                    DLOG_F(ERROR, "Invalid format in compile_options.json.");
+                    LOG_F(ERROR, "Invalid format in compile_options.json.");
                     return false;
                 }
             }
             catch (const std::exception &e)
             {
-                DLOG_F(ERROR, "Error reading compile_options.json: {}", e.what());
+                LOG_F(ERROR, "Error reading compile_options.json: {}", e.what());
                 return false;
             }
         }
@@ -130,7 +130,7 @@ namespace Lithium
         std::string syntaxCheckOutput;
         if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0)
         {
-            DLOG_F(ERROR, "Syntax error in C++ code: {}", syntaxCheckOutput);
+            LOG_F(ERROR, "Syntax error in C++ code: {}", syntaxCheckOutput);
             return false;
         }
 
@@ -142,7 +142,7 @@ namespace Lithium
         int exitCode = RunShellCommand(cmd, code, compilationOutput);
         if (exitCode != 0)
         {
-            DLOG_F(ERROR, "Failed to compile C++ code: {}", compilationOutput);
+            LOG_F(ERROR, "Failed to compile C++ code: {}", compilationOutput);
             return false;
         }
 
@@ -155,7 +155,7 @@ namespace Lithium
             LOG_S(INFO) << "Module " << moduleName << "::" << functionName << " compiled successfully.";
             return true;
         } else {
-            DLOG_F(ERROR, "Failed to load the compiled module: {}", output);
+            LOG_F(ERROR, "Failed to load the compiled module: {}", output);
             return false;
         }
         */
@@ -197,17 +197,17 @@ namespace Lithium
         sa.bInheritHandle = TRUE;
         if (!CreatePipe(&hStdinRead, &hStdoutWrite, &sa, 0))
         {
-            DLOG_F(ERROR, "Failed to create input pipe for shell command: {}", command);
+            LOG_F(ERROR, "Failed to create input pipe for shell command: {}", command);
             return exitCode;
         }
         if (!SetHandleInformation(hStdoutWrite, HANDLE_FLAG_INHERIT, 0))
         {
-            DLOG_F(ERROR, "Failed to set input handle information for shell command: {}", command);
+            LOG_F(ERROR, "Failed to set input handle information for shell command: {}", command);
             return exitCode;
         }
         if (!SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0))
         {
-            DLOG_F(ERROR, "Failed to set output handle information for shell command: {}", command);
+            LOG_F(ERROR, "Failed to set output handle information for shell command: {}", command);
             return exitCode;
         }
         si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
@@ -221,7 +221,7 @@ namespace Lithium
 
         if (!CreateProcess(NULL, &commandBuffer[0], NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
         {
-            DLOG_F(ERROR, "Failed to launch shell command: {}", command);
+            LOG_F(ERROR, "Failed to launch shell command: {}", command);
             CloseHandle(hStdinRead);
             CloseHandle(hStdoutWrite);
             CloseHandle(hStdoutRead);
@@ -245,7 +245,7 @@ namespace Lithium
         DWORD bytesWritten;
         if (!WriteFile(hStdoutWrite, input, input.size(), &bytesWritten, NULL))
         {
-            DLOG_F(ERROR, "Failed to write input for shell command: {}", command);
+            LOG_F(ERROR, "Failed to write input for shell command: {}", command);
             return exitCode;
         }
         CloseHandle(hStdoutWrite);
@@ -264,7 +264,7 @@ namespace Lithium
         FILE *pipe = popen(command.c_str(), "w");
         if (!pipe)
         {
-            DLOG_F(ERROR, "Failed to popen shell command: {}", command);
+            LOG_F(ERROR, "Failed to popen shell command: {}", command);
             return exitCode;
         }
 

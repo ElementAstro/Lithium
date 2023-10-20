@@ -66,7 +66,7 @@ namespace Lithium
     {
     }
 
-    std::shared_ptr<ChaiScriptManager> ChaiScriptManager::createShared(std::shared_ptr<MessageBus> messageBus)
+    std::shared_ptr<ChaiScriptManager> ChaiScriptManager::createShared(std::shared_ptr<Lithium::MessageBus> messageBus)
     {
         return std::make_shared<ChaiScriptManager>(messageBus);
     }
@@ -172,7 +172,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, "Failed to open script file: {}", filename);
+            LOG_F(ERROR, "Failed to open script file: {}", filename);
             return false;
         }
         return true;
@@ -186,7 +186,7 @@ namespace Lithium
         }
         catch (chaiscript::exception::eval_error &e)
         {
-            DLOG_F(ERROR, "Failed to eval {} : {}", e.filename, e.what());
+            LOG_F(ERROR, "Failed to eval {} : {}", e.filename, e.what());
             return false;
         };
         return true;
@@ -200,7 +200,7 @@ namespace Lithium
         }
         catch (chaiscript::exception::eval_error &e)
         {
-            DLOG_F(ERROR, "Failed to run {} : {}", e.filename, e.what());
+            LOG_F(ERROR, "Failed to run {} : {}", e.filename, e.what());
             return false;
         }
         return true;
@@ -216,7 +216,7 @@ namespace Lithium
             }
             catch (chaiscript::exception::eval_error &e)
             {
-                DLOG_F(ERROR, "Failed to run: {}", e.what());
+                LOG_F(ERROR, "Failed to run: {}", e.what());
                 return false;
             }
         }

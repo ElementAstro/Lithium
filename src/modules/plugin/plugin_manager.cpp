@@ -56,7 +56,7 @@ namespace Lithium
 
         if (plugins_.count(pluginName))
         {
-            DLOG_F(ERROR, "Error: Plugin '%s' already exists.", pluginName.c_str());
+            LOG_F(ERROR, "Error: Plugin '%s' already exists.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' already exists.");
         }
 
@@ -72,7 +72,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, "Error: Unknown plugin type '%s'.", type.c_str());
+            LOG_F(ERROR, "Error: Unknown plugin type '%s'.", type.c_str());
             throw std::runtime_error("Error: Unknown plugin type '" + type + "'.");
         }
 
@@ -93,7 +93,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
+            LOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' does not exist.");
         }
     }
@@ -117,7 +117,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
+            LOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' does not exist.");
         }
     }
@@ -157,7 +157,7 @@ namespace Lithium
         }
         else
         {
-            DLOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
+            LOG_F(ERROR, "Error: Plugin '%s' does not exist.", pluginName.c_str());
             throw std::runtime_error("Error: Plugin '" + pluginName + "' does not exist.");
         }
     }

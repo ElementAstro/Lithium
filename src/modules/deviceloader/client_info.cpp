@@ -76,7 +76,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
     Msg *mp = Msg::fromXml(this, root, sharedBuffers);
     if (!mp)
     {
-        DLOG_F(ERROR, "Closing after malformed message\n");
+        LOG_F(ERROR, "Closing after malformed message\n");
         close();
         return;
     }
@@ -103,7 +103,7 @@ void ClInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
 void ClInfo::close()
 {
     if (verbose > 0)
-        DLOG_F(ERROR, "shut down complete - bye!\n");
+        LOG_F(ERROR, "shut down complete - bye!\n");
 
     delete (this);
 

@@ -32,7 +32,7 @@ void DvrInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
         traceMsg("read ", root);
     else if (verbose > 1)
     {
-        DLOG_F(ERROR, "read <{} device='{}' name='{}'>\n", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
+        LOG_F(ERROR, "read <{} device='{}' name='{}'>\n", tagXMLEle(root), findXMLAttValu(root, "device"), findXMLAttValu(root, "name"));
     }
 
     /* that's all if driver is just registering a snoop */

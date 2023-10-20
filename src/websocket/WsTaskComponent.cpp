@@ -35,9 +35,9 @@ Description: Task API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
+void WebSocketServer::AddTask(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "AddTask";
 
 	// 检查必要参数是否存在
@@ -92,7 +92,7 @@ const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 			res = {{"error", "Invalid Parameters"}, {"message", "Unknown task origin"}};
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::AddTask() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
@@ -105,14 +105,14 @@ const nlohmann::json WebSocketServer::AddTask(const nlohmann::json &m_params)
 	return res;
 }
 
-const nlohmann::json WebSocketServer::InsertTask(const nlohmann::json &m_params)
+void WebSocketServer::InsertTask(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_params)
+void WebSocketServer::ExecuteAllTasks(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "ExecuteAllTasks";
 
 	try
@@ -123,7 +123,7 @@ const nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_pa
 			LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks : Failed to start executing all tasks");
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
@@ -136,9 +136,9 @@ const nlohmann::json WebSocketServer::ExecuteAllTasks(const nlohmann::json &m_pa
 	return res;
 }
 
-const nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
+void WebSocketServer::StopTask(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "StopTask";
 
 	try
@@ -149,7 +149,7 @@ const nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
 			LOG_F(ERROR, "WebSocketServer::StopTask(): Failed to stop current task");
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::StopTask() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
@@ -162,9 +162,9 @@ const nlohmann::json WebSocketServer::StopTask(const nlohmann::json &m_params)
 	return res;
 }
 
-const nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_params)
+void WebSocketServer::ExecuteTaskByName(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "ExecuteTaskByName";
 
 	if (!m_params.contains("task_name"))
@@ -183,7 +183,7 @@ const nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_
 			LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName(): Failed to execute specific task");
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
@@ -196,39 +196,39 @@ const nlohmann::json WebSocketServer::ExecuteTaskByName(const nlohmann::json &m_
 	return res;
 }
 
-const nlohmann::json WebSocketServer::ModifyTask(const nlohmann::json &m_params)
+void WebSocketServer::ModifyTask(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::ModifyTaskByName(const nlohmann::json &m_params)
+void WebSocketServer::ModifyTaskByName(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::DeleteTask(const nlohmann::json &m_params)
+void WebSocketServer::DeleteTask(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::DeleteTaskByName(const nlohmann::json &m_params)
+void WebSocketServer::DeleteTaskByName(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::QueryTaskByName(const nlohmann::json &m_params)
+void WebSocketServer::QueryTaskByName(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::GetTaskList(const nlohmann::json &m_params)
+void WebSocketServer::GetTaskList(const json &m_params)
 {
 	return {};
 }
 
-const nlohmann::json WebSocketServer::SaveTasksToJson(const nlohmann::json &m_params)
+void WebSocketServer::SaveTasksToJson(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "SaveTasksToJson";
 
 	try
@@ -239,7 +239,7 @@ const nlohmann::json WebSocketServer::SaveTasksToJson(const nlohmann::json &m_pa
 			LOG_F(ERROR, "WebSocketServer::SaveTasksToJson(): Failed to save task in sequence to a JSON file");
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::SaveTasksToJson() json exception: %s", e.what());
 		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};

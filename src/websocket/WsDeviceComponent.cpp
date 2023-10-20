@@ -35,11 +35,11 @@ Description: Device API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_params)
+void WebSocketServer::GetDeviceList(const json &m_params)
 {
 	try
 	{
-		nlohmann::json res;
+		json res;
 		res["command"] = "GetDeviceList";
 		if (!m_params.contains("device_type"))
 		{
@@ -69,9 +69,9 @@ const nlohmann::json WebSocketServer::GetDeviceList(const nlohmann::json &m_para
 	}
 }
 
-const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
+void WebSocketServer::AddDevice(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "AddDevice";
 	try
 	{
@@ -100,7 +100,7 @@ const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 			Lithium::MyApp->addDeviceObserver(device_type, m_params["device_name"].get<std::string>());
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::AddDevice() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -114,9 +114,9 @@ const nlohmann::json WebSocketServer::AddDevice(const nlohmann::json &m_params)
 	return res;
 }
 
-const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_params)
+void WebSocketServer::AddDeviceLibrary(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "AddDeviceLibrary";
 	if (!m_params.contains("lib_path") || !m_params.contains("lib_name"))
 	{
@@ -134,7 +134,7 @@ const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_p
 			res["error"] = "Failed to add device library";
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::AddDeviceLibrary() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -149,9 +149,9 @@ const nlohmann::json WebSocketServer::AddDeviceLibrary(const nlohmann::json &m_p
 	return res;
 }
 
-const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_params)
+void WebSocketServer::RemoveDevice(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "RemoveDevice";
 	if (!m_params.contains("device_type") || !m_params.contains("device_name"))
 	{
@@ -179,7 +179,7 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 			res["error"] = "Failed to remove device";
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::RemoveDevice() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -194,9 +194,9 @@ const nlohmann::json WebSocketServer::RemoveDevice(const nlohmann::json &m_param
 	return res;
 }
 
-const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &m_params)
+void WebSocketServer::RemoveDevicesByName(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "RemoveDeviceByName";
 	if (!m_params.contains("device_name"))
 	{
@@ -214,7 +214,7 @@ const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &
 			res["error"] = "Failed to remove device by name";
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::RemoveDeviceByName() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -229,9 +229,9 @@ const nlohmann::json WebSocketServer::RemoveDevicesByName(const nlohmann::json &
 	return res;
 }
 
-const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &m_params)
+void WebSocketServer::RemoveDeviceLibrary(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "RemoveDeviceLibrary";
 	if (!m_params.contains("lib_name"))
 	{
@@ -249,7 +249,7 @@ const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &
 			res["error"] = "Failed to remove device library";
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::RemoveDeviceLibrary() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -264,9 +264,9 @@ const nlohmann::json WebSocketServer::RemoveDeviceLibrary(const nlohmann::json &
 	return res;
 }
 
-const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_params)
+void WebSocketServer::RunDeviceTask(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "RunDeviceTask";
 	std::string device_name;
 	Lithium::DeviceType device_type;
@@ -308,7 +308,7 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 		return res;
 	}
 	task->Execute();
-	nlohmann::json result = task->GetResult();
+	json result = task->GetResult();
 
 	// 检查任务执行结果
 	if (result.contains("error"))
@@ -320,9 +320,9 @@ const nlohmann::json WebSocketServer::RunDeviceTask(const nlohmann::json &m_para
 	return res;
 }
 
-const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_params)
+void WebSocketServer::GetDeviceInfo(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "GetDeviceInfo";
 
 	// 检查必要参数是否存在
@@ -354,7 +354,7 @@ const nlohmann::json WebSocketServer::GetDeviceInfo(const nlohmann::json &m_para
 			}
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::GetDeviceInfo() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";

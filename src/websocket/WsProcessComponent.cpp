@@ -35,9 +35,9 @@ Description: Process API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_params)
+void WebSocketServer::CreateProcessLi(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "CreateProcess";
 	try
 	{
@@ -55,7 +55,7 @@ const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_pa
 			return res;
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::CreateProcess() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -70,9 +70,9 @@ const nlohmann::json WebSocketServer::CreateProcessLi(const nlohmann::json &m_pa
 	return res;
 }
 
-const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
+void WebSocketServer::RunScript(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "RunScript";
 	try
 	{
@@ -90,7 +90,7 @@ const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 			return res;
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::RunScript() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -105,9 +105,9 @@ const nlohmann::json WebSocketServer::RunScript(const nlohmann::json &m_params)
 	return res;
 }
 
-const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::json &m_params)
+void WebSocketServer::TerminateProcessByName(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "TerminateProcessByName";
 	try
 	{
@@ -124,7 +124,7 @@ const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::jso
 			return res;
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::TerminateProcessByName() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -139,9 +139,9 @@ const nlohmann::json WebSocketServer::TerminateProcessByName(const nlohmann::jso
 	return res;
 }
 
-const nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &m_params)
+void WebSocketServer::GetRunningProcesses(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "GetRunningProcesses";
 	try
 	{
@@ -152,7 +152,7 @@ const nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &
 			res["result"][process.name]["output"] = process.output;
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::GetRunningProcesses() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";
@@ -167,9 +167,9 @@ const nlohmann::json WebSocketServer::GetRunningProcesses(const nlohmann::json &
 	return res;
 }
 
-const nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_params)
+void WebSocketServer::GetProcessOutput(const json &m_params)
 {
-	nlohmann::json res;
+	json res;
 	res["command"] = "GetProcessOutput";
 	try
 	{
@@ -185,7 +185,7 @@ const nlohmann::json WebSocketServer::GetProcessOutput(const nlohmann::json &m_p
 			res["result"].push_back(output);
 		}
 	}
-	catch (const nlohmann::json::exception &e)
+	catch (const json::exception &e)
 	{
 		LOG_F(ERROR, "WebSocketServer::GetProcessOutput() json exception: %s", e.what());
 		res["error"] = "Invalid parameters";

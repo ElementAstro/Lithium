@@ -45,12 +45,14 @@ Description: WebSocket Server
 #endif
 #include "oatpp/core/macro/component.hpp"
 
-#include "nlohmann/json.hpp"
-
 #include "LithiumApp.hpp"
 
 #include "modules/server/commander.hpp"
 #include "core/property/iproperty.hpp"
+#include "modules/error/error_code.hpp"
+
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
 
 #if ENABLE_ASYNC
 class WebSocketServer : public oatpp::websocket::AsyncWebSocket::Listener
@@ -58,95 +60,46 @@ class WebSocketServer : public oatpp::websocket::AsyncWebSocket::Listener
 class WebSocketServer : public oatpp::websocket::WebSocket::Listener
 #endif
 {
-private:
-	static constexpr const char *TAG = "WebSocketServer";
-
-#if ENABLE_ASYNC == 0
-	void ProcessMessage(const WebSocket &socket, const nlohmann::json &data);
-#endif
-
-private:
-	oatpp::data::stream::BufferOutputStream m_messageBuffer;
-
-#if ENABLE_ASYNC
-	std::shared_ptr<AsyncWebSocket> m_socket;
-	/**
-	 * Lock for synchronization of writes to the web socket.
-	 */
-	oatpp::async::Lock m_writeLock;
-	/**
-	 * Inject async executor object.
-	 */
-	OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
-#else
 public:
-	int add_connection(const oatpp::websocket::WebSocket *recv);
-	int remove_connection(const oatpp::websocket::WebSocket *recv);
-private:
-	std::vector<const oatpp::websocket::WebSocket *> m_connections;
-	std::vector<const oatpp::websocket::WebSocket *>::const_iterator find(const oatpp::websocket::WebSocket *recv);
-#endif
-
-private:
-	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
-
-	template <typename ClassType>
-	void LiRegisterFunc(const std::string &name, const nlohmann::json (ClassType::*handler)(const nlohmann::json &))
-	{
-		m_CommandDispatcher->RegisterHandler(name, handler, this);
-	}
-
-	bool APTRunFunc(const std::string &name, const nlohmann::json &params)
-	{
-		if (m_CommandDispatcher->HasHandler(name))
-		{
-			m_CommandDispatcher->Dispatch(name, params);
-			return true;
-		}
-		return false;
-	}
-
-public:
-	WebSocketServer(const std::shared_ptr<AsyncWebSocket>& socket);
+	WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket);
 	~WebSocketServer();
 
 public:
-	const nlohmann::json GetDeviceList(const nlohmann::json &m_params);
-	const nlohmann::json AddDevice(const nlohmann::json &m_params);
-	const nlohmann::json AddDeviceLibrary(const nlohmann::json &m_params);
-	const nlohmann::json RemoveDevice(const nlohmann::json &m_params);
-	const nlohmann::json RemoveDevicesByName(const nlohmann::json &m_params);
-	const nlohmann::json RemoveDeviceLibrary(const nlohmann::json &m_params);
-	const nlohmann::json RunDeviceTask(const nlohmann::json &m_params);
-	const nlohmann::json GetDeviceInfo(const nlohmann::json &m_params);
+	void GetDeviceList(const json &m_params);
+	void AddDevice(const json &m_params);
+	void AddDeviceLibrary(const json &m_params);
+	void RemoveDevice(const json &m_params);
+	void RemoveDevicesByName(const json &m_params);
+	void RemoveDeviceLibrary(const json &m_params);
+	void RunDeviceTask(const json &m_params);
+	void GetDeviceInfo(const json &m_params);
 
 public:
-	const nlohmann::json CreateProcessLi(const nlohmann::json &m_params);
-	const nlohmann::json RunScript(const nlohmann::json &m_params);
-	const nlohmann::json TerminateProcessByName(const nlohmann::json &m_params);
-	const nlohmann::json GetRunningProcesses(const nlohmann::json &m_params);
-	const nlohmann::json GetProcessOutput(const nlohmann::json &m_params);
+	void CreateProcessLi(const json &m_params);
+	void RunScript(const json &m_params);
+	void TerminateProcessByName(const json &m_params);
+	void GetRunningProcesses(const json &m_params);
+	void GetProcessOutput(const json &m_params);
 
 public:
-	const nlohmann::json AddTask(const nlohmann::json &m_params);
-	const nlohmann::json InsertTask(const nlohmann::json &m_params);
-	const nlohmann::json ExecuteAllTasks(const nlohmann::json &m_params);
-	const nlohmann::json StopTask(const nlohmann::json &m_params);
-	const nlohmann::json ExecuteTaskByName(const nlohmann::json &m_params);
-	const nlohmann::json ModifyTask(const nlohmann::json &m_params);
-	const nlohmann::json ModifyTaskByName(const nlohmann::json &m_params);
-	const nlohmann::json DeleteTask(const nlohmann::json &m_params);
-	const nlohmann::json DeleteTaskByName(const nlohmann::json &m_params);
-	const nlohmann::json QueryTaskByName(const nlohmann::json &m_params);
-	const nlohmann::json GetTaskList(const nlohmann::json &m_params);
-	const nlohmann::json SaveTasksToJson(const nlohmann::json &m_params);
+	void AddTask(const json &m_params);
+	void InsertTask(const json &m_params);
+	void ExecuteAllTasks(const json &m_params);
+	void StopTask(const json &m_params);
+	void ExecuteTaskByName(const json &m_params);
+	void ModifyTask(const json &m_params);
+	void ModifyTaskByName(const json &m_params);
+	void DeleteTask(const json &m_params);
+	void DeleteTaskByName(const json &m_params);
+	void QueryTaskByName(const json &m_params);
+	void GetTaskList(const json &m_params);
+	void SaveTasksToJson(const json &m_params);
 
 public:
-
-	const nlohmann::json runChaiCommand(const nlohmann::json &m_params);
-	const nlohmann::json runChaiMultiCommand(const nlohmann::json &m_params);
-	const nlohmann::json runChaiScript(const nlohmann::json &m_params);
-	const nlohmann::json loadChaiFile(const nlohmann::json &m_params);
+	void runChaiCommand(const json &m_params);
+	void runChaiMultiCommand(const json &m_params);
+	void runChaiScript(const json &m_params);
+	void loadChaiFile(const json &m_params);
 
 public:
 #if ENABLE_ASYNC
@@ -166,6 +119,55 @@ public:
 
 	void readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 #endif
+
+private:
+	static constexpr const char *TAG = "WebSocketServer";
+
+#if ENABLE_ASYNC == 0
+	void ProcessMessage(const WebSocket &socket, const json &data);
+#endif
+
+private:
+	oatpp::data::stream::BufferOutputStream m_messageBuffer;
+
+#if ENABLE_ASYNC
+	std::shared_ptr<AsyncWebSocket> m_socket;
+	/**
+	 * Lock for synchronization of writes to the web socket.
+	 */
+	oatpp::async::Lock m_writeLock;
+	/**
+	 * Inject async executor object.
+	 */
+	OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
+#else
+public:
+	int add_connection(const oatpp::websocket::WebSocket *recv);
+	int remove_connection(const oatpp::websocket::WebSocket *recv);
+
+private:
+	std::vector<const oatpp::websocket::WebSocket *> m_connections;
+	std::vector<const oatpp::websocket::WebSocket *>::const_iterator find(const oatpp::websocket::WebSocket *recv);
+#endif
+
+private:
+	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
+
+	template <typename ClassType>
+	void LiRegisterFunc(const std::string &name, void (ClassType::*handler)(const json &))
+	{
+		m_CommandDispatcher->RegisterHandler(name, handler, this);
+	}
+
+	bool APTRunFunc(const std::string &name, const json &params)
+	{
+		if (m_CommandDispatcher->HasHandler(name))
+		{
+			m_CommandDispatcher->Dispatch(name, params);
+			return true;
+		}
+		return false;
+	}
 };
 
 /**
@@ -203,5 +205,7 @@ public:
 };
 
 extern std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap;
+
+const json serror(const std::string func_name, ServerError code, const std::string errorMsg);
 
 #endif // WebSocketServer_hpp

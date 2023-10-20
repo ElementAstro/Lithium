@@ -35,9 +35,9 @@ Description: Script API of WebSocket Server
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 
-const nlohmann::json WebSocketServer::runChaiCommand(const nlohmann::json &m_params)
+void WebSocketServer::runChaiCommand(const json &m_params)
 {
-    nlohmann::json res;
+    json res;
     res["command"] = "runChaiCommand";
     try
     {
@@ -55,7 +55,7 @@ const nlohmann::json WebSocketServer::runChaiCommand(const nlohmann::json &m_par
             res["message"] = "Failed to run command";
         }
     }
-    catch (const nlohmann::json::exception &e)
+    catch (const json::exception &e)
     {
         LOG_F(ERROR, "WebSocketServer::runChaiCommand() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
@@ -70,9 +70,9 @@ const nlohmann::json WebSocketServer::runChaiCommand(const nlohmann::json &m_par
     return res;
 }
 
-const nlohmann::json WebSocketServer::runChaiMultiCommand(const nlohmann::json &m_params)
+void WebSocketServer::runChaiMultiCommand(const json &m_params)
 {
-    nlohmann::json res;
+    json res;
     res["command"] = "runChaiMultiCommand";
     try
     {
@@ -89,7 +89,7 @@ const nlohmann::json WebSocketServer::runChaiMultiCommand(const nlohmann::json &
             res["message"] = "Failed to run multiline command";
         }
     }
-    catch (const nlohmann::json::exception &e)
+    catch (const json::exception &e)
     {
         LOG_F(ERROR, "WebSocketServer::runChaiMultiCommand() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
@@ -104,9 +104,9 @@ const nlohmann::json WebSocketServer::runChaiMultiCommand(const nlohmann::json &
     return res;
 }
 
-const nlohmann::json WebSocketServer::runChaiScript(const nlohmann::json &m_params)
+void WebSocketServer::runChaiScript(const json &m_params)
 {
-    nlohmann::json res;
+    json res;
     res["command"] = "runChaiScript";
     try
     {
@@ -123,7 +123,7 @@ const nlohmann::json WebSocketServer::runChaiScript(const nlohmann::json &m_para
             res["message"] = "Failed to run script";
         }
     }
-    catch (const nlohmann::json::exception &e)
+    catch (const json::exception &e)
     {
         LOG_F(ERROR, "WebSocketServer::runChaiScript() json exception: %s", e.what());
         res["error"] = "Invalid parameters";
@@ -138,9 +138,9 @@ const nlohmann::json WebSocketServer::runChaiScript(const nlohmann::json &m_para
     return res;
 }
 
-const nlohmann::json WebSocketServer::loadChaiFile(const nlohmann::json &m_params)
+void WebSocketServer::loadChaiFile(const json &m_params)
 {
-    nlohmann::json res;
+    json res;
     res["command"] = "loadChaiFile";
     try
     {
@@ -157,7 +157,7 @@ const nlohmann::json WebSocketServer::loadChaiFile(const nlohmann::json &m_param
             res["message"] = "Failed to load script";
         }
     }
-    catch (const nlohmann::json::exception &e)
+    catch (const json::exception &e)
     {
         LOG_F(ERROR, "WebSocketServer::loadChaiFile() json exception: %s", e.what());
         res["error"] = "Invalid parameters";

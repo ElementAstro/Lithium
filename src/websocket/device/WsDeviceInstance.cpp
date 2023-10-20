@@ -43,8 +43,12 @@ WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket
 {
 	OATPP_LOGD(m_device_name.getValue("").c_str(), "%s created", m_device_name.getValue("").c_str());
 
+	m_CommandDispatcher = std::make_unique<VCommandDispatcher>();
+
 	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty);
 	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty);
+	LiRegisterFunc("runTask", &WsDeviceInstance::runTask);
+	LiRegisterFunc("runFunc", &WsDeviceInstance::runFunc);
 }
 
 WsDeviceInstance::~WsDeviceInstance()

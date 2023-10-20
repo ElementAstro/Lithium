@@ -32,9 +32,11 @@ Description: WebSocket Server
 #include "WebSocketServer.hpp"
 
 #include <functional>
-#include <iostream>
 #include <version>
 #include <thread>
+
+#include "loguru/loguru.hpp"
+#include "magic_enum/magic_enum_all.hpp"
 
 std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
 	{"Camera", Lithium::DeviceType::Camera},
@@ -107,70 +109,53 @@ oatpp::async::CoroutineStarter WebSocketServer::readMessage(const std::shared_pt
 {
 	if (size == 0)
 	{
-		nlohmann::json reply_data;
+		json ret;
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
 		// DLOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
-		if (!nlohmann::json::accept(wholeMessage->c_str()))
+		if (!json::accept(wholeMessage->c_str()))
 		{
 			LOG_F(ERROR, "Message is not in JSON format");
-			reply_data["error"] = "Invalid Format";
-			reply_data["message"] = "Message is not in JSON format";
-			return socket->sendOneFrameTextAsync(reply_data.dump());
+			ret["error"] = "Invalid Format";
+			ret["message"] = "Message is not in JSON format";
+			return socket->sendOneFrameTextAsync(ret.dump());
 		}
 		try
 		{
-			nlohmann::json jdata = nlohmann::json::parse(wholeMessage->c_str());
+			json jdata = json::parse(wholeMessage->c_str());
 			try
 			{
-				if (jdata.empty())
-				{
-					LOG_F(ERROR, "WebSocketServer::processMessage() data is empty");
-					reply_data["error"] = "Invalid Parameters";
-					reply_data["message"] = "Data is empty";
-					return socket->sendOneFrameTextAsync(reply_data.dump());
-				}
 				if (jdata.contains("name") && jdata.contains("params"))
 				{
 					const std::string name = jdata["name"].get<std::string>();
 					if (m_CommandDispatcher->HasHandler(name))
 					{
-						json res = m_CommandDispatcher->Dispatch(name, jdata["params"].get<json>());
-						if (res.contains("error"))
-						{
-							LOG_F(ERROR, "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
-							reply_data["error"] = res["error"];
-						}
-						else
-						{
-							DLOG_F(INFO, "Run command %s successfully", name.c_str());
-							reply_data = {{"reply", "OK"}};
-						}
+						m_CommandDispatcher->Dispatch(name, jdata["params"]);
 					}
 				}
 				else
 				{
-					LOG_F(ERROR, "[ASYNC MODE] WebSocketServer::readMessage() missing parameter: name or params");
-					reply_data = {{"error", "Invalid Parameters"}, {"message", "Missing parameter: name or params"}};
+					LOG_F(ERROR, "WebSocketServer::readMessage() missing parameter: name or params");
+					ret = {{"error", "Invalid Parameters"}, {"message", "Missing parameter: name or params"}};
 				}
 			}
 			catch (const std::exception &e)
 			{
 				LOG_F(ERROR, "WebSocketServer::readMessage() run command failed: %s", e.what());
-				reply_data = {{"error", "Running Error"}, {"message", e.what()}};
+				ret = {{"error", "Running Error"}, {"message", e.what()}};
 			}
 		}
 		catch (const nlohmann::detail::parse_error &e)
 		{
-			LOG_F(ERROR, "[ASYNC MODE] WebSocketServer::readMessage() json exception: %s", e.what());
-			reply_data = {{"errro", "Invalid Format"}, {"message", e.what()}};
+			LOG_F(ERROR, "WebSocketServer::readMessage() json exception: %s", e.what());
+			ret = {{"errro", "Invalid Format"}, {"message", e.what()}};
 		}
 		catch (const std::exception &e)
 		{
-			LOG_F(ERROR, "[ASYNC MODE] WebSocketServer::readMessage() exception: %s", e.what());
-			reply_data = {{"errro", "Unknown Error"}, {"message", e.what()}};
+			LOG_F(ERROR, "WebSocketServer::readMessage() exception: %s", e.what());
+			ret = {{"errro", "Unknown Error"}, {"message", e.what()}};
 		}
-		return socket->sendOneFrameTextAsync(reply_data.dump());
+		sendMessage(ret.dump());
 	}
 	else if (size > 0)
 	{
@@ -204,7 +189,7 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 		auto wholeMessage = m_messageBuffer.toString();
 		m_messageBuffer.setCurrentPosition(0);
 		DLOG_F(INFO, "onMessage message='%s'", wholeMessage->c_str());
-		if (!nlohmann::json::accept(wholeMessage->c_str()))
+		if (!json::accept(wholeMessage->c_str()))
 		{
 			LOG_F(ERROR, "Message is not in JSON format");
 			return;
@@ -212,7 +197,7 @@ void WebSocketServer::readMessage(const WebSocket &socket, v_uint8 opcode, p_cha
 		try
 		{
 			DLOG_F(INFO, "Start client command in alone thread");
-			nlohmann::json jdata = nlohmann::json::parse(wholeMessage->c_str());
+			json jdata = json::parse(wholeMessage->c_str());
 #if __cplusplus >= 202002L
 			std::jthread myThread(std::bind(&WebSocketServer::ProcessMessage, this, std::ref(socket), std::ref(jdata)));
 #else
@@ -281,7 +266,7 @@ std::vector<const oatpp::websocket::WebSocket *>::const_iterator WebSocketServer
 #endif
 
 #if ENABLE_ASYNC == 0
-void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::json &data)
+void WebSocketServer::ProcessMessage(const WebSocket &socket, const json &data)
 {
 	try
 	{
@@ -290,7 +275,7 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 			LOG_F(ERROR, "WebSocketServer::processMessage() data is empty");
 			return;
 		}
-		nlohmann::json reply_data;
+		json ret;
 		try
 		{
 			if (data.contains("name") && data.contains("params"))
@@ -302,32 +287,32 @@ void WebSocketServer::ProcessMessage(const WebSocket &socket, const nlohmann::js
 					if (res.contains("error"))
 					{
 						LOG_F(ERROR, "Failed to run command %s , error : %s", name.c_str(), res.dump().c_str());
-						reply_data["error"] = res["error"];
+						ret["error"] = res["error"];
 					}
 					else
 					{
 						DLOG_F(INFO, "Run command %s successfully", name.c_str());
-						reply_data = {{"reply", "OK"}};
+						ret = {{"reply", "OK"}};
 					}
 				}
 			}
 			else
 			{
 				LOG_F(ERROR, "WebSocketServer::processMessage() missing parameter: name or params");
-				reply_data = {{"error", "Missing parameter: name or params"}};
+				ret = {{"error", "Missing parameter: name or params"}};
 			}
 		}
-		catch (const nlohmann::json::exception &e)
+		catch (const json::exception &e)
 		{
 			LOG_F(ERROR, "WebSocketServer::processMessage() json exception: %s", e.what());
-			reply_data = {{"error", e.what()}};
+			ret = {{"error", e.what()}};
 		}
 		catch (const std::exception &e)
 		{
 			LOG_F(ERROR, "WebSocketServer::processMessage() exception: %s", e.what());
-			reply_data = {{"error", e.what()}};
+			ret = {{"error", e.what()}};
 		}
-		socket.sendOneFrameText(reply_data.dump());
+		socket.sendOneFrameText(ret.dump());
 	}
 	catch (const std::exception &e)
 	{
@@ -375,3 +360,8 @@ void WSInstanceListener::onBeforeDestroy(const oatpp::websocket::WebSocket &sock
 	m_sockets->remove_connection(&socket);
 }
 #endif
+
+const json WebSocketServer::serror(const std::string func_name, ServerError code, const std::string errorMsg)
+{
+
+}

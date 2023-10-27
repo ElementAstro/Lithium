@@ -219,30 +219,30 @@ msgstr ""
 msgid "Set server port to %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:70
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:81
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:82
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:93
 msgid "Get config value: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:88
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:99
 msgid "Set {} to {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:275
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:286
 msgid "Failed to run chai command : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:293
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:304
 msgid "Failed to run chai multi command {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:306
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:317
 msgid "Failed to load chaiscript file {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:319
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:330
 msgid "Failed to run chai script {}"
 msgstr ""

@@ -361,6 +361,9 @@ void IDLog(const char *fmt, ...)
 double time_ns()
 {
     struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 0;
+
 #if defined(HAVE_TIMESPEC_GET)
     timespec_get(&ts, TIME_UTC);
 #elif defined(HAVE_CLOCK_GETTIME)
@@ -557,9 +560,9 @@ int tty_read_expanded(int fd, char *buf, int nbytes, long timeout_seconds, long 
 
         if (tty_debug)
         {
-            IDLog("%d bytes read and %d bytes remaining...\n", bytesRead, numBytesToRead - bytesRead);
+            IDLog("%lu bytes read and %lu bytes remaining...\n", bytesRead, numBytesToRead - bytesRead);
             int i = 0;
-            for (i = *nbytes_read; i < (*nbytes_read + bytesRead); i++)
+            for (i = *nbytes_read; static_cast<long>(i) < static_cast<long>((*nbytes_read + bytesRead)); i++)
                 IDLog("%s: buffer[%d]=%#X (%c)\n", __FUNCTION__, i, (unsigned char)buf[i], buf[i]);
         }
 
@@ -704,7 +707,7 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
             return tty_read_section_expanded(fd, buf, stop_char, timeout_seconds, timeout_microseconds, nbytes_read);
         }
 
-        for (int index = 8; index < bytesRead; index++)
+        for (int index = 8; static_cast<long>(index) < static_cast<long>(bytesRead); index++)
         {
             (*nbytes_read)++;
 
@@ -726,7 +729,7 @@ int tty_read_section_expanded(int fd, char *buf, char stop_char, long timeout_se
         if (bytesRead < 0)
             return TTY_READ_ERROR;
 
-        for (int index = 0; index < bytesRead; index++)
+        for (int index = 0; static_cast<long>(index) < static_cast<long>(bytesRead); index++)
         {
             (*nbytes_read)++;
 

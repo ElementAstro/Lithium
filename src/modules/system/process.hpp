@@ -57,6 +57,8 @@ namespace Lithium::Process
         pid_t pid;
         std::string name;
         std::string output;
+        std::string path;
+        std::string status;
     };
 
     class ProcessManager
@@ -122,5 +124,7 @@ namespace Lithium::Process
     };
 
     std::vector<std::pair<int, std::string>> GetAllProcesses();
+
+    Process GetSelfProcessInfo();
 
 }

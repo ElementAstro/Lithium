@@ -408,4 +408,65 @@ namespace Lithium::Process
 #error "Unsupported operating system"
 #endif
 
+    Process GetSelfProcessInfo()
+    {
+        Process info;
+
+        // 获取进程ID
+#ifdef _WIN32
+        DWORD pid = GetCurrentProcessId();
+#else
+        pid_t pid = getpid();
+#endif
+        info.pid = pid;
+
+        // 获取进程位置
+#ifdef _WIN32
+        char path[MAX_PATH];
+        GetModuleFileName(NULL, path, MAX_PATH);
+#else
+        char path[PATH_MAX];
+        ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+        if (count != -1)
+        {
+            path[count] = '\0';
+        }
+#endif
+        info.path = path;
+
+        // 获取进程状态
+#ifdef _WIN32
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
+        if (hProcess)
+        {
+            DWORD exitCode;
+            if (GetExitCodeProcess(hProcess, &exitCode))
+            {
+                info.status = "Running";
+            }
+            else
+            {
+                info.status = "Unknown";
+            }
+            CloseHandle(hProcess);
+        }
+        else
+        {
+            info.status = "Unknown";
+        }
+#else
+        struct stat statBuf;
+        if (stat(path, &statBuf) == 0)
+        {
+            info.status = "Running";
+        }
+        else
+        {
+            info.status = "Unknown";
+        }
+#endif
+
+        return info;
+    }
+
 }

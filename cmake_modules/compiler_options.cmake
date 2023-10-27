@@ -53,6 +53,8 @@ if (APPLE)
   endif ()
 endif ()
 
+add_compile_options(-fsanitize=address -Wall)
+
 # set build architecture for non-Apple platforms
 if (NOT APPLE)
   set(CMAKE_OSX_ARCHITECTURES x86_64 CACHE STRING "build architecture for non-Apple platforms" FORCE)

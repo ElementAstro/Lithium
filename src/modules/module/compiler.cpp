@@ -243,7 +243,7 @@ namespace Lithium
 
         // Write the command input
         DWORD bytesWritten;
-        if (!WriteFile(hStdoutWrite, input, input.size(), &bytesWritten, NULL))
+        if (!WriteFile(hStdoutWrite, input.c_str(), input.size(), &bytesWritten, NULL))
         {
             LOG_F(ERROR, "Failed to write input for shell command: {}", command);
             return exitCode;

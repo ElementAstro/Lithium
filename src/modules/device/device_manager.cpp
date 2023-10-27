@@ -35,10 +35,6 @@ Description: Device Manager
 #include "server/message_bus.hpp"
 #include "thread/thread.hpp"
 
-#include "core/device_exception.hpp"
-
-#include "nlohmann/json.hpp"
-
 #include "core/camera.hpp"
 #include "core/telescope.hpp"
 #include "core/focuser.hpp"
@@ -46,11 +42,9 @@ Description: Device Manager
 #include "core/solver.hpp"
 #include "core/guider.hpp"
 
+#include "core/device_exception.hpp"
 #include "core/camera_utils.hpp"
-
 #include "device_utils.hpp"
-
-#include "loguru/loguru.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>
@@ -64,6 +58,9 @@ Description: Device Manager
 
 #include "config.h"
 
+#include "loguru/loguru.hpp"
+#include "magic_enum/magic_enum.hpp"
+#include "nlohmann/json.hpp"
 
 // For DEVICE_FUNC
 
@@ -225,9 +222,9 @@ namespace Lithium
 
                 if (!logMsg.empty())
                 {
-                    DLOG_F(INFO, logMsg);
+                    DLOG_F(INFO, "{}", logMsg);
                 }
-                DLOG_F(INFO, "Added new {} instance successfully", DeviceTypeToString(type));
+                DLOG_F(INFO, "Added new {} instance successfully", magic_enum::enum_name(type));
             }
         }
         catch (const std::exception &e)

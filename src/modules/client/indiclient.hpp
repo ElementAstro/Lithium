@@ -65,7 +65,6 @@ protected:
     // must use this in LGuider2 rather than BaseClient::disconnectServer()
     bool DisconnectIndiServer();
 
-#if LITHIUM_VERSION_MAJOR >= 2
 protected: // old deprecated interface INDI Version < 2.0.0
     virtual void newDevice(LITHIUM::BaseDevice *dp) = 0;
     virtual void removeDevice(LITHIUM::BaseDevice *dp) = 0;
@@ -121,7 +120,6 @@ protected: // new interface INDI Version >= 2.0.0
     {
         return newMessage((LITHIUM::BaseDevice *)device, messageID);
     }
-#endif
 };
 
 #endif

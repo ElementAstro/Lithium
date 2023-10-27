@@ -44,19 +44,19 @@ Telescope::~Telescope()
     DLOG_F(INFO, "Telescope Simulator Destructed");
 }
 
-bool Telescope::connect(const IParams &params)
+bool Telescope::connect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Telescope::disconnect(const IParams &params)
+bool Telescope::disconnect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Telescope::reconnect(const IParams &params)
+bool Telescope::reconnect(const nlohmann::json &params)
 {
     return true;
 }

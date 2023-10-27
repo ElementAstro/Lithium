@@ -39,17 +39,17 @@ Solver::~Solver()
 {
 }
 
-bool Solver::connect(const IParams &params)
+bool Solver::connect(const nlohmann::json &params)
 {
     return true;
 }
 
-bool Solver::disconnect(const IParams &params)
+bool Solver::disconnect(const nlohmann::json &params)
 {
     return true;
 }
 
-bool Solver::reconnect(const IParams &params)
+bool Solver::reconnect(const nlohmann::json &params)
 {
     return true;
 }

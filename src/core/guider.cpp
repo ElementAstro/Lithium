@@ -44,19 +44,19 @@ Guider::~Guider()
     DLOG_F(INFO, "Guider Simulator Destructed");
 }
 
-bool Guider::connect(const IParams &params)
+bool Guider::connect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Guider::disconnect(const IParams &params)
+bool Guider::disconnect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Guider::reconnect(const IParams &params)
+bool Guider::reconnect(const nlohmann::json &params)
 {
     return true;
 }

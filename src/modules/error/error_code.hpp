@@ -81,4 +81,4 @@ enum class ServerError
     None,
     InvalidParameters,
     InvalidFormat
-}
+};

@@ -38,6 +38,9 @@ Description: Compressor using ZLib
 #include <vector>
 #include <cstring>
 #include <zlib.h>
+#ifdef __cpp_lib_format
+#include <format>
+#endif
 
 #include "loguru/loguru.hpp"
 #include "libzippp/libzippp.h"
@@ -174,7 +177,10 @@ namespace Lithium::File
     {
 // Size of the read/write buffer
 #ifdef __cpp_lib_format
-        std::string outfile_name = std::format("{}.gz", folder_name);
+        // TODO : Some strange bugs here
+        // 'format' is not a member of 'std'; did you mean 'fmt::v10::format'?
+        // std::string outfile_name = std::format("{}.gz", folder_name);
+        std::string outfile_name = fmt::format("{}.gz", folder_name);
 #else
         std::string outfile_name = fmt::format("{}.gz", folder_name);
 #endif

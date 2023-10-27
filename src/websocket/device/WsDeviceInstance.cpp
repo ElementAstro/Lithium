@@ -211,6 +211,11 @@ void WsDeviceInstance::getProperty(const json &m_params)
 	sendMessage("hello");
 }
 
+void WsDeviceInstance::getProperties(const json &m_params)
+{
+	
+}
+
 void WsDeviceInstance::runTask(const json &m_params)
 {
 }

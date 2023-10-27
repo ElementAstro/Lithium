@@ -44,19 +44,19 @@ Focuser::~Focuser()
     DLOG_F(INFO, "Focuser Simulator Destructed");
 }
 
-bool Focuser::connect(const IParams &params)
+bool Focuser::connect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Focuser::disconnect(const IParams &params)
+bool Focuser::disconnect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Focuser::reconnect(const IParams &params)
+bool Focuser::reconnect(const nlohmann::json &params)
 {
     return true;
 }

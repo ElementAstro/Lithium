@@ -37,6 +37,31 @@ Description: Camera Simulator and Basic Definition
 #include "shared_memory.hpp"
 #endif
 
+class CameraFrame
+{
+public:
+    std::atomic_int binning_x;
+    std::atomic_int binning_y;
+
+    std::atomic<double> pixel;
+    std::atomic<double> pixel_x;
+    std::atomic<double> pixel_y;
+    std::atomic<double> pixel_depth;
+
+    std::atomic<double> frame_x;
+    std::atomic<double> frame_y;
+    std::atomic<double> max_frame_x;
+    std::atomic<double> max_frame_y;
+
+    std::atomic_int frame_height;
+    std::atomic_int frame_width;
+    
+    std::string frame_type;
+    std::string frame_format;
+    std::string upload_mode;
+    std::atomic_bool is_fastread;
+};
+
 class Camera : public Device
 {
 public:
@@ -49,11 +74,11 @@ public:
 
     virtual ~Camera();
 
-    virtual bool connect(const IParams &params) override;
+    virtual bool connect(const nlohmann::json &params) override;
 
-    virtual bool disconnect(const IParams &params) override;
+    virtual bool disconnect(const nlohmann::json &params) override;
 
-    virtual bool reconnect(const IParams &params) override;
+    virtual bool reconnect(const nlohmann::json &params) override;
 
     virtual bool isConnected() override;
 

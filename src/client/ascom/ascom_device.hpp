@@ -55,9 +55,9 @@ public:
 
     void setBasicInfo(const std::string &address, const std::string &device_type, const int &device_number);
 
-    virtual bool connect(const IParams &params) override;
-    virtual bool disconnect(const IParams &params) override;
-    virtual bool reconnect(const IParams &params) override;
+    virtual bool connect(const nlohmann::json &params) override;
+    virtual bool disconnect(const nlohmann::json &params) override;
+    virtual bool reconnect(const nlohmann::json &params) override;
 
 public:
     const std::string action(const std::string &action_name, const std::vector<std::any> &parameters);

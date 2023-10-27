@@ -249,13 +249,13 @@ bool CheckAndKillProgramOnPort(int port)
 
 #ifdef _WIN32
 #ifdef __cpp_lib_format
-                ret = std::system(std::format("taskkill /F /PID {}", pid_str));
+                ret = std::system(std::format("taskkill /F /PID {}", pid_str).c_str());
 #else
-                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str));
+                ret = std::system(fmt::format("taskkill /F /PID {}", pid_str).c_str());
 #endif
 #else
 #ifdef __cpp_lib_format
-                int ret = std::system(std::format("kill {}", pid_str));
+                int ret = std::system(std::format("kill {}", pid_str).c_str());
 #else
                 int ret = std::system(fmt::format("kill {}", pid_str).c_str());
 #endif

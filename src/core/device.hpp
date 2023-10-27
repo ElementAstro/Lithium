@@ -57,11 +57,11 @@ public:
     virtual ~Device();
 
 public:
-    virtual bool connect(const IParams &params) { return true; };
+    virtual bool connect(const nlohmann::json &params) { return true; };
 
-    virtual bool disconnect(const IParams &params) { return true; };
+    virtual bool disconnect(const nlohmann::json &params) { return true; };
 
-    virtual bool reconnect(const IParams &params) { return true; };
+    virtual bool reconnect(const nlohmann::json &params) { return true; };
 
     virtual bool isConnected() { return true; }
 
@@ -118,9 +118,9 @@ public:
     std::shared_ptr<SocketServer> deviceIOServer;
 
 public:
-    typedef bool (*ConnectFunc)(const IParams &params);
-    typedef bool (*DisconnectFunc)(const IParams &params);
-    typedef bool (*ReconnectFunc)(const IParams &params);
+    typedef bool (*ConnectFunc)(const nlohmann::json &params);
+    typedef bool (*DisconnectFunc)(const nlohmann::json &params);
+    typedef bool (*ReconnectFunc)(const nlohmann::json &params);
     typedef void (*InitFunc)();
     typedef void (*InsertPropertyFunc)(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check);
     typedef void (*SetPropertyFunc)(const std::string &name, const std::any &value);

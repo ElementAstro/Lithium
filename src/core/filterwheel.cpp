@@ -44,19 +44,19 @@ Filterwheel::~Filterwheel()
     DLOG_F(INFO, "Filterwheel Simulator Destructed");
 }
 
-bool Filterwheel::connect(const IParams &params)
+bool Filterwheel::connect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Filterwheel::disconnect(const IParams &params)
+bool Filterwheel::disconnect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Filterwheel::reconnect(const IParams &params)
+bool Filterwheel::reconnect(const nlohmann::json &params)
 {
     return true;
 }

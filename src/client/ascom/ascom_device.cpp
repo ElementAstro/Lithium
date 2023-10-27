@@ -61,7 +61,7 @@ void ASCOMDevice::setBasicInfo(const std::string &address, const std::string &de
 #endif
 }
 
-bool ASCOMDevice::connect(const IParams &params)
+bool ASCOMDevice::connect(const nlohmann::json &params)
 {
     if (getConnected())
     {
@@ -78,7 +78,7 @@ bool ASCOMDevice::connect(const IParams &params)
     return true;
 }
 
-bool ASCOMDevice::disconnect(const IParams &params)
+bool ASCOMDevice::disconnect(const nlohmann::json &params)
 {
     if (!getConnected())
     {
@@ -94,7 +94,7 @@ bool ASCOMDevice::disconnect(const IParams &params)
     return true;
 }
 
-bool ASCOMDevice::reconnect(const IParams &params)
+bool ASCOMDevice::reconnect(const nlohmann::json &params)
 {
     if (!disconnect(params))
     {

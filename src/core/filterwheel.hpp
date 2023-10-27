@@ -39,11 +39,11 @@ public:
     Filterwheel(const std::string &name);
     ~Filterwheel();
 
-    virtual bool connect(const IParams &params) override;
+    virtual bool connect(const nlohmann::json &params) override;
 
-    virtual bool disconnect(const IParams &params) override;
+    virtual bool disconnect(const nlohmann::json &params) override;
 
-    virtual bool reconnect(const IParams &params) override;
+    virtual bool reconnect(const nlohmann::json &params) override;
 
     virtual bool moveTo(const nlohmann::json &params);
 };

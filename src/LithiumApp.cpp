@@ -32,6 +32,17 @@ Description: Lithium App Enter
 #include "LithiumApp.hpp"
 #include "config.h"
 
+#include "modules/thread/thread.hpp"
+#include "modules/config/configor.hpp"
+#include "modules/device/device_manager.hpp"
+#include "modules/system/process.hpp"
+#include "modules/task/task_manager.hpp"
+#include "modules/task/task_generator.hpp"
+#include "modules/task/task_stack.hpp"
+#include "core/property/iproperty.hpp"
+#include "modules/plugin/plugin_manager.hpp"
+#include "modules/script/script_manager.hpp"
+
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 

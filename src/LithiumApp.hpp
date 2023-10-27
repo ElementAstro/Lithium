@@ -35,20 +35,31 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "modules/thread/thread.hpp"
-#include "modules/config/configor.hpp"
-#include "modules/device/device_manager.hpp"
-#include "modules/system/process.hpp"
-#include "modules/task/task_manager.hpp"
-#include "modules/task/task_generator.hpp"
-#include "modules/task/task_stack.hpp"
+
 #include "modules/server/message_bus.hpp"
-#include "core/property/iproperty.hpp"
-#include "modules/plugin/plugin_manager.hpp"
-#include "modules/script/script_manager.hpp"
+
 
 namespace Lithium
 {
+    namespace Thread
+    {
+        class ThreadManager;
+    }
+
+    namespace Config
+    {
+        class ConfigManager;
+    }
+
+    class DeviceManager;
+    class ScriptManager;
+    
+    namespace Process
+    {
+        class ProcessManager;
+    }
+
+    
     
     class LithiumApp
     {

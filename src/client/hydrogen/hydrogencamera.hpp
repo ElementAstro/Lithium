@@ -35,123 +35,19 @@ Description: Hydrogen Camera
 
 class HydrogenCamera : public Camera, public LithiumIndiClient
 {
-    // Hydrogen Parameters
-private:
-    // 连接属性
-    ISwitchVectorProperty *connection_prop;
-    // 曝光属性
-    INumberVectorProperty *expose_prop;
-    // 帧属性
-    INumberVectorProperty *frame_prop;
-    // 温度属性
-    INumberVectorProperty *temperature_prop;
-    // 增益属性
-    INumberVectorProperty *gain_prop;
-    // 偏移属性
-    INumberVectorProperty *offset_prop;
-    // 帧区域参数
-    INumber *indi_frame_x;
-    INumber *indi_frame_y;
-    INumber *indi_frame_width;
-    INumber *indi_frame_height;
-    // 帧类型
-    ISwitchVectorProperty *frame_type_prop;
-    // 图像类型
-    ISwitchVectorProperty *image_type_prop;
-    // CCD 设备信息
-    INumberVectorProperty *ccdinfo_prop;
-    // 二次取样属性
-    INumberVectorProperty *binning_prop;
-    // 二次取样 X 轴
-    INumber *indi_binning_x;
-    // 二次取样 Y 轴
-    INumber *indi_binning_y;
-    // 视频属性
-    ISwitchVectorProperty *video_prop;
-    // 视频延迟
-    INumberVectorProperty *video_delay_prop;
-    // 视频曝光时间
-    INumberVectorProperty *video_exposure_prop;
-    // 视频帧率
-    INumberVectorProperty *video_fps_prop;
-    // 相机端口
-    ITextVectorProperty *camera_port;
-    // 相机设备
-    HYDROGEN::BaseDevice *camera_device;
-    // 调试模式
-    ISwitchVectorProperty *debug_prop;
-    // 信息刷新间隔
-    INumberVectorProperty *polling_prop;
-    // 已连接的辅助设备
-    ITextVectorProperty *active_device_prop;
-    // 是否压缩
-    ISwitchVectorProperty *compression_prop;
-    // 图像上传模式
-    ISwitchVectorProperty *image_upload_mode_prop;
-    // 快速读出模式
-    ISwitchVectorProperty *fast_read_out_prop;
-    // 相机限制
-    INumberVectorProperty *camera_limit_prop;
-
-    // 标志位
-    bool is_ready; // 是否就绪
-    bool has_blob; // 是否有 BLOB 数据
-
-    // Hydrogen 指令
-    std::string indi_camera_cmd = "CCD_"; // Hydrogen 控制命令前缀
-    std::string indi_blob_name;           // BLOB 文件名
-    std::string indi_camera_exec = "";    // Hydrogen 执行命令
-    std::string indi_camera_version;
-    std::string indi_camera_interface;
-
-    std::atomic_bool is_connected;
-    std::atomic_bool is_exposure;
-    std::atomic_bool is_video;
-
-    nlohmann::json device_info;
-
-private:
-    // For Hydrogen Toupcamera
-
-    ISwitchVectorProperty *toupcam_fan_control_prop;
-
-    ISwitchVectorProperty *toupcam_heat_control_prop;
-
-    ISwitchVectorProperty *toupcam_hcg_control_prop;
-
-    ISwitchVectorProperty *toupcam_low_noise_control_prop;
-
-    ISwitchVectorProperty *toupcam_simulation_prop;
-
-    ISwitchVectorProperty *toupcam_binning_mode_prop;
-
-    // For Hydrogen ZWOASI
-
-    // 图像翻转
-    ISwitchVectorProperty *asi_image_flip_prop;
-    // 图像翻转
-    ISwitchVectorProperty *asi_image_flip_hor_prop;
-    ISwitchVectorProperty *asi_image_flip_ver_prop;
-    // 控制模式
-    INumberVectorProperty *asi_controls_prop;
-    // 控制模式
-    ISwitchVectorProperty *asi_controls_mode_prop;
-
-    // For Hydrogen QHYCCD
-
 public:
     // 构造函数
     HydrogenCamera(const std::string &name);
     // 析构函数
     ~HydrogenCamera();
 
-    bool connect(const IParams &params) override;
+    virtual bool connect(const nlohmann::json &params) override;
 
-    bool disconnect(const IParams &params) override;
+    virtual bool disconnect(const nlohmann::json &params) override;
 
-    bool reconnect(const IParams &params) override;
+    virtual bool reconnect(const nlohmann::json &params) override;
 
-    bool isConnected(const IParams &params) override;
+    virtual bool isConnected() override;
 
 public:
     /**
@@ -386,4 +282,125 @@ protected:
     void IndiServerConnected() override;
     // Hydrogen 服务器断开连接
     void IndiServerDisconnected(int exit_code) override;
+
+    // Hydrogen Parameters
+private:
+    // 连接属性
+    std::shared_ptr<ISwitchVectorProperty> connection_prop;
+    // 曝光属性
+    std::shared_ptr<INumberVectorProperty> exposure_prop;
+    // 停止曝光属性
+    std::shared_ptr<ISwitchVectorProperty> abort_exposure_prop;
+    // 帧属性
+    std::shared_ptr<INumberVectorProperty> frame_prop;
+    // 温度属性
+    std::shared_ptr<INumberVectorProperty> temperature_prop;
+    // 增益属性
+    std::shared_ptr<INumberVectorProperty> gain_prop;
+    // 偏移属性
+    std::shared_ptr<INumberVectorProperty> offset_prop;
+    // 帧区域参数
+    std::shared_ptr<INumber> indi_frame_x;
+    std::shared_ptr<INumber> indi_frame_y;
+    std::shared_ptr<INumber> indi_frame_width;
+    std::shared_ptr<INumber> indi_frame_height;
+    // 帧类型
+    std::shared_ptr<ISwitchVectorProperty> frame_type_prop;
+    // 图像类型
+    std::shared_ptr<ISwitchVectorProperty> frame_format_prop;
+    // CCD 设备信息
+    std::shared_ptr<INumberVectorProperty> ccdinfo_prop;
+    // 二次取样属性
+    std::shared_ptr<INumberVectorProperty> binning_prop;
+    // 二次取样 X 轴
+    std::shared_ptr<INumber> indi_binning_x;
+    // 二次取样 Y 轴
+    std::shared_ptr<INumber> indi_binning_y;
+    // 视频属性
+    std::shared_ptr<ISwitchVectorProperty> video_prop;
+    // 视频延迟
+    std::shared_ptr<INumberVectorProperty> video_delay_prop;
+    // 视频曝光时间
+    std::shared_ptr<INumberVectorProperty> video_exposure_prop;
+    // 视频帧率
+    std::shared_ptr<INumberVectorProperty> video_fps_prop;
+    // 相机端口
+    std::shared_ptr<ITextVectorProperty> camera_prop;
+    // 相机设备
+    HYDROGEN::BaseDevice *camera_device;
+    // 调试模式
+    std::shared_ptr<ISwitchVectorProperty> debug_prop;
+    // 信息刷新间隔
+    std::shared_ptr<INumberVectorProperty> polling_prop;
+    // 已连接的辅助设备
+    std::shared_ptr<ITextVectorProperty> active_device_prop;
+    // 是否压缩
+    std::shared_ptr<ISwitchVectorProperty> compression_prop;
+    // 图像上传模式
+    std::shared_ptr<ISwitchVectorProperty> image_upload_mode_prop;
+    // 快速读出模式
+    std::shared_ptr<ISwitchVectorProperty> fast_read_out_prop;
+    // 相机限制
+    std::shared_ptr<INumberVectorProperty> camera_limit_prop;
+    // 相机温度
+    std::shared_ptr<INumberVectorProperty> camera_temperature_prop;
+
+    std::shared_ptr<ITextVectorProperty> cfa_prop;
+
+    std::shared_ptr<IText> cfa_type_prop;
+
+    // 标志位
+    std::atomic_bool is_ready; // 是否就绪
+    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_debug;
+    std::atomic_bool is_connected;
+    std::atomic_bool is_exposure;
+    std::atomic_bool is_video;
+    bool is_color;
+
+    std::atomic_int current_gain;
+    std::atomic_int current_offset;
+    std::atomic_int current_exposure;
+    std::atomic<double> current_temperature;
+
+    // Hydrogen 指令
+    std::string indi_camera_cmd = "CCD_"; // Hydrogen 控制命令前缀
+    std::string indi_blob_name;           // BLOB 文件名
+    std::string indi_camera_exec = "";    // Hydrogen 执行命令
+    std::string indi_camera_version;
+    std::string indi_camera_interface;
+    std::string indi_camera_port;
+
+    CameraFrame frame;
+
+    std::atomic<double> polling_period;
+
+private:
+    // For Hydrogen Toupcamera
+
+    std::shared_ptr<ISwitchVectorProperty> toupcam_fan_control_prop;
+
+    std::shared_ptr<ISwitchVectorProperty> toupcam_heat_control_prop;
+
+    std::shared_ptr<ISwitchVectorProperty> toupcam_hcg_control_prop;
+
+    std::shared_ptr<ISwitchVectorProperty> toupcam_low_noise_control_prop;
+
+    std::shared_ptr<ISwitchVectorProperty> toupcam_simulation_prop;
+
+    std::shared_ptr<ISwitchVectorProperty> toupcam_binning_mode_prop;
+
+    // For Hydrogen ZWOASI
+
+    // 图像翻转
+    std::shared_ptr<ISwitchVectorProperty> asi_image_flip_prop;
+    // 图像翻转
+    std::shared_ptr<ISwitchVectorProperty> asi_image_flip_hor_prop;
+    std::shared_ptr<ISwitchVectorProperty> asi_image_flip_ver_prop;
+    // 控制模式
+    std::shared_ptr<INumberVectorProperty> asi_controls_prop;
+    // 控制模式
+    std::shared_ptr<ISwitchVectorProperty> asi_controls_mode_prop;
+
+    // For Hydrogen QHYCCD
 };

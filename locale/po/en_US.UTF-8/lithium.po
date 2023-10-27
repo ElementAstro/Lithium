@@ -1,29 +1,5 @@
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:163
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:161
 msgid "A device with name {} already exists, please choose a different name"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:190
-msgid "Trying to add a new camera instance : {}"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:192
-msgid "Added new camera {} instance successfully"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:197
-msgid "Trying to add a new telescope instance : {}"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:199
-msgid "Added new telescope instance successfully"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:204
-msgid "Trying to add a new Focuser instance : {}"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/device/device_manager.cpp:206
-msgid "Added new focuser instance successfully"
 msgstr ""
 
 #: E:/msys64/home/Qrm/OpenAPT/src/modules/device/indidevice_manager.cpp:266
@@ -243,30 +219,30 @@ msgstr ""
 msgid "Set server port to %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:67
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:70
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:79
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:82
 msgid "Get config value: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:85
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:88
 msgid "Set {} to {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:272
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:275
 msgid "Failed to run chai command : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:290
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:293
 msgid "Failed to run chai multi command {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:303
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:306
 msgid "Failed to load chaiscript file {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:316
+#: E:/msys64/home/Qrm/OpenAPT/src/LithiumApp.cpp:319
 msgid "Failed to run chai script {}"
 msgstr ""

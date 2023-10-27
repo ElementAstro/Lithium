@@ -12,17 +12,17 @@ ASCOMCamera::~ASCOMCamera()
     DLOG_F(INFO, "ASCOMCamera Simulator Destructed");
 }
 
-bool ASCOMCamera::connect(const IParams &params)
+bool ASCOMCamera::connect(const nlohmann::json &params)
 {
     return ASCOMDevice::connect(params);
 }
 
-bool ASCOMCamera::disconnect(const IParams &params)
+bool ASCOMCamera::disconnect(const nlohmann::json &params)
 {
     return ASCOMDevice::disconnect(params);
 }
 
-bool ASCOMCamera::reconnect(const IParams &params)
+bool ASCOMCamera::reconnect(const nlohmann::json &params)
 {
     return ASCOMDevice::reconnect(params);
 }

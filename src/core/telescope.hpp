@@ -47,11 +47,11 @@ public:
      */
     virtual ~Telescope();
 
-    virtual bool connect(const IParams &params) override;
+    virtual bool connect(const nlohmann::json &params) override;
 
-    virtual bool disconnect(const IParams &params) override;
+    virtual bool disconnect(const nlohmann::json &params) override;
 
-    virtual bool reconnect(const IParams &params) override;
+    virtual bool reconnect(const nlohmann::json &params) override;
 
 public:
     /**

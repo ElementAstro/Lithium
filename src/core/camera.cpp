@@ -44,19 +44,19 @@ Camera::~Camera()
     DLOG_F(INFO, "Camera Simulator Destructed");
 }
 
-bool Camera::connect(const IParams &params)
+bool Camera::connect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Camera::disconnect(const IParams &params)
+bool Camera::disconnect(const nlohmann::json &params)
 {
     DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Camera::reconnect(const IParams &params)
+bool Camera::reconnect(const nlohmann::json &params)
 {
     return true;
 }

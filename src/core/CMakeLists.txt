@@ -44,6 +44,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     property/task/conditional_task.cpp
     property/task/daemon_task.cpp
     property/task/loop_task.cpp
+    property/task/device_task.cpp
+    property/task/plugin_task.cpp
     property/task/task.cpp
 
     property/hydrogenproperties.cpp

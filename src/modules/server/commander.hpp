@@ -32,142 +32,159 @@ Description: Commander
 #pragma once
 
 #include <string>
+#include <functional>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-#include <functional>
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-/**
- * @brief 类 CommandDispatcher 负责命令的派发和处理。
- */
+template <typename Result, typename Argument>
 class CommandDispatcher
 {
 public:
     /**
-     * @brief HandlerFunc 是用于处理命令的函数类型。
-     *
-     * 该函数应该接受一个 `json` 类型的参数，表示命令所携带的数据。
+     * @brief 定义处理函数类型
      */
-    using HandlerFunc = std::function<const json(const json &)>;
+    using HandlerFunc = std::function<Result(const Argument &)>;
 
     /**
-     * @brief RegisterHandler 函数用于将一个命令处理程序注册到 `CommandDispatcher` 中。
-     *
-     * @tparam ClassType 命令处理程序所属的类类型。
-     * @param name 命令的名称。
-     * @param handler 处理命令的成员函数指针。
-     * @param instance 处理命令的对象指针。
+     * @brief 注册命令处理函数和撤销函数
+     * @param name 命令名称
+     * @param handler 命令处理函数
+     * @param undoHandler 撤销函数，默认为nullptr
      */
-    template <typename ClassType>
-    void RegisterHandler(const std::string &name, const json (ClassType::*handler)(const json &), ClassType *instance)
-    {
-        auto hash_value = Djb2Hash(name.c_str());
-        handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);
-    }
+    void RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler = nullptr);
 
     /**
-     * @brief HasHandler 函数用于检查是否有名为 `name` 的命令处理程序。
-     *
-     * @param name 要检查的命令名称。
-     * @return 如果存在名为 `name` 的命令处理程序，则返回 `true`；否则返回 `false`。
+     * @brief 检查是否存在特定名称的命令处理函数
+     * @param name 命令名称
+     * @return 存在返回true，否则返回false
      */
     bool HasHandler(const std::string &name);
 
     /**
-     * @brief Dispatch 函数用于派发一个命令，并将它交给相应的处理程序处理。
-     *
-     * @param name 要派发的命令的名称。
-     * @param data 命令所携带的数据。
+     * @brief 分派命令并执行处理函数
+     * @param name 命令名称
+     * @param data 命令参数
+     * @return 处理函数的返回结果
      */
-    json Dispatch(const std::string &name, const json &data);
+    Result Dispatch(const std::string &name, const Argument &data);
+
+    /**
+     * @brief 执行撤销操作
+     * @return 撤销成功返回true，无可撤销的命令返回false
+     */
+    bool Undo();
+
+    /**
+     * @brief 执行重做操作
+     * @return 重做成功返回true，无可重做的命令返回false
+     */
+    bool Redo();
 
 private:
-    /**
-     * @brief handlers_ 是一个哈希表，存储了所有已注册的命令处理程序。
-     *
-     * 键值为哈希值，值为命令处理程序本身。
-     */
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
+    emhash8::HashMap<std::size_t, HandlerFunc> undoHandlers_;
 #else
     std::unordered_map<std::size_t, HandlerFunc> handlers_;
+    std::unordered_map<std::size_t, HandlerFunc> undoHandlers_;
 #endif
 
     /**
-     * @brief Djb2Hash 函数是一个字符串哈希函数，用于将字符串转换成哈希值。
-     *
-     * @param str 要转换的字符串。
-     * @return 转换后的哈希值。
+     * @brief 使用Djb2哈希算法计算字符串的哈希值
+     * @param str 输入字符串
+     * @return 哈希值
      */
     static std::size_t Djb2Hash(const char *str);
+
+    std::stack<std::pair<std::string, Argument>> commandHistory_;
+    std::stack<std::pair<std::string, Argument>> undoneCommands_;
 };
 
-/**
- * @brief 类 VCommandDispatcher 负责命令的派发和处理。
- */
-class VCommandDispatcher
+template <typename Result, typename Argument>
+void CommandDispatcher<Result, Argument>::RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler)
 {
-public:
-    /**
-     * @brief HandlerFunc 是用于处理命令的函数类型。
-     *
-     * 该函数应该接受一个 `json` 类型的参数，表示命令所携带的数据。
-     */
-    using HandlerFunc = std::function<void(const json &)>;
-
-    /**
-     * @brief RegisterHandler 函数用于将一个命令处理程序注册到 `CommandDispatcher` 中。
-     *
-     * @tparam ClassType 命令处理程序所属的类类型。
-     * @param name 命令的名称。
-     * @param handler 处理命令的成员函数指针。
-     * @param instance 处理命令的对象指针。
-     */
-    template <typename ClassType>
-    void RegisterHandler(const std::string &name, void (ClassType::*handler)(const json &), ClassType *instance)
+    auto hash_value = Djb2Hash(name.c_str());
+    if (handler)
     {
-        auto hash_value = Djb2Hash(name.c_str());
-        handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);
+        handlers_[hash_value] = handler;
+    }
+    if (undoHandler)
+    {
+        undoHandlers_[hash_value] = undoHandler;
+    }
+}
+
+template <typename Result, typename Argument>
+bool CommandDispatcher<Result, Argument>::HasHandler(const std::string &name)
+{
+    return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
+}
+
+template <typename Result, typename Argument>
+Result CommandDispatcher<Result, Argument>::Dispatch(const std::string &name, const Argument &data)
+{
+    auto it = handlers_.find(Djb2Hash(name.c_str()));
+    if (it != handlers_.end())
+    {
+        return it->second(data);
+    }
+    return Result{};
+}
+
+template <typename Result, typename Argument>
+std::size_t CommandDispatcher<Result, Argument>::Djb2Hash(const char *str)
+{
+    std::size_t hash = 5381;
+    char c;
+    while ((c = *str++) != '\0')
+    {
+        hash = ((hash << 5) + hash) + static_cast<unsigned char>(c);
+    }
+    return hash;
+}
+
+template <typename Result, typename Argument>
+bool CommandDispatcher<Result, Argument>::Undo()
+{
+    if (commandHistory_.empty())
+    {
+        return false;
+    }
+    auto lastCommand = commandHistory_.top();
+    commandHistory_.pop();
+    undoneCommands_.push(lastCommand);
+
+    auto it = undoHandlers_.find(Djb2Hash(lastCommand.first.c_str()));
+    if (it != undoHandlers_.end())
+    {
+        it->second(lastCommand.second);
     }
 
-    /**
-     * @brief HasHandler 函数用于检查是否有名为 `name` 的命令处理程序。
-     *
-     * @param name 要检查的命令名称。
-     * @return 如果存在名为 `name` 的命令处理程序，则返回 `true`；否则返回 `false`。
-     */
-    bool HasHandler(const std::string &name);
+    return true;
+}
 
-    /**
-     * @brief Dispatch 函数用于派发一个命令，并将它交给相应的处理程序处理。
-     *
-     * @param name 要派发的命令的名称。
-     * @param data 命令所携带的数据。
-     */
-    void Dispatch(const std::string &name, const json &data);
+template <typename Result, typename Argument>
+bool CommandDispatcher<Result, Argument>::Redo()
+{
+    if (undoneCommands_.empty())
+    {
+        return false;
+    }
+    auto lastUndoneCommand = undoneCommands_.top();
+    undoneCommands_.pop();
+    commandHistory_.push(lastUndoneCommand);
 
-private:
-    /**
-     * @brief handlers_ 是一个哈希表，存储了所有已注册的命令处理程序。
-     *
-     * 键值为哈希值，值为命令处理程序本身。
-     */
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
-#else
-    std::unordered_map<std::size_t, HandlerFunc> handlers_;
-#endif
+    auto it = handlers_.find(Djb2Hash(lastUndoneCommand.first.c_str()));
+    if (it != handlers_.end())
+    {
+        it->second(lastUndoneCommand.second);
+    }
 
-    /**
-     * @brief Djb2Hash 函数是一个字符串哈希函数，用于将字符串转换成哈希值。
-     *
-     * @param str 要转换的字符串。
-     * @return 转换后的哈希值。
-     */
-    static std::size_t Djb2Hash(const char *str);
-};
+    return true;
+}

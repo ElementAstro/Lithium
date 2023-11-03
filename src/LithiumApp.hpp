@@ -35,9 +35,12 @@ Description: Lithium App Enter
 
 #include <memory>
 
-
 #include "modules/server/message_bus.hpp"
+#include "modules/device/device_manager.hpp"
+#include "modules/system/process.hpp"
 
+#include "nlohmann/json.hpp"
+using json = nlohmann::json;
 
 namespace Lithium
 {
@@ -51,15 +54,17 @@ namespace Lithium
         class ConfigManager;
     }
 
-    class DeviceManager;
     class ScriptManager;
-    
-    namespace Process
-    {
-        class ProcessManager;
-    }
+    class PluginManager;
 
-    
+    class BasicTask;
+
+    namespace Task
+    {
+        class TaskGenerator;
+        class TaskManager;
+        class TaskStack;
+    }
     
     class LithiumApp
     {
@@ -68,8 +73,8 @@ namespace Lithium
         ~LithiumApp();
 
     public:
-        nlohmann::json GetConfig(const std::string &key_path) const;
-        void SetConfig(const std::string &key_path, const nlohmann::json &value);
+        json GetConfig(const std::string &key_path) const;
+        void SetConfig(const std::string &key_path, const json &value);
 
     public:
         std::vector<std::string> getDeviceList(DeviceType type);
@@ -82,7 +87,7 @@ namespace Lithium
         std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
         size_t findDevice(DeviceType type, const std::string &name);
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
-        std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params);
+        std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
 
     public:
 
@@ -90,8 +95,8 @@ namespace Lithium
     public:
         bool createProcess(const std::string &command, const std::string &identifier);
         bool runScript(const std::string &script, const std::string &identifier);
-        bool terminateProcess(pid_t pid, int signal = SIGTERM);
-        bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
+        bool terminateProcess(pid_t pid, int signal = 15);
+        bool terminateProcessByName(const std::string &name, int signal = 15);
         std::vector<Process::Process> getRunningProcesses();
         std::vector<std::string> getProcessOutput(const std::string &identifier);
 
@@ -143,11 +148,11 @@ namespace Lithium
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Process::ProcessManager> m_ProcessManager;
         std::shared_ptr<Task::TaskManager> m_TaskManager;
-        std::shared_ptr<TaskGenerator> m_TaskGenerator;
+        std::shared_ptr<Task::TaskGenerator> m_TaskGenerator;
         std::shared_ptr<Task::TaskStack> m_TaskStack;
         std::shared_ptr<MessageBus> m_MessageBus;
         std::shared_ptr<PluginManager> m_PluginManager;
-        std::shared_ptr<ChaiScriptManager> m_ScriptManager;
+        std::shared_ptr<ScriptManager> m_ScriptManager;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 } // namespace Lithium

@@ -1,5 +1,5 @@
 /*
- * plugin.cpp
+ * plugin_task.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,37 +23,37 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-8-6
+Date: 2023-7-19
 
-Description: Basic Plugin Definition
+Description: Plugin Task Definition
 
 **************************************************/
 
-#include "plugin.hpp"
+#include "plugin_task.hpp"
 
-
-
-Plugin::Plugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description)
-    : path_(path), version_(version), author_(author), description_(description) {}
-
-Plugin::~Plugin() {}
-
-std::string Plugin::GetPath() const
+PluginTask::PluginTask(const std::function<json(const json &)> &func,
+                       const json &params_template,
+                       const std::string &plugin_name,
+                       const std::function<json(const json &)> &stop_fn,
+                       bool can_stop)
+    : SimpleTask(func, params_template, stop_fn, can_stop), plugin_name_(plugin_name)
 {
-    return path_;
 }
 
-std::string Plugin::GetVersion() const
+/**
+ * @brief 获取插件名称
+ * @return 插件名称
+ */
+const std::string &PluginTask::get_plugin_name() const
 {
-    return version_;
+    return plugin_name_;
 }
 
-std::string Plugin::GetAuthor() const
+/**
+ * @brief 设置插件名称
+ * @param plugin_name 要设置的插件名称
+ */
+void PluginTask::set_plugin_name(const std::string &plugin_name)
 {
-    return author_;
-}
-
-std::string Plugin::GetDescription() const
-{
-    return description_;
+    plugin_name_ = plugin_name;
 }

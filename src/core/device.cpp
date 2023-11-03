@@ -419,8 +419,8 @@ std::shared_ptr<Lithium::SimpleTask> Device::getTask(const std::string &name, co
     if (task_map.find(name) != task_map.end())
     {
         auto tmp_task = task_map[name];
-        tmp_task->SetParams(params);
-        if (tmp_task->validateJsonValue(params, tmp_task->GetParamsTemplate()))
+        tmp_task->setParams(params);
+        if (tmp_task->validateJsonValue(params, tmp_task->getParamsTemplate()))
         {
             return tmp_task;
         }

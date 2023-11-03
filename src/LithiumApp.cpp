@@ -67,10 +67,10 @@ namespace Lithium
 
             m_PluginManager = PluginManager::createShared(m_ProcessManager);
             m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
-            m_TaskGenerator = std::make_shared<TaskGenerator>(m_DeviceManager);
+            m_TaskGenerator = std::make_shared<Task::TaskGenerator>(m_DeviceManager);
             m_TaskStack = std::make_shared<Task::TaskStack>();
 
-            m_ScriptManager = ChaiScriptManager::createShared(m_MessageBus);
+            m_ScriptManager = ScriptManager::createShared(m_MessageBus);
 
             m_MessageBus->StartProcessingThread<IStringProperty>();
             m_MessageBus->StartProcessingThread<IBoolProperty>();
@@ -248,7 +248,7 @@ namespace Lithium
 
     bool LithiumApp::checkTaskExecutable(const std::string &name)
     {
-        
+        return true;
     }
 
     /*

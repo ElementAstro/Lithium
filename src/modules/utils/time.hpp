@@ -1,5 +1,5 @@
 /*
- * plugin.cpp
+ * time.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,37 +23,34 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-8-6
+Date: 2023-10-27
 
-Description: Basic Plugin Definition
+Description: Some useful functions about time
 
 **************************************************/
 
-#include "plugin.hpp"
+#pragma once
 
+#include <string>
 
+/**
+ * @brief 获取当前时间的字符串时间戳
+ * 
+ * @return std::string 返回格式为"%Y-%m-%d %H:%M:%S"的字符串时间戳
+ */
+std::string GetTimestampString();
 
-Plugin::Plugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description)
-    : path_(path), version_(version), author_(author), description_(description) {}
+/**
+ * @brief 将UTC时间转换为东八区时间
+ * 
+ * @param utcTimeStr UTC时间字符串，格式为"%Y-%m-%d %H:%M:%S"
+ * @return std::string 东八区时间字符串，格式为"%Y-%m-%d %H:%M:%S"
+ */
+std::string ConvertToChinaTime(const std::string& utcTimeStr);
 
-Plugin::~Plugin() {}
-
-std::string Plugin::GetPath() const
-{
-    return path_;
-}
-
-std::string Plugin::GetVersion() const
-{
-    return version_;
-}
-
-std::string Plugin::GetAuthor() const
-{
-    return author_;
-}
-
-std::string Plugin::GetDescription() const
-{
-    return description_;
-}
+/**
+ * @brief 获取当前时间的东八区字符串时间戳
+ * 
+ * @return std::string 返回格式为"%Y-%m-%d %H:%M:%S"的东八区字符串时间戳
+ */
+std::string GetChinaTimestampString();

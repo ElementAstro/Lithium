@@ -32,8 +32,13 @@ Description: WebSocket Device Instance (each device each instance)
 #include "WsDeviceInstance.hpp"
 #include "WsDeviceHub.hpp"
 
+#include "modules/utils/time.hpp"
+#include "websocket/template/error_message.hpp"
+#include "modules/error/error_code.hpp"
+
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket,
 								   const std::shared_ptr<WsDeviceHub> &hub,
@@ -43,7 +48,7 @@ WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket
 {
 	OATPP_LOGD(m_device_name.getValue("").c_str(), "%s created", m_device_name.getValue("").c_str());
 
-	m_CommandDispatcher = std::make_unique<VCommandDispatcher>();
+	m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
 
 	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty);
 	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty);
@@ -150,46 +155,34 @@ oatpp::async::CoroutineStarter WsDeviceInstance::readMessage(const std::shared_p
 		json res;
 		if (!json::accept(wholeMessage->c_str()))
 		{
-			LOG_F(ERROR, "Message is not in JSON format: {}", wholeMessage->c_str());
-			res = {{"error", "Invalid Format"}, {"message", "Message is not in JSON format"}};
+			RESPONSE_ERROR(res, ServerError::InvalidFormat, "Message is not in JSON format");
 		}
 		else
 		{
 			try
 			{
 				json jdata = json::parse(wholeMessage->c_str());
-				try
+				if (jdata.contains("name") && jdata.contains("params"))
 				{
-					if (jdata.contains("name") && jdata.contains("params"))
+					const std::string name = jdata["name"].get<std::string>();
+					if (m_CommandDispatcher->HasHandler(name))
 					{
-						const std::string name = jdata["name"].get<std::string>();
-						if (m_CommandDispatcher->HasHandler(name))
-						{
-							m_CommandDispatcher->Dispatch(name, jdata["params"]);
-						}
-					}
-					else
-					{
-						LOG_F(ERROR, "WebSocketServer::readMessage() missing parameter: name or params");
-						res = {{"error", "Invalid Parameters"}, {"message", "Missing parameter: name or params"}};
+						m_CommandDispatcher->Dispatch(name, jdata["params"]);
 					}
 				}
-				catch (const std::exception &e)
+				else
 				{
-					LOG_F(ERROR, "WebSocketServer::readMessage() run command failed: {}", e.what());
-					res = {{"error", "Running Error"}, {"message", e.what()}};
+					RESPONSE_ERROR(res, ServerError::MissingParameters, "Missing parameter: name or params");
 				}
-			}
-			catch (const nlohmann::detail::parse_error &e)
-			{
-				LOG_F(ERROR, "WebSocketServer::readMessage() json exception: {}", e.what());
-				res = {{"errro", "Invalid Format"}, {"message", e.what()}};
 			}
 			catch (const std::exception &e)
 			{
-				LOG_F(ERROR, "WebSocketServer::readMessage() exception: {}", e.what());
-				res = {{"errro", "Unknown Error"}, {"message", e.what()}};
+				RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
 			}
+		}
+		if (res.contains("error") || res.contains("message"))
+		{
+			sendMessage(res.dump());
 		}
 	}
 	else if (size > 0)
@@ -213,7 +206,6 @@ void WsDeviceInstance::getProperty(const json &m_params)
 
 void WsDeviceInstance::getProperties(const json &m_params)
 {
-	
 }
 
 void WsDeviceInstance::runTask(const json &m_params)

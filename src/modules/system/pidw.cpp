@@ -260,11 +260,8 @@ void PidWWatcher::MonitorThread()
         double networkUsage = GetNetworkUsage();
         double memoryUsage = GetMemoryUsage();
 
-        double networkUsageDelta = networkUsage - prevNetworkUsage;
-        double memoryUsageDelta = memoryUsage - prevMemoryUsage;
-
-        DLOG_F(INFO, "Network Usage: {:.2f} bytes", networkUsageDelta);
-        DLOG_F(INFO, "Memory Usage: {:.2f} KB", memoryUsageDelta);
+        DLOG_F(INFO, "Network Usage: {:.2f} bytes", networkUsage - prevNetworkUsage);
+        DLOG_F(INFO, "Memory Usage: {:.2f} KB", memoryUsage - prevMemoryUsage);
 
         prevNetworkUsage = networkUsage;
         prevMemoryUsage = memoryUsage;

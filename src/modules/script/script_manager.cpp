@@ -57,21 +57,21 @@ Description: Script Manager
 
 namespace Lithium
 {
-    ChaiScriptManager::ChaiScriptManager(std::shared_ptr<MessageBus> messageBus) : chai_(std::make_unique<chaiscript::ChaiScript>())
+    ScriptManager::ScriptManager(std::shared_ptr<MessageBus> messageBus) : chai_(std::make_unique<chaiscript::ChaiScript>())
     {
         m_MessageBus = messageBus;
     }
 
-    ChaiScriptManager::~ChaiScriptManager()
+    ScriptManager::~ScriptManager()
     {
     }
 
-    std::shared_ptr<ChaiScriptManager> ChaiScriptManager::createShared(std::shared_ptr<Lithium::MessageBus> messageBus)
+    std::shared_ptr<ScriptManager> ScriptManager::createShared(std::shared_ptr<Lithium::MessageBus> messageBus)
     {
-        return std::make_shared<ChaiScriptManager>(messageBus);
+        return std::make_shared<ScriptManager>(messageBus);
     }
 
-    void ChaiScriptManager::Init()
+    void ScriptManager::Init()
     {
         // Add Base64 support
         chai_->add(chaiscript::fun(&Base64::base64Decode), "base64_decode");
@@ -143,7 +143,7 @@ namespace Lithium
         chai_->add(chaiscript::type_conversion<const char *, std::string>());
     }
 
-    void ChaiScriptManager::InitSubModules()
+    void ScriptManager::InitSubModules()
     {
         chai_->add(chaiscript::extras::math::bootstrap());
         chai_->add(chaiscript::extras::string_methods::bootstrap());
@@ -151,16 +151,16 @@ namespace Lithium
         chai_->add(create_chaiscript_device_module());
     }
 
-    void ChaiScriptManager::InitMyApp()
+    void ScriptManager::InitMyApp()
     {
         DLOG_F(INFO, "ChaiScript Manager initializing ...");
         Init();
         InitSubModules();
-        DLOG_F(INFO, "ChaiScriptManager initialized");
+        DLOG_F(INFO, "ScriptManager initialized");
         chai_->add_global(chaiscript::var(MyApp), "app");
     }
 
-    bool ChaiScriptManager::loadScriptFile(const std::string &filename)
+    bool ScriptManager::loadScriptFile(const std::string &filename)
     {
         std::ifstream file(filename);
         if (file)
@@ -178,7 +178,7 @@ namespace Lithium
         return true;
     }
 
-    bool ChaiScriptManager::runCommand(const std::string &command)
+    bool ScriptManager::runCommand(const std::string &command)
     {
         try
         {
@@ -192,7 +192,7 @@ namespace Lithium
         return true;
     }
 
-    bool ChaiScriptManager::runScript(const std::string &filename)
+    bool ScriptManager::runScript(const std::string &filename)
     {
         try
         {
@@ -206,7 +206,7 @@ namespace Lithium
         return true;
     }
 
-    bool ChaiScriptManager::runMultiCommand(const std::vector<std::string> &commands)
+    bool ScriptManager::runMultiCommand(const std::vector<std::string> &commands)
     {
         for (auto command : commands)
         {

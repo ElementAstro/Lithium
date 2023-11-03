@@ -1,3 +1,34 @@
+/*
+ * plugin_task.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-7-19
+
+Description: Plugin Task Definition
+
+**************************************************/
+
 #pragma once
 
 #include "task.hpp"
@@ -13,32 +44,23 @@ public:
      * @param stop_fn 一个可选的停止函数，默认为nullptr
      * @param can_stop 指示任务是否可以停止，默认为false
      */
-    PluginTask(const std::function<nlohmann::json(const nlohmann::json &)> &func,
-               const nlohmann::json &params_template,
+    PluginTask(const std::function<json(const json &)> &func,
+               const json &params_template,
                const std::string &plugin_name,
-               std::function<nlohmann::json(const nlohmann::json &)>&stop_fn = nullptr,
-               bool can_stop = false)
-        : SimpleTask(func, params_template, stop_fn, can_stop), plugin_name_(plugin_name)
-    {
-    }
+               const std::function<json(const json &)>&stop_fn = nullptr,
+               bool can_stop = false);
 
     /**
      * @brief 获取插件名称
      * @return 插件名称
      */
-    const std::string &get_plugin_name() const
-    {
-        return plugin_name_;
-    }
+    const std::string &get_plugin_name() const;
 
     /**
      * @brief 设置插件名称
      * @param plugin_name 要设置的插件名称
      */
-    void set_plugin_name(const std::string &plugin_name)
-    {
-        plugin_name_ = plugin_name;
-    }
+    void set_plugin_name(const std::string &plugin_name);
 
 private:
     // 插件名称

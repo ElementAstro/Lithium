@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
 project(hydrogenclient CXX)
 
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/base)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/io)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/property)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/timer)
-include_directories(${CMAKE_SOURCE_DIR}/modules/Hydrogen/core/thread)
+include_directories(${CMAKE_SOURCE_DIR}/src/)
+include_directories(${CMAKE_SOURCE_DIR}/src/core)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/base)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/io)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/property)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/timer)
+include_directories(${CMAKE_SOURCE_DIR}/src/core/thread)
 
 include_directories(socket)
 add_subdirectory(socket)
@@ -41,7 +41,7 @@ target_include_directories(hydrogenabstractclient
     PUBLIC .
 )
 
-target_link_libraries(hydrogenabstractclient hydrogencore hydrogendevice)
+target_link_libraries(hydrogenabstractclient hydrogencore)
 
 install(FILES
     ${hydrogenabstractclient_HEADERS}

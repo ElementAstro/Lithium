@@ -33,12 +33,12 @@ Description: Loop Task Definition
 
 namespace Lithium
 {
-    LoopTask::LoopTask(const std::function<void(const nlohmann::json &)> &item_fn,
-                       const nlohmann::json &params,
-                       std::function<nlohmann::json(const nlohmann::json &)>&stop_fn)
+    LoopTask::LoopTask(const std::function<void(const json &)> &item_fn,
+                       const json &params,
+                       std::function<json(const json &)> &stop_fn)
         : BasicTask(stop_fn, stop_fn != nullptr), item_fn_(item_fn), params_(params) {}
 
-    nlohmann::json LoopTask::Execute()
+    const json LoopTask::execute()
     {
         for (const auto &item : params_["items"])
         {
@@ -52,9 +52,9 @@ namespace Lithium
         return {{"status", "done"}};
     }
 
-    const nlohmann::json LoopTask::ToJson() const
+    const json LoopTask::toJson() const
     {
-        auto json = BasicTask::ToJson();
+        auto json = BasicTask::toJson();
         json["type"] = "loop";
         json["params"] = params_;
         return json;

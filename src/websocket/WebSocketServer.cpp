@@ -36,7 +36,7 @@ Description: WebSocket Server
 #include <thread>
 
 #include "loguru/loguru.hpp"
-#include "magic_enum/magic_enum_all.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
 	{"Camera", Lithium::DeviceType::Camera},
@@ -48,7 +48,7 @@ std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
 
 WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 {
-	m_CommandDispatcher = std::make_unique<CommandDispatcher>();
+	m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
 
 	LiRegisterFunc("RunDeviceTask", &WebSocketServer::RunDeviceTask);
 	LiRegisterFunc("GetDeviceInfo", &WebSocketServer::GetDeviceInfo);
@@ -155,7 +155,7 @@ oatpp::async::CoroutineStarter WebSocketServer::readMessage(const std::shared_pt
 			LOG_F(ERROR, "WebSocketServer::readMessage() exception: %s", e.what());
 			ret = {{"errro", "Unknown Error"}, {"message", e.what()}};
 		}
-		sendMessage(ret.dump());
+		socket->sendOneFrameTextAsync(ret.dump());
 	}
 	else if (size > 0)
 	{
@@ -361,7 +361,7 @@ void WSInstanceListener::onBeforeDestroy(const oatpp::websocket::WebSocket &sock
 }
 #endif
 
-const json WebSocketServer::serror(const std::string func_name, ServerError code, const std::string errorMsg)
+const json serror(const std::string func_name, ServerError code, const std::string errorMsg)
 {
-
+	return {};
 }

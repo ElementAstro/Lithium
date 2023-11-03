@@ -29,6 +29,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #pragma once
+
+#ifndef ARGPARSE_MODULE_USE_STD_MODULE
 #include <algorithm>
 #include <any>
 #include <array>
@@ -53,6 +55,7 @@ SOFTWARE.
 #include <utility>
 #include <variant>
 #include <vector>
+#endif
 
 namespace argparse {
 
@@ -72,7 +75,7 @@ struct HasContainerTraits<
                    decltype(std::declval<T>().size())>> : std::true_type {};
 
 template <typename T>
-static constexpr bool IsContainer = HasContainerTraits<T>::value;
+inline constexpr bool IsContainer = HasContainerTraits<T>::value;
 
 template <typename T, typename = void>
 struct HasStreamableTraits : std::false_type {};
@@ -84,7 +87,7 @@ struct HasStreamableTraits<
     : std::true_type {};
 
 template <typename T>
-static constexpr bool IsStreamable = HasStreamableTraits<T>::value;
+inline constexpr bool IsStreamable = HasStreamableTraits<T>::value;
 
 constexpr std::size_t repr_max_container_size = 5;
 
@@ -211,13 +214,13 @@ inline auto do_from_chars(std::string_view s) -> T {
     if (ptr == last) {
       return x;
     }
-    throw std::invalid_argument{"pattern does not match to the end"};
+    throw std::invalid_argument{"pattern '" + std::string(s) + "' does not match to the end"};
   }
   if (ec == std::errc::invalid_argument) {
-    throw std::invalid_argument{"pattern not found"};
+    throw std::invalid_argument{"pattern '" + std::string(s) + "' not found"};
   }
   if (ec == std::errc::result_out_of_range) {
-    throw std::range_error{"not representable"};
+    throw std::range_error{"'" + std::string(s) + "' not representable"};
   }
   return x; // unreachable
 }
@@ -230,10 +233,29 @@ template <class T, auto Param = 0> struct parse_number {
 
 template <class T> struct parse_number<T, radix_16> {
   auto operator()(std::string_view s) -> T {
-    if (auto [ok, rest] = consume_hex_prefix(s); ok) {
-      return do_from_chars<T, radix_16>(rest);
+    if (starts_with("0x"sv, s) || starts_with("0X"sv, s)) {
+      if (auto [ok, rest] = consume_hex_prefix(s); ok) {
+        try {
+          return do_from_chars<T, radix_16>(rest);
+        } catch (const std::invalid_argument& err) {
+          throw std::invalid_argument("Failed to parse '" + std::string(s) + "' as hexadecimal: " + err.what());
+        } catch (const std::range_error& err) {
+          throw std::range_error("Failed to parse '" + std::string(s) + "' as hexadecimal: " + err.what());
+        }
+      }
+    } else {
+      // Allow passing hex numbers without prefix
+      // Shape 'x' already has to be specified
+      try {
+        return do_from_chars<T, radix_16>(s);
+      } catch (const std::invalid_argument& err) {
+        throw std::invalid_argument("Failed to parse '" + std::string(s) + "' as hexadecimal: " + err.what());
+      } catch (const std::range_error& err) {
+        throw std::range_error("Failed to parse '" + std::string(s) + "' as hexadecimal: " + err.what());
+      }
     }
-    throw std::invalid_argument{"pattern not found"};
+
+    throw std::invalid_argument{"pattern '" + std::string(s) + "' not identified as hexadecimal"};
   }
 };
 
@@ -241,12 +263,32 @@ template <class T> struct parse_number<T> {
   auto operator()(std::string_view s) -> T {
     auto [ok, rest] = consume_hex_prefix(s);
     if (ok) {
-      return do_from_chars<T, radix_16>(rest);
+      try {
+        return do_from_chars<T, radix_16>(rest);
+      } catch (const std::invalid_argument& err) {
+        throw std::invalid_argument("Failed to parse '" + std::string(s) + "' as hexadecimal: " + err.what());
+      } catch (const std::range_error& err) {
+        throw std::range_error("Failed to parse '" + std::string(s) + "' as hexadecimal: " + err.what());
+      }
     }
+
     if (starts_with("0"sv, s)) {
-      return do_from_chars<T, radix_8>(rest);
+      try {
+        return do_from_chars<T, radix_8>(rest);
+      } catch (const std::invalid_argument& err) {
+        throw std::invalid_argument("Failed to parse '" + std::string(s) + "' as octal: " + err.what());
+      } catch (const std::range_error& err) {
+        throw std::range_error("Failed to parse '" + std::string(s) + "' as octal: " + err.what());
+      }
     }
-    return do_from_chars<T, radix_10>(rest);
+
+    try {
+      return do_from_chars<T, radix_10>(rest);
+    } catch (const std::invalid_argument& err) {
+      throw std::invalid_argument("Failed to parse '" + std::string(s) + "' as decimal integer: " + err.what());
+    } catch (const std::range_error& err) {
+      throw std::range_error("Failed to parse '" + std::string(s) + "' as decimal integer: " + err.what());
+    }
   }
 };
 
@@ -261,7 +303,7 @@ template <> inline const auto generic_strtod<long double> = strtold;
 
 template <class T> inline auto do_strtod(std::string const &s) -> T {
   if (isspace(static_cast<unsigned char>(s[0])) || s[0] == '+') {
-    throw std::invalid_argument{"pattern not found"};
+    throw std::invalid_argument{"pattern '" + s + "' not found"};
   }
 
   auto [first, last] = pointer_range(s);
@@ -273,10 +315,10 @@ template <class T> inline auto do_strtod(std::string const &s) -> T {
     if (ptr == last) {
       return x;
     }
-    throw std::invalid_argument{"pattern does not match to the end"};
+    throw std::invalid_argument{"pattern '" + s + "' does not match to the end"};
   }
   if (errno == ERANGE) {
-    throw std::range_error{"not representable"};
+    throw std::range_error{"'" + s + "' not representable"};
   }
   return x; // unreachable
 }
@@ -288,7 +330,13 @@ template <class T> struct parse_number<T, chars_format::general> {
           "chars_format::general does not parse hexfloat"};
     }
 
-    return do_strtod<T>(s);
+    try {
+      return do_strtod<T>(s);
+    } catch (const std::invalid_argument& err) {
+      throw std::invalid_argument("Failed to parse '" + s + "' as number: " + err.what());
+    } catch (const std::range_error& err) {
+      throw std::range_error("Failed to parse '" + s + "' as number: " + err.what());
+    }
   }
 };
 
@@ -298,7 +346,13 @@ template <class T> struct parse_number<T, chars_format::hex> {
       throw std::invalid_argument{"chars_format::hex parses hexfloat"};
     }
 
-    return do_strtod<T>(s);
+    try {
+      return do_strtod<T>(s);
+    } catch (const std::invalid_argument& err) {
+      throw std::invalid_argument("Failed to parse '" + s + "' as hexadecimal: " + err.what());
+    } catch (const std::range_error& err) {
+      throw std::range_error("Failed to parse '" + s + "' as hexadecimal: " + err.what());
+    }
   }
 };
 
@@ -313,7 +367,13 @@ template <class T> struct parse_number<T, chars_format::scientific> {
           "chars_format::scientific requires exponent part"};
     }
 
-    return do_strtod<T>(s);
+    try {
+      return do_strtod<T>(s);
+    } catch (const std::invalid_argument& err) {
+      throw std::invalid_argument("Failed to parse '" + s + "' as scientific notation: " + err.what());
+    } catch (const std::range_error& err) {
+      throw std::range_error("Failed to parse '" + s + "' as scientific notation: " + err.what());
+    }
   }
 };
 
@@ -328,7 +388,13 @@ template <class T> struct parse_number<T, chars_format::fixed> {
           "chars_format::fixed does not parse exponent part"};
     }
 
-    return do_strtod<T>(s);
+    try {
+      return do_strtod<T>(s);
+    } catch (const std::invalid_argument& err) {
+      throw std::invalid_argument("Failed to parse '" + s + "' as fixed notation: " + err.what());
+    } catch (const std::range_error& err) {
+      throw std::range_error("Failed to parse '" + s + "' as fixed notation: " + err.what());
+    }
   }
 };
 
@@ -346,6 +412,24 @@ std::string join(StrIt first, StrIt last, const std::string &separator) {
   }
   return value.str();
 }
+
+template <typename T> struct can_invoke_to_string {
+  template <typename U>
+  static auto test(int)
+      -> decltype(std::to_string(std::declval<U>()), std::true_type{});
+
+  template <typename U> static auto test(...) -> std::false_type;
+
+  static constexpr bool value = decltype(test<T>(0))::value;
+};
+
+template <typename T> struct IsChoiceTypeSupported {
+  using CleanType = typename std::decay<T>::type;
+  static const bool value = std::is_integral<CleanType>::value ||
+                            std::is_same<CleanType, std::string>::value ||
+                            std::is_same<CleanType, std::string_view>::value ||
+                            std::is_same<CleanType, const char *>::value;
+};
 
 } // namespace details
 
@@ -404,7 +488,15 @@ public:
   }
 
   template <typename T> Argument &default_value(T &&value) {
+    m_num_args_range = NArgsRange{0, m_num_args_range.get_max()};
     m_default_value_repr = details::repr(value);
+
+    if constexpr (std::is_convertible_v<T, std::string_view>) {
+      m_default_value_str = std::string{std::string_view{value}};
+    } else if constexpr (details::can_invoke_to_string<T>::value) {
+      m_default_value_str = std::to_string(value);
+    }
+
     m_default_value = std::forward<T>(value);
     return *this;
   }
@@ -424,8 +516,18 @@ public:
     return *this;
   }
 
+  // This is shorthand for:
+  //   program.add_argument("foo")
+  //     .default_value(false)
+  //     .implicit_value(true)
+  Argument &flag() {
+    default_value(false);
+    implicit_value(true);
+    return *this;
+  }
+
   template <class F, class... Args>
-  auto action(F &&callable, Args &&... bound_args)
+  auto action(F &&callable, Args &&...bound_args)
       -> std::enable_if_t<std::is_invocable_v<F, Args..., std::string const>,
                           Argument &> {
     using action_type = std::conditional_t<
@@ -506,10 +608,12 @@ public:
       m_num_args_range = NArgsRange{0, 1};
       break;
     case nargs_pattern::any:
-      m_num_args_range = NArgsRange{0, (std::numeric_limits<std::size_t>::max)()};
+      m_num_args_range =
+          NArgsRange{0, (std::numeric_limits<std::size_t>::max)()};
       break;
     case nargs_pattern::at_least_one:
-      m_num_args_range = NArgsRange{1, (std::numeric_limits<std::size_t>::max)()};
+      m_num_args_range =
+          NArgsRange{1, (std::numeric_limits<std::size_t>::max)()};
       break;
     }
     return *this;
@@ -520,6 +624,82 @@ public:
     return nargs(nargs_pattern::any);
   }
 
+  template <typename T> void add_choice(T &&choice) {
+    static_assert(details::IsChoiceTypeSupported<T>::value,
+                  "Only string or integer type supported for choice");
+    static_assert(std::is_convertible_v<T, std::string_view> ||
+                      details::can_invoke_to_string<T>::value,
+                  "Choice is not convertible to string_type");
+    if (!m_choices.has_value()) {
+      m_choices = std::vector<std::string>{};
+    }
+
+    if constexpr (std::is_convertible_v<T, std::string_view>) {
+      m_choices.value().push_back(
+          std::string{std::string_view{std::forward<T>(choice)}});
+    } else if constexpr (details::can_invoke_to_string<T>::value) {
+      m_choices.value().push_back(std::to_string(std::forward<T>(choice)));
+    }
+  }
+
+  Argument &choices() {
+    if (!m_choices.has_value()) {
+      throw std::runtime_error("Zero choices provided");
+    }
+    return *this;
+  }
+
+  template <typename T, typename... U>
+  Argument &choices(T &&first, U &&...rest) {
+    add_choice(std::forward<T>(first));
+    choices(std::forward<U>(rest)...);
+    return *this;
+  }
+
+  void find_default_value_in_choices_or_throw() const {
+
+    const auto &choices = m_choices.value();
+
+    if (m_default_value.has_value()) {
+      if (std::find(choices.begin(), choices.end(), m_default_value_str) ==
+          choices.end()) {
+        // provided arg not in list of allowed choices
+        // report error
+
+        std::string choices_as_csv =
+            std::accumulate(choices.begin(), choices.end(), std::string(),
+                            [](const std::string &a, const std::string &b) {
+                              return a + (a.empty() ? "" : ", ") + b;
+                            });
+
+        throw std::runtime_error(
+            std::string{"Invalid default value "} + m_default_value_repr +
+            " - allowed options: {" + choices_as_csv + "}");
+      }
+    }
+  }
+
+  template <typename Iterator>
+  void find_value_in_choices_or_throw(Iterator it) const {
+
+    const auto &choices = m_choices.value();
+
+    if (std::find(choices.begin(), choices.end(), *it) == choices.end()) {
+      // provided arg not in list of allowed choices
+      // report error
+
+      std::string choices_as_csv =
+          std::accumulate(choices.begin(), choices.end(), std::string(),
+                          [](const std::string &a, const std::string &b) {
+                            return a + (a.empty() ? "" : ", ") + b;
+                          });
+
+      throw std::runtime_error(std::string{"Invalid argument "} +
+                               details::repr(*it) + " - allowed options: {" +
+                               choices_as_csv + "}");
+    }
+  }
+
   template <typename Iterator>
   Iterator consume(Iterator start, Iterator end,
                    std::string_view used_name = {}) {
@@ -528,6 +708,14 @@ public:
     }
     m_is_used = true;
     m_used_name = used_name;
+
+    if (m_choices.has_value()) {
+      // Check each value in (start, end) and make sure
+      // it is in the list of allowed choices/options
+      for (auto it = start; it != end; ++it) {
+        find_value_in_choices_or_throw(it);
+      }
+    }
 
     const auto num_args_max = m_num_args_range.get_max();
     const auto num_args_min = m_num_args_range.get_min();
@@ -598,6 +786,12 @@ public:
           !m_default_value.has_value()) {
         throw_nargs_range_validation_error();
       }
+    }
+
+    if (m_choices.has_value()) {
+      // Make sure the default value (if provided)
+      // is in the list of choices
+      find_default_value_in_choices_or_throw();
     }
   }
 
@@ -677,8 +871,8 @@ public:
     // align multiline help message
     auto stream_width = stream.width();
     auto name_padding = std::string(name_stream.str().size(), ' ');
-    auto pos = 0;
-    auto prev = 0;
+    auto pos = std::string::size_type{};
+    auto prev = std::string::size_type{};
     auto first_line = true;
     auto hspace = "  "; // minimal space between name and help message
     stream << name_stream.str();
@@ -735,8 +929,7 @@ public:
       using ValueType = typename T::value_type;
       auto lhs = get<T>();
       return std::equal(std::begin(lhs), std::end(lhs), std::begin(rhs),
-                        std::end(rhs),
-                        [](const auto &a, const auto &b) {
+                        std::end(rhs), [](const auto &a, const auto &b) {
                           return std::any_cast<const ValueType &>(a) == b;
                         });
     }
@@ -1060,7 +1253,10 @@ private:
   std::string m_metavar;
   std::any m_default_value;
   std::string m_default_value_repr;
+  std::optional<std::string>
+      m_default_value_str; // used for checking default_value against choices
   std::any m_implicit_value;
+  std::optional<std::vector<std::string>> m_choices{std::nullopt};
   using valued_action = std::function<std::any(const std::string &)>;
   using void_action = std::function<void(const std::string &)>;
   std::variant<valued_action, void_action> m_action{
@@ -1149,16 +1345,11 @@ public:
   }
 
   explicit operator bool() const {
-    auto arg_used = std::any_of(m_argument_map.cbegin(),
-                                m_argument_map.cend(),
-                                [](auto &it) {
-                                    return it.second->m_is_used;
-                                });
-    auto subparser_used = std::any_of(m_subparser_used.cbegin(),
-                                      m_subparser_used.cend(),
-                                      [](auto &it) {
-                                          return it.second;
-                                      });
+    auto arg_used = std::any_of(m_argument_map.cbegin(), m_argument_map.cend(),
+                                [](auto &it) { return it.second->m_is_used; });
+    auto subparser_used =
+        std::any_of(m_subparser_used.cbegin(), m_subparser_used.cend(),
+                    [](auto &it) { return it.second; });
 
     return m_is_parsed && (arg_used || subparser_used);
   }
@@ -1183,7 +1374,7 @@ public:
   // Parameter packed add_parents method
   // Accepts a variadic number of ArgumentParser objects
   template <typename... Targs>
-  ArgumentParser &add_parents(const Targs &... f_args) {
+  ArgumentParser &add_parents(const Targs &...f_args) {
     for (const ArgumentParser &parent_parser : {std::ref(f_args)...}) {
       for (const auto &argument : parent_parser.m_positional_arguments) {
         auto it = m_positional_arguments.insert(
@@ -1212,8 +1403,7 @@ public:
   /* Getter for arguments and subparsers.
    * @throws std::logic_error in case of an invalid argument or subparser name
    */
-  template <typename T = Argument>
-  T& at(std::string_view name) {
+  template <typename T = Argument> T &at(std::string_view name) {
     if constexpr (std::is_same_v<T, Argument>) {
       return (*this)[name];
     } else {
@@ -1324,7 +1514,7 @@ public:
   }
 
   /* Indexing operator. Return a reference to an Argument object
-   * Used in conjuction with Argument.operator== e.g., parser["foo"] == true
+   * Used in conjunction with Argument.operator== e.g., parser["foo"] == true
    * @throws std::logic_error in case of an invalid argument name
    */
   Argument &operator[](std::string_view arg_name) const {
@@ -1689,7 +1879,8 @@ private:
     }
     std::size_t max_size = 0;
     for ([[maybe_unused]] const auto &[unused, argument] : m_argument_map) {
-      max_size = std::max<std::size_t>(max_size, argument->get_arguments_length());
+      max_size =
+          std::max<std::size_t>(max_size, argument->get_arguments_length());
     }
     for ([[maybe_unused]] const auto &[command, unused] : m_subparser_map) {
       max_size = std::max<std::size_t>(max_size, command.size());

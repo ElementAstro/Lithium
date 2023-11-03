@@ -33,14 +33,14 @@ Description: Conditional Task Definition
 
 namespace Lithium
 {
-    ConditionalTask::ConditionalTask(const std::function<bool(const nlohmann::json &)> &condition_fn,
-                                     const nlohmann::json &params,
-                                     const std::function<void(const nlohmann::json &)> &task_fn,
-                                     std::function<nlohmann::json(const nlohmann::json &)>&stop_fn)
+    ConditionalTask::ConditionalTask(const std::function<bool(const json &)> &condition_fn,
+                                     const json &params,
+                                     const std::function<void(const json &)> &task_fn,
+                                     std::function<json(const json &)> &stop_fn)
         : BasicTask(stop_fn, stop_fn != nullptr), condition_fn_(condition_fn), params_(params), task_fn_(task_fn) {}
 
     // Executes the task
-    nlohmann::json ConditionalTask::Execute()
+    const json ConditionalTask::execute()
     {
         if (condition_fn_(params_))
         {
@@ -51,9 +51,9 @@ namespace Lithium
     }
 
     // Serializes the task to a JSON object
-    const nlohmann::json ConditionalTask::ToJson() const
+    const json ConditionalTask::toJson() const
     {
-        auto json = BasicTask::ToJson();
+        auto json = BasicTask::toJson();
         json["type"] = "conditional";
         json["params"] = params_;
         return json;

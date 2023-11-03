@@ -33,19 +33,19 @@ Description: Basic and Simple Task Definition
 
 namespace Lithium
 {
-    BasicTask::BasicTask(const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn, bool can_stop)
+    BasicTask::BasicTask(const std::function<json(const json &)> &stop_fn, bool can_stop)
         : stop_fn_(stop_fn), can_stop_(stop_fn != nullptr), stop_flag_(false) {}
 
     BasicTask::~BasicTask()
     {
         if (stop_flag_)
         {
-            Stop();
+            stop();
         }
     }
 
     // Serializes the task to a JSON object
-    const nlohmann::json BasicTask::ToJson() const
+    const json BasicTask::toJson() const
     {
         return {
             {"type", "basic"},
@@ -55,33 +55,71 @@ namespace Lithium
             {"can_stop", can_stop_}};
     }
 
-    // Accessor and mutator for the task ID
-    int BasicTask::get_id() const { return id_; }
-    void BasicTask::set_id(int id) { id_ = id; }
+    const json BasicTask::getResult() const
+    {
+        return {};
+    }
+    const json BasicTask::getParamsTemplate() const
+    {
+        return {};
+    }
+    void BasicTask::setParams(const json &params)
+    {
+        return;
+    }
 
-    // Accessor and mutator for the task name
-    const std::string &BasicTask::get_name() const { return name_; }
-    void BasicTask::set_name(const std::string &name) { name_ = name; }
+    int BasicTask::getId() const
+    {
+        return id_;
+    }
+    void BasicTask::setId(int id)
+    {
+        id_ = id;
+    }
 
-    const std::string &BasicTask::get_description() const { return description_; }
-    void BasicTask::set_description(const std::string &description) { description_ = description; }
+    const std::string &BasicTask::getName() const
+    {
+        return name_;
+    }
+    void BasicTask::setName(const std::string &name)
+    {
+        name_ = name;
+    }
 
-    void BasicTask::set_can_execute(bool can_execute) { can_execute_ = can_execute; }
-    bool BasicTask::can_execute() const { return can_execute_; }
+    const std::string &BasicTask::getDescription() const
+    {
+        return description_;
+    }
+    void BasicTask::setDescription(const std::string &description)
+    {
+        description_ = description;
+    }
 
-    // Set the stop function
-    void BasicTask::set_stop_function(const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn)
+    void BasicTask::setCanExecute(bool can_execute)
+    {
+        can_execute_ = can_execute;
+    }
+    bool BasicTask::isExecutable() const
+    {
+        return can_execute_;
+    }
+
+    void BasicTask::setStopFunction(const std::function<json(const json &)> &stop_fn)
     {
         stop_fn_ = stop_fn;
         can_stop_ = true;
     }
 
-    // Accessor and mutator for the stop flag
-    bool BasicTask::get_stop_flag() const { return stop_flag_; }
-    void BasicTask::set_stop_flag(bool flag) { stop_flag_ = flag; }
+    bool BasicTask::getStopFlag() const
+    {
+        return stop_flag_;
+    }
+    void BasicTask::setStopFlag(bool flag)
+    {
+        stop_flag_ = flag;
+    }
 
-    // Stops the task
-    void BasicTask::Stop()
+    void BasicTask::stop()
     {
         stop_flag_ = true;
         if (stop_fn_)
@@ -90,7 +128,7 @@ namespace Lithium
         }
     }
 
-    bool BasicTask::validateJsonValue(const nlohmann::json &data, const nlohmann::json &templateValue)
+    bool BasicTask::validateJsonValue(const json &data, const json &templateValue)
     {
         if (data.type() != templateValue.type())
         {
@@ -105,7 +143,7 @@ namespace Lithium
             {
                 const std::string &key = it.key();
                 const auto &subTemplateValue = it.value();
-                if (!validateJsonValue(data.value(key, nlohmann::json()), subTemplateValue))
+                if (!validateJsonValue(data.value(key, json()), subTemplateValue))
                 {
                     return false;
                 }
@@ -131,12 +169,12 @@ namespace Lithium
 
     bool BasicTask::validateJsonString(const std::string &jsonString, const std::string &templateString)
     {
-        nlohmann::json jsonData;
-        nlohmann::json templateData;
+        json jsonData;
+        json templateData;
         try
         {
-            jsonData = nlohmann::json::parse(jsonString);
-            templateData = nlohmann::json::parse(templateString);
+            jsonData = json::parse(jsonString);
+            templateData = json::parse(templateString);
         }
         catch (const std::exception &e)
         {
@@ -145,12 +183,12 @@ namespace Lithium
         return validateJsonValue(jsonData, templateData);
     }
 
-    SimpleTask::SimpleTask(const std::function<nlohmann::json(const nlohmann::json &)> &func,
-                           const nlohmann::json &params_template,
-                           const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn, bool can_stop)
+    SimpleTask::SimpleTask(const std::function<json(const json &)> &func,
+                           const json &params_template,
+                           const std::function<json(const json &)> &stop_fn, bool can_stop)
         : function_(func), params_template_(params_template), BasicTask(stop_fn, can_stop) {}
 
-    nlohmann::json SimpleTask::Execute()
+    const json SimpleTask::execute()
     {
         if (!params_template_.is_null() && !params_.is_null())
         {
@@ -164,28 +202,28 @@ namespace Lithium
             returns_ = function_(params_);
         }
         done_ = true;
-        return ToJson();
+        return toJson();
     }
 
-    void SimpleTask::SetParams(const nlohmann::json &params)
+    void SimpleTask::setParams(const json &params)
     {
         params_ = params;
     }
 
-    const nlohmann::json SimpleTask::ToJson() const
+    const json SimpleTask::toJson() const
     {
-        auto j = BasicTask::ToJson();
+        auto j = BasicTask::toJson();
         j["type"] = "simple";
         j["params"] = params_;
         return j;
     }
 
-    const nlohmann::json SimpleTask::GetResult() const
+    const json SimpleTask::getResult() const
     {
         return returns_;
     }
 
-    const nlohmann::json SimpleTask::GetParamsTemplate() const
+    const json SimpleTask::getParamsTemplate() const
     {
         return params_template_;
     }

@@ -33,6 +33,7 @@ Description: Property type definition
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 enum class PossibleValueType
 {
@@ -54,6 +55,19 @@ struct IPropertyBase
     std::string get_func;
     std::string set_func;
 };
+
+static std::unordered_map<std::string, std::string> to_unordered_map(const IPropertyBase &prop)
+{
+    std::unordered_map<std::string, std::string> result;
+    result["device_name"] = prop.device_name;
+    result["device_uuid"] = prop.device_uuid;
+    result["message_uuid"] = prop.message_uuid;
+    result["name"] = prop.name;
+    result["need_check"] = prop.need_check ? "true" : "false";
+    result["get_func"] = prop.get_func;
+    result["set_func"] = prop.set_func;
+    return result;
+}
 
 struct INumberProperty : public IPropertyBase
 {

@@ -242,7 +242,6 @@ void DownloadManager::download_task(DownloadTask &task, size_t download_speed)
         }
     }
 
-    char buffer[kBufferSize];
     size_t total_bytes_read = 0;
 
     while (!res->body.empty() && !task.completed && !task.paused)

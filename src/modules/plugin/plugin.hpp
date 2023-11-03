@@ -32,23 +32,41 @@ Description: Basic Plugin Definition
 #pragma once
 
 #include <string>
+#include <memory>
 #include <vector>
+
+#include "server/commander.hpp"
 
 class Plugin
 {
 public:
     Plugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description);
     virtual ~Plugin();
+    
     virtual void Execute(const std::vector<std::string> &args) const = 0;
 
-    const std::string &GetPath() const;
-    const std::string &GetVersion() const;
-    const std::string &GetAuthor() const;
-    const std::string &GetDescription() const;
+    json GetPluginInfo() const;
+
+    std::string &GetPath() const;
+    std::string &GetVersion() const;
+    std::string &GetAuthor() const;
+    std::string &GetDescription() const;
+
+    template <typename ClassType>
+    void RegisterFunc(const std::string &name, void (ClassType::*handler)(const json &))
+    {
+        m_CommandDispatcher->RegisterHandler(name, handler, this);
+    }
+
+    bool RunFunc(const std::string &name, const json &params);
+
+    json GetFuncInfo(const std::string &name);
 
 private:
     std::string path_;
     std::string version_;
     std::string author_;
     std::string description_;
+
+    std::unique_ptr<CommandDispatcher<void, json>> m_CommandDispathcer;
 };

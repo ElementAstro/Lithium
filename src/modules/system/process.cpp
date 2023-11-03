@@ -41,6 +41,7 @@ Description: Process Manager
 #include <cerrno>
 #include <cstdlib>
 #include <fstream>
+#include <sys/stat.h>
 #elif defined(__APPLE__)
 #include <sys/sysctl.h>
 #include <libproc.h>
@@ -85,6 +86,10 @@ namespace Lithium::Process
             DLOG_F(INFO, _("Running command: {}"), command);
             int pipefd[2];
             int result = pipe(pipefd);
+            if (result != 0)
+            {
+                
+            }
             dup2(pipefd[1], STDOUT_FILENO);
             close(pipefd[0]);
             close(pipefd[1]);
@@ -204,17 +209,6 @@ namespace Lithium::Process
         }
         LOG_F(ERROR, _("Process not found by name: {}"), name);
         return false;
-    }
-
-    void ProcessManager::listProcesses()
-    {
-        std::lock_guard<std::mutex> lock(mtx);
-        DLOG_F(INFO, _("Currently running processes:"));
-
-        for (const auto &process : processes)
-        {
-            DLOG_F(INFO, _("{} (PID: {})"), process.name, process.pid);
-        }
     }
 
     std::vector<Process> ProcessManager::getRunningProcesses()

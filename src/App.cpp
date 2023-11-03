@@ -190,6 +190,9 @@ BOOL WINAPI interruptHandler(DWORD signalNumber)
 // Define the signal handler function
 void interruptHandler(int signalNumber, siginfo_t *info, void *context)
 {
+    Lithium::CrashReport::saveCrashLog("");
+    oatpp::base::Environment::destroy();
+    loguru::shutdown();
     ::exit(1);
 }
 #endif
@@ -266,10 +269,38 @@ int main(int argc, char *argv[])
                 DLOG_F(INFO, _("Set server port to %d"), cmd_port);
             }
         }
-        auto cmd_host = program.get<std::string>("--host");
-        auto cmd_config_path = program.get<std::string>("--config");
-        auto cmd_module_path = program.get<std::string>("--module-path");
-        auto cmd_web_panel = program.get<bool>("--web-panel");
+        try
+        {
+            auto cmd_host = program.get<std::string>("--host");
+            auto cmd_config_path = program.get<std::string>("--config");
+            auto cmd_module_path = program.get<std::string>("--module-path");
+            auto cmd_web_panel = program.get<bool>("--web-panel");
+
+            if (!cmd_host.empty())
+            {
+                Lithium::MyApp->SetConfig("config/server/host", cmd_host);
+            }
+            if (!cmd_config_path.empty())
+            {
+                Lithium::MyApp->SetConfig("config/server/configpath", cmd_config_path);
+            }
+            if (!cmd_module_path.empty())
+            {
+                Lithium::MyApp->SetConfig("config/server/modulepath", cmd_module_path);
+            }
+
+            if (!cmd_web_panel)
+            {
+                if (Lithium::MyApp->GetConfig("config/server/web").get<bool>())
+                {
+                    Lithium::MyApp->SetConfig("config/server/web",false);
+                }
+            }
+        }
+        catch (const std::bad_any_cast &e)
+        {
+            LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
+        }
 
         oatpp::base::Environment::init();
         // Run the main server
@@ -280,6 +311,7 @@ int main(int argc, char *argv[])
     catch (const std::exception &e)
     {
         Lithium::CrashReport::saveCrashLog(e.what());
+        oatpp::base::Environment::destroy();
         loguru::shutdown();
         std::exit(EXIT_FAILURE);
     }

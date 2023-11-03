@@ -429,7 +429,6 @@ namespace Lithium::System
         DIR *dir;
         struct dirent *dirEntry;
         char exePath[PATH_MAX];
-        char targetPath[PATH_MAX];
 
         dir = opendir("/proc");
         if (dir != NULL)

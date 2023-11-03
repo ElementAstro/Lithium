@@ -1,3 +1,34 @@
+/*
+ * device_task.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-7-19
+
+Description: Device Task Definition
+
+**************************************************/
+
 #pragma once
 
 #include "task.hpp"
@@ -13,61 +44,43 @@ public:
      * @param stop_fn 一个可选的停止函数，默认为nullptr
      * @param can_stop 指示任务是否可以停止，默认为false
      */
-    DeviceTask(const std::function<nlohmann::json(const nlohmann::json &)> &func,
-               const nlohmann::json &params_template,
+    DeviceTask(const std::function<json(const json &)> &func,
+               const json &params_template,
                const std::string &device_name,
                const std::string &device_uuid,
                const std::string &device_device_name,
-               const std::function<nlohmann::json(const nlohmann::json &)> &stop_fn,
-               bool can_stop = false)
-        : SimpleTask(func, params_template, stop_fn, can_stop), device_name_(device_name), device_uuid_(device_uuid), device_device_name_(device_device_name)
-    {
-    }
+               const std::function<json(const json &)> &stop_fn,
+               bool can_stop = false);
 
     /**
      * @brief 获取设备名称
      * @return 设备名称
      */
-    const std::string &get_device_name() const
-    {
-        return device_name_;
-    }
+    const std::string &getDeviceName() const;
 
     /**
      * @brief 设置设备名称
      * @param device_name 要设置的设备名称
      */
-    void set_device_name(const std::string &device_name)
-    {
-        device_name_ = device_name;
-    }
+    void setDeviceName(const std::string &device_name);
 
     /**
      * @brief 获取设备UUID
      * @return 设备UUID
      */
-    const std::string &get_device_uuid() const
-    {
-        return device_uuid_;
-    }
+    const std::string &getDeviceUUID() const;
 
     /**
      * @brief 获取设备真实名称
      * @return 设备真实名称
      */
-    const std::string &get_device_device_name() const
-    {
-        return device_device_name_;
-    }
+    const std::string &getDeviceDeviceName() const;
 
     /**
      * @brief 设置设备名称
      * @param device_name 要设置的设备名称
      */
-    void set_device_device_name(const std::string &device_device_name)
-    {
-        device_device_name_ = device_device_name;
-    }
+    void setDeviceDeviceName(const std::string &device_device_name);
 
 private:
     // 设备名称

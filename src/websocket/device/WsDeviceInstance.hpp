@@ -209,7 +209,7 @@ private:
 	 */
 	oatpp::async::Lock m_writeLock;
 
-	std::unique_ptr<VCommandDispatcher> m_CommandDispatcher;
+	std::unique_ptr<CommandDispatcher<void,json>> m_CommandDispatcher;
 
 	/**
 	 * @brief Register a function handler for the VCommandDispatcher.

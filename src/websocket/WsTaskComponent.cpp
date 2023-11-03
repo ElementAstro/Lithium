@@ -32,56 +32,52 @@ Description: Task API of WebSocket Server
 #include "WebSocketServer.hpp"
 #include "LithiumApp.hpp"
 
+#include "modules/utils/time.hpp"
+#include "websocket/template/error_message.hpp"
+#include "modules/error/error_code.hpp"
+
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
+#include "magic_enum/magic_enum.hpp"
 
 void WebSocketServer::AddTask(const json &m_params)
 {
-	json res;
-	res["command"] = "AddTask";
+	json res = {{"command", __func__}};
 
 	// 检查必要参数是否存在
 	if (!m_params.contains("device_name") && !m_params.contains("device_uuid"))
 	{
-		res = {{"error", "Invalid Parameters"}, {"message", "Device name or uuid is required"}};
-		LOG_F(ERROR, "WebSocketServer::AddTask() : %s", res.dump().c_str());
-		return res;
+		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device name or uuid is required");
 	}
 	// 检查任务的来源是否指定，主要是来自设备管理器和插件管理器
 	if (!m_params.contains("task_origin") || !m_params.contains("task_name"))
 	{
-		res = {{"error", "Invalid Parameters"}, {"message", "Task origin and name are required"}};
-		LOG_F(ERROR, "WebSocketServer::AddTask() : %s", res.dump().c_str());
-		return res;
+		RESPONSE_ERROR(res, ServerError::MissingParameters, "Task origin and name are required");
 	}
 
 	try
 	{
 		const std::string device_name = m_params.value("device_name", "");
 		const std::string device_uuid = m_params.value("device_uuid", "");
-		const std::string task_origin = m_params.value("task_origin","");
-		const std::string task_name = m_params.value("task_name","");
+		const std::string task_origin = m_params.value("task_origin", "");
+		const std::string task_name = m_params.value("task_name", "");
 		if (task_origin == "device")
 		{
 			Lithium::DeviceType device_type;
 			auto it = DeviceTypeMap.find(m_params["device_type"]);
 			if (it == DeviceTypeMap.end())
 			{
-				res["error"] = "Unsupport device type";
-				LOG_F(ERROR, "Unsupport device type, AddTask() : %s", res.dump().c_str());
-				return res;
+				RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
 			}
 			device_type = it->second;
 			std::shared_ptr<Lithium::SimpleTask> task = Lithium::MyApp->getTask(device_type, device_name, task_name, m_params["task_params"]);
 			if (!task)
 			{
-				res = {{"error", "Task Failed"}, {"message", "Failed to add device task"}};
-				return res;
+				RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to add device task");
 			}
 			if (!Lithium::MyApp->addTask(task))
 			{
-				res = {{"error", "Task Failed"}, {"message", "Failed to add task to task manager"}};
-				return res;
+				RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to add task to task manager");
 			}
 		}
 		else if (task_origin == "plugin")
@@ -89,31 +85,38 @@ void WebSocketServer::AddTask(const json &m_params)
 		}
 		else
 		{
-			res = {{"error", "Invalid Parameters"}, {"message", "Unknown task origin"}};
+			RESPONSE_ERROR(res, ServerError::InvalidFormat, "Unknown task origin");
 		}
 	}
 	catch (const json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::AddTask() json exception: %s", e.what());
-		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
 	}
 	catch (const std::exception &e)
 	{
-		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		LOG_F(ERROR, "WebSocketServer::AddTask(): %s", e.what());
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
 	}
-	return res;
 }
 
 void WebSocketServer::InsertTask(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::ExecuteAllTasks(const json &m_params)
 {
-	json res;
-	res["command"] = "ExecuteAllTasks";
+	json res = {{"command", __func__}};
 
 	try
 	{
@@ -125,21 +128,17 @@ void WebSocketServer::ExecuteAllTasks(const json &m_params)
 	}
 	catch (const json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks() json exception: %s", e.what());
-		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
 	}
 	catch (const std::exception &e)
 	{
-		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		LOG_F(ERROR, "WebSocketServer::ExecuteAllTasks(): %s", e.what());
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
 	}
-	return res;
 }
 
 void WebSocketServer::StopTask(const json &m_params)
 {
-	json res;
-	res["command"] = "StopTask";
+	json res = {{"command", __func__}};
 
 	try
 	{
@@ -151,27 +150,21 @@ void WebSocketServer::StopTask(const json &m_params)
 	}
 	catch (const json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::StopTask() json exception: %s", e.what());
-		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
 	}
 	catch (const std::exception &e)
 	{
-		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		LOG_F(ERROR, "WebSocketServer::StopTask(): %s", e.what());
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
 	}
-	return res;
 }
 
 void WebSocketServer::ExecuteTaskByName(const json &m_params)
 {
-	json res;
-	res["command"] = "ExecuteTaskByName";
+	json res = {{"command", __func__}};
 
 	if (!m_params.contains("task_name"))
 	{
-		res = {{"error", "Invalid Parameters"}, {"message", "Task name is required"}};
-		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() : %s", res.dump().c_str());
-		return res;
+		RESPONSE_ERROR(res, ServerError::MissingParameters, "Task name is required");
 	}
 
 	try
@@ -185,51 +178,113 @@ void WebSocketServer::ExecuteTaskByName(const json &m_params)
 	}
 	catch (const json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName() json exception: %s", e.what());
-		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
 	}
 	catch (const std::exception &e)
 	{
-		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		LOG_F(ERROR, "WebSocketServer::ExecuteTaskByName(): %s", e.what());
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
 	}
-	return res;
 }
 
 void WebSocketServer::ModifyTask(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::ModifyTaskByName(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::DeleteTask(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::DeleteTaskByName(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::QueryTaskByName(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::GetTaskList(const json &m_params)
 {
-	return {};
+	json res = {{"command", __func__}};
+	try
+	{
+	}
+	catch (const json::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+	}
+	catch (const std::exception &e)
+	{
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+	}
 }
 
 void WebSocketServer::SaveTasksToJson(const json &m_params)
 {
-	json res;
-	res["command"] = "SaveTasksToJson";
+	json res = {{"command", __func__}};
 
 	try
 	{
@@ -241,13 +296,10 @@ void WebSocketServer::SaveTasksToJson(const json &m_params)
 	}
 	catch (const json::exception &e)
 	{
-		LOG_F(ERROR, "WebSocketServer::SaveTasksToJson() json exception: %s", e.what());
-		res = {{"error", "Invalid Parameters"}, {"message", e.what()}};
+		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
 	}
 	catch (const std::exception &e)
 	{
-		res = {{"error", "Unknown Error"}, {"message", e.what()}};
-		LOG_F(ERROR, "WebSocketServer::SaveTasksToJson(): %s", e.what());
+		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
 	}
-	return res;
 }

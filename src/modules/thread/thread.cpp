@@ -75,7 +75,7 @@ namespace Lithium::Thread
         {
             std::unique_lock<std::mutex> lock(m_mtx);
             m_cv.wait(lock, [this]
-                      { return m_threads.size() < m_maxThreads || m_stopFlag; });
+                      { return static_cast<int>(m_threads.size()) < m_maxThreads || m_stopFlag; });
 
             if (m_stopFlag)
             {
@@ -85,12 +85,12 @@ namespace Lithium::Thread
             {
                 auto t = std::make_tuple(
 #if __cplusplus >= 202002L
-                    std::make_unique<std::jthread>([func]
+                std::make_unique<std::jthread>([func]
+                {
 #else
-                    std::make_unique<std::thread>([func]
+                std::make_unique<std::thread>([func]
+                {
 #endif
-
-                                                   {
                 try
                 {
                     func();

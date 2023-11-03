@@ -27,7 +27,7 @@
 #define MAXFD_PER_MESSAGE 16 /* No more than 16 buffer attached to a message */
 
 #ifdef ENABLE_HYDROGEN_SHARED_MEMORY
-# include "sharedblob_parse.hpp"
+# include "sharedblob_parse.h"
 # include <sys/socket.h>
 # include <sys/un.h>
 # include <unistd.h>

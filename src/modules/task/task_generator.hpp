@@ -44,7 +44,7 @@ Description: Task Generator
 #include "modules/plugin/plugin_manager.hpp"
 #include "core/property/task/task.hpp"
 
-namespace Lithium
+namespace Lithium::Task
 {
     class TaskGenerator
     {

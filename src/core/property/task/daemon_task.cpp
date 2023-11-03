@@ -34,16 +34,21 @@ Description: Daemon Task Definition
 namespace Lithium
 {
     DaemonTask::DaemonTask(const std::function<void()> &task_fn,
-                           std::function<nlohmann::json(const nlohmann::json &)>&stop_fn)
+                           std::function<json(const json &)> &stop_fn)
         : BasicTask(stop_fn, true), task_fn_(task_fn)
     {
     }
 
-    nlohmann::json DaemonTask::Execute()
+    const json DaemonTask::execute()
     {
         // 执行任务的具体逻辑实现
+#if __cplusplus >= 202002L
         std::jthread task_thread([this](std::stop_token stoken)
                                  {
+#else
+        std::jthread task_thread([this](std::stop_token stoken)
+                                 {
+#endif
         while (!stoken.stop_requested())
         {
             if (task_fn_)
@@ -56,14 +61,14 @@ namespace Lithium
         return {{"status", "running"}};
     }
 
-    const nlohmann::json DaemonTask::ToJson() const
+    const json DaemonTask::toJson() const
     {
-        auto json = BasicTask::ToJson();
+        auto json = BasicTask::toJson();
         json["type"] = "daemon";
         return json;
     }
 
-    void DaemonTask::RunTask()
+    void DaemonTask::runTask()
     {
         while (!stop_flag_)
         {

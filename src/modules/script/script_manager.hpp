@@ -45,13 +45,13 @@ namespace Lithium
 {
     class MessageBus;
 
-    class ChaiScriptManager
+    class ScriptManager
     {
     public:
-        ChaiScriptManager(std::shared_ptr<MessageBus> messageBus);
-        ~ChaiScriptManager();
+        ScriptManager(std::shared_ptr<MessageBus> messageBus);
+        ~ScriptManager();
 
-        static std::shared_ptr<ChaiScriptManager> createShared(std::shared_ptr<MessageBus> messageBus);
+        static std::shared_ptr<ScriptManager> createShared(std::shared_ptr<MessageBus> messageBus);
 
         void Init();
         void InitSubModules();

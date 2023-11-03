@@ -92,7 +92,7 @@ public:
     std::shared_ptr<Generator::Config> generatorConfig;
     try {
       generatorConfig = OATPP_GET_COMPONENT(std::shared_ptr<Generator::Config>);
-    } catch (std::runtime_error e) {
+    } catch (const std::runtime_error &e) {
       generatorConfig = std::make_shared<Generator::Config>();
     }
 

@@ -97,11 +97,6 @@ namespace Lithium::Process
 
         bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
 
-        /**
-         * 列出当前运行的进程。
-         */
-        void listProcesses();
-
         std::vector<Process> getRunningProcesses();
 
         /**

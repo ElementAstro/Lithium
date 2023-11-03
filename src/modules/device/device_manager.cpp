@@ -163,7 +163,7 @@ namespace Lithium
         }
         std::string newName = name;
         int index = 1;
-        while (findDevice(type, newName) != -1)
+        while (static_cast<int>(findDevice(type, newName)) != -1)
         {
 #if __cplusplus >= 202002L
 #ifdef __cpp_lib_format
@@ -385,7 +385,7 @@ namespace Lithium
         std::lock_guard<std::mutex> lock(m_mutex);
 
         size_t index = findDevice(type, name);
-        if (index != -1)
+        if (static_cast<int>(index) != -1)
         {
             return m_devices[static_cast<int>(type)][index];
         }

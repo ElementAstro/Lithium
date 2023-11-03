@@ -46,7 +46,6 @@ namespace Lithium::Task
         // Check if the task being added is mutually exclusive with any existing tasks
         for (const auto &kv : mutually_exclusive_tasks_)
         {
-            const std::string &existingTaskName = kv.first;
             const std::unordered_set<std::string> &exclusiveTasks = kv.second;
 
             if (exclusiveTasks.find(taskName) != exclusiveTasks.end())

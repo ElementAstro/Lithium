@@ -266,7 +266,7 @@ namespace Lithium::File
                 continue;
             char file_name[512];
             int ret = snprintf(file_name, sizeof(file_name), "%s/%s", folder_name, entry->d_name);
-            if (ret < 0 || ret >= sizeof(file_name))
+            if (ret < 0 || static_cast<size_t>(ret) >= sizeof(file_name))
             {
                 LOG_F(ERROR, "Failed to compress file {} because the output was truncated or an error occurred in snprintf()", entry->d_name);
                 closedir(dir);

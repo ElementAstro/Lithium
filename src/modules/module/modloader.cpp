@@ -448,7 +448,6 @@ namespace Lithium
         auto it = handles_.find(module_name);
         if (it != handles_.end())
         {
-            void *handle = it->second;
             std::string module_path = GetModulePath(module_name);
             if (module_path.empty())
             {

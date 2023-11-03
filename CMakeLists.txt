@@ -149,7 +149,7 @@ if(NOT WIN32)
 add_subdirectory(${lithium_src_dir}/modules/deviceloader)
 endif()
 
-set(api_SRC
+set(api_module
 	${lithium_src_dir}/client/astap.cpp
 	${lithium_src_dir}/client/astap.hpp
 
@@ -159,16 +159,19 @@ set(api_SRC
     ${lithium_src_dir}/client/phd2client.cpp
 	${lithium_src_dir}/client/phd2client.hpp
 
+    ${lithium_src_dir}/modules/client/indiclient.cpp
+    ${lithium_src_dir}/modules/client/indiclient.hpp
+
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.hpp
 )
 
-set(config_SRC
+set(config_module
     ${lithium_src_dir}/modules/config/configor.cpp
     ${lithium_src_dir}/modules/config/configor.hpp
 )
 
-set(device_SRC
+set(device_module
     ${lithium_src_dir}/modules/device/device_manager.cpp
     ${lithium_src_dir}/modules/device/device_manager.hpp
 
@@ -185,33 +188,14 @@ set(device_SRC
     ${lithium_src_dir}/modules/device/hydrogen_device.hpp
 )
 
-set(driver_indi_SRC
-    ${lithium_src_dir}/client/indiclient.cpp
-    ${lithium_src_dir}/client/indiclient.hpp
-
-    ${lithium_src_dir}/driver/indi/indi_exception.hpp
-
-	${lithium_src_dir}/driver/indi/indicamera.cpp
-	${lithium_src_dir}/driver/indi/indicamera.hpp
-
-	${lithium_src_dir}/driver/indi/indifocuser.cpp
-	${lithium_src_dir}/driver/indi/indifocuser.hpp
-
-	${lithium_src_dir}/driver/indi/inditelescope.cpp
-	${lithium_src_dir}/driver/indi/inditelescope.hpp
-
-	${lithium_src_dir}/driver/indi/indifilterwheel.cpp
-	${lithium_src_dir}/driver/indi/indifilterwheel.hpp
-)
-
-set(image_SRC
+set(image_module
 	${lithium_src_dir}/image/image.cpp
 	${lithium_src_dir}/image/image.hpp
 
 	${lithium_src_dir}/image/draw.cpp
 )
 
-set(io_SRC
+set(io_module
     ${lithium_src_dir}/modules/io/compress.cpp
     ${lithium_src_dir}/modules/io/compress.hpp
 
@@ -224,12 +208,12 @@ set(io_SRC
     ${lithium_src_dir}/modules/io/io.hpp
 )
 
-set(launcher_SRC
+set(launcher_module
     ${lithium_src_dir}/launcher/crash.cpp
     ${lithium_src_dir}/launcher/crash.hpp
 )
 
-set(module_SRC
+set(module_module
     ${lithium_src_dir}/modules/module/modloader.cpp
     ${lithium_src_dir}/modules/module/modloader.hpp
 
@@ -249,7 +233,7 @@ set(module_SRC
     ${lithium_src_dir}/modules/module/compiler.hpp
 )
 
-set(network_SRC
+set(network_module
     ${lithium_src_dir}/modules/web/downloader.cpp
     ${lithium_src_dir}/modules/web/downloader.hpp
 
@@ -263,9 +247,13 @@ set(network_SRC
     # ${lithium_src_dir}/network/time.hpp
 )
 
-set(server_SRC
-    ${lithium_src_dir}/modules/server/commander.cpp
+set(server_module
     ${lithium_src_dir}/modules/server/commander.hpp
+    ${lithium_src_dir}/modules/server/message_bus.hpp
+    ${lithium_src_dir}/modules/server/message_queue.hpp
+
+    ${lithium_src_dir}/modules/server/serialize.cpp
+    ${lithium_src_dir}/modules/server/serialize.hpp
 
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
@@ -293,12 +281,12 @@ set(server_SRC
     ${lithium_src_dir}/websocket/plugin/WsPluginServer.hpp
 )
 
-set(script_SRC
+set(script_module
     ${lithium_src_dir}/modules/script/script_manager.cpp
     ${lithium_src_dir}/modules/script/script_manager.hpp
 )
 
-set(task_SRC
+set(task_module
     ${lithium_src_dir}/modules/task/task_manager.cpp
     ${lithium_src_dir}/modules/task/task_manager.hpp
 
@@ -309,7 +297,7 @@ set(task_SRC
     ${lithium_src_dir}/modules/task/task_generator.hpp
 )
 
-set(thread_SRC
+set(thread_module
     ${lithium_src_dir}/modules/thread/thread.cpp
     ${lithium_src_dir}/modules/thread/thread.hpp
 )
@@ -331,7 +319,13 @@ set(system_module
     ${lithium_src_dir}/modules/system/pidw.cpp
 )
 
-set(Lithium_SRC
+set(utils_module
+    ${lithium_src_dir}/modules/utils/time.cpp
+    ${lithium_src_dir}/modules/utils/string.cpp
+    ${lithium_src_dir}/modules/utils/switch.cpp
+)
+
+set(Lithium_module
 	${lithium_src_dir}/ErrorHandler.cpp
     ${lithium_src_dir}/ErrorHandler.hpp
 
@@ -360,7 +354,7 @@ include(cmake_modules/Gettext_helpers.cmake)
 configure_gettext(
     DOMAIN "lithium"
     TARGET_NAME "lithium-gettext"
-    SOURCES "${api_SRC}" "${config_SRC}" "${io_SRC}" "${module_SRC}" "${network_SRC}" "${device_SRC}" "${thread_SRC}" "${task_SRC}" "${server_SRC}" "${script_SRC}" "${system_module}" "${Lithium_SRC}"
+    SOURCES "${api_module}" "${config_module}" "${io_module}" "${module_module}" "${network_module}" "${device_module}" "${thread_module}" "${task_module}" "${server_module}" "${script_module}" "${system_module}" "${Lithium_module}"
     POTFILE_DESTINATION "locale"
     XGETTEXT_ARGS 
         "--keyword=_" "--keyword=N_" "--keyword=P_:1,2"
@@ -372,11 +366,11 @@ find_package(Intl REQUIRED)
 
 
 if(WIN32)
-    #add_executable(lithium_server ${api_SRC} ${config_SRC} ${database_SRC} ${debug_SRC}
-     #${image_SRC} ${logger_SRC} ${module_SRC} 
-    #  ${server_SRC} ${task_SRC} ${thread_SRC} ${Lithium_SRC})
+    #add_executable(lithium_server ${api_module} ${config_module} ${database_module} ${debug_module}
+     #${image_module} ${logger_module} ${module_module} 
+    #  ${server_module} ${task_module} ${thread_module} ${Lithium_module})
 
-    add_executable(lithium_server ${api_SRC} ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${network_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${Lithium_module})
 
     target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
     
@@ -431,7 +425,7 @@ if(WIN32)
     install(TARGETS oatpp-websocket)
 elseif(UNIX OR LINUX OR APPLE)
     
-    add_executable(lithium_server ${config_SRC} ${io_SRC} ${module_SRC} ${network_SRC} ${device_SRC} ${thread_SRC} ${task_SRC} ${server_SRC} ${script_SRC} ${system_module} ${Lithium_SRC})
+    add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${network_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
 
     target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 
@@ -442,6 +436,10 @@ elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server lithiumcorestatic)
 
     target_link_libraries(lithium_server hydrogencore)
+
+    target_link_libraries(lithium_server hydrogenclientstatic)
+
+    target_link_libraries(lithium_server asan)
 
     CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 

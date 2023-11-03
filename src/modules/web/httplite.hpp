@@ -1,5 +1,5 @@
 /*
- * plugin.cpp
+ * httplite.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,37 +23,15 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-8-6
+Date: 2023-11-3
 
-Description: Basic Plugin Definition
+Description: Simple Http Client
 
 **************************************************/
 
-#include "plugin.hpp"
+#pragma once
 
+#include <string>
+#include <functional>
 
-
-Plugin::Plugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description)
-    : path_(path), version_(version), author_(author), description_(description) {}
-
-Plugin::~Plugin() {}
-
-std::string Plugin::GetPath() const
-{
-    return path_;
-}
-
-std::string Plugin::GetVersion() const
-{
-    return version_;
-}
-
-std::string Plugin::GetAuthor() const
-{
-    return author_;
-}
-
-std::string Plugin::GetDescription() const
-{
-    return description_;
-}
+std::string httpRequest(const std::string &url, const std::string &method, std::function<void(const std::string &)> errorHandler);

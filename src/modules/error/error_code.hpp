@@ -80,5 +80,10 @@ enum class ServerError
 {
     None,
     InvalidParameters,
-    InvalidFormat
+    InvalidFormat,
+    MissingParameters,
+
+    RunFailed,
+    
+    UnknownError,
 };

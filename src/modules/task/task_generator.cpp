@@ -40,7 +40,7 @@ Description: Task Generator
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-namespace Lithium
+namespace Lithium::Task
 {
     TaskGenerator::TaskGenerator(std::shared_ptr<DeviceManager> deviceManager)
     {

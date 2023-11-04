@@ -33,6 +33,7 @@ Description: Commander
 
 #include <string>
 #include <functional>
+#include <stack>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -58,6 +59,9 @@ public:
      * @param undoHandler 撤销函数，默认为nullptr
      */
     void RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler = nullptr);
+
+    template <class T>
+    void RegisterMemberHandler(const std::string &name, T *object, Result (T::*memberFunc)(const Argument &));
 
     /**
      * @brief 检查是否存在特定名称的命令处理函数
@@ -121,6 +125,14 @@ void CommandDispatcher<Result, Argument>::RegisterHandler(const std::string &nam
 }
 
 template <typename Result, typename Argument>
+template <class T>
+void CommandDispatcher<Result, Argument>::RegisterMemberHandler(const std::string &name, T *object, Result (T::*memberFunc)(const Argument &))
+{
+    auto handler = std::bind(memberFunc, object, std::placeholders::_1);
+    RegisterHandler(name, handler);
+}
+
+template <typename Result, typename Argument>
 bool CommandDispatcher<Result, Argument>::HasHandler(const std::string &name)
 {
     return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
@@ -134,7 +146,6 @@ Result CommandDispatcher<Result, Argument>::Dispatch(const std::string &name, co
     {
         return it->second(data);
     }
-    return Result{};
 }
 
 template <typename Result, typename Argument>

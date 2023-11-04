@@ -152,7 +152,7 @@ private:
     mutable std::mutex m_mutex;
 };
 
-std::string SerializeVariablesToJson(const VariableRegistry &registry)
+static std::string SerializeVariablesToJson(const VariableRegistry &registry)
 {
     json j;
 
@@ -189,9 +189,8 @@ std::string SerializeVariablesToJson(const VariableRegistry &registry)
     return j.dump();
 }
 
-/**
- * @brief 示例代码。
- */
+/*
+
 int main()
 {
     VariableRegistry registry;
@@ -237,3 +236,5 @@ int main()
 
     return 0;
 }
+
+*/

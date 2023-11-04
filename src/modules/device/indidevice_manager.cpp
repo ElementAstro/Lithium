@@ -89,6 +89,10 @@ void INDIManager::start_server()
     // Clear old fifo pipe and create new one
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
     int res = system(("rm -f " + fifo_path).c_str());
+    if (res != 0)
+    {
+        
+    }
     res = system(("mkfifo " + fifo_path).c_str());
     // Just start the server without driver
     std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
@@ -193,6 +197,10 @@ void INDIManager::start_driver(std::shared_ptr<INDIDeviceContainer> driver)
     }
 #else
     int res = system(full_cmd.c_str());
+    if (res != 0)
+    {
+
+    }
     DLOG_F(INFO, "Started driver : {}", driver->name);
 #endif
 
@@ -227,6 +235,10 @@ void INDIManager::stop_driver(std::shared_ptr<INDIDeviceContainer> driver)
     }
 #else
     int res = system(full_cmd.c_str());
+    if (res != 0)
+    {
+        
+    }
     DLOG_F(INFO, "Stop running driver: {}", driver->label);
     running_drivers.erase(driver->label);
 #endif

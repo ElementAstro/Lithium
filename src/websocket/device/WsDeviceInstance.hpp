@@ -51,6 +51,8 @@ Description: WebSocket Device Instance (each device each instance)
 
 #include "LithiumApp.hpp"
 
+#include <memory>
+
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
@@ -218,10 +220,10 @@ private:
 	 * @param name The name of the function.
 	 * @param handler The function handler.
 	 */
-	template <typename ClassType>
-	void LiRegisterFunc(const std::string &name, void (ClassType::*handler)(const json &))
+	template <typename T>
+	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &))
 	{
-		m_CommandDispatcher->RegisterHandler(name, handler, this);
+		m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
 	}
 
 	/**

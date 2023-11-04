@@ -56,7 +56,7 @@ struct IPropertyBase
     std::string set_func;
 };
 
-static std::unordered_map<std::string, std::string> to_unordered_map(const IPropertyBase &prop)
+static std::unordered_map<std::string, std::string> __attribute__((unused)) to_unordered_map(const IPropertyBase &prop)
 {
     std::unordered_map<std::string, std::string> result;
     result["device_name"] = prop.device_name;

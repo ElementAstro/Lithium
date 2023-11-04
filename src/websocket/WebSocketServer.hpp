@@ -404,10 +404,10 @@ private:
 	 */
 	bool APTRunFunc(const std::string &name, const json &params);
 
-	template <typename ClassType>
-	void LiRegisterFunc(const std::string &name, void (ClassType::*handler)(const json &))
+	template <typename T>
+	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &))
 	{
-		m_CommandDispatcher->RegisterHandler(name, handler, this);
+		m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
 	}
 
 #if ENABLE_ASYNC

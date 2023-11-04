@@ -86,7 +86,11 @@ FileMonitor::~FileMonitor()
 bool FileMonitor::AddWatch(const std::string &path, const FileEventHandler &handler)
 {
     auto handle = CreateWatch(path);
+#ifdef _WIN32
     if (handle == INVALID_HANDLE_VALUE)
+#else
+    if (handle == -1)
+#endif
     {
         return false;
     }
@@ -289,24 +293,3 @@ void *FileMonitor::LinuxThreadFunc(void *arg)
     return nullptr;
 }
 #endif
-
-int main()
-{
-    FileMonitor monitor;
-
-    if (!monitor.AddWatch(".", OnFileEvent))
-    {
-        std::cerr << "Failed to add watch." << std::endl;
-        return 1;
-    }
-
-    std::cin.get();
-
-    if (!monitor.RemoveWatch("."))
-    {
-        std::cerr << "Failed to remove watch." << std::endl;
-        return 1;
-    }
-
-    return 0;
-}

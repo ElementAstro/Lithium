@@ -14,6 +14,32 @@
 
 using json = nlohmann::json;
 
+bool CommandDispatcher::HasHandler(const std::string &name)
+{
+    return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
+}
+
+void CommandDispatcher::Dispatch(const std::string &name, const json &data)
+{
+    auto it = handlers_.find(Djb2Hash(name.c_str()));
+    if (it != handlers_.end())
+    {
+        it->second(data);
+    }
+}
+
+std::size_t CommandDispatcher::Djb2Hash(const char *str)
+{
+    std::size_t hash = 5381;
+    char c;
+    while ((c = *str++) != '\0')
+    {
+        hash = ((hash << 5) + hash) + static_cast<unsigned char>(c);
+    }
+    return hash;
+}
+
+
 SocketClient::SocketClient()
     : socket_(INVALID_SOCKET), isRunning_(false)
 {
@@ -194,6 +220,7 @@ void SocketClient::ReceiveThread()
 PHD2Client::PHD2Client()
 {
     phd2_client = std::make_shared<SocketClient>();
+    m_CommandDispatcher = std::make_unique<CommandDispatcher>();
 
     _is_star_locked = false;
     _is_star_selected = false;

@@ -21,6 +21,8 @@
 
 #include "LithiumApp.hpp"
 
+#include <memory>
+
 class WsPluginHub; // FWD
 
 class WsPluginInstance : public oatpp::websocket::AsyncWebSocket::Listener
@@ -36,12 +38,12 @@ private:
 	 */
 	oatpp::async::Lock m_writeLock;
 
-	std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
+	std::unique_ptr<CommandDispatcher<void,json>> m_CommandDispatcher;
 
-	template <typename ClassType>
-	void LiRegisterFunc(const std::string &name, const nlohmann::json (ClassType::*handler)(const nlohmann::json &))
+	template <typename T>
+	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &))
 	{
-		m_CommandDispatcher->RegisterHandler(name, handler, this);
+		m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
 	}
 
 	bool LiRunFunc(const std::string &name, const nlohmann::json &params)

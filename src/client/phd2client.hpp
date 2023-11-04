@@ -8,9 +8,73 @@
 #include <atomic>
 #include <thread>
 
-#include <modules/server/commander.hpp>
-
 #include "nlohmann/json.hpp"
+using json = nlohmann::json;
+
+/**
+ * @brief 类 VCommandDispatcher 负责命令的派发和处理。
+ */
+class CommandDispatcher
+{
+public:
+    /**
+     * @brief HandlerFunc 是用于处理命令的函数类型。
+     *
+     * 该函数应该接受一个 `json` 类型的参数，表示命令所携带的数据。
+     */
+    using HandlerFunc = std::function<void(const json &)>;
+
+    /**
+     * @brief RegisterHandler 函数用于将一个命令处理程序注册到 `CommandDispatcher` 中。
+     *
+     * @tparam ClassType 命令处理程序所属的类类型。
+     * @param name 命令的名称。
+     * @param handler 处理命令的成员函数指针。
+     * @param instance 处理命令的对象指针。
+     */
+    template <typename ClassType>
+    void RegisterHandler(const std::string &name, void (ClassType::*handler)(const json &), ClassType *instance)
+    {
+        auto hash_value = Djb2Hash(name.c_str());
+        handlers_[hash_value] = std::bind(handler, instance, std::placeholders::_1);
+    }
+
+    /**
+     * @brief HasHandler 函数用于检查是否有名为 `name` 的命令处理程序。
+     *
+     * @param name 要检查的命令名称。
+     * @return 如果存在名为 `name` 的命令处理程序，则返回 `true`；否则返回 `false`。
+     */
+    bool HasHandler(const std::string &name);
+
+    /**
+     * @brief Dispatch 函数用于派发一个命令，并将它交给相应的处理程序处理。
+     *
+     * @param name 要派发的命令的名称。
+     * @param data 命令所携带的数据。
+     */
+    void Dispatch(const std::string &name, const json &data);
+
+private:
+    /**
+     * @brief handlers_ 是一个哈希表，存储了所有已注册的命令处理程序。
+     *
+     * 键值为哈希值，值为命令处理程序本身。
+     */
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
+#else
+    std::unordered_map<std::size_t, HandlerFunc> handlers_;
+#endif
+
+    /**
+     * @brief Djb2Hash 函数是一个字符串哈希函数，用于将字符串转换成哈希值。
+     *
+     * @param str 要转换的字符串。
+     * @return 转换后的哈希值。
+     */
+    static std::size_t Djb2Hash(const char *str);
+};
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -22,8 +86,6 @@
 #define SOCKET int
 #define INVALID_SOCKET -1
 #endif
-
-using json = json;
 
 /**
  * @brief Represents a client socket for connecting to a server.
@@ -137,13 +199,13 @@ public:
     void _guide_param_change(const json &message);
     void _configuration_change(const json &message);
 
-    json GenerateCommand(const std::string& command, const json& params);
-    bool SendCommand(const json& command);
+    json GenerateCommand(const std::string &command, const json &params);
+    bool SendCommand(const json &command);
 
     bool GetProfiles();
     bool GetCurrentProfile();
     bool SetProfile(int profileId);
-    bool generateProfile(const json& profile);
+    bool generateProfile(const json &profile);
     bool exportProfile();
 
     bool connectDevice();
@@ -153,7 +215,7 @@ public:
 
 private:
     std::shared_ptr<SocketClient> phd2_client;
-    std::unique_ptr<VCommandDispatcher> m_CommandDispatcher;
+    std::unique_ptr<CommandDispatcher> m_CommandDispatcher;
 
     template <typename ClassType>
     void RegisterFunc(const std::string &name, void (ClassType::*handler)(const json &))

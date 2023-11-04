@@ -199,7 +199,7 @@ set(system_module
     ${lithium_module_dir}/system/process.cpp
     ${lithium_module_dir}/system/pid.cpp
     ${lithium_module_dir}/system/pidw.cpp
-    ${lithium_module_dir}/system/filew.cpp
+    # ${lithium_module_dir}/system/filew.cpp
     ${lithium_module_dir}/system/dirw.cpp
 )
 

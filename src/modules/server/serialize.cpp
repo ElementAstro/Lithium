@@ -42,7 +42,7 @@ Description: This file contains the declaration of the SerializationEngine class
 
 #include "loguru/loguru.hpp"
 
-std::string JsonRenderEngine::render(const std::any &data, bool format = false) const
+std::string JsonRenderEngine::render(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -78,7 +78,7 @@ std::string JsonRenderEngine::render(const std::any &data, bool format = false) 
     return oss.str();
 }
 
-std::string XmlRenderEngine::render(const std::any &data, bool format = false) const
+std::string XmlRenderEngine::render(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -110,7 +110,8 @@ std::string XmlRenderEngine::render(const std::any &data, bool format = false) c
     }
     return oss.str();
 }
-std::string YamlRenderEngine::render(const std::any &data, bool format = false) const
+
+std::string YamlRenderEngine::render(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -139,7 +140,7 @@ std::string YamlRenderEngine::render(const std::any &data, bool format = false) 
     return oss.str();
 }
 
-std::string IniRenderEngine::render(const std::any &data, bool format = false) const
+std::string IniRenderEngine::render(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -158,7 +159,7 @@ std::string IniRenderEngine::render(const std::any &data, bool format = false) c
     }
     return oss.str();
 }
-std::string TomlRenderEngine::render(const std::any &data, bool format = false) const
+std::string TomlRenderEngine::render(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try

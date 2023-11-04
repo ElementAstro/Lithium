@@ -31,10 +31,12 @@ Description: Basic Plugin Definition
 
 #include "plugin.hpp"
 
-
-
 Plugin::Plugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description)
-    : path_(path), version_(version), author_(author), description_(description) {}
+    : path_(path), version_(version), author_(author), description_(description)
+{
+    m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
+    m_VariableRegistry = std::make_unique<VariableRegistry>();
+}
 
 Plugin::~Plugin() {}
 
@@ -56,4 +58,28 @@ std::string Plugin::GetAuthor() const
 std::string Plugin::GetDescription() const
 {
     return description_;
+}
+
+bool Plugin::RunFunc(const std::string &name, const json &params)
+{
+    if (!m_CommandDispatcher->HasHandler(name))
+    {
+        return false;
+    }
+    m_CommandDispatcher->Dispatch(name, params);
+    return true;
+}
+
+bool Plugin::RunFunc(const std::vector<std::string> &name, const std::vector<json> &params)
+{
+    if (name.empty())
+        return false;
+    if (name.size() != params.size())
+        return false;
+    return true;
+}
+
+json Plugin::GetPluginInfo() const
+{
+    return {{"author", author_}, {"version", version_}, {"description", description_}, {"license", path_}};
 }

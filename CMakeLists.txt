@@ -111,172 +111,96 @@ endif()
 
 set(api_module
 	${lithium_src_dir}/client/astap.cpp
-	${lithium_src_dir}/client/astap.hpp
-
 	${lithium_src_dir}/client/astrometry.cpp
-	${lithium_src_dir}/client/astrometry.hpp
-
     ${lithium_src_dir}/client/phd2client.cpp
-	${lithium_src_dir}/client/phd2client.hpp
-
     ${lithium_module_dir}/client/indiclient.cpp
-    ${lithium_module_dir}/client/indiclient.hpp
-
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
-    ${lithium_src_dir}/client/hydrogen/hydrogencamera.hpp
 )
 
 set(config_module
     ${lithium_module_dir}/config/configor.cpp
-    ${lithium_module_dir}/config/configor.hpp
 )
 
 set(device_module
     ${lithium_module_dir}/device/device_manager.cpp
-    ${lithium_module_dir}/device/device_manager.hpp
-
     ${lithium_module_dir}/device/indidevice_manager.cpp
-    ${lithium_module_dir}/device/indidevice_manager.hpp
-
     ${lithium_module_dir}/device/device_utils.cpp
-    ${lithium_module_dir}/device/device_utils.hpp
-
     ${lithium_module_dir}/device/indi_device.cpp
-    ${lithium_module_dir}/device/indi_device.hpp
-
     ${lithium_module_dir}/device/hydrogen_device.cpp
-    ${lithium_module_dir}/device/hydrogen_device.hpp
 )
 
 set(image_module
 	${lithium_src_dir}/image/image.cpp
-	${lithium_src_dir}/image/image.hpp
-
 	${lithium_src_dir}/image/draw.cpp
 )
 
 set(io_module
     ${lithium_module_dir}/io/compress.cpp
-    ${lithium_module_dir}/io/compress.hpp
-
     ${lithium_module_dir}/io/file.cpp
-    ${lithium_module_dir}/io/file.hpp
-
-    ${lithium_module_dir}/io/glob.hpp
-
     ${lithium_module_dir}/io/io.cpp
-    ${lithium_module_dir}/io/io.hpp
-)
-
-set(launcher_module
-    ${lithium_src_dir}/launcher/crash.cpp
-    ${lithium_src_dir}/launcher/crash.hpp
 )
 
 set(module_module
     ${lithium_module_dir}/module/modloader.cpp
-    ${lithium_module_dir}/module/modloader.hpp
-
     ${lithium_module_dir}/plugin/plugin.cpp
-    ${lithium_module_dir}/plugin/plugin.hpp
-
     ${lithium_module_dir}/plugin/exe_plugin.cpp
-    ${lithium_module_dir}/plugin/exe_plugin.hpp
-
     ${lithium_module_dir}/plugin/script_plugin.cpp
-    ${lithium_module_dir}/plugin/script_plugin.hpp
-
     ${lithium_module_dir}/plugin/plugin_manager.cpp
-    ${lithium_module_dir}/plugin/plugin_manager.hpp
-
     ${lithium_module_dir}/module/compiler.cpp
-    ${lithium_module_dir}/module/compiler.hpp
 )
 
-set(network_module
+set(web_module
     ${lithium_module_dir}/web/downloader.cpp
-    ${lithium_module_dir}/web/downloader.hpp
-
     ${lithium_module_dir}/web/httpclient.cpp
-    ${lithium_module_dir}/web/httpclient.hpp
-
+    ${lithium_module_dir}/web/httplite.cpp
     ${lithium_module_dir}/web/utils.cpp
-    ${lithium_module_dir}/web/utils.hpp
-
-    # ${lithium_src_dir}/network/time.cpp
-    # ${lithium_src_dir}/network/time.hpp
+    ${lithium_module_dir}/web/time.cpp
 )
 
 set(server_module
     ${lithium_module_dir}/server/commander.hpp
     ${lithium_module_dir}/server/message_bus.hpp
     ${lithium_module_dir}/server/message_queue.hpp
-
     ${lithium_module_dir}/server/serialize.cpp
-    ${lithium_module_dir}/server/serialize.hpp
 
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
-    ${lithium_src_dir}/websocket/WebSocketServer.hpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
     ${lithium_src_dir}/websocket/WsProcessComponent.cpp
     ${lithium_src_dir}/websocket/WsScriptComponent.cpp
     ${lithium_src_dir}/websocket/WsTaskComponent.cpp
 
     ${lithium_src_dir}/websocket/device/WsDeviceHub.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceHub.hpp
-
     ${lithium_src_dir}/websocket/device/WsDeviceInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceInstance.hpp
-
     ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceServer.hpp
 
     ${lithium_src_dir}/websocket/plugin/WsPluginHub.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginHub.hpp
-
     ${lithium_src_dir}/websocket/plugin/WsPluginInstance.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginInstance.hpp
-
     ${lithium_src_dir}/websocket/plugin/WsPluginServer.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginServer.hpp
 )
 
 set(script_module
     ${lithium_module_dir}/script/script_manager.cpp
-    ${lithium_module_dir}/script/script_manager.hpp
 )
 
 set(task_module
     ${lithium_module_dir}/task/task_manager.cpp
-    ${lithium_module_dir}/task/task_manager.hpp
-
     ${lithium_module_dir}/task/task_stack.cpp
-    ${lithium_module_dir}/task/task_stack.hpp
-
     ${lithium_module_dir}/task/task_generator.cpp
-    ${lithium_module_dir}/task/task_generator.hpp
 )
 
 set(thread_module
     ${lithium_module_dir}/thread/thread.cpp
-    ${lithium_module_dir}/thread/thread.hpp
+    ${lithium_module_dir}/thread/thread_pool.hpp
 )
 
 set(system_module
     ${lithium_module_dir}/system/system.cpp
-    ${lithium_module_dir}/system/system.hpp
-
     ${lithium_module_dir}/system/crash.cpp
-    ${lithium_module_dir}/system/crash.hpp
-
     ${lithium_module_dir}/system/process.cpp
-    ${lithium_module_dir}/system/process.hpp
-
     ${lithium_module_dir}/system/pid.cpp
-    ${lithium_module_dir}/system/pid.hpp
-
     ${lithium_module_dir}/system/pidw.cpp
-    ${lithium_module_dir}/system/pidw.cpp
+    ${lithium_module_dir}/system/filew.cpp
+    ${lithium_module_dir}/system/dirw.cpp
 )
 
 set(utils_module
@@ -286,14 +210,10 @@ set(utils_module
 )
 
 set(Lithium_module
-	${lithium_src_dir}/ErrorHandler.cpp
-    ${lithium_src_dir}/ErrorHandler.hpp
-
     ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp
-
+	${lithium_src_dir}/ErrorHandler.cpp
     ${lithium_src_dir}/LithiumApp.cpp
-	${lithium_src_dir}/LithiumApp.hpp
 )
 
 find_package(OpenSSL REQUIRED)
@@ -314,7 +234,7 @@ include(cmake_modules/Gettext_helpers.cmake)
 configure_gettext(
     DOMAIN "lithium"
     TARGET_NAME "lithium-gettext"
-    SOURCES "${api_module}" "${config_module}" "${io_module}" "${module_module}" "${network_module}" "${device_module}" "${thread_module}" "${task_module}" "${server_module}" "${script_module}" "${system_module}" "${Lithium_module}"
+    SOURCES "${api_module}" "${config_module}" "${io_module}" "${module_module}" "${web_module}" "${device_module}" "${thread_module}" "${task_module}" "${server_module}" "${script_module}" "${system_module}" "${Lithium_module}"
     POTFILE_DESTINATION "locale"
     XGETTEXT_ARGS 
         "--keyword=_" "--keyword=N_" "--keyword=P_:1,2"
@@ -358,7 +278,7 @@ if(NOT WIN32)
 add_subdirectory(${lithium_module_dir}/deviceloader)
 endif()
 
-add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${network_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
+add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${web_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 

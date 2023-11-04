@@ -54,7 +54,7 @@ Description: Time
 #include <netdb.h>
 #endif
 
-#include <spdlog/spdlog.h>
+// #include <spdlog/spdlog.h>
 
 namespace Lithium::Time
 {
@@ -76,11 +76,11 @@ namespace Lithium::Time
         sysTime.wSecond = second;
         if (!SetSystemTime(&sysTime))
         {
-            spdlog::error("Failed to set system time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}. Error code: {}", year, month, day, hour, minute, second, GetLastError());
+            // spdlog::error("Failed to set system time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}. Error code: {}", year, month, day, hour, minute, second, GetLastError());
         }
         else
         {
-            DLOG_F(INFO,"System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
+            DLOG_F(INFO, "System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
         }
     }
 
@@ -92,23 +92,23 @@ namespace Lithium::Time
         DWORD tz_id;
         if (!GetTimeZoneInformationByName(timezone, &tz_id))
         {
-            spdlog::error("Error getting time zone id for {}: {}", timezone, GetLastError());
+            // spdlog::error("Error getting time zone id for {}: {}", timezone, GetLastError());
             success = false;
         }
         TIME_ZONE_INFORMATION tz_info;
         if (!GetTimeZoneInformation(&tz_info))
         {
-            spdlog::error("Error getting current time zone information: {}", GetLastError());
+            // spdlog::error("Error getting current time zone information: {}", GetLastError());
             success = false;
         }
         else if (tz_info.StandardBias != -static_cast<int>(tz_id))
         {
-            spdlog::error("Time zone id obtained does not match offset: {} != {}", tz_id, -tz_info.StandardBias);
+            // spdlog::error("Time zone id obtained does not match offset: {} != {}", tz_id, -tz_info.StandardBias);
             success = false;
         }
         if (!SetTimeZoneInformation(&tz_info))
         {
-            spdlog::error("Error setting time zone to {}: {}", timezone, GetLastError());
+            // spdlog::error("Error setting time zone to {}: {}", timezone, GetLastError());
             success = false;
         }
         return success;
@@ -219,7 +219,7 @@ namespace Lithium::Time
     {
         if (geteuid() != 0)
         {
-            spdlog::error("Permission denied. Need root privilege to set system time.");
+            // spdlog::error("Permission denied. Need root privilege to set system time.");
             return;
         }
 
@@ -235,17 +235,17 @@ namespace Lithium::Time
 
         if (std::mktime(&new_time) == -1)
         {
-            spdlog::error("Failed to set new time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
+            // spdlog::error("Failed to set new time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
             return;
         }
 
         if (std::abs(std::difftime(now, std::mktime(&new_time))) < 2)
         {
-            DLOG_F(INFO,"System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
+            DLOG_F(INFO, "System time has been set to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
         }
         else
         {
-            spdlog::error("Failed to set new time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
+            // spdlog::error("Failed to set new time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.", year, month, day, hour, minute, second);
         }
     }
 
@@ -256,13 +256,13 @@ namespace Lithium::Time
         memset(&new_time, 0, sizeof(new_time));
         if (strptime("20200101", "%Y%m%d", &new_time) == NULL)
         {
-            spdlog::error("Failed to initialize struct tm.");
+            // spdlog::error("Failed to initialize struct tm.");
             success = false;
         }
         tzset();
         if (setenv("TZ", timezone.c_str(), 1) != 0)
         {
-            spdlog::error("Error setting time zone to {}: {}", timezone, strerror(errno));
+            // spdlog::error("Error setting time zone to {}: {}", timezone, strerror(errno));
             success = false;
         }
         else
@@ -270,7 +270,7 @@ namespace Lithium::Time
             tzset();
             if (strftime(NULL, 0, "%Z", &new_time) == 0)
             {
-                spdlog::error("Error setting time zone to {}: {}", timezone, strerror(errno));
+                // spdlog::error("Error setting time zone to {}: {}", timezone, strerror(errno));
                 success = false;
             }
         }
@@ -286,18 +286,18 @@ namespace Lithium::Time
         struct stat rtc_stat;
         if (stat(rtc_path, &rtc_stat) != 0)
         {
-            spdlog::error("Failed to stat RTC file: {}", strerror(errno));
+            // spdlog::error("Failed to stat RTC file: {}", strerror(errno));
             return false;
         }
         if (!S_ISREG(rtc_stat.st_mode))
         {
-            spdlog::error("RTC path is not a regular file");
+            // spdlog::error("RTC path is not a regular file");
             return false;
         }
         std::ifstream rtc_file(rtc_path);
         if (!rtc_file.is_open())
         {
-            spdlog::error("Failed to open RTC file: {}", strerror(errno));
+            // spdlog::error("Failed to open RTC file: {}", strerror(errno));
             return false;
         }
         int year, month, day, hour, minute, second;
@@ -330,12 +330,12 @@ namespace Lithium::Time
         }
         if (tv.tv_sec < now - 60 || tv.tv_sec > now + 60)
         {
-            spdlog::error("RTC time is too far away from current time");
+            // spdlog::error("RTC time is too far away from current time");
             return false; // 如果调整后的时间与当前时间相差超过1分钟，则认为调整失败
         }
         if (settimeofday(&tv, nullptr) != 0)
         {
-            spdlog::error("Failed to adjust system time: {}", strerror(errno));
+            // spdlog::error("Failed to adjust system time: {}", strerror(errno));
             return false;
         }
 
@@ -354,7 +354,7 @@ namespace Lithium::Time
         WSADATA wsaData;
         if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         {
-            spdlog::error("Failed to initialize Winsock2.");
+            // spdlog::error("Failed to initialize Winsock2.");
             return 0;
         }
 #endif
@@ -363,7 +363,7 @@ namespace Lithium::Time
         int socketFd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
         if (socketFd < 0)
         {
-            spdlog::error("Failed to create socket.");
+            // spdlog::error("Failed to create socket.");
             return 0;
         }
 
@@ -387,7 +387,7 @@ namespace Lithium::Time
         if (sendto(socketFd, (char *)packetBuffer, NTP_PACKET_SIZE, 0,
                    (sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
         {
-            spdlog::error("Failed to send NTP request: {}", strerror(errno));
+            // spdlog::error("Failed to send NTP request: {}", strerror(errno));
             return 0;
         }
 
@@ -398,7 +398,7 @@ namespace Lithium::Time
         FD_SET(socketFd, &readfds);
         if (select(socketFd + 1, &readfds, nullptr, nullptr, &timeout) <= 0)
         {
-            spdlog::error("Failed to receive NTP response: {}", strerror(errno));
+            // spdlog::error("Failed to receive NTP response: {}", strerror(errno));
             return 0;
         }
 
@@ -409,7 +409,7 @@ namespace Lithium::Time
         if (recvfrom(socketFd, (char *)packetBuffer, NTP_PACKET_SIZE, 0,
                      (sockaddr *)&serverResponseAddr, &addrLen) < 0)
         {
-            spdlog::error("Failed to receive NTP response: {}", strerror(errno));
+            // spdlog::error("Failed to receive NTP response: {}", strerror(errno));
             return 0;
         }
 
@@ -428,7 +428,7 @@ namespace Lithium::Time
 
         timestamp -= 2208988800UL; // 将从 1900 年至今的秒数转换为从 1970 年至今的秒数
 
-        DLOG_F(INFO,"从 {} 获取到的时间戳是：{}", hostname, timestamp);
+        DLOG_F(INFO, "从 {} 获取到的时间戳是：{}", hostname, timestamp);
 
         return (time_t)timestamp;
     }
@@ -438,7 +438,7 @@ namespace Lithium::Time
 /*
 int main() {
     // Initialize spdlog logger
-    auto logger = spdlog::stdout_color_mt("console");
+    auto logger = //spdlog::stdout_color_mt("console");
 
     // Test the function on Windows and Linux
     std::string timezone = "Asia/Shanghai";

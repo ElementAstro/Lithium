@@ -54,93 +54,85 @@ msgstr ""
 msgid "Failed to check if thread {} is running: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:75
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:76
 msgid "Failed to create PowerShell process"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:85
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:86
 msgid "Running command: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:98
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:122
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:143
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:103
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:127
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:148
 msgid "Failed to create process"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:108
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:153
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:113
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:158
 msgid "Process created: {} (PID: {})"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:132
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:137
 msgid "Running script: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:170
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:182
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:175
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:187
 msgid "Process terminated: {} (PID: {})"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:174
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:179
 msgid "Failed to terminate process"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:190
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:246
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:195
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:240
 msgid "Process not found"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:205
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:210
 msgid "Process not found by name: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:212
-msgid "Currently running processes:"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:216
-msgid "{} (PID: {})"
-msgstr ""
-
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:261
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:255
 msgid "Process completed: {} (PID: {})"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:265
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:259
 msgid "Failed to wait for process completion"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:271
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:265
 #, c-format
 msgid "Process completed: %s (PID: %d)"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:276
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:270
 msgid "All processes completed."
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:287
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:281
 msgid "Failed to create process snapshot"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:328
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:322
 msgid "Failed to open /proc directory"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:357
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:351
 msgid "Failed to get process path"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:378
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:372
 msgid "Failed to get process info length"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:385
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:379
 msgid "Failed to allocate memory"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:391
+#: E:/msys64/home/Qrm/OpenAPT/src/modules/system/process.cpp:385
 msgid "Failed to get process info"
 msgstr ""
 
@@ -172,49 +164,49 @@ msgstr ""
 msgid "Process terminated by signal: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:223
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:226
 msgid "port the server running on"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:224
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:227
 msgid "host the server running on"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:225
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:228
 msgid "path to the config file"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:226
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:229
 msgid "path to the modules directory"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:227
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:230
 msgid "web panel"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:228
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:231
 msgid "path to log file"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:230
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:233
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:231
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:234
 msgid "End."
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:239
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:242
 #, c-format
 msgid "Failed to parser command line : %s"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:260
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:263
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:266
+#: E:/msys64/home/Qrm/OpenAPT/src/App.cpp:269
 #, c-format
 msgid "Set server port to %d"
 msgstr ""

@@ -20,6 +20,7 @@ endif()
 # root directory of the project
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
+set(lithium_module_dir ${Lithium_PROJECT_ROOT_DIR}/src/modules)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -70,11 +71,6 @@ set(LITHIUM_SOVERSION ${CMAKE_LITHIUM_VERSION_MAJOR})
 set(CMAKE_LITHIUM_VERSION_STRING "${CMAKE_LITHIUM_VERSION_MAJOR}.${CMAKE_LITHIUM_VERSION_MINOR}.${CMAKE_LITHIUM_VERSION_RELEASE}")
 set(LITHIUM_VERSION ${CMAKE_LITHIUM_VERSION_MAJOR}.${CMAKE_LITHIUM_VERSION_MINOR}.${CMAKE_LITHIUM_VERSION_RELEASE})
 
-# #######################################  Paths  ###################################################
-set(DATA_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/share/indi/")
-set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
-set(INCLUDE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/include")
-
 if(APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
 endif(APPLE)
@@ -113,42 +109,6 @@ elseif(LINUX)
     set(CMAKE_INSTALL_PREFIX "/usr/lithium")
 endif()
 
-#################################################################################
-#
-# main project
-# this should appear after setting the architecture
-project(Lithium)
-
-include_directories(${CMAKE_SOURCE_DIR}/libs/)
-include_directories(${lithium_src_dir})
-include_directories(${lithium_src_dir}/modules)
-include_directories(${CMAKE_SOURCE_DIR}/src/)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
-
-# TODO : 更好的构建系统，不需要这样引用
-include_directories(${lithium_src_dir}/)
-include_directories(${lithium_src_dir}/core)
-include_directories(${lithium_src_dir}/core/image)
-include_directories(${lithium_src_dir}/core/base)
-include_directories(${lithium_src_dir}/core/property)
-
-add_subdirectory(libs/)
-
-# 所有的工具组件
-add_subdirectory(tools)
-
-# 内置的模组
-include_directories(modules)
-add_subdirectory(modules/hydrogen_client)
-
-# 构建Lithium内核
-add_subdirectory(${lithium_src_dir}/core)
-if(NOT WIN32)
-add_subdirectory(${lithium_src_dir}/modules/deviceloader)
-endif()
-
 set(api_module
 	${lithium_src_dir}/client/astap.cpp
 	${lithium_src_dir}/client/astap.hpp
@@ -159,33 +119,33 @@ set(api_module
     ${lithium_src_dir}/client/phd2client.cpp
 	${lithium_src_dir}/client/phd2client.hpp
 
-    ${lithium_src_dir}/modules/client/indiclient.cpp
-    ${lithium_src_dir}/modules/client/indiclient.hpp
+    ${lithium_module_dir}/client/indiclient.cpp
+    ${lithium_module_dir}/client/indiclient.hpp
 
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.hpp
 )
 
 set(config_module
-    ${lithium_src_dir}/modules/config/configor.cpp
-    ${lithium_src_dir}/modules/config/configor.hpp
+    ${lithium_module_dir}/config/configor.cpp
+    ${lithium_module_dir}/config/configor.hpp
 )
 
 set(device_module
-    ${lithium_src_dir}/modules/device/device_manager.cpp
-    ${lithium_src_dir}/modules/device/device_manager.hpp
+    ${lithium_module_dir}/device/device_manager.cpp
+    ${lithium_module_dir}/device/device_manager.hpp
 
-    ${lithium_src_dir}/modules/device/indidevice_manager.cpp
-    ${lithium_src_dir}/modules/device/indidevice_manager.hpp
+    ${lithium_module_dir}/device/indidevice_manager.cpp
+    ${lithium_module_dir}/device/indidevice_manager.hpp
 
-    ${lithium_src_dir}/modules/device/device_utils.cpp
-    ${lithium_src_dir}/modules/device/device_utils.hpp
+    ${lithium_module_dir}/device/device_utils.cpp
+    ${lithium_module_dir}/device/device_utils.hpp
 
-    ${lithium_src_dir}/modules/device/indi_device.cpp
-    ${lithium_src_dir}/modules/device/indi_device.hpp
+    ${lithium_module_dir}/device/indi_device.cpp
+    ${lithium_module_dir}/device/indi_device.hpp
 
-    ${lithium_src_dir}/modules/device/hydrogen_device.cpp
-    ${lithium_src_dir}/modules/device/hydrogen_device.hpp
+    ${lithium_module_dir}/device/hydrogen_device.cpp
+    ${lithium_module_dir}/device/hydrogen_device.hpp
 )
 
 set(image_module
@@ -196,16 +156,16 @@ set(image_module
 )
 
 set(io_module
-    ${lithium_src_dir}/modules/io/compress.cpp
-    ${lithium_src_dir}/modules/io/compress.hpp
+    ${lithium_module_dir}/io/compress.cpp
+    ${lithium_module_dir}/io/compress.hpp
 
-    ${lithium_src_dir}/modules/io/file.cpp
-    ${lithium_src_dir}/modules/io/file.hpp
+    ${lithium_module_dir}/io/file.cpp
+    ${lithium_module_dir}/io/file.hpp
 
-    ${lithium_src_dir}/modules/io/glob.hpp
+    ${lithium_module_dir}/io/glob.hpp
 
-    ${lithium_src_dir}/modules/io/io.cpp
-    ${lithium_src_dir}/modules/io/io.hpp
+    ${lithium_module_dir}/io/io.cpp
+    ${lithium_module_dir}/io/io.hpp
 )
 
 set(launcher_module
@@ -214,46 +174,46 @@ set(launcher_module
 )
 
 set(module_module
-    ${lithium_src_dir}/modules/module/modloader.cpp
-    ${lithium_src_dir}/modules/module/modloader.hpp
+    ${lithium_module_dir}/module/modloader.cpp
+    ${lithium_module_dir}/module/modloader.hpp
 
-    ${lithium_src_dir}/modules/plugin/plugin.cpp
-    ${lithium_src_dir}/modules/plugin/plugin.hpp
+    ${lithium_module_dir}/plugin/plugin.cpp
+    ${lithium_module_dir}/plugin/plugin.hpp
 
-    ${lithium_src_dir}/modules/plugin/exe_plugin.cpp
-    ${lithium_src_dir}/modules/plugin/exe_plugin.hpp
+    ${lithium_module_dir}/plugin/exe_plugin.cpp
+    ${lithium_module_dir}/plugin/exe_plugin.hpp
 
-    ${lithium_src_dir}/modules/plugin/script_plugin.cpp
-    ${lithium_src_dir}/modules/plugin/script_plugin.hpp
+    ${lithium_module_dir}/plugin/script_plugin.cpp
+    ${lithium_module_dir}/plugin/script_plugin.hpp
 
-    ${lithium_src_dir}/modules/plugin/plugin_manager.cpp
-    ${lithium_src_dir}/modules/plugin/plugin_manager.hpp
+    ${lithium_module_dir}/plugin/plugin_manager.cpp
+    ${lithium_module_dir}/plugin/plugin_manager.hpp
 
-    ${lithium_src_dir}/modules/module/compiler.cpp
-    ${lithium_src_dir}/modules/module/compiler.hpp
+    ${lithium_module_dir}/module/compiler.cpp
+    ${lithium_module_dir}/module/compiler.hpp
 )
 
 set(network_module
-    ${lithium_src_dir}/modules/web/downloader.cpp
-    ${lithium_src_dir}/modules/web/downloader.hpp
+    ${lithium_module_dir}/web/downloader.cpp
+    ${lithium_module_dir}/web/downloader.hpp
 
-    ${lithium_src_dir}/modules/web/httpclient.cpp
-    ${lithium_src_dir}/modules/web/httpclient.hpp
+    ${lithium_module_dir}/web/httpclient.cpp
+    ${lithium_module_dir}/web/httpclient.hpp
 
-    ${lithium_src_dir}/modules/web/utils.cpp
-    ${lithium_src_dir}/modules/web/utils.hpp
+    ${lithium_module_dir}/web/utils.cpp
+    ${lithium_module_dir}/web/utils.hpp
 
     # ${lithium_src_dir}/network/time.cpp
     # ${lithium_src_dir}/network/time.hpp
 )
 
 set(server_module
-    ${lithium_src_dir}/modules/server/commander.hpp
-    ${lithium_src_dir}/modules/server/message_bus.hpp
-    ${lithium_src_dir}/modules/server/message_queue.hpp
+    ${lithium_module_dir}/server/commander.hpp
+    ${lithium_module_dir}/server/message_bus.hpp
+    ${lithium_module_dir}/server/message_queue.hpp
 
-    ${lithium_src_dir}/modules/server/serialize.cpp
-    ${lithium_src_dir}/modules/server/serialize.hpp
+    ${lithium_module_dir}/server/serialize.cpp
+    ${lithium_module_dir}/server/serialize.hpp
 
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WebSocketServer.hpp
@@ -282,47 +242,47 @@ set(server_module
 )
 
 set(script_module
-    ${lithium_src_dir}/modules/script/script_manager.cpp
-    ${lithium_src_dir}/modules/script/script_manager.hpp
+    ${lithium_module_dir}/script/script_manager.cpp
+    ${lithium_module_dir}/script/script_manager.hpp
 )
 
 set(task_module
-    ${lithium_src_dir}/modules/task/task_manager.cpp
-    ${lithium_src_dir}/modules/task/task_manager.hpp
+    ${lithium_module_dir}/task/task_manager.cpp
+    ${lithium_module_dir}/task/task_manager.hpp
 
-    ${lithium_src_dir}/modules/task/task_stack.cpp
-    ${lithium_src_dir}/modules/task/task_stack.hpp
+    ${lithium_module_dir}/task/task_stack.cpp
+    ${lithium_module_dir}/task/task_stack.hpp
 
-    ${lithium_src_dir}/modules/task/task_generator.cpp
-    ${lithium_src_dir}/modules/task/task_generator.hpp
+    ${lithium_module_dir}/task/task_generator.cpp
+    ${lithium_module_dir}/task/task_generator.hpp
 )
 
 set(thread_module
-    ${lithium_src_dir}/modules/thread/thread.cpp
-    ${lithium_src_dir}/modules/thread/thread.hpp
+    ${lithium_module_dir}/thread/thread.cpp
+    ${lithium_module_dir}/thread/thread.hpp
 )
 
 set(system_module
-    ${lithium_src_dir}/modules/system/system.cpp
-    ${lithium_src_dir}/modules/system/system.hpp
+    ${lithium_module_dir}/system/system.cpp
+    ${lithium_module_dir}/system/system.hpp
 
-    ${lithium_src_dir}/modules/system/crash.cpp
-    ${lithium_src_dir}/modules/system/crash.hpp
+    ${lithium_module_dir}/system/crash.cpp
+    ${lithium_module_dir}/system/crash.hpp
 
-    ${lithium_src_dir}/modules/system/process.cpp
-    ${lithium_src_dir}/modules/system/process.hpp
+    ${lithium_module_dir}/system/process.cpp
+    ${lithium_module_dir}/system/process.hpp
 
-    ${lithium_src_dir}/modules/system/pid.cpp
-    ${lithium_src_dir}/modules/system/pid.hpp
+    ${lithium_module_dir}/system/pid.cpp
+    ${lithium_module_dir}/system/pid.hpp
 
-    ${lithium_src_dir}/modules/system/pidw.cpp
-    ${lithium_src_dir}/modules/system/pidw.cpp
+    ${lithium_module_dir}/system/pidw.cpp
+    ${lithium_module_dir}/system/pidw.cpp
 )
 
 set(utils_module
-    ${lithium_src_dir}/modules/utils/time.cpp
-    ${lithium_src_dir}/modules/utils/string.cpp
-    ${lithium_src_dir}/modules/utils/switch.cpp
+    ${lithium_module_dir}/utils/time.cpp
+    ${lithium_module_dir}/utils/string.cpp
+    ${lithium_module_dir}/utils/switch.cpp
 )
 
 set(Lithium_module
@@ -338,7 +298,7 @@ set(Lithium_module
 
 find_package(OpenSSL REQUIRED)
 if(OpenSSL_FOUND)
-    message("-- Using OpenSSL ${OPENSSL_VERSION}")
+    message("-- Found OpenSSL ${OPENSSL_VERSION}: ${OPENSSL_LIBRARIES}")
 else()
     message("-- OpenSSL Not Found")
 endif()
@@ -364,107 +324,86 @@ configure_gettext(
 
 find_package(Intl REQUIRED)
 
+#################################################################################
+# Main
+
+project(Lithium)
+
+include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${lithium_src_dir})
+include_directories(${lithium_module_dir})
+include_directories(${CMAKE_SOURCE_DIR}/src/)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
+
+# TODO : 更好的构建系统，不需要这样引用
+include_directories(${lithium_src_dir}/)
+include_directories(${lithium_src_dir}/core)
+include_directories(${lithium_src_dir}/core/base)
+include_directories(${lithium_src_dir}/core/property)
+
+add_subdirectory(libs/)
+
+# 所有的工具组件
+add_subdirectory(tools)
+
+# 内置的模组
+include_directories(modules)
+add_subdirectory(modules/hydrogen_client)
+
+# 构建Lithium内核
+add_subdirectory(${lithium_src_dir}/core)
+if(NOT WIN32)
+add_subdirectory(${lithium_module_dir}/deviceloader)
+endif()
+
+add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${network_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
+
+target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
+
+target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
+target_link_libraries(lithium_server loguru)
+target_link_libraries(lithium_server libzippp)
+
+target_link_libraries(lithium_server lithiumcorestatic)
+target_link_libraries(lithium_server hydrogencore)
+target_link_libraries(lithium_server hydrogenclientstatic)
+
+CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
+if(NOT HAS_STD_FORMAT)
+    find_package(fmt REQUIRED)
+    target_link_libraries(lithium_server fmt::fmt)
+endif()
+
+target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
+target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
+target_link_libraries(lithium_server libzip::zip)
+target_link_libraries(lithium_server pugixml-static)
+target_link_libraries(lithium_server sqlite3)
+target_link_libraries(lithium_server cpp_httplib)
+target_link_libraries(lithium_server backward)
+
+target_link_libraries(lithium_server asan)
+
+target_link_libraries(lithium_server ${Libintl_LIBRARY})
+target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})
+add_dependencies(lithium_server lithium-gettext)
 
 if(WIN32)
-    #add_executable(lithium_server ${api_module} ${config_module} ${database_module} ${debug_module}
-     #${image_module} ${logger_module} ${module_module} 
-    #  ${server_module} ${task_module} ${thread_module} ${Lithium_module})
-
-    add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${network_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${Lithium_module})
-
-    target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
-    
     target_link_libraries(lithium_server pdh iphlpapi winmm crypt32 wsock32 ws2_32)
-
-    target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
-
-    target_link_libraries(lithium_server loguru)
-
-    target_link_libraries(lithium_server libzippp)
-
-    target_link_libraries(lithium_server lithiumcorestatic)
-
-    target_link_libraries(lithium_server hydrogencore)
-
     find_package(dlfcn-win32 REQUIRED)
     target_link_libraries(lithium_server dlfcn-win32::dl)
-
-    CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
-
-    if(NOT HAS_STD_FORMAT)
-        find_package(fmt REQUIRED)
-        target_link_libraries(lithium_server fmt::fmt)
-    endif()
-
-    target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
-    target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
-    target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
-    target_link_libraries(lithium_server libzip::zip)
-    target_link_libraries(lithium_server pugixml-static)
-    target_link_libraries(lithium_server sqlite3)
-    target_link_libraries(lithium_server cpp_httplib)
-    target_link_libraries(lithium_server backward)
-
-    find_package(libuv REQUIRED)
-
-    target_link_libraries(lithium_server ${Libintl_LIBRARY})
-    target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})
-    add_dependencies(lithium_server lithium-gettext)
-
-    # Set output name for Lithium executable
-    set_target_properties(
-        lithium_server
-        PROPERTIES
-        OUTPUT_NAME lithium_server
-    )
-
-    install(TARGETS lithium_server)
-    install(TARGETS oatpp)
-    install(TARGETS oatpp-zlib)
-    install(TARGETS oatpp-openssl)
-    install(TARGETS oatpp-websocket)
 elseif(UNIX OR LINUX OR APPLE)
-    
-    add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${network_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
-
-    target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
-
-    target_link_libraries(lithium_server loguru)
-
-    target_link_libraries(lithium_server libzippp)
-
-    target_link_libraries(lithium_server lithiumcorestatic)
-
-    target_link_libraries(lithium_server hydrogencore)
-
-    target_link_libraries(lithium_server hydrogenclientstatic)
-
-    target_link_libraries(lithium_server asan)
-
-    CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
-
-    if(NOT HAS_STD_FORMAT)
-        find_package(fmt REQUIRED)
-        target_link_libraries(lithium_server fmt::fmt)
-    endif()
-
-    target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
-    target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
-    target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
-    target_link_libraries(lithium_server libzip::zip)
-    target_link_libraries(lithium_server pugixml-static)
-    target_link_libraries(lithium_server sqlite3)
-    target_link_libraries(lithium_server cpp_httplib)
-    target_link_libraries(lithium_server backward)
-
     target_link_libraries(lithium_server dl)
-
-    set_target_properties(
-        lithium_server
-        PROPERTIES
-        OUTPUT_NAME lithium_server
-    )
-    
 else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
+
+# Set output name for Lithium executable
+set_target_properties(
+    lithium_server
+    PROPERTIES
+    OUTPUT_NAME lithium_server
+)

@@ -69,47 +69,35 @@ namespace Lithium::System
     bool CheckSoftwareInstalled(const std::string &software_name)
     {
         bool is_installed = false;
-
 #if defined(_WIN32)
         HKEY hKey;
-        const std::string uninstall_key = R"(SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall)";
-        if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, uninstall_key.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS)
+        std::string regPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+        if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
         {
-            // // spdlog::error("Failed to open registry key.");
-            return false;
-        }
-
-        // 遍历注册表键值，查找指定软件名
-        TCHAR subkey[1024];
-        DWORD index = 0;
-        while (RegEnumKeyExA(hKey, index++, subkey, nullptr, nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS)
-        {
-            HKEY subkey_handle;
-            std::string subkey_path = uninstall_key + "\\" + subkey;
-            if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, subkey_path.c_str(), 0, KEY_READ, &subkey_handle) != ERROR_SUCCESS)
+            char subKeyName[255];
+            DWORD subKeyNameSize = 255;
+            for (DWORD i = 0; RegEnumKeyEx(hKey, i, subKeyName, &subKeyNameSize, NULL, NULL, NULL, NULL) != ERROR_NO_MORE_ITEMS; i++)
             {
-                continue;
-            }
-
-            // 获取 DisplayName 值
-            TCHAR display_name[1024];
-            DWORD display_name_size = sizeof(display_name);
-            if (RegGetValueA(subkey_handle, nullptr, "DisplayName", RRF_RT_REG_SZ, nullptr, display_name, &display_name_size) == ERROR_SUCCESS)
-            {
-                if (software_name == display_name)
+                HKEY hSubKey;
+                if (RegOpenKeyEx(hKey, subKeyName, 0, KEY_READ, &hSubKey) == ERROR_SUCCESS)
                 {
-                    RegCloseKey(subkey_handle);
-                    RegCloseKey(hKey);
-                    is_installed = true;
-                    // DLOG_F(INFO,"Software '{}' is installed.", software_name); // 记录日志
-                    break;
+                    char displayName[255];
+                    DWORD displayNameSize = 255;
+                    if (RegQueryValueEx(hSubKey, "DisplayName", NULL, NULL, reinterpret_cast<LPBYTE>(displayName), &displayNameSize) == ERROR_SUCCESS)
+                    {
+                        if (softwareName == displayName)
+                        {
+                            RegCloseKey(hSubKey);
+                            RegCloseKey(hKey);
+                            is_installed = true;
+                        }
+                    }
+                    RegCloseKey(hSubKey);
                 }
+                subKeyNameSize = 255;
             }
-
-            RegCloseKey(subkey_handle);
+            RegCloseKey(hKey);
         }
-
-        RegCloseKey(hKey);
 #elif defined(__APPLE__)
         std::string command = "mdfind \"kMDItemKind == 'Application' && kMDItemFSName == '*" + software_name + "*.app'\"";
         FILE *pipe = popen(command.c_str(), "r");

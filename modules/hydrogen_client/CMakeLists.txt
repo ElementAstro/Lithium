@@ -58,7 +58,6 @@ include_directories(${ZLIB_INCLUDE_DIR})
 
 list(APPEND ${PROJECT_NAME}_LIBS
     hydrogencore
-    hydrogendevice
     hydrogenabstractclient
     sockets
     ${CMAKE_THREAD_LIBS_INIT}

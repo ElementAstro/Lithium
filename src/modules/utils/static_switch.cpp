@@ -1,5 +1,5 @@
 /*
- * switch.cpp
+ * static_switch.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,11 +25,11 @@ E-mail: astro_air@126.com
 
 Date: 2023-10-27
 
-Description: Smart Switch just like javascript
+Description: Smart Static Switch just like javascript
 
 **************************************************/
 
-#include "switch.hpp"
+#include "static_switch.hpp"
 
 /**
  * @brief Registers a case with the given string and function.

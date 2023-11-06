@@ -39,7 +39,7 @@ ScriptPlugin::ScriptPlugin(const std::string &path, const std::string &version, 
     m_ProcessManager = processManager;
 }
 
-void ScriptPlugin::Execute(const std::vector<std::string> &args) const
+void ScriptPlugin::Execute(const std::vector<std::string> &args)
 {
     std::ostringstream oss;
     oss << GetPath();

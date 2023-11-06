@@ -33,7 +33,7 @@ Description: Basic Solver Defination
 
 #include "device.hpp"
 
-class Solver : virtual public Device
+class Solver : public Device
 {
 public:
     Solver(const std::string &name);

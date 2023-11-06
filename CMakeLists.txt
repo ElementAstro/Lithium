@@ -115,6 +115,9 @@ set(api_module
     ${lithium_src_dir}/client/phd2client.cpp
     ${lithium_module_dir}/client/indiclient.cpp
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
+    ${lithium_src_dir}/client/hydrogen/hydrogenfilterwheel.cpp
+    ${lithium_src_dir}/client/hydrogen/hydrogentelescope.cpp
+    ${lithium_src_dir}/client/hydrogen/hydrogenfocuser.cpp
 )
 
 set(config_module
@@ -206,7 +209,7 @@ set(system_module
 set(utils_module
     ${lithium_module_dir}/utils/time.cpp
     ${lithium_module_dir}/utils/string.cpp
-    ${lithium_module_dir}/utils/switch.cpp
+    ${lithium_module_dir}/utils/static_switch.cpp
 )
 
 set(Lithium_module

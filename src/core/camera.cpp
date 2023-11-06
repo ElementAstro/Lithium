@@ -35,24 +35,20 @@ Description: Camera Simulator and Basic Definition
 
 Camera::Camera(const std::string &name) : Device(name)
 {
-    DLOG_F(INFO, "Camera Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Camera::~Camera()
 {
-    DLOG_F(INFO, "Camera Simulator Destructed");
 }
 
 bool Camera::connect(const nlohmann::json &params)
 {
-    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Camera::disconnect(const nlohmann::json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

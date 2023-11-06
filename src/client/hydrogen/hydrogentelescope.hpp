@@ -1,5 +1,5 @@
 /*
- * indiTelescope.hpp
+ * hydrogentelescope.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -32,236 +32,208 @@ Description: Hydrogen Telescope
 #pragma once
 
 #include "hydrogendevice.hpp"
+#include "core/telescope.hpp"
 
-namespace Lithium
+template <typename... Args>
+class StringSwitch;
+
+class HydrogenTelescope : public Telescope, public LithiumIndiClient
 {
-    class HydrogenTelescope : public Telescope, public LithiumIndiClient
-    {
-    private:
-        // Hydrogen 客户端参数
-        ISwitchVectorProperty *connection_prop;    // 连接属性指针
-        INumberVectorProperty *telescopeinfo_prop; // 望远镜信息属性指针
-        ITextVectorProperty *telescope_port;       // 望远镜端口属性指针
-        ISwitchVectorProperty *rate_prop;          // 望远镜速率属性指针
-        HYDROGEN::BaseDevice *telescope_device;        // 望远镜设备指针
 
-        bool is_ready; // 是否连接成功标志
-        bool has_blob; // 是否接收 blob 数据标志
+public:
+    /**
+     * @brief 构造函数
+     *
+     * @param name 望远镜名字
+     */
+    HydrogenTelescope(const std::string &name);
 
-        std::string indi_telescope_port = ""; // 望远镜所选端口
-        std::string indi_telescope_rate = ""; // 望远镜所选速率
+    /**
+     * @brief 析构函数
+     *
+     */
+    ~HydrogenTelescope();
 
-        std::string indi_telescope_cmd;            // Hydrogen 命令字符串
-        std::string indi_telescope_exec = "";      // Hydrogen 设备执行文件路径
-        std::string indi_telescope_version = "";   // Hydrogen 设备固件版本
-        std::string indi_telescope_interface = ""; // Hydrogen 接口版本
+    virtual bool connect(const json &params) override;
 
-    public:
-        /**
-         * @brief 构造函数
-         *
-         * @param name 望远镜名字
-         */
-        HydrogenTelescope(const std::string &name);
+    virtual bool disconnect(const json &params) override;
 
-        /**
-         * @brief 析构函数
-         *
-         */
-        ~HydrogenTelescope();
+    virtual bool reconnect(const json &params) override;
 
-        /**
-         * @brief 连接望远镜
-         *
-         * @param name 望远镜名字
-         * @return true 连接成功
-         * @return false 连接失败
-         */
-        bool connect(std::string name) override;
+    virtual bool isConnected() override;
 
-        /**
-         * @brief 断开连接
-         *
-         * @return true 断开成功
-         * @return false 断开失败
-         */
-        bool disconnect() override;
+    /**
+     * @brief 指向新目标
+     * @param ra 目标赤经
+     * @param dec 目标赤纬
+     * @param j2000 是否使用J2000坐标系，默认为false，表示使用本地坐标系
+     * @return 是否成功指向新目标
+     */
+    virtual bool SlewTo(const json &params);
 
-        /**
-         * @brief 重新连接
-         *
-         * @return true 重新连接成功
-         * @return false 重新连接失败
-         */
-        bool reconnect() override;
+    /**
+     * @brief 中止望远镜的指向
+     * @return 是否成功中止指向
+     */
+    virtual bool Abort(const json &params);
 
-        /**
-         * @brief 搜索可用设备
-         *
-         * @return true 搜索成功
-         * @return false 搜索失败
-         */
-        bool scanForAvailableDevices() override;
+    /**
+     * @brief 获取望远镜是否在指向新目标
+     * @return 返回 true 表示正在指向新目标，否则返回 false
+     */
+    virtual bool isSlewing(const json &params);
 
-        /**
-         * @brief 将望远镜移动到指定位置
-         *
-         * @param ra 赤经
-         * @param dec 赤纬
-         * @param j2000 是否使用 J2000 坐标系
-         * @return true 移动成功
-         * @return false 移动失败
-         */
-        bool SlewTo(const std::string &ra, const std::string &dec, const bool j2000 = false) override;
+    /**
+     * @brief 获取当前赤经位置
+     * @return 当前赤经位置
+     */
+    virtual std::string getCurrentRA(const json &params);
 
-        /**
-         * @brief 中止望远镜命令
-         *
-         * @return true 中止成功
-         * @return false 中止失败
-         */
-        bool Abort() override;
+    /**
+     * @brief 获取当前赤纬位置
+     * @return 当前赤纬位置
+     */
+    virtual std::string getCurrentDec(const json &params);
 
-        /**
-         * @brief 开始追踪指定的模型和速率
-         *
-         * @param model 模型名称
-         * @param speed 速率
-         * @return true 开始追踪成功
-         * @return false 开始追踪失败
-         */
-        bool StartTracking(const std::string &model, const std::string &speed) override;
+    /**
+     * @brief 开始跟踪运动目标
+     * @param model 跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+     * @param speed 跟踪速度，默认为1
+     * @return 是否成功开始跟踪运动目标
+     */
+    virtual bool StartTracking(const json &params);
 
-        /**
-         * @brief 停止追踪
-         *
-         * @return true 停止追踪成功
-         * @return false 停止追踪失败
-         */
-        bool StopTracking() override;
+    /**
+     * @brief 停止跟踪运动目标
+     * @return 是否成功停止跟踪运动目标
+     */
+    virtual bool StopTracking(const json &params);
 
-        /**
-         * @brief 设置望远镜追踪模式
-         *
-         * @param mode 追踪模式
-         * @return true 设置成功
-         * @return false 设置失败
-         */
-        bool setTrackingMode(const std::string &mode) override;
+    /**
+     * @brief 设置跟踪模式
+     * @param mode 跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+     * @return 是否成功设置跟踪模式
+     */
+    virtual bool setTrackingMode(const json &params);
 
-        /**
-         * @brief 设置望远镜追踪速率
-         *
-         * @param speed 速率
-         * @return true 设置成功
-         * @return false 设置失败
-         */
-        bool setTrackingSpeed(const std::string &speed) override;
+    /**
+     * @brief 设置跟踪速度
+     * @param speed 跟踪速度
+     * @return 是否成功设置跟踪速度
+     */
+    virtual bool setTrackingSpeed(const json &params);
 
-        /**
-         * @brief 回归原点
-         *
-         * @return true 回归成功
-         * @return false 回归失败
-         */
-        bool Home() override;
+    /**
+     * @brief 获取当前跟踪模式
+     * @return 当前跟踪模式，包括恒星跟踪、太阳跟踪和月球跟踪
+     */
+    virtual std::string getTrackingMode(const json &params);
 
-        /**
-         * @brief 是否在原点位置
-         *
-         * @return true 在原点位置
-         * @return false 不在原点位置
-         */
-        bool isAtHome() override;
+    /**
+     * @brief 获取当前跟踪速度
+     * @return 当前跟踪速度
+     */
+    virtual std::string getTrackingSpeed(const json &params);
 
-        /**
-         * @brief 设置原点
-         *
-         * @return true 设置成功
-         * @return false 设置失败
-         */
-        bool setHomePosition() override;
+    /**
+     * @brief 将望远镜回到家位置
+     * @return 是否成功将望远镜回到家位置
+     */
+    virtual bool Home(const json &params);
 
-        /**
-         * @brief 停泊望远镜
-         *
-         * @return true 停泊成功
-         * @return false 停泊失败
-         */
-        bool Park() override;
+    /**
+     * @brief 判断望远镜是否在家位置
+     * @return 返回 true 表示望远镜在家位置，否则返回 false
+     */
+    virtual bool isAtHome(const json &params);
 
-        /**
-         * @brief 解锁望远镜
-         *
-         * @return true 解锁成功
-         * @return false 解锁失败
-         */
-        bool Unpark() override;
+    /**
+     * @brief 设置家位置
+     * @return 是否成功设置家位置
+     */
+    virtual bool setHomePosition(const json &params);
 
-        /**
-         * @brief 是否在停泊位置
-         *
-         * @return true 在停泊位置
-         * @return false 不在停泊位置
-         */
-        bool isAtPark() override;
+    /**
+     * @brief 获取望远镜是否可以回到家位置
+     * @return 返回 true 表示望远镜可以回到家位置，否则返回 false
+     */
+    virtual bool isHomeAvailable(const json &params);
 
-        /**
-         * @brief 设置停泊位置
-         *
-         * @return true 设置成功
-         * @return false 设置失败
-         */
-        bool setParkPosition() override;
+    /**
+     * @brief 停车
+     * @return 是否成功停车
+     */
+    virtual bool Park(const json &params);
 
-        /**
-         * @brief 获取简单任务
-         *
-         * @param task_name 任务名称
-         * @param params 任务参数
-         * @return std::shared_ptr<Lithium::SimpleTask> 简单任务指针
-         */
-        std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
+    /**
+     * @brief 解除停车状态
+     * @return 是否成功解除停车状态
+     */
+    virtual bool Unpark(const json &params);
 
-        /**
-         * @brief 获取条件任务
-         *
-         * @param task_name 任务名称
-         * @param params 任务参数
-         * @return std::shared_ptr<Lithium::ConditionalTask> 条件任务指针
-         */
-        std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
+    /**
+     * @brief 判断望远镜是否在停车位置
+     * @return 返回 true 表示位于停车位置，否则返回 false
+     */
+    virtual bool isAtPark(const json &params);
 
-        /**
-         * @brief 获取循环任务
-         *
-         * @param task_name 任务名称
-         * @param params 任务参数
-         * @return std::shared_ptr<Lithium::LoopTask> 循环任务指针
-         */
-        std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
+    /**
+     * @brief 设置停车位置
+     * @return 是否成功设置停车位置
+     */
+    virtual bool setParkPosition(const json &params);
 
-    protected:
-        /**
-         * @brief 清空状态
-         *
-         */
-        void ClearStatus();
+    /**
+     * @brief 获取望远镜是否可以停车
+     * @return 返回 true 表示望远镜可以停车，否则返回 false
+     */
+    virtual bool isParkAvailable(const json &params);
 
-    protected:
-        // Hydrogen 回调函数
-        void newDevice(HYDROGEN::BaseDevice *dp) override;
-        void removeDevice(HYDROGEN::BaseDevice *dp) override;
-        void newProperty(HYDROGEN::Property *property) override;
-        void removeProperty(HYDROGEN::Property *property) override {}
-        void newBLOB(IBLOB *bp) override;
-        void newSwitch(ISwitchVectorProperty *svp) override;
-        void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
-        void newText(ITextVectorProperty *tvp) override;
-        void newLight(ILightVectorProperty *lvp) override {}
-        void IndiServerConnected() override;
-        void IndiServerDisconnected(int exit_code) override;
-    };
+protected:
+    /**
+     * @brief 清空状态
+     *
+     */
+    void ClearStatus();
 
-}
+protected:
+    // Hydrogen 回调函数
+    void newDevice(HYDROGEN::BaseDevice *dp) override;
+    void removeDevice(HYDROGEN::BaseDevice *dp) override;
+    void newProperty(HYDROGEN::Property *property) override;
+    void removeProperty(HYDROGEN::Property *property) override {}
+    void newBLOB(IBLOB *bp) override;
+    void newSwitch(ISwitchVectorProperty *svp) override;
+    void newNumber(INumberVectorProperty *nvp) override;
+    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
+    void newText(ITextVectorProperty *tvp) override;
+    void newLight(ILightVectorProperty *lvp) override {}
+    void IndiServerConnected() override;
+    void IndiServerDisconnected(int exit_code) override;
+
+private:
+    // Hydrogen 客户端参数
+    std::shared_ptr<ISwitchVectorProperty> m_connection_prop;    // 连接属性指针
+    std::shared_ptr<INumberVectorProperty> telescopeinfo_prop; // 望远镜信息属性指针
+    std::shared_ptr<ITextVectorProperty> telescope_port;       // 望远镜端口属性指针
+    std::shared_ptr<ISwitchVectorProperty> rate_prop;          // 望远镜速率属性指针
+    std::shared_ptr<ITextVectorProperty> telescope_prop;
+    HYDROGEN::BaseDevice *telescope_device;                    // 望远镜设备指针
+
+    std::atomic_bool is_ready; // 是否就绪
+    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_debug;
+    std::atomic_bool is_connected;
+
+    std::string hydrogen_telescope_port = ""; // 望远镜所选端口
+    std::string hydrogen_telescope_rate = ""; // 望远镜所选速率
+
+    std::string hydrogen_telescope_cmd;            // Hydrogen 命令字符串
+    std::string hydrogen_telescope_exec = "";      // Hydrogen 设备执行文件路径
+    std::string hydrogen_telescope_version = "";   // Hydrogen 设备固件版本
+    std::string hydrogen_telescope_interface = ""; // Hydrogen 接口版本
+
+    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
+    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
+    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
+};

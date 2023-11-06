@@ -33,17 +33,21 @@ Description: Basic FilterWheel Defination
 
 #include "device.hpp"
 
-class Filterwheel : virtual public Device
+class Filterwheel : public Device
 {
 public:
     Filterwheel(const std::string &name);
     ~Filterwheel();
 
-    virtual bool connect(const nlohmann::json &params) override;
+    virtual bool connect(const json &params) override;
 
-    virtual bool disconnect(const nlohmann::json &params) override;
+    virtual bool disconnect(const json &params) override;
 
-    virtual bool reconnect(const nlohmann::json &params) override;
+    virtual bool reconnect(const json &params) override;
 
-    virtual bool moveTo(const nlohmann::json &params);
+    virtual bool isConnected() override;
+
+    virtual bool moveTo(const json &params);
+
+    virtual bool getCurrentPosition(const json &params);
 };

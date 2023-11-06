@@ -35,33 +35,39 @@ Description: Filterwheel Simulator and Basic Definition
 
 Filterwheel::Filterwheel(const std::string &name) : Device(name)
 {
-    DLOG_F(INFO, "Filterwheel Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Filterwheel::~Filterwheel()
 {
-    DLOG_F(INFO, "Filterwheel Simulator Destructed");
 }
 
-bool Filterwheel::connect(const nlohmann::json &params)
-{
-    DLOG_F(INFO, "%s is connected", getDeviceName());
-    return true;
-}
-
-bool Filterwheel::disconnect(const nlohmann::json &params)
-{
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
-    return true;
-}
-
-bool Filterwheel::reconnect(const nlohmann::json &params)
+bool Filterwheel::connect(const json &params)
 {
     return true;
 }
 
-bool Filterwheel::moveTo(const nlohmann::json &params)
+bool Filterwheel::disconnect(const json &params)
+{
+    return true;
+}
+
+bool Filterwheel::reconnect(const json &params)
+{
+    return true;
+}
+
+bool Filterwheel::isConnected()
+{
+    return true;
+}
+
+bool Filterwheel::moveTo(const json &params)
+{
+    return true;
+}
+
+bool Filterwheel::getCurrentPosition(const json &params)
 {
     return true;
 }

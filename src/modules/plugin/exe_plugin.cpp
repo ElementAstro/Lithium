@@ -42,7 +42,7 @@ ExecutablePlugin::ExecutablePlugin(const std::string &path, const std::string &v
     m_ProcessManager = processManager;
 }
 
-void ExecutablePlugin::Execute(const std::vector<std::string> &args) const
+void ExecutablePlugin::Execute(const std::vector<std::string> &args)
 {
     std::ostringstream oss;
     oss << GetPath();

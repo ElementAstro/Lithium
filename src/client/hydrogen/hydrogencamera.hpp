@@ -1,5 +1,5 @@
 /*
- * indicamera.hpp
+ * hydrogencamera.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -32,6 +32,10 @@ Description: Hydrogen Camera
 #pragma once
 
 #include "hydrogendevice.hpp"
+#include "core/camera.hpp"
+
+template <typename... Args>
+class StringSwitch;
 
 class HydrogenCamera : public Camera, public LithiumIndiClient
 {
@@ -41,11 +45,11 @@ public:
     // 析构函数
     ~HydrogenCamera();
 
-    virtual bool connect(const nlohmann::json &params) override;
+    virtual bool connect(const json &params) override;
 
-    virtual bool disconnect(const nlohmann::json &params) override;
+    virtual bool disconnect(const json &params) override;
 
-    virtual bool reconnect(const nlohmann::json &params) override;
+    virtual bool reconnect(const json &params) override;
 
     virtual bool isConnected() override;
 
@@ -56,7 +60,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool startExposure(const nlohmann::json &params);
+    bool startExposure(const json &params);
 
     /**
      * @brief 中止曝光
@@ -64,7 +68,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool abortExposure(const nlohmann::json &params);
+    bool abortExposure(const json &params);
 
     /**
      * @brief 获取曝光状态
@@ -72,7 +76,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getExposureStatus(const nlohmann::json &params);
+    bool getExposureStatus(const json &params);
 
     /**
      * @brief 获取曝光结果
@@ -80,7 +84,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getExposureResult(const nlohmann::json &params);
+    bool getExposureResult(const json &params);
 
     /**
      * @brief 保存曝光结果
@@ -88,7 +92,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool saveExposureResult(const nlohmann::json &params);
+    bool saveExposureResult(const json &params);
 
     /**
      * @brief 启动视频
@@ -96,7 +100,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool startVideo(const nlohmann::json &params);
+    bool startVideo(const json &params);
 
     /**
      * @brief 停止视频
@@ -104,7 +108,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool stopVideo(const nlohmann::json &params);
+    bool stopVideo(const json &params);
 
     /**
      * @brief 获取视频状态
@@ -112,7 +116,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getVideoStatus(const nlohmann::json &params);
+    bool getVideoStatus(const json &params);
 
     /**
      * @brief 获取视频结果
@@ -120,7 +124,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getVideoResult(const nlohmann::json &params);
+    bool getVideoResult(const json &params);
 
     /**
      * @brief 保存视频结果
@@ -128,7 +132,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool saveVideoResult(const nlohmann::json &params);
+    bool saveVideoResult(const json &params);
 
     /**
      * @brief 启动冷却
@@ -136,7 +140,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool startCooling(const nlohmann::json &params);
+    bool startCooling(const json &params);
 
     /**
      * @brief 停止冷却
@@ -144,7 +148,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool stopCooling(const nlohmann::json &params);
+    bool stopCooling(const json &params);
 
     bool isCoolingAvailable();
 
@@ -154,7 +158,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getTemperature(const nlohmann::json &params);
+    bool getTemperature(const json &params);
 
     /**
      * @brief 获取冷却功率
@@ -162,7 +166,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getCoolingPower(const nlohmann::json &params);
+    bool getCoolingPower(const json &params);
 
     /**
      * @brief 设置温度
@@ -170,7 +174,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool setTemperature(const nlohmann::json &params);
+    bool setTemperature(const json &params);
 
     /**
      * @brief 设置冷却功率
@@ -178,7 +182,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool setCoolingPower(const nlohmann::json &params);
+    bool setCoolingPower(const json &params);
 
     /**
      * @brief 获取增益值
@@ -186,7 +190,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getGain(const nlohmann::json &params);
+    bool getGain(const json &params);
 
     /**
      * @brief 设置增益值
@@ -194,7 +198,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool setGain(const nlohmann::json &params);
+    bool setGain(const json &params);
 
     bool isGainAvailable();
 
@@ -204,7 +208,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getOffset(const nlohmann::json &params);
+    bool getOffset(const json &params);
 
     /**
      * @brief 设置偏移量
@@ -212,7 +216,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool setOffset(const nlohmann::json &params);
+    bool setOffset(const json &params);
 
     bool isOffsetAvailable();
 
@@ -222,7 +226,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getISO(const nlohmann::json &params);
+    bool getISO(const json &params);
 
     /**
      * @brief 设置ISO值
@@ -230,7 +234,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool setISO(const nlohmann::json &params);
+    bool setISO(const json &params);
 
     bool isISOAvailable();
 
@@ -240,7 +244,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool getFrame(const nlohmann::json &params);
+    bool getFrame(const json &params);
 
     /**
      * @brief 设置帧数
@@ -248,7 +252,7 @@ public:
      * @param params 参数
      * @return 成功返回true，失败返回false
      */
-    bool setFrame(const nlohmann::json &params);
+    bool setFrame(const json &params);
 
     bool isFrameSettingAvailable();
 
@@ -286,7 +290,7 @@ protected:
     // Hydrogen Parameters
 private:
     // 连接属性
-    std::shared_ptr<ISwitchVectorProperty> connection_prop;
+    std::shared_ptr<ISwitchVectorProperty> m_connection_prop;
     // 曝光属性
     std::shared_ptr<INumberVectorProperty> exposure_prop;
     // 停止曝光属性
@@ -300,10 +304,10 @@ private:
     // 偏移属性
     std::shared_ptr<INumberVectorProperty> offset_prop;
     // 帧区域参数
-    std::shared_ptr<INumber> indi_frame_x;
-    std::shared_ptr<INumber> indi_frame_y;
-    std::shared_ptr<INumber> indi_frame_width;
-    std::shared_ptr<INumber> indi_frame_height;
+    std::shared_ptr<INumber> hydrogen_frame_x;
+    std::shared_ptr<INumber> hydrogen_frame_y;
+    std::shared_ptr<INumber> hydrogen_frame_width;
+    std::shared_ptr<INumber> hydrogen_frame_height;
     // 帧类型
     std::shared_ptr<ISwitchVectorProperty> frame_type_prop;
     // 图像类型
@@ -313,9 +317,9 @@ private:
     // 二次取样属性
     std::shared_ptr<INumberVectorProperty> binning_prop;
     // 二次取样 X 轴
-    std::shared_ptr<INumber> indi_binning_x;
+    std::shared_ptr<INumber> hydrogen_binning_x;
     // 二次取样 Y 轴
-    std::shared_ptr<INumber> indi_binning_y;
+    std::shared_ptr<INumber> hydrogen_binning_y;
     // 视频属性
     std::shared_ptr<ISwitchVectorProperty> video_prop;
     // 视频延迟
@@ -364,16 +368,20 @@ private:
     std::atomic<double> current_temperature;
 
     // Hydrogen 指令
-    std::string indi_camera_cmd = "CCD_"; // Hydrogen 控制命令前缀
-    std::string indi_blob_name;           // BLOB 文件名
-    std::string indi_camera_exec = "";    // Hydrogen 执行命令
-    std::string indi_camera_version;
-    std::string indi_camera_interface;
-    std::string indi_camera_port;
+    std::string hydrogen_camera_cmd = "CCD_"; // Hydrogen 控制命令前缀
+    std::string hydrogen_blob_name;           // BLOB 文件名
+    std::string hydrogen_camera_exec = "";    // Hydrogen 执行命令
+    std::string hydrogen_camera_version;
+    std::string hydrogen_camera_interface;
+    std::string hydrogen_camera_port;
 
     CameraFrame frame;
 
     std::atomic<double> polling_period;
+
+    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
+    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
+    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
 
 private:
     // For Hydrogen Toupcamera

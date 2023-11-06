@@ -35,128 +35,129 @@ Description: Telescope Simulator and Basic Definition
 
 Telescope::Telescope(const std::string &name) : Device(name)
 {
-    DLOG_F(INFO, "Telescope Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Telescope::~Telescope()
 {
-    DLOG_F(INFO, "Telescope Simulator Destructed");
 }
 
-bool Telescope::connect(const nlohmann::json &params)
-{
-    DLOG_F(INFO, "%s is connected", getDeviceName());
-    return true;
-}
-
-bool Telescope::disconnect(const nlohmann::json &params)
-{
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
-    return true;
-}
-
-bool Telescope::reconnect(const nlohmann::json &params)
+bool Telescope::connect(const json &params)
 {
     return true;
 }
 
-bool Telescope::SlewTo(const nlohmann::json &params)
+bool Telescope::disconnect(const json &params)
 {
     return true;
 }
 
-bool Telescope::Abort(const nlohmann::json &params)
+bool Telescope::reconnect(const json &params)
 {
     return true;
 }
 
-bool Telescope::isSlewing(const nlohmann::json &params)
+bool Telescope::isConnected()
 {
     return true;
 }
 
-std::string Telescope::getCurrentRA(const nlohmann::json &params)
+bool Telescope::SlewTo(const json &params)
+{
+    return true;
+}
+
+bool Telescope::Abort(const json &params)
+{
+    return true;
+}
+
+bool Telescope::isSlewing(const json &params)
+{
+    return true;
+}
+
+std::string Telescope::getCurrentRA(const json &params)
 {
     return "";
 }
 
-std::string Telescope::getCurrentDec(const nlohmann::json &params)
+std::string Telescope::getCurrentDec(const json &params)
 {
     return "";
 }
 
-bool Telescope::StartTracking(const nlohmann::json &params)
+bool Telescope::StartTracking(const json &params)
 {
     return true;
 }
 
-bool Telescope::StopTracking(const nlohmann::json &params)
+bool Telescope::StopTracking(const json &params)
 {
     return true;
 }
 
-bool Telescope::setTrackingMode(const nlohmann::json &params)
+bool Telescope::setTrackingMode(const json &params)
 {
     return true;
 }
 
-bool Telescope::setTrackingSpeed(const nlohmann::json &params)
+bool Telescope::setTrackingSpeed(const json &params)
 {
     return true;
 }
 
-std::string Telescope::getTrackingMode(const nlohmann::json &params)
+std::string Telescope::getTrackingMode(const json &params)
 {
     return "";
 }
 
-std::string Telescope::getTrackingSpeed(const nlohmann::json &params)
+std::string Telescope::getTrackingSpeed(const json &params)
 {
     return "";
 }
 
-bool Telescope::Home(const nlohmann::json &params)
+bool Telescope::Home(const json &params)
 {
     return true;
 }
 
-bool Telescope::isAtHome(const nlohmann::json &params)
+bool Telescope::isAtHome(const json &params)
 {
     return true;
 }
 
-bool Telescope::setHomePosition(const nlohmann::json &params)
+bool Telescope::setHomePosition(const json &params)
 {
     return true;
 }
 
-bool Telescope::isHomeAvailable(const nlohmann::json &params)
+bool Telescope::isHomeAvailable(const json &params)
 {
     return true;
 }
 
-bool Telescope::Park(const nlohmann::json &params)
+bool Telescope::Park(const json &params)
 {
     return true;
 }
 
-bool Telescope::Unpark(const nlohmann::json &params)
+bool Telescope::Unpark(const json &params)
 {
     return true;
 }
 
-bool Telescope::isAtPark(const nlohmann::json &params)
+bool Telescope::isAtPark(const json &params)
 {
     return true;
 }
 
-bool Telescope::setParkPosition(const nlohmann::json &params)
+bool Telescope::setParkPosition(const json &params)
 {
     return true;
 }
 
-bool Telescope::isParkAvailable(const nlohmann::json &params)
+bool Telescope::isParkAvailable(const json &params)
 {
     return true;
 }

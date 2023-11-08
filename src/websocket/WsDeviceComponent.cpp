@@ -251,7 +251,7 @@ void WebSocketServer::RunDeviceTask(const json &m_params)
 		{
 			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to get task");
 		}
-		DLOG_F(INFO, "Trying to run {}", )
+		DLOG_F(INFO, "Trying to run {}", task->getName());
 		task->execute();
 		json result = task->getResult();
 

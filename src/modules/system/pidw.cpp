@@ -36,7 +36,6 @@ Description: PID Watcher with Network
 #include <thread>
 
 #ifdef _WIN32
-#include <windows.h>
 #include <psapi.h>
 #pragma comment(lib, "psapi.lib")
 #else

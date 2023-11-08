@@ -34,6 +34,10 @@ Description: PID Watcher with Network
 #include <string>
 #include <thread>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 class PidWWatcher
 {
 public:

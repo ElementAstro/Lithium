@@ -102,17 +102,6 @@ public:
 };
 
 /**
- * @brief TOML渲染引擎
- *
- * TOML rendering engine
- */
-class TomlRenderEngine : public RenderEngine
-{
-public:
-    std::string render(const std::any &data, bool format = false) const override;
-};
-
-/**
  * @brief 序列化引擎类
  *
  * Serialization engine class

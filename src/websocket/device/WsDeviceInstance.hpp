@@ -58,6 +58,7 @@ Description: WebSocket Device Instance (each device each instance)
 using json = nlohmann::json;
 
 class WsDeviceHub; // FWD
+class SerializationEngine;
 
 /**
  * @brief Class representing an instance of a WebSocket device.
@@ -123,6 +124,13 @@ public:
 	v_int32 getUserId();
 
 public:
+	void loadDriverLibrary(const json &m_params);
+
+	void unloadDriverLibrary(const json &m_params);
+
+	void addDriver(const json &m_params);
+
+	void removeDriver(const json &m_params);
 	/**
 	 * @brief Set a property of the WsDeviceInstance.
 	 *
@@ -211,7 +219,9 @@ private:
 	 */
 	oatpp::async::Lock m_writeLock;
 
-	std::unique_ptr<CommandDispatcher<void,json>> m_CommandDispatcher;
+	std::unique_ptr<CommandDispatcher<void, json>> m_CommandDispatcher;
+
+	std::unique_ptr<SerializationEngine> m_SerializationEngine;
 
 	/**
 	 * @brief Register a function handler for the VCommandDispatcher.
@@ -234,6 +244,14 @@ private:
 	 * @return True if the function was run successfully, false otherwise.
 	 */
 	bool LiRunFunc(const std::string &name, const json &params);
+
+	std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
+		{"Camera", Lithium::DeviceType::Camera},
+		{"Telescope", Lithium::DeviceType::Telescope},
+		{"Focuser", Lithium::DeviceType::Focuser},
+		{"FilterWheel", Lithium::DeviceType::FilterWheel},
+		{"Solver", Lithium::DeviceType::Solver},
+		{"Guider", Lithium::DeviceType::Guider}};
 
 private:
 	std::shared_ptr<AsyncWebSocket> m_socket;

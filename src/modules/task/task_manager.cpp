@@ -48,7 +48,7 @@ namespace Lithium::Task
         }
         m_TaskList.push_back(task);
         m_TaskMap[task->getName()] = task;
-        DLOG_F(INFO, "Task added: {}", task->get_name());
+        DLOG_F(INFO, "Task added: {}", task->getName());
         return true;
     }
 
@@ -68,7 +68,7 @@ namespace Lithium::Task
 
         auto it = m_TaskList.begin() + position;
         m_TaskList.insert(it, task);
-        DLOG_F(INFO, "Task inserted at position %d: {}", position, task->get_name());
+        DLOG_F(INFO, "Task inserted at position %d: {}", position, task->getName());
         return true;
     }
 
@@ -83,7 +83,7 @@ namespace Lithium::Task
                 {
                     if (task->execute())
                     {
-                        DLOG_F(INFO, "Task executed: {}", task->get_name());
+                        DLOG_F(INFO, "Task executed: {}", task->getName());
                         it = m_TaskList.erase(it);
                     }
                     else
@@ -119,7 +119,7 @@ namespace Lithium::Task
             {
                 if (it->second->execute())
                 {
-                    DLOG_F(INFO, "Task executed: {}", it->second->get_name());
+                    DLOG_F(INFO, "Task executed: {}", it->second->getName());
                 }
                 else
                 {

@@ -155,6 +155,17 @@ namespace Lithium
         return m_DeviceManager->getTask(type, device_name, task_name, params);
     }
 
+    bool LithiumApp::getProperty(const std::string &name, const std::string &property_name)
+    {
+        m_DeviceManager->findDeviceByName(name)->getStringProperty(property_name);
+        
+    }
+    
+    bool LithiumApp::setProperty(const std::string &name, const std::string &property_name, const std::string &property_value)
+    {
+
+    }
+
     bool LithiumApp::createProcess(const std::string &command, const std::string &identifier)
     {
         return m_ProcessManager->createProcess(command, identifier);

@@ -303,12 +303,10 @@ target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
 target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
 target_link_libraries(lithium_server libzip::zip)
-target_link_libraries(lithium_server pugixml-static)
+target_link_libraries(lithium_server pugixml-shared)
 target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
-
-target_link_libraries(lithium_server asan)
 
 target_link_libraries(lithium_server ${Libintl_LIBRARY})
 target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})

@@ -40,20 +40,89 @@ Description: This file contains the declaration of the SerializationEngine class
 #include <fmt/format.h>
 #endif
 
+#include "property/iproperty.hpp"
+
 #include "loguru/loguru.hpp"
 
 std::string JsonRenderEngine::render(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
-    try
+    if (data.type() == typeid(std::unordered_map<std::string, std::string>))
     {
-        _data = std::any_cast<std::unordered_map<std::string, std::string>>(data);
+        try
+        {
+            _data = std::any_cast<std::unordered_map<std::string, std::string>>(data);
+        }
+        catch (const std::exception &e)
+        {
+            LOG_F(ERROR, "Failed to serialize message: {}", e.what());
+        }
     }
-    catch (const std::exception &e)
+    else
     {
-        LOG_F(ERROR, "Failed to serialize message: {}", e.what());
+        if (data.type() == typeid(std::shared_ptr<IBoolProperty>))
+        {
+            try
+            {
+                std::shared_ptr<IBoolProperty> prop = std::any_cast<std::shared_ptr<IBoolProperty>>(data);
+                _data["device_name"] = prop->device_name;
+                _data["device_uuid"] = prop->device_uuid;
+                _data["message_uuid"] = prop->message_uuid;
+                _data["name"] = prop->name;
+                _data["need_check"] = prop->need_check ? "true" : "false";
+                _data["get_func"] = prop->get_func;
+                _data["set_func"] = prop->set_func;
+                _data["value"] = prop->value ? "true" : "false";
+            }
+            catch (const std::exception &e)
+            {
+                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
+            }
+        }
+        else if (data.type() == typeid(std::shared_ptr<IStringProperty>))
+        {
+            try
+            {
+                std::shared_ptr<IStringProperty> prop = std::any_cast<std::shared_ptr<IStringProperty>>(data);
+                _data["device_name"] = prop->device_name;
+                _data["device_uuid"] = prop->device_uuid;
+                _data["message_uuid"] = prop->message_uuid;
+                _data["name"] = prop->name;
+                _data["need_check"] = prop->need_check ? "true" : "false";
+                _data["get_func"] = prop->get_func;
+                _data["set_func"] = prop->set_func;
+                _data["value"] = prop->value;
+            }
+            catch (const std::exception &e)
+            {
+                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
+            }
+        }
+        else if (data.type() == typeid(std::shared_ptr<INumberProperty>))
+        {
+            try
+            {
+                std::shared_ptr<INumberProperty> prop = std::any_cast<std::shared_ptr<INumberProperty>>(data);
+                _data["device_name"] = prop->device_name;
+                _data["device_uuid"] = prop->device_uuid;
+                _data["message_uuid"] = prop->message_uuid;
+                _data["name"] = prop->name;
+                _data["need_check"] = prop->need_check ? "true" : "false";
+                _data["get_func"] = prop->get_func;
+                _data["set_func"] = prop->set_func;
+                _data["value"] = std::to_string(prop->value);
+            }
+            catch (const std::exception &e)
+            {
+                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
+            }
+        }
+        else
+        {
+            LOG_F(ERROR, "Unknown type of message!");
+            return "";
+        }
     }
-
     std::ostringstream oss;
     if (format)
     {
@@ -159,37 +228,6 @@ std::string IniRenderEngine::render(const std::any &data, bool format) const
     }
     return oss.str();
 }
-std::string TomlRenderEngine::render(const std::any &data, bool format) const
-{
-    std::unordered_map<std::string, std::string> _data;
-    try
-    {
-        _data = std::any_cast<std::unordered_map<std::string, std::string>>(data);
-    }
-    catch (const std::exception &e)
-    {
-        LOG_F(ERROR, "Failed to serialize message: {}", e.what());
-    }
-
-    std::string result;
-
-    if (format)
-    {
-        for (const auto &pair : _data)
-        {
-            result += fmt::format("{} = \"{}\"\n", pair.first, pair.second);
-        }
-    }
-    else
-    {
-        for (const auto &pair : _data)
-        {
-            result += fmt::format("{}=\"{}\"\n", pair.first, pair.second);
-        }
-    }
-
-    return result;
-}
 
 SerializationEngine::SerializationEngine()
 {
@@ -243,11 +281,11 @@ int main()
     data["get_func"] = property.get_func;
     data["set_func"] = property.set_func;
 
-    std::optional<std::string> result = engine.serialize(data, true);
+    std::optional<std::string> _data = engine.serialize(data, true);
 
-    if (result)
+    if (_data)
     {
-        std::cout << "Serialization Result: " << *result << std::endl;
+        std::cout << "Serialization _data: " << *_data << std::endl;
     }
     else
     {
@@ -256,11 +294,11 @@ int main()
 
     engine.addRenderEngine("xml", std::make_shared<YamlRenderEngine>());
     engine.setCurrentRenderEngine("xml");
-    result = engine.serialize(data, true);
+    _data = engine.serialize(data, true);
 
-    if (result)
+    if (_data)
     {
-        std::cout << "Serialization Result: " << *result << std::endl;
+        std::cout << "Serialization _data: " << *_data << std::endl;
     }
     else
     {

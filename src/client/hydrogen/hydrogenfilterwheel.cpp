@@ -86,7 +86,7 @@ HydrogenFilterwheel::HydrogenFilterwheel(const std::string &name) : Filterwheel(
         else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
             hydrogen_filter_rate = baud_230400;
 
-        DLOG_F(INFO, "{} baud rate : {}", _name, hydrogen_filter_rate); });
+        DLOG_F(INFO, "{} baud rate : {}", getDeviceName(), hydrogen_filter_rate); });
 
     m_text_switch->registerCase("DEVICE_PORT", [this](ITextVectorProperty *tvp)
                                 {
@@ -167,7 +167,7 @@ void HydrogenFilterwheel::newSwitch(ISwitchVectorProperty *svp)
 
 void HydrogenFilterwheel::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
 {
-    DLOG_F(INFO, "{} Received message: {}", _name, dp->messageQueue(messageID));
+    DLOG_F(INFO, "{} Received message: {}", getDeviceName(), dp->messageQueue(messageID));
 }
 
 inline static const char *StateStr(IPState st)
@@ -198,7 +198,7 @@ void HydrogenFilterwheel::newText(ITextVectorProperty *tvp)
 
 void HydrogenFilterwheel::newBLOB(IBLOB *bp)
 {
-    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", getDeviceName(), bp->name, bp->bloblen, bp->size);
 }
 
 void HydrogenFilterwheel::newProperty(HYDROGEN::Property *property)
@@ -224,24 +224,24 @@ void HydrogenFilterwheel::newProperty(HYDROGEN::Property *property)
 
 void HydrogenFilterwheel::IndiServerConnected()
 {
-    DLOG_F(INFO, "{} connection succeeded", _name);
+    DLOG_F(INFO, "{} connection succeeded", getDeviceName());
     is_connected = true;
 }
 
 void HydrogenFilterwheel::IndiServerDisconnected(int exit_code)
 {
-    DLOG_F(INFO, "{}: serverDisconnected", _name);
+    DLOG_F(INFO, "{}: serverDisconnected", getDeviceName());
     // after disconnection we reset the connection status and the properties pointers
     ClearStatus();
     // in case the connection lost we must reset the client socket
     if (exit_code == -1)
-        DLOG_F(INFO, "{} : Hydrogen server disconnected", _name);
+        DLOG_F(INFO, "{} : Hydrogen server disconnected", getDeviceName());
 }
 
 void HydrogenFilterwheel::removeDevice(HYDROGEN::BaseDevice *dp)
 {
     ClearStatus();
-    DLOG_F(INFO, "{} disconnected", _name);
+    DLOG_F(INFO, "{} disconnected", getDeviceName());
 }
 
 void HydrogenFilterwheel::ClearStatus()

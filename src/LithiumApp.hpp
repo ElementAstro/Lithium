@@ -65,7 +65,7 @@ namespace Lithium
         class TaskManager;
         class TaskStack;
     }
-    
+
     class LithiumApp
     {
     public:
@@ -88,10 +88,10 @@ namespace Lithium
         size_t findDevice(DeviceType type, const std::string &name);
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
+        bool getProperty(const std::string &name, const std::string &property_name);
+        bool setProperty(const std::string &name, const std::string &property_name, const std::string &property_value);
 
     public:
-
-        
     public:
         bool createProcess(const std::string &command, const std::string &identifier);
         bool runScript(const std::string &script, const std::string &identifier);

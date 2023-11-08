@@ -85,7 +85,7 @@ namespace Lithium::System
                     DWORD displayNameSize = 255;
                     if (RegQueryValueEx(hSubKey, "DisplayName", NULL, NULL, reinterpret_cast<LPBYTE>(displayName), &displayNameSize) == ERROR_SUCCESS)
                     {
-                        if (softwareName == displayName)
+                        if (software_name == displayName)
                         {
                             RegCloseKey(hSubKey);
                             RegCloseKey(hKey);

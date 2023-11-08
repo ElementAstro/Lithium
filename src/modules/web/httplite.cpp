@@ -37,6 +37,7 @@ Description: Simple Http Client
 
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 #else
 #include <sys/socket.h>
@@ -93,7 +94,11 @@ std::string httpRequest(const std::string &url, const std::string &method, std::
     };
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(80); // HTTP默认端口为80
+#ifdef _WIN32
+    if (InetPton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0)
+#else
     if (inet_pton(AF_INET, host.c_str(), &(serverAddr.sin_addr)) <= 0)
+#endif
     {
         errorHandler("Failed to parse server address");
 #ifdef _WIN32

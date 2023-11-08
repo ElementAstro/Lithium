@@ -345,6 +345,21 @@ public:
 	void readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 #endif
 
+	/**
+	 * @brief Send a message to the WsDeviceInstance (to user).
+	 *
+	 * @param message The message to be sent.
+	 */
+	void sendMessage(const oatpp::String &message);
+
+	/**
+	 * @brief Send a binary message to the WsDeviceInstance (to user).
+	 *
+	 * @param binary_message Pointer to the binary message.
+	 * @param size Size of the binary message.
+	 */
+	void sendBinaryMessage(void *binary_message, int size);
+
 private:
 	/**
 	 * @brief A constant character string that represents the tag for this class.

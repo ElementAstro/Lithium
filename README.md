@@ -46,6 +46,8 @@ pacman -S mingw-w64-x86_64-zlib
 pacman -S mingw-w64-x86_64-fftw
 pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
+pacman -S mingw-w64-x86_64-libjpeg-turbo
+pacman -S mingw-w64-x86_64-libusb
 ```
 
 On Ubuntu or other similar Linux platforms:
@@ -132,6 +134,11 @@ pacman -S mingw-w64-x86_64-cfitsio
 pacman -S mingw-w64-x86_64-cmake
 pacman -S mingw-w64-x86_64-libzip
 pacman -S mingw-w64-x86_64-zlib
+pacman -S mingw-w64-x86_64-fftw
+pacman -S mingw-w64-x86_64-fmt
+pacman -S mingw-w64-x86_64-libnova
+pacman -S mingw-w64-x86_64-libjpeg-turbo
+pacman -S mingw-w64-x86_64-libusb
 # 如果想用make构建
 pacman -S make
 ```

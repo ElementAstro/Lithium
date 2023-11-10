@@ -32,8 +32,8 @@ Description: Device API of WebSocket Server
 #include "WebSocketServer.hpp"
 #include "LithiumApp.hpp"
 
-#include "modules/utils/time.hpp"
-#include "modules/error/error_code.hpp"
+#include "atom/utils/time.hpp"
+#include "atom/error/error_code.hpp"
 #include "template/error_message.hpp"
 
 #include "loguru/loguru.hpp"
@@ -178,7 +178,7 @@ void WebSocketServer::RemoveDevicesByName(const json &m_params)
 	{
 		std::string device_name = m_params["device_name"].get<std::string>();
 
-		if (!Lithium::MyApp->removeDevicesByName(device_name))
+		if (!Lithium::MyApp->removeDeviceByName(device_name))
 		{
 			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device by name");
 		}

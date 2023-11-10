@@ -17,7 +17,7 @@
 
 #include "oatpp/core/macro/component.hpp"
 
-#include "modules/server/commander.hpp"
+#include "atom/server/commander.hpp"
 
 #include "LithiumApp.hpp"
 

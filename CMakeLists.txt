@@ -113,7 +113,7 @@ set(api_module
 	${lithium_src_dir}/client/astap.cpp
 	${lithium_src_dir}/client/astrometry.cpp
     ${lithium_src_dir}/client/phd2client.cpp
-    ${lithium_module_dir}/client/indiclient.cpp
+    ${lithium_module_dir}/client/hydrogenclient.cpp
     ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
     ${lithium_src_dir}/client/hydrogen/hydrogenfilterwheel.cpp
     ${lithium_src_dir}/client/hydrogen/hydrogentelescope.cpp
@@ -144,11 +144,11 @@ set(io_module
 )
 
 set(module_module
-    ${lithium_module_dir}/module/modloader.cpp
+    ${lithium_module_dir}/module/module_loader.cpp
     ${lithium_module_dir}/plugin/plugin.cpp
     ${lithium_module_dir}/plugin/exe_plugin.cpp
     ${lithium_module_dir}/plugin/script_plugin.cpp
-    ${lithium_module_dir}/plugin/plugin_manager.cpp
+    ${lithium_module_dir}/plugin/plugin_loader.cpp
     ${lithium_module_dir}/module/compiler.cpp
 )
 

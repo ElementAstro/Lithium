@@ -32,12 +32,12 @@ Description: WebSocket Device Instance (each device each instance)
 #include "WsDeviceInstance.hpp"
 #include "WsDeviceHub.hpp"
 
-#include "modules/device/device_manager.hpp"
-#include "modules/server/serialize.hpp"
+#include "atom/device/device_manager.hpp"
+#include "atom/server/serialize.hpp"
 
-#include "modules/utils/time.hpp"
+#include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
-#include "modules/error/error_code.hpp"
+#include "atom/error/error_code.hpp"
 
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"

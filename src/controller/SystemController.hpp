@@ -32,7 +32,7 @@ Description: System Route
 #ifndef Lithium_SystemCONTROLLER_HPP
 #define Lithium_SystemCONTROLLER_HPP
 
-#include "modules/system/system.hpp"
+#include "atom/system/system.hpp"
 #include "LithiumApp.hpp"
 #include "config.h"
 

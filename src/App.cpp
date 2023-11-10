@@ -63,8 +63,8 @@ Description: Main
 
 #include "LithiumApp.hpp"
 
-#include "modules/system/crash.hpp"
-#include "modules/web/utils.hpp"
+#include "atom/system/crash.hpp"
+#include "atom/web/utils.hpp"
 
 #include <chrono>
 #include <ctime>

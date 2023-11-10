@@ -47,9 +47,9 @@ Description: WebSocket Server
 
 #include "LithiumApp.hpp"
 
-#include "modules/server/commander.hpp"
+#include "atom/server/commander.hpp"
 #include "core/property/iproperty.hpp"
-#include "modules/error/error_code.hpp"
+#include "atom/error/error_code.hpp"
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;

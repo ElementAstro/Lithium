@@ -27,4 +27,4 @@ if(WIN32)
 target_link_libraries(ascom_remote PRIVATE wsock32 ws2_32)
 endif()
 
-include_directories(${CMAKE_SOURCE_DIR}/modules/lidrvier)
+include_directories(${CMAKE_SOURCE_DIR}/atom/lidrvier)

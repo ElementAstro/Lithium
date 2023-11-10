@@ -35,9 +35,9 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "modules/server/message_bus.hpp"
-#include "modules/device/device_manager.hpp"
-#include "modules/system/process.hpp"
+#include "atom/server/message_bus.hpp"
+#include "atom/device/device_manager.hpp"
+#include "atom/system/process.hpp"
 
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -82,7 +82,7 @@ namespace Lithium
         bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
         void addDeviceObserver(DeviceType type, const std::string &name);
         bool removeDevice(DeviceType type, const std::string &name);
-        bool removeDevicesByName(const std::string &name);
+        bool removeDeviceByName(const std::string &name);
         bool removeDeviceLibrary(const std::string &lib_name);
         std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
         size_t findDevice(DeviceType type, const std::string &name);

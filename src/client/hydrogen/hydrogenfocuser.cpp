@@ -31,7 +31,7 @@ Description: Hydrogen Focuser
 
 #include "hydrogenfocuser.hpp"
 
-#include "modules/utils/switch.hpp"
+#include "atom/utils/switch.hpp"
 
 #include "config.h"
 

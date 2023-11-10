@@ -33,7 +33,7 @@ Description: Hydorgen Camera
 
 #include "config.h"
 
-#include "modules/utils/switch.hpp"
+#include "atom/utils/switch.hpp"
 
 #include "loguru/loguru.hpp"
 

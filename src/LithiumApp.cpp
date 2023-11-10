@@ -32,16 +32,16 @@ Description: Lithium App Enter
 #include "LithiumApp.hpp"
 #include "config.h"
 
-#include "modules/thread/thread.hpp"
-#include "modules/config/configor.hpp"
-#include "modules/device/device_manager.hpp"
-#include "modules/system/process.hpp"
-#include "modules/task/task_manager.hpp"
-#include "modules/task/task_generator.hpp"
-#include "modules/task/task_stack.hpp"
+#include "atom/thread/thread.hpp"
+#include "atom/config/configor.hpp"
+#include "atom/device/device_manager.hpp"
+#include "atom/system/process.hpp"
+#include "atom/task/task_manager.hpp"
+#include "atom/task/task_generator.hpp"
+#include "atom/task/task_stack.hpp"
 #include "core/property/iproperty.hpp"
-#include "modules/plugin/plugin_manager.hpp"
-#include "modules/script/script_manager.hpp"
+#include "atom/plugin/plugin_loader.hpp"
+#include "atom/script/script_manager.hpp"
 
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
@@ -117,7 +117,7 @@ namespace Lithium
 
     void LithiumApp::addDeviceObserver(DeviceType type, const std::string &name)
     {
-        m_DeviceManager->AddDeviceObserver(type, name);
+        m_DeviceManager->addDeviceObserver(type, name);
     }
 
     bool LithiumApp::removeDevice(DeviceType type, const std::string &name)
@@ -125,9 +125,9 @@ namespace Lithium
         return m_DeviceManager->removeDevice(type, name);
     }
 
-    bool LithiumApp::removeDevicesByName(const std::string &name)
+    bool LithiumApp::removeDeviceByName(const std::string &name)
     {
-        return m_DeviceManager->removeDevicesByName(name);
+        return m_DeviceManager->removeDeviceByName(name);
     }
 
     bool LithiumApp::removeDeviceLibrary(const std::string &lib_name)

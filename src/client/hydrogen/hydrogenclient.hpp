@@ -58,7 +58,7 @@ protected:
     virtual void IndiServerConnected() = 0;
     virtual void IndiServerDisconnected(int exit_code) = 0;
 
-    // must use this in LGuider2 rather than BaseClient::disconnectServer()
+    // must use this in PHD2 rather than BaseClient::disconnectServer()
     bool DisconnectIndiServer();
 
 protected: // old deprecated interface INDI Version < 2.0.0

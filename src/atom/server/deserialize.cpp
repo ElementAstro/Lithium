@@ -34,7 +34,7 @@ Description: This file contains the declaration of the DeserializationEngine cla
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
 
-std::optional<std::any> JsonDeserializer::deserialize(const std::string &data) const override
+std::optional<std::any> JsonDeserializer::deserialize(const std::string &data) const
 {
     try
     {

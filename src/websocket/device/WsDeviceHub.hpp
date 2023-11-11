@@ -57,7 +57,7 @@ public:
 	 * Add device to the WsDeviceHub.
 	 * @param device
 	 */
-	void adddevice(const std::shared_ptr<WsDeviceInstance> &device);
+	void addDevice(const std::shared_ptr<WsDeviceInstance> &device);
 
 	/**
 	 * Remove device from the WsDeviceHub.

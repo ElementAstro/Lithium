@@ -33,15 +33,15 @@ Description: Lithium App Enter
 #include "config.h"
 
 #include "atom/thread/thread.hpp"
-#include "atom/config/configor.hpp"
-#include "atom/device/device_manager.hpp"
+#include "config/configor.hpp"
+#include "device/device_manager.hpp"
 #include "atom/system/process.hpp"
-#include "atom/task/task_manager.hpp"
-#include "atom/task/task_generator.hpp"
-#include "atom/task/task_stack.hpp"
+#include "task/task_manager.hpp"
+#include "task/task_generator.hpp"
+#include "task/task_stack.hpp"
 #include "core/property/iproperty.hpp"
-#include "atom/plugin/plugin_loader.hpp"
-#include "atom/script/script_manager.hpp"
+#include "plugin/plugin_loader.hpp"
+#include "script/script_manager.hpp"
 
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
@@ -55,7 +55,7 @@ namespace Lithium
     {
         try
         {
-            m_ConfigManager = Config::ConfigManager::createShared();
+            m_ConfigManager = ConfigManager::createShared();
             m_MessageBus = std::make_shared<MessageBus>();
             m_DeviceManager = DeviceManager::createShared(m_MessageBus, m_ConfigManager);
 

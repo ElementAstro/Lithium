@@ -143,21 +143,6 @@ namespace Lithium
         chai_->add(chaiscript::user_type<LIError>(), "LiError");
         chai_->add(chaiscript::user_type<DeviceType>(), "DeviceType");
 
-        chai_->add(chaiscript::constructor<DeviceManager()>(),"DeviceManager");
-        chai_->add(chaiscript::fun(&DeviceManager::getDeviceList),"get_device_list");
-        chai_->add(chaiscript::fun(&DeviceManager::addDevice),"add_device");
-        chai_->add(chaiscript::fun(&DeviceManager::addDeviceLibrary),"add_device_library");
-        chai_->add(chaiscript::fun(&DeviceManager::addDeviceObserver),"add_device_observer");
-        chai_->add(chaiscript::fun(&DeviceManager::removeDevice),"remove_device");
-        chai_->add(chaiscript::fun(&DeviceManager::removeDeviceByName),"remove_device_by_name");
-        chai_->add(chaiscript::fun(&DeviceManager::removeDeviceLibrary),"remove_device_library");
-        chai_->add(chaiscript::fun(&DeviceManager::getDevice),"get_device");
-        chai_->add(chaiscript::fun(&DeviceManager::findDevice),"find_device");
-        chai_->add(chaiscript::fun(&DeviceManager::findDeviceByName),"find_device_by_name");
-        chai_->add(chaiscript::fun(&DeviceManager::getTask),"get_task");
-        chai_->add(chaiscript::fun(&DeviceManager::setDeviceProperty),"set_device_property");
-        chai_->add(chaiscript::fun(&DeviceManager::setDevicePropertyByName),"set_device_property_by_name");
-
         chai_->add(chaiscript::type_conversion<const char *, std::string>());
 
     }

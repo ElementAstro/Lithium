@@ -132,7 +132,7 @@ namespace Lithium::File
         std::ifstream in(file, std::ios::binary);
         if (!in)
         {
-            LOG_F(ERROR, "Failed to open file {}", file);
+            LOG_F(ERROR, "Failed to open file {}", file.string());
             return false;
         }
 
@@ -222,7 +222,7 @@ namespace Lithium::File
                         std::ifstream in(sub_entry.path(), std::ios::binary);
                         if (!in)
                         {
-                            LOG_F(ERROR, "Failed to open file {}", sub_entry.path());
+                            LOG_F(ERROR, "Failed to open file {}", sub_entry.path().string());
                             continue;
                         }
 
@@ -233,7 +233,7 @@ namespace Lithium::File
                             {
                                 in.close();
                                 gzclose(out);
-                                LOG_F(ERROR, "Failed to compress file {}", sub_entry.path());
+                                LOG_F(ERROR, "Failed to compress file {}", sub_entry.path().string());
                                 return false;
                             }
                         }

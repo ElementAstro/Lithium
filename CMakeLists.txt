@@ -175,6 +175,8 @@ set(server_module
     ${lithium_src_dir}/websocket/device/WsDeviceInstance.cpp
     ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
 
+    ${lithium_src_dir}/websocket/device/WsCameraInstance.cpp
+
     ${lithium_src_dir}/websocket/plugin/WsPluginHub.cpp
     ${lithium_src_dir}/websocket/plugin/WsPluginInstance.cpp
     ${lithium_src_dir}/websocket/plugin/WsPluginServer.cpp
@@ -276,9 +278,6 @@ add_subdirectory(modules/hydrogen_client)
 
 # 构建Lithium内核
 add_subdirectory(${lithium_src_dir}/core)
-if(NOT WIN32)
-add_subdirectory(${lithium_module_dir}/deviceloader)
-endif()
 
 add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${web_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
 

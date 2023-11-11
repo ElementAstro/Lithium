@@ -1,6 +1,6 @@
 #pragma once
 
-#include "atom/client/hydrogenclient.hpp"
+#include "hydrogenclient.hpp"
 #include "core/property/task/device_task.hpp"
 #include "core/property/task/conditional_task.hpp"
 #include "core/property/task/loop_task.hpp"

@@ -62,6 +62,9 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     hydrogenstandardproperty.cpp
 )
 
+find_package(Intl REQUIRED)
+target_link_libraries(hydrogencore ${Libintl_LIBRARY})
+
 if(UNIX OR WIN32 OR LINUX)
     list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
         sharedblob_parse.hpp

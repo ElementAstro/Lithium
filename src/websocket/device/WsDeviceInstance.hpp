@@ -59,6 +59,7 @@ using json = nlohmann::json;
 
 class WsDeviceHub; // FWD
 class SerializationEngine;
+class DeserializationEngine;
 
 /**
  * @brief Class representing an instance of a WebSocket device.
@@ -206,7 +207,31 @@ public: // WebSocket Listener methods
 	 */
 	CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 
+public:
+/**
+	 * @brief Register a function handler for the VCommandDispatcher.
+	 *
+	 * @tparam ClassType The class type of the handler.
+	 * @param name The name of the function.
+	 * @param handler The function handler.
+	 */
+	template <typename T>
+	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &), T *object)
+	{
+		m_CommandDispatcher->RegisterMemberHandler(name, object, memberFunc);
+	}
+	
+	/**
+	 * @brief Run a function on the VCommandDispatcher.
+	 *
+	 * @param name The name of the function to be run.
+	 * @param params JSON object containing the parameters for the function.
+	 * @return True if the function was run successfully, false otherwise.
+	 */
+	bool LiRunFunc(const std::string &name, const json &params);
+
 private:
+	
 	/**
 	 * @brief Buffer for messages. Needed for multi-frame messages.
 	 *
@@ -223,27 +248,7 @@ private:
 
 	std::unique_ptr<SerializationEngine> m_SerializationEngine;
 
-	/**
-	 * @brief Register a function handler for the VCommandDispatcher.
-	 *
-	 * @tparam ClassType The class type of the handler.
-	 * @param name The name of the function.
-	 * @param handler The function handler.
-	 */
-	template <typename T>
-	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &))
-	{
-		m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
-	}
-
-	/**
-	 * @brief Run a function on the VCommandDispatcher.
-	 *
-	 * @param name The name of the function to be run.
-	 * @param params JSON object containing the parameters for the function.
-	 * @return True if the function was run successfully, false otherwise.
-	 */
-	bool LiRunFunc(const std::string &name, const json &params);
+	std::unique_ptr<DeserializationEngine> m_DeserializationEngine;
 
 	std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
 		{"Camera", Lithium::DeviceType::Camera},

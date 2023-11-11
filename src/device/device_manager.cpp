@@ -31,7 +31,7 @@ Description: Device Manager
 
 #include "device_manager.hpp"
 #include "config/configor.hpp"
-#include "module/module_loader.hpp"
+#include "atom/plugin/module_loader.hpp"
 #include "server/message_bus.hpp"
 #include "thread/thread.hpp"
 
@@ -103,7 +103,7 @@ namespace Lithium
 {
 
     // Constructor
-    DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager)
+    DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
         m_ModuleLoader = ModuleLoader::createShared("drivers");
         m_ConfigManager = configManager;
@@ -130,7 +130,7 @@ namespace Lithium
         }
     }
 
-    std::shared_ptr<DeviceManager> DeviceManager::createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager)
+    std::shared_ptr<DeviceManager> DeviceManager::createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
         return std::make_shared<DeviceManager>(messageBus, configManager);
     }

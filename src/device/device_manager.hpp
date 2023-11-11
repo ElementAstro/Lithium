@@ -79,10 +79,7 @@ namespace Lithium
         class ThreadManager;
     }
 
-    namespace Config
-    {
-        class ConfigManager;
-    }
+    class ConfigManager;
     
     /**
      * @class DeviceManager
@@ -96,7 +93,7 @@ namespace Lithium
          * @param messageBus 消息总线对象的共享指针。
          * @param configManager 配置管理器对象的共享指针。
          */
-        DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager);
+        DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
 
         /**
          * @brief 析构函数，销毁设备管理器对象。
@@ -109,7 +106,7 @@ namespace Lithium
          * @param configManager 配置管理器对象的共享指针。
          * @return 返回一个指向设备管理器对象的共享指针。
          */
-        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<Config::ConfigManager> configManager);
+        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
 
         /**
          * @brief 获取指定类型设备的设备列表。
@@ -318,7 +315,7 @@ namespace Lithium
 
         std::shared_ptr<ModuleLoader> m_ModuleLoader;           ///< 模块加载器对象的共享指针。
         std::shared_ptr<MessageBus> m_MessageBus;               ///< 消息总线对象的共享指针。
-        std::shared_ptr<Config::ConfigManager> m_ConfigManager; ///< 配置管理器对象的共享指针。
+        std::shared_ptr<ConfigManager> m_ConfigManager; ///< 配置管理器对象的共享指针。
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
 
     // Device for quick performance

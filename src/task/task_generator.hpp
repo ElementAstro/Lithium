@@ -40,8 +40,8 @@ Description: Task Generator
 #endif
 #include <fstream>
 
-#include "atom/device/device_manager.hpp"
-#include "atom/plugin/plugin_loader.hpp"
+#include "device/device_manager.hpp"
+#include "plugin/plugin_loader.hpp"
 #include "core/property/task/task.hpp"
 
 namespace Lithium::Task

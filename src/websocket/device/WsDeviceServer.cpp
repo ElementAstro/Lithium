@@ -31,6 +31,22 @@ Description: WebSocket Device Server
 
 #include "WsDeviceServer.hpp"
 
+WsDeviceServer::WsDeviceServer() : m_userIdCounter(0)
+{
+	m_device_switch = std::make_unique<StringSwitch<const std::shared_ptr<AsyncWebSocket> &, const oatpp::String &, const oatpp::String &>>();
+	m_device_switch->registerCase("camera", [this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
+								  {
+		auto hub = getOrCreateHub(deviceHub);
+		auto device = std::make_shared<WsDeviceInstance>(socket, hub, deviceName, obtainNewUserId());
+		socket->setListener(device);
+		hub->addDevice(device); });
+	m_device_switch->registerCase("telescope", [this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
+								  {
+		auto hub = getOrCreateHub(deviceHub);
+		auto device = std::make_shared<WsDeviceInstance>(socket, hub, deviceName, obtainNewUserId());
+		socket->setListener(device);
+		hub->addDevice(device); });
+}
 v_int32 WsDeviceServer::obtainNewUserId()
 {
 	return m_userIdCounter++;
@@ -51,13 +67,8 @@ void WsDeviceServer::onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSoc
 {
 	auto deviceName = params->find("deviceName")->second;
 	auto deviceHub = params->find("deviceHub")->second;
-	auto hub = getOrCreateHub(deviceHub);
-
-	auto device = std::make_shared<WsDeviceInstance>(socket, hub, deviceName, obtainNewUserId());
-	socket->setListener(device);
-
-	hub->adddevice(device);
-	hub->sendMessage(deviceName + " joined " + deviceHub);
+	auto deviceType = params->find("deviceType")->second;
+	m_device_switch->match(deviceType, socket, deviceName, deviceHub);
 }
 
 void WsDeviceServer::onBeforeDestroy_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket)

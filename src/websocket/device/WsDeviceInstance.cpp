@@ -32,8 +32,9 @@ Description: WebSocket Device Instance (each device each instance)
 #include "WsDeviceInstance.hpp"
 #include "WsDeviceHub.hpp"
 
-#include "atom/device/device_manager.hpp"
+#include "device/device_manager.hpp"
 #include "atom/server/serialize.hpp"
+#include "atom/server/deserialize.hpp"
 
 #include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
@@ -53,16 +54,17 @@ WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket
 
 	m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
 
-	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty);
-	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty);
-	LiRegisterFunc("runTask", &WsDeviceInstance::runTask);
-	LiRegisterFunc("runFunc", &WsDeviceInstance::runFunc);
-	LiRegisterFunc("loadDriverLibrary", &WsDeviceInstance::loadDriverLibrary);
-	LiRegisterFunc("unloadDriverLibrary", &WsDeviceInstance::unloadDriverLibrary);
-	LiRegisterFunc("addDriver", &WsDeviceInstance::addDriver);
-	LiRegisterFunc("removeDriver", &WsDeviceInstance::removeDriver);
+	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty, this);
+	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty, this);
+	LiRegisterFunc("runTask", &WsDeviceInstance::runTask, this);
+	LiRegisterFunc("runFunc", &WsDeviceInstance::runFunc, this);
+	LiRegisterFunc("loadDriverLibrary", &WsDeviceInstance::loadDriverLibrary, this);
+	LiRegisterFunc("unloadDriverLibrary", &WsDeviceInstance::unloadDriverLibrary, this);
+	LiRegisterFunc("addDriver", &WsDeviceInstance::addDriver, this);
+	LiRegisterFunc("removeDriver", &WsDeviceInstance::removeDriver, this);
 
 	m_SerializationEngine = std::make_unique<SerializationEngine>();
+	m_DeserializationEngine = std::make_unique<DeserializationEngine>();
 }
 
 WsDeviceInstance::~WsDeviceInstance()

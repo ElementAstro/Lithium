@@ -36,7 +36,7 @@ Description: Lithium App Enter
 #include <memory>
 
 #include "atom/server/message_bus.hpp"
-#include "atom/device/device_manager.hpp"
+#include "device/device_manager.hpp"
 #include "atom/system/process.hpp"
 
 #include "nlohmann/json.hpp"
@@ -49,10 +49,7 @@ namespace Lithium
         class ThreadManager;
     }
 
-    namespace Config
-    {
-        class ConfigManager;
-    }
+    class ConfigManager;
 
     class ScriptManager;
     class PluginManager;
@@ -144,7 +141,7 @@ namespace Lithium
 
     private:
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
-        std::shared_ptr<Config::ConfigManager> m_ConfigManager;
+        std::shared_ptr<ConfigManager> m_ConfigManager;
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Process::ProcessManager> m_ProcessManager;
         std::shared_ptr<Task::TaskManager> m_TaskManager;

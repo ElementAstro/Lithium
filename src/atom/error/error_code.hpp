@@ -1,5 +1,5 @@
 /*
- * error_code.cpp
+ * error_code.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *

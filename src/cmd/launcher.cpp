@@ -34,7 +34,6 @@ Description: Lithium Server Launcher
 
 #include <cstdio>
 #include <regex>
-#include <boost/asio.hpp>
 #include <iostream>
 #include <openssl/sha.h>
 
@@ -433,67 +432,6 @@ void ServerLauncher::read_server_output()
 
     // 让分离线程自行运行，不阻塞 run() 函数
     read_thread.detach();
-}
-
-void ServerLauncher::send_warning_email(const std::string &message)
-{
-    std::string smtp_server = "smtp.example.com";
-    int smtp_port = 25;
-    std::string from_address = "noreply@example.com";
-    std::string to_address = "admin@example.com";
-    std::string subject = "Server Warning";
-    std::string body = "Warning message:\n" + message;
-
-    // 使用 Boost.Asio 进行 SMTP 邮件发送
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::resolver resolver(io_service);
-    boost::asio::ip::tcp::socket socket(io_service);
-    boost::asio::connect(socket, resolver.resolve({smtp_server, std::to_string(smtp_port)}));
-    std::string response;
-
-    // 接收服务端欢迎信息
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-
-    // 发送 HELO 命令
-    socket.send(boost::asio::buffer("HELO example.com\r\n"));
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-
-    // 发送 MAIL FROM 命令
-    socket.send(boost::asio::buffer("MAIL FROM:<" + from_address + ">\r\n"));
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-
-    // 发送 RCPT TO 命令
-    socket.send(boost::asio::buffer("RCPT TO:<" + to_address + ">\r\n"));
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-
-    // 发送 DATA 命令
-    socket.send(boost::asio::buffer("DATA\r\n"));
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-
-    // 发送邮件头部
-    std::string header =
-        "From: " + from_address + "\r\n"
-                                  "To: " +
-        to_address + "\r\n"
-                     "Subject: " +
-        subject + "\r\n"
-                  "Content-Type: text/plain; charset=utf-8\r\n"
-                  "\r\n";
-    socket.send(boost::asio::buffer(header));
-
-    // 发送邮件正文
-    socket.send(boost::asio::buffer(body));
-
-    // 发送结束符和换行符
-    socket.send(boost::asio::buffer("\r\n.\r\n"));
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-
-    // 发送 QUIT 命令并关闭连接
-    socket.send(boost::asio::buffer("QUIT\r\n"));
-    boost::asio::read_until(socket, boost::asio::dynamic_buffer(response), "\n");
-    socket.close();
-
-    std::cout << "Sent warning email: " << message << std::endl;
 }
 
 bool ServerLauncher::calculate_sha256(const std::string &filename, std::string &sha256_val)

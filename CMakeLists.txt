@@ -20,7 +20,8 @@ endif()
 # root directory of the project
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
-set(lithium_module_dir ${Lithium_PROJECT_ROOT_DIR}/src/modules)
+set(lithium_module_dir ${Lithium_PROJECT_ROOT_DIR}/src/atom)
+set(lithium_client_dir ${Lithium_PROJECT_ROOT_DIR}/src/client)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -110,26 +111,26 @@ elseif(LINUX)
 endif()
 
 set(api_module
-	${lithium_src_dir}/client/astap.cpp
-	${lithium_src_dir}/client/astrometry.cpp
-    ${lithium_src_dir}/client/phd2client.cpp
-    ${lithium_module_dir}/client/hydrogenclient.cpp
-    ${lithium_src_dir}/client/hydrogen/hydrogencamera.cpp
-    ${lithium_src_dir}/client/hydrogen/hydrogenfilterwheel.cpp
-    ${lithium_src_dir}/client/hydrogen/hydrogentelescope.cpp
-    ${lithium_src_dir}/client/hydrogen/hydrogenfocuser.cpp
+	${lithium_client_dir}/platesolve/astap.cpp
+	${lithium_client_dir}/platesolve/astrometry.cpp
+    ${lithium_client_dir}/phd2/phd2client.cpp
+    ${lithium_client_dir}/hydrogen/hydrogenclient.cpp
+    ${lithium_client_dir}/hydrogen/hydrogencamera.cpp
+    ${lithium_client_dir}/hydrogen/hydrogenfilterwheel.cpp
+    ${lithium_client_dir}/hydrogen/hydrogentelescope.cpp
+    ${lithium_client_dir}/hydrogen/hydrogenfocuser.cpp
 )
 
 set(config_module
-    ${lithium_module_dir}/config/configor.cpp
+    ${lithium_src_dir}/config/configor.cpp
 )
 
 set(device_module
-    ${lithium_module_dir}/device/device_manager.cpp
-    ${lithium_module_dir}/device/indidevice_manager.cpp
-    ${lithium_module_dir}/device/device_utils.cpp
-    ${lithium_module_dir}/device/indi_device.cpp
-    ${lithium_module_dir}/device/hydrogen_device.cpp
+    ${lithium_src_dir}/device/device_manager.cpp
+    ${lithium_src_dir}/device/indidevice_manager.cpp
+    ${lithium_src_dir}/device/device_utils.cpp
+    ${lithium_src_dir}/device/indi_device.cpp
+    ${lithium_src_dir}/device/hydrogen_device.cpp
 )
 
 set(image_module
@@ -144,12 +145,9 @@ set(io_module
 )
 
 set(module_module
-    ${lithium_module_dir}/module/module_loader.cpp
-    ${lithium_module_dir}/plugin/plugin.cpp
-    ${lithium_module_dir}/plugin/exe_plugin.cpp
-    ${lithium_module_dir}/plugin/script_plugin.cpp
-    ${lithium_module_dir}/plugin/plugin_loader.cpp
-    ${lithium_module_dir}/module/compiler.cpp
+    ${lithium_module_dir}/plugin/module_loader.cpp
+    ${lithium_src_dir}/plugin/plugin_loader.cpp
+    ${lithium_module_dir}/plugin/compiler.cpp
 )
 
 set(web_module
@@ -165,6 +163,7 @@ set(server_module
     ${lithium_module_dir}/server/message_bus.hpp
     ${lithium_module_dir}/server/message_queue.hpp
     ${lithium_module_dir}/server/serialize.cpp
+    ${lithium_module_dir}/server/deserialize.cpp
 
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
@@ -182,13 +181,13 @@ set(server_module
 )
 
 set(script_module
-    ${lithium_module_dir}/script/script_manager.cpp
+    ${lithium_src_dir}/script/script_manager.cpp
 )
 
 set(task_module
-    ${lithium_module_dir}/task/task_manager.cpp
-    ${lithium_module_dir}/task/task_stack.cpp
-    ${lithium_module_dir}/task/task_generator.cpp
+    ${lithium_src_dir}/task/task_manager.cpp
+    ${lithium_src_dir}/task/task_stack.cpp
+    ${lithium_src_dir}/task/task_generator.cpp
 )
 
 set(thread_module
@@ -290,6 +289,7 @@ target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 
 target_link_libraries(lithium_server lithiumcorestatic)
+target_link_libraries(lithium_server lithiumpluginstatic)
 target_link_libraries(lithium_server hydrogencore)
 target_link_libraries(lithium_server hydrogenclientstatic)
 

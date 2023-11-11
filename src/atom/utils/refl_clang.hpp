@@ -2,8 +2,8 @@
 #include <string_view> // Repository: https://github.com/Ubpa/USRefl
 #include <tuple>       // License: https://github.com/Ubpa/USRefl/blob/master/LICENSE
 #define TSTR(s) ([] { struct tmp { static constexpr auto get() { return std::basic_string_view{s}; } }; \
-  return Ubpa::detail::TSTRH(tmp{}); }())
-namespace Ubpa::detail
+  return detail::TSTRH(tmp{}); }())
+namespace detail
 {
   template <typename C, C... chars>
   struct TStr
@@ -54,7 +54,7 @@ namespace Ubpa::detail
                       {if constexpr(!b.is_virtual)NV_Var(b.info,b.info.Forward(std::forward<U>(u)),std::forward<F>(f)); });
   }
 }
-namespace Ubpa::USRefl
+namespace USRefl
 {
   template <class Name>
   struct NamedValueBase
@@ -156,7 +156,7 @@ namespace Ubpa::USRefl
   template <class Name, class T>
   struct Attr : NamedValue<Name, T>
   {
-    constexpr Attr(Name, T v) : NamedValue<Name, T> { v }
+    constexpr Attr(Name, T v) : NamedValue<Name, T>{v}
     {
     }
   };
@@ -168,7 +168,7 @@ namespace Ubpa::USRefl
   template <typename... As>
   struct AttrList : ElemList<As...>
   {
-    constexpr AttrList(As... as) : ElemList<As...> { as... }
+    constexpr AttrList(As... as) : ElemList<As...>{as...}
     {
     }
   };
@@ -198,7 +198,7 @@ namespace Ubpa::USRefl
   template <typename... Fs>
   struct FieldList : ElemList<Fs...>
   {
-    constexpr FieldList(Fs... fs) : ElemList<Fs...> { fs... }
+    constexpr FieldList(Fs... fs) : ElemList<Fs...>{fs...}
     {
     }
   };
@@ -213,14 +213,14 @@ namespace Ubpa::USRefl
   template <typename... Bs>
   struct BaseList : ElemList<Bs...>
   {
-    constexpr BaseList(Bs... bs) : ElemList<Bs...> { bs... }
+    constexpr BaseList(Bs... bs) : ElemList<Bs...>{bs...}
     {
     }
   };
   template <typename... Ts>
   struct TypeInfoList : ElemList<Ts...>
   {
-    constexpr TypeInfoList(Ts... ts) : ElemList<Ts...> { ts... }
+    constexpr TypeInfoList(Ts... ts) : ElemList<Ts...>{ts...}
     {
     }
   };

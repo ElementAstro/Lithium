@@ -2,8 +2,8 @@
 #include <string_view> // Repository: https://github.com/Ubpa/USRefl
 #include <tuple>       // License: https://github.com/Ubpa/USRefl/blob/master/LICENSE
 #define TSTR(s) ([] { constexpr std::basic_string_view str{s}; \
-  return Ubpa::detail::TStr<Ubpa::detail::fcstr<typename decltype(str)::value_type, str.size()>{str}>{}; }())
-namespace Ubpa::detail
+  return detail::TStr<detail::fcstr<typename decltype(str)::value_type, str.size()>{str}>{}; }())
+namespace detail
 {
   template <typename C, std::size_t N>
   struct fcstr
@@ -59,7 +59,7 @@ namespace Ubpa::detail
                       {if constexpr(!b.is_virtual)NV_Var(b.info,b.info.Forward(std::forward<U>(u)),std::forward<F>(f)); });
   }
 }
-namespace Ubpa::USRefl
+namespace USRefl
 {
   template <class Name>
   struct NamedValueBase

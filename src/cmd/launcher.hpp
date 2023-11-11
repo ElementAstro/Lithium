@@ -172,16 +172,6 @@ private:
     void start_server();
 
     /**
-     * @brief 发送警告邮件。
-     * 
-     * 该函数在 ServerLauncher::run() 函数中被调用，用于发送警告邮件给管理员。
-     * 邮件内容包括错误信息以及日志文件的部分内容，以供管理员进行问题排查。
-     *
-     * @param message 警告信息
-     */
-    void send_warning_email(const std::string& message);
-
-    /**
      * @brief 发送停止信号给服务器进程，并等待其优雅地退出。
      * 
      * 该函数在 ServerLauncher::stop() 函数中被调用，用于发送停止信号给服务器进程，

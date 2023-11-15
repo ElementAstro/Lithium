@@ -132,7 +132,7 @@ namespace Lithium
 
     void ConfigManager::setValue(const std::string &key_path, const json &value)
     {
-        std::lock_guard<std::shared_mutex> lock(rw_mutex_);
+        // std::lock_guard<std::shared_mutex> lock(rw_mutex_);
         try
         {
             json *p = &config_;
@@ -155,7 +155,7 @@ namespace Lithium
 
     json ConfigManager::getValue(const std::string &key_path) const
     {
-        std::lock_guard<std::shared_mutex> lock(rw_mutex_);
+        // std::lock_guard<std::shared_mutex> lock(rw_mutex_);
         try
         {
             const json *p = &config_;

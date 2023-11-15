@@ -127,7 +127,7 @@ namespace Lithium::File
         return true;
     }
 
-    bool compress_file(const fs::path &file, gzFile out)
+    bool compress_file_(const fs::path &file, gzFile out)
     {
         std::ifstream in(file, std::ios::binary);
         if (!in)
@@ -143,7 +143,7 @@ namespace Lithium::File
             {
                 in.close();
                 gzclose(out);
-                DLOG_F(ERROR, "Failed to compress file {}", file);
+                DLOG_F(ERROR, "Failed to compress file {}", file.string());
                 return false;
             }
         }
@@ -196,7 +196,7 @@ namespace Lithium::File
         return true;
     }
 
-    bool compress_folder(const fs::path &folder_name)
+    bool compress_folder_(const fs::path &folder_name)
     {
         auto outfile_name = fmt::format("{}.gz", folder_name.string());
         gzFile out = gzopen(outfile_name.c_str(), "wb");
@@ -244,7 +244,7 @@ namespace Lithium::File
             }
             else if (entry.is_regular_file())
             {
-                if (!compress_file(entry.path(), out))
+                if (!compress_file_(entry.path(), out))
                 {
                     gzclose(out);
                     return false;
@@ -252,8 +252,13 @@ namespace Lithium::File
             }
         }
         gzclose(out);
-        DLOG_F(INFO, "Compressed folder {} -> {}", folder_name, outfile_name);
+        DLOG_F(INFO, "Compressed folder {} -> {}", folder_name.string(), outfile_name);
         return true;
+    }
+
+    bool compress_folder(const char *folder_name)
+    {
+        return compress_folder_(fs::path(folder_name));
     }
 
     bool extract_zip(const std::string &zip_file, const std::string &destination_folder)

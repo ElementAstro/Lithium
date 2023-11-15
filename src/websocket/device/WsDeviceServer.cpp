@@ -31,16 +31,39 @@ Description: WebSocket Device Server
 
 #include "WsDeviceServer.hpp"
 
+#include "WsCameraInstance.hpp"
+#include "WsFilterInstance.hpp"
+#include "WsFocuserInstance.hpp"
+#include "WsTelescopeInstance.hpp"
+
 WsDeviceServer::WsDeviceServer() : m_userIdCounter(0)
 {
 	m_device_switch = std::make_unique<StringSwitch<const std::shared_ptr<AsyncWebSocket> &, const oatpp::String &, const oatpp::String &>>();
 	m_device_switch->registerCase("camera", [this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
 								  {
 		auto hub = getOrCreateHub(deviceHub);
-		auto device = std::make_shared<WsDeviceInstance>(socket, hub, deviceName, obtainNewUserId());
+		auto device = std::make_shared<WsCameraInstance>(socket, hub, deviceName, obtainNewUserId());
 		socket->setListener(device);
 		hub->addDevice(device); });
 	m_device_switch->registerCase("telescope", [this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
+								  {
+		auto hub = getOrCreateHub(deviceHub);
+		auto device = std::make_shared<WsTelescopeInstance>(socket, hub, deviceName, obtainNewUserId());
+		socket->setListener(device);
+		hub->addDevice(device); });
+	m_device_switch->registerCase("focuser", [this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
+								  {
+		auto hub = getOrCreateHub(deviceHub);
+		auto device = std::make_shared<WsFocuserInstance>(socket, hub, deviceName, obtainNewUserId());
+		socket->setListener(device);
+		hub->addDevice(device); });
+	m_device_switch->registerCase("filterwheel", [this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
+								  {
+		auto hub = getOrCreateHub(deviceHub);
+		auto device = std::make_shared<WsFilterInstance>(socket, hub, deviceName, obtainNewUserId());
+		socket->setListener(device);
+		hub->addDevice(device); });
+	m_device_switch->setDefault([this](const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &deviceName, const oatpp::String &deviceHub)
 								  {
 		auto hub = getOrCreateHub(deviceHub);
 		auto device = std::make_shared<WsDeviceInstance>(socket, hub, deviceName, obtainNewUserId());

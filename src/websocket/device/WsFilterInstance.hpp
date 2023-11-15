@@ -1,5 +1,5 @@
 /*
- * WsCameraInstance.hpp
+ * WsFilterInstance.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -29,52 +29,39 @@ Description: WebSocket Device Instance (each device each instance)
 
 **************************************************/
 
-#ifndef WSCAMERAINSTANCE_HPP
-#define WSCAMERAINSTANCE_HPP
+#ifndef WSFILTERINSTANCE_HPP
+#define WSFILTERINSTANCE_HPP
 
 #include "WsDeviceInstance.hpp"
 
-class Camera;
-
 /**
- * @brief Class representing an instance of a WebSocket Camera
+ * @brief Class representing an instance of a WebSocket Filter
  *
  */
-class WsCameraInstance : public WsDeviceInstance
+class WsFilterInstance : public WsDeviceInstance
 {
 
 public:
 	/**
-	 * @brief Construct a new WsCameraInstance object.
+	 * @brief Construct a new WsFilterInstance object.
 	 *
 	 * @param socket Shared pointer to the AsyncWebSocket object.
 	 * @param hub Shared pointer to the WsDeviceHub object.
 	 * @param device_name Name of the device.
 	 * @param userId Id of the user.
 	 */
-	WsCameraInstance(const std::shared_ptr<AsyncWebSocket> &socket,
+	WsFilterInstance(const std::shared_ptr<AsyncWebSocket> &socket,
 					 const std::shared_ptr<WsDeviceHub> &hub,
 					 const oatpp::String &device_name,
 					 v_int32 userId);
 
 	/**
-	 * @brief Destroy the WsCameraInstance object.
+	 * @brief Destroy the WsFilterInstance object.
 	 *
 	 */
-	~WsCameraInstance();
+	~WsFilterInstance();
 
 public:
-
-    void startExposure(const json &m_params);
-	void stopExosure(const json &m_parmas);
-	void getGain(const json &m_params);
-	void setGain(const json &m_params);
-	void setOffset(const json &m_params);
-	void getOffset(const json &m_params);
-
-private:
-
-	std::shared_ptr<Camera> m_camera;
 };
 
-#endif // WSCAMERAINSTANCE_HPP
+#endif // WSFILTERINSTANCE_HPP

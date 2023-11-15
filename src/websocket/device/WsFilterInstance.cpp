@@ -1,5 +1,5 @@
 /*
- * WsTelescopeInstance.hpp
+ * WsFilterInstance.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -29,41 +29,29 @@ Description: WebSocket Device Instance (each device each instance)
 
 **************************************************/
 
-#ifndef WSTELESCOPEINSTANCE_HPP
-#define WSTELESCOPEINSTANCE_HPP
+#include "WsFilterInstance.hpp"
+#include "WsDeviceHub.hpp"
 
-#include "WsDeviceInstance.hpp"
+#include "device/device_manager.hpp"
+#include "atom/server/serialize.hpp"
+#include "atom/server/deserialize.hpp"
 
-/**
- * @brief Class representing an instance of a WebSocket Telescope
- *
- */
-class WsTelescopeInstance : public WsDeviceInstance
+#include "atom/utils/time.hpp"
+#include "websocket/template/error_message.hpp"
+#include "atom/error/error_code.hpp"
+
+#include "loguru/loguru.hpp"
+#include "nlohmann/json.hpp"
+#include "magic_enum/magic_enum.hpp"
+
+WsFilterInstance::WsFilterInstance(const std::shared_ptr<AsyncWebSocket> &socket,
+                                   const std::shared_ptr<WsDeviceHub> &hub,
+                                   const oatpp::String &device_name,
+                                   v_int32 userId)
+    : WsDeviceInstance(socket, hub, device_name, userId)
 {
+}
 
-public:
-	/**
-	 * @brief Construct a new WsTelescopeInstance object.
-	 *
-	 * @param socket Shared pointer to the AsyncWebSocket object.
-	 * @param hub Shared pointer to the WsDeviceHub object.
-	 * @param device_name Name of the device.
-	 * @param userId Id of the user.
-	 */
-	WsTelescopeInstance(const std::shared_ptr<AsyncWebSocket> &socket,
-					 const std::shared_ptr<WsDeviceHub> &hub,
-					 const oatpp::String &device_name,
-					 v_int32 userId);
-
-	/**
-	 * @brief Destroy the WsTelescopeInstance object.
-	 *
-	 */
-	~WsTelescopeInstance();
-
-public:
-
-    void startExposure(const json &m_params);
-};
-
-#endif // WSTELESCOPEINSTANCE_HPP
+WsFilterInstance::~WsFilterInstance()
+{
+}

@@ -40,6 +40,8 @@ Description: WebSocket Device Instance (each device each instance)
 #include "websocket/template/error_message.hpp"
 #include "atom/error/error_code.hpp"
 
+#include "core/camera.hpp"
+
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
 #include "magic_enum/magic_enum.hpp"
@@ -85,4 +87,29 @@ void WsCameraInstance::startExposure(const json &m_params)
         sendMessage(error_message.dump());
         return;
     }
+}
+
+void WsCameraInstance::stopExposure(const json &m_params)
+{
+
+}
+
+void WsCameraInstance::getGain(const json &m_params)
+{
+
+}
+
+void WsCameraInstance::setGain(const json &m_params)
+{
+
+}
+
+void WsCameraInstance::getOffset(const json &m_params)
+{
+
+}
+
+void WsCameraInstance::setOffset(const json & m_params)
+{
+    
 }

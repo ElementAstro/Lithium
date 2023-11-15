@@ -81,10 +81,15 @@ void run()
 {
     DLOG_F(INFO, "Loading App component ...");
 
+    std::string host = Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0");
+    DLOG_F(INFO, "Host: {}", host);
+    int port = Lithium::MyApp->GetConfig("config/server").value("port", 8000);
+    DLOG_F(INFO, "Port: {}", port);
+
 #if ENABLE_IPV6
     AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "::"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
 #else
-    AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
+    AppComponent components(host, port); // Create scope Environment components
 #endif
 
     DLOG_F(INFO, "App component loaded");

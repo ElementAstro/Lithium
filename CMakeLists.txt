@@ -176,6 +176,9 @@ set(server_module
     ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
 
     ${lithium_src_dir}/websocket/device/WsCameraInstance.cpp
+    ${lithium_src_dir}/websocket/device/WsTelescopeInstance.cpp
+    ${lithium_src_dir}/websocket/device/WsFocuserInstance.cpp
+    ${lithium_src_dir}/websocket/device/WsFilterInstance.cpp
 
     ${lithium_src_dir}/websocket/plugin/WsPluginHub.cpp
     ${lithium_src_dir}/websocket/plugin/WsPluginInstance.cpp
@@ -298,11 +301,17 @@ if(NOT HAS_STD_FORMAT)
     target_link_libraries(lithium_server fmt::fmt)
 endif()
 
+target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
+
 target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
 target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
 target_link_libraries(lithium_server libzip::zip)
+if(WIN32)
 target_link_libraries(lithium_server pugixml-shared)
+else()
+target_link_libraries(lithium_server pugixml-static)
+endif()
 target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)

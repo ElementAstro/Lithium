@@ -264,7 +264,7 @@ void WsDeviceInstance::addDriver(const json &m_params)
 		{
 			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type and name are required");
 		}
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{
@@ -301,7 +301,7 @@ void WsDeviceInstance::removeDriver(const json &m_params)
 	}
 	try
 	{
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{

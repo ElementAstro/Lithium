@@ -80,6 +80,10 @@ Description: App Components
  */
 class AppComponent
 {
+private:
+    oatpp::String m_host;
+    v_uint16 m_port;
+
 public:
     AppComponent(oatpp::String host, v_uint16 port)
         : m_host(host), m_port(port)
@@ -229,10 +233,6 @@ public:
 #endif
         connectionHandler->setSocketInstanceListener(std::make_shared<WsPluginServer>());
         return connectionHandler; }());
-
-private:
-    oatpp::String m_host;
-    v_uint16 m_port;
 };
 
 #endif /* AppComponent_hpp */

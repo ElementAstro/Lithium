@@ -38,6 +38,7 @@ Description: Device Manager
 #include <functional>
 
 #include "core/device.hpp"
+#include "core/device_type.hpp"
 
 #include "error/error_code.hpp"
 
@@ -60,17 +61,6 @@ class Solver;
 
 namespace Lithium
 {
-    enum class DeviceType
-    {
-        Camera,
-        Telescope,
-        Focuser,
-        FilterWheel,
-        Solver,
-        Guider,
-        NumDeviceTypes
-    };
-
     class ModuleLoader;
     class MessageBus;
 

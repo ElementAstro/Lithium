@@ -164,49 +164,49 @@ msgstr ""
 msgid "Process terminated by signal: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:231
+#: /workspaces/Lithium/src/App.cpp:246
 msgid "port the server running on"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:232
+#: /workspaces/Lithium/src/App.cpp:247
 msgid "host the server running on"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:233
+#: /workspaces/Lithium/src/App.cpp:248
 msgid "path to the config file"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:234
+#: /workspaces/Lithium/src/App.cpp:249
 msgid "path to the modules directory"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:235
+#: /workspaces/Lithium/src/App.cpp:250
 msgid "web panel"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:236
+#: /workspaces/Lithium/src/App.cpp:251
 msgid "path to log file"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:238
+#: /workspaces/Lithium/src/App.cpp:253
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:239
+#: /workspaces/Lithium/src/App.cpp:254
 msgid "End."
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:247
+#: /workspaces/Lithium/src/App.cpp:262
 #, c-format
 msgid "Failed to parser command line : %s"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:268
+#: /workspaces/Lithium/src/App.cpp:283
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:274
+#: /workspaces/Lithium/src/App.cpp:289
 #, c-format
 msgid "Set server port to %d"
 msgstr ""

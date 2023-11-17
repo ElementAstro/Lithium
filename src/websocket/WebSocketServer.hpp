@@ -527,7 +527,7 @@ private:
 	static constexpr const char *TAG = "WebSocketInstanceListener";
 };
 
-extern std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap;
+extern std::unordered_map<std::string, DeviceType> DeviceTypeMap;
 
 const json serror(const std::string func_name, ServerError code, const std::string errorMsg);
 

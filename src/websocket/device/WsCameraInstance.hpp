@@ -66,7 +66,7 @@ public:
 public:
 
     void startExposure(const json &m_params);
-	void stopExosure(const json &m_parmas);
+	void stopExposure(const json &m_parmas);
 	void getGain(const json &m_params);
 	void setGain(const json &m_params);
 	void setOffset(const json &m_params);

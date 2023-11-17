@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.13)
 project(hydrogencore C CXX)
 
 find_package(Nova)
-
 add_library(${PROJECT_NAME} OBJECT "")
 
 include(CPack)
@@ -61,9 +60,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
     hydrogenstandardproperty.cpp
 )
-
-find_package(Intl REQUIRED)
-target_link_libraries(hydrogencore ${Libintl_LIBRARY})
 
 if(UNIX OR WIN32 OR LINUX)
     list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS

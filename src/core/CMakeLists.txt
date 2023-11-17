@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(lithiumcore C CXX)
 
-find_package(USB1 REQUIRED)
-find_package(JPEG REQUIRED)
 find_package(Threads REQUIRED)
-include_directories(${USB1_INCLUDE_DIRS})
 
 add_subdirectory(base)
 add_subdirectory(plugin)

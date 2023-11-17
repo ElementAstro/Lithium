@@ -35,16 +35,18 @@ Description: WebSocket Server
 #include <version>
 #include <thread>
 
+#include "core/device_type.hpp"
+
 #include "loguru/loguru.hpp"
 #include "magic_enum/magic_enum.hpp"
 
-std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
-	{"Camera", Lithium::DeviceType::Camera},
-	{"Telescope", Lithium::DeviceType::Telescope},
-	{"Focuser", Lithium::DeviceType::Focuser},
-	{"FilterWheel", Lithium::DeviceType::FilterWheel},
-	{"Solver", Lithium::DeviceType::Solver},
-	{"Guider", Lithium::DeviceType::Guider}};
+std::unordered_map<std::string, DeviceType> DeviceTypeMap = {
+	{"Camera", DeviceType::Camera},
+	{"Telescope", DeviceType::Telescope},
+	{"Focuser", DeviceType::Focuser},
+	{"FilterWheel", DeviceType::FilterWheel},
+	{"Solver", DeviceType::Solver},
+	{"Guider", DeviceType::Guider}};
 
 WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 {

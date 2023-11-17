@@ -63,7 +63,7 @@ void WebSocketServer::AddTask(const json &m_params)
 		const std::string task_name = m_params.value("task_name", "");
 		if (task_origin == "device")
 		{
-			Lithium::DeviceType device_type;
+			DeviceType device_type;
 			auto it = DeviceTypeMap.find(m_params["device_type"]);
 			if (it == DeviceTypeMap.end())
 			{

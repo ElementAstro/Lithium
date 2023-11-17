@@ -250,13 +250,13 @@ private:
 
 	std::unique_ptr<DeserializationEngine> m_DeserializationEngine;
 
-	std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
-		{"Camera", Lithium::DeviceType::Camera},
-		{"Telescope", Lithium::DeviceType::Telescope},
-		{"Focuser", Lithium::DeviceType::Focuser},
-		{"FilterWheel", Lithium::DeviceType::FilterWheel},
-		{"Solver", Lithium::DeviceType::Solver},
-		{"Guider", Lithium::DeviceType::Guider}};
+	std::unordered_map<std::string, DeviceType> DeviceTypeMap = {
+		{"Camera", DeviceType::Camera},
+		{"Telescope", DeviceType::Telescope},
+		{"Focuser", DeviceType::Focuser},
+		{"FilterWheel", DeviceType::FilterWheel},
+		{"Solver", DeviceType::Solver},
+		{"Guider", DeviceType::Guider}};
 
 private:
 	std::shared_ptr<AsyncWebSocket> m_socket;

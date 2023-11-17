@@ -35,6 +35,7 @@ Description: Device API of WebSocket Server
 #include "atom/utils/time.hpp"
 #include "atom/error/error_code.hpp"
 #include "template/error_message.hpp"
+#include "core/device_type.hpp"
 
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
@@ -49,7 +50,7 @@ void WebSocketServer::GetDeviceList(const json &m_params)
 		{
 			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type is required");
 		}
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{
@@ -80,7 +81,7 @@ void WebSocketServer::AddDevice(const json &m_params)
 		{
 			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type and name are required");
 		}
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{
@@ -142,7 +143,7 @@ void WebSocketServer::RemoveDevice(const json &m_params)
 	}
 	try
 	{
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{
@@ -222,7 +223,7 @@ void WebSocketServer::RemoveDeviceLibrary(const json &m_params)
 void WebSocketServer::RunDeviceTask(const json &m_params)
 {
 	json res = {{"command", __func__}};
-	Lithium::DeviceType device_type;
+	DeviceType device_type;
 	// 检查必要参数是否存在
 	if (!(m_params.contains("device_name") || m_params.contains("device_uuid")) || !m_params.contains("device_type"))
 	{

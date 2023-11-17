@@ -164,6 +164,7 @@ set(server_module
     ${lithium_module_dir}/server/message_queue.hpp
     ${lithium_module_dir}/server/serialize.cpp
     ${lithium_module_dir}/server/deserialize.cpp
+    ${lithium_module_dir}/server/json_checker.cpp
 
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
@@ -249,7 +250,7 @@ configure_gettext(
         "--copyright-holder=Max Qian" "--msgid-bugs-address=astro_air@126.com"
     LANGUAGES "en_US.UTF-8")
 
-find_package(Intl REQUIRED)
+# find_package(Intl REQUIRED)
 
 #################################################################################
 # Main
@@ -310,7 +311,7 @@ target_link_libraries(lithium_server libzip::zip)
 if(WIN32)
 target_link_libraries(lithium_server pugixml-shared)
 else()
-target_link_libraries(lithium_server pugixml-static)
+target_link_libraries(lithium_server pugixml-shared)
 endif()
 target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)

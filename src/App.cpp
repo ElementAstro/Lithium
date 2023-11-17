@@ -40,6 +40,9 @@ Description: Main
 #include "controller/AsyncPHD2Controller.hpp"
 #include "controller/AsyncTaskController.hpp"
 #include "controller/AsyncUploadController.hpp"
+#include "controller/AsyncDeviceController.hpp"
+#include "controller/AsyncTweakerController.hpp"
+#include "controller/AsyncScriptController.hpp"
 #else
 #include "controller/StaticController.hpp"
 #include "controller/SystemController.hpp"
@@ -89,7 +92,7 @@ void run()
 #if ENABLE_IPV6
     AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "::"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
 #else
-    AppComponent components(host, port); // Create scope Environment components
+    AppComponent components("0.0.0.0", 8000); // Create scope Environment components
 #endif
 
     DLOG_F(INFO, "App component loaded");
@@ -137,6 +140,21 @@ void run()
     router->addController(upload_controller);
     DLOG_F(INFO, "Upload controller loaded");
 
+    auto device_controller = DeviceController::createShared();
+    docEndpoints.append(device_controller->getEndpoints());
+    router->addController(device_controller);
+    DLOG_F(INFO, "Device controller loaded");
+
+    auto tweaker_controller = TweakerController::createShared();
+    docEndpoints.append(tweaker_controller->getEndpoints());
+    router->addController(tweaker_controller);
+    DLOG_F(INFO, "Tweaker controller loaded");
+
+    auto script_controller = ScriptController::createShared();
+    docEndpoints.append(script_controller->getEndpoints());
+    router->addController(script_controller);
+    DLOG_F(INFO, "Tweaker controller loaded");
+
     DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
     router->addController(oatpp::swagger::AsyncController::createShared(docEndpoints));
@@ -158,7 +176,7 @@ void run()
     oatpp::network::Server server(connectionProvider,
                                   connectionHandler);
 
-    DLOG_F(INFO, "Server running on port %s...", connectionProvider->getProperty("port").toString()->c_str());
+    DLOG_F(INFO, "Server running on port {}...", connectionProvider->getProperty("port").toString()->c_str());
 
     server.run();
 }
@@ -177,6 +195,9 @@ void setupLogFile()
     std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", local_time);
     std::filesystem::path logFilePath = logsFolder / filename;
     loguru::add_file(logFilePath.string().c_str(), loguru::Append, loguru::Verbosity_MAX);
+
+    loguru::set_fatal_handler([](const loguru::Message &message)
+                              { Lithium::CrashReport::saveCrashLog(std::string(message.prefix) + message.message); });
 }
 
 #ifdef _WIN32
@@ -298,7 +319,7 @@ int main(int argc, char *argv[])
             {
                 if (Lithium::MyApp->GetConfig("config/server/web").get<bool>())
                 {
-                    Lithium::MyApp->SetConfig("config/server/web",false);
+                    Lithium::MyApp->SetConfig("config/server/web", false);
                 }
             }
         }

@@ -76,6 +76,23 @@ enum class DeviceError
     HomeError
 };
 
+enum class DeviceWarning
+{
+    // For Camera
+    ExposureWarning,
+    GainWarning,
+    OffsetWarning,
+    ISOWarning,
+    CoolingWarning,
+
+    // For Telescope
+    GotoWarning,
+    ParkWarning,
+    UnParkWarning,
+    ParkedWarning,
+    HomeWarning
+};
+
 enum class ServerError
 {
     None,

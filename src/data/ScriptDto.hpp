@@ -37,25 +37,105 @@ Description: Data Transform Object for Device Controller
 
 #include OATPP_CODEGEN_BEGIN(DTO) ///< Begin DTO codegen section
 
-class RunScriptDTO : public oatpp::DTO
+class RunCScriptFileDTO : public oatpp::DTO
 {
-    DTO_INIT(RunScriptDTO, DTO)
+    DTO_INIT(RunCScriptFileDTO, DTO)
 
-    DTO_FIELD_INFO(library_path)
+    DTO_FIELD_INFO(script_path)
     {
-        info->description = "Path of the device library to add";
+        info->description = "Path of the script to run";
         info->required = true;
     }
-    DTO_FIELD(String, library_path);
+    DTO_FIELD(String, script_path);
 
-    DTO_FIELD_INFO(library_name)
+    DTO_FIELD_INFO(script_name)
     {
-        info->description = "Name of the device library to add";
+        info->description = "Name of the script to run";
         info->required = true;
     }
-    DTO_FIELD(String, library_name);
+    DTO_FIELD(String, script_name);
 };
 
+class RunCScriptDTO : public oatpp::DTO
+{
+    DTO_INIT(RunCScriptDTO, DTO)
+
+    DTO_FIELD_INFO(script)
+    {
+        info->description = "A single line script";
+        info->required = true;
+    }
+    DTO_FIELD(String, script);
+
+    DTO_FIELD_INFO(need_async)
+    {
+        info->description = "Whether to run in async mode (default: true)";
+        info->required = false;
+    }
+    DTO_FIELD(Boolean, need_async);
+
+    DTO_FIELD_INFO(need_result)
+    {
+        info->description = "Whether to return the result of the script (default: false)";
+        info->required = false;
+    }
+    DTO_FIELD(Boolean, need_result);
+};
+
+class CheckScriptFileDTO: public oatpp::DTO
+{
+    DTO_INIT(CheckScriptFileDTO, DTO)
+
+    DTO_FIELD_INFO(script_path)
+    {
+        info->description = "Path of the script to check";
+        info->required = true;
+    }
+    DTO_FIELD(String, script_path);
+};
+
+class GetScriptFileDTO : public oatpp::DTO
+{
+    DTO_INIT(GetScriptFileDTO, DTO)
+
+    DTO_FIELD_INFO(script_path)
+    {
+        info->description = "Path of the script to get";
+        info->required = true;
+    }
+    DTO_FIELD(String, script_path);
+};
+
+class LoadScriptFileDTO : public oatpp::DTO
+{
+    DTO_INIT(LoadScriptFileDTO, DTO)
+
+    DTO_FIELD_INFO(script_path)
+    {
+        info->description = "Path of the script to load";
+        info->required = true;
+    }
+    DTO_FIELD(String, script_path);
+
+    DTO_FIELD_INFO(script_name)
+    {
+        info->description = "Name of the script to load";
+        info->required = true;
+    }
+    DTO_FIELD(String, script_name);
+};
+
+class UnloadScriptFileDTO : public oatpp::DTO
+{
+    DTO_INIT(UnloadScriptFileDTO, DTO)
+
+    DTO_FIELD_INFO(script_name)
+    {
+        info->description = "Name of the script to unload";
+        info->required = true;
+    }
+    DTO_FIELD(String, script_name);
+};
 
 #include OATPP_CODEGEN_END(DTO) ///< End DTO codegen section
 

@@ -1,0 +1,26 @@
+---
+import Head from "../components/_head.astro";
+import LoadingComponent from "../components/_loading.jsx";
+import DeviceConnection from "../components/device/device"
+
+const title = "Lithium Web Client";
+---
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <Head title={title} />
+    </head>
+    <!-- Body Part -->
+
+    <body
+        class="hold-transition sidebar-mini layout-fixed dark-mode"
+        data-panel-auto-height-mode="height"
+    >
+        <LoadingComponent client:load />
+
+        <DeviceConnection client:load />
+
+        
+    </body>
+</html>

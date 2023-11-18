@@ -158,12 +158,12 @@ namespace Lithium
     bool LithiumApp::getProperty(const std::string &name, const std::string &property_name)
     {
         m_DeviceManager->findDeviceByName(name)->getStringProperty(property_name);
-        
+        return true;
     }
     
     bool LithiumApp::setProperty(const std::string &name, const std::string &property_name, const std::string &property_value)
     {
-
+        return true;
     }
 
     bool LithiumApp::createProcess(const std::string &command, const std::string &identifier)
@@ -326,6 +326,19 @@ namespace Lithium
         else
         {
             LOG_F(ERROR, _("Failed to load chaiscript file {}"), filename);
+            return false;
+        }
+    }
+
+    bool LithiumApp::unloadChaiScriptFile(const std::string &filename)
+    {
+        if (m_ScriptManager->unloadScriptFile(filename))
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, _("Failed to unload chaiscript file {}"), filename);
             return false;
         }
     }

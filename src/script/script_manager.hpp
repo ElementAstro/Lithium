@@ -58,6 +58,7 @@ namespace Lithium
         void InitMyApp();
 
         bool loadScriptFile(const std::string &filename);
+        bool unloadScriptFile(const std::string &filename);
         bool runCommand(const std::string &command);
         bool runMultiCommand(const std::vector<std::string> &commands);
         bool runScript(const std::string &filename);

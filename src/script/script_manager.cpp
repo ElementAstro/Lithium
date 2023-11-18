@@ -182,6 +182,24 @@ namespace Lithium
         return true;
     }
 
+    bool ScriptManager::unloadScriptFile(const std::string &filename)
+    {
+        std::ifstream file(filename);
+        if (file)
+        {
+            std::string script((std::istreambuf_iterator<char>(file)),
+                               std::istreambuf_iterator<char>());
+            file.close();
+            chai_->eval(script);
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to open script file: {}", filename);
+            return false;
+        }
+        return true;
+    }
+
     bool ScriptManager::runCommand(const std::string &command)
     {
         try

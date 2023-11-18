@@ -35,6 +35,7 @@ Description: Script API of WebSocket Server
 #include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
 #include "atom/error/error_code.hpp"
+#include "websocket/template/function.hpp"
 
 #include "loguru/loguru.hpp"
 #include "nlohmann/json.hpp"
@@ -42,100 +43,74 @@ Description: Script API of WebSocket Server
 
 void WebSocketServer::runChaiCommand(const json &m_params)
 {
-    json res = {{"command", __func__}};
+    FUNCTION_BEGIN;
     if (!m_params.contains("command"))
     {
         RESPONSE_ERROR(res, ServerError::MissingParameters, "command content is required");
     }
-    try
+    std::string command = m_params["command"].get<std::string>();
+    if (!Lithium::MyApp->runChaiCommand(command))
     {
-        std::string command = m_params["command"].get<std::string>();
-        if (!Lithium::MyApp->runChaiCommand(command))
-        {
-            res["error"] = "ScriptError";
-            res["message"] = "Failed to run command";
-        }
+        res["error"] = "ScriptError";
+        res["message"] = "Failed to run command";
     }
-    catch (const json::exception &e)
-    {
-        RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-    }
-    catch (const std::exception &e)
-    {
-        RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-    }
+    FUNCTION_END;
 }
 
 void WebSocketServer::runChaiMultiCommand(const json &m_params)
 {
-    json res = {{"command", __func__}};
+    FUNCTION_BEGIN;
     if (!m_params.contains("command"))
     {
         RESPONSE_ERROR(res, ServerError::MissingParameters, "command content is required");
     }
-    try
+    if (!Lithium::MyApp->runChaiMultiCommand(m_params["command"].get<std::vector<std::string>>()))
     {
-        if (!Lithium::MyApp->runChaiMultiCommand(m_params["command"].get<std::vector<std::string>>()))
-        {
-            res["error"] = "ScriptError";
-            res["message"] = "Failed to run multiline command";
-        }
+        res["error"] = "ScriptError";
+        res["message"] = "Failed to run multiline command";
     }
-    catch (const json::exception &e)
-    {
-        RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-    }
-    catch (const std::exception &e)
-    {
-        RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-    }
+    FUNCTION_END;
 }
 
 void WebSocketServer::runChaiScript(const json &m_params)
 {
-    json res = {{"command", __func__}};
+    FUNCTION_BEGIN;
     if (!m_params.contains("script"))
     {
         RESPONSE_ERROR(res, ServerError::MissingParameters, "script name is required");
     }
-    try
+    if (!Lithium::MyApp->runChaiScript(m_params["script"].get<std::string>()))
     {
-        if (!Lithium::MyApp->runChaiScript(m_params["script"].get<std::string>()))
-        {
-            res["error"] = "ScriptError";
-            res["message"] = "Failed to run script";
-        }
+        res["error"] = "ScriptError";
+        res["message"] = "Failed to run script";
     }
-    catch (const json::exception &e)
-    {
-        RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-    }
-    catch (const std::exception &e)
-    {
-        RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-    }
+    FUNCTION_END;
 }
 
 void WebSocketServer::loadChaiFile(const json &m_params)
 {
-    json res = {{"command", __func__}};
+    FUNCTION_BEGIN;
     if (!m_params.contains("command"))
     {
         RESPONSE_ERROR(res, ServerError::MissingParameters, "script name is required");
     }
-    try
+    if (!Lithium::MyApp->loadChaiScriptFile(m_params["script"].get<std::string>()))
     {
-        if (!Lithium::MyApp->loadChaiScriptFile(m_params["script"].get<std::string>()))
-        {
-            RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to load script");
-        }
+        RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to load script");
     }
-    catch (const json::exception &e)
+    FUNCTION_END;
+}
+
+void WebSocketServer::unloadChaiFile(const json &m_params)
+{
+    FUNCTION_BEGIN;
+    if (!m_params.contains("command"))
     {
-        RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+        RESPONSE_ERROR(res, ServerError::MissingParameters, "script name is required");
     }
-    catch (const std::exception &e)
+    if (!Lithium::MyApp->unloadChaiScriptFile(m_params["script"].get<std::string>()))
     {
-        RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+        RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to unload script");
     }
+    FUNCTION_END;
 }

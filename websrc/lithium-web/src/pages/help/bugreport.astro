@@ -1,34 +1,23 @@
-<!doctype html>
+---
+import Head from "../../components/_head.astro";
+import Scripts from "../../components/_scripts.astro";
+import LoadingComponent from "../../components/_loading.jsx";
+
+const title = "Bug Report";
+---
+
+<!DOCTYPE html>
 <html lang="en">
     <head>
-        <meta charset="utf-8" />
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1,user-scalable=no"
-        />
-
-        <title>问题反馈</title>
-
-        <link
-            rel="icon"
-            sizes="16x16"
-            type="image/icon"
-            href="/textures/icon.ico"
-        />
-
-        <!-- Font Awesome -->
-        <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css" />
-        <!-- Theme style -->
-        <link rel="stylesheet" href="/css/adminlte.min.css" />
-        <!-- overlayScrollbars -->
-        <link
-            rel="stylesheet"
-            href="../../node_modules/overlayscrollbars/css/OverlayScrollbars.min.css"
-        />
+        <Head title={title} />
     </head>
+    <!-- Body Part -->
 
-    <body style="height: auto;" class="dark-mode">
+    <body
+        class="hold-transition sidebar-mini layout-fixed dark-mode"
+        data-panel-auto-height-mode="height"
+    >
+        <LoadingComponent client:load/>
         <!-- Content Wrapper. Contains page content -->
         <div class="wrapper">
             <section class="content">

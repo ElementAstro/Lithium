@@ -61,6 +61,27 @@ class WsDeviceHub; // FWD
 class SerializationEngine;
 class DeserializationEngine;
 
+#define CHECK_DEVICE_VALIDITY(device, deviceType)                                                                                                          \
+	if (!device)                                                                                                                                           \
+	{                                                                                                                                                      \
+		if (!m_params.contains("device_name") || !m_params["device_name"].is_string())                                                                     \
+		{                                                                                                                                                  \
+			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Device name is required");                                                                \
+		}                                                                                                                                                  \
+		if (Lithium::MyApp->findDevice(DeviceType::deviceType, m_params["device_name"].get<std::string>()) == -1)                                          \
+		{                                                                                                                                                  \
+			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Device not found");                                                                       \
+		}                                                                                                                                                  \
+		try                                                                                                                                                \
+		{                                                                                                                                                  \
+			device = std::dynamic_pointer_cast<deviceType>(Lithium::MyApp->getDevice(DeviceType::deviceType, m_params["device_name"].get<std::string>())); \
+		}                                                                                                                                                  \
+		catch (const std::bad_any_cast &e)                                                                                                                 \
+		{                                                                                                                                                  \
+			RESPONSE_ERROR(res, ServerError::UnknownError, fmt::format("{} with {}", "Failed to cast pointer", e.what()));                                 \
+		}                                                                                                                                                  \
+	}
+
 /**
  * @brief Class representing an instance of a WebSocket device.
  *
@@ -208,7 +229,7 @@ public: // WebSocket Listener methods
 	CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 
 public:
-/**
+	/**
 	 * @brief Register a function handler for the VCommandDispatcher.
 	 *
 	 * @tparam ClassType The class type of the handler.
@@ -220,7 +241,7 @@ public:
 	{
 		m_CommandDispatcher->RegisterMemberHandler(name, object, memberFunc);
 	}
-	
+
 	/**
 	 * @brief Run a function on the VCommandDispatcher.
 	 *
@@ -231,7 +252,6 @@ public:
 	bool LiRunFunc(const std::string &name, const json &params);
 
 private:
-	
 	/**
 	 * @brief Buffer for messages. Needed for multi-frame messages.
 	 *

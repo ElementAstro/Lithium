@@ -289,6 +289,13 @@ public:
 	 */
 	void loadChaiFile(const json &m_params);
 
+	/**
+	 * @brief Unload a ChaiScript file from the system.
+	 *
+	 * @param m_params A JSON object that contains the parameters for this function.
+	 */
+	void unloadChaiFile(const json &m_params);
+
 public:
 	/**
 	 * @brief Handle a WebSocket ping message.

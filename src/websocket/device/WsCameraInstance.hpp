@@ -36,6 +36,9 @@ Description: WebSocket Device Instance (each device each instance)
 
 class Camera;
 
+template <typename... Args>
+class StringSwitch;
+
 /**
  * @brief Class representing an instance of a WebSocket Camera
  *
@@ -65,16 +68,66 @@ public:
 
 public:
 
+	// ----------------------------------------------------------------
+	// Exposure Functions
+	// ----------------------------------------------------------------
+
     void startExposure(const json &m_params);
 	void stopExposure(const json &m_parmas);
+	void getExposureStatus(const json &m_params);
+	void getExposureResult(const json &m_params);
+
+	// ----------------------------------------------------------------
+	// Cooling Functions
+	// ----------------------------------------------------------------
+
+	void startCooling(const json &m_params);
+	void stopCooling(const json &m_params);
+	void getCoolingStatus(const json &m_params);
+	void getCurrentTemperature(const json &m_params);
+
+	// ----------------------------------------------------------------
+	// Camera Property Functions (Directly)
+	// ----------------------------------------------------------------
+
 	void getGain(const json &m_params);
 	void setGain(const json &m_params);
 	void setOffset(const json &m_params);
 	void getOffset(const json &m_params);
+	void getISO(const json &m_params);
+	void setISO(const json &m_params);
+
+	// ----------------------------------------------------------------
+	// Camera Property Functions (Commonly Used)
+	// ----------------------------------------------------------------
+
+	/**
+	 * @brief Get all properties of the WsCameraInstance.
+	 *
+	 * @param m_params JSON object containing the request. (Empty)
+	 * 
+	 * @return JSON object containing all properties.
+	 */
+	void getPropertys(const json &m_params);
+
+	/**
+	 * @brief Get a property of the WsCameraInstance.
+	 * @param m_params JSON object containing the property to be retrieved. ["property_name"] || ["name"]
+	 * @return JSON object containing the property.
+	*/
+	void getProperty(const json &m_params);
+
+	/**
+	 * @brief Set a property of the WsCameraInstance.
+	 * @param m_params ["property_name", "property_value"]
+	 * @return noraml is a commom result, containing error or warning if any.
+	*/
+	void setProperty(const json &m_params);
 
 private:
 
 	std::shared_ptr<Camera> m_camera;
+	std::shared_ptr<StringSwitch<std::string,const json &>> m_property_type_switch;
 };
 
 #endif // WSCAMERAINSTANCE_HPP

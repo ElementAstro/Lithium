@@ -134,6 +134,7 @@ namespace Lithium
 
     public:
         bool loadChaiScriptFile(const std::string &filename);
+        bool unloadChaiScriptFile(const std::string &filename);
         bool runChaiCommand(const std::string &command);
         bool runChaiMultiCommand(const std::vector<std::string> &command);
         bool runChaiScript(const std::string &filename);

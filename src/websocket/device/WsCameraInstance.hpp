@@ -97,33 +97,6 @@ public:
 	void getISO(const json &m_params);
 	void setISO(const json &m_params);
 
-	// ----------------------------------------------------------------
-	// Camera Property Functions (Commonly Used)
-	// ----------------------------------------------------------------
-
-	/**
-	 * @brief Get all properties of the WsCameraInstance.
-	 *
-	 * @param m_params JSON object containing the request. (Empty)
-	 * 
-	 * @return JSON object containing all properties.
-	 */
-	void getPropertys(const json &m_params);
-
-	/**
-	 * @brief Get a property of the WsCameraInstance.
-	 * @param m_params JSON object containing the property to be retrieved. ["property_name"] || ["name"]
-	 * @return JSON object containing the property.
-	*/
-	void getProperty(const json &m_params);
-
-	/**
-	 * @brief Set a property of the WsCameraInstance.
-	 * @param m_params ["property_name", "property_value"]
-	 * @return noraml is a commom result, containing error or warning if any.
-	*/
-	void setProperty(const json &m_params);
-
 private:
 
 	std::shared_ptr<Camera> m_camera;

@@ -46,7 +46,7 @@ Description: IO Route
 #include "data/IODto.hpp"
 #include "data/StatusDto.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 

@@ -51,7 +51,7 @@ Description: WebSocket Server
 #include "core/property/iproperty.hpp"
 #include "atom/error/error_code.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
 
 /**

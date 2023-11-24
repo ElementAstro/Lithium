@@ -64,7 +64,7 @@ Description: C++ and Modules Loader
 #endif
 */
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "loguru/loguru.hpp"
 #include "error/error_code.hpp"
 

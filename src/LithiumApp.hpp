@@ -39,8 +39,23 @@ Description: Lithium App Enter
 #include "device/device_manager.hpp"
 #include "atom/system/process.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
+
+#define GetIntConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<int>()
+
+#define GetFloatConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<float>()
+
+#define GetBoolConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<bool>()
+
+#define GetDoubleConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<double>()
+
+#define GetStringConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<std::string>()
 
 namespace Lithium
 {
@@ -68,6 +83,8 @@ namespace Lithium
     public:
         LithiumApp();
         ~LithiumApp();
+
+        static std::shared_ptr<LithiumApp> createShared();
 
     public:
         json GetConfig(const std::string &key_path) const;
@@ -153,4 +170,6 @@ namespace Lithium
         std::shared_ptr<ScriptManager> m_ScriptManager;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
+
+    void InitLithiumApp();
 } // namespace Lithium

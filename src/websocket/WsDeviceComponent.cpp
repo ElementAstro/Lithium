@@ -34,42 +34,35 @@ Description: Device API of WebSocket Server
 
 #include "atom/utils/time.hpp"
 #include "atom/error/error_code.hpp"
-#include "template/error_message.hpp"
 #include "core/device_type.hpp"
 
+#include "template/error_message.hpp"
+#include "template/function.hpp"
+#include "template/variable.hpp"
+
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 void WebSocketServer::GetDeviceList(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	try
+	FUNCTION_BEGIN;
+	if (!m_params.contains("device_type"))
 	{
-		if (!m_params.contains("device_type"))
-		{
-			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type is required");
-		}
-		DeviceType device_type;
-		auto it = DeviceTypeMap.find(m_params["device_type"]);
-		if (it == DeviceTypeMap.end())
-		{
-			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
-		}
-		device_type = it->second;
-		for (const auto &device : Lithium::MyApp->getDeviceList(device_type))
-		{
-			res["params"].push_back(device);
-		}
+		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type is required");
 	}
-	catch (const json::exception &e)
+	DeviceType device_type;
+	auto it = DeviceTypeMap.find(m_params["device_type"]);
+	if (it == DeviceTypeMap.end())
 	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+		RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
 	}
-	catch (const std::exception &e)
+	device_type = it->second;
+	for (const auto &device : Lithium::MyApp->getDeviceList(device_type))
 	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+		res["params"].push_back(device);
 	}
+	FUNCTION_END;
 }
 
 void WebSocketServer::AddDevice(const json &m_params)

@@ -37,7 +37,7 @@ Description: Process API of WebSocket Server
 #include "atom/error/error_code.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 void WebSocketServer::CreateProcessLi(const json &m_params)

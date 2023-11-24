@@ -264,5 +264,10 @@ msgstr ""
 
 #: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:341
 #, c++-format
+msgid "Failed to unload chaiscript file {}"
+msgstr ""
+
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:354
+#, c++-format
 msgid "Failed to run chai script {}"
 msgstr ""

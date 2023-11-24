@@ -43,7 +43,7 @@ Description: Task Manager
 #include <fstream>
 
 #include "core/property/task/task.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 namespace Lithium::Task
 {

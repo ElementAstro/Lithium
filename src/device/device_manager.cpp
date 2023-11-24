@@ -60,7 +60,7 @@ Description: Device Manager
 
 #include "loguru/loguru.hpp"
 #include "magic_enum/magic_enum.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 // For DEVICE_FUNC
 

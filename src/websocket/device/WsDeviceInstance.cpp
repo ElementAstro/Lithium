@@ -38,10 +38,12 @@ Description: WebSocket Device Instance (each device each instance)
 
 #include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
+#include "websocket/template/function.hpp"
+#include "websocket/template/variable.hpp"
 #include "atom/error/error_code.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket,
@@ -55,6 +57,7 @@ WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket
 	m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
 
 	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty, this);
+	LiRegisterFunc("getProperties", &WsDeviceInstance::getProperties, this);
 	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty, this);
 	LiRegisterFunc("runTask", &WsDeviceInstance::runTask, this);
 	LiRegisterFunc("runFunc", &WsDeviceInstance::runFunc, this);
@@ -205,199 +208,107 @@ oatpp::async::CoroutineStarter WsDeviceInstance::readMessage(const std::shared_p
 
 void WsDeviceInstance::loadDriverLibrary(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	if (!m_params.contains("lib_path") || !m_params.contains("lib_name"))
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(lib_path);
+	CHECK_PARAM_EXISTS(lib_name);
+	GET_STRING_PARAM_VALUE(m_params["lib_path"], lib_path);
+	GET_STRING_PARAM_VALUE(m_params["lib_name"], lib_name);
+	if (!Lithium::MyApp->addDeviceLibrary(lib_path, lib_name))
 	{
-		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device library path and name are required");
+		res["error"] = "Failed to add device library";
 	}
-	try
-	{
-		std::string lib_path = m_params["lib_path"].get<std::string>();
-		std::string lib_name = m_params["lib_name"].get<std::string>();
-		if (!Lithium::MyApp->addDeviceLibrary(lib_path, lib_name))
-		{
-			res["error"] = "Failed to add device library";
-		}
-	}
-	catch (const json::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-	}
-	catch (const std::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::unloadDriverLibrary(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	if (!m_params.contains("lib_name"))
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(lib_name);
+	GET_STRING_PARAM_VALUE(m_params["lib_name"], lib_name);
+	if (!Lithium::MyApp->removeDeviceLibrary(lib_name))
 	{
-		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device library name is required");
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device library");
 	}
-	try
-	{
-		std::string lib_name = m_params["lib_name"].get<std::string>();
-
-		if (!Lithium::MyApp->removeDeviceLibrary(lib_name))
-		{
-			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device library");
-		}
-	}
-	catch (const json::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-	}
-	catch (const std::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::addDriver(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	try
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(device_type);
+	CHECK_PARAM_EXISTS(device_name);
+	SET_DEVICE_TYPE(m_params["device_type"]);
+	GET_STRING_PARAM_VALUE(m_params["device_name"], device_name);
+	if (!Lithium::MyApp->addDevice(device_type, device_name, m_params.value("lib_name", "")))
 	{
-		if (!m_params.contains("device_type") || !m_params.contains("device_name"))
-		{
-			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type and name are required");
-		}
-		DeviceType device_type;
-		auto it = DeviceTypeMap.find(m_params["device_type"]);
-		if (it == DeviceTypeMap.end())
-		{
-			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
-		}
-		device_type = it->second;
-
-		if (!Lithium::MyApp->addDevice(device_type, m_params["device_name"].get<std::string>(), m_params.value("lib_name", "")))
-		{
-			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to add device");
-		}
-		else
-		{
-			m_device_name = m_params["device_name"].get<std::string>();
-			Lithium::MyApp->addDeviceObserver(device_type, m_params["device_name"].get<std::string>());
-		}
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to add device");
 	}
-	catch (const json::exception &e)
+	else
 	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+		SET_STRING_PARAM_VALUE(device_name, m_device_name);
+		Lithium::MyApp->addDeviceObserver(device_type, device_name);
 	}
-	catch (const std::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::removeDriver(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	if (!m_params.contains("device_type") || !m_params.contains("device_name"))
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(device_type);
+	CHECK_PARAM_EXISTS(device_name);
+	SET_DEVICE_TYPE(m_params["device_type"]);
+	GET_STRING_PARAM_VALUE(m_params["device_name"], device_name);
+	if (!Lithium::MyApp->removeDevice(device_type, device_name))
 	{
-		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type and name are required");
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device");
 	}
-	try
-	{
-		DeviceType device_type;
-		auto it = DeviceTypeMap.find(m_params["device_type"]);
-		if (it == DeviceTypeMap.end())
-		{
-			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
-		}
-		device_type = it->second;
-
-		std::string device_name = m_params["device_name"].get<std::string>();
-
-		if (!Lithium::MyApp->removeDevice(device_type, device_name))
-		{
-			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device");
-		}
-	}
-	catch (const json::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-	}
-	catch (const std::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::setProperty(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	if (!m_params.contains("name"))
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(name);
+	CHECK_PARAM_EXISTS(value);
+	GET_STRING_PARAM_VALUE(m_params["name"], name);
+	GET_STRING_PARAM_VALUE(m_params["value"], value);
+	if (!Lithium::MyApp->setProperty(m_device_name, name, value))
 	{
-		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device parameter name is required");
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device library");
 	}
-	if (!m_params.contains("value"))
-	{
-		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device parameter value is required");
-	}
-	try
-	{
-		std::string name = m_params["name"].get<std::string>();
-		std::string value = m_params["value"].get<std::string>();
-
-		if (value.empty())
-		{
-			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device parameter value is required");
-		}
-		else
-		{
-			if (!Lithium::MyApp->setProperty(m_device_name, name, value))
-			{
-				RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device library");
-			}
-		}
-	}
-	catch (const json::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-	}
-	catch (const std::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::getProperty(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	if (!m_params.contains("name"))
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(name);
+	GET_STRING_PARAM_VALUE(m_params["name"], name);
+	if (!Lithium::MyApp->getProperty(m_device_name, name))
 	{
-		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device parameter name is required");
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to get device property");
 	}
-	try
-	{
-		std::string name = m_params["name"].get<std::string>();
-
-		if (!Lithium::MyApp->getProperty(m_device_name, name))
-		{
-			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to get device property");
-		}
-	}
-	catch (const json::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
-	}
-	catch (const std::exception &e)
-	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
-	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::getProperties(const json &m_params)
 {
+	FUNCTION_BEGIN;
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::runTask(const json &m_params)
 {
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(task_name);
+	GET_STRING_PARAM_VALUE(m_params["task_name"], task_name);
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::runFunc(const json &m_params)
 {
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(func_name);
+	GET_STRING_PARAM_VALUE(m_params["func_name"], func_name);
+	FUNCTION_END;
 }

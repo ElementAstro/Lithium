@@ -53,7 +53,7 @@ Description: WebSocket Device Instance (each device each instance)
 
 #include <memory>
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
@@ -81,6 +81,15 @@ class DeserializationEngine;
 			RESPONSE_ERROR(res, ServerError::UnknownError, fmt::format("{} with {}", "Failed to cast pointer", e.what()));                                 \
 		}                                                                                                                                                  \
 	}
+
+#define SET_DEVICE_TYPE(device_type_)                                                 \
+	DeviceType device_type;                                                           \
+	auto it = DeviceTypeMap.find(device_type_);                                       \
+	if (it == DeviceTypeMap.end())                                                    \
+	{                                                                                 \
+		RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type"); \
+	}                                                                                 \
+	device_type = it->second;
 
 /**
  * @brief Class representing an instance of a WebSocket device.

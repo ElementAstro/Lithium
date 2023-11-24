@@ -8,7 +8,7 @@
 #include <atomic>
 #include <thread>
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
 
 /**

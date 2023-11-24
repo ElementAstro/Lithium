@@ -43,38 +43,37 @@ Description: Lithium App Enter
 #include "plugin/plugin_loader.hpp"
 #include "script/script_manager.hpp"
 
+#include "atom/server/global_ptr.hpp"
+
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
 namespace Lithium
 {
     std::shared_ptr<LithiumApp> MyApp = nullptr;
+
     LithiumApp::LithiumApp()
     {
         try
         {
-            m_ConfigManager = ConfigManager::createShared();
-            m_MessageBus = std::make_shared<MessageBus>();
-            m_DeviceManager = DeviceManager::createShared(m_MessageBus, m_ConfigManager);
-
-            auto max_thread = GetConfig("config/server").value<int>("maxthread", 10);
-            m_ThreadManager = Thread::ThreadManager::createShared(max_thread);
-
-            auto max_process = GetConfig("config/server").value<int>("maxprocess", 10);
-            m_ProcessManager = Process::ProcessManager::createShared(max_process);
-
-            m_PluginManager = PluginManager::createShared(m_ProcessManager);
-            m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
-            m_TaskGenerator = std::make_shared<Task::TaskGenerator>(m_DeviceManager);
-            m_TaskStack = std::make_shared<Task::TaskStack>();
-
-            m_ScriptManager = ScriptManager::createShared(m_MessageBus);
+            m_ConfigManager = GetPtr<ConfigManager>("ConfigManager");
+            m_DeviceManager = GetPtr<DeviceManager>("DeviceManager");
+            m_PluginManager = GetPtr<PluginManager>("PluginManager");
+            m_TaskManager = GetPtr<Task::TaskManager>("TaskManager");
+            m_TaskGenerator = GetPtr<Task::TaskGenerator>("TaskGenerator");
+            m_TaskStack = GetPtr<Task::TaskStack>("TaskStack");
+            m_ScriptManager = GetPtr<ScriptManager>("ScriptManager");
+            m_ThreadManager = GetPtr<Thread::ThreadManager>("ThreadManager");
+            m_ProcessManager = GetPtr<Process::ProcessManager>("ProcessManager");
+            m_MessageBus = GetPtr<MessageBus>("MessageBus");
 
             m_MessageBus->StartProcessingThread<IStringProperty>();
             m_MessageBus->StartProcessingThread<IBoolProperty>();
             m_MessageBus->StartProcessingThread<INumberProperty>();
+            m_MessageBus->StartProcessingThread<INumberVector>();
+            m_MessageBus->StartProcessingThread<std::string>();
         }
         catch (const std::exception &e)
         {
@@ -86,6 +85,11 @@ namespace Lithium
     LithiumApp::~LithiumApp()
     {
         m_MessageBus->StopAllProcessingThreads();
+    }
+
+    std::shared_ptr<LithiumApp> LithiumApp::createShared()
+    {
+        return std::make_shared<LithiumApp>();
     }
 
     json LithiumApp::GetConfig(const std::string &key_path) const
@@ -160,7 +164,7 @@ namespace Lithium
         m_DeviceManager->findDeviceByName(name)->getStringProperty(property_name);
         return true;
     }
-    
+
     bool LithiumApp::setProperty(const std::string &name, const std::string &property_name, const std::string &property_value)
     {
         return true;
@@ -359,6 +363,20 @@ namespace Lithium
     void LithiumApp::initMyAppChai()
     {
         m_ScriptManager->InitMyApp();
+    }
+
+    void InitLithiumApp()
+    {
+        AddPtr("ConfigManager", ConfigManager::createShared());
+        AddPtr("MessageBus", MessageBus::createShared());
+        AddPtr("ThreadManager", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
+        AddPtr("ProcessManager", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
+        AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
+        AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
+        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<Task::TaskManager>("TaskManager")));
+        AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
+        AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
+        AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
     }
 
 }

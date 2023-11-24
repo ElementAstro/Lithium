@@ -52,7 +52,7 @@ Description: Script Manager
 #include "LithiumApp.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "error/error_code.hpp"
 
 #include "script/lithium_script.hpp"

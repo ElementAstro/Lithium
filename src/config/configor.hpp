@@ -37,7 +37,7 @@ Description: Configor
 
 #include "error/error_code.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 

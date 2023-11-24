@@ -65,6 +65,7 @@ Description: Main
 #include <argparse/argparse.hpp>
 
 #include "LithiumApp.hpp"
+#include "atom/server/global_ptr.hpp"
 
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
@@ -80,7 +81,7 @@ Description: Main
 
 #include "loguru/loguru.hpp"
 
-void run()
+void runServer()
 {
     DLOG_F(INFO, "Loading App component ...");
 
@@ -197,7 +198,9 @@ void setupLogFile()
     loguru::add_file(logFilePath.string().c_str(), loguru::Append, loguru::Verbosity_MAX);
 
     loguru::set_fatal_handler([](const loguru::Message &message)
-                              { Lithium::CrashReport::saveCrashLog(std::string(message.prefix) + message.message); });
+                              { 
+        Lithium::CrashReport::saveCrashLog(std::string(message.prefix) + message.message); 
+        oatpp::base::Environment::destroy(); });
 }
 
 #ifdef _WIN32
@@ -279,8 +282,9 @@ int main(int argc, char *argv[])
         // Register ctrl-c handle for better debug
         registerInterruptHandler();
 #endif
+        Lithium::InitLithiumApp();
         // Run oatpp server
-        Lithium::MyApp = std::make_shared<Lithium::LithiumApp>();
+        Lithium::MyApp = Lithium::LithiumApp::createShared();
         Lithium::MyApp->initMyAppChai();
 
         auto cmd_port = program.get<int>("--port");
@@ -330,7 +334,7 @@ int main(int argc, char *argv[])
 
         oatpp::base::Environment::init();
         // Run the main server
-        run();
+        runServer();
         // Clean up all
         oatpp::base::Environment::destroy();
     }

@@ -58,6 +58,11 @@ namespace Lithium
     class MessageBus
     {
     public:
+        static std::shared_ptr<MessageBus> createShared()
+        {
+            return std::make_shared<MessageBus>();
+        }
+    public:
         template <typename T>
         void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0, const std::string &namespace_ = "")
         {

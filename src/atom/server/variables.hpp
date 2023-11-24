@@ -40,7 +40,7 @@ Description: Variable Registry
 #include <sstream>
 #include <mutex>
 
-#include <nlohmann/json.hpp>
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 

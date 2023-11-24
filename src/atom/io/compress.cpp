@@ -56,7 +56,7 @@ Description: Compressor using ZLib
 
 #include "loguru/loguru.hpp"
 #include "libzippp/libzippp.h"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 using namespace libzippp;

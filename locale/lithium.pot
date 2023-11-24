@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2023-11-17 22:13+0800\n"
+"POT-Creation-Date: 2023-11-24 19:53+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -282,6 +282,11 @@ msgid "Failed to load chaiscript file {}"
 msgstr ""
 
 #: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:341
+#, c++-format
+msgid "Failed to unload chaiscript file {}"
+msgstr ""
+
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:354
 #, c++-format
 msgid "Failed to run chai script {}"
 msgstr ""

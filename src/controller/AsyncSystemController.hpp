@@ -41,7 +41,7 @@ Description: System Route
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 

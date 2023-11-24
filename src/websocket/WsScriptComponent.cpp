@@ -38,7 +38,7 @@ Description: Script API of WebSocket Server
 #include "websocket/template/function.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 void WebSocketServer::runChaiCommand(const json &m_params)

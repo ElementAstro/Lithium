@@ -41,7 +41,7 @@ Description: WebSocket Device Instance (each device each instance)
 #include "atom/error/error_code.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 WsTelescopeInstance::WsTelescopeInstance(const std::shared_ptr<AsyncWebSocket> &socket,

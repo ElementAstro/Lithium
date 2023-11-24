@@ -45,7 +45,7 @@ Description: WebSocket Device Instance (each device each instance)
 #include "core/camera.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 WsCameraInstance::WsCameraInstance(const std::shared_ptr<AsyncWebSocket> &socket,
@@ -56,6 +56,14 @@ WsCameraInstance::WsCameraInstance(const std::shared_ptr<AsyncWebSocket> &socket
 {
     LiRegisterFunc("startExopsure", &WsCameraInstance::startExposure, this);
     LiRegisterFunc("stopExposure", &WsCameraInstance::stopExposure, this);
+    LiRegisterFunc("getExposureStatus", &WsCameraInstance::getExposureStatus, this);
+    LiRegisterFunc("getExposureResult", &WsCameraInstance::getExposureResult, this);
+    
+    LiRegisterFunc("startCooling", &WsCameraInstance::startCooling, this);
+    LiRegisterFunc("stopCooling", &WsCameraInstance::stopCooling, this);
+    LiRegisterFunc("getCoolingStatus", &WsCameraInstance::getCoolingStatus, this);
+    LiRegisterFunc("getCurrentTemperautre", &WsCameraInstance::getCurrentTemperature, this);
+    
     LiRegisterFunc("getGain", &WsCameraInstance::getGain, this);
     LiRegisterFunc("setGain", &WsCameraInstance::setGain, this);
     LiRegisterFunc("getOffset", &WsCameraInstance::getOffset, this);

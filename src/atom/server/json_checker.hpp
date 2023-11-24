@@ -31,7 +31,7 @@ Description: Json Checker interface implementation
 
 #include <regex>
 #include <unordered_map>
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 

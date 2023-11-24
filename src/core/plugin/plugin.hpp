@@ -38,7 +38,7 @@ Description: Basic Plugin Definition
 #include "server/commander.hpp"
 #include "server/variables.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
 
 class Plugin

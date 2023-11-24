@@ -37,7 +37,7 @@ Description: Compiler
 #include <atomic>
 #include <thread>
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "loguru/loguru.hpp"
 
 using json = nlohmann::json;

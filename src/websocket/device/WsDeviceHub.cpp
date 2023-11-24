@@ -31,7 +31,7 @@ Description: WebSocket Device Hub (all devices of one type in one hub)
 
 #include "WsDeviceHub.hpp"
 
-void WsDeviceHub::adddevice(const std::shared_ptr<WsDeviceInstance> &device)
+void WsDeviceHub::addDevice(const std::shared_ptr<WsDeviceInstance> &device)
 {
 	std::lock_guard<std::mutex> guard(m_deviceByIdLock);
 	m_deviceById[device->getUserId()] = device;

@@ -1,0 +1,361 @@
+<!--
+
+   Copyright(c) 2022-2023 Max Qian  <astroair.cn>
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA.
+   
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Tools</title>
+
+    {{ basic.icon() }}
+
+    {{ basic.load_basic_css() }}
+
+    <!-- Loading animation -->
+    <link rel="stylesheet" href="/static/css/client/loading.css">
+    <!-- overlayScrollbars -->
+	<link rel="stylesheet" href="/static/css/plugins/OverlayScrollbars.min.css">
+
+</head>
+
+<body style="height: auto;" class="sidebar-mini sidebar-closed sidebar-collapse dark-mode">
+    
+    {{ basic.loading() }}
+    
+    <div class="wrapper">
+        <!-- Main content -->
+        <section class="content">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-sm-12">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-microchip-ai"></i>
+                                                    实时CPU
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        id="refresh_cpu">
+                                                        <i class="fas fa-redo"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <canvas id="realtime_cpu" style="display: block; box-sizing: border-box; height: 250px; width: 100%;" width="921" height="350"></canvas>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-timeline-arrow"></i>
+                                                    实时内存
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        id="refresh_memory">
+                                                        <i class="fas fa-redo"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-sm-12">
+                                                        <canvas id="realtime_memory" style="display: block; box-sizing: border-box; height: 250px; width: 100%;" width="921" height="350"></canvas>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-square-info"></i>
+                                                    系统信息
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-bordered table-sm">
+                                                    <tr>
+                                                        <td>主机名</td>
+                                                        <td class="text-center">{{ sys_name }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>内核名称</td>
+                                                        <td class="text-center">{{ kernel_name }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>发行版本号</td>
+                                                        <td class="text-center">{{ kernel_no }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>内核版本</td>
+                                                        <td class="text-center">{{ kernel_version }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>系统架构</td>
+                                                        <td class="text-center">{{ sys_framework }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>现在时间</td>
+                                                        <td class="text-center">{{ now_time }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>开机时间</td>
+                                                        <td class="text-center">{{ boot_time }}</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-hard-drive"></i>
+                                                    CPU
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-bordered table-sm">
+                                                    <tr>
+                                                        <td>CPU核心</td>
+                                                        <td>{{ cpu_count }}</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-memory"></i>
+                                                    内存
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-bordered table-sm">
+                                                    <tr>
+                                                        <td>内存大小</td>
+                                                        <td>{{ memory.total }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>可用内存</td>
+                                                        <td>{{ memory.available }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>内存占用</td>
+                                                        <td>{{ memory.percent }} %</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>已用内存</td>
+                                                        <td>{{ memory.used }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>空闲内存</td>
+                                                        <td>{{ memory.free }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>缓冲区</td>
+                                                        <td>{{ memory.buffers }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>缓存</td>
+                                                        <td>{{ memory.cached }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>共享内存</td>
+                                                        <td>{{ memory.shared }}</td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-floppy-disk"></i>
+                                                    硬盘
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-sm table-bordered">
+                                                    <tr>
+                                                        <td>设备</td>
+                                                        <td>挂载点</td>
+                                                        <td>容量</td>
+                                                        <td>已用</td>
+                                                        <td>剩余</td>
+                                                        <td>类型</td>
+                                                        <td>选项</td>
+                                                    </tr>
+                                                    {% for physical_disk_info in disk_list %}
+                                                        <tr>
+                                                            <td>{{ physical_disk_info['device'] }}</td>
+                                                            <td>{{ physical_disk_info['mount_point'] }}</td>
+                                                            <td>{{ physical_disk_info['space_total'] }}</td>
+                                                            <td>
+                                                                {{ physical_disk_info['space_used'] }}
+                                                                ( {{ physical_disk_info['used_percent'] }} %)
+                                                            </td>
+                                                            <td>{{ physical_disk_info['space_free'] }}</td>
+                                                            <td>{{ physical_disk_info['type'] }}</td>
+                                                            <td>{{ physical_disk_info['options'] }}</td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="card card-default card-primary collapsed-card">
+                                            <div class="card-header">
+                                                <div class="card-title">
+                                                    <i class="fas fa-microchip"></i>
+                                                    进程
+                                                </div>
+                                                <div class="card-tools">
+                                                    <button type="button" class="btn btn-tool"
+                                                        data-card-widget="collapse" title="Collapse">
+                                                        <i class="fas fa-minus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <table class="table table-sm table-bordered table-responsive">
+                                                    <tr>
+                                                        <td>进程</td>
+                                                        <td>用户</td>
+                                                        <td>状态</td>
+                                                        <td>CPU</td>
+                                                        <td>内存</td>
+                                                        <td>内存RSS</td>
+                                                        <td>内存VMS</td>
+                                                        <td>创建时间</td>
+                                                    </tr>
+                                                    {% for process in processes %}
+                                                        <tr>
+                                                        <td>{{ process['name'] }}</td>
+                                                        <td>{{ process['username'] }}</td>
+                                                        <td>{{ process['status'] }}</td>
+                                                        <td>{{ process['cpu']|round(2) }} %</td>
+                                                        <td>{{ process['memory']|round(2) }} %</td>
+                                                        <td>{{ process['memory_rss'] }}</td>
+                                                        <td>{{ process['memory_vms'] }}</td>
+                                                        <td>{{ process['created_time'] }}</td>
+                                                    {% endfor %}
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    {{ basic.load_danger_model() }}
+
+	{{ basic.load_warning_model() }}
+
+	{{ basic.load_info_model() }}
+
+    {{ basic.load_basic_js() }}
+    
+    <!-- Chart Js -->
+    <script src="/static/js/plugins/chart.min.js"></script>
+    <!-- Tools JS -->
+    <script src="/static/js/client/system.js"></script>
+    <!-- overlayScrollbars -->
+	<script src="/static/js/jquery/jquery.overlayScrollbars.min.js"></script>
+	<script>
+		$(function () {
+			$('body').overlayScrollbars({});
+		});
+	</script>
+</body>
+</html>

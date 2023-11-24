@@ -35,28 +35,24 @@ Description: Camera Simulator and Basic Definition
 
 Camera::Camera(const std::string &name) : Device(name)
 {
-    DLOG_F(INFO, "Camera Simulator Loaded : %s", name.c_str());
     init();
 }
 
 Camera::~Camera()
 {
-    DLOG_F(INFO, "Camera Simulator Destructed");
 }
 
-bool Camera::connect(const nlohmann::json &params)
+bool Camera::connect(const json &params)
 {
-    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Camera::disconnect(const nlohmann::json &params)
+bool Camera::disconnect(const json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Camera::reconnect(const nlohmann::json &params)
+bool Camera::reconnect(const json &params)
 {
     return true;
 }
@@ -66,62 +62,62 @@ bool Camera::isConnected()
     return true;
 }
 
-bool Camera::startExposure(const nlohmann::json &params)
+bool Camera::startExposure(const json &params)
 {
     return true;
 }
 
-bool Camera::abortExposure(const nlohmann::json &params)
+bool Camera::abortExposure(const json &params)
 {
     return true;
 }
 
-bool Camera::getExposureStatus(const nlohmann::json &params)
+bool Camera::getExposureStatus(const json &params)
 {
     return true;
 }
 
-bool Camera::getExposureResult(const nlohmann::json &params)
+bool Camera::getExposureResult(const json &params)
 {
     return true;
 }
 
-bool Camera::saveExposureResult(const nlohmann::json &params)
+bool Camera::saveExposureResult(const json &params)
 {
     return true;
 }
 
-bool Camera::startVideo(const nlohmann::json &params)
+bool Camera::startVideo(const json &params)
 {
     return true;
 }
 
-bool Camera::stopVideo(const nlohmann::json &params)
+bool Camera::stopVideo(const json &params)
 {
     return true;
 }
 
-bool Camera::getVideoStatus(const nlohmann::json &params)
+bool Camera::getVideoStatus(const json &params)
 {
     return true;
 }
 
-bool Camera::getVideoResult(const nlohmann::json &params)
+bool Camera::getVideoResult(const json &params)
 {
     return true;
 }
 
-bool Camera::saveVideoResult(const nlohmann::json &params)
+bool Camera::saveVideoResult(const json &params)
 {
     return true;
 }
 
-bool Camera::startCooling(const nlohmann::json &params)
+bool Camera::startCooling(const json &params)
 {
     return true;
 }
 
-bool Camera::stopCooling(const nlohmann::json &params)
+bool Camera::stopCooling(const json &params)
 {
     return true;
 }
@@ -131,32 +127,32 @@ bool Camera::isCoolingAvailable()
     return true;
 }
 
-bool Camera::getTemperature(const nlohmann::json &params)
+bool Camera::getTemperature(const json &params)
 {
     return true;
 }
 
-bool Camera::getCoolingPower(const nlohmann::json &params)
+bool Camera::getCoolingPower(const json &params)
 {
     return true;
 }
 
-bool Camera::setTemperature(const nlohmann::json &params)
+bool Camera::setTemperature(const json &params)
 {
     return true;
 }
 
-bool Camera::setCoolingPower(const nlohmann::json &params)
+bool Camera::setCoolingPower(const json &params)
 {
     return true;
 }
 
-bool Camera::getGain(const nlohmann::json &params)
+bool Camera::getGain(const json &params)
 {
     return true;
 }
 
-bool Camera::setGain(const nlohmann::json &params)
+bool Camera::setGain(const json &params)
 {
     return true;
 }
@@ -166,12 +162,12 @@ bool Camera::isGainAvailable()
     return true;
 }
 
-bool Camera::getOffset(const nlohmann::json &params)
+bool Camera::getOffset(const json &params)
 {
     return true;
 }
 
-bool Camera::setOffset(const nlohmann::json &params)
+bool Camera::setOffset(const json &params)
 {
     return true;
 }
@@ -181,12 +177,12 @@ bool Camera::isOffsetAvailable()
     return true;
 }
 
-bool Camera::getISO(const nlohmann::json &params)
+bool Camera::getISO(const json &params)
 {
     return true;
 }
 
-bool Camera::setISO(const nlohmann::json &params)
+bool Camera::setISO(const json &params)
 {
     return true;
 }
@@ -196,12 +192,12 @@ bool Camera::isISOAvailable()
     return true;
 }
 
-bool Camera::getFrame(const nlohmann::json &params)
+bool Camera::getFrame(const json &params)
 {
     return true;
 }
 
-bool Camera::setFrame(const nlohmann::json &params)
+bool Camera::setFrame(const json &params)
 {
     return true;
 }

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.13)
 project(hydrogencore C CXX)
 
 find_package(Nova)
-
 add_library(${PROJECT_NAME} OBJECT "")
 
 include(CPack)

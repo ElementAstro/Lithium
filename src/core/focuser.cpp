@@ -44,89 +44,94 @@ Focuser::~Focuser()
     DLOG_F(INFO, "Focuser Simulator Destructed");
 }
 
-bool Focuser::connect(const nlohmann::json &params)
+bool Focuser::connect(const json &params)
 {
     DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
-bool Focuser::disconnect(const nlohmann::json &params)
+bool Focuser::disconnect(const json &params)
 {
     DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 
-bool Focuser::reconnect(const nlohmann::json &params)
+bool Focuser::reconnect(const json &params)
 {
     return true;
 }
 
-bool Focuser::moveTo(const nlohmann::json &params)
+bool Focuser::isConnected()
 {
     return true;
 }
 
-bool Focuser::moveToAbsolute(const nlohmann::json &params)
+bool Focuser::moveTo(const json &params)
 {
     return true;
 }
 
-bool Focuser::moveStep(const nlohmann::json &params)
+bool Focuser::moveToAbsolute(const json &params)
 {
     return true;
 }
 
-bool Focuser::moveStepAbsolute(const nlohmann::json &params)
+bool Focuser::moveStep(const json &params)
 {
     return true;
 }
 
-bool Focuser::AbortMove(const nlohmann::json &params)
+bool Focuser::moveStepAbsolute(const json &params)
 {
     return true;
 }
 
-int Focuser::getMaxPosition(const nlohmann::json &params)
+bool Focuser::AbortMove(const json &params)
+{
+    return true;
+}
+
+int Focuser::getMaxPosition(const json &params)
 {
     return 0;
 }
 
-bool Focuser::setMaxPosition(const nlohmann::json &params)
+bool Focuser::setMaxPosition(const json &params)
 {
     return true;
 }
 
-bool Focuser::isGetTemperatureAvailable(const nlohmann::json &params)
+bool Focuser::isGetTemperatureAvailable(const json &params)
 {
     return true;
 }
 
-double Focuser::getTemperature(const nlohmann::json &params)
+double Focuser::getTemperature(const json &params)
 {
     return 0.0;
 }
 
-bool Focuser::isAbsoluteMoveAvailable(const nlohmann::json &params)
+bool Focuser::isAbsoluteMoveAvailable(const json &params)
 {
     return true;
 }
 
-bool Focuser::isManualMoveAvailable(const nlohmann::json &params)
+bool Focuser::isManualMoveAvailable(const json &params)
 {
     return true;
 }
 
-int Focuser::getCurrentPosition(const nlohmann::json &params)
+int Focuser::getCurrentPosition(const json &params)
 {
     return 0;
 }
 
-bool Focuser::haveBacklash(const nlohmann::json &params)
+bool Focuser::haveBacklash(const json &params)
 {
     return true;
 }
 
-bool Focuser::setBacklash(const nlohmann::json &params)
+bool Focuser::setBacklash(const json &params)
 {
     return true;
 }

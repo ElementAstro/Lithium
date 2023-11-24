@@ -1,12 +1,10 @@
 cmake_minimum_required(VERSION 3.13)
 project(lithiumcore C CXX)
 
-find_package(USB1 REQUIRED)
-find_package(JPEG REQUIRED)
 find_package(Threads REQUIRED)
-include_directories(${USB1_INCLUDE_DIRS})
 
 add_subdirectory(base)
+add_subdirectory(plugin)
 
 include_directories(.)
 include_directories(base)
@@ -32,9 +30,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     network/fifoserver.cpp
     util/utils.cpp
     event/eventloop.cpp
-
-    util/math.cpp
-    util/reflection.cpp
 
     property/base64.cpp
     property/iproperty.cpp
@@ -101,9 +96,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     property/task/daemon_task.hpp
     property/task/loop_task.hpp
     property/task/task.hpp
-
-    util/math.hpp
-    util/reflection.hpp
 )
 
 # Private Headers

@@ -33,7 +33,7 @@ Description: Basic Focuser Defination
 
 #include "device.hpp"
 
-class Focuser : virtual public Device
+class Focuser : public Device
 {
 public:
     /**
@@ -48,20 +48,21 @@ public:
      */
     virtual ~Focuser();
 
-    virtual bool connect(const nlohmann::json &params) override;
+    virtual bool connect(const json &params) override;
 
-    virtual bool disconnect(const nlohmann::json &params) override;
+    virtual bool disconnect(const json &params) override;
 
-    virtual bool reconnect(const nlohmann::json &params) override;
+    virtual bool reconnect(const json &params) override;
 
-protected:
+    virtual bool isConnected() override;
+
     /**
      * @brief 将电调移动到 position 位置
      *
      * @param position 相对移动的步数
      * @return bool 移动是否成功
      */
-    virtual bool moveTo(const nlohmann::json &params);
+    virtual bool moveTo(const json &params);
 
     /**
      * @brief 将电调移动到绝对位置 position
@@ -69,7 +70,7 @@ protected:
      * @param position 绝对位置步数
      * @return bool 移动是否成功
      */
-    virtual bool moveToAbsolute(const nlohmann::json &params);
+    virtual bool moveToAbsolute(const json &params);
 
     /**
      * @brief 移动电调 step 个步长
@@ -77,7 +78,7 @@ protected:
      * @param step 移动步数
      * @return bool 移动是否成功
      */
-    virtual bool moveStep(const nlohmann::json &params);
+    virtual bool moveStep(const json &params);
 
     /**
      * @brief 移动电调至绝对步数位置
@@ -85,21 +86,21 @@ protected:
      * @param step 绝对步数位置
      * @return bool 移动是否成功
      */
-    virtual bool moveStepAbsolute(const nlohmann::json &params);
+    virtual bool moveStepAbsolute(const json &params);
 
     /**
      * @brief 中止电调移动
      *
      * @return bool 操作是否成功
      */
-    virtual bool AbortMove(const nlohmann::json &params);
+    virtual bool AbortMove(const json &params);
 
     /**
      * @brief 获取电调最大位置
      *
      * @return int 电调最大位置
      */
-    virtual int getMaxPosition(const nlohmann::json &params);
+    virtual int getMaxPosition(const json &params);
 
     /**
      * @brief 设置电调最大位置
@@ -107,49 +108,49 @@ protected:
      * @param max_position 电调最大位置
      * @return bool 操作是否成功
      */
-    virtual bool setMaxPosition(const nlohmann::json &params);
+    virtual bool setMaxPosition(const json &params);
 
     /**
      * @brief 判断是否支持获取温度功能
      *
      * @return bool 是否支持获取温度功能
      */
-    virtual bool isGetTemperatureAvailable(const nlohmann::json &params);
+    virtual bool isGetTemperatureAvailable(const json &params);
 
     /**
      * @brief 获取电调当前温度
      *
      * @return double 当前温度
      */
-    virtual double getTemperature(const nlohmann::json &params);
+    virtual double getTemperature(const json &params);
 
     /**
      * @brief 判断是否支持绝对移动功能
      *
      * @return bool 是否支持绝对移动功能
      */
-    virtual bool isAbsoluteMoveAvailable(const nlohmann::json &params);
+    virtual bool isAbsoluteMoveAvailable(const json &params);
 
     /**
      * @brief 判断是否支持手动移动功能
      *
      * @return bool 是否支持手动移动功能
      */
-    virtual bool isManualMoveAvailable(const nlohmann::json &params);
+    virtual bool isManualMoveAvailable(const json &params);
 
     /**
      * @brief 获取电调当前位置
      *
      * @return int 当前位置
      */
-    virtual int getCurrentPosition(const nlohmann::json &params);
+    virtual int getCurrentPosition(const json &params);
 
     /**
      * @brief 判断电调是否存在反向间隙
      *
      * @return bool 是否存在反向间隙
      */
-    virtual bool haveBacklash(const nlohmann::json &params);
+    virtual bool haveBacklash(const json &params);
 
     /**
      * @brief 设置电调反向间隙值
@@ -157,5 +158,5 @@ protected:
      * @param value 反向间隙值
      * @return bool 操作是否成功
      */
-    virtual bool setBacklash(const nlohmann::json &params);
+    virtual bool setBacklash(const json &params);
 };

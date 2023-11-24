@@ -35,16 +35,18 @@ Description: WebSocket Server
 #include <version>
 #include <thread>
 
+#include "core/device_type.hpp"
+
 #include "loguru/loguru.hpp"
 #include "magic_enum/magic_enum.hpp"
 
-std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap = {
-	{"Camera", Lithium::DeviceType::Camera},
-	{"Telescope", Lithium::DeviceType::Telescope},
-	{"Focuser", Lithium::DeviceType::Focuser},
-	{"FilterWheel", Lithium::DeviceType::FilterWheel},
-	{"Solver", Lithium::DeviceType::Solver},
-	{"Guider", Lithium::DeviceType::Guider}};
+std::unordered_map<std::string, DeviceType> DeviceTypeMap = {
+	{"Camera", DeviceType::Camera},
+	{"Telescope", DeviceType::Telescope},
+	{"Focuser", DeviceType::Focuser},
+	{"FilterWheel", DeviceType::FilterWheel},
+	{"Solver", DeviceType::Solver},
+	{"Guider", DeviceType::Guider}};
 
 WebSocketServer::WebSocketServer(const std::shared_ptr<AsyncWebSocket> &socket)
 {
@@ -162,6 +164,60 @@ oatpp::async::CoroutineStarter WebSocketServer::readMessage(const std::shared_pt
 		m_messageBuffer.writeSimple(data, size);
 	}
 	return nullptr;
+}
+
+void WebSocketServer::sendMessage(const oatpp::String &message)
+{
+
+	class SendMessageCoroutine : public oatpp::async::Coroutine<SendMessageCoroutine>
+	{
+	private:
+		oatpp::async::Lock *m_lock;
+		std::shared_ptr<AsyncWebSocket> m_websocket;
+		oatpp::String m_message;
+
+	public:
+		SendMessageCoroutine(oatpp::async::Lock *lock,
+							 const std::shared_ptr<AsyncWebSocket> &websocket,
+							 const oatpp::String &message)
+			: m_lock(lock), m_websocket(websocket), m_message(message)
+		{
+		}
+
+		Action act() override
+		{
+			return oatpp::async::synchronize(m_lock, m_websocket->sendOneFrameTextAsync(m_message)).next(finish());
+		}
+	};
+
+	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, message);
+}
+
+void WebSocketServer::sendBinaryMessage(void *binary_message, int size)
+{
+	oatpp::String binary((const char *)binary_message, size);
+	class SendMessageCoroutine : public oatpp::async::Coroutine<SendMessageCoroutine>
+	{
+	private:
+		oatpp::async::Lock *m_lock;
+		std::shared_ptr<AsyncWebSocket> m_websocket;
+		oatpp::String m_message;
+
+	public:
+		SendMessageCoroutine(oatpp::async::Lock *lock,
+							 const std::shared_ptr<AsyncWebSocket> &websocket,
+							 const oatpp::String &message)
+			: m_lock(lock), m_websocket(websocket), m_message(message)
+		{
+		}
+
+		Action act() override
+		{
+			return oatpp::async::synchronize(m_lock, m_websocket->sendOneFrameTextAsync(m_message)).next(finish());
+		}
+	};
+
+	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, binary);
 }
 
 #else

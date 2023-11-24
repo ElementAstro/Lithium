@@ -36,6 +36,8 @@ Description: WebSocket Device Server
 
 #include "config.h"
 
+#include <mutex>
+
 #if ENABLE_ASYNC
 #include "oatpp-websocket/AsyncConnectionHandler.hpp"
 #else
@@ -47,20 +49,17 @@ Description: WebSocket Device Server
 #else
 #include <unordered_map>
 #endif
-#include <mutex>
 
+#include "atom/utils/switch.hpp"
+
+#if ENABLE_ASYNC
 class WsDeviceServer : public oatpp::websocket::AsyncConnectionHandler::SocketInstanceListener
+#else
+class WsDeviceServer : public oatpp::websocket::ConnectionHandler::SocketInstanceListener
+#endif
 {
 public:
-	std::atomic<v_int32> m_userIdCounter;
-	std::unordered_map<oatpp::String, std::shared_ptr<WsDeviceHub>> m_hubs;
-	std::mutex m_hubsMutex;
-
-public:
-	WsDeviceServer()
-		: m_userIdCounter(0)
-	{
-	}
+	WsDeviceServer();
 
 	/**
 	 * Generate id for new user
@@ -76,15 +75,39 @@ public:
 	std::shared_ptr<WsDeviceHub> getOrCreateHub(const oatpp::String &hubName);
 
 public:
+#if ENABLE_ASYNC
 	/**
-	 *  Called when socket is created
+	 * @brief Callback function called after creating a new WebSocket connection in non-blocking mode.
+	 * @param socket The newly created WebSocket connection.
+	 * @param params The parameters associated with the connection.
 	 */
 	void onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params) override;
 
 	/**
-	 *  Called before socket instance is destroyed.
+	 * @brief Callback function called before destroying a WebSocket connection in non-blocking mode.
+	 * @param socket The WebSocket connection to be destroyed.
 	 */
 	void onBeforeDestroy_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket) override;
+#else
+	/**
+	 * @brief Callback function called after creating a new WebSocket connection.
+	 * @param socket The newly created WebSocket connection.
+	 * @param params The parameters associated with the connection.
+	 */
+	void onAfterCreate(const oatpp::websocket::WebSocket &socket, const std::shared_ptr<const ParameterMap> &params) override;
+
+	/**
+	 * @brief Callback function called before destroying a WebSocket connection.
+	 * @param socket The WebSocket connection to be destroyed.
+	 */
+	void onBeforeDestroy(const oatpp::websocket::WebSocket &socket) override;
+#endif
+
+public:
+	std::atomic<v_int32> m_userIdCounter;
+	std::unordered_map<oatpp::String, std::shared_ptr<WsDeviceHub>> m_hubs;
+	std::mutex m_hubsMutex;
+	std::unique_ptr<StringSwitch<const std::shared_ptr<AsyncWebSocket> &, const oatpp::String &, const oatpp::String &>> m_device_switch;
 };
 
 #endif // WSDEVICESERVER_HPP

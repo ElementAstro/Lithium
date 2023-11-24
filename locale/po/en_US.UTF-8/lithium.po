@@ -1,240 +1,273 @@
-#: /workspaces/Lithium/src/modules/device/device_manager.cpp:161
+#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:161
+#, c++-format
 msgid "A device with name {} already exists, please choose a different name"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/device/indidevice_manager.cpp:278
+#: E:/msys64/home/Qrm/Lithium/src/device/indidevice_manager.cpp:278
+#, c++-format
 msgid "Failed to run command: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:63
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:63
+#, c++-format
 msgid "Failed to destroy ThreadManager: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:82
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:82
 msgid "Thread manager has stopped, cannot add new thread"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:100
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:122
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:100
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:122
+#, c++-format
 msgid "Unhandled exception in thread: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:128
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:128
+#, c++-format
 msgid "Added thread: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:133
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:133
+#, c++-format
 msgid "Failed to add thread {}: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:149
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:149
 msgid "All threads joined"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:153
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:153
+#, c++-format
 msgid "Failed to join all threads: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:163
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:180
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:194
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:205
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:163
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:180
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:194
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:205
+#, c++-format
 msgid "Thread {} not found"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:172
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:172
+#, c++-format
 msgid "Thread {} joined"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:184
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:184
+#, c++-format
 msgid "Failed to join thread {}: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/thread/thread.cpp:210
+#: E:/msys64/home/Qrm/Lithium/src/atom/thread/thread.cpp:210
+#, c++-format
 msgid "Failed to check if thread {} is running: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:76
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:76
 msgid "Failed to create PowerShell process"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:86
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:86
+#, c++-format
 msgid "Running command: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:103
-#: /workspaces/Lithium/src/modules/system/process.cpp:127
-#: /workspaces/Lithium/src/modules/system/process.cpp:148
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:103
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:127
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:148
 msgid "Failed to create process"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:113
-#: /workspaces/Lithium/src/modules/system/process.cpp:158
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:113
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:158
+#, c++-format
 msgid "Process created: {} (PID: {})"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:137
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:137
+#, c++-format
 msgid "Running script: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:175
-#: /workspaces/Lithium/src/modules/system/process.cpp:187
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:175
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:187
+#, c++-format
 msgid "Process terminated: {} (PID: {})"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:179
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:179
 msgid "Failed to terminate process"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:195
-#: /workspaces/Lithium/src/modules/system/process.cpp:240
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:195
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:240
 msgid "Process not found"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:210
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:210
+#, c++-format
 msgid "Process not found by name: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:255
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:255
+#, c++-format
 msgid "Process completed: {} (PID: {})"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:259
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:259
 msgid "Failed to wait for process completion"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:265
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:265
 #, c-format
 msgid "Process completed: %s (PID: %d)"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:270
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:270
 msgid "All processes completed."
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:281
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:281
 msgid "Failed to create process snapshot"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:322
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:322
 msgid "Failed to open /proc directory"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:351
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:351
 msgid "Failed to get process path"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:372
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:372
 msgid "Failed to get process info length"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:379
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:379
 msgid "Failed to allocate memory"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/process.cpp:385
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/process.cpp:385
 msgid "Failed to get process info"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:94
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:94
 msgid "CreateToolhelp32Snapshot failed."
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:113
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:113
+#, c++-format
 msgid "Watching process with PID: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:124
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:124
+#, c++-format
 msgid "Process exited with code: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:133
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:133
 msgid "GetExitCodeProcess failed."
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:143
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:143
 msgid "OpenProcess failed."
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:170
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:170
+#, c++-format
 msgid "Process exited with status: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/modules/system/pid.cpp:179
+#: E:/msys64/home/Qrm/Lithium/src/atom/system/pid.cpp:179
+#, c++-format
 msgid "Process terminated by signal: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:226
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:252
 msgid "port the server running on"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:227
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:253
 msgid "host the server running on"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:228
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:254
 msgid "path to the config file"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:229
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:255
 msgid "path to the modules directory"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:230
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:256
 msgid "web panel"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:231
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:257
 msgid "path to log file"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:233
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:259
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:234
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:260
 msgid "End."
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:242
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:268
 #, c-format
 msgid "Failed to parser command line : %s"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:263
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:289
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: /workspaces/Lithium/src/App.cpp:269
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:295
 #, c-format
 msgid "Set server port to %d"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:81
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:81
+#, c++-format
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:93
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:93
+#, c++-format
 msgid "Get config value: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:99
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:99
+#, c++-format
 msgid "Set {} to {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:286
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:297
+#, c++-format
 msgid "Failed to run chai command : {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:304
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:315
+#, c++-format
 msgid "Failed to run chai multi command {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:317
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:328
+#, c++-format
 msgid "Failed to load chaiscript file {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:330
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:341
+#, c++-format
+msgid "Failed to unload chaiscript file {}"
+msgstr ""
+
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:354
+#, c++-format
 msgid "Failed to run chai script {}"
 msgstr ""

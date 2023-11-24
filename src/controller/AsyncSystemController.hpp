@@ -32,7 +32,7 @@ Description: System Route
 #ifndef Lithium_SystemCONTROLLER_HPP
 #define Lithium_SystemCONTROLLER_HPP
 
-#include "modules/system/system.hpp"
+#include "atom/system/system.hpp"
 #include "LithiumApp.hpp"
 #include "config.h"
 
@@ -41,7 +41,7 @@ Description: System Route
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 

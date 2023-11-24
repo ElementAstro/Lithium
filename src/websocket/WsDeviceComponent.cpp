@@ -32,43 +32,37 @@ Description: Device API of WebSocket Server
 #include "WebSocketServer.hpp"
 #include "LithiumApp.hpp"
 
-#include "modules/utils/time.hpp"
-#include "modules/error/error_code.hpp"
+#include "atom/utils/time.hpp"
+#include "atom/error/error_code.hpp"
+#include "core/device_type.hpp"
+
 #include "template/error_message.hpp"
+#include "template/function.hpp"
+#include "template/variable.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 void WebSocketServer::GetDeviceList(const json &m_params)
 {
-	json res = {{"command", __func__}};
-	try
+	FUNCTION_BEGIN;
+	if (!m_params.contains("device_type"))
 	{
-		if (!m_params.contains("device_type"))
-		{
-			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type is required");
-		}
-		Lithium::DeviceType device_type;
-		auto it = DeviceTypeMap.find(m_params["device_type"]);
-		if (it == DeviceTypeMap.end())
-		{
-			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
-		}
-		device_type = it->second;
-		for (const auto &device : Lithium::MyApp->getDeviceList(device_type))
-		{
-			res["params"].push_back(device);
-		}
+		RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type is required");
 	}
-	catch (const json::exception &e)
+	DeviceType device_type;
+	auto it = DeviceTypeMap.find(m_params["device_type"]);
+	if (it == DeviceTypeMap.end())
 	{
-		RESPONSE_EXCEPTION(res, ServerError::InvalidParameters, e.what());
+		RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type");
 	}
-	catch (const std::exception &e)
+	device_type = it->second;
+	for (const auto &device : Lithium::MyApp->getDeviceList(device_type))
 	{
-		RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+		res["params"].push_back(device);
 	}
+	FUNCTION_END;
 }
 
 void WebSocketServer::AddDevice(const json &m_params)
@@ -80,7 +74,7 @@ void WebSocketServer::AddDevice(const json &m_params)
 		{
 			RESPONSE_ERROR(res, ServerError::MissingParameters, "Device type and name are required");
 		}
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{
@@ -142,7 +136,7 @@ void WebSocketServer::RemoveDevice(const json &m_params)
 	}
 	try
 	{
-		Lithium::DeviceType device_type;
+		DeviceType device_type;
 		auto it = DeviceTypeMap.find(m_params["device_type"]);
 		if (it == DeviceTypeMap.end())
 		{
@@ -178,7 +172,7 @@ void WebSocketServer::RemoveDevicesByName(const json &m_params)
 	{
 		std::string device_name = m_params["device_name"].get<std::string>();
 
-		if (!Lithium::MyApp->removeDevicesByName(device_name))
+		if (!Lithium::MyApp->removeDeviceByName(device_name))
 		{
 			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device by name");
 		}
@@ -222,7 +216,7 @@ void WebSocketServer::RemoveDeviceLibrary(const json &m_params)
 void WebSocketServer::RunDeviceTask(const json &m_params)
 {
 	json res = {{"command", __func__}};
-	Lithium::DeviceType device_type;
+	DeviceType device_type;
 	// 检查必要参数是否存在
 	if (!(m_params.contains("device_name") || m_params.contains("device_uuid")) || !m_params.contains("device_type"))
 	{
@@ -251,7 +245,7 @@ void WebSocketServer::RunDeviceTask(const json &m_params)
 		{
 			RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to get task");
 		}
-		DLOG_F(INFO, "Trying to run {}", )
+		DLOG_F(INFO, "Trying to run {}", task->getName());
 		task->execute();
 		json result = task->getResult();
 

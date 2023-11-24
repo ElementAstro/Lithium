@@ -34,9 +34,9 @@ Description: IO Route
 
 #include "config.h"
 
-#include "modules/io/io.hpp"
-#include "modules/io/file.hpp"
-#include "modules/io/compress.hpp"
+#include "atom/io/io.hpp"
+#include "atom/io/file.hpp"
+#include "atom/io/compress.hpp"
 
 #include "oatpp/web/server/api/ApiController.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
@@ -46,7 +46,7 @@ Description: IO Route
 #include "data/IODto.hpp"
 #include "data/StatusDto.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 

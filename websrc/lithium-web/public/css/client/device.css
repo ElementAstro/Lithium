@@ -1,0 +1,90 @@
+.border-sx-blue {
+    border-left: 6px solid #4285f4;
+    border-radius: 5px;
+}
+
+.status-item {
+    font-size: x-small;
+    color: #4285f4;
+}
+
+.statusText {
+    margin: 0 !important;
+}
+
+.led-circle {
+    background-color: gray;
+    border: 1px solid #383838;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin: 2px;
+}
+
+.ledgreen {
+    background-color: #00c851 !important;
+    -webkit-box-shadow: 0 0 5px #00c851;
+    -moz-box-shadow: 0 0 5px #00c851;
+    box-shadow: 0 0 5px #00c851;
+}  
+
+.text-small {
+    font-size: 80% !important;
+    font-weight: 400 !important;
+}
+
+.extraSmallText {
+    font-size: x-small !important;
+}
+
+.btn-voy-item {
+    width: 50%;
+}
+
+.statusLed {
+    width: 8px;
+    height: 8px;
+    background-color: dimgrey;
+}
+
+.camera-panel-item {
+    font-size: x-small;
+    text-transform: uppercase;
+    overflow-wrap: break-word;
+}
+
+.docs-pictures {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.docs-pictures>li {
+    border: 1px solid transparent;
+    float: left;
+    height: calc(100%);
+    margin: 0 -1px -1px 0;
+    overflow: hidden;
+    width: calc(100);
+}
+
+.docs-pictures>li>img {
+    cursor: -webkit-zoom-in;
+    cursor: zoom-in;
+    width: 100%;
+}
+
+#logDivTelescope,
+#logDivCamera {
+    background: #343a40;
+    color: gray;
+    border: 1px gray solid;
+    border-radius: 5px;
+    resize: none;
+    padding: 10px;
+    width: 100%;
+    height: 250px;
+    font-size: small;
+    overflow: auto;
+    line-height: 1.3;
+}

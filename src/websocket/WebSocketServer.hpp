@@ -47,11 +47,11 @@ Description: WebSocket Server
 
 #include "LithiumApp.hpp"
 
-#include "modules/server/commander.hpp"
+#include "atom/server/commander.hpp"
 #include "core/property/iproperty.hpp"
-#include "modules/error/error_code.hpp"
+#include "atom/error/error_code.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
 
 /**
@@ -289,6 +289,13 @@ public:
 	 */
 	void loadChaiFile(const json &m_params);
 
+	/**
+	 * @brief Unload a ChaiScript file from the system.
+	 *
+	 * @param m_params A JSON object that contains the parameters for this function.
+	 */
+	void unloadChaiFile(const json &m_params);
+
 public:
 	/**
 	 * @brief Handle a WebSocket ping message.
@@ -344,6 +351,21 @@ public:
 #else
 	void readMessage(const WebSocket &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 #endif
+
+	/**
+	 * @brief Send a message to the WsDeviceInstance (to user).
+	 *
+	 * @param message The message to be sent.
+	 */
+	void sendMessage(const oatpp::String &message);
+
+	/**
+	 * @brief Send a binary message to the WsDeviceInstance (to user).
+	 *
+	 * @param binary_message Pointer to the binary message.
+	 * @param size Size of the binary message.
+	 */
+	void sendBinaryMessage(void *binary_message, int size);
 
 private:
 	/**
@@ -512,7 +534,7 @@ private:
 	static constexpr const char *TAG = "WebSocketInstanceListener";
 };
 
-extern std::unordered_map<std::string, Lithium::DeviceType> DeviceTypeMap;
+extern std::unordered_map<std::string, DeviceType> DeviceTypeMap;
 
 const json serror(const std::string func_name, ServerError code, const std::string errorMsg);
 

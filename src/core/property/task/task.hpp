@@ -41,7 +41,7 @@ Description: Basic and Simple Task Definition
 #include <cstddef>
 #include <cstdint>
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
 
 namespace Lithium

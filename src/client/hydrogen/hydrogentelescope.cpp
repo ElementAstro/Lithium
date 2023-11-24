@@ -1,5 +1,5 @@
 /*
- * inditelescope.cpp
+ * hydrogentelescope.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -29,397 +29,319 @@ Description: Hydrogen Telescope
 
 **************************************************/
 
-#include "lithiumtelescope.hpp"
+#include "hydrogentelescope.hpp"
 
-#include <spdlog/spdlog.h>
+#include "atom/utils/switch.hpp"
 
-namespace Lithium
+#include "config.h"
+
+#include "loguru/loguru.hpp"
+
+HydrogenTelescope::HydrogenTelescope(const std::string &name) : Telescope(name)
 {
-    void HydrogenTelescope::newDevice(HYDROGEN::BaseDevice *dp)
-    {
-        if (dp->getDeviceName() == device_name)
+    DLOG_F(INFO, "Hydrogen telescope {} init successfully", name);
+
+    m_number_switch = std::make_unique<StringSwitch<INumberVectorProperty *>>();
+    m_switch_switch = std::make_unique<StringSwitch<ISwitchVectorProperty *>>();
+    m_text_switch = std::make_unique<StringSwitch<ITextVectorProperty *>>();
+
+    m_switch_switch->registerCase("CONNECTION", [this](ISwitchVectorProperty *svp)
+                                  {
+        m_connection_prop.reset(svp);
+        if (auto connectswitch = IUFindSwitch(svp, "CONNECT"); connectswitch->s == ISS_ON)
         {
-            telescope_device = dp;
+            setProperty("connect", true);
+            is_connected.store(true);
+            DLOG_F(INFO, "{} is connected", getDeviceName());
         }
-    }
-
-    void HydrogenTelescope::newSwitch(ISwitchVectorProperty *svp)
-    {
-        std::string const connection_str{"CONNECTION"};
-        std::string const baud_rate_str{"DEVICE_BAUD_RATE"};
-
-        if (svp->name == connection_str)
+        else
         {
-            ISwitch *connectswitch = IUFindSwitch(svp, "CONNECT");
-            if (connectswitch->s == ISS_ON)
+            if (is_ready.load())
             {
-                is_connected = true;
-                DLOG_F(INFO,"{} is connected", _name);
+                setProperty("connect", false);
+                is_connected.store(true);
+                DLOG_F(INFO, "{} is disconnected", getDeviceName());
             }
-            else
-            {
-                if (is_ready)
-                {
-                    ClearStatus();
-                    DLOG_F(INFO,"{} is disconnected", _name);
-                }
-            }
-        }
-        else if (svp->name == baud_rate_str)
-        {
-            std::string const baud_9600{"9600"};
-            std::string const baud_19200{"19200"};
-            std::string const baud_38400{"38400"};
-            std::string const baud_57600{"57600"};
-            std::string const baud_115200{"115200"};
-            std::string const baud_230400{"230400"};
+        } });
 
-            if (IUFindSwitch(svp, "9600")->s == ISS_ON)
-                indi_telescope_rate = baud_9600;
-            else if (IUFindSwitch(svp, "19200")->s == ISS_ON)
-                indi_telescope_rate = baud_19200;
-            else if (IUFindSwitch(svp, "38400")->s == ISS_ON)
-                indi_telescope_rate = baud_38400;
-            else if (IUFindSwitch(svp, "57600")->s == ISS_ON)
-                indi_telescope_rate = baud_57600;
-            else if (IUFindSwitch(svp, "115200")->s == ISS_ON)
-                indi_telescope_rate = baud_115200;
-            else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
-                indi_telescope_rate = baud_230400;
+    m_switch_switch->registerCase("DEVICE_BAUD_RATE", [this](ISwitchVectorProperty *svp)
+                                  {
+        std::string const baud_9600{"9600"};
+        std::string const baud_19200{"19200"};
+        std::string const baud_38400{"38400"};
+        std::string const baud_57600{"57600"};
+        std::string const baud_115200{"115200"};
+        std::string const baud_230400{"230400"};
 
-            DLOG_F(INFO,"{} baud rate : {}", _name, indi_telescope_rate);
-        }
-    }
+        if (IUFindSwitch(svp, "9600")->s == ISS_ON)
+            hydrogen_telescope_rate = baud_9600;
+        else if (IUFindSwitch(svp, "19200")->s == ISS_ON)
+            hydrogen_telescope_rate = baud_19200;
+        else if (IUFindSwitch(svp, "38400")->s == ISS_ON)
+            hydrogen_telescope_rate = baud_38400;
+        else if (IUFindSwitch(svp, "57600")->s == ISS_ON)
+            hydrogen_telescope_rate = baud_57600;
+        else if (IUFindSwitch(svp, "115200")->s == ISS_ON)
+            hydrogen_telescope_rate = baud_115200;
+        else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
+            hydrogen_telescope_rate = baud_230400;
 
-    void HydrogenTelescope::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
+        DLOG_F(INFO, "{} baud rate : {}", getDeviceName(), hydrogen_telescope_rate); });
+
+    m_text_switch->registerCase("DEVICE_PORT", [this](ITextVectorProperty *tvp)
+                                {
+                                    telescope_prop.reset(tvp);
+                                    hydrogen_telescope_port = tvp->tp->text;
+                                    setProperty("port", hydrogen_telescope_port);
+                                    DLOG_F(INFO, "Current device port of {} is {}", getDeviceName(), telescope_prop->tp->text); });
+
+    m_text_switch->registerCase("DRIVER_INFO", [this](ITextVectorProperty *tvp)
+                                {
+        hydrogen_telescope_exec = IUFindText(tvp, "DRIVER_EXEC")->text;
+        hydrogen_telescope_version = IUFindText(tvp, "DRIVER_VERSION")->text;
+        hydrogen_telescope_interface = IUFindText(tvp, "DRIVER_INTERFACE")->text;
+        DLOG_F(INFO, "Telescope Name : {} connected exec {}", getDeviceName(), getDeviceName(), hydrogen_telescope_exec); });
+}
+
+HydrogenTelescope::~HydrogenTelescope()
+{
+}
+
+bool HydrogenTelescope::connect(const json &params)
+{
+    std::string name = params["name"];
+    std::string hostname = params["host"];
+    int port = params["port"];
+    DLOG_F(INFO, "Trying to connect to {}", name);
+    setServer(hostname.c_str(), port);
+    // Receive messages only for our camera.
+    watchDevice(name.c_str());
+    // Connect to server.
+    if (connectServer())
     {
-        DLOG_F(INFO,"{} Received message: {}", _name, dp->messageQueue(messageID));
+        DLOG_F(INFO, "{}: connectServer done ready", getDeviceName());
+        connectDevice(name.c_str());
+        return !is_ready.load();
     }
+    return false;
+}
 
-    inline static const char *StateStr(IPState st)
+bool HydrogenTelescope::disconnect(const json &params)
+{
+    DLOG_F(INFO, "%s is disconnected", getDeviceName());
+    return true;
+}
+
+bool HydrogenTelescope::reconnect(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::isConnected()
+{
+    return true;
+}
+
+bool HydrogenTelescope::SlewTo(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::Abort(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::isSlewing(const json &params)
+{
+    return true;
+}
+
+std::string HydrogenTelescope::getCurrentRA(const json &params)
+{
+    return "";
+}
+
+std::string HydrogenTelescope::getCurrentDec(const json &params)
+{
+    return "";
+}
+
+bool HydrogenTelescope::StartTracking(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::StopTracking(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::setTrackingMode(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::setTrackingSpeed(const json &params)
+{
+    return true;
+}
+
+std::string HydrogenTelescope::getTrackingMode(const json &params)
+{
+    return "";
+}
+
+std::string HydrogenTelescope::getTrackingSpeed(const json &params)
+{
+    return "";
+}
+
+bool HydrogenTelescope::Home(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::isAtHome(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::setHomePosition(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::isHomeAvailable(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::Park(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::Unpark(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::isAtPark(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::setParkPosition(const json &params)
+{
+    return true;
+}
+
+bool HydrogenTelescope::isParkAvailable(const json &params)
+{
+    return true;
+}
+
+void HydrogenTelescope::newDevice(HYDROGEN::BaseDevice *dp)
+{
+    if (strcmp(dp->getDeviceName(), getDeviceName().c_str()) == 0)
     {
-        switch (st)
-        {
-        default:
-        case IPS_IDLE:
-            return "Idle";
-        case IPS_OK:
-            return "Ok";
-        case IPS_BUSY:
-            return "Busy";
-        case IPS_ALERT:
-            return "Alert";
-        }
+        telescope_device = dp;
     }
+}
 
-    void HydrogenTelescope::newNumber(INumberVectorProperty *nvp)
+void HydrogenTelescope::newSwitch(ISwitchVectorProperty *svp)
+{
+    m_switch_switch->match(svp->name, svp);
+}
+
+void HydrogenTelescope::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
+{
+    DLOG_F(INFO, "{} Received message: {}", getDeviceName(), dp->messageQueue(messageID));
+}
+
+inline static const char *StateStr(IPState st)
+{
+    switch (st)
     {
-        std::ostringstream os;
-        for (int i = 0; i < nvp->nnp; i++)
-        {
-            if (i)
-                os << ',';
-            os << nvp->np[i].name << ':' << nvp->np[i].value;
-        }
-        DLOG_F(INFO,"{} Received Number: {} = {} state = {}", _name, nvp->name, os.str().c_str(), StateStr(nvp->s));
-
-        if (nvp == telescopeinfo_prop)
-        {
-            // do nothing
-        }
+    default:
+    case IPS_IDLE:
+        return "Idle";
+    case IPS_OK:
+        return "Ok";
+    case IPS_BUSY:
+        return "Busy";
+    case IPS_ALERT:
+        return "Alert";
     }
+}
 
-    void HydrogenTelescope::newText(ITextVectorProperty *tvp)
+void HydrogenTelescope::newNumber(INumberVectorProperty *nvp)
+{
+    m_number_switch->match(nvp->name, nvp);
+}
+
+void HydrogenTelescope::newText(ITextVectorProperty *tvp)
+{
+    m_text_switch->match(tvp->name, tvp);
+}
+
+void HydrogenTelescope::newBLOB(IBLOB *bp)
+{
+    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", getDeviceName(), bp->name, bp->bloblen, bp->size);
+}
+
+void HydrogenTelescope::newProperty(HYDROGEN::Property *property)
+{
+    std::string PropName(property->getName());
+    HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
+
+    // DLOG_F(INFO,"{} Property: {}", getDeviceName(), property->getName());
+
+    if (Proptype == HYDROGEN_NUMBER)
     {
-        DLOG_F(INFO,"{} Received Text: {} = {}", _name, tvp->name, tvp->tp->text);
+        newNumber(property->getNumber());
     }
-
-    void HydrogenTelescope::newBLOB(IBLOB *bp)
+    else if (Proptype == HYDROGEN_SWITCH)
     {
-        DLOG_F(INFO,"{} Received BLOB {} len = {} size = {}", _name, bp->name, bp->bloblen, bp->size);
+        newSwitch(property->getSwitch());
     }
-
-    void HydrogenTelescope::newProperty(HYDROGEN::Property *property)
+    else if (Proptype == HYDROGEN_TEXT)
     {
-        std::string PropName(property->getName());
-        HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
-
-        DLOG_F(INFO,"{} Property: {}", _name, property->getName());
-
-        if (PropName == "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
-        {
-            DLOG_F(INFO,"{} Found device port for {} ", _name, property->getDeviceName());
-            telescope_port = property->getText();
-        }
-        else if (PropName == "CONNECTION" && Proptype == HYDROGEN_SWITCH)
-        {
-            DLOG_F(INFO,"{} Found CONNECTION for {} {}", _name, property->getDeviceName(), PropName);
-            connection_prop = property->getSwitch();
-            ISwitch *connectswitch = IUFindSwitch(connection_prop, "CONNECT");
-            is_connected = (connectswitch->s == ISS_ON);
-            if (!is_connected)
-            {
-                connection_prop->sp->s = ISS_ON;
-                sendNewSwitch(connection_prop);
-            }
-            DLOG_F(INFO,"{} Connected {}", _name, is_connected);
-        }
-        else if (PropName == "DRIVER_INFO" && Proptype == HYDROGEN_TEXT)
-        {
-            device_name = IUFindText(property->getText(), "DRIVER_NAME")->text;
-            indi_telescope_exec = IUFindText(property->getText(), "DRIVER_EXEC")->text;
-            indi_telescope_version = IUFindText(property->getText(), "DRIVER_VERSION")->text;
-            indi_telescope_interface = IUFindText(property->getText(), "DRIVER_INTERFACE")->text;
-            DLOG_F(INFO,"{} Name : {} connected exec {}", _name, device_name, indi_telescope_exec);
-        }
-        else if (PropName == indi_telescope_cmd + "INFO" && Proptype == HYDROGEN_NUMBER)
-        {
-            telescopeinfo_prop = property->getNumber();
-            newNumber(telescopeinfo_prop);
-        }
-        else if (PropName == indi_telescope_cmd + "DEVICE_BAUD_RATE" && Proptype == HYDROGEN_SWITCH)
-        {
-            rate_prop = property->getSwitch();
-            if (IUFindSwitch(rate_prop, "9600")->s == ISS_ON)
-                indi_telescope_rate = "9600";
-            else if (IUFindSwitch(rate_prop, "19200")->s == ISS_ON)
-                indi_telescope_rate = "19200";
-            else if (IUFindSwitch(rate_prop, "38400")->s == ISS_ON)
-                indi_telescope_rate = "38400";
-            else if (IUFindSwitch(rate_prop, "57600")->s == ISS_ON)
-                indi_telescope_rate = "57600";
-            else if (IUFindSwitch(rate_prop, "115200")->s == ISS_ON)
-                indi_telescope_rate = "115200";
-            else if (IUFindSwitch(rate_prop, "230400")->s == ISS_ON)
-                indi_telescope_rate = "230400";
-            DLOG_F(INFO,"{} baud rate : {}", _name, indi_telescope_rate);
-        }
-        else if (PropName == indi_telescope_cmd + "DEVICE_PORT" && Proptype == HYDROGEN_TEXT)
-        {
-            indi_telescope_port = IUFindText(property->getText(), "PORT")->text;
-            DLOG_F(INFO,"{} USB Port : {}", _name, indi_telescope_port);
-        }
+        newText(property->getText());
     }
+}
 
-    void HydrogenTelescope::IndiServerConnected()
-    {
-        DLOG_F(INFO,"{} connection succeeded", _name);
-        is_connected = true;
-    }
+void HydrogenTelescope::IndiServerConnected()
+{
+    DLOG_F(INFO, "{} connection succeeded", getDeviceName());
+    is_connected.store(true);
+}
 
-    void HydrogenTelescope::IndiServerDisconnected(int exit_code)
-    {
-        DLOG_F(INFO,"{}: serverDisconnected", _name);
-        // after disconnection we reset the connection status and the properties pointers
-        ClearStatus();
-        // in case the connection lost we must reset the client socket
-        if (exit_code == -1)
-            DLOG_F(INFO,"{} : Hydrogen server disconnected", _name);
-    }
+void HydrogenTelescope::IndiServerDisconnected(int exit_code)
+{
+    DLOG_F(INFO, "{}: serverDisconnected", getDeviceName());
+    // after disconnection we reset the connection status and the properties pointers
+    ClearStatus();
+    // in case the connection lost we must reset the client socket
+    if (exit_code == -1)
+        DLOG_F(INFO, "{} : Hydrogen server disconnected", getDeviceName());
+}
 
-    void HydrogenTelescope::removeDevice(HYDROGEN::BaseDevice *dp)
-    {
-        ClearStatus();
-        DLOG_F(INFO,"{} disconnected", _name);
-    }
+void HydrogenTelescope::removeDevice(HYDROGEN::BaseDevice *dp)
+{
+    ClearStatus();
+    DLOG_F(INFO, "{} disconnected", getDeviceName());
+}
 
-    void HydrogenTelescope::ClearStatus()
-    {
-        connection_prop = nullptr;
-        telescope_port = nullptr;
-        telescope_device = nullptr;
-        connection_prop = nullptr;
-        rate_prop = nullptr;
-        telescopeinfo_prop = nullptr;
-        telescope_port = nullptr;
-        telescope_device = nullptr;
-    }
-
-    HydrogenTelescope::HydrogenTelescope(const std::string &name) : Telescope(name)
-    {
-        DLOG_F(INFO,"Hydrogen telescope {} init successfully", name);
-    }
-
-    HydrogenTelescope::~HydrogenTelescope()
-    {
-    }
-
-    bool HydrogenTelescope::connect(std::string name)
-    {
-        DLOG_F(INFO,"Trying to connect to {}", name);
-        if (is_connected)
-        {
-            spdlog::warn("{} is already connected", _name);
-            return true;
-        }
-        if (hostname.empty() || port == 0)
-        {
-            throw std::runtime_error("Host or port not set!");
-        }
-        setServer(hostname.c_str(), port);
-        watchDevice(name.c_str());
-        if (connectServer())
-        {
-            DLOG_F(INFO,"{}: connectServer done ready = {}", _name, is_ready);
-            connectDevice(name.c_str());
-            is_connected = true;
-            return true;
-        }
-        is_connected = false;
-        return false;
-    }
-
-    bool HydrogenTelescope::disconnect()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return true;
-        }
-        disconnectServer();
-        is_connected = false;
-        return true;
-    }
-
-    bool HydrogenTelescope::reconnect()
-    {
-        return disconnect() and connect(_name);
-    }
-
-    bool HydrogenTelescope::scanForAvailableDevices()
-    {
-        throw std::runtime_error("scanForAvailableDevices function not implemented");
-    }
-
-    bool HydrogenTelescope::SlewTo(const std::string &ra, const std::string &dec, const bool j2000)
-    {
-        throw std::runtime_error("SlewTo function not implemented");
-    }
-
-    bool HydrogenTelescope::Abort()
-    {
-        throw std::runtime_error("Abort function not implemented");
-    }
-
-    bool HydrogenTelescope::StartTracking(const std::string &model, const std::string &speed)
-    {
-        throw std::runtime_error("StartTracking function not implemented");
-    }
-
-    bool HydrogenTelescope::StopTracking()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::setTrackingMode(const std::string &mode)
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::setTrackingSpeed(const std::string &speed)
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::Home()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::isAtHome()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::setHomePosition()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::Park()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::Unpark()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::isAtPark()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    bool HydrogenTelescope::setParkPosition()
-    {
-        if (!is_connected)
-        {
-            spdlog::warn("{} is not connected", _name);
-            return false;
-        }
-        return true;
-    }
-
-    std::shared_ptr<Lithium::SimpleTask> HydrogenTelescope::getSimpleTask(const std::string &task_name, const nlohmann::json &params)
-    {
-        spdlog::error("Unknown type of the Hydrogen telescope task: {}", task_name);
-        return nullptr;
-    }
-
-    std::shared_ptr<Lithium::ConditionalTask> HydrogenTelescope::getCondtionalTask(const std::string &task_name, const nlohmann::json &params)
-    {
-        throw std::runtime_error("getCondtionalTask function not implemented");
-    }
-
-    std::shared_ptr<Lithium::LoopTask> HydrogenTelescope::getLoopTask(const std::string &task_name, const nlohmann::json &params)
-    {
-        throw std::runtime_error("getLoopTask function not implemented");
-    }
-
-} // namespace Lithium
+void HydrogenTelescope::ClearStatus()
+{
+    m_connection_prop = nullptr;
+    telescope_port = nullptr;
+    telescope_device = nullptr;
+    m_connection_prop = nullptr;
+    rate_prop = nullptr;
+    telescopeinfo_prop = nullptr;
+    telescope_port = nullptr;
+    telescope_device = nullptr;
+}

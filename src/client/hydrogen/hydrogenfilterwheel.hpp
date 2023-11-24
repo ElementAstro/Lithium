@@ -1,5 +1,5 @@
 /*
- * indifilterwheel.hpp
+ * hydrogenfilterwheel.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -32,62 +32,70 @@ Description: Hydrogen Filterwheel
 #pragma once
 
 #include "hydrogendevice.hpp"
+#include "core/filterwheel.hpp"
 
-namespace Lithium
+template <typename... Args>
+class StringSwitch;
+
+class HydrogenFilterwheel : public Filterwheel, public LithiumIndiClient
 {
-    class HydrogenFilterwheel : public Filterwheel, public LithiumIndiClient
-    {
-        // Hydrogen Parameters
-    private:
-        ISwitchVectorProperty *connection_prop;
-        INumberVectorProperty *filterinfo_prop;
-        ITextVectorProperty *filter_port;
-        ISwitchVectorProperty *rate_prop;
-        HYDROGEN::BaseDevice *filter_device;
+public:
+    HydrogenFilterwheel(const std::string &name);
+    ~HydrogenFilterwheel();
 
-        bool is_ready;
-        bool has_blob;
+    virtual bool connect(const json &params) override;
 
-        std::string indi_filter_port = "";
-        std::string indi_filter_rate = "";
+    virtual bool disconnect(const json &params) override;
 
-        std::string indi_filter_cmd;
-        std::string indi_filter_exec = "";
-        std::string indi_filter_version = "";
-        std::string indi_filter_interface = "";
+    virtual bool reconnect(const json &params) override;
 
-    public:
-        HydrogenFilterwheel(const std::string &name);
-        ~HydrogenFilterwheel();
+    virtual bool isConnected() override;
 
-        bool connect(std::string name) override;
-        bool disconnect() override;
-        bool reconnect() override;
-        bool scanForAvailableDevices() override;
+    virtual bool moveTo(const json &params) override;
 
-        // 获取简单任务
-        std::shared_ptr<Lithium::SimpleTask> getSimpleTask(const std::string &task_name, const nlohmann::json &params) override;
-        // 获取条件任务
-        std::shared_ptr<Lithium::ConditionalTask> getCondtionalTask(const std::string &task_name, const nlohmann::json &params) override;
-        // 获取循环任务
-        std::shared_ptr<Lithium::LoopTask> getLoopTask(const std::string &task_name, const nlohmann::json &params) override;
+    virtual bool getCurrentPosition(const json &params) override;
 
-    protected:
-        void ClearStatus();
+protected:
+    void newDevice(HYDROGEN::BaseDevice *dp) override;
+    void removeDevice(HYDROGEN::BaseDevice *dp) override;
+    void newProperty(HYDROGEN::Property *property) override;
+    void removeProperty(HYDROGEN::Property *property) override {}
+    void newBLOB(IBLOB *bp) override;
+    void newSwitch(ISwitchVectorProperty *svp) override;
+    void newNumber(INumberVectorProperty *nvp) override;
+    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
+    void newText(ITextVectorProperty *tvp) override;
+    void newLight(ILightVectorProperty *lvp) override {}
+    void IndiServerConnected() override;
+    void IndiServerDisconnected(int exit_code) override;
 
-    protected:
-        void newDevice(HYDROGEN::BaseDevice *dp) override;
-        void removeDevice(HYDROGEN::BaseDevice *dp) override;
-        void newProperty(HYDROGEN::Property *property) override;
-        void removeProperty(HYDROGEN::Property *property) override {}
-        void newBLOB(IBLOB *bp) override;
-        void newSwitch(ISwitchVectorProperty *svp) override;
-        void newNumber(INumberVectorProperty *nvp) override;
-        void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
-        void newText(ITextVectorProperty *tvp) override;
-        void newLight(ILightVectorProperty *lvp) override {}
-        void IndiServerConnected() override;
-        void IndiServerDisconnected(int exit_code) override;
-    };
+protected:
 
-}
+    void ClearStatus();
+
+    // Hydrogen Parameters
+private:
+    std::shared_ptr<ISwitchVectorProperty> m_connection_prop;
+    std::shared_ptr<INumberVectorProperty> filterinfo_prop;
+    std::shared_ptr<ITextVectorProperty> filter_port;
+    std::shared_ptr<ISwitchVectorProperty> rate_prop;
+    std::shared_ptr<ITextVectorProperty> filter_prop;
+    HYDROGEN::BaseDevice *filter_device;
+
+    std::atomic_bool is_ready; // 是否就绪
+    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_debug;
+    std::atomic_bool is_connected;
+
+    std::string hydrogen_filter_port = "";
+    std::string hydrogen_filter_rate = "";
+
+    std::string hydrogen_filter_cmd;
+    std::string hydrogen_filter_exec = "";
+    std::string hydrogen_filter_version = "";
+    std::string hydrogen_filter_interface = "";
+
+    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
+    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
+    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
+};

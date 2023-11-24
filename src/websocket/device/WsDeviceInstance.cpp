@@ -32,12 +32,18 @@ Description: WebSocket Device Instance (each device each instance)
 #include "WsDeviceInstance.hpp"
 #include "WsDeviceHub.hpp"
 
-#include "modules/utils/time.hpp"
+#include "device/device_manager.hpp"
+#include "atom/server/serialize.hpp"
+#include "atom/server/deserialize.hpp"
+
+#include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
-#include "modules/error/error_code.hpp"
+#include "websocket/template/function.hpp"
+#include "websocket/template/variable.hpp"
+#include "atom/error/error_code.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket,
@@ -50,10 +56,18 @@ WsDeviceInstance::WsDeviceInstance(const std::shared_ptr<AsyncWebSocket> &socket
 
 	m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
 
-	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty);
-	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty);
-	LiRegisterFunc("runTask", &WsDeviceInstance::runTask);
-	LiRegisterFunc("runFunc", &WsDeviceInstance::runFunc);
+	LiRegisterFunc("getProperty", &WsDeviceInstance::getProperty, this);
+	LiRegisterFunc("getProperties", &WsDeviceInstance::getProperties, this);
+	LiRegisterFunc("setProperty", &WsDeviceInstance::setProperty, this);
+	LiRegisterFunc("runTask", &WsDeviceInstance::runTask, this);
+	LiRegisterFunc("runFunc", &WsDeviceInstance::runFunc, this);
+	LiRegisterFunc("loadDriverLibrary", &WsDeviceInstance::loadDriverLibrary, this);
+	LiRegisterFunc("unloadDriverLibrary", &WsDeviceInstance::unloadDriverLibrary, this);
+	LiRegisterFunc("addDriver", &WsDeviceInstance::addDriver, this);
+	LiRegisterFunc("removeDriver", &WsDeviceInstance::removeDriver, this);
+
+	m_SerializationEngine = std::make_unique<SerializationEngine>();
+	m_DeserializationEngine = std::make_unique<DeserializationEngine>();
 }
 
 WsDeviceInstance::~WsDeviceInstance()
@@ -155,7 +169,7 @@ oatpp::async::CoroutineStarter WsDeviceInstance::readMessage(const std::shared_p
 		json res;
 		if (!json::accept(wholeMessage->c_str()))
 		{
-			RESPONSE_ERROR(res, ServerError::InvalidFormat, "Message is not in JSON format");
+			RESPONSE_ERROR_C(res, ServerError::InvalidFormat, "Message is not in JSON format");
 		}
 		else
 		{
@@ -172,12 +186,12 @@ oatpp::async::CoroutineStarter WsDeviceInstance::readMessage(const std::shared_p
 				}
 				else
 				{
-					RESPONSE_ERROR(res, ServerError::MissingParameters, "Missing parameter: name or params");
+					RESPONSE_ERROR_C(res, ServerError::MissingParameters, "Missing parameter: name or params");
 				}
 			}
 			catch (const std::exception &e)
 			{
-				RESPONSE_EXCEPTION(res, ServerError::UnknownError, e.what());
+				RESPONSE_EXCEPTION_C(res, ServerError::UnknownError, e.what());
 			}
 		}
 		if (res.contains("error") || res.contains("message"))
@@ -192,26 +206,109 @@ oatpp::async::CoroutineStarter WsDeviceInstance::readMessage(const std::shared_p
 	return nullptr; // do nothing
 }
 
+void WsDeviceInstance::loadDriverLibrary(const json &m_params)
+{
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(lib_path);
+	CHECK_PARAM_EXISTS(lib_name);
+	GET_STRING_PARAM_VALUE(m_params["lib_path"], lib_path);
+	GET_STRING_PARAM_VALUE(m_params["lib_name"], lib_name);
+	if (!Lithium::MyApp->addDeviceLibrary(lib_path, lib_name))
+	{
+		res["error"] = "Failed to add device library";
+	}
+	FUNCTION_END;
+}
+
+void WsDeviceInstance::unloadDriverLibrary(const json &m_params)
+{
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(lib_name);
+	GET_STRING_PARAM_VALUE(m_params["lib_name"], lib_name);
+	if (!Lithium::MyApp->removeDeviceLibrary(lib_name))
+	{
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device library");
+	}
+	FUNCTION_END;
+}
+
+void WsDeviceInstance::addDriver(const json &m_params)
+{
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(device_type);
+	CHECK_PARAM_EXISTS(device_name);
+	SET_DEVICE_TYPE(m_params["device_type"]);
+	GET_STRING_PARAM_VALUE(m_params["device_name"], device_name);
+	if (!Lithium::MyApp->addDevice(device_type, device_name, m_params.value("lib_name", "")))
+	{
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to add device");
+	}
+	else
+	{
+		SET_STRING_PARAM_VALUE(device_name, m_device_name);
+		Lithium::MyApp->addDeviceObserver(device_type, device_name);
+	}
+	FUNCTION_END;
+}
+
+void WsDeviceInstance::removeDriver(const json &m_params)
+{
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(device_type);
+	CHECK_PARAM_EXISTS(device_name);
+	SET_DEVICE_TYPE(m_params["device_type"]);
+	GET_STRING_PARAM_VALUE(m_params["device_name"], device_name);
+	if (!Lithium::MyApp->removeDevice(device_type, device_name))
+	{
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device");
+	}
+	FUNCTION_END;
+}
+
 void WsDeviceInstance::setProperty(const json &m_params)
 {
-	LOG_F(INFO, "Run set property");
-	sendMessage("hello");
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(name);
+	CHECK_PARAM_EXISTS(value);
+	GET_STRING_PARAM_VALUE(m_params["name"], name);
+	GET_STRING_PARAM_VALUE(m_params["value"], value);
+	if (!Lithium::MyApp->setProperty(m_device_name, name, value))
+	{
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to remove device library");
+	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::getProperty(const json &m_params)
 {
-	LOG_F(INFO, "Run get property");
-	sendMessage("hello");
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(name);
+	GET_STRING_PARAM_VALUE(m_params["name"], name);
+	if (!Lithium::MyApp->getProperty(m_device_name, name))
+	{
+		RESPONSE_ERROR(res, ServerError::RunFailed, "Failed to get device property");
+	}
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::getProperties(const json &m_params)
 {
+	FUNCTION_BEGIN;
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::runTask(const json &m_params)
 {
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(task_name);
+	GET_STRING_PARAM_VALUE(m_params["task_name"], task_name);
+	FUNCTION_END;
 }
 
 void WsDeviceInstance::runFunc(const json &m_params)
 {
+	FUNCTION_BEGIN;
+	CHECK_PARAM_EXISTS(func_name);
+	GET_STRING_PARAM_VALUE(m_params["func_name"], func_name);
+	FUNCTION_END;
 }

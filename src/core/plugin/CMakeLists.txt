@@ -1,0 +1,50 @@
+cmake_minimum_required(VERSION 3.13)
+project(lithiumplugin C CXX)
+
+
+list(APPEND ${PROJECT_NAME}_SOURCES
+    exe_plugin.cpp
+    plugin.cpp
+    script_plugin.cpp
+)
+
+# Headers
+list(APPEND ${PROJECT_NAME}_HEADERS
+    exe_plugin.hpp
+    plugin.hpp
+    script_plugin.hpp
+)
+
+# Private Headers
+list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
+)
+
+# Build Object Library
+add_library(${PROJECT_NAME}_OBJECT OBJECT)
+set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
+
+target_sources(${PROJECT_NAME}_OBJECT
+    PUBLIC
+    ${${PROJECT_NAME}_HEADERS}
+    PRIVATE
+    ${${PROJECT_NAME}_SOURCES}
+    ${${PROJECT_NAME}_PRIVATE_HEADERS}
+)
+
+target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+
+add_library(${PROJECT_NAME}static STATIC)
+
+target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
+target_include_directories(${PROJECT_NAME}static PUBLIC .)
+
+set_target_properties(${PROJECT_NAME}static PROPERTIES
+    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
+    SOVERSION ${HYDROGEN_SOVERSION}
+    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
+)
+
+install(TARGETS ${PROJECT_NAME}static
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)

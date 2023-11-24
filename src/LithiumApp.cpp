@@ -32,49 +32,48 @@ Description: Lithium App Enter
 #include "LithiumApp.hpp"
 #include "config.h"
 
-#include "modules/thread/thread.hpp"
-#include "modules/config/configor.hpp"
-#include "modules/device/device_manager.hpp"
-#include "modules/system/process.hpp"
-#include "modules/task/task_manager.hpp"
-#include "modules/task/task_generator.hpp"
-#include "modules/task/task_stack.hpp"
+#include "atom/thread/thread.hpp"
+#include "config/configor.hpp"
+#include "device/device_manager.hpp"
+#include "atom/system/process.hpp"
+#include "task/task_manager.hpp"
+#include "task/task_generator.hpp"
+#include "task/task_stack.hpp"
 #include "core/property/iproperty.hpp"
-#include "modules/plugin/plugin_manager.hpp"
-#include "modules/script/script_manager.hpp"
+#include "plugin/plugin_loader.hpp"
+#include "script/script_manager.hpp"
+
+#include "atom/server/global_ptr.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
 namespace Lithium
 {
     std::shared_ptr<LithiumApp> MyApp = nullptr;
+
     LithiumApp::LithiumApp()
     {
         try
         {
-            m_ConfigManager = Config::ConfigManager::createShared();
-            m_MessageBus = std::make_shared<MessageBus>();
-            m_DeviceManager = DeviceManager::createShared(m_MessageBus, m_ConfigManager);
-
-            auto max_thread = GetConfig("config/server").value<int>("maxthread", 10);
-            m_ThreadManager = Thread::ThreadManager::createShared(max_thread);
-
-            auto max_process = GetConfig("config/server").value<int>("maxprocess", 10);
-            m_ProcessManager = Process::ProcessManager::createShared(max_process);
-
-            m_PluginManager = PluginManager::createShared(m_ProcessManager);
-            m_TaskManager = std::make_shared<Task::TaskManager>("tasks.json");
-            m_TaskGenerator = std::make_shared<Task::TaskGenerator>(m_DeviceManager);
-            m_TaskStack = std::make_shared<Task::TaskStack>();
-
-            m_ScriptManager = ScriptManager::createShared(m_MessageBus);
+            m_ConfigManager = GetPtr<ConfigManager>("ConfigManager");
+            m_DeviceManager = GetPtr<DeviceManager>("DeviceManager");
+            m_PluginManager = GetPtr<PluginManager>("PluginManager");
+            m_TaskManager = GetPtr<Task::TaskManager>("TaskManager");
+            m_TaskGenerator = GetPtr<Task::TaskGenerator>("TaskGenerator");
+            m_TaskStack = GetPtr<Task::TaskStack>("TaskStack");
+            m_ScriptManager = GetPtr<ScriptManager>("ScriptManager");
+            m_ThreadManager = GetPtr<Thread::ThreadManager>("ThreadManager");
+            m_ProcessManager = GetPtr<Process::ProcessManager>("ProcessManager");
+            m_MessageBus = GetPtr<MessageBus>("MessageBus");
 
             m_MessageBus->StartProcessingThread<IStringProperty>();
             m_MessageBus->StartProcessingThread<IBoolProperty>();
             m_MessageBus->StartProcessingThread<INumberProperty>();
+            m_MessageBus->StartProcessingThread<INumberVector>();
+            m_MessageBus->StartProcessingThread<std::string>();
         }
         catch (const std::exception &e)
         {
@@ -86,6 +85,11 @@ namespace Lithium
     LithiumApp::~LithiumApp()
     {
         m_MessageBus->StopAllProcessingThreads();
+    }
+
+    std::shared_ptr<LithiumApp> LithiumApp::createShared()
+    {
+        return std::make_shared<LithiumApp>();
     }
 
     json LithiumApp::GetConfig(const std::string &key_path) const
@@ -117,7 +121,7 @@ namespace Lithium
 
     void LithiumApp::addDeviceObserver(DeviceType type, const std::string &name)
     {
-        m_DeviceManager->AddDeviceObserver(type, name);
+        m_DeviceManager->addDeviceObserver(type, name);
     }
 
     bool LithiumApp::removeDevice(DeviceType type, const std::string &name)
@@ -125,9 +129,9 @@ namespace Lithium
         return m_DeviceManager->removeDevice(type, name);
     }
 
-    bool LithiumApp::removeDevicesByName(const std::string &name)
+    bool LithiumApp::removeDeviceByName(const std::string &name)
     {
-        return m_DeviceManager->removeDevicesByName(name);
+        return m_DeviceManager->removeDeviceByName(name);
     }
 
     bool LithiumApp::removeDeviceLibrary(const std::string &lib_name)
@@ -153,6 +157,17 @@ namespace Lithium
     std::shared_ptr<SimpleTask> LithiumApp::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params)
     {
         return m_DeviceManager->getTask(type, device_name, task_name, params);
+    }
+
+    bool LithiumApp::getProperty(const std::string &name, const std::string &property_name)
+    {
+        m_DeviceManager->findDeviceByName(name)->getStringProperty(property_name);
+        return true;
+    }
+
+    bool LithiumApp::setProperty(const std::string &name, const std::string &property_name, const std::string &property_value)
+    {
+        return true;
     }
 
     bool LithiumApp::createProcess(const std::string &command, const std::string &identifier)
@@ -319,6 +334,19 @@ namespace Lithium
         }
     }
 
+    bool LithiumApp::unloadChaiScriptFile(const std::string &filename)
+    {
+        if (m_ScriptManager->unloadScriptFile(filename))
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, _("Failed to unload chaiscript file {}"), filename);
+            return false;
+        }
+    }
+
     bool LithiumApp::runChaiScript(const std::string &filename)
     {
         if (m_ScriptManager->runScript(filename))
@@ -335,6 +363,20 @@ namespace Lithium
     void LithiumApp::initMyAppChai()
     {
         m_ScriptManager->InitMyApp();
+    }
+
+    void InitLithiumApp()
+    {
+        AddPtr("ConfigManager", ConfigManager::createShared());
+        AddPtr("MessageBus", MessageBus::createShared());
+        AddPtr("ThreadManager", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
+        AddPtr("ProcessManager", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
+        AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
+        AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
+        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<Task::TaskManager>("TaskManager")));
+        AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
+        AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
+        AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
     }
 
 }

@@ -34,9 +34,9 @@ Description: IO Route
 
 #include "config.h"
 
-#include "modules/io/io.hpp"
-#include "modules/io/file.hpp"
-#include "modules/io/compress.hpp"
+#include "atom/io/io.hpp"
+#include "atom/io/file.hpp"
+#include "atom/io/compress.hpp"
 
 #include "oatpp/web/server/api/ApiController.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
@@ -46,7 +46,7 @@ Description: IO Route
 #include "data/IODto.hpp"
 #include "data/StatusDto.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 
@@ -71,7 +71,6 @@ public:
         info->addConsumes<Object<CreateDirectoryDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/directory/create", getUICreateDirectory)
     {
         ENDPOINT_ASYNC_INIT(getUICreateDirectory)
@@ -108,9 +107,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIRemoveDirectory)
     {
@@ -118,7 +114,6 @@ public:
         info->addConsumes<Object<CreateDirectoryDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/directory/remove", getUIRemoveDirectory)
     {
         ENDPOINT_ASYNC_INIT(getUIRemoveDirectory)
@@ -155,9 +150,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIRenameDirectory)
     {
@@ -165,7 +157,6 @@ public:
         info->addConsumes<Object<RenameDirectoryDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/directory/rename", getUIRenameDirectory)
     {
         ENDPOINT_ASYNC_INIT(getUIRenameDirectory)
@@ -211,9 +202,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIMoveDirectory)
     {
@@ -221,7 +209,6 @@ public:
         info->addConsumes<Object<MoveDirectoryDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/directory/move", getUIMoveDirectory)
     {
         ENDPOINT_ASYNC_INIT(getUIMoveDirectory)
@@ -259,9 +246,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUICopyFile)
     {
@@ -269,7 +253,6 @@ public:
         info->addConsumes<Object<CopyFileDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/file/copy", getUICopyFile)
     {
         ENDPOINT_ASYNC_INIT(getUICopyFile)
@@ -307,9 +290,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIMoveFile)
     {
@@ -317,7 +297,6 @@ public:
         info->addConsumes<Object<MoveFileDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/file/move", getUIMoveFile)
     {
         ENDPOINT_ASYNC_INIT(getUIMoveFile)
@@ -355,9 +334,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIRenameFile)
     {
@@ -365,7 +341,6 @@ public:
         info->addConsumes<Object<RenameFileDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/file/rename", getUIRenameFile)
     {
         ENDPOINT_ASYNC_INIT(getUIRenameFile)
@@ -396,9 +371,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 
     ENDPOINT_INFO(getUIRemoveFile)
     {
@@ -406,7 +378,6 @@ public:
         info->addConsumes<Object<RemoveFileDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-#if ENABLE_ASYNC
     ENDPOINT_ASYNC("GET", "/api/io/file/remove", getUIRemoveFile)
     {
         ENDPOINT_ASYNC_INIT(getUIRemoveFile)
@@ -435,9 +406,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-#else
-
-#endif
 };
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen

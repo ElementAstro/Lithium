@@ -32,12 +32,12 @@ Description: Task API of WebSocket Server
 #include "WebSocketServer.hpp"
 #include "LithiumApp.hpp"
 
-#include "modules/utils/time.hpp"
+#include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
-#include "modules/error/error_code.hpp"
+#include "atom/error/error_code.hpp"
 
 #include "loguru/loguru.hpp"
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 void WebSocketServer::AddTask(const json &m_params)
@@ -63,7 +63,7 @@ void WebSocketServer::AddTask(const json &m_params)
 		const std::string task_name = m_params.value("task_name", "");
 		if (task_origin == "device")
 		{
-			Lithium::DeviceType device_type;
+			DeviceType device_type;
 			auto it = DeviceTypeMap.find(m_params["device_type"]);
 			if (it == DeviceTypeMap.end())
 			{

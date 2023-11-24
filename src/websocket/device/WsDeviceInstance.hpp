@@ -47,17 +47,49 @@ Description: WebSocket Device Instance (each device each instance)
 
 #include "oatpp/core/macro/component.hpp"
 
-#include "modules/server/commander.hpp"
+#include "atom/server/commander.hpp"
 
 #include "LithiumApp.hpp"
 
 #include <memory>
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 
 class WsDeviceHub; // FWD
+class SerializationEngine;
+class DeserializationEngine;
+
+#define CHECK_DEVICE_VALIDITY(device, deviceType)                                                                                                          \
+	if (!device)                                                                                                                                           \
+	{                                                                                                                                                      \
+		if (!m_params.contains("device_name") || !m_params["device_name"].is_string())                                                                     \
+		{                                                                                                                                                  \
+			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Device name is required");                                                                \
+		}                                                                                                                                                  \
+		if (Lithium::MyApp->findDevice(DeviceType::deviceType, m_params["device_name"].get<std::string>()) == -1)                                          \
+		{                                                                                                                                                  \
+			RESPONSE_ERROR(res, ServerError::InvalidParameters, "Device not found");                                                                       \
+		}                                                                                                                                                  \
+		try                                                                                                                                                \
+		{                                                                                                                                                  \
+			device = std::dynamic_pointer_cast<deviceType>(Lithium::MyApp->getDevice(DeviceType::deviceType, m_params["device_name"].get<std::string>())); \
+		}                                                                                                                                                  \
+		catch (const std::bad_any_cast &e)                                                                                                                 \
+		{                                                                                                                                                  \
+			RESPONSE_ERROR(res, ServerError::UnknownError, fmt::format("{} with {}", "Failed to cast pointer", e.what()));                                 \
+		}                                                                                                                                                  \
+	}
+
+#define SET_DEVICE_TYPE(device_type_)                                                 \
+	DeviceType device_type;                                                           \
+	auto it = DeviceTypeMap.find(device_type_);                                       \
+	if (it == DeviceTypeMap.end())                                                    \
+	{                                                                                 \
+		RESPONSE_ERROR(res, ServerError::InvalidParameters, "Unsupport device type"); \
+	}                                                                                 \
+	device_type = it->second;
 
 /**
  * @brief Class representing an instance of a WebSocket device.
@@ -123,6 +155,13 @@ public:
 	v_int32 getUserId();
 
 public:
+	void loadDriverLibrary(const json &m_params);
+
+	void unloadDriverLibrary(const json &m_params);
+
+	void addDriver(const json &m_params);
+
+	void removeDriver(const json &m_params);
 	/**
 	 * @brief Set a property of the WsDeviceInstance.
 	 *
@@ -198,6 +237,29 @@ public: // WebSocket Listener methods
 	 */
 	CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
 
+public:
+	/**
+	 * @brief Register a function handler for the VCommandDispatcher.
+	 *
+	 * @tparam ClassType The class type of the handler.
+	 * @param name The name of the function.
+	 * @param handler The function handler.
+	 */
+	template <typename T>
+	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &), T *object)
+	{
+		m_CommandDispatcher->RegisterMemberHandler(name, object, memberFunc);
+	}
+
+	/**
+	 * @brief Run a function on the VCommandDispatcher.
+	 *
+	 * @param name The name of the function to be run.
+	 * @param params JSON object containing the parameters for the function.
+	 * @return True if the function was run successfully, false otherwise.
+	 */
+	bool LiRunFunc(const std::string &name, const json &params);
+
 private:
 	/**
 	 * @brief Buffer for messages. Needed for multi-frame messages.
@@ -211,29 +273,19 @@ private:
 	 */
 	oatpp::async::Lock m_writeLock;
 
-	std::unique_ptr<CommandDispatcher<void,json>> m_CommandDispatcher;
+	std::unique_ptr<CommandDispatcher<void, json>> m_CommandDispatcher;
 
-	/**
-	 * @brief Register a function handler for the VCommandDispatcher.
-	 *
-	 * @tparam ClassType The class type of the handler.
-	 * @param name The name of the function.
-	 * @param handler The function handler.
-	 */
-	template <typename T>
-	void LiRegisterFunc(const std::string &name, void (T::*memberFunc)(const json &))
-	{
-		m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
-	}
+	std::unique_ptr<SerializationEngine> m_SerializationEngine;
 
-	/**
-	 * @brief Run a function on the VCommandDispatcher.
-	 *
-	 * @param name The name of the function to be run.
-	 * @param params JSON object containing the parameters for the function.
-	 * @return True if the function was run successfully, false otherwise.
-	 */
-	bool LiRunFunc(const std::string &name, const json &params);
+	std::unique_ptr<DeserializationEngine> m_DeserializationEngine;
+
+	std::unordered_map<std::string, DeviceType> DeviceTypeMap = {
+		{"Camera", DeviceType::Camera},
+		{"Telescope", DeviceType::Telescope},
+		{"Focuser", DeviceType::Focuser},
+		{"FilterWheel", DeviceType::FilterWheel},
+		{"Solver", DeviceType::Solver},
+		{"Guider", DeviceType::Guider}};
 
 private:
 	std::shared_ptr<AsyncWebSocket> m_socket;

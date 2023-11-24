@@ -35,12 +35,27 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "modules/server/message_bus.hpp"
-#include "modules/device/device_manager.hpp"
-#include "modules/system/process.hpp"
+#include "atom/server/message_bus.hpp"
+#include "device/device_manager.hpp"
+#include "atom/system/process.hpp"
 
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
 using json = nlohmann::json;
+
+#define GetIntConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<int>()
+
+#define GetFloatConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<float>()
+
+#define GetBoolConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<bool>()
+
+#define GetDoubleConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<double>()
+
+#define GetStringConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<std::string>()
 
 namespace Lithium
 {
@@ -49,10 +64,7 @@ namespace Lithium
         class ThreadManager;
     }
 
-    namespace Config
-    {
-        class ConfigManager;
-    }
+    class ConfigManager;
 
     class ScriptManager;
     class PluginManager;
@@ -65,12 +77,14 @@ namespace Lithium
         class TaskManager;
         class TaskStack;
     }
-    
+
     class LithiumApp
     {
     public:
         LithiumApp();
         ~LithiumApp();
+
+        static std::shared_ptr<LithiumApp> createShared();
 
     public:
         json GetConfig(const std::string &key_path) const;
@@ -82,16 +96,16 @@ namespace Lithium
         bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
         void addDeviceObserver(DeviceType type, const std::string &name);
         bool removeDevice(DeviceType type, const std::string &name);
-        bool removeDevicesByName(const std::string &name);
+        bool removeDeviceByName(const std::string &name);
         bool removeDeviceLibrary(const std::string &lib_name);
         std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
         size_t findDevice(DeviceType type, const std::string &name);
         std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
+        bool getProperty(const std::string &name, const std::string &property_name);
+        bool setProperty(const std::string &name, const std::string &property_name, const std::string &property_value);
 
     public:
-
-        
     public:
         bool createProcess(const std::string &command, const std::string &identifier);
         bool runScript(const std::string &script, const std::string &identifier);
@@ -137,6 +151,7 @@ namespace Lithium
 
     public:
         bool loadChaiScriptFile(const std::string &filename);
+        bool unloadChaiScriptFile(const std::string &filename);
         bool runChaiCommand(const std::string &command);
         bool runChaiMultiCommand(const std::vector<std::string> &command);
         bool runChaiScript(const std::string &filename);
@@ -144,7 +159,7 @@ namespace Lithium
 
     private:
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
-        std::shared_ptr<Config::ConfigManager> m_ConfigManager;
+        std::shared_ptr<ConfigManager> m_ConfigManager;
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Process::ProcessManager> m_ProcessManager;
         std::shared_ptr<Task::TaskManager> m_TaskManager;
@@ -155,4 +170,6 @@ namespace Lithium
         std::shared_ptr<ScriptManager> m_ScriptManager;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
+
+    void InitLithiumApp();
 } // namespace Lithium

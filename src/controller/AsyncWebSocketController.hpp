@@ -97,6 +97,7 @@ public:
 				auto parameters = std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
 				(*parameters)["deviceName"] = hubName;
 				(*parameters)["deviceHub"] = instanceName;
+				(*parameters)["deviceType"] = hubType;
 				response->setConnectionUpgradeParameters(parameters);
 				return _return(response);
 			}

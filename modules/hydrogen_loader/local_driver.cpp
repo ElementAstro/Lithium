@@ -19,7 +19,7 @@
 #include "xml_util.hpp"
 #include "hydrogen_server.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 LocalDvrInfo::LocalDvrInfo() : DvrInfo(true)
 {

@@ -41,7 +41,7 @@ Description: INDI Device Manager
 
 #include <regex>
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 INDIManager::INDIManager(const std::string &hst, int prt, const std::string &cfg, const std::string &dta, const std::string &fif)
 {

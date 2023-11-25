@@ -49,7 +49,7 @@ Description: Process Manager
 #error "不支持的操作系统"
 #endif
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace Lithium::Process
 {

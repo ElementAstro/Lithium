@@ -35,9 +35,9 @@ Description: Downloader
 #include <fstream>
 #include <thread>
 #include <chrono>
-#include "cpp_httplib/httplib.h"
+#include "atom/web/httplib.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 DownloadManager::DownloadManager(const std::string &task_file) : task_file_(task_file)
 {

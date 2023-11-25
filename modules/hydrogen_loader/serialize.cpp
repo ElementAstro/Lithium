@@ -21,7 +21,7 @@
 #include "xml_util.hpp"
 #include "hydrogen_server.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 SerializedMsg::SerializedMsg(Msg *parent) : asyncProgress(), owner(parent), awaiters(), chuncks(), ownBuffers()
 {

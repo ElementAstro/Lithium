@@ -31,7 +31,7 @@ Description: Guider Simulator and Basic Definition
 
 #include "guider.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 Guider::Guider(const std::string &name) : Device(name)
 {

@@ -44,7 +44,7 @@ Description: PID Watcher with Network
 #include <dirent.h>
 #endif
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 PidWWatcher::PidWWatcher(const std::string &processName) : processName_(processName), isMonitoring_(false) {}
 

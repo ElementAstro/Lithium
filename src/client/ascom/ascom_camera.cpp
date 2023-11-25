@@ -1,6 +1,6 @@
 #include "ascom_camera.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 ASCOMCamera::ASCOMCamera(const std::string &name) :Device(name), Camera(name), ASCOMDevice(name)
 {

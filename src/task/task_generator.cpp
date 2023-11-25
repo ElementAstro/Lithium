@@ -35,7 +35,7 @@ Description: Task Generator
 
 #include <filesystem>
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;

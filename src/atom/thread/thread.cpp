@@ -36,7 +36,7 @@ Description: Thread Manager
 #include <iostream>
 #include <random>
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace Lithium::Thread
 {

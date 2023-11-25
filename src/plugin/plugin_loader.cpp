@@ -36,7 +36,7 @@ Description: Plugin Manager
 
 #include "atom/system/process.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace Lithium
 {

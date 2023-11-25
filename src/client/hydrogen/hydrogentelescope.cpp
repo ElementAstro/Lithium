@@ -35,7 +35,7 @@ Description: Hydrogen Telescope
 
 #include "config.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 HydrogenTelescope::HydrogenTelescope(const std::string &name) : Telescope(name)
 {

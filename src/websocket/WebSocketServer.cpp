@@ -37,7 +37,7 @@ Description: WebSocket Server
 
 #include "core/device_type.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include "magic_enum/magic_enum.hpp"
 
 std::unordered_map<std::string, DeviceType> DeviceTypeMap = {

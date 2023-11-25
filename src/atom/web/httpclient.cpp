@@ -31,9 +31,9 @@ Description: Http Client
 
 #include "httpclient.hpp"
 
-#include "cpp_httplib/httplib.h"
+#include "atom/web/httplib.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #if __cplusplus >= 202002L
 #include <format>

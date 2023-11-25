@@ -51,7 +51,7 @@ Description: Main Message Bus
 #include <unordered_map>
 #endif
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace Lithium
 {

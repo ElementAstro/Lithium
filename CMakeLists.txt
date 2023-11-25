@@ -133,39 +133,11 @@ set(device_module
     ${lithium_src_dir}/device/hydrogen_device.cpp
 )
 
-set(image_module
-	${lithium_src_dir}/image/image.cpp
-	${lithium_src_dir}/image/draw.cpp
-)
-
-set(io_module
-    ${lithium_module_dir}/io/compress.cpp
-    ${lithium_module_dir}/io/file.cpp
-    ${lithium_module_dir}/io/io.cpp
-)
-
 set(module_module
-    ${lithium_module_dir}/plugin/module_loader.cpp
     ${lithium_src_dir}/plugin/plugin_loader.cpp
-    ${lithium_module_dir}/plugin/compiler.cpp
-)
-
-set(web_module
-    ${lithium_module_dir}/web/downloader.cpp
-    ${lithium_module_dir}/web/httpclient.cpp
-    ${lithium_module_dir}/web/httplite.cpp
-    ${lithium_module_dir}/web/utils.cpp
-    ${lithium_module_dir}/web/time.cpp
 )
 
 set(server_module
-    ${lithium_module_dir}/server/commander.hpp
-    ${lithium_module_dir}/server/message_bus.hpp
-    ${lithium_module_dir}/server/message_queue.hpp
-    ${lithium_module_dir}/server/serialize.cpp
-    ${lithium_module_dir}/server/deserialize.cpp
-    ${lithium_module_dir}/server/json_checker.cpp
-
     ${lithium_src_dir}/websocket/WebSocketServer.cpp
     ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
     ${lithium_src_dir}/websocket/WsProcessComponent.cpp
@@ -194,27 +166,6 @@ set(task_module
     ${lithium_src_dir}/task/task_manager.cpp
     ${lithium_src_dir}/task/task_stack.cpp
     ${lithium_src_dir}/task/task_generator.cpp
-)
-
-set(thread_module
-    ${lithium_module_dir}/thread/thread.cpp
-    ${lithium_module_dir}/thread/thread_pool.hpp
-)
-
-set(system_module
-    ${lithium_module_dir}/system/system.cpp
-    ${lithium_module_dir}/system/crash.cpp
-    ${lithium_module_dir}/system/process.cpp
-    ${lithium_module_dir}/system/pid.cpp
-    ${lithium_module_dir}/system/pidw.cpp
-    # ${lithium_module_dir}/system/filew.cpp
-    ${lithium_module_dir}/system/dirw.cpp
-)
-
-set(utils_module
-    ${lithium_module_dir}/utils/time.cpp
-    ${lithium_module_dir}/utils/string.cpp
-    ${lithium_module_dir}/utils/static_switch.cpp
 )
 
 set(Lithium_module
@@ -276,6 +227,8 @@ add_subdirectory(libs/)
 # 所有的工具组件
 add_subdirectory(tools)
 
+add_subdirectory(${lithium_module_dir})
+
 # 内置的模组
 include_directories(modules)
 add_subdirectory(modules/hydrogen_client)
@@ -283,13 +236,14 @@ add_subdirectory(modules/hydrogen_client)
 # 构建Lithium内核
 add_subdirectory(${lithium_src_dir}/core)
 
-add_executable(lithium_server ${api_module} ${config_module} ${io_module} ${module_module} ${web_module} ${device_module} ${thread_module} ${task_module} ${server_module} ${script_module} ${system_module} ${utils_module} ${Lithium_module})
+add_executable(lithium_server ${api_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
 target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
+target_link_libraries(lithium_server atomstatic)
 
 target_link_libraries(lithium_server lithiumcorestatic)
 target_link_libraries(lithium_server lithiumpluginstatic)

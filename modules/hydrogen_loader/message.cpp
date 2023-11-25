@@ -39,7 +39,7 @@ Description: Message
 #include "message_queue.hpp"
 #include "xml_util.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 MsgChunck::MsgChunck() : sharedBufferIdsToAttach()
 {

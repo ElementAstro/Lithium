@@ -38,7 +38,7 @@ Description: Compiler
 #include <thread>
 
 #include "atom/type/json.hpp"
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;

@@ -58,7 +58,7 @@ Description: Device Manager
 
 #include "config.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include "magic_enum/magic_enum.hpp"
 #include "atom/type/json.hpp"
 

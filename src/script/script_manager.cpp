@@ -51,7 +51,7 @@ Description: Script Manager
 
 #include "LithiumApp.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "error/error_code.hpp"
 

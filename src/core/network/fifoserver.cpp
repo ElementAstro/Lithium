@@ -31,7 +31,7 @@ Description: FIFO Server
 
 #include "fifoserver.hpp"
 #include <stdexcept>
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
 FifoServer::FifoServer(const std::string &fifoPath) : fifoPath(fifoPath), pipeHandle(INVALID_HANDLE_VALUE)

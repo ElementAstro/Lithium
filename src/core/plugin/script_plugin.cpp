@@ -31,7 +31,7 @@ Description: Script Plugin
 
 #include "script_plugin.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 ScriptPlugin::ScriptPlugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description, std::shared_ptr<Lithium::Process::ProcessManager> processManager)
     : Plugin(path, version, author, description)

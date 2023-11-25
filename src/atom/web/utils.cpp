@@ -68,7 +68,7 @@ Description: Network Utils
 #else
 #include <fmt/format.h>
 #endif
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 bool IsConnectedToInternet()
 {

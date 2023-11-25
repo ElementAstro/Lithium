@@ -73,10 +73,15 @@ XMLEle *configRootFP(const char *device)
         strncpy(configFileName, getenv("HYDROGENCONFIG"), MAXRBUF);
     else
     {
+        int len = snprintf(configFileName, sizeof(configFileName), "%s%s_config.xml", configDir, device);
+        if (len >= sizeof(configFileName)) {
+        }
+        /*
         int len = snprintf(configFileName, MAXRBUF, "%s%s_config.xml", configDir, device);
         if (len >= MAXRBUF)
         {
         }
+        */
     }
 
     if (stat(configDir, &st) != 0)

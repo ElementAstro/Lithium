@@ -31,7 +31,7 @@ Description: Executable Plugin
 
 #include "exe_plugin.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #include <fstream>
 #include <sstream>

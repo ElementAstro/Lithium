@@ -66,13 +66,6 @@ public:
         return std::make_shared<DeviceController>(objectMapper);
     }
 
-    static std::unique_ptr<DeviceController> createShared(
-         OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)
-    )
-    {
-        return std::make_unique<DeviceController>(objectMapper);
-    }
-
 public:
 
     // ----------------------------------------------------------------

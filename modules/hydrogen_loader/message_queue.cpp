@@ -15,7 +15,7 @@
 #include "io.hpp"
 #include "hydrogen_server.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 MsgQueue::MsgQueue(bool useSharedBuffer) : useSharedBuffer(useSharedBuffer)
 {

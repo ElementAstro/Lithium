@@ -10,11 +10,11 @@
 #include <netinet/in.h>
 #endif
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #include "hydrogen_server.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 RemoteDvrInfo::RemoteDvrInfo() : DvrInfo(false)
 {

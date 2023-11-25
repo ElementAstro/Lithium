@@ -35,7 +35,7 @@ Description: Hydorgen Camera
 
 #include "atom/utils/switch.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 HydrogenCamera::HydrogenCamera(const std::string &name) : Camera(name)
 {

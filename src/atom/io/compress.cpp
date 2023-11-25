@@ -54,8 +54,8 @@ Description: Compressor using ZLib
 #define PATH_SEPARATOR '/'
 #endif
 
-#include "loguru/loguru.hpp"
-#include "libzippp/libzippp.h"
+#include "atom/log/loguru.hpp"
+#include "atom/io/libzippp.h"
 #include "atom/type/json.hpp"
 
 using json = nlohmann::json;

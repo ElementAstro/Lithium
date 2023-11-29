@@ -44,7 +44,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get upgrade -y
 
     - name: Install dependencies
-      run: sudo apt install gcc g++ cmake libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev
+      run: sudo apt install gcc g++ cmake libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev gettext libintl-dev
 
     - name: Checkout repository
       uses: actions/checkout@v3

@@ -1,9 +1,8 @@
 ---
 import Head from "../components/_head.astro";
-import LoadingComponent from "../components/_loading.jsx";
-import WebSocketComponent from "../components/websocket.jsx";
+import ConfigComponent from "../components/config";
 
-const title = "Lithium Web Client";
+const title = "Lithium Web Client - Config";
 ---
 
 <!DOCTYPE html>
@@ -17,8 +16,7 @@ const title = "Lithium Web Client";
         class="hold-transition sidebar-mini layout-fixed dark-mode"
         data-panel-auto-height-mode="height"
     >
-
-        <WebSocketComponent client:load />
+        <ConfigComponent client:load />
 
         
     </body>

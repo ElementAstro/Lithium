@@ -1,5 +1,5 @@
 /*
- * script_plugin.hpp
+ * lithium_image_main.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,24 +23,31 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-7-13
+Date: 2023-12-1
 
-Description: Script Plugin
+Description: Image processing plugin main
 
 **************************************************/
 
-#pragma once
+#include "lithium_image.hpp"
 
-#include "plugin.hpp"
+#include <memory>
 
-#include "atom/system/process.hpp"
-
-class ScriptPlugin : public Plugin
+std::shared_ptr<ImageProcessingPlugin> GetInstance()
 {
-public:
-    ScriptPlugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description, std::shared_ptr<Lithium::Process::ProcessManager> processManager);
+    return std::make_shared<ImageProcessingPlugin>();
+}
 
-    void Execute(const std::vector<std::string> &args) override;
-private:
-    std::shared_ptr<Lithium::Process::ProcessManager> m_ProcessManager;
-};
+json GetInfo()
+{
+    json config;
+    config["name"] = "lithium_image";
+    config["version"] = "1.0.0";
+    config["description"] = "Image processing plugin";
+    config["author"] = "Max Qian";
+    config["email"] = "astro_air@126.com";
+    config["url"] = "lightapt.com";
+    config["license"] = "GPLv3";
+    config["copyright"] = "2023 Max Qian. All rights reserved";
+    return config;
+}

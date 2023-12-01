@@ -90,13 +90,39 @@ public:
      */
     bool Redo();
 
+    /**
+     * @brief 清空所有命令处理函数
+    */
+    bool RemoveAll();
+
+    /**
+     * @brief 注册函数的描述信息
+     * @param name 函数名称
+     * @param description 函数描述信息
+    */
+    void RegisterFunctionDescription(const std::string& name, const std::string& description);
+
+    /**
+     * @brief 获取函数的描述信息
+     * @param name 函数名称
+     * @return 函数描述信息
+    */
+    std::string GetFunctionDescription(const std::string& name);
+
+    void RemoveFunctionDescription(const std::string& name);
+
+    /** @brief 清空函数的描述信息 */
+    void ClearFunctionDescriptions();
+
 private:
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
     emhash8::HashMap<std::size_t, HandlerFunc> undoHandlers_;
+    emhash8::HashMap<std::string, std::string> descriptions_;
 #else
     std::unordered_map<std::size_t, HandlerFunc> handlers_;
     std::unordered_map<std::size_t, HandlerFunc> undoHandlers_;
+    std::unordered_map<std::string, std::string> descriptions_;
 #endif
 
     /**
@@ -198,4 +224,40 @@ bool CommandDispatcher<Result, Argument>::Redo()
     }
 
     return true;
+}
+
+template <typename Result, typename Argument>
+bool CommandDispatcher<Result, Argument>::RemoveAll()
+{
+    handlers_.clear();
+    return true;
+}
+
+template <typename Result, typename Argument>
+void CommandDispatcher<Result, Argument>::RegisterFunctionDescription(const std::string& name, const std::string& description)
+{
+    descriptions_[name] = description;
+}
+
+template <typename Result, typename Argument>
+std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const std::string& name)
+{
+    auto it = descriptions_.find(name);
+    if (it != descriptions_.end())
+    {
+        return it->second;
+    }
+    return "";
+}
+
+template <typename Result, typename Argument>
+void CommandDispatcher<Result, Argument>::RemoveFunctionDescription(const std::string& name)
+{
+    descriptions_.erase(name);
+}
+
+template <typename Result, typename Argument>
+void CommandDispatcher<Result, Argument>::ClearFunctionDescriptions()
+{
+    descriptions_.clear();
 }

@@ -1,6 +1,7 @@
 #cmakedefine01 ENABLE_ASYNC
 #cmakedefine01 ENABLE_NATIVE_SERVER
 #cmakedefine01 ENABLE_FASTHASH
+#cmakedefine01 ENABLE_DEBUG
 
 // I18n
 #include <libintl.h>

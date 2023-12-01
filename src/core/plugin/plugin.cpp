@@ -36,9 +36,22 @@ Plugin::Plugin(const std::string &path, const std::string &version, const std::s
 {
     m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
     m_VariableRegistry = std::make_unique<VariableRegistry>();
+
+    SETVAR_STR("name", path);
+    SETVAR_STR("version", version);
+    SETVAR_STR("author", author);
+    SETVAR_STR("description", description);
+    SETVAR_STR("license", path);
 }
 
-Plugin::~Plugin() {}
+Plugin::~Plugin()
+{
+    // Just for safety
+    m_CommandDispatcher->RemoveAll();
+    m_VariableRegistry->RemoveAll();
+    m_CommandDispatcher.reset();
+    m_VariableRegistry.reset();
+}
 
 std::string Plugin::GetPath() const
 {
@@ -79,6 +92,18 @@ bool Plugin::RunFunc(const std::vector<std::string> &name, const std::vector<jso
     return true;
 }
 
+json Plugin::GetFuncInfo(const std::string &name)
+{
+    if (m_CommandDispatcher->HasHandler(name))
+    {
+        return {
+            {"name", name}, {"description", m_CommandDispatcher->GetFunctionDescription(name)}};
+    }
+    else
+    {
+        return json();
+    }
+}
 json Plugin::GetPluginInfo() const
 {
     return {{"author", author_}, {"version", version_}, {"description", description_}, {"license", path_}};

@@ -40,7 +40,13 @@ class ExecutablePlugin : public Plugin
 public:
     ExecutablePlugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description, std::shared_ptr<Lithium::Process::ProcessManager> processManager);
 
-    void Execute(const std::vector<std::string> &args) override;
+    void RunSystemCommand(const json &m_parmas);
+
+    void RunSystemCommandOutput(const json &m_parmas);
+
+    void RunScript(const json &m_parmas);
+
+    void RunScriptOutput(const json &m_parmas);
 private:
     std::shared_ptr<Lithium::Process::ProcessManager> m_ProcessManager;
 };

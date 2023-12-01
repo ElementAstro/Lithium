@@ -99,6 +99,11 @@ if(ENABLE_NATIVE_SERVER)
     set(ENABLE_NATIVE_SERVER_FLAG "1")
 endif()
 
+option(ENABLE_DEBUG "Enable Debug Mode" OFF)
+if(ENABLE_DEBUG)
+    set(ENABLE_DEBUG_FLAG "1")
+endif()
+
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -222,15 +227,21 @@ include_directories(${lithium_src_dir}/core)
 include_directories(${lithium_src_dir}/core/base)
 include_directories(${lithium_src_dir}/core/property)
 
+# Build all dependencies
+# 构建所有需要的依赖库
 add_subdirectory(libs/)
 
+# Build all tools
 # 所有的工具组件
 add_subdirectory(tools)
 
+# Build Atom core library
+# 构建Atom核心库
 add_subdirectory(${lithium_module_dir})
 
 # 内置的模组
 include_directories(modules)
+add_subdirectory(modules)
 add_subdirectory(modules/hydrogen_client)
 
 # 构建Lithium内核

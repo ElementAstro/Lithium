@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp' ]
+        language: [ 'javascript', 'python', 'cpp' ]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
         # Use only 'java' to analyze code written in Java, Kotlin or both
         # Use only 'javascript' to analyze code written in JavaScript, TypeScript or both
@@ -40,8 +40,11 @@ jobs:
 
     steps:
 
-    - name: Run install dependencies
-      run: sudo apt-add-repository ppa:mutlaqja/ppa -y && sudo apt update && sudo apt upgrade -y && sudo apt install libcurl4-openssl-dev libev-dev libgl-dev libspdlog-dev libboost-thread-dev libopencv-dev libboost-dev libgsl-dev libcfitsio-dev libz-dev python3-dev libssl-dev libboost-system-dev && sudo apt-get install libindi1 libglfw3-dev indi-bin libindi-dev
+    - name: Update the build system
+      run: sudo apt-get update && sudo apt-get upgrade -y
+
+    - name: Install dependencies
+      run: sudo apt install gcc g++ cmake libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev gettext libintl-dev
 
     - name: Checkout repository
       uses: actions/checkout@v3

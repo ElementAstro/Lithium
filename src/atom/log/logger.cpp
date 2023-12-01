@@ -41,8 +41,8 @@ Description: Custom Logger Manager
 
 #include <openssl/evp.h>
 
-#include "cpp_httplib/httplib.h"
-#include "loguru/loguru.hpp"
+#include "atom/web/httplib.h"
+#include "atom/log/loguru.hpp"
 
 namespace Lithium
 {
@@ -100,7 +100,7 @@ namespace Lithium
         }
         else
         {
-            spdlog::error("Failed to upload file");
+            LOG_F(ERROR, "Failed to upload file");
         }
     }
 

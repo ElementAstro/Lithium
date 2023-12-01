@@ -31,7 +31,7 @@ Description: Executable Plugin
 
 #include "exe_plugin.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -40,27 +40,89 @@ ExecutablePlugin::ExecutablePlugin(const std::string &path, const std::string &v
     : Plugin(path, version, author, description)
 {
     m_ProcessManager = processManager;
+
+    RegisterFunc("run_system_command", &ExecutablePlugin::RunSystemCommand, this);
+    RegisterFunc("run_system_command_with_output", &ExecutablePlugin::RunSystemCommandOutput, this);
+    RegisterFunc("run_script", &ExecutablePlugin::RunScript, this);
+    RegisterFunc("run_script_with_output", &ExecutablePlugin::RunScriptOutput, this);
 }
 
-void ExecutablePlugin::Execute(const std::vector<std::string> &args)
+void ExecutablePlugin::RunSystemCommand(const json &m_params)
 {
-    std::ostringstream oss;
-    oss << GetPath();
-    for (const std::string &arg : args)
-    {
-        oss << " " << arg;
-    }
-    std::string command = oss.str();
-    DLOG_F(INFO, "Running command: %s", command.c_str());
+    std::string command = m_params["command"].get<std::string>();
+    DLOG_F(INFO, "Running command: {}", command);
     if (m_ProcessManager)
     {
         if (!m_ProcessManager->createProcess(command, GetPath()))
         {
-            LOG_F(ERROR, "Failed to run executable plugin : %s", command.c_str());
+            LOG_F(ERROR, "Failed to run executable plugin : {}", command);
         }
         else
         {
-            LOG_F(ERROR, "Started %s successfully", command.c_str());
+            LOG_F(ERROR, "Started {} successfully", command);
+        }
+    }
+    else
+    {
+        LOG_F(ERROR, "Process manager is not initialized");
+    }
+}
+
+void ExecutablePlugin::RunSystemCommandOutput(const json &m_params)
+{
+    if (m_ProcessManager)
+    {
+        std::string command = m_params["command"].get<std::string>();
+        DLOG_F(INFO, "Running command: {}", command);
+        if (m_ProcessManager->createProcess(command, GetPath()))
+        {
+            LOG_F(ERROR, "Started {} successfully", command);
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to run executable plugin : {}", command);
+        }
+    }
+    else
+    {
+        LOG_F(ERROR, "Process manager is not initialized");
+    }
+}
+
+void ExecutablePlugin::RunScript(const json &m_params)
+{
+    if (m_ProcessManager)
+    {
+        std::string script = m_params["script"].get<std::string>();
+        DLOG_F(INFO, "Running script: {}", script);
+        if (m_ProcessManager->createProcess(script, GetPath()))
+        {
+            LOG_F(ERROR, "Started {} successfully", script);
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to run executable plugin : {}", script);
+        }
+    }
+    else
+    {
+        LOG_F(ERROR, "Process manager is not initialized");
+    }
+}
+
+void ExecutablePlugin::RunScriptOutput(const json &m_params)
+{
+    if (m_ProcessManager)
+    {
+        std::string script = m_params["script"].get<std::string>();
+        DLOG_F(INFO, "Running script: {}", script);
+        if (m_ProcessManager->createProcess(script, GetPath()))
+        {
+            LOG_F(ERROR, "Started {} successfully", script);
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to run executable plugin : {}", script);
         }
     }
     else

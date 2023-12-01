@@ -31,8 +31,6 @@ Description: Camera Simulator and Basic Definition
 
 #include "camera.hpp"
 
-#include "loguru/loguru.hpp"
-
 Camera::Camera(const std::string &name) : Device(name)
 {
     init();
@@ -133,6 +131,11 @@ bool Camera::getTemperature(const json &params)
 }
 
 bool Camera::getCoolingPower(const json &params)
+{
+    return true;
+}
+
+bool Camera::getCoolingStatus(const json &params)
 {
     return true;
 }

@@ -161,9 +161,36 @@ public:
         }
     }
 
+    bool RemoveObserver(const std::string &name, const std::string &observerName)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        if (auto it = m_observers.find(name); it!= m_observers.end())
+        {
+            for (auto it2 = it->second.begin(); it2!= it->second.end(); ++it2)
+            {
+                if (it2->name == observerName)
+                {
+                    it->second.erase(it2);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     std::unordered_map<std::string, std::any> GetAll() const
     {
         return m_variables;
+    }
+
+    bool RemoveAll()
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        m_variables.clear();
+        m_observers.clear();
+        return true;
     }
 
 private:

@@ -65,7 +65,7 @@ Description: C++ and Modules Loader
 */
 
 #include "atom/type/json.hpp"
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include "error/error_code.hpp"
 
 using json = nlohmann::json;

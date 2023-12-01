@@ -1,0 +1,23 @@
+---
+import Head from "../components/_head.astro";
+import ServerSearchComponent from "../components/connect";
+
+const title = "Lithium Web Client - Server Connect";
+---
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <Head title={title} />
+    </head>
+    <!-- Body Part -->
+
+    <body
+        class="hold-transition sidebar-mini layout-fixed dark-mode"
+        data-panel-auto-height-mode="height"
+    >
+        <ServerSearchComponent client:load />
+
+        
+    </body>
+</html>

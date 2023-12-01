@@ -44,7 +44,7 @@ Description: PID Watcher
 #include <sys/wait.h>
 #endif
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
 std::wstring charToWchar(const CHAR *str)

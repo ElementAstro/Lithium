@@ -35,7 +35,7 @@ Description: Hydrogen Filterwheel
 
 #include "config.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 HydrogenFilterwheel::HydrogenFilterwheel(const std::string &name) : Filterwheel(name)
 {

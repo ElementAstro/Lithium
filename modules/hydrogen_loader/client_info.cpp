@@ -11,7 +11,7 @@
 #include "driver_info.hpp"
 #include "io.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 ClInfo::ClInfo(bool useSharedBuffer) : MsgQueue(useSharedBuffer)
 {

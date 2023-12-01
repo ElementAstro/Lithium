@@ -32,11 +32,10 @@ Description: Plugin Manager
 #include "plugin_loader.hpp"
 
 #include "exe_plugin.hpp"
-#include "script_plugin.hpp"
 
 #include "atom/system/process.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 namespace Lithium
 {
@@ -62,11 +61,7 @@ namespace Lithium
 
         std::shared_ptr<Plugin> plugin;
 
-        if (type == "ScriptPlugin")
-        {
-            plugin = std::make_shared<ScriptPlugin>(pluginPath, version, author, description, m_ProcessManager);
-        }
-        else if (type == "ExecutablePlugin")
+        if (type == "ExecutablePlugin")
         {
             plugin = std::make_shared<ExecutablePlugin>(pluginPath, version, author, description, m_ProcessManager);
         }
@@ -112,8 +107,6 @@ namespace Lithium
             {
                 DLOG_F(INFO, "- %s", arg.c_str());
             }
-
-            plugin->Execute(args);
         }
         else
         {
@@ -164,11 +157,7 @@ namespace Lithium
 
     std::string PluginManager::GetPluginType(const std::shared_ptr<Plugin> &plugin) const
     {
-        if (dynamic_cast<const ScriptPlugin *>(plugin.get()))
-        {
-            return "ScriptPlugin";
-        }
-        else if (dynamic_cast<const ExecutablePlugin *>(plugin.get()))
+        if (dynamic_cast<const ExecutablePlugin *>(plugin.get()))
         {
             return "ExecutablePlugin";
         }

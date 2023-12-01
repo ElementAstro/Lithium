@@ -127,8 +127,6 @@ public:
         Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
         {
             auto res = StatusDto::createShared();
-
-            auto script = body->script.getValue("");
             
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
@@ -155,12 +153,10 @@ public:
         Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
         {
             auto res = StatusDto::createShared();
-
-            auto script = body->script.getValue("");
             
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
-    }
+    };
 
     ENDPOINT_INFO(getUIGetScriptFile)
     {
@@ -168,23 +164,21 @@ public:
         info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
         info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
-    ENDPOINT_ASYNC("GET", "/api/script/get", getUIGetScriptFIle)
+    ENDPOINT_ASYNC("GET", "/api/script/get", getUIGetScriptFile)
     {
-        ENDPOINT_ASYNC_INIT(getUIGetScriptFIle)
+        ENDPOINT_ASYNC_INIT(getUIGetScriptFile)
         Action act() override
         {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIGetScriptFIle::returnResponse);
+            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIGetScriptFile::returnResponse);
         }
 
         Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
         {
             auto res = StatusDto::createShared();
-
-            auto script = body->script.getValue("");
             
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
-    }
+    };
 
     ENDPOINT_INFO(getUIListScriptFiles)
     {
@@ -203,14 +197,12 @@ public:
         Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
         {
             auto res = StatusDto::createShared();
-
-            auto script = body->script.getValue("");
             
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
-    }
+    };
 
-    ENDPOINT_INFO(getUILoadScriptFile)
+    ENDPOINT_INFO(getUILoadScript)
     {
         info->summary = "Load script into cache";
         info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
@@ -226,12 +218,10 @@ public:
         Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
         {
             auto res = StatusDto::createShared();
-
-            auto script = body->script.getValue("");
             
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
-    }
+    };
 
     ENDPOINT_INFO(getUIUnloadScriptFile)
     {
@@ -249,12 +239,10 @@ public:
         Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
         {
             auto res = StatusDto::createShared();
-
-            auto script = body->script.getValue("");
             
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
-    }
+    };
 };
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen

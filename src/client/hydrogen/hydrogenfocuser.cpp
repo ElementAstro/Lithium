@@ -35,7 +35,7 @@ Description: Hydrogen Focuser
 
 #include "config.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 HydrogenFocuser::HydrogenFocuser(const std::string &name) : Focuser(name)
 {

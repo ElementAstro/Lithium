@@ -19,7 +19,7 @@
 #include "xml_util.hpp"
 #include "hydrogen_server.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 void DvrInfo::onMessage(XMLEle *root, std::list<int> &sharedBuffers)
 {

@@ -32,7 +32,7 @@ Description: ASCOM Basic Device
 #include "ascom_device.hpp"
 #include "ascom_exception.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 #include <exception>
 #ifdef __cpp_lib_format

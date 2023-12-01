@@ -40,7 +40,7 @@ Description: Device API of WebSocket Server
 #include "template/function.hpp"
 #include "template/variable.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "magic_enum/magic_enum.hpp"
 

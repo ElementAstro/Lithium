@@ -45,7 +45,7 @@ Description: Lithium App Enter
 
 #include "atom/server/global_ptr.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
 using json = nlohmann::json;
@@ -373,7 +373,7 @@ namespace Lithium
         AddPtr("ProcessManager", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
         AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
         AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
-        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<Task::TaskManager>("TaskManager")));
+        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
         AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
         AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
         AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));

@@ -1,13 +1,12 @@
 Lithium
 =======
-
 <p align="center">
-    <a href="https://isocpp.org/">
-        <img src="https://img.shields.io/badge/language-C%2B%2B20-blue.svg">
-    </a>
-    <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" >
-        <img src="https://img.shields.io/github/license/ElementAstro/Lithium">
-    </a>
+<img src="https://img.shields.io/badge/dialect-C%2B%2B20-blue">
+<img src="https://img.shields.io/badge/license-GPL3-blue">
+<img src="https://img.shields.io/badge/platform-Windows-green">
+<img src= "https://img.shields.io/badge/platform-Linux%20x86__64--bit-green">
+<img src="https://img.shields.io/badge/platform-Linux%20ARM-green">
+<img src="https://img.shields.io/badge/platform-Ubuntu-green">
 </p>
 
 ## Introduction
@@ -28,11 +27,11 @@ Features:
 
 ## How to build:
 
-### Install dependencies:
+### Install dependencies
 
 Although efforts have been made to minimize the use of libraries, a few dependencies still need to be installed.
 
-On Windows platform:
+#### On Windows
 
 ```shell
 sed -i "s#https\?://mirror.msys2.org/#https://mirrors.tuna.tsinghua.edu.cn/msys2/#g" /etc/pacman.d/mirrorlist*
@@ -43,21 +42,16 @@ pacman -S mingw-w64-x86_64-cfitsio
 pacman -S mingw-w64-x86_64-cmake
 pacman -S mingw-w64-x86_64-libzip
 pacman -S mingw-w64-x86_64-zlib
-pacman -S mingw-w64-x86_64-fftw
 pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
-pacman -S mingw-w64-x86_64-libjpeg-turbo
-pacman -S mingw-w64-x86_64-libusb
 ```
 
-On Ubuntu or other similar Linux platforms:
+#### On Ubuntu or other similar Linux platforms (No INDI needed):
 
 ```shell
-sudo apt-add-repository ppa:mutlaqja/ppa -y
-sudo apt update && sudo apt upgrade -y
+sudo apt-get update && sudo apt-get upgrade -y
 sudo apt install gcc g++ cmake
-sudo apt-get install libindi1 indi-bin libindi-dev
-sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev
+sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev
 ```
 
 Alternatively, you can directly run the provided script according to your platform:
@@ -65,6 +59,19 @@ Alternatively, you can directly run the provided script according to your platfo
 ```shell
 sudo sh scripts/build_ci.sh
 sh scripts/build_win.sh
+```
+
+#### Update GCC and Cmake
+
+Unfortunately, the newest GCC and CMake are not available on Github Codespace, so we must install them manually.
+
+```shell
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+sudo apt-get update
+sudo apt-get install gcc-13 # GCC13 is the best choice
+
+wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
+tar -zxvf cmake-3.28.0-rc5.tar.gz
 ```
 
 Build the code:
@@ -122,7 +129,7 @@ And never lose sight of this noble race.
 
 尽管已经尽最大努力减少了库的使用，但仍需要安装一些依赖项
 
-在Windows平台下：
+#### 在Windows平台下
 
 ```shell
 # 添加清华镜像源，下载速度嘎嘎的
@@ -134,24 +141,18 @@ pacman -S mingw-w64-x86_64-cfitsio
 pacman -S mingw-w64-x86_64-cmake
 pacman -S mingw-w64-x86_64-libzip
 pacman -S mingw-w64-x86_64-zlib
-pacman -S mingw-w64-x86_64-fftw
 pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
-pacman -S mingw-w64-x86_64-libjpeg-turbo
-pacman -S mingw-w64-x86_64-libusb
 # 如果想用make构建
-pacman -S make
+pacman -S make # 注意添加对应的目录，否则会当场爆炸
 ```
 
-在Ubuntu或其他类似的Linux平台下：
+#### Ubuntu/Debian （不需要INDI库）
 
 ```shell
-# 安装INDI及其附属库
-sudo apt-add-repository ppa:mutlaqja/ppa -y
-sudo apt update && sudo apt upgrade -y
-sudo apt-get install libindi1 indi-bin libindi-dev
+sudo apt-get update && sudo apt-get upgrade -y
 sudo apt install gcc g++ cmake
-sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev
+sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev
 ```
 
 或者您可以直接根据您的平台运行提供的脚本：
@@ -161,7 +162,7 @@ sudo sh scripts/build_ci.sh
 sh scripts/build_win.sh
 ```
 
-构建代码：
+#### 构建代码
 
 ```shell
 mkdir build && cd build

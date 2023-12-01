@@ -31,7 +31,7 @@ Description: Filterwheel Simulator and Basic Definition
 
 #include "filterwheel.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 Filterwheel::Filterwheel(const std::string &name) : Device(name)
 {

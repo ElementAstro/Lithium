@@ -35,7 +35,7 @@ Description: Hydrogen Basic Template
 
 #include "config.h"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 HydrogenBasic::HydrogenBasic(const std::string &name)
 {

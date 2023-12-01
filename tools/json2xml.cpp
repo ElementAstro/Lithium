@@ -3,7 +3,7 @@
 #include <string>
 #include "nlohmann/json.hpp"
 #include "pugixml/pugixml.hpp"
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 #include <argparse/argparse.hpp>
 
 using json = nlohmann::json;

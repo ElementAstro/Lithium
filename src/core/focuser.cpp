@@ -31,7 +31,7 @@ Description: Focuser Simulator and Basic Definition
 
 #include "focuser.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 Focuser::Focuser(const std::string &name) : Device(name)
 {

@@ -41,7 +41,27 @@ Description: Basic Plugin Definition
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-class Plugin
+#define SETVAR_STR(name, value)\
+    m_VariableRegistry->RegisterVariable<std::string>(name);\
+    m_VariableRegistry->SetVariable(name, value);
+
+#define SETVAR_INT(name, value)\
+    m_VariableRegistry->RegisterVariable<int>(name);\
+    m_VariableRegistry->SetVariable(name, value);
+
+#define SETVAR_BOOL(name, value)\
+    m_VariableRegistry->RegisterVariable<bool>(name);\
+    m_VariableRegistry->SetVariable(name, value);
+
+#define SETVAR_JSON(name, value)\
+    m_VariableRegistry->RegisterVariable<json>(name);\
+    m_VariableRegistry->SetVariable(name, value);
+
+#define SETVAR_DOUBLE(name, value)\
+    m_VariableRegistry->RegisterVariable<double>(name);\
+    m_VariableRegistry->SetVariable(name, value);
+
+class Plugin : public std::enable_shared_from_this<Plugin>
 {
 public:
     /**
@@ -58,15 +78,6 @@ public:
      * @brief Destroys the Plugin object.
      */
     virtual ~Plugin();
-
-    /**
-     * @brief Executes the plugin with the given arguments.
-     *
-     * This function must be implemented by derived classes to provide plugin-specific functionality.
-     *
-     * @param args The arguments for the plugin execution.
-     */
-    virtual void Execute(const std::vector<std::string> &args) = 0;
 
     /**
      * @brief Gets the information about the plugin.
@@ -163,6 +174,19 @@ public:
     void AddObserver(const std::string &name, const VariableRegistry::Observer &observer)
     {
         m_VariableRegistry->AddObserver(name, observer);
+    }
+
+    /**
+     * @brief Removes an observer for the variable with the specified name.
+     *
+     * This function allows plugins to stop listening for changes to a registered variable.
+     *
+     * @param name The name of the variable.
+     * @param observer The observer function.
+    */
+    void RemoveObserver(const std::string &name, const std::string &observer)
+    {
+        m_VariableRegistry->RemoveObserver(name, observer);
     }
 
     /**

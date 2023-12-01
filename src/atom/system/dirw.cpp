@@ -31,7 +31,7 @@ Description: Folder Watcher
 
 #include "dirw.hpp"
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
 
 FolderMonitor::FolderMonitor(const std::string &folderPath)
     : m_folderPath(folderPath), m_isMonitoring(false) {}

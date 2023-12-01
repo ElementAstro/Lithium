@@ -5,14 +5,12 @@ project(lithiumplugin C CXX)
 list(APPEND ${PROJECT_NAME}_SOURCES
     exe_plugin.cpp
     plugin.cpp
-    script_plugin.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     exe_plugin.hpp
     plugin.hpp
-    script_plugin.hpp
 )
 
 # Private Headers

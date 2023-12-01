@@ -43,6 +43,7 @@ Description: Main
 #include "controller/AsyncDeviceController.hpp"
 #include "controller/AsyncTweakerController.hpp"
 #include "controller/AsyncScriptController.hpp"
+#include "controller/AsyncModuleController.hpp"
 #else
 #include "controller/StaticController.hpp"
 #include "controller/SystemController.hpp"
@@ -79,21 +80,22 @@ Description: Main
 #include <signal.h>
 #endif
 
-#include "loguru/loguru.hpp"
+#include "atom/log/loguru.hpp"
+
+#define ADD_CONTROLLER(controller, docEndpoints, router, logMessage) \
+    auto controller##_ptr = controller::createShared(); \
+    docEndpoints.append(controller##_ptr->getEndpoints()); \
+    router->addController(controller##_ptr); \
+    DLOG_F(INFO, logMessage " loaded");
 
 void runServer()
 {
     DLOG_F(INFO, "Loading App component ...");
 
-    std::string host = Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0");
-    DLOG_F(INFO, "Host: {}", host);
-    int port = Lithium::MyApp->GetConfig("config/server").value("port", 8000);
-    DLOG_F(INFO, "Port: {}", port);
-
 #if ENABLE_IPV6
     AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "::"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
 #else
-    AppComponent components("0.0.0.0", 8000); // Create scope Environment components
+    AppComponent components(Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0"), Lithium::MyApp->GetConfig("config/server").value("port", 8000)); // Create scope Environment components
 #endif
 
     DLOG_F(INFO, "App component loaded");
@@ -106,55 +108,18 @@ void runServer()
 
     /* Add document */
 
-    auto static_controller = StaticController::createShared();
-    docEndpoints.append(static_controller->getEndpoints());
-    router->addController(static_controller);
-    DLOG_F(INFO, "Static file controller loaded");
-
-    auto system_controller = SystemController::createShared();
-    docEndpoints.append(system_controller->getEndpoints());
-    router->addController(system_controller);
-    DLOG_F(INFO, "System controller loaded");
-
-    auto io_controller = IOController::createShared();
-    docEndpoints.append(io_controller->getEndpoints());
-    router->addController(io_controller);
-    DLOG_F(INFO, "IO controller loaded");
-
-    auto process_controller = ProcessController::createShared();
-    docEndpoints.append(process_controller->getEndpoints());
-    router->addController(process_controller);
-    DLOG_F(INFO, "System process controller loaded");
-
-    auto phd2_controller = PHD2Controller::createShared();
-    docEndpoints.append(phd2_controller->getEndpoints());
-    router->addController(phd2_controller);
-    DLOG_F(INFO, "PHD2 controller loaded");
-
-    auto task_controller = TaskController::createShared();
-    docEndpoints.append(task_controller->getEndpoints());
-    router->addController(task_controller);
-    DLOG_F(INFO, "Task controller loaded");
-
-    auto upload_controller = UploadController::createShared();
-    docEndpoints.append(upload_controller->getEndpoints());
-    router->addController(upload_controller);
-    DLOG_F(INFO, "Upload controller loaded");
-
-    auto device_controller = DeviceController::createShared();
-    docEndpoints.append(device_controller->getEndpoints());
-    router->addController(device_controller);
-    DLOG_F(INFO, "Device controller loaded");
-
-    auto tweaker_controller = TweakerController::createShared();
-    docEndpoints.append(tweaker_controller->getEndpoints());
-    router->addController(tweaker_controller);
-    DLOG_F(INFO, "Tweaker controller loaded");
-
-    auto script_controller = ScriptController::createShared();
-    docEndpoints.append(script_controller->getEndpoints());
-    router->addController(script_controller);
-    DLOG_F(INFO, "Tweaker controller loaded");
+    ADD_CONTROLLER(SystemController, docEndpoints, router, "System controller");
+    ADD_CONTROLLER(IOController, docEndpoints, router, "IO controller");
+    ADD_CONTROLLER(ProcessController, docEndpoints, router, "System process controller");
+    ADD_CONTROLLER(PHD2Controller, docEndpoints, router, "PHD2 controller");
+    ADD_CONTROLLER(TaskController, docEndpoints, router, "Task controller");
+    ADD_CONTROLLER(UploadController, docEndpoints, router, "Upload controller");
+    ADD_CONTROLLER(WebSocketController, docEndpoints, router, "WebSocket controller");
+    ADD_CONTROLLER(TweakerController, docEndpoints, router, "Tweaker controller");
+    ADD_CONTROLLER(ScriptController, docEndpoints, router, "Script controller");
+    ADD_CONTROLLER(ModuleController, docEndpoints, router, "Module controller");
+    ADD_CONTROLLER(StaticController, docEndpoints, router, "Static file controller");
+    ADD_CONTROLLER(DeviceController, docEndpoints, router, "Device controller");
 
     DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC

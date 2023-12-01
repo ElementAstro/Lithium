@@ -32,6 +32,7 @@ Description: Simple implementation of AES encryption
 #include "aes.hpp"
 
 #include <string_view>
+#include <cstring>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 #include <zlib.h>

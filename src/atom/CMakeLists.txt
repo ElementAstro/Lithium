@@ -1,121 +1,122 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom C CXX)
 
-find_package(Threads REQUIRED)
+CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
-add_subdirectory(error)
 add_subdirectory(io)
 add_subdirectory(log)
-add_subdirectory(plugin)
-add_subdirectory(server)
-add_subdirectory(system)
-add_subdirectory(thread)
-add_subdirectory(utils)
 add_subdirectory(web)
-
-include_directories(.)
-include_directories(base)
-include_directories(property)
-include_directories(utils)
-CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
 endif()
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
-    fitskeyword.cpp
+    error/error_stack.cpp
 
-    device.cpp
-    deviceio.cpp
-    camera.cpp
-    telescope.cpp
-    focuser.cpp
-    filterwheel.cpp
-    guider.cpp
-    network/fifoclient.cpp
-    network/fifoserver.cpp
-    util/utils.cpp
-    event/eventloop.cpp
+    io/compress.cpp
+    io/file.cpp
+    io/io.cpp
 
-    property/base64.cpp
-    property/iproperty.cpp
-    property/iphoto.cpp
-    property/uuid.cpp
+    log/logger.cpp
 
-    property/task/conditional_task.cpp
-    property/task/daemon_task.cpp
-    property/task/loop_task.cpp
-    property/task/device_task.cpp
-    property/task/plugin_task.cpp
-    property/task/task.cpp
+    plugin/module_loader.cpp
+    plugin/compiler.cpp
 
-    property/hydrogenproperties.cpp
-    property/hydrogenproperty.cpp
-    property/hydrogenpropertybasic.cpp
-    property/hydrogenpropertyview.cpp
-    property/hydrogenpropertytext.cpp
-    property/hydrogenpropertynumber.cpp
-    property/hydrogenpropertyswitch.cpp
-    property/hydrogenpropertylight.cpp
-    property/hydrogenpropertyblob.cpp
+    server/serialize.cpp
+    server/deserialize.cpp
+    server/json_checker.cpp
+    server/xml_checker.cpp
+    server/global_ptr.cpp
 
-    # connection/ttybase.cpp
+    system/system.cpp
+    system/crash.cpp
+    system/process.cpp
+    system/pid.cpp
+    system/pidw.cpp
+    # system/filew.cpp
+    system/dirw.cpp
+
+    type/ini.cpp
+
+    thread/thread.cpp
+
+    utils/aes.cpp
+    utils/huffman.cpp
+    utils/math.cpp
+    utils/string.cpp
+    utils/static_switch.cpp
+    utils/time.cpp
+
+    web/downloader.cpp
+    web/httpclient.cpp
+    web/httplite.cpp
+    web/utils.cpp
+    web/time.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    fitskeyword.h
+    error/error_code.hpp
+    error/error_stack.hpp
 
-    property/hydrogenproperties.h
-    property/hydrogenproperty.h
-    property/hydrogenpropertybasic.h
-    property/hydrogenpropertyview.h
-    property/hydrogenpropertytext.h
-    property/hydrogenpropertynumber.h
-    property/hydrogenpropertyswitch.h
-    property/hydrogenpropertylight.h
-    property/hydrogenpropertyblob.h
+    io/compress.hpp
+    io/file.hpp
+    io/glob.hpp
+    io/io.hpp
 
-    property/hydrogenwidgetview.h
-    property/hydrogenwidgettraits.h
+    log/logger.hpp
 
-    device.hpp
-    deviceio.hpp
-    camera.hpp
-    telescope.hpp
-    focuser.hpp
-    filterwheel.hpp
-    guider.hpp
-    solver.hpp
-    network/fifoclient.hpp
-    network/fifoserver.hpp
-    util/utils.hpp
+    plugin/module_loader.hpp
+    plugin/compiler.hpp
 
-    property/base64.hpp
-    property/iproperty.hpp
-    property/iphoto.hpp
-    property/sha256.hpp
-    property/uuid.hpp
+    server/serialize.hpp
+    server/deserialize.hpp
+    server/json_checker.hpp
+    server/xml_checker.hpp
+    server/global_ptr.hpp
+    server/commander.hpp
+    server/message_bus.hpp
+    server/message_queue.hpp
+    server/variables.hpp
 
-    property/task/conditional_task.hpp
-    property/task/device_task.hpp
-    property/task/daemon_task.hpp
-    property/task/loop_task.hpp
-    property/task/task.hpp
+    system/system.hpp
+    system/crash.hpp
+    system/process.hpp
+    system/pid.hpp
+    system/pidw.hpp
+    # system/filew.hpp
+    system/dirw.hpp
+
+    type/json.hpp
+    type/ini.hpp
+
+    thread/async.hpp
+    thread/thread_pool.hpp
+    thread/thread.hpp
+
+    utils/aes.hpp
+    utils/exception.hpp
+    utils/huffman.hpp
+    utils/math.hpp
+    utils/refl_clang.hpp
+    utils/reflection.hpp
+    utils/refl.hpp
+    utils/string.hpp
+    utils/static_switch.hpp
+    utils/switch.hpp
+    utils/time.hpp
+
+    web/downloader.hpp
+    web/httpclient.hpp
+    web/httplite.hpp
+    web/utils.hpp
+    web/time.hpp
 )
 
 # Private Headers
 list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
-    property/hydrogenproperty_p.h
-    property/hydrogenproperties_p.h
-    property/hydrogenpropertyblob_p.h
-    property/hydrogenpropertyswitch_p.h
-    property/hydrogenpropertylight_p.h
-    property/hydrogenpropertytext_p.h
-    property/hydrogenpropertynumber_p.h
-    property/hydrogenpropertybasic_p.h
-    # TODO
+
 )
 
 # Build Object Library
@@ -127,6 +128,8 @@ target_compile_definitions(${PROJECT_NAME}_OBJECT PRIVATE "-DHAVE_LIBNOVA")
 if(WIN32)
 target_link_libraries(${PROJECT_NAME}_OBJECT setupapi wsock32 ws2_32 shlwapi iphlpapi)
 endif()
+
+target_link_libraries(${PROJECT_NAME}_OBJECT loguru cpp_httplib libzippp)
 
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC

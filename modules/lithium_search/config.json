@@ -1,0 +1,20 @@
+{
+  "name": "Star Search Engine for Lithium",
+  "description": "Search engine for Lithium",
+  "version": "1.0.0",
+  "author": "Max Qian",
+  "license": "GPLv3 -or- later",
+  "dependencies": {
+    "lithium-plugin": "1.0.0",
+    "atom-core": "1.0.0"
+  },
+  "main": "lithium_search",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ElementAstro/Lithium/modules/lithium_search"
+  },
+  "keywords": ["lithium", "openngc", "star", "sqlite", "mysql"]
+}

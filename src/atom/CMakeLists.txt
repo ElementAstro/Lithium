@@ -23,6 +23,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     plugin/module_loader.cpp
     plugin/compiler.cpp
 
+    search/sqlite.cpp
+
     server/serialize.cpp
     server/deserialize.cpp
     server/json_checker.cpp
@@ -69,6 +71,8 @@ list(APPEND ${PROJECT_NAME}_HEADERS
 
     plugin/module_loader.hpp
     plugin/compiler.hpp
+
+    search/sqlite.hpp
 
     server/serialize.hpp
     server/deserialize.hpp

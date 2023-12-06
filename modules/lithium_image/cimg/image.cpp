@@ -1,5 +1,5 @@
 /*
- * lithium_image.cpp
+ * image.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -29,7 +29,7 @@ Description: Image processing plugin for Lithium
 
 **************************************************/
 
-#include "lithium_image.hpp"
+#include "image.hpp"
 
 #include <fstream>
 #include <sstream>

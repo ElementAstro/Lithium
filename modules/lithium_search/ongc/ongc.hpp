@@ -1,5 +1,5 @@
 /*
- * image.hpp
+ * ongc.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -23,13 +23,26 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-4-6
+Date: 2023-7-13
 
-Description: Image Processing
+Description: C++ Version of PyOngc
 
 **************************************************/
 
-namespace Lithium
+#pragma once
+
+#include "dso.hpp"
+#include "core/plugin/plugin.hpp"
+
+class OpenNGC : public Plugin
 {
-    int StarDrawing(const std::string &filename, const unsigned int outerHfdDiameter = 50);
-} // namespace Lithium
+public:
+    OpenNGC(const std::string &path, const std::string &version, const std::string &author, const std::string &description);
+    ~OpenNGC();
+
+private:
+
+    void recognizeName(const std::string &name, std::string &catalog, std::string &objectname);
+
+    
+}

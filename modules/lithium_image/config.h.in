@@ -1,0 +1,3 @@
+#cmakedefine01 ENABLE_OPENCV
+#cmakedefine01 ENABLE_CIMG
+#cmakedefine01 ENABLE_STB

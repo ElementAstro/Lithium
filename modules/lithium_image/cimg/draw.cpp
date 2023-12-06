@@ -28,7 +28,6 @@
 #include <vector>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_multifit_nlin.h>
-#include <spdlog/spdlog.h>
 
 #include "image.hpp"
 

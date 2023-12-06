@@ -30,31 +30,24 @@ Description: C++ Version of PyOngc
 **************************************************/
 
 #include "ongc.hpp"
+#include "ongc_utils.hpp"
 
-#include <iostream>
 #include <cmath>
 #include <regex>
+
+#include <sqlite3.h>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-#include <sqlite3.h>
-#include "nlohmann/json.hpp"
+#include "atom/type/json.hpp"
+#include "atom/log/loguru.hpp"
 
 using json = nlohmann::json;
 
 #define DBPATH "ognc.db"
-
-#ifndef M_PI
-#define M_PI (3.14159265358979323846)
-#endif
-
-double rad2deg(const double &radians)
-{
-    const double conversionFactor = 180.0 / M_PI;
-    return radians * conversionFactor;
-}
 
 template <int i>
 std::vector<std::string> get_identifiers_helper(const std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std::vector<std::string>, std::vector<std::string>> &identifiers)
@@ -305,7 +298,7 @@ std::tuple<std::string, std::vector<std::string>, std::vector<std::string>, std:
     return std::make_tuple(messier, ngc, ic, commonNames, other);
 }
 
-void Dso::recognize_name(const std::string &name, std::string &catalog, std::string &objectname) const
+void DsoObject::recognizeName(const std::string &name, std::string &catalog, std::string &objectname) const
 {
     const std::unordered_map<std::string, std::string> patterns = {
         {"NGC|IC", R"(^((?:NGC|IC)\s?)(\d{1,4})\s?((NED)(\d{1,2})|[A-Z]{1,2})?$)"},

@@ -1,28 +1,36 @@
 cmake_minimum_required(VERSION 3.20)
-project(lithium_image C CXX)
+project(lithium_search C CXX)
 
 option(ENABLE_DEBUG "Enable Debug Mode" OFF)
 if(ENABLE_DEBUG)
     set(ENABLE_DEBUG_FLAG "1")
 endif()
 
-option(ENABLE_OPENCV_FLAG "Enable OpenCV" OFF)
-if (ENABLE_OPENCV_FLAG)
-    find_package(OpenCV REQUIRED)
-    message("-- Found OpenCV ${OpenCV_VERSION}: ${OpenCV_LIBRARIES}")
+option(ENABLE_SQLITE_FLAG "Enable Sqlite" ON)
+if (ENABLE_SQLITE_FLAG)
+    find_package(SQLite3 REQUIRED)
+    message("-- Found SQLite3 ${SQLite3_VERSION}: ${SQLite3_LIBRARIES}")
+    set(ENABLE_SQLITE "1")
 else()
-    message("-- OpenCV Not Found. Will not build opencv image module.")
+    message("-- SQLite3 Not Found. Will not build sqlite search module.")
 endif()
 
-
-option(ENABLE_CIMG_FLAG "Enable CImg" On)
-if(ENABLE_CIMG_FLAG)
-    set(ENABLE_CIMG "1")
+option(ENABLE_MYSQL_FLAG "Enable MySQL" OFF)
+if (ENABLE_MYSQL_FLAG)
+    find_package(MySQL REQUIRED)
+    message("-- Found MySQL ${MySQL_VERSION}: ${MySQL_LIBRARIES}")
+    set(ENABLE_MYSQL "1")
+else()
+    message("-- MySQL Not Found. Will not build mysql search module.")
 endif()
 
-option(ENABLE_STB_FLAG "Enable STB" OFF)
-if(ENABLE_STB_FLAG)
-    set(ENABLE_STB "1")
+option(ENABLE_POSTGRESQL_FLAG "Enable PostgreSQL" OFF)
+if (ENABLE_POSTGRESQL_FLAG)
+    find_package(PostgreSQL REQUIRED)
+    message("-- Found PostgreSQL ${PostgreSQL_VERSION}: ${PostgreSQL_LIBRARIES}")
+    set(ENABLE_POSTGRESQL "1")
+else()
+    message("-- PostgreSQL Not Found. Will not build postgresql search module.")
 endif()
 
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -40,39 +48,31 @@ list(APPEND ${PROJECT_NAME}_LIBS
     ${CFITSIO_LIBRARIES}
 )
 
-if(ENABLE_OPENCV_FLAG)
+if(ENABLE_SLQLITE_FLAG)
     list(APPEND ${PROJECT_NAME}_LIBS
-        ${OpenCV_LIBRARIES}
+        ${SQLite3_LIBRARIES}
+    )
+endif()
+
+if(ENABLE_MYSQL_FLAG)
+    list(APPEND ${PROJECT_NAME}_LIBS
+        ${MySQL_LIBRARIES}
+    )
+endif()
+
+if(ENABLE_POSTGRESQL_FLAG)
+    list(APPEND ${PROJECT_NAME}_LIBS
+        ${PostgreSQL_LIBRARIES}
     )
 endif()
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
     main.cpp
+
+    ongc/dso.cpp
+    ongc/ongc.cpp
+
 )
-
-if(ENABLE_OPENCV_FLAG)
-    list(APPEND ${PROJECT_NAME}_SOURCES
-        opencv/image.cpp
-    )
-endif()
-
-if(ENABLE_CIMG_FLAG)
-    list(APPEND ${PROJECT_NAME}_SOURCES
-        cimg/image.cpp
-    )
-endif()
-
-if(ENABLE_OPENCV_FLAG)
-    list(APPEND ${PROJECT_NAME}_HEADERS
-        opencv/image.hpp
-    )
-endif()
-
-if(ENABLE_CIMG_FLAG)
-    list(APPEND ${PROJECT_NAME}_HEADERS
-        cimg/image.hpp
-    )
-endif()
 
 # Private Headers
 list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS

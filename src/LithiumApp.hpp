@@ -68,6 +68,7 @@ namespace Lithium
 
     class ScriptManager;
     class PluginManager;
+    class ModuleLoader;
 
     class BasicTask;
 
@@ -131,6 +132,18 @@ namespace Lithium
         bool checkTaskExecutable(const std::string &name);
 
     public:
+        bool loadModule(const std::string &path, const std::string &name);
+        bool unloadModule(const std::string &name);
+        bool reloadModule(const std::string &name);
+        bool reloadAllModules();
+        bool checkModuleLoaded(const std::string &name);
+        bool enableModule(const std::string &name);
+        bool disableModule(const std::string &name);
+        bool getModuleStatus(const std::string &name);
+        json getModuleConfig(const std::string &name);
+        std::vector<std::string> getModuleList();
+        
+    public:
         template <typename T>
         void MSSubscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0)
         {
@@ -141,6 +154,16 @@ namespace Lithium
         void MSUnsubscribe(const std::string &topic, std::function<void(const T &)> callback)
         {
             m_MessageBus->Unsubscribe(topic, callback);
+        }
+
+        void sendStringMessage(const std::string &topic, const std::string &message)
+        {
+            m_MessageBus->Publish<std::string>(topic, message);
+        }
+
+        void sendJsonMessage(const std::string &topic, const json &message)
+        {
+            m_MessageBus->Publish<json>(topic, message);
         }
 
     public:
@@ -168,6 +191,7 @@ namespace Lithium
         std::shared_ptr<MessageBus> m_MessageBus;
         std::shared_ptr<PluginManager> m_PluginManager;
         std::shared_ptr<ScriptManager> m_ScriptManager;
+        std::shared_ptr<ModuleLoader> m_ModuleLoader;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 

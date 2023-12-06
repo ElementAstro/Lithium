@@ -29,13 +29,19 @@ Description: Image processing plugin main
 
 **************************************************/
 
-#include "lithium_image.hpp"
+#include "config.h"
 
+#if ENABLE_CIMG
+#include "cimg/image.hpp"
+#endif
+#if ENABLE_OPENCV
+#include "opencv/image.hpp"
+#endif
 #include <memory>
 
 std::shared_ptr<ImageProcessingPlugin> GetInstance()
 {
-    return std::make_shared<ImageProcessingPlugin>();
+    return std::make_shared<ImageProcessingPlugin>("lithium_image", "1.0.0", "Max Qian", "Image processing plugin");
 }
 
 json GetInfo()

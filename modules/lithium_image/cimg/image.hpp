@@ -1,5 +1,5 @@
 /*
- * lithium_image.hpp
+ * image.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -28,6 +28,8 @@ Date: 2023-12-1
 Description: Image processing plugin for Lithium
 
 **************************************************/
+
+#pragma once
 
 #include "core/plugin/plugin.hpp"
 #include "cimg/CImg.h"

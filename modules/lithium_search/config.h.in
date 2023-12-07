@@ -1,3 +1,0 @@
-#cmakedefine01 ENABLE_SQLITE
-#cmakedefine01 ENABLE_MYSQL
-#cmakedefine01 ENABLE_POSTGRESQL

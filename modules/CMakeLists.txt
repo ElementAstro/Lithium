@@ -1,3 +1,0 @@
-add_subdirectory(lithium_image)
-
-add_subdirectory(lithium_search)

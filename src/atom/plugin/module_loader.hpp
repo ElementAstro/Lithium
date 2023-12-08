@@ -163,7 +163,7 @@ namespace Lithium
         /**
          * @brief   Loads a dynamic module from the given path.
          *
-         * This function loads a dynamic module from the given path. If the loading is successful, it returns true and saves the handle to the module in the handles_ map.
+         * This function loads a dynamic module from the given path. If the loading is successful, it returns true and saves the handle to the module in the modules_ map.
          * If the loading fails, it returns false and logs an error message.
          *
          * @param[in]   path    The path of the dynamic module to load.
@@ -252,18 +252,18 @@ namespace Lithium
         template <typename T>
         T GetFunction(const std::string &name, const std::string &function_name)
         {
-            auto handle_it = handles_.find(name);
-            if (handle_it == handles_.end())
+            auto handle_it = modules_.find(name);
+            if (handle_it == modules_.end())
             {
-                LOG_F(ERROR, "Failed to find module %s", name.c_str());
+                LOG_F(ERROR, "Failed to find module {}", name);
                 return nullptr;
             }
 
-            auto func_ptr = reinterpret_cast<T>(LOAD_FUNCTION(handle_it->second, function_name.c_str()));
+            auto func_ptr = reinterpret_cast<T>(LOAD_FUNCTION(handle_it->second->handle, function_name.c_str()));
 
             if (!func_ptr)
             {
-                LOG_F(ERROR, "Failed to get symbol %s from module %s: %s", function_name.c_str(), name.c_str(), dlerror());
+                LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", function_name, name, dlerror());
                 return nullptr;
             }
 
@@ -283,17 +283,17 @@ namespace Lithium
         std::shared_ptr<T> GetInstance(const std::string &name, const json &config,
                                        const std::string &symbol_name)
         {
-            auto handle_it = handles_.find(name);
-            if (handle_it == handles_.end())
+            auto handle_it = modules_.find(name);
+            if (handle_it == modules_.end())
             {
-                LOG_F(ERROR, "Failed to find module %s", name.c_str());
+                LOG_F(ERROR, "Failed to find module {}", name);
                 return nullptr;
             }
 
             auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const json &)>(name, symbol_name);
             if (!get_instance_func)
             {
-                LOG_F(ERROR, "Failed to get symbol %s from module %s: %s", symbol_name.c_str(), name.c_str(), dlerror());
+                LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", symbol_name, name, dlerror());
                 return nullptr;
             }
 

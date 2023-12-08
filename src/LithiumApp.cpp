@@ -454,22 +454,19 @@ namespace Lithium
     {
         if (m_ModuleLoader->HasModule(name))
         {
-            if(unloadModule(name))
+            if (unloadModule(name))
             {
                 return loadModule(m_ModuleLoader->GetModulePath(name), name);
             }
         }
-        else
-        {
-            LOG_F(ERROR, _("Failed to reload module {}"), name);
-            json res = {
-                {"command", __func__},
-                {"status", false},
-                {"message", _(fmt::format("Failed to reload module {}", name).c_str())},
-                {"timestamp", GetTimestampString()}};
-            sendJsonMessage("error", res);
-            return false;
-        }
+        LOG_F(ERROR, _("Failed to reload module {}"), name);
+        json res = {
+            {"command", __func__},
+            {"status", false},
+            {"message", _(fmt::format("Failed to reload module {}", name).c_str())},
+            {"timestamp", GetTimestampString()}};
+        sendJsonMessage("error", res);
+        return false;
     }
 
     bool LithiumApp::reloadAllModules()

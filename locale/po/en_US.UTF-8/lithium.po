@@ -1,4 +1,4 @@
-#: /workspaces/Lithium/src/device/device_manager.cpp:161
+#: /workspaces/Lithium/src/device/device_manager.cpp:162
 msgid "A device with name {} already exists, please choose a different name"
 msgstr ""
 
@@ -53,34 +53,54 @@ msgstr ""
 msgid "Set server port to %d"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:80
+#: /workspaces/Lithium/src/LithiumApp.cpp:84
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:97
+#: /workspaces/Lithium/src/LithiumApp.cpp:120
 msgid "Get config value: {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:103
+#: /workspaces/Lithium/src/LithiumApp.cpp:126
 msgid "Set {} to {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:301
+#: /workspaces/Lithium/src/LithiumApp.cpp:344
 msgid "Failed to run chai command : {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:319
+#: /workspaces/Lithium/src/LithiumApp.cpp:362
 msgid "Failed to run chai multi command {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:332
+#: /workspaces/Lithium/src/LithiumApp.cpp:375
 msgid "Failed to load chaiscript file {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:345
+#: /workspaces/Lithium/src/LithiumApp.cpp:388
 msgid "Failed to unload chaiscript file {}"
 msgstr ""
 
-#: /workspaces/Lithium/src/LithiumApp.cpp:358
+#: /workspaces/Lithium/src/LithiumApp.cpp:401
 msgid "Failed to run chai script {}"
+msgstr ""
+
+#: /workspaces/Lithium/src/LithiumApp.cpp:423
+msgid "Failed to load module {} in {}"
+msgstr ""
+
+#: /workspaces/Lithium/src/LithiumApp.cpp:442
+msgid "Failed to unload module {}"
+msgstr ""
+
+#: /workspaces/Lithium/src/LithiumApp.cpp:464
+msgid "Failed to reload module {}"
+msgstr ""
+
+#: /workspaces/Lithium/src/LithiumApp.cpp:502
+msgid "Failed to enable module {}"
+msgstr ""
+
+#: /workspaces/Lithium/src/LithiumApp.cpp:521
+msgid "Failed to disable module {}"
 msgstr ""

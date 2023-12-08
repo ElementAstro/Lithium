@@ -206,6 +206,7 @@ public:
                 res->error = "ModuleError";
                 res->message = fmt::format("Failed to disable module: {}", plugin_name);
             }
+            return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
 

@@ -5,6 +5,7 @@ CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 add_subdirectory(io)
 add_subdirectory(log)
+add_subdirectory(type)
 add_subdirectory(web)
 
 if(NOT HAS_STD_FORMAT)

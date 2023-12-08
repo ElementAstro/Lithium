@@ -4,12 +4,14 @@ project(lithiumplugin C CXX)
 
 list(APPEND ${PROJECT_NAME}_SOURCES
     exe_plugin.cpp
+    wrapper_plugin.cpp
     plugin.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     exe_plugin.hpp
+    wrapper_plugin.hpp
     plugin.hpp
 )
 

@@ -34,6 +34,7 @@ Description: Device Manager
 #include "atom/plugin/module_loader.hpp"
 #include "server/message_bus.hpp"
 #include "thread/thread.hpp"
+#include "atom/server/global_ptr.hpp"
 
 #include "core/camera.hpp"
 #include "core/telescope.hpp"
@@ -105,7 +106,7 @@ namespace Lithium
     // Constructor
     DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
-        m_ModuleLoader = ModuleLoader::createShared("drivers");
+        m_ModuleLoader = ModuleLoader::createShared("drivers", GetPtr<Thread::ThreadManager>("ThreadManager"));
         m_ConfigManager = configManager;
         m_MessageBus = messageBus;
         for (auto &devices : m_devices)

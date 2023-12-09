@@ -3,7 +3,6 @@ project(lithiumcore C CXX)
 
 find_package(Threads REQUIRED)
 
-add_subdirectory(base)
 add_subdirectory(plugin)
 
 include_directories(.)
@@ -42,36 +41,11 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     property/task/device_task.cpp
     property/task/plugin_task.cpp
     property/task/task.cpp
-
-    property/hydrogenproperties.cpp
-    property/hydrogenproperty.cpp
-    property/hydrogenpropertybasic.cpp
-    property/hydrogenpropertyview.cpp
-    property/hydrogenpropertytext.cpp
-    property/hydrogenpropertynumber.cpp
-    property/hydrogenpropertyswitch.cpp
-    property/hydrogenpropertylight.cpp
-    property/hydrogenpropertyblob.cpp
-
-    # connection/ttybase.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     fitskeyword.h
-
-    property/hydrogenproperties.h
-    property/hydrogenproperty.h
-    property/hydrogenpropertybasic.h
-    property/hydrogenpropertyview.h
-    property/hydrogenpropertytext.h
-    property/hydrogenpropertynumber.h
-    property/hydrogenpropertyswitch.h
-    property/hydrogenpropertylight.h
-    property/hydrogenpropertyblob.h
-
-    property/hydrogenwidgetview.h
-    property/hydrogenwidgettraits.h
 
     device.hpp
     deviceio.hpp
@@ -100,14 +74,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
 
 # Private Headers
 list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
-    property/hydrogenproperty_p.h
-    property/hydrogenproperties_p.h
-    property/hydrogenpropertyblob_p.h
-    property/hydrogenpropertyswitch_p.h
-    property/hydrogenpropertylight_p.h
-    property/hydrogenpropertytext_p.h
-    property/hydrogenpropertynumber_p.h
-    property/hydrogenpropertybasic_p.h
     # TODO
 )
 

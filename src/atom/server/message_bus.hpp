@@ -77,7 +77,7 @@ namespace Lithium
                     });
             subscribersLock_.unlock();
 
-            DLOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
+            DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
         }
 
         template <typename T>
@@ -106,7 +106,7 @@ namespace Lithium
                         }),
                     topicSubscribers.end());
 
-                DLOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
+                DLOG_F(INFO, "Unsubscribed from topic: {}", fullTopic);
             }
             subscribersLock_.unlock();
         }
@@ -121,7 +121,7 @@ namespace Lithium
             messageQueueLock_.unlock();
             messageAvailableFlag_.notify_one();
 
-            DLOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
+            DLOG_F(INFO, "Published message to topic: {}", fullTopic);
         }
 
         template <typename T>
@@ -193,7 +193,7 @@ namespace Lithium
                                     }
                                 }
                             } catch (const std::bad_any_cast& e) {
-                                LOG_F(ERROR, "Message type mismatch: %s", e.what());
+                                LOG_F(ERROR, "Message type mismatch: {}", e.what());
                             } catch (...) {
                                 LOG_F(ERROR, "Unknown error occurred during message processing");
                             }
@@ -208,13 +208,13 @@ namespace Lithium
                                 }
                             }
                         } catch (const std::bad_any_cast& e) {
-                            LOG_F(ERROR, "Global message type mismatch: %s", e.what());
+                            LOG_F(ERROR, "Global message type mismatch: {}", e.what());
                         } catch (...) {
                             LOG_F(ERROR, "Unknown error occurred during global message processing");
                         }
                         globalSubscribersLock_.unlock();
 
-                        DLOG_F(INFO, "Processed message on topic: %s", topic.c_str());
+                        DLOG_F(INFO, "Processed message on topic: {}", topic);
                     }
                 } }));
         }
@@ -231,7 +231,7 @@ namespace Lithium
     #endif
                 it->second.join();
                 processingThreads_.erase(it);
-                DLOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+                DLOG_F(INFO, "Processing thread for type {} stopped", typeid(T).name());
             }
         }
 

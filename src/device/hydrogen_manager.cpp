@@ -1,5 +1,5 @@
 /*
- * indidevice_manager.cpp
+ * Hydrogendevice_manager.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,12 +25,12 @@ E-mail: astro_air@126.com
 
 Date: 2023-3-29
 
-Description: INDI Device Manager
+Description: Hydrogen Device Manager
 
 **************************************************/
 
-#include "indidevice_manager.hpp"
-#include "indi_device.hpp"
+#include "hydrogen_manager.hpp"
+#include "hydrogen_device.hpp"
 #include "device_utils.hpp"
 #include "config.h"
 
@@ -43,7 +43,7 @@ Description: INDI Device Manager
 
 #include "atom/log/loguru.hpp"
 
-INDIManager::INDIManager(const std::string &hst, int prt, const std::string &cfg, const std::string &dta, const std::string &fif)
+HydrogenManager::HydrogenManager(const std::string &hst, int prt, const std::string &cfg, const std::string &dta, const std::string &fif)
 {
     host = hst;
     port = prt;
@@ -53,9 +53,9 @@ INDIManager::INDIManager(const std::string &hst, int prt, const std::string &cfg
 }
 
 #ifdef _WIN32
-void INDIManager::start_server()
+void HydrogenManager::start_server()
 {
-    // If there is an INDI server running, just kill it
+    // If there is an Hydrogen server running, just kill it
     if (is_running())
     {
         stop_server();
@@ -64,7 +64,7 @@ void INDIManager::start_server()
     DeleteFileA(fifo_path.c_str());
     CreateNamedPipeA(fifo_path.c_str(), PIPE_ACCESS_OUTBOUND, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 0, 0, 0, NULL);
     // Just start the server without driver
-    std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\indiserver.log 2>&1";
+    std::string cmd = "Hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\Hydrogenserver.log 2>&1";
     STARTUPINFOA si;
     PROCESS_INFORMATION pi;
     ZeroMemory(&si, sizeof(si));
@@ -76,12 +76,12 @@ void INDIManager::start_server()
     }
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    DLOG_F(INFO, "Started INDI server on port {}", port);
+    DLOG_F(INFO, "Started Hydrogen server on port {}", port);
 }
 #else
-void INDIManager::start_server()
+void HydrogenManager::start_server()
 {
-    // If there is a INDI server running, just kill it
+    // If there is a Hydrogen server running, just kill it
     if (is_running())
     {
         stop_server();
@@ -95,35 +95,35 @@ void INDIManager::start_server()
     }
     res = system(("mkfifo " + fifo_path).c_str());
     // Just start the server without driver
-    std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
+    std::string cmd = "Hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/Hydrogenserver.log 2>&1 &";
 
-    DLOG_F(INFO, "Started INDI server on port ", port);
+    DLOG_F(INFO, "Started Hydrogen server on port ", port);
     res = system(cmd.c_str());
 }
 #endif
 
-void INDIManager::stop_server()
+void HydrogenManager::stop_server()
 {
 #ifdef _WIN32
-    std::string cmd = "taskkill /f /im indiserver.exe >nul 2>&1";
+    std::string cmd = "taskkill /f /im Hydrogenserver.exe >nul 2>&1";
 #else
-    std::string cmd = "killall indiserver >/dev/null 2>&1";
+    std::string cmd = "killall Hydrogenserver >/dev/null 2>&1";
 #endif
     int res = system(cmd.c_str());
     if (res == 0)
     {
-        DLOG_F(INFO, "INDI server terminated successfully");
+        DLOG_F(INFO, "Hydrogen server terminated successfully");
     }
     else
     {
-        LOG_F(ERROR, "Failed to terminate indiserver, error code is {}", res);
+        LOG_F(ERROR, "Failed to terminate Hydrogenserver, error code is {}", res);
     }
 }
 
 #ifdef _WIN32
-bool INDIManager::is_running()
+bool HydrogenManager::is_running()
 {
-    std::string processName = "indiserver.exe";
+    std::string processName = "Hydrogenserver.exe";
     bool isRunning = false;
 
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -149,10 +149,10 @@ bool INDIManager::is_running()
     return isRunning;
 }
 #else
-bool INDIManager::is_running()
+bool HydrogenManager::is_running()
 {
     std::string output = "";
-    FILE *pipe = popen("ps -ef | grep indiserver | grep -v grep | wc -l", "r");
+    FILE *pipe = popen("ps -ef | grep Hydrogenserver | grep -v grep | wc -l", "r");
     if (!pipe)
         return false;
     char buffer[128];
@@ -166,7 +166,7 @@ bool INDIManager::is_running()
 }
 #endif
 
-void INDIManager::start_driver(std::shared_ptr<INDIDeviceContainer> driver)
+void HydrogenManager::start_driver(std::shared_ptr<HydrogenDeviceContainer> driver)
 {
     std::string cmd = "start " + driver->binary;
 
@@ -207,7 +207,7 @@ void INDIManager::start_driver(std::shared_ptr<INDIDeviceContainer> driver)
     running_drivers.emplace(driver->label, driver);
 }
 
-void INDIManager::stop_driver(std::shared_ptr<INDIDeviceContainer> driver)
+void HydrogenManager::stop_driver(std::shared_ptr<HydrogenDeviceContainer> driver)
 {
     std::string cmd = "stop " + driver->binary;
     if (driver->binary.find("@") == std::string::npos)
@@ -245,18 +245,18 @@ void INDIManager::stop_driver(std::shared_ptr<INDIDeviceContainer> driver)
 }
 
 #ifdef _WIN32
-void INDIManager::set_prop(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
+void HydrogenManager::set_prop(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
 {
     std::stringstream ss;
-    ss << "indi_setprop " << dev << "." << prop << "." << element << "=" << value;
+    ss << "Hydrogen_setprop " << dev << "." << prop << "." << element << "=" << value;
     std::string cmd = ss.str();
     execute_command(cmd);
 }
 
-std::string INDIManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)
+std::string HydrogenManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)
 {
     std::stringstream ss;
-    ss << "indi_getprop " << dev << "." << prop << "." << element;
+    ss << "Hydrogen_getprop " << dev << "." << prop << "." << element;
     std::string cmd = ss.str();
     std::string output = execute_command(cmd);
     size_t equalsPos = output.find('=');
@@ -267,10 +267,10 @@ std::string INDIManager::get_prop(const std::string &dev, const std::string &pro
     return "";
 }
 #else
-void INDIManager::set_prop(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
+void HydrogenManager::set_prop(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
 {
     std::stringstream ss;
-    ss << "indi_setprop " << dev << "." << prop << "." << element << "=" << value;
+    ss << "Hydrogen_setprop " << dev << "." << prop << "." << element << "=" << value;
     std::string cmd = ss.str();
     int result = system(cmd.c_str());
     if (result != 0)
@@ -279,10 +279,10 @@ void INDIManager::set_prop(const std::string &dev, const std::string &prop, cons
     }
 }
 
-std::string INDIManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)
+std::string HydrogenManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)
 {
     std::stringstream ss;
-    ss << "indi_getprop " << dev << "." << prop << "." << element;
+    ss << "Hydrogen_getprop " << dev << "." << prop << "." << element;
     std::string cmd = ss.str();
     std::array<char, 128> buffer;
     std::string result = "";
@@ -299,20 +299,20 @@ std::string INDIManager::get_prop(const std::string &dev, const std::string &pro
 }
 #endif
 
-std::string INDIManager::get_state(const std::string &dev, const std::string &prop)
+std::string HydrogenManager::get_state(const std::string &dev, const std::string &prop)
 {
     return get_prop(dev, prop, "_STATE");
 }
 
-std::map<std::string, std::shared_ptr<INDIDeviceContainer>> INDIManager::get_running_drivers()
+std::map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::get_running_drivers()
 {
     return running_drivers;
 }
 
-std::vector<std::map<std::string, std::string>> INDIManager::get_devices()
+std::vector<std::map<std::string, std::string>> HydrogenManager::get_devices()
 {
     std::vector<std::map<std::string, std::string>> devices;
-    std::string cmd = "indi_getprop *.CONNECTION.CONNECT";
+    std::string cmd = "Hydrogen_getprop *.CONNECTION.CONNECT";
     std::array<char, 128> buffer;
     std::string result = "";
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);

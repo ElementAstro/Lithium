@@ -42,9 +42,8 @@ Description: Device Manager
 
 #include "error/error_code.hpp"
 
-class INDIManager;
 class HydrogenManager;
-class INDIDriverCollection;
+class HydrogenDriverCollection;
 
 class Camera;
 class Telescope;
@@ -286,10 +285,10 @@ namespace Lithium
 
     public:
 
-        bool startINDIServer();
-        bool stopINDIServer();
-        bool startINDIDevice();
-        bool stopINDIDevice();
+        bool startHydrogenServer();
+        bool stopHydrogenServer();
+        bool startHydrogenDevice();
+        bool stopHydrogenDevice();
 
         
 
@@ -318,8 +317,8 @@ namespace Lithium
         std::shared_ptr<Guider> m_guider;
         std::shared_ptr<Solver> m_solver;
 
-        std::shared_ptr<INDIManager> m_indimanager;
-        std::shared_ptr<INDIDriverCollection> m_indicollection;
+        std::shared_ptr<HydrogenManager> m_hydrogenmanager;
+        std::shared_ptr<HydrogenDriverCollection> m_hydrogencollection;
     
     // For Hydrogen Inside Server
     public:
@@ -327,7 +326,11 @@ namespace Lithium
         bool startHydrogenDriver(const nlohmann::json &m_params);
         bool stopHydrogenDriver(const nlohmann::json &m_params);
     private:
+#if __cplusplus >= 202002L
         std::jthread m_hydrogen_server_thread;
+#else
+        std::thread m_hydrogen_server_thread;
+#endif
     };
 
 }

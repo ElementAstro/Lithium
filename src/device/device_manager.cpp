@@ -54,8 +54,8 @@ Description: Device Manager
 #endif
 #include <typeinfo>
 
-#include "indi_device.hpp"
-#include "indidevice_manager.hpp"
+#include "hydrogen_device.hpp"
+#include "hydrogen_manager.hpp"
 
 #include "config.h"
 
@@ -114,7 +114,7 @@ namespace Lithium
             devices.emplace_back();
         }
 
-        m_indimanager = std::make_shared<INDIManager>();
+        m_hydrogenmanager = std::make_shared<HydrogenManager>();
     }
 
     DeviceManager::~DeviceManager()
@@ -1230,35 +1230,35 @@ namespace Lithium
         return DeviceError::None;
     }
 
-    bool DeviceManager::startINDIServer()
+    bool DeviceManager::startHydrogenServer()
     {
-        if (!m_indimanager->is_running())
+        if (!m_hydrogenmanager->is_running())
         {
-            m_indimanager->start_server();
+            m_hydrogenmanager->start_server();
         }
         return true;
     }
 
-    bool DeviceManager::stopINDIServer()
+    bool DeviceManager::stopHydrogenServer()
     {
-        if (m_indimanager->is_running())
+        if (m_hydrogenmanager->is_running())
         {
-            m_indimanager->stop_server();
+            m_hydrogenmanager->stop_server();
         }
         return true;
     }
 
-    bool DeviceManager::startINDIDevice()
+    bool DeviceManager::startHydrogenDevice()
     {
-        if (!m_indimanager->is_running())
+        if (!m_hydrogenmanager->is_running())
         {
-            LOG_F(ERROR, "INDI server is not started(not by lithium server)");
+            LOG_F(ERROR, "Hydrogen server is not started(not by lithium server)");
             return false;
         }
         return true;
     }
 
-    bool DeviceManager::stopINDIDevice()
+    bool DeviceManager::stopHydrogenDevice()
     {
         return true;
     }

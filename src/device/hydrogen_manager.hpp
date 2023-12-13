@@ -1,5 +1,5 @@
 /*
- * indidevice_manager.hpp
+ * Hydrogendevice_manager.hpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-3-29
 
-Description: INDI Device Manager
+Description: Hydrogen Device Manager
 
 **************************************************/
 
@@ -37,48 +37,48 @@ Description: INDI Device Manager
 #include <string>
 #include <memory>
 
-class INDIDeviceContainer;
+class HydrogenDeviceContainer;
 
-class INDIManager
+class HydrogenManager
 {
 public:
     /**
      * @brief 构造函数
-     * @param hst INDI服务器的主机名，默认为"localhost"
-     * @param prt INDI服务器的端口号，默认为7624
-     * @param cfg INDI配置文件路径，默认为空字符串
-     * @param dta INDI驱动程序路径，默认为"/usr/share/indi"
-     * @param fif INDI FIFO路径，默认为"/tmp/indiFIFO"
+     * @param hst Hydrogen服务器的主机名，默认为"localhost"
+     * @param prt Hydrogen服务器的端口号，默认为7624
+     * @param cfg Hydrogen配置文件路径，默认为空字符串
+     * @param dta Hydrogen驱动程序路径，默认为"/usr/share/Hydrogen"
+     * @param fif Hydrogen FIFO路径，默认为"/tmp/HydrogenFIFO"
      */
-    INDIManager(const std::string &hst = "localhost", int prt = 7624, const std::string &cfg = "", const std::string &dta = "/usr/share/indi", const std::string &fif = "/tmp/indiFIFO");
+    HydrogenManager(const std::string &hst = "localhost", int prt = 7624, const std::string &cfg = "", const std::string &dta = "/usr/share/Hydrogen", const std::string &fif = "/tmp/HydrogenFIFO");
 
     /**
-     * @brief 启动INDI服务器
+     * @brief 启动Hydrogen服务器
      */
     void start_server();
 
     /**
-     * @brief 停止INDI服务器
+     * @brief 停止Hydrogen服务器
      */
     void stop_server();
 
     /**
-     * @brief 检查INDI服务器是否正在运行
-     * @return 如果INDI服务器正在运行，则返回true；否则返回false
+     * @brief 检查Hydrogen服务器是否正在运行
+     * @return 如果Hydrogen服务器正在运行，则返回true；否则返回false
      */
     bool is_running();
 
     /**
-     * @brief 启动INDI驱动程序
-     * @param driver 要启动的INDI驱动程序的INDIDeviceContainer对象
+     * @brief 启动Hydrogen驱动程序
+     * @param driver 要启动的Hydrogen驱动程序的HydrogenDeviceContainer对象
      */
-    void start_driver(std::shared_ptr<INDIDeviceContainer> driver);
+    void start_driver(std::shared_ptr<HydrogenDeviceContainer> driver);
 
     /**
-     * @brief 停止INDI驱动程序
-     * @param driver 要停止的INDI驱动程序的INDIDeviceContainer对象
+     * @brief 停止Hydrogen驱动程序
+     * @param driver 要停止的Hydrogen驱动程序的HydrogenDeviceContainer对象
      */
-    void stop_driver(std::shared_ptr<INDIDeviceContainer> driver);
+    void stop_driver(std::shared_ptr<HydrogenDeviceContainer> driver);
 
     /**
      * @brief 设置设备属性值
@@ -108,9 +108,9 @@ public:
 
     /**
      * @brief 获取正在运行的驱动程序列表
-     * @return 包含正在运行的驱动程序的映射表，键为驱动程序名称，值为INDIDeviceContainer对象
+     * @return 包含正在运行的驱动程序的映射表，键为驱动程序名称，值为HydrogenDeviceContainer对象
      */
-    std::map<std::string, std::shared_ptr<INDIDeviceContainer>> get_running_drivers();
+    std::map<std::string, std::shared_ptr<HydrogenDeviceContainer>> get_running_drivers();
 
     /**
      * @brief 获取设备列表
@@ -119,10 +119,10 @@ public:
     static std::vector<std::map<std::string, std::string>> get_devices();
 
 private:
-    std::string host;                                                            ///< INDI服务器的主机名
-    int port;                                                                    ///< INDI服务器的端口号
-    std::string config_path;                                                     ///< INDI配置文件路径
-    std::string data_path;                                                       ///< INDI驱动程序路径
-    std::string fifo_path;                                                       ///< INDI FIFO路径
-    std::map<std::string, std::shared_ptr<INDIDeviceContainer>> running_drivers; ///< 正在运行的驱动程序列表
+    std::string host;                                                            ///< Hydrogen服务器的主机名
+    int port;                                                                    ///< Hydrogen服务器的端口号
+    std::string config_path;                                                     ///< Hydrogen配置文件路径
+    std::string data_path;                                                       ///< Hydrogen驱动程序路径
+    std::string fifo_path;                                                       ///< Hydrogen FIFO路径
+    std::map<std::string, std::shared_ptr<HydrogenDeviceContainer>> running_drivers; ///< 正在运行的驱动程序列表
 };

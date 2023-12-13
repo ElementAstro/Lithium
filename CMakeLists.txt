@@ -115,26 +115,14 @@ elseif(LINUX)
     set(CMAKE_INSTALL_PREFIX "/usr/lithium")
 endif()
 
-set(api_module
-	${lithium_client_dir}/platesolve/astap.cpp
-	${lithium_client_dir}/platesolve/astrometry.cpp
-    ${lithium_client_dir}/phd2/phd2client.cpp
-    ${lithium_client_dir}/hydrogen/hydrogenclient.cpp
-    ${lithium_client_dir}/hydrogen/hydrogencamera.cpp
-    ${lithium_client_dir}/hydrogen/hydrogenfilterwheel.cpp
-    ${lithium_client_dir}/hydrogen/hydrogentelescope.cpp
-    ${lithium_client_dir}/hydrogen/hydrogenfocuser.cpp
-)
-
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
 )
 
 set(device_module
     ${lithium_src_dir}/device/device_manager.cpp
-    ${lithium_src_dir}/device/indidevice_manager.cpp
+    ${lithium_src_dir}/device/hydrogen_manager.cpp
     ${lithium_src_dir}/device/device_utils.cpp
-    ${lithium_src_dir}/device/indi_device.cpp
     ${lithium_src_dir}/device/hydrogen_device.cpp
 )
 
@@ -242,12 +230,12 @@ add_subdirectory(${lithium_module_dir})
 # 内置的模组
 include_directories(modules)
 add_subdirectory(modules)
-add_subdirectory(modules/hydrogen_client)
+
 
 # 构建Lithium内核
 add_subdirectory(${lithium_src_dir}/core)
 
-add_executable(lithium_server ${api_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_executable(lithium_server ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
@@ -258,7 +246,7 @@ target_link_libraries(lithium_server atomstatic)
 
 target_link_libraries(lithium_server lithiumcorestatic)
 target_link_libraries(lithium_server lithiumpluginstatic)
-target_link_libraries(lithium_server hydrogencore)
+target_link_libraries(lithium_server lithiumcore)
 target_link_libraries(lithium_server hydrogenclientstatic)
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)

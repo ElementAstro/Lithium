@@ -49,6 +49,11 @@ namespace Lithium
         return std::make_shared<PluginManager>(processManager);
     }
 
+    std::unique_ptr<PluginManager> PluginManager::createUnique(std::shared_ptr<Process::ProcessManager> processManager)
+    {
+        return std::make_unique<PluginManager>(processManager);
+    }
+
     void PluginManager::LoadPlugin(const std::string &pluginName, const std::string &pluginPath, const std::string &version, const std::string &author, const std::string &description, const std::string &type)
     {
         std::lock_guard<std::mutex> lock(mutex_);

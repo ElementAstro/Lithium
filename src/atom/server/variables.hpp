@@ -23,9 +23,9 @@ Author: Max Qian
 
 E-mail: astro_air@126.com
 
-Date: 2023-11-3
+Date: 2023-12-14
 
-Description: Variable Registry
+Description: Variable Registry 类，用于注册、获取和观察变量值。
 
 **************************************************/
 
@@ -39,6 +39,7 @@ Description: Variable Registry
 #include <functional>
 #include <sstream>
 #include <mutex>
+#include <shared_mutex>
 
 #include "atom/type/json.hpp"
 
@@ -89,10 +90,13 @@ public:
     template <typename T>
     bool SetVariable(const std::string &name, T &&value)
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
-
+        std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
         if (auto it = m_variables.find(name); it != m_variables.end())
         {
+            if (auto setter = m_setters.find(name); setter != m_setters.end())
+            {
+                setter->second(std::forward<T>(value));
+            }
             it->second = std::forward<T>(value);
             NotifyObservers(name, value);
             return true;
@@ -165,9 +169,9 @@ public:
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        if (auto it = m_observers.find(name); it!= m_observers.end())
+        if (auto it = m_observers.find(name); it != m_observers.end())
         {
-            for (auto it2 = it->second.begin(); it2!= it->second.end(); ++it2)
+            for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2)
             {
                 if (it2->name == observerName)
                 {
@@ -193,6 +197,34 @@ public:
         return true;
     }
 
+    /**
+     * @brief 添加获取指定名称变量的回调函数。
+     * @tparam T 变量类型，需要与注册时相同。
+     * @param name 变量名称。
+     * @param getter 获取变量值的函数。
+     */
+    template <typename T>
+    void AddGetter(const std::string &name, const std::function<T()> &getter)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        m_getters[name] = getter;
+    }
+
+    /**
+     * @brief 添加检测指定名称变量修改的回调函数。
+     * @tparam T 变量类型，需要与注册时相同。
+     * @param name 变量名称。
+     * @param setter 检测变量修改的函数。
+     */
+    template <typename T>
+    void AddSetter(const std::string &name, const std::function<void(const std::any &)> &setter)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        m_setters[name] = setter;
+    }
+
 private:
     /**
      * @brief 所有变量的集合。
@@ -205,46 +237,98 @@ private:
     std::unordered_map<std::string, std::vector<Observer>> m_observers;
 
     /**
+     * @brief 获取函数的集合，以变量名称为键。
+     */
+    std::unordered_map<std::string, std::function<std::any()>> m_getters;
+
+    /**
+     * @brief 检测修改函数的集合，以变量名称为键。
+     */
+    std::unordered_map<std::string, std::function<void(const std::any &)>> m_setters;
+
+    /**
      * @brief 互斥锁，用于保证多线程安全。
      */
     mutable std::mutex m_mutex;
+
+    mutable std::shared_mutex m_sharedMutex;
 };
 
 static std::string SerializeVariablesToJson(const VariableRegistry &registry)
 {
-    json j;
-
+    std::string j = "{";
     for (const auto entry : registry.GetAll())
     {
         const std::string &name = entry.first;
         const std::any &value = entry.second;
-
         try
         {
             if (value.type() == typeid(int))
             {
-                j[name] = std::any_cast<int>(value);
+                j += "\"" + name + "\":" + std::to_string(std::any_cast<int>(value)) + ",";
             }
             else if (value.type() == typeid(double))
             {
-                j[name] = std::any_cast<double>(value);
+                j += "\"" + name + "\":" + std::to_string(std::any_cast<double>(value)) + ",";
             }
             else if (value.type() == typeid(bool))
             {
-                j[name] = std::any_cast<bool>(value);
+                j += "\"" + name + "\":" + std::to_string(std::any_cast<bool>(value)) + ",";
             }
             else if (value.type() == typeid(std::string))
             {
-                j[name] = std::any_cast<std::string>(value);
+                j += "\"" + name + "\":\"" + std::any_cast<std::string>(value) + "\",";
+            }
+            else if (value.type() == typeid(std::vector<int>))
+            {
+                j += "\"" + name + "\":[";
+                for (const auto &i : std::any_cast<std::vector<int>>(value))
+                {
+                    j += std::to_string(i) + ",";
+                }
+                j.pop_back(); // 删除末尾多余的逗号
+                j += "],";
+            }
+            else if (value.type() == typeid(std::vector<double>))
+            {
+                j += "\"" + name + "\":[";
+                for (const auto &i : std::any_cast<std::vector<double>>(value))
+                {
+                    j += std::to_string(i) + ",";
+                }
+                j.pop_back();
+                j += "],";
+            }
+            else if (value.type() == typeid(std::vector<bool>))
+            {
+                j += "\"" + name + "\":[";
+                for (const auto &i : std::any_cast<std::vector<bool>>(value))
+                {
+                    j += std::to_string(i) + ",";
+                }
+                j.pop_back();
+                j += "],";
+            }
+            else if (value.type() == typeid(std::vector<std::string>))
+            {
+                j += "\"" + name + "\":[";
+                for (const auto &i : std::any_cast<std::vector<std::string>>(value))
+                {
+                    j += "\"" + i + "\",";
+                }
             }
         }
         catch (const std::bad_any_cast &)
         {
-            // 转换失败，忽略该变量或进行其他处理
         }
     }
+    if (!registry.GetAll().empty())
+    {
+        j.pop_back(); // 删除末尾多余的逗号
+    }
 
-    return j.dump();
+    j += "}";
+    return j;
 }
 
 /*

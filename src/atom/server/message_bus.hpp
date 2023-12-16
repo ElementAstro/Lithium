@@ -58,11 +58,55 @@ namespace Lithium
     class MessageBus
     {
     public:
+        MessageBus()
+        {
+
+        }
+
+        MessageBus(const int &max_queue_size)
+        {
+            maxMessageBusSize_.store(max_queue_size);
+        }
+
+        ~MessageBus()
+        {
+            if (!subscribers_.empty())
+            {
+                subscribers_.clear();
+            }
+            if (!processingThreads_.empty())
+            {
+                for (auto &thread : processingThreads_)
+                {
+                    if (thread.second.joinable())
+                    {
+#if __cplusplus >= 202002L
+                        thread.second.request_stop();
+#endif
+                        thread.second.join();
+                    }
+                }
+                processingThreads_.clear();
+            }
+        }
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
         static std::shared_ptr<MessageBus> createShared()
         {
             return std::make_shared<MessageBus>();
         }
+
+        static std::unique_ptr<MessageBus> createUnique()
+        {
+            return std::make_unique<MessageBus>();
+        }
     public:
+        // -------------------------------------------------------------------
+        // MessageBus methods
+        // -------------------------------------------------------------------
+
         template <typename T>
         void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0, const std::string &namespace_ = "")
         {
@@ -269,9 +313,9 @@ namespace Lithium
     #else
         std::unordered_map<std::type_index, std::thread> processingThreads_;
     #endif
-
     #endif
         std::atomic<bool> isRunning_{true};
+        std::atomic_int maxMessageBusSize_{1000};
 
         std::vector<std::any> globalSubscribers_;
         std::mutex globalSubscribersLock_;

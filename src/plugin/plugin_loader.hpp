@@ -64,11 +64,23 @@ namespace Lithium
          */
         PluginManager(std::shared_ptr<Process::ProcessManager> processManager);
 
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
         /**
          * @brief 创建并返回共享的PluginManager指针
          * @return 共享的PluginManager指针
          */
         static std::shared_ptr<PluginManager> createShared(std::shared_ptr<Process::ProcessManager> processManager);
+
+        static std::unique_ptr<PluginManager> createUnique(std::shared_ptr<Process::ProcessManager> processManager);
+
+        
+
+        // ---------------------------------------------------------------------
+        // Plugin methods
+        // ---------------------------------------------------------------------
 
         /**
          * @brief 加载插件

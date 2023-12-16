@@ -91,14 +91,17 @@ void HydrogenManager::start_server()
     int res = system(("rm -f " + fifo_path).c_str());
     if (res != 0)
     {
-        
+        LOG_F(ERROR, "Failed to delete fifo pipe");
     }
     res = system(("mkfifo " + fifo_path).c_str());
     // Just start the server without driver
     std::string cmd = "Hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/Hydrogenserver.log 2>&1 &";
-
-    DLOG_F(INFO, "Started Hydrogen server on port ", port);
     res = system(cmd.c_str());
+    if (res!= 0)
+    {
+        LOG_F(ERROR, "Failed to start Hydrogenserver, error code is {}", res);
+    }
+    DLOG_F(INFO, "Started Hydrogen server on port {}", port);
 }
 #endif
 
@@ -199,7 +202,7 @@ void HydrogenManager::start_driver(std::shared_ptr<HydrogenDeviceContainer> driv
     int res = system(full_cmd.c_str());
     if (res != 0)
     {
-
+        LOG_F(ERROR, "Failed to start driver: {}", driver->name);
     }
     DLOG_F(INFO, "Started driver : {}", driver->name);
 #endif
@@ -237,7 +240,7 @@ void HydrogenManager::stop_driver(std::shared_ptr<HydrogenDeviceContainer> drive
     int res = system(full_cmd.c_str());
     if (res != 0)
     {
-        
+        LOG_F(ERROR, "Failed to stop driver: {}", driver->label);
     }
     DLOG_F(INFO, "Stop running driver: {}", driver->label);
     running_drivers.erase(driver->label);
@@ -304,14 +307,14 @@ std::string HydrogenManager::get_state(const std::string &dev, const std::string
     return get_prop(dev, prop, "_STATE");
 }
 
-std::map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::get_running_drivers()
+std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::get_running_drivers()
 {
     return running_drivers;
 }
 
-std::vector<std::map<std::string, std::string>> HydrogenManager::get_devices()
+std::vector<std::unordered_map<std::string, std::string>> HydrogenManager::get_devices()
 {
-    std::vector<std::map<std::string, std::string>> devices;
+    std::vector<std::unordered_map<std::string, std::string>> devices;
     std::string cmd = "Hydrogen_getprop *.CONNECTION.CONNECT";
     std::array<char, 128> buffer;
     std::string result = "";
@@ -329,7 +332,7 @@ std::vector<std::map<std::string, std::string>> HydrogenManager::get_devices()
     {
         if (token == '\n')
         {
-            std::map<std::string, std::string> device;
+            std::unordered_map<std::string, std::string> device;
             std::stringstream ss(lines[0]);
             std::string item;
             while (getline(ss, item, '.'))

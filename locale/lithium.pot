@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2023-12-13 20:52+0800\n"
+"POT-Creation-Date: 2023-12-15 18:06+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -22,54 +22,54 @@ msgstr ""
 msgid "A device with name {} already exists, please choose a different name"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/device/hydrogen_manager.cpp:278
+#: E:/msys64/home/Qrm/Lithium/src/device/hydrogen_manager.cpp:281
 #, c++-format
 msgid "Failed to run command: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:220
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:222
 msgid "port the server running on"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:221
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:223
 msgid "host the server running on"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:222
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:224
 msgid "path to the config file"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:223
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:225
 msgid "path to the modules directory"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:224
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:226
 msgid "web panel"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:225
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:227
 msgid "path to log file"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:227
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:229
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:228
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:230
 msgid "End."
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:236
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:238
 #, c-format
 msgid "Failed to parser command line : %s"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:258
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:260
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:264
+#: E:/msys64/home/Qrm/Lithium/src/App.cpp:266
 #, c-format
 msgid "Set server port to %d"
 msgstr ""

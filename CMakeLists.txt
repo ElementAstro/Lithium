@@ -131,24 +131,11 @@ set(module_module
 )
 
 set(server_module
-    ${lithium_src_dir}/websocket/WebSocketServer.cpp
-    ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
-    ${lithium_src_dir}/websocket/WsProcessComponent.cpp
-    ${lithium_src_dir}/websocket/WsScriptComponent.cpp
-    ${lithium_src_dir}/websocket/WsTaskComponent.cpp
-
-    ${lithium_src_dir}/websocket/device/WsDeviceHub.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
-
-    ${lithium_src_dir}/websocket/device/WsCameraInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsTelescopeInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsFocuserInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsFilterInstance.cpp
-
-    ${lithium_src_dir}/websocket/plugin/WsPluginHub.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginInstance.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginServer.cpp
+    ${lithium_src_dir}/websocket/WsServer.cpp
+    ${lithium_src_dir}/websocket/WsHub.cpp
+    ${lithium_src_dir}/websocket/WsInstance.cpp
+    ${lithium_src_dir}/websocket/components/WsDeviceComponent.cpp
+    ${lithium_src_dir}/websocket/components/WsTaskComponent.cpp
 )
 
 set(script_module
@@ -246,8 +233,10 @@ target_link_libraries(lithium_server atomstatic)
 
 target_link_libraries(lithium_server lithiumcorestatic)
 target_link_libraries(lithium_server lithiumpluginstatic)
-target_link_libraries(lithium_server lithiumcore)
+target_link_libraries(lithium_server lithiumcorestatic)
+if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
+endif()
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 if(NOT HAS_STD_FORMAT)
@@ -264,6 +253,7 @@ target_link_libraries(lithium_server libzip::zip)
 target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
+target_link_libraries(lithium_server tinyxml2)
 
 target_link_libraries(lithium_server ${Libintl_LIBRARY})
 target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})

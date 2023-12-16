@@ -32,10 +32,14 @@ Description: Hydrogen Device Manager
 
 #pragma once
 
-#include <map>
 #include <vector>
 #include <string>
 #include <memory>
+#ifdef ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
 
 class HydrogenDeviceContainer;
 
@@ -110,13 +114,13 @@ public:
      * @brief 获取正在运行的驱动程序列表
      * @return 包含正在运行的驱动程序的映射表，键为驱动程序名称，值为HydrogenDeviceContainer对象
      */
-    std::map<std::string, std::shared_ptr<HydrogenDeviceContainer>> get_running_drivers();
+    std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> get_running_drivers();
 
     /**
      * @brief 获取设备列表
      * @return 包含设备信息的向量，每个元素是一个映射表，包含设备名称和设备类型等信息
      */
-    static std::vector<std::map<std::string, std::string>> get_devices();
+    static std::vector<std::unordered_map<std::string, std::string>> get_devices();
 
 private:
     std::string host;                                                            ///< Hydrogen服务器的主机名
@@ -124,5 +128,5 @@ private:
     std::string config_path;                                                     ///< Hydrogen配置文件路径
     std::string data_path;                                                       ///< Hydrogen驱动程序路径
     std::string fifo_path;                                                       ///< Hydrogen FIFO路径
-    std::map<std::string, std::shared_ptr<HydrogenDeviceContainer>> running_drivers; ///< 正在运行的驱动程序列表
+    std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> running_drivers; ///< 正在运行的驱动程序列表
 };

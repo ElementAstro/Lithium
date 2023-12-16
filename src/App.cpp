@@ -210,10 +210,12 @@ void registerInterruptHandler()
  */
 int main(int argc, char *argv[])
 {
+#if ENABLE_GETTEXT
     bindtextdomain("lithium", "locale");
     /* Only write the following 2 lines if creating an executable */
     setlocale(LC_ALL, "");
     textdomain("lithium");
+#endif
 
     argparse::ArgumentParser program("Lithium Server");
 

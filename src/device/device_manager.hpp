@@ -89,6 +89,10 @@ namespace Lithium
          */
         ~DeviceManager();
 
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
         /**
          * @brief 创建一个共享的设备管理器对象。
          * @param messageBus 消息总线对象的共享指针。
@@ -96,6 +100,18 @@ namespace Lithium
          * @return 返回一个指向设备管理器对象的共享指针。
          */
         static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
+
+        static std::unique_ptr<DeviceManager> createUnique(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
+
+        // -------------------------------------------------------------------
+        // Message methods
+        // -------------------------------------------------------------------
+
+        std::function<void(const nlohmann::json &)> connectToMessageBus();
+
+        // -------------------------------------------------------------------
+        // Device methods
+        // -------------------------------------------------------------------
 
         /**
          * @brief 获取指定类型设备的设备列表。

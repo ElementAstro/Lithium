@@ -136,6 +136,11 @@ namespace Lithium
         return std::make_shared<DeviceManager>(messageBus, configManager);
     }
 
+    std::unique_ptr<DeviceManager> DeviceManager::createUnique(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
+    {
+        return std::make_unique<DeviceManager>(messageBus, configManager);
+    }
+
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type)
     {
         std::vector<std::string> deviceList;

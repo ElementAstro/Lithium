@@ -1,4 +1,4 @@
-#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:162
+#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:167
 #, c++-format
 msgid "A device with name {} already exists, please choose a different name"
 msgstr ""

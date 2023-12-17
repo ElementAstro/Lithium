@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2023-12-15 18:06+0800\n"
+"POT-Creation-Date: 2023-12-17 21:01+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:162
+#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:167
 #, c++-format
 msgid "A device with name {} already exists, please choose a different name"
 msgstr ""

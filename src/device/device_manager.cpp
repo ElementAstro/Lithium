@@ -34,6 +34,7 @@ Description: Device Manager
 #include "atom/plugin/module_loader.hpp"
 #include "server/message_bus.hpp"
 #include "thread/thread.hpp"
+#include "atom/server/global_ptr.hpp"
 
 #include "core/camera.hpp"
 #include "core/telescope.hpp"
@@ -53,8 +54,8 @@ Description: Device Manager
 #endif
 #include <typeinfo>
 
-#include "indi_device.hpp"
-#include "indidevice_manager.hpp"
+#include "hydrogen_device.hpp"
+#include "hydrogen_manager.hpp"
 
 #include "config.h"
 
@@ -105,7 +106,7 @@ namespace Lithium
     // Constructor
     DeviceManager::DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
-        m_ModuleLoader = ModuleLoader::createShared("drivers");
+        m_ModuleLoader = ModuleLoader::createShared("drivers", GetPtr<Thread::ThreadManager>("ThreadManager"));
         m_ConfigManager = configManager;
         m_MessageBus = messageBus;
         for (auto &devices : m_devices)
@@ -113,7 +114,7 @@ namespace Lithium
             devices.emplace_back();
         }
 
-        m_indimanager = std::make_shared<INDIManager>();
+        m_hydrogenmanager = std::make_shared<HydrogenManager>();
     }
 
     DeviceManager::~DeviceManager()
@@ -133,6 +134,53 @@ namespace Lithium
     std::shared_ptr<DeviceManager> DeviceManager::createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
         return std::make_shared<DeviceManager>(messageBus, configManager);
+    }
+
+    std::unique_ptr<DeviceManager> DeviceManager::createUnique(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
+    {
+        return std::make_unique<DeviceManager>(messageBus, configManager);
+    }
+
+    void DeviceManager::connectToMessageBus()
+    {
+        m_MessageBus->Subscribe<std::shared_ptr<Message>>("device", [this](std::shared_ptr<Message> message) -> void {
+            switch (message->type())
+            {
+                case Message::Type::kNumber:
+                {
+                    std::shared_ptr<NumberMessage> numberMessage = std::dynamic_pointer_cast<NumberMessage>(message);
+
+                    break;
+                }
+                case Message::Type::kText:
+                {
+                    std::shared_ptr<TextMessage> stringMessage = std::dynamic_pointer_cast<TextMessage>(message);
+                    break;
+                }
+                case Message::Type::kBoolean:
+                {
+                    std::shared_ptr<BooleanMessage> booleanMessage = std::dynamic_pointer_cast<BooleanMessage>(message);
+                    break;
+                }
+                case Message::Type::kParams:
+                {
+                    std::shared_ptr<ParamsMessage> paramsMessage = std::dynamic_pointer_cast<ParamsMessage>(message);
+                    std::shared_ptr<IParams> params = paramsMessage->value();
+                    
+                    break;
+                }
+                case Message::Type::kJson:
+                {
+                    std::shared_ptr<JsonMessage> jsonMessage = std::dynamic_pointer_cast<JsonMessage>(message);
+                    break;
+                }
+                default:
+                {
+                    LOG_F(ERROR, "Unknown message type {}", magic_enum::enum_name(message->type()));
+                    break;
+                }
+            }
+        });
     }
 
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type)
@@ -1229,35 +1277,35 @@ namespace Lithium
         return DeviceError::None;
     }
 
-    bool DeviceManager::startINDIServer()
+    bool DeviceManager::startHydrogenServer()
     {
-        if (!m_indimanager->is_running())
+        if (!m_hydrogenmanager->is_running())
         {
-            m_indimanager->start_server();
+            m_hydrogenmanager->start_server();
         }
         return true;
     }
 
-    bool DeviceManager::stopINDIServer()
+    bool DeviceManager::stopHydrogenServer()
     {
-        if (m_indimanager->is_running())
+        if (m_hydrogenmanager->is_running())
         {
-            m_indimanager->stop_server();
+            m_hydrogenmanager->stop_server();
         }
         return true;
     }
 
-    bool DeviceManager::startINDIDevice()
+    bool DeviceManager::startHydrogenDevice()
     {
-        if (!m_indimanager->is_running())
+        if (!m_hydrogenmanager->is_running())
         {
-            LOG_F(ERROR, "INDI server is not started(not by lithium server)");
+            LOG_F(ERROR, "Hydrogen server is not started(not by lithium server)");
             return false;
         }
         return true;
     }
 
-    bool DeviceManager::stopINDIDevice()
+    bool DeviceManager::stopHydrogenDevice()
     {
         return true;
     }

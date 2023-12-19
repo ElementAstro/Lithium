@@ -58,11 +58,55 @@ namespace Lithium
     class MessageBus
     {
     public:
+        MessageBus()
+        {
+
+        }
+
+        MessageBus(const int &max_queue_size)
+        {
+            maxMessageBusSize_.store(max_queue_size);
+        }
+
+        ~MessageBus()
+        {
+            if (!subscribers_.empty())
+            {
+                subscribers_.clear();
+            }
+            if (!processingThreads_.empty())
+            {
+                for (auto &thread : processingThreads_)
+                {
+                    if (thread.second.joinable())
+                    {
+#if __cplusplus >= 202002L
+                        thread.second.request_stop();
+#endif
+                        thread.second.join();
+                    }
+                }
+                processingThreads_.clear();
+            }
+        }
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
         static std::shared_ptr<MessageBus> createShared()
         {
             return std::make_shared<MessageBus>();
         }
+
+        static std::unique_ptr<MessageBus> createUnique()
+        {
+            return std::make_unique<MessageBus>();
+        }
     public:
+        // -------------------------------------------------------------------
+        // MessageBus methods
+        // -------------------------------------------------------------------
+
         template <typename T>
         void Subscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0, const std::string &namespace_ = "")
         {
@@ -77,7 +121,7 @@ namespace Lithium
                     });
             subscribersLock_.unlock();
 
-            DLOG_F(INFO, "Subscribed to topic: %s", fullTopic.c_str());
+            DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
         }
 
         template <typename T>
@@ -106,9 +150,27 @@ namespace Lithium
                         }),
                     topicSubscribers.end());
 
-                DLOG_F(INFO, "Unsubscribed from topic: %s", fullTopic.c_str());
+                DLOG_F(INFO, "Unsubscribed from topic: {}", fullTopic);
             }
             subscribersLock_.unlock();
+        }
+
+        template <typename T>
+        void UnsubscribeFromNamespace(const std::string &namespaceName, std::function<void(const T &)> callback)
+        {
+            std::string topic = namespaceName + ".*";
+            Unsubscribe<T>(topic, callback, namespaceName);
+        }
+
+        void UnsubscribeAll(const std::string &namespace_ = "")
+        {
+            std::string fullTopic = namespace_.empty()? "*" : (namespace_ + "::*");
+
+            subscribersLock_.lock();
+            subscribers_.erase(fullTopic);
+            subscribersLock_.unlock();
+
+            DLOG_F(INFO, "Unsubscribed from all topics");
         }
 
         template <typename T>
@@ -121,7 +183,7 @@ namespace Lithium
             messageQueueLock_.unlock();
             messageAvailableFlag_.notify_one();
 
-            DLOG_F(INFO, "Published message to topic: %s", fullTopic.c_str());
+            DLOG_F(INFO, "Published message to topic: {}", fullTopic);
         }
 
         template <typename T>
@@ -193,7 +255,7 @@ namespace Lithium
                                     }
                                 }
                             } catch (const std::bad_any_cast& e) {
-                                LOG_F(ERROR, "Message type mismatch: %s", e.what());
+                                LOG_F(ERROR, "Message type mismatch: {}", e.what());
                             } catch (...) {
                                 LOG_F(ERROR, "Unknown error occurred during message processing");
                             }
@@ -208,13 +270,13 @@ namespace Lithium
                                 }
                             }
                         } catch (const std::bad_any_cast& e) {
-                            LOG_F(ERROR, "Global message type mismatch: %s", e.what());
+                            LOG_F(ERROR, "Global message type mismatch: {}", e.what());
                         } catch (...) {
                             LOG_F(ERROR, "Unknown error occurred during global message processing");
                         }
                         globalSubscribersLock_.unlock();
 
-                        DLOG_F(INFO, "Processed message on topic: %s", topic.c_str());
+                        DLOG_F(INFO, "Processed message on topic: {}", topic);
                     }
                 } }));
         }
@@ -231,7 +293,7 @@ namespace Lithium
     #endif
                 it->second.join();
                 processingThreads_.erase(it);
-                DLOG_F(INFO, "Processing thread for type %s stopped", typeid(T).name());
+                DLOG_F(INFO, "Processing thread for type {} stopped", typeid(T).name());
             }
         }
 
@@ -269,9 +331,9 @@ namespace Lithium
     #else
         std::unordered_map<std::type_index, std::thread> processingThreads_;
     #endif
-
     #endif
         std::atomic<bool> isRunning_{true};
+        std::atomic_int maxMessageBusSize_{1000};
 
         std::vector<std::any> globalSubscribers_;
         std::mutex globalSubscribersLock_;

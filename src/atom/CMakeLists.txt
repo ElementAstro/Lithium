@@ -5,6 +5,7 @@ CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 add_subdirectory(io)
 add_subdirectory(log)
+add_subdirectory(type)
 add_subdirectory(web)
 
 if(NOT HAS_STD_FORMAT)
@@ -23,9 +24,13 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     plugin/module_loader.cpp
     plugin/compiler.cpp
 
+    search/sqlite.cpp
+
+    server/daemon.cpp
     server/serialize.cpp
     server/deserialize.cpp
     server/json_checker.cpp
+    server/message.cpp
     server/xml_checker.cpp
     server/global_ptr.cpp
 
@@ -38,16 +43,21 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     system/dirw.cpp
 
     type/ini.cpp
+    type/iparams.cpp
 
     thread/thread.cpp
+    thread/timer.cpp
 
     utils/aes.cpp
+    utils/env.cpp
+    utils/hash_util.cpp
     utils/huffman.cpp
     utils/math.cpp
     utils/string.cpp
     utils/static_switch.cpp
     utils/time.cpp
 
+    web/address.cpp
     web/downloader.cpp
     web/httpclient.cpp
     web/httplite.cpp
@@ -70,6 +80,9 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     plugin/module_loader.hpp
     plugin/compiler.hpp
 
+    search/sqlite.hpp
+
+    server/daemon.hpp
     server/serialize.hpp
     server/deserialize.hpp
     server/json_checker.hpp
@@ -79,6 +92,7 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     server/message_bus.hpp
     server/message_queue.hpp
     server/variables.hpp
+    server/message.hpp
 
     system/system.hpp
     system/crash.hpp
@@ -90,10 +104,14 @@ list(APPEND ${PROJECT_NAME}_HEADERS
 
     type/json.hpp
     type/ini.hpp
+    type/iparams.hpp
+    type/small_vector.hpp
+    type/small_hashmap.hpp
 
     thread/async.hpp
     thread/thread_pool.hpp
     thread/thread.hpp
+    thread/timer.hpp
 
     utils/aes.hpp
     utils/exception.hpp
@@ -106,7 +124,10 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     utils/static_switch.hpp
     utils/switch.hpp
     utils/time.hpp
+    utils/env.hpp
+    utils/hash_util.hpp
 
+    web/address.hpp
     web/downloader.hpp
     web/httpclient.hpp
     web/httplite.hpp

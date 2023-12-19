@@ -54,3 +54,11 @@ std::string ConvertToChinaTime(const std::string& utcTimeStr);
  * @return std::string 返回格式为"%Y-%m-%d %H:%M:%S"的东八区字符串时间戳
  */
 std::string GetChinaTimestampString();
+
+/**
+ * @brief 将时间戳转换为字符串
+ * 
+ * @param timestamp 时间戳
+ * @return std::string 时间戳对应的字符串
+ */
+std::string TimeStampToString(time_t timestamp);

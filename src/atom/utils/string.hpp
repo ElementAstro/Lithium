@@ -29,8 +29,7 @@ Description: Some useful string functions
 
 **************************************************/
 
-#ifndef UNDERSCORE_H
-#define UNDERSCORE_H
+#pragma once
 
 #include <string>
 
@@ -39,5 +38,5 @@ std::string ToUnderscore(const std::string& str);
 std::string ToCamelCase(const std::string& str);
 std::string ConvertToUnderscore(const std::string& str);
 std::string ConvertToCamelCase(const std::string& str);
-
-#endif  // UNDERSCORE_H
+std::string UrlEncode(const std::string &str);
+std::string UrlDecode(const std::string &str);

@@ -115,26 +115,14 @@ elseif(LINUX)
     set(CMAKE_INSTALL_PREFIX "/usr/lithium")
 endif()
 
-set(api_module
-	${lithium_client_dir}/platesolve/astap.cpp
-	${lithium_client_dir}/platesolve/astrometry.cpp
-    ${lithium_client_dir}/phd2/phd2client.cpp
-    ${lithium_client_dir}/hydrogen/hydrogenclient.cpp
-    ${lithium_client_dir}/hydrogen/hydrogencamera.cpp
-    ${lithium_client_dir}/hydrogen/hydrogenfilterwheel.cpp
-    ${lithium_client_dir}/hydrogen/hydrogentelescope.cpp
-    ${lithium_client_dir}/hydrogen/hydrogenfocuser.cpp
-)
-
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
 )
 
 set(device_module
     ${lithium_src_dir}/device/device_manager.cpp
-    ${lithium_src_dir}/device/indidevice_manager.cpp
+    ${lithium_src_dir}/device/hydrogen_manager.cpp
     ${lithium_src_dir}/device/device_utils.cpp
-    ${lithium_src_dir}/device/indi_device.cpp
     ${lithium_src_dir}/device/hydrogen_device.cpp
 )
 
@@ -143,24 +131,11 @@ set(module_module
 )
 
 set(server_module
-    ${lithium_src_dir}/websocket/WebSocketServer.cpp
-    ${lithium_src_dir}/websocket/WsDeviceComponent.cpp
-    ${lithium_src_dir}/websocket/WsProcessComponent.cpp
-    ${lithium_src_dir}/websocket/WsScriptComponent.cpp
-    ${lithium_src_dir}/websocket/WsTaskComponent.cpp
-
-    ${lithium_src_dir}/websocket/device/WsDeviceHub.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsDeviceServer.cpp
-
-    ${lithium_src_dir}/websocket/device/WsCameraInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsTelescopeInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsFocuserInstance.cpp
-    ${lithium_src_dir}/websocket/device/WsFilterInstance.cpp
-
-    ${lithium_src_dir}/websocket/plugin/WsPluginHub.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginInstance.cpp
-    ${lithium_src_dir}/websocket/plugin/WsPluginServer.cpp
+    ${lithium_src_dir}/websocket/WsServer.cpp
+    ${lithium_src_dir}/websocket/WsHub.cpp
+    ${lithium_src_dir}/websocket/WsInstance.cpp
+    ${lithium_src_dir}/websocket/components/WsDeviceComponent.cpp
+    ${lithium_src_dir}/websocket/components/WsTaskComponent.cpp
 )
 
 set(script_module
@@ -242,12 +217,12 @@ add_subdirectory(${lithium_module_dir})
 # 内置的模组
 include_directories(modules)
 add_subdirectory(modules)
-add_subdirectory(modules/hydrogen_client)
+
 
 # 构建Lithium内核
 add_subdirectory(${lithium_src_dir}/core)
 
-add_executable(lithium_server ${api_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_executable(lithium_server ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
@@ -258,8 +233,10 @@ target_link_libraries(lithium_server atomstatic)
 
 target_link_libraries(lithium_server lithiumcorestatic)
 target_link_libraries(lithium_server lithiumpluginstatic)
-target_link_libraries(lithium_server hydrogencore)
+target_link_libraries(lithium_server lithiumcorestatic)
+if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
+endif()
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 if(NOT HAS_STD_FORMAT)
@@ -273,14 +250,10 @@ target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
 target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
 target_link_libraries(lithium_server libzip::zip)
-if(WIN32)
-target_link_libraries(lithium_server pugixml-shared)
-else()
-target_link_libraries(lithium_server pugixml-shared)
-endif()
 target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
+target_link_libraries(lithium_server tinyxml2)
 
 target_link_libraries(lithium_server ${Libintl_LIBRARY})
 target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})

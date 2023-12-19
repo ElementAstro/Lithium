@@ -1,70 +1,103 @@
-#include <iostream>
+/*
+ * json2xml.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-12-7
+
+Description: Json to XML conversion
+
+**************************************************/
+
 #include <fstream>
 #include <string>
-#include "nlohmann/json.hpp"
-#include "pugixml/pugixml.hpp"
+#include "atom/type/json.hpp"
+#include "atom/type/tinyxml2.h"
 #include "atom/log/loguru.hpp"
 #include <argparse/argparse.hpp>
 
 using json = nlohmann::json;
 
-void jsonToXml(const json &jsonData, pugi::xml_node &xmlNode)
+void jsonToXml(const json &jsonData, tinyxml2::XMLElement *xmlElement)
 {
+    tinyxml2::XMLDocument *xmlDoc = xmlElement->GetDocument();
+
     for (const auto &item : jsonData.items())
     {
         if (item.value().is_object())
         {
-            pugi::xml_node childXmlNode = xmlNode.append_child(item.key().c_str());
-            jsonToXml(item.value(), childXmlNode);
+            tinyxml2::XMLElement *childXmlElement = xmlDoc->NewElement(item.key().c_str());
+            xmlElement->InsertEndChild(childXmlElement);
+            jsonToXml(item.value(), childXmlElement);
         }
         else if (item.value().is_array())
         {
             for (const auto &arrayItem : item.value())
             {
-                pugi::xml_node childXmlNode = xmlNode.append_child(item.key().c_str());
-                jsonToXml(arrayItem, childXmlNode);
+                tinyxml2::XMLElement *childXmlElement = xmlDoc->NewElement(item.key().c_str());
+                xmlElement->InsertEndChild(childXmlElement);
+                jsonToXml(arrayItem, childXmlElement);
             }
         }
         else
         {
-            xmlNode.append_child(item.key().c_str()).text().set(item.value().get<std::string>().c_str());
+            tinyxml2::XMLElement *childXmlElement = xmlDoc->NewElement(item.key().c_str());
+            childXmlElement->SetText(item.value().get<std::string>().c_str());
+            xmlElement->InsertEndChild(childXmlElement);
         }
     }
 }
 
 bool convertJsonToXml(const std::string &jsonFilePath, const std::string &xmlFilePath)
 {
-    // 设置 loguru 的日志文件
     loguru::add_file("conversion.log", loguru::Append, loguru::Verbosity_INFO);
 
+    DLOG_F(INFO, "Reading JSON file: {}", jsonFilePath);
     // 读取 JSON 文件
-    DLOG_F(INFO, "Reading JSON file: %s", jsonFilePath.c_str());
     std::ifstream jsonFile(jsonFilePath);
     if (!jsonFile.is_open())
     {
-        DLOG_F(ERROR, "Failed to open JSON file: %s", jsonFilePath.c_str());
+        std::cout << "Failed to open JSON file: " << jsonFilePath << std::endl;
         return false;
     }
 
     // 解析 JSON
-    DLOG_F(INFO, "Parsing JSON data");
     json jsonData;
     jsonFile >> jsonData;
     jsonFile.close();
 
     // 创建 XML 文档
-    DLOG_F(INFO, "Creating XML document");
-    pugi::xml_document xmlDoc;
+    tinyxml2::XMLDocument xmlDoc;
+    tinyxml2::XMLElement *rootElement = xmlDoc.NewElement("root");
+    xmlDoc.InsertFirstChild(rootElement);
 
     // 转换 JSON 到 XML
-    DLOG_F(INFO, "Converting JSON to XML");
-    jsonToXml(jsonData, xmlDoc);
+    jsonToXml(jsonData, rootElement);
 
     // 保存 XML 文档到文件
-    DLOG_F(INFO, "Saving XML file: %s", xmlFilePath.c_str());
-    if (!xmlDoc.save_file(xmlFilePath.c_str()))
+    if (xmlDoc.SaveFile(xmlFilePath.c_str()) != tinyxml2::XML_SUCCESS)
     {
-        DLOG_F(ERROR, "Failed to save XML file: %s", xmlFilePath.c_str());
+        LOG_F(ERROR, "Failed to save XML file: {}", xmlFilePath);
         return false;
     }
 

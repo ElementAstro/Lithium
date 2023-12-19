@@ -1,20 +1,50 @@
-#include <iostream>
+/*
+ * xml2json.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-12-7
+
+Description: XML to JSON conversion
+
+**************************************************/
+
 #include <fstream>
 #include <string>
-#include "nlohmann/json.hpp"
-#include "pugixml/pugixml.hpp"
+#include "atom/type/json.hpp"
+#include "atom/type/tinyxml2.h"
 #include "atom/log/loguru.hpp"
 #include <argparse/argparse.hpp>
 
 using json = nlohmann::json;
 
-void xmlToJson(const pugi::xml_node &xmlNode, json &jsonData)
+void xmlToJson(const tinyxml2::XMLElement *xmlElement, json &jsonData)
 {
-    for (const auto &childXmlNode : xmlNode.children())
+    for (const tinyxml2::XMLNode *childNode = xmlElement->FirstChild(); childNode != nullptr; childNode = childNode->NextSibling())
     {
-        if (childXmlNode.type() == pugi::node_element)
+        if (childNode->ToElement())
         {
-            const std::string childNodeName = childXmlNode.name();
+            const std::string childNodeName = childNode->Value();
             json &jsonChildValue = jsonData[childNodeName];
             if (!jsonChildValue.is_null())
             {
@@ -30,12 +60,12 @@ void xmlToJson(const pugi::xml_node &xmlNode, json &jsonData)
             }
 
             json jsonItemValue;
-            xmlToJson(childXmlNode, jsonItemValue);
+            xmlToJson(childNode->ToElement(), jsonItemValue);
             jsonChildValue.push_back(jsonItemValue);
         }
-        else if (childXmlNode.type() == pugi::node_pcdata)
+        else if (childNode->ToText())
         {
-            jsonData = json(childXmlNode.value());
+            jsonData = json(childNode->ToText()->Value());
         }
     }
 }
@@ -46,11 +76,11 @@ bool convertXmlToJson(const std::string &xmlFilePath, const std::string &jsonFil
     loguru::add_file("conversion.log", loguru::Append, loguru::Verbosity_INFO);
 
     // 读取 XML 文件
-    DLOG_F(INFO, "Reading XML file: %s", xmlFilePath.c_str());
-    pugi::xml_document xmlDoc;
-    if (!xmlDoc.load_file(xmlFilePath.c_str()))
+    DLOG_F(INFO, "Reading XML file: {}", xmlFilePath);
+    tinyxml2::XMLDocument xmlDoc;
+    if (xmlDoc.LoadFile(xmlFilePath.c_str()) != tinyxml2::XML_SUCCESS)
     {
-        DLOG_F(ERROR, "Failed to load XML file: %s", xmlFilePath.c_str());
+        DLOG_F(ERROR, "Failed to load XML file: {}", xmlFilePath);
         return false;
     }
 
@@ -59,14 +89,14 @@ bool convertXmlToJson(const std::string &xmlFilePath, const std::string &jsonFil
 
     // 转换 XML 到 JSON
     DLOG_F(INFO, "Converting XML to JSON");
-    xmlToJson(xmlDoc, jsonData);
+    xmlToJson(xmlDoc.RootElement(), jsonData);
 
     // 保存 JSON 对象到文件
-    DLOG_F(INFO, "Saving JSON file: %s", jsonFilePath.c_str());
+    DLOG_F(INFO, "Saving JSON file: {}", jsonFilePath);
     std::ofstream jsonFile(jsonFilePath);
     if (!jsonFile.is_open())
     {
-        DLOG_F(ERROR, "Failed to open JSON file: %s", jsonFilePath.c_str());
+        DLOG_F(ERROR, "Failed to open JSON file: {}", jsonFilePath);
         return false;
     }
 

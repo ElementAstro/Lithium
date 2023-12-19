@@ -30,6 +30,7 @@ Description: Lithium App Enter
 **************************************************/
 
 #include "LithiumApp.hpp"
+
 #include "config.h"
 
 #include "atom/thread/thread.hpp"
@@ -40,13 +41,17 @@ Description: Lithium App Enter
 #include "task/task_generator.hpp"
 #include "task/task_stack.hpp"
 #include "core/property/iproperty.hpp"
+#include "atom/server/message.hpp"
 #include "plugin/plugin_loader.hpp"
 #include "script/script_manager.hpp"
+#include "atom/plugin/module_loader.hpp"
+#include "atom/error/error_stack.hpp"
 
 #include "atom/server/global_ptr.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "atom/utils/time.hpp"
 
 using json = nlohmann::json;
 
@@ -58,6 +63,7 @@ namespace Lithium
     {
         try
         {
+            // Specialized Managers and Threads
             m_ConfigManager = GetPtr<ConfigManager>("ConfigManager");
             m_DeviceManager = GetPtr<DeviceManager>("DeviceManager");
             m_PluginManager = GetPtr<PluginManager>("PluginManager");
@@ -68,12 +74,19 @@ namespace Lithium
             m_ThreadManager = GetPtr<Thread::ThreadManager>("ThreadManager");
             m_ProcessManager = GetPtr<Process::ProcessManager>("ProcessManager");
             m_MessageBus = GetPtr<MessageBus>("MessageBus");
+            m_ModuleLoader = GetPtr<ModuleLoader>("ModuleLoader");
 
+            // Specialized Message Processing Threads for Device and Device Manager
             m_MessageBus->StartProcessingThread<IStringProperty>();
             m_MessageBus->StartProcessingThread<IBoolProperty>();
             m_MessageBus->StartProcessingThread<INumberProperty>();
             m_MessageBus->StartProcessingThread<INumberVector>();
-            m_MessageBus->StartProcessingThread<std::string>();
+
+            // Common Message Processing Threads
+            // Max : Maybe we only need one thread for Message, and dynamically cast message
+            //       to the right type to process.
+            //       All of the messages are based on the Message class.
+            m_MessageBus->StartProcessingThread<Message>();
         }
         catch (const std::exception &e)
         {
@@ -84,6 +97,7 @@ namespace Lithium
 
     LithiumApp::~LithiumApp()
     {
+        m_MessageBus->UnsubscribeAll();
         m_MessageBus->StopAllProcessingThreads();
     }
 
@@ -91,6 +105,31 @@ namespace Lithium
     {
         return std::make_shared<LithiumApp>();
     }
+
+    std::unique_ptr<LithiumApp> LithiumApp::createUnique()
+    {
+        return std::make_unique<LithiumApp>();
+    }
+
+    void InitLithiumApp()
+    {
+        AddPtr("ConfigManager", ConfigManager::createShared());
+        AddPtr("MessageBus", MessageBus::createShared());
+        AddPtr("ModuleLoader", ModuleLoader::createShared());
+        AddPtr("ThreadManager", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
+        AddPtr("ProcessManager", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
+        AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
+        AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
+        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
+        AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
+        AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
+        AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
+        AddPtr("ErrorStack", std::make_shared<ErrorStack>());
+    }
+
+    // ----------------------------------------------------------------
+    // Config
+    // ----------------------------------------------------------------
 
     json LithiumApp::GetConfig(const std::string &key_path) const
     {
@@ -103,6 +142,24 @@ namespace Lithium
         DLOG_F(INFO, _("Set {} to {}"), key_path, value.dump());
         m_ConfigManager->setValue(key_path, value);
     }
+
+    ReturnMessage LithiumApp::GetConfigW(const std::shared_ptr<IParams> &params)
+    {
+        if(!params->get<std::string>("params","key_path").has_value())
+        {
+            LOG_F(ERROR, _("Get config value failed: Missing key_path"));
+
+        }
+    }
+
+    ReturnMessage LithiumApp::SetConfigW(const std::shared_ptr<IParams> &params)
+    {
+
+    }
+
+    // -----------------------------------------------------------------
+    // Device
+    // -----------------------------------------------------------------
 
     std::vector<std::string> LithiumApp::getDeviceList(DeviceType type)
     {
@@ -170,6 +227,10 @@ namespace Lithium
         return true;
     }
 
+    // ------------------------------------------------------------------
+    // Process
+    // ------------------------------------------------------------------
+
     bool LithiumApp::createProcess(const std::string &command, const std::string &identifier)
     {
         return m_ProcessManager->createProcess(command, identifier);
@@ -199,6 +260,10 @@ namespace Lithium
     {
         return m_ProcessManager->getProcessOutput(identifier);
     }
+
+    // --------------------------------------------------------------------
+    // Task
+    // --------------------------------------------------------------------
 
     bool LithiumApp::addTask(const std::shared_ptr<BasicTask> &task)
     {
@@ -266,6 +331,10 @@ namespace Lithium
         return true;
     }
 
+    // -----------------------------------------------------------------
+    // Thread
+    // -----------------------------------------------------------------
+
     /*
      * Thread Manager Functions Wrapper
      */
@@ -289,6 +358,10 @@ namespace Lithium
     {
         return m_ThreadManager->isThreadRunning(name);
     }
+
+    // -----------------------------------------------------------------
+    // Chai
+    // -----------------------------------------------------------------
 
     bool LithiumApp::runChaiCommand(const std::string &command)
     {
@@ -365,18 +438,140 @@ namespace Lithium
         m_ScriptManager->InitMyApp();
     }
 
-    void InitLithiumApp()
+    // -----------------------------------------------------------------
+    // Module
+    // -----------------------------------------------------------------
+
+    bool LithiumApp::loadModule(const std::string &path, const std::string &name)
     {
-        AddPtr("ConfigManager", ConfigManager::createShared());
-        AddPtr("MessageBus", MessageBus::createShared());
-        AddPtr("ThreadManager", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
-        AddPtr("ProcessManager", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
-        AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
-        AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
-        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
-        AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
-        AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
-        AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
+        if (m_ModuleLoader->LoadModule(path, name))
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, _("Failed to load module {} in {}"), name, path);
+            json res = {
+                {"command", __func__},
+                {"status", false},
+                {"message", _(fmt::format("Failed to load module {} in {}", name, path).c_str())},
+                {"timestamp", GetTimestampString()}};
+            sendJsonMessage("error", res);
+            return false;
+        }
     }
 
+    bool LithiumApp::unloadModule(const std::string &name)
+    {
+        if (m_ModuleLoader->UnloadModule(name))
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, _("Failed to unload module {}"), name);
+            json res = {
+                {"command", __func__},
+                {"status", false},
+                {"message", _(fmt::format("Failed to unload module {}", name).c_str())},
+                {"timestamp", GetTimestampString()}};
+            sendJsonMessage("error", res);
+            return false;
+        }
+    }
+
+    bool LithiumApp::reloadModule(const std::string &name)
+    {
+        if (m_ModuleLoader->HasModule(name))
+        {
+            if (unloadModule(name))
+            {
+                return loadModule(m_ModuleLoader->GetModulePath(name), name);
+            }
+        }
+        LOG_F(ERROR, _("Failed to reload module {}"), name);
+        json res = {
+            {"command", __func__},
+            {"status", false},
+            {"message", _(fmt::format("Failed to reload module {}", name).c_str())},
+            {"timestamp", GetTimestampString()}};
+        sendJsonMessage("error", res);
+        return false;
+    }
+
+    bool LithiumApp::reloadAllModules()
+    {
+        for (const std::string &name : m_ModuleLoader->GetAllExistedModules())
+        {
+            reloadModule(name);
+        }
+        return true;
+    }
+
+    bool LithiumApp::checkModuleLoaded(const std::string &name)
+    {
+        return m_ModuleLoader->HasModule(name);
+    }
+
+    std::vector<std::string> LithiumApp::getModuleList()
+    {
+        return m_ModuleLoader->GetAllExistedModules();
+    }
+
+    bool LithiumApp::enableModule(const std::string &name)
+    {
+        if (m_ModuleLoader->EnableModule(name))
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, _("Failed to enable module {}"), name);
+            json res = {
+                {"command", __func__},
+                {"status", false},
+                {"message", _(fmt::format("Failed to enable module {}", name).c_str())},
+                {"timestamp", GetTimestampString()}};
+            sendJsonMessage("error", res);
+            return false;
+        }
+    }
+
+    bool LithiumApp::disableModule(const std::string &name)
+    {
+        if (m_ModuleLoader->DisableModule(name))
+        {
+            return true;
+        }
+        else
+        {
+            LOG_F(ERROR, _("Failed to disable module {}"), name);
+            json res = {
+                {"command", __func__},
+                {"status", false},
+                {"message", _(fmt::format("Failed to disable module {}", name).c_str())},
+                {"timestamp", GetTimestampString()}};
+            sendJsonMessage("error", res);
+            return false;
+        }
+    }
+
+    bool LithiumApp::getModuleStatus(const std::string &name)
+    {
+        return m_ModuleLoader->IsModuleEnabled(name);
+    }
+
+    json LithiumApp::getModuleConfig(const std::string &name)
+    {
+        return m_ModuleLoader->GetModuleConfig(name);
+    }
+
+    // -----------------------------------------------------------------
+    // Message methods
+    // -----------------------------------------------------------------
+
+    ReturnMessage LithiumApp::returnMessage(const std::string &message)
+    {
+
+    }
 }

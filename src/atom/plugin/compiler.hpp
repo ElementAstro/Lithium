@@ -53,9 +53,32 @@ namespace Lithium
          * \param functionName 入口函数名
          * \return 编译是否成功
          */
-        bool CompileToSharedLibrary(const std::string &code, const std::string &moduleName, const std::string &functionName);
+        bool CompileToSharedLibrary(const std::string &code, const std::string &moduleName, const std::string &functionName, const std::string &optionsFile = "compile_options.json");
+
+        bool CompileToSharedLibraryAllinOne(const std::string &code, const std::string &moduleName, const std::string &functionName);
 
     private:
+        // 检查参数是否有效
+        bool CheckParameters(const std::string &code, const std::string &moduleName, const std::string &functionName);
+        // 检查模块是否已经编译并缓存
+        bool IsModuleCached(const std::string &moduleName, const std::string &functionName, std::unordered_map<std::string, std::string> &cache_);
+
+        // 创建输出目录
+        bool CreateOutputDirectory(const std::string &outputDir);
+
+        // 从 JSON 文件中读取编译选项
+        std::string ReadCompileOptions(const std::string &optionsFile);
+
+        // 语法检查
+        bool SyntaxCheck(const std::string &code, const std::string &compiler);
+        // 编译代码
+        bool CompileCode(const std::string &code, const std::string &compiler, const std::string &compileOptions, const std::string &output);
+
+        // 缓存已编译的模块
+        void CacheCompiledModule(const std::string &moduleName, const std::string &functionName, const std::string &output, std::unordered_map<std::string, std::string> &cache_);
+        // ----------------------------------------------------
+        // 文件、系统操作
+        // ----------------------------------------------------
         /**
          * \brief 复制文件
          *

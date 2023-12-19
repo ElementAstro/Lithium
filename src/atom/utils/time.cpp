@@ -85,3 +85,10 @@ std::string GetChinaTimestampString()
 
     return ss.str();
 }
+
+std::string TimeStampToString(time_t timestamp)
+{
+    char buffer[80];
+    std::strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", std::localtime(&timestamp));
+    return std::string(buffer);
+}

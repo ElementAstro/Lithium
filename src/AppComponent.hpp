@@ -34,9 +34,7 @@ Description: App Components
 
 #include "config.h"
 
-#include "websocket/WebSocketServer.hpp"
-#include "websocket/device/WsDeviceServer.hpp"
-#include "websocket/plugin/WsPluginServer.hpp"
+#include "websocket/WsServer.hpp"
 
 #include "ErrorHandler.hpp"
 
@@ -207,31 +205,7 @@ public:
 #else
         auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
 #endif
-        connectionHandler->setSocketInstanceListener(std::make_shared<WSInstanceListener>());
-        return connectionHandler; }());
-
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketDeviceConnectionHandler)
-    ("websocket-device", []
-     {
-#if ENABLE_ASYNC
-        OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
-        auto connectionHandler = oatpp::websocket::AsyncConnectionHandler::createShared(executor);
-#else
-        auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
-#endif
-        connectionHandler->setSocketInstanceListener(std::make_shared<WsDeviceServer>());
-        return connectionHandler; }());
-
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketScriptConnectionHandler)
-    ("websocket-script", []
-     {
-#if ENABLE_ASYNC
-        OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
-        auto connectionHandler = oatpp::websocket::AsyncConnectionHandler::createShared(executor);
-#else
-        auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
-#endif
-        connectionHandler->setSocketInstanceListener(std::make_shared<WsPluginServer>());
+        connectionHandler->setSocketInstanceListener(std::make_shared<WsServer>());
         return connectionHandler; }());
 };
 

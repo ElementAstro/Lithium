@@ -49,6 +49,9 @@ namespace fs = std::filesystem;
 #define PATH_SEPARATOR "/"
 #endif
 
+#define SET_CONFIG_VALUE(key) \
+    config[dir.path().string()][#key] = module_config.value(#key, "");
+
 namespace Lithium
 {
     /**
@@ -127,25 +130,37 @@ namespace Lithium
                 if (dir.is_directory())
                 {
                     // Get the path of the info.json file within the subdirectory
-                    fs::path info_file = dir.path() / "info.json";
+                    fs::path info_file = dir.path() / "config.json";
                     // If the info.json exists
                     if (fs::exists(info_file))
                     {
                         // Append necessary information to the JSON object
                         config[dir.path().string()]["path"] = dir.path().string();
                         config[dir.path().string()]["config"] = info_file.string();
+                        DLOG_F(INFO, "Module found: {}, config file: {}", dir.path().string(), info_file.string());
                         // Read the module configuration from the info.json file and append to the JSON object
                         json module_config = read_config_file(info_file.string());
-                        config[dir.path().string()]["name"] = module_config["name"];
-                        config[dir.path().string()]["version"] = module_config["version"];
-                        config[dir.path().string()]["author"] = module_config["author"];
-                        config[dir.path().string()]["license"] = module_config.value("license", "");
-                        config[dir.path().string()]["description"] = module_config.value("description", "");
-                        // Debug message
-                        DLOG_F(INFO, "Module found: {}, config file: {}", dir.path().string(), info_file.string());
+                        SET_CONFIG_VALUE(name)
+                        SET_CONFIG_VALUE(version)
+                        SET_CONFIG_VALUE(author)
+                        SET_CONFIG_VALUE(type)
+                        SET_CONFIG_VALUE(dependencies)
+                        SET_CONFIG_VALUE(url)
+                        SET_CONFIG_VALUE(homepage)
+                        SET_CONFIG_VALUE(keywords)
+                        SET_CONFIG_VALUE(repository)
+                        SET_CONFIG_VALUE(bugs)
+                        SET_CONFIG_VALUE(readme)
+                        SET_CONFIG_VALUE(license)
+                        SET_CONFIG_VALUE(description)
                     }
                 }
             }
+        }
+        catch (const fs::filesystem_error &e)
+        {
+            LOG_F(ERROR, "Failed to iterate modules directory: {}", e.what());
+            return {{"error", "Failed to iterate modules directory"}};
         }
         catch (const std::exception &e)
         {
@@ -159,61 +174,7 @@ namespace Lithium
         return config;
     }
 
-    ModuleLoader::ModuleLoader()
-    {
-        m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
-        DLOG_F(INFO, "C++ module manager loaded successfully.");
-        if (m_ThreadManager)
-        {
-            m_ThreadManager->addThread([this]()
-                                       { if(!LoadOnInit("modules")){
-                                    LOG_F(ERROR,"Failed to load modules on init");
-                                   } },
-                                       "LoadOnInit");
-        }
-        else
-        {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
-        }
-    }
-
-    ModuleLoader::ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager)
-    {
-        m_ThreadManager = threadManager;
-        DLOG_F(INFO, "C++ module manager loaded successfully.");
-        if (m_ThreadManager)
-        {
-            m_ThreadManager->addThread([this]()
-                                       { if(!LoadOnInit("modules")){
-                                    LOG_F(ERROR,"Failed to load modules on init");
-                                   } },
-                                       "LoadOnInit");
-        }
-        else
-        {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
-        }
-    }
-
-    ModuleLoader::ModuleLoader(const std::string &dir_name)
-    {
-        m_ThreadManager = std::make_shared<Thread::ThreadManager>(10);
-        DLOG_F(INFO, "C++ module manager loaded successfully.");
-        if (m_ThreadManager)
-        {
-            m_ThreadManager->addThread([this, dir_name]()
-                                       { if(!LoadOnInit(dir_name)){
-                                    LOG_F(ERROR,"Failed to load modules on init");
-                                   } },
-                                       "LoadOnInit");
-        }
-        else
-        {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
-        }
-    }
-
-    ModuleLoader::ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager)
+    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules", std::shared_ptr<Thread::ThreadManager> threadManager = Thread::ThreadManager::createShared())
     {
         m_ThreadManager = threadManager;
         DLOG_F(INFO, "C++ module manager loaded successfully.");
@@ -233,31 +194,23 @@ namespace Lithium
 
     std::shared_ptr<ModuleLoader> ModuleLoader::createShared()
     {
-        return std::make_shared<ModuleLoader>();
+        return std::make_shared<ModuleLoader>("modules", Thread::ThreadManager::createShared());
     }
 
-    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name)
-    {
-        return std::make_shared<ModuleLoader>(dir_name);
-    }
-
-    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(std::shared_ptr<Thread::ThreadManager> threadManager)
-    {
-        return std::make_shared<ModuleLoader>(threadManager);
-    }
-    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager)
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules", std::shared_ptr<Thread::ThreadManager> threadManager = Thread::ThreadManager::createShared())
     {
         return std::make_shared<ModuleLoader>(dir_name, threadManager);
     }
 
     ModuleLoader::~ModuleLoader()
     {
-        if (!handles_.empty())
+        if (!modules_.empty())
         {
-            for (auto &entry : handles_)
+            if (!UnloadAllModules())
             {
-                UNLOAD_LIBRARY(entry.second);
+                LOG_F(ERROR, "Failed to unload all modules");
             }
+            modules_.clear();
         }
     }
 
@@ -298,7 +251,14 @@ namespace Lithium
                 LOG_F(ERROR, "Library {} does not exist", path);
                 return false;
             }
+            // Max : The mod's name should be unique, so we check if it already exists
+            if (HasModule(name))
+            {
+                LOG_F(ERROR, "Module {} already loaded", name);
+                return false;
+            }
 
+            std::shared_ptr<Mod> mod = std::make_shared<Mod>();
             // Load the library file
             void *handle = LOAD_LIBRARY(path.c_str());
             if (!handle)
@@ -306,22 +266,37 @@ namespace Lithium
                 LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
                 return false;
             }
-
-            // Read the configuration file in JSON format
+            mod->handle = handle;
+            // Read the configuration file in JSON format. We will support other formats in the future
             std::filesystem::path p = path;
             std::string config_file_path = p.replace_extension(".json").string();
             if (std::filesystem::exists(config_file_path))
             {
                 json config;
-                std::ifstream config_file(config_file_path);
-                config_file >> config;
-
+                try
+                {
+                    std::ifstream config_file(config_file_path);
+                    config_file >> config;
+                }
+                catch (const json::parse_error &e)
+                {
+                    LOG_F(ERROR, "Failed to parse config file {}: {}", config_file_path, e.what());
+                }
+                mod->config_path = config_file_path;
+                mod->config_file = p.string();
+                mod->config = config;
                 // Check if the required fields exist in the configuration file
-                if (config.contains("name") && config.contains("version") && config.contains("author"))
+                if (config.contains("name") && config.contains("version") && config.contains("author") && config.contains("type"))
                 {
                     std::string version = config["version"].get<std::string>();
                     std::string author = config["author"].get<std::string>();
                     std::string license = config.value("license", "");
+                    std::string type = config["type"].get<std::string>();
+
+                    mod->version = version;
+                    mod->author = author;
+                    mod->license = license;
+                    mod->type = type;
 
                     DLOG_F(INFO, "Loaded Module : {} version {} written by {}{}",
                            config.value("name", "Unknown"), version, author, license.empty() ? "" : (" under " + license));
@@ -337,7 +312,9 @@ namespace Lithium
             }
 
             // Store the library handle in handles_ map with the module name as key
-            handles_[name] = handle;
+            // handles_[name] = handle;
+            modules_[name] = mod;
+            DLOG_F(INFO, "Loaded module : {}", name);
             return true;
         }
         catch (const std::exception &e)
@@ -347,37 +324,25 @@ namespace Lithium
         }
     }
 
-    bool ModuleLoader::UnloadModule(const std::string &filename)
+    bool ModuleLoader::UnloadModule(const std::string &name)
     {
         try
         {
             // Check if the module is loaded and has a valid handle
-            auto it = handles_.find(filename);
-            if (it == handles_.end())
+            if (!HasModule(name))
             {
-                LOG_F(ERROR, "Module {} is not loaded", filename);
+                LOG_F(ERROR, "Module {} is not loaded", name);
                 return false;
-            }
-
-            if (!it->second)
-            {
-                LOG_F(ERROR, "Module {}'s handle is null", filename);
-                return false;
-            }
-
+            };
             // Unload the library and remove its handle from handles_ map
-            int result = UNLOAD_LIBRARY(it->second);
-            if (result == 0)
+            int result = UNLOAD_LIBRARY(GetModule(name)->handle);
+            if (result != 0)
             {
-                DLOG_F(INFO, "Unloaded module : {}", filename);
-                handles_.erase(it);
-                return true;
-            }
-            else
-            {
-                LOG_F(ERROR, "Failed to unload module {}", filename);
+                LOG_F(ERROR, "Failed to unload module {}", name);
                 return false;
             }
+            modules_.erase(name);
+            return true;
         }
         catch (const std::exception &e)
         {
@@ -386,8 +351,24 @@ namespace Lithium
         }
     }
 
+    bool ModuleLoader::UnloadAllModules()
+    {
+        for (auto entry : modules_)
+        {
+            int result = UNLOAD_LIBRARY(entry.second->handle);
+            if (result != 0)
+            {
+                LOG_F(ERROR, "Failed to unload module {}", entry.first);
+                return false;
+            }
+        }
+        modules_.clear();
+        return true;
+    }
+
     bool ModuleLoader::CheckModuleExists(const std::string &name) const
     {
+        // Max : Directly check if the library exists seems to be a litle bit slow. May we use filesystem instead?
         void *handle = LOAD_LIBRARY(name.c_str());
         if (handle == nullptr)
         {
@@ -399,34 +380,50 @@ namespace Lithium
         return true;
     }
 
-    void *ModuleLoader::GetHandle(const std::string &name) const
+    std::shared_ptr<Mod> ModuleLoader::GetModule(const std::string &name) const
     {
-        auto it = handles_.find(name);
-        if (it == handles_.end())
+        auto it = modules_.find(name);
+        if (it == modules_.end())
         {
             return nullptr;
         }
         return it->second;
     }
 
-    bool ModuleLoader::HasModule(const std::string &name) const
+    void *ModuleLoader::GetHandle(const std::string &name) const
     {
-        return handles_.count(name) > 0;
+        auto it = modules_.find(name);
+        if (it == modules_.end())
+        {
+            return nullptr;
+        }
+        return it->second->handle;
     }
 
-    bool ModuleLoader::EnableModule(const std::string &module_name)
+    bool ModuleLoader::HasModule(const std::string &name) const
     {
-        auto it = disabled_modules_.find(module_name);
-        if (it != disabled_modules_.end())
+        return modules_.count(name) > 0;
+    }
+
+    bool ModuleLoader::EnableModule(const std::string &name)
+    {
+        // Check if the module is loaded
+        if (!HasModule(name))
         {
-            std::string disabled_file = it->second;
+            LOG_F(ERROR, "Module {} is not loaded", name);
+            return false;
+        }
+        std::shared_ptr<Mod> mod = GetModule(name);
+        if (!mod->enabled.load())
+        {
+            mod->enabled.store(true);
+            std::string disabled_file = mod->path;
             std::string enabled_file = disabled_file.substr(0, disabled_file.size() - 8);
             if (CheckModuleExists(enabled_file))
             {
                 if (UnloadModule(enabled_file))
                 {
                     std::rename(disabled_file.c_str(), enabled_file.c_str());
-                    disabled_modules_.erase(it);
                     return true;
                 }
                 else
@@ -436,47 +433,103 @@ namespace Lithium
             }
             else
             {
-                LOG_F(ERROR, "Enabled file not found for module {}", module_name);
+                LOG_F(ERROR, "Enabled file not found for module {}", name);
                 return false;
             }
         }
         return true;
     }
 
-    bool ModuleLoader::DisableModule(const std::string &module_name)
+    bool ModuleLoader::DisableModule(const std::string &name)
     {
-        auto it = handles_.find(module_name);
-        if (it != handles_.end())
+        // Check if the module is loaded
+        if (!HasModule(name))
         {
-            std::string module_path = GetModulePath(module_name);
+            LOG_F(ERROR, "Module {} is not loaded", name);
+            return false;
+        }
+        std::shared_ptr<Mod> mod = GetModule(name);
+        if (mod->enabled.load())
+        {
+            mod->enabled.store(false);
+            std::string module_path = GetModulePath(name);
             if (module_path.empty())
             {
-                LOG_F(ERROR, "Module path not found for module {}", module_name);
+                LOG_F(ERROR, "Module path not found for module {}", name);
                 return false;
             }
             std::string disabled_file = module_path + ".disabled";
             if (std::rename(module_path.c_str(), disabled_file.c_str()) == 0)
             {
-                handles_.erase(it);
-                disabled_modules_.insert(std::make_pair(module_name, disabled_file));
+                modules_.erase(name);
                 return true;
             }
             else
             {
-                LOG_F(ERROR, "Failed to disable module {}", module_name);
+                LOG_F(ERROR, "Failed to disable module {}", name);
                 return false;
             }
         }
         return true;
     }
 
-    std::string ModuleLoader::GetModulePath(const std::string &module_name)
+    bool ModuleLoader::IsModuleEnabled(const std::string &name) const
     {
-        auto it = handles_.find(module_name);
-        if (it != handles_.end())
+        if (!HasModule(name))
+        {
+            LOG_F(ERROR, "Module {} is not loaded", name);
+            return false;
+        }
+        if (GetModule(name)->enabled.load())
+        {
+            return true;
+        }
+        return false;
+    }
+
+    std::string ModuleLoader::GetModuleVersion(const std::string &name)
+    {
+        if (HasModule(name))
+        {
+            return GetFunction<std::string (*)()>(name, "GetVersion")();
+        }
+        return "";
+    }
+
+    std::string ModuleLoader::GetModuleDescription(const std::string &name)
+    {
+        if (HasModule(name))
+        {
+            return GetFunction<std::string (*)()>(name, "GetDescription")();
+        }
+        return "";
+    }
+
+    std::string ModuleLoader::GetModuleAuthor(const std::string &name)
+    {
+        if (HasModule(name))
+        {
+            return GetFunction<std::string (*)()>(name, "GetAuthor")();
+        }
+        return "";
+    }
+
+    std::string ModuleLoader::GetModuleLicense(const std::string &name)
+    {
+        if (HasModule(name))
+        {
+            return GetFunction<std::string (*)()>(name, "GetLicense")();
+        }
+        return "";
+    }
+
+    std::string ModuleLoader::GetModulePath(const std::string &name)
+    {
+        auto it = modules_.find(name);
+        if (it != modules_.end())
         {
             Dl_info dl_info;
-            if (dladdr(it->second, &dl_info) != 0)
+            if (dladdr(it->second->handle, &dl_info) != 0)
             {
                 return dl_info.dli_fname;
             }
@@ -484,14 +537,23 @@ namespace Lithium
         return "";
     }
 
+    json ModuleLoader::GetModuleConfig(const std::string &name)
+    {
+        if (HasModule(name))
+        {
+            return GetFunction<json (*)()>(name, "GetConfig")();
+        }
+        return {};
+    }
+
     const std::vector<std::string> ModuleLoader::GetAllExistedModules() const
     {
         std::vector<std::string> modules_name;
-        if (handles_.empty())
+        if (modules_.empty())
         {
             return modules_name;
         }
-        for (auto module_ : handles_)
+        for (auto module_ : modules_)
         {
             modules_name.push_back(module_.first);
         }

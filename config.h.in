@@ -3,11 +3,17 @@
 #cmakedefine01 ENABLE_FASTHASH
 #cmakedefine01 ENABLE_DEBUG
 
+#ifdef ENABLE_GETTEXT
 // I18n
 #include <libintl.h>
 #include <locale.h>
 #include <locale>
-
 #define _(STRING) gettext(STRING)
 #define N_(STRING) STRING
 #define P_(SINGULAR, PLURAL, N) ngettext(SINGULAR, PLURAL, N)
+#else
+#define _(STRING) (STRING)
+#define N_(STRING) (STRING)
+#define P_(SINGULAR, PLURAL, N) (N > 1 ? PLURAL : SINGULAR)
+#endif
+

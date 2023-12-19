@@ -43,7 +43,11 @@ struct ErrorInfo
 {
     std::string errorMessage; /**< Error message. */
     std::string moduleName;   /**< Module name. */
+    std::string functionName; /**< Function name where the error occurred. */
+    int line;                 /**< Line number where the error occurred. */
+    std::string fileName;     /**< File name where the error occurred. */
     time_t timestamp;         /**< Timestamp of the error. */
+    std::string uuid;         /**< UUID of the error. */
 };
 
 /**
@@ -74,11 +78,23 @@ public:
     ErrorStack();
 
     /**
+     * @brief Create shared ErrorStack object.
+     * @return Shared ErrorStack object.
+     */
+    static std::shared_ptr<ErrorStack> createShared();
+
+    /**
+     * @brief Create unique ErrorStack object.
+     * @return Unique ErrorStack object.
+     */
+    static std::unique_ptr<ErrorStack> createUnique();
+
+    /**
      * @brief Insert an error into the stack.
      * @param errorMessage Error message.
      * @param moduleName Module name where the error occurred.
      */
-    void InsertError(const std::string &errorMessage, const std::string &moduleName);
+    void InsertError(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName);
 
     /**
      * @brief Set the filtered modules for printing the error stack.
@@ -108,7 +124,7 @@ public:
      * @param errorMessage Error message.
      * @param moduleName Module name where the error occurred.
      */
-    void InsertErrorCompressed(const std::string &errorMessage, const std::string &moduleName);
+    void InsertErrorCompressed(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName);
 
     /**
      * @brief Get the compressed errors as a string.

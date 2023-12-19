@@ -34,6 +34,7 @@ Description: C++ and Modules Loader
 #include <vector>
 #include <cstdio>
 #include <functional>
+#include <atomic>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -95,28 +96,38 @@ namespace Lithium
      */
     json iterator_modules_dir(const std::string &dir_name);
 
+    /**
+     * @brief 用于描述一个模块。
+     *
+     * 用于描述一个模块。注意模组和插件不是一个东西，模组描述的动态库，而插件是从动态库中提取的指针，是可以操作的对象
+     */
+    class Mod
+    {
+        // All of the module information
+    public:
+        int id;
+        std::string name;
+        std::string description;
+        std::string version;
+        std::string status;
+        std::string type;
+        std::string author;
+        std::string license;
+        std::string path;
+        std::string config_path;
+        std::string config_file;
+        json config;
+
+        // Module enable status
+        std::atomic_bool enabled;
+
+        // Module handle pointer
+        void *handle;
+    };
+
     class ModuleLoader
     {
     public:
-        /**
-         * @brief 默认构造函数，创建一个空的 ModuleLoader 对象。
-         */
-        ModuleLoader();
-
-        /**
-         * @brief 使用给定的目录名称参数构造 ModuleLoader 对象。
-         *
-         * @param dir_name 模块所在的目录名称。
-         */
-        ModuleLoader(const std::string &dir_name);
-
-        /**
-         * @brief 使用给定的线程管理器参数构造 ModuleLoader 对象。
-         *
-         * @param threadManager 线程管理器的共享指针。
-         */
-        ModuleLoader(std::shared_ptr<Thread::ThreadManager> threadManager);
-
         /**
          * @brief 使用给定的目录名称和线程管理器参数构造 ModuleLoader 对象。
          *
@@ -130,28 +141,7 @@ namespace Lithium
          */
         ~ModuleLoader();
 
-        /**
-         * @brief 创建一个共享的 ModuleLoader 指针对象。
-         *
-         * @return 新创建的共享 ModuleLoader 指针对象。
-         */
         static std::shared_ptr<ModuleLoader> createShared();
-
-        /**
-         * @brief 使用给定的目录名称参数创建一个共享的 ModuleLoader 指针对象。
-         *
-         * @param dir_name 模块所在的目录名称。
-         * @return 新创建的共享 ModuleLoader 指针对象。
-         */
-        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name);
-
-        /**
-         * @brief 使用给定的线程管理器参数创建一个共享的 ModuleLoader 指针对象。
-         *
-         * @param threadManager 线程管理器的共享指针。
-         * @return 新创建的共享 ModuleLoader 指针对象。
-         */
-        static std::shared_ptr<ModuleLoader> createShared(std::shared_ptr<Thread::ThreadManager> threadManager);
 
         /**
          * @brief 使用给定的目录名称和线程管理器参数创建一个共享的 ModuleLoader 指针对象。
@@ -173,7 +163,7 @@ namespace Lithium
         /**
          * @brief   Loads a dynamic module from the given path.
          *
-         * This function loads a dynamic module from the given path. If the loading is successful, it returns true and saves the handle to the module in the handles_ map.
+         * This function loads a dynamic module from the given path. If the loading is successful, it returns true and saves the handle to the module in the modules_ map.
          * If the loading fails, it returns false and logs an error message.
          *
          * @param[in]   path    The path of the dynamic module to load.
@@ -191,51 +181,89 @@ namespace Lithium
          */
         bool UnloadModule(const std::string &name);
 
+        /**
+         * @brief 卸载所有动态库
+         *
+         * @return true 所有动态库卸载成功
+         * @return false 所有动态库卸载失败
+         */
+        bool UnloadAllModules();
+
+        /**
+         * @brief 判断指定名称的模块是否存在
+         *
+         * @param name 模块名称
+         * @return true 模块存在
+         * @return false 模块不存在
+         */
         bool HasModule(const std::string &name) const;
 
+        /**
+         * @brief 获取指定名称的模块
+         *
+         * @param name 模块名称
+         * @return std::shared_ptr<Mod> 模块指针
+         */
+        std::shared_ptr<Mod> GetModule(const std::string &name) const;
+
+        /**
+         * @brief 检查指定名称的模块是否存在
+         *
+         * @param name 模块名称
+         * @return true 模块存在
+         * @return false 模块不存在
+         */
         bool CheckModuleExists(const std::string &name) const;
 
         /**
          * @brief 允许指定模块
          *
-         * @param module_name 模块名称
+         * @param name 模块名称
          * @return true 成功允许模块
          * @return false 允许模块失败
          */
-        bool EnableModule(const std::string &module_name);
+        bool EnableModule(const std::string &name);
 
         /**
          * @brief 禁用指定模块
          *
-         * @param module_name 模块名称
+         * @param name 模块名称
          * @return true 成功禁用模块
          * @return false 禁用模块失败
          */
-        bool DisableModule(const std::string &module_name);
+        bool DisableModule(const std::string &name);
+
+        /*
+         * @brief 判断指定模块是否被允许
+         * @param name 模块名称
+         * @return true 指定模块被允许
+         * @return false 指定模块未被允许
+         */
+        bool IsModuleEnabled(const std::string &name) const;
 
         /**
          * @brief 获取指定模块中的函数指针
          *
          * @tparam T 函数指针类型
-         * @param module_name 模块名称
+         * @param name 模块名称
          * @param function_name 函数名称
          * @return T 返回函数指针，如果获取失败则返回nullptr
          */
         template <typename T>
-        T GetFunction(const std::string &module_name, const std::string &function_name)
+        T GetFunction(const std::string &name, const std::string &function_name)
         {
-            auto handle_it = handles_.find(module_name);
-            if (handle_it == handles_.end())
+            auto handle_it = modules_.find(name);
+            if (handle_it == modules_.end())
             {
-                LOG_F(ERROR, "Failed to find module %s", module_name.c_str());
+                LOG_F(ERROR, "Failed to find module {}", name);
                 return nullptr;
             }
 
-            auto func_ptr = reinterpret_cast<T>(LOAD_FUNCTION(handle_it->second, function_name.c_str()));
+            auto func_ptr = reinterpret_cast<T>(LOAD_FUNCTION(handle_it->second->handle, function_name.c_str()));
 
             if (!func_ptr)
             {
-                LOG_F(ERROR, "Failed to get symbol %s from module %s: %s", function_name.c_str(), module_name.c_str(), dlerror());
+                LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", function_name, name, dlerror());
                 return nullptr;
             }
 
@@ -246,26 +274,26 @@ namespace Lithium
          * @brief 从指定模块中获取实例对象
          *
          * @tparam T 实例对象类型
-         * @param module_name 模块名称
+         * @param name 模块名称
          * @param config 实例对象的配置参数
          * @param symbol_name 获取实例对象的符号名称
          * @return std::shared_ptr<T> 返回实例对象的智能指针，如果获取失败则返回nullptr
          */
         template <typename T>
-        std::shared_ptr<T> GetInstance(const std::string &module_name, const json &config,
+        std::shared_ptr<T> GetInstance(const std::string &name, const json &config,
                                        const std::string &symbol_name)
         {
-            auto handle_it = handles_.find(module_name);
-            if (handle_it == handles_.end())
+            auto handle_it = modules_.find(name);
+            if (handle_it == modules_.end())
             {
-                LOG_F(ERROR, "Failed to find module %s", module_name.c_str());
+                LOG_F(ERROR, "Failed to find module {}", name);
                 return nullptr;
             }
 
-            auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const json &)>(module_name, symbol_name);
+            auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const json &)>(name, symbol_name);
             if (!get_instance_func)
             {
-                LOG_F(ERROR, "Failed to get symbol %s from module %s: %s", symbol_name.c_str(), module_name.c_str(), dlerror());
+                LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", symbol_name, name, dlerror());
                 return nullptr;
             }
 
@@ -276,18 +304,18 @@ namespace Lithium
          * @brief 获取指定模块的任务实例指针
          *
          * @tparam T 任务类型
-         * @param module_name 模块名称
+         * @param name 模块名称
          * @param config 配置信息
          * @param instance_function_name 实例化函数名称
          * @return std::shared_ptr<T> 任务实例指针
-         * std::shared_ptr<BasicTask> task = GetInstancePointer<BasicTask>(module_name, config, "GetTaskInstance");
-         * std::shared_ptr<Device> device = GetInstancePointer<Device>(module_name, config, "GetDeviceInstance");
-         * std::shared_ptr<Plugin> plugin = GetInstancePointer<Plugin>(module_name, config, "GetPluginInstance");
+         * std::shared_ptr<BasicTask> task = GetInstancePointer<BasicTask>(name, config, "GetTaskInstance");
+         * std::shared_ptr<Device> device = GetInstancePointer<Device>(name, config, "GetDeviceInstance");
+         * std::shared_ptr<Plugin> plugin = GetInstancePointer<Plugin>(name, config, "GetPluginInstance");
          */
         template <typename T>
-        std::shared_ptr<T> GetInstancePointer(const std::string &module_name, const json &config, const std::string &instance_function_name)
+        std::shared_ptr<T> GetInstancePointer(const std::string &name, const json &config, const std::string &instance_function_name)
         {
-            return GetInstance<T>(module_name, config, instance_function_name);
+            return GetInstance<T>(name, config, instance_function_name);
         }
 
     public:
@@ -296,16 +324,57 @@ namespace Lithium
          *
          * @param name 句柄名称。
          * @return 对应名称的句柄指针，如果未找到则返回空指针。
+         * @note 该函数不检查模块是否被允许。这个函数的使用其实是很危险的，不建议暴露到模组或者脚本中被随意调用。
          */
         void *GetHandle(const std::string &name) const;
+
+        // ---------------------------------------------------------------------
+        // Get Module Info
+        // ---------------------------------------------------------------------
+
+        /**
+         * @brief 获取指定模块的版本号
+         * @param name 模块名称
+         * @return 模块版本号
+         */
+        std::string GetModuleVersion(const std::string &name);
+
+        /**
+         * @brief 获取指定模块的描述信息
+         * @param name 模块名称
+         * @return 模块描述信息
+         */
+        std::string GetModuleDescription(const std::string &name);
+
+        /**
+         * @brief 获取指定模块的作者信息
+         * @param name 模块名称
+         * @return 模块作者信息
+         */
+        std::string GetModuleAuthor(const std::string &name);
+
+        /**
+         * @brief 获取指定模块的许可证信息
+         * @param name 模块名称
+         * @return 模块许可证信息
+         */
+        std::string GetModuleLicense(const std::string &name);
 
         /**
          * @brief 获取给定模块名称的模块路径。
          *
-         * @param module_name 模块名称。
+         * @param name 模块名称。
          * @return 对应模块名称的模块路径。
          */
-        std::string GetModulePath(const std::string &module_name);
+        std::string GetModulePath(const std::string &name);
+
+        /**
+         * @brief 获取给定模块名称的模块配置。
+         *
+         * @param name 模块名称。
+         * @return 对应模块名称的模块配置。
+         */
+        json GetModuleConfig(const std::string &name);
 
         /**
          * @brief 获取所有存在的模块名称。
@@ -316,13 +385,11 @@ namespace Lithium
 
     private:
 #if ENABLE_FASTHASH
-        emhash8::HashMap<std::string, void *> handles_;
-        emhash8::HashMap<std::string, std::string> disabled_modules_;
+        emhash8::HashMap<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
 #else
-        std::unordered_map<std::string, void *> handles_;
-        std::unordered_map<std::string, std::string> disabled_modules_;
+        std::unordered_map<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
 #endif
-
+        // Injected Thread Manager
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
     };
 }

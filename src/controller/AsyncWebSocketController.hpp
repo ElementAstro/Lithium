@@ -55,8 +55,6 @@ private:
   typedef WebSocketController __ControllerType;
 
 	OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler, "websocket");
-	OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketDeviceConnectionHandler, "websocket-device");
-	OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketScriptConnectionHandler, "websocket-script");
 public:
 	WebSocketController(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
 		: oatpp::web::server::api::ApiController(objectMapper)
@@ -69,56 +67,31 @@ public:
 		return std::make_shared<WebSocketController>(objectMapper);
 	}
 
-	ENDPOINT_ASYNC("GET", "ws", ws)
-	{
-		ENDPOINT_ASYNC_INIT(ws)
-		Action act() override 
-		{
-			auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketConnectionHandler);
-			return _return(response);
-		}
-	};
-
-	ENDPOINT_ASYNC("GET", "/ws/{hub-type}/{hub-name}/{instance-name}", wsConsole)
+	ENDPOINT_ASYNC("GET", "/ws/{hub-name}", wsConsole)
 	{
 		ENDPOINT_ASYNC_INIT(wsConsole)
 		Action act() override 
 		{
 			auto hubType = request->getPathVariable("hub-type");
-			auto hubName = request->getPathVariable("hub-name");
-			auto instanceName = request->getPathVariable("instance-name");
-			
-			if (const std::string hub_type = hubType.getValue("");hub_type == "device")
+			auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketConnectionHandler);
+			auto parameters = std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
+			(*parameters)["type"] = hubType;
+			response->setConnectionUpgradeParameters(parameters);
+
+			if (const std::string hub_type = hubType.getValue(""); hub_type == "device")
 			{
 				std::vector<std::string> available_device_types = {"camera", "telescope", "focuser", "filterwheel","solver","guider"};
-				auto it = std::find(available_device_types.begin(), available_device_types.end(), hubName.getValue(""));
+				auto it = std::find(available_device_types.begin(), available_device_types.end(), hubType.getValue(""));
 				OATPP_ASSERT_HTTP(it != available_device_types.end(), Status::CODE_500, "Invalid device type");
-				auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketDeviceConnectionHandler);
-				auto parameters = std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
-				(*parameters)["deviceName"] = hubName;
-				(*parameters)["deviceHub"] = instanceName;
-				(*parameters)["deviceType"] = hubType;
-				response->setConnectionUpgradeParameters(parameters);
-				return _return(response);
 			}
 			else if(hub_type == "plugin")
 			{
-				oatpp::String hubName = request->getPathVariable("hub-name");
-				oatpp::String pluginName = request->getPathVariable("instance-name");
 				std::vector<std::string> available_plugins = {"script", "exe", "liscript"};
-				auto it = std::find(available_plugins.begin(), available_plugins.end(), hubName->c_str());
+				auto it = std::find(available_plugins.begin(), available_plugins.end(), hubType->c_str());
 				OATPP_ASSERT_HTTP(it != available_plugins.end(), Status::CODE_500, "Invalid plugin type");
-				auto response = oatpp::websocket::Handshaker::serversideHandshake(request->getHeaders(), controller->websocketScriptConnectionHandler);
-				auto parameters = std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
-				(*parameters)["pluginName"] = pluginName;
-				(*parameters)["pluginHub"] = hubName;
-				response->setConnectionUpgradeParameters(parameters);
-				return _return(response);
 			}
-			else
-			{
-				OATPP_ASSERT_HTTP(false,Status::CODE_500,"Unknown tyoe of the Webwoskcet Instance or Hub");
-			}
+
+			return _return(response);
 		}
 	};
 };

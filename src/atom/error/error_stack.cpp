@@ -32,37 +32,65 @@ Description: Error Stack
 #include "error_stack.hpp"
 
 #include <ctime>
+#include <sstream>
+
 #include "atom/log/loguru.hpp"
+#include "atom/utils/time.hpp"
 
 std::ostream &operator<<(std::ostream &os, const ErrorInfo &error)
 {
-    os << "Error message: " << error.errorMessage << "\n";
-    os << "Module name: " << error.moduleName << "\n";
-    os << "Timestamp: " << std::asctime(std::localtime(&error.timestamp)) << "\n";
+    os << "{"
+       << "\"errorMessage\": \"" << error.errorMessage << "\","
+       << "\"moduleName\": \"" << error.moduleName << "\","
+       << "\"functionName\": \"" << error.functionName << "\","
+       << "\"line\": " << error.line << ","
+       << "\"fileName\": \"" << error.fileName << "\","
+       << "\"timestamp\": \"" << TimeStampToString(error.timestamp) << "\","
+       << "\"uuid\": \"" << error.uuid << "\""
+       << "}";
 
     return os;
 }
 
 std::string operator<<(const std::string &str, const ErrorInfo &error)
 {
-    std::string output;
-    output += "Error message: " + error.errorMessage + "\n";
-    output += "Module name: " + error.moduleName + "\n";
-    output += "Timestamp: " + std::string(std::asctime(std::localtime(&error.timestamp)));
+    std::stringstream ss;
+    ss << "{"
+       << "\"errorMessage\": \"" << error.errorMessage << "\","
+       << "\"moduleName\": \"" << error.moduleName << "\","
+       << "\"functionName\": \"" << error.functionName << "\","
+       << "\"line\": " << error.line << ","
+       << "\"fileName\": \"" << error.fileName << "\","
+       << "\"timestamp\": \"" << TimeStampToString(error.timestamp) << "\","
+       << "\"uuid\": \"" << error.uuid << "\""
+       << "}";
 
-    return output;
+    return ss.str();
 }
 
 ErrorStack::ErrorStack()
 {
 }
 
-void ErrorStack::InsertError(const std::string &errorMessage, const std::string &moduleName)
+std::shared_ptr<ErrorStack> ErrorStack::createShared()
+{
+    return std::make_shared<ErrorStack>();
+}
+
+std::unique_ptr<ErrorStack> ErrorStack::createUnique()
+{
+    return std::make_unique<ErrorStack>();
+}
+
+void ErrorStack::InsertError(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName)
 {
     ErrorInfo error;
     error.errorMessage = errorMessage;
     error.moduleName = moduleName;
     error.timestamp = std::time(nullptr);
+    error.functionName = functionName;
+    error.line = line;
+    error.fileName = fileName;
 
     errorStack.push_back(error);
 }
@@ -101,7 +129,7 @@ std::vector<ErrorInfo> ErrorStack::GetFilteredErrorsByModule(const std::string &
     return errors;
 }
 
-void ErrorStack::InsertErrorCompressed(const std::string &errorMessage, const std::string &moduleName)
+void ErrorStack::InsertErrorCompressed(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName)
 {
     time_t currentTime = std::time(nullptr);
 
@@ -121,6 +149,9 @@ void ErrorStack::InsertErrorCompressed(const std::string &errorMessage, const st
         error.errorMessage = errorMessage;
         error.moduleName = moduleName;
         error.timestamp = currentTime;
+        error.functionName = functionName;
+        error.line = line;
+        error.fileName = fileName;
 
         errorStack.push_back(error);
     }

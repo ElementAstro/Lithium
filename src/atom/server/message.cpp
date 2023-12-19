@@ -1,200 +1,181 @@
+/*
+ * message.cpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-12-18
+
+Description: A message class, which can be used to store different types of messages
+
+**************************************************/
+
 #include "message.hpp"
 
 #include "atom/utils/time.hpp"
+#include "atom/type/iparams.hpp"
 
-Message::Message(Type t, const std::string &target, const std::string &origin)
-    : type_(t), target_(target), origin_(origin),timestamp_(GetChinaTimestampString()) {}
+#include "core/property/uuid.hpp"
 
-// TextMessage class
-class TextMessage : public Message
+using namespace std;
+
+// Message
+Message::Message(Type t, const string &name, const string &target, const string &origin)
+    : type_(t), name_(name), target_(target), origin_(origin)
 {
-public:
-    explicit TextMessage(std::string text) : Message(Type::kText), text_(std::move(text)) {}
-    const std::string &text() const { return text_; }
-    void print() const override { std::cout << "Text Message: " << text_ << '\n'; }
-
-private:
-    std::string text_;
-};
-
-// NumberMessage class
-class NumberMessage : public Message
-{
-public:
-    explicit NumberMessage(double number) : Message(Type::kNumber), number_(number) {}
-    double number() const { return number_; }
-    void print() const override { std::cout << "Number Message: " << number_ << '\n'; }
-
-private:
-    double number_;
-};
-
-// StructuredDataMessage class
-class StructuredDataMessage : public Message
-{
-public:
-    explicit StructuredDataMessage(std::vector<int> data) : Message(Type::kStructuredData), data_(std::move(data)) {}
-    const std::vector<int> &data() const { return data_; }
-    void print() const override
-    {
-        std::cout << "Structured Data Message: ";
-        for (const auto &num : data_)
-        {
-            std::cout << num << ' ';
-        }
-        std::cout << '\n';
-    }
-
-private:
-    std::vector<int> data_;
-};
-
-// CustomMessage1 class
-class CustomMessage1 : public Message
-{
-public:
-    explicit CustomMessage1(std::string data) : Message(Type::kCustom1), data_(std::move(data)) {}
-    const std::string &data() const { return data_; }
-    void print() const override { std::cout << "Custom Message 1: " << data_ << '\n'; }
-
-private:
-    std::string data_;
-};
-
-// CustomMessage2 class
-class CustomMessage2 : public Message
-{
-public:
-    explicit CustomMessage2(int value) : Message(Type::kCustom2), value_(value) {}
-    int value() const { return value_; }
-    void print() const override { std::cout << "Custom Message 2: " << value_ << '\n'; }
-
-private:
-    int value_;
-};
-
-// Message factory function
-template <typename T, typename... Args>
-std::unique_ptr<T> MakeMessage(Args &&...args)
-{
-    return std::make_unique<T>(std::forward<Args>(args)...);
+    timestamp_ = GetChinaTimestampString();
+    uuid_ = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 
-// VariantMessage class, using std::unique_ptr<Message> to store different message types
-class VariantMessage
+Message::Type Message::type() const
 {
-public:
-    VariantMessage() : msg_(std::make_unique<TextMessage>("")) {}
+    return type_;
+}
 
-    template <typename T>
-    void Set(T message)
-    {
-        msg_ = std::make_unique<T>(std::move(message));
-    }
-
-    template <typename T>
-    const T &Get() const
-    {
-        return static_cast<const T &>(*msg_);
-    }
-
-    std::optional<Message::Type> type() const
-    {
-        if (msg_)
-        {
-            return msg_->type();
-        }
-        return std::nullopt;
-    }
-
-    void reset()
-    {
-        msg_ = std::make_unique<TextMessage>("");
-    }
-
-private:
-    std::unique_ptr<Message> msg_;
-};
-
-int main()
+string_view Message::target() const
 {
-    // Create different types of messages using the factory function
-    auto text_msg = MakeMessage<TextMessage>("Hello, world!");
-    auto number_msg = MakeMessage<NumberMessage>(3.14);
-    auto structured_data_msg = MakeMessage<StructuredDataMessage>(std::vector<int>{1, 2, 3});
-    auto custom_msg1 = MakeMessage<CustomMessage1>("Custom message 1");
-    auto custom_msg2 = MakeMessage<CustomMessage2>(42);
+    return target_;
+}
 
-    // Store messages in VariantMessage
-    VariantMessage variant_msg;
-    variant_msg.Set(std::move(*text_msg));
+string_view Message::origin() const
+{
+    return origin_;
+}
 
-    // Print the message based on its type
-    if (auto type = variant_msg.type())
-    {
-        switch (*type)
-        {
-        case Message::Type::kText:
-            variant_msg.Get<TextMessage>().print();
-            break;
-        case Message::Type::kNumber:
-            variant_msg.Get<NumberMessage>().print();
-            break;
-        case Message::Type::kStructuredData:
-            variant_msg.Get<StructuredDataMessage>().print();
-            break;
-        case Message::Type::kCustom1:
-            variant_msg.Get<CustomMessage1>().print();
-            break;
-        case Message::Type::kCustom2:
-            variant_msg.Get<CustomMessage2>().print();
-            break;
-        default:
-            std::cout << "Unknown Message Type\n";
-            break;
-        }
-    }
-    else
-    {
-        std::cout << "No Message Set\n";
-    }
+string Message::timestamp() const
+{
+    // TODO: implement timestamp function
+    return "";
+}
 
-    // Add more messages to VariantMessage
-    variant_msg.Set(std::move(*number_msg));
-    variant_msg.Set(std::move(*structured_data_msg));
+string Message::name() const
+{
+    return name_;
+}
 
-    variant_msg.reset();
-    variant_msg.Set(std::move(*structured_data_msg));
+double Message::api_version() const
+{
+    return api_version_;
+}
 
-    // Print the new message based on its type
-    if (auto type = variant_msg.type())
-    {
-        switch (*type)
-        {
-        case Message::Type::kText:
-            variant_msg.Get<TextMessage>().print();
-            break;
-        case Message::Type::kNumber:
-            variant_msg.Get<NumberMessage>().print();
-            break;
-        case Message::Type::kStructuredData:
-            variant_msg.Get<StructuredDataMessage>().print();
-            break;
-        case Message::Type::kCustom1:
-            variant_msg.Get<CustomMessage1>().print();
-            break;
-        case Message::Type::kCustom2:
-            variant_msg.Get<CustomMessage2>().print();
-            break;
-        default:
-            std::cout << "Unknown Message Type\n";
-            break;
-        }
-    }
-    else
-    {
-        std::cout << "No Message Set\n";
-    }
+// TextMessage
+TextMessage::TextMessage(const string &name, const string &text, const string &target, const string &origin)
+    : Message(Type::kText, name, target, origin), value_(text)
+{
+}
 
-    return 0;
+string TextMessage::value() const
+{
+    return value_;
+}
+
+// NumberMessage
+NumberMessage::NumberMessage(const string &name, double number, const string &target, const string &origin)
+    : Message(Type::kNumber, name, target, origin), value_(number)
+{
+}
+
+double NumberMessage::value() const
+{
+    return value_;
+}
+
+// BooleanMessage
+BooleanMessage::BooleanMessage(const string &name, bool value, const string &target, const string &origin)
+    : Message(Type::kBoolean, name, target, origin), value_(value)
+{
+}
+
+bool BooleanMessage::value() const
+{
+    return value_;
+}
+
+// AnyMessage
+AnyMessage::AnyMessage(const string &name, const any &data, const string &target, const string &origin)
+    : Message(Type::kAny, name, target, origin), data_(data)
+{
+    type_ = data_.type().name();
+}
+
+any AnyMessage::value() const
+{
+    return data_;
+}
+
+string AnyMessage::type() const
+{
+    return type_;
+}
+
+// ParamsMessage
+ParamsMessage::ParamsMessage(const string &name, shared_ptr<IParams> params, const string &target, const string &origin)
+    : Message(Type::kParams, name, target, origin), params_(params)
+{
+}
+
+shared_ptr<IParams> ParamsMessage::value() const
+{
+    return params_;
+}
+
+// JsonMessage
+JsonMessage::JsonMessage(const string &name, const json &json, const string &target, const string &origin)
+    : Message(Type::kJson, name, target, origin), value_(json)
+{
+}
+
+json JsonMessage::value() const
+{
+    return value_;
+}
+
+// MessageHelper
+shared_ptr<TextMessage> MessageHelper::MakeTextMessage(const string &name, const string &value, const string &target, const string &origin)
+{
+    return make_shared<TextMessage>(name, value, target, origin);
+}
+
+shared_ptr<NumberMessage> MessageHelper::MakeNumberMessage(const string &name, double value, const string &target, const string &origin)
+{
+    return make_shared<NumberMessage>(name, value, target, origin);
+}
+
+shared_ptr<BooleanMessage> MessageHelper::MakeBooleanMessage(const string &name, bool value, const string &target, const string &origin)
+{
+    return make_shared<BooleanMessage>(name, value, target, origin);
+}
+
+shared_ptr<AnyMessage> MessageHelper::MakeAnyMessage(const string &name, const any &data, const string &target, const string &origin)
+{
+    return make_shared<AnyMessage>(name, data, target, origin);
+}
+
+shared_ptr<ParamsMessage> MessageHelper::MakeParamsMessage(const string &name, shared_ptr<IParams> params, const string &target, const string &origin)
+{
+    return make_shared<ParamsMessage>(name, params, target, origin);
+}
+
+shared_ptr<JsonMessage> MessageHelper::MakeJsonMessage(const string &name, const json &json, const string &target, const string &origin)
+{
+    return make_shared<JsonMessage>(name, json, target, origin);
 }

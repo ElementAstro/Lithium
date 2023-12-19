@@ -25,12 +25,19 @@ template <class T>
 static uint32_t CountBytes(T value)
 {
     uint32_t result = 0;
-    for (; value; ++result)
+    uint8_t *ptr = reinterpret_cast<uint8_t *>(&value);
+    for (size_t i = 0; i < sizeof(T); ++i)
     {
-        value &= value - 1;
+        uint8_t byte = ptr[i];
+        for (; byte; ++result)
+        {
+            byte &= byte - 1;
+        }
     }
     return result;
 }
+
+class IPAddress;
 
 class Address
 {

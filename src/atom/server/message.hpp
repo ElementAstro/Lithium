@@ -1,9 +1,44 @@
+/*
+ * message.hpp
+ *
+ * Copyright (C) 2023 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Copyright: 2023 Max Qian. All rights reserved
+
+Author: Max Qian
+
+E-mail: astro_air@126.com
+
+Date: 2023-12-18
+
+Description: A message class, which can be used to store different types of messages
+
+**************************************************/
+
 #pragma once
 
 #include <string>
+#include <any>
 #include <memory>
-#include <vector>
-#include <optional>
+#include "atom/type/json.hpp"
+
+using json = nlohmann::json;
+
+class IParams;
 
 // Base class Message
 class Message
@@ -17,25 +52,29 @@ public:
         kText,
         kNumber,
         kBoolean,
-        kSwitch,
         kAny,
+        kParams,
+        kJson,
         kMaxType
     };
 
-    Type type() const { return type_; }
-
-    // Common operations that can be performed on all message types
-    virtual void serialize() const = 0;
+    Type type() const;
+    std::string_view target() const;
+    std::string_view origin() const;
+    std::string timestamp() const;
+    std::string name() const;
+    double api_version() const;
 
 protected:
-    explicit Message(Type t, const std::string &target, const std::string &origin);
+    explicit Message(Type t, const std::string &name, const std::string &target, const std::string &origin);
 
 private:
     Type type_;
-    std::string_view target_;
-    std::string_view origin_;
-
-    std::string_view timestamp_;
+    std::string target_;
+    std::string origin_;
+    std::string name_;
+    std::string timestamp_;
+    std::string uuid_;
     double api_version_{1.0};
 };
 
@@ -43,66 +82,91 @@ private:
 class TextMessage : public Message
 {
 public:
-    explicit TextMessage(std::string text,const std::string &target, const std::string &origin);
-    void serialize() const override;
+    explicit TextMessage(const std::string &name, const std::string &text, const std::string &target, const std::string &origin);
+
+    std::string value() const;
 
 private:
-    std::string text_;
+    std::string value_;
 };
 
 // NumberMessage class
 class NumberMessage : public Message
 {
 public:
-    explicit NumberMessage(double number) : Message(Type::kNumber), number_(number) {}
-    void serialize() const override;
+    explicit NumberMessage(const std::string &name, double number, const std::string &target, const std::string &origin);
+
+    double value() const;
 
 private:
-    double number_;
+    double value_;
 };
 
-// StructuredDataMessage class
-class StructuredDataMessage : public Message
+class BooleanMessage : public Message
 {
 public:
-    explicit StructuredDataMessage(std::vector<int> data) : Message(Type::kStructuredData), data_(std::move(data)) {}
-    void serialize() const override;
+    explicit BooleanMessage(const std::string &name, bool value, const std::string &target, const std::string &origin);
+
+    bool value() const;
 
 private:
-    std::vector<int> data_;
-};
-
-class SwitchMessage : public Message
-{
-public:
-    explicit SwitchMessage(std::string name, std::string value) : Message(Type::kSwitch), name_(std::move(name)), value_(std::move(value)) {}
-    void serialize() const override;
-
-private:
-    std::string name_;
-    std::string value_;
+    bool value_;
 };
 
 class AnyMessage : public Message
 {
 public:
-    explicit AnyMessage(std::string data) : Message(Type::kAny), data_(std::move(data)) {}
-    void serialize() const override;
+    explicit AnyMessage(const std::string &name, const std::any &data, const std::string &target, const std::string &origin);
+
+    std::any value() const;
+    std::string type() const;
 
 private:
-    std::string data_;
+    std::any data_;
+    std::string type_;
 };
 
-// Message factory function
-template <typename T, typename... Args>
-std::unique_ptr<T> MakeUniqueMessage(Args &&...args)
+class ParamsMessage : public Message
 {
-    return std::make_unique<T>(std::forward<Args>(args)...);
-}
+public:
+    explicit ParamsMessage(const std::string &name, std::shared_ptr<IParams> params, const std::string &target, const std::string &origin);
 
-// Message factory function
-template <typename T, typename... Args>
-std::unique_ptr<T> MakeSharedMessage(Args &&...args)
+    std::shared_ptr<IParams> value() const;
+
+private:
+    std::shared_ptr<IParams> params_;
+};
+
+class JsonMessage : public Message
 {
-    return std::make_shared<T>(std::forward<Args>(args)...);
-}
+public:
+    explicit JsonMessage(const std::string &name, const json &json, const std::string &target, const std::string &origin);
+
+    json value() const;
+
+private:
+    json value_;
+};
+
+class MessageHelper
+{
+public:
+    static std::shared_ptr<TextMessage> MakeTextMessage(const std::string &name, const std::string &value, const std::string &target, const std::string &origin);
+
+    static std::shared_ptr<NumberMessage> MakeNumberMessage(const std::string &name, double value, const std::string &target, const std::string &origin);
+
+    static std::shared_ptr<BooleanMessage> MakeBooleanMessage(const std::string &name, bool value, const std::string &target, const std::string &origin);
+
+    static std::shared_ptr<AnyMessage> MakeAnyMessage(const std::string &name, const std::any &data, const std::string &target, const std::string &origin);
+
+    static std::shared_ptr<ParamsMessage> MakeParamsMessage(const std::string &name, std::shared_ptr<IParams> params, const std::string &target, const std::string &origin);
+
+    static std::shared_ptr<JsonMessage> MakeJsonMessage(const std::string &name, const json &json, const std::string &target, const std::string &origin);
+};
+
+using ReturnMessage = std::variant<std::shared_ptr<TextMessage>,
+                                 std::shared_ptr<NumberMessage>,
+                                 std::shared_ptr<BooleanMessage>,
+                                 std::shared_ptr<JsonMessage>,
+                                 std::shared_ptr<AnyMessage>,
+                                 std::shared_ptr<ParamsMessage>>;

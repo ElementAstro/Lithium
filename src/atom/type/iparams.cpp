@@ -47,7 +47,34 @@ bool IParams::serialize(const std::string &filename) const
         json sectionData;
         for (const auto &entry : section.second)
         {
-            sectionData[entry.first] = entry.second;
+            if (entry.second.type() == typeid(int))
+            {
+                sectionData[entry.first] = std::any_cast<int>(entry.second);
+            }
+            else if (entry.second.type() == typeid(float))
+            {
+                sectionData[entry.first] = std::any_cast<float>(entry.second);
+            }
+            else if (entry.second.type() == typeid(double))
+            {
+                sectionData[entry.first] = std::any_cast<double>(entry.second);
+            }
+            else if (entry.second.type() == typeid(std::string))
+            {
+                sectionData[entry.first] = std::any_cast<std::string>(entry.second);
+            }
+            else if (entry.second.type() == typeid(const char *))
+            {
+                sectionData[entry.first] = std::any_cast<const char *>(entry.second);
+            }
+            else if (entry.second.type() == typeid(bool))
+            {
+                sectionData[entry.first] = std::any_cast<bool>(entry.second);
+            }
+            else
+            {
+                LOG_F(ERROR, "Unsupported type: {}", entry.second.type().name());
+            }
         }
         jsonData[section.first] = sectionData;
     }
@@ -140,7 +167,7 @@ std::string IParams::toJson() const
             }
             catch (const std::bad_any_cast &e)
             {
-                LOG_F(ERROR, "Failed to cast any_cast: {}", e.what())
+                LOG_F(ERROR, "Failed to cast any_cast: {}", e.what());
             }
         }
         jsonData[section.first] = sectionData;

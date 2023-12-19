@@ -156,6 +156,24 @@ namespace Lithium
         }
 
         template <typename T>
+        void UnsubscribeFromNamespace(const std::string &namespaceName, std::function<void(const T &)> callback)
+        {
+            std::string topic = namespaceName + ".*";
+            Unsubscribe<T>(topic, callback, namespaceName);
+        }
+
+        void UnsubscribeAll(const std::string &namespace_ = "")
+        {
+            std::string fullTopic = namespace_.empty()? "*" : (namespace_ + "::*");
+
+            subscribersLock_.lock();
+            subscribers_.erase(fullTopic);
+            subscribersLock_.unlock();
+
+            DLOG_F(INFO, "Unsubscribed from all topics");
+        }
+
+        template <typename T>
         void Publish(const std::string &topic, const T &message, const std::string &namespace_ = "")
         {
             std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);

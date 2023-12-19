@@ -30,6 +30,7 @@ Description: Lithium App Enter
 **************************************************/
 
 #include "LithiumApp.hpp"
+
 #include "config.h"
 
 #include "atom/thread/thread.hpp"
@@ -40,9 +41,11 @@ Description: Lithium App Enter
 #include "task/task_generator.hpp"
 #include "task/task_stack.hpp"
 #include "core/property/iproperty.hpp"
+#include "atom/server/message.hpp"
 #include "plugin/plugin_loader.hpp"
 #include "script/script_manager.hpp"
 #include "atom/plugin/module_loader.hpp"
+#include "atom/error/error_stack.hpp"
 
 #include "atom/server/global_ptr.hpp"
 
@@ -60,6 +63,7 @@ namespace Lithium
     {
         try
         {
+            // Specialized Managers and Threads
             m_ConfigManager = GetPtr<ConfigManager>("ConfigManager");
             m_DeviceManager = GetPtr<DeviceManager>("DeviceManager");
             m_PluginManager = GetPtr<PluginManager>("PluginManager");
@@ -72,12 +76,17 @@ namespace Lithium
             m_MessageBus = GetPtr<MessageBus>("MessageBus");
             m_ModuleLoader = GetPtr<ModuleLoader>("ModuleLoader");
 
+            // Specialized Message Processing Threads for Device and Device Manager
             m_MessageBus->StartProcessingThread<IStringProperty>();
             m_MessageBus->StartProcessingThread<IBoolProperty>();
             m_MessageBus->StartProcessingThread<INumberProperty>();
             m_MessageBus->StartProcessingThread<INumberVector>();
-            m_MessageBus->StartProcessingThread<std::string>();
-            m_MessageBus->StartProcessingThread<json>();
+
+            // Common Message Processing Threads
+            // Max : Maybe we only need one thread for Message, and dynamically cast message
+            //       to the right type to process.
+            //       All of the messages are based on the Message class.
+            m_MessageBus->StartProcessingThread<Message>();
         }
         catch (const std::exception &e)
         {
@@ -88,12 +97,18 @@ namespace Lithium
 
     LithiumApp::~LithiumApp()
     {
+        m_MessageBus->UnsubscribeAll();
         m_MessageBus->StopAllProcessingThreads();
     }
 
     std::shared_ptr<LithiumApp> LithiumApp::createShared()
     {
         return std::make_shared<LithiumApp>();
+    }
+
+    std::unique_ptr<LithiumApp> LithiumApp::createUnique()
+    {
+        return std::make_unique<LithiumApp>();
     }
 
     void InitLithiumApp()
@@ -109,6 +124,7 @@ namespace Lithium
         AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
         AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
         AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
+        AddPtr("ErrorStack", std::make_shared<ErrorStack>());
     }
 
     // ----------------------------------------------------------------
@@ -125,6 +141,20 @@ namespace Lithium
     {
         DLOG_F(INFO, _("Set {} to {}"), key_path, value.dump());
         m_ConfigManager->setValue(key_path, value);
+    }
+
+    ReturnMessage LithiumApp::GetConfigW(const std::shared_ptr<IParams> &params)
+    {
+        if(!params->get<std::string>("params","key_path").has_value())
+        {
+            LOG_F(ERROR, _("Get config value failed: Missing key_path"));
+
+        }
+    }
+
+    ReturnMessage LithiumApp::SetConfigW(const std::shared_ptr<IParams> &params)
+    {
+
     }
 
     // -----------------------------------------------------------------
@@ -534,5 +564,14 @@ namespace Lithium
     json LithiumApp::getModuleConfig(const std::string &name)
     {
         return m_ModuleLoader->GetModuleConfig(name);
+    }
+
+    // -----------------------------------------------------------------
+    // Message methods
+    // -----------------------------------------------------------------
+
+    ReturnMessage LithiumApp::returnMessage(const std::string &message)
+    {
+
     }
 }

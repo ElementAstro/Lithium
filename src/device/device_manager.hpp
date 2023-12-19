@@ -39,6 +39,7 @@ Description: Device Manager
 
 #include "core/device.hpp"
 #include "core/device_type.hpp"
+#include "atom/server/message.hpp"
 
 #include "error/error_code.hpp"
 
@@ -107,7 +108,7 @@ namespace Lithium
         // Message methods
         // -------------------------------------------------------------------
 
-        std::function<void(const nlohmann::json &)> connectToMessageBus();
+        void connectToMessageBus();
 
         // -------------------------------------------------------------------
         // Device methods

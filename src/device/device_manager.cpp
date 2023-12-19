@@ -141,6 +141,48 @@ namespace Lithium
         return std::make_unique<DeviceManager>(messageBus, configManager);
     }
 
+    void DeviceManager::connectToMessageBus()
+    {
+        m_MessageBus->Subscribe<std::shared_ptr<Message>>("device", [this](std::shared_ptr<Message> message) -> void {
+            switch (message->type())
+            {
+                case Message::Type::kNumber:
+                {
+                    std::shared_ptr<NumberMessage> numberMessage = std::dynamic_pointer_cast<NumberMessage>(message);
+
+                    break;
+                }
+                case Message::Type::kText:
+                {
+                    std::shared_ptr<TextMessage> stringMessage = std::dynamic_pointer_cast<TextMessage>(message);
+                    break;
+                }
+                case Message::Type::kBoolean:
+                {
+                    std::shared_ptr<BooleanMessage> booleanMessage = std::dynamic_pointer_cast<BooleanMessage>(message);
+                    break;
+                }
+                case Message::Type::kParams:
+                {
+                    std::shared_ptr<ParamsMessage> paramsMessage = std::dynamic_pointer_cast<ParamsMessage>(message);
+                    std::shared_ptr<IParams> params = paramsMessage->value();
+                    
+                    break;
+                }
+                case Message::Type::kJson:
+                {
+                    std::shared_ptr<JsonMessage> jsonMessage = std::dynamic_pointer_cast<JsonMessage>(message);
+                    break;
+                }
+                default:
+                {
+                    LOG_F(ERROR, "Unknown message type {}", magic_enum::enum_name(message->type()));
+                    break;
+                }
+            }
+        });
+    }
+
     std::vector<std::string> DeviceManager::getDeviceList(DeviceType type)
     {
         std::vector<std::string> deviceList;

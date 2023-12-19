@@ -36,10 +36,11 @@ Description: Task Stack
 #include <string>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
+#include "emhash/hash_set8.hpp"
 #else
 #include <unordered_map>
-#endif
 #include <unordered_set>
+#endif
 #include <vector>
 
 #include "core/property/task/task.hpp"
@@ -48,7 +49,9 @@ enum class TaskStatus
 {
     Pending,
     Executing,
-    Completed
+    Completed,
+    Failed,
+    Cancelled
 };
 
 namespace Lithium::Task
@@ -96,8 +99,11 @@ namespace Lithium::Task
         std::vector<std::shared_ptr<BasicTask>> tasks_;                                             /**< The tasks in the task stack. */
         std::vector<TaskStatus> task_status_;                                                       /**< The status of each task in the task stack. */
         std::vector<std::string> task_names_;                                                       /**< The names of the tasks in the task stack. */
+#ifdef ENABLE_FASTHASH
+        emhash8::hashMap<std::string, emhash8::hashSet<std::string>> mutually_exclusive_tasks_; /**< The map of mutually exclusive tasks. */
+#else
         std::unordered_map<std::string, std::unordered_set<std::string>> mutually_exclusive_tasks_; /**< The map of mutually exclusive tasks. */
-
+#endif
         /**
          * @brief Checks if a task with the given name exists in the task stack.
          * @param taskName The name of the task to check.

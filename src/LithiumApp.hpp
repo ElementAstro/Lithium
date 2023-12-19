@@ -38,6 +38,9 @@ Description: Lithium App Enter
 #include "atom/server/message_bus.hpp"
 #include "device/device_manager.hpp"
 #include "atom/system/process.hpp"
+#include "atom/server/commander.hpp"
+#include "atom/type/iparams.hpp"
+#include "atom/server/message.hpp"
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
@@ -79,19 +82,40 @@ namespace Lithium
         class TaskStack;
     }
 
+    class ErrorStack;
+
     class LithiumApp
     {
     public:
         LithiumApp();
         ~LithiumApp();
 
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
         static std::shared_ptr<LithiumApp> createShared();
 
-    public:
+        static std::unique_ptr<LithiumApp> createUnique();
+
+        // -------------------------------------------------------------------
+        // Config methods
+        // -------------------------------------------------------------------
+
         json GetConfig(const std::string &key_path) const;
         void SetConfig(const std::string &key_path, const json &value);
 
-    public:
+        // -------------------------------------------------------------------
+        // Wrappered Config methods
+        // -------------------------------------------------------------------
+
+        ReturnMessage GetConfigW(const std::shared_ptr<IParams> &params);
+        ReturnMessage SetConfigW(const std::shared_ptr<IParams> &params);
+
+        // -------------------------------------------------------------------
+        // Device methods
+        // -------------------------------------------------------------------
+
         std::vector<std::string> getDeviceList(DeviceType type);
         bool addDevice(DeviceType type, const std::string &name, const std::string &lib_name = "");
         bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
@@ -106,8 +130,10 @@ namespace Lithium
         bool getProperty(const std::string &name, const std::string &property_name);
         bool setProperty(const std::string &name, const std::string &property_name, const std::string &property_value);
 
-    public:
-    public:
+        // -------------------------------------------------------------------
+        // Process methods
+        // -------------------------------------------------------------------
+
         bool createProcess(const std::string &command, const std::string &identifier);
         bool runScript(const std::string &script, const std::string &identifier);
         bool terminateProcess(pid_t pid, int signal = 15);
@@ -115,7 +141,10 @@ namespace Lithium
         std::vector<Process::Process> getRunningProcesses();
         std::vector<std::string> getProcessOutput(const std::string &identifier);
 
-    public:
+        // -------------------------------------------------------------------
+        // Task methods
+        // -------------------------------------------------------------------
+
         bool addTask(const std::shared_ptr<BasicTask> &task);
         bool insertTask(const std::shared_ptr<BasicTask> &task, int position);
         bool executeAllTasks();
@@ -131,7 +160,10 @@ namespace Lithium
 
         bool checkTaskExecutable(const std::string &name);
 
-    public:
+        // -------------------------------------------------------------------
+        // Module methods
+        // -------------------------------------------------------------------
+
         bool loadModule(const std::string &path, const std::string &name);
         bool unloadModule(const std::string &name);
         bool reloadModule(const std::string &name);
@@ -142,8 +174,26 @@ namespace Lithium
         bool getModuleStatus(const std::string &name);
         json getModuleConfig(const std::string &name);
         std::vector<std::string> getModuleList();
+
+        // -------------------------------------------------------------------
+        // Wrappered Module methods
+        // -------------------------------------------------------------------
+
+        ReturnMessage loadModuleW(const std::shared_ptr<IParams> &params);
+        ReturnMessage unloadModuleW(const std::shared_ptr<IParams> &params);
+        ReturnMessage reloadModuleW(const std::shared_ptr<IParams> &params);
+        ReturnMessage reloadAllModulesW(const std::shared_ptr<IParams> &params);
+        ReturnMessage checkModuleLoadedW(const std::shared_ptr<IParams> &params);
+        ReturnMessage enableModuleW(const std::shared_ptr<IParams> &params);
+        ReturnMessage disableModuleW(const std::shared_ptr<IParams> &params);
+        ReturnMessage getModuleStatusW(const std::shared_ptr<IParams> &params);
+        ReturnMessage getModuleConfigW(const std::shared_ptr<IParams> &params);
+        ReturnMessage getModuleListW(const std::shared_ptr<IParams> &params);
         
-    public:
+        // -------------------------------------------------------------------
+        // Message methods
+        // -------------------------------------------------------------------
+
         template <typename T>
         void MSSubscribe(const std::string &topic, std::function<void(const T &)> callback, int priority = 0)
         {
@@ -166,6 +216,8 @@ namespace Lithium
             m_MessageBus->Publish<json>(topic, message);
         }
 
+        ReturnMessage returnMessage(const std::string &message);
+
     public:
         void addThread(std::function<void()> func, const std::string &name);
         void joinAllThreads();
@@ -180,6 +232,33 @@ namespace Lithium
         bool runChaiScript(const std::string &filename);
         void initMyAppChai();
 
+        void LiRegisterFunc(const std::string &name, std::function<void(const std::shared_ptr<IParams> &)> handler)
+        {
+            m_CommandDispatcher->RegisterHandler(name, handler);
+        }
+
+        template <typename T>
+        void LiRegisterMemberFunc(const std::string &name, void (T::*memberFunc)(const std::shared_ptr<IParams>))
+        {
+            if (!m_CommandDispatcher)
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,std::shared_ptr<IParams>>>();
+            m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
+        }
+
+        // Max: The async func will be executed in a separate thread, and the return value will be ignored.
+        //      So must use MessageBus to send the return value.
+        template <typename T>
+        void LiRegisterAsyncMemberFunc(const std::string &name, void (T::*memberFunc)(const std::shared_ptr<IParams>), bool async = false)
+        {
+            if (!m_CommandDispatcher)
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,std::shared_ptr<IParams>>>();
+            m_CommandDispatcher->RegisterMemberHandler(name + "_async", this, memberFunc);
+        }
+
+    private:
+
+        std::unique_ptr<CommandDispatcher<void,std::shared_ptr<IParams>>> m_CommandDispatcher;
+
     private:
         std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
         std::shared_ptr<ConfigManager> m_ConfigManager;
@@ -192,6 +271,7 @@ namespace Lithium
         std::shared_ptr<PluginManager> m_PluginManager;
         std::shared_ptr<ScriptManager> m_ScriptManager;
         std::shared_ptr<ModuleLoader> m_ModuleLoader;
+        std::shared_ptr<ErrorStack> m_ErrorStack;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 

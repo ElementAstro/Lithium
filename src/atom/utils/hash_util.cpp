@@ -34,9 +34,12 @@ Description: Implementation of murmur3 hash and quick hash
 #include <algorithm>
 #include <cstdlib>
 #include <stdexcept>
+#include <sstream>
 #include <string.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <openssl/hmac.h>
 
 #define ROTL(x, r) ((x << r) | (x >> (32 - r)))
 
@@ -261,184 +264,6 @@ std::string base64decode(const std::string &src)
     return result;
 }
 
-std::string base64encode(const std::string &data)
-{
-    return base64encode(data.c_str(), data.size());
-}
-
-std::string base64encode(const void *data, size_t len)
-{
-    const char *base64 =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-    std::string ret;
-    ret.reserve(len * 4 / 3 + 2);
-
-    const unsigned char *ptr = (const unsigned char *)data;
-    const unsigned char *end = ptr + len;
-
-    while (ptr < end)
-    {
-        unsigned int packed = 0;
-        int i = 0;
-        int padding = 0;
-        for (; i < 3 && ptr < end; ++i, ++ptr)
-        {
-            packed = (packed << 8) | *ptr;
-        }
-        if (i == 2)
-        {
-            padding = 1;
-        }
-        else if (i == 1)
-        {
-            padding = 2;
-        }
-        for (; i < 3; ++i)
-        {
-            packed <<= 8;
-        }
-
-        ret.append(1, base64[packed >> 18]);
-        ret.append(1, base64[(packed >> 12) & 0x3f]);
-        if (padding != 2)
-        {
-            ret.append(1, base64[(packed >> 6) & 0x3f]);
-        }
-        if (padding == 0)
-        {
-            ret.append(1, base64[packed & 0x3f]);
-        }
-        ret.append(padding, '=');
-    }
-
-    return ret;
-}
-
-std::string md5(const std::string &data)
-{
-    return hexstring_from_data(md5sum(data).c_str(), MD5_DIGEST_LENGTH);
-}
-
-std::string sha1(const std::string &data)
-{
-    return hexstring_from_data(sha1sum(data).c_str(), SHA_DIGEST_LENGTH);
-}
-
-std::string md5sum(const void *data, size_t len)
-{
-    MD5_CTX ctx;
-    MD5_Init(&ctx);
-    MD5_Update(&ctx, data, len);
-    std::string result;
-    result.resize(MD5_DIGEST_LENGTH);
-    MD5_Final((unsigned char *)&result[0], &ctx);
-    return result;
-}
-
-std::string md5sum(const std::string &data)
-{
-    return md5sum(data.c_str(), data.size());
-}
-
-// std::string sha0sum(const void *data, size_t len) {
-//     SHA_CTX ctx;
-//     SHA0_Init(&ctx);
-//     SHA1_Update(&ctx, data, len);
-//     std::string result;
-//     result.resize(SHA_DIGEST_LENGTH);
-//     SHA1_Final((unsigned char*)&result[0], &ctx);
-//     return result;
-// }
-
-// std::string sha0sum(const std::string & data) {
-//     return sha0sum(data.c_str(), data.length());
-// }
-
-std::string sha1sum(const void *data, size_t len)
-{
-    SHA_CTX ctx;
-    SHA1_Init(&ctx);
-    SHA1_Update(&ctx, data, len);
-    std::string result;
-    result.resize(SHA_DIGEST_LENGTH);
-    SHA1_Final((unsigned char *)&result[0], &ctx);
-    return result;
-}
-
-std::string sha1sum(const std::string &data)
-{
-    return sha1sum(data.c_str(), data.size());
-}
-
-struct xorStruct
-{
-    xorStruct(char value) : m_value(value) {}
-    char m_value;
-    char operator()(char in) const { return in ^ m_value; }
-};
-
-template <class CTX,
-          int (*Init)(CTX *),
-          int (*Update)(CTX *, const void *, size_t),
-          int (*Final)(unsigned char *, CTX *),
-          unsigned int B, unsigned int L>
-std::string hmac(const std::string &text, const std::string &key)
-{
-    std::string keyLocal = key;
-    CTX ctx;
-    if (keyLocal.size() > B)
-    {
-        Init(&ctx);
-        Update(&ctx, keyLocal.c_str(), keyLocal.size());
-        keyLocal.resize(L);
-        Final((unsigned char *)&keyLocal[0], &ctx);
-    }
-    keyLocal.append(B - keyLocal.size(), '\0');
-    std::string ipad = keyLocal, opad = keyLocal;
-    std::transform(ipad.begin(), ipad.end(), ipad.begin(), xorStruct(0x36));
-    std::transform(opad.begin(), opad.end(), opad.begin(), xorStruct(0x5c));
-    Init(&ctx);
-    Update(&ctx, ipad.c_str(), B);
-    Update(&ctx, text.c_str(), text.size());
-    std::string result;
-    result.resize(L);
-    Final((unsigned char *)&result[0], &ctx);
-    Init(&ctx);
-    Update(&ctx, opad.c_str(), B);
-    Update(&ctx, result.c_str(), L);
-    Final((unsigned char *)&result[0], &ctx);
-    return result;
-}
-
-std::string hmac_md5(const std::string &text, const std::string &key)
-{
-    return hmac<MD5_CTX,
-                &MD5_Init,
-                &MD5_Update,
-                &MD5_Final,
-                MD5_CBLOCK, MD5_DIGEST_LENGTH>(text, key);
-}
-
-std::string hmac_sha1(const std::string &text, const std::string &key)
-{
-    return hmac<SHA_CTX,
-                &SHA1_Init,
-                &SHA1_Update,
-                &SHA1_Final,
-                SHA_CBLOCK, SHA_DIGEST_LENGTH>(text, key);
-}
-
-std::string
-hmac_sha256(const std::string &text, const std::string &key)
-{
-    return hmac<SHA256_CTX,
-                &SHA256_Init,
-                &SHA256_Update,
-                &SHA256_Final,
-                SHA256_CBLOCK, SHA256_DIGEST_LENGTH>(text, key);
-}
-
 void hexstring_from_data(const void *data, size_t len, char *output)
 {
     const unsigned char *buf = (const unsigned char *)data;
@@ -456,7 +281,7 @@ void hexstring_from_data(const void *data, size_t len, char *output)
 }
 
 std::string
-hexstring_from_data(const void *data, size_t len)
+hexstring_from_data(const char *data, size_t len)
 {
     if (len == 0)
     {

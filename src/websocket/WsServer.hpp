@@ -51,20 +51,23 @@ Description: WebSocket Server
 
 #include "atom/server/serialize.hpp"
 #include "atom/server/deserialize.hpp"
+#include "atom/server/message.hpp"
+
+class MessageBus;
 
 class WsServer : public oatpp::websocket::AsyncConnectionHandler::SocketInstanceListener
 {
 public:
 	std::atomic<v_int32> m_ConnectionCounter;
+#ifdef ENABLE_FASTHASH
+	emhash8::HashMap<oatpp::String, std::shared_ptr<WsHub>> m_hubs;
+#else
 	std::unordered_map<oatpp::String, std::shared_ptr<WsHub>> m_hubs;
+#endif
 	std::mutex m_hubsMutex;
 
 public:
-	WsServer()
-		: m_ConnectionCounter(0)
-	{
-	}
-
+	WsServer();
 
 public:
 	/**
@@ -91,29 +94,11 @@ public:
 	std::shared_ptr<WsHub> getOrCreateHub(const oatpp::String &hubName);
 
 private:
-
-	std::shared_ptr<CommandDispatcher<void, json>> m_CommandDispatcher;
-
-	std::shared_ptr<SerializationEngine> m_SerializationEngine;
-
-	std::shared_ptr<DeserializationEngine> m_DeserializationEngine;
-
-    template <typename T>
-    void LiRegisterMemberFunc(const std::string &name, void (T::*memberFunc)(const json &))
-    {
-        m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
-    }
-
-    bool LiRunFunc(const std::string &name, const nlohmann::json &params)
-    {
-        if (m_CommandDispatcher->HasHandler(name))
-        {
-            m_CommandDispatcher->Dispatch(name, params);
-            return true;
-        }
-        return false;
-    }
-
+	// Serialization and Deserialization Engine
+	std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
+	std::shared_ptr<Atom::Server::DeserializationEngine> m_DeserializationEngine;
+	// Message Bus
+	std::shared_ptr<MessageBus> m_MessageBus;
 };
 
 #endif // WSSERVER_HPP

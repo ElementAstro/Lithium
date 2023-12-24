@@ -31,7 +31,7 @@ Description: Storage Monitor
 
 #include <functional>
 #include <thread>
-#include <map>
+#include <unordered_map>
 #include <vector>
 #include <mutex>
 
@@ -60,7 +60,7 @@ public:
      * 
      * @return 成功返回true，否则返回false。
      */
-    bool startMonitoring();
+    [[nodiscard]] bool startMonitoring();
 
     /**
      * @brief 停止存储空间监控。
@@ -81,8 +81,9 @@ private:
      * @param path 存储空间路径。
      * @return 如果有新的存储设备插入则返回true，否则返回false。
      */
-    bool isNewMediaInserted(const std::string &path);
+    [[nodiscard]] bool isNewMediaInserted(const std::string &path);
 
+#ifdef DEBUG
     /**
      * @brief 列举所有已挂载的存储空间。
      */
@@ -94,11 +95,12 @@ private:
      * @param path 存储空间路径。
      */
     void listFiles(const std::string &path);
+#endif
 
 private:
     std::vector<std::string> m_storagePaths; ///< 所有已挂载的存储空间路径。
-    std::map<std::string, uintmax_t> m_lastCapacity; ///< 上一次记录的存储空间容量。
-    std::map<std::string, uintmax_t> m_lastFree; ///< 上一次记录的存储空间可用空间。
+    std::unordered_map<std::string, uintmax_t> m_lastCapacity; ///< 上一次记录的存储空间容量。
+    std::unordered_map<std::string, uintmax_t> m_lastFree; ///< 上一次记录的存储空间可用空间。
     std::mutex m_mutex; ///< 互斥锁，用于保护数据结构的线程安全。
     std::vector<std::function<void(const std::string &)>> m_callbacks; ///< 注册的回调函数列表。
     bool m_isRunning = false; ///< 标记是否正在运行监控。

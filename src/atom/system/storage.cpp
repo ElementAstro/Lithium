@@ -48,6 +48,8 @@ Description: Storage Monitor
 
 namespace fs = std::filesystem;
 
+namespace Atom::System
+{
     void StorageMonitor::registerCallback(std::function<void(const std::string &)> callback)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -59,7 +61,7 @@ namespace fs = std::filesystem;
         try
         {
             m_isRunning = true;
-            std::cout << "Storage monitor started." << std::endl;
+            DLOG_F(INFO, "Storage monitor started.");
             listAllStorage();
 
             while (m_isRunning)
@@ -68,7 +70,7 @@ namespace fs = std::filesystem;
                 {
                     if (isNewMediaInserted(path))
                     {
-                        std::cout << "New storage media inserted. Path: " << path << std::endl;
+                        DLOG_F(INFO, "New storage media inserted. Path: {}", path);
                         listFiles(path);
                         triggerCallbacks(path);
                     }
@@ -79,7 +81,7 @@ namespace fs = std::filesystem;
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Error: " << e.what() << std::endl;
+            LOG_F(ERROR, "Storage monitor failed to start.");
             return false;
         }
 
@@ -89,7 +91,7 @@ namespace fs = std::filesystem;
     void StorageMonitor::stopMonitoring()
     {
         m_isRunning = false;
-        std::cout << "Storage monitor stopped." << std::endl;
+        DLOG_F(INFO, "Storage monitor stopped.");
     }
 
     void StorageMonitor::triggerCallbacks(const std::string &path)
@@ -117,13 +119,14 @@ namespace fs = std::filesystem;
                 return true;
             }
         }
-
+        DLOG_F(INFO, "No new storage media inserted.");
         return false;
     }
 
+#ifdef DEBUG
     void StorageMonitor::listAllStorage()
     {
-        std::cout << "All storage media: " << std::endl;
+        DLOG_F(INFO, "List all storage devices.");
 
         for (const auto &entry : fs::directory_iterator("/"))
         {
@@ -149,8 +152,74 @@ namespace fs = std::filesystem;
 
         std::cout << std::endl;
     }
+#endif
+}
 
-#ifdef __linux__
+#ifdef _WIN32
+void monitorUdisk()
+{
+    DEV_BROADCAST_DEVICEINTERFACE devInterface;
+    ZeroMemory(&devInterface, sizeof(devInterface));
+    devInterface.dbcc_size = sizeof(devInterface);
+    devInterface.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+    HDEVNOTIFY hDevNotify = RegisterDeviceNotification(
+        GetConsoleWindow(),
+        &devInterface,
+        DEVICE_NOTIFY_WINDOW_HANDLE);
+
+    if (hDevNotify == nullptr)
+    {
+        LOG_F(ERROR, "Failed to register device notification");
+        return;
+    }
+
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        if (msg.message == WM_DEVICECHANGE)
+        {
+            PDEV_BROADCAST_HDR hdr = reinterpret_cast<PDEV_BROADCAST_HDR>(msg.lParam);
+            if (hdr != nullptr && hdr->dbch_devicetype == DBT_DEVTYP_VOLUME)
+            {
+                PDEV_BROADCAST_VOLUME volume = reinterpret_cast<PDEV_BROADCAST_VOLUME>(hdr);
+                if (volume->dbcv_flags == DBTF_MEDIAINSERTED)
+                {
+                    char driveLetter = 'A';
+                    DWORD mask = volume->dbcv_unitmask;
+                    while (mask != 0)
+                    {
+                        if ((mask & 1) != 0)
+                        {
+                            std::string drivePath = std::string(1, driveLetter) + ":\\";
+                            DLOG_F(INFO, "U disk inserted. Drive path: {}", drivePath);
+                            // TODO: Handle U disk insertion event
+                        }
+                        mask >>= 1;
+                        ++driveLetter;
+                    }
+                }
+                else if (volume->dbcv_flags == DBTF_MEDIAREMOVED)
+                {
+                    char driveLetter = 'A';
+                    DWORD mask = volume->dbcv_unitmask;
+                    while (mask != 0)
+                    {
+                        if ((mask & 1) != 0)
+                        {
+                            std::string drivePath = std::string(1, driveLetter) + ":\\";
+                            DLOG_F(INFO, "U disk removed. Drive path: {}", drivePath);
+                            // TODO: Handle U disk removal event
+                        }
+                        mask >>= 1;
+                        ++driveLetter;
+                    }
+                }
+            }
+        }
+    }
+    UnregisterDeviceNotification(hDevNotify);
+}
+#else
 static void monitorUdisk(StorageMonitor &monitor)
 {
     struct udev *udev = udev_new();

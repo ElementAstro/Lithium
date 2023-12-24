@@ -134,8 +134,6 @@ set(server_module
     ${lithium_src_dir}/websocket/WsServer.cpp
     ${lithium_src_dir}/websocket/WsHub.cpp
     ${lithium_src_dir}/websocket/WsInstance.cpp
-    ${lithium_src_dir}/websocket/components/WsDeviceComponent.cpp
-    ${lithium_src_dir}/websocket/components/WsTaskComponent.cpp
 )
 
 set(script_module

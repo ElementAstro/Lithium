@@ -35,7 +35,7 @@ Description: Extra Math Library
 #include <complex>
 #include <thread>
 
-namespace Math
+namespace Atom::Utils
 {
     /*			"+",加法重载部分					*/
     // 友元函数是可以通过成员访问运算符访问私有成员的
@@ -278,7 +278,7 @@ namespace Math
                 input >> f.denominator;
                 if (f.denominator == 0)
                 {
-                    throw Utilities::WrongArgument_Error("Got 0 in the denominator of Math::Fraction object!");
+                    throw Exception::WrongArgument_Error("Got 0 in the denominator of Math::Fraction object!");
                 }
                 if (f.denominator < 0)
                 {

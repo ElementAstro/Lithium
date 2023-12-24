@@ -49,18 +49,60 @@ public:
     virtual std::optional<std::any> deserialize(const std::string &data) const = 0;
 };
 
-class DeserializationEngine
+namespace Atom::Server
 {
-public:
-    DeserializationEngine() = default;
-    ~DeserializationEngine() = default;
+    /**
+     * @class DeserializationEngine
+     * @brief A class responsible for deserializing data using different deserialization engines.
+     */
+    class DeserializationEngine
+    {
+    public:
+        /**
+         * @brief Default constructor.
+         */
+        DeserializationEngine() = default;
 
-    void addDeserializeEngine(const std::string &name, const std::shared_ptr<DeserializeEngine> &DeserializeEngine);
+        /**
+         * @brief Default destructor.
+         */
+        ~DeserializationEngine() = default;
 
-    bool setCurrentDeserializeEngine(const std::string &name);
+        /**
+         * @brief Adds a deserialization engine to the engine map.
+         * @param name The name of the deserialization engine.
+         * @param engine A shared pointer to the deserialization engine.
+         */
+        void addDeserializeEngine(const std::string &name, const std::shared_ptr<DeserializeEngine> &engine);
+
+        /**
+         * @brief Sets the current deserialization engine.
+         * @param name The name of the deserialization engine to set as current.
+         * @return True if the deserialization engine was set successfully, false otherwise.
+         */
+        bool setCurrentDeserializeEngine(const std::string &name);
+
+        /**
+         * @brief Deserializes the given data using the current deserialization engine.
+         * @tparam T The type to deserialize the data into.
+         * @param data The serialized data to deserialize.
+         * @return An optional containing the deserialized object if successful, or an empty optional otherwise.
+         */
+        template <typename T>
+        std::optional<T> deserialize(const std::string &data) const;
+
+    private:
+#ifdef ENABLE_FASTHASH
+        emhash8::HashMap<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */
+#else
+        std::unordered_map<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */
+#endif
+        std::string currentDeserializationEngine_;                                                   /**< Name of the current deserialization engine. */
+        mutable std::mutex mutex_;                                                                   /**< Mutex to ensure thread safety. */
+    };
 
     template <typename T>
-    std::optional<T> deserialize(const std::string &data) const
+    std::optional<T> DeserializationEngine::deserialize(const std::string &data) const
     {
         std::lock_guard<std::mutex> lock(mutex_);
 
@@ -83,14 +125,15 @@ public:
 
         return std::nullopt;
     }
-
-private:
-    std::unordered_map<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_;
-    std::string currentDeserializationEngine_;
-    mutable std::mutex mutex_;
-};
+}
 
 class JsonDeserializer : public DeserializeEngine
+{
+public:
+    std::optional<std::any> deserialize(const std::string &data) const override;
+};
+
+class JsonParamsDeserializer : public DeserializeEngine
 {
 public:
     std::optional<std::any> deserialize(const std::string &data) const override;

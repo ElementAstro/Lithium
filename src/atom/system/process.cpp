@@ -46,13 +46,20 @@ Description: Process Manager
 #include <sys/sysctl.h>
 #include <libproc.h>
 #else
-#error "不支持的操作系统"
+#error "Unknown platform"
 #endif
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium::Process
+namespace Atom::System
 {
+    ProcessManager::ProcessManager()
+    {
+        m_maxProcesses = 10;
+    }
+
+    ProcessManager::ProcessManager(int maxProcess) : m_maxProcesses(maxProcess) {}
+
     std::shared_ptr<ProcessManager> ProcessManager::createShared()
     {
         return std::make_shared<ProcessManager>();
@@ -61,6 +68,16 @@ namespace Lithium::Process
     std::shared_ptr<ProcessManager> ProcessManager::createShared(int maxProcess)
     {
         return std::make_shared<ProcessManager>(maxProcess);
+    }
+
+    std::unique_ptr<ProcessManager> ProcessManager::createUnique()
+    {
+        return std::make_unique<ProcessManager>();
+    }
+
+    std::unique_ptr<ProcessManager> ProcessManager::createUnique(int maxProcess)
+    {
+        return std::make_unique<ProcessManager>(maxProcess);
     }
 
     bool ProcessManager::createProcess(const std::string &command, const std::string &identifier)
@@ -88,7 +105,6 @@ namespace Lithium::Process
             int result = pipe(pipefd);
             if (result != 0)
             {
-                
             }
             dup2(pipefd[1], STDOUT_FILENO);
             close(pipefd[0]);

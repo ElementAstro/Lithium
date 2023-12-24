@@ -25,7 +25,7 @@ E-mail: astro_air@126.com
 
 Date: 2023-10-27
 
-Description: Smart Static Switch just like javascript
+Description: Smart Static Switch just like javascript (One Instance Per Process)
 
 **************************************************/
 
@@ -39,33 +39,54 @@ Description: Smart Static Switch just like javascript
 #include <unordered_map>
 #endif
 
-/**
- * @brief A class for implementing a string switch statement.
- */
-class StringSwitch
+namespace Atom::Utils
 {
-public:
-    using Func = std::function<void()>;        /**< The function type for handling a case. */
-    using DefaultFunc = std::function<void()>; /**< The function type for handling the default case. */
-
     /**
-     * @brief Registers a case with the given string and function.
-     *
-     * @param str The string to match against.
-     * @param func The function to call if the string matches.
+     * @brief A class for implementing a string switch statement.
      */
-    static void registerCase(const std::string &str, Func func);
+    class StringSwitch
+    {
+    public:
+        using Func = std::function<void()>;        /**< The function type for handling a case. */
+        using DefaultFunc = std::function<void()>; /**< The function type for handling the default case. */
 
-    /**
-     * @brief Matches the given string against the registered cases.
-     *
-     * @tparam Args The types of the arguments to pass to the function.
-     * @param str The string to match against.
-     * @param args The arguments to pass to the function.
-     * @return true if a match was found, false otherwise.
-     */
+        /**
+         * @brief Registers a case with the given string and function.
+         *
+         * @param str The string to match against.
+         * @param func The function to call if the string matches.
+         */
+        static void registerCase(const std::string &str, Func func);
+
+        /**
+         * @brief Matches the given string against the registered cases.
+         *
+         * @tparam Args The types of the arguments to pass to the function.
+         * @param str The string to match against.
+         * @param args The arguments to pass to the function.
+         * @return true if a match was found, false otherwise.
+         */
+        template <typename... Args>
+        static bool match(const std::string &str, Args &&...args);
+
+        /**
+         * @brief Sets the default function to be called if no match is found.
+         *
+         * @param func The function to call for the default case.
+         */
+        static void setDefault(DefaultFunc func);
+
+    private:
+#ifdef ENABLE_FASTHASH
+        static emhash8::HashMap<std::string, Func> &cases();
+#else
+        static std::unordered_map<std::string, Func> &cases(); /**< Returns the map of registered cases. */
+#endif
+        static DefaultFunc defaultFunc;                        /**< The default function to call if no match is found. */
+    };
+
     template <typename... Args>
-    static bool match(const std::string &str, Args &&...args)
+    bool StringSwitch::match(const std::string &str, Args &&...args)
     {
         auto iter = cases().find(str);
         if (iter != cases().end())
@@ -85,15 +106,4 @@ public:
 
         return false;
     }
-
-    /**
-     * @brief Sets the default function to be called if no match is found.
-     *
-     * @param func The function to call for the default case.
-     */
-    static void setDefault(DefaultFunc func);
-
-private:
-    static std::unordered_map<std::string, Func> &cases(); /**< Returns the map of registered cases. */
-    static DefaultFunc defaultFunc;                        /**< The default function to call if no match is found. */
-};
+}

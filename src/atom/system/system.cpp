@@ -31,7 +31,6 @@ Description: System
 
 #include "system.hpp"
 
-#include <iostream>
 #include <cstdlib>
 #include <fstream>
 #include <string>
@@ -63,9 +62,11 @@ Description: System
 #include <netinet/udp.h>
 #endif
 
-namespace Lithium::System
-{
+#include "atom/log/loguru.hpp"
+#include "atom/utils/exception.hpp"
 
+namespace Atom::System
+{
     bool CheckSoftwareInstalled(const std::string &software_name)
     {
         bool is_installed = false;
@@ -147,6 +148,11 @@ namespace Lithium::System
         PdhCloseQuery(query);
 #elif __linux__
         std::ifstream file("/proc/stat");
+        if (!file.is_open())
+        {
+            LOG_F(ERROR, "Failed to open /proc/stat");
+            return cpu_usage;
+        }
         std::string line;
         std::getline(file, line); // 读取第一行
 
@@ -170,6 +176,10 @@ namespace Lithium::System
         {
             cpu_usage = static_cast<float>(tinfo->cpu_ticks[CPU_STATE_USER] + tinfo->cpu_ticks[CPU_STATE_SYSTEM]) / tinfo->cpu_ticks[CPU_STATE_IDLE];
             cpu_usage *= 100.0;
+        }
+        else
+        {
+            LOG_F(ERROR, "Failed to get CPU temperature");
         }
 #endif
 
@@ -212,8 +222,13 @@ namespace Lithium::System
                     }
                     catch (const std::exception &e)
                     {
+                        LOG_F(ERROR, "GetCpuTemperature error: {}", e.what());
                     }
                 }
+            }
+            else
+            {
+                LOG_F(ERROR, "GetCpuTemperature error: popen error");
             }
             pclose(pipe);
         }
@@ -225,6 +240,10 @@ namespace Lithium::System
             tempFile >> temp;
             tempFile.close();
             temperature = static_cast<float>(temp) / 1000.0f; // 温度以摄氏度为单位
+        }
+        else
+        {
+            LOG_F(ERROR, "GetMemoryUsage error: open /proc/meminfo error");
         }
 #endif
 
@@ -238,14 +257,24 @@ namespace Lithium::System
 #ifdef _WIN32
         MEMORYSTATUSEX status;
         status.dwLength = sizeof(status);
-        GlobalMemoryStatusEx(&status);
-
-        float total_memory = static_cast<float>(status.ullTotalPhys / 1024 / 1024);
-        float available_memory = static_cast<float>(status.ullAvailPhys / 1024 / 1024);
-
-        memory_usage = (total_memory - available_memory) / total_memory * 100.0;
+        float total_memory = 0.0f;
+        float available_memory = 0.0f;
+        if (GlobalMemoryStatusEx(&status))
+        {
+            total_memory = static_cast<float>(status.ullTotalPhys / 1024 / 1024);
+            available_memory = static_cast<float>(status.ullAvailPhys / 1024 / 1024);
+            memory_usage = (total_memory - available_memory) / total_memory * 100.0;
+        }
+        else
+        {
+            LOG_F(ERROR, "GetMemoryUsage error: GlobalMemoryStatusEx error");
+        }
 #elif __linux__
         std::ifstream file("/proc/meminfo");
+        if (!file.is_open())
+        {
+            LOG_F(ERROR, "GetMemoryUsage error: open /proc/meminfo error");
+        }
         std::string line;
 
         unsigned long total_memory = 0;
@@ -319,6 +348,10 @@ namespace Lithium::System
                     float usage = 100.0 * static_cast<float>(total - free) / total;
                     disk_usage.push_back(std::make_pair(drive_path, usage));
                 }
+                else
+                {
+                    LOG_F(ERROR, "GetDiskUsage error: GetDiskFreeSpaceExA error");
+                }
             }
 
             drives >>= 1;
@@ -343,6 +376,10 @@ namespace Lithium::System
                 float usage = static_cast<float>(usedSpace) / totalSpace * 100.0;
                 disk_usage.push_back({path, usage});
             }
+            else
+            {
+                LOG_F(ERROR, "GetDiskUsage error: statfs error");
+            }
         }
 
 #endif
@@ -359,11 +396,13 @@ namespace Lithium::System
 
         if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
         {
+            LOG_F(ERROR, "IsRoot error: OpenProcessToken error");
             return false;
         }
 
         if (!GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize))
         {
+            LOG_F(ERROR, "IsRoot error: GetTokenInformation error");
             CloseHandle(hToken);
             return false;
         }

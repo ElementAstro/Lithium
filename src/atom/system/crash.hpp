@@ -33,7 +33,7 @@ Description: Crash Report
 
 #include <string>
 
-namespace Lithium::CrashReport
+namespace Atom::System
 {
     /**
      * @brief 保存崩溃日志

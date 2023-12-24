@@ -38,7 +38,7 @@ Description: Thread Manager
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium::Thread
+namespace Atom::Async
 {
     ThreadManager::ThreadManager(int maxThreads)
         : m_maxThreads(maxThreads), m_stopFlag(false)
@@ -71,16 +71,17 @@ namespace Lithium::Thread
 
     void ThreadManager::addThread(std::function<void()> func, const std::string &name)
     {
+        LOG_SCOPE_FUNCTION(MAX);
+        if (m_stopFlag)
+        {
+            throw std::runtime_error(_("Thread manager has stopped, cannot add new thread"));
+        }
         try
         {
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: trying to add thread {}"), name);
             std::unique_lock<std::mutex> lock(m_mtx);
             m_cv.wait(lock, [this]
                       { return static_cast<int>(m_threads.size()) < m_maxThreads || m_stopFlag; });
-
-            if (m_stopFlag)
-            {
-                throw std::runtime_error(_("Thread manager has stopped, cannot add new thread"));
-            }
             if (name != "")
             {
                 auto t = std::make_tuple(
@@ -102,6 +103,7 @@ namespace Lithium::Thread
                     name,
                     false);
                 m_threads.emplace_back(std::move(t));
+                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: added thread {}"), name);
             }
             else
             {
@@ -124,42 +126,48 @@ namespace Lithium::Thread
                     generateRandomString(16),
                     false);
                 m_threads.emplace_back(std::move(t));
+                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: added thread {}"), std::get<2>(t));
             }
-            DLOG_F(INFO, _("Added thread: {}"), name);
             m_cv.notify_all();
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to add thread {}: {}"), name, e.what());
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: failed to add thread {}: {}"), name, e.what());
         }
     }
 
     void ThreadManager::joinAllThreads()
     {
+        LOG_SCOPE_FUNCTION(MAX);
         try
         {
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: trying to join all threads"));
             std::unique_lock<std::mutex> lock(m_mtx);
             m_cv.wait(lock, [this]
                       { return m_threads.empty(); });
             for (auto &t : m_threads)
             {
+                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: trying to join thread {}"), std::get<2>(t));
                 joinThread(lock, t);
             }
             m_threads.clear();
-            DLOG_F(INFO, _("All threads joined"));
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: all threads joined"));
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to join all threads: {}"), e.what());
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: failed to join all threads: {}"), e.what());
         }
     }
 
     void ThreadManager::joinThreadByName(const std::string &name)
     {
+        LOG_SCOPE_FUNCTION(MAX);
         try
         {
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: trying to join thread {}"), name);
             if (m_threads.empty())
             {
+                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: no threads to join"));
                 DLOG_F(WARNING, _("Thread {} not found"), name);
                 return;
             }
@@ -168,6 +176,7 @@ namespace Lithium::Thread
             {
                 if (std::get<1>(t) == name)
                 {
+                    DLOG_F(INFO, _("Thread {} found"), name);
                     joinThread(lock, t);
                     DLOG_F(INFO, _("Thread {} joined"), name);
                     m_threads.erase(std::remove_if(m_threads.begin(), m_threads.end(),
@@ -177,10 +186,12 @@ namespace Lithium::Thread
                     return;
                 }
             }
+            VLOG_SCOPE_F(9 , _("Atom::Async::ThreadManager::joinThreadByName: thread {} not found"), name);
             DLOG_F(WARNING, _("Thread {} not found"), name);
         }
         catch (const std::exception &e)
         {
+            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: failed to join thread {}: {}"), name, e.what());
             LOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
         }
     }

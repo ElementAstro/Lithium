@@ -35,7 +35,7 @@ Description: Extra Math Library
 #include <sstream>
 #include "exception.hpp"
 
-namespace Math
+namespace Atom::Utils
 {
     class Fraction;
     // 运算符，友元函数声明
@@ -60,10 +60,6 @@ namespace Math
     std::istream &operator>>(std::istream &input, Fraction &f);
     std::ostream &operator<<(std::ostream &output, const Fraction &f);
     std::ostream &operator<<(std::ostream &output, const Fraction &&f);
-}
-
-namespace Math
-{
 
     class Fraction
     {
@@ -89,7 +85,7 @@ namespace Math
         {
             if (this->denominator == 0)
             {
-                throw Utilities::WrongArgument_Error("Got 0 in the denominator of Math::Fraction object!");
+                throw Exception::WrongArgument_Error("Got 0 in the denominator of Math::Fraction object!");
             }
         };
         Fraction(int num_value) : numerator(num_value), denominator(1){};
@@ -167,6 +163,9 @@ namespace Math
         friend std::ostream &operator<<(std::ostream &output, const Fraction &f);
         friend std::ostream &operator<<(std::ostream &output, const Fraction &&f);
     };
+
+    [[maybe_unused]] std::vector<std::vector<double>> convolve2D(const std::vector<std::vector<double>> &input, const std::vector<std::vector<double>> &kernel, int numThreads);
+    [[maybe_unused]] std::vector<std::vector<double>> deconvolve2D(const std::vector<std::vector<double>> &signal, const std::vector<std::vector<double>> &kernel);
 }
 
 #endif // FRACTION_H

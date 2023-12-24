@@ -50,7 +50,7 @@ Description: Process Manager
 #include <sys/wait.h>
 #endif
 
-namespace Lithium::Process
+namespace Atom::System
 {
     struct Process
     {
@@ -64,15 +64,46 @@ namespace Lithium::Process
     class ProcessManager
     {
     public:
-        ProcessManager()
-        {
-            m_maxProcesses = 10;
-        }
+        /**
+         * 创建一个进程管理器。
+         */
+        ProcessManager();
 
-        ProcessManager(int maxProcess) : m_maxProcesses(maxProcess) {}
+        /**
+         * 创建一个进程管理器。
+         * @param maxProcess 最大进程数。
+         */
+        ProcessManager(int maxProcess);
 
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
+        /**
+         * 创建一个进程管理器。
+         */
         static std::shared_ptr<ProcessManager> createShared();
+
+        /**
+         * 创建一个进程管理器。
+         * @param maxProcess 最大进程数。
+         */
         static std::shared_ptr<ProcessManager> createShared(int maxProcess);
+
+        /**
+         * 创建一个进程管理器。
+         */
+        static std::unique_ptr<ProcessManager> createUnique();
+
+        /**
+         * 创建一个进程管理器。
+         * @param maxProcess 最大进程数。
+         */
+        static std::unique_ptr<ProcessManager> createUnique(int maxProcess);
+
+        // -------------------------------------------------------------------
+        // Process methods
+        // -------------------------------------------------------------------
 
         /**
          * 创建一个新的进程。
@@ -80,13 +111,6 @@ namespace Lithium::Process
          * @param identifier 进程的标识符。
          */
         bool createProcess(const std::string &command, const std::string &identifier);
-
-        /**
-         * 运行一个脚本。
-         * @param script 要运行的脚本。
-         * @param identifier 进程的标识符。
-         */
-        bool runScript(const std::string &script, const std::string &identifier);
 
         /**
          * 终止一个进程。
@@ -97,29 +121,47 @@ namespace Lithium::Process
 
         bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
 
-        std::vector<Process> getRunningProcesses();
+        [[nodiscard]] std::vector<Process> getRunningProcesses();
 
         /**
          * 获取指定进程的输出信息。
          * @param identifier 进程的标识符。
          * @return 进程的输出信息。
          */
-        std::vector<std::string> getProcessOutput(const std::string &identifier);
+        [[nodiscard]] std::vector<std::string> getProcessOutput(const std::string &identifier);
 
         /**
          * 等待所有进程完成并清除进程列表。
          */
         void waitForCompletion();
 
+        /**
+         * 运行一个脚本。
+         * @param script 要运行的脚本。
+         * @param identifier 进程的标识符。
+         */
+        bool runScript(const std::string &script, const std::string &identifier);
+
+        // -------------------------------------------------------------------
+        // Script methods
+        // -------------------------------------------------------------------
+
     private:
-        int m_maxProcesses;
-        std::condition_variable cv;
+        int m_maxProcesses;             ///< 最大进程数。 // Maximum number of processes.
+        std::condition_variable cv;     ///< 条件变量，用于等待进程完成。 // Condition variable used to wait for process completion.
         std::vector<Process> processes; ///< 存储当前运行的进程列表。 // Stores the list of currently running processes.
         std::mutex mtx;                 ///< 互斥锁，用于操作进程列表。 // Mutex used for manipulating the process list.
     };
 
+    /**
+     * 获取所有进程信息。
+     * @return 所有进程信息。
+     */
     std::vector<std::pair<int, std::string>> GetAllProcesses();
 
+    /*
+     * 获取当前进程信息。
+     */
     Process GetSelfProcessInfo();
 
 }

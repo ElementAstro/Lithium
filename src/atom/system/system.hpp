@@ -34,7 +34,7 @@ Description: System
 #include <string>
 #include <vector>
 
-namespace Lithium::System
+namespace Atom::System
 {
     /**
      * @brief Check whether the specified software is installed.

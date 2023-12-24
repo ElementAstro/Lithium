@@ -41,10 +41,10 @@ Description: This file contains the declaration of the SerializationEngine class
 #endif
 
 #include "property/iproperty.hpp"
-
+#include "atom/type/iparams.hpp"
 #include "atom/log/loguru.hpp"
 
-std::string JsonRenderEngine::render(const std::any &data, bool format) const
+std::string JsonSerializationEngine::serialize(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     if (data.type() == typeid(std::unordered_map<std::string, std::string>))
@@ -117,6 +117,17 @@ std::string JsonRenderEngine::render(const std::any &data, bool format) const
                 LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
             }
         }
+        else if (data.type() == typeid(std::shared_ptr<IParams>))
+        {
+            try
+            {
+                return std::any_cast<std::shared_ptr<IParams>>(data)->toJson();
+            }
+            catch (const std::bad_any_cast &e)
+            {
+                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
+            }
+        }
         else
         {
             LOG_F(ERROR, "Unknown type of message!");
@@ -147,7 +158,7 @@ std::string JsonRenderEngine::render(const std::any &data, bool format) const
     return oss.str();
 }
 
-std::string XmlRenderEngine::render(const std::any &data, bool format) const
+std::string XmlSerializationEngine::serialize(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -180,7 +191,7 @@ std::string XmlRenderEngine::render(const std::any &data, bool format) const
     return oss.str();
 }
 
-std::string YamlRenderEngine::render(const std::any &data, bool format) const
+std::string YamlSerializationEngine::serialize(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -209,7 +220,7 @@ std::string YamlRenderEngine::render(const std::any &data, bool format) const
     return oss.str();
 }
 
-std::string IniRenderEngine::render(const std::any &data, bool format) const
+std::string IniSerializationEngine::serialize(const std::any &data, bool format) const
 {
     std::unordered_map<std::string, std::string> _data;
     try
@@ -229,32 +240,42 @@ std::string IniRenderEngine::render(const std::any &data, bool format) const
     return oss.str();
 }
 
-SerializationEngine::SerializationEngine()
+namespace Atom::Server
 {
-    // 添加默认的渲染引擎
-    auto jsonRenderEngine = std::make_shared<JsonRenderEngine>();
-    m_renderEngines["json"] = jsonRenderEngine;
-    m_currentRenderEngine = "json"; // 默认选中 JsonRenderEngine
-}
-
-// 添加渲染引擎
-void SerializationEngine::addRenderEngine(const std::string &name, const std::shared_ptr<RenderEngine> &renderEngine)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_renderEngines[name] = renderEngine;
-}
-
-// 设置当前选中的渲染引擎
-bool SerializationEngine::setCurrentRenderEngine(const std::string &name)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    auto it = m_renderEngines.find(name);
-    if (it != m_renderEngines.end())
+    SerializationEngine::SerializationEngine()
     {
-        m_currentRenderEngine = name;
-        return true;
+        // 添加默认的渲染引擎
+        auto jsonSerializationEngine = std::make_shared<JsonSerializationEngine>();
+        m_serializeEngines["json"] = jsonSerializationEngine;
+        m_currentSerializationEngine = "json"; // 默认选中 JsonSerializationEngine
     }
-    return false;
+
+    // 添加渲染引擎
+    void SerializationEngine::addSerializationEngine(const std::string &name, const std::shared_ptr<Serialization> &renderEngine)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        if (m_serializeEngines.find(name)!= m_serializeEngines.end())
+        {
+            LOG_F(ERROR, "SerializationEngine::addSerializationEngine: Render engine {} already exists!", name);
+            return;
+        }
+        m_serializeEngines[name] = renderEngine;
+    }
+
+    // 设置当前选中的渲染引擎
+    bool SerializationEngine::setCurrentSerializationEngine(const std::string &name)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto it = m_serializeEngines.find(name);
+        if (it != m_serializeEngines.end())
+        {
+            m_currentSerializationEngine = name;
+            DLOG_F(INFO, "SerializationEngine::setCurrentSerializationEngine: Set current render engine: {}", name);
+            return true;
+        }
+        LOG_F(ERROR, "SerializationEngine::setCurrentSerializationEngine: No such render engine: {}", name);
+        return false;
+    }
 }
 
 /*
@@ -292,8 +313,8 @@ int main()
         std::cout << "Serialization Failed." << std::endl;
     }
 
-    engine.addRenderEngine("xml", std::make_shared<YamlRenderEngine>());
-    engine.setCurrentRenderEngine("xml");
+    engine.addSerializationEngine("xml", std::make_shared<YamlSerializationEngine>());
+    engine.setCurrentSerializationEngine("xml");
     _data = engine.serialize(data, true);
 
     if (_data)

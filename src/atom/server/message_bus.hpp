@@ -53,7 +53,7 @@ Description: Main Message Bus
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium
+namespace Atom::Server
 {
     class MessageBus
     {

@@ -60,8 +60,21 @@ public:
      */
     void RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler = nullptr);
 
+    /**
+     * @brief 注册成员函数处理函数
+     * @param name 命令名称
+     * @param object 命令处理函数所属对象
+     * @param memberFunc 命令处理函数
+     */
     template <class T>
     void RegisterMemberHandler(const std::string &name, T *object, Result (T::*memberFunc)(const Argument &));
+
+    /**
+     * @brief 获取特定名称的命令处理函数
+     * @param name 命令名称
+     * @return 命令处理函数
+     */
+    std::function<Result(const Argument &)> GetHandler(const std::string &name);
 
     /**
      * @brief 检查是否存在特定名称的命令处理函数
@@ -92,24 +105,25 @@ public:
 
     /**
      * @brief 清空所有命令处理函数
-    */
+     */
     bool RemoveAll();
 
     /**
      * @brief 注册函数的描述信息
      * @param name 函数名称
      * @param description 函数描述信息
-    */
-    void RegisterFunctionDescription(const std::string& name, const std::string& description);
+     */
+    void RegisterFunctionDescription(const std::string &name, const std::string &description);
 
     /**
      * @brief 获取函数的描述信息
      * @param name 函数名称
      * @return 函数描述信息
-    */
-    std::string GetFunctionDescription(const std::string& name);
+     */
+    std::string GetFunctionDescription(const std::string &name);
 
-    void RemoveFunctionDescription(const std::string& name);
+    /** @brief 删除函数的描述信息 */
+    void RemoveFunctionDescription(const std::string &name);
 
     /** @brief 清空函数的描述信息 */
     void ClearFunctionDescriptions();
@@ -125,13 +139,6 @@ private:
     std::unordered_map<std::string, std::string> descriptions_;
 #endif
 
-    /**
-     * @brief 使用Djb2哈希算法计算字符串的哈希值
-     * @param str 输入字符串
-     * @return 哈希值
-     */
-    static std::size_t Djb2Hash(const char *str);
-
     std::stack<std::pair<std::string, Argument>> commandHistory_;
     std::stack<std::pair<std::string, Argument>> undoneCommands_;
 };
@@ -139,7 +146,6 @@ private:
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler)
 {
-    auto hash_value = Djb2Hash(name.c_str());
     if (handler)
     {
         handlers_[hash_value] = handler;
@@ -161,29 +167,27 @@ void CommandDispatcher<Result, Argument>::RegisterMemberHandler(const std::strin
 template <typename Result, typename Argument>
 bool CommandDispatcher<Result, Argument>::HasHandler(const std::string &name)
 {
-    return handlers_.find(Djb2Hash(name.c_str())) != handlers_.end();
+    return handlers_.find(name) != handlers_.end();
+}
+
+template <typename Result, typename Argument>
+std::function<Result(const Argument &)> CommandDispatcher<Result, Argument>::GetHandler(const std::string &name)
+{
+    auto it = handlers_.find(name);
+    if (it != handlers_.end())
+    {
+        return it->second;
+    }
 }
 
 template <typename Result, typename Argument>
 Result CommandDispatcher<Result, Argument>::Dispatch(const std::string &name, const Argument &data)
 {
-    auto it = handlers_.find(Djb2Hash(name.c_str()));
+    auto it = handlers_.find(name);
     if (it != handlers_.end())
     {
         return it->second(data);
     }
-}
-
-template <typename Result, typename Argument>
-std::size_t CommandDispatcher<Result, Argument>::Djb2Hash(const char *str)
-{
-    std::size_t hash = 5381;
-    char c;
-    while ((c = *str++) != '\0')
-    {
-        hash = ((hash << 5) + hash) + static_cast<unsigned char>(c);
-    }
-    return hash;
 }
 
 template <typename Result, typename Argument>
@@ -234,13 +238,13 @@ bool CommandDispatcher<Result, Argument>::RemoveAll()
 }
 
 template <typename Result, typename Argument>
-void CommandDispatcher<Result, Argument>::RegisterFunctionDescription(const std::string& name, const std::string& description)
+void CommandDispatcher<Result, Argument>::RegisterFunctionDescription(const std::string &name, const std::string &description)
 {
     descriptions_[name] = description;
 }
 
 template <typename Result, typename Argument>
-std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const std::string& name)
+std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const std::string &name)
 {
     auto it = descriptions_.find(name);
     if (it != descriptions_.end())
@@ -251,7 +255,7 @@ std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const st
 }
 
 template <typename Result, typename Argument>
-void CommandDispatcher<Result, Argument>::RemoveFunctionDescription(const std::string& name)
+void CommandDispatcher<Result, Argument>::RemoveFunctionDescription(const std::string &name)
 {
     descriptions_.erase(name);
 }

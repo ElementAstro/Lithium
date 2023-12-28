@@ -29,6 +29,8 @@ Description: Smart Switch just like javascript
 
 **************************************************/
 
+#pragma once
+
 #include <functional>
 #include <string>
 #if ENABLE_FASTHASH
@@ -41,7 +43,6 @@ Description: Smart Switch just like javascript
 
 namespace Atom::Utils
 {
-
     /**
      * @brief A class for implementing a switch statement with string cases.
      *

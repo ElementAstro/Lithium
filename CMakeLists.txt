@@ -22,6 +22,7 @@ set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
 set(lithium_module_dir ${Lithium_PROJECT_ROOT_DIR}/src/atom)
 set(lithium_client_dir ${Lithium_PROJECT_ROOT_DIR}/src/client)
+set(lithium_component_dir ${Lithium_PROJECT_ROOT_DIR}/src/components)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -115,19 +116,20 @@ elseif(LINUX)
     set(CMAKE_INSTALL_PREFIX "/usr/lithium")
 endif()
 
+set(component_module
+    ${lithium_component_dir}/device/ascom_manager.cpp
+    ${lithium_component_dir}/device/device_manager.cpp
+    ${lithium_component_dir}/device/hydrogen_manager.cpp
+    ${lithium_component_dir}/device/device_utils.cpp
+    ${lithium_component_dir}/device/hydrogen_device.cpp
+
+    ${lithium_component_dir}/plugin/plugin_loader.cpp
+
+    ${lithium_component_dir}/component_manager.cpp
+)
+
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
-)
-
-set(device_module
-    ${lithium_src_dir}/device/device_manager.cpp
-    ${lithium_src_dir}/device/hydrogen_manager.cpp
-    ${lithium_src_dir}/device/device_utils.cpp
-    ${lithium_src_dir}/device/hydrogen_device.cpp
-)
-
-set(module_module
-    ${lithium_src_dir}/plugin/plugin_loader.cpp
 )
 
 set(server_module
@@ -217,9 +219,6 @@ include_directories(modules)
 add_subdirectory(modules)
 
 
-# 构建Lithium内核
-add_subdirectory(${lithium_src_dir}/core)
-
 add_executable(lithium_server ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
@@ -231,7 +230,6 @@ target_link_libraries(lithium_server atomstatic)
 
 target_link_libraries(lithium_server lithiumcorestatic)
 target_link_libraries(lithium_server lithiumpluginstatic)
-target_link_libraries(lithium_server lithiumcorestatic)
 if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
 endif()

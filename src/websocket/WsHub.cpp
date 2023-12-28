@@ -1,6 +1,8 @@
 
 #include "WsHub.hpp"
 
+#include "atom/"
+
 WsHub::WsHub(const oatpp::String &name)
 		: m_name(name)
 	{
@@ -9,7 +11,7 @@ WsHub::WsHub(const oatpp::String &name)
 void WsHub::addConnection(const std::shared_ptr<WsInstance> &Connection)
 {
     std::lock_guard<std::mutex> guard(m_ConnectionByIdLock);
-    m_ConnectionById[Connection->getUserId()] = Connection;
+    m_ConnectionById[Connection->getId()] = Connection;
 }
 
 void WsHub::removeConnectionByUserId(v_int32 userId)

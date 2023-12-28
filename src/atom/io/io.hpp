@@ -36,7 +36,7 @@ Description: IO
 #include <cstdint>
 #include <filesystem>
 
-namespace Lithium::File
+namespace Atom::IO
 {
     /**
      * @brief Creates a directory with the specified path.

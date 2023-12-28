@@ -51,7 +51,7 @@ const std::regex folderNameRegex("^[^/]+$");
 
 namespace fs = std::filesystem;
 
-namespace Lithium::File
+namespace Atom::IO
 {
 
     bool create_directory(const std::string &path)

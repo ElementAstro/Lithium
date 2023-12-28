@@ -41,7 +41,7 @@ Description: File Manager
 
 #include <openssl/evp.h>
 
-namespace Lithium::File
+namespace Atom::IO
 {
 
     bool fileExists(const std::string &filename)

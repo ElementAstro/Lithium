@@ -10,6 +10,8 @@
 #include <unordered_map>
 #endif
 
+class MessageBus;
+
 class WsHub
 {
 public:
@@ -44,6 +46,11 @@ private:
 	oatpp::String m_name;
 	std::unordered_map<v_int32, std::shared_ptr<WsInstance>> m_ConnectionById;
 	std::mutex m_ConnectionByIdLock;
+	// Serialization and Deserialization Engine
+	std::shared_ptr<SerializationEngine> m_SerializationEngine;
+	std::shared_ptr<DeserializationEngine> m_DeserializationEngine;
+	// Message Bus
+	std::shared_ptr<MessageBus> m_MessageBus;
 };
 
 #endif // WsHUB_HPP

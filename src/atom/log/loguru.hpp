@@ -1143,6 +1143,8 @@ LOGURU_ANONYMOUS_NAMESPACE_END
 	#define DVLOG_IF_F(verbosity, ...)      VLOG_IF_F(verbosity, __VA_ARGS__)
 	#define DRAW_LOG_F(verbosity_name, ...) RAW_LOG_F(verbosity_name, __VA_ARGS__)
 	#define DRAW_VLOG_F(verbosity, ...)     RAW_VLOG_F(verbosity, __VA_ARGS__)
+	#define DLOG_SCOPE_F(verbosity_name,...) LOG_SCOPE_F(verbosity_name, __VA_ARGS__)
+	#define DLOG_SCOPE_FUNCTION(...)       LOG_SCOPE_FUNCTION(__VA_ARGS__)
 #else
 	// Debug logging disabled:
 	#define DLOG_F(verbosity_name, ...)
@@ -1151,6 +1153,8 @@ LOGURU_ANONYMOUS_NAMESPACE_END
 	#define DVLOG_IF_F(verbosity, ...)
 	#define DRAW_LOG_F(verbosity_name, ...)
 	#define DRAW_VLOG_F(verbosity, ...)
+	#define DLOG_SCOPE_F(verbosity_name,...)
+	#define DLOG_SCOPE_FUNCTION(...)
 #endif
 
 #define CHECK_EQ_F(a, b, ...) CHECK_OP_F(a, b, ==, ##__VA_ARGS__)

@@ -29,131 +29,136 @@ Description: A simple type wrapper
 
 **************************************************/
 
+#pragma once
+
 #include <cstddef>
 #include <tuple>
-#include <iostream>
 #include <type_traits>
 
-template <typename T>
-class MyType
+namespace Atom::Utils
 {
-public:
-    explicit MyType(const T &value) : m_value(value) {}
 
-    // 加法运算符重载
-    template <typename U>
-    auto operator+(const MyType<U> &other) const
+    template <typename T>
+    class AutoType
     {
-        using ResultType = decltype(m_value + other.m_value);
-        return MyType<ResultType>(m_value + other.m_value);
-    }
+    public:
+        explicit AutoType(const T &value) : m_value(value) {}
 
-    // 减法运算符重载
-    template <typename U>
-    auto operator-(const MyType<U> &other) const
+        // 加法运算符重载
+        template <typename U>
+        auto operator+(const AutoType<U> &other) const
+        {
+            using ResultType = decltype(m_value + other.m_value);
+            return AutoType<ResultType>(m_value + other.m_value);
+        }
+
+        // 减法运算符重载
+        template <typename U>
+        auto operator-(const AutoType<U> &other) const
+        {
+            using ResultType = decltype(m_value - other.m_value);
+            return AutoType<ResultType>(m_value - other.m_value);
+        }
+
+        // 乘法运算符重载
+        template <typename U>
+        auto operator*(const AutoType<U> &other) const
+        {
+            using ResultType = decltype(m_value * other.m_value);
+            return AutoType<ResultType>(m_value * other.m_value);
+        }
+
+        // 除法运算符重载
+        template <typename U>
+        auto operator/(const AutoType<U> &other) const
+        {
+            using ResultType = decltype(m_value / other.m_value);
+            return AutoType<ResultType>(m_value / other.m_value);
+        }
+
+        // 取模运算符重载
+        template <typename U>
+        auto operator%(const AutoType<U> &other) const
+        {
+            using ResultType = decltype(m_value % other.m_value);
+            return AutoType<ResultType>(m_value % other.m_value);
+        }
+
+        // 等于运算符重载
+        template <typename U>
+        auto operator==(const AutoType<U> &other) const
+        {
+            return m_value == other.m_value;
+        }
+
+        // 不等于运算符重载
+        template <typename U>
+        auto operator!=(const AutoType<U> &other) const
+        {
+            return m_value != other.m_value;
+        }
+
+        // 小于运算符重载
+        template <typename U>
+        auto operator<(const AutoType<U> &other) const
+        {
+            return m_value < other.m_value;
+        }
+
+        // 小于等于运算符重载
+        template <typename U>
+        auto operator<=(const AutoType<U> &other) const
+        {
+            return m_value <= other.m_value;
+        }
+
+        // 大于运算符重载
+        template <typename U>
+        auto operator>(const AutoType<U> &other) const
+        {
+            return m_value > other.m_value;
+        }
+
+        // 大于等于运算符重载
+        template <typename U>
+        auto operator>=(const AutoType<U> &other) const
+        {
+            return m_value >= other.m_value;
+        }
+
+        T m_value; // 成员变量
+    };
+
+    template <typename Tuple, std::size_t N = std::tuple_size_v<Tuple>, typename T = void>
+    struct TuplePrinter
     {
-        using ResultType = decltype(m_value - other.m_value);
-        return MyType<ResultType>(m_value - other.m_value);
-    }
+        static void print(const Tuple &t)
+        {
+            TuplePrinter<Tuple, N - 1, T>::print(t);
+            std::cout << ", " << std::get<N - 1>(t);
+        }
+    };
 
-    // 乘法运算符重载
-    template <typename U>
-    auto operator*(const MyType<U> &other) const
+    template <typename Tuple, std::size_t N>
+    struct TuplePrinter<Tuple, N, typename std::enable_if<N == 1>::type>
     {
-        using ResultType = decltype(m_value * other.m_value);
-        return MyType<ResultType>(m_value * other.m_value);
-    }
-
-    // 除法运算符重载
-    template <typename U>
-    auto operator/(const MyType<U> &other) const
-    {
-        using ResultType = decltype(m_value / other.m_value);
-        return MyType<ResultType>(m_value / other.m_value);
-    }
-
-    // 取模运算符重载
-    template <typename U>
-    auto operator%(const MyType<U> &other) const
-    {
-        using ResultType = decltype(m_value % other.m_value);
-        return MyType<ResultType>(m_value % other.m_value);
-    }
-
-    // 等于运算符重载
-    template <typename U>
-    auto operator==(const MyType<U> &other) const
-    {
-        return m_value == other.m_value;
-    }
-
-    // 不等于运算符重载
-    template <typename U>
-    auto operator!=(const MyType<U> &other) const
-    {
-        return m_value != other.m_value;
-    }
-
-    // 小于运算符重载
-    template <typename U>
-    auto operator<(const MyType<U> &other) const
-    {
-        return m_value < other.m_value;
-    }
-
-    // 小于等于运算符重载
-    template <typename U>
-    auto operator<=(const MyType<U> &other) const
-    {
-        return m_value <= other.m_value;
-    }
-
-    // 大于运算符重载
-    template <typename U>
-    auto operator>(const MyType<U> &other) const
-    {
-        return m_value > other.m_value;
-    }
-
-    // 大于等于运算符重载
-    template <typename U>
-    auto operator>=(const MyType<U> &other) const
-    {
-        return m_value >= other.m_value;
-    }
-
-    T m_value; // 成员变量
-};
-
-template <typename Tuple, std::size_t N = std::tuple_size_v<Tuple>, typename T = void>
-struct TuplePrinter
-{
-    static void print(const Tuple &t)
-    {
-        TuplePrinter<Tuple, N - 1, T>::print(t);
-        std::cout << ", " << std::get<N - 1>(t);
-    }
-};
-
-template <typename Tuple, std::size_t N>
-struct TuplePrinter<Tuple, N, typename std::enable_if<N == 1>::type>
-{
-    static void print(const Tuple &t)
-    {
-        std::cout << std::get<0>(t);
-    }
-};
+        static void print(const Tuple &t)
+        {
+            std::cout << std::get<0>(t);
+        }
+    };
+}
 
 /*
 int main()
 {
-    MyType<int> a(2);
-    MyType<double> b(3.5);
+    AutoType<int> a(2);
+    AutoType<double> b(3.5);
 
-    auto c = a + b; // MyType<double>(5.5)
-    auto d = a - b; // MyType<double>(-1.5)
-    auto e = a * b; // MyType<double>(7.0)
-    auto f = a / b; // MyType<double>(0.571429)
+    auto c = a + b; // AutoType<double>(5.5)
+    auto d = a - b; // AutoType<double>(-1.5)
+    auto e = a * b; // AutoType<double>(7.0)
+    auto f = a / b; // AutoType<double>(0.571429)
 
     std::cout << std::boolalpha << (a == b) << '\n'; // false
     std::cout << std::boolalpha << (a != b) << '\n'; // true

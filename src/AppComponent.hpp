@@ -38,7 +38,7 @@ Description: App Components
 
 #include "ErrorHandler.hpp"
 
-#include "components/SwaggerComponent.hpp"
+#include "controller/SwaggerComponent.hpp"
 
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-openssl/configurer/TrustStore.hpp"

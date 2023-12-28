@@ -32,58 +32,62 @@ Description: Simple implementation of Huffman encoding
 #pragma once
 
 #include <string>
-#include <map>
+#include <unordered_map>
 
-/**
- * @brief 哈夫曼树节点
- * 
- */
-struct HuffmanNode {
-    char data; ///< 节点存储的字符
-    int frequency; ///< 节点的频率
-    HuffmanNode *left; ///< 左子节点指针
-    HuffmanNode *right; ///< 右子节点指针
+namespace Atom::Utils
+{
+    /**
+     * @brief 哈夫曼树节点
+     *
+     */
+    struct HuffmanNode
+    {
+        char data;          ///< 节点存储的字符
+        int frequency;      ///< 节点的频率
+        HuffmanNode *left;  ///< 左子节点指针
+        HuffmanNode *right; ///< 右子节点指针
+
+        /**
+         * @brief 构造函数
+         *
+         * @param data 节点存储的字符
+         * @param frequency 节点的频率
+         */
+        HuffmanNode(char data, int frequency) : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
+    };
 
     /**
-     * @brief 构造函数
-     * 
-     * @param data 节点存储的字符
-     * @param frequency 节点的频率
+     * @brief 创建哈夫曼树
+     *
+     * @param frequencies 字符频率表
+     * @return HuffmanNode* 哈夫曼树的根节点指针
      */
-    HuffmanNode(char data, int frequency) : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
-};
+    HuffmanNode *createHuffmanTree(std::unordered_map<char, int> &frequencies);
 
-/**
- * @brief 创建哈夫曼树
- * 
- * @param frequencies 字符频率表
- * @return HuffmanNode* 哈夫曼树的根节点指针
- */
-HuffmanNode *createHuffmanTree(std::map<char, int> &frequencies);
+    /**
+     * @brief 递归生成哈夫曼编码
+     *
+     * @param root 当前节点指针
+     * @param code 当前节点编码
+     * @param huffmanCodes 哈夫曼编码表
+     */
+    void generateHuffmanCodes(HuffmanNode *root, std::string code, std::unordered_map<char, std::string> &huffmanCodes);
 
-/**
- * @brief 递归生成哈夫曼编码
- * 
- * @param root 当前节点指针
- * @param code 当前节点编码
- * @param huffmanCodes 哈夫曼编码表
- */
-void generateHuffmanCodes(HuffmanNode *root, std::string code, std::map<char, std::string> &huffmanCodes);
+    /**
+     * @brief 使用哈夫曼编码压缩文本
+     *
+     * @param text 待压缩文本
+     * @param huffmanCodes 哈夫曼编码表
+     * @return std::string 压缩后的文本
+     */
+    std::string compressText(const std::string &text, const std::unordered_map<char, std::string> &huffmanCodes);
 
-/**
- * @brief 使用哈夫曼编码压缩文本
- * 
- * @param text 待压缩文本
- * @param huffmanCodes 哈夫曼编码表
- * @return std::string 压缩后的文本
- */
-std::string compressText(const std::string &text, const std::map<char, std::string> &huffmanCodes);
-
-/**
- * @brief 使用哈夫曼编码解压缩文本
- * 
- * @param compressedText 压缩后的文本
- * @param root 哈夫曼树的根节点指针
- * @return std::string 解压缩后的文本
- */
-std::string decompressText(const std::string &compressedText, HuffmanNode *root);
+    /**
+     * @brief 使用哈夫曼编码解压缩文本
+     *
+     * @param compressedText 压缩后的文本
+     * @param root 哈夫曼树的根节点指针
+     * @return std::string 解压缩后的文本
+     */
+    std::string decompressText(const std::string &compressedText, HuffmanNode *root);
+}

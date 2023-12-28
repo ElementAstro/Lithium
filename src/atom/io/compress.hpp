@@ -33,9 +33,8 @@ Description: Compressor using ZLib
 
 #include <string>
 
-namespace Lithium::File
+namespace Atom::IO
 {
-
     /**
      * @brief 对单个文件进行压缩
      * @param file_name 待压缩的文件名（包含路径）
@@ -107,5 +106,4 @@ namespace Lithium::File
      * @return 成功提取内容返回true，否则返回false。
      */
     bool extract_zip(const std::string &zip_file, const std::string &destination_folder);
-
 }

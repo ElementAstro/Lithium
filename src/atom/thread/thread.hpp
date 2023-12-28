@@ -41,8 +41,26 @@ Description: Thread Manager
 #include <functional>
 #include <condition_variable>
 
-namespace Lithium::Thread
+#include "thread_pool.hpp"
+
+namespace Atom::Async
 {
+	class ThreadContainer
+	{
+	public:
+		ThreadContainer() = default;
+		virtual ~ThreadContainer() = default;
+
+	private:
+#if __cplusplus >= 202002L
+		std::unique_ptr<std::jthread> m_thread;
+#else
+		std::unique_ptr<std::thread> m_thread;
+#endif
+		std::string m_name;
+		std::atomic_bool m_isRunning;
+	};
+
 	/**
 	 * @brief 线程管理器类，用于管理多个线程
 	 */
@@ -85,7 +103,7 @@ namespace Lithium::Thread
 		 * @param name 线程名称
 		 * @return 是否正在运行
 		 */
-		bool isThreadRunning(const std::string &name);
+		[[nodiscard]] bool isThreadRunning(const std::string &name);
 
 		/**
 		 * @brief 生成指定长度的随机字符串
@@ -93,6 +111,14 @@ namespace Lithium::Thread
 		 * @return 生成的随机字符串
 		 */
 		const std::string generateRandomString(int length);
+
+		void setMaxThreads(int maxThreads);
+
+		[[nodiscard]] int getMaxThreads() const;
+
+	public:
+
+		thread_pool<void()> m_threadPool;
 
 	private:
 #if __cplusplus >= 202002L

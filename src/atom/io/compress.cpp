@@ -82,7 +82,7 @@ public:
     }
 };
 
-namespace Lithium::File
+namespace Atom::IO
 {
     bool compress_file(const std::string &file_name, const std::string &output_folder)
     {

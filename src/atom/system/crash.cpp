@@ -49,47 +49,22 @@ Description: Crash Report
 #include <ws2tcpip.h>
 #include <pdh.h>
 #include <pdhmsg.h>
-#endif
-
-#if defined(__linux__)
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <sys/utsname.h>
 #include <sys/sysinfo.h>
 #endif
 
-#if defined(__APPLE__)
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#endif
+#include "backward/backward.hpp" // For stack trace
+#include "atom/log/loguru.hpp"
 
-#include <backward/backward.hpp>
+#include "atom/utils/string.hpp"
+#include "atom/utils/exception.hpp"
 
-namespace Lithium::CrashReport
+namespace Atom::System
 {
-
-    std::vector<std::string> SplitString(const std::string &input, char delimiter)
-    {
-        std::vector<std::string> tokens;
-        size_t pos = 0;
-        size_t foundPos = input.find(delimiter);
-
-        while (foundPos != std::string::npos)
-        {
-            tokens.push_back(input.substr(pos, foundPos - pos));
-            pos = foundPos + 1;
-            foundPos = input.find(delimiter, pos);
-        }
-
-        tokens.push_back(input.substr(pos));
-
-        return tokens;
-    }
-
     // 获取系统信息
     std::string getSystemInfo()
     {
@@ -113,7 +88,6 @@ namespace Lithium::CrashReport
             GetVersionEx(&osvi);
             GetSystemInfo(&si);
 
-            // 组装 Windows 系统信息字符串
             ss << "Operating system version: " << osvi.dwMajorVersion << "." << osvi.dwMinorVersion << "." << osvi.dwBuildNumber << "." << osvi.dwPlatformId << std::endl;
             ss << "Computer name: ";
             WCHAR computerName[MAX_COMPUTERNAME_LENGTH + 1];
@@ -168,20 +142,20 @@ namespace Lithium::CrashReport
             status = PdhOpenQuery(NULL, 0, &query);
             if (status != ERROR_SUCCESS)
             {
-                throw std::runtime_error("Failed to open PDH query for CPU usage (error code: " + std::to_string(status) + ")");
+                LOG_F(ERROR, "Failed to open PDH query for CPU usage (error code: {})", status);
             }
 
             const char *instanceName = "_Total";
             status = PdhAddCounterA(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
             if (status != ERROR_SUCCESS)
             {
-                throw std::runtime_error("Failed to add CPU usage counter for instance '" + std::string(instanceName) + "' (error code: " + std::to_string(status) + ")");
+                LOG_F(ERROR, "Failed to add CPU usage counter for instance '{}' (error code: {})", instanceName, status);
             }
 
             status = PdhCollectQueryData(query);
             if (status != ERROR_SUCCESS)
             {
-                throw std::runtime_error("Failed to collect data for PDH query (error code: " + std::to_string(status) + ")");
+                LOG_F(ERROR, "Failed to collect data for PDH query (error code: {})", status);
             }
 
             Sleep(1000);
@@ -189,13 +163,13 @@ namespace Lithium::CrashReport
             status = PdhCollectQueryData(query);
             if (status != ERROR_SUCCESS)
             {
-                throw std::runtime_error("Failed to collect data for PDH query (error code: " + std::to_string(status) + ")");
+                LOG_F(ERROR, "Failed to collect data for PDH query (error code: {})", status);
             }
 
             status = PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
             if (status != ERROR_SUCCESS)
             {
-                throw std::runtime_error("Failed to get formatted CPU usage value for instance '" + std::string(instanceName) + "' (error code: " + std::to_string(status) + ")");
+                LOG_F(ERROR, "Failed to get formatted CPU usage value for instance '{}' (error code: {})", instanceName, status);
             }
 
             cpuInfo = "CPU usage: " + std::to_string(value.doubleValue) + "%";
@@ -205,13 +179,10 @@ namespace Lithium::CrashReport
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Error occurred: " << e.what() << std::endl;
+            LOG_F(ERROR, "Error occurred: {}", e.what());
             return "";
         }
-#endif
-
-// Linux
-#if defined(__linux__)
+#elif defined(__linux__)
         try
         {
             struct utsname name;
@@ -249,13 +220,10 @@ namespace Lithium::CrashReport
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Error occurred: " << e.what() << std::endl;
+            LOG_F(ERROR, "Error occurred: {}", e.what());
             return "";
         }
-#endif
-
-// Mac OS X
-#if defined(__APPLE__)
+#elif defined(__APPLE__)
         try
         {
             struct utsname name;
@@ -283,11 +251,10 @@ namespace Lithium::CrashReport
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Error occurred: " << e.what() << std::endl;
+            LOG_F(ERROR, "Error occurred: {}", e.what());
             return "";
         }
 #endif
-
         return ss.str();
     }
 
@@ -296,46 +263,7 @@ namespace Lithium::CrashReport
         std::stringstream ss;
         std::vector<std::string> env_vars = {
             "PATH", "TMP", "TEMP", "ProgramFiles(x86)", "ProgramFiles", "SystemRoot", "APPDATA"};
-
-#if defined(__linux__)
-        ss << "================== Linux Environment Information ==================" << std::endl;
-
-        for (auto &env_var : env_vars)
-        {
-            char *env_value = getenv(env_var.c_str());
-            if (env_value != nullptr)
-            {
-                ss << "Linux ";
-                ss << env_var << "=" << env_value << std::endl;
-                char delimiter = ':';
-
-                std::vector<std::string> tokens = SplitString(env_value, delimiter);
-
-                for (const auto &token : tokens)
-                {
-                    ss << token << std::endl;
-                }
-            }
-        }
-#endif
-
-#if defined(__APPLE__)
-        ss << "================== Mac OS X Environment Information ==================" << std::endl;
-
-        for (auto &env_var : env_vars)
-        {
-            char *env_value = getenv(env_var.c_str());
-            if (env_value != nullptr)
-            {
-                ss << "Mac OS X ";
-                ss << env_var << "=" << env_value << std::endl;
-            }
-        }
-#endif
-
 #if defined(_WIN32) || defined(_WIN64)
-        ss << "================== Windows Environment Information ==================" << std::endl;
-
         for (auto &env_var : env_vars)
         {
             DWORD buffer_size = GetEnvironmentVariableA(env_var.c_str(), nullptr, 0);
@@ -348,9 +276,35 @@ namespace Lithium::CrashReport
                 }
             }
         }
+#elif defined(__linux__)
+        for (auto &env_var : env_vars)
+        {
+            char *env_value = getenv(env_var.c_str());
+            if (env_value != nullptr)
+            {
+                ss << "Linux ";
+                ss << env_var << "=" << env_value << std::endl;
+                char delimiter = ':';
 
+                std::vector<std::string> tokens = Utils::SplitString(env_value, delimiter);
+
+                for (const auto &token : tokens)
+                {
+                    ss << token << std::endl;
+                }
+            }
+        }
+#elif defined(__APPLE__)
+        for (auto &env_var : env_vars)
+        {
+            char *env_value = getenv(env_var.c_str());
+            if (env_value != nullptr)
+            {
+                ss << "Mac OS X ";
+                ss << env_var << "=" << env_value << std::endl;
+            }
+        }
 #endif
-
         return ss.str();
     }
 
@@ -489,10 +443,10 @@ namespace Lithium::CrashReport
             {
                 ResolvedTrace trace = tr.resolve(st[i]);
                 ss << "#" << i
-                          << " " << trace.object_filename
-                          << " " << trace.object_function
-                          << " [" << trace.addr << "]"
-                          << std::endl;
+                   << " " << trace.object_filename
+                   << " " << trace.object_function
+                   << " [" << trace.addr << "]"
+                   << std::endl;
             }
             ss << "==================== System Information ====================" << std::endl;
             ss << system_info << std::endl;
@@ -515,17 +469,12 @@ namespace Lithium::CrashReport
             // 写入日志文件
             std::stringstream sss;
             sss << "crash_report/crash_" << std::put_time(std::localtime(&now), "%Y%m%d_%H%M%S") << ".log";
-
             // 检查目录是否存在，如果不存在则创建
             std::filesystem::path dir_path("crash_report");
             if (!std::filesystem::exists(dir_path))
             {
                 std::filesystem::create_directory(dir_path);
             }
-
-            // 组装日志信息字符串
-
-            // 写入日志文件
             std::ofstream ofs(sss.str());
             if (ofs.good())
             {
@@ -539,7 +488,7 @@ namespace Lithium::CrashReport
         }
         catch (const std::exception &e)
         {
-            std::cerr << "Exception caught: " << e.what() << std::endl;
+            LOG_F(ERROR, "Failed to write crash report: {}", e.what());
         }
     }
 }

@@ -31,113 +31,113 @@ Description: Simple implementation of Huffman encoding
 
 #include "huffman.hpp"
 
-#include <iostream>
 #include <queue>
-#include <map>
 
-// 定义优先队列中的比较函数
-struct Compare
+namespace Atom::Utils
 {
-    bool operator()(HuffmanNode *a, HuffmanNode *b)
+    // 定义优先队列中的比较函数
+    struct Compare
     {
-        return a->frequency > b->frequency;
-    }
-};
-
-// 创建哈夫曼树
-HuffmanNode *createHuffmanTree(std::map<char, int> &frequencies)
-{
-    std::priority_queue<HuffmanNode *, std::vector<HuffmanNode *>, Compare> minHeap;
-
-    // 将频率表中的字符和频率构建成叶子节点，并加入到最小堆
-    for (auto &pair : frequencies)
-    {
-        char data = pair.first;
-        int frequency = pair.second;
-        HuffmanNode *node = new HuffmanNode(data, frequency);
-        minHeap.push(node);
-    }
-
-    // 不断从最小堆中取出两个最小频率的节点，合并为一个新节点，并将新节点放回最小堆
-    while (minHeap.size() > 1)
-    {
-        HuffmanNode *left = minHeap.top();
-        minHeap.pop();
-        HuffmanNode *right = minHeap.top();
-        minHeap.pop();
-
-        HuffmanNode *newNode = new HuffmanNode('$', left->frequency + right->frequency);
-        newNode->left = left;
-        newNode->right = right;
-
-        minHeap.push(newNode);
-    }
-
-    // 返回最后剩下的根节点
-    return minHeap.top();
-}
-
-// 递归生成哈夫曼编码
-void generateHuffmanCodes(HuffmanNode *root, std::string code, std::map<char, std::string> &huffmanCodes)
-{
-    if (root->left == nullptr && root->right == nullptr)
-    {
-        huffmanCodes[root->data] = code;
-        return;
-    }
-
-    generateHuffmanCodes(root->left, code + "0", huffmanCodes);
-    generateHuffmanCodes(root->right, code + "1", huffmanCodes);
-}
-
-// 使用哈夫曼编码压缩文本
-std::string compressText(const std::string &text, const std::map<char, std::string> &huffmanCodes)
-{
-    std::string compressedText = "";
-
-    // 将原始文本中的每个字符替换为对应的哈夫曼编码
-    for (char c : text)
-    {
-        compressedText += huffmanCodes.at(c);
-    }
-
-    return compressedText;
-}
-
-// 使用哈夫曼编码解压缩文本
-std::string decompressText(const std::string &compressedText, HuffmanNode *root)
-{
-    std::string decompressedText = "";
-    HuffmanNode *current = root;
-
-    // 遍历压缩后的文本中的每个位，根据哈夫曼树进行解码
-    for (char bit : compressedText)
-    {
-        if (bit == '0')
+        bool operator()(HuffmanNode *a, HuffmanNode *b)
         {
-            current = current->left;
+            return a->frequency > b->frequency;
         }
-        else
+    };
+
+    // 创建哈夫曼树
+    HuffmanNode *createHuffmanTree(std::unordered_map<char, int> &frequencies)
+    {
+        std::priority_queue<HuffmanNode *, std::vector<HuffmanNode *>, Compare> minHeap;
+
+        // 将频率表中的字符和频率构建成叶子节点，并加入到最小堆
+        for (auto &pair : frequencies)
         {
-            current = current->right;
+            char data = pair.first;
+            int frequency = pair.second;
+            HuffmanNode *node = new HuffmanNode(data, frequency);
+            minHeap.push(node);
         }
 
-        if (current->left == nullptr && current->right == nullptr)
+        // 不断从最小堆中取出两个最小频率的节点，合并为一个新节点，并将新节点放回最小堆
+        while (minHeap.size() > 1)
         {
-            decompressedText += current->data;
-            current = root;
+            HuffmanNode *left = minHeap.top();
+            minHeap.pop();
+            HuffmanNode *right = minHeap.top();
+            minHeap.pop();
+
+            HuffmanNode *newNode = new HuffmanNode('$', left->frequency + right->frequency);
+            newNode->left = left;
+            newNode->right = right;
+
+            minHeap.push(newNode);
         }
+
+        // 返回最后剩下的根节点
+        return minHeap.top();
     }
 
-    return decompressedText;
+    // 递归生成哈夫曼编码
+    void generateHuffmanCodes(HuffmanNode *root, std::string code, std::unordered_map<char, std::string> &huffmanCodes)
+    {
+        if (root->left == nullptr && root->right == nullptr)
+        {
+            huffmanCodes[root->data] = code;
+            return;
+        }
+
+        generateHuffmanCodes(root->left, code + "0", huffmanCodes);
+        generateHuffmanCodes(root->right, code + "1", huffmanCodes);
+    }
+
+    // 使用哈夫曼编码压缩文本
+    std::string compressText(const std::string &text, const std::unordered_map<char, std::string> &huffmanCodes)
+    {
+        std::string compressedText = "";
+
+        // 将原始文本中的每个字符替换为对应的哈夫曼编码
+        for (char c : text)
+        {
+            compressedText += huffmanCodes.at(c);
+        }
+
+        return compressedText;
+    }
+
+    // 使用哈夫曼编码解压缩文本
+    std::string decompressText(const std::string &compressedText, HuffmanNode *root)
+    {
+        std::string decompressedText = "";
+        HuffmanNode *current = root;
+
+        // 遍历压缩后的文本中的每个位，根据哈夫曼树进行解码
+        for (char bit : compressedText)
+        {
+            if (bit == '0')
+            {
+                current = current->left;
+            }
+            else
+            {
+                current = current->right;
+            }
+
+            if (current->left == nullptr && current->right == nullptr)
+            {
+                decompressedText += current->data;
+                current = root;
+            }
+        }
+
+        return decompressedText;
+    }
 }
 
 /*
-
 int main()
 {
     std::string text = "Hello, world!";
-    std::map<char, int> frequencies;
+    std::unordered_map<char, int> frequencies;
 
     // 统计文本中每个字符的频率
     for (char c : text)
@@ -147,7 +147,7 @@ int main()
 
     HuffmanNode *root = createHuffmanTree(frequencies);
 
-    std::map<char, std::string> huffmanCodes;
+    std::unordered_map<char, std::string> huffmanCodes;
     generateHuffmanCodes(root, "", huffmanCodes);
 
     std::string compressedText = compressText(text, huffmanCodes);
@@ -159,5 +159,4 @@ int main()
 
     return 0;
 }
-
 */

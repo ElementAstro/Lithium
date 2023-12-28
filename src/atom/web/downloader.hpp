@@ -41,118 +41,122 @@ Description: Downloader
 #include <mutex>
 #include <thread>
 
-struct DownloadTask
+namespace Atom::Web
 {
-    std::string url;
-    std::string filepath;
-    bool completed{false};
-    bool paused{false};
-    size_t downloaded_bytes{0};
-    int priority{0};
-};
 
-inline bool operator<(const DownloadTask &lhs, const DownloadTask &rhs)
-{
-    return lhs.priority < rhs.priority;
+    struct DownloadTask
+    {
+        std::string url;
+        std::string filepath;
+        bool completed{false};
+        bool paused{false};
+        size_t downloaded_bytes{0};
+        int priority{0};
+    };
+
+    inline bool operator<(const DownloadTask &lhs, const DownloadTask &rhs)
+    {
+        return lhs.priority < rhs.priority;
+    }
+
+    /**
+     * @brief DownloadManager 类，用于管理下载任务
+     */
+    class DownloadManager
+    {
+    public:
+        /**
+         * @brief 构造函数
+         * @param task_file 保存下载任务列表的文件路径
+         */
+        DownloadManager(const std::string &task_file);
+
+        /**
+         * @brief 析构函数，用于释放资源
+         */
+        ~DownloadManager();
+
+        /**
+         * @brief 添加下载任务
+         * @param url 下载链接
+         * @param filepath 本地保存文件路径
+         * @param priority 下载任务优先级，数字越大优先级越高
+         */
+        void add_task(const std::string &url, const std::string &filepath, int priority = 0);
+
+        /**
+         * @brief 删除下载任务
+         * @param index 要删除的任务在任务列表中的索引
+         * @return 是否成功删除任务
+         */
+        bool remove_task(size_t index);
+
+        /**
+         * @brief 开始下载任务
+         * @param thread_count 下载线程数，默认为 CPU 核心数
+         * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
+         */
+        void start(size_t thread_count = std::thread::hardware_concurrency(), size_t download_speed = 0);
+
+        /**
+         * @brief 暂停下载任务
+         * @param index 要暂停的任务在任务列表中的索引
+         */
+        void pause_task(size_t index);
+
+        /**
+         * @brief 恢复下载任务
+         * @param index 要恢复的任务在任务列表中的索引
+         */
+        void resume_task(size_t index);
+
+        /**
+         * @brief 获取已下载的字节数
+         * @param index 下载任务在任务列表中的索引
+         * @return 已下载的字节数
+         */
+        size_t get_downloaded_bytes(size_t index);
+
+    private:
+        /**
+         * @brief 获取下一个要下载的任务的索引
+         * @return 下一个要下载的任务的索引，如果任务队列为空，则返回空
+         */
+        std::optional<size_t> get_next_task_index();
+
+        /**
+         * @brief 获取下一个要下载的任务
+         * @return 下一个要下载的任务，如果任务队列为空，则返回空
+         */
+        std::optional<DownloadTask> get_next_task();
+
+        /**
+         * @brief 启动下载线程
+         * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
+         */
+        void run(size_t download_speed);
+
+        /**
+         * @brief 下载指定的任务
+         * @param task 要下载的任务
+         * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
+         */
+        void download_task(DownloadTask &task, size_t download_speed);
+
+        /**
+         * @brief 保存下载任务列表到文件中
+         */
+        void save_task_list_to_file();
+
+    private:
+        std::string task_file_;                        ///< 下载任务列表文件路径
+        std::vector<DownloadTask> tasks_;              ///< 下载任务列表
+        std::priority_queue<DownloadTask> task_queue_; ///< 任务队列，按照优先级排序
+        std::mutex mutex_;                             ///< 互斥量，用于保护任务列表和任务队列
+        std::atomic<bool> running_{false};             ///< 是否正在下载中
+        std::chrono::system_clock::time_point start_time_;
+    };
 }
-
-/**
- * @brief DownloadManager 类，用于管理下载任务
- */
-class DownloadManager
-{
-public:
-    /**
-     * @brief 构造函数
-     * @param task_file 保存下载任务列表的文件路径
-     */
-    DownloadManager(const std::string &task_file);
-
-    /**
-     * @brief 析构函数，用于释放资源
-     */
-    ~DownloadManager();
-
-    /**
-     * @brief 添加下载任务
-     * @param url 下载链接
-     * @param filepath 本地保存文件路径
-     * @param priority 下载任务优先级，数字越大优先级越高
-     */
-    void add_task(const std::string &url, const std::string &filepath, int priority = 0);
-
-    /**
-     * @brief 删除下载任务
-     * @param index 要删除的任务在任务列表中的索引
-     * @return 是否成功删除任务
-     */
-    bool remove_task(size_t index);
-
-    /**
-     * @brief 开始下载任务
-     * @param thread_count 下载线程数，默认为 CPU 核心数
-     * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
-     */
-    void start(size_t thread_count = std::thread::hardware_concurrency(), size_t download_speed = 0);
-
-    /**
-     * @brief 暂停下载任务
-     * @param index 要暂停的任务在任务列表中的索引
-     */
-    void pause_task(size_t index);
-
-    /**
-     * @brief 恢复下载任务
-     * @param index 要恢复的任务在任务列表中的索引
-     */
-    void resume_task(size_t index);
-
-    /**
-     * @brief 获取已下载的字节数
-     * @param index 下载任务在任务列表中的索引
-     * @return 已下载的字节数
-     */
-    size_t get_downloaded_bytes(size_t index);
-
-private:
-    /**
-     * @brief 获取下一个要下载的任务的索引
-     * @return 下一个要下载的任务的索引，如果任务队列为空，则返回空
-     */
-    std::optional<size_t> get_next_task_index();
-
-    /**
-     * @brief 获取下一个要下载的任务
-     * @return 下一个要下载的任务，如果任务队列为空，则返回空
-     */
-    std::optional<DownloadTask> get_next_task();
-
-    /**
-     * @brief 启动下载线程
-     * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
-     */
-    void run(size_t download_speed);
-
-    /**
-     * @brief 下载指定的任务
-     * @param task 要下载的任务
-     * @param download_speed 下载速度限制，单位为字节/秒，0 表示不限制下载速度
-     */
-    void download_task(DownloadTask &task, size_t download_speed);
-
-    /**
-     * @brief 保存下载任务列表到文件中
-     */
-    void save_task_list_to_file();
-
-private:
-    std::string task_file_;                        ///< 下载任务列表文件路径
-    std::vector<DownloadTask> tasks_;              ///< 下载任务列表
-    std::priority_queue<DownloadTask> task_queue_; ///< 任务队列，按照优先级排序
-    std::mutex mutex_;                             ///< 互斥量，用于保护任务列表和任务队列
-    std::atomic<bool> running_{false};             ///< 是否正在下载中
-    std::chrono::system_clock::time_point start_time_;
-};
 
 /*
 #include <iostream>

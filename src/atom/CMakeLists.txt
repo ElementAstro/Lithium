@@ -7,6 +7,8 @@ add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(type)
 add_subdirectory(web)
+add_subdirectory(connection)
+add_subdirectory(components)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
@@ -21,8 +23,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
     log/logger.cpp
 
-    plugin/module_loader.cpp
-    plugin/compiler.cpp
+    module/module_loader.cpp
+    module/compiler.cpp
 
     search/sqlite.cpp
 
@@ -30,7 +32,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     server/serialize.cpp
     server/deserialize.cpp
     server/json_checker.cpp
-    server/message.cpp
     server/xml_checker.cpp
     server/global_ptr.cpp
 
@@ -44,6 +45,7 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
     type/ini.cpp
     type/iparams.cpp
+    type/message.cpp
 
     thread/thread.cpp
     thread/timer.cpp
@@ -77,8 +79,8 @@ list(APPEND ${PROJECT_NAME}_HEADERS
 
     log/logger.hpp
 
-    plugin/module_loader.hpp
-    plugin/compiler.hpp
+    module/module_loader.hpp
+    module/compiler.hpp
 
     search/sqlite.hpp
 
@@ -92,7 +94,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     server/message_bus.hpp
     server/message_queue.hpp
     server/variables.hpp
-    server/message.hpp
 
     system/system.hpp
     system/crash.hpp
@@ -102,11 +103,12 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     # system/filew.hpp
     system/dirw.hpp
 
+    type/args.hpp
     type/json.hpp
     type/ini.hpp
     type/iparams.hpp
     type/small_vector.hpp
-    type/small_hashmap.hpp
+    type/message.hpp
 
     thread/async.hpp
     thread/thread_pool.hpp
@@ -118,7 +120,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     utils/huffman.hpp
     utils/math.hpp
     utils/refl_clang.hpp
-    utils/reflection.hpp
     utils/refl.hpp
     utils/string.hpp
     utils/static_switch.hpp

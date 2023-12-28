@@ -34,7 +34,7 @@ Description: File Manager
 #include <fstream>
 #include <string>
 
-namespace Lithium::File
+namespace Atom::IO
 {
     /**
      * @class FileManager

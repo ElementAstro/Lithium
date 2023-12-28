@@ -31,6 +31,16 @@ Description: WebSocket Server
 
 #include "WsServer.hpp"
 
+WsServer::WsServer()
+	: m_ConnectionCounter(0)
+{
+	m_CommandDispatcher = std::make_shared<CommandDispatcher<ReturnMessage, std::shared_ptr<IParams>>();
+	m_SerializationEngine = std::make_shared<SerializationEngine>();
+	m_DeserializationEngine = std::make_shared<DeserializationEngine>();
+
+	m_SerializationEngine->addRenderEngine("json", std::make_shared<JsonRenderEngine>());
+	m_DeserializationEngine->addDeserializeEngine("json", std::make_shared<JsonDeserializer>());
+}
 v_int32 WsServer::obtainNewConnectionId()
 {
 	return m_ConnectionCounter++;
@@ -43,6 +53,7 @@ std::shared_ptr<WsHub> WsServer::getOrCreateHub(const oatpp::String &hubName)
 	if (!hub)
 	{
 		hub = std::make_shared<WsHub>(hubName);
+		
 	}
 	return hub;
 }

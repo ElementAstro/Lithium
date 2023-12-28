@@ -43,53 +43,56 @@ Description: Folder Watcher
 #include <unistd.h>
 #endif
 
-
-/**
- * @class FolderMonitor
- * @brief 文件夹监视器类，用于监视指定文件夹的变化并触发回调函数。
- */
-class FolderMonitor
+namespace Atom::System
 {
-public:
-    /**
-     * @brief 定义文件变化事件回调函数类型。
-     * @param filePath 变化的文件路径。
-     */
-    using FileChangeEventCallback = std::function<void(const std::string &)>;
 
     /**
-     * @brief 构造函数。
-     * @param folderPath 要监视的文件夹路径。
+     * @class FolderMonitor
+     * @brief 文件夹监视器类，用于监视指定文件夹的变化并触发回调函数。
      */
-    FolderMonitor(const std::string &folderPath);
+    class FolderMonitor
+    {
+    public:
+        /**
+         * @brief 定义文件变化事件回调函数类型。
+         * @param filePath 变化的文件路径。
+         */
+        using FileChangeEventCallback = std::function<void(const std::string &)>;
 
-    /**
-     * @brief 开始监视文件夹变化。
-     */
-    void StartMonitoring();
+        /**
+         * @brief 构造函数。
+         * @param folderPath 要监视的文件夹路径。
+         */
+        FolderMonitor(const std::string &folderPath);
 
-    /**
-     * @brief 停止监视文件夹变化。
-     */
-    void StopMonitoring();
+        /**
+         * @brief 开始监视文件夹变化。
+         */
+        void StartMonitoring();
 
-    /**
-     * @brief 注册文件变化事件回调函数。
-     * @param callback 文件变化事件回调函数。
-     */
-    void RegisterFileChangeEventCallback(FileChangeEventCallback callback);
+        /**
+         * @brief 停止监视文件夹变化。
+         */
+        void StopMonitoring();
 
-private:
-    std::string m_folderPath;                          /**< 要监视的文件夹路径 */
-    bool m_isMonitoring;                               /**< 是否正在监视文件夹变化 */
-    std::thread m_monitorThread;                       /**< 监视线程 */
-    FileChangeEventCallback m_fileChangeEventCallback; /**< 文件变化事件回调函数 */
+        /**
+         * @brief 注册文件变化事件回调函数。
+         * @param callback 文件变化事件回调函数。
+         */
+        void RegisterFileChangeEventCallback(FileChangeEventCallback callback);
 
-    /**
-     * @brief 监视文件夹变化的内部方法。
-     */
-    void MonitorFolderChanges();
-};
+    private:
+        std::string m_folderPath;                          /**< 要监视的文件夹路径 */
+        bool m_isMonitoring;                               /**< 是否正在监视文件夹变化 */
+        std::thread m_monitorThread;                       /**< 监视线程 */
+        FileChangeEventCallback m_fileChangeEventCallback; /**< 文件变化事件回调函数 */
+
+        /**
+         * @brief 监视文件夹变化的内部方法。
+         */
+        void MonitorFolderChanges();
+    };
+}
 
 /*
 

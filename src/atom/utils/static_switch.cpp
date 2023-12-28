@@ -31,34 +31,34 @@ Description: Smart Static Switch just like javascript
 
 #include "static_switch.hpp"
 
-/**
- * @brief Registers a case with the given string and function.
- *
- * @param str The string to match against.
- * @param func The function to call if the string matches.
- */
-void StringSwitch::registerCase(const std::string &str, Func func)
+namespace Atom::Utils
 {
-    cases()[str] = std::move(func);
-}
+    void StringSwitch::registerCase(const std::string &str, Func func)
+    {
+        cases()[str] = std::move(func);
+    }
 
-/**
- * @brief Sets the default function to be called if no match is found.
- *
- * @param func The function to call for the default case.
- */
-void StringSwitch::setDefault(DefaultFunc func)
-{
-    defaultFunc = std::move(func);
-}
+    void StringSwitch::setDefault(DefaultFunc func)
+    {
+        defaultFunc = std::move(func);
+    }
 
-std::unordered_map<std::string, StringSwitch::Func> &StringSwitch::cases()
-{
-    static std::unordered_map<std::string, Func> cases;
-    return cases;
-}
+#ifdef ENABLE_FASTHASH
+    emhash8::HashMap<std::string, StringSwitch::Func> &StringSwitch::cases()
+#else
+    std::unordered_map<std::string, StringSwitch::Func> &StringSwitch::cases()
+#endif
+    {
+#ifdef ENABLE_FASTHASH
+        static emhash8::HashMap<std::string, Func> cases;
+#else
+        static std::unordered_map<std::string, Func> cases;
+#endif
+        return cases;
+    }
 
-StringSwitch::DefaultFunc StringSwitch::defaultFunc;
+    StringSwitch::DefaultFunc StringSwitch::defaultFunc;
+}
 
 /*
 

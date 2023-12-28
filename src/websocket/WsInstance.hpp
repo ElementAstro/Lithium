@@ -17,15 +17,13 @@
 
 #include "oatpp/core/macro/component.hpp"
 
-#include "atom/server/commander.hpp"
 #include "atom/server/serialize.hpp"
 #include "atom/server/deserialize.hpp"
-
-#include "LithiumApp.hpp"
 
 #include <memory>
 
 class WsHub; // FWD
+class MessageBus; // FWD
 
 class WsInstance : public oatpp::websocket::AsyncWebSocket::Listener
 {
@@ -95,11 +93,11 @@ private:
     oatpp::String m_connection_name;
     v_int32 m_userId;
 
-    std::shared_ptr<CommandDispatcher<void, json>> m_CommandDispatcher;
-
+    // Serialization and Deserialization Engine
 	std::shared_ptr<SerializationEngine> m_SerializationEngine;
-
 	std::shared_ptr<DeserializationEngine> m_DeserializationEngine;
+	// Message Bus
+	std::shared_ptr<MessageBus> m_MessageBus;
 };
 
 #endif // WsINSTANCE_HPP

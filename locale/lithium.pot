@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2023-12-17 21:01+0800\n"
+"POT-Creation-Date: 2023-12-23 14:40+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:167
+#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:209
 #, c++-format
 msgid "A device with name {} already exists, please choose a different name"
 msgstr ""
@@ -74,67 +74,71 @@ msgstr ""
 msgid "Set server port to %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:84
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:93
 #, c++-format
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:120
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:136
 #, c++-format
 msgid "Get config value: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:126
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:142
 #, c++-format
 msgid "Set {} to {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:344
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:150
+msgid "Get config value failed: Missing key_path"
+msgstr ""
+
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:374
 #, c++-format
 msgid "Failed to run chai command : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:362
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:392
 #, c++-format
 msgid "Failed to run chai multi command {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:375
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:405
 #, c++-format
 msgid "Failed to load chaiscript file {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:388
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:418
 #, c++-format
 msgid "Failed to unload chaiscript file {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:401
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:431
 #, c++-format
 msgid "Failed to run chai script {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:423
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:453
 #, c++-format
 msgid "Failed to load module {} in {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:442
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:472
 #, c++-format
 msgid "Failed to unload module {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:462
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:492
 #, c++-format
 msgid "Failed to reload module {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:499
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:529
 #, c++-format
 msgid "Failed to enable module {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:518
+#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:548
 #, c++-format
 msgid "Failed to disable module {}"
 msgstr ""

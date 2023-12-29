@@ -1,3 +1,8 @@
+---
+import Credits from "../components/_credits.astro";
+
+---
+
 <!DOCTYPE html>
 <html lang="en">
 	<head>
@@ -8,7 +13,7 @@
 			content="width=device-width, initial-scale=1,user-scalable=no"
 		/>
 
-		<title>星空猎手</title>
+		<title>锂 - 控制台</title>
 
 		<link
 			rel="icon"
@@ -25,9 +30,9 @@
 	<body>
 		<div id="particles-js"></div>
 		<div id="welcome">
-			<h1>Welcom to LightAPT</h1>
+			<h1>欢迎来到锂</h1>
 			<p>
-				使用星空猎手服务器可以合理的调度您的天文设备。<br
+				使用锂服务器可以合理的调度您的天文设备。<br
 				/>只需连接您的设备，即可体验宇宙。
 			</p>
 			<a id="connect" href="/client">网络工具</a>
@@ -41,43 +46,6 @@
 			</p>
 			<div id="credits">
 				<a style="vertical-align:top;">技术支持</a>
-				<a
-					href="https://www.raspberrypi.org/"
-					target="_blank"
-					rel="noopener"
-					><img
-						src="/textures/icons/raspberry-pi.png"
-						alt="Raspberry Pi"
-						title="Raspberry Pi"
-					/></a
-				>
-				<a href="http://indilib.org/" target="_blank" rel="noopener"
-					><img
-						src="/textures/icons/indilib.png"
-						alt="INDI"
-						title="INDI"
-					/></a
-				>
-				<a
-					href="https://edu.kde.org/kstars/"
-					target="_blank"
-					rel="noopener"
-					><img
-						src="/textures/icons/kstars.png"
-						alt="KStars"
-						title="KStars"
-					/></a
-				>
-				<a
-					href="https://kanaka.github.io/noVNC/"
-					target="_blank"
-					rel="noopener"
-					><img
-						src="/textures/icons/novnc.png"
-						alt="noVNC"
-						title="noVNC"
-					/></a
-				>
 			</div>
 			<a
 				id="logo"
@@ -87,6 +55,7 @@
 			>
 		</div>
 	</body>
+	<Credits />
 	<script is:inline>
 		particlesJS.load("particles-js", "json/particles.json", function () {
 			console.log("callback - particles.js config loaded");

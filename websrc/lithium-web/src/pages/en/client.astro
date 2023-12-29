@@ -1,6 +1,8 @@
 ---
-import Head from "../components/_head.astro";
-import Scripts from "../components/_scripts.astro";
+import Head from "../../components/_head.astro";
+import Scripts from "../../components/_scripts.astro";
+import Nav from "../../components/_nav.astro";
+import Modal from "../../components/_modal.astro";
 const title = "Lithium Web Client";
 ---
 
@@ -31,7 +33,7 @@ const title = "Lithium Web Client";
                     </li>
                     <!-- Home -->
                     <li class="nav-item d-none d-sm-inline-block">
-                        <a href="#" class="nav-link">主页</a>
+                        <a href="#" class="nav-link">Home</a>
                     </li>
                 </ul>
 
@@ -88,137 +90,8 @@ const title = "Lithium Web Client";
                             data-widget="treeview"
                             role="menu"
                             data-accordion="false"
+                            id="navMenu"
                         >
-                            <!-- Sidebar Item Device Hub -->
-                            <li class="nav-item">
-                                <a href="/device" class="nav-link">
-                                    <i class="nav-icon fas fa-plug"></i>
-                                    <p>设备管理</p>
-                                </a>
-                            </li>
-                            <!-- ./ Sidebar Item Device Hub -->
-
-                            <!-- Sky Object Search -->
-                            <li class="nav-item">
-                                <a href="/search" class="nav-link">
-                                    <i class="fas fa-search nav-icon"></i>
-                                    <p>天体搜索</p>
-                                </a>
-                            </li>
-
-                            <!-- Image Viewer -->
-                            <li class="nav-item">
-                                <a href="/imageviewer" class="nav-link">
-                                    <i class="fas fa-image nav-icon"></i>
-                                    <p>图像查看</p>
-                                </a>
-                            </li>
-
-                            <!-- Online Skymap -->
-                            <li class="nav-item">
-                                <a href="/scripteditor" class="nav-link">
-                                    <i class="fas fa-pen nav-icon"></i>
-                                    <p>脚本编辑</p>
-                                </a>
-                            </li>
-
-                            <!-- Sidebar Item Tools -->
-                            <li class="nav-item">
-                                <a href="#" class="nav-link">
-                                    <i class="nav-icon fas fa-toolbox"></i>
-                                    <p>
-                                        工具组件
-                                        <i class="right fas fa-angle-left"></i>
-                                    </p>
-                                </a>
-                                <!-- Items in Tools -->
-                                <ul class="nav nav-treeview">
-                                    <!-- Online Skymap -->
-                                    <li class="nav-item">
-                                        <a href="/skymap" class="nav-link">
-                                            <i class="fas fa-map nav-icon"></i>
-                                            <p>在线星图</p>
-                                        </a>
-                                    </li>
-                                    <!-- INDI Starter -->
-                                    <li class="nav-item">
-                                        <a href='/indiweb"' class="nav-link">
-                                            <i class="fas fa-server nav-icon"
-                                            ></i>
-                                            <p>INDI启动器</p>
-                                        </a>
-                                    </li>
-                                    <!-- WebSSH -->
-                                    <li class="nav-item">
-                                        <a href='/webssh"' class="nav-link">
-                                            <i class="fas fa-terminal nav-icon"
-                                            ></i>
-                                            <p>WebSSH</p>
-                                        </a>
-                                    </li>
-                                    <!-- novnc -->
-                                    <li class="nav-item">
-                                        <a href='/novnc"' class="nav-link">
-                                            <i class="fas fa-desktop nav-icon"
-                                            ></i>
-                                            <p>noVNC</p>
-                                        </a>
-                                    </li>
-                                    <!-- System Monitor -->
-                                    <li class="nav-item">
-                                        <a href="/system" class="nav-link">
-                                            <i class="fas fa-computer nav-icon"
-                                            ></i>
-                                            <p>系统信息</p>
-                                        </a>
-                                    </li>
-                                    <!-- Tools -->
-                                    <li class="nav-item">
-                                        <a href="/tools" class="nav-link">
-                                            <i class="fas fa-tools nav-icon"
-                                            ></i>
-                                            <p>工具</p>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </li>
-                            <!-- ./ Sidebar Item Tools -->
-
-                            <!-- Sidebar Item Setting -->
-                            <li class="nav-item">
-                                <a href="/settings" class="nav-link">
-                                    <i class="nav-icon fas fa-gear"></i>
-                                    <p>设置</p>
-                                </a>
-                            </li>
-                            <!-- ./ Sidebar Item Setting -->
-
-                            <!-- Sidebar Item FAQ -->
-                            <li class="nav-item">
-                                <a href="/help/faq" class="nav-link">
-                                    <i class="nav-icon fas fa-book"></i>
-                                    <p>FAQ</p>
-                                </a>
-                            </li>
-                            <!-- ./ Sidebar Item FAQ -->
-
-                            <!-- Sidebar Item Bug Report -->
-                            <li class="nav-item">
-                                <a href="/help/bugreport" class="nav-link">
-                                    <i class="nav-icon fas fa-mail-forward"></i>
-                                    <p>问题反馈</p>
-                                </a>
-                            </li>
-                            <!-- ./ Sidebar Item Bug Report -->
-
-                            <!-- Sidebar Item Setting -->
-                            <li class="nav-item">
-                                <a href="/debug" class="nav-link">
-                                    <i class="nav-icon fas fa-debug"></i>
-                                    <p>调试</p>
-                                </a>
-                            </li>
-                            <!-- ./ Sidebar Item Setting -->
                         </ul>
                     </nav>
                 </div>
@@ -242,20 +115,20 @@ const title = "Lithium Web Client";
                             href="#"
                             role="button"
                             aria-haspopup="true"
-                            aria-expanded="false">关闭</a
+                            aria-expanded="false">Close</a
                         >
                         <div class="dropdown-menu mt-0">
                             <a
                                 class="dropdown-item"
                                 href="#"
                                 data-widget="iframe-close"
-                                data-type="all">关闭所有</a
+                                data-type="all">Close all</a
                             >
                             <a
                                 class="dropdown-item"
                                 href="#"
                                 data-widget="iframe-close"
-                                data-type="all-other">关闭除外所有</a
+                                data-type="all-other">Close other</a
                             >
                         </div>
                     </div>
@@ -282,12 +155,12 @@ const title = "Lithium Web Client";
 
                 <div class="tab-content">
                     <div class="tab-empty">
-                        <h2 class="display-4">未选择组件</h2>
+                        <h2 class="display-4">No tabs opened</h2>
                     </div>
                     <div class="tab-loading">
                         <div>
                             <h2 class="display-4">
-                                组件正在加载中
+                                Component is loading...
                                 <i class="fa fa-sync fa-spin"></i>
                             </h2>
                         </div>
@@ -314,211 +187,11 @@ const title = "Lithium Web Client";
             <!-- /.control-sidebar -->
         </div>
 
-        <!-- Modal container -->
-        <div class="container">
-            <!-- Central Modal Medium Danger -->
-            <div
-                class="modal fade"
-                id="centralModalDanger"
-                tabindex="-1"
-                role="dialog"
-                aria-labelledby="myModalLabel"
-                aria-hidden="true"
-            >
-                <div
-                    class="modal-dialog modal-notify modal-danger"
-                    role="document"
-                >
-                    <!--Content-->
-                    <div class="modal-content">
-                        <!--Header-->
-                        <div class="modal-header">
-                            <p class="heading lead" id="errorModalTitle">
-                                错误信息
-                            </p>
-                            <button
-                                type="button"
-                                class="close modal-voy-btn"
-                                data-dismiss="modal"
-                                aria-label="Close"
-                            >
-                                <span aria-hidden="true" class="white-text"
-                                    >&times;</span
-                                >
-                            </button>
-                        </div>
-                        <!--Body-->
-                        <div class="modal-body">
-                            <div class="text-center">
-                                <i
-                                    class="fas fa-exclamation-triangle fa-4x mb-3 animated bounceIn"
-                                ></i>
-                                <p id="errorMessage" class="note note-danger">
-                                    未知错误
-                                </p>
-                                <p id="contactMessage" class="text-muted">
-                                    <small
-                                        >如果你有任何问题，请将详细细节告知开发者</small
-                                    >
-                                </p>
-                            </div>
-                        </div>
-                        <!--Footer-->
-                        <div class="modal-footer justify-content-center">
-                            <a
-                                class="btn btn-outline-danger modal-voy-btn"
-                                href="mailto:astro_air@126.com,fran.dibiase@gmail.com"
-                            >
-                                <i class="fas fa-envelope mr-1"></i>联系我们</a
-                            >
-                            <button
-                                type="button"
-                                class="btn btn-danger waves-effect modal-voy-btn"
-                                data-dismiss="modal"
-                            >
-                                Ok
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Modal container end -->
-
-        <div class="container">
-            <!-- Central Modal Medium Warning -->
-            <div class="modal fade" id="modalDoubleWarning" aria-hidden="true">
-                <div
-                    class="modal-dialog modal-notify modal-warning modal-lg"
-                    role="document"
-                >
-                    <!--Content-->
-                    <div class="modal-content">
-                        <!--Header-->
-                        <div class="modal-header">
-                            <p class="heading lead" id="modalWarnTit">
-                                确认操作?
-                            </p>
-                            <button
-                                type="button"
-                                class="close"
-                                data-dismiss="modal"
-                                aria-label="Close"
-                            >
-                                <span aria-hidden="true" class="white-text"
-                                    >&times;</span
-                                >
-                            </button>
-                        </div>
-                        <!--Body-->
-                        <div class="modal-body">
-                            <div class="text-center">
-                                <i
-                                    class="fas fa-question fa-4x mb-3 animated rotateIn text-danger"
-                                ></i>
-                                <p id="contWarnModal" class="text-warning"></p>
-                                <p>你确定要执行这步操作吗?</p>
-                            </div>
-                        </div>
-                        <!--Footer-->
-                        <div class="modal-footer justify-content-center">
-                            <div class="row">
-                                <div class="col-sm-6">
-                                    <a
-                                        type="button"
-                                        id="confirmDoubleWarn"
-                                        class="btn btn-sm btn-warning btn-block"
-                                    >
-                                        确认
-                                        <i class="fas fa-check"></i>
-                                    </a>
-                                </div>
-                                <div class="col-sm-6">
-                                    <a
-                                        type="button"
-                                        class="btn btn-sm btn-outline-warning waves-effect btn-block"
-                                        data-dismiss="modal"
-                                    >
-                                        Nope
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Central Modal Medium Warning-->
-        </div>
-
-        <!-- Container Modal -->
-        <div class="container">
-            <!-- Central Modal Medium Generic info -->
-            <div
-                class="modal fade"
-                id="infoModalGeneric"
-                tabindex="-1"
-                role="dialog"
-                aria-labelledby="myModalLabel2"
-                aria-hidden="true"
-            >
-                <div
-                    class="modal-dialog modal-notify modal-info"
-                    role="document"
-                >
-                    <!--Content-->
-                    <div class="modal-content">
-                        <!--Header-->
-                        <div class="modal-header">
-                            <p class="heading lead">信息</p>
-                            <button
-                                type="button"
-                                id="closeModalInfo"
-                                class="close modal-voy-btn"
-                                data-dismiss="modal"
-                                aria-label="Close"
-                            >
-                                <span aria-hidden="true" class="white-text"
-                                    >&times;</span
-                                >
-                            </button>
-                        </div>
-
-                        <!--Body-->
-                        <div class="modal-body">
-                            <div class="text-center">
-                                <div
-                                    class="spinner-border text-primary m-5"
-                                    role="status"
-                                >
-                                    <span class="sr-only">常规信息</span>
-                                </div>
-                                <p id="infoModalMessage" class="note note-info">
-                                    常规消息...
-                                </p>
-                                <p id="genericMessageinfo" class="text-muted">
-                                    <small></small>
-                                </p>
-                            </div>
-                        </div>
-                        <!--Footer-->
-                        <div class="modal-footer justify-content-center">
-                            <button
-                                type="button"
-                                class="btn btn-primary modal-voy-btn"
-                                data-dismiss="modal"
-                            >
-                                Ok
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Central Modal Medium Danger-->
-        </div>
-        <!-- Container Modal end -->
+        <Modal />
 
         <Scripts />
         <!-- UI custom -->
         <script src="/js/client/client.js" is:inline></script>
+        <Nav />
     </body>
 </html>

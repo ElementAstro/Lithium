@@ -157,9 +157,9 @@ std::shared_ptr<HydrogenDeviceContainer> HydrogenDriverCollection::getByBinary(c
     return nullptr;
 }
 
-std::map<std::string, std::vector<std::string>> HydrogenDriverCollection::getFamilies()
+std::unordered_map<std::string, std::vector<std::string>> HydrogenDriverCollection::getFamilies()
 {
-    std::map<std::string, std::vector<std::string>> families;
+    std::unordered_map<std::string, std::vector<std::string>> families;
     for (const auto driver : drivers)
     {
         families[driver->family].push_back(driver->label);

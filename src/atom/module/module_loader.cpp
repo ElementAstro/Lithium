@@ -39,8 +39,6 @@ Description: C++ and Modules Loader
 #include <cxxabi.h>
 #include <regex>
 
-#include "thread/thread.hpp"
-
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
@@ -174,7 +172,7 @@ namespace Atom::Module
         return config;
     }
 
-    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules", std::shared_ptr<Thread::ThreadManager> threadManager = Thread::ThreadManager::createShared())
+    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
     {
         m_ThreadManager = threadManager;
         DLOG_F(INFO, "C++ module manager loaded successfully.");
@@ -194,10 +192,10 @@ namespace Atom::Module
 
     std::shared_ptr<ModuleLoader> ModuleLoader::createShared()
     {
-        return std::make_shared<ModuleLoader>("modules", Thread::ThreadManager::createShared());
+        return std::make_shared<ModuleLoader>("modules", Atom::Async::ThreadManager::createShared());
     }
 
-    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules", std::shared_ptr<Thread::ThreadManager> threadManager = Thread::ThreadManager::createShared())
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
     {
         return std::make_shared<ModuleLoader>(dir_name, threadManager);
     }

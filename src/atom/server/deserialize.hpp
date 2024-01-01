@@ -49,6 +49,18 @@ public:
     virtual std::optional<std::any> deserialize(const std::string &data) const = 0;
 };
 
+class JsonDeserializer : public DeserializeEngine
+{
+public:
+    std::optional<std::any> deserialize(const std::string &data) const override;
+};
+
+class JsonParamsDeserializer : public DeserializeEngine
+{
+public:
+    std::optional<std::any> deserialize(const std::string &data) const override;
+};
+
 namespace Atom::Server
 {
     /**
@@ -126,18 +138,6 @@ namespace Atom::Server
         return std::nullopt;
     }
 }
-
-class JsonDeserializer : public DeserializeEngine
-{
-public:
-    std::optional<std::any> deserialize(const std::string &data) const override;
-};
-
-class JsonParamsDeserializer : public DeserializeEngine
-{
-public:
-    std::optional<std::any> deserialize(const std::string &data) const override;
-};
 
 /*
 

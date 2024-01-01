@@ -32,6 +32,7 @@ Description: Simple random number generator
 #pragma once
 
 #include <random>
+#include <string>
 
 namespace Atom::Utils
 {
@@ -68,6 +69,24 @@ namespace Atom::Utils
             return static_cast<base_t &>(*this)(engine_, parm);
         }
     };
+
+    [[nodiscard]] std::string generateRandomString(int length)
+    {
+        const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        std::random_device rd;
+        std::mt19937 generator(rd());
+        std::uniform_int_distribution<int> distribution(0, characters.size() - 1);
+
+        std::string randomString;
+        randomString.reserve(length);
+
+        for (int i = 0; i < length; ++i)
+        {
+            randomString.push_back(characters[distribution(generator)]);
+        }
+
+        return randomString;
+    }
 }
 
 /*

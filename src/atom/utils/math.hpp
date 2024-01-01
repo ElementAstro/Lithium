@@ -33,6 +33,7 @@ Description: Extra Math Library
 #define FRACTION_H
 
 #include <sstream>
+#include <vector>
 #include "exception.hpp"
 
 namespace Atom::Utils

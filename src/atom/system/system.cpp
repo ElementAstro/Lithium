@@ -538,7 +538,7 @@ namespace Atom::System
         HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (hSnapshot == INVALID_HANDLE_VALUE)
         {
-            // // spdlog::error("CreateToolhelp32Snapshot failed: {}", GetLastError());
+            LOG_F(ERROR, "CreateToolhelp32Snapshot failed: {}", GetLastError());
             exit(EXIT_FAILURE);
         }
 
@@ -550,16 +550,16 @@ namespace Atom::System
             std::string name = pe.szExeFile;
             if (name == program_name)
             {
-                // spdlog::warn("Found duplicate {} process with PID {}", program_name, pe.th32ProcessID);
+                LOG_F(WARNING, "Found duplicate {} process with PID {}", program_name, pe.th32ProcessID);
                 HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
                 if (hProcess == NULL)
                 {
-                    // // spdlog::error("OpenProcess failed: {}", GetLastError());
+                    LOG_F(ERROR, "OpenProcess failed: {}", GetLastError());
                     exit(EXIT_FAILURE);
                 }
                 if (!TerminateProcess(hProcess, 0))
                 {
-                    // // spdlog::error("TerminateProcess failed: {}", GetLastError());
+                    LOG_F(ERROR, "TerminateProcess failed: {}", GetLastError());
                     exit(EXIT_FAILURE);
                 }
                 CloseHandle(hProcess);
@@ -572,7 +572,7 @@ namespace Atom::System
         DIR *dirp = opendir("/proc");
         if (dirp == NULL)
         {
-            // // spdlog::error("Cannot open /proc directory");
+            LOG_F(ERROR, "Cannot open /proc directory");
             exit(EXIT_FAILURE);
         }
 
@@ -594,7 +594,7 @@ namespace Atom::System
                 char cmdline[1024];
                 if (fgets(cmdline, sizeof(cmdline), cmd_file) == NULL)
                 {
-                    // // spdlog::error("Failed to get pids");
+                    LOG_F(ERROR, "Failed to get pids");
                 }
                 fclose(cmd_file);
                 std::string name = cmdline;
@@ -608,19 +608,83 @@ namespace Atom::System
 
         if (pids.size() <= 1)
         {
-            // DLOG_F(INFO,"No duplicate {} process found", program_name);
+            DLOG_F(INFO, "No duplicate {} process found", program_name);
             return;
         }
 
         for (auto pid : pids)
         {
-            // spdlog::warn("Found duplicate {} process with PID {}", program_name, pid);
+            LOG_F(WARNING, "Found duplicate {} process with PID {}", program_name, pid);
             if (kill(pid, SIGTERM) != 0)
             {
-                // // spdlog::error("kill failed: {}", strerror(errno));
+                LOG_F(ERROR, "kill failed: {}", strerror(errno));
                 exit(EXIT_FAILURE);
             }
         }
+#endif
+    }
+
+    bool isProcessRunning(const std::string &processName)
+    {
+#ifdef _WIN32
+        // Enumerate all processes in the system and find the specified process
+        // 枚举系统中所有进程，查找指定名称的进程
+        HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (hSnapshot == INVALID_HANDLE_VALUE)
+        {
+            return false;
+        }
+        PROCESSENTRY32 pe32;
+        pe32.dwSize = sizeof(pe32);
+        // Get the first process
+        // 获取第一个进程
+        if (!Process32First(hSnapshot, &pe32))
+        {
+            CloseHandle(hSnapshot);
+            return false;
+        }
+        bool isRunning = false;
+        do
+        {
+            if (processName.compare(pe32.szExeFile) == 0)
+            {
+                isRunning = true;
+                break;
+            }
+        } while (Process32Next(hSnapshot, &pe32));
+
+        CloseHandle(hSnapshot);
+        return isRunning;
+#else
+        // Check /proc directory for the existence of the process directory
+        // 检查 /proc 目录下是否存在指定名称的进程目录
+        DIR *dir;
+        struct dirent *ent;
+        char processDirName[256];
+        sprintf(processDirName, "/proc/%s", processName.c_str());
+        if ((dir = opendir(processDirName)) == NULL)
+        {
+            return false;
+        }
+
+        closedir(dir);
+        return true;
+        // An alternative way to check
+        /*
+        std::string command = "pgrep -c " + processName;
+        std::string output;
+        std::ifstream pipe(command.c_str());
+        if (pipe)
+        {
+            if (getline(pipe, output))
+            {
+                int count = std::stoi(output);
+                return (count > 0);
+            }
+        }
+
+        return false;
+        */
 #endif
     }
 

@@ -130,12 +130,12 @@ public:
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
-    emhash8::HashMap<std::size_t, HandlerFunc> undoHandlers_;
+    emhash8::HashMap<std::string, HandlerFunc> handlers_;
+    emhash8::HashMap<std::string, HandlerFunc> undoHandlers_;
     emhash8::HashMap<std::string, std::string> descriptions_;
 #else
-    std::unordered_map<std::size_t, HandlerFunc> handlers_;
-    std::unordered_map<std::size_t, HandlerFunc> undoHandlers_;
+    std::unordered_map<std::string, HandlerFunc> handlers_;
+    std::unordered_map<std::string, HandlerFunc> undoHandlers_;
     std::unordered_map<std::string, std::string> descriptions_;
 #endif
 
@@ -148,11 +148,11 @@ void CommandDispatcher<Result, Argument>::RegisterHandler(const std::string &nam
 {
     if (handler)
     {
-        handlers_[hash_value] = handler;
+        handlers_[name] = handler;
     }
     if (undoHandler)
     {
-        undoHandlers_[hash_value] = undoHandler;
+        undoHandlers_[name] = undoHandler;
     }
 }
 

@@ -200,7 +200,7 @@ private:
 };
 
 template <typename T>
-bool VariableRegistry::RegisterVariable(const std::string &name, const std::string descirption = "")
+bool VariableRegistry::RegisterVariable(const std::string &name, const std::string descirption)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 

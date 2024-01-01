@@ -3,9 +3,8 @@
 #include "atom/components/component.hpp"
 #include "atom/type/message.hpp"
 #include "atom/utils/switch.hpp"
-
-class Atom::Server::MessageBus;
-class Atom::Async::ThreadManager;
+#include "atom/server/message_bus.hpp"
+#include "atom/thread/thread.hpp"
 
 class SharedComponent : public Component
 {
@@ -41,8 +40,6 @@ public:
     {
         m_handleFunction = handleFunction;
     }
-
-    void RegisterFunc
 
     // -------------------------------------------------------------------
     // Thread methods

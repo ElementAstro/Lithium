@@ -29,17 +29,17 @@ Description: Executable Plugin
 
 **************************************************/
 
-#include "exe_plugin.hpp"
+#include "exe_component.hpp"
 
 #include "atom/log/loguru.hpp"
+#include "atom/utils/random.hpp"
 
 #include <fstream>
 #include <sstream>
 
-ExecutablePlugin::ExecutablePlugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description, std::shared_ptr<Lithium::Process::ProcessManager> processManager)
-    : Plugin(path, version, author, description)
+ExecutablePlugin::ExecutablePlugin()
+    : Component()
 {
-    m_ProcessManager = processManager;
 
     RegisterFunc("run_system_command", &ExecutablePlugin::RunSystemCommand, this);
     RegisterFunc("run_system_command_with_output", &ExecutablePlugin::RunSystemCommandOutput, this);
@@ -50,10 +50,11 @@ ExecutablePlugin::ExecutablePlugin(const std::string &path, const std::string &v
 void ExecutablePlugin::RunSystemCommand(const json &m_params)
 {
     std::string command = m_params["command"].get<std::string>();
+    std::string identifier = m_params["identifier"].get<std::string>();
     DLOG_F(INFO, "Running command: {}", command);
     if (m_ProcessManager)
     {
-        if (!m_ProcessManager->createProcess(command, GetPath()))
+        if (!m_ProcessManager->createProcess(command, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Failed to run executable plugin : {}", command);
         }
@@ -73,8 +74,9 @@ void ExecutablePlugin::RunSystemCommandOutput(const json &m_params)
     if (m_ProcessManager)
     {
         std::string command = m_params["command"].get<std::string>();
+        std::string identifier = m_params["identifier"].get<std::string>();
         DLOG_F(INFO, "Running command: {}", command);
-        if (m_ProcessManager->createProcess(command, GetPath()))
+        if (m_ProcessManager->createProcess(command, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Started {} successfully", command);
         }
@@ -94,8 +96,9 @@ void ExecutablePlugin::RunScript(const json &m_params)
     if (m_ProcessManager)
     {
         std::string script = m_params["script"].get<std::string>();
+        std::string identifier = m_params["identifier"].get<std::string>();
         DLOG_F(INFO, "Running script: {}", script);
-        if (m_ProcessManager->createProcess(script, GetPath()))
+        if (m_ProcessManager->createProcess(script, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Started {} successfully", script);
         }
@@ -115,8 +118,9 @@ void ExecutablePlugin::RunScriptOutput(const json &m_params)
     if (m_ProcessManager)
     {
         std::string script = m_params["script"].get<std::string>();
+        std::string identifier = m_params["identifier"].get<std::string>();
         DLOG_F(INFO, "Running script: {}", script);
-        if (m_ProcessManager->createProcess(script, GetPath()))
+        if (m_ProcessManager->createProcess(script, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Started {} successfully", script);
         }

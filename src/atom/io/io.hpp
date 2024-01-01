@@ -49,7 +49,7 @@ namespace Atom::IO
      * @param path 要创建的目录的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool create_directory(const std::string &path);
+    [[nodiscard]] bool create_directory(const std::string &path);
 
     /**
      * @brief Removes an empty directory with the specified path.
@@ -62,7 +62,7 @@ namespace Atom::IO
      * @param path 要删除的目录的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool remove_directory(const std::string &path);
+    [[nodiscard]] bool remove_directory(const std::string &path);
 
     /**
      * @brief Renames a directory with the specified old and new paths.
@@ -77,7 +77,7 @@ namespace Atom::IO
      * @param new_path 重命名后目录的新路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool rename_directory(const std::string &old_path, const std::string &new_path);
+    [[nodiscard]] bool rename_directory(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Moves a directory from one path to another.
@@ -92,7 +92,7 @@ namespace Atom::IO
      * @param new_path 移动后目录的新路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool move_directory(const std::string &old_path, const std::string &new_path);
+    [[nodiscard]] bool move_directory(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Copies a file from source path to destination path.
@@ -107,7 +107,7 @@ namespace Atom::IO
      * @param dst_path 复制后文件的目标路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool copy_file(const std::string &src_path, const std::string &dst_path);
+    [[nodiscard]] bool copy_file(const std::string &src_path, const std::string &dst_path);
 
     /**
      * @brief Moves a file from source path to destination path.
@@ -122,7 +122,7 @@ namespace Atom::IO
      * @param dst_path 移动后文件的目标路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool move_file(const std::string &src_path, const std::string &dst_path);
+    [[nodiscard]] bool move_file(const std::string &src_path, const std::string &dst_path);
 
     /**
      * @brief Renames a file with the specified old and new paths.
@@ -137,7 +137,7 @@ namespace Atom::IO
      * @param new_path 重命名后文件的新路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool rename_file(const std::string &old_path, const std::string &new_path);
+    [[nodiscard]] bool rename_file(const std::string &old_path, const std::string &new_path);
 
     /**
      * @brief Removes a file with the specified path.
@@ -150,7 +150,7 @@ namespace Atom::IO
      * @param path 要删除的文件的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool remove_file(const std::string &path);
+    [[nodiscard]] bool remove_file(const std::string &path);
 
     /**
      * @brief Creates a symbolic link with the specified target and symlink paths.
@@ -165,7 +165,7 @@ namespace Atom::IO
      * @param symlink_path 要创建的符号链接的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool create_symlink(const std::string &target_path, const std::string &symlink_path);
+    [[nodiscard]] bool create_symlink(const std::string &target_path, const std::string &symlink_path);
 
     /**
      * @brief Removes a symbolic link with the specified path.
@@ -178,7 +178,7 @@ namespace Atom::IO
      * @param path 要删除的符号链接的路径。
      * @return 如果操作成功，则返回true，否则返回false。
      */
-    bool remove_symlink(const std::string &path);
+    [[nodiscard]] bool remove_symlink(const std::string &path);
 
     /**
      * @brief Returns the size of a file in bytes.
@@ -191,7 +191,7 @@ namespace Atom::IO
      * @param path 要获取大小的文件的路径。
      * @return 文件的大小（以字节为单位），如果文件不存在或无法读取，则返回0。
      */
-    std::uintmax_t file_size(const std::string &path);
+    [[nodiscard]] std::uintmax_t file_size(const std::string &path);
 
     /**
      * @brief Traverses a directory and prints the names of all files and directories within it.
@@ -223,7 +223,7 @@ namespace Atom::IO
      * @param windows_path The Windows path to convert.
      * @return The converted Linux path.
      */
-    std::string convert_windows_to_linux_path(const std::string &windows_path);
+    [[nodiscard]] std::string convert_windows_to_linux_path(const std::string &windows_path);
 
     /**
      * @brief Convert Linux path to Windows path.
@@ -233,9 +233,9 @@ namespace Atom::IO
      * @param linux_path The Linux path to convert.
      * @return The converted Windows path.
      */
-    std::string convert_linux_to_windows_path(const std::string &linux_path);
+    [[nodiscard]] std::string convert_linux_to_windows_path(const std::string &linux_path);
 
-    bool is_full_path(const std::string& path);
+    [[nodiscard]] bool is_full_path(const std::string& path);
 
-    bool isFolderNameValid(const std::string& folderName);
+    [[nodiscard]] bool isFolderNameValid(const std::string& folderName);
 } // namespace Lithium::File

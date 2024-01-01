@@ -35,10 +35,10 @@ Description: Executable Plugin
 
 #include "atom/system/process.hpp"
 
-class ExecutablePlugin : public C
+class ExecutablePlugin : public Component
 {
 public:
-    ExecutablePlugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description, std::shared_ptr<Lithium::Process::ProcessManager> processManager);
+    ExecutablePlugin();
 
     void RunSystemCommand(const json &m_parmas);
 
@@ -48,5 +48,5 @@ public:
 
     void RunScriptOutput(const json &m_parmas);
 private:
-    std::shared_ptr<Lithium::Process::ProcessManager> m_ProcessManager;
+    std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
 };

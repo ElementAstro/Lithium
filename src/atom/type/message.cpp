@@ -34,7 +34,7 @@ Description: A message class, which can be used to store different types of mess
 #include "atom/utils/time.hpp"
 #include "atom/type/iparams.hpp"
 
-#include "core/property/uuid.hpp"
+#include "atom/property/uuid.hpp"
 
 using namespace std;
 
@@ -42,7 +42,7 @@ using namespace std;
 Message::Message(Type t, const string &name, const string &target, const string &origin)
     : type_(t), name_(name), target_(target), origin_(origin)
 {
-    timestamp_ = GetChinaTimestampString();
+    timestamp_ = Atom::Utils::GetChinaTimestampString();
     uuid_ = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 

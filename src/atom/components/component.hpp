@@ -155,7 +155,7 @@ public:
      * @param name The name of the function.
      * @return The information about the function in JSON format.
      */
-    json Component::GetFuncInfo(const std::string &name);
+    json GetFuncInfo(const std::string &name);
 
     /**
      * @brief Gets the value of the variable with the specified name.
@@ -238,14 +238,6 @@ public:
     {
         return m_CommandDispatcher->GetHandler(name);
     }
-
-    /**
-     * @brief Gets the information about the function with the specified name.
-     *
-     * @param name The name of the function.
-     * @return The function information in JSON format.
-     */
-    json GetFuncInfo(const std::string &name);
 
 private:
     std::string m_Name;

@@ -1,0 +1,73 @@
+name: flutter_admin
+description: 一个基于flutter的后台管理系统 - A management system based on flutter
+publish_to: 'https://github.com/cairuoyu/flutter_admin'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.12.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cry: 1.3.0
+  font_awesome_flutter: ^10.1.0
+  flutter_colorpicker: ^1.0.3
+  url_launcher: ^6.0.3
+  mime_type: ^1.0.0
+  video_player: ^2.1.0
+  flutter_simple_treeview: ^3.0.0-nullsafety.1
+  get: ^4.0.0-nullsafety.2
+  get_storage: ^2.0.2
+  syncfusion_flutter_charts: ^20.1.60+1
+  syncfusion_flutter_datagrid: ^20.1.60
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+dependency_overrides:
+  intl: any
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/mobilefacenet.tflite
+    - config/
+    - PRIVACY
+  fonts:
+#    - family: Roboto
+#      fonts:
+#        - asset: assets/fonts/STXINWEI.woff2
+#    - family: NotoSans
+#      fonts:
+#        - asset: assets/fonts/STXINGKA.woff2
+    - family: RockSalt
+      fonts:
+        - asset: assets/fonts/RockSalt-Regular.ttf
+    - family: Bradhitc
+      fonts:
+        - asset: assets/fonts/BRADHITC.TTF
+    - family: OpenSansCondensed
+      fonts:
+        - asset: assets/fonts/OpenSansCondensed-LightItalic.TTF
+    - family: Italianno
+      fonts:
+        - asset: assets/fonts/Italianno-Regular.TTF
+    - family: BowlbyOneSC
+      fonts:
+        - asset: assets/fonts/BowlbyOneSC-Regular.TTF
+    - family: AnnieUseYourTelescope
+      fonts:
+        - asset: assets/fonts/AnnieUseYourTelescope-Regular.TTF
+    - family: Chango
+      fonts:
+        - asset: assets/fonts/Chango-Regular.TTF
+    - family: Agencry
+      fonts:
+        - asset: assets/fonts/AGENCYR.TTF
+
+flutter_intl:
+  enabled: false

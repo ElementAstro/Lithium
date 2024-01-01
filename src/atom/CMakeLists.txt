@@ -58,6 +58,7 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     utils/string.cpp
     utils/static_switch.cpp
     utils/time.cpp
+    utils/guid.cpp
 
     web/address.cpp
     web/downloader.cpp
@@ -127,6 +128,7 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     utils/time.hpp
     utils/env.hpp
     utils/hash_util.hpp
+    utils/guid.hpp
 
     web/address.hpp
     web/downloader.hpp

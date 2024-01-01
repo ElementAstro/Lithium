@@ -1,5 +1,5 @@
 /*
- * Hydrogendevice_manager.cpp
+ * Hydrogen_manager.cpp
  *
  * Copyright (C) 2023 Max Qian <lightapt.com>
  *
@@ -42,6 +42,8 @@ Description: Hydrogen Device Manager
 #include <regex>
 
 #include "atom/log/loguru.hpp"
+#include "atom/io/io.hpp"
+#include "atom/system/system.hpp"
 
 HydrogenManager::HydrogenManager(const std::string &hst, int prt, const std::string &cfg, const std::string &dta, const std::string &fif)
 {
@@ -52,165 +54,191 @@ HydrogenManager::HydrogenManager(const std::string &hst, int prt, const std::str
     fifo_path = fif;
 }
 
+HydrogenManager::~HydrogenManager()
+{
+}
+
 #ifdef _WIN32
-void HydrogenManager::start_server()
+bool HydrogenManager::startServer()
 {
     // If there is an Hydrogen server running, just kill it
-    if (is_running())
+    // Surely, this is not the best way to do this, but it works.
+    // If there is no server running, start it.
+    if (isRunning())
     {
-        stop_server();
+        stopServer();
     }
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    DeleteFileA(fifo_path.c_str());
-    CreateNamedPipeA(fifo_path.c_str(), PIPE_ACCESS_OUTBOUND, PIPE_TYPE_BYTE | PIPE_WAIT, 1, 0, 0, 0, NULL);
-    // Just start the server without driver
-    std::string cmd = "Hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\Hydrogenserver.log 2>&1";
-    STARTUPINFOA si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-    if (!CreateProcessA(NULL, const_cast<char *>(cmd.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    if (!Atom::IO::remove_file(fifo_path))
     {
-        throw std::runtime_error("Failed to execute command!");
+        LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
+        return false;
     }
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
+#ifdef ENABLE_INDI
+    std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\indiserver.log 2>&1";
+#else
+    std::string cmd = "hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\Hydrogenserver.log 2>&1";
+#endif
+    try
+    {
+        if (executeCommand(cmd) != "")
+        {
+            LOG_F(ERROR, "Failed to execute command: {}", cmd);
+            return false;
+        }
+    }
+    catch (const std::runtime_error &e)
+    {
+        LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
+        return false;
+    }
+    // Just start the server without driver
     DLOG_F(INFO, "Started Hydrogen server on port {}", port);
+    return true;
 }
 #else
-void HydrogenManager::start_server()
+bool HydrogenManager::startServer()
 {
     // If there is a Hydrogen server running, just kill it
-    if (is_running())
+    if (isRunning())
     {
-        stop_server();
+        stopServer();
     }
     // Clear old fifo pipe and create new one
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    int res = system(("rm -f " + fifo_path).c_str());
+    if (!Atom::IO::remove_file(fifo_path))
+    {
+        LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
+        return false;
+    }
+    int res = system(("mkfifo " + fifo_path).c_str());
     if (res != 0)
     {
-        LOG_F(ERROR, "Failed to delete fifo pipe");
+        LOG_F(ERROR, "Failed to create fifo pipe at: {}", fifo_path);
+        return false;
     }
-    res = system(("mkfifo " + fifo_path).c_str());
     // Just start the server without driver
-    std::string cmd = "Hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/Hydrogenserver.log 2>&1 &";
+#ifdef ENABLE_INDI
+    std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
+#else
+    std::string cmd = "hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/hydrogenserver.log 2>&1 &";
+#endif
     res = system(cmd.c_str());
-    if (res!= 0)
+    if (res != 0)
     {
         LOG_F(ERROR, "Failed to start Hydrogenserver, error code is {}", res);
+        return false;
     }
     DLOG_F(INFO, "Started Hydrogen server on port {}", port);
+    return true;
 }
 #endif
 
-void HydrogenManager::stop_server()
+bool HydrogenManager::stopServer()
 {
+    if (!isRunning())
+    {
+        DLOG_F(WARNING, "Hydrogen server is not running");
+        return true;
+    }
+#ifdef ENABLE_INDI
 #ifdef _WIN32
-    std::string cmd = "taskkill /f /im Hydrogenserver.exe >nul 2>&1";
+    std::string cmd = "taskkill /f /im indiserver.exe >nul 2>&1";
 #else
-    std::string cmd = "killall Hydrogenserver >/dev/null 2>&1";
+    std::string cmd = "killall indiserver >/dev/null 2>&1";
 #endif
-    int res = system(cmd.c_str());
-    if (res == 0)
-    {
-        DLOG_F(INFO, "Hydrogen server terminated successfully");
-    }
-    else
-    {
-        LOG_F(ERROR, "Failed to terminate Hydrogenserver, error code is {}", res);
-    }
-}
-
+#else
 #ifdef _WIN32
-bool HydrogenManager::is_running()
-{
-    std::string processName = "Hydrogenserver.exe";
-    bool isRunning = false;
-
-    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (hSnapshot != INVALID_HANDLE_VALUE)
+    std::string cmd = "taskkill /f /im hydrogenserver.exe >nul 2>&1";
+#else
+    std::string cmd = "killall hydrogenserver >/dev/null 2>&1";
+#endif
+#endif
+    DLOG_F(INFO, "Terminating Hydrogen server");
+    try
     {
-        PROCESSENTRY32 pe32;
-        pe32.dwSize = sizeof(PROCESSENTRY32);
-        if (Process32First(hSnapshot, &pe32))
+        if (executeCommand(cmd) != "")
         {
-            do
-            {
-                std::string foundProcess(pe32.szExeFile);
-                if (foundProcess.find(processName) != std::string::npos)
-                {
-                    isRunning = true;
-                    break;
-                }
-            } while (Process32Next(hSnapshot, &pe32));
+            LOG_F(ERROR, "Failed to execute command: {}", cmd);
+            return false;
         }
-        CloseHandle(hSnapshot);
     }
-
-    return isRunning;
-}
-#else
-bool HydrogenManager::is_running()
-{
-    std::string output = "";
-    FILE *pipe = popen("ps -ef | grep Hydrogenserver | grep -v grep | wc -l", "r");
-    if (!pipe)
-        return false;
-    char buffer[128];
-    while (!feof(pipe))
+    catch (const std::exception &e)
     {
-        if (fgets(buffer, 128, pipe) != NULL)
-            output += buffer;
+        LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
+        return false;
     }
-    pclose(pipe);
-    return (output != "0");
+    DLOG_F(INFO, "Hydrogen server terminated successfully");
+    return true;
 }
-#endif
 
-void HydrogenManager::start_driver(std::shared_ptr<HydrogenDeviceContainer> driver)
+bool HydrogenManager::isRunning()
+{
+    // A little bit hacky, but it works. We need a dynamic way to check if the server is running
+    // Not stupid like this :P
+#ifdef ENABLE_INDI
+#ifdef _WIN32
+    std::string processName = "indiserver.exe";
+    return Atom::System::isProcessRunning(processName);
+#else
+    std::string processName = "indiserver";
+    return Atom::System::isProcessRunning(processName);
+#endif
+#else
+#ifdef _WIN32
+    std::string processName = "hydrogenserver.exe";
+    return Atom::System::isProcessRunning(processName);
+#else
+    std::string processName = "hydrogenserver";
+    return Atom::System::isProcessRunning(processName);
+#endif
+#endif
+}
+
+bool HydrogenManager::isInstalled()
+{
+#ifdef _WIN32
+    if(!Atom::System::CheckSoftwareInstalled("hydrogenserver.exe"))
+    {
+        return false;
+    }
+#else
+    if(!Atom::System::CheckSoftwareInstalled("hydrogenserver"))
+    {
+        return false;
+    }
+#endif
+    return true;
+}
+
+bool HydrogenManager::startDriver(std::shared_ptr<HydrogenDeviceContainer> driver)
 {
     std::string cmd = "start " + driver->binary;
-
     if (driver->skeleton != "")
     {
         cmd += " -s \"" + driver->skeleton + "\"";
     }
-
     cmd = std::regex_replace(cmd, std::regex("\""), "\\\"");
     std::string full_cmd = "echo \"" + cmd + "\" > " + fifo_path;
-#ifdef _WIN32
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-    if (CreateProcess(NULL, const_cast<char *>(full_cmd.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    DLOG_F(INFO, "Cmd: {}", full_cmd);
+    try
     {
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-        DLOG_F(INFO, "Started driver : {}", driver->name);
-
-        running_drivers.emplace(driver->label, driver);
+        if (executeCommand(full_cmd) != "")
+        {
+            LOG_F(ERROR, "Failed to execute command: {}", full_cmd);
+            return false;
+        }
     }
-    else
+    catch (const std::runtime_error &e)
     {
-        LOG_F(ERROR, "Failed to start driver: {}", driver->name);
+        LOG_F(ERROR, "Failed to execute command: {} with {}", full_cmd, e.what());
+        return false;
     }
-#else
-    int res = system(full_cmd.c_str());
-    if (res != 0)
-    {
-        LOG_F(ERROR, "Failed to start driver: {}", driver->name);
-    }
-    DLOG_F(INFO, "Started driver : {}", driver->name);
-#endif
-
     running_drivers.emplace(driver->label, driver);
+    return true;
 }
 
-void HydrogenManager::stop_driver(std::shared_ptr<HydrogenDeviceContainer> driver)
+bool HydrogenManager::stopDriver(std::shared_ptr<HydrogenDeviceContainer> driver)
 {
     std::string cmd = "stop " + driver->binary;
     if (driver->binary.find("@") == std::string::npos)
@@ -219,108 +247,111 @@ void HydrogenManager::stop_driver(std::shared_ptr<HydrogenDeviceContainer> drive
     }
     cmd = std::regex_replace(cmd, std::regex("\""), "\\\"");
     std::string full_cmd = "echo \"" + cmd + "\" > " + fifo_path;
-#ifdef _WIN32
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-    if (CreateProcess(NULL, const_cast<char *>(full_cmd.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    DLOG_F(INFO, "Cmd: {}", full_cmd);
+    try
     {
-        CloseHandle(pi.hProcess);
-        CloseHandle(pi.hThread);
-        DLOG_F(INFO, "Stop running driver: {}", driver->label);
-        running_drivers.erase(driver->label);
+        if (executeCommand(full_cmd) != "")
+        {
+            LOG_F(ERROR, "Failed to execute command: {}", full_cmd);
+            return false;
+        }
     }
-    else
+    catch (const std::runtime_error &e)
     {
-        LOG_F(ERROR, "Failed to stop driver: {}", driver->label);
-    }
-#else
-    int res = system(full_cmd.c_str());
-    if (res != 0)
-    {
-        LOG_F(ERROR, "Failed to stop driver: {}", driver->label);
+        LOG_F(ERROR, "Failed to execute command: {} with {}", full_cmd, e.what());
+        return false;
     }
     DLOG_F(INFO, "Stop running driver: {}", driver->label);
     running_drivers.erase(driver->label);
-#endif
+    return true;
 }
 
-#ifdef _WIN32
-void HydrogenManager::set_prop(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
+bool HydrogenManager::setProp(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
 {
     std::stringstream ss;
-    ss << "Hydrogen_setprop " << dev << "." << prop << "." << element << "=" << value;
-    std::string cmd = ss.str();
-    execute_command(cmd);
-}
 
-std::string HydrogenManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)
-{
-    std::stringstream ss;
-    ss << "Hydrogen_getprop " << dev << "." << prop << "." << element;
+    ss << "hydrogen_setprop " << dev << "." << prop << "." << element << "=" << value;
     std::string cmd = ss.str();
-    std::string output = execute_command(cmd);
-    size_t equalsPos = output.find('=');
-    if (equalsPos != std::string::npos && equalsPos + 1 < output.length())
+    DLOG_F(INFO, "Cmd: {}", cmd);
+    try
     {
-        return output.substr(equalsPos + 1, output.length() - equalsPos - 2);
+        if (executeCommand(cmd) != "")
+        {
+            LOG_F(ERROR, "Failed to execute command: {}", cmd);
+            return false;
+        }
+    }
+    catch (const std::runtime_error &e)
+    {
+        LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
+        return false;
+    }
+    DLOG_F(INFO, "Set property: {}.{} to {}", dev, prop, value)
+    return true;
+}
+
+std::string HydrogenManager::getProp(const std::string &dev, const std::string &prop, const std::string &element)
+{
+    std::stringstream ss;
+#ifdef ENABLE_INDI
+    ss << "indi_getprop " << dev << "." << prop << "." << element;
+#else
+    ss << "hydrogen_getprop " << dev << "." << prop << "." << element;
+#endif
+    std::string cmd = ss.str();
+    try
+    {
+        std::string output = executeCommand(cmd);
+        size_t equalsPos = output.find('=');
+        if (equalsPos != std::string::npos && equalsPos + 1 < output.length())
+        {
+            return output.substr(equalsPos + 1, output.length() - equalsPos - 2);
+        }
+    }
+    catch (const std::runtime_error &e)
+    {
+        LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
+        return "";
     }
     return "";
 }
+
+std::string HydrogenManager::getState(const std::string &dev, const std::string &prop)
+{
+    return getProp(dev, prop, "_STATE");
+}
+
+#ifdef ENABLE_FASTHASH
+emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::getRunningDrivers()
 #else
-void HydrogenManager::set_prop(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
-{
-    std::stringstream ss;
-    ss << "Hydrogen_setprop " << dev << "." << prop << "." << element << "=" << value;
-    std::string cmd = ss.str();
-    int result = system(cmd.c_str());
-    if (result != 0)
-    {
-        LOG_F(ERROR, _("Failed to run command: {}"), cmd);
-    }
-}
-
-std::string HydrogenManager::get_prop(const std::string &dev, const std::string &prop, const std::string &element)
-{
-    std::stringstream ss;
-    ss << "Hydrogen_getprop " << dev << "." << prop << "." << element;
-    std::string cmd = ss.str();
-    std::array<char, 128> buffer;
-    std::string result = "";
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-    if (!pipe)
-    {
-        throw std::runtime_error("popen() failed!");
-    }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
-    {
-        result += buffer.data();
-    }
-    return result.substr(result.find('=') + 1, result.length()).substr(0, result.length() - 2);
-}
+std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::getRunningDrivers()
 #endif
-
-std::string HydrogenManager::get_state(const std::string &dev, const std::string &prop)
-{
-    return get_prop(dev, prop, "_STATE");
-}
-
-std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::get_running_drivers()
 {
     return running_drivers;
 }
 
-std::vector<std::unordered_map<std::string, std::string>> HydrogenManager::get_devices()
+#ifdef ENABLE_FASTHASH
+std::vector<emhash8::HashMap<std::string, std::string>> HydrogenManager::getDevices()
+#else
+std::vector<std::unordered_map<std::string, std::string>> HydrogenManager::getDevices()
+#endif
 {
+#ifdef ENABLE_FASTHASH
+    std::vector<emhash8::HashMap<std::string, std::string>> devices;
+#else
     std::vector<std::unordered_map<std::string, std::string>> devices;
-    std::string cmd = "Hydrogen_getprop *.CONNECTION.CONNECT";
+#endif
+#ifdef ENABLE_INDI
+    std::string cmd = "indi_getprop *.CONNECTION.CONNECT";
+#else
+    std::string cmd = "hydrogen_getprop *.CONNECTION.CONNECT";
+#endif
     std::array<char, 128> buffer;
     std::string result = "";
     std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe)
     {
+        LOG_F(ERROR, "Failed to execute command: {}", cmd);
         throw std::runtime_error("popen() failed!");
     }
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)

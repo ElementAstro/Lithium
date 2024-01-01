@@ -69,14 +69,12 @@ Description: C++ and Modules Loader
 #include "atom/log/loguru.hpp"
 #include "error/error_code.hpp"
 
+#include "atom/thread/thread.hpp"
+
 using json = nlohmann::json;
 
 namespace Atom::Module
 {
-    namespace Async
-    {
-        class ThreadManager;
-    }
 
     /**
      * @brief Traverse the "modules" directory and create a JSON object containing the information of all modules.
@@ -134,7 +132,7 @@ namespace Atom::Module
          * @param dir_name 模块所在的目录名称。
          * @param threadManager 线程管理器的共享指针。
          */
-        ModuleLoader(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
+        ModuleLoader(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
 
         /**
          * @brief 析构函数，释放 ModuleLoader 对象。
@@ -150,7 +148,7 @@ namespace Atom::Module
          * @param threadManager 线程管理器的共享指针。
          * @return 新创建的共享 ModuleLoader 指针对象。
          */
-        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Thread::ThreadManager> threadManager);
+        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
 
         /**
          * @brief 根据给定的目录名称加载模块。
@@ -390,6 +388,6 @@ namespace Atom::Module
         std::unordered_map<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
 #endif
         // Injected Thread Manager
-        std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
+        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
     };
 }

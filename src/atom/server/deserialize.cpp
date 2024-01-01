@@ -37,49 +37,49 @@ Description: This file contains the declaration of the DeserializationEngine cla
 
 using json = nlohmann::json;
 
-namespace Atom::Server
+std::optional<std::any> JsonDeserializer::deserialize(const std::string &data) const
 {
-    std::optional<std::any> JsonDeserializer::deserialize(const std::string &data) const
+    DLOG_F(INFO, "JsonDeserializer::deserialize called with {}", data);
+    try
     {
-        DLOG_F(INFO, "JsonDeserializer::deserialize called with {}", data);
-        try
-        {
-            json jsonData = json::parse(data);
-            DLOG_F(INFO, "JsonDeserializer::deserialize: Successfully deserialized json data.");
-            return jsonData.get<std::map<std::string, std::string>>();
-        }
-        catch (const json::parse_error &)
-        {
-            LOG_F(ERROR, "JsonDeserializer::deserialize: Failed to deserialize json data.");
-            return std::nullopt;
-        }
+        json jsonData = json::parse(data);
+        DLOG_F(INFO, "JsonDeserializer::deserialize: Successfully deserialized json data.");
+        return jsonData.get<std::map<std::string, std::string>>();
     }
-
-    std::optional<std::any> JsonParamsDeserializer::deserialize(const std::string &data) const
+    catch (const json::parse_error &)
     {
-        DLOG_F(INFO, "JsonParamsDeserializer::deserialize called with {}", data);
-        try
-        {
-            std::shared_ptr<IParams> params;
-            if (!params->fromJson(data))
-            {
-                LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
-                return std::nullopt;
-            }
-            DLOG_F(INFO, "JsonParamsDeserializer::deserialize: Successfully deserialized json data.");
-            return params;
-        }
-        catch (const std::exception &)
+        LOG_F(ERROR, "JsonDeserializer::deserialize: Failed to deserialize json data.");
+        return std::nullopt;
+    }
+}
+
+std::optional<std::any> JsonParamsDeserializer::deserialize(const std::string &data) const
+{
+    DLOG_F(INFO, "JsonParamsDeserializer::deserialize called with {}", data);
+    try
+    {
+        std::shared_ptr<IParams> params;
+        if (!params->fromJson(data))
         {
             LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
             return std::nullopt;
         }
+        DLOG_F(INFO, "JsonParamsDeserializer::deserialize: Successfully deserialized json data.");
+        return params;
     }
+    catch (const std::exception &)
+    {
+        LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
+        return std::nullopt;
+    }
+}
 
+namespace Atom::Server
+{
     void DeserializationEngine::addDeserializeEngine(const std::string &name, const std::shared_ptr<DeserializeEngine> &DeserializeEngine)
     {
         DLOG_F(INFO, "DeserializationEngine::addDeserializeEngine called with {}", name);
-        if (deserializationEngines_.find(name)!= deserializationEngines_.end())
+        if (deserializationEngines_.find(name) != deserializationEngines_.end())
         {
             LOG_F(ERROR, "DeserializationEngine::addDeserializeEngine: Deserialize engine already exists: {}", name);
             return;

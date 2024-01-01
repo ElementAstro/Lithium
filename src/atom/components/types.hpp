@@ -79,6 +79,7 @@ enum class ComponentType
     {
         type = ComponentType::NONE;
     }
+    return is;
 }
 
 [[maybe_unused]] ComponentType toComponentType(const int &type)
@@ -111,9 +112,5 @@ enum class ComponentType
     {
         return ComponentType::Task;
     }
-    else
-    {
-        return ComponentType::NONE;
-    }
+    return ComponentType::NONE;
 }
-

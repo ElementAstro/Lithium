@@ -31,7 +31,6 @@ Description: Extra Math Library
 
 #include "math.hpp"
 
-#include <vector>
 #include <complex>
 #include <thread>
 

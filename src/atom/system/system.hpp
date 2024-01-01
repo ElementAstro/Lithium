@@ -114,4 +114,16 @@ namespace Atom::System
      * @param program_name The name of the program to check for duplicates. 要检查重复项的程序名称。
      */
     void CheckDuplicateProcess(const std::string &program_name);
+
+    /**
+     * @brief Check if the specified process is running.
+     * 检查指定的进程是否正在运行
+     *
+     * @param processName The name of the process to check. 要检查的进程名称。
+     * @return true if the process is running.
+     *         如果进程正在运行，则返回 true
+     * @return false if the process is not running.
+     *         如果进程没有运行，则返回 false
+     */
+    bool isProcessRunning(const std::string &processName);
 }

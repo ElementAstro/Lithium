@@ -105,20 +105,9 @@ namespace Atom::Async
 		 */
 		[[nodiscard]] bool isThreadRunning(const std::string &name);
 
-		/**
-		 * @brief 生成指定长度的随机字符串
-		 * @param length 字符串长度
-		 * @return 生成的随机字符串
-		 */
-		const std::string generateRandomString(int length);
-
 		void setMaxThreads(int maxThreads);
 
 		[[nodiscard]] int getMaxThreads() const;
-
-	public:
-
-		thread_pool<void()> m_threadPool;
 
 	private:
 #if __cplusplus >= 202002L

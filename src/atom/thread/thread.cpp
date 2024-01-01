@@ -37,6 +37,7 @@ Description: Thread Manager
 #include <random>
 
 #include "atom/log/loguru.hpp"
+#include "atom/utils/random.hpp"
 
 namespace Atom::Async
 {
@@ -123,7 +124,7 @@ namespace Atom::Async
                 {
                     LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
                 } }),
-                    generateRandomString(16),
+                    Atom::Utils::generateRandomString(16),
                     false);
                 m_threads.emplace_back(std::move(t));
                 VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: added thread {}"), std::get<2>(t));
@@ -247,21 +248,20 @@ namespace Atom::Async
         m_cv.notify_all();
     }
 
-    const std::string ThreadManager::generateRandomString(int length)
+    void ThreadManager::setMaxThreads(int maxThreads)
     {
-        static const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        static std::random_device rd;
-        static std::mt19937 generator(rd());
-        static std::uniform_int_distribution<int> distribution(0, characters.size() - 1);
-
-        std::string randomString;
-        randomString.reserve(length);
-
-        for (int i = 0; i < length; ++i)
+        if (maxThreads <= 0)
         {
-            randomString.push_back(characters[distribution(generator)]);
+            m_maxThreads = std::thread::hardware_concurrency();
         }
+        else
+        {
+            m_maxThreads = maxThreads;
+        }
+    }
 
-        return randomString;
+    int ThreadManager::getMaxThreads() const
+    {
+        return m_maxThreads;
     }
 }

@@ -2,6 +2,7 @@
 
 #include "atom/thread/thread.hpp"
 #include "atom/server/message_bus.hpp"
+#include "atom/type/iparams.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "config.h"
@@ -50,7 +51,7 @@ SharedComponent::SharedComponent() : Component()
                 auto paramsMessage = std::dynamic_pointer_cast<ParamsMessage>(message);
                 if (paramsMessage)
                 {
-                    DLOG_F(INFO, _("Params message is received: {}"), paramsMessage->value()->ToString());
+                    DLOG_F(INFO, _("Params message is received: {}"), paramsMessage->value()->toJson());
                     m_handleParams->match(paramsMessage->name(),paramsMessage);
                 }
                 break;

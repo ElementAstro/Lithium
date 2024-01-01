@@ -171,7 +171,7 @@ namespace Atom::Server
     };
 
     template <typename T>
-    std::optional<std::string> SerializationEngine::serialize(const T &data, bool format = false) const
+    std::optional<std::string> SerializationEngine::serialize(const T &data, bool format) const
     {
         std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_mutex));
 

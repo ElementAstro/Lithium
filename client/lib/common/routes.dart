@@ -53,8 +53,8 @@ class Routes {
     '/message': MessageMain(),
     '/subsystemList': SubsystemMain(),
     '/settingBase': SettingBase(),
-    '/secondLevel': OnlyText('二级菜单页面'),
-    '/threeLevel': OnlyText('三级菜单页面'),
+    //'/secondLevel': OnlyText('二级菜单页面'),
+    //'/threeLevel': OnlyText('三级菜单页面'),
   };
   static List<String> whiteRoutes = ['/register'];
 

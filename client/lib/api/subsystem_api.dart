@@ -23,4 +23,31 @@ class SubsystemApi {
   static removeByIds(data) {
     return HttpUtil.post('/subsystem/removeByIds', data: data);
   }
+
+  static loadById(String lib_path, String lib_name, int lib_type) {
+    return HttpUtil.post('/api/module/load', data: {
+      {'lib_path': lib_path},
+      {"lib_name", lib_name},
+      {"lib_type", lib_type}
+    });
+  }
+
+  static unloadById(String lib_path, String lib_name, int lib_type) {
+    return HttpUtil.post('/api/module/unload', data: {
+      {"lib_name", lib_name}
+    });
+  }
+
+  static enableById(String lib_path, String lib_name, int lib_type) {
+    return HttpUtil.post('/api/module/enable', data: {
+      {'lib_path': lib_path},
+      {"lib_name", lib_name}
+    });
+  }
+
+  static disableById(String lib_path, String lib_name, int lib_type) {
+    return HttpUtil.post('/api/module/disable', data: {
+      {"lib_name", lib_name}
+    });
+  }
 }

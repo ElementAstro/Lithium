@@ -33,7 +33,7 @@ Description: Plugin Task Definition
 
 #include "task.hpp"
 
-class PluginTask : public Lithium::SimpleTask
+class PluginTask : public Atom::Task::SimpleTask
 {
 public:
     /**

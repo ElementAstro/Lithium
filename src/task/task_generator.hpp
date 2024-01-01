@@ -40,9 +40,11 @@ Description: Task Generator
 #endif
 #include <fstream>
 
-#include "device/device_manager.hpp"
-#include "plugin/plugin_loader.hpp"
-#include "core/property/task/task.hpp"
+#include "components/device/device_manager.hpp"
+#include "components/plugin/plugin_loader.hpp"
+#include "atom/property/task/task.hpp"
+
+using json = nlohmann::json;
 
 namespace Lithium::Task
 {
@@ -58,8 +60,8 @@ namespace Lithium::Task
         bool generateTasks(const std::string &jsonFileName);
 
     private:
-        bool parseJsonFile(const std::string &jsonFileName, nlohmann::json &jsonTasks);
-        void saveTasksToJson(const std::string &jsonFileName, const nlohmann::json &jsonTasks);
+        bool parseJsonFile(const std::string &jsonFileName, json &jsonTasks);
+        void saveTasksToJson(const std::string &jsonFileName, const json &jsonTasks);
         void getTasksFromManagers();
 
     private:

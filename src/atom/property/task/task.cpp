@@ -31,7 +31,7 @@ Description: Basic and Simple Task Definition
 
 #include "task.hpp"
 
-namespace Lithium
+namespace Atom::Task
 {
     BasicTask::BasicTask(const std::function<json(const json &)> &stop_fn, bool can_stop)
         : stop_fn_(stop_fn), can_stop_(stop_fn != nullptr), stop_flag_(false) {}

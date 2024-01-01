@@ -39,7 +39,7 @@ namespace Lithium::Task
     TaskManager::TaskManager(const std::string &fileName)
         : m_FileName(fileName), m_StopFlag(false) {}
 
-    bool TaskManager::addTask(const std::shared_ptr<BasicTask> &task)
+    bool TaskManager::addTask(const std::shared_ptr<Atom::Task::BasicTask> &task)
     {
         if (!task)
         {
@@ -52,7 +52,7 @@ namespace Lithium::Task
         return true;
     }
 
-    bool TaskManager::insertTask(const std::shared_ptr<BasicTask> &task, int position)
+    bool TaskManager::insertTask(const std::shared_ptr<Atom::Task::BasicTask> &task, int position)
     {
         if (!task)
         {
@@ -139,7 +139,7 @@ namespace Lithium::Task
         return false;
     }
 
-    bool TaskManager::modifyTask(int index, const std::shared_ptr<BasicTask> &task)
+    bool TaskManager::modifyTask(int index, const std::shared_ptr<Atom::Task::BasicTask> &task)
     {
         if (!task)
         {
@@ -158,7 +158,7 @@ namespace Lithium::Task
         return true;
     }
 
-    bool TaskManager::modifyTaskByName(const std::string &name, const std::shared_ptr<BasicTask> &task)
+    bool TaskManager::modifyTaskByName(const std::string &name, const std::shared_ptr<Atom::Task::BasicTask> &task)
     {
         auto it = findTaskByName(name);
         if (it != m_TaskMap.end() && task)
@@ -212,7 +212,7 @@ namespace Lithium::Task
         return false;
     }
 
-    const std::vector<std::shared_ptr<BasicTask>> &TaskManager::getTaskList() const
+    const std::vector<std::shared_ptr<Atom::Task::BasicTask>> &TaskManager::getTaskList() const
     {
         return m_TaskList;
     }
@@ -241,10 +241,10 @@ namespace Lithium::Task
         return true;
     }
 
-    std::unordered_map<std::string, std::shared_ptr<BasicTask>>::iterator TaskManager::findTaskByName(const std::string &name)
+    std::unordered_map<std::string, std::shared_ptr<Atom::Task::BasicTask>>::iterator TaskManager::findTaskByName(const std::string &name)
     {
         return std::find_if(m_TaskMap.begin(), m_TaskMap.end(),
-                            [&](const std::pair<std::string, std::shared_ptr<BasicTask>> &item)
+                            [&](const std::pair<std::string, std::shared_ptr<Atom::Task::BasicTask>> &item)
                             {
                                 return item.second->getName() == name;
                             });

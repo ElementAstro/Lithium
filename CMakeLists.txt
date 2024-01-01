@@ -146,6 +146,7 @@ set(task_module
     ${lithium_src_dir}/task/task_manager.cpp
     ${lithium_src_dir}/task/task_stack.cpp
     ${lithium_src_dir}/task/task_generator.cpp
+    ${lithium_src_dir}/task/task_container.cpp
 )
 
 set(Lithium_module
@@ -228,7 +229,7 @@ target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
 
-target_link_libraries(lithium_server lithiumcorestatic)
+target_link_libraries(lithium_server atom.propertystatic)
 target_link_libraries(lithium_server lithiumpluginstatic)
 if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)

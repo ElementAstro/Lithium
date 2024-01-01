@@ -51,7 +51,7 @@ Description: WebSocket Server
 
 #include "atom/server/serialize.hpp"
 #include "atom/server/deserialize.hpp"
-#include "atom/server/message.hpp"
+#include "atom/type/message.hpp"
 
 class MessageBus;
 

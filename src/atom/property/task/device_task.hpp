@@ -33,7 +33,7 @@ Description: Device Task Definition
 
 #include "task.hpp"
 
-class DeviceTask : public Lithium::SimpleTask
+class DeviceTask : public Atom::Task::SimpleTask
 {
 public:
     /**

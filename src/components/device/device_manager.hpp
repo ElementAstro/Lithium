@@ -37,9 +37,9 @@ Description: Device Manager
 #include <thread>
 #include <functional>
 
-#include "core/device.hpp"
-#include "core/device_type.hpp"
-#include "atom/server/message.hpp"
+#include "atom/driver/device.hpp"
+#include "core/driver/device_type.hpp"
+#include "atom/type/message.hpp"
 
 #include "error/error_code.hpp"
 

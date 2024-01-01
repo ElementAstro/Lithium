@@ -38,7 +38,6 @@ Description: Task Generator
 #include "atom/log/loguru.hpp"
 
 namespace fs = std::filesystem;
-using json = nlohmann::json;
 
 namespace Lithium::Task
 {

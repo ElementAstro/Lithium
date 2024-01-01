@@ -44,7 +44,7 @@ Description: Basic and Simple Task Definition
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-namespace Lithium
+namespace Atom::Task
 {
     class BasicTask
     {

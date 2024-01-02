@@ -238,4 +238,10 @@ namespace Atom::IO
     [[nodiscard]] bool is_full_path(const std::string& path);
 
     [[nodiscard]] bool isFolderNameValid(const std::string& folderName);
+
+    [[nodiscard]] bool isFileNameValid(const std::string& fileName);
+
+    [[nodiscard]] bool isFolderExists(const std::string& folderPath);
+
+    [[nodiscard]] bool isFileExists(const std::string& filePath);
 } // namespace Lithium::File

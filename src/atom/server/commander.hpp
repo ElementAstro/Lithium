@@ -34,14 +34,13 @@ Description: Commander
 #include <string>
 #include <functional>
 #include <stack>
+#include <shared_mutex>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
 
 template <typename Result, typename Argument>
 class CommandDispatcher
@@ -141,11 +140,18 @@ private:
 
     std::stack<std::pair<std::string, Argument>> commandHistory_;
     std::stack<std::pair<std::string, Argument>> undoneCommands_;
+
+    mutable std::shared_mutex m_sharedMutex;
 };
 
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler)
 {
+    if (name.empty())
+    {
+        return;
+    }
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     if (handler)
     {
         handlers_[name] = handler;
@@ -167,12 +173,14 @@ void CommandDispatcher<Result, Argument>::RegisterMemberHandler(const std::strin
 template <typename Result, typename Argument>
 bool CommandDispatcher<Result, Argument>::HasHandler(const std::string &name)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     return handlers_.find(name) != handlers_.end();
 }
 
 template <typename Result, typename Argument>
 std::function<Result(const Argument &)> CommandDispatcher<Result, Argument>::GetHandler(const std::string &name)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = handlers_.find(name);
     if (it != handlers_.end())
     {
@@ -183,6 +191,7 @@ std::function<Result(const Argument &)> CommandDispatcher<Result, Argument>::Get
 template <typename Result, typename Argument>
 Result CommandDispatcher<Result, Argument>::Dispatch(const std::string &name, const Argument &data)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = handlers_.find(name);
     if (it != handlers_.end())
     {
@@ -233,19 +242,32 @@ bool CommandDispatcher<Result, Argument>::Redo()
 template <typename Result, typename Argument>
 bool CommandDispatcher<Result, Argument>::RemoveAll()
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     handlers_.clear();
+    undoHandlers_.clear();
+    descriptions_.clear();
+    while (!commandHistory_.empty())
+    {
+        commandHistory_.pop();
+    }
     return true;
 }
 
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RegisterFunctionDescription(const std::string &name, const std::string &description)
 {
+    if (name.empty() || description.empty())
+    {
+        return;
+    }
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     descriptions_[name] = description;
 }
 
 template <typename Result, typename Argument>
 std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const std::string &name)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = descriptions_.find(name);
     if (it != descriptions_.end())
     {
@@ -257,11 +279,17 @@ std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const st
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RemoveFunctionDescription(const std::string &name)
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (name.empty())
+    {
+        return;
+    }
     descriptions_.erase(name);
 }
 
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::ClearFunctionDescriptions()
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     descriptions_.clear();
 }

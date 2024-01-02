@@ -1,14 +1,9 @@
-cmake_minimum_required(VERSION 3.13)
-project(lithiumcore C CXX)
+cmake_minimum_required(VERSION 3.20)
+project(atom.driver C CXX)
 
 find_package(Threads REQUIRED)
 
-add_subdirectory(plugin)
-
 include_directories(.)
-include_directories(base)
-include_directories(property)
-include_directories(utils)
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 if(NOT HAS_STD_FORMAT)
@@ -19,28 +14,11 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     fitskeyword.cpp
 
     device.cpp
-    deviceio.cpp
     camera.cpp
     telescope.cpp
     focuser.cpp
     filterwheel.cpp
     guider.cpp
-    network/fifoclient.cpp
-    network/fifoserver.cpp
-    util/utils.cpp
-    event/eventloop.cpp
-
-    property/base64.cpp
-    property/iproperty.cpp
-    property/iphoto.cpp
-    property/uuid.cpp
-
-    property/task/conditional_task.cpp
-    property/task/daemon_task.cpp
-    property/task/loop_task.cpp
-    property/task/device_task.cpp
-    property/task/plugin_task.cpp
-    property/task/task.cpp
 )
 
 # Headers
@@ -48,28 +26,12 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     fitskeyword.h
 
     device.hpp
-    deviceio.hpp
     camera.hpp
     telescope.hpp
     focuser.hpp
     filterwheel.hpp
     guider.hpp
     solver.hpp
-    network/fifoclient.hpp
-    network/fifoserver.hpp
-    util/utils.hpp
-
-    property/base64.hpp
-    property/iproperty.hpp
-    property/iphoto.hpp
-    property/sha256.hpp
-    property/uuid.hpp
-
-    property/task/conditional_task.hpp
-    property/task/device_task.hpp
-    property/task/daemon_task.hpp
-    property/task/loop_task.hpp
-    property/task/task.hpp
 )
 
 # Private Headers

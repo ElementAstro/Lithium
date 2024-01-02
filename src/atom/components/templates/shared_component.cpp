@@ -2,10 +2,19 @@
 
 #include "atom/thread/thread.hpp"
 #include "atom/server/message_bus.hpp"
-#include "atom/type/iparams.hpp"
+
+#include "atom/utils/string.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "config.h"
+
+#define GET_ARGUMENT_S(command, type, name)                            \
+    std::optional<type> name = args[#name];                            \
+    if (!name)                                                         \
+    {                                                                  \
+        this->SendTextMessage(#command, "Missing arguments:" + #name); \
+        return;                                                        \
+    }
 
 SharedComponent::SharedComponent() : Component()
 {
@@ -77,18 +86,45 @@ SharedComponent::~SharedComponent()
 
 bool SharedComponent::Initialize()
 {
+    // Initialize message handlers
+    // Register message handlers
     m_handleVoid->registerCase("getVersion", [this](const std::shared_ptr<VoidMessage> &message)
-                               {
-        this->SendTextMessage("getVersion", GetVersion());
-        return true; });
+                               { this->SendTextMessage("getVersion", getInfo<std::string>("basic", "version")); });
     m_handleVoid->registerCase("getName", [this](const std::shared_ptr<VoidMessage> &message)
-                               {
-        this->SendTextMessage("getName", GetName());
-        return true; });
-    m_handleVoid->registerCase("getPackageInfo", [this](const std::shared_ptr<VoidMessage> &message)
-                                   {
-        this->SendTextMessage("getPackageInfo", this->GetComponentInfo().dump());
-        return true; });
+                               { this->SendTextMessage("getName", getInfo<std::string>("basic", "name")); });
+    m_handleVoid->registerCase("getAllInfo", [this](const std::shared_ptr<VoidMessage> &message)
+                               { this->SendTextMessage("getAllInfo", this->getJsonInfo()); });
+    m_handleVoid->registerCase("getAllConfig", [this](const std::shared_ptr<VoidMessage> &message)
+                               { this->SendTextMessage("getAllConfig", this->getJsonConfig()); });
+
+    m_handleParams->registerCase("getConfig", [this](const std::shared_ptr<ParamsMessage> &message)
+                                 { 
+                                Args args = message->value();
+                                if (args.size() < 1)
+                                {
+                                    this->SendTextMessage("getConfig", "Invalid arguments.");
+                                    return;
+                                }
+                                GET_ARGUMENT_S("getConfig", std::string, section);
+                                GET_ARGUMENT_S("getConfig", std::string, key);
+                                GET_ARGUMENT_S("getConfig", std::string, type);
+
+                                if (type == "text")
+                                {
+                                    this->SendTextMessage("getConfig", this->getConfig<std::string>(section, key));
+                                }
+                                else if (type == "number")
+                                {
+                                    this->SendNumberMessage("getConfig", this->getConfig<int>(section, key));
+                                }
+                                else if (type == "boolean")
+                                {
+                                    this->SendBooleanMessage("getConfig", this->getConfig<bool>(section, key));
+                                }
+                                else
+                                {
+                                    this->SendTextMessage("getConfig", "Invalid type:" + type);
+                                }; });
     return true;
 }
 
@@ -136,7 +172,7 @@ bool SharedComponent::DisconnectMessageBus()
     // There is a very severe bug in the message bus.
     // It will cause a crash when the message bus is disconnected.
     // How should we identify which connection is the one we want to disconnect?
-    m_MessageBus->Unsubscribe<std::shared_ptr<Message>>("lithium.app",m_handleFunction);
+    m_MessageBus->Unsubscribe<std::shared_ptr<Message>>("lithium.app", m_handleFunction);
     DLOG_F(INFO, _("Message bus is disconnected."));
     return true;
 }

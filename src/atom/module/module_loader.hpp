@@ -35,6 +35,8 @@ Description: C++ and Modules Loader
 #include <cstdio>
 #include <functional>
 #include <atomic>
+#include <shared_mutex>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -139,7 +141,21 @@ namespace Atom::Module
          */
         ~ModuleLoader();
 
+        // -------------------------------------------------------------------
+        // Common methods
+        // -------------------------------------------------------------------
+
+        /**
+         * @brief 使用默认参数创建一个共享的 ModuleLoader 对象。
+         * @return 新创建的共享 ModuleLoader 对象。
+         */
         static std::shared_ptr<ModuleLoader> createShared();
+
+        /**
+         * @brief 使用默认参数创建一个唯一的 ModuleLoader 对象。
+         * @return 新创建的唯一 ModuleLoader 对象。
+         */
+        static std::unique_ptr<ModuleLoader> createUnique();
 
         /**
          * @brief 使用给定的目录名称和线程管理器参数创建一个共享的 ModuleLoader 指针对象。
@@ -149,6 +165,19 @@ namespace Atom::Module
          * @return 新创建的共享 ModuleLoader 指针对象。
          */
         static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
+
+        /**
+         * @brief 使用给定的目录名称和线程管理器参数创建一个唯一的 ModuleLoader 指针对象。
+         *
+         * @param dir_name 模块所在的目录名称。
+         * @param threadManager 线程管理器的共享指针。
+         * @return 新创建的唯一 ModuleLoader 指针对象。
+         */
+        static std::unique_ptr<ModuleLoader> createUnique(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
+
+        // -------------------------------------------------------------------
+        // Module methods
+        // -------------------------------------------------------------------
 
         /**
          * @brief 根据给定的目录名称加载模块。
@@ -239,6 +268,10 @@ namespace Atom::Module
          */
         bool IsModuleEnabled(const std::string &name) const;
 
+        // -------------------------------------------------------------------
+        // Functions methods
+        // -------------------------------------------------------------------
+
         /**
          * @brief 获取指定模块中的函数指针
          *
@@ -248,25 +281,9 @@ namespace Atom::Module
          * @return T 返回函数指针，如果获取失败则返回nullptr
          */
         template <typename T>
-        T GetFunction(const std::string &name, const std::string &function_name)
-        {
-            auto handle_it = modules_.find(name);
-            if (handle_it == modules_.end())
-            {
-                LOG_F(ERROR, "Failed to find module {}", name);
-                return nullptr;
-            }
+        T GetFunction(const std::string &name, const std::string &function_name);
 
-            auto func_ptr = reinterpret_cast<T>(LOAD_FUNCTION(handle_it->second->handle, function_name.c_str()));
-
-            if (!func_ptr)
-            {
-                LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", function_name, name, dlerror());
-                return nullptr;
-            }
-
-            return func_ptr;
-        }
+        bool HasFunction(const std::string &name, const std::string &function_name);
 
         /**
          * @brief 从指定模块中获取实例对象
@@ -279,24 +296,7 @@ namespace Atom::Module
          */
         template <typename T>
         std::shared_ptr<T> GetInstance(const std::string &name, const json &config,
-                                       const std::string &symbol_name)
-        {
-            auto handle_it = modules_.find(name);
-            if (handle_it == modules_.end())
-            {
-                LOG_F(ERROR, "Failed to find module {}", name);
-                return nullptr;
-            }
-
-            auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const json &)>(name, symbol_name);
-            if (!get_instance_func)
-            {
-                LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", symbol_name, name, dlerror());
-                return nullptr;
-            }
-
-            return get_instance_func(config);
-        }
+                                       const std::string &symbol_name);
 
         /**
          * @brief 获取指定模块的任务实例指针
@@ -311,10 +311,7 @@ namespace Atom::Module
          * std::shared_ptr<Plugin> plugin = GetInstancePointer<Plugin>(name, config, "GetPluginInstance");
          */
         template <typename T>
-        std::shared_ptr<T> GetInstancePointer(const std::string &name, const json &config, const std::string &instance_function_name)
-        {
-            return GetInstance<T>(name, config, instance_function_name);
-        }
+        std::shared_ptr<T> GetInstancePointer(const std::string &name, const json &config, const std::string &instance_function_name);
 
     public:
         /**
@@ -389,5 +386,75 @@ namespace Atom::Module
 #endif
         // Injected Thread Manager
         std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
+
+        mutable std::shared_mutex m_SharedMutex;
     };
+
+    template <typename T>
+    T ModuleLoader::GetFunction(const std::string &name, const std::string &function_name)
+    {
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+        auto handle_it = modules_.find(name);
+        if (handle_it == modules_.end())
+        {
+            LOG_F(ERROR, "Failed to find module {}", name);
+            return nullptr;
+        }
+
+        auto func_ptr = reinterpret_cast<T>(LOAD_FUNCTION(handle_it->second->handle, function_name.c_str()));
+
+        if (!func_ptr)
+        {
+            LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", function_name, name, dlerror());
+            return nullptr;
+        }
+
+        return func_ptr;
+    }
+
+    template <typename T>
+    std::shared_ptr<T> ModuleLoader::GetInstance(const std::string &name, const json &config,
+                                                 const std::string &symbol_name)
+    {
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+        if (!HasModule(name))
+        {
+            LOG_F(ERROR, "Failed to find module {}", name);
+            return nullptr;
+        }
+        auto get_instance_func = GetFunction<std::shared_ptr<T> (*)(const json &)>(name, symbol_name);
+        if (!get_instance_func)
+        {
+            LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", symbol_name, name, dlerror());
+            return nullptr;
+        }
+
+        return get_instance_func(config);
+    }
+
+    template <typename T>
+    std::unique_ptr<T> ModuleLoader::GetUniqueInstance(const std::string &name, const json &config,
+                                                       const std::string &instance_function_name)
+    {
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+        if (!HasModule(name))
+        {
+            LOG_F(ERROR, "Failed to find module {}", name);
+            return nullptr;
+        }
+        auto get_instance_func = GetFunction<std::unique_ptr<T> (*)(const json &)>(name, instance_function_name);
+        if (!get_instance_func)
+        {
+            LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", instance_function_name, name, dlerror());
+            return nullptr;
+        }
+
+        return get_instance_func(config);
+    }
+
+    template <typename T>
+    std::shared_ptr<T> ModuleLoader::GetInstancePointer(const std::string &name, const json &config, const std::string &instance_function_name)
+    {
+        return GetInstance<T>(name, config, instance_function_name);
+    }
 }

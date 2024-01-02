@@ -10,6 +10,7 @@ add_subdirectory(web)
 add_subdirectory(connection)
 add_subdirectory(components)
 add_subdirectory(property)
+add_subdirectory(driver)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)

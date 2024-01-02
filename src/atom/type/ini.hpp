@@ -31,11 +31,16 @@ Description: INI File Read/Write Library
 
 #pragma once
 
-#include <unordered_map>
 #include <any>
 #include <optional>
 #include <string>
 #include <mutex>
+#include <shared_mutex>
+#ifdef ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
 
 class INIFile
 {
@@ -60,11 +65,7 @@ public:
      * @param value 值
      */
     template <typename T>
-    void set(const std::string &section, const std::string &key, const T &value)
-    {
-        std::lock_guard<std::mutex> guard(mutex);
-        data[section][key] = value;
-    }
+    void set(const std::string &section, const std::string &key, const T &value);
 
     /**
      * 获取INI文件中的值
@@ -74,31 +75,29 @@ public:
      * @return 值，如果不存在则返回std::nullopt
      */
     template <typename T>
-    std::optional<T> get(const std::string &section, const std::string &key) const
+    std::optional<T> get(const std::string &section, const std::string &key) const;
+
+    bool has(const std::string &section, const std::string &key) const;
+
+    bool hasSection(const std::string &section) const;
+
+    std::unordered_map<std::string, std::any> operator[](const std::string &section)
     {
-        std::lock_guard<std::mutex> guard(mutex);
-        auto it = data.find(section);
-        if (it != data.end())
-        {
-            auto entryIt = it->second.find(key);
-            if (entryIt != it->second.end())
-            {
-                try
-                {
-                    return std::any_cast<T>(entryIt->second);
-                }
-                catch (const std::bad_any_cast &)
-                {
-                    return std::nullopt;
-                }
-            }
-        }
-        return std::nullopt;
+        return data[section];
     }
 
+    std::string toJson() const;
+
+    std::string toXml() const;
+
 private:
-    std::unordered_map<std::string, std::unordered_map<std::string, std::any>> data;  // 存储数据的映射表
-    mutable std::mutex mutex;  // 互斥锁，用于线程安全
+#ifdef ENABlE_FASTHASH
+    emhash8::HashMap<std::string, emhash8::HashMap<std::string, std::any>> data;
+#else
+    std::unordered_map<std::string, std::unordered_map<std::string, std::any>> data; // 存储数据的映射表
+#endif
+
+    mutable std::shared_mutex m_sharedMutex; // 共享互斥锁，用于线程安全
     /**
      * 解析INI文件的一行，并更新当前部分
      * @param line 行内容
@@ -112,3 +111,33 @@ private:
      */
     std::string trim(const std::string &str);
 };
+
+template <typename T>
+void INIFile::set(const std::string &section, const std::string &key, const T &value)
+{
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    data[section][key] = value;
+}
+
+template <typename T>
+std::optional<T> INIFile::get(const std::string &section, const std::string &key) const
+{
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    auto it = data.find(section);
+    if (it != data.end())
+    {
+        auto entryIt = it->second.find(key);
+        if (entryIt != it->second.end())
+        {
+            try
+            {
+                return std::any_cast<T>(entryIt->second);
+            }
+            catch (const std::bad_any_cast &)
+            {
+                return std::nullopt;
+            }
+        }
+    }
+    return std::nullopt;
+}

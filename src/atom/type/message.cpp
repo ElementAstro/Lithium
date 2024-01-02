@@ -46,6 +46,27 @@ Message::Message(Type t, const string &name, const string &target, const string 
     uuid_ = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
 }
 
+Message::Type Message::fromInt(const int &t)
+{
+    switch (t)
+    {
+    case 0:
+        return Type::kVoid;
+    case 1:
+        return Type::kText;
+    case 2:
+        return Type::kNumber;
+    case 3:
+        return Type::kBoolean;
+    case 4:
+        return Type::kAny;
+    case 5:
+        return Type::kParams;
+    default:
+        return Type::kMaxType;
+    }
+}
+
 Message::Type Message::type() const
 {
     return type_;
@@ -134,25 +155,19 @@ string AnyMessage::type() const
 }
 
 // ParamsMessage
-ParamsMessage::ParamsMessage(const string &name, shared_ptr<IParams> params, const string &target, const string &origin)
+ParamsMessage::ParamsMessage(const string &name,const Args &params, const string &target, const string &origin)
     : Message(Type::kParams, name, target, origin), params_(params)
 {
 }
 
-shared_ptr<IParams> ParamsMessage::value() const
+Args ParamsMessage::value() const
 {
     return params_;
 }
 
-// JsonMessage
-JsonMessage::JsonMessage(const string &name, const json &json, const string &target, const string &origin)
-    : Message(Type::kJson, name, target, origin), value_(json)
+shared_ptr<VoidMessage> MessageHelper::MakeVoidMessage(const string &name, const string &target, const string &origin)
 {
-}
-
-json JsonMessage::value() const
-{
-    return value_;
+    return make_shared<VoidMessage>(name, target, origin);
 }
 
 // MessageHelper
@@ -171,17 +186,12 @@ shared_ptr<BooleanMessage> MessageHelper::MakeBooleanMessage(const string &name,
     return make_shared<BooleanMessage>(name, value, target, origin);
 }
 
-shared_ptr<AnyMessage> MessageHelper::MakeAnyMessage(const string &name, const any &data, const string &target, const string &origin)
+shared_ptr<AnyMessage> MessageHelper::MakeAnyMessage(const string &name, const any &value, const string &target, const string &origin)
 {
     return make_shared<AnyMessage>(name, data, target, origin);
 }
 
-shared_ptr<ParamsMessage> MessageHelper::MakeParamsMessage(const string &name, shared_ptr<IParams> params, const string &target, const string &origin)
+shared_ptr<ParamsMessage> MessageHelper::MakeParamsMessage(const string &name,const Args &params, const string &target, const string &origin)
 {
     return make_shared<ParamsMessage>(name, params, target, origin);
-}
-
-shared_ptr<JsonMessage> MessageHelper::MakeJsonMessage(const string &name, const json &json, const string &target, const string &origin)
-{
-    return make_shared<JsonMessage>(name, json, target, origin);
 }

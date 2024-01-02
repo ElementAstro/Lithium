@@ -37,11 +37,12 @@ Description: Basic Component Definition
 #include <memory>
 #include <vector>
 
+#include "types.hpp"
+
 #include "atom/server/commander.hpp"
 #include "atom/server/variables.hpp"
-
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
+#include "atom/type/args.hpp"
+#include "atom/type/ini.hpp"
 
 #define SETVAR_STR(name, value)                              \
     m_VariableRegistry->RegisterVariable<std::string>(name); \
@@ -55,15 +56,12 @@ using json = nlohmann::json;
     m_VariableRegistry->RegisterVariable<bool>(name); \
     m_VariableRegistry->SetVariable(name, value);
 
-#define SETVAR_JSON(name, value)                      \
-    m_VariableRegistry->RegisterVariable<json>(name); \
-    m_VariableRegistry->SetVariable(name, value);
-
 #define SETVAR_DOUBLE(name, value)                      \
     m_VariableRegistry->RegisterVariable<double>(name); \
     m_VariableRegistry->SetVariable(name, value);
 
-class PackageInfo; // Forward declaration
+using ComponentInfo = std::shared_ptr<INIFile>;
+using ComponentConfig = std::shared_ptr<INIFile>;
 
 class Component : public std::enable_shared_from_this<Component>
 {
@@ -78,26 +76,9 @@ public:
      */
     virtual ~Component();
 
-    /**
-     * @brief Gets the information about the plugin.
-     *
-     * @return The plugin information in JSON format.
-     */
-    json GetComponentInfo() const;
-
-    /**
-     * @brief Gets the version of the plugin.
-     *
-     * @return The version of the plugin.
-     */
-    std::string GetVersion() const;
-
-    /**
-     * @brief Gets the name of the plugin.
-     *
-     * @return The name of the plugin.
-     */
-    std::string GetName() const;
+    // -------------------------------------------------------------------
+    // Common methods
+    // -------------------------------------------------------------------
 
     /**
      * @brief Initializes the plugin.
@@ -119,6 +100,68 @@ public:
      */
     virtual bool Destroy();
 
+    // -------------------------------------------------------------------
+    // Component Infomation methods
+    // -------------------------------------------------------------------
+
+    /**
+     * @brief Loads the component information from a file.
+     *
+     * @param path The path to the component information file.
+     * @return True if the component information was loaded successfully, false otherwise.
+     * @note Usually, the component information file is stored in the plugin's directory.
+     */
+    bool LoadComponentInfo(const std::string &path);
+
+    template <typename T>
+    std::optional<T> getInfo(const std::string section, const std::string &key)
+    {
+        return m_ComponentInfo->get<T>(key);
+    }
+
+    std::string getJsonInfo() const;
+
+    std::string getXmlInfo() const;
+
+    template <typename T>
+    bool setInfo(const std::string &section, const std::string &key, const T &value)
+    {
+        return m_ComponentInfo->set(key, value);
+    }
+
+    // -------------------------------------------------------------------
+    // Component Configuration methods
+    // -------------------------------------------------------------------
+
+    /**
+     * @brief Loads the component configuration from a file.
+     *
+     * @param path The path to the component configuration file.
+     * @return True if the component configuration was loaded successfully, false otherwise.
+     * @note Usually, the component configuration file is stored in the plugin's directory.
+     */
+    bool LoadComponentConfig(const std::string &path);
+
+    template <typename T>
+    std::optional<T> getConfig(const std::string &section, const std::string &key)
+    {
+        return m_ComponentConfig->get<T>(section, key);
+    }
+
+    std::string getJsonConfig() const;
+
+    std::string getXmlConfig() const;
+
+    template <typename T>
+    bool setConfig(const std::string &section, const std::string &key, const T &value)
+    {
+        return m_ComponentConfig->set(section, key, value);
+    }
+
+    // -------------------------------------------------------------------
+    // Variable methods
+    // -------------------------------------------------------------------
+
     /**
      * @brief Registers a member function with a specific name and handler.
      *
@@ -134,28 +177,6 @@ public:
     {
         return m_VariableRegistry->RegisterVariable<T>(name);
     }
-
-    /**
-     * @brief Sets the value of the variable with the specified name.
-     *
-     * @tparam T The type of the variable.
-     * @param name The name of the variable.
-     * @param value The value to set.
-     * @return True if the variable was set successfully, false otherwise.
-     */
-    template <typename ClassType>
-    void RegisterFunc(const std::string &name, void (ClassType::*handler)(const json &), ClassType *object)
-    {
-        m_CommandDispatcher->RegisterMemberHandler(name, object, handler);
-    }
-
-    /**
-     * @brief Gets the information about the function with the specified name.
-     *
-     * @param name The name of the function.
-     * @return The information about the function in JSON format.
-     */
-    json GetFuncInfo(const std::string &name);
 
     /**
      * @brief Gets the value of the variable with the specified name.
@@ -192,36 +213,30 @@ public:
      * @param name The name of the variable.
      * @return The information about the variable.
      */
-    std::string GetVariableInfo(const std::string &name) const
-    {
-        return m_VariableRegistry->GetDescription(name);
-    }
+    std::string GetVariableInfo(const std::string &name) const;
+
+    // -------------------------------------------------------------------
+    // Function methods
+    // -------------------------------------------------------------------
 
     /**
-     * @brief Adds an observer for the variable with the specified name.
+     * @brief Sets the value of the variable with the specified name.
      *
-     * This function allows plugins to listen for changes to a registered variable.
-     *
+     * @tparam T The type of the variable.
      * @param name The name of the variable.
-     * @param observer The observer function.
+     * @param value The value to set.
+     * @return True if the variable was set successfully, false otherwise.
      */
-    void AddObserver(const std::string &name, const VariableRegistry::Observer &observer)
-    {
-        m_VariableRegistry->AddObserver(name, observer);
-    }
+    template <typename ClassType>
+    void RegisterFunc(const std::string &name, void (ClassType::*handler)(const Args &), ClassType *object);
 
     /**
-     * @brief Removes an observer for the variable with the specified name.
+     * @brief Gets the information about the function with the specified name.
      *
-     * This function allows plugins to stop listening for changes to a registered variable.
-     *
-     * @param name The name of the variable.
-     * @param observer The observer function.
+     * @param name The name of the function.
+     * @return The information about the function in JSON format.
      */
-    void RemoveObserver(const std::string &name, const std::string &observer)
-    {
-        m_VariableRegistry->RemoveObserver(name, observer);
-    }
+    Args GetFuncInfo(const std::string &name);
 
     /**
      * @brief Runs the function with the specified name and parameters.
@@ -232,17 +247,28 @@ public:
      * @param params The parameters for the function.
      * @return True if the function was executed successfully, false otherwise.
      */
-    bool RunFunc(const std::string &name, const json &params);
+    bool RunFunc(const std::string &name, const Args &params);
 
-    std::function<void(const json &)> GetFunc(const std::string &name)
-    {
-        return m_CommandDispatcher->GetHandler(name);
-    }
+    std::function<void(const Args &)> GetFunc(const std::string &name);
 
 private:
-    std::string m_Name;
+    std::string m_name;
+    std::string m_ConfigPath;
+    std::string m_InfoPath;
 
-    std::unique_ptr<CommandDispatcher<void, json>> m_CommandDispatcher; ///< The command dispatcher for handling functions.
+    std::unique_ptr<CommandDispatcher<void, Args>> m_CommandDispatcher; ///< The command dispatcher for handling functions.
     std::unique_ptr<VariableRegistry> m_VariableRegistry;               ///< The variable registry for managing variables.
-    std::shared_ptr<PackageInfo> m_PackageInfo;                         ///< The package information for the plugin.
+
+    // Component info in INI format
+    ComponentInfo m_ComponentInfo;
+
+    // Component Config in INI format
+    ComponentConfig m_ComponentConfig;
 };
+
+template <typename ClassType>
+void Component::RegisterFunc(const std::string &name, void (ClassType::*handler)(const Args &), ClassType *object)
+{
+    if (!m_CommandDispatcher->HasHandler(name))
+        m_CommandDispatcher->RegisterMemberHandler(name, object, handler);
+}

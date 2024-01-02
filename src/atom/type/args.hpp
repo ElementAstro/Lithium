@@ -162,6 +162,11 @@ public:
         set(argument.first, argument.second);
     }
 
+    void operator=(const std::unordered_map<std::string, std::any> &container)
+    {
+        m_arguments = container;
+    }
+
 private:
 #ifdef ENABLE_FASTHASH
     emhash::HashMap<std::string, std::any> m_arguments;
@@ -169,3 +174,5 @@ private:
     std::unordered_map<std::string, std::any> m_arguments;
 #endif
 };
+
+using Args = ArgumentContainer;

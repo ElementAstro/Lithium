@@ -42,11 +42,17 @@ Description: IO
 #include <windows.h>
 const std::string PATH_SEPARATOR = "\\";
 const std::regex folderNameRegex("^[^\\/?*:;{}\\\\]+[^\\\\]*$");
+#ifndef _WIN64
+const std::regex fileNameRegex("^[^\\/:*?\"<>|]+$");
+#else
+const std::regex fileNameRegex("^[^\\/:*?\"<>|]+$");
+#endif
 #else
 #include <unistd.h>
 #include <limits.h>
 const std::string PATH_SEPARATOR = "/";
 const std::regex folderNameRegex("^[^/]+$");
+const std::regex fileNameRegex("^[^/]+$");
 #endif
 
 namespace fs = std::filesystem;
@@ -324,5 +330,20 @@ namespace Atom::IO
     bool isFolderNameValid(const std::string& folderName)
     {
         return std::regex_match(folderName, folderNameRegex);
+    }
+
+    bool isFileNameValid(const std::string& fileName)
+    {
+        return std::regex_match(fileName, fileNameRegex);
+    }
+
+    bool isFolderExists(const std::string& folderName)
+    {
+        return fs::exists(folderName) && fs::is_directory(folderName);
+    }
+
+    bool isFileExists(const std::string& fileName)
+    {
+        return fs::exists(fileName) && fs::is_regular_file(fileName);
     }
 }

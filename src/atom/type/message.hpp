@@ -34,11 +34,7 @@ Description: A message class, which can be used to store different types of mess
 #include <string>
 #include <any>
 #include <memory>
-#include "atom/type/json.hpp"
-
-using json = nlohmann::json;
-
-class IParams;
+#include "args.hpp"
 
 // Base class Message
 class Message
@@ -55,9 +51,10 @@ public:
         kBoolean,
         kAny,
         kParams,
-        kJson,
         kMaxType
     };
+
+    static Type fromInt(const int &t);
 
     Type type() const;
     std::string_view target() const;
@@ -138,44 +135,91 @@ private:
 class ParamsMessage : public Message
 {
 public:
-    explicit ParamsMessage(const std::string &name, std::shared_ptr<IParams> params, const std::string &target, const std::string &origin);
+    explicit ParamsMessage(const std::string &name, const Args &params, const std::string &target, const std::string &origin);
 
-    std::shared_ptr<IParams> value() const;
-
-private:
-    std::shared_ptr<IParams> params_;
-};
-
-class JsonMessage : public Message
-{
-public:
-    explicit JsonMessage(const std::string &name, const json &json, const std::string &target, const std::string &origin);
-
-    json value() const;
+    Args value() const;
 
 private:
-    json value_;
+    Args params_;
 };
 
+/**
+ * @brief Message helper
+ * @note This class is used to make messages
+*/
 class MessageHelper
 {
 public:
+    /**
+     * @brief Make a message
+     * @param name Message name
+     * @param target Message target
+     * @param origin Message origin
+     * @return Message
+     * @note The message type is kVoid, which is used to send a command without parameters
+     */
+    static std::shared_ptr<VoidMessage> MakeVoidMessage(const std::string &name, const std::string &target, const std::string &origin);
+
+    /**
+     * @brief Make a message
+     * @param name Message name
+     * @param value Message value
+     * @param target Message target
+     * @param origin Message origin
+     * @return Message
+     * @note The message type is kText, which is used to send a command with a string parameter
+     */
     static std::shared_ptr<TextMessage> MakeTextMessage(const std::string &name, const std::string &value, const std::string &target, const std::string &origin);
 
+    /**
+     * @brief Make a message
+     * @param name Message name
+     * @param value Message value
+     * @param target Message target
+     * @param origin Message origin
+     * @return Message
+     * @note The message type is kNumber, which is used to send a command with a number parameter
+     */
     static std::shared_ptr<NumberMessage> MakeNumberMessage(const std::string &name, double value, const std::string &target, const std::string &origin);
 
+    /**
+     * @brief Make a message
+     * @param name Message name
+     * @param value Message value
+     * @param target Message target
+     * @param origin Message origin
+     * @return Message
+     * @note The message type is kBoolean, which is used to send a command with a boolean parameter
+     */
     static std::shared_ptr<BooleanMessage> MakeBooleanMessage(const std::string &name, bool value, const std::string &target, const std::string &origin);
 
-    static std::shared_ptr<AnyMessage> MakeAnyMessage(const std::string &name, const std::any &data, const std::string &target, const std::string &origin);
+    /**
+     * @brief Make a message
+     * @param name Message name
+     * @param data Message value
+     * @param target Message target
+     * @param origin Message origin
+     * @return Message
+     * @note The message type is kAny, which is used to send a command with a any parameter
+     * @note This is a little bit dangerous, please use it carefully
+     * @note std::bad_any_cast exception will be thrown if the type of data is not the same as the type of the parameter
+     */
+    static std::shared_ptr<AnyMessage> MakeAnyMessage(const std::string &name, const std::any &value, const std::string &target, const std::string &origin);
 
-    static std::shared_ptr<ParamsMessage> MakeParamsMessage(const std::string &name, std::shared_ptr<IParams> params, const std::string &target, const std::string &origin);
-
-    static std::shared_ptr<JsonMessage> MakeJsonMessage(const std::string &name, const json &json, const std::string &target, const std::string &origin);
+    /**
+     * @brief Make a message
+     * @param name Message name
+     * @param value Message value
+     * @param target Message target
+     * @param origin Message origin
+     * @return Message
+     * @note The message type is kParams, which is used to send a command with a Args parameter
+     */
+    static std::shared_ptr<ParamsMessage> MakeParamsMessage(const std::string &name, const Args &value, const std::string &target, const std::string &origin);
 };
 
 using ReturnMessage = std::variant<std::shared_ptr<TextMessage>,
-                                 std::shared_ptr<NumberMessage>,
-                                 std::shared_ptr<BooleanMessage>,
-                                 std::shared_ptr<JsonMessage>,
-                                 std::shared_ptr<AnyMessage>,
-                                 std::shared_ptr<ParamsMessage>>;
+                                   std::shared_ptr<NumberMessage>,
+                                   std::shared_ptr<BooleanMessage>,
+                                   std::shared_ptr<AnyMessage>,
+                                   std::shared_ptr<ParamsMessage>>;

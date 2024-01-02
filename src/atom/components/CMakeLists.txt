@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom-component C CXX)
+project(atom.component C CXX)
 
 
 list(APPEND ${PROJECT_NAME}_SOURCES
     component.cpp
-    component_info.cpp
 
     templates/alone_component.cpp
     templates/exe_component.cpp
@@ -16,7 +15,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     component.hpp
-    component_info.hpp
     types.hpp
 
     templates/alone_component.hpp

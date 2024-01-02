@@ -30,9 +30,7 @@ Description: Basic Device Defination
 *************************************************/
 
 #include "device.hpp"
-#include "core/property/uuid.hpp"
-
-#include "util/utils.hpp"
+#include "atom/property/uuid.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>
@@ -44,28 +42,17 @@ Description: Basic Device Defination
 
 Device::Device(const std::string &name) : _name(name)
 {
-    _uuid = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
+    _uuid = Atom::Property::UUIDGenerator::generateUUIDWithFormat();
 }
 
 Device::~Device()
 {
-    if (deviceIOServer->is_running())
-    {
-        deviceIOServer->stop();
-    }
-    loopThread.request_stop();
 }
 
 void Device::init()
 {
     setProperty("name", _name);
     setProperty("uuid", _uuid);
-
-    std::jthread loop([this]()
-                      { this->eventLoop.start(); });
-    loopThread = std::move(loop);
-    deviceIOServer = std::make_shared<SocketServer>(eventLoop, generateRandomNumber(10000, 60000));
-    deviceIOServer->start();
 }
 
 const std::string Device::getDeviceName()
@@ -378,9 +365,9 @@ void Device::removeProperty(const std::string &name)
     }
 }
 
-void Device::insertTask(const std::string &name, std::any defaultValue, nlohmann::json params_template,
-                        const std::function<nlohmann::json(const nlohmann::json &)> &func,
-                        const std::function<nlohmann::json(const nlohmann::json &)> &stop_func,
+void Device::insertTask(const std::string &name, std::any defaultValue, Args params_template,
+                        const std::function<Args(const Args &)> &func,
+                        const std::function<Args(const Args &)> &stop_func,
                         bool isBlock)
 {
     if (name.empty() || !defaultValue.has_value())
@@ -410,7 +397,7 @@ bool Device::removeTask(const std::string &name)
     return true;
 }
 
-std::shared_ptr<Lithium::SimpleTask> Device::getTask(const std::string &name, const nlohmann::json &params)
+std::shared_ptr<Atom::Task::SimpleTask> Device::getTask(const std::string &name, const Args &params)
 {
     if (name.empty())
     {
@@ -426,81 +413,4 @@ std::shared_ptr<Lithium::SimpleTask> Device::getTask(const std::string &name, co
         }
     }
     return nullptr;
-}
-
-void Device::addObserver(const std::function<void(const std::any &message)> &observer)
-{
-    m_observers.push_back(observer);
-}
-
-void Device::removeObserver(const std::function<void(const std::any &message)> &observer)
-{
-    m_observers.erase(std::remove_if(m_observers.begin(), m_observers.end(),
-                                     [&observer](const std::function<void(const std::any &message)> &o)
-                                     {
-                                         return o.target<std::function<void(const std::any &message)>>() == observer.target<std::function<void(const std::any &message)>>();
-                                     }),
-                      m_observers.end());
-}
-
-const nlohmann::json Device::exportDeviceInfoToJson()
-{
-    nlohmann::json jsonInfo;
-    for (const auto &property : m_properties)
-    {
-        if (property.second.type() == typeid(std::shared_ptr<IStringProperty>))
-        {
-            jsonInfo[property.first] = std::any_cast<std::shared_ptr<IStringProperty>>(property.second)->value;
-        }
-        else if (property.second.type() == typeid(std::shared_ptr<INumberProperty>))
-        {
-            jsonInfo[property.first] = std::any_cast<std::shared_ptr<INumberProperty>>(property.second)->value;
-        }
-        else if (property.second.type() == typeid(std::shared_ptr<IBoolProperty>))
-        {
-            jsonInfo[property.first] = std::any_cast<std::shared_ptr<IBoolProperty>>(property.second)->value;
-        }
-        else if (property.second.type() == typeid(std::shared_ptr<INumberVector>))
-        {
-            jsonInfo[property.first] = std::any_cast<std::shared_ptr<INumberVector>>(property.second)->value;
-        }
-        else
-        {
-#ifdef __cpp_lib_format
-            throw InvalidProperty(std::format("Unknown type of property {}", property.first));
-#else
-            throw InvalidProperty(fmt::format("Unknown type of property {}", property.first));
-#endif
-        }
-    }
-    std::cout << jsonInfo.dump(4) << std::endl;
-    return jsonInfo;
-}
-
-bool Device::HasHandler(const std::string &name)
-{
-    return command_handlers_.find(Djb2Hash(name.c_str())) != command_handlers_.end();
-}
-
-IReturns Device::Dispatch(const std::string &name, const IParams &data)
-{
-    auto it = command_handlers_.find(Djb2Hash(name.c_str()));
-    if (it != command_handlers_.end())
-    {
-        return it->second(data);
-    }
-    IReturns res;
-    res["error"] = "Function not found";
-    return res;
-}
-
-std::size_t Device::Djb2Hash(const char *str)
-{
-    std::size_t hash = 5381;
-    char c;
-    while ((c = *str++) != '\0')
-    {
-        hash = ((hash << 5) + hash) + static_cast<unsigned char>(c);
-    }
-    return hash;
 }

@@ -34,12 +34,39 @@ Description: INI File Read/Write Library
 #include <fstream>
 #include <sstream>
 
+#include "atom/utils/exception.hpp"
+
+bool INIFile::has(const std::string &section, const std::string &key) const
+{
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    auto it = data.find(section);
+    if (it != data.end())
+    {
+        auto entryIt = it->second.find(key);
+        if (entryIt != it->second.end())
+        {
+            if (entryIt->second.has_value())
+            {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool INIFile::hasSection(const std::string &section) const
+{
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    return data.find(section) != data.end();
+}
+
 void INIFile::load(const std::string &filename)
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     std::ifstream file(filename);
     if (!file.is_open())
     {
-        throw std::runtime_error("Failed to open file: " + filename);
+        throw Atom::Utils::Exception::FileNotReadable_Error("Failed to open file: " + filename);
     }
 
     std::string line;
@@ -54,12 +81,13 @@ void INIFile::load(const std::string &filename)
 
 void INIFile::save(const std::string &filename)
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     std::ofstream file(filename);
     if (!file.is_open())
     {
-        throw std::runtime_error("Failed to create file: " + filename);
+        throw Atom::Utils::Exception::FileNotWritable_Error("Failed to create file: " + filename);
     }
-    
+
     for (const auto &section : data)
     {
         file << "[" << section.first << "]\n";
@@ -81,9 +109,9 @@ void INIFile::save(const std::string &filename)
             {
                 file << entry.first << "=" << std::any_cast<std::string>(entry.second) << "\n";
             }
-            else if (entry.second.type() == typeid(const char*))
+            else if (entry.second.type() == typeid(const char *))
             {
-                file << entry.first << "=" << std::any_cast<const char*>(entry.second) << "\n";
+                file << entry.first << "=" << std::any_cast<const char *>(entry.second) << "\n";
             }
             else if (entry.second.type() == typeid(bool))
             {
@@ -91,7 +119,7 @@ void INIFile::save(const std::string &filename)
             }
             else
             {
-                throw std::runtime_error("Unsupported type");
+                throw Atom::Utils::Exception::InvalidArgument_Error("Unsupported type");
             }
         }
         file << "\n";
@@ -137,6 +165,100 @@ std::string INIFile::trim(const std::string &str)
     {
         return str.substr(start, end - start + 1);
     }
+}
+
+std::string INIFile::toJson() const
+{
+    std::ostringstream oss;
+    oss << "{";
+    for (const auto &section : data)
+    {
+        oss << "\"" << section.first << "\": {";
+        for (const auto &entry : section.second)
+        {
+            try
+            {
+                if (entry.second.type() == typeid(int))
+                {
+                    oss << "\"" << entry.first << "\": " << std::any_cast<int>(entry.second) << ", ";
+                }
+                else if (entry.second.type() == typeid(float))
+                {
+                    oss << "\"" << entry.first << "\": " << std::any_cast<float>(entry.second) << ", ";
+                }
+                else if (entry.second.type() == typeid(double))
+                {
+                    oss << "\"" << entry.first << "\": " << std::any_cast<double>(entry.second) << ", ";
+                }
+                else if (entry.second.type() == typeid(std::string))
+                {
+                    oss << "\"" << entry.first << "\": \"" << std::any_cast<std::string>(entry.second) << "\", ";
+                }
+                else if (entry.second.type() == typeid(const char *))
+                {
+                    oss << "\"" << entry.first << "\": \"" << std::any_cast<const char *>(entry.second) << "\", ";
+                }
+                else if (entry.second.type() == typeid(bool))
+                {
+                    oss << "\"" << entry.first << "\": " << std::any_cast<bool>(entry.second) << ", ";
+                }
+            }
+            catch (const std::bad_any_cast &e)
+            {
+                throw Atom::Utils::Exception::InvalidArgument_Error("Unsupported type");
+            }
+        }
+    }
+    oss << "}";
+    return oss.str();
+}
+
+std::string INIFile::toXml() const
+{
+    std::ostringstream oss;
+    oss << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    oss << "<config>\n";
+    for (const auto &section : data)
+    {
+        oss << "  <section name=\"" << section.first << "\">\n";
+        for (const auto &entry : section.second)
+        {
+            try
+            {
+                if (entry.second.type() == typeid(int))
+                {
+                    oss << "    <entry name=\"" << entry.first << "\" type=\"int\">" << std::any_cast<int>(entry.second) << "</entry>\n";
+                }
+                else if (entry.second.type() == typeid(float))
+                {
+                    oss << "    <entry name=\"" << entry.first << "\" type=\"float\">" << std::any_cast<float>(entry.second) << "</entry>\n";
+                }
+                else if (entry.second.type() == typeid(double))
+                {
+                    oss << "    <entry name=\"" << entry.first << "\" type=\"double\">" << std::any_cast<double>(entry.second) << "</entry>\n";
+                }
+                else if (entry.second.type() == typeid(std::string))
+                {
+                    oss << "    <entry name=\"" << entry.first << "\" type=\"string\">" << std::any_cast<std::string>(entry.second) << "</entry>\n";
+                }
+                else if (entry.second.type() == typeid(const char *))
+                {
+                    oss << "    <entry name=\"" << entry.first << "\" type=\"string\">" << std::any_cast<const char *>(entry.second) << "</entry>\n";
+                }
+                else if (entry.second.type() == typeid(bool))
+                {
+                    oss << "    <entry name=\"" << entry.first << "\" type=\"bool\">" << std::any_cast<bool>(entry.second) << "</entry>\n";
+                }
+                        }
+            catch (const std::bad_any_cast &e)
+            {
+                throw Atom::Utils::Exception::InvalidArgument_Error("Unsupported type");
+            }
+        }
+        oss << "  </section>\n";
+    }
+    oss << "</config>\n";
+    return oss.str();
 }
 
 /*

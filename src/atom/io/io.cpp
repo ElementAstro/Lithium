@@ -1,7 +1,7 @@
 /*
  * io.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-4-3
 
@@ -57,196 +51,210 @@ const std::regex fileNameRegex("^[^/]+$");
 
 namespace fs = std::filesystem;
 
+#define ATOM_IO_CHECK_ARGUMENT(value)                             \
+    if (value.empty() || !value)                                  \
+    {                                                             \
+        LOG_F(ERROR, "{}: Invalid argument: {}", __func__, path); \
+        return false;                                             \
+    }
+
 namespace Atom::IO
 {
 
-    bool create_directory(const std::string &path)
+    bool createDirectory(const std::string &path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
             fs::create_directory(path);
-            DLOG_F(INFO, "Directory created: {}", path);
+            DVLOG_F(INFO, "Directory created: {}", path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to create directory {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to create directory {}: {}", path, e.what());
         }
         return false;
     }
 
-    bool remove_directory(const std::string &path)
+    bool removeDirectory(const std::string &path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
             fs::remove_all(path);
             DLOG_F(INFO, "Directory removed: {}", path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to remove directory {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to remove directory {}: {}", path, e.what());
         }
         return false;
     }
 
-    bool rename_directory(const std::string &old_path, const std::string &new_path)
+    bool renameDirectory(const std::string &old_path, const std::string &new_path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(old_path);
+        ATOM_IO_CHECK_ARGUMENT(new_path);
         try
         {
             fs::rename(old_path, new_path);
             DLOG_F(INFO, "Directory renamed from {} to {}", old_path, new_path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to rename directory from {} to {}: {}", old_path, new_path, ex.what());
+            LOG_F(ERROR, "Failed to rename directory from {} to {}: {}", old_path, new_path, e.what());
         }
         return false;
     }
 
-    bool move_directory(const std::string &old_path, const std::string &new_path)
+    bool moveDirectory(const std::string &old_path, const std::string &new_path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(old_path);
+        ATOM_IO_CHECK_ARGUMENT(new_path);
         try
         {
             fs::rename(old_path, new_path);
             DLOG_F(INFO, "Directory moved from {} to {}", old_path, new_path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to move directory from {} to {}: {}", old_path, new_path, ex.what());
+            LOG_F(ERROR, "Failed to move directory from {} to {}: {}", old_path, new_path, e.what());
         }
         return false;
     }
 
-    bool copy_file(const std::string &src_path, const std::string &dst_path)
+    bool copyFile(const std::string &src_path, const std::string &dst_path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(src_path);
+        ATOM_IO_CHECK_ARGUMENT(dst_path);
         try
         {
             fs::copy_file(src_path, dst_path);
             DLOG_F(INFO, "File copied from {} to {}", src_path, dst_path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to copy file from {} to {}: {}", src_path, dst_path, ex.what());
+            LOG_F(ERROR, "Failed to copy file from {} to {}: {}", src_path, dst_path, e.what());
         }
         return false;
     }
 
-    bool move_file(const std::string &src_path, const std::string &dst_path)
+    bool moveFile(const std::string &src_path, const std::string &dst_path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(src_path);
+        ATOM_IO_CHECK_ARGUMENT(dst_path);
         try
         {
             fs::rename(src_path, dst_path);
             DLOG_F(INFO, "File moved from {} to {}", src_path, dst_path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to move file from {} to {}: {}", src_path, dst_path, ex.what());
+            LOG_F(ERROR, "Failed to move file from {} to {}: {}", src_path, dst_path, e.what());
         }
         return false;
     }
 
-    bool rename_file(const std::string &old_path, const std::string &new_path)
+    bool renameFile(const std::string &old_path, const std::string &new_path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(old_path);
+        ATOM_IO_CHECK_ARGUMENT(new_path);
         try
         {
             fs::rename(old_path, new_path);
             DLOG_F(INFO, "File renamed from {} to {}", old_path, new_path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to rename file from {} to {}: {}", old_path, new_path, ex.what());
+            LOG_F(ERROR, "Failed to rename file from {} to {}: {}", old_path, new_path, e.what());
         }
         return false;
     }
 
-    bool remove_file(const std::string &path)
+    bool removeFile(const std::string &path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
             fs::remove(path);
             DLOG_F(INFO, "File removed: {}", path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to remove file {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to remove file {}: {}", path, e.what());
         }
         return false;
     }
 
-    bool create_symlink(const std::string &target_path, const std::string &symlink_path)
+    bool createSymlink(const std::string &target_path, const std::string &symlink_path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(target_path);
+        ATOM_IO_CHECK_ARGUMENT(symlink_path);
         try
         {
             fs::create_symlink(target_path, symlink_path);
             DLOG_F(INFO, "Symlink created from {} to {}", target_path, symlink_path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to create symlink from {} to {}: {}", target_path, symlink_path, ex.what());
+            LOG_F(ERROR, "Failed to create symlink from {} to {}: {}", target_path, symlink_path, e.what());
         }
         return false;
     }
 
-    bool remove_symlink(const std::string &path)
+    bool removeSymlink(const std::string &path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
             fs::remove(path);
             DLOG_F(INFO, "Symlink removed: {}", path);
             return true;
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to remove symlink {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to remove symlink {}: {}", path, e.what());
         }
         return false;
     }
 
-    std::uintmax_t file_size(const std::string &path)
+    std::uintmax_t fileSize(const std::string &path)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
             return fs::file_size(path);
         }
-        catch (const std::exception &ex)
+        catch (const std::filesystem::filesystem_error &e)
         {
-            LOG_F(ERROR, "Failed to get file size of {}: {}", path, ex.what());
+            LOG_F(ERROR, "Failed to get file size of {}: {}", path, e.what());
             return 0;
         }
     }
 
-    void traverse_directory(const std::string &path)
+    std::string convertToLinuxPath(const std::string &windows_path)
     {
-        try
-        {
-            for (const auto &entry : fs::recursive_directory_iterator(path))
-            {
-                if (entry.is_directory())
-                {
-                    DLOG_F(INFO, "Directory: {}", entry.path().string());
-                }
-                else
-                {
-                    DLOG_F(INFO, "File: {}", entry.path().string());
-                }
-            }
-        }
-        catch (const std::exception &ex)
-        {
-            LOG_F(ERROR, "Failed to traverse directory {}: {}", path, ex.what());
-        }
-    }
-
-    std::string convert_windows_to_linux_path(const std::string &windows_path)
-    {
+        ATOM_IO_CHECK_ARGUMENT(windows_path);
         std::string linux_path = windows_path;
         for (char &c : linux_path)
         {
@@ -259,12 +267,12 @@ namespace Atom::IO
         {
             linux_path[0] = tolower(linux_path[0]);
         }
-
         return linux_path;
     }
 
-    std::string convert_linux_to_windows_path(const std::string &linux_path)
+    std::string convertToWindowsPath(const std::string &linux_path)
     {
+        ATOM_IO_CHECK_ARGUMENT(linux_path);
         std::string windows_path = linux_path;
         for (char &c : windows_path)
         {
@@ -277,11 +285,10 @@ namespace Atom::IO
         {
             windows_path[0] = toupper(windows_path[0]);
         }
-
         return windows_path;
     }
 
-    std::string get_absolute_directory()
+    std::string getAbsoluteDirectory()
     {
         fs::path program_path;
 #ifdef _WIN32
@@ -296,11 +303,10 @@ namespace Atom::IO
             program_path = std::string(buffer, length);
         }
 #endif
-
         return program_path.parent_path().string();
     }
 
-    std::string normalize_path(const std::string &path)
+    std::string normalizePath(const std::string &path)
     {
         std::string normalized_path = path;
         std::replace(normalized_path.begin(), normalized_path.end(), '/', PATH_SEPARATOR.front());
@@ -308,8 +314,10 @@ namespace Atom::IO
         return normalized_path;
     }
 
-    void traverse_directories(const fs::path &directory, std::vector<std::string> &folders)
+    void traverseDirectories(const fs::path &directory, std::vector<std::string> &folders)
     {
+        DLOG_SCOPE_FUNCTION(INFO);
+        DLOG_F(INFO, "Traversing directory: {}", directory.string());
         for (const auto &entry : fs::directory_iterator(directory))
         {
             if (entry.is_directory())
@@ -321,29 +329,38 @@ namespace Atom::IO
         }
     }
 
-    bool is_full_path(const std::string& path)
+    bool isFolderNameValid(const std::string &folderName)
     {
-        std::filesystem::path fsPath(path);
-        return fsPath.is_absolute();
-    }
-
-    bool isFolderNameValid(const std::string& folderName)
-    {
+        ATOM_IO_CHECK_ARGUMENT(folderName);
         return std::regex_match(folderName, folderNameRegex);
     }
 
-    bool isFileNameValid(const std::string& fileName)
+    bool isFileNameValid(const std::string &fileName)
     {
+        ATOM_IO_CHECK_ARGUMENT(fileName);
         return std::regex_match(fileName, fileNameRegex);
     }
 
-    bool isFolderExists(const std::string& folderName)
+    bool isFolderExists(const std::string &folderName)
     {
+        if (!isFolderNameValid(folderName))
+        {
+            return false;
+        }
         return fs::exists(folderName) && fs::is_directory(folderName);
     }
 
-    bool isFileExists(const std::string& fileName)
+    bool isFileExists(const std::string &fileName)
     {
+        if (!isFileNameValid(fileName))
+        {
+            return false;
+        }
         return fs::exists(fileName) && fs::is_regular_file(fileName);
+    }
+
+    bool isAbsolutePath(const std::string &path)
+    {
+        return std::filesystem::path(fsPath).is_absolute();
     }
 }

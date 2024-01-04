@@ -1,3 +1,28 @@
+/*
+ * component_manager.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+/*************************************************
+
+Date: 2024-1-4
+
+Description: Component Manager (the core of the plugin system)
+
+**************************************************/
+
 #pragma once
 
 #include "atom/components/component.hpp"
@@ -7,7 +32,18 @@
 
 #include "atom/type/args.hpp"
 
+// headers of the components that are provided by the plugin system
 #include "component_info.hpp"
+#include "component_finder.hpp"
+
+// headers about the package system and the project system
+// note: we will use the package system to manage the plugins
+#include "package_manager.hpp"
+#include "project_info.hpp"
+#include "project_manager.hpp"
+
+// headers about the sandbox system, specifically for the alone components
+#include "sandbox.hpp"
 
 namespace Lithium
 {
@@ -21,10 +57,39 @@ namespace Lithium
         // Common methods
         // -------------------------------------------------------------------
 
+        /**
+         * @brief Initializes the component manager
+         * @return true if the component manager was initialized successfully, false otherwise
+         * @note We will try to load all of the components in the components directory.
+         * @note And the directory structure should be like this:
+         *     - components / modules
+         *         - component1
+         *             - package.json
+         *             - component.dll
+         *         - component2
+         *             - package.json
+         *             - component.dll
+         *         -...
+         * @warning This method will not load the components in the debug mode.
+         */
         bool Initialize();
+
+        /**
+         * @brief Destroys the component manager
+         * @return true if the component manager was destroyed successfully, false otherwise
+         */
         bool Destroy();
 
+        /**
+         * @brief Creates a shared pointer to the component manager
+         * @return A shared pointer to the component manager
+         */
         std::shared_ptr<ComponentManager> createShared();
+
+        /**
+         * @brief Creates a unique pointer to the component manager
+         * @return A unique pointer to the component manager
+         */
         std::unique_ptr<ComponentManager> createUnique();
 
         // -------------------------------------------------------------------
@@ -138,6 +203,10 @@ namespace Lithium
 
     private:
         std::shared_ptr<Atom::Module::ModuleLoader> m_ModuleLoader;
+
+        std::shared_ptr<ComponentFinder> m_ComponentFinder;
+        std::shared_ptr<PackageManager> m_PackageManager;
+        std::shared_ptr<ProjectManager> m_ProjectManager;
 
         std::unordered_map<ComponentType, std::unordered_map<std::string, std::shared_ptr<ComponentInfo>>> m_ComponentInfos;
     };

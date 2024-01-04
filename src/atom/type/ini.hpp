@@ -1,7 +1,7 @@
 /*
  * ini.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-6-17
 
@@ -46,19 +40,23 @@ class INIFile
 {
 public:
     /**
-     * 加载INI文件
+     * @brief 加载INI文件
+     * @brief load INI file
      * @param filename 文件名
+     * @param filename the name of file
      */
     void load(const std::string &filename);
 
     /**
-     * 保存INI文件
+     * @brief 保存INI文件
+     * @brief save INI file
      * @param filename 文件名
+     * @param filename the name of file
      */
     void save(const std::string &filename);
 
     /**
-     * 设置INI文件中的值
+     * @brief 设置INI文件中的值
      * @tparam T 类型
      * @param section 部分名
      * @param key 键
@@ -68,7 +66,7 @@ public:
     void set(const std::string &section, const std::string &key, const T &value);
 
     /**
-     * 获取INI文件中的值
+     * @brief 获取INI文件中的值
      * @tparam T 类型
      * @param section 部分名
      * @param key 键
@@ -77,35 +75,59 @@ public:
     template <typename T>
     std::optional<T> get(const std::string &section, const std::string &key) const;
 
+    /**
+     * @brief 判断INI文件中是否存在指定键
+     * @param section 部分名
+     * @param key 键
+     * @return 存在返回true，否则返回false
+     */
     bool has(const std::string &section, const std::string &key) const;
 
+    /**
+     * 判断INI文件中是否存在指定部分
+     * @param section 部分名
+     * @return 存在返回true，否则返回false
+     */
     bool hasSection(const std::string &section) const;
 
+    /**
+     * @brief 获取INI文件中的部分
+     * @param section 部分名
+     * @return 部分内容
+     */
     std::unordered_map<std::string, std::any> operator[](const std::string &section)
     {
         return data[section];
     }
 
+    /**
+     * @brief 将INI文件中的数据转换为JSON字符串
+     * @return JSON字符串
+     */
     std::string toJson() const;
 
+    /**
+     * @brief 将INI文件中的数据转换为XML字符串
+     * @return XML字符串
+     */
     std::string toXml() const;
 
 private:
 #ifdef ENABlE_FASTHASH
-    emhash8::HashMap<std::string, emhash8::HashMap<std::string, std::any>> data;
+    emhash8::HashMap<std::string, emhash8::HashMap<std::string, std::any>> data; // 存储数据的映射表
 #else
     std::unordered_map<std::string, std::unordered_map<std::string, std::any>> data; // 存储数据的映射表
 #endif
 
     mutable std::shared_mutex m_sharedMutex; // 共享互斥锁，用于线程安全
     /**
-     * 解析INI文件的一行，并更新当前部分
+     * @brief 解析INI文件的一行，并更新当前部分
      * @param line 行内容
      * @param currentSection 当前部分
      */
     void parseLine(const std::string &line, std::string &currentSection);
     /**
-     * 剔除字符串前后的空格
+     * @brief 剔除字符串前后的空格
      * @param str 字符串
      * @return 剔除空格后的字符串
      */

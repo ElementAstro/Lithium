@@ -1,7 +1,7 @@
 /*
  * script_manager.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-7-13
 
 Description: Script Manager
@@ -37,12 +31,12 @@ Description: Script Manager
 #include "chaiscript/extras/string_methods.hpp"
 
 #include "server/message_bus.hpp"
-#include "device/device_manager.hpp"
+#include "components/device/device_manager.hpp"
 #include "system/process.hpp"
 
-#include "core/property/base64.hpp"
-#include "core/property/iproperty.hpp"
-#include "core/property/uuid.hpp"
+#include "atom/utils/base64.hpp"
+#include "atom/property/iproperty.hpp"
+#include "atom/property/uuid.hpp"
 
 #include "atom/system/system.hpp"
 
@@ -76,15 +70,15 @@ namespace Lithium
     void ScriptManager::Init()
     {
         // Add Base64 support
-        chai_->add(chaiscript::fun(&Base64::base64Decode), "base64_decode");
-        chai_->add(chaiscript::fun(&Base64::base64Encode), "base64_encode");
-        chai_->add(chaiscript::fun(&Base64::base64EncodeEnhance), "base64encode_e");
-        chai_->add(chaiscript::fun(&Base64::base64DecodeEnhance), "base64decode_e");
+        chai_->add(chaiscript::fun(&Atom::Utils::base64Decode), "base64_decode");
+        chai_->add(chaiscript::fun(&Atom::Utils::base64Encode), "base64_encode");
+        chai_->add(chaiscript::fun(&Atom::Utils::base64EncodeEnhance), "base64encode_e");
+        chai_->add(chaiscript::fun(&Atom::Utils::base64DecodeEnhance), "base64decode_e");
 
         // Add UUID support
-        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::seed), "seed");
-        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::generateUUID), "generate_uuid");
-        chai_->add(chaiscript::fun(&LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
+        chai_->add(chaiscript::fun(&Atom::Property::UUIDGenerator::seed), "seed");
+        chai_->add(chaiscript::fun(&Atom::Property::UUIDGenerator::generateUUID), "generate_uuid");
+        chai_->add(chaiscript::fun(&Atom::Property::UUIDGenerator::generateUUIDWithFormat), "generate_uuid_with_format");
         chai_->add(chaiscript::user_type<LITHIUM::UUID::UUIDGenerator>(), "UUIDGenerator");
 
         chai_->add(chaiscript::fun(&File::compress_file), "compress_file");

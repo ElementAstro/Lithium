@@ -1,7 +1,7 @@
 /*
  * device_manager.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-3-29
 
 Description: Device Manager
@@ -37,9 +31,9 @@ Description: Device Manager
 #include <thread>
 #include <functional>
 
-#include "core/device.hpp"
-#include "core/device_type.hpp"
-#include "atom/server/message.hpp"
+#include "atom/driver/device.hpp"
+#include "atom/driver/device_type.hpp"
+#include "atom/type/message.hpp"
 
 #include "error/error_code.hpp"
 

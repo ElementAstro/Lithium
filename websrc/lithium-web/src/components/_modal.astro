@@ -1,0 +1,175 @@
+<!-- Modal container -->
+<div class="container">
+  <!-- Central Modal Medium Danger -->
+  <div
+    class="modal fade"
+    id="centralModalDanger"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="myModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-notify modal-danger" role="document">
+      <!--Content-->
+      <div class="modal-content">
+        <!--Header-->
+        <div class="modal-header">
+          <p class="heading lead" id="errorModalTitle">错误信息</p>
+          <button
+            type="button"
+            class="close modal-voy-btn"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true" class="white-text">&times;</span>
+          </button>
+        </div>
+        <!--Body-->
+        <div class="modal-body">
+          <div class="text-center">
+            <i class="fas fa-exclamation-triangle fa-4x mb-3 animated bounceIn"
+            ></i>
+            <p id="errorMessage" class="note note-danger">未知错误</p>
+            <p id="contactMessage" class="text-muted">
+              <small>如果你有任何问题，请将详细细节告知开发者</small>
+            </p>
+          </div>
+        </div>
+        <!--Footer-->
+        <div class="modal-footer justify-content-center">
+          <a
+            class="btn btn-outline-danger modal-voy-btn"
+            href="mailto:astro_air@126.com,fran.dibiase@gmail.com"
+          >
+            <i class="fas fa-envelope mr-1"></i>联系我们</a
+          >
+          <button
+            type="button"
+            class="btn btn-danger waves-effect modal-voy-btn"
+            data-dismiss="modal"
+          >
+            Ok
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal container end -->
+
+<div class="container">
+  <!-- Central Modal Medium Warning -->
+  <div class="modal fade" id="modalDoubleWarning" aria-hidden="true">
+    <div
+      class="modal-dialog modal-notify modal-warning modal-lg"
+      role="document"
+    >
+      <!--Content-->
+      <div class="modal-content">
+        <!--Header-->
+        <div class="modal-header">
+          <p class="heading lead" id="modalWarnTit">确认操作?</p>
+          <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true" class="white-text">&times;</span>
+          </button>
+        </div>
+        <!--Body-->
+        <div class="modal-body">
+          <div class="text-center">
+            <i class="fas fa-question fa-4x mb-3 animated rotateIn text-danger"
+            ></i>
+            <p id="contWarnModal" class="text-warning"></p>
+            <p>你确定要执行这步操作吗?</p>
+          </div>
+        </div>
+        <!--Footer-->
+        <div class="modal-footer justify-content-center">
+          <div class="row">
+            <div class="col-sm-6">
+              <a
+                type="button"
+                id="confirmDoubleWarn"
+                class="btn btn-sm btn-warning btn-block"
+              >
+                确认
+                <i class="fas fa-check"></i>
+              </a>
+            </div>
+            <div class="col-sm-6">
+              <a
+                type="button"
+                class="btn btn-sm btn-outline-warning waves-effect btn-block"
+                data-dismiss="modal"
+              >
+                Nope
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Central Modal Medium Warning-->
+</div>
+
+<!-- Container Modal -->
+<div class="container">
+  <!-- Central Modal Medium Generic info -->
+  <div
+    class="modal fade"
+    id="infoModalGeneric"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="myModalLabel2"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-notify modal-info" role="document">
+      <!--Content-->
+      <div class="modal-content">
+        <!--Header-->
+        <div class="modal-header">
+          <p class="heading lead">信息</p>
+          <button
+            type="button"
+            id="closeModalInfo"
+            class="close modal-voy-btn"
+            data-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true" class="white-text">&times;</span>
+          </button>
+        </div>
+
+        <!--Body-->
+        <div class="modal-body">
+          <div class="text-center">
+            <div class="spinner-border text-primary m-5" role="status">
+              <span class="sr-only">常规信息</span>
+            </div>
+            <p id="infoModalMessage" class="note note-info">常规消息...</p>
+            <p id="genericMessageinfo" class="text-muted">
+              <small></small>
+            </p>
+          </div>
+        </div>
+        <!--Footer-->
+        <div class="modal-footer justify-content-center">
+          <button
+            type="button"
+            class="btn btn-primary modal-voy-btn"
+            data-dismiss="modal"
+          >
+            Ok
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Central Modal Medium Danger-->
+</div>
+<!-- Container Modal end -->

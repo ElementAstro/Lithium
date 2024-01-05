@@ -1,7 +1,7 @@
 /*
  * message.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-12-18
 
 Description: A message class, which can be used to store different types of messages
@@ -34,7 +28,7 @@ Description: A message class, which can be used to store different types of mess
 #include "atom/utils/time.hpp"
 #include "atom/type/iparams.hpp"
 
-#include "core/property/uuid.hpp"
+#include "atom/property/uuid.hpp"
 
 using namespace std;
 
@@ -42,8 +36,29 @@ using namespace std;
 Message::Message(Type t, const string &name, const string &target, const string &origin)
     : type_(t), name_(name), target_(target), origin_(origin)
 {
-    timestamp_ = GetChinaTimestampString();
-    uuid_ = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
+    timestamp_ = Atom::Utils::GetChinaTimestampString();
+    uuid_ = Atom::Property::UUIDGenerator::generateUUIDWithFormat();
+}
+
+Message::Type Message::fromInt(const int &t)
+{
+    switch (t)
+    {
+    case 0:
+        return Type::kVoid;
+    case 1:
+        return Type::kText;
+    case 2:
+        return Type::kNumber;
+    case 3:
+        return Type::kBoolean;
+    case 4:
+        return Type::kAny;
+    case 5:
+        return Type::kParams;
+    default:
+        return Type::kMaxType;
+    }
 }
 
 Message::Type Message::type() const
@@ -134,25 +149,19 @@ string AnyMessage::type() const
 }
 
 // ParamsMessage
-ParamsMessage::ParamsMessage(const string &name, shared_ptr<IParams> params, const string &target, const string &origin)
+ParamsMessage::ParamsMessage(const string &name,const Args &params, const string &target, const string &origin)
     : Message(Type::kParams, name, target, origin), params_(params)
 {
 }
 
-shared_ptr<IParams> ParamsMessage::value() const
+Args ParamsMessage::value() const
 {
     return params_;
 }
 
-// JsonMessage
-JsonMessage::JsonMessage(const string &name, const json &json, const string &target, const string &origin)
-    : Message(Type::kJson, name, target, origin), value_(json)
+shared_ptr<VoidMessage> MessageHelper::MakeVoidMessage(const string &name, const string &target, const string &origin)
 {
-}
-
-json JsonMessage::value() const
-{
-    return value_;
+    return make_shared<VoidMessage>(name, target, origin);
 }
 
 // MessageHelper
@@ -171,17 +180,12 @@ shared_ptr<BooleanMessage> MessageHelper::MakeBooleanMessage(const string &name,
     return make_shared<BooleanMessage>(name, value, target, origin);
 }
 
-shared_ptr<AnyMessage> MessageHelper::MakeAnyMessage(const string &name, const any &data, const string &target, const string &origin)
+shared_ptr<AnyMessage> MessageHelper::MakeAnyMessage(const string &name, const any &value, const string &target, const string &origin)
 {
-    return make_shared<AnyMessage>(name, data, target, origin);
+    return make_shared<AnyMessage>(name, value, target, origin);
 }
 
-shared_ptr<ParamsMessage> MessageHelper::MakeParamsMessage(const string &name, shared_ptr<IParams> params, const string &target, const string &origin)
+shared_ptr<ParamsMessage> MessageHelper::MakeParamsMessage(const string &name,const Args &params, const string &target, const string &origin)
 {
     return make_shared<ParamsMessage>(name, params, target, origin);
-}
-
-shared_ptr<JsonMessage> MessageHelper::MakeJsonMessage(const string &name, const json &json, const string &target, const string &origin)
-{
-    return make_shared<JsonMessage>(name, json, target, origin);
 }

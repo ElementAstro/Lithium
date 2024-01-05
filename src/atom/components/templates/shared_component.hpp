@@ -3,9 +3,8 @@
 #include "atom/components/component.hpp"
 #include "atom/type/message.hpp"
 #include "atom/utils/switch.hpp"
-
-class Atom::Server::MessageBus;
-class Atom::Async::ThreadManager;
+#include "atom/server/message_bus.hpp"
+#include "atom/async/thread.hpp"
 
 class SharedComponent : public Component
 {
@@ -31,7 +30,7 @@ public:
     bool SendTextMessage(const std::string &message, const std::string &text);
     bool SendNumberMessage(const std::string &message, const double &number);
     bool SendBooleanMessage(const std::string &message, const bool &boolean);
-    bool SendParamsMessage(const std::string &message, const json &params);
+    bool SendParamsMessage(const std::string &message, const Args &params);
 
     // -------------------------------------------------------------------
     // Handbler methods
@@ -41,8 +40,6 @@ public:
     {
         m_handleFunction = handleFunction;
     }
-
-    void RegisterFunc
 
     // -------------------------------------------------------------------
     // Thread methods

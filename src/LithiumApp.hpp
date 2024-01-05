@@ -1,7 +1,7 @@
 /*
  * LithiumApp.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-7-13
 
 Description: Lithium App Enter
@@ -36,7 +30,7 @@ Description: Lithium App Enter
 #include <memory>
 
 #include "atom/server/message_bus.hpp"
-#include "device/device_manager.hpp"
+#include "components/device/device_manager.hpp"
 #include "atom/system/process.hpp"
 #include "atom/server/commander.hpp"
 #include "atom/type/iparams.hpp"

@@ -1,7 +1,7 @@
 /*
  * device_utils.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-3-29
 
 Description: Device Utilities
@@ -36,6 +30,7 @@ Description: Device Utilities
 #include <string>
 #include <stdexcept>
 #include <sstream>
+#include <regex>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -44,16 +39,11 @@ Description: Device Utilities
 #include <sys/types.h>
 #include <sys/wait.h>
 #endif
-#include <regex>
-#include <iostream>
-#include <array>
-#include <memory>
-#include <stdexcept>
-#include <iomanip>
-#include <sstream>
+
+#include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
-std::string execute_command(const std::string &cmd)
+std::string executeCommand(const std::string &cmd)
 {
     std::array<char, 128> buffer;
     std::string result = "";
@@ -64,10 +54,12 @@ std::string execute_command(const std::string &cmd)
     saAttr.lpSecurityDescriptor = nullptr;
     if (!CreatePipe(&pipeOutRead, &pipeOutWrite, &saAttr, 0))
     {
+        LOG_F(ERROR, "Failed to create pipe!");
         throw std::runtime_error("Failed to create pipe!");
     }
     if (!SetHandleInformation(pipeOutRead, HANDLE_FLAG_INHERIT, 0))
     {
+        LOG_F(ERROR, "Failed to set pipe handle information!");
         throw std::runtime_error("Failed to set pipe handle information!");
     }
     STARTUPINFO si;
@@ -79,6 +71,7 @@ std::string execute_command(const std::string &cmd)
     si.dwFlags |= STARTF_USESTDHANDLES;
     if (!CreateProcess(NULL, const_cast<char *>(cmd.c_str()), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
     {
+        LOG_F(ERROR, "Failed to execute command!");
         throw std::runtime_error("Failed to execute command!");
     }
     CloseHandle(pipeOutWrite);
@@ -106,12 +99,14 @@ std::string execute_command(const std::string &cmd)
     int pipeOut[2];
     if (pipe(pipeOut) == -1)
     {
+        LOG_F(ERROR, "Failed to create pipe!");
         throw std::runtime_error("Failed to create pipe!");
     }
 
     pid_t childPid = fork();
     if (childPid == -1)
     {
+        LOG_F(ERROR, "Failed to fork process!");
         throw std::runtime_error("Failed to fork process!");
     }
     else if (childPid == 0)
@@ -122,6 +117,7 @@ std::string execute_command(const std::string &cmd)
         // Redirect stdout and stderr to the write end of the pipe
         if (dup2(pipeOut[1], STDOUT_FILENO) == -1 || dup2(pipeOut[1], STDERR_FILENO) == -1)
         {
+            LOG_F(ERROR, "Failed to redirect output!");
             throw std::runtime_error("Failed to redirect output!");
         }
         close(pipeOut[1]); // Close the write end of the pipe
@@ -130,6 +126,7 @@ std::string execute_command(const std::string &cmd)
         execl("/bin/sh", "sh", "-c", cmd.c_str(), NULL);
 
         // This point is reached only if execl fails
+        LOG_F(ERROR, "Failed to execute command!");
         throw std::runtime_error("Failed to execute command!");
     }
     else
@@ -150,6 +147,7 @@ std::string execute_command(const std::string &cmd)
         // Handle any error status
         if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
         {
+            LOG_F(ERROR, "Command execution failed with non-zero exit status!");
             throw std::runtime_error("Command execution failed with non-zero exit status!");
         }
     }

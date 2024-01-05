@@ -1,7 +1,7 @@
 /*
  * exe_plugin.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-7-13
 
 Description: Executable Plugin
@@ -35,18 +29,18 @@ Description: Executable Plugin
 
 #include "atom/system/process.hpp"
 
-class ExecutablePlugin : public C
+class ExecutablePlugin : public Component
 {
 public:
-    ExecutablePlugin(const std::string &path, const std::string &version, const std::string &author, const std::string &description, std::shared_ptr<Lithium::Process::ProcessManager> processManager);
+    ExecutablePlugin();
 
-    void RunSystemCommand(const json &m_parmas);
+    void RunSystemCommand(const Args &m_parmas);
 
-    void RunSystemCommandOutput(const json &m_parmas);
+    void RunSystemCommandOutput(const Args &m_parmas);
 
-    void RunScript(const json &m_parmas);
+    void RunScript(const Args &m_parmas);
 
-    void RunScriptOutput(const json &m_parmas);
+    void RunScriptOutput(const Args &m_parmas);
 private:
-    std::shared_ptr<Lithium::Process::ProcessManager> m_ProcessManager;
+    std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
 };

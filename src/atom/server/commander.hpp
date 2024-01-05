@@ -1,7 +1,7 @@
 /*
  * commander.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-6-17
 
 Description: Commander
@@ -34,14 +28,14 @@ Description: Commander
 #include <string>
 #include <functional>
 #include <stack>
+#include <shared_mutex>
+#include <mutex>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
 
 template <typename Result, typename Argument>
 class CommandDispatcher
@@ -130,29 +124,36 @@ public:
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::size_t, HandlerFunc> handlers_;
-    emhash8::HashMap<std::size_t, HandlerFunc> undoHandlers_;
+    emhash8::HashMap<std::string, HandlerFunc> handlers_;
+    emhash8::HashMap<std::string, HandlerFunc> undoHandlers_;
     emhash8::HashMap<std::string, std::string> descriptions_;
 #else
-    std::unordered_map<std::size_t, HandlerFunc> handlers_;
-    std::unordered_map<std::size_t, HandlerFunc> undoHandlers_;
+    std::unordered_map<std::string, HandlerFunc> handlers_;
+    std::unordered_map<std::string, HandlerFunc> undoHandlers_;
     std::unordered_map<std::string, std::string> descriptions_;
 #endif
 
     std::stack<std::pair<std::string, Argument>> commandHistory_;
     std::stack<std::pair<std::string, Argument>> undoneCommands_;
+
+    mutable std::shared_mutex m_sharedMutex;
 };
 
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler)
 {
+    if (name.empty())
+    {
+        return;
+    }
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     if (handler)
     {
-        handlers_[hash_value] = handler;
+        handlers_[name] = handler;
     }
     if (undoHandler)
     {
-        undoHandlers_[hash_value] = undoHandler;
+        undoHandlers_[name] = undoHandler;
     }
 }
 
@@ -167,12 +168,14 @@ void CommandDispatcher<Result, Argument>::RegisterMemberHandler(const std::strin
 template <typename Result, typename Argument>
 bool CommandDispatcher<Result, Argument>::HasHandler(const std::string &name)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     return handlers_.find(name) != handlers_.end();
 }
 
 template <typename Result, typename Argument>
 std::function<Result(const Argument &)> CommandDispatcher<Result, Argument>::GetHandler(const std::string &name)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = handlers_.find(name);
     if (it != handlers_.end())
     {
@@ -183,6 +186,7 @@ std::function<Result(const Argument &)> CommandDispatcher<Result, Argument>::Get
 template <typename Result, typename Argument>
 Result CommandDispatcher<Result, Argument>::Dispatch(const std::string &name, const Argument &data)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = handlers_.find(name);
     if (it != handlers_.end())
     {
@@ -233,19 +237,32 @@ bool CommandDispatcher<Result, Argument>::Redo()
 template <typename Result, typename Argument>
 bool CommandDispatcher<Result, Argument>::RemoveAll()
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     handlers_.clear();
+    undoHandlers_.clear();
+    descriptions_.clear();
+    while (!commandHistory_.empty())
+    {
+        commandHistory_.pop();
+    }
     return true;
 }
 
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RegisterFunctionDescription(const std::string &name, const std::string &description)
 {
+    if (name.empty() || description.empty())
+    {
+        return;
+    }
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     descriptions_[name] = description;
 }
 
 template <typename Result, typename Argument>
 std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const std::string &name)
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = descriptions_.find(name);
     if (it != descriptions_.end())
     {
@@ -257,11 +274,17 @@ std::string CommandDispatcher<Result, Argument>::GetFunctionDescription(const st
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::RemoveFunctionDescription(const std::string &name)
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (name.empty())
+    {
+        return;
+    }
     descriptions_.erase(name);
 }
 
 template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::ClearFunctionDescriptions()
 {
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     descriptions_.clear();
 }

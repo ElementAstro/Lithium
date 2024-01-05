@@ -1,7 +1,7 @@
 /*
  * variables.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-12-14
 
 Description: Variable Registry 类，用于注册、获取和观察变量值。
@@ -31,7 +25,6 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 
 #pragma once
 
-#include <iostream>
 #include <string>
 #include <vector>
 #include <any>
@@ -39,16 +32,13 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 #include <sstream>
 #include <mutex>
 #include <shared_mutex>
+#include <optional>
 
 #ifdef ENALE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
-
-#include "atom/type/json.hpp"
-
-using json = nlohmann::json;
 
 /**
  * @brief 变量注册器类，用于注册、获取和观察变量值。
@@ -93,6 +83,13 @@ public:
      */
     template <typename T>
     std::optional<T> GetVariable(const std::string &name) const;
+
+    /**
+     * @brief 判断指定名称的变量是否存在。
+     * @param name 变量名称。
+     * @return 指定名称的变量是否存在。
+     */
+    bool HasVariable(const std::string &name) const;
 
     /**
      * @brief 获取指定名称的变量描述。
@@ -191,18 +188,17 @@ private:
      */
     std::unordered_map<std::string, std::function<void(const std::any &)>> m_setters;
 #endif
-    /**
-     * @brief 互斥锁，用于保证多线程安全。
-     */
-    mutable std::mutex m_mutex;
 
+    /**
+     * @brief 共享互斥锁，用于保证多线程安全。
+     */
     mutable std::shared_mutex m_sharedMutex;
 };
 
 template <typename T>
-bool VariableRegistry::RegisterVariable(const std::string &name, const std::string descirption = "")
+bool VariableRegistry::RegisterVariable(const std::string &name, const std::string descirption)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
 
     if (m_variables.find(name) != m_variables.end())
     {
@@ -217,7 +213,7 @@ bool VariableRegistry::RegisterVariable(const std::string &name, const std::stri
 template <typename T>
 bool VariableRegistry::SetVariable(const std::string &name, T &&value)
 {
-    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     if (auto it = m_variables.find(name); it != m_variables.end())
     {
         if (auto setter = m_setters.find(name); setter != m_setters.end())
@@ -234,8 +230,7 @@ bool VariableRegistry::SetVariable(const std::string &name, T &&value)
 template <typename T>
 std::optional<T> VariableRegistry::GetVariable(const std::string &name) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     if (auto it = m_variables.find(name); it != m_variables.end())
     {
         try
@@ -250,9 +245,15 @@ std::optional<T> VariableRegistry::GetVariable(const std::string &name) const
     return std::nullopt;
 }
 
+bool VariableRegistry::HasVariable(const std::string &name) const
+{
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    return m_variables.find(name) != m_variables.end();
+}
+
 std::string VariableRegistry::GetDescription(const std::string &name) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
 
     if (auto it = m_descriptions.find(name); it != m_descriptions.end())
     {
@@ -263,22 +264,26 @@ std::string VariableRegistry::GetDescription(const std::string &name) const
 
 void VariableRegistry::AddObserver(const std::string &name, const Observer &observer)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    m_observers[name].push_back(observer);
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (m_observers.find(name) == m_observers.end())
+    {
+        m_observers[name].push_back(observer);
+    }
 }
 
 template <typename T>
 void VariableRegistry::NotifyObservers(const std::string &name, const T &value) const
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (!HasVariable(name))
+    {
+        return;
+    }
     if (auto it = m_observers.find(name); it != m_observers.end())
     {
         std::stringstream ss;
         ss << value;
         std::string valueString = ss.str();
-
         for (const auto &observer : it->second)
         {
             observer.callback(valueString);
@@ -288,8 +293,7 @@ void VariableRegistry::NotifyObservers(const std::string &name, const T &value) 
 
 bool VariableRegistry::RemoveObserver(const std::string &name, const std::string &observerName)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     if (auto it = m_observers.find(name); it != m_observers.end())
     {
         for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2)
@@ -306,13 +310,13 @@ bool VariableRegistry::RemoveObserver(const std::string &name, const std::string
 
 std::unordered_map<std::string, std::any> VariableRegistry::GetAll() const
 {
+    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     return m_variables;
 }
 
 bool VariableRegistry::RemoveAll()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     m_variables.clear();
     m_observers.clear();
     return true;
@@ -321,16 +325,22 @@ bool VariableRegistry::RemoveAll()
 template <typename T>
 void VariableRegistry::AddGetter(const std::string &name, const std::function<T()> &getter)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (m_getters.find(name) != m_getters.end())
+    {
+        return;
+    }
     m_getters[name] = getter;
 }
 
 template <typename T>
 void VariableRegistry::AddSetter(const std::string &name, const std::function<void(const std::any &)> &setter)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (m_setters.find(name) != m_setters.end())
+    {
+        return;
+    }
     m_setters[name] = setter;
 }
 

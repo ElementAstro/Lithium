@@ -1,7 +1,7 @@
 /*
  * task_manager.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-7-21
 
@@ -42,7 +36,7 @@ Description: Task Manager
 #include <stdexcept>
 #include <fstream>
 
-#include "core/property/task/task.hpp"
+#include "atom/property/task/task.hpp"
 #include "atom/type/json.hpp"
 
 namespace Lithium::Task
@@ -64,7 +58,7 @@ namespace Lithium::Task
          * @param task 要添加的任务指针。
          * @return 添加成功返回 true，否则返回 false。
          */
-        bool addTask(const std::shared_ptr<BasicTask> &task);
+        bool addTask(const std::shared_ptr<Atom::Task::SimpleTask> &task);
 
         /**
          * @brief 在指定位置插入任务到任务列表。
@@ -72,7 +66,7 @@ namespace Lithium::Task
          * @param position 要插入的位置索引。
          * @return 插入成功返回 true，否则返回 false。
          */
-        bool insertTask(const std::shared_ptr<BasicTask> &task, int position);
+        bool insertTask(const std::shared_ptr<Atom::Task::SimpleTask> &task, int position);
 
         /**
          * @brief 执行所有任务。
@@ -98,7 +92,7 @@ namespace Lithium::Task
          * @param task 新的任务指针。
          * @return 修改成功返回 true，否则返回 false。
          */
-        bool modifyTask(int index, const std::shared_ptr<BasicTask> &task);
+        bool modifyTask(int index, const std::shared_ptr<Atom::Task::SimpleTask> &task);
 
         /**
          * @brief 根据任务名称修改任务。
@@ -106,7 +100,7 @@ namespace Lithium::Task
          * @param task 新的任务指针。
          * @return 修改成功返回 true，否则返回 false。
          */
-        bool modifyTaskByName(const std::string &name, const std::shared_ptr<BasicTask> &task);
+        bool modifyTaskByName(const std::string &name, const std::shared_ptr<Atom::Task::SimpleTask> &task);
 
         /**
          * @brief 删除指定位置的任务。
@@ -133,7 +127,7 @@ namespace Lithium::Task
          * @brief 获取任务列表。
          * @return 任务列表的常量引用。
          */
-        const std::vector<std::shared_ptr<BasicTask>> &getTaskList() const;
+        const std::vector<std::shared_ptr<Atom::Task::SimpleTask>> &getTaskList() const;
 
         /**
          * @brief 将任务列表保存为 JSON 文件。
@@ -142,8 +136,8 @@ namespace Lithium::Task
         bool saveTasksToJson() const;
 
     private:
-        std::vector<std::shared_ptr<BasicTask>> m_TaskList;                    /**< 任务列表 */
-        std::unordered_map<std::string, std::shared_ptr<BasicTask>> m_TaskMap; /**< 任务名称到任务指针的映射表 */
+        std::vector<std::shared_ptr<Atom::Task::SimpleTask>> m_TaskList;                    /**< 任务列表 */
+        std::unordered_map<std::string, std::shared_ptr<Atom::Task::SimpleTask>> m_TaskMap; /**< 任务名称到任务指针的映射表 */
         std::string m_FileName;                                                /**< 任务列表的文件名 */
         bool m_StopFlag;                                                       /**< 停止标志，用于中止当前正在执行的任务 */
 
@@ -152,7 +146,7 @@ namespace Lithium::Task
          * @param name 任务名称。
          * @return 找到的任务指针的迭代器，如果未找到则返回 m_TaskMap.end()。
          */
-        std::unordered_map<std::string, std::shared_ptr<BasicTask>>::iterator findTaskByName(const std::string &name);
+        std::unordered_map<std::string, std::shared_ptr<Atom::Task::SimpleTask>>::iterator findTaskByName(const std::string &name);
     };
 
 } // namespace Lithium

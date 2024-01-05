@@ -1,7 +1,7 @@
 /*
  * random.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-12-25
 
 Description: Simple random number generator
@@ -32,6 +26,7 @@ Description: Simple random number generator
 #pragma once
 
 #include <random>
+#include <string>
 
 namespace Atom::Utils
 {
@@ -68,6 +63,24 @@ namespace Atom::Utils
             return static_cast<base_t &>(*this)(engine_, parm);
         }
     };
+
+    [[nodiscard]] std::string generateRandomString(int length)
+    {
+        const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        std::random_device rd;
+        std::mt19937 generator(rd());
+        std::uniform_int_distribution<int> distribution(0, characters.size() - 1);
+
+        std::string randomString;
+        randomString.reserve(length);
+
+        for (int i = 0; i < length; ++i)
+        {
+            randomString.push_back(characters[distribution(generator)]);
+        }
+
+        return randomString;
+    }
 }
 
 /*

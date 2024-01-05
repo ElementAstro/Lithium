@@ -1,0 +1,57 @@
+<script>
+  const creditsDiv = document.getElementById("credits");
+
+  const creditsData = [
+    {
+      href: "https://www.raspberrypi.org/",
+      imgSrc: "/textures/icons/raspberry-pi.png",
+      imgAlt: "Raspberry Pi",
+      imgTitle: "Raspberry Pi",
+    },
+    {
+      href: "http://indilib.org/",
+      imgSrc: "/textures/icons/indilib.png",
+      imgAlt: "INDI",
+      imgTitle: "INDI",
+    },
+    {
+      href: "https://www.ascom-standards.org/",
+      imgSrc: "/textures/icons/ascom.ico",
+      imgAlt: "ASCOM",
+      imgTitle: "ASCOM",
+    },
+    {
+      href: "https://edu.kde.org/kstars/",
+      imgSrc: "/textures/icons/kstars.png",
+      imgAlt: "KStars",
+      imgTitle: "KStars",
+    },
+    {
+      href: "https://kanaka.github.io/noVNC/",
+      imgSrc: "/textures/icons/novnc.png",
+      imgAlt: "noVNC",
+      imgTitle: "noVNC",
+    },
+    {
+      href: "https://github.com/ElementAstro/Lithium",
+      imgSrc: "/textures/icons/atom.png",
+      imgAlt: "Lithium",
+      imgTitle: "Lithium",
+    },
+  ];
+
+  for (const credit of creditsData) {
+    const link = document.createElement("a");
+    link.href = credit.href;
+    link.target = "_blank";
+    link.rel = "noopener";
+
+    const image = document.createElement("img");
+    image.src = credit.imgSrc;
+    image.alt = credit.imgAlt;
+    image.title = credit.imgTitle;
+
+    link.appendChild(image);
+    creditsDiv.appendChild(link);
+  }
+</script>

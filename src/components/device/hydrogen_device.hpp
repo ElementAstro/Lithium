@@ -1,7 +1,7 @@
 /*
  * hydrogen_driver.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-3-29
 
 Description: Hydrogen Web Driver
@@ -32,12 +26,15 @@ Description: Hydrogen Web Driver
 #pragma once
 
 #include <string>
-#include <map>
 #include <vector>
 #include <memory>
+#ifdef ENABLE_FASTHASH
+#include "emhash/hash_table8.h"
+#else
+#include <unordered_map>
+#endif
 
 #include "atom/type/json.hpp"
-
 using json = nlohmann::json;
 
 class HydrogenDeviceContainer
@@ -61,9 +58,9 @@ class HydrogenDriverCollection
 public:
     /**
      * @brief 构造函数
-     * @param path Hydrogen驱动程序的路径，默认为"/usr/share/Hydrogen"
+     * @param path Hydrogen驱动程序的路径，默认为"/usr/share/hydrogen"
      */
-    HydrogenDriverCollection(const std::string &path = "/usr/share/Hydrogen");
+    HydrogenDriverCollection(const std::string &path = "/usr/share/hydrogen");
 
     /**
      * @brief 解析所有Hydrogen驱动程序
@@ -106,7 +103,7 @@ public:
      * @brief 获取所有Hydrogen设备的家族关系
      * @return 包含家族关系的映射表，键为家族名称，值为设备名称的向量
      */
-    std::map<std::string, std::vector<std::string>> getFamilies();
+    std::unordered_map<std::string, std::vector<std::string>> getFamilies();
 
 private:
     std::string path;                                          ///< Hydrogen驱动程序的路径

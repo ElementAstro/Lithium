@@ -1,7 +1,7 @@
 /*
  * component.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-8-6
 
 Description: Basic Component Definition
@@ -31,45 +25,33 @@ Description: Basic Component Definition
 
 #include "component.hpp"
 
-#include "component_info.hpp"
 #include "atom/utils/exception.hpp"
 
 Component::Component()
 {
     // Just for safety, initialize the members
-    m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
+    m_CommandDispatcher = std::make_unique<CommandDispatcher<void, Args>>();
     m_VariableRegistry = std::make_unique<VariableRegistry>();
 
-    // Load the package info from package.json
-    // Other name is also supported but not recommended
-
-    m_PackageInfo = std::make_shared<PackageInfo>("package.json");
-
-    // Should we catch the exception here?
-    // The package info should be loaded successfully, so it should not be empty
-    m_PackageInfo->loadPackageJson();
-
-    // This is a little bit hacky, but it works
-    m_VariableRegistry->RegisterVariable<std::string>("version", "the version of the component");
-    m_VariableRegistry->SetVariable("version", m_PackageInfo->getVersion());
-    m_VariableRegistry->RegisterVariable<std::string>("author", "the author of the component");
-    m_VariableRegistry->SetVariable("author", m_PackageInfo->getPackageJson().at("author").get<std::string>());
-    m_VariableRegistry->RegisterVariable<std::string>("description", "the description of the component");
-    m_VariableRegistry->SetVariable("description", m_PackageInfo->getPackageJson().at("description").get<std::string>());
-    m_VariableRegistry->RegisterVariable<std::string>("repository", "the repository of the component");
-    m_VariableRegistry->SetVariable("repository", m_PackageInfo->getPackageJson().at("repository").value("url", ""));
-    m_VariableRegistry->RegisterVariable<std::string>("homepage", "the homepage of the component");
-    m_VariableRegistry->SetVariable("homepage", m_PackageInfo->getPackageJson().at("homepage").value("url", ""));
-    
+    m_ComponentInfo = std::make_shared<INIFile>();
+    m_ComponentConfig = std::make_shared<INIFile>();
 }
 
 Component::~Component()
 {
+    // Save the config file
+    if (!m_ConfigPath.empty())
+        m_ComponentConfig->save(m_ConfigPath);
+    // Save the info file
+    if (!m_InfoPath.empty())
+        m_ComponentInfo->save(m_InfoPath);
     // Just for safety
     m_CommandDispatcher->RemoveAll();
     m_VariableRegistry->RemoveAll();
     m_CommandDispatcher.reset();
     m_VariableRegistry.reset();
+    m_ComponentInfo.reset();
+    m_ComponentConfig.reset();
 }
 
 bool Component::Initialize()
@@ -82,7 +64,69 @@ bool Component::Destroy()
     return true;
 }
 
-bool Component::RunFunc(const std::string &name, const json &params)
+std::string Component::GetName() const
+{
+    return m_name;
+}
+
+bool Component::LoadComponentInfo(const std::string &path)
+{
+    try
+    {
+        m_ComponentInfo->load(path);
+    }
+    catch(const Atom::Utils::Exception::FileNotReadable_Error& e)
+    {
+        return false;
+    }
+    m_InfoPath = path;
+    return true;
+}
+
+std::string Component::getJsonInfo() const
+{
+    return m_ComponentInfo->toJson();
+}
+
+std::string Component::getXmlInfo() const
+{
+    return m_ComponentInfo->toXml();
+}
+
+bool Component::LoadComponentConfig(const std::string &path)
+{
+    try
+    {
+        m_ComponentConfig->load(path);
+    }
+    catch(const Atom::Utils::Exception::FileNotReadable_Error& e)
+    {
+        return false;
+    }
+    m_ConfigPath = path;
+    return true;
+}
+
+std::string Component::getJsonConfig() const
+{
+    return m_ComponentConfig->toJson();
+}
+
+std::string Component::getXmlConfig() const
+{
+    return m_ComponentConfig->toXml();
+}
+
+std::string Component::GetVariableInfo(const std::string &name) const
+{
+    if (!m_VariableRegistry->HasVariable(name))
+    {
+        return "";
+    }
+    return m_VariableRegistry->GetDescription(name);
+}
+
+bool Component::RunFunc(const std::string &name, const Args &params)
 {
     if (!m_CommandDispatcher->HasHandler(name))
     {
@@ -92,33 +136,24 @@ bool Component::RunFunc(const std::string &name, const json &params)
     return true;
 }
 
-json Component::GetFuncInfo(const std::string &name)
+Args Component::GetFuncInfo(const std::string &name)
 {
     if (m_CommandDispatcher->HasHandler(name))
     {
-        return {
-            {"name", name}, {"description", m_CommandDispatcher->GetFunctionDescription(name)}};
-    }
-    else
-    {
-        return json();
-    }
-}
-json Component::GetComponentInfo() const
-{
-    if (m_PackageInfo->isLoaded())
-    {
-        return m_PackageInfo->getPackageJson();
+        Args args;
+        args = {
+            {"name", name},
+            {"description", m_CommandDispatcher->GetFunctionDescription(name)}};
+        return args;
     }
     return {};
 }
 
-std::string Component::GetName() const
+std::function<void(const Args &)> Component::GetFunc(const std::string &name)
 {
-    return m_PackageInfo->getName();
-}
-
-std::string Component::GetVersion() const
-{
-    return m_PackageInfo->getVersion();
+    if (!m_CommandDispatcher->HasHandler(name))
+    {
+        throw Atom::Utils::Exception::InvalidArgument_Error("Function not found");
+    }
+    return m_CommandDispatcher->GetHandler(name);
 }

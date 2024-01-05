@@ -1,8 +1,6 @@
 
 #include "WsHub.hpp"
 
-#include "atom/"
-
 WsHub::WsHub(const oatpp::String &name)
 		: m_name(name)
 	{

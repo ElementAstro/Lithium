@@ -1,7 +1,7 @@
 /*
  * system.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-6-17
 
@@ -114,4 +108,16 @@ namespace Atom::System
      * @param program_name The name of the program to check for duplicates. 要检查重复项的程序名称。
      */
     void CheckDuplicateProcess(const std::string &program_name);
+
+    /**
+     * @brief Check if the specified process is running.
+     * 检查指定的进程是否正在运行
+     *
+     * @param processName The name of the process to check. 要检查的进程名称。
+     * @return true if the process is running.
+     *         如果进程正在运行，则返回 true
+     * @return false if the process is not running.
+     *         如果进程没有运行，则返回 false
+     */
+    bool isProcessRunning(const std::string &processName);
 }

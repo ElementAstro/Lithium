@@ -1,7 +1,7 @@
 /*
  * hydrogen_driver.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-3-29
 
@@ -157,9 +151,9 @@ std::shared_ptr<HydrogenDeviceContainer> HydrogenDriverCollection::getByBinary(c
     return nullptr;
 }
 
-std::map<std::string, std::vector<std::string>> HydrogenDriverCollection::getFamilies()
+std::unordered_map<std::string, std::vector<std::string>> HydrogenDriverCollection::getFamilies()
 {
-    std::map<std::string, std::vector<std::string>> families;
+    std::unordered_map<std::string, std::vector<std::string>> families;
     for (const auto driver : drivers)
     {
         families[driver->family].push_back(driver->label);

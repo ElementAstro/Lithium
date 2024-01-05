@@ -1,7 +1,7 @@
 /*
  * serialize.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-11-3
 
@@ -171,7 +165,7 @@ namespace Atom::Server
     };
 
     template <typename T>
-    std::optional<std::string> SerializationEngine::serialize(const T &data, bool format = false) const
+    std::optional<std::string> SerializationEngine::serialize(const T &data, bool format) const
     {
         std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_mutex));
 

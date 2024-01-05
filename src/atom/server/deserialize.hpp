@@ -1,7 +1,7 @@
 /*
  * deserialize.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-11-11
 
@@ -47,6 +41,18 @@ class DeserializeEngine
 public:
     virtual ~DeserializeEngine() = default;
     virtual std::optional<std::any> deserialize(const std::string &data) const = 0;
+};
+
+class JsonDeserializer : public DeserializeEngine
+{
+public:
+    std::optional<std::any> deserialize(const std::string &data) const override;
+};
+
+class JsonParamsDeserializer : public DeserializeEngine
+{
+public:
+    std::optional<std::any> deserialize(const std::string &data) const override;
 };
 
 namespace Atom::Server
@@ -92,7 +98,7 @@ namespace Atom::Server
         std::optional<T> deserialize(const std::string &data) const;
 
     private:
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
         emhash8::HashMap<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */
 #else
         std::unordered_map<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */
@@ -126,18 +132,6 @@ namespace Atom::Server
         return std::nullopt;
     }
 }
-
-class JsonDeserializer : public DeserializeEngine
-{
-public:
-    std::optional<std::any> deserialize(const std::string &data) const override;
-};
-
-class JsonParamsDeserializer : public DeserializeEngine
-{
-public:
-    std::optional<std::any> deserialize(const std::string &data) const override;
-};
 
 /*
 

@@ -1,7 +1,7 @@
 /*
  * task_manager.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-7-21
 
@@ -39,7 +33,7 @@ namespace Lithium::Task
     TaskManager::TaskManager(const std::string &fileName)
         : m_FileName(fileName), m_StopFlag(false) {}
 
-    bool TaskManager::addTask(const std::shared_ptr<BasicTask> &task)
+    bool TaskManager::addTask(const std::shared_ptr<Atom::Task::SimpleTask> &task)
     {
         if (!task)
         {
@@ -52,7 +46,7 @@ namespace Lithium::Task
         return true;
     }
 
-    bool TaskManager::insertTask(const std::shared_ptr<BasicTask> &task, int position)
+    bool TaskManager::insertTask(const std::shared_ptr<Atom::Task::SimpleTask> &task, int position)
     {
         if (!task)
         {
@@ -139,7 +133,7 @@ namespace Lithium::Task
         return false;
     }
 
-    bool TaskManager::modifyTask(int index, const std::shared_ptr<BasicTask> &task)
+    bool TaskManager::modifyTask(int index, const std::shared_ptr<Atom::Task::SimpleTask> &task)
     {
         if (!task)
         {
@@ -158,7 +152,7 @@ namespace Lithium::Task
         return true;
     }
 
-    bool TaskManager::modifyTaskByName(const std::string &name, const std::shared_ptr<BasicTask> &task)
+    bool TaskManager::modifyTaskByName(const std::string &name, const std::shared_ptr<Atom::Task::SimpleTask> &task)
     {
         auto it = findTaskByName(name);
         if (it != m_TaskMap.end() && task)
@@ -212,7 +206,7 @@ namespace Lithium::Task
         return false;
     }
 
-    const std::vector<std::shared_ptr<BasicTask>> &TaskManager::getTaskList() const
+    const std::vector<std::shared_ptr<Atom::Task::SimpleTask>> &TaskManager::getTaskList() const
     {
         return m_TaskList;
     }
@@ -241,10 +235,10 @@ namespace Lithium::Task
         return true;
     }
 
-    std::unordered_map<std::string, std::shared_ptr<BasicTask>>::iterator TaskManager::findTaskByName(const std::string &name)
+    std::unordered_map<std::string, std::shared_ptr<Atom::Task::SimpleTask>>::iterator TaskManager::findTaskByName(const std::string &name)
     {
         return std::find_if(m_TaskMap.begin(), m_TaskMap.end(),
-                            [&](const std::pair<std::string, std::shared_ptr<BasicTask>> &item)
+                            [&](const std::pair<std::string, std::shared_ptr<Atom::Task::SimpleTask>> &item)
                             {
                                 return item.second->getName() == name;
                             });

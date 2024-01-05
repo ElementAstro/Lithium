@@ -1,7 +1,7 @@
 /*
  * global_ptr.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-6-17
 
 Description: Global shared pointer manager
@@ -33,6 +27,12 @@ Description: Global shared pointer manager
 
 #include <sstream>
 #include <iostream>
+
+GlobalSharedPtrManager &GlobalSharedPtrManager::getInstance()
+{
+    static GlobalSharedPtrManager instance;
+    return instance;
+}
 
 void GlobalSharedPtrManager::removeSharedPtr(const std::string &key)
 {

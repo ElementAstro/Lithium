@@ -1,7 +1,7 @@
 /*
  * task_generator.hpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +16,6 @@
  */
 
 /*************************************************
-
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
 
 Date: 2023-7-21
 
@@ -40,9 +34,10 @@ Description: Task Generator
 #endif
 #include <fstream>
 
-#include "device/device_manager.hpp"
-#include "plugin/plugin_loader.hpp"
-#include "core/property/task/task.hpp"
+#include "components/device/device_manager.hpp"
+#include "atom/property/task/task.hpp"
+
+using json = nlohmann::json;
 
 namespace Lithium::Task
 {
@@ -58,8 +53,8 @@ namespace Lithium::Task
         bool generateTasks(const std::string &jsonFileName);
 
     private:
-        bool parseJsonFile(const std::string &jsonFileName, nlohmann::json &jsonTasks);
-        void saveTasksToJson(const std::string &jsonFileName, const nlohmann::json &jsonTasks);
+        bool parseJsonFile(const std::string &jsonFileName, json &jsonTasks);
+        void saveTasksToJson(const std::string &jsonFileName, const json &jsonTasks);
         void getTasksFromManagers();
 
     private:

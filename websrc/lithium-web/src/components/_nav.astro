@@ -1,0 +1,206 @@
+<script>
+    function createNavMenu() {
+        // 创建导航菜单的父元素
+        var navMenu = document.getElementById("navMenu");
+
+        // 默认的导航菜单数据对象
+        var defaultNavData = [
+            {
+                href: "/device",
+                icon: "fa-plug",
+                text: "设备管理",
+            },
+            {
+                href: "/search",
+                icon: "fa-search",
+                text: "天体搜索",
+            },
+            {
+                href: "/imageviewer",
+                icon: "fa-image",
+                text: "图像查看",
+            },
+            {
+                href: "/scripteditor",
+                icon: "fa-pen",
+                text: "脚本编辑",
+            },
+            {
+                href: "#",
+                icon: "fa-toolbox",
+                text: "工具组件",
+                submenu: [
+                    {
+                        href: "/skymap",
+                        icon: "fa-map",
+                        text: "在线星图",
+                    },
+                    {
+                        href: "/indiweb",
+                        icon: "fa-server",
+                        text: "INDI启动器",
+                    },
+                    {
+                        href: "/webssh",
+                        icon: "fa-terminal",
+                        text: "WebSSH",
+                    },
+                    {
+                        href: "/novnc",
+                        icon: "fa-desktop",
+                        text: "noVNC",
+                    },
+                    {
+                        href: "/system",
+                        icon: "fa-computer",
+                        text: "系统信息",
+                    },
+                    {
+                        href: "/tools",
+                        icon: "fa-tools",
+                        text: "工具",
+                    },
+                ],
+            },
+            {
+                href: "/settings",
+                icon: "fa-gear",
+                text: "设置",
+            },
+            {
+                href: "/help/faq",
+                icon: "fa-book",
+                text: "FAQ",
+            },
+            {
+                href: "/help/bugreport",
+                icon: "fa-mail-forward",
+                text: "问题反馈",
+            },
+            {
+                href: "/debug",
+                icon: "fa-debug",
+                text: "调试",
+            },
+        ];
+
+        // 发送请求获取导航菜单数据对象
+        fetch("/api/web/nav")
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                // 如果有从后端获取到导航菜单数据，则使用它来动态生成导航菜单
+                data.forEach(function (item) {
+                    var li = document.createElement("li");
+                    li.classList.add("nav-item");
+
+                    var a = document.createElement("a");
+                    a.href = item.href;
+                    a.classList.add("nav-link");
+
+                    var icon = document.createElement("i");
+                    icon.classList.add("nav-icon", item.icon);
+                    icon.classList.add("fas");
+                    a.appendChild(icon);
+
+                    var p = document.createElement("p");
+                    p.textContent = item.text;
+                    a.appendChild(p);
+
+                    li.appendChild(a);
+
+                    if (item.submenu) {
+                        var ul = document.createElement("ul");
+                        ul.classList.add("nav", "nav-treeview");
+
+                        item.submenu.forEach(function (subitem) {
+                            var subli = document.createElement("li");
+                            subli.classList.add("nav-item");
+
+                            var suba = document.createElement("a");
+                            suba.href = subitem.href;
+                            suba.classList.add("nav-link");
+
+                            var subicon = document.createElement("i");
+                            subicon.classList.add(
+                                "nav-icon",
+                                subitem.icon.trim(),
+                            );
+                            subicon.classList.add("fas");
+                            suba.appendChild(subicon);
+
+                            var subp = document.createElement("p");
+                            subp.textContent = subitem.text;
+                            suba.appendChild(subp);
+
+                            subli.appendChild(suba);
+                            ul.appendChild(subli);
+                        });
+
+                        li.appendChild(ul);
+                    }
+
+                    navMenu.appendChild(li);
+                });
+            })
+            .catch(function (error) {
+                // 如果从后端获取导航菜单数据失败，则使用默认的导航菜单数据对象来动态生成导航菜单
+                defaultNavData.forEach(function (item) {
+                    var li = document.createElement("li");
+                    li.classList.add("nav-item");
+
+                    var a = document.createElement("a");
+                    a.href = item.href;
+                    a.classList.add("nav-link");
+
+                    var icon = document.createElement("i");
+                    icon.classList.add("fas");
+                    icon.classList.add("nav-icon", item.icon.trim());
+                    a.appendChild(icon);
+
+                    var p = document.createElement("p");
+                    p.textContent = item.text;
+                    a.appendChild(p);
+
+                    li.appendChild(a);
+
+                    if (item.submenu) {
+                        var ul = document.createElement("ul");
+                        ul.classList.add("nav", "nav-treeview");
+
+                        item.submenu.forEach(function (subitem) {
+                            var subli = document.createElement("li");
+                            subli.classList.add("nav-item");
+
+                            var suba = document.createElement("a");
+                            suba.href = subitem.href;
+                            suba.classList.add("nav-link");
+
+                            var subicon = document.createElement("i");
+                            subicon.classList.add(
+                                "nav-icon",
+                                subitem.icon,
+                            );
+                            subicon.classList.add("fas");
+                            suba.appendChild(subicon);
+
+                            var subp = document.createElement("p");
+                            subp.textContent = subitem.text;
+                            suba.appendChild(subp);
+
+                            subli.appendChild(suba);
+                            ul.appendChild(subli);
+                        });
+
+                        li.appendChild(ul);
+                    }
+
+                    navMenu.appendChild(li);
+                });
+            });
+    }
+    window.onload = function () {
+        createNavMenu();
+    };
+</script>

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2023-12-23 14:40+0800\n"
+"POT-Creation-Date: 2024-01-04 19:33+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,128 +17,118 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: E:/msys64/home/Qrm/Lithium/src/device/device_manager.cpp:209
-#, c++-format
-msgid "A device with name {} already exists, please choose a different name"
-msgstr ""
-
-#: E:/msys64/home/Qrm/Lithium/src/device/hydrogen_manager.cpp:281
-#, c++-format
-msgid "Failed to run command: {}"
-msgstr ""
-
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:222
+#: E:/msys64/home/Lithium/src/App.cpp:216
 msgid "port the server running on"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:223
+#: E:/msys64/home/Lithium/src/App.cpp:217
 msgid "host the server running on"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:224
+#: E:/msys64/home/Lithium/src/App.cpp:218
 msgid "path to the config file"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:225
+#: E:/msys64/home/Lithium/src/App.cpp:219
 msgid "path to the modules directory"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:226
+#: E:/msys64/home/Lithium/src/App.cpp:220
 msgid "web panel"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:227
+#: E:/msys64/home/Lithium/src/App.cpp:221
 msgid "path to log file"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:229
+#: E:/msys64/home/Lithium/src/App.cpp:223
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:230
+#: E:/msys64/home/Lithium/src/App.cpp:224
 msgid "End."
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:238
+#: E:/msys64/home/Lithium/src/App.cpp:232
 #, c-format
 msgid "Failed to parser command line : %s"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:260
+#: E:/msys64/home/Lithium/src/App.cpp:254
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/App.cpp:266
+#: E:/msys64/home/Lithium/src/App.cpp:260
 #, c-format
 msgid "Set server port to %d"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:93
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:87
 #, c++-format
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:136
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:130
 #, c++-format
 msgid "Get config value: {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:142
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:136
 #, c++-format
 msgid "Set {} to {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:150
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:144
 msgid "Get config value failed: Missing key_path"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:374
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:368
 #, c++-format
 msgid "Failed to run chai command : {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:392
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:386
 #, c++-format
 msgid "Failed to run chai multi command {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:405
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:399
 #, c++-format
 msgid "Failed to load chaiscript file {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:418
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:412
 #, c++-format
 msgid "Failed to unload chaiscript file {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:431
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:425
 #, c++-format
 msgid "Failed to run chai script {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:453
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:447
 #, c++-format
 msgid "Failed to load module {} in {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:472
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:466
 #, c++-format
 msgid "Failed to unload module {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:492
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:486
 #, c++-format
 msgid "Failed to reload module {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:529
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:523
 #, c++-format
 msgid "Failed to enable module {}"
 msgstr ""
 
-#: E:/msys64/home/Qrm/Lithium/src/LithiumApp.cpp:548
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:542
 #, c++-format
 msgid "Failed to disable module {}"
 msgstr ""

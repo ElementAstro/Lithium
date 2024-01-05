@@ -1,7 +1,7 @@
 /*
  * task_stack.cpp
  *
- * Copyright (C) 2023 Max Qian <lightapt.com>
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,12 +17,6 @@
 
 /*************************************************
 
-Copyright: 2023 Max Qian. All rights reserved
-
-Author: Max Qian
-
-E-mail: astro_air@126.com
-
 Date: 2023-7-21
 
 Description: Task Stack (just log the task)
@@ -33,13 +27,13 @@ Description: Task Stack (just log the task)
 
 namespace Lithium::Task
 {
-    void TaskStack::AddTask(std::shared_ptr<BasicTask> task)
+    void TaskStack::AddTask(std::shared_ptr<Atom::Task::SimpleTask> task)
     {
         tasks_.push_back(task);
         task_status_.push_back(TaskStatus::Pending);
     }
 
-    void TaskStack::AddTask(std::shared_ptr<BasicTask> task, const std::string &taskName)
+    void TaskStack::AddTask(std::shared_ptr<Atom::Task::SimpleTask> task, const std::string &taskName)
     {
         bool canInsert = true;
 

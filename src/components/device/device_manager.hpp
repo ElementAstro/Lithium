@@ -32,7 +32,7 @@ Description: Device Manager
 #include <functional>
 
 #include "atom/driver/device.hpp"
-#include "core/driver/device_type.hpp"
+#include "atom/driver/device_type.hpp"
 #include "atom/type/message.hpp"
 
 #include "error/error_code.hpp"

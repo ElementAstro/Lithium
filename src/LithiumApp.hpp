@@ -30,7 +30,7 @@ Description: Lithium App Enter
 #include <memory>
 
 #include "atom/server/message_bus.hpp"
-#include "device/device_manager.hpp"
+#include "components/device/device_manager.hpp"
 #include "atom/system/process.hpp"
 #include "atom/server/commander.hpp"
 #include "atom/type/iparams.hpp"

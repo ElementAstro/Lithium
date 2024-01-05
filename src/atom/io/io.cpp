@@ -51,11 +51,18 @@ const std::regex fileNameRegex("^[^/]+$");
 
 namespace fs = std::filesystem;
 
-#define ATOM_IO_CHECK_ARGUMENT(value)                             \
-    if (value.empty() || !value)                                  \
-    {                                                             \
-        LOG_F(ERROR, "{}: Invalid argument: {}", __func__, path); \
-        return false;                                             \
+#define ATOM_IO_CHECK_ARGUMENT(value)                              \
+    if (value.empty())                                             \
+    {                                                              \
+        LOG_F(ERROR, "{}: Invalid argument: {}", __func__, value); \
+        return false;                                              \
+    }
+
+#define ATOM_IO_CHECK_ARGUMENT_S(value)                            \
+    if (value.empty())                                             \
+    {                                                              \
+        LOG_F(ERROR, "{}: Invalid argument: {}", __func__, value); \
+        return "";                                                 \
     }
 
 namespace Atom::IO
@@ -68,7 +75,6 @@ namespace Atom::IO
         try
         {
             fs::create_directory(path);
-            DVLOG_F(INFO, "Directory created: {}", path);
             return true;
         }
         catch (const std::filesystem::filesystem_error &e)
@@ -240,7 +246,6 @@ namespace Atom::IO
     std::uintmax_t fileSize(const std::string &path)
     {
         DLOG_SCOPE_FUNCTION(INFO);
-        ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
             return fs::file_size(path);
@@ -254,7 +259,7 @@ namespace Atom::IO
 
     std::string convertToLinuxPath(const std::string &windows_path)
     {
-        ATOM_IO_CHECK_ARGUMENT(windows_path);
+        ATOM_IO_CHECK_ARGUMENT_S(windows_path);
         std::string linux_path = windows_path;
         for (char &c : linux_path)
         {
@@ -272,7 +277,7 @@ namespace Atom::IO
 
     std::string convertToWindowsPath(const std::string &linux_path)
     {
-        ATOM_IO_CHECK_ARGUMENT(linux_path);
+        ATOM_IO_CHECK_ARGUMENT_S(linux_path);
         std::string windows_path = linux_path;
         for (char &c : windows_path)
         {
@@ -322,9 +327,9 @@ namespace Atom::IO
         {
             if (entry.is_directory())
             {
-                std::string folder_path = normalize_path(entry.path().string());
+                std::string folder_path = normalizePath(entry.path().string());
                 folders.push_back(folder_path);
-                traverse_directories(entry.path(), folders);
+                traverseDirectories(entry.path(), folders);
             }
         }
     }
@@ -361,6 +366,6 @@ namespace Atom::IO
 
     bool isAbsolutePath(const std::string &path)
     {
-        return std::filesystem::path(fsPath).is_absolute();
+        return std::filesystem::path(path).is_absolute();
     }
 }

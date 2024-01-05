@@ -33,7 +33,7 @@ Description: Base64
 #include <arpa/inet.h>
 #endif
 
-namespace Lithium::Base64
+namespace Atom::Utils
 {
     std::string base64Encode(const std::vector<unsigned char> &bytes_to_encode)
     {

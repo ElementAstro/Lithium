@@ -1,35 +1,24 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.property C CXX)
+project(atom.task C CXX)
 
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
-    task/daemon_task.cpp
-    task/device_task.cpp
-    task/loop_task.cpp
-    task/plugin_task.cpp
-    task/conditional_task.cpp
-    task/task.cpp
-
-    base64.cpp
-    iphoto.cpp
-    iproperty.cpp
-    uuid.cpp
+    daemon_task.cpp
+    device_task.cpp
+    loop_task.cpp
+    plugin_task.cpp
+    conditional_task.cpp
+    task.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    task/daemon_task.hpp
-    task/device_task.hpp
-    task/loop_task.hpp
-    task/plugin_task.hpp
-    task/conditional_task.hpp
-    task/task.hpp
-
-    base64.hpp
-    iphoto.hpp
-    iproperty.hpp
-    uuid.hpp
-    sha256.hpp
+    daemon_task.hpp
+    device_task.hpp
+    loop_task.hpp
+    plugin_task.hpp
+    conditional_task.hpp
+    task.hpp
 )
 
 # Private Headers

@@ -154,13 +154,19 @@ public:
      * @param container 要设置的参数容器。
      * @param container The parameter container to be set.
      */
+#if ENABLE_FASTHASH
+    void operator=(const emhash8::HashMap<std::string, std::any> &container)
+#else
     void operator=(const std::unordered_map<std::string, std::any> &container)
+#endif
     {
         m_arguments = container;
     }
 
+    std::string toJson() const;
+
 private:
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
     emhash8::HashMap<std::string, std::any> m_arguments; // 存储参数的容器
 #else
     std::unordered_map<std::string, std::any> m_arguments; // 存储参数的容器
@@ -226,6 +232,39 @@ std::vector<std::string> ArgumentContainer::getNames() const
         names.push_back(pair.first);
     }
     return names;
+}
+
+std::string ArgumentContainer::toJson() const
+{
+    std::string json;
+    json += "{";
+    for (const auto &pair : m_arguments)
+    {
+        json += "\"" + pair.first + "\":";
+        if (pair.second.type() == typeid(std::string))
+        {
+            json += "\"" + std::any_cast<std::string>(pair.second) + "\"";
+        }
+        else if (pair.second.type() == typeid(int))
+        {
+            json += std::to_string(std::any_cast<int>(pair.second));
+        }
+        else if (pair.second.type() == typeid(double))
+        {
+            json += std::to_string(std::any_cast<double>(pair.second));
+        }
+        else if (pair.second.type() == typeid(bool))
+        {
+            json += std::to_string(std::any_cast<bool>(pair.second));
+        }
+        else
+        {
+            json += "null";
+        }
+        json += ",";
+    }
+    json += "}";
+    return json;
 }
 
 using Args = ArgumentContainer;

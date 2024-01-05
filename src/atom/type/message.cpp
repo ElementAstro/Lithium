@@ -37,7 +37,7 @@ Message::Message(Type t, const string &name, const string &target, const string 
     : type_(t), name_(name), target_(target), origin_(origin)
 {
     timestamp_ = Atom::Utils::GetChinaTimestampString();
-    uuid_ = LITHIUM::UUID::UUIDGenerator::generateUUIDWithFormat();
+    uuid_ = Atom::Property::UUIDGenerator::generateUUIDWithFormat();
 }
 
 Message::Type Message::fromInt(const int &t)
@@ -182,7 +182,7 @@ shared_ptr<BooleanMessage> MessageHelper::MakeBooleanMessage(const string &name,
 
 shared_ptr<AnyMessage> MessageHelper::MakeAnyMessage(const string &name, const any &value, const string &target, const string &origin)
 {
-    return make_shared<AnyMessage>(name, data, target, origin);
+    return make_shared<AnyMessage>(name, value, target, origin);
 }
 
 shared_ptr<ParamsMessage> MessageHelper::MakeParamsMessage(const string &name,const Args &params, const string &target, const string &origin)

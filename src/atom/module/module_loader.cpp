@@ -245,7 +245,7 @@ namespace Atom::Module
 
     bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)
     {
-        std::unique_lock<std::shared_lock> lock(m_SharedMutex);
+        std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
         try
         {
             // Check if the library file exists
@@ -329,7 +329,7 @@ namespace Atom::Module
 
     bool ModuleLoader::UnloadModule(const std::string &name)
     {
-        std::unique_lock<std::shared_lock> lock(m_SharedMutex);
+        std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
         try
         {
             // Check if the module is loaded and has a valid handle
@@ -357,7 +357,7 @@ namespace Atom::Module
 
     bool ModuleLoader::UnloadAllModules()
     {
-        std::unique_lock<std::shared_lock> lock(m_SharedMutex);
+        std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
         for (auto entry : modules_)
         {
             int result = UNLOAD_LIBRARY(entry.second->handle);
@@ -373,7 +373,7 @@ namespace Atom::Module
 
     bool ModuleLoader::CheckModuleExists(const std::string &name) const
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         // Max : Directly check if the library exists seems to be a litle bit slow. May we use filesystem instead?
         void *handle = LOAD_LIBRARY(name.c_str());
         if (handle == nullptr)
@@ -388,7 +388,7 @@ namespace Atom::Module
 
     std::shared_ptr<Mod> ModuleLoader::GetModule(const std::string &name) const
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         auto it = modules_.find(name);
         if (it == modules_.end())
         {
@@ -399,7 +399,7 @@ namespace Atom::Module
 
     void *ModuleLoader::GetHandle(const std::string &name) const
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         auto it = modules_.find(name);
         if (it == modules_.end())
         {
@@ -410,13 +410,13 @@ namespace Atom::Module
 
     bool ModuleLoader::HasModule(const std::string &name) const
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         return modules_.count(name) > 0;
     }
 
     bool ModuleLoader::EnableModule(const std::string &name)
     {
-        std::unique_lock<std::shared_lock> lock(m_SharedMutex);
+        std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
         // Check if the module is loaded
         if (!HasModule(name))
         {
@@ -452,7 +452,7 @@ namespace Atom::Module
 
     bool ModuleLoader::DisableModule(const std::string &name)
     {
-        std::unique_lock<std::shared_lock> lock(m_SharedMutex);
+        std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
         // Check if the module is loaded
         if (!HasModule(name))
         {
@@ -486,7 +486,7 @@ namespace Atom::Module
 
     bool ModuleLoader::IsModuleEnabled(const std::string &name) const
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         if (!HasModule(name))
         {
             LOG_F(ERROR, "Module {} is not loaded", name);
@@ -501,7 +501,7 @@ namespace Atom::Module
 
     std::string ModuleLoader::GetModuleVersion(const std::string &name)
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         if (HasModule(name))
         {
             return GetFunction<std::string (*)()>(name, "GetVersion")();
@@ -511,7 +511,7 @@ namespace Atom::Module
 
     std::string ModuleLoader::GetModuleDescription(const std::string &name)
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         if (HasModule(name))
         {
             return GetFunction<std::string (*)()>(name, "GetDescription")();
@@ -521,7 +521,7 @@ namespace Atom::Module
 
     std::string ModuleLoader::GetModuleAuthor(const std::string &name)
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         if (HasModule(name))
         {
             return GetFunction<std::string (*)()>(name, "GetAuthor")();
@@ -531,7 +531,7 @@ namespace Atom::Module
 
     std::string ModuleLoader::GetModuleLicense(const std::string &name)
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         if (HasModule(name))
         {
             return GetFunction<std::string (*)()>(name, "GetLicense")();
@@ -541,7 +541,7 @@ namespace Atom::Module
 
     std::string ModuleLoader::GetModulePath(const std::string &name)
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         auto it = modules_.find(name);
         if (it != modules_.end())
         {
@@ -565,7 +565,7 @@ namespace Atom::Module
 
     const std::vector<std::string> ModuleLoader::GetAllExistedModules() const
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         std::vector<std::string> modules_name;
         if (modules_.empty())
         {
@@ -580,7 +580,7 @@ namespace Atom::Module
 
     bool ModuleLoader::HasFunction(const std::string &name, const std::string &function_name)
     {
-        std::shared_lock<std::shared_lock> lock(m_SharedMutex);
+        std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         auto handle_it = modules_.find(name);
         if (handle_it == modules_.end())
         {

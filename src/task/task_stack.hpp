@@ -60,14 +60,14 @@ namespace Lithium::Task
          * @brief Adds a task to the task stack.
          * @param task The task to add.
          */
-        void AddTask(std::shared_ptr<BasicTask> task);
+        void AddTask(std::shared_ptr<Atom::Task::SimpleTask> task);
 
         /**
          * @brief Adds a named task to the task stack.
          * @param task The task to add.
          * @param taskName The name of the task.
          */
-        void AddTask(std::shared_ptr<BasicTask> task, const std::string &taskName);
+        void AddTask(std::shared_ptr<Atom::Task::SimpleTask> task, const std::string &taskName);
 
         /**
          * @brief Registers mutually exclusive tasks.
@@ -90,9 +90,9 @@ namespace Lithium::Task
         TaskStatus GetTaskStatus(size_t index) const;
 
     private:
-        std::vector<std::shared_ptr<BasicTask>> tasks_;                                             /**< The tasks in the task stack. */
-        std::vector<TaskStatus> task_status_;                                                       /**< The status of each task in the task stack. */
-        std::vector<std::string> task_names_;                                                       /**< The names of the tasks in the task stack. */
+        std::vector<std::shared_ptr<Atom::Task::SimpleTask>> tasks_; /**< The tasks in the task stack. */
+        std::vector<TaskStatus> task_status_;                        /**< The status of each task in the task stack. */
+        std::vector<std::string> task_names_;                        /**< The names of the tasks in the task stack. */
 #ifdef ENABLE_FASTHASH
         emhash8::hashMap<std::string, emhash8::hashSet<std::string>> mutually_exclusive_tasks_; /**< The map of mutually exclusive tasks. */
 #else

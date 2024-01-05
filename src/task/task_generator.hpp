@@ -35,7 +35,6 @@ Description: Task Generator
 #include <fstream>
 
 #include "components/device/device_manager.hpp"
-#include "components/plugin/plugin_loader.hpp"
 #include "atom/property/task/task.hpp"
 
 using json = nlohmann::json;

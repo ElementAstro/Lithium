@@ -83,15 +83,38 @@ namespace Atom::Module
         */
         bool CreateOutputDirectory(const std::string &outputDir);
 
-        // 从 JSON 文件中读取编译选项
+        /**
+         * \brief 读取编译选项
+         * \param optionsFile 编译选项文件路径
+         * \return 编译选项
+        */
         std::string ReadCompileOptions(const std::string &optionsFile);
 
-        // 语法检查
+        /**
+         * \brief 语法检查
+         * \param code 要编译的代码
+         * \param compiler 编译器路径
+         * \return 语法检查是否成功
+        */
         bool SyntaxCheck(const std::string &code, const std::string &compiler);
-        // 编译代码
+        
+        /**
+         * \brief 编译代码
+         * \param code 要编译的代码
+         * \param compiler 编译器路径
+         * \param compileOptions 编译选项
+         * \param output 编译输出路径
+         * \return 编译是否成功
+         */
         bool CompileCode(const std::string &code, const std::string &compiler, const std::string &compileOptions, const std::string &output);
 
-        // 缓存已编译的模块
+        /**
+         * \brief 缓存编译好的模块
+         * \param moduleName 模块名
+         * \param functionName 入口函数名
+         * \param output 编译输出路径
+         * \return 缓存是否成功
+        */
         void CacheCompiledModule(const std::string &moduleName, const std::string &functionName, const std::string &output, std::unordered_map<std::string, std::string> &cache_);
         
         // ----------------------------------------------------

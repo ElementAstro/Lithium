@@ -65,7 +65,7 @@ Description: C++ and Modules Loader
 #include "atom/log/loguru.hpp"
 #include "error/error_code.hpp"
 
-#include "atom/thread/thread.hpp"
+#include "atom/async/thread.hpp"
 
 using json = nlohmann::json;
 
@@ -277,6 +277,14 @@ namespace Atom::Module
         template <typename T>
         T GetFunction(const std::string &name, const std::string &function_name);
 
+        /**
+         * @brief 判断指定模块中的函数是否存在
+         *
+         * @param name 模块名称
+         * @param function_name 函数名称
+         * @return true 函数存在
+         * @return false 函数不存在
+         */
         bool HasFunction(const std::string &name, const std::string &function_name);
 
         /**
@@ -291,6 +299,19 @@ namespace Atom::Module
         template <typename T>
         std::shared_ptr<T> GetInstance(const std::string &name, const json &config,
                                        const std::string &symbol_name);
+
+        /**
+         * @brief 从指定模块中获取实例对象
+         *
+         * @tparam T 实例对象类型
+         * @param name 模块名称
+         * @param config 实例对象的配置参数
+         * @param instance_function_name 获取实例对象的函数名称
+         * @return std::unique_ptr<T> 返回实例对象的智能指针，如果获取失败则返回nullptr
+         */
+        template <typename T>
+        std::unique_ptr<T> GetUniqueInstance(const std::string &name, const json &config,
+                                            const std::string &instance_function_name);
 
         /**
          * @brief 获取指定模块的任务实例指针

@@ -1,6 +1,6 @@
 #include "shared_component.hpp"
 
-#include "atom/thread/thread.hpp"
+#include "atom/async/thread.hpp"
 #include "atom/server/message_bus.hpp"
 
 #include "atom/utils/string.hpp"
@@ -8,13 +8,13 @@
 #include "atom/log/loguru.hpp"
 #include "config.h"
 
-#define GET_ARGUMENT_S(command, type, name)                            \
-    std::optional<type> name = args[#name];                            \
-    if (!name)                                                         \
-    {                                                                  \
-        this->SendTextMessage(#command, "Missing arguments:" + #name); \
-        return;                                                        \
-    }
+#define GET_ARGUMENT_S(command, type, name)                                           \
+    if (!args.get<type>(#name).has_value())                                           \
+    {                                                                                 \
+        this->SendTextMessage(#command, fmt::format("Missing arguments: {}", #name)); \
+        return;                                                                       \
+    }                                                                                 \
+    type name = args.get<type>(#name).value();
 
 SharedComponent::SharedComponent() : Component()
 {
@@ -60,7 +60,7 @@ SharedComponent::SharedComponent() : Component()
                 auto paramsMessage = std::dynamic_pointer_cast<ParamsMessage>(message);
                 if (paramsMessage)
                 {
-                    DLOG_F(INFO, _("Params message is received: {}"), paramsMessage->value()->toJson());
+                    DLOG_F(INFO, _("Params message is received: {}"), paramsMessage->value().toJson());
                     m_handleParams->match(paramsMessage->name(),paramsMessage);
                 }
                 break;
@@ -89,9 +89,9 @@ bool SharedComponent::Initialize()
     // Initialize message handlers
     // Register message handlers
     m_handleVoid->registerCase("getVersion", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getVersion", getInfo<std::string>("basic", "version")); });
+                               { this->SendTextMessage("getVersion", getInfo<std::string>("basic", "version").value()); });
     m_handleVoid->registerCase("getName", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getName", getInfo<std::string>("basic", "name")); });
+                               { this->SendTextMessage("getName", getInfo<std::string>("basic", "name").value()); });
     m_handleVoid->registerCase("getAllInfo", [this](const std::shared_ptr<VoidMessage> &message)
                                { this->SendTextMessage("getAllInfo", this->getJsonInfo()); });
     m_handleVoid->registerCase("getAllConfig", [this](const std::shared_ptr<VoidMessage> &message)
@@ -111,15 +111,15 @@ bool SharedComponent::Initialize()
 
                                 if (type == "text")
                                 {
-                                    this->SendTextMessage("getConfig", this->getConfig<std::string>(section, key));
+                                    this->SendTextMessage("getConfig", this->getConfig<std::string>(section, key).value());
                                 }
                                 else if (type == "number")
                                 {
-                                    this->SendNumberMessage("getConfig", this->getConfig<int>(section, key));
+                                    this->SendNumberMessage("getConfig", this->getConfig<int>(section, key).value());
                                 }
                                 else if (type == "boolean")
                                 {
-                                    this->SendBooleanMessage("getConfig", this->getConfig<bool>(section, key));
+                                    this->SendBooleanMessage("getConfig", this->getConfig<bool>(section, key).value());
                                 }
                                 else
                                 {
@@ -210,14 +210,14 @@ bool SharedComponent::SendBooleanMessage(const std::string &message, const bool 
     return true;
 }
 
-bool SharedComponent::SendParamsMessage(const std::string &message, const json &params)
+bool SharedComponent::SendParamsMessage(const std::string &message, const Args &params)
 {
     if (!m_MessageBus)
     {
         LOG_F(ERROR, _("Message bus is null."));
         return false;
     }
-    // m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<ParamsMessage>(message, params, "lithium.app", GetName()));
+    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<ParamsMessage>(message, params, "lithium.app", GetName()));
     return true;
 }
 

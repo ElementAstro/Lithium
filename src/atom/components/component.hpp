@@ -94,6 +94,8 @@ public:
      */
     virtual bool Destroy();
 
+    std::string GetName() const;
+
     // -------------------------------------------------------------------
     // Component Infomation methods
     // -------------------------------------------------------------------
@@ -110,7 +112,7 @@ public:
     template <typename T>
     std::optional<T> getInfo(const std::string section, const std::string &key)
     {
-        return m_ComponentInfo->get<T>(key);
+        return m_ComponentInfo->get<T>(section, key);
     }
 
     std::string getJsonInfo() const;

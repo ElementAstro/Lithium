@@ -23,29 +23,30 @@ Description: Basic Device Defination
 
 *************************************************/
 
-#ifndef DEVICE_H
-#define DEVICE_H
+#pragma once
+
+#define ATOM_DRIVER_DEFINITION
 
 #include <any>
 #include <functional>
 #include <memory>
 #include <thread>
 
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
 
 #include "atom/property/task/device_task.hpp"
+
+#include "atom/components/component.hpp"
 #include "atom/type/args.hpp"
-#include "atom/server/commander.hpp"
-#include "atom/server/variables.hpp"
 
 #include "device_exception.hpp"
 
 
-class Device
+class Device : public Component
 {
 public:
     explicit Device(const std::string &name);
@@ -90,7 +91,7 @@ public:
 private:
     // Why we use emhash8 : because it is so fast!
     // Map of the properties
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
     emhash8::HashMap<std::string, std::any> m_properties;
     emhash8::HashMap<std::string, std::shared_ptr<DeviceTask>> m_task_map;
 #else

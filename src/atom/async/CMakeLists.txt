@@ -1,24 +1,22 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.web C CXX)
+project(atom.async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    address.cpp
-    downloader.cpp
-    httpclient.cpp
-    httplite.cpp
-    utils.cpp
-    time.cpp
+    ioloop.cpp
+    thread.cpp
+    timer.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    address.hpp
-    downloader.hpp
-    httpclient.hpp
-    httplite.hpp
-    utils.hpp
-    time.hpp
+    async.hpp
+    ioloop.hpp
+    thread_pool.hpp
+    thread.hpp
+    timer.hpp
+    trigger.hpp
+    trigger_impl.hpp
 )
 
 # Private Headers
@@ -56,15 +54,3 @@ set_target_properties(${PROJECT_NAME}static PROPERTIES
 install(TARGETS ${PROJECT_NAME}static
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-find_package(OpenSSL REQUIRED)
-add_library(cpp_httplib httplib.cpp)
-target_link_libraries(cpp_httplib OpenSSL::SSL OpenSSL::Crypto)
-if(WIN32)
-target_link_libraries(cpp_httplib crypt32 wsock32 ws2_32)
-endif()
-if(LINUX)
-    set_target_properties(cpp_httplib PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-    )
-endif()

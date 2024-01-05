@@ -3,14 +3,16 @@ project(atom C CXX)
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
+add_subdirectory(async)
 add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(type)
 add_subdirectory(web)
 add_subdirectory(connection)
 add_subdirectory(components)
-add_subdirectory(property)
+add_subdirectory(task)
 add_subdirectory(driver)
+add_subdirectory(utils)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
@@ -48,26 +50,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     type/ini.cpp
     type/iparams.cpp
     type/message.cpp
-
-    thread/thread.cpp
-    thread/timer.cpp
-
-    utils/aes.cpp
-    utils/env.cpp
-    utils/hash_util.cpp
-    utils/huffman.cpp
-    utils/math.cpp
-    utils/string.cpp
-    utils/static_switch.cpp
-    utils/time.cpp
-    utils/guid.cpp
-
-    web/address.cpp
-    web/downloader.cpp
-    web/httpclient.cpp
-    web/httplite.cpp
-    web/utils.cpp
-    web/time.cpp
 )
 
 # Headers
@@ -112,38 +94,22 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     type/iparams.hpp
     type/small_vector.hpp
     type/message.hpp
-
-    thread/async.hpp
-    thread/thread_pool.hpp
-    thread/thread.hpp
-    thread/timer.hpp
-
-    utils/aes.hpp
-    utils/exception.hpp
-    utils/huffman.hpp
-    utils/math.hpp
-    utils/refl_clang.hpp
-    utils/refl.hpp
-    utils/string.hpp
-    utils/static_switch.hpp
-    utils/switch.hpp
-    utils/time.hpp
-    utils/env.hpp
-    utils/hash_util.hpp
-    utils/guid.hpp
-
-    web/address.hpp
-    web/downloader.hpp
-    web/httpclient.hpp
-    web/httplite.hpp
-    web/utils.hpp
-    web/time.hpp
 )
 
 # Private Headers
 list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
 
 )
+
+list(APPEND ${PROJECT_NAME}_LIBS
+    loguru
+    cpp_httplib
+    libzippp
+    atom.async
+    atom.utils
+    atom.driver
+    atom.component
+    )
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
@@ -154,8 +120,7 @@ target_compile_definitions(${PROJECT_NAME}_OBJECT PRIVATE "-DHAVE_LIBNOVA")
 if(WIN32)
 target_link_libraries(${PROJECT_NAME}_OBJECT setupapi wsock32 ws2_32 shlwapi iphlpapi)
 endif()
-
-target_link_libraries(${PROJECT_NAME}_OBJECT loguru cpp_httplib libzippp)
+target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC

@@ -41,10 +41,10 @@ Component::~Component()
 {
     // Save the config file
     if (!m_ConfigPath.empty())
-        m_ComponentConfig->save(m_ConfigPath)
+        m_ComponentConfig->save(m_ConfigPath);
     // Save the info file
     if (!m_InfoPath.empty())
-        m_ComponentInfo->save(m_InfoPath)
+        m_ComponentInfo->save(m_InfoPath);
     // Just for safety
     m_CommandDispatcher->RemoveAll();
     m_VariableRegistry->RemoveAll();
@@ -62,6 +62,11 @@ bool Component::Initialize()
 bool Component::Destroy()
 {
     return true;
+}
+
+std::string Component::GetName() const
+{
+    return m_name;
 }
 
 bool Component::LoadComponentInfo(const std::string &path)

@@ -24,6 +24,7 @@ Description: Executable Plugin
 **************************************************/
 
 #include "exe_component.hpp"
+#include "component_marco.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "atom/utils/random.hpp"
@@ -41,10 +42,10 @@ ExecutablePlugin::ExecutablePlugin()
     RegisterFunc("run_script_with_output", &ExecutablePlugin::RunScriptOutput, this);
 }
 
-void ExecutablePlugin::RunSystemCommand(const json &m_params)
+void ExecutablePlugin::RunSystemCommand(const Args &m_params)
 {
-    std::string command = m_params["command"].get<std::string>();
-    std::string identifier = m_params["identifier"].get<std::string>();
+    GET_COMPONENT_ARG(command,std::string);
+    GET_COMPONENT_ARG(identifier,std::string);
     DLOG_F(INFO, "Running command: {}", command);
     if (m_ProcessManager)
     {
@@ -63,12 +64,12 @@ void ExecutablePlugin::RunSystemCommand(const json &m_params)
     }
 }
 
-void ExecutablePlugin::RunSystemCommandOutput(const json &m_params)
+void ExecutablePlugin::RunSystemCommandOutput(const Args &m_params)
 {
+    GET_COMPONENT_ARG(command,std::string);
+    GET_COMPONENT_ARG(identifier,std::string);
     if (m_ProcessManager)
     {
-        std::string command = m_params["command"].get<std::string>();
-        std::string identifier = m_params["identifier"].get<std::string>();
         DLOG_F(INFO, "Running command: {}", command);
         if (m_ProcessManager->createProcess(command, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {
@@ -85,12 +86,12 @@ void ExecutablePlugin::RunSystemCommandOutput(const json &m_params)
     }
 }
 
-void ExecutablePlugin::RunScript(const json &m_params)
+void ExecutablePlugin::RunScript(const Args &m_params)
 {
+    GET_COMPONENT_ARG(script,std::string);
+    GET_COMPONENT_ARG(identifier,std::string);
     if (m_ProcessManager)
     {
-        std::string script = m_params["script"].get<std::string>();
-        std::string identifier = m_params["identifier"].get<std::string>();
         DLOG_F(INFO, "Running script: {}", script);
         if (m_ProcessManager->createProcess(script, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {
@@ -107,12 +108,12 @@ void ExecutablePlugin::RunScript(const json &m_params)
     }
 }
 
-void ExecutablePlugin::RunScriptOutput(const json &m_params)
+void ExecutablePlugin::RunScriptOutput(const Args &m_params)
 {
+    GET_COMPONENT_ARG(script,std::string);
+    GET_COMPONENT_ARG(identifier,std::string);
     if (m_ProcessManager)
     {
-        std::string script = m_params["script"].get<std::string>();
-        std::string identifier = m_params["identifier"].get<std::string>();
         DLOG_F(INFO, "Running script: {}", script);
         if (m_ProcessManager->createProcess(script, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
         {

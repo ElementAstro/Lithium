@@ -1,24 +1,43 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.web C CXX)
+project(atom.utils C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    address.cpp
-    downloader.cpp
-    httpclient.cpp
-    httplite.cpp
-    utils.cpp
+    aes.cpp
+    base64.cpp
+    env.cpp
+    guid.cpp
+    hash_util.cpp
+    huffman.cpp
+    math.cpp
+    string.cpp
+    static_switch.cpp
     time.cpp
+    uuid.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    address.hpp
-    downloader.hpp
-    httpclient.hpp
-    httplite.hpp
-    utils.hpp
+    aes.hpp
+    base64.hpp
+    env.hpp
+    exception.hpp
+    guid.hpp
+    hash_util.hpp
+    huffman.hpp
+    lock.hpp
+    math.hpp
+    random.hpp
+    refl.hpp
+    refl_clang.hpp
+    sha256.hpp
+    string.hpp
+    static_switch.hpp
+    stopwatcher.hpp
+    switch.hpp
     time.hpp
+    type.hpp
+    uuid.hpp
 )
 
 # Private Headers
@@ -56,15 +75,3 @@ set_target_properties(${PROJECT_NAME}static PROPERTIES
 install(TARGETS ${PROJECT_NAME}static
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-find_package(OpenSSL REQUIRED)
-add_library(cpp_httplib httplib.cpp)
-target_link_libraries(cpp_httplib OpenSSL::SSL OpenSSL::Crypto)
-if(WIN32)
-target_link_libraries(cpp_httplib crypt32 wsock32 ws2_32)
-endif()
-if(LINUX)
-    set_target_properties(cpp_httplib PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
-    )
-endif()

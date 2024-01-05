@@ -47,8 +47,8 @@ private:
 	std::unordered_map<v_int32, std::shared_ptr<WsInstance>> m_ConnectionById;
 	std::mutex m_ConnectionByIdLock;
 	// Serialization and Deserialization Engine
-	std::shared_ptr<SerializationEngine> m_SerializationEngine;
-	std::shared_ptr<DeserializationEngine> m_DeserializationEngine;
+	std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
+	std::shared_ptr<Atom::Server::DeserializationEngine> m_DeserializationEngine;
 	// Message Bus
 	std::shared_ptr<MessageBus> m_MessageBus;
 };

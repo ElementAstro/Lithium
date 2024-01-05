@@ -29,6 +29,7 @@ Description: Commander
 #include <functional>
 #include <stack>
 #include <shared_mutex>
+#include <mutex>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"

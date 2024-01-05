@@ -123,8 +123,6 @@ set(component_module
     ${lithium_component_dir}/device/device_utils.cpp
     ${lithium_component_dir}/device/hydrogen_device.cpp
 
-    ${lithium_component_dir}/plugin/plugin_loader.cpp
-
     ${lithium_component_dir}/component_manager.cpp
 )
 

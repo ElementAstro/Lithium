@@ -98,7 +98,7 @@ namespace Atom::Server
         std::optional<T> deserialize(const std::string &data) const;
 
     private:
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
         emhash8::HashMap<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */
 #else
         std::unordered_map<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */

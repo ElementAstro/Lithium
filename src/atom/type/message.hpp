@@ -28,6 +28,8 @@ Description: A message class, which can be used to store different types of mess
 #include <string>
 #include <any>
 #include <memory>
+#include <variant>
+
 #include "args.hpp"
 
 // Base class Message

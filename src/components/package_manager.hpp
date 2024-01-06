@@ -27,7 +27,7 @@ Description: Package manager to solve the dependency problem.
 
 #include <string>
 #include <vector>
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
@@ -192,7 +192,7 @@ namespace Lithium
         bool resolveDependencies(const std::string &modName, std::vector<std::string> &resolvedDeps, std::vector<std::string> &missingDeps);
 
     private:
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
         emhash8::HashMap<std::string, std::shared_ptr<Package>> m_packages;
 #else
         std::unordered_map<std::string, std::shared_ptr<Package>> m_packages;

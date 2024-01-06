@@ -368,4 +368,39 @@ namespace Atom::IO
     {
         return std::filesystem::path(path).is_absolute();
     }
+
+    enum class FileOption
+    {
+        Path,
+        Name
+    };
+
+    std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath, const std::string &fileType, FileOption fileOption)
+    {
+        std::vector<std::string> files;
+
+        try
+        {
+            for (const auto &entry : std::filesystem::directory_iterator(folderPath))
+            {
+                if (entry.is_regular_file() && entry.path().extension() == fileType)
+                {
+                    if (fileOption == FileOption::Path)
+                    {
+                        files.push_back(entry.path().string());
+                    }
+                    else if (fileOption == FileOption::Name)
+                    {
+                        files.push_back(entry.path().filename().string());
+                    }
+                }
+            }
+        }
+        catch (const std::filesystem::filesystem_error &ex)
+        {
+            LOG_F(ERROR, "Failed to check files in folder: {}", ex.what());
+        }
+
+        return files;
+    }
 }

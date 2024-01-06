@@ -29,10 +29,10 @@ Description: Executable Plugin
 
 #include "atom/system/process.hpp"
 
-class ExecutablePlugin : public Component
+class ExecutableComponent : public Component
 {
 public:
-    ExecutablePlugin();
+    ExecutableComponent();
 
     void RunSystemCommand(const Args &m_parmas);
 

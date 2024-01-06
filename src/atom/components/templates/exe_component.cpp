@@ -32,17 +32,17 @@ Description: Executable Plugin
 #include <fstream>
 #include <sstream>
 
-ExecutablePlugin::ExecutablePlugin()
+ExecutableComponent::ExecutableComponent()
     : Component()
 {
 
-    RegisterFunc("run_system_command", &ExecutablePlugin::RunSystemCommand, this);
-    RegisterFunc("run_system_command_with_output", &ExecutablePlugin::RunSystemCommandOutput, this);
-    RegisterFunc("run_script", &ExecutablePlugin::RunScript, this);
-    RegisterFunc("run_script_with_output", &ExecutablePlugin::RunScriptOutput, this);
+    RegisterFunc("run_system_command", &ExecutableComponent::RunSystemCommand, this);
+    RegisterFunc("run_system_command_with_output", &ExecutableComponent::RunSystemCommandOutput, this);
+    RegisterFunc("run_script", &ExecutableComponent::RunScript, this);
+    RegisterFunc("run_script_with_output", &ExecutableComponent::RunScriptOutput, this);
 }
 
-void ExecutablePlugin::RunSystemCommand(const Args &m_params)
+void ExecutableComponent::RunSystemCommand(const Args &m_params)
 {
     GET_COMPONENT_ARG(command,std::string);
     GET_COMPONENT_ARG(identifier,std::string);
@@ -64,7 +64,7 @@ void ExecutablePlugin::RunSystemCommand(const Args &m_params)
     }
 }
 
-void ExecutablePlugin::RunSystemCommandOutput(const Args &m_params)
+void ExecutableComponent::RunSystemCommandOutput(const Args &m_params)
 {
     GET_COMPONENT_ARG(command,std::string);
     GET_COMPONENT_ARG(identifier,std::string);
@@ -86,7 +86,7 @@ void ExecutablePlugin::RunSystemCommandOutput(const Args &m_params)
     }
 }
 
-void ExecutablePlugin::RunScript(const Args &m_params)
+void ExecutableComponent::RunScript(const Args &m_params)
 {
     GET_COMPONENT_ARG(script,std::string);
     GET_COMPONENT_ARG(identifier,std::string);
@@ -108,7 +108,7 @@ void ExecutablePlugin::RunScript(const Args &m_params)
     }
 }
 
-void ExecutablePlugin::RunScriptOutput(const Args &m_params)
+void ExecutableComponent::RunScriptOutput(const Args &m_params)
 {
     GET_COMPONENT_ARG(script,std::string);
     GET_COMPONENT_ARG(identifier,std::string);

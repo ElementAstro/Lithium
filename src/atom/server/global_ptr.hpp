@@ -31,7 +31,7 @@ Description: Global shared pointer manager
 #include <mutex>
 #include <string>
 #include <functional>
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
@@ -134,7 +134,7 @@ public:
     void printSharedPtrMap() const;
 
 private:
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
     emhash8::HashMap<std::string, std::any> sharedPtrMap;
 #else
     std::unordered_map<std::string, std::any> sharedPtrMap; /**< The map that stores the shared pointers and weak pointers. */

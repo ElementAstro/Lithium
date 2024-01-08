@@ -26,9 +26,7 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     io/io.cpp
 
     log/logger.cpp
-
-    module/module_loader.cpp
-    module/compiler.cpp
+    log/global_logger.cpp
 
     search/sqlite.cpp
 
@@ -36,7 +34,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     server/serialize.cpp
     server/deserialize.cpp
     server/json_checker.cpp
-    server/xml_checker.cpp
     server/global_ptr.cpp
 
     system/system.cpp
@@ -63,9 +60,7 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     io/io.hpp
 
     log/logger.hpp
-
-    module/module_loader.hpp
-    module/compiler.hpp
+    log/global_logger.hpp
 
     search/sqlite.hpp
 
@@ -73,7 +68,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     server/serialize.hpp
     server/deserialize.hpp
     server/json_checker.hpp
-    server/xml_checker.hpp
     server/global_ptr.hpp
     server/commander.hpp
     server/message_bus.hpp

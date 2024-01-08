@@ -327,6 +327,11 @@ namespace Atom::Module
         }
     }
 
+    std::vector<std::string> ModuleLoader::loadModuleFunctions(const std::string &name)
+    {
+        
+    }
+
     bool ModuleLoader::UnloadModule(const std::string &name)
     {
         std::unique_lock<std::shared_mutex> lock(m_SharedMutex);

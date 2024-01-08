@@ -31,12 +31,16 @@ Description: C++ and Modules Loader
 #include <atomic>
 #include <shared_mutex>
 
+#include "info.hpp"
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
 
+
+// Max: There we use dlfcn-win to load shared library on windows.So we don't need to use Windows Native API.
 /*
 #ifdef _WIN32
 #include <windows.h>
@@ -88,36 +92,7 @@ namespace Atom::Module
      * @return json - A JSON object containing the module information or an error message.
      *                包含模块信息或错误消息的JSON对象。
      */
-    json iterator_modules_dir(const std::string &dir_name);
-
-    /**
-     * @brief 用于描述一个模块。
-     *
-     * 用于描述一个模块。注意模组和插件不是一个东西，模组描述的动态库，而插件是从动态库中提取的指针，是可以操作的对象
-     */
-    class Mod
-    {
-        // All of the module information
-    public:
-        int id;
-        std::string name;
-        std::string description;
-        std::string version;
-        std::string status;
-        std::string type;
-        std::string author;
-        std::string license;
-        std::string path;
-        std::string config_path;
-        std::string config_file;
-        json config;
-
-        // Module enable status
-        std::atomic_bool enabled;
-
-        // Module handle pointer
-        void *handle;
-    };
+    [[deprecated]] json iterator_modules_dir(const std::string &dir_name);
 
     class ModuleLoader
     {
@@ -192,6 +167,8 @@ namespace Atom::Module
          * @return      true if the loading is successful, false otherwise.
          */
         bool LoadModule(const std::string &path, const std::string &name);
+
+        std::vector<std::string> loadModuleFunctions(const std::string &name);
 
         /**
          * @brief 卸载指定名称的动态库

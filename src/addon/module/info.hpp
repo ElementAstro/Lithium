@@ -7,6 +7,13 @@
 
 namespace Lithium::Component
 {
+    struct FunctionInfo
+    {
+        std::string name;
+        void *address;
+        std::vector<std::string> parameters;
+    };
+
     class ModuleInfo
     {
         // All of the module information
@@ -26,7 +33,7 @@ namespace Lithium::Component
         std::atomic_bool m_enabled;
 
         // All of the functions in the module(dynamic loaded)
-        std::vector<std::string> m_functions
+        std::vector<std::unique_ptr<FunctionInfo>> functions;
 
         // Module handle pointer
         void *handle;

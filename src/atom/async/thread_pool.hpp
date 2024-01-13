@@ -26,8 +26,6 @@ Description: Thread Pool
 #pragma once
 
 #include <atomic>
-#include <barrier>
-#include <concepts>
 #include <deque>
 #include <functional>
 #include <future>
@@ -38,6 +36,11 @@ Description: Thread Pool
 #include <algorithm>
 #include <mutex>
 #include <optional>
+#include <condition_variable>
+#if __cplusplus >= 202003L
+#include <barrier>
+#include <concepts>
+#endif
 #ifdef __has_include
 #if __has_include(<version>)
 #include <version>
@@ -46,6 +49,7 @@ Description: Thread Pool
 
 namespace Atom::Async
 {
+#if __cplusplus >= 202003L
     template <typename Lock>
     concept is_lockable = requires(Lock &&lock) {
         lock.lock();
@@ -149,7 +153,6 @@ namespace Atom::Async
         mutable Lock mutex_{};
     };
 
-
 #ifdef __cpp_lib_move_only_function
     using default_function_type = std::move_only_function<void()>;
 #else
@@ -167,10 +170,10 @@ namespace Atom::Async
         requires std::invocable<FunctionType> &&
                  std::is_same<void, std::invoke_result_t<FunctionType>>::value
 #endif
-    class thread_pool
+    class ThreadPool
     {
     public:
-        explicit thread_pool(
+        explicit ThreadPool(
             const unsigned int &number_of_threads = std::thread::hardware_concurrency())
             : tasks_(number_of_threads)
         {
@@ -229,7 +232,7 @@ namespace Atom::Async
             }
         }
 
-        ~thread_pool()
+        ~ThreadPool()
         {
             // stop all threads
             for (std::size_t i = 0; i < threads_.size(); ++i)
@@ -241,8 +244,8 @@ namespace Atom::Async
         }
 
         /// thread pool is non-copyable
-        thread_pool(const thread_pool &) = delete;
-        thread_pool &operator=(const thread_pool &) = delete;
+        ThreadPool(const ThreadPool &) = delete;
+        ThreadPool &operator=(const ThreadPool &) = delete;
 
         /**
          * @brief Enqueue a task into the thread pool that returns a result.
@@ -378,4 +381,163 @@ namespace Atom::Async
         thread_safe_queue<std::size_t> priority_queue_;
         std::atomic_int_fast64_t pending_tasks_{};
     };
+#else
+    class ThreadPool
+    {
+    public:
+        explicit ThreadPool(size_t numThreads)
+            : stop(false),
+              maxQueueSize(1000),
+              maxIdleTime(std::chrono::seconds(60)),
+              numThreads(numThreads),
+              idleThreads(0)
+        {
+            for (size_t i = 0; i < numThreads; ++i)
+            {
+                workers.emplace_back([this, &numThreads]
+                                     {
+                for (;;) {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(this->queue_mutex);
+                        this->condition.wait_for(lock, maxIdleTime, [this] {
+                            return this->stop || !this->tasks.empty();
+                        });
+
+                        if (this->stop && this->tasks.empty()) {
+                            return;
+                        }
+
+                        if (!this->tasks.empty()) {
+                            task = std::move(this->tasks.front());
+                            this->tasks.pop();
+                            --idleThreads;
+                        } else {
+                            if (numThreads > 1) {
+                                if (++idleThreads < numThreads) {
+                                    continue;
+                                }
+                            }
+                            return;
+                        }
+                    }
+                    task();
+                    if (onTaskCompleted) {
+                        onTaskCompleted();
+                    }
+                } });
+            }
+        }
+
+        template <class F, class... Args>
+        auto enqueue(F &&f, Args &&...args) -> std::future<typename std::result_of<F(Args...)>::type>
+        {
+            using return_type = typename std::result_of<F(Args...)>::type;
+
+            auto task = std::make_shared<std::packaged_task<return_type()>>(
+                std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+
+            std::future<return_type> res = task->get_future();
+            {
+                std::unique_lock<std::mutex> lock(queue_mutex);
+
+                while (tasks.size() >= maxQueueSize)
+                {
+                    condition.wait(lock);
+                }
+
+                // don't allow enqueueing after stopping the pool
+                if (stop)
+                {
+                    throw std::runtime_error("enqueue on stopped ThreadPool");
+                }
+
+                tasks.emplace([task]()
+                              { (*task)(); });
+
+                if (idleThreads > 0)
+                {
+                    condition.notify_one();
+                }
+                else if (workers.size() < numThreads)
+                {
+                    workers.emplace_back([this]
+                                         {
+                    for (;;) {
+                        std::function<void()> task;
+                        {
+                            std::unique_lock<std::mutex> lock(this->queue_mutex);
+                            this->condition.wait(lock, [this] {
+                                return this->stop || !this->tasks.empty();
+                            });
+
+                            if (this->stop && this->tasks.empty()) {
+                                return;
+                            }
+
+                            if (!this->tasks.empty()) {
+                                task = std::move(this->tasks.front());
+                                this->tasks.pop();
+                            } else {
+                                return;
+                            }
+                        }
+                        task();
+                    } });
+                }
+            }
+            return res;
+        }
+
+        void setMaxQueueSize(size_t size)
+        {
+            maxQueueSize = size;
+        }
+
+        void setMaxIdleTime(std::chrono::seconds time)
+        {
+            maxIdleTime = time;
+        }
+
+        void setNumThreads(size_t num)
+        {
+            numThreads = num;
+        }
+
+        void setOnTaskCompleted(std::function<void()> callback)
+        {
+            onTaskCompleted = std::move(callback);
+        }
+
+        ~ThreadPool()
+        {
+            {
+                std::unique_lock<std::mutex> lock(queue_mutex);
+                stop = true;
+            }
+            condition.notify_all();
+            for (std::thread &worker : workers)
+            {
+                worker.join();
+            }
+        }
+
+        /// thread pool is non-copyable
+        ThreadPool(const ThreadPool &) = delete;
+        ThreadPool &operator=(const ThreadPool &) = delete;
+
+    private:
+        std::vector<std::thread> workers;
+        std::queue<std::function<void()>> tasks;
+
+        std::mutex queue_mutex;
+        std::condition_variable condition;
+        bool stop;
+        size_t maxQueueSize;
+        std::chrono::seconds maxIdleTime;
+        size_t numThreads;
+        std::atomic<size_t> idleThreads;
+        std::function<void()> onTaskCompleted;
+    };
+#endif
 }

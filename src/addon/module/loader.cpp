@@ -33,6 +33,8 @@ Description: C++ and Modules Loader
 #include <cxxabi.h>
 #include <regex>
 
+#include "atom/io/io.hpp"
+
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
@@ -46,126 +48,6 @@ namespace fs = std::filesystem;
 
 namespace Atom::Module
 {
-    /**
-     * @brief Read a JSON configuration file and return its content as a JSON object.
-     *
-     * This function reads a JSON configuration file, stores its content in a JSON object, and returns the object. If it fails to read
-     * the file or encounters any exception, it returns an error message as a JSON object.
-     *
-     * 读取JSON配置文件，将其内容存储在一个JSON对象中，并返回该对象。如果无法读取文件或遇到任何异常，则返回错误消息作为JSON对象。
-     *
-     * @param file_path (const std::string&) : The path of the configuration file to be read.
-     *                                         要读取的配置文件的路径。
-     * @return json - A JSON object containing the configuration information or an error message.
-     *                包含配置信息或错误消息的JSON对象。
-     */
-    json read_config_file(const std::string &file_path)
-    {
-        try
-        {
-            // Open the configuration file
-            std::ifstream file_stream(file_path);
-            if (!file_stream.is_open())
-            {
-                LOG_F(ERROR, "Failed to open config file {}", file_path);
-                return {{"error", "Failed to open config file"}};
-            }
-
-            // Read the configuration file content into a JSON object
-            json config = json::parse(file_stream);
-
-            // Close the file stream
-            file_stream.close();
-            return config;
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Failed to read config file {}: {}", file_path, e.what());
-            return {{"error", "Failed to read config file"}};
-        }
-    }
-
-    json iterator_modules_dir(const std::string &dir_name)
-    {
-        if (dir_name == "")
-        {
-            LOG_F(ERROR, "DIR name should not be null");
-            return {{"error", "dir name should not be null"}};
-        }
-        // Define the modules directory path
-        fs::path modules_dir;
-        modules_dir = fs::absolute(std::filesystem::current_path() / "modules" / dir_name);
-        try
-        {
-            // Create the modules directory if it does not exist
-            if (!fs::exists(modules_dir) || !fs::is_directory(modules_dir))
-            {
-                DLOG_F(WARNING, "Warning: modules folder not found, creating a new one...");
-                fs::create_directory(modules_dir);
-            }
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Failed to create modules directory: {}", e.what());
-            return {{"error", "Failed to create modules directory"}};
-        }
-
-        // Create a JSON object to store module information
-        json config;
-
-        try
-        {
-            // Iterate through each subdirectory of the modules directory
-            for (const auto &dir : fs::recursive_directory_iterator(modules_dir))
-            {
-                // Check if the current directory is indeed a subdirectory
-                if (dir.is_directory())
-                {
-                    // Get the path of the info.json file within the subdirectory
-                    fs::path info_file = dir.path() / "config.json";
-                    // If the info.json exists
-                    if (fs::exists(info_file))
-                    {
-                        // Append necessary information to the JSON object
-                        config[dir.path().string()]["path"] = dir.path().string();
-                        config[dir.path().string()]["config"] = info_file.string();
-                        DLOG_F(INFO, "Module found: {}, config file: {}", dir.path().string(), info_file.string());
-                        // Read the module configuration from the info.json file and append to the JSON object
-                        json module_config = read_config_file(info_file.string());
-                        SET_CONFIG_VALUE(name)
-                        SET_CONFIG_VALUE(version)
-                        SET_CONFIG_VALUE(author)
-                        SET_CONFIG_VALUE(type)
-                        SET_CONFIG_VALUE(dependencies)
-                        SET_CONFIG_VALUE(url)
-                        SET_CONFIG_VALUE(homepage)
-                        SET_CONFIG_VALUE(keywords)
-                        SET_CONFIG_VALUE(repository)
-                        SET_CONFIG_VALUE(bugs)
-                        SET_CONFIG_VALUE(readme)
-                        SET_CONFIG_VALUE(license)
-                        SET_CONFIG_VALUE(description)
-                    }
-                }
-            }
-        }
-        catch (const fs::filesystem_error &e)
-        {
-            LOG_F(ERROR, "Failed to iterate modules directory: {}", e.what());
-            return {{"error", "Failed to iterate modules directory"}};
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Failed to iterate modules directory: {}", e.what());
-            return {{"error", "Failed to iterate modules directory"}};
-        }
-        if (config.empty())
-        {
-            config["message"] = "No module found";
-        }
-        return config;
-    }
-
     ModuleLoader::ModuleLoader(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
     {
         m_ThreadManager = threadManager;
@@ -248,20 +130,19 @@ namespace Atom::Module
         std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
         try
         {
-            // Check if the library file exists
-            if (!std::filesystem::exists(path))
-            {
-                LOG_F(ERROR, "Library {} does not exist", path);
-                return false;
-            }
             // Max : The mod's name should be unique, so we check if it already exists
             if (HasModule(name))
             {
                 LOG_F(ERROR, "Module {} already loaded", name);
                 return false;
             }
-
-            std::shared_ptr<Mod> mod = std::make_shared<Mod>();
+            if (!Atom::IO::isFileExists(path))
+            {
+                LOG_F(ERROR, "Module {} does not exist", name);
+                return false;
+            }
+            // Create module info
+            std::shared_ptr<ModuleInfo> mod_info = std::make_shared<ModuleInfo>();
             // Load the library file
             void *handle = LOAD_LIBRARY(path.c_str());
             if (!handle)
@@ -269,54 +150,12 @@ namespace Atom::Module
                 LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
                 return false;
             }
-            mod->handle = handle;
-            // Read the configuration file in JSON format. We will support other formats in the future
-            std::filesystem::path p = path;
-            std::string config_file_path = p.replace_extension(".json").string();
-            if (std::filesystem::exists(config_file_path))
-            {
-                json config;
-                try
-                {
-                    std::ifstream config_file(config_file_path);
-                    config_file >> config;
-                }
-                catch (const json::parse_error &e)
-                {
-                    LOG_F(ERROR, "Failed to parse config file {}: {}", config_file_path, e.what());
-                }
-                mod->config_path = config_file_path;
-                mod->config_file = p.string();
-                mod->config = config;
-                // Check if the required fields exist in the configuration file
-                if (config.contains("name") && config.contains("version") && config.contains("author") && config.contains("type"))
-                {
-                    std::string version = config["version"].get<std::string>();
-                    std::string author = config["author"].get<std::string>();
-                    std::string license = config.value("license", "");
-                    std::string type = config["type"].get<std::string>();
-
-                    mod->version = version;
-                    mod->author = author;
-                    mod->license = license;
-                    mod->type = type;
-
-                    DLOG_F(INFO, "Loaded Module : {} version {} written by {}{}",
-                           config.value("name", "Unknown"), version, author, license.empty() ? "" : (" under " + license));
-                }
-                else
-                {
-                    DLOG_F(WARNING, "Missing required fields in {}", config_file_path);
-                }
-            }
-            else
-            {
-                DLOG_F(WARNING, "Config file {} does not exist", config_file_path);
-            }
+            mod_info->handle = handle;
+            // Load infomation from the library
 
             // Store the library handle in handles_ map with the module name as key
             // handles_[name] = handle;
-            modules_[name] = mod;
+            modules_[name] = mod_info;
             DLOG_F(INFO, "Loaded module : {}", name);
             return true;
         }
@@ -327,9 +166,153 @@ namespace Atom::Module
         }
     }
 
-    std::vector<std::string> ModuleLoader::loadModuleFunctions(const std::string &name)
+    std::vector<std::unique_ptr<FunctionInfo>> ModuleLoader::loadModuleFunctions(const std::string &name)
     {
-        
+        std::vector<std::unique_ptr<FunctionInfo>> funcs;
+        auto it = modules_.find(name);
+        if (it == modules_.end())
+        {
+            LOG_F(ERROR, "Module {} not found", name);
+            return funcs;
+        }
+
+#ifdef _WIN32
+        HMODULE handle = it->second->handle;
+
+        PIMAGE_DOS_HEADER dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(handle);
+        PIMAGE_NT_HEADERS ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS>(reinterpret_cast<char *>(handle) + dosHeader->e_lfanew);
+        PIMAGE_EXPORT_DIRECTORY exportDir = reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(reinterpret_cast<char *>(handle) + ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress);
+
+        DWORD *nameTable = reinterpret_cast<DWORD *>(reinterpret_cast<char *>(handle) + exportDir->AddressOfNames);
+        WORD *ordinalTable = reinterpret_cast<WORD *>(reinterpret_cast<char *>(handle) + exportDir->AddressOfNameOrdinals);
+        DWORD *functionTable = reinterpret_cast<DWORD *>(reinterpret_cast<char *>(handle) + exportDir->AddressOfFunctions);
+
+        for (DWORD i = 0; i < exportDir->NumberOfNames; ++i)
+        {
+            std::unique_ptr<FunctionInfo> func = std::make_unique<FunctionInfo>();
+            func->name = reinterpret_cast<const char *>(reinterpret_cast<char *>(handle) + nameTable[i]);
+            func->address = reinterpret_cast<void *>(reinterpret_cast<char *>(handle) + functionTable[ordinalTable[i]]);
+            funcs.push_back(func);
+            DLOG_F(INFO, "Function: {}", func->name);
+
+            // Trying to get function's parameters, but there are some issues with it
+            DWORD functionRva = functionTable[ordinalTable[i]];
+            PIMAGE_FUNCTION_ENTRY functionEntry = reinterpret_cast<PIMAGE_FUNCTION_ENTRY>(reinterpret_cast<char *>(handle) + functionRva);
+            ULONG_PTR dwFunctionLength = functionEntry->EndOfPrologue - functionEntry->StartingAddress;
+
+            DWORD64 dwImageBase = reinterpret_cast<DWORD64>(handle);
+            DWORD64 dwFunctionAddress = dwImageBase + functionEntry->StartingAddress;
+
+            const int maxParameters = 16;
+            BYTE parameters[maxParameters * sizeof(DWORD64)];
+            DWORD cbParameterSize = sizeof(DWORD64) * maxParameters;
+            DWORD cbBytesRead;
+            if (ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<LPCVOID>(dwFunctionAddress), parameters, cbParameterSize, reinterpret_cast<SIZE_T *>(&cbBytesRead)))
+            {
+                BYTE *dwParameterPtr = parameters;
+                DWORD64 dwParameter = *reinterpret_cast<DWORD64 *>(dwParameterPtr);
+                for (int j = 0; j < maxParameters; ++j)
+                {
+                    DWORD64 dwParameter = *dwParameterPtr;
+
+                    if (dwParameter == 0)
+                    {
+                        break;
+                    }
+
+                    char parameterBuffer[256];
+                    sprintf_s(parameterBuffer, "%#010I64x", dwParameter);
+                    funcs[i].parameters.push_back(parameterBuffer);
+
+                    ++dwParameterPtr;
+                }
+            }
+        }
+#else
+        void *handle = it->second->handle;
+
+        dl_iterate_phdr([](struct dl_phdr_info *info, size_t size, void *data)
+                        {
+        std::vector<FunctionInfo>* funcs = reinterpret_cast<std::vector<FunctionInfo>*>(data);
+
+        if (info->dlpi_name && strcmp(info->dlpi_name, "") != 0) {
+            DLOG_F(INFO, "Module: {}", info->dlpi_name);
+
+            Dl_info dl_info;
+            memset(&dl_info, 0, sizeof(Dl_info));
+            dladdr(info->dlpi_addr, &dl_info);
+
+            ElfW(Ehdr)* elfHeader = reinterpret_cast<ElfW(Ehdr)*>(info->dlpi_addr);
+            int numOfSymbols = elfHeader->e_shnum;
+            ElfW(Shdr)* symbolSection = nullptr;
+            ElfW(Sym)* symbolTable = nullptr;
+            char* strTable = nullptr;
+            int strTableSize = 0;
+
+            for (int i = 0; i < numOfSymbols; ++i) {
+                ElfW(Shdr)* sectionHeader = reinterpret_cast<ElfW(Shdr)*>(info->dlpi_addr + elfHeader->e_shoff + i * elfHeader->e_shentsize);
+                if (sectionHeader->sh_type == SHT_DYNSYM) {
+                    symbolSection = sectionHeader;
+                    symbolTable = reinterpret_cast<ElfW(Sym)*>(info->dlpi_addr + symbolSection->sh_offset);
+                    strTable = reinterpret_cast<char*>(info->dlpi_addr + reinterpret_cast<ElfW(Shdr)*>(info->dlpi_phdr + info->dlpi_phnum)->sh_offset);
+                    strTableSize = reinterpret_cast<ElfW(Shdr)*>(info->dlpi_phdr + info->dlpi_phnum)->sh_size;
+                    break;
+                }
+
+                // Get function parameters using libdw
+                Dwfl* dwfl = dwfl_begin(nullptr);
+                Dwfl_Module* module = dwfl_module_info(dwfl, info->dlpi_addr);
+                GElf_Sym sym;
+                GElf_Addr sym_address;
+                Dwarf_Die* die = nullptr;
+
+                if (gelf_getsym(symtab, i, &sym)) {
+                    sym_address = sym.st_value;
+                    die = dwarf_offdie(elf, sym.st_value);
+                }
+
+                if (die != nullptr) {
+                    Dwarf_Die params;
+                    Dwarf_Die param;
+                    if (dwarf_child(die, &params) == DW_DLV_OK) {
+                        while (dwarf_siblingof(die, &param) == DW_DLV_OK) {
+                            char* paramName = nullptr;
+                            dwarf_diename(param, &paramName);
+
+                            if (paramName != nullptr) {
+                                funcs[i].parameters.push_back(paramName);
+                            }
+
+                            dwarf_nextcu(die, &die, nullptr);
+                        }
+                    }
+                }
+            }
+
+            if (symbolTable && symbolSection) {
+                int numOfSymbols = symbolSection->sh_size / sizeof(ElfW(Sym));
+                for (int i = 0; i < numOfSymbols; ++i) {
+                    ElfW(Sym)* symbol = &symbolTable[i];
+                    char* symName = &strTable[symbol->st_name];
+
+                    if (ELF64_ST_TYPE(symbol->st_info) == STT_FUNC && symName[0] != '\0') {
+                        FunctionInfo func;
+                        func->name = symName;
+                        func->address = reinterpret_cast<void*>(info->dlpi_addr + symbol->st_value);
+                        funcs->push_back(func);
+                        LOG_F(INFO, "Function: {}", symName);
+                    }
+                }
+            }
+        }
+
+        return 0; },
+                        &funcs);
+
+        dlclose(handle);
+#endif
+
+        return funcs;
     }
 
     bool ModuleLoader::UnloadModule(const std::string &name)

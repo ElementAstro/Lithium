@@ -75,25 +75,6 @@ using json = nlohmann::json;
 
 namespace Atom::Module
 {
-
-    /**
-     * @brief Traverse the "modules" directory and create a JSON object containing the information of all modules.
-     *
-     * This function iterates through the "modules" directory and its subdirectories, creates a JSON object for each subdirectory that
-     * contains an "info.json" configuration file, and stores the module's name, version, author, license, description, path, and configuration
-     * file path in the JSON object. It returns a JSON object containing all module information, or an error message if it fails to iterate
-     * the directories or encounters any exception.
-     *
-     * 遍历“modules”目录并创建一个包含所有模块信息的JSON对象。
-     *
-     * 该函数遍历“modules”目录及其子目录，为每个包含“info.json”配置文件的子目录创建一个JSON对象，并将模块的名称、版本、作者、许可证、描述、路径和配置文件路径存储在JSON对象中。
-     * 如果无法遍历目录或遇到任何异常，则返回一个包含所有模块信息的JSON对象，否则返回错误消息。
-     *
-     * @return json - A JSON object containing the module information or an error message.
-     *                包含模块信息或错误消息的JSON对象。
-     */
-    [[deprecated]] json iterator_modules_dir(const std::string &dir_name);
-
     class ModuleLoader
     {
     public:
@@ -168,7 +149,7 @@ namespace Atom::Module
          */
         bool LoadModule(const std::string &path, const std::string &name);
 
-        std::vector<std::string> loadModuleFunctions(const std::string &name);
+        std::vector<std::unique_ptr<FunctionInfo>> loadModuleFunctions(const std::string &name);
 
         /**
          * @brief 卸载指定名称的动态库

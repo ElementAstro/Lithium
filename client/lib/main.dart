@@ -1,69 +1,102 @@
-/// @author: cairuoyu
-/// @homepage: http://cairuoyu.com
-/// @github: https://github.com/cairuoyu/flutter_admin
-/// @date: 2021/6/21
-/// @version: 1.0
-/// @description: 入口
+// Copyright 2019 The Flutter team. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-import 'package:cry/common/application_context.dart';
-import 'package:cry/constants/cry_constant.dart';
-import 'package:cry/generated/l10n.dart' as cryS;
-import 'package:cry/routes/cry_route_Information_parser.dart';
+import 'package:dual_screen/dual_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:cry/cry.dart';
-import 'package:flutter_admin/common/cry_dio_interceptors.dart';
-import 'package:flutter_admin/pages/layout/layout.dart';
-import 'package:flutter_admin/pages/layout/layout_controller.dart';
-import 'package:flutter_admin/pages/login.dart';
-import 'package:flutter_admin/pages/register.dart';
-import 'package:flutter_admin/utils/utils.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:get/get.dart';
+import 'package:flutter/scheduler.dart' show timeDilation;
+import 'package:flutter_gen/gen_l10n/gallery_localizations.dart';
+import 'package:flutter_localized_locales/flutter_localized_locales.dart';
+import 'package:client/constants.dart';
+import 'package:client/data/gallery_options.dart';
+import 'package:client/pages/backdrop.dart';
+import 'package:client/pages/splash.dart';
+import 'package:client/routes.dart';
+import 'package:client/themes/gallery_theme_data.dart';
 import 'package:get_storage/get_storage.dart';
-import 'generated/l10n.dart';
-import 'pages/layout/layout_menu_controller.dart';
-import 'router/main_router_delegate.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import 'layout/adaptive.dart';
+
+export 'package:client/data/demos.dart' show pumpDeferredLibraries;
 
 void main() async {
-  await init();
-  runApp(MyApp());
-}
-
-init() async {
+  GoogleFonts.config.allowRuntimeFetching = false;
   await GetStorage.init();
-  await ApplicationContext.instance.init();
-  ApplicationContext.instance
-      .addBean(CryConstant.KEY_DIO_INTERCEPTORS, [CryDioInterceptors()]);
-  Get.put(LayoutController());
-  Get.put(LayoutMenuController());
+  runApp(const GalleryApp());
 }
 
-class MyApp extends StatelessWidget {
+class GalleryApp extends StatelessWidget {
+  const GalleryApp({
+    super.key,
+    this.initialRoute,
+    this.isTestMode = false,
+  });
+
+  final String? initialRoute;
+  final bool isTestMode;
+
   @override
   Widget build(BuildContext context) {
-    Map<String, Widget> pageMap = {
-      '/': Layout(),
-      '/login': Login(),
-      '/register': Register(),
-    };
-    return GetMaterialApp.router(
-      key: UniqueKey(),
-      builder: Cry.init,
-      debugShowCheckedModeBanner: false,
-      title: 'LITHIUM_ADMIN',
-      enableLog: false,
-      theme: Utils.getThemeData(),
-      darkTheme: Utils.getThemeData(brightness: Brightness.light),
-      localizationsDelegates: [
-        S.delegate,
-        cryS.S.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ],
-      supportedLocales: S.delegate.supportedLocales,
-      routerDelegate: MainRouterDelegate(pageMap: pageMap),
-      routeInformationParser: CryRouteInformationParser(),
+    return ModelBinding(
+      initialModel: GalleryOptions(
+        themeMode: ThemeMode.system,
+        textScaleFactor: systemTextScaleFactorOption,
+        customTextDirection: CustomTextDirection.localeBased,
+        locale: null,
+        timeDilation: timeDilation,
+        platform: defaultTargetPlatform,
+        isTestMode: isTestMode,
+      ),
+      child: Builder(
+        builder: (context) {
+          final options = GalleryOptions.of(context);
+          final hasHinge = MediaQuery.of(context).hinge?.bounds != null;
+          return MaterialApp(
+            restorationScopeId: 'rootGallery',
+            title: 'Flutter Gallery',
+            debugShowCheckedModeBanner: false,
+            themeMode: options.themeMode,
+            theme: GalleryThemeData.lightThemeData.copyWith(
+              platform: options.platform,
+            ),
+            darkTheme: GalleryThemeData.darkThemeData.copyWith(
+              platform: options.platform,
+            ),
+            localizationsDelegates: const [
+              ...GalleryLocalizations.localizationsDelegates,
+              LocaleNamesLocalizationsDelegate()
+            ],
+            initialRoute: initialRoute,
+            supportedLocales: GalleryLocalizations.supportedLocales,
+            locale: options.locale,
+            localeListResolutionCallback: (locales, supportedLocales) {
+              deviceLocale = locales?.first;
+              return basicLocaleListResolution(locales, supportedLocales);
+            },
+            onGenerateRoute: (settings) =>
+                RouteConfiguration.onGenerateRoute(settings, hasHinge),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class RootPage extends StatelessWidget {
+  const RootPage({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ApplyTextOptions(
+      child: SplashPage(
+        child: Backdrop(
+          isDesktop: isDisplayDesktop(context),
+        ),
+      ),
     );
   }
 }

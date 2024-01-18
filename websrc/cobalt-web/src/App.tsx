@@ -6,7 +6,12 @@ import Route from "./routes/root";
 import { getResouceList } from "./services/api";
 import React from "react";
 
+import { useTranslation } from "react-i18next";
+
+import "bootstrap/dist/css/bootstrap.min.css";
+
 function Main() {
+  const { t } = useTranslation();
   // useEffect(()=>{
   //   getResouceList().then(res=>{
   //     console.log(res);

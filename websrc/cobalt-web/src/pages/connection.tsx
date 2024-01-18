@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { Modal } from "react-bootstrap";
-import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
-import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
-import Row from "react-bootstrap/Row";
-import "bootstrap/dist/css/bootstrap.min.css";
-import { HddRack, Ethernet, People, Key } from "react-bootstrap-icons";
-import * as formik from "formik";
-import * as yup from "yup";
+import {
+  Modal,
+  Form,
+  Button,
+  Col,
+  Row,
+  InputGroup,
+  ButtonToolbar,
+} from "react-bootstrap";
+import {
+  HddRack,
+  Ethernet,
+  People,
+  Key,
+  CheckCircle,
+  XCircle,
+} from "react-bootstrap-icons";
+
+import { useTranslation } from "react-i18next";
+
+import * as Yup from "yup";
 
 const ServerSearch = () => {
   const [serverUrl, setServerUrl] = useState("");
@@ -20,16 +31,8 @@ const ServerSearch = () => {
   const [connecting, setConnecting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showModal, setShowModal] = useState(false);
-
-  const { Formik } = formik;
-
-  const schema = yup.object().shape({
-    serverPort: yup.string().required(),
-    serverUrl: yup.string().required(),
-    username: yup.string().required(),
-    password: yup.string().optional(),
-    sslEnabled: yup.bool().optional(),
-  });
+  const [validated, setValidated] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (showModal) {
@@ -39,31 +42,60 @@ const ServerSearch = () => {
     }
   }, [showModal]);
 
-  const handleSearch = () => {
+  const schema = Yup.object().shape({
+    serverUrl: Yup.string()
+      .typeError(t("Server URL must be a valid URL"))
+      .matches(
+        /^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/,
+        t("Server URL must be a valid URL")
+      )
+      .required(),
+    serverPort: Yup.number()
+      .typeError(t("Port must be a number"))
+      .min(1, t("Port must be greater than or equal to 1"))
+      .max(65535, t("Port must be less than or equal to 65535"))
+      .required(),
+    username: Yup.string().matches(
+      /^[a-zA-Z0-9_]+$/,
+      t("Username can only contain letters, numbers, and underscores")
+    ),
+  });
+
+  const handleSearch = (event) => {
+    event.preventDefault();
     setSearching(true);
-    fetch("/api/search-server", {
-      method: "POST",
-      body: JSON.stringify({ serverUrl }),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          setServerPort(data.serverPort);
-        } else {
-          setErrorMessage("服务器搜索失败");
-          setShowModal(true);
-        }
-        setSearching(false);
+    setValidated(false);
+
+    const form = event.currentTarget;
+    if (form.checkValidity() === false) {
+      event.stopPropagation();
+      setValidated(true);
+    } else {
+      fetch("/api/search-server", {
+        method: "POST",
+        body: JSON.stringify({ serverUrl }),
+        headers: {
+          "Content-Type": "application/json",
+        },
       })
-      .catch((error) => {
-        console.error("服务器搜索错误:", error);
-        setErrorMessage("服务器搜索错误");
-        setSearching(false);
-        setShowModal(true);
-      });
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            setServerPort(data.serverPort);
+            setValidated(true);
+          } else {
+            setErrorMessage(t("服务器搜索失败"));
+            setShowModal(true);
+          }
+          setSearching(false);
+        })
+        .catch((error) => {
+          console.error(t("服务器搜索错误:"), error);
+          setErrorMessage(t("服务器搜索错误"));
+          setSearching(false);
+          setShowModal(true);
+        });
+    }
   };
 
   const handleConnect = () => {
@@ -79,7 +111,7 @@ const ServerSearch = () => {
           window.location.href = `http://${serverUrl}:${serverPort}/client`;
         }
       } else {
-        setErrorMessage("Invalid server");
+        setErrorMessage(t("Invalid server"));
         setShowModal(true);
       }
 
@@ -93,110 +125,140 @@ const ServerSearch = () => {
 
   return (
     <div className="container">
-      <h1 className="title">服务器搜索</h1>
+      <h1 className="title">{t("服务器搜索")}</h1>
 
-      <Formik
-        validationSchema={schema}
-        onSubmit={console.log}
-        initialValues={{
-          serverUrl: "",
-          serverPort: "",
-          sslEnabled: false,
-          username: "",
-          password: "",
+      <Form
+        noValidate
+        validated={validated}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setValidated(true);
         }}
       >
-        {({ handleSubmit, handleChange, values, touched, errors }) => (
-          <Form noValidate onSubmit={handleSubmit}>
-            <Row className="mb-3">
-              <Form.Group as={Col} md="4" controlId="validationFormik01">
-                <Form.Label>Server URL</Form.Label>
-                <Form.Control
-                  type="text"
-                  name="serverUrl"
-                  value={values.serverUrl}
-                  onChange={handleChange}
-                  isValid={touched.serverUrl && !errors.serverUrl}
-                />
-              </Form.Group>
-              <Form.Group as={Col} md="4" controlId="validationFormik02">
-                <Form.Label>Server Port</Form.Label>
-                <Form.Control
-                  type="number"
-                  name="serverPort"
-                  value={values.serverPort}
-                  max={65535}
-                  min={1}
-                  onChange={handleChange}
-                  isValid={touched.serverPort && !errors.serverPort}
-                />
-              </Form.Group>
-            </Row>
-            <Row className="mb-3">
-              
-            </Row>
-            <Row className="mb-3">
-              <Form.Group as={Col} md="4" controlId="validationFormikUsername">
-                <Form.Label>Username</Form.Label>
-                <InputGroup hasValidation>
-                  <InputGroup.Text id="inputGroupPrepend">@</InputGroup.Text>
-                  <Form.Control
-                    type="text"
-                    placeholder="Username"
-                    aria-describedby="inputGroupPrepend"
-                    name="username"
-                    value={values.username}
-                    onChange={handleChange}
-                    isInvalid={!!errors.username}
-                  />
-                  <Form.Control.Feedback type="invalid">
-                    {errors.username}
-                  </Form.Control.Feedback>
-                </InputGroup>
-              </Form.Group>
-            </Row>
+        <Row className="mb-3">
+          <Form.Group as={Col} md="4" controlId="validationServerUrl">
+            <Form.Label>
+              <HddRack /> {t("Server URL")}
+            </Form.Label>
+            <Form.Control
+              required
+              type="text"
+              name="serverUrl"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+              // isValid={validated && !errorMessage && serverPort}
+              isInvalid={validated && (!!errorMessage || !serverUrl)}
+            />
+            <Form.Control.Feedback type="invalid">
+              {!!errorMessage ? (
+                <XCircle />
+              ) : (
+                t(
+                  "Please provide a valid server URL and ensure the server is available"
+                )
+              )}
+            </Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group as={Col} md="2" controlId="validationServerPort">
+            <Form.Label>
+              <Ethernet /> {t("Server Port")}
+            </Form.Label>
+            <Form.Control
+              required
+              type="number"
+              name="serverPort"
+              value={serverPort}
+              max={65535}
+              min={1}
+              onChange={(e) => setServerPort(e.target.value)}
+              //isValid={validated && !errorMessage && serverPort}
+              isInvalid={validated && (!!errorMessage || !serverPort)}
+            />
+            <Form.Control.Feedback type="invalid">
+              {!!errorMessage ? (
+                <XCircle />
+              ) : (
+                t(
+                  "Please provide a valid server port and ensure the server is available"
+                )
+              )}
+            </Form.Control.Feedback>
+          </Form.Group>
+        </Row>
+        <Row className="mb-3">
+          <Form.Group as={Col} md="4" controlId="validationUsername">
+            <Form.Label>
+              <People /> {t("Username")}
+            </Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Username"
+              name="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              isValid={validated && !!username}
+              //isInvalid={validated && !!errors.username}
+            />
+            <Form.Control.Feedback type="invalid">
+              {errorMessage}
+            </Form.Control.Feedback>
+          </Form.Group>
+          <Form.Group as={Col} md="2" controlId="validationSslEnabled">
+            <Form.Label>
+              <Key /> SSL Enabled
+            </Form.Label>
+            <Form.Check
+              type="switch"
+              id="sslSwitch"
+              label=""
+              checked={sslEnabled}
+              onChange={(e) => setSslEnabled(e.target.checked)}
+              className="lg"
+            />
+          </Form.Group>
+        </Row>
 
-            <Form.Group className="mb-3">
-              <Form.Check
-                required
-                name="sslEnabled"
-                label="SSL Enabled"
-                onChange={handleChange}
-                isInvalid={!!errors.sslEnabled}
-                feedback={errors.sslEnabled}
-                feedbackType="invalid"
-                id="validationFormik0"
-              />
-            </Form.Group>
-            <InputGroup className="mt-3 col-md-12">
-              <Button
-                variant="primary"
-                onClick={handleSearch}
-                disabled={searching || connecting}
-                className="flex-fill"
-              >
-                {searching ? "Searching..." : "Search"}
-              </Button>
-              <Button
-                variant="success"
-                onClick={handleConnect}
-                disabled={connecting || !serverPort}
-                className="flex-fill"
-              >
-                {connecting ? "Connecting..." : "Connect"}
-              </Button>
-            </InputGroup>
-          </Form>
-        )}
-      </Formik>
+        <Form.Group className="mb-3">
+          <Form.Check
+            required
+            name="terms"
+            label="Agree to terms and conditions"
+            feedback="You must agree before submitting."
+          />
+        </Form.Group>
 
-      {errorMessage && <div className="mt-3 text-danger">{errorMessage}</div>}
+        <ButtonToolbar className="mt-3">
+          <Button
+            variant="primary"
+            onClick={handleSearch}
+            disabled={searching || connecting}
+            className="mr-2"
+          >
+            {searching ? t("Searching...") : t("Search")}
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleConnect}
+            disabled={connecting || !serverPort}
+          >
+            {connecting ? t("Connecting...") : t("Connect")}
+          </Button>
+        </ButtonToolbar>
+      </Form>
+
+      {errorMessage && (
+        <div className="mt-3 text-danger">
+          <XCircle /> {errorMessage}
+        </div>
+      )}
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>Error</Modal.Title>
         </Modal.Header>
-        <Modal.Body>{errorMessage}</Modal.Body>
+        <Modal.Body>
+          <XCircle /> {errorMessage}
+        </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModal(false)}>
             Close

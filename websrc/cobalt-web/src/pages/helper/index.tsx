@@ -132,7 +132,7 @@ const Helper = () => {
           <Col xs={6}>
             {/* 卡片池 */}
             <Droppable droppableId="init_droppable">
-              {(provided: { droppableProps: React.JSX.IntrinsicAttributes & React.ClassAttributes<HTMLDivElement> & React.HTMLAttributes<HTMLDivElement>; innerRef: React.LegacyRef<HTMLDivElement> | undefined; placeholder: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | Iterable<React.ReactNode> | null | undefined; }, snapshot: any) => (
+              {(provided: { droppableProps }, snapshot) => (
                 <div
                   style={{
                     width: "100%",

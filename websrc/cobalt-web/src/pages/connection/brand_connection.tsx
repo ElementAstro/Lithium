@@ -64,12 +64,15 @@ const BrandConnection = () => {
           <Card>
             <Card.Body>
               <Form.Group controlId="formBrandName">
-                <Form.Label>{t("设备品牌")}</Form.Label>
+                <Form.Label>{t("Device Brand")}</Form.Label>
                 <Row>
                   {brand_type_cn.map((item: string, type_index: number) => (
                     <Col xs={6} key={type_index}>
                       <Form.Group>
-                        <Form.Label>{item}{t("品牌")}</Form.Label>
+                        <Form.Label>
+                          {item}
+                          {t("Brand")}
+                        </Form.Label>
                         <Form.Control
                           as="select"
                           value={
@@ -84,7 +87,7 @@ const BrandConnection = () => {
                           onChange={(e) => handleBrandChange(e, type_index)}
                         >
                           <option value="">
-                            <em>{t("空")}</em>
+                            <em>{t("Empty")}</em>
                           </option>
                           {brand_list !== null
                             ? brand_list[
@@ -109,17 +112,28 @@ const BrandConnection = () => {
         <Col md={6}>
           <Card>
             <Card.Body>
-              <Button
-                variant="outline-primary"
-                onClick={handleResetBrandSelections}
-              >
-                <Trash />
-                {t("重置")}
-              </Button>
-              <Button variant="primary" onClick={handleConnectBrand}>
-                <ArrowRight />
-                {t("初始化配置")}
-              </Button>
+              <Row fluid="md">
+                <Col sm>
+                  <Button
+                    variant="outline-primary"
+                    onClick={handleResetBrandSelections}
+                    size={"lg"}
+                  >
+                    <Trash />
+                    {t("重置")}
+                  </Button>
+                </Col>
+                <Col sm>
+                  <Button
+                    variant="primary"
+                    onClick={handleConnectBrand}
+                    size={"lg"}
+                  >
+                    <ArrowRight />
+                    {t("初始化配置")}
+                  </Button>
+                </Col>
+              </Row>
             </Card.Body>
           </Card>
         </Col>

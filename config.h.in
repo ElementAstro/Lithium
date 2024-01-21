@@ -2,6 +2,7 @@
 #cmakedefine01 ENABLE_NATIVE_SERVER
 #cmakedefine01 ENABLE_FASTHASH
 #cmakedefine01 ENABLE_DEBUG
+#cmakedefine01 ENABLE_SSL
 
 #ifdef ENABLE_GETTEXT
 // I18n

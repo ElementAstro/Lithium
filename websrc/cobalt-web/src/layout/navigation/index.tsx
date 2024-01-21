@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
@@ -16,10 +16,19 @@ import {
   Webcam,
   Box,
   Bookmark,
-  Camera
+  Camera,
 } from "react-bootstrap-icons";
+import { useTranslation } from "react-i18next";
+import { Button } from "react-bootstrap";
 
-function OffcanvasExample() {
+function Navigation() {
+  const { t } = useTranslation();
+
+  const [language, setLanguage] = useState("en");
+
+  const changeLanguage = (lng) => {
+    setLanguage(lng);
+  };
   return (
     <>
       <Navbar key="xxl" expand="xxl" className="bg-body-tertiary mb-3">
@@ -32,17 +41,17 @@ function OffcanvasExample() {
               height="30"
               className="d-inline-block align-top"
             />{" "}
-            Cobalt-WebClient
+            {t("title")}
           </Navbar.Brand>
-          <Navbar.Toggle aria-controls={`offcanvasNavbar-expand-xxl`} />
+          <Navbar.Toggle aria-controls={`offcanvasNavbar-routes`} />
           <Navbar.Offcanvas
-            id={`offcanvasNavbar-expand-xxl`}
-            aria-labelledby={`offcanvasNavbarLabel-expand-xxl`}
+            id={`offcanvasNavbar-routes`}
+            aria-labelledby={`offcanvasNavbarLabel-routes`}
             placement="end"
           >
             <Offcanvas.Header closeButton>
-              <Offcanvas.Title id={`offcanvasNavbarLabel-expand-xxl`}>
-                Cobalt-WebClient
+              <Offcanvas.Title id={`offcanvasNavbarLabel-routes`}>
+                {t("title")}
               </Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body>
@@ -81,7 +90,7 @@ function OffcanvasExample() {
                   </NavDropdown.Item>
                   <NavDropdown.Divider />
                   <NavDropdown.Item href="#action5">
-                    <Webcam size={24}  />
+                    <Webcam size={24} />
                     INDIWeb
                   </NavDropdown.Item>
                 </NavDropdown>
@@ -106,4 +115,4 @@ function OffcanvasExample() {
   );
 }
 
-export default OffcanvasExample;
+export default Navigation;

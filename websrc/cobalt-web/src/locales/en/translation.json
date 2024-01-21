@@ -1,0 +1,23 @@
+{
+  "home": {
+    "title": "Home",
+    "deviceControl": "Device Control",
+    "community": "Community",
+    "knowledgeBase": "Knowledge Base"
+  },
+  "title": "Cobalt-WebClient",
+  "phd2ConfigEditor.advancedSettings": "Advanced Settings",
+  "phd2ConfigEditor.hideAdvancedSettings": "Hide Advanced Settings",
+  "phd2ConfigEditor.enableCentroidDetection": "Enable Centroid Detection",
+  "phd2ConfigEditor.centroidDetectionThreshold": "Centroid Detection Threshold",
+  "phd2ConfigEditor.calibrationDuration": "Calibration Duration (ms)",
+  "phd2ConfigEditor.calibrationDistance": "Calibration Distance (pixels)",
+  "phd2ConfigEditor.name": "Phd2 Config Name",
+  "phd2ConfigEditor.cameraDriver": "Camera Driver",
+  "phd2ConfigEditor.cameraCCD": "Camera CCD",
+  "phd2ConfigEditor.pixelSize": "Pixel Size",
+  "phd2ConfigEditor.telescopeDriver": "Telescope Driver",
+  "phd2ConfigEditor.telescopeFocalLength": "Telescope Focal Length",
+  "phd2ConfigEditor.submit": "Submit",
+  "phd2ConfigEditor.cancel": "Cancel"
+}

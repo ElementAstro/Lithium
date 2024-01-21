@@ -7,6 +7,9 @@ import { initReactI18next } from "react-i18next";
 import Route from "./routes/root.tsx";
 import { Router } from "react-router";
 
+import translationEN from "./locales/en/translation.json";
+import translationZH from "./locales/zh/translation.json";
+
 i18n
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
@@ -15,9 +18,10 @@ i18n
     // or even better, manage them via a UI: https://react.i18next.com/guides/multiple-translation-files#manage-your-translations-with-a-management-gui)
     resources: {
       en: {
-        translation: {
-          "Welcome to React": "Welcome to React and react-i18next",
-        },
+        translation: translationEN,
+      },
+      zh: {
+        translation: translationZH,
       },
     },
     lng: "en", // if you're using a language detector, do not define the lng option

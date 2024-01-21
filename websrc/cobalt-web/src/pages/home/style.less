@@ -1,0 +1,37 @@
+.opening-animation {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  background: linear-gradient(to bottom, #3f51b5, #2196f3);
+  color: #fff;
+  transition: opacity 1s ease-in-out;
+  animation-name: fadeIn;
+  animation-duration: 2s;
+}
+
+.opening-animation.fade-out {
+  opacity: 1;
+  animation-name: fadeOut;
+  animation-duration: 2s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

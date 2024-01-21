@@ -29,55 +29,23 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "atom/server/message_bus.hpp"
-#include "components/device/device_manager.hpp"
+#include "atom/async/thread.hpp"
+#include "config/configor.hpp"
+#include "device/device_manager.hpp"
 #include "atom/system/process.hpp"
+#include "task/task_manager.hpp"
+#include "task/task_generator.hpp"
+#include "task/task_stack.hpp"
+#include "atom/type/message.hpp"
+#include "script/script_manager.hpp"
+#include "atom/error/error_stack.hpp"
+#include "atom/server/message_bus.hpp"
+#include "device/device_manager.hpp"
 #include "atom/server/commander.hpp"
 #include "atom/type/iparams.hpp"
-#include "atom/server/message.hpp"
-
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
-
-#define GetIntConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<int>()
-
-#define GetFloatConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<float>()
-
-#define GetBoolConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<bool>()
-
-#define GetDoubleConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<double>()
-
-#define GetStringConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<std::string>()
 
 namespace Lithium
 {
-    namespace Thread
-    {
-        class ThreadManager;
-    }
-
-    class ConfigManager;
-
-    class ScriptManager;
-    class PluginManager;
-    class ModuleLoader;
-
-    class BasicTask;
-
-    namespace Task
-    {
-        class TaskGenerator;
-        class TaskManager;
-        class TaskStack;
-    }
-
-    class ErrorStack;
-
     class LithiumApp
     {
     public:

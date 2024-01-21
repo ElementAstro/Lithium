@@ -1,17 +1,14 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { AppProviders } from "./AppProvider";
 import { HashRouter as Router } from "react-router-dom";
 import Body from "./layout/index";
 import Route from "./routes/root";
-import { getResouceList } from "./services/api";
-import React from "react";
 
-import { useTranslation } from "react-i18next";
+import WS_LISTENER_COMP from "./pages/home/init_ws_listener";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 
 function Main() {
-  const { t } = useTranslation();
   // useEffect(()=>{
   //   getResouceList().then(res=>{
   //     console.log(res);
@@ -23,6 +20,7 @@ function Main() {
       <Body>
         <Route></Route>
       </Body>
+      <WS_LISTENER_COMP />
     </Router>
   );
 }
@@ -32,4 +30,3 @@ export default () => (
     <Main></Main>
   </AppProviders>
 );
-

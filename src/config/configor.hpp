@@ -32,20 +32,61 @@ Description: Configor
 #include "error/error_code.hpp"
 
 #include "atom/type/json.hpp"
-
 using json = nlohmann::json;
+
+#define GetIntConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<int>()
+
+#define GetFloatConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<float>()
+
+#define GetBoolConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<bool>()
+
+#define GetDoubleConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<double>()
+
+#define GetStringConfig(path) \
+    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<std::string>()
 
 namespace Lithium
 {
+    /**
+     * @brief 配置管理器
+     *
+     * Config manager.
+     */
     class ConfigManager
     {
     public:
+        /**
+         * @brief 构造函数
+         *
+         * Constructor.
+         */
         ConfigManager();
 
+        /**
+         * @brief 析构函数
+         *
+         * Destructor.
+         */
         ~ConfigManager();
 
+        /**
+         * @brief 创建一个全局唯一的ConfigManager实例
+         *
+         * Create a globally unique ConfigManager instance.
+         */
         static std::shared_ptr<ConfigManager> createShared();
-        
+
+        /**
+         * @brief 创建一个全局唯一的ConfigManager实例
+         *
+         * Create a globally unique ConfigManager instance.
+         */
+        static std::unique_ptr<ConfigManager> createUnique();
+
         /**
          * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
          *
@@ -102,6 +143,11 @@ namespace Lithium
          */
         bool saveToFile(const std::string &file_path) const;
 
+        /**
+         * @brief 清理配置项
+         *
+         * Clean up configuration items.
+         */
         void tidyConfig();
 
     private:
@@ -110,6 +156,13 @@ namespace Lithium
         std::mutex mutex_;
         mutable std::shared_mutex rw_mutex_;
 
+        /**
+         * @brief 将 JSON 配置合并到当前配置中
+         *
+         * Merge JSON configuration to the current configuration.
+         *
+         * @param j JSON 配置
+         */
         void mergeConfig(const json &j);
 
         /**

@@ -13,16 +13,21 @@ import {
   InfoCircle,
 } from "react-bootstrap-icons";
 
+import Welcome from "../pages/home/animation";
+import Home from "../pages/home";
 import Dashboard from "../pages/dashboard";
-import ServerSearch from "../pages/connection";
+import ServerSearch from "../pages/server";
 import DeviceConnection from "../pages/connect";
+import DeviceControlPanelPage from "../pages/device";
 import ConfigManager from "../pages/settings";
 import ModuleManager from "../pages/module";
-import Help from "../pages/help";
+import Help from "../pages/about/help";
 import AboutPage from "../pages/about";
 
+import GlobalParameterSettingPage from "../pages/config";
 import Connect from "../pages/connection/index";
 import Helper from "../pages/helper";
+import ErrorPage from "../pages/error";
 
 interface IndexRouteObjectPlus extends IndexRouteObject {
   title?: string;
@@ -38,13 +43,25 @@ type RouteObjectPlus = IndexRouteObjectPlus | NonIndexRouteObjectPlus;
 
 export const routesConfig: RouteObjectPlus[] = [
   {
+    path: "/",
+    element: <Welcome />,
+    title: "首页",
+    icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+  },
+  {
+    path: "/home",
+    element: <Home />,
+    title: "欢迎",
+    icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+  },
+  {
     path: "/dashboard",
     element: <Dashboard />,
     title: "Dashboard",
     icon: <Box fill="#333" width={28} height={28}></Box>,
   },
   {
-    path: "/",
+    path: "/server",
     element: <ServerSearch />,
     title: "服务器连接",
     icon: <Server fill="#333" width={28} height={28}></Server>,
@@ -53,6 +70,12 @@ export const routesConfig: RouteObjectPlus[] = [
     path: "/device_connect",
     element: <DeviceConnection />,
     title: "设备连接",
+    icon: <Motherboard fill="#333" width={28} height={28}></Motherboard>,
+  },
+  {
+    path: "/device",
+    element: <DeviceControlPanelPage />,
+    title: "设备控制",
     icon: <Motherboard fill="#333" width={28} height={28}></Motherboard>,
   },
   {
@@ -66,6 +89,12 @@ export const routesConfig: RouteObjectPlus[] = [
     element: <ConfigManager />,
     title: "配置管理",
     icon: <Gear fill="#333" width={28} height={28}></Gear>,
+  },
+  {
+    path : "/config",
+    element: <GlobalParameterSettingPage />,
+    title: "全局参数设置",
+    icon: <Box fill="#333" width={28} height={28}></Box>,
   },
   {
     path: "/module",
@@ -91,6 +120,12 @@ export const routesConfig: RouteObjectPlus[] = [
     title: "关于",
     icon: <Box fill="#333" width={28} height={28}></Box>,
   },
+  {
+    path: "/error",
+    element: <ErrorPage />,
+    title: "错误",
+    icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+  }
 ];
 
 const Route = () => {

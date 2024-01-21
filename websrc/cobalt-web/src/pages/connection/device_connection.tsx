@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 
 import { Modal, Form, Button, Row, Col } from "react-bootstrap";
-import { Trash, ArrowRight } from "react-bootstrap-icons";
+import { Trash, ArrowRight, CheckCircle } from "react-bootstrap-icons";
 
 import { useTranslation } from "react-i18next";
 
 import { GlobalStore } from "../../store/globalStore";
+import Phd2ConfigEditor from "./phd2_connection";
 
 const DeviceConnection = () => {
   const { t } = useTranslation();
@@ -13,26 +14,45 @@ const DeviceConnection = () => {
     device_list,
     user_config_list,
     open_dialog,
+    config_name,
+    already_connect,
     brand_type_cn,
     brand_type_en,
     brand_connection,
     device_selections,
+    phd2_connect_ready,
   } = GlobalStore.useAppState((state) => state.connect);
-  const [configName, setConfigName] = useState("");
+
+  const [isDialogOpen, setDialogOpen] = React.useState(false);
+  const [isAlertOpen, setAlertOpen] = React.useState(false);
 
   const handleNewSetting = () => {
-    GlobalStore.actions.connect.loadNewConfig();
-    handleCreateClose();
+    if (config_name !== null) {
+      GlobalStore.actions.connect.setProfile(config_name);
+      // 关闭Dialog
+      handleCreateClose();
+    }
   };
 
+  // 用户完成配置时，调用connectDevice正式启动连接
   const handleConnectDevice = () => {
-    GlobalStore.actions.connect.connectDevice();
+    if (already_connect) {
+      // 提示用户
+      setAlertOpen(true);
+    } else {
+      connectToDevice();
+    }
   };
 
-  const handleDeviceChange = (event, index) => {
+  const connectToDevice = () => {
+    GlobalStore.actions.connect.connectDevice();
+    handleAlertClose();
+  };
+
+  const handleDeviceChange = (event: SelectChangeEvent, index: number) => {
     const value = event.target.value;
     const selectedConfig = device_list[brand_type_en[index]].find(
-      (config) => config.device_name === value
+      (config: { device_name: string }) => config.device_name === value
     );
     const deviceType = brand_type_en[index];
     if (device_selections === null) {
@@ -44,24 +64,26 @@ const DeviceConnection = () => {
     });
   };
 
-  const handleUserConfigLoad = (event) => {
+  // 切换一个新的配置
+  const handleUserConfigLoad = (event: SelectChangeEvent) => {
     const value = event.target.value;
-    const selectedConfig = user_config_list.find(
-      (config) => config.name === value
-    );
-    if (selectedConfig !== undefined) {
-      GlobalStore.actions.connect.setState({
-        device_selections: selectedConfig,
-      });
+    const selectedConfig = value;
+    GlobalStore.actions.connect.setState({
+      config_name: value,
+    });
+    if (value !== "") {
+      GlobalStore.actions.connect.setProfile(selectedConfig);
     }
   };
-
+  // 重置
   const handleResetDeviceSelections = () => {
     GlobalStore.actions.connect.resetDeviceSelections();
   };
 
-  const handleSettingChange = (event) => {
-    setConfigName(event.target.value);
+  const handleSettingChange = (event: any) => {
+    GlobalStore.actions.connect.setState({
+      config_name: event.target.value,
+    });
   };
 
   const handleCreateOpen = () => {
@@ -76,8 +98,33 @@ const DeviceConnection = () => {
     });
   };
 
-  const Sleep = (ms: number | undefined) => {
+  const handleStartPHD2 = async () => {
+    let connectReady = await GlobalStore.actions.connect.startPhd2();
+    if (connectReady) {
+      alert("PHD2 start OK");
+    } else {
+      alert("PHD2 Error");
+    }
+  };
+  //   休眠函数
+  const Sleep = (ms: number) => {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  };
+
+  const handleOpenDialog = () => {
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+  };
+
+  const handleDeleteConfig = (name: string) => {
+    GlobalStore.actions.connect.deleteProfile(name);
+  };
+
+  const handleAlertClose = () => {
+    setAlertOpen(false);
   };
 
   return (
@@ -157,10 +204,22 @@ const DeviceConnection = () => {
             className="m-2"
             onClick={handleConnectDevice}
           >
-            连接设备<ArrowRight/>
+            连接设备
+            <ArrowRight />
           </Button>
         </Col>
       </Row>
+      {phd2_connect_ready ? (
+        <Button
+          variant="contained"
+          onClick={async () => {
+            handleStartPHD2();
+          }}
+        >
+          <CheckCircle />
+          启动并连接PHD2
+        </Button>
+      ) : null}
       <Modal show={open_dialog} onHide={handleCreateClose}>
         <Modal.Header closeButton>
           <Modal.Title>配置命名</Modal.Title>
@@ -179,6 +238,8 @@ const DeviceConnection = () => {
           <Button onClick={handleNewSetting}>提交</Button>
         </Modal.Footer>
       </Modal>
+      <Button onClick={handleOpenDialog}>配置Phd2相关内容</Button>
+      <Phd2ConfigEditor open={isDialogOpen} onClose={handleCloseDialog} />
     </>
   );
 };

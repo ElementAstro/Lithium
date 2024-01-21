@@ -3,7 +3,7 @@ import { Accordion } from "react-bootstrap";
 import { useTranslation } from "react-i18next";
 
 const Help = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   return (
     <Accordion defaultActiveKey="0" flush>
       <Accordion.Item eventKey="0">

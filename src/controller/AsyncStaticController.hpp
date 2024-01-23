@@ -1,18 +1,7 @@
 /*
- * StaticController.cpp
+ * AsyncStaticController.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,8 +12,8 @@ Description: Static Route
 
 **************************************************/
 
-#ifndef Lithium_STATICCONTROLLER_HPP
-#define Lithium_STATICCONTROLLER_HPP
+#ifndef LITHIUM_ASYNC_STATIC_CONTROLLER_HPP
+#define LITHIUM_ASYNC_STATIC_CONTROLLER_HPP
 
 #include "oatpp/web/server/api/ApiController.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
@@ -47,13 +36,20 @@ public:
     {
     }
 
-public:
+    // ----------------------------------------------------------------
+    // Pointer creator
+    // ----------------------------------------------------------------
+
     static std::shared_ptr<StaticController> createShared(
         OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper) // Inject objectMapper component here as default parameter
     )
     {
         return std::make_shared<StaticController>(objectMapper);
     }
+
+    // ----------------------------------------------------------------
+    // Static Loader
+    // ----------------------------------------------------------------
 
     static std::string loadResource(const std::string &path, const std::unordered_set<std::string> &allowedExtensions, bool checkAllowed = true)
     {
@@ -140,21 +136,6 @@ public:
         Action act() override
         {
             auto response = controller->createResponse(Status::CODE_200, loadResource("module/novnc/index.html", {"html"}));
-            response->putHeader(Header::CONTENT_TYPE, "text/html");
-            return _return(response);
-        }
-    };
-
-    ENDPOINT_INFO(SkymapRequestHandler)
-    {
-        info->summary = "'Skymap' endpoint";
-    }
-    ENDPOINT_ASYNC("GET", "/skymap", SkymapRequestHandler)
-    {
-        ENDPOINT_ASYNC_INIT(SkymapRequestHandler)
-        Action act() override
-        {
-            auto response = controller->createResponse(Status::CODE_200, loadResource("module/skymap/index.html", {"html"}));
             response->putHeader(Header::CONTENT_TYPE, "text/html");
             return _return(response);
         }
@@ -363,4 +344,4 @@ public:
 
 };
 
-#endif // Lithium_STATICCONTROLLER_HPP
+#endif // LITHIUM_ASYNC_STATIC_CONTROLLER_HPP

@@ -90,6 +90,39 @@ namespace Atom::System
     bool IsRoot();
 
     /**
+     * @brief Get the current user name.
+     * 获取当前用户名
+     *
+     * @return The current user name.
+     *         当前用户名
+     */
+    std::string GetCurrentUsername();
+
+    // Max: Surely, we will not recieve any signal after we call this function.
+
+    /**
+     * @brief Shutdown the system.
+     * 关闭系统
+     *
+     * @return true if the system is successfully shutdown.
+     *         如果系统成功关闭，则返回 true
+     * @return false if an error occurred.
+     *         如果发生错误，则返回 false
+     */
+    bool Shutdown();
+
+    /**
+     * @brief Reboot the system.
+     * 重启系统
+     *
+     * @return true if the system is successfully rebooted.
+     *         如果系统成功重启，则返回 true
+     * @return false if an error occurred.
+     *         如果发生错误，则返回 false
+     */
+    bool Reboot();
+
+    /**
      * @brief Get the process information and file address.
      * 获取进程信息以及对应文件地址
      *

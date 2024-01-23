@@ -2,17 +2,6 @@
  * LithiumApp.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -31,18 +20,13 @@ Description: Lithium App Enter
 
 #include "atom/async/thread.hpp"
 #include "config/configor.hpp"
-#include "device/device_manager.hpp"
+#include "device/manager.hpp"
 #include "atom/system/process.hpp"
-#include "task/task_manager.hpp"
-#include "task/task_generator.hpp"
-#include "task/task_stack.hpp"
 #include "atom/type/message.hpp"
-#include "script/script_manager.hpp"
 #include "atom/error/error_stack.hpp"
 #include "atom/server/message_bus.hpp"
-#include "device/device_manager.hpp"
 #include "atom/server/commander.hpp"
-#include "atom/type/iparams.hpp"
+#include "addon/manager.hpp"
 
 namespace Lithium
 {
@@ -57,8 +41,6 @@ namespace Lithium
         // -------------------------------------------------------------------
 
         static std::shared_ptr<LithiumApp> createShared();
-
-        static std::unique_ptr<LithiumApp> createUnique();
 
         // -------------------------------------------------------------------
         // Config methods
@@ -102,40 +84,6 @@ namespace Lithium
         bool terminateProcessByName(const std::string &name, int signal = 15);
         std::vector<Process::Process> getRunningProcesses();
         std::vector<std::string> getProcessOutput(const std::string &identifier);
-
-        // -------------------------------------------------------------------
-        // Task methods
-        // -------------------------------------------------------------------
-
-        bool addTask(const std::shared_ptr<BasicTask> &task);
-        bool insertTask(const std::shared_ptr<BasicTask> &task, int position);
-        bool executeAllTasks();
-        bool stopTask();
-        bool executeTaskByName(const std::string &name);
-        bool modifyTask(int index, const std::shared_ptr<BasicTask> &task);
-        bool modifyTaskByName(const std::string &name, const std::shared_ptr<BasicTask> &task);
-        bool deleteTask(int index);
-        bool deleteTaskByName(const std::string &name);
-        bool queryTaskByName(const std::string &name);
-        const std::vector<std::shared_ptr<BasicTask>> &getTaskList() const;
-        bool saveTasksToJson() const;
-
-        bool checkTaskExecutable(const std::string &name);
-
-        // -------------------------------------------------------------------
-        // Module methods
-        // -------------------------------------------------------------------
-
-        bool loadModule(const std::string &path, const std::string &name);
-        bool unloadModule(const std::string &name);
-        bool reloadModule(const std::string &name);
-        bool reloadAllModules();
-        bool checkModuleLoaded(const std::string &name);
-        bool enableModule(const std::string &name);
-        bool disableModule(const std::string &name);
-        bool getModuleStatus(const std::string &name);
-        json getModuleConfig(const std::string &name);
-        std::vector<std::string> getModuleList();
         
         // -------------------------------------------------------------------
         // Message methods
@@ -171,14 +119,6 @@ namespace Lithium
         void joinThreadByName(const std::string &name);
         bool isThreadRunning(const std::string &name);
 
-    public:
-        bool loadChaiScriptFile(const std::string &filename);
-        bool unloadChaiScriptFile(const std::string &filename);
-        bool runChaiCommand(const std::string &command);
-        bool runChaiMultiCommand(const std::vector<std::string> &command);
-        bool runChaiScript(const std::string &filename);
-        void initMyAppChai();
-
         void LiRegisterFunc(const std::string &name, std::function<void(const json &)> handler)
         {
             m_CommandDispatcher->RegisterHandler(name, handler);
@@ -211,13 +151,9 @@ namespace Lithium
         std::shared_ptr<ConfigManager> m_ConfigManager;
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
-        std::shared_ptr<Task::TaskManager> m_TaskManager;
-        std::shared_ptr<Task::TaskGenerator> m_TaskGenerator;
-        std::shared_ptr<Task::TaskStack> m_TaskStack;
         std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
-        std::shared_ptr<ScriptManager> m_ScriptManager;
-        std::shared_ptr<Atom::ModuleLoader> m_ModuleLoader;
         std::shared_ptr<ErrorStack> m_ErrorStack;
+        std::shared_ptr<ComponentManager> m_ComponentManager;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 

@@ -71,8 +71,8 @@ namespace Lithium
         // Wrappered Config methods
         // -------------------------------------------------------------------
 
-        ReturnMessage GetConfigW(const std::shared_ptr<IParams> &params);
-        ReturnMessage SetConfigW(const std::shared_ptr<IParams> &params);
+        ReturnMessage GetConfigW(const json &params);
+        ReturnMessage SetConfigW(const json &params);
 
         // -------------------------------------------------------------------
         // Device methods
@@ -136,21 +136,6 @@ namespace Lithium
         bool getModuleStatus(const std::string &name);
         json getModuleConfig(const std::string &name);
         std::vector<std::string> getModuleList();
-
-        // -------------------------------------------------------------------
-        // Wrappered Module methods
-        // -------------------------------------------------------------------
-
-        ReturnMessage loadModuleW(const std::shared_ptr<IParams> &params);
-        ReturnMessage unloadModuleW(const std::shared_ptr<IParams> &params);
-        ReturnMessage reloadModuleW(const std::shared_ptr<IParams> &params);
-        ReturnMessage reloadAllModulesW(const std::shared_ptr<IParams> &params);
-        ReturnMessage checkModuleLoadedW(const std::shared_ptr<IParams> &params);
-        ReturnMessage enableModuleW(const std::shared_ptr<IParams> &params);
-        ReturnMessage disableModuleW(const std::shared_ptr<IParams> &params);
-        ReturnMessage getModuleStatusW(const std::shared_ptr<IParams> &params);
-        ReturnMessage getModuleConfigW(const std::shared_ptr<IParams> &params);
-        ReturnMessage getModuleListW(const std::shared_ptr<IParams> &params);
         
         // -------------------------------------------------------------------
         // Message methods
@@ -194,45 +179,44 @@ namespace Lithium
         bool runChaiScript(const std::string &filename);
         void initMyAppChai();
 
-        void LiRegisterFunc(const std::string &name, std::function<void(const std::shared_ptr<IParams> &)> handler)
+        void LiRegisterFunc(const std::string &name, std::function<void(const json &)> handler)
         {
             m_CommandDispatcher->RegisterHandler(name, handler);
         }
 
         template <typename T>
-        void LiRegisterMemberFunc(const std::string &name, void (T::*memberFunc)(const std::shared_ptr<IParams>))
+        void LiRegisterMemberFunc(const std::string &name, void (T::*memberFunc)(const json &))
         {
             if (!m_CommandDispatcher)
-                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,std::shared_ptr<IParams>>>();
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,json>>();
             m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
         }
 
         // Max: The async func will be executed in a separate thread, and the return value will be ignored.
         //      So must use MessageBus to send the return value.
         template <typename T>
-        void LiRegisterAsyncMemberFunc(const std::string &name, void (T::*memberFunc)(const std::shared_ptr<IParams>), bool async = false)
+        void LiRegisterAsyncMemberFunc(const std::string &name, void (T::*memberFunc)(const json &), bool async = false)
         {
             if (!m_CommandDispatcher)
-                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,std::shared_ptr<IParams>>>();
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,json>();
             m_CommandDispatcher->RegisterMemberHandler(name + "_async", this, memberFunc);
         }
 
     private:
 
-        std::unique_ptr<CommandDispatcher<void,std::shared_ptr<IParams>>> m_CommandDispatcher;
+        std::unique_ptr<CommandDispatcher<void,json> m_CommandDispatcher;
 
     private:
-        std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
+        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
         std::shared_ptr<ConfigManager> m_ConfigManager;
         std::shared_ptr<DeviceManager> m_DeviceManager;
-        std::shared_ptr<Process::ProcessManager> m_ProcessManager;
+        std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
         std::shared_ptr<Task::TaskManager> m_TaskManager;
         std::shared_ptr<Task::TaskGenerator> m_TaskGenerator;
         std::shared_ptr<Task::TaskStack> m_TaskStack;
-        std::shared_ptr<MessageBus> m_MessageBus;
-        std::shared_ptr<PluginManager> m_PluginManager;
+        std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
         std::shared_ptr<ScriptManager> m_ScriptManager;
-        std::shared_ptr<ModuleLoader> m_ModuleLoader;
+        std::shared_ptr<Atom::ModuleLoader> m_ModuleLoader;
         std::shared_ptr<ErrorStack> m_ErrorStack;
     };
     extern std::shared_ptr<LithiumApp> MyApp;

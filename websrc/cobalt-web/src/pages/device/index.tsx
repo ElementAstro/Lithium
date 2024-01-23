@@ -4,12 +4,23 @@ import Tab from "react-bootstrap/Tab";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Alert from "react-bootstrap/Alert";
-import { Camera, Question, XCircle } from "react-bootstrap-icons";
+import Col from "react-bootstrap/Col";
+import Container from "react-bootstrap/Container";
+import Row from "react-bootstrap/Row";
+
+import {
+  Camera,
+  DeviceHdd,
+  Filter,
+  Rulers,
+  Star,
+  XCircle,
+} from "react-bootstrap-icons";
 
 import DeviceCameraGeneralControlPanel from "./camera";
 import DeviceFilterGeneralControlPanel from "./filterwheel";
 import DeviceFocuserGeneralControlPanel from "./focuser";
-// import DeviceGuiderGeneralControlPanel from "./guider";
+import DeviceGuiderGeneralControlPanel from "./guider";
 import DevicePHD2GeneralControlPanel from "./phd2";
 import DeviceTelescopeGeneralControlPanel from "./telescope";
 
@@ -19,20 +30,30 @@ import DeviceFilterDetailedControlPanel from "./detail/filterwheel";
 import DeviceFocuserDetailedControlPanel from "./detail/focuser";
 import DeviceGuiderDetailedControlPanel from "./detail/guider";
 import DevicePHD2DetailedControlPanel from "./detail/phd2";
-import { Col, Container, Row } from "react-bootstrap";
+
+import DeviceAdvancedControlModal from "../../components/device/modal";
 
 const DeviceControlPanelPage = () => {
   const device_disable_state = [false, false, false, false, false, false];
   const [show_detail, set_show_detail] = useState(false);
-  const [show_alert, set_show_alert] = useState(false);
-  const [activeTab, setActiveTab] = useState("camera");
+  // const [show_alert, set_show_alert] = useState(false);
+  // const [activeTab, setActiveTab] = useState("camera");
+  const [showAdvancedMode, setShowAdvancedMode] = useState(false);
 
-  const handleAlertClose = () => {
-    set_show_alert(false);
+  const handleShowAdvancedMode = () => {
+    setShowAdvancedMode(true);
+  };
+
+  const handleCloseAdvancedMode = () => {
+    setShowAdvancedMode(false);
+  };
+
+  const handlAdvanceModeOk = () => {
+    setShowAdvancedMode(false);
     set_show_detail(true);
   };
 
-  const check_device_connection = (device_key) => {
+  const check_device_connection = (device_key: string) => {
     // Replace with your own logic
     if (device_key === "camera") {
       return true;
@@ -40,7 +61,7 @@ const DeviceControlPanelPage = () => {
       return true;
     } else if (device_key === "filter") {
       return true;
-    } else if (device_key === "focus") {
+    } else if (device_key === "focuser") {
       return true;
     } else if (device_key === "guider") {
       return true;
@@ -49,32 +70,80 @@ const DeviceControlPanelPage = () => {
     }
   };
 
-  const show_device_icon_if_not_connected = (device_key) => {
+  const show_device_icon_if_not_connected = (device_key: string) => {
     // Replace with your own logic
     if (device_key === "camera") {
       return (
         <Container>
-          <Camera color="disabled" />
-          <Alert
-            variant="danger"
-            onClose={handleAlertClose}
-            dismissible
-          >
-            <Alert.Heading>设备未连接</Alert.Heading>
-            <p>设备未连接</p>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <Camera color="disabled" />
+              相机未连接
+            </Alert.Heading>
+            <p>相机未连接</p>
           </Alert>
         </Container>
       );
     } else if (device_key === "telescope") {
-      return <XCircle color="error" />;
+      return (
+        <Container>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <Star color="disabled" />
+              赤道仪未连接
+            </Alert.Heading>
+            <p>赤道仪未连接</p>
+          </Alert>
+        </Container>
+      );
     } else if (device_key === "filter") {
-      return <Question color="disabled" />;
+      return (
+        <Container>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <Filter color="disabled" />
+              滤镜轮未连接
+            </Alert.Heading>
+            <p>滤镜轮未连接</p>
+          </Alert>
+        </Container>
+      );
     } else if (device_key === "focuser") {
-      return <XCircle color="error" />;
+      return (
+        <Container>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <DeviceHdd color="disabled" />
+              电调未连接
+            </Alert.Heading>
+            <p>电调未连接</p>
+          </Alert>
+        </Container>
+      );
     } else if (device_key === "guider") {
-      return <Question color="disabled" />;
+      return (
+        <Container>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <Rulers color="disabled" />
+              导星未连接
+            </Alert.Heading>
+            <p>导星未连接</p>
+          </Alert>
+        </Container>
+      );
     } else if (device_key === "phd2") {
-      return <XCircle color="error" />;
+      return (
+        <Container>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <XCircle color="disabled" />
+              PHD2未连接
+            </Alert.Heading>
+            <p>PHD2未连接</p>
+          </Alert>
+        </Container>
+      );
     }
   };
 
@@ -83,139 +152,126 @@ const DeviceControlPanelPage = () => {
   }, []);
 
   return (
-    <Container>
-      <Row>
-        <Col md={3}>
-          <div className="d-flex flex-row">
-            <div className="p-3 w-25 border-end">
-              <Form>
-                <Form.Check
-                  type="radio"
-                  label="基础参数"
-                  name="select-set-format"
-                  value="basic"
-                  checked={!show_detail}
-                  onChange={() => set_show_detail(false)}
-                />
-                <Form.Check
-                  type="radio"
-                  label="详细配置"
-                  name="select-set-format"
-                  value="detailed"
-                  checked={show_detail}
-                  onChange={() => set_show_alert(true)}
-                />
-              </Form>
-              <Alert
-                show={show_alert}
-                variant="warning"
-                onClose={handleAlertClose}
-                dismissible
-              >
-                <Alert.Heading>警告</Alert.Heading>
-                <p>
-                  详细配置是专业模式，除非必要不建议用户修改！修改会导致不可预料的故障！是否确认进入？
-                </p>
-                <div className="d-flex justify-content-end">
-                  <Button onClick={handleAlertClose} variant="outline-warning">
-                    确认
-                  </Button>
-                </div>
-              </Alert>
-            </div>
-            <div className="p-3 w-75">
-              <Tab.Content>
-                <Tab.Pane eventKey={0}>
-                  {!show_detail ? (
-                    <DeviceCameraGeneralControlPanel />
-                  ) : (
-                    <DeviceCameraDetailedControlPanel />
-                  )}
-                </Tab.Pane>
-                <Tab.Pane eventKey={1}>
-                  {!show_detail ? (
-                    <DeviceTelescopeGeneralControlPanel />
-                  ) : (
-                    <DeviceTelescopeDetailedControlPanel />
-                  )}
-                </Tab.Pane>
-                <Tab.Pane eventKey={2}>
-                  {!show_detail ? (
-                    <DeviceFocuserGeneralControlPanel />
-                  ) : (
-                    <DeviceFocuserDetailedControlPanel />
-                  )}
-                </Tab.Pane>
-                <Tab.Pane eventKey={3}>
-                  {!show_detail ? (
-                    <DeviceFilterGeneralControlPanel />
-                  ) : (
-                    <DeviceFilterDetailedControlPanel />
-                  )}
-                </Tab.Pane>
-                <Tab.Pane eventKey={4}></Tab.Pane>
-                <Tab.Pane eventKey={5}>
-                  {!show_detail ? (
-                    <DevicePHD2GeneralControlPanel />
-                  ) : (
-                    <DevicePHD2DetailedControlPanel />
-                  )}
-                </Tab.Pane>
-              </Tab.Content>
-            </div>
-          </div>
-        </Col>
-        <Col md={9}>
-          <Tabs
-            defaultActiveKey="camera"
-            className="d-flex justify-content-between align-items-center bg-light rounded-xl p-2 mb-3"
+    <Row lg={"auto"}>
+      <Col md={3}>
+        <Row md={"auto"}>
+          <Form.Group>
+            <Form.Check
+              type="radio"
+              label="基础参数"
+              name="select-set-format"
+              value="basic"
+              checked={!show_detail}
+              onChange={() => set_show_detail(false)}
+            />
+            <Form.Check
+              type="radio"
+              label="详细配置"
+              name="select-set-format"
+              value="detailed"
+              checked={show_detail}
+              onChange={() => setShowAdvancedMode(true)}
+              size={32}
+            />
+          </Form.Group>
+        </Row>
+        <Row md={"auto"}>
+          <DeviceAdvancedControlModal
+            showModal={showAdvancedMode}
+            handleCloseModal={handleCloseAdvancedMode}
+            handleOkModal={handlAdvanceModeOk}
+          />
+        </Row>
+      </Col>
+      <Col md={9}>
+        <Tabs defaultActiveKey="camera">
+          <Tab
+            eventKey="camera"
+            // disabled={!check_device_connection("camera")}
+            title="主相机"
           >
-            <Tab
-              eventKey="camera"
-              // disabled={!check_device_connection("camera")}
-              title="主相机"
-            >
-              {show_device_icon_if_not_connected("camera")}
-            </Tab>
-            <Tab
-              eventKey="telescope"
-              // disabled={!check_device_connection("telescope")}
-              title="赤道仪"
-            >
-              {show_device_icon_if_not_connected("telescope")}
-            </Tab>
-            <Tab
-              eventKey="filter"
-              // disabled={!check_device_connection("filter")}
-              title="滤镜轮"
-            >
-              {show_device_icon_if_not_connected("filter")}
-            </Tab>
-            <Tab
-              eventKey="focuser"
-              // disabled={!check_device_connection("focuser")}
-              title="电调"
-            >
-              {show_device_icon_if_not_connected("focuser")}
-            </Tab>
-            <Tab
-              eventKey="guider"
-              // disabled={!check_device_connection("guider")}
-              title="导星"
-            >
-              {show_device_icon_if_not_connected("guider")}
-            </Tab>
-            <Tab
-              eventKey="phd2"
-              // disabled={!check_device_connection("phd2")}
-              title="PHD2导星控制"
-            >
-              {show_device_icon_if_not_connected("phd2")}
-            </Tab>
-          </Tabs>
-        </Col>
-      </Row>
-    </Container>
+            {
+              //show_device_icon_if_not_connected("camera")
+            }
+            {!show_detail ? (
+              <DeviceCameraGeneralControlPanel />
+            ) : (
+              <DeviceCameraDetailedControlPanel />
+            )}
+          </Tab>
+          <Tab
+            eventKey="telescope"
+            // disabled={!check_device_connection("telescope")}
+            title="赤道仪"
+          >
+            {
+              //show_device_icon_if_not_connected("telescope")
+            }
+            {!show_detail ? (
+              <DeviceTelescopeGeneralControlPanel />
+            ) : (
+              <DeviceTelescopeDetailedControlPanel />
+            )}
+          </Tab>
+          <Tab
+            eventKey="filter"
+            // disabled={!check_device_connection("filter")}
+            title="滤镜轮"
+          >
+            {
+              //show_device_icon_if_not_connected("focuser")
+            }
+            {!show_detail ? (
+              <DeviceFilterGeneralControlPanel />
+            ) : (
+              <DeviceFilterDetailedControlPanel />
+            )}
+          </Tab>
+          <Tab
+            eventKey="focuser"
+            // disabled={!check_device_connection("focuser")}
+            title="电调"
+          >
+            {
+              //show_device_icon_if_not_connected("filter")
+            }
+            {!show_detail ? (
+              <DeviceFocuserGeneralControlPanel />
+            ) : (
+              <DeviceFocuserDetailedControlPanel />
+            )}
+          </Tab>
+          <Tab
+            eventKey="guider"
+            // disabled={!check_device_connection("guider")}
+            title="导星"
+          >
+            {
+              //show_device_icon_if_not_connected("guider")//
+            }
+            {!show_detail ? (
+              <DeviceGuiderGeneralControlPanel />
+            ) : (
+              <DeviceGuiderDetailedControlPanel />
+            )}
+          </Tab>
+          <Tab
+            eventKey="phd2"
+            // disabled={!check_device_connection("phd2")}
+            title="PHD2导星控制"
+          >
+            {
+              //show_device_icon_if_not_connected("phd2")
+            }
+            {!show_detail ? (
+              <DevicePHD2GeneralControlPanel />
+            ) : (
+              <DevicePHD2DetailedControlPanel />
+            )}
+          </Tab>
+        </Tabs>
+      </Col>
+    </Row>
   );
 };
 

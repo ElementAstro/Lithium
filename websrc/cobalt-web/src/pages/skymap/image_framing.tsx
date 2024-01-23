@@ -1,21 +1,24 @@
-import * as React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Paper,
   Card,
-  CardContent,
-  Typography,
   Button,
-  Divider,
+  Container,
+  Row,
+  Col,
+  InputGroup,
+  Form,
 } from "react-bootstrap";
-import { Search, SearchPlus } from "react-bootstrap-icons";
-import "./framing.css";
-import AladinLiteView from "./Components/AladinLiteView";
+import { Search } from "react-bootstrap-icons";
 import { useImmer } from "use-immer";
+
+import AladinLiteView from "../../components/skymap/aladin_wrapper";
 import * as AXIOSOF from "../../services/object_finding_api";
 import FOVSettingDialog from "../../components/skymap/fov_dialog";
-import ObjectManagementDialog from "./ObjectManagementDialog";
-import ObjectSearchDialog from "./ObjectSearchDialog";
+import ObjectManagementDialog from "./object_manager_dialog";
+import ObjectSearchDialog from "./object_search_dialog";
+import { GlobalStore } from "../../store/globalStore";
+
+import { TransparentPaper } from "./style";
 
 const ImageFraming = () => {
   const [target_ra, set_target_ra] = useState(0);
@@ -39,6 +42,19 @@ const ImageFraming = () => {
   const [fov_x, set_fov_x] = useState(0.25);
   const [fov_y, set_fov_y] = useState(0.25);
   const [aladin_show_fov, set_aladin_show_fov] = useState(0.5);
+
+  // store related
+  const target_store = GlobalStore.useAppState(
+    (state) => state.TargetListStore
+  );
+  const global_parameter = GlobalStore.useAppState(
+    (state) => state.GlobalParameterStore
+  );
+  const set_focus_target_to_store =
+    GlobalStore.actions.TargetListStore.change_focus_target;
+  const update_twilight_data =
+    GlobalStore.actions.TargetListStore.fetch_twilight_data;
+  // todo actions need to be initialed if necessary
 
   const on_new_ra_dec_input = (new_ra, new_dec) => {
     set_screen_ra(new_ra);
@@ -163,49 +179,53 @@ const ImageFraming = () => {
   }, [fov_data]);
 
   return (
-    <div>
-      <Paper className="main-paper">
-        <Card>
-          <CardContent>
-            <Typography variant="h5" component="h2">
-              Image Framing
-            </Typography>
-            <Divider />
-            <div className="framing-content">
-              <div className="aladin-lite-container">
+    <Card className="main-paper">
+      <Card.Title>Image Framing</Card.Title>
+
+      <Card.Body>
+        <Row lg={12}>
+          <Col md={6}>
+            <Container>
+              <Row
+                sx={{
+                  width: 1,
+                  height: 1,
+                }}
+              >
                 <AladinLiteView
-                  targetRA={target_ra}
-                  targetDec={target_dec}
-                  screenRA={screen_ra}
-                  screenDec={screen_dec}
+                  ra={target_ra}
+                  dec={target_dec}
+                  onCenterChange={on_new_ra_dec_input}
                   fovPoints={fov_points}
-                  aladinShowFOV={aladin_show_fov}
+                  fovSize={aladin_show_fov}
                 />
-              </div>
+              </Row>
+            </Container>
+          </Col>
+          <Col md={6}>
+            <div className="framing-content">
               <div className="sidebar">
                 <div className="center-control">
-                  <Typography variant="h6" component="h4">
-                    Target Center
-                  </Typography>
+                  <Card.Title>Target Center</Card.Title>
                   <div className="ra-dec-input">
-                    <Typography variant="body2" component="span">
-                      RA:
-                    </Typography>
-                    <input
-                      type="number"
-                      value={target_ra}
-                      step="any"
-                      onChange={(e) => set_target_ra(e.target.value)}
-                    />
-                    <Typography variant="body2" component="span">
-                      Dec:
-                    </Typography>
-                    <input
-                      type="number"
-                      value={target_dec}
-                      step="any"
-                      onChange={(e) => set_target_dec(e.target.value)}
-                    />
+                    <InputGroup>
+                      <InputGroup.Text>RA:</InputGroup.Text>
+                      <Form.Control
+                        type="number"
+                        value={target_ra}
+                        step="any"
+                        onChange={(e) => set_target_ra(e.target.value)}
+                      />
+                    </InputGroup>
+                    <InputGroup>
+                      <InputGroup.Text>Dec:</InputGroup.Text>
+                      <Form.Control
+                        type="number"
+                        value={target_dec}
+                        step="any"
+                        onChange={(e) => set_target_dec(e.target.value)}
+                      />
+                    </InputGroup>
                   </div>
                   <Button
                     variant="outline-dark"
@@ -216,28 +236,26 @@ const ImageFraming = () => {
                   </Button>
                 </div>
                 <div className="fov-control">
-                  <Typography variant="h6" component="h4">
-                    Field of View (FOV)
-                  </Typography>
+                  <Card.Title>Field of View (FOV)</Card.Title>
                   <div className="fov-inputs">
-                    <Typography variant="body2" component="span">
-                      X:
-                    </Typography>
-                    <input
-                      type="number"
-                      value={fov_x}
-                      step="any"
-                      onChange={(e) => set_fov_x(e.target.value)}
-                    />
-                    <Typography variant="body2" component="span">
-                      Y:
-                    </Typography>
-                    <input
-                      type="number"
-                      value={fov_y}
-                      step="any"
-                      onChange={(e) => set_fov_y(e.target.value)}
-                    />
+                    <InputGroup>
+                      <InputGroup.Text>X:</InputGroup.Text>
+                      <Form.Control
+                        type="number"
+                        value={fov_x}
+                        step="any"
+                        onChange={(e) => set_fov_x(e.target.value)}
+                      />
+                    </InputGroup>
+                    <InputGroup>
+                      <InputGroup.Text>Y:</InputGroup.Text>
+                      <Form.Control
+                        type="number"
+                        value={fov_y}
+                        step="any"
+                        onChange={(e) => set_fov_y(e.target.value)}
+                      />
+                    </InputGroup>
                   </div>
                   <div className="fov-buttons">
                     <Button
@@ -255,24 +273,35 @@ const ImageFraming = () => {
                   </div>
                   {open_fov_dialog && (
                     <FOVSettingDialog
-                      open={open_fov_dialog}
-                      onClose={() => set_open_fov_dialog(false)}
-                      fovData={fov_data}
-                      onUpdate={(newData) =>
-                        update_fov_data((draft) => (draft = newData))
-                      }
+                      fov_data={fov_data}
+                      rotation={camera_rotation}
+                      open_dialog={open_fov_dialog}
+                      on_fov_change={(new_fov_data) => {
+                        update_fov_data((draft) => {
+                          console.log(
+                            "in framing, got fov change",
+                            new_fov_data
+                          );
+                          draft.focal_length = new_fov_data.focal_length;
+                          draft.x_pixels = new_fov_data.x_pixels;
+                          draft.x_pixel_size = new_fov_data.x_pixel_size;
+                          draft.y_pixels = new_fov_data.y_pixels;
+                          draft.y_pixel_size = new_fov_data.y_pixel_size;
+                        });
+                      }}
+                      on_rotation_change={function (rotation: number): void {
+                        throw new Error("Function not implemented.");
+                      }}
                     />
                   )}
                 </div>
                 <div className="object-control">
-                  <Typography variant="h6" component="h4">
-                    Objects
-                  </Typography>
+                  <Card.Title>Objects</Card.Title>
                   <Button
                     variant="outline-dark"
                     onClick={() => set_open_search_dialog(true)}
                   >
-                    <SearchPlus className="icon" />
+                    <Search className="icon" />
                     Search Objects
                   </Button>
                   <Button
@@ -283,31 +312,18 @@ const ImageFraming = () => {
                     Manage Objects
                   </Button>
                   {open_search_dialog && (
-                    <ObjectSearchDialog
-                      open={open_search_dialog}
-                      onClose={() => set_open_search_dialog(false)}
-                      onAdd={(newObject) =>
-                        add_current_as_new_target(newObject)
-                      }
-                    />
+                    <ObjectSearchDialog open_dialog={open_search_dialog} />
                   )}
                   {open_manage_dialog && (
-                    <ObjectManagementDialog
-                      open={open_manage_dialog}
-                      onClose={() => set_open_manage_dialog(false)}
-                      onRemove={(index) => remove_target_from_store(index)}
-                      onSave={(updatedObject) =>
-                        update_target_in_store(updatedObject)
-                      }
-                    />
+                    <ObjectManagementDialog open_dialog={open_manage_dialog} />
                   )}
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </Paper>
-    </div>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
   );
 };
 

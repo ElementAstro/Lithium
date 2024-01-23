@@ -11,11 +11,11 @@ import {
   Box,
   Gear,
   InfoCircle,
+  Map,
 } from "react-bootstrap-icons";
 
 import Welcome from "../pages/home/animation";
 import Home from "../pages/home";
-import Dashboard from "../pages/dashboard";
 import ServerSearch from "../pages/server";
 import DeviceConnection from "../pages/connect";
 import DeviceControlPanelPage from "../pages/device";
@@ -28,6 +28,8 @@ import GlobalParameterSettingPage from "../pages/config";
 import Connect from "../pages/connection/index";
 import Helper from "../pages/helper";
 import ErrorPage from "../pages/error";
+import ObjectFinding from "../pages/skymap";
+import Dashboard from "../pages/dashboard/index";
 
 interface IndexRouteObjectPlus extends IndexRouteObject {
   title?: string;
@@ -47,18 +49,21 @@ export const routesConfig: RouteObjectPlus[] = [
     element: <Welcome />,
     title: "首页",
     icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+    errorElement: <ErrorPage />
   },
   {
     path: "/home",
     element: <Home />,
     title: "欢迎",
     icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+    errorElement: <ErrorPage />
   },
   {
     path: "/dashboard",
     element: <Dashboard />,
     title: "Dashboard",
     icon: <Box fill="#333" width={28} height={28}></Box>,
+    errorElement: <ErrorPage />
   },
   {
     path: "/server",
@@ -95,6 +100,12 @@ export const routesConfig: RouteObjectPlus[] = [
     element: <GlobalParameterSettingPage />,
     title: "全局参数设置",
     icon: <Box fill="#333" width={28} height={28}></Box>,
+  },
+  {
+    path: "/skymap",
+    element: <ObjectFinding/>,
+    title: "星图与目标管理",
+    icon: <Map fill="#333" width={28} height={28}/>
   },
   {
     path: "/module",

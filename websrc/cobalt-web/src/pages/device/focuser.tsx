@@ -7,6 +7,7 @@ import {
   FormControl,
   InputGroup,
   Alert,
+  ButtonGroup,
 } from "react-bootstrap";
 import {
   ArrowLeftCircle,
@@ -231,97 +232,99 @@ const DeviceFocuserGeneralControlPanel: React.FC = () => {
             <div className="p-2 border">
               <Row className="mb-2">
                 <Col>
-                  <Button
-                    variant="dark"
-                    className="me-2"
-                    onClick={() => {
-                      if (!work_status) {
-                        sendMessage(
-                          JSON.stringify({
-                            device_name: "focus",
-                            instruction: "move_in_large",
-                            params: [],
-                          })
-                        );
-                        set_work_status(true);
-                      } else {
-                        // popup notification
-                        set_help_text("设备移动中，悠着点！");
-                        helper_ref.current?.open_snackbar();
-                      }
-                    }}
-                  >
-                    <ArrowLeft />
-                    移近 大步
-                  </Button>
-                  <Button
-                    variant="dark"
-                    className="me-2"
-                    onClick={() => {
-                      if (!work_status) {
-                        sendMessage(
-                          JSON.stringify({
-                            device_name: "focus",
-                            instruction: "move_in_small",
-                            params: [],
-                          })
-                        );
-                        set_work_status(true);
-                      } else {
-                        // popup notification
-                        set_help_text("设备移动中，悠着点！");
-                        helper_ref.current?.open_snackbar();
-                      }
-                    }}
-                  >
-                    <ArrowLeftCircle />
-                    移近 小步
-                  </Button>
-                  <Button
-                    variant="dark"
-                    className="me-2"
-                    onClick={() => {
-                      if (!work_status) {
-                        sendMessage(
-                          JSON.stringify({
-                            device_name: "focus",
-                            instruction: "move_out_small",
-                            params: [],
-                          })
-                        );
-                        set_work_status(true);
-                      } else {
-                        // popup notification
-                        set_help_text("设备移动中，悠着点！");
-                        helper_ref.current?.open_snackbar();
-                      }
-                    }}
-                  >
-                    移出 小步
-                    <ArrowRightCircle />
-                  </Button>
-                  <Button
-                    variant="dark"
-                    onClick={() => {
-                      if (!work_status) {
-                        sendMessage(
-                          JSON.stringify({
-                            device_name: "focus",
-                            instruction: "move_out_large",
-                            params: [],
-                          })
-                        );
-                        set_work_status(true);
-                      } else {
-                        // popup notification
-                        set_help_text("设备移动中，悠着点！");
-                        helper_ref.current?.open_snackbar();
-                      }
-                    }}
-                  >
-                    移出 大步
-                    <ArrowRight />
-                  </Button>
+                  <ButtonGroup>
+                    <Button
+                      variant="dark"
+                      className="me-2"
+                      onClick={() => {
+                        if (!work_status) {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "focus",
+                              instruction: "move_in_large",
+                              params: [],
+                            })
+                          );
+                          set_work_status(true);
+                        } else {
+                          // popup notification
+                          set_help_text("设备移动中，悠着点！");
+                          helper_ref.current?.open_snackbar();
+                        }
+                      }}
+                    >
+                      <ArrowLeft />
+                      移近 大步
+                    </Button>
+                    <Button
+                      variant="dark"
+                      className="me-2"
+                      onClick={() => {
+                        if (!work_status) {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "focus",
+                              instruction: "move_in_small",
+                              params: [],
+                            })
+                          );
+                          set_work_status(true);
+                        } else {
+                          // popup notification
+                          set_help_text("设备移动中，悠着点！");
+                          helper_ref.current?.open_snackbar();
+                        }
+                      }}
+                    >
+                      <ArrowLeftCircle />
+                      移近 小步
+                    </Button>
+                    <Button
+                      variant="dark"
+                      className="me-2"
+                      onClick={() => {
+                        if (!work_status) {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "focus",
+                              instruction: "move_out_small",
+                              params: [],
+                            })
+                          );
+                          set_work_status(true);
+                        } else {
+                          // popup notification
+                          set_help_text("设备移动中，悠着点！");
+                          helper_ref.current?.open_snackbar();
+                        }
+                      }}
+                    >
+                      移出 小步
+                      <ArrowRightCircle />
+                    </Button>
+                    <Button
+                      variant="dark"
+                      onClick={() => {
+                        if (!work_status) {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "focus",
+                              instruction: "move_out_large",
+                              params: [],
+                            })
+                          );
+                          set_work_status(true);
+                        } else {
+                          // popup notification
+                          set_help_text("设备移动中，悠着点！");
+                          helper_ref.current?.open_snackbar();
+                        }
+                      }}
+                    >
+                      移出 大步
+                      <ArrowRight />
+                    </Button>
+                  </ButtonGroup>
                 </Col>
               </Row>
               <Row className="mb-2">

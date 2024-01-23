@@ -111,129 +111,127 @@ const FOVSettingDialog: React.FC<FOVDialogProps> = (props) => {
   };
 
   return (
-    <>
-      <Modal show={open} onHide={() => handleClose(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>视角设置</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            默认数据都是根据全局变量的参数自动获取的。如果需要查看不同光学配置下的视场大小，可以通过以下参数进行修改。
-            注意，计算出的视场大小仅供参考，因为光学畸变以及光学系统本身对的限制，实际有效的拍摄范围并不一定是计算出的结果！
-          </p>
-          <Form>
-            <Row className="mb-3">
-              <Form.Group as={Col}>
-                <Form.Label>相机x方向的像素数量</Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type="number"
-                    value={x_pixels}
-                    onChange={(event) =>
-                      set_x_pixels(parseInt(event.target.value))
-                    }
-                  />
-                  <InputGroup.Text>个</InputGroup.Text>
-                </InputGroup>
-              </Form.Group>
-              <Form.Group as={Col}>
-                <Form.Label>相机x方向的像素大小</Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type="number"
-                    value={x_pixels_size}
-                    onChange={(event) =>
-                      set_x_pixels_size(parseFloat(event.target.value))
-                    }
-                  />
-                  <InputGroup.Text>um</InputGroup.Text>
-                </InputGroup>
-              </Form.Group>
-            </Row>
-            <Row className="mb-3">
-              <Form.Group as={Col}>
-                <Form.Label>相机y方向的像素数量</Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type="number"
-                    value={y_pixels}
-                    onChange={(event) =>
-                      set_y_pixels(parseInt(event.target.value))
-                    }
-                  />
-                  <InputGroup.Text>个</InputGroup.Text>
-                </InputGroup>
-              </Form.Group>
-              <Form.Group as={Col}>
-                <Form.Label>相机y方向的像素大小</Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type="number"
-                    value={y_pixel_size}
-                    onChange={(event) =>
-                      set_y_pixels_size(parseFloat(event.target.value))
-                    }
-                  />
-                  <InputGroup.Text>um</InputGroup.Text>
-                </InputGroup>
-              </Form.Group>
-            </Row>
-            <Row className="mb-3">
-              <Form.Group as={Col}>
-                <Form.Label>望远镜焦距</Form.Label>
-                <InputGroup>
-                  <Form.Control
-                    type="number"
-                    value={focal_length}
-                    onChange={(event) =>
-                      set_focal_length(parseFloat(event.target.value))
-                    }
-                  />
-                  <InputGroup.Text>mm</InputGroup.Text>
-                </InputGroup>
-              </Form.Group>
-            </Row>
-            <Row className="mb-3">
-              <Form.Group as={Col}>
-                <Button variant="primary">解析获取视场角度</Button>
-              </Form.Group>
-            </Row>
-            <Row className="mb-3">
-              <Form.Group as={Col} xs={2}>
-                <Form.Label>相机旋转角度</Form.Label>
-              </Form.Group>
-              <Form.Group as={Col} xs={8}>
-                <Form.Range
-                  min={0}
-                  max={360}
-                  step={1}
-                  value={rotation}
+    <Modal show={open} onHide={() => handleClose(false)}>
+      <Modal.Header closeButton>
+        <Modal.Title>视角设置</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <p>
+          默认数据都是根据全局变量的参数自动获取的。如果需要查看不同光学配置下的视场大小，可以通过以下参数进行修改。
+          注意，计算出的视场大小仅供参考，因为光学畸变以及光学系统本身对的限制，实际有效的拍摄范围并不一定是计算出的结果！
+        </p>
+        <Form>
+          <Row className="mb-3">
+            <Form.Group as={Col}>
+              <Form.Label>相机x方向的像素数量</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="number"
+                  value={x_pixels}
                   onChange={(event) =>
-                    handleSliderChange(parseInt(event.target.value))
+                    set_x_pixels(parseInt(event.target.value))
                   }
                 />
-              </Form.Group>
-              <Form.Group as={Col} xs={2}>
-                <Form.Label>这是要不要输入？</Form.Label>
-              </Form.Group>
-            </Row>
-            <Row className="mb-3">
-              <Form.Group as={Col}>
-                {/* Add more form controls here */}
-              </Form.Group>
-            </Row>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={() => handleClose(true)}>
-            确认修改
-          </Button>
-          <Button variant="secondary" onClick={() => handleClose(false)}>
-            关闭
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </>
+                <InputGroup.Text>个</InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
+            <Form.Group as={Col}>
+              <Form.Label>相机x方向的像素大小</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="number"
+                  value={x_pixels_size}
+                  onChange={(event) =>
+                    set_x_pixels_size(parseFloat(event.target.value))
+                  }
+                />
+                <InputGroup.Text>um</InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
+          </Row>
+          <Row className="mb-3">
+            <Form.Group as={Col}>
+              <Form.Label>相机y方向的像素数量</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="number"
+                  value={y_pixels}
+                  onChange={(event) =>
+                    set_y_pixels(parseInt(event.target.value))
+                  }
+                />
+                <InputGroup.Text>个</InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
+            <Form.Group as={Col}>
+              <Form.Label>相机y方向的像素大小</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="number"
+                  value={y_pixel_size}
+                  onChange={(event) =>
+                    set_y_pixels_size(parseFloat(event.target.value))
+                  }
+                />
+                <InputGroup.Text>um</InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
+          </Row>
+          <Row className="mb-3">
+            <Form.Group as={Col}>
+              <Form.Label>望远镜焦距</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type="number"
+                  value={focal_length}
+                  onChange={(event) =>
+                    set_focal_length(parseFloat(event.target.value))
+                  }
+                />
+                <InputGroup.Text>mm</InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
+          </Row>
+          <Row className="mb-3">
+            <Form.Group as={Col}>
+              <Button variant="primary">解析获取视场角度</Button>
+            </Form.Group>
+          </Row>
+          <Row className="mb-3">
+            <Form.Group as={Col} xs={2}>
+              <Form.Label>相机旋转角度</Form.Label>
+            </Form.Group>
+            <Form.Group as={Col} xs={8}>
+              <Form.Range
+                min={0}
+                max={360}
+                step={1}
+                value={rotation}
+                onChange={(event) =>
+                  handleSliderChange(parseInt(event.target.value))
+                }
+              />
+            </Form.Group>
+            <Form.Group as={Col} xs={2}>
+              <Form.Label>这是要不要输入？</Form.Label>
+            </Form.Group>
+          </Row>
+          <Row className="mb-3">
+            <Form.Group as={Col}>
+              {/* Add more form controls here */}
+            </Form.Group>
+          </Row>
+        </Form>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="primary" onClick={() => handleClose(true)}>
+          确认修改
+        </Button>
+        <Button variant="secondary" onClick={() => handleClose(false)}>
+          关闭
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 };
 

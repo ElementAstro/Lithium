@@ -1,4 +1,4 @@
-import * as React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Row,
@@ -8,10 +8,6 @@ import {
   Form,
   InputGroup,
 } from "react-bootstrap";
-import { useImmer } from "use-immer";
-import HelperSnackbar from "./description/helper_snackbar";
-import { useEchoWebSocket } from "../../utils/websocketProvider";
-import { stringify } from "querystring";
 import {
   ArrowDown,
   ArrowLeft,
@@ -19,6 +15,12 @@ import {
   Hourglass,
   Snow,
 } from "react-bootstrap-icons";
+import { useImmer } from "use-immer";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+
+import HelperSnackbar from "./description/helper_snackbar";
+import { useEchoWebSocket } from "../../utils/websocketProvider";
+import DeviceCustomSettingComp from "./custom/settings";
 
 const DeviceCameraGeneralControlPanel: React.FC = () => {
   // static status
@@ -38,21 +40,15 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
   const [binning, set_binning] = React.useState(1);
   const [gain, set_gain] = React.useState(100);
   const [offset, set_offset] = React.useState(0);
-  const [extra_setting, update_extra_setting] = useImmer({
-    glass_heat: false,
-    fan_control: false,
-    high_fullwell: false,
-    low_noise: false,
-    conversion_gain: false,
-  });
+  const [extra_setting, set_extra_setting] = React.useState<Array<any>>([]);
   const [setting_show, update_setting_show] = useImmer({
     has_cool: true,
-    has_fan: true,
-    has_heater: true,
+    // has_fan: true,
+    // has_heater: true,
     has_binning: true,
-    has_high_fullwell: false,
-    has_low_noise: false,
-    has_conversion_gain: false,
+    // has_high_fullwell: false,
+    // has_low_noise: false,
+    // has_conversion_gain: false,
   });
   // input data
   const [input_target_temperature, set_input_target_temperature] =
@@ -123,58 +119,58 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
               draft.has_cool = false;
             });
           }
-          // fan
-          if (msg.data.fan !== null) {
-            update_extra_setting((draft) => {
-              draft.fan_control = msg.data.fan;
-            });
-            update_setting_show((draft) => {
-              draft.has_fan = true;
-            });
-          } else {
-            update_setting_show((draft) => {
-              draft.has_fan = false;
-            });
-          }
-          // heater
-          if (msg.data.heater !== null) {
-            update_extra_setting((draft) => {
-              draft.glass_heat = msg.data.heater;
-            });
-            update_setting_show((draft) => {
-              draft.has_heater = true;
-            });
-          } else {
-            update_setting_show((draft) => {
-              draft.has_heater = false;
-            });
-          }
+          // // fan
+          // if (msg.data.fan !== null){
+          //   set_extra_setting(draft => {
+          //     draft.fan_control = msg.data.fan;
+          //   })
+          //   update_setting_show(draft => {
+          //     draft.has_fan = true;
+          //   })
+          // }else{
+          //   update_setting_show(draft => {
+          //     draft.has_fan = false;
+          //   })
+          // }
+          // // heater
+          // if (msg.data.heater !== null){
+          //   set_extra_setting(draft => {
+          //     draft.glass_heat = msg.data.heater;
+          //   })
+          //   update_setting_show(draft => {
+          //     draft.has_heater = true;
+          //   })
+          // }else{
+          //   update_setting_show(draft => {
+          //     draft.has_heater = false;
+          //   })
+          // }
           // hcg
-          if (msg.data.hcg !== null) {
-            update_extra_setting((draft) => {
-              draft.high_fullwell = msg.data.hcg;
-            });
-            update_setting_show((draft) => {
-              draft.has_high_fullwell = true;
-            });
-          } else {
-            update_setting_show((draft) => {
-              draft.has_high_fullwell = false;
-            });
-          }
-          // low_noise_mode
-          if (msg.data.low_noise_mode !== null) {
-            update_extra_setting((draft) => {
-              draft.low_noise = msg.data.low_noise_mode;
-            });
-            update_setting_show((draft) => {
-              draft.has_low_noise = true;
-            });
-          } else {
-            update_setting_show((draft) => {
-              draft.has_low_noise = false;
-            });
-          }
+          // if (msg.data.hcg !== null){
+          //   set_extra_setting(draft => {
+          //     draft.high_fullwell = msg.data.hcg;
+          //   })
+          //   update_setting_show(draft => {
+          //     draft.has_high_fullwell = true;
+          //   })
+          // }else{
+          //   update_setting_show(draft => {
+          //     draft.has_high_fullwell = false;
+          //   })
+          // }
+          // // low_noise_mode
+          // if (msg.data.low_noise_mode !== null){
+          //   set_extra_setting(draft => {
+          //     draft.low_noise = msg.data.low_noise_mode;
+          //   })
+          //   update_setting_show(draft => {
+          //     draft.has_low_noise = true;
+          //   })
+          // }else{
+          //   update_setting_show(draft => {
+          //     draft.has_low_noise = false;
+          //   })
+          // }
           break;
         }
         case "get_real_time_info": {
@@ -219,6 +215,20 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
           );
           break;
         }
+        case "get_custom_settings": {
+          set_extra_setting(msg.data);
+          break;
+        }
+        case "set_custom_setting": {
+          sendMessage(
+            JSON.stringify({
+              device_name: "camera",
+              instruction: "get_custom_settings",
+              params: [],
+            })
+          );
+          break;
+        }
         default: {
         }
       }
@@ -251,6 +261,13 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
         params: [],
       })
     );
+    sendMessage(
+      JSON.stringify({
+        device_name: "camera",
+        instruction: "get_custom_settings",
+        params: [],
+      })
+    );
     const interval = setInterval(() => {
       // console.log('Logs every second');
       set_control_cool_down(false);
@@ -271,7 +288,7 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
   }, []);
 
   return (
-    <Container className="mt-1">
+    <Container>
       <Row>
         <Col xs={12} md={6}>
           <Card>
@@ -529,7 +546,8 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
                   </div>
                 </>
               )}
-              {setting_show.has_heater && (
+              {/*
+                {setting_show.has_heater && (
                 <div className="mt-3">
                   <Form.Check
                     type="switch"
@@ -537,7 +555,7 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
                     label="相机玻璃加热"
                     checked={extra_setting.glass_heat}
                     onChange={(event) => {
-                      update_extra_setting((draft) => {
+                      set_extra_setting((draft) => {
                         draft.glass_heat = event.target.checked;
                       });
                     }}
@@ -552,13 +570,29 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
                     label="散热风扇控制"
                     checked={extra_setting.fan_control}
                     onChange={(event) => {
-                      update_extra_setting((draft) => {
+                      set_extra_setting((draft) => {
                         draft.fan_control = event.target.checked;
                       });
                     }}
                   />
                 </div>
               )}
+                */}
+              <DeviceCustomSettingComp
+                setting_values={extra_setting}
+                on_value_change={function (
+                  custom_name: string,
+                  value: string | boolean
+                ): void {
+                  sendMessage(
+                    JSON.stringify({
+                      device_name: "camera",
+                      instruction: "set_custom_setting",
+                      params: [custom_name, value],
+                    })
+                  );
+                }}
+              />
             </Card.Body>
           </Card>
         </Col>

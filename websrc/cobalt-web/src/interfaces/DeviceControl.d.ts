@@ -103,3 +103,20 @@ declare interface IndiConnectProfile {
 interface HelperHandle {
   open_snackbar: () => void;
 }
+
+declare interface DeviceCustomSwitchValue {
+  custom_name: string;
+  display_label: string;
+  data: boolean;
+  data_type: "SWITCH";
+}
+
+declare interface DeviceCustomSelectValue {
+  custom_name: string;
+  display_label: string;
+  data: {
+    selections: string[];
+    selected: string;
+  };
+  data_type: "SELECT";
+}

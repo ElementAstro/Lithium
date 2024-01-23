@@ -16,7 +16,7 @@ import {
   Webcam,
   Box,
   Bookmark,
-  Camera,
+  Camera
 } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
 import { Button } from "react-bootstrap";
@@ -26,9 +26,20 @@ function Navigation() {
 
   const [language, setLanguage] = useState("en");
 
+  const navLinks = [
+    { to: "/dashboard", text: "Dashboard", icon: House },
+    { to: "/server", text: "Server Finder", icon: Info },
+    { to: "/device_connect", text: "Device Connector", icon: Webcam },
+    { to: "/device", text: "Device Control", icon: Box },
+    { to: "/skymap", text: "Skymap & Object", icon: Map },
+    { to: "/settings", text: "Settings", icon: Gear },
+    { to: "/about", text: "About", icon: Bookmark },
+  ];
+
   const changeLanguage = (lng) => {
     setLanguage(lng);
   };
+
   return (
     <>
       <Navbar key="xxl" expand="xxl" className="bg-body-tertiary mb-3">
@@ -56,56 +67,14 @@ function Navigation() {
             </Offcanvas.Header>
             <Offcanvas.Body>
               <Nav className="justify-content-end flex-grow-1 pe-3">
-                <LinkContainer to="/dashboard">
-                  <Nav.Link>
-                    <House size={24} />
-                    Dashboard
-                  </Nav.Link>
-                </LinkContainer>
-                <LinkContainer to="/drivers">
-                  <Nav.Link>
-                    <Cpu size={24} />
-                    Drivers
-                  </Nav.Link>
-                </LinkContainer>
-                <LinkContainer to="/skymap">
-                  <Nav.Link>
-                    <Map size={24} />
-                    Skymap
-                  </Nav.Link>
-                </LinkContainer>
-                <LinkContainer to="/settings">
-                  <Nav.Link>
-                    <Gear size={24} />
-                    Settings
-                  </Nav.Link>
-                </LinkContainer>
-                <NavDropdown
-                  title="Utils"
-                  id={`offcanvasNavbarDropdown-expand-xxl`}
-                >
-                  <NavDropdown.Item href="#action4">
-                    <WindowDash size={24} />
-                    NoVNC
-                  </NavDropdown.Item>
-                  <NavDropdown.Divider />
-                  <NavDropdown.Item href="#action5">
-                    <Webcam size={24} />
-                    INDIWeb
-                  </NavDropdown.Item>
-                </NavDropdown>
-                <LinkContainer to="/about">
-                  <Nav.Link href="#action6">
-                    <People size={24} />
-                    About
-                  </Nav.Link>
-                </LinkContainer>
-                <LinkContainer to="/help">
-                  <Nav.Link href="#action6">
-                    <Info size={24} />
-                    Help
-                  </Nav.Link>
-                </LinkContainer>
+                {navLinks.map((link, index) => (
+                  <LinkContainer key={index} to={link.to}>
+                    <Nav.Link>
+                      {React.createElement(link.icon, { size: 24 })}
+                      {link.text}
+                    </Nav.Link>
+                  </LinkContainer>
+                ))}
               </Nav>
             </Offcanvas.Body>
           </Navbar.Offcanvas>

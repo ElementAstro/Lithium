@@ -3,8 +3,8 @@ import { Form, Alert, Card } from "react-bootstrap";
 import { FilesAlt, ChevronDown, ChevronUp } from "react-bootstrap-icons";
 import styled from "styled-components";
 
-import TargetSmallCardHori from "./Components/TargetSmallCardV2";
-import TargetSmallCard from "./Components/TargetSmallCard";
+import TargetSmallCardHori from "../../components/skymap/target_smallv2";
+import TargetSmallCard from "../../components/skymap/target_small";
 
 import * as AXIOSOF from "../../services/object_finding_api";
 
@@ -112,6 +112,7 @@ const ObjectSearch: React.FC<ObjectSearchProps> = (props) => {
                     on_card_clicked={null}
                     card_index={index}
                     on_choice_maken={props.on_choice_maken}
+                    in_manage={false}
                   />
                 </div>
               );

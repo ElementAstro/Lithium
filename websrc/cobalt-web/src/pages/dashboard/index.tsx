@@ -6,6 +6,8 @@ import CaptureButton from "./CaptureButton";
 import Sidebar from "./Sidebar";
 import Toolbar from "./Toolbar";
 import FloatingUI from "./FloatingUI";
+import SystemPanel from "./SystemPanel";
+import FloatingWindow from "./FloatingWindow";
 
 const Dashboard = () => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -70,6 +72,9 @@ const Dashboard = () => {
 
       <Toolbar visible={toolbarVisible} onToggle={handleToggleToolbar} />
       <FloatingUI />
+      <FloatingWindow>
+        <SystemPanel />
+      </FloatingWindow>
     </Container>
   );
 };

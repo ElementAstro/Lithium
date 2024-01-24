@@ -447,7 +447,7 @@ export const getConnectModel = (): ConnectModel => ({
     // 检查是否可以启动phd2
     let selections = getState().device_selections;
     const phd2_check_ok = await postCheckPhd2({
-      camera: selections["camera"].device_name,
+      camera: selections["guider"].device_name,
       telescope: selections["telescope"].device_name,
     });
     if (phd2_check_ok) {

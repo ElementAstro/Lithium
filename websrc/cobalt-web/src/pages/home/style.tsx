@@ -1,8 +1,6 @@
 import styled, { keyframes } from "styled-components";
-import { DetailedHTMLProps, HTMLAttributes } from "react";
-import { FastOmit } from "ts-essentials";
 
-const fadeIn = keyframes`
+export const fadeIn = keyframes`
   from {
     opacity: 0;
   }
@@ -11,7 +9,7 @@ const fadeIn = keyframes`
   }
 `;
 
-const fadeOut = keyframes`
+export const fadeOut = keyframes`
   from {
     opacity: 1;
   }
@@ -20,21 +18,28 @@ const fadeOut = keyframes`
   }
 `;
 
-type OpeningAnimationProps = FastOmit<DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>, "fadeOutAnimation"> & {
-  fadeOutAnimation?: boolean;
-};
-
-const OpeningAnimation = styled.div<OpeningAnimationProps>`
+export const OpeningAnimation = styled.div<{ animationDone?: boolean }>`
   width: 100%;
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  opacity: 0;
+  opacity: ${({ animationDone }) => (animationDone ? 0 : 1)};
   background: linear-gradient(to bottom, #3f51b5, #2196f3);
   color: #fff;
   transition: opacity 1s ease-in-out;
-  animation-name: ${({ fadeOutAnimation }) => (fadeOutAnimation ? fadeOut : fadeIn)};
+  animation-name: ${({ animationDone }) => (animationDone ? fadeOut : fadeIn)};
   animation-duration: 2s;
 `;
 
+export const Title = styled.h1`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 40px;
+  animation-name: ${fadeIn};
+  animation-duration: 2s;
+  opacity: ${({ animationDone }) => (animationDone ? 0 : 1)};
+  transition: opacity 1s ease-in-out;
+`;

@@ -2,8 +2,8 @@ import React from "react";
 import PropTypes from "prop-types";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 
-function ModuleList(props) {
-  const { onDragEnd, children } = props;
+function ModuleList(props: { onDragEnd: any; children: any; draggableClassName: any; }) {
+  const { onDragEnd, children, draggableClassName } = props;
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -21,6 +21,7 @@ function ModuleList(props) {
                     ref={provided.innerRef}
                     {...provided.draggableProps}
                     {...provided.dragHandleProps}
+                    className={draggableClassName}
                   >
                     {child}
                   </div>
@@ -38,6 +39,11 @@ function ModuleList(props) {
 ModuleList.propTypes = {
   onDragEnd: PropTypes.func.isRequired,
   children: PropTypes.node.isRequired,
+  draggableClassName: PropTypes.string,
+};
+
+ModuleList.defaultProps = {
+  draggableClassName: "",
 };
 
 export default ModuleList;

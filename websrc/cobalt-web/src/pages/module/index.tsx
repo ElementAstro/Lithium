@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Container } from "react-bootstrap";
+import { Container, FormControl } from "react-bootstrap";
 import axios from "axios";
-import ToolBar from "../../components/module/toolbar";
-import ModuleCard from "../../components/module/card";
+import ToolBar from "./toolbar";
+import ModuleCard from "./card";
 import ModuleList from "./list";
 
 function ModuleManager(props) {
@@ -27,7 +27,16 @@ function ModuleManager(props) {
       author: "Author 2",
       version: "2.0.0",
       thumbnail: "path/to/thumbnail2.jpg",
+      license: "MIT",
+      description: "This is a module description.",
       package: {
+        name: "module-2",
+        dependencies: {
+          react: "^17.0.2",
+          lodash: "^4.17.21",
+        },
+      },
+      packageJson: {
         name: "module-2",
         dependencies: {
           react: "^17.0.2",
@@ -48,37 +57,49 @@ function ModuleManager(props) {
           moment: "^2.29.1",
         },
       },
+      packageJson: {
+        name: "module-3",
+        dependencies: [
+          "react", "moment",
+        ]
+      },
     },
   ]);
+  const [searchText, setSearchText] = useState("");
+  const [sortField, setSortField] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
 
   const handleRefresh = () => {
-    // 点击刷新按钮时重新获取模组列表
     fetchModules();
   };
 
   const fetchModules = () => {
-    // 向后端发送请求获取模组列表
-    axios.get("/api/modules").then((res) => {
-      setModuleList(res.data);
-    });
+    axios
+      .get("/api/modules", {
+        params: {
+          searchText,
+          sortField,
+          sortOrder,
+        },
+      })
+      .then((res) => {
+        setModuleList(res.data);
+      });
   };
 
   const handleEnable = (id) => {
-    // 点击启用按钮时向后端发送请求启用对应的模组
     axios.put(`/api/modules/${id}/enable`).then((res) => {
       fetchModules();
     });
   };
 
   const handleDisable = (id) => {
-    // 点击停用按钮时向后端发送请求停用对应的模组
     axios.put(`/api/modules/${id}/disable`).then((res) => {
       fetchModules();
     });
   };
 
   const handleDelete = (id) => {
-    // 点击删除按钮时向后端发送请求删除对应的模组
     axios.delete(`/api/modules/${id}`).then((res) => {
       fetchModules();
     });
@@ -94,9 +115,23 @@ function ModuleManager(props) {
     setModuleList(items);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchText(e.target.value);
+  };
+
+  const handleSortChange = (e) => {
+    const [field, order] = e.target.value.split(".");
+    setSortField(field);
+    setSortOrder(order);
+  };
+
   return (
     <Container>
-      <ToolBar onRefresh={handleRefresh} />
+      <ToolBar
+        onRefresh={handleRefresh}
+        onSearchChange={handleSearchChange}
+        onSortChange={handleSortChange}
+      />
       <ModuleList onDragEnd={handleDragEnd}>
         {moduleList.map((module) => (
           <ModuleCard

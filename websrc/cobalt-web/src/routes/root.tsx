@@ -23,6 +23,7 @@ import ConfigManager from "../pages/settings";
 import ModuleManager from "../pages/module";
 import Help from "../pages/about/help";
 import AboutPage from "../pages/about";
+import ScriptManager from "../pages/script";
 
 import GlobalParameterSettingPage from "../pages/config";
 import Connect from "../pages/connection/index";
@@ -30,6 +31,8 @@ import Helper from "../pages/helper";
 import ErrorPage from "../pages/error";
 import ObjectFinding from "../pages/skymap";
 import Dashboard from "../pages/dashboard/index";
+import PAAIndexPage from "../pages/sequence"
+import Test from "../pages/test/test";
 
 interface IndexRouteObjectPlus extends IndexRouteObject {
   title?: string;
@@ -102,10 +105,22 @@ export const routesConfig: RouteObjectPlus[] = [
     icon: <Box fill="#333" width={28} height={28}></Box>,
   },
   {
+    path: "/script",
+    element: <ScriptManager />,
+    title: "脚本管理",
+    icon: <Box fill="#333" width={28} height={28}></Box>,
+  },
+  {
     path: "/skymap",
     element: <ObjectFinding/>,
     title: "星图与目标管理",
     icon: <Map fill="#333" width={28} height={28}/>
+  },
+  {
+    path: "/sequence",
+    element: <PAAIndexPage />,
+    title: "PAA",
+    icon: <Box fill="#333" width={28} height={28}></Box>,
   },
   {
     path: "/module",
@@ -135,6 +150,12 @@ export const routesConfig: RouteObjectPlus[] = [
     path: "/error",
     element: <ErrorPage />,
     title: "错误",
+    icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+  },
+  {
+    path: "/test",
+    element: <Test />,
+    title: "测试",
     icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
   }
 ];

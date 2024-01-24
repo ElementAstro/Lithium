@@ -1,12 +1,18 @@
-import React from "react";
+import React, { LegacyRef } from "react";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
-import "./style.less";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
-
 import { BoxArrowInDownRight } from "react-bootstrap-icons";
+import {
+  HelperPage,
+  SelectBox,
+  SelectItem,
+  InitBox,
+  InitItem,
+  TempTitle,
+} from "./style";
 
 // 测试用数据
 const DEVICES_ITEMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -39,9 +45,24 @@ const Helper = () => {
     console.log("is dragging!");
   };
 
+  const clearAllCards = () => {
+    setInitItems(DEVICES_ITEMS);
+    setSelectItems(SELECT_ITEMS);
+  };
+
+  const resetCards = () => {
+    setInitItems(DEVICES_ITEMS);
+    setSelectItems(SELECT_ITEMS);
+  };
+
+  const shuffleCards = () => {
+    const shuffled = DEVICES_ITEMS.sort(() => Math.random() - 0.5);
+    setInitItems(shuffled);
+  };
+
   return (
     <DragDropContext onDragEnd={onDragEnd} onDragStart={onDragStart}>
-      <Container fluid>
+      <HelperPage>
         <Row>
           <Col xs={6}>
             {/* 卡片槽部分 */}
@@ -55,18 +76,9 @@ const Helper = () => {
                   >
                     {(provided, snapshot) => (
                       // 背景 样式
-                      <div
+                      <SelectBox
                         {...provided.droppableProps}
                         ref={provided.innerRef}
-                        style={{
-                          width: "80%",
-                          height: "100px",
-                          padding: "8px",
-                          backgroundColor: "#E5E7EB",
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: "8px",
-                        }}
                       >
                         <Draggable
                           draggableId={`select-draggable-${index}`}
@@ -76,31 +88,14 @@ const Helper = () => {
                         >
                           {(provided, snapshot) => (
                             // 卡片槽样式，注意组件一定要position: absolute
-                            <div
+                            <SelectItem
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              style={{ position: "relative", width: "15%" }}
                             >
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  margin: "8px",
-                                  width: "100%",
-                                  backgroundColor: "#111827",
-                                  padding: "8px",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <span style={{ color: "#F9FAFB" }}>
-                                    {item}
-                                  </span>
+                              <div>
+                                <div>
+                                  <span>{item}</span>
                                   <Button
                                     variant="outline-light"
                                     size="sm"
@@ -118,11 +113,11 @@ const Helper = () => {
                                   </Button>
                                 </div>
                               </div>
-                            </div>
+                            </SelectItem>
                           )}
                         </Draggable>
                         {provided.placeholder}
-                      </div>
+                      </SelectBox>
                     )}
                   </Droppable>
                 </Col>
@@ -132,19 +127,23 @@ const Helper = () => {
           <Col xs={6}>
             {/* 卡片池 */}
             <Droppable droppableId="init_droppable">
-              {(provided: { droppableProps }, snapshot) => (
-                <div
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    backgroundColor: "#F9FAFB",
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "8px",
-                  }}
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                >
+              {(
+                provided: {
+                  innerRef: LegacyRef<HTMLDivElement> | undefined;
+                  droppableProps;
+                },
+                snapshot
+              ) => (
+                <InitBox {...provided.droppableProps} ref={provided.innerRef}>
+                  <Button variant="secondary" onClick={clearAllCards}>
+                    清空所有卡片
+                  </Button>
+                  <Button variant="secondary" onClick={resetCards}>
+                    重置卡片槽和卡片池
+                  </Button>
+                  <Button variant="secondary" onClick={shuffleCards}>
+                    随机排序卡片池
+                  </Button>
                   {init_items.map((item, index) => (
                     <Draggable
                       draggableId={`init-draggable-${index}`}
@@ -152,36 +151,23 @@ const Helper = () => {
                       key={`init-draggable-${index}`}
                     >
                       {(provided, snapshot) => (
-                        <div
+                        <InitItem
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          style={{ marginBottom: "8px" }}
                         >
-                          <div
-                            style={{
-                              backgroundColor: "#E5E7EB",
-                              padding: "8px",
-                              display: "flex",
-                              justifyContent: "center",
-                              alignItems: "center",
-                              height: "60px",
-                              lineHeight: "60px",
-                            }}
-                          >
-                            {item}
-                          </div>
-                        </div>
+                          <div>{item}</div>
+                        </InitItem>
                       )}
                     </Draggable>
                   ))}
                   {provided.placeholder}
-                </div>
+                </InitBox>
               )}
             </Droppable>
           </Col>
         </Row>
-      </Container>
+      </HelperPage>
     </DragDropContext>
   );
 };

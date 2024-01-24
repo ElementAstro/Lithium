@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { GlobalStore } from "../../store/globalStore";
-import "./style.less";
 import { useNavigate } from "react-router-dom";
 import { RingLoader } from "react-spinners";
+import { OpeningAnimation, Title } from "./style";
 import styled from "styled-components";
 
 function Welcome() {
@@ -29,7 +29,7 @@ function Welcome() {
   useEffect(() => {
     setTimeout(() => {
       setAnimationDone(true);
-    }, 1000);
+    }, 2000);
   }, []);
 
   useEffect(() => {
@@ -70,18 +70,20 @@ function Welcome() {
           left: 0,
         }}
       ></div>
-      <img
-        className={`opening-animation ${animationDone ? "fade-out" : ""}`}
-        src="/background.png"
-        alt="Welcome"
-        style={{
-          position: "absolute",
-          width: "100%",
-          height: "100%",
-          top: 0,
-          left: 0,
-        }}
-      />
+      <OpeningAnimation animationDone={animationDone}>
+        <img
+          src="/background.png"
+          alt="Welcome"
+          style={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            top: 0,
+            left: 0,
+          }}
+        />
+        <Title animationDone={animationDone}>Cobalt WebClient</Title>
+      </OpeningAnimation>
     </div>
   );
 }

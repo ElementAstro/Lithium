@@ -10,6 +10,9 @@ Lithium
 <img src="https://img.shields.io/badge/platform-Ubuntu-green">
 </p>
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/d3fed47a38e642a390d8ee506dc0acb3)](https://app.codacy.com/gh/ElementAstro/Lithium/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
+
 ## Introduction
 
 Lithium, a lively and lightweight astrophotography terminal.
@@ -195,7 +198,7 @@ pacman -S mingw-w64-x86_64-libnova
 pacman -S make # 注意添加对应的目录，否则会当场爆炸
 ```
 
-#### Ubuntu/Debian （不需要INDI库）
+#### Ubuntu/Debian/Other Linux
 
 ```shell
 sudo apt-get update && sudo apt-get upgrade -y

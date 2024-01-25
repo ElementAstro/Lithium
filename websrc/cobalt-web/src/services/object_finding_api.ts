@@ -1,4 +1,4 @@
-import request from '@/services/request';
+import request from './request';
 import { AxiosResponse } from 'axios';
 
 

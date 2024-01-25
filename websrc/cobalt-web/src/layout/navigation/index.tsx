@@ -1,37 +1,87 @@
-import { useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import { Nav,Navbar } from "react-bootstrap";
-import { routesConfig } from "../../routes/root";
-import { GlobalStore } from "../../store/globalStore";
-import "./style.less";
-import React from "react";
+import React, { useState } from "react";
+import Container from "react-bootstrap/Container";
+import Nav from "react-bootstrap/Nav";
+import Navbar from "react-bootstrap/Navbar";
+import NavDropdown from "react-bootstrap/NavDropdown";
+import Offcanvas from "react-bootstrap/Offcanvas";
+import { LinkContainer } from "react-router-bootstrap";
+import {
+  Info,
+  People,
+  House,
+  Cpu,
+  Map,
+  Gear,
+  WindowDash,
+  Webcam,
+  Box,
+  Bookmark,
+  Camera
+} from "react-bootstrap-icons";
+import { useTranslation } from "react-i18next";
+import { Button } from "react-bootstrap";
 
-const Navigation = () => {
-  const { drawerVisible } = GlobalStore.useAppState((state) => state.visible);
+function Navigation() {
+  const { t } = useTranslation();
 
-  const toggleNavigation = () => {
-    GlobalStore.actions.visible.setState({
-      drawerVisible: false,
-    });
-  };
+  const [language, setLanguage] = useState("en");
 
-  const navigate = useNavigate();
+  const navLinks = [
+    { to: "/dashboard", text: "Dashboard", icon: House },
+    { to: "/server", text: "Server Finder", icon: Info },
+    { to: "/device_connect", text: "Device Connector", icon: Webcam },
+    { to: "/device", text: "Device Control", icon: Box },
+    { to: "/skymap", text: "Skymap & Object", icon: Map },
+    { to: "/settings", text: "Settings", icon: Gear },
+    { to: "/about", text: "About", icon: Bookmark },
+  ];
 
-  const push = (key: string) => {
-    navigate(key);
-    toggleNavigation();
+  const changeLanguage = (lng) => {
+    setLanguage(lng);
   };
 
   return (
-    
-    <Nav defaultActiveKey="/" className="flex-column">
-      {routesConfig.map((item) => (
-        <Nav.Item key={item.path} onClick={() => push(item.path as string)}>
-          <Nav.Link>{item.title}</Nav.Link>
-        </Nav.Item>
-      ))}
-    </Nav>
+    <>
+      <Navbar key="xxl" expand="xxl" className="bg-body-tertiary mb-3">
+        <Container fluid>
+          <Navbar.Brand href="#home">
+            <img
+              alt=""
+              src="atom.png"
+              width="30"
+              height="30"
+              className="d-inline-block align-top"
+            />{" "}
+            {t("title")}
+          </Navbar.Brand>
+          <Navbar.Toggle aria-controls={`offcanvasNavbar-routes`} />
+          <Navbar.Offcanvas
+            id={`offcanvasNavbar-routes`}
+            aria-labelledby={`offcanvasNavbarLabel-routes`}
+            placement="end"
+          >
+            <Offcanvas.Header closeButton>
+              <Offcanvas.Title id={`offcanvasNavbarLabel-routes`}>
+                {t("title")}
+              </Offcanvas.Title>
+            </Offcanvas.Header>
+            <Offcanvas.Body>
+              <Nav className="justify-content-end flex-grow-1 pe-3">
+                {navLinks.map((link, index) => (
+                  <LinkContainer key={index} to={link.to}>
+                    <Nav.Link>
+                      {React.createElement(link.icon, { size: 24 })}
+                      {link.text}
+                    </Nav.Link>
+                  </LinkContainer>
+                ))}
+              </Nav>
+            </Offcanvas.Body>
+          </Navbar.Offcanvas>
+        </Container>
+      </Navbar>
+    </>
   );
-};
+}
 
 export default Navigation;

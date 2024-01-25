@@ -381,6 +381,26 @@ namespace Atom::System
         return disk_usage;
     }
 
+    bool Shutdown()
+    {
+#ifdef _WIN32
+        ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, 0);
+#else
+        system("shutdown -h now");
+#endif
+        return true;
+    }
+
+    // 重启函数
+    void Reboot()
+    {
+#ifdef _WIN32
+        ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
+#else
+        system("reboot");
+#endif
+    }
+
     bool IsRoot()
     {
 #ifdef _WIN32
@@ -407,6 +427,25 @@ namespace Atom::System
 #else
         return (getuid() == 0);
 #endif
+    }
+
+    std::string GetCurrentUsername()
+    {
+#ifdef _WIN32
+        char username[UNLEN + 1];
+        DWORD usernameLen = UNLEN + 1;
+        if (GetUserNameA(username, &usernameLen))
+        {
+            return std::string(username);
+        }
+#else
+        char username[256];
+        if (getlogin_r(username, sizeof(username)) == 0)
+        {
+            return std::string(username);
+        }
+#endif
+        return "";
     }
 
     std::vector<std::pair<std::string, std::string>> GetProcessInfo()
@@ -681,7 +720,6 @@ namespace Atom::System
         */
 #endif
     }
-
 }
 
 /*

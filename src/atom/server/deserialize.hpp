@@ -103,8 +103,8 @@ namespace Atom::Server
 #else
         std::unordered_map<std::string, std::shared_ptr<DeserializeEngine>> deserializationEngines_; /**< Map of deserialization engines. */
 #endif
-        std::string currentDeserializationEngine_;                                                   /**< Name of the current deserialization engine. */
-        mutable std::mutex mutex_;                                                                   /**< Mutex to ensure thread safety. */
+        std::string currentDeserializationEngine_; /**< Name of the current deserialization engine. */
+        mutable std::mutex mutex_;                 /**< Mutex to ensure thread safety. */
     };
 
     template <typename T>

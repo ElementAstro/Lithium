@@ -1,10 +1,12 @@
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { AppProviders } from "./AppProvider";
 import { HashRouter as Router } from "react-router-dom";
 import Body from "./layout/index";
 import Route from "./routes/root";
-import { getResouceList } from "./services/api";
-import React from "react";
+
+import WS_LISTENER_COMP from "./pages/home/init_ws_listener";
+
+import "bootstrap/dist/css/bootstrap.min.css";
 
 function Main() {
   // useEffect(()=>{
@@ -18,6 +20,7 @@ function Main() {
       <Body>
         <Route></Route>
       </Body>
+      <WS_LISTENER_COMP />
     </Router>
   );
 }
@@ -27,4 +30,3 @@ export default () => (
     <Main></Main>
   </AppProviders>
 );
-

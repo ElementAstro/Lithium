@@ -2,17 +2,6 @@
  * configor.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -124,29 +113,6 @@ namespace Lithium
         return true;
     }
 
-    void ConfigManager::setValue(const std::string &key_path, const json &value)
-    {
-        // std::lock_guard<std::shared_mutex> lock(rw_mutex_);
-        try
-        {
-            json *p = &config_;
-            for (const auto &key : split(key_path, "/"))
-            {
-                if (!p->is_object())
-                {
-                    LOG_F(ERROR, "Invalid key path: {}", key_path);
-                    return;
-                }
-                p = &(*p)[key];
-            }
-            *p = value;
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Failed to set key: {} with {}", key_path, e.what());
-        }
-    }
-
     json ConfigManager::getValue(const std::string &key_path) const
     {
         // std::lock_guard<std::shared_mutex> lock(rw_mutex_);
@@ -174,7 +140,32 @@ namespace Lithium
         }
     }
 
-    void ConfigManager::deleteValue(const std::string &key_path)
+    bool ConfigManager::setValue(const std::string &key_path, const json &value)
+    {
+        // std::lock_guard<std::shared_mutex> lock(rw_mutex_);
+        try
+        {
+            json *p = &config_;
+            for (const auto &key : split(key_path, "/"))
+            {
+                if (!p->is_object())
+                {
+                    LOG_F(ERROR, "Invalid key path: {}", key_path);
+                    return;
+                }
+                p = &(*p)[key];
+            }
+            *p = value;
+        }
+        catch (const std::exception &e)
+        {
+            LOG_F(ERROR, "Failed to set key: {} with {}", key_path, e.what());
+            return false;
+        }
+        return true;
+    }
+
+    bool ConfigManager::deleteValue(const std::string &key_path)
     {
         std::lock_guard<std::shared_mutex> lock(rw_mutex_);
         std::vector<std::string> keys = split(key_path, "/");
@@ -235,7 +226,16 @@ namespace Lithium
             LOG_F(ERROR, "Failed to open file: {}", file_path);
             return false;
         }
-        ofs << config_.dump(4);
+        try
+        {
+            fs << config_.dump(4);
+        }
+        catch(const std::exception& e)
+        {
+            LOG_F(ERROR, "Failed to save config to file: {}, error message: {}", file_path, e.what());
+            ofs.close();
+            return false;
+        }
         ofs.close();
         DLOG_F(INFO, "Save config to file: {}", file_path);
         return true;

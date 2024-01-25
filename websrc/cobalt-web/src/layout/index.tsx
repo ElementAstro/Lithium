@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import Header from "./header";
 import Navigation from "./navigation";
 import { useNavigate } from "react-router-dom";
 import "./style.less";
@@ -18,7 +17,6 @@ export default ({ children }: Props) => {
 
   return (
     <div className="app-main">
-      <Header></Header>
       <Navigation />
       <main>{children}</main>
     </div>

@@ -2,17 +2,6 @@
  * AppComponent.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -28,15 +17,13 @@ Description: App Components
 
 #include "config.h"
 
+#ifdef ENABLE_ASYNC
 #include "websocket/WsServer.hpp"
+#else
+#include "websocket/WsServer.hpp"
+#endif
 
 #include "ErrorHandler.hpp"
-
-#include "controller/SwaggerComponent.hpp"
-
-#include "oatpp-openssl/server/ConnectionProvider.hpp"
-#include "oatpp-openssl/configurer/TrustStore.hpp"
-#include "oatpp-openssl/Config.hpp"
 
 #if ENABLE_ASYNC
 #include "oatpp/web/server/AsyncHttpConnectionHandler.hpp"
@@ -53,18 +40,21 @@ Description: App Components
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
 #include "oatpp/web/protocol/http/incoming/SimpleBodyDecoder.hpp"
 #include "oatpp/web/server/interceptor/AllowCorsGlobal.hpp"
+#include "oatpp/parser/json/mapping/ObjectMapper.hpp"
+#include "oatpp/core/macro/component.hpp"
 #if ENABLE_DEBUG
 #include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
 #include "oatpp/network/virtual_/Interface.hpp"
 #endif
 
+#include "controller/SwaggerComponent.hpp"
+
+#include "oatpp-openssl/server/ConnectionProvider.hpp"
+#include "oatpp-openssl/configurer/TrustStore.hpp"
+#include "oatpp-openssl/Config.hpp"
 #include "oatpp-zlib/EncoderProvider.hpp"
 
-#include "oatpp/parser/json/mapping/ObjectMapper.hpp"
-
-#include "oatpp/core/macro/component.hpp"
-
-#include <thread>
+#include <thread> // for std::thread::hardware_concurrency
 
 /**
  *  Class which creates and holds Application components and registers components in oatpp::base::Environment
@@ -72,11 +62,17 @@ Description: App Components
  */
 class AppComponent
 {
+    /* note: though I don't like this kind of initialization, but I don't know how to do it in a better way, segmentation fault ! */
 private:
     oatpp::String m_host;
     v_uint16 m_port;
 
 public:
+    /**
+     *  Create components
+     *  @param host - host name
+     *  @param port - port number
+     */
     AppComponent(oatpp::String host, v_uint16 port)
         : m_host(host), m_port(port)
     {
@@ -160,19 +156,18 @@ public:
      *  Create ConnectionHandler component which uses Router component to route requests
      */
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, serverConnectionHandler)
-    ("http", []
-     {                              // get JWT component
+    ("http", [] {                                                                           // get JWT component
         OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);           // get Router component
         OATPP_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, objectMapper); // get ObjectMapper component
-		/* Create HttpProcessor::Components */
-  		auto components = std::make_shared<oatpp::web::server::HttpProcessor::Components>(router);
+                                                                                            /* Create HttpProcessor::Components */
+        auto components = std::make_shared<oatpp::web::server::HttpProcessor::Components>(router);
 
-		/* Add content encoders */
-		auto encoders = std::make_shared<oatpp::web::protocol::http::encoding::ProviderCollection>();
-		encoders->add(std::make_shared<oatpp::zlib::DeflateEncoderProvider>());
-		encoders->add(std::make_shared<oatpp::zlib::GzipEncoderProvider>());
+        /* Add content encoders */
+        auto encoders = std::make_shared<oatpp::web::protocol::http::encoding::ProviderCollection>();
+        encoders->add(std::make_shared<oatpp::zlib::DeflateEncoderProvider>());
+        encoders->add(std::make_shared<oatpp::zlib::GzipEncoderProvider>());
         /* Set content encoders */
-		components->contentEncodingProviders = encoders;
+        components->contentEncodingProviders = encoders;
 
         auto decoders = std::make_shared<oatpp::web::protocol::http::encoding::ProviderCollection>();
         decoders->add(std::make_shared<oatpp::zlib::DeflateDecoderProvider>());
@@ -187,8 +182,9 @@ public:
 #else
         auto connectionHandler = oatpp::web::server::HttpConnectionHandler::createShared(components);
         connectionHandler->setErrorHandler(std::make_shared<ErrorHandler>(objectMapper));
-#endif 
-        return connectionHandler; }());
+#endif
+        return connectionHandler;
+    }());
 
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler)
     ("websocket", []

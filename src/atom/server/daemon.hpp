@@ -19,103 +19,92 @@
 
 Date: 2023-11-11
 
-Description: Daemon thread implementation
+Description: Daemon process implementation
 
 **************************************************/
 
 #pragma once
 
-/**
- * @file process_info.h
- * @brief This file contains the definition of ProcessInfoMgr and ProcessInfo classes for managing process information.
- */
-
-#include <sstream>
 #include <functional>
-#include <iostream>
+#include <ctime>
+#include <cstring>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <unistd.h>
-#include <sys/types.h>
+#include <signal.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #endif
 
-/**
- * @brief Converts timestamp to string in format "YYYY-MM-DD HH:MM:SS".
- * 
- * @param timestamp The timestamp to be converted.
- * @return The string representation of the timestamp in "YYYY-MM-DD HH:MM:SS" format.
- */
-std::string Time2Str(time_t timestamp);
-
-/**
- * @brief Singleton class for managing process information.
- */
-class ProcessInfoMgr
+namespace Atom::Async
 {
-public:
-    /**
-     * @brief Gets the singleton instance of ProcessInfoMgr.
-     * 
-     * @return Pointer to the singleton instance of ProcessInfoMgr.
-     */
-    static ProcessInfoMgr *GetInstance();
+    // Class for managing process information
+    class DaemonGuard
+    {
+    public:
+        /**
+         * @brief Default constructor.
+         */
+        DaemonGuard() {}
 
-    int parent_id = 0; /**< The parent process ID. */
-    int main_id = 0; /**< The main process ID. */
-    time_t parent_start_time = 0; /**< The start time of the parent process. */
-    time_t main_start_time = 0; /**< The start time of the main process. */
-    int restart_count = 0; /**< The number of times the main process has been restarted. */
-};
+        /**
+         * @brief Converts process information to a string.
+         *
+         * @return The process information as a string.
+         */
+        std::string ToString() const;
 
-/**
- * @brief Class for managing process information and starting the process.
- */
-class ProcessInfo
-{
-public:
-    /**
-     * @brief Returns a string representation of the process information.
-     * 
-     * @return The string representation of the process information.
-     */
-    std::string toString() const;
+        /**
+         * @brief Starts a child process to execute the actual task.
+         *
+         * @param argc The number of command line arguments.
+         * @param argv An array of command line arguments.
+         * @param mainCb The main callback function to be executed in the child process.
+         * @return The return value of the main callback function.
+         */
+        int RealStart(int argc, char **argv,
+                      std::function<int(int argc, char **argv)> mainCb);
 
-    /**
-     * @brief Starts the process without daemonizing it.
-     * 
-     * @param argc The number of command-line arguments.
-     * @param argv The array of command-line arguments.
-     * @param main_cb The callback function to be executed by the main process.
-     * @return The exit code of the main process.
-     */
-    static int real_start(int argc, char **argv,
-                          std::function<int(int argc, char **argv)> main_cb);
+        /**
+         * @brief Starts the process. If a daemon process needs to be created, it will create the daemon process first.
+         *
+         * @param argc The number of command line arguments.
+         * @param argv An array of command line arguments.
+         * @param mainCb The main callback function to be executed.
+         * @param isDaemon Determines if a daemon process should be created.
+         * @return The return value of the main callback function.
+         */
+        int StartDaemon(int argc, char **argv,
+                        std::function<int(int argc, char **argv)> mainCb,
+                        bool isDaemon);
 
-    /**
-     * @brief Starts the process and daemonizes it.
-     * 
-     * @param argc The number of command-line arguments.
-     * @param argv The array of command-line arguments.
-     * @param main_cb The callback function to be executed by the main process.
-     * @return The exit code of the main process.
-     */
-    static int real_daemon(int argc, char **argv,
-                           std::function<int(int argc, char **argv)> main_cb);
+    private:
+        pid_t m_parentId = 0;         /**< The parent process ID. */
+        pid_t m_mainId = 0;           /**< The child process ID. */
+        time_t m_parentStartTime = 0; /**< The start time of the parent process. */
+        time_t m_mainStartTime = 0;   /**< The start time of the child process. */
+        int m_restartCount = 0;       /**< The number of restarts. */
+    };
 
     /**
-     * @brief Starts the process with or without daemonizing it.
-     * 
-     * @param argc The number of command-line arguments.
-     * @param argv The array of command-line arguments.
-     * @param main_cb The callback function to be executed by the main process.
-     * @param is_daemon Whether to daemonize the process or not.
-     * @return The exit code of the main process.
+     * @brief Signal handler function.
+     *
+     * @param signum The signal number.
      */
-    int start_daemon(int argc, char **argv,
-                     std::function<int(int argc, char **argv)> main_cb,
-                     bool is_daemon);
-};
+    void SignalHandler(int signum);
 
+    /**
+     * @brief Writes the process ID to a file.
+     */
+    void WritePidFile();
+
+    /**
+     * @brief Checks if the process ID file exists.
+     *
+     * @return True if the process ID file exists, false otherwise.
+     */
+    bool CheckPidFile();
+
+}

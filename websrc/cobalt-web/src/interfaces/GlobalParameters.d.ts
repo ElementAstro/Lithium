@@ -26,8 +26,8 @@ declare interface ISingleFilterInfo {
 }
 
 declare interface IFilterSetting {
-  filter_number: number,
-  filter_info: Array<ISingleFilterInfo>,
+  filter_number: number;
+  filter_info: Array<ISingleFilterInfo>;
 }
 
 declare interface IAutofocus {
@@ -42,14 +42,14 @@ declare interface IAutofocus {
 }
 
 declare interface IPlateSolve {
-  use: 'astap' | 'astronomy';
+  use: "astap" | "astronomy";
   exposure_time: number;
-  use_filter: number | 'current';
+  use_filter: number | "current";
   downsample: number;
   tolerance: number;
 }
 
-declare interface ITelescopeInfo{
+declare interface ITelescopeInfo {
   name: string;
   apeture: number;
   focal_length: number;
@@ -64,8 +64,8 @@ declare interface AnyCameraInfo {
 }
 
 declare interface ICameraGet {
-  camera: boolean = false;
-  guider_camera: boolean = false;
+  camera: boolean;
+  guider_camera: boolean;
 }
 
 declare interface IGlobalParameters {
@@ -101,15 +101,15 @@ declare interface IGPSingleParameterExplain {
   unit?: string;
 }
 
-declare interface IGPParameterExplain{
+declare interface IGPParameterExplain {
   [key: string]: IGPSingleParameterExplain;
 }
 
-declare interface IGPPorfileList{
+declare interface IGPPorfileList {
+  data: any;
   current_profile: string;
   all_profiles: Array<string>;
 }
-
 
 declare interface IGPFilterSelection {
   label: string;

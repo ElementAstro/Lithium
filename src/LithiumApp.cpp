@@ -2,17 +2,6 @@
  * LithiumApp.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -27,21 +16,8 @@ Description: Lithium App Enter
 
 #include "config.h"
 
-#include "atom/thread/thread.hpp"
-#include "config/configor.hpp"
-#include "device/device_manager.hpp"
-#include "atom/system/process.hpp"
-#include "task/task_manager.hpp"
-#include "task/task_generator.hpp"
-#include "task/task_stack.hpp"
-#include "core/property/iproperty.hpp"
-#include "atom/server/message.hpp"
-#include "plugin/plugin_loader.hpp"
-#include "script/script_manager.hpp"
-#include "atom/plugin/module_loader.hpp"
-#include "atom/error/error_stack.hpp"
-
 #include "atom/server/global_ptr.hpp"
+#include "atom/driver/iproperty.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
@@ -58,17 +34,11 @@ namespace Lithium
         try
         {
             // Specialized Managers and Threads
-            m_ConfigManager = GetPtr<ConfigManager>("ConfigManager");
-            m_DeviceManager = GetPtr<DeviceManager>("DeviceManager");
-            m_PluginManager = GetPtr<PluginManager>("PluginManager");
-            m_TaskManager = GetPtr<Task::TaskManager>("TaskManager");
-            m_TaskGenerator = GetPtr<Task::TaskGenerator>("TaskGenerator");
-            m_TaskStack = GetPtr<Task::TaskStack>("TaskStack");
-            m_ScriptManager = GetPtr<ScriptManager>("ScriptManager");
-            m_ThreadManager = GetPtr<Thread::ThreadManager>("ThreadManager");
-            m_ProcessManager = GetPtr<Process::ProcessManager>("ProcessManager");
-            m_MessageBus = GetPtr<MessageBus>("MessageBus");
-            m_ModuleLoader = GetPtr<ModuleLoader>("ModuleLoader");
+            m_ConfigManager = GetPtr<ConfigManager>("lithium.config");
+            m_DeviceManager = GetPtr<DeviceManager>("lithium.device");
+            m_ThreadManager = GetPtr<Thread::ThreadManager>("lithium.async.thread");
+            m_ProcessManager = GetPtr<Process::ProcessManager>("lithium.system.process");
+            m_MessageBus = GetPtr<MessageBus>("lithium.bus");
 
             // Specialized Message Processing Threads for Device and Device Manager
             m_MessageBus->StartProcessingThread<IStringProperty>();
@@ -100,25 +70,20 @@ namespace Lithium
         return std::make_shared<LithiumApp>();
     }
 
-    std::unique_ptr<LithiumApp> LithiumApp::createUnique()
-    {
-        return std::make_unique<LithiumApp>();
-    }
-
     void InitLithiumApp()
     {
-        AddPtr("ConfigManager", ConfigManager::createShared());
-        AddPtr("MessageBus", MessageBus::createShared());
-        AddPtr("ModuleLoader", ModuleLoader::createShared());
-        AddPtr("ThreadManager", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
-        AddPtr("ProcessManager", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
-        AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
-        AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
-        AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
-        AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
-        AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
-        AddPtr("DeviceManager", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
-        AddPtr("ErrorStack", std::make_shared<ErrorStack>());
+        AddPtr("lithium.config", ConfigManager::createShared());
+        AddPtr("lithium.bus", MessageBus::createShared());
+        //AddPtr("ModuleLoader", ModuleLoader::createShared());
+        AddPtr("lithium.async.thread", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
+        AddPtr("lithium.system.process", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
+        //AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
+       // AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
+        //AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
+        //AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
+        //AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
+        AddPtr("lithium.device", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
+        AddPtr("lithium.error.stack", std::make_shared<ErrorStack>());
     }
 
     // ----------------------------------------------------------------

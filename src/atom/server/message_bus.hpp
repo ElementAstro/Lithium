@@ -54,7 +54,6 @@ namespace Atom::Server
     public:
         MessageBus()
         {
-
         }
 
         MessageBus(const int &max_queue_size)
@@ -96,6 +95,7 @@ namespace Atom::Server
         {
             return std::make_unique<MessageBus>();
         }
+
     public:
         // -------------------------------------------------------------------
         // MessageBus methods
@@ -109,10 +109,10 @@ namespace Atom::Server
             subscribersLock_.lock();
             subscribers_[fullTopic].push_back({priority, std::any(callback)});
             std::sort(subscribers_[fullTopic].begin(), subscribers_[fullTopic].end(),
-                    [](const auto &a, const auto &b)
-                    {
-                        return a.first > b.first;
-                    });
+                      [](const auto &a, const auto &b)
+                      {
+                          return a.first > b.first;
+                      });
             subscribersLock_.unlock();
 
             DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
@@ -158,7 +158,7 @@ namespace Atom::Server
 
         void UnsubscribeAll(const std::string &namespace_ = "")
         {
-            std::string fullTopic = namespace_.empty()? "*" : (namespace_ + "::*");
+            std::string fullTopic = namespace_.empty() ? "*" : (namespace_ + "::*");
 
             subscribersLock_.lock();
             subscribers_.erase(fullTopic);
@@ -207,13 +207,13 @@ namespace Atom::Server
         void StartProcessingThread()
         {
             std::type_index typeIndex = typeid(T);
-    #if __cplusplus >= 202002L
+#if __cplusplus >= 202002L
             processingThreads_.emplace(typeIndex, std::jthread([&]()
-                                                            {
-    #else
+#else
             processingThreads_.emplace(typeIndex, std::thread([&]()
-                                                            {
-    #endif
+#endif
+                                                               {
+    
                 while (isRunning_.load()) {
                     std::pair<std::string, std::any> message;
                     bool hasMessage = false;
@@ -282,9 +282,9 @@ namespace Atom::Server
             auto it = processingThreads_.find(typeIndex);
             if (it != processingThreads_.end())
             {
-    #if __cplusplus >= 202002L
+#if __cplusplus >= 202002L
                 it->second.request_stop();
-    #endif
+#endif
                 it->second.join();
                 processingThreads_.erase(it);
                 DLOG_F(INFO, "Processing thread for type {} stopped", typeid(T).name());
@@ -297,9 +297,9 @@ namespace Atom::Server
             messageAvailableFlag_.notify_one();
             for (auto &thread : processingThreads_)
             {
-    #if __cplusplus >= 202002L
+#if __cplusplus >= 202002L
                 thread.second.request_stop();
-    #endif
+#endif
                 thread.second.join();
             }
             processingThreads_.clear();
@@ -313,19 +313,19 @@ namespace Atom::Server
         std::mutex messageQueueLock_;
         std::condition_variable messageAvailableFlag_;
         std::mutex waitingMutex_;
-    #if __cplusplus >= 202002L
-    #if ENABLE_FASTHASH
+#if __cplusplus >= 202002L
+#if ENABLE_FASTHASH
         emhash8::HashMap<std::type_index, std::thread> processingThreads_;
-    #else
+#else
         std::unordered_map<std::type_index, std::jthread> processingThreads_;
-    #endif
-    #else
-    #if ENABLE_FASTHASH
+#endif
+#else
+#if ENABLE_FASTHASH
         emhash8::HashMap<std::type_index, std::thread> processingThreads_;
-    #else
+#else
         std::unordered_map<std::type_index, std::thread> processingThreads_;
-    #endif
-    #endif
+#endif
+#endif
         std::atomic<bool> isRunning_{true};
         std::atomic_int maxMessageBusSize_{1000};
 

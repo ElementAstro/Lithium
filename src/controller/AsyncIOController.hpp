@@ -1,18 +1,7 @@
 /*
- * IOController.cpp
+ * AsyncIOController.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,8 +12,8 @@ Description: IO Route
 
 **************************************************/
 
-#ifndef Lithium_IOCONTROLLER_HPP
-#define Lithium_IOCONTROLLER_HPP
+#ifndef LITHIUM_ASYNC_IO_CONTROLLER_HPP
+#define LITHIUM_ASYNC_IO_CONTROLLER_HPP
 
 #include "config.h"
 
@@ -52,12 +41,19 @@ public:
     {
     }
 
-public:
+    // ----------------------------------------------------------------
+    // Pointer creator
+    // ----------------------------------------------------------------
+
     static std::shared_ptr<IOController> createShared(
         OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
     {
         return std::make_shared<IOController>(objectMapper);
     }
+
+    // ----------------------------------------------------------------
+    // IO Http Handler
+    // ----------------------------------------------------------------
 
     ENDPOINT_INFO(getUICreateDirectory)
     {
@@ -75,27 +71,31 @@ public:
 
         Action returnResponse(const oatpp::Object<CreateDirectoryDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->path.getValue("") == "")
+            auto path = body->path.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+            if(isAbsolute && !Atom::IO::is_full_path(path))
             {
+                res->status = "error";
                 res->error = "Invalid Parameters";
-                res->message = "Directory path is required";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto path = body->path.getValue("");
-                if(!Lithium::File::is_full_path(path))
+                if(!Atom::IO::create_directory(path))
                 {
-                    res->error = "Invalid Parameters";
-                    res->message = "Directory path must be a absolute path";
+                    res->status = "error";
+                    res->error = "IO Failed";
+                    res->code = 500;
+                    res->message = "Failed to create directory";
                 }
                 else
                 {
-                    if(!Lithium::File::create_directory(path))
-                    {
-                        res->error = "IO Failed";
-                        res->message = "Failed to create directory";
-                    }
+                    res->status = "success";
+                    res->message = "Successfully created directory";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -118,27 +118,33 @@ public:
 
         Action returnResponse(const oatpp::Object<CreateDirectoryDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->path.getValue("") == "")
+            auto path = body->path.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+
+            if(isAbsolute && !Atom::IO::is_full_path(path))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "Directory path is required";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto path = body->path.getValue("");
-                if(!Lithium::File::is_full_path(path))
+                if(!Atom::IO::remove_directory(path))
                 {
-                    res->error = "Invalid Parameters";
-                    res->message = "Directory path must be a absolute path";
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "IO Failed";
+                    res->message = "Failed to remove directory";
                 }
                 else
                 {
-                    if(!Lithium::File::remove_directory(path))
-                    {
-                        res->error = "IO Failed";
-                        res->message = "Failed to remove directory";
-                    }
+                    res->status = "success";
+                    res->message = "Successfully removed directory";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -161,36 +167,43 @@ public:
 
         Action returnResponse(const oatpp::Object<RenameDirectoryDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+            OATPP_ASSERT_HTTP(body->name.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->path.getValue("") == "" || body->name.getValue("") == "")
+            
+            auto path = body->path.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+            auto name = body->name.getValue("");
+
+            if(!Atom::IO::isFolderNameValid(name))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "Directory path and name are required";
+                res->message = "New folder name must be valid";
+            }
+            if(isAbsolute && !Atom::IO::is_full_path(path))
+            {
+                res->status = "error";
+                res->code = 500;
+                res->error = "Invalid Parameters";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto path = body->path.getValue("");
-                if(!Lithium::File::is_full_path(path))
+                if(!Atom::IO::rename_directory(path,name))
                 {
-                    res->error = "Invalid Parameters";
-                    res->message = "Directory path must be a absolute path";
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "IO Failed";
+                    res->message = "Failed to rename directory";
                 }
                 else
                 {
-                    auto name = body->name.getValue("");
-                    if(!Lithium::File::isFolderNameValid(name))
-                    {
-                        res->error = "Invalid Parameters";
-                        res->message = "New folder name must be valid";
-                    }
-                    else
-                    {
-                        if(!Lithium::File::rename_directory(path,name))
-                        {
-                            res->error = "IO Failed";
-                            res->message = "Failed to rename directory";
-                        }
-                    }
+                    res->status = "success";
+                    res->message = "Successfully renamed directory";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -213,28 +226,33 @@ public:
 
         Action returnResponse(const oatpp::Object<MoveDirectoryDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+            OATPP_ASSERT_HTTP(body->new_path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->old_path.getValue("") == "" || body->new_path.getValue("") == "")
+            auto old_path = body->old_path.getValue("");
+            auto new_path = body->new_path.getValue("");
+            if(isAbsolute && (!Atom::IO::is_full_path(old_path) || !Atom::IO::is_full_path(new_path)))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "Directory old path and new path are required";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto old_path = body->old_path.getValue("");
-                auto new_path = body->new_path.getValue("");
-                if(!Lithium::File::is_full_path(old_path) || !Lithium::File::is_full_path(new_path))
+                if(!Atom::IO::move_directory(old_path,new_path))
                 {
-                    res->error = "Invalid Parameters";
-                    res->message = "Directory path must be a absolute path";
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "IO Failed";
+                    res->message = "Failed to move directory";
                 }
                 else
                 {
-                    if(!Lithium::File::move_directory(old_path,new_path))
-                    {
-                        res->error = "IO Failed";
-                        res->message = "Failed to move directory";
-                    }
+                    res->status = "success";
+                    res->message = "Successfully moved directory";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -257,28 +275,35 @@ public:
 
         Action returnResponse(const oatpp::Object<CopyFileDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+            OATPP_ASSERT_HTTP(body->new_path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->old_path.getValue("") == "" || body->new_path.getValue("") == "")
+            auto old_path = body->old_path.getValue("");
+            auto new_path = body->new_path.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+
+            if(isAbsolute && !Atom::IO::is_full_path(old_path) || !Atom::IO::is_full_path(new_path))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "File old path and new path are required";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto old_path = body->old_path.getValue("");
-                auto new_path = body->new_path.getValue("");
-                if(!Lithium::File::is_full_path(old_path) || !Lithium::File::is_full_path(new_path))
+                if(!Atom::IO::copy_file(old_path,new_path))
                 {
-                    res->error = "Invalid Parameters";
-                    res->message = "Directory path must be a absolute path";
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "IO Failed";
+                    res->message = "Failed to copy file";
                 }
                 else
                 {
-                    if(!Lithium::File::copy_file(old_path,new_path))
-                    {
-                        res->error = "IO Failed";
-                        res->message = "Failed to copy file";
-                    }
+                    res->status = "success";
+                    res->message = "Successfully moved file";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -301,28 +326,36 @@ public:
 
         Action returnResponse(const oatpp::Object<MoveFileDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+            OATPP_ASSERT_HTTP(body->new_path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->old_path.getValue("")  == "" || body->new_path.getValue("") == "")
+
+            auto old_path = body->old_path.getValue("");
+            auto new_path = body->new_path.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+
+            if(isAbsolute && !Atom::IO::is_full_path(old_path) || !Atom::IO::is_full_path(new_path))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "File old path and new path are required";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto old_path = body->old_path.getValue("");
-                auto new_path = body->new_path.getValue("");
-                if(!Lithium::File::is_full_path(old_path) || !Lithium::File::is_full_path(new_path))
+                if(!Atom::IO::copy_file(old_path,new_path))
                 {
-                    res->error = "Invalid Parameters";
-                    res->message = "Directory path must be a absolute path";
+                    res->status = "error";
+                    res->code = 500;
+                    res->error = "IO Failed";
+                    res->message = "Failed to move file";
                 }
                 else
                 {
-                    if(!Lithium::File::copy_file(old_path,new_path))
-                    {
-                        res->error = "IO Failed";
-                        res->message = "Failed to move file";
-                    }
+                    res->status = "success";
+                    res->message = "Successfully moved file";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -345,21 +378,36 @@ public:
 
         Action returnResponse(const oatpp::Object<RenameFileDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+            OATPP_ASSERT_HTTP(body->new_name.getValue("") != "", Status::CODE_400, "Missing Parameters");
+            
             auto res = StatusDto::createShared();
-            if(body->old_name.getValue("")  == "" || body->new_name.getValue("")  == "")
+
+            auto old_name = body->path.getValue("");
+            auto new_name = body->new_name.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+
+            if(isAbsolute && !Atom::IO::is_full_path(old_name))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "File old name and new name are required";
+                res->message = "Directory path must be a absolute path";
             }
             else
             {
-                auto old_name = body->old_name.getValue("");
-                auto new_name = body->new_name.getValue("");
-
-                if(!Lithium::File::rename_file(old_name,new_name))
+                if(!Atom::IO::rename_file(old_name,new_name))
                 {
+                    res->status = "error";
+                    res->code = 500;
                     res->error = "IO Failed";
                     res->message = "Failed to rename file";
+                }
+                else
+                {
+                    res->status = "success";
+                    res->message = "Successfully renamed file";
+                    res->code = 200;
                 }
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
@@ -382,20 +430,24 @@ public:
 
         Action returnResponse(const oatpp::Object<RemoveFileDTO>& body)
         {
+            OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
+
             auto res = StatusDto::createShared();
-            if(body->name.getValue("") == "")
+
+            auto name = body->path.getValue("");
+            auto isAbsolute = body->isAbsolute.getValue(false);
+            
+            if (isAbsolute && !Atom::IO::is_full_path(name))
             {
+                res->status = "error";
+                res->code = 500;
                 res->error = "Invalid Parameters";
-                res->message = "File name is required";
+                res->message = "Directory path must be a absolute path";
             }
-            else
+            if(!Atom::IO::remove_file(name))
             {
-                auto name = body->name.getValue("");
-                if(!Lithium::File::remove_file(name))
-                {
-                    res->error = "IO Failed";
-                    res->message = "Failed to remove file";
-                }
+                res->error = "IO Failed";
+                res->message = "Failed to remove file";
             }
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
@@ -404,4 +456,4 @@ public:
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen
 
-#endif // Lithium_IOCONTROLLER_HPP
+#endif // LITHIUM_ASYNC_IO_CONTROLLER_HPP

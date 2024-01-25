@@ -229,7 +229,7 @@ namespace Atom::IO
      * @param folderName 要检查的文件夹名称。
      * @return 如果文件夹名称有效，则返回true，否则返回false。
      */
-    [[nodiscard]] bool isFolderNameValid(const std::string& folderName);
+    [[nodiscard]] bool isFolderNameValid(const std::string &folderName);
 
     /**
      * @brief Check if the file name is valid.
@@ -242,7 +242,7 @@ namespace Atom::IO
      * @param fileName 要检查的文件名称。
      * @return 如果文件名称有效，则返回true，否则返回false。
      */
-    [[nodiscard]] bool isFileNameValid(const std::string& fileName);
+    [[nodiscard]] bool isFileNameValid(const std::string &fileName);
 
     /**
      * @brief Check if the folder exists.
@@ -255,7 +255,7 @@ namespace Atom::IO
      * @param folderPath 要检查的文件夹路径。
      * @return 如果文件夹存在，则返回true，否则返回false。
      */
-    [[nodiscard]] bool isFolderExists(const std::string& folderPath);
+    [[nodiscard]] bool isFolderExists(const std::string &folderPath);
 
     /**
      * @brief Check if the file exists.
@@ -268,7 +268,7 @@ namespace Atom::IO
      * @param filePath 要检查的文件路径。
      * @return 如果文件存在，则返回true，否则返回false。
      */
-    [[nodiscard]] bool isFileExists(const std::string& filePath);
+    [[nodiscard]] bool isFileExists(const std::string &filePath);
 
     /**
      * @brief Check if the path is an absolute path.
@@ -281,5 +281,34 @@ namespace Atom::IO
      * @param path 要检查的路径。
      * @return 如果路径为绝对路径，则返回true，否则返回false。
      */
-    [[nodiscard]] bool isAbsolutePath(const std::string& path);
-} // namespace Lithium::File
+    [[nodiscard]] bool isAbsolutePath(const std::string &path);
+
+    /**
+     * @brief The option to check the file type.
+     *
+     * @remark The file type is checked by the file extension.
+     */
+    enum class FileOption
+    {
+        Path,
+        Name
+    };
+
+    /**
+     * @brief Check the file type in the folder.
+     *
+     * @param folderPath The folder path to check.
+     * @param fileType The file type to check.
+     * @param fileOption The option to check the file type.
+     * @return A vector of file paths.
+     *
+     * 检查文件夹中文件的类型。
+     *
+     * @param folderPath 要检查的文件夹路径。
+     * @param fileType 要检查的文件类型。
+     * @param fileOption 要检查文件类型的选项。
+     * @return 一个文件路径的向量。
+     * @remark The file type is checked by the file extension.
+     */
+    [[nodiscard]] std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath, const std::string &fileType, FileOption fileOption);
+} // namespace Atom::IO

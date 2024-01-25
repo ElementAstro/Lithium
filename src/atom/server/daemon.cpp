@@ -19,139 +19,264 @@
 
 Date: 2023-11-11
 
-Description: Daemon thread implementation
+Description: Daemon process implementation for Linux and Windows. But there is still some problems on Windows, espacially the console.
 
 **************************************************/
 
 #include "daemon.hpp"
 
+#include <sstream>
+#include <ostream>
+#include <fstream>
+#include <thread>
+
 #include "atom/log/loguru.hpp"
+#include "atom/utils/time.hpp"
 
-std::string ProcessInfo::toString() const
+// 定义 g_daemonRestartInterval 变量
+int g_daemonRestartInterval = 10;
+
+// 定义 g_pidFilePath 变量
+std::string g_pidFilePath = "lithium-daemon";
+
+// 定义 g_isDaemon 变量
+bool g_isDaemon = false;
+
+namespace Atom::Async
 {
-    std::stringstream ss;
-    ss << "[ProcessInfo parent_id=" << ProcessInfoMgr::GetInstance()->parent_id
-       << " main_id=" << ProcessInfoMgr::GetInstance()->main_id
-       << " parent_start_time=" << Time2Str(ProcessInfoMgr::GetInstance()->parent_start_time)
-       << " main_start_time=" << Time2Str(ProcessInfoMgr::GetInstance()->main_start_time)
-       << " restart_count=" << ProcessInfoMgr::GetInstance()->restart_count << "]";
-    return ss.str();
-}
-
-int ProcessInfo::real_start(int argc, char **argv,
-                            std::function<int(int argc, char **argv)> main_cb)
-{
-    ProcessInfoMgr::GetInstance()->main_id = getpid();
-    ProcessInfoMgr::GetInstance()->main_start_time = time(0);
-    return main_cb(argc, argv);
-}
-
-int ProcessInfo::real_daemon(int argc, char **argv,
-                             std::function<int(int argc, char **argv)> main_cb)
-{
-#ifdef _WIN32
-    // Create new process to hide window and console output
-    STARTUPINFO si = {sizeof(si)};
-    PROCESS_INFORMATION pi;
-    si.dwFlags = STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-
-    if (!CreateProcess(NULL, GetCommandLine(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    std::string DaemonGuard::ToString() const
     {
-        LOG_F(ERROR, "Create daemon process failed");
-        return -1;
+        std::stringstream ss;
+        ss << "[DaemonGuard parentId=" << m_parentId
+           << " mainId=" << m_mainId
+           << " parentStartTime=" << Utils::TimeStampToString(m_parentStartTime)
+           << " mainStartTime=" << Utils::TimeStampToString(m_mainStartTime)
+           << " restartCount=" << m_restartCount << "]";
+        return ss.str();
     }
 
-    // Exit parent process
-    ExitProcess(0);
-#else
-    daemon(1, 0);
-    ProcessInfoMgr::GetInstance()->parent_id = getpid();
-    ProcessInfoMgr::GetInstance()->parent_start_time = time(0);
-    while (true)
+    int DaemonGuard::RealStart(int argc, char **argv,
+                               std::function<int(int argc, char **argv)> mainCb)
     {
-        pid_t pid = fork();
-        if (pid == 0)
-        {
-            // Child process returns
-            ProcessInfoMgr::GetInstance()->main_id = getpid();
-            ProcessInfoMgr::GetInstance()->main_start_time = time(0);
-            LOG_F(INFO, "daemon process start pid={} argv={}", getpid(), argv)
-            return real_start(argc, argv, main_cb);
-        }
-        else if (pid < 0)
-        {
-            LOG_F(ERROR, "fork fail return={} errno={} errstr={}", pid, errno, strerror(errno));
-            return -1;
-        }
-        else
-        {
-            // Parent process
-            // Parent process returns
-            int status = 0;
-            waitpid(pid, &status, 0);
+        m_mainId = getpid();
+        m_mainStartTime = time(0);
+        return mainCb(argc, argv);
+    }
 
-            // Terminated abnormally
-            if (status)
+    int DaemonGuard::RealDaemon(int argc, char **argv,
+                                std::function<int(int argc, char **argv)> mainCb)
+    {
+#ifdef _WIN32
+        // 在 Windows 平台下模拟守护进程
+        FreeConsole();
+        m_parentId = GetCurrentProcessId();
+        m_parentStartTime = time(0);
+        while (true)
+        {
+            PROCESS_INFORMATION DaemonGuard;
+            STARTUPINFO startupInfo;
+            memset(&DaemonGuard, 0, sizeof(DaemonGuard));
+            memset(&startupInfo, 0, sizeof(startupInfo));
+            startupInfo.cb = sizeof(startupInfo);
+            if (!CreateProcess(nullptr, argv[0], nullptr, nullptr, FALSE,
+                               CREATE_NEW_CONSOLE, nullptr, nullptr, &startupInfo, &DaemonGuard))
             {
-                if (status == 9)
-                {
-                    LOG_F(INFO, "daemon process killed pid={}", getpid());
-                    break;
-                }
-                else
-                {
-                    LOG_F(ERROR, "child crash pid={} status={}", pid, status);
-                }
+                LOG_F(ERROR, "Create process failed with error code {}", GetLastError());
+                return -1;
+            }
+            WaitForSingleObject(DaemonGuard.hProcess, INFINITE);
+            CloseHandle(DaemonGuard.hProcess);
+            CloseHandle(DaemonGuard.hThread);
+
+            // 等待一段时间后重新启动子进程
+            m_restartCount += 1;
+            Sleep(g_daemonRestartInterval * 1000);
+        }
+#else
+        daemon(1, 0); // 转化为守护进程
+        m_parentId = getpid();
+        m_parentStartTime = time(0);
+        while (true)
+        {
+            pid_t pid = fork(); // 创建子进程
+            if (pid == 0)
+            { // 子进程
+                m_mainId = getpid();
+                m_mainStartTime = time(0);
+                LOG_F(INFO, "daemon process start pid={} argv={}", getpid(), argv)
+                return RealStart(argc, argv, mainCb);
+            }
+            else if (pid < 0)
+            { // 创建子进程失败
+                LOG_F(ERROR, "fork fail return={} errno={} errstr={}", pid, errno, strerror(errno));
+                return -1;
             }
             else
-            {
-                LOG_F(INFO, "daemon process restart pid={}", getpid());
-                break;
-            }
+            { // 父进程
+                int status = 0;
+                waitpid(pid, &status, 0); // 等待子进程退出
 
-            // Restart child process
-            ProcessInfoMgr::GetInstance()->restart_count += 1;
-            sleep(g_daemon_restart_interval->getValue());
+                // 子进程异常退出
+                if (status)
+                {
+                    if (status == 9)
+                    { // SIGKILL 信号杀死子进程，不需要重新启动
+                        LOG_F(INFO, "daemon process killed pid={}", getpid());
+                        break;
+                    }
+                    else
+                    { // 记录日志并重新启动子进程
+                        LOG_F(ERROR, "child crash pid={} status={}", pid, status);
+                    }
+                }
+                else
+                { // 正常退出，直接退出程序
+                    LOG_F(INFO, "daemon process exit pid={}", getpid());
+                    break;
+                }
+
+                // 等待一段时间后重新启动子进程
+                m_restartCount += 1;
+                sleep(g_daemonRestartInterval);
+            }
+        }
+#endif
+        return 0;
+    }
+
+    // 启动进程，如果需要创建守护进程，则先创建守护进程
+    int DaemonGuard::StartDaemon(int argc, char **argv,
+                                 std::function<int(int argc, char **argv)> mainCb,
+                                 bool isDaemon)
+    {
+#ifdef _WIN32
+        if (isDaemon)
+        {
+            AllocConsole();
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+        }
+#endif
+
+        if (!isDaemon)
+        { // 不需要创建守护进程
+            m_parentId = getpid();
+            m_parentStartTime = time(0);
+            return RealStart(argc, argv, mainCb);
+        }
+        else
+        { // 创建守护进程
+            return RealDaemon(argc, argv, mainCb);
         }
     }
-#endif
 
-    return 0;
-}
-
-int ProcessInfo::start_daemon(int argc, char **argv,
-                              std::function<int(int argc, char **argv)> main_cb,
-                              bool is_daemon)
-{
+    // 信号处理函数，用于在程序退出时删除 PID 文件
+    void SignalHandler(int signum)
+    {
 #ifdef _WIN32
-    if (!is_daemon)
-    {
-        ProcessInfoMgr::GetInstance()->parent_id = getpid();
-        ProcessInfoMgr::GetInstance()->parent_start_time = time(0);
-        return real_start(argc, argv, main_cb);
-    }
+        if (signum == SIGTERM || signum == SIGINT)
+        {
+            remove(g_pidFilePath.c_str());
+            exit(0);
+        }
 #else
-    if (!is_daemon)
-    {
-        ProcessInfoMgr::GetInstance()->parent_id = getpid();
-        ProcessInfoMgr::GetInstance()->parent_start_time = time(0);
-        return real_start(argc, argv, main_cb);
-    }
+        if (signum == SIGTERM || signum == SIGINT)
+        {
+            remove(g_pidFilePath.c_str());
+            exit(0);
+        }
 #endif
+    }
 
-    return real_daemon(argc, argv, main_cb);
+    // 写入 PID 文件
+    void WritePidFile()
+    {
+        std::ofstream ofs(g_pidFilePath);
+        if (!ofs)
+        {
+            // LOG_F(ERROR, "open pid file {} failed", g_pidFilePath);
+            exit(-1);
+        }
+        ofs << getpid();
+        ofs.close();
+    }
+
+    // 检查 PID 文件是否存在，并检查文件中的 PID 是否有效
+    bool CheckPidFile()
+    {
+#ifdef _WIN32
+        // Windows 平台下不检查 PID 文件是否存在以及文件中的 PID 是否有效
+        return false;
+#else
+        struct stat st;
+        if (stat(g_pidFilePath.c_str(), &st) != 0)
+        {
+            return false;
+        }
+        std::ifstream ifs(g_pidFilePath);
+        if (!ifs)
+        {
+            return false;
+        }
+        pid_t pid = -1;
+        ifs >> pid;
+        ifs.close();
+        if (kill(pid, 0) == -1 && errno == ESRCH)
+        {
+            return false;
+        }
+        return true;
+#endif
+    }
 }
 
-int main_cb(int argc, char **argv)
+/*
+
+// 定义 MainCb 函数
+int MainCb(int argc, char **argv)
 {
-    std::cout << "Hello from main_cb!" << std::endl;
+    // 实际任务的代码逻辑
+    for (int i = 0; i < 10; ++i)
+    {
+        std::cout << "hello world" << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+
     return 0;
 }
 
+// 主函数
 int main(int argc, char **argv)
 {
-    ProcessInfo processInfo;
-    processInfo.start_daemon(argc, argv, std::bind(main_cb, argc, argv), false);
+    // 初始化日志库、配置文件等
+    // ...
+
+    // 检查 PID 文件是否存在，并检查文件中的 PID 是否有效
+    if (CheckPidFile())
+    {
+        // LOG_F(ERROR, "process already running with pid file {}", g_pidFilePath);
+        exit(-1);
+    }
+
+    // 写入 PID 文件
+    WritePidFile();
+
+    // 注册退出信号处理函数
+    signal(SIGTERM, SignalHandler);
+    signal(SIGINT, SignalHandler);
+
+    // 创建 DaemonGuard 对象并启动进程，如果需要创建守护进程，则先创建守护进程
+    DaemonGuard DaemonGuard;
+    DaemonGuard.StartDaemon(argc, argv, std::bind(MainCb, argc, argv), g_isDaemon);
+    DaemonGuard.RealDaemon(argc, argv, std::bind(MainCb, argc, argv));
+    if (g_isDaemon)
+    {
+        // LOG_F(INFO, "daemon process start pid={} argv={}", getpid(), argv)
+    }
+
+    std::cout << DaemonGuard.ToString() << std::endl;
+    // 删除 PID 文件并退出程序
+    remove(g_pidFilePath.c_str());
     return 0;
 }
+*/

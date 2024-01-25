@@ -1,18 +1,7 @@
 /*
- * WebSocketController.cpp
+ * AsyncWebSocketController.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,8 +12,8 @@ Description: Websocket Route
 
 **************************************************/
 
-#ifndef WebSocketController_hpp
-#define WebSocketController_hpp
+#ifndef LITHIUM_ASYNC_WEBSOCKET_CONTROLLER_HPP
+#define LITHIUM_ASYNC_WEBSOCKET_CONTROLLER_HPP
 
 #include "config.h"
 
@@ -54,12 +43,20 @@ public:
 		: oatpp::web::server::api::ApiController(objectMapper)
 	{
 	}
+
+	// ----------------------------------------------------------------
+    // Pointer creator
+    // ----------------------------------------------------------------
 	
 	static std::shared_ptr<WebSocketController> createShared(
 		OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper))
 	{
 		return std::make_shared<WebSocketController>(objectMapper);
 	}
+
+	// ----------------------------------------------------------------
+    // Websocket Handler
+    // ----------------------------------------------------------------
 
 	ENDPOINT_ASYNC("GET", "/ws/{hub-name}", wsConsole)
 	{
@@ -92,4 +89,4 @@ public:
 
 #include OATPP_CODEGEN_END(ApiController) //<-- codegen end
 
-#endif /* WebSocketController_hpp */
+#endif /* LITHIUM_ASYNC_WEBSOCKET_CONTROLLER_HPP */

@@ -12,11 +12,11 @@ Description: Lithium Python scripting engine
 
 **************************************************/
 
+#pragma once
+
 #include "pocketpy/pocketpy.h"
 
 #include "config/configor.hpp"
-
-using namespace pkpy;
 
 namespace Lithium
 {
@@ -32,10 +32,10 @@ namespace Lithium
     
 
     private:
-        VM* vm;
-        PyObject* m_deviceModule;
-        PyObject* m_systemModule;
-        PyObject* m_configModule;
+        pkpy::VM* vm;
+        pkpy::PyObject* m_deviceModule;
+        pkpy::PyObject* m_systemModule;
+        pkpy::PyObject* m_configModule;
 
         std::shared_ptr<ConfigManager> m_coofigManager;
     };

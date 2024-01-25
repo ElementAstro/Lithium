@@ -182,6 +182,7 @@ Result CommandDispatcher<Result, Argument>::Dispatch(const std::string &name, co
     {
         return it->second(data);
     }
+    return Result();
 }
 
 template <typename Result, typename Argument>

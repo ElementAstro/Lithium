@@ -97,4 +97,9 @@ enum class ServerError
     RunFailed,
     
     UnknownError,
+    UnknownCommand,
+    UnknownDevice,
+    UnknownDeviceType,
+    UnknownDeviceName,
+    UnknownDeviceID
 };

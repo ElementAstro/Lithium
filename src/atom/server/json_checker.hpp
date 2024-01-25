@@ -199,15 +199,8 @@ bool JsonChecker::checkTypeImpl(const json &jsonData, const std::string &typeNam
     return false;
 }
 
-/**
- * @brief Internal implementation to check if the JSON data matches the expected value.
- * @tparam T The type of the JSON data.
- * @param jsonData The JSON data to be checked.
- * @param expectedValue The expected value.
- * @return True if the JSON data matches the expected value, false otherwise.
- */
 template <typename T>
-bool checkValueImpl(const json &jsonData, const T &expectedValue)
+bool JsonChecker::checkValueImpl(const json &jsonData, const T &expectedValue)
 {
     if (jsonData != expectedValue)
     {

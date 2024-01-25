@@ -17,6 +17,7 @@ Description: Daemon process implementation
 #include <functional>
 #include <ctime>
 #include <cstring>
+#include <string>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -57,6 +58,17 @@ namespace Atom::Async
                       std::function<int(int argc, char **argv)> mainCb);
 
         /**
+         * @brief Starts a child process to execute the actual task.
+         *
+         * @param argc The number of command line arguments.
+         * @param argv An array of command line arguments.
+         * @param mainCb The main callback function to be executed in the child process.
+         * @return The return value of the main callback function.
+         */
+        int RealDaemon(int argc, char **argv,
+                       std::function<int(int argc, char **argv)> mainCb);
+
+        /**
          * @brief Starts the process. If a daemon process needs to be created, it will create the daemon process first.
          *
          * @param argc The number of command line arguments.
@@ -70,8 +82,13 @@ namespace Atom::Async
                         bool isDaemon);
 
     private:
-        pid_t m_parentId = 0;         /**< The parent process ID. */
-        pid_t m_mainId = 0;           /**< The child process ID. */
+#ifdef _WIN32
+        HANDLE m_parentId = 0;
+        HANDLE m_mainId = 0;
+#else
+        pid_t m_parentId = 0; /**< The parent process ID. */
+        pid_t m_mainId = 0;   /**< The child process ID. */
+#endif
         time_t m_parentStartTime = 0; /**< The start time of the parent process. */
         time_t m_mainStartTime = 0;   /**< The start time of the child process. */
         int m_restartCount = 0;       /**< The number of restarts. */

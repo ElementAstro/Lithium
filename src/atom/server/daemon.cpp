@@ -47,7 +47,7 @@ namespace Atom::Async
     int DaemonGuard::RealStart(int argc, char **argv,
                                std::function<int(int argc, char **argv)> mainCb)
     {
-        m_mainId = getpid();
+        m_mainId = reinterpret_cast<HANDLE>(getpid());
         m_mainStartTime = time(0);
         return mainCb(argc, argv);
     }
@@ -58,7 +58,7 @@ namespace Atom::Async
 #ifdef _WIN32
         // 在 Windows 平台下模拟守护进程
         FreeConsole();
-        m_parentId = GetCurrentProcessId();
+        m_parentId = reinterpret_cast<HANDLE>(GetCurrentProcessId());
         m_parentStartTime = time(0);
         while (true)
         {
@@ -149,7 +149,7 @@ namespace Atom::Async
 
         if (!isDaemon)
         { // 不需要创建守护进程
-            m_parentId = getpid();
+            m_parentId = reinterpret_cast<HANDLE>(getpid());
             m_parentStartTime = time(0);
             return RealStart(argc, argv, mainCb);
         }

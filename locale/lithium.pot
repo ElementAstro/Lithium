@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2024-01-25 23:48+0800\n"
+"POT-Creation-Date: 2024-01-26 03:37+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,78 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: E:/msys64/home/Lithium/src/App.cpp:156
-msgid "port the server running on"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:157
-msgid "host the server running on"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:158
-msgid "path to the config file"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:159
-msgid "path to the modules directory"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:160
-msgid "web panel"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:161
-msgid "path to log file"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:163
-msgid "Lithium Command Line Interface:"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:164
-msgid "End."
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:176
-#, c-format
-msgid "Command line server port : %d"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:182
-#, c-format
-msgid "Set server port to %d"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:41
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:57
-#, c++-format
-msgid "Failed to execute {}: Invalid Parameters"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:108
-#, c++-format
-msgid "Failed to load Lithium App , error : {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:575
-msgid "Invalid command name or params"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:582
-#, c++-format
-msgid "Dispatching command {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:585
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:588
 #, c++-format
 msgid "Dispatched command {} with result: {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:593
-#, c++-format
-msgid "Command {} not found"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:597
-msgid "Command dispatcher not found"
 msgstr ""

@@ -31,7 +31,7 @@ Logger::~Logger()
     workerThread_.join();
 }
 
-void Logger::addSubscriber(std::shared_ptr<Subscriber? subscriber)
+void Logger::addSubscriber(std::shared_ptr<Subscriber> subscriber)
 {
     subscribers_.push_back(subscriber);
 }
@@ -56,7 +56,7 @@ void Logger::log(LogLevel level, const std::string &message)
     cv_.notify_one();
 }
 
-static Logger::std::string getLogLevelString(LogLevel level)
+std::string Logger::getLogLevelString(LogLevel level)
 {
     switch (level)
     {

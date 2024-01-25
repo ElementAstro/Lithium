@@ -27,6 +27,7 @@ Description: Lithium App Enter
 #include "atom/server/message_bus.hpp"
 #include "atom/server/commander.hpp"
 #include "addon/manager.hpp"
+#include "script/python.hpp"
 
 // -------------------------------------------------------------------
 // About the LithiumApp
@@ -71,21 +72,20 @@ namespace Lithium
         json addDevice(const json &params);
         json addDeviceLibrary(const json &params);
         json removeDevice(const json &params);
-        json removeDeviceByName(const json  &params);
+        json removeDeviceByName(const json &params);
         json removeDeviceLibrary(const json &params);
-/*
-        void addDeviceObserver(DeviceType type, const std::string &name);
-        bool removeDevice(DeviceType type, const std::string &name);
-        bool removeDeviceByName(const std::string &name);
-        bool removeDeviceLibrary(const std::string &lib_name);
-        std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
-        size_t findDevice(DeviceType type, const std::string &name);
-        std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
-        std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
-        bool getProperty(const std::string &name, const std::string &property_name);
-        bool setProperty(const std::string &name, const std::string &property_name, const std::string &property_value);
-*/
-
+        /*
+                void addDeviceObserver(DeviceType type, const std::string &name);
+                bool removeDevice(DeviceType type, const std::string &name);
+                bool removeDeviceByName(const std::string &name);
+                bool removeDeviceLibrary(const std::string &lib_name);
+                std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
+                size_t findDevice(DeviceType type, const std::string &name);
+                std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
+                std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
+                bool getProperty(const std::string &name, const std::string &property_name);
+                bool setProperty(const std::string &name, const std::string &property_name, const std::string &property_value);
+        */
 
         // -------------------------------------------------------------------
         // Process methods
@@ -150,7 +150,7 @@ namespace Lithium
         void LiRegisterMemberFunc(const std::string &name, json (T::*memberFunc)(const json &))
         {
             if (!m_CommandDispatcher)
-                m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<json, json>>();
             m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
         }
 
@@ -160,7 +160,7 @@ namespace Lithium
         void LiRegisterAsyncMemberFunc(const std::string &name, json (T::*memberFunc)(const json &), bool async = false)
         {
             if (!m_CommandDispatcher)
-                m_CommandDispatcher = std::make_unique < CommandDispatcher<void, json>();
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<json, json>>();
             m_CommandDispatcher->RegisterMemberHandler(name + "_async", this, memberFunc);
         }
 
@@ -169,7 +169,7 @@ namespace Lithium
         bool hasCommand(const std::string &name);
 
     private:
-        std::unique_ptr < CommandDispatcher<json, json> m_CommandDispatcher;
+        std::unique_ptr<CommandDispatcher<json, json>> m_CommandDispatcher;
 
     private:
         std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
@@ -177,9 +177,9 @@ namespace Lithium
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
         std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
-        std::shared_ptr<ErrorStack> m_ErrorStack;
+        std::shared_ptr<Atom::Error::ErrorStack> m_ErrorStack;
         std::shared_ptr<ComponentManager> m_ComponentManager;
-        
+
         std::shared_ptr<PyScriptManager> m_PyScriptManager;
     };
     extern std::shared_ptr<LithiumApp> MyApp;

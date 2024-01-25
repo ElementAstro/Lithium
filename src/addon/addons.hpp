@@ -25,8 +25,6 @@ Description: Addon manager to solve the dependency problem.
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-#include "error/exception.hpp"
-
 namespace Lithium
 {
     /**

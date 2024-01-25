@@ -23,7 +23,9 @@ Description: WebSocket Connections hub.
 #include <unordered_map>
 #endif
 
-class MessageBus;
+#include "atom/server/serialize.hpp"
+#include "atom/server/deserialize.hpp"
+#include "atom/server/message_bus.hpp"
 
 class AsyncWsHub
 {
@@ -34,7 +36,7 @@ public:
 	 * Add Connection to the AsyncWsHub.
 	 * @param Connection
 	 */
-	void addConnection(const std::shared_ptr<WsInstance> &Connection);
+	void addConnection(const std::shared_ptr<AsyncWsInstance> &Connection);
 
 	/**
 	 * Remove Connection from the AsyncWsHub.
@@ -57,13 +59,13 @@ public:
 
 private:
 	oatpp::String m_name;
-	std::unordered_map<v_int32, std::shared_ptr<WsInstance>> m_ConnectionById;
+	std::unordered_map<v_int32, std::shared_ptr<AsyncWsInstance>> m_ConnectionById;
 	std::mutex m_ConnectionByIdLock;
 	// Serialization and Deserialization Engine
 	std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
 	std::shared_ptr<Atom::Server::DeserializationEngine> m_DeserializationEngine;
 	// Message Bus
-	std::shared_ptr<MessageBus> m_MessageBus;
+	std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
 };
 
 #endif // WsHUB_HPP

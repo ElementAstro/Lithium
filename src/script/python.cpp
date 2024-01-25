@@ -23,7 +23,7 @@ Description: Lithium Python scripting engine
 namespace Lithium
 {
     PyScriptManager::PyScriptManager(/* args */)
-        : vm(new VM()),
+        : vm(new pkpy::VM()),
           m_deviceModule(vm->new_module("lithium_device")),
           m_systemModule(vm->new_module("lithium_system")),
           m_configModule(vm->new_module("lithium_config"))
@@ -32,6 +32,7 @@ namespace Lithium
 
     PyScriptManager::~PyScriptManager()
     {
+        delete vm;
     }
 
 } // namespace Lithium

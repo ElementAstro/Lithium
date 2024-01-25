@@ -32,11 +32,15 @@ Description: Async Config Controller
 
 class ConfigController : public oatpp::web::server::api::ApiController
 {
+private:
+
+    static std::shared_ptr<Lithium::ConfigManager> m_configManager;
+    
 public:
     ConfigController(const std::shared_ptr<ObjectMapper> &objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper)
     {
-        m_configManager = GetPtr<ConfigManager>("ConfigManager");
+        m_configManager = GetPtr<Lithium::ConfigManager>("lithium.config");
     }
 
     // ----------------------------------------------------------------
@@ -104,7 +108,7 @@ public:
     {
         info->summary = "Set config to global ConfigManager (thread safe)";
         info->addConsumes<Object<SetConfigDTO>>("application/json");
-        info->addResponse<Object<StatusDTO>>(Status::CODE_200, "application/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
     ENDPOINT_ASYNC("GET", "/api/config/set", getUISetConfig)
     {
@@ -119,7 +123,7 @@ public:
             OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
             OATPP_ASSERT_HTTP(body->value.getValue("") != "", Status::CODE_400, "Missing Parameters");
 
-            auto res = StatusDTO::createShared();
+            auto res = StatusDto::createShared();
 
             if (!m_configManager)
             {
@@ -151,7 +155,7 @@ public:
     {
         info->summary = "Delete config from global ConfigManager (thread safe)";
         info->addConsumes<Object<DeleteConfigDTO>>("application/json");
-        info->addResponse<Object<StatusDTO>>(Status::CODE_200, "application/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
     ENDPOINT_ASYNC("GET", "/api/config/delete", getUIDeleteConfig)
     {
@@ -165,7 +169,7 @@ public:
         {
             OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
 
-            auto res = StatusDTO::createShared();
+            auto res = StatusDto::createShared();
 
             if (!m_configManager)
             {
@@ -196,7 +200,7 @@ public:
     {
         info->summary = "Load config from file, this will be merged into the main config";
         info->addConsumes<Object<LoadConfigDTO>>("application/json");
-        info->addResponse<Object<StatusDTO>>(Status::CODE_200, "application/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
     ENDPOINT_ASYNC("GET", "/api/config/load", getUILoadConfig)
     {
@@ -210,7 +214,7 @@ public:
         {
             OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
 
-            auto res = StatusDTO::createShared();
+            auto res = StatusDto::createShared();
 
             if (!m_configManager)
             {
@@ -242,7 +246,7 @@ public:
     {
         info->summary = "Save config to file (this will auto load the config after saving)";
         info->addConsumes<Object<SaveConfigDTO>>("application/json");
-        info->addResponse<Object<StatusDTO>>(Status::CODE_200, "application/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
     }
     ENDPOINT_ASYNC("GET", "/api/config/save", getUISaveConfig)
     {
@@ -251,12 +255,12 @@ public:
         {
             return request->readBodyToDtoAsync<oatpp::Object<SaveConfigDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUISaveConfig::returnResponse);
         }
-        Action act() override
+        Action returnResponse(const oatpp::Object<SaveConfigDTO>& body)
         {
             OATPP_ASSERT_HTTP(body->path.getValue("") != "", Status::CODE_400, "Missing Parameters");
             OATPP_ASSERT_HTTP(body->isAbsolute.getValue(true) != true, Status::CODE_400, "Missing Parameters");
 
-            auto res = StatusDTO::createShared();
+            auto res = StatusDto::createShared();
             if (!m_configManager)
             {
                 res->status = "error";
@@ -282,10 +286,6 @@ public:
             return _return(controller->createDtoResponse(Status::CODE_200, res));
         }
     };
-
-private:
-
-    std::shared_ptr<Lithium::ConfigManager> m_configManager;
 };
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen

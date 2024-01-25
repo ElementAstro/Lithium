@@ -20,7 +20,7 @@ Description: C++ and Modules Loader
 #include <atomic>
 #include <shared_mutex>
 
-#include "info.hpp"
+#include "module.hpp"
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
@@ -159,9 +159,9 @@ namespace Lithium
          * @brief 获取指定名称的模块
          *
          * @param name 模块名称
-         * @return std::shared_ptr<Mod> 模块指针
+         * @return std::shared_ptr<ModuleInfo> 模块指针
          */
-        std::shared_ptr<Mod> GetModule(const std::string &name) const;
+        std::shared_ptr<ModuleInfo> GetModule(const std::string &name) const;
 
         /**
          * @brief 检查指定名称的模块是否存在
@@ -331,9 +331,9 @@ namespace Lithium
 
     private:
 #if ENABLE_FASTHASH
-        emhash8::HashMap<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
+        emhash8::HashMap<std::string, std::shared_ptr<ModuleInfo>> modules_; // 模块哈希表
 #else
-        std::unordered_map<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
+        std::unordered_map<std::string, std::shared_ptr<ModuleInfo>> modules_; // 模块哈希表
 #endif
         // Injected Thread Manager
         std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;

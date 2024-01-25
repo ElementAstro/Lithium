@@ -17,7 +17,7 @@ Description: WebSocket Instance
 //      We can use oatpp::async::Lock to make sure the thread safe
 
 #include "AsyncWsInstance.hpp"
-#include "WsHub.hpp"
+#include "AsyncWsHub.hpp"
 
 #include "atom/utils/time.hpp"
 #include "websocket/template/error_message.hpp"
@@ -33,7 +33,7 @@ Description: WebSocket Instance
 using json = nlohmann::json;
 
 AsyncWsInstance::AsyncWsInstance(const std::shared_ptr<AsyncWebSocket> &socket,
-                     const std::shared_ptr<WsHub> &hub,
+                     const std::shared_ptr<AsyncWsHub> &hub,
                      const oatpp::String &connection_name,
                      v_int32 userId)
         : m_socket(socket), m_hub(hub), m_connection_name(connection_name), m_userId(userId)
@@ -92,7 +92,7 @@ void AsyncWsInstance::sendBinaryMessage(const void *binary_message, int size)
 	m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock, m_socket, binary);
 }
 
-std::shared_ptr<WsHub> AsyncWsInstance::getHub()
+std::shared_ptr<AsyncWsHub> AsyncWsInstance::getHub()
 {
 	return m_hub;
 }

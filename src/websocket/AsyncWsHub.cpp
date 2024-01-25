@@ -19,7 +19,7 @@ AsyncWsHub::AsyncWsHub(const oatpp::String &name)
 	{
 	}
 
-void AsyncWsHub::addConnection(const std::shared_ptr<WsInstance> &Connection)
+void AsyncWsHub::addConnection(const std::shared_ptr<AsyncWsInstance> &Connection)
 {
     std::lock_guard<std::mutex> guard(m_ConnectionByIdLock);
     m_ConnectionById[Connection->getId()] = Connection;

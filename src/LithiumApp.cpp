@@ -38,7 +38,7 @@ using json = nlohmann::json;
 #define CHECK_PARAM(key)                                                                \
     if (!params.contains(key))                                                          \
     {                                                                                   \
-        LOG_F(ERROR, _("Failed to execute {}: Invalid Parameters"), __func__);          \
+        LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);          \
         return {                                                                        \
             {"command", __func__},                                                      \
             {"error", "Invalid Parameters"},                                            \
@@ -54,7 +54,7 @@ using json = nlohmann::json;
         {                                                                                       \
             if (!params.contains(key))                                                          \
             {                                                                                   \
-                LOG_F(ERROR, _("Failed to execute {}: Invalid Parameters"), __func__);          \
+                LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);          \
                 return {                                                                        \
                     {"command", __func__},                                                      \
                     {"error", "Invalid Parameters"},                                            \
@@ -82,9 +82,9 @@ namespace Lithium
             // Specialized Managers and Threads
             m_ConfigManager = GetPtr<ConfigManager>("lithium.config");
             m_DeviceManager = GetPtr<DeviceManager>("lithium.device");
-            m_ThreadManager = GetPtr<Thread::ThreadManager>("lithium.async.thread");
-            m_ProcessManager = GetPtr<Process::ProcessManager>("lithium.system.process");
-            m_MessageBus = GetPtr<MessageBus>("lithium.bus");
+            m_ThreadManager = GetPtr<Atom::Async::ThreadManager>("lithium.async.thread");
+            m_ProcessManager = GetPtr<Atom::System::ProcessManager>("lithium.system.process");
+            m_MessageBus = GetPtr<Atom::Server::MessageBus>("lithium.bus");
 
             // Specialized Message Processing Threads for Device and Device Manager
             m_MessageBus->StartProcessingThread<IStringProperty>();
@@ -105,7 +105,7 @@ namespace Lithium
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to load Lithium App , error : {}"), e.what());
+            LOG_F(ERROR, "Failed to load Lithium App , error : {}", e.what());
             throw std::runtime_error("Failed to load Lithium App");
         }
     }
@@ -124,17 +124,17 @@ namespace Lithium
     void InitLithiumApp()
     {
         AddPtr("lithium.config", ConfigManager::createShared());
-        AddPtr("lithium.bus", MessageBus::createShared());
+        AddPtr("lithium.bus", Atom::Server::MessageBus::createShared());
         // AddPtr("ModuleLoader", ModuleLoader::createShared());
-        AddPtr("lithium.async.thread", Thread::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
-        AddPtr("lithium.system.process", Process::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
+        AddPtr("lithium.async.thread", Atom::Async::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
+        AddPtr("lithium.system.process", Atom::System::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
         // AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
         // AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
         // AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
         // AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
         // AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
-        AddPtr("lithium.device", DeviceManager::createShared(GetPtr<MessageBus>("MessageBus"), GetPtr<ConfigManager>("ConfigManager")));
-        AddPtr("lithium.error.stack", std::make_shared<ErrorStack>());
+        AddPtr("lithium.device", DeviceManager::createShared(GetPtr<Atom::Server::MessageBus>("lithium.bus"), GetPtr<ConfigManager>("ConfigManager")));
+        AddPtr("lithium.error.stack", std::make_shared<Atom::Error::ErrorStack>());
     }
 
     json createSuccessResponse(const std::string &command, const json &value)
@@ -200,7 +200,7 @@ namespace Lithium
     // Config
     // ----------------------------------------------------------------
 
-    json LithiumApp::GetConfig(const json &params) const
+    json LithiumApp::GetConfig(const json &params)
     {
         INIT_FUNC();
         CHECK_PARAM("key");
@@ -253,7 +253,7 @@ namespace Lithium
     {
         INIT_FUNC();
         GET_VALUE_D(std::string, path, "config/config.json");
-        if (m_ConfigManager->saveConfig(path))
+        if (m_ConfigManager->saveToFile(path))
         {
             return createSuccessResponse(__func__, json());
         }
@@ -286,7 +286,7 @@ namespace Lithium
             {
                 return createErrorResponse(__func__, json(), std::format("Unknown device type {}", type));
             }
-            for (const auto &device : m_DeviceManager->getDeviceList(d_type))
+            for (const auto &device : m_DeviceManager->getDeviceListByType(d_type))
             {
                 device_list.push_back(device);
             }
@@ -302,6 +302,9 @@ namespace Lithium
     {
         INIT_FUNC();
         CHECK_PARAMS("type", "name", "lib_name");
+        std::string type = params["type"].get<std::string>();
+        std::string name = params["name"].get<std::string>();
+        std::string lib_name = params["lib_name"].get<std::string>();
         DeviceType d_type = StringToDeviceType(type);
         if (d_type == DeviceType::NumDeviceTypes)
         {
@@ -311,7 +314,7 @@ namespace Lithium
         {
             return createErrorResponse(__func__, json(), std::format("Device {} already exists", name));
         }
-        if (m_DeviceManager->addDevice(type, name, lib_name))
+        if (m_DeviceManager->addDevice(d_type, name, lib_name))
         {
             return createSuccessResponse(__func__, json());
         }
@@ -332,7 +335,7 @@ namespace Lithium
         return createErrorResponse(__func__, json(), std::format("Failed to add device library {}", lib_name));
     }
 
-    json rLithiumApp::emoveDevice(const json &params)
+    json LithiumApp::removeDevice(const json &params)
     {
         INIT_FUNC();
         CHECK_PARAMS("type", "name");
@@ -479,7 +482,7 @@ namespace Lithium
         }
         else
         {
-            return createErrorResponse(__func__, json(), std::format("Failed to terminate process {}", identifier));
+            return createErrorResponse(__func__, json(), std::format("Failed to terminate process {}", pid));
         }
     }
 
@@ -495,7 +498,7 @@ namespace Lithium
         }
         else
         {
-            return createErrorResponse(__func__, json(), std::format("Failed to terminate process {}", identifier));
+            return createErrorResponse(__func__, json(), std::format("Failed to terminate process {}", name));
         }
     }
 
@@ -504,9 +507,9 @@ namespace Lithium
         json running_process;
         for (auto &process : m_ProcessManager->getRunningProcesses())
         {
-            running_process.push_back({{"pid", process.pid}, {"name", process.name}, {"command", process.command}, {"identifier", process.identifier}, {"status", process.status}, {"output", process.output}});
+            running_process["process"].push_back({{"pid", process.pid}, {"name", process.name}, {"status", process.status}, {"output", process.output}});
         }
-        return createSuccessResponse(__func__, running_process);
+        return createSuccessResponse(__func__, running_process["process"]);
     }
 
     json LithiumApp::getProcessOutput(const json &params)
@@ -570,16 +573,16 @@ namespace Lithium
 
     json LithiumApp::DispatchCommand(const std::string &name, const json &params)
     {
-        if (name.empty() || !json::accept(params))
+        if (name.empty())
         {
-            DLOG_F(ERROR, _("Invalid command name or params"));
+            DLOG_F(ERROR, "Invalid command name or params");
             return json();
         }
         if (m_CommandDispatcher)
         {
-            if (m_CommandDispatcher->HasHandler(me))
+            if (m_CommandDispatcher->HasHandler(name))
             {
-                DLOG_F(INFO, _("Dispatching command {}"), name);
+                DLOG_F(INFO, "Dispatching command {}", name);
 #if ENABLE_DEBUG
                 json res = m_CommandDispatcher->Dispatch(name, params);
                 DLOG_F(INFO, _("Dispatched command {} with result: {}"), name, res.dump());
@@ -590,11 +593,11 @@ namespace Lithium
             }
             else
             {
-                LOG_F(ERROR, _("Command {} not found"), name);
+                LOG_F(ERROR, "Command {} not found", name);
                 return json();
             }
         }
-        LOG_F(ERROR, _("Command dispatcher not found"));
+        LOG_F(ERROR, "Command dispatcher not found");
         return json();
     }
 

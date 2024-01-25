@@ -25,6 +25,7 @@ Description: Device Manager
 #include "atom/type/message.hpp"
 #include "atom/server/message_bus.hpp"
 #include "atom/async/thread.hpp"
+#include "atom/driver/iproperty.hpp"
 
 #include "addon/loader.hpp"
 #include "config/configor.hpp"
@@ -62,7 +63,7 @@ namespace Lithium
          * @param messageBus 消息总线对象的共享指针。
          * @param configManager 配置管理器对象的共享指针。
          */
-        DeviceManager(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
+        DeviceManager(std::shared_ptr<Atom::Server::MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
 
         /**
          * @brief 析构函数，销毁设备管理器对象。
@@ -79,9 +80,9 @@ namespace Lithium
          * @param configManager 配置管理器对象的共享指针。
          * @return 返回一个指向设备管理器对象的共享指针。
          */
-        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
+        static std::shared_ptr<DeviceManager> createShared(std::shared_ptr<Atom::Server::MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
 
-        static std::unique_ptr<DeviceManager> createUnique(std::shared_ptr<MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
+        static std::unique_ptr<DeviceManager> createUnique(std::shared_ptr<Atom::Server::MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager);
 
         // -------------------------------------------------------------------
         // Message methods
@@ -179,7 +180,7 @@ namespace Lithium
          * @param params 任务参数的JSON对象。
          * @return 返回指向简单任务对象的共享指针。
          */
-        std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
+        std::shared_ptr<Atom::Task::SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
 
         /**
          * @brief 发布字符串类型的消息到消息总线。
@@ -300,9 +301,9 @@ namespace Lithium
         std::mutex m_mutex; ///< 互斥锁，用于保护设备管理器的并发访问。
 
         std::shared_ptr<ModuleLoader> m_ModuleLoader;           ///< 模块加载器对象的共享指针。
-        std::shared_ptr<MessageBus> m_MessageBus;               ///< 消息总线对象的共享指针。
+        std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;               ///< 消息总线对象的共享指针。
         std::shared_ptr<ConfigManager> m_ConfigManager; ///< 配置管理器对象的共享指针。
-        std::shared_ptr<Thread::ThreadManager> m_ThreadManager;
+        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
 
     // Device for quick performance
     private:

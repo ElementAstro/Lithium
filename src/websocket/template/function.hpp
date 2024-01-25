@@ -18,4 +18,4 @@
     catch (...)                                                              \
     {                                                                        \
         RESPONSE_EXCEPTION(res, ServerError::UnknownError, "Unknown Error"); \
-    }\
+    }

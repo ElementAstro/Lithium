@@ -540,13 +540,14 @@ namespace Atom::System
     }
 
     // 重启函数
-    void Reboot()
+    bool Reboot()
     {
 #ifdef _WIN32
         ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
 #else
         system("reboot");
 #endif
+        return true;
     }
 
     bool IsRoot()
@@ -960,6 +961,32 @@ namespace Atom::System
     }
 
 #ifdef _WIN32
+    DWORD GetParentProcessId(DWORD processId)
+    {
+        DWORD parentProcessId = 0;
+        HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (hSnapshot != INVALID_HANDLE_VALUE)
+        {
+            PROCESSENTRY32 processEntry;
+            processEntry.dwSize = sizeof(PROCESSENTRY32);
+
+            if (Process32First(hSnapshot, &processEntry))
+            {
+                do
+                {
+                    if (processEntry.th32ProcessID == processId)
+                    {
+                        parentProcessId = processEntry.th32ParentProcessID;
+                        break;
+                    }
+                } while (Process32Next(hSnapshot, &processEntry));
+            }
+
+            CloseHandle(hSnapshot);
+        }
+        return parentProcessId;
+    }
+
     bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo)
     {
         HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
@@ -972,7 +999,7 @@ namespace Atom::System
             {
                 processInfo.processID = processID;
                 processInfo.executableFile = std::string(exeName);
-                if (!GetProcessId(GetParentProcess(hProcess), &processInfo.parentProcessID))
+                //if (!GetProcessId(reinterpret_cast<HANDLE>(GetParentProcessId(reinterpret_cast<DWORD>(hProcess))), &processInfo.parentProcessID))
                     processInfo.parentProcessID = 0;
                 processInfo.basePriority = GetPriorityClass(hProcess);
 

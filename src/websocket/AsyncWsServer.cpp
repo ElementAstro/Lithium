@@ -17,11 +17,10 @@ Description: WebSocket Server
 AsyncWsServer::AsyncWsServer()
 	: m_ConnectionCounter(0)
 {
-	m_CommandDispatcher = std::make_shared<CommandDispatcher<ReturnMessage, std::shared_ptr<IParams>>();
-	m_SerializationEngine = std::make_shared<SerializationEngine>();
-	m_DeserializationEngine = std::make_shared<DeserializationEngine>();
+	m_SerializationEngine = std::make_shared<Atom::Server::SerializationEngine>();
+	m_DeserializationEngine = std::make_shared<Atom::Server::DeserializationEngine>();
 
-	m_SerializationEngine->addRenderEngine("json", std::make_shared<JsonRenderEngine>());
+	m_SerializationEngine->addSerializationEngine("json", std::make_shared<JsonSerializationEngine>());
 	m_DeserializationEngine->addDeserializeEngine("json", std::make_shared<JsonDeserializer>());
 }
 v_int32 AsyncWsServer::obtainNewConnectionId()
@@ -29,13 +28,13 @@ v_int32 AsyncWsServer::obtainNewConnectionId()
 	return m_ConnectionCounter++;
 }
 
-std::shared_ptr<WsHub> AsyncWsServer::getOrCreateHub(const oatpp::String &hubName)
+std::shared_ptr<AsyncWsHub> AsyncWsServer::getOrCreateHub(const oatpp::String &hubName)
 {
 	std::lock_guard<std::mutex> lock(m_hubsMutex);
-	std::shared_ptr<WsHub> &hub = m_hubs[hubName];
+	std::shared_ptr<AsyncWsHub> &hub = m_hubs[hubName];
 	if (!hub)
 	{
-		hub = std::make_shared<WsHub>(hubName);
+		hub = std::make_shared<AsyncWsHub>(hubName);
 		
 	}
 	return hub;
@@ -47,7 +46,7 @@ void AsyncWsServer::onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSock
 	auto pluginHub = params->find("pluginHub")->second;
 	auto hub = getOrCreateHub(pluginHub);
 
-	auto plugin = std::make_shared<WsInstance>(socket, hub, pluginName, obtainNewConnectionId());
+	auto plugin = std::make_shared<AsyncWsInstance>(socket, hub, pluginName, obtainNewConnectionId());
 	socket->setListener(plugin);
 
 	hub->addConnection(plugin);
@@ -56,7 +55,7 @@ void AsyncWsServer::onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSock
 
 void AsyncWsServer::onBeforeDestroy_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket)
 {
-	auto plugin = std::static_pointer_cast<WsInstance>(socket->getListener());
+	auto plugin = std::static_pointer_cast<AsyncWsInstance>(socket->getListener());
 	auto hub = plugin->getHub();
 	hub->removeConnectionByUserId(plugin->getId());
 	/* Remove circle `std::shared_ptr` dependencies */

@@ -76,7 +76,7 @@ public:
             auto res = StatusDto::createShared();
             auto path = body->path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
-            if(isAbsolute && !Atom::IO::is_full_path(path))
+            if(isAbsolute && !Atom::IO::isAbsolutePath(path))
             {
                 res->status = "error";
                 res->error = "Invalid Parameters";
@@ -84,7 +84,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::create_directory(path))
+                if(!Atom::IO::createDirectory(path))
                 {
                     res->status = "error";
                     res->error = "IO Failed";
@@ -124,7 +124,7 @@ public:
             auto path = body->path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if(isAbsolute && !Atom::IO::is_full_path(path))
+            if(isAbsolute && !Atom::IO::isAbsolutePath(path))
             {
                 res->status = "error";
                 res->code = 500;
@@ -133,7 +133,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::remove_directory(path))
+                if(!Atom::IO::removeDirectory(path))
                 {
                     res->status = "error";
                     res->code = 500;
@@ -183,7 +183,7 @@ public:
                 res->error = "Invalid Parameters";
                 res->message = "New folder name must be valid";
             }
-            if(isAbsolute && !Atom::IO::is_full_path(path))
+            if(isAbsolute && !Atom::IO::isAbsolutePath(path))
             {
                 res->status = "error";
                 res->code = 500;
@@ -192,7 +192,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::rename_directory(path,name))
+                if(!Atom::IO::renameDirectory(path,name))
                 {
                     res->status = "error";
                     res->code = 500;
@@ -230,9 +230,9 @@ public:
             OATPP_ASSERT_HTTP(body->new_path.getValue("") != "", Status::CODE_400, "Missing Parameters");
 
             auto res = StatusDto::createShared();
-            auto old_path = body->old_path.getValue("");
+            auto old_path = body->path.getValue("");
             auto new_path = body->new_path.getValue("");
-            if(isAbsolute && (!Atom::IO::is_full_path(old_path) || !Atom::IO::is_full_path(new_path)))
+            if((!Atom::IO::isAbsolutePath(old_path) || !Atom::IO::isAbsolutePath(new_path)))
             {
                 res->status = "error";
                 res->code = 500;
@@ -241,7 +241,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::move_directory(old_path,new_path))
+                if(!Atom::IO::moveDirectory(old_path,new_path))
                 {
                     res->status = "error";
                     res->code = 500;
@@ -279,11 +279,11 @@ public:
             OATPP_ASSERT_HTTP(body->new_path.getValue("") != "", Status::CODE_400, "Missing Parameters");
 
             auto res = StatusDto::createShared();
-            auto old_path = body->old_path.getValue("");
+            auto old_path = body->path.getValue("");
             auto new_path = body->new_path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if(isAbsolute && !Atom::IO::is_full_path(old_path) || !Atom::IO::is_full_path(new_path))
+            if(isAbsolute && !Atom::IO::isAbsolutePath(old_path) || !Atom::IO::isAbsolutePath(new_path))
             {
                 res->status = "error";
                 res->code = 500;
@@ -292,7 +292,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::copy_file(old_path,new_path))
+                if(!Atom::IO::copyFile(old_path,new_path))
                 {
                     res->status = "error";
                     res->code = 500;
@@ -331,11 +331,11 @@ public:
 
             auto res = StatusDto::createShared();
 
-            auto old_path = body->old_path.getValue("");
+            auto old_path = body->path.getValue("");
             auto new_path = body->new_path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if(isAbsolute && !Atom::IO::is_full_path(old_path) || !Atom::IO::is_full_path(new_path))
+            if(isAbsolute && !Atom::IO::isAbsolutePath(old_path) || !Atom::IO::isAbsolutePath(new_path))
             {
                 res->status = "error";
                 res->code = 500;
@@ -344,7 +344,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::copy_file(old_path,new_path))
+                if(!Atom::IO::copyFile(old_path,new_path))
                 {
                     res->status = "error";
                     res->code = 500;
@@ -387,7 +387,7 @@ public:
             auto new_name = body->new_name.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if(isAbsolute && !Atom::IO::is_full_path(old_name))
+            if(isAbsolute && !Atom::IO::isAbsolutePath(old_name))
             {
                 res->status = "error";
                 res->code = 500;
@@ -396,7 +396,7 @@ public:
             }
             else
             {
-                if(!Atom::IO::rename_file(old_name,new_name))
+                if(!Atom::IO::renameFile(old_name,new_name))
                 {
                     res->status = "error";
                     res->code = 500;
@@ -437,14 +437,14 @@ public:
             auto name = body->path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
             
-            if (isAbsolute && !Atom::IO::is_full_path(name))
+            if (isAbsolute && !Atom::IO::isAbsolutePath(name))
             {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             }
-            if(!Atom::IO::remove_file(name))
+            if(!Atom::IO::removeFile(name))
             {
                 res->error = "IO Failed";
                 res->message = "Failed to remove file";

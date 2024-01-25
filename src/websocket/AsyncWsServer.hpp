@@ -37,9 +37,9 @@ class AsyncWsServer : public oatpp::websocket::AsyncConnectionHandler::SocketIns
 public:
 	std::atomic<v_int32> m_ConnectionCounter;
 #if ENABLE_FASTHASH
-	emhash8::HashMap<oatpp::String, std::shared_ptr<WsHub>> m_hubs;
+	emhash8::HashMap<oatpp::String, std::shared_ptr<AsyncWsHub>> m_hubs;
 #else
-	std::unordered_map<oatpp::String, std::shared_ptr<WsHub>> m_hubs;
+	std::unordered_map<oatpp::String, std::shared_ptr<AsyncWsHub>> m_hubs;
 #endif
 	std::mutex m_hubsMutex;
 
@@ -68,7 +68,7 @@ public:
 	 * @param hubName
 	 * @return
 	 */
-	std::shared_ptr<WsHub> getOrCreateHub(const oatpp::String &hubName);
+	std::shared_ptr<AsyncWsHub> getOrCreateHub(const oatpp::String &hubName);
 
 private:
 	// Serialization and Deserialization Engine

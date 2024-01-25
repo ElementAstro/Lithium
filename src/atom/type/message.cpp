@@ -17,7 +17,7 @@ Description: A message class, which can be used to store different types of mess
 #include "atom/utils/time.hpp"
 #include "atom/type/iparams.hpp"
 
-#include "atom/property/uuid.hpp"
+#include "atom/utils/uuid.hpp"
 
 using namespace std;
 

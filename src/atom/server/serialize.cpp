@@ -23,7 +23,7 @@ Description: This file contains the declaration of the SerializationEngine class
 #include <fmt/format.h>
 #endif
 
-#include "property/iproperty.hpp"
+#include "atom/driver/iproperty.hpp"
 #include "atom/type/iparams.hpp"
 #include "atom/log/loguru.hpp"
 

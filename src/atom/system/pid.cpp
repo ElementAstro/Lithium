@@ -74,7 +74,7 @@ void PIDWatcher::watch()
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            LOG_F(ERROR, _("CreateToolhelp32Snapshot failed."));
+            LOG_F(ERROR, "CreateToolhelp32Snapshot failed.");
             return;
         }
 
@@ -93,7 +93,7 @@ void PIDWatcher::watch()
 
                 {
                     DWORD pid = entry.th32ProcessID;
-                    DLOG_F(INFO, _("Watching process with PID: {}"), pid);
+                    DLOG_F(INFO, "Watching process with PID: {}", pid);
 
                     HANDLE process = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_INFORMATION, FALSE, pid);
                     if (process != NULL)
@@ -104,7 +104,7 @@ void PIDWatcher::watch()
                             DWORD exitCode;
                             if (GetExitCodeProcess(process, &exitCode))
                             {
-                                DLOG_F(INFO, _("Process exited with code: {}"), exitCode);
+                                DLOG_F(INFO, "Process exited with code: {}", exitCode);
                                 // 触发回调函数
                                 if (callback_)
                                 {
@@ -113,7 +113,7 @@ void PIDWatcher::watch()
                             }
                             else
                             {
-                                LOG_F(ERROR, _("GetExitCodeProcess failed."));
+                                LOG_F(ERROR, "GetExitCodeProcess failed.");
                             }
                             CloseHandle(process);
                             stop();
@@ -123,7 +123,7 @@ void PIDWatcher::watch()
                     }
                     else
                     {
-                        LOG_F(ERROR, _("OpenProcess failed."));
+                        LOG_F(ERROR, "OpenProcess failed.");
                     }
 
                     break;

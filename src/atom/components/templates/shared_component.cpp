@@ -18,7 +18,7 @@
 
 SharedComponent::SharedComponent() : Component()
 {
-    DLOG_F(INFO, _("Shared component is created."));
+    DLOG_F(INFO, "Shared component is created.");
 
     m_handleFunction = [this](std::shared_ptr<Message> message)
     {
@@ -31,7 +31,7 @@ SharedComponent::SharedComponent() : Component()
                 auto textMessage = std::dynamic_pointer_cast<TextMessage>(message);
                 if (textMessage)
                 {
-                    DLOG_F(INFO, _("Text message is received: {}"), textMessage->value());
+                    DLOG_F(INFO, "Text message is received: {}", textMessage->value());
                     m_handleText->match(textMessage->name(),textMessage);
                 }
                 break;
@@ -41,7 +41,7 @@ SharedComponent::SharedComponent() : Component()
                 auto numberMessage = std::dynamic_pointer_cast<NumberMessage>(message);
                 if (numberMessage)
                 {
-                    DLOG_F(INFO, _("Number message is received: {}"), numberMessage->value());
+                    DLOG_F(INFO, "Number message is received: {}", numberMessage->value());
                     m_handleNumber->match(numberMessage->name(),numberMessage);
                 }
             }
@@ -50,7 +50,7 @@ SharedComponent::SharedComponent() : Component()
                 auto booleanMessage = std::dynamic_pointer_cast<BooleanMessage>(message);
                 if (booleanMessage)
                 {
-                    DLOG_F(INFO, _("Boolean message is received: {}"), booleanMessage->value());
+                    DLOG_F(INFO, "Boolean message is received: {}", booleanMessage->value());
                     m_handleBoolean->match(booleanMessage->name(),booleanMessage);
                 }
                 break;
@@ -60,7 +60,7 @@ SharedComponent::SharedComponent() : Component()
                 auto paramsMessage = std::dynamic_pointer_cast<ParamsMessage>(message);
                 if (paramsMessage)
                 {
-                    DLOG_F(INFO, _("Params message is received: {}"), paramsMessage->value().toJson());
+                    DLOG_F(INFO, "Params message is received: {}", paramsMessage->value().toJson());
                     m_handleParams->match(paramsMessage->name(),paramsMessage);
                 }
                 break;
@@ -81,7 +81,7 @@ SharedComponent::SharedComponent() : Component()
 SharedComponent::~SharedComponent()
 {
 
-    DLOG_F(INFO, _("Shared component is destroyed."));
+    DLOG_F(INFO, "Shared component is destroyed.");
 }
 
 bool SharedComponent::Initialize()
@@ -143,10 +143,10 @@ bool SharedComponent::InjectMessageBus(std::shared_ptr<Atom::Server::MessageBus>
     m_MessageBus = messageBus;
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
-    DLOG_F(INFO, _("Message bus is injected."));
+    DLOG_F(INFO, "Message bus is injected.");
     return true;
 }
 
@@ -154,11 +154,11 @@ bool SharedComponent::ConnectMessageBus()
 {
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
     m_MessageBus->Subscribe<std::shared_ptr<Message>>("lithium.app", m_handleFunction);
-    DLOG_F(INFO, _("Message bus is connected."));
+    DLOG_F(INFO, "Message bus is connected.");
     return true;
 }
 
@@ -166,14 +166,14 @@ bool SharedComponent::DisconnectMessageBus()
 {
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
     // There is a very severe bug in the message bus.
     // It will cause a crash when the message bus is disconnected.
     // How should we identify which connection is the one we want to disconnect?
     m_MessageBus->Unsubscribe<std::shared_ptr<Message>>("lithium.app", m_handleFunction);
-    DLOG_F(INFO, _("Message bus is disconnected."));
+    DLOG_F(INFO, "Message bus is disconnected.");
     return true;
 }
 
@@ -181,7 +181,7 @@ bool SharedComponent::SendTextMessage(const std::string &message, const std::str
 {
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
     m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<TextMessage>(message, text, "lithium.app", GetName()));
@@ -192,7 +192,7 @@ bool SharedComponent::SendNumberMessage(const std::string &message, const double
 {
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
     m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<NumberMessage>(message, number, "lithium.app", GetName()));
@@ -203,7 +203,7 @@ bool SharedComponent::SendBooleanMessage(const std::string &message, const bool 
 {
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
     m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<BooleanMessage>(message, boolean, "lithium.app", GetName()));
@@ -214,7 +214,7 @@ bool SharedComponent::SendParamsMessage(const std::string &message, const Args &
 {
     if (!m_MessageBus)
     {
-        LOG_F(ERROR, _("Message bus is null."));
+        LOG_F(ERROR, "Message bus is null.");
         return false;
     }
     m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<ParamsMessage>(message, params, "lithium.app", GetName()));
@@ -230,9 +230,9 @@ bool SharedComponent::InjectThreadPool(std::shared_ptr<Atom::Async::ThreadManage
 {
     if (!threadPool)
     {
-        LOG_F(ERROR, _("Thread pool is null."));
+        LOG_F(ERROR, "Thread pool is null.");
         return false;
     }
-    DLOG_F(INFO, _("Thread pool is injected."));
+    DLOG_F(INFO, "Thread pool is injected.");
     return true;
 }

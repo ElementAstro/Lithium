@@ -28,7 +28,7 @@ class AsyncWsInstance : public oatpp::websocket::AsyncWebSocket::Listener
 {
 public:
     AsyncWsInstance(const std::shared_ptr<AsyncWebSocket> &socket,
-                     const std::shared_ptr<WsHub> &hub,
+                     const std::shared_ptr<AsyncWsHub> &hub,
                      const oatpp::String &connection_name,
                      v_int32 userId);
 
@@ -48,7 +48,7 @@ public:
      * Get hub of the AsyncWsInstance.
      * @return
      */
-    std::shared_ptr<WsHub> getHub();
+    std::shared_ptr<AsyncWsHub> getHub();
 
     /**
      * Get AsyncWsInstance connection_name.
@@ -88,7 +88,7 @@ private:
     OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
 
     std::shared_ptr<AsyncWebSocket> m_socket;
-    std::shared_ptr<WsHub> m_hub;
+    std::shared_ptr<AsyncWsHub> m_hub;
     oatpp::String m_connection_name;
     v_int32 m_userId;
 };

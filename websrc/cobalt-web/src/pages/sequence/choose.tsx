@@ -59,7 +59,7 @@ function generateObjects() {
 
 interface ObjectProp {
   object_name: string;
-  image: string;
+  image: any; // Changed the type of 'image' to 'any' for icons
   date: string;
   time: string;
   detail: string;
@@ -77,17 +77,19 @@ function ObjectItem(props: { task: ObjectProp; onEdit: any; onDelete: any }) {
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         </ListGroup.Item>
-        <ListGroup.Item>
+        <ListGroup.Item className="align-items-center">
           <h5>{task.object_name}</h5>
           <p>Detail: {task.detail}</p>
           <p>Date: {task.date}</p>
           <p>Time: {task.time}</p>
-          <Button variant="primary" onClick={props.onEdit}>
-            <DetailIcon />
-          </Button>
-          <Button variant="danger" onClick={props.onDelete}>
-            <DeleteIcon />
-          </Button>
+          <div className="d-flex justify-content-between align-items-center">
+            <Button variant="primary" onClick={props.onEdit}>
+              <DetailIcon />
+            </Button>
+            <Button variant="danger" onClick={props.onDelete}>
+              <DeleteIcon />
+            </Button>
+          </div>
         </ListGroup.Item>
       </ListGroup>
     </div>
@@ -98,8 +100,8 @@ export default function PAAChoosePage() {
   const [objects, setObjects] = useState<Array<ObjectProp>>([]);
 
   useEffect(() => {
-    // 生成任务数组
-    setObjects(generateObjects);
+    // Generate the array of objects
+    setObjects(generateObjects());
   }, []);
 
   const toEditPage = (index: number) => {
@@ -118,11 +120,11 @@ export default function PAAChoosePage() {
     updatedObjects.splice(index, 1);
     setObjects(updatedObjects);
   };
+
   return (
     <Container fluid>
       <Row>
-        <Col xs={2}></Col>
-        <Col xs={8}>
+        <Col xs={12}>
           <div style={{ padding: "16px", height: "90%", margin: "20px 10px" }}>
             <h3>可选星体</h3>
             <ListGroup style={{ overflow: "auto", maxHeight: "100%" }}>

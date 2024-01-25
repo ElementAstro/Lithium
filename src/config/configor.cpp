@@ -186,6 +186,11 @@ namespace Lithium
         p->clear();
     }
 
+    bool ConfigManager::hasValue(const std::string &key_path) const
+    {
+        return getValue(key_path) != nullptr;
+    }
+
     void ConfigManager::tidyConfig()
     {
         std::lock_guard<std::mutex> lock(mutex_);

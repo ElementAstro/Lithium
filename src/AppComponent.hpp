@@ -18,7 +18,7 @@ Description: App Components
 #include "config.h"
 
 #ifdef ENABLE_ASYNC
-#include "websocket/WsServer.hpp"
+#include "websocket/AsyncWsServer.hpp"
 #else
 #include "websocket/WsServer.hpp"
 #endif

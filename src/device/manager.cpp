@@ -158,7 +158,22 @@ namespace Lithium
         });
     }
 
-    std::vector<std::string> DeviceManager::getDeviceList(DeviceType type)
+    std::vector<std::string> DeviceManager::getDeviceListByType()
+    {
+        std::vector<std::string> deviceList;
+        for (auto &devices : m_devices)
+        {
+            for (auto &device : devices)
+            {
+                if (device)
+                {
+                    deviceList.emplace_back(device->getDeviceName());
+                }
+            }
+        }
+    }
+
+    std::vector<std::string> DeviceManager::getDeviceListByType(DeviceType type)
     {
         std::vector<std::string> deviceList;
         auto &devices = m_devices[static_cast<int>(type)];

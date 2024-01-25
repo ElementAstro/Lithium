@@ -20,9 +20,9 @@ endif()
 # root directory of the project
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
-set(lithium_module_dir ${Lithium_PROJECT_ROOT_DIR}/src/atom)
-set(lithium_client_dir ${Lithium_PROJECT_ROOT_DIR}/src/client)
-set(lithium_component_dir ${Lithium_PROJECT_ROOT_DIR}/src/components)
+set(lithium_module_dir ${lithium_src_dir}/atom)
+set(lithium_client_dir ${lithium_src_dir}/client)
+set(lithium_component_dir ${lithium_src_dir}/addon)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -117,34 +117,53 @@ elseif(LINUX)
 endif()
 
 set(component_module
-    ${lithium_component_dir}/device/ascom_manager.cpp
-    ${lithium_component_dir}/device/device_manager.cpp
-    ${lithium_component_dir}/device/hydrogen_manager.cpp
-    ${lithium_component_dir}/device/device_utils.cpp
-    ${lithium_component_dir}/device/hydrogen_device.cpp
+    ${lithium_src_dir}/device/server/ascom.cpp
+    ${lithium_src_dir}/device/server/hydrogen.cpp
+    ${lithium_src_dir}/device/server/hydrogen_driver.cpp
+    ${lithium_src_dir}/device/server/connector.cpp
 
-    ${lithium_component_dir}/component_manager.cpp
+    ${lithium_src_dir}/device/manager.cpp
+    
+    ${lithium_src_dir}/device/utils/utils.cpp
+
+    ${lithium_component_dir}/addons.cpp
+    ${lithium_component_dir}/compiler.cpp
+    ${lithium_component_dir}/finder.cpp
+    ${lithium_component_dir}/loader.cpp
+    ${lithium_component_dir}/manager.cpp
+    ${lithium_component_dir}/sandbox.cpp
 )
 
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
 )
 
+if (ENABLE_ASYNC_FLAG)
+set(server_module
+    ${lithium_src_dir}/websocket/AsyncWsServer.cpp
+    ${lithium_src_dir}/websocket/AsyncWsHub.cpp
+    ${lithium_src_dir}/websocket/AsyncWsInstance.cpp
+)
+else()
 set(server_module
     ${lithium_src_dir}/websocket/WsServer.cpp
     ${lithium_src_dir}/websocket/WsHub.cpp
     ${lithium_src_dir}/websocket/WsInstance.cpp
 )
+endif()
 
 set(script_module
-    ${lithium_src_dir}/script/script_manager.cpp
+    ${lithium_src_dir}/script/python.cpp
+    ${lithium_src_dir}/script/python_system.cpp
+
+    ${lithium_src_dir}/script/sheller.cpp
 )
 
 set(task_module
-    ${lithium_src_dir}/task/task_manager.cpp
-    ${lithium_src_dir}/task/task_stack.cpp
-    ${lithium_src_dir}/task/task_generator.cpp
-    ${lithium_src_dir}/task/task_container.cpp
+    #${lithium_src_dir}/task/task_manager.cpp
+    #${lithium_src_dir}/task/task_stack.cpp
+    #${lithium_src_dir}/task/task_generator.cpp
+    #${lithium_src_dir}/task/task_container.cpp
 )
 
 set(Lithium_module

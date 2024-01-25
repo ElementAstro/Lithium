@@ -2,17 +2,6 @@
  * global_logger.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -78,7 +67,7 @@ public:
      * @brief 添加日志订阅者。
      * @param subscriber 订阅者对象指针。
      */
-    void addSubscriber(std::unique_ptr<Subscriber> subscriber);
+    void addSubscriber(std::shared_ptr<Subscriber> subscriber);
 
     /**
      * @brief 设置日志级别。
@@ -114,7 +103,7 @@ public:
 
 private:
     LogLevel logLevel_;                                     /**< 日志级别。*/
-    std::vector<std::unique_ptr<Subscriber>> subscribers_;                 /**< 订阅者列表。*/
+    std::vector<std::shared_ptr<Subscriber>> subscribers_;                 /**< 订阅者列表。*/
     std::queue<std::pair<LogLevel, std::string>> logQueue_; /**< 日志消息队列。*/
     std::mutex mutex_;                                      /**< 互斥锁，用于保护日志消息队列。*/
     std::condition_variable cv_;                            /**< 条件变量，用于线程同步。*/

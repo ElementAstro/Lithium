@@ -118,6 +118,16 @@ namespace Lithium
         bool deleteValue(const std::string &key_path);
 
         /**
+         * @brief 判断一个配置项是否存在
+         *
+         * Determine if a configuration item exists.
+         *
+         * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如 "database/username"
+         * @return bool 存在返回 true，不存在返回 false
+         */
+        bool hasValue(const std::string &key_path) const;
+
+        /**
          * @brief 将当前配置保存到指定文件
          *
          * Save the current configuration to the specified file.

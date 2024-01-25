@@ -2,17 +2,6 @@
  * thread.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -130,8 +119,8 @@ namespace Atom::Async
             VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: failed to add thread {}: {}"), name, e.what());
         }
     }
-
-    void ThreadManager::joinAllThreads()
+    
+    bool ThreadManager::joinAllThreads()
     {
         LOG_SCOPE_FUNCTION(MAX);
         try
@@ -151,10 +140,12 @@ namespace Atom::Async
         catch (const std::exception &e)
         {
             VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: failed to join all threads: {}"), e.what());
+            return false;
         }
+        return true;
     }
 
-    void ThreadManager::joinThreadByName(const std::string &name)
+    bool ThreadManager::joinThreadByName(const std::string &name)
     {
         LOG_SCOPE_FUNCTION(MAX);
         try
@@ -164,7 +155,7 @@ namespace Atom::Async
             {
                 VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: no threads to join"));
                 DLOG_F(WARNING, _("Thread {} not found"), name);
-                return;
+                return false;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
             for (auto &t : m_threads)
@@ -178,7 +169,7 @@ namespace Atom::Async
                                                    [&](auto &x)
                                                    { return !std::get<0>(x); }),
                                     m_threads.end());
-                    return;
+                    return true;
                 }
             }
             VLOG_SCOPE_F(9 , _("Atom::Async::ThreadManager::joinThreadByName: thread {} not found"), name);
@@ -189,6 +180,7 @@ namespace Atom::Async
             VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: failed to join thread {}: {}"), name, e.what());
             LOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
         }
+        return false;
     }
 
     bool ThreadManager::isThreadRunning(const std::string &name)

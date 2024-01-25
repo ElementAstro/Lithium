@@ -14,10 +14,24 @@ Description: Lithium Python scripting engine
 
 #include "python.hpp"
 
-PyScriptManager::PyScriptManager(/* args */)
+#include "atom/log/loguru.hpp"
+
+#include "atom/system/system.hpp"
+
+#include "atom/io/io.hpp"
+
+namespace Lithium
+{
+    PyScriptManager::PyScriptManager(/* args */)
+        : vm(new VM()),
+          m_deviceModule(vm->new_module("lithium_device")),
+          m_systemModule(vm->new_module("lithium_system")),
+          m_configModule(vm->new_module("lithium_config"))
     {
     }
-    
+
     PyScriptManager::~PyScriptManager()
     {
     }
+
+} // namespace Lithium

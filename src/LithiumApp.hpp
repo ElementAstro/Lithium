@@ -28,8 +28,20 @@ Description: Lithium App Enter
 #include "atom/server/commander.hpp"
 #include "addon/manager.hpp"
 
+// -------------------------------------------------------------------
+// About the LithiumApp
+// This is the main class of the Lithium App. All of the functions can be executed here.
+// NOTE: No wrapper functions needed, just use the functions directly.
+//       A json object is used to pass parameters to the functions.
+//       And the return value is a json object.
+//       Sometimes I think it is unnecessary to use json object to pass parameters.
+//       However, It is more convenient to use json object.
+// -------------------------------------------------------------------
+
 namespace Lithium
 {
+    class PyScriptManager; // FWD
+
     class LithiumApp
     {
     public:
@@ -46,23 +58,22 @@ namespace Lithium
         // Config methods
         // -------------------------------------------------------------------
 
-        json GetConfig(const std::string &key_path) const;
-        void SetConfig(const std::string &key_path, const json &value);
-
-        // -------------------------------------------------------------------
-        // Wrappered Config methods
-        // -------------------------------------------------------------------
-
-        ReturnMessage GetConfigW(const json &params);
-        ReturnMessage SetConfigW(const json &params);
+        json GetConfig(const json &params);
+        json SetConfig(const json &params);
+        json DeleteConfig(const json &params);
+        json SaveConfig(const json &params);
 
         // -------------------------------------------------------------------
         // Device methods
         // -------------------------------------------------------------------
 
-        std::vector<std::string> getDeviceList(DeviceType type);
-        bool addDevice(DeviceType type, const std::string &name, const std::string &lib_name = "");
-        bool addDeviceLibrary(const std::string &lib_path, const std::string &lib_name);
+        json getDeviceList(const json &params);
+        json addDevice(const json &params);
+        json addDeviceLibrary(const json &params);
+        json removeDevice(const json &params);
+        json removeDeviceByName(const json  &params);
+        json removeDeviceLibrary(const json &params);
+/*
         void addDeviceObserver(DeviceType type, const std::string &name);
         bool removeDevice(DeviceType type, const std::string &name);
         bool removeDeviceByName(const std::string &name);
@@ -73,18 +84,20 @@ namespace Lithium
         std::shared_ptr<SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
         bool getProperty(const std::string &name, const std::string &property_name);
         bool setProperty(const std::string &name, const std::string &property_name, const std::string &property_value);
+*/
+
 
         // -------------------------------------------------------------------
         // Process methods
         // -------------------------------------------------------------------
 
-        bool createProcess(const std::string &command, const std::string &identifier);
-        bool runScript(const std::string &script, const std::string &identifier);
-        bool terminateProcess(pid_t pid, int signal = 15);
-        bool terminateProcessByName(const std::string &name, int signal = 15);
-        std::vector<Process::Process> getRunningProcesses();
-        std::vector<std::string> getProcessOutput(const std::string &identifier);
-        
+        json createProcess(const json &params);
+        json runScript(const json &params);
+        json terminateProcess(const json &params);
+        json terminateProcessByName(const json &params);
+        json getProcessOutput(const json &params);
+        json getRunningProcesses(const json &params);
+
         // -------------------------------------------------------------------
         // Message methods
         // -------------------------------------------------------------------
@@ -114,37 +127,49 @@ namespace Lithium
         ReturnMessage returnMessage(const std::string &message);
 
     public:
-        void addThread(std::function<void()> func, const std::string &name);
-        void joinAllThreads();
-        void joinThreadByName(const std::string &name);
-        bool isThreadRunning(const std::string &name);
+        json joinThreadByName(const json &params);
+        json joinAllThreads(const json &params);
+        json isThreadRunning(const json &params);
 
-        void LiRegisterFunc(const std::string &name, std::function<void(const json &)> handler)
+        // -------------------------------------------------------------------
+        // Lithium Command methods (the main entry point)
+        // -------------------------------------------------------------------
+        // -------------------------------------------------------------------
+        // NOTE: The handler must be registered before the websocket server starts.
+        //       Though the handler can be registered after the websocket server starts, it is not guaranteed that the handler will be called.
+        //       All of the servers (both websocket and tcp) will use the follow handler to handle the command.
+        //       No private components exposed to theservers.
+        // -------------------------------------------------------------------
+
+        void LiRegisterFunc(const std::string &name, std::function<json(const json &)> handler)
         {
             m_CommandDispatcher->RegisterHandler(name, handler);
         }
 
         template <typename T>
-        void LiRegisterMemberFunc(const std::string &name, void (T::*memberFunc)(const json &))
+        void LiRegisterMemberFunc(const std::string &name, json (T::*memberFunc)(const json &))
         {
             if (!m_CommandDispatcher)
-                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,json>>();
+                m_CommandDispatcher = std::make_unique<CommandDispatcher<void, json>>();
             m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
         }
 
         // Max: The async func will be executed in a separate thread, and the return value will be ignored.
         //      So must use MessageBus to send the return value.
         template <typename T>
-        void LiRegisterAsyncMemberFunc(const std::string &name, void (T::*memberFunc)(const json &), bool async = false)
+        void LiRegisterAsyncMemberFunc(const std::string &name, json (T::*memberFunc)(const json &), bool async = false)
         {
             if (!m_CommandDispatcher)
-                m_CommandDispatcher = std::make_unique<CommandDispatcher<void,json>();
+                m_CommandDispatcher = std::make_unique < CommandDispatcher<void, json>();
             m_CommandDispatcher->RegisterMemberHandler(name + "_async", this, memberFunc);
         }
 
-    private:
+        json DispatchCommand(const std::string &name, const json &params);
 
-        std::unique_ptr<CommandDispatcher<void,json> m_CommandDispatcher;
+        bool hasCommand(const std::string &name);
+
+    private:
+        std::unique_ptr < CommandDispatcher<json, json> m_CommandDispatcher;
 
     private:
         std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
@@ -154,6 +179,8 @@ namespace Lithium
         std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
         std::shared_ptr<ErrorStack> m_ErrorStack;
         std::shared_ptr<ComponentManager> m_ComponentManager;
+        
+        std::shared_ptr<PyScriptManager> m_PyScriptManager;
     };
     extern std::shared_ptr<LithiumApp> MyApp;
 

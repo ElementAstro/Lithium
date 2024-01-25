@@ -1,115 +1,75 @@
-#: E:/msys64/home/Lithium/src/App.cpp:216
+#: E:/msys64/home/Lithium/src/App.cpp:156
 msgid "port the server running on"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:217
+#: E:/msys64/home/Lithium/src/App.cpp:157
 msgid "host the server running on"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:218
+#: E:/msys64/home/Lithium/src/App.cpp:158
 msgid "path to the config file"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:219
+#: E:/msys64/home/Lithium/src/App.cpp:159
 msgid "path to the modules directory"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:220
+#: E:/msys64/home/Lithium/src/App.cpp:160
 msgid "web panel"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:221
+#: E:/msys64/home/Lithium/src/App.cpp:161
 msgid "path to log file"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:223
+#: E:/msys64/home/Lithium/src/App.cpp:163
 msgid "Lithium Command Line Interface:"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:224
+#: E:/msys64/home/Lithium/src/App.cpp:164
 msgid "End."
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:232
-#, c-format
-msgid "Failed to parser command line : %s"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/App.cpp:254
+#: E:/msys64/home/Lithium/src/App.cpp:176
 #, c-format
 msgid "Command line server port : %d"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/App.cpp:260
+#: E:/msys64/home/Lithium/src/App.cpp:182
 #, c-format
 msgid "Set server port to %d"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:87
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:41
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:57
+#, c++-format
+msgid "Failed to execute {}: Invalid Parameters"
+msgstr ""
+
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:108
 #, c++-format
 msgid "Failed to load Lithium App , error : {}"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:130
-#, c++-format
-msgid "Get config value: {}"
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:575
+msgid "Invalid command name or params"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:136
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:582
 #, c++-format
-msgid "Set {} to {}"
+msgid "Dispatching command {}"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:144
-msgid "Get config value failed: Missing key_path"
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:585
+#, c++-format
+msgid "Dispatched command {} with result: {}"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:368
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:593
 #, c++-format
-msgid "Failed to run chai command : {}"
+msgid "Command {} not found"
 msgstr ""
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:386
-#, c++-format
-msgid "Failed to run chai multi command {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:399
-#, c++-format
-msgid "Failed to load chaiscript file {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:412
-#, c++-format
-msgid "Failed to unload chaiscript file {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:425
-#, c++-format
-msgid "Failed to run chai script {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:447
-#, c++-format
-msgid "Failed to load module {} in {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:466
-#, c++-format
-msgid "Failed to unload module {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:486
-#, c++-format
-msgid "Failed to reload module {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:523
-#, c++-format
-msgid "Failed to enable module {}"
-msgstr ""
-
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:542
-#, c++-format
-msgid "Failed to disable module {}"
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:597
+msgid "Command dispatcher not found"
 msgstr ""

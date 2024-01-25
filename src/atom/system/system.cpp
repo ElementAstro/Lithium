@@ -2,17 +2,6 @@
  * system.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -36,6 +25,8 @@ Description: System
 #include <pdh.h>
 #include <Psapi.h>
 #include <iphlpapi.h>
+#include <intrin.h>
+#pragma comment(lib, "user32.lib")
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
@@ -244,6 +235,40 @@ namespace Atom::System
         return temperature;
     }
 
+    std::string GetCPUModel()
+    {
+        std::string cpuModel;
+#ifdef _WIN32
+
+        HKEY hKey;
+        if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+        {
+            char cpuName[1024];
+            DWORD size = sizeof(cpuName);
+            if (RegQueryValueEx(hKey, "ProcessorNameString", NULL, NULL, (LPBYTE)cpuName, &size) == ERROR_SUCCESS)
+            {
+                cpuModel = cpuName;
+            }
+            RegCloseKey(hKey);
+        }
+
+#elif __linux__
+
+        std::ifstream cpuinfo("/proc/cpuinfo");
+        std::string line;
+        while (std::getline(cpuinfo, line))
+        {
+            if (line.substr(0, 10) == "model name")
+            {
+                cpuModel = line.substr(line.find(":") + 2);
+                break;
+            }
+        }
+        cpuinfo.close();
+#endif
+        return cpuModel;
+    }
+
     float GetMemoryUsage()
     {
         float memory_usage = 0.0;
@@ -319,6 +344,44 @@ namespace Atom::System
         return memory_usage;
     }
 
+    unsigned long long GetTotalMemorySize()
+    {
+#ifdef _WIN32
+        MEMORYSTATUSEX status;
+        status.dwLength = sizeof(status);
+        GlobalMemoryStatusEx(&status);
+        return status.ullTotalPhys;
+#else
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        return pages * page_size;
+#endif
+    }
+
+    unsigned long long GetAvailableMemorySize()
+    {
+#ifdef _WIN32
+        MEMORYSTATUSEX status;
+        status.dwLength = sizeof(status);
+        GlobalMemoryStatusEx(&status);
+        return status.ullAvailPhys;
+#else
+        std::ifstream meminfo("/proc/meminfo");
+        std::string line;
+        while (std::getline(meminfo, line))
+        {
+            if (line.substr(0, 9) == "MemAvailable:")
+            {
+                unsigned long long availableMemory;
+                std::sscanf(line.c_str(), "MemAvailable: %llu kB", &availableMemory);
+                return availableMemory * 1024; // 转换为字节
+            }
+        }
+        meminfo.close();
+        return 0;
+#endif
+    }
+
     std::vector<std::pair<std::string, float>> GetDiskUsage()
     {
         std::vector<std::pair<std::string, float>> disk_usage;
@@ -379,6 +442,91 @@ namespace Atom::System
 #endif
 
         return disk_usage;
+    }
+
+    std::string GetDriveModel(const std::string &drivePath)
+    {
+        std::string model;
+
+#ifdef _WIN32
+        HANDLE hDevice = CreateFileA(drivePath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+        if (hDevice != INVALID_HANDLE_VALUE)
+        {
+            STORAGE_PROPERTY_QUERY query;
+            char buffer[1024];
+            ZeroMemory(&query, sizeof(query));
+            ZeroMemory(buffer, sizeof(buffer));
+            query.PropertyId = StorageDeviceProperty;
+            query.QueryType = PropertyStandardQuery;
+            DWORD bytesReturned = 0;
+            if (DeviceIoControl(hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query, sizeof(query), buffer, sizeof(buffer), &bytesReturned, NULL))
+            {
+                STORAGE_DEVICE_DESCRIPTOR *desc = (STORAGE_DEVICE_DESCRIPTOR *)buffer;
+                char *vendorId = (char *)(buffer + desc->VendorIdOffset);
+                char *productId = (char *)(buffer + desc->ProductIdOffset);
+                char *productRevision = (char *)(buffer + desc->ProductRevisionOffset);
+                model = vendorId + std::string(" ") + productId + std::string(" ") + productRevision;
+            }
+            CloseHandle(hDevice);
+        }
+#else
+        std::ifstream inFile("/sys/block/" + drivePath + "/device/model");
+        if (inFile.is_open())
+        {
+            std::getline(inFile, model);
+            inFile.close();
+        }
+#endif
+
+        return model;
+    }
+
+    std::vector<std::pair<std::string, std::string>> GetStorageDeviceModels()
+    {
+        std::vector<std::pair<std::string, std::string>> storage_device_models;
+#ifdef _WIN32
+        char driveStrings[1024];
+        DWORD length = GetLogicalDriveStringsA(sizeof(driveStrings), driveStrings);
+        if (length > 0 && length <= sizeof(driveStrings))
+        {
+            char *drive = driveStrings;
+            while (*drive)
+            {
+                UINT driveType = GetDriveTypeA(drive);
+                if (driveType == DRIVE_FIXED)
+                {
+                    std::string drivePath = drive;
+                    std::string model = GetDriveModel(drivePath);
+                    if (!model.empty())
+                    {
+                        storage_device_models.push_back(std::make_pair(drivePath, model));
+                    }
+                }
+                drive += strlen(drive) + 1;
+            }
+        }
+#else
+        DIR *dir = opendir("/sys/block/");
+        if (dir != NULL)
+        {
+            struct dirent *ent;
+            while ((ent = readdir(dir)) != NULL)
+            {
+                std::string deviceName = ent->d_name;
+                if (deviceName != "." && deviceName != "..")
+                {
+                    std::string devicePath = deviceName;
+                    std::string model = GetDriveModel(devicePath);
+                    if (!model.empty())
+                    {
+                        storage_device_models.push_back(std::make_pair(devicePath, model));
+                    }
+                }
+            }
+            closedir(dir);
+        }
+#endif
+        return storage_device_models;
     }
 
     bool Shutdown()
@@ -565,14 +713,14 @@ namespace Atom::System
         return processInfo;
     }
 
-    void CheckDuplicateProcess(const std::string &program_name)
+    bool CheckDuplicateProcess(const std::string &program_name)
     {
-#ifdef _WIN32 // Windows平台
+#ifdef _WIN32
         HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (hSnapshot == INVALID_HANDLE_VALUE)
         {
             LOG_F(ERROR, "CreateToolhelp32Snapshot failed: {}", GetLastError());
-            exit(EXIT_FAILURE);
+            return false;
         }
 
         PROCESSENTRY32 pe;
@@ -588,12 +736,12 @@ namespace Atom::System
                 if (hProcess == NULL)
                 {
                     LOG_F(ERROR, "OpenProcess failed: {}", GetLastError());
-                    exit(EXIT_FAILURE);
+                    return false;
                 }
                 if (!TerminateProcess(hProcess, 0))
                 {
                     LOG_F(ERROR, "TerminateProcess failed: {}", GetLastError());
-                    exit(EXIT_FAILURE);
+                    return false;
                 }
                 CloseHandle(hProcess);
                 break;
@@ -601,12 +749,12 @@ namespace Atom::System
             bRet = Process32Next(hSnapshot, &pe);
         }
         CloseHandle(hSnapshot);
-#else // Linux和macOS平台
+#else
         DIR *dirp = opendir("/proc");
         if (dirp == NULL)
         {
             LOG_F(ERROR, "Cannot open /proc directory");
-            exit(EXIT_FAILURE);
+            return false;
         }
 
         std::vector<pid_t> pids;
@@ -651,10 +799,11 @@ namespace Atom::System
             if (kill(pid, SIGTERM) != 0)
             {
                 LOG_F(ERROR, "kill failed: {}", strerror(errno));
-                exit(EXIT_FAILURE);
+                return false;
             }
         }
 #endif
+        return true;
     }
 
     bool isProcessRunning(const std::string &processName)
@@ -720,6 +869,196 @@ namespace Atom::System
         */
 #endif
     }
+
+    std::vector<ProcessInfo> GetProcessDetails()
+    {
+        std::vector<ProcessInfo> processList;
+#ifdef _WIN32
+        HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (hSnapshot != INVALID_HANDLE_VALUE)
+        {
+            PROCESSENTRY32 pe32;
+            pe32.dwSize = sizeof(PROCESSENTRY32);
+
+            if (Process32First(hSnapshot, &pe32))
+            {
+                do
+                {
+                    ProcessInfo processInfo;
+                    processInfo.processID = pe32.th32ProcessID;
+                    processInfo.parentProcessID = pe32.th32ParentProcessID;
+                    processInfo.basePriority = pe32.pcPriClassBase;
+                    processInfo.executableFile = pe32.szExeFile;
+
+                    processList.push_back(processInfo);
+                } while (Process32Next(hSnapshot, &pe32));
+            }
+
+            CloseHandle(hSnapshot);
+        }
+#else
+        DIR *dir = opendir("/proc");
+        if (dir != NULL)
+        {
+            struct dirent *ent;
+            while ((ent = readdir(dir)) != NULL)
+            {
+                std::string processDir = ent->d_name;
+                if (processDir != "." && processDir != ".." && std::isdigit(processDir[0]))
+                {
+                    std::string exePath = "/proc/" + processDir + "/exe";
+                    std::string cmdlinePath = "/proc/" + processDir + "/cmdline";
+                    std::string statPath = "/proc/" + processDir + "/stat";
+
+                    std::ifstream exeFile(exePath);
+                    std::ifstream cmdlineFile(cmdlinePath);
+                    std::ifstream statFile(statPath);
+
+                    std::string exeName, cmdline, stat;
+
+                    if (exeFile.is_open())
+                    {
+                        std::getline(exeFile, exeName);
+                        exeFile.close();
+                    }
+
+                    if (cmdlineFile.is_open())
+                    {
+                        std::getline(cmdlineFile, cmdline);
+                        cmdlineFile.close();
+                    }
+
+                    if (statFile.is_open())
+                    {
+                        std::getline(statFile, stat);
+                        statFile.close();
+                    }
+
+                    std::istringstream iss(stat);
+                    int pid, ppid, priority;
+
+                    std::string temp;
+                    for (int i = 0; i < 3; ++i)
+                        iss >> temp;
+
+                    iss >> pid >> temp >> ppid >> priority;
+
+                    ProcessInfo processInfo;
+                    processInfo.processID = pid;
+                    processInfo.parentProcessID = ppid;
+                    processInfo.basePriority = priority;
+                    processInfo.executableFile = exeName;
+
+                    processList.push_back(processInfo);
+                }
+            }
+
+            closedir(dir);
+        }
+#endif
+        return processList;
+    }
+
+#ifdef _WIN32
+    bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo)
+    {
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+        if (hProcess != NULL)
+        {
+            char exeName[MAX_PATH];
+            DWORD exeNameLength = MAX_PATH;
+
+            if (QueryFullProcessImageNameA(hProcess, 0, exeName, &exeNameLength))
+            {
+                processInfo.processID = processID;
+                processInfo.executableFile = std::string(exeName);
+                if (!GetProcessId(GetParentProcess(hProcess), &processInfo.parentProcessID))
+                    processInfo.parentProcessID = 0;
+                processInfo.basePriority = GetPriorityClass(hProcess);
+
+                CloseHandle(hProcess);
+                return true;
+            }
+
+            CloseHandle(hProcess);
+        }
+
+        return false;
+    }
+
+    bool GetProcessInfoByName(const std::string &processName, ProcessInfo &processInfo)
+    {
+        std::vector<ProcessInfo> processes = GetProcessDetails();
+        for (const auto &process : processes)
+        {
+            if (process.executableFile == processName)
+            {
+                if (GetProcessInfoByID(process.processID, processInfo))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+#else
+    bool GetProcessInfoByID(int processID, ProcessInfo &processInfo)
+    {
+
+        std::string statPath = "/proc/" + std::to_string(processID) + "/stat";
+
+        std::ifstream statFile(statPath);
+        std::string stat;
+
+        if (statFile.is_open())
+        {
+            std::getline(statFile, stat);
+            statFile.close();
+
+            std::istringstream iss(stat);
+            int pid, ppid, priority;
+
+            std::string temp;
+            for (int i = 0; i < 3; ++i)
+                iss >> temp;
+
+            iss >> pid >> temp >> ppid >> priority;
+
+            processInfo.processID = pid;
+            processInfo.parentProcessID = ppid;
+            processInfo.basePriority = priority;
+
+            std::string exePath = "/proc/" + std::to_string(processID) + "/exe";
+            char exeName[PATH_MAX];
+            if (realpath(exePath.c_str(), exeName) != NULL)
+            {
+                processInfo.executableFile = std::string(exeName);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool GetProcessInfoByName(const std::string &processName, ProcessInfo &processInfo)
+    {
+        std::vector<ProcessInfo> processes = GetProcessDetails();
+        for (const auto &process : processes)
+        {
+            size_t pos = process.executableFile.rfind('/');
+            if (pos != std::string::npos)
+            {
+                std::string fileName = process.executableFile.substr(pos + 1);
+                if (fileName == processName)
+                {
+                    if (GetProcessInfoByID(process.processID, processInfo))
+                        return true;
+                }
+            }
+        }
+
+        return false;
+    }
+#endif
 }
 
 /*

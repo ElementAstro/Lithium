@@ -44,7 +44,7 @@ namespace Atom::Async
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to destroy ThreadManager: {}"), e.what());
+            LOG_F(ERROR, "Failed to destroy ThreadManager: {}", e.what());
         }
     }
 
@@ -55,14 +55,12 @@ namespace Atom::Async
 
     void ThreadManager::addThread(std::function<void()> func, const std::string &name)
     {
-        LOG_SCOPE_FUNCTION(MAX);
         if (m_stopFlag)
         {
-            throw std::runtime_error(_("Thread manager has stopped, cannot add new thread"));
+            throw std::runtime_error("Thread manager has stopped, cannot add new thread");
         }
         try
         {
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: trying to add thread {}"), name);
             std::unique_lock<std::mutex> lock(m_mtx);
             m_cv.wait(lock, [this]
                       { return static_cast<int>(m_threads.size()) < m_maxThreads || m_stopFlag; });
@@ -82,12 +80,11 @@ namespace Atom::Async
                 }
                 catch (const std::exception &e)
                 {
-                    LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
+                    LOG_F(ERROR, "Unhandled exception in thread: {}", e.what());
                 } }),
                     name,
                     false);
                 m_threads.emplace_back(std::move(t));
-                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: added thread {}"), name);
             }
             else
             {
@@ -105,41 +102,35 @@ namespace Atom::Async
                 }
                 catch (const std::exception &e)
                 {
-                    LOG_F(ERROR, _("Unhandled exception in thread: {}"), e.what());
+                    LOG_F(ERROR, "Unhandled exception in thread: {}", e.what());
                 } }),
                     Atom::Utils::generateRandomString(16),
                     false);
                 m_threads.emplace_back(std::move(t));
-                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: added thread {}"), std::get<2>(t));
             }
             m_cv.notify_all();
         }
         catch (const std::exception &e)
         {
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::addThread: failed to add thread {}: {}"), name, e.what());
+            LOG_F(ERROR, "Failed to add thread: {}", e.what());
         }
     }
     
     bool ThreadManager::joinAllThreads()
     {
-        LOG_SCOPE_FUNCTION(MAX);
         try
         {
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: trying to join all threads"));
             std::unique_lock<std::mutex> lock(m_mtx);
             m_cv.wait(lock, [this]
                       { return m_threads.empty(); });
             for (auto &t : m_threads)
             {
-                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: trying to join thread {}"), std::get<2>(t));
                 joinThread(lock, t);
             }
             m_threads.clear();
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: all threads joined"));
         }
         catch (const std::exception &e)
         {
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinAllThreads: failed to join all threads: {}"), e.what());
             return false;
         }
         return true;
@@ -147,14 +138,11 @@ namespace Atom::Async
 
     bool ThreadManager::joinThreadByName(const std::string &name)
     {
-        LOG_SCOPE_FUNCTION(MAX);
         try
         {
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: trying to join thread {}"), name);
             if (m_threads.empty())
             {
-                VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: no threads to join"));
-                DLOG_F(WARNING, _("Thread {} not found"), name);
+                DLOG_F(WARNING, "Thread {} not found", name);
                 return false;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -162,9 +150,9 @@ namespace Atom::Async
             {
                 if (std::get<1>(t) == name)
                 {
-                    DLOG_F(INFO, _("Thread {} found"), name);
+                    DLOG_F(INFO, "Thread {} found", name);
                     joinThread(lock, t);
-                    DLOG_F(INFO, _("Thread {} joined"), name);
+                    DLOG_F(INFO, "Thread {} joined", name);
                     m_threads.erase(std::remove_if(m_threads.begin(), m_threads.end(),
                                                    [&](auto &x)
                                                    { return !std::get<0>(x); }),
@@ -172,13 +160,11 @@ namespace Atom::Async
                     return true;
                 }
             }
-            VLOG_SCOPE_F(9 , _("Atom::Async::ThreadManager::joinThreadByName: thread {} not found"), name);
-            DLOG_F(WARNING, _("Thread {} not found"), name);
+            DLOG_F(WARNING, "Thread {} not found", name);
         }
         catch (const std::exception &e)
         {
-            VLOG_SCOPE_F(9, _("Atom::Async::ThreadManager::joinThreadByName: failed to join thread {}: {}"), name, e.what());
-            LOG_F(ERROR, _("Failed to join thread {}: {}"), name, e.what());
+            LOG_F(ERROR, "Failed to join thread {}: {}", name, e.what());
         }
         return false;
     }
@@ -189,7 +175,6 @@ namespace Atom::Async
         {
             if (m_threads.empty())
             {
-                DLOG_F(WARNING, _("Thread {} not found"), name);
                 return false;
             }
             std::unique_lock<std::mutex> lock(m_mtx);
@@ -200,12 +185,11 @@ namespace Atom::Async
                     return !std::get<2>(t);
                 }
             }
-            DLOG_F(WARNING, _("Thread {} not found"), name);
             return false;
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, _("Failed to check if thread {} is running: {}"), name, e.what());
+            LOG_F(ERROR, "Failed to check if thread {} is running: {}", name, e.what());
             return false;
         }
     }

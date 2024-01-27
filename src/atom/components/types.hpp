@@ -14,7 +14,7 @@ enum class ComponentType
     MaxType
 };
 
-[[maybe_unused]] std::string to_string(ComponentType type)
+[[maybe_unused]] inline std::string to_string(ComponentType type)
 {
     switch (type)
     {
@@ -37,13 +37,13 @@ enum class ComponentType
     }
 }
 
-[[maybe_unused]] std::ostream &operator<<(std::ostream &os, ComponentType type)
+[[maybe_unused]] inline std::ostream &operator<<(std::ostream &os, ComponentType type)
 {
     os << to_string(type);
     return os;
 }
 
-[[maybe_unused]] std::istream &operator>>(std::istream &is, ComponentType &type)
+[[maybe_unused]] inline std::istream &operator>>(std::istream &is, ComponentType &type)
 {
     std::string str;
     is >> str;
@@ -82,7 +82,7 @@ enum class ComponentType
     return is;
 }
 
-[[maybe_unused]] ComponentType toComponentType(const int &type)
+[[maybe_unused]] inline ComponentType toComponentType(const int &type)
 {
     if (type == 0)
     {

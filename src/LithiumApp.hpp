@@ -121,6 +121,10 @@ namespace Lithium
 
         void sendJsonMessage(const std::string &topic, const json &message)
         {
+            if (message.is_null())
+                return;
+            if (!m_MessageBus)
+                return;
             m_MessageBus->Publish<json>(topic, message);
         }
 

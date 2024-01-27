@@ -13,7 +13,7 @@ Description: Property type definition
 **************************************************/
 
 #include "iproperty.hpp"
-#include "uuid.hpp"
+#include "atom/utils/uuid.hpp"
 
 IPropertyBase::IPropertyBase()
 {

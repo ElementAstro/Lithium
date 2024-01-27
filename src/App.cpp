@@ -138,7 +138,7 @@ void setupLogFile()
     loguru::add_file(logFilePath.string().c_str(), loguru::Append, loguru::Verbosity_MAX);
 
     MyNetworkLogger network_logger;
-    loguru::add_callback("network_logger", BusLoggerFunction, &network_logger, loguru::Verbosity_INFO);
+    // TODO loguru::add_callback("network_logger", BusLoggerFunction, &network_logger, loguru::Verbosity_INFO);
 
     loguru::set_fatal_handler([](const loguru::Message &message)
                               { 

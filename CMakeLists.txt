@@ -237,7 +237,7 @@ include_directories(modules)
 add_subdirectory(modules)
 
 
-add_executable(lithium_server ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
@@ -245,9 +245,6 @@ target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-o
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-
-target_link_libraries(lithium_server atom.propertystatic)
-target_link_libraries(lithium_server lithiumpluginstatic)
 if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
 endif()
@@ -268,6 +265,7 @@ target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
 target_link_libraries(lithium_server tinyxml2)
+target_link_libraries(lithium_server pocketpy)
 
 target_link_libraries(lithium_server ${Libintl_LIBRARY})
 target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})

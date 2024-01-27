@@ -123,6 +123,7 @@ namespace Lithium
 
     void InitLithiumApp()
     {
+        LOG_F(INFO, "Init Lithium App");
         AddPtr("lithium.config", ConfigManager::createShared());
         AddPtr("lithium.bus", Atom::Server::MessageBus::createShared());
         // AddPtr("ModuleLoader", ModuleLoader::createShared());

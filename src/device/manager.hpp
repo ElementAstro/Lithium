@@ -180,7 +180,7 @@ namespace Lithium
          * @param params 任务参数的JSON对象。
          * @return 返回指向简单任务对象的共享指针。
          */
-        std::shared_ptr<Atom::Task::SimpleTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
+        std::shared_ptr<DeviceTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
 
         /**
          * @brief 发布字符串类型的消息到消息总线。

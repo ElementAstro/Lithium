@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.web C CXX)
+project(atom-web C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES

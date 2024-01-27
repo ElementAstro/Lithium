@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.async C CXX)
+project(atom-async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES

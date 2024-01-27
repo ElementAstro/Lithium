@@ -12,7 +12,10 @@ Description: Addon manager to solve the dependency problem.
 
 **************************************************/
 
-#include "addon.hpp"
+#include "addons.hpp"
+
+#include <queue>
+#include <fstream>
 
 #include "atom/log/loguru.hpp"
 
@@ -20,21 +23,21 @@ namespace Lithium
 {
     bool AddonManager::addModule(const std::filesystem::path &path, const std::string &name)
     {
-        if (m_packages.find(name) != m_packages.end())
+        if (m_modules.find(name) != m_modules.end())
         {
             LOG_F(ERROR, "Addon {} has already been added.", name);
             return false;
         }
         if (std::filesystem::exists(path))
         {
-            path = path / "package.json";
+            std::filesystem::path new_path = path / "package.json";
             try
             {
-                m_packages[name] = json::parse(std::ifstream(path.string()));
+                m_modules[name] = json::parse(std::ifstream(new_path.string()));
             }
             catch (const std::exception &e)
             {
-                LOG_F(ERROR, "Addon {} package.json file does not exist.", name)
+                LOG_F(ERROR, "Addon {} package.json file does not exist.", name);
                 return false;
             }
         }
@@ -48,9 +51,9 @@ namespace Lithium
 
     bool AddonManager::removeModule(const std::string &name)
     {
-        if (m_packages.find(name) != m_packages.end())
+        if (m_modules.find(name) != m_modules.end())
         {
-            m_packages.erase(name);
+            m_modules.erase(name);
             DLOG_F(INFO, "Addon {} has been removed.", name);
             return true;
         }
@@ -60,9 +63,9 @@ namespace Lithium
 
     json AddonManager::getModule(const std::string &name)
     {
-        if (m_packages.find(name) != m_packages.end())
+        if (m_modules.find(name) != m_modules.end())
         {
-            return m_packages[name];
+            return m_modules[name];
         }
         LOG_F(ERROR, "Addon {} does not exist.", name);
         return nullptr;
@@ -71,7 +74,7 @@ namespace Lithium
     bool AddonManager::resolveDependencies(const std::string &modName, std::vector<std::string> &resolvedDeps, std::vector<std::string> &missingDeps)
     {
         // 检查模组是否存在
-        if (m_packages.find(modName) == m_packages.end())
+        if (m_modules.find(modName) == m_modules.end())
         {
             LOG_F(ERROR, "Addon {} does not exist.", modName);
             return false;
@@ -79,17 +82,17 @@ namespace Lithium
         std::unordered_map<std::string, int> inDegree;
         std::queue<json> q;
 
-        for (const auto &pair : m_packages)
+        for (const auto &pair : m_modules)
         {
-            inDegree[pair.second->getName()] = 0;
+            inDegree[pair.second["name"]] = 0;
             for (auto &dep : pair.second["dependencies"])
             {
-                inDegree[dep->getName()]++;
+                inDegree[dep["name"]]++;
             }
         }
 
         // 将入度为0的模组加入队列
-        const json &mod = m_packages[modName];
+        const json &mod = m_modules[modName];
         q.push(mod);
         while (!q.empty())
         {
@@ -108,7 +111,7 @@ namespace Lithium
             }
         }
         // 检查是否有循环依赖关系
-        if (resolvedDeps.size() < m_packages.size() || !checkMissingDependencies(modName, missingDeps))
+        if (resolvedDeps.size() < m_modules.size() || !checkMissingDependencies(modName, missingDeps))
         {
             return false;
         }
@@ -118,11 +121,11 @@ namespace Lithium
     bool AddonManager::checkMissingDependencies(const std::string &modName, std::vector<std::string> &missingDeps)
     {
         std::unordered_map<std::string, bool> expectedDeps;
-        for (const std::string &depName : m_packages[modName]["dependencies"].get<std::vector<std::string>>())
+        for (const std::string &depName : m_modules[modName]["dependencies"].get<std::vector<std::string>>())
         {
             expectedDeps[depName] = true;
         }
-        for (const std::string &dep : m_packages[modName]["dependencies"].get < std::vector < std::string >>> ())
+        for (const std::string &dep : m_modules[modName]["dependencies"].get<std::vector<std::string>>())
         {
             if (expectedDeps.find(dep) != expectedDeps.end())
             {
@@ -143,7 +146,7 @@ namespace Lithium
             visited[modName] = true;
             recursionStack[modName] = true;
 
-            const json &mod = m_packages[modName];
+            const json &mod = m_modules[modName];
             for (const json &dep : mod["dependencies"])
             {
                 if (!visited[dep.get<std::string>()] && checkCircularDependencies(dep.get<std::string>(), visited, recursionStack))

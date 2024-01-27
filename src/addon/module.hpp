@@ -26,6 +26,12 @@ namespace Lithium
         std::string name;
         void *address;
         std::vector<std::string> parameters;
+
+        FunctionInfo()
+        {
+            name = "";
+            address = nullptr;
+        }
     };
 
     class ModuleInfo

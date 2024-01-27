@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.utils C CXX)
+project(atom-utils C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
@@ -10,6 +10,7 @@ set(${PROJECT_NAME}_SOURCES
     hash_util.cpp
     huffman.cpp
     math.cpp
+    random.cpp
     string.cpp
     static_switch.cpp
     time.cpp

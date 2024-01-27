@@ -13,7 +13,7 @@ Description: Photo type definition
 **************************************************/
 
 #include "iphoto.hpp"
-#include "uuid.hpp"
+#include "atom/utils/uuid.hpp"
 
 IPhoto::IPhoto()
 {

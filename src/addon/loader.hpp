@@ -108,14 +108,6 @@ namespace Lithium
         // -------------------------------------------------------------------
 
         /**
-         * @brief 根据给定的目录名称加载模块。
-         *
-         * @param dir_name 模块所在的目录名称。
-         * @return 如果成功加载则返回 true，否则返回 false。
-         */
-        bool LoadOnInit(const std::string &dir_name);
-
-        /**
          * @brief   Loads a dynamic module from the given path.
          *
          * This function loads a dynamic module from the given path. If the loading is successful, it returns true and saves the handle to the module in the modules_ map.
@@ -127,6 +119,15 @@ namespace Lithium
          */
         bool LoadModule(const std::string &path, const std::string &name);
 
+        /**
+         * @brief   Loads all functions from the given module.
+         *
+         * This function loads all functions from the given module. If the loading is successful, it returns a vector of FunctionInfo objects.
+         * If the loading fails, it returns an empty vector and logs an error message.
+         *
+         * @param[in]   name    The name of the dynamic module.
+         * @return      A vector of FunctionInfo objects.
+         */
         std::vector<std::unique_ptr<FunctionInfo>> loadModuleFunctions(const std::string &name);
 
         /**

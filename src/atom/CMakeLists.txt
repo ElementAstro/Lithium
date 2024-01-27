@@ -43,9 +43,11 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     # system/filew.cpp
     system/dirw.cpp
 
+    type/args.cpp
     type/ini.cpp
     type/iparams.cpp
     type/message.cpp
+    server/variables.cpp
 )
 
 # Headers
@@ -98,10 +100,12 @@ list(APPEND ${PROJECT_NAME}_LIBS
     loguru
     cpp_httplib
     libzippp
-    atom.async
-    atom.utils
-    atom.driver
-    atom.component
+    atom-asyncstatic
+    atom-utilsstatic
+    atom-driverstatic
+    atom-component
+    atom-utilsstatic
+    atom-webstatic
     )
 
 # Build Object Library

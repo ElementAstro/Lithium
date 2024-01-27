@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.task C CXX)
+project(atom-task C CXX)
 
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES

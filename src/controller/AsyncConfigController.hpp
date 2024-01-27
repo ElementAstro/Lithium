@@ -32,15 +32,13 @@ Description: Async Config Controller
 
 class ConfigController : public oatpp::web::server::api::ApiController
 {
-private:
+public:
 
     static std::shared_ptr<Lithium::ConfigManager> m_configManager;
-    
-public:
+
     ConfigController(const std::shared_ptr<ObjectMapper> &objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper)
     {
-        m_configManager = GetPtr<Lithium::ConfigManager>("lithium.config");
     }
 
     // ----------------------------------------------------------------
@@ -287,6 +285,8 @@ public:
         }
     };
 };
+
+std::shared_ptr<Lithium::ConfigManager> ConfigController::m_configManager = GetPtr<Lithium::ConfigManager>("lithium.config");
 
 #include OATPP_CODEGEN_END(ApiController) //<- End Codegen
 

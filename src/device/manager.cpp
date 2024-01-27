@@ -21,10 +21,12 @@ Description: Device Manager
 #include "atom/driver/filterwheel.hpp"
 #include "atom/driver/solver.hpp"
 #include "atom/driver/guider.hpp"
+#include "atom/driver/device_type.hpp"
 
 #include "atom/driver/device_exception.hpp"
 #include "atom/driver/camera_utils.hpp"
 #include "utils/utils.hpp"
+#include "atom/utils/random.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>
@@ -81,7 +83,7 @@ namespace Lithium
     // Constructor
     DeviceManager::DeviceManager(std::shared_ptr<Atom::Server::MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
-        m_ModuleLoader = ModuleLoader::createShared("drivers", GetPtr<Thread::ThreadManager>("ThreadManager"));
+        m_ModuleLoader = ModuleLoader::createShared("drivers", GetPtr<Atom::Async::ThreadManager>("lithium.async.thread"));
         m_ConfigManager = configManager;
         m_MessageBus = messageBus;
         for (auto &devices : m_devices)
@@ -118,7 +120,8 @@ namespace Lithium
 
     void DeviceManager::connectToMessageBus()
     {
-        m_MessageBus->Subscribe<std::shared_ptr<Message>>("device", [this](std::shared_ptr<Message> message) -> void {
+        m_MessageBus->Subscribe<std::shared_ptr<Message>>("device", [this](std::shared_ptr<Message> message) -> void
+                                                          {
             switch (message->type())
             {
                 case Message::Type::kNumber:
@@ -137,33 +140,22 @@ namespace Lithium
                     std::shared_ptr<BooleanMessage> booleanMessage = std::dynamic_pointer_cast<BooleanMessage>(message);
                     break;
                 }
-                case Message::Type::kParams:
-                {
-                    std::shared_ptr<ParamsMessage> paramsMessage = std::dynamic_pointer_cast<ParamsMessage>(message);
-                    std::shared_ptr<IParams> params = paramsMessage->value();
-                    
-                    break;
-                }
-                case Message::Type::kJson:
-                {
-                    std::shared_ptr<JsonMessage> jsonMessage = std::dynamic_pointer_cast<JsonMessage>(message);
-                    break;
-                }
                 default:
                 {
                     LOG_F(ERROR, "Unknown message type {}", magic_enum::enum_name(message->type()));
                     break;
                 }
-            }
-        });
+            } });
     }
 
-    std::vector<std::string> DeviceManager::getDeviceListByType()
+    std::vector<std::string> DeviceManager::getDeviceList()
     {
         std::vector<std::string> deviceList;
-        for (auto &devices : m_devices)
+        std::initializer_list<DeviceType> devices = {DeviceType::Camera, DeviceType::Focuser, DeviceType::Telescope, DeviceType::Guider, DeviceType::Solver, DeviceType::FilterWheel};
+        for (auto &device_type : devices)
         {
-            for (auto &device : devices)
+            auto &devices = m_devices[static_cast<int>(device_type)];
+            for (const auto &device : devices)
             {
                 if (device)
                 {
@@ -171,6 +163,7 @@ namespace Lithium
                 }
             }
         }
+        return deviceList;
     }
 
     std::vector<std::string> DeviceManager::getDeviceListByType(DeviceType type)
@@ -196,7 +189,7 @@ namespace Lithium
         }
         if (findDeviceByName(name))
         {
-            LOG_F(ERROR, _("A device with name {} already exists, please choose a different name"), name);
+            LOG_F(ERROR, "A device with name {} already exists, please choose a different name", name);
             return false;
         }
         std::string newName = name;
@@ -224,7 +217,7 @@ namespace Lithium
             }
             else
             {
-                nlohmann::json params;
+                json params;
                 params["name"] = newName;
                 std::string logMsg;
 
@@ -309,8 +302,9 @@ namespace Lithium
         {
             if (*it && (*it)->getDeviceName() == name)
             {
-                (*it)->addObserver([this](const std::any &message)
-                                   { 
+                /*
+                (*it)->AddObserverFunc([this](const std::any &message)
+                                       { 
                                     if(message.has_value())
                                     {
                                         try
@@ -337,6 +331,7 @@ namespace Lithium
                                             LOG_F(ERROR,"Failed to cast property {}",e.what());
                                         }
                                     } });
+                */
                 DLOG_F(INFO, "Add device {} observer successfully", name);
 
                 return true;
@@ -462,7 +457,7 @@ namespace Lithium
         return nullptr;
     }
 
-    std::shared_ptr<SimpleTask> DeviceManager::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const nlohmann::json &params)
+    std::shared_ptr<DeviceTask> DeviceManager::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         DLOG_F(INFO, "Trying to find {} and get {} task", device_name, task_name);
@@ -597,7 +592,7 @@ namespace Lithium
                                  {
                                      LOG_F(ERROR, "Failed to convert {} of {} with {}", value_name, name, e.what());
                                  } },
-                                   m_ThreadManager->generateRandomString(16));
+                                   Atom::Utils::generateRandomString(16));
         return true;
     }
 
@@ -619,7 +614,7 @@ namespace Lithium
                                  {
                                      LOG_F(ERROR, "Failed to convert {} of {} with {}", value_name, name, e.what());
                                  } },
-                                   m_ThreadManager->generateRandomString(16));
+                                   Atom::Utils::generateRandomString(16));
         return true;
     }
 
@@ -1269,25 +1264,25 @@ namespace Lithium
 
     bool DeviceManager::startHydrogenServer()
     {
-        if (!m_hydrogenmanager->is_running())
+        if (!m_hydrogenmanager->isRunning())
         {
-            m_hydrogenmanager->start_server();
+            m_hydrogenmanager->startServer();
         }
         return true;
     }
 
     bool DeviceManager::stopHydrogenServer()
     {
-        if (m_hydrogenmanager->is_running())
+        if (m_hydrogenmanager->isRunning())
         {
-            m_hydrogenmanager->stop_server();
+            m_hydrogenmanager->stopServer();
         }
         return true;
     }
 
     bool DeviceManager::startHydrogenDevice()
     {
-        if (!m_hydrogenmanager->is_running())
+        if (!m_hydrogenmanager->isRunning())
         {
             LOG_F(ERROR, "Hydrogen server is not started(not by lithium server)");
             return false;
@@ -1320,7 +1315,7 @@ namespace Lithium
         return true;
     }
 
-    bool DeviceManager::runHydrogenServer(const nlohmann::json &m_params)
+    bool DeviceManager::runHydrogenServer(const json &m_params)
     {
 #ifdef _WIN32
 
@@ -1329,7 +1324,7 @@ namespace Lithium
 #endif
         return true;
     }
-    bool DeviceManager::startHydrogenDriver(const nlohmann::json &m_params)
+    bool DeviceManager::startHydrogenDriver(const json &m_params)
     {
 #ifdef _WIN32
 
@@ -1338,7 +1333,7 @@ namespace Lithium
 #endif
         return true;
     }
-    bool DeviceManager::stopHydrogenDriver(const nlohmann::json &m_params)
+    bool DeviceManager::stopHydrogenDriver(const json &m_params)
     {
 #ifdef _WIN32
 

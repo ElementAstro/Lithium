@@ -29,11 +29,11 @@ Component::Component()
 Component::~Component()
 {
     // Save the config file
-    if (!m_ConfigPath.empty())
-        m_ComponentConfig->save(m_ConfigPath);
+    // if (!m_ConfigPath.empty())
+    //    m_ComponentConfig->save(m_ConfigPath);
     // Save the info file
-    if (!m_InfoPath.empty())
-        m_ComponentInfo->save(m_InfoPath);
+    // if (!m_InfoPath.empty())
+    //    m_ComponentInfo->save(m_InfoPath);
     // Just for safety
     m_CommandDispatcher->RemoveAll();
     m_VariableRegistry->RemoveAll();
@@ -62,9 +62,9 @@ bool Component::LoadComponentInfo(const std::string &path)
 {
     try
     {
-        m_ComponentInfo->load(path);
+        // m_ComponentInfo->load(path);
     }
-    catch(const Atom::Utils::Exception::FileNotReadable_Error& e)
+    catch (const Atom::Utils::Exception::FileNotReadable_Error &e)
     {
         return false;
     }
@@ -74,21 +74,21 @@ bool Component::LoadComponentInfo(const std::string &path)
 
 std::string Component::getJsonInfo() const
 {
-    return m_ComponentInfo->toJson();
+    return "";
 }
 
 std::string Component::getXmlInfo() const
 {
-    return m_ComponentInfo->toXml();
+    return "";
 }
 
 bool Component::LoadComponentConfig(const std::string &path)
 {
     try
     {
-        m_ComponentConfig->load(path);
+        // m_ComponentConfig->load(path);
     }
-    catch(const Atom::Utils::Exception::FileNotReadable_Error& e)
+    catch (const Atom::Utils::Exception::FileNotReadable_Error &e)
     {
         return false;
     }
@@ -98,12 +98,12 @@ bool Component::LoadComponentConfig(const std::string &path)
 
 std::string Component::getJsonConfig() const
 {
-    return m_ComponentConfig->toJson();
+    // return m_ComponentConfig->toJson();
 }
 
 std::string Component::getXmlConfig() const
 {
-    return m_ComponentConfig->toXml();
+    // return m_ComponentConfig->toXml();
 }
 
 std::string Component::GetVariableInfo(const std::string &name) const

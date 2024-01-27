@@ -107,7 +107,7 @@ namespace Lithium
          * @return true if the component was loaded successfully, false otherwise
          * @note The component will be loaded in the main thread
          */
-        bool loadComponent(ComponentType component_type, const std::shared_ptr<Args> args);
+        bool loadComponent(ComponentType component_type, const json& params);
 
         /**
          * @brief Unload a component
@@ -119,7 +119,7 @@ namespace Lithium
          * @warning This method will alse unload the component if it is still in use
          * @warning Also, will cause Segmentation fault
          */
-        bool unloadComponent(ComponentType component_type, const std::shared_ptr<Args> args);
+        bool unloadComponent(ComponentType component_type, const json& params);
 
         /**
          * @brief Reload a component
@@ -131,7 +131,7 @@ namespace Lithium
          * @warning This method will alse reload the component if it is still in use
          * @warning Also, will cause Segmentation fault
          */
-        bool reloadComponent(ComponentType component_type, const std::shared_ptr<Args> args);
+        bool reloadComponent(ComponentType component_type, const json& params);
 
         /**
          * @brief Reload all components
@@ -152,7 +152,7 @@ namespace Lithium
          * @warning This method will alse reload the components if they are still in use
          * @warning Also, will cause Segmentation fault
          */
-        bool reloadAllComponents(const std::shared_ptr<Args> args);
+        bool reloadAllComponents(const json& params);
 
         // -------------------------------------------------------------------
         // Components methods (getters)
@@ -172,7 +172,7 @@ namespace Lithium
          * @param args The arguments to pass to the component
          * @return The component if it exists, nullptr otherwise
          */
-        std::shared_ptr<Component> getComponent(ComponentType component_type, const std::shared_ptr<Args> args) const;
+        std::shared_ptr<Component> getComponent(ComponentType component_type, const json& params) const;
 
         // -------------------------------------------------------------------
         // Load Components Steppers methods
@@ -219,24 +219,24 @@ namespace Lithium
          * @warning Also, will cause Segmentation fault
          */
         bool loadSharedComponent(const std::string &component_name);
-        bool unloadSharedComponent(const std::shared_ptr<Args> args);
-        bool reloadSharedComponent(const std::shared_ptr<Args> args);
+        bool unloadSharedComponent(const json& params);
+        bool reloadSharedComponent(const json& params);
 
         // -------------------------------------------------------------------
         // Components methods (for alone components)
         // -------------------------------------------------------------------
 
-        bool loadAloneComponent(const std::shared_ptr<Args> args);
-        bool unloadAloneComponent(const std::shared_ptr<Args> args);
-        bool reloadAloneComponent(const std::shared_ptr<Args> args);
+        bool loadAloneComponent(const json& params);
+        bool unloadAloneComponent(const json& params);
+        bool reloadAloneComponent(const json& params);
 
         // -------------------------------------------------------------------
         // Components methods (for script components)
         // -------------------------------------------------------------------
 
-        bool loadScriptComponent(const std::shared_ptr<Args> args);
-        bool unloadScriptComponent(const std::shared_ptr<Args> args);
-        bool reloadScriptComponent(const std::shared_ptr<Args> args);
+        bool loadScriptComponent(const json& params);
+        bool unloadScriptComponent(const json& params);
+        bool reloadScriptComponent(const json& params);
 
     private:
         std::shared_ptr<ModuleLoader> m_ModuleLoader;
@@ -255,6 +255,7 @@ namespace Lithium
         std::shared_ptr<AddonManager> m_AddonManager;
 
         std::unordered_map<std::string, std::shared_ptr<ComponentEntry>> m_ComponentEntries;
+        std::unordered_map<std::string, json> m_ComponentInfos;
 
         // Components map of different types
         // Max: Why not just use a single map of std::shared_ptr<Component>?

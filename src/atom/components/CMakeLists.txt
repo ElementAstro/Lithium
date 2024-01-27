@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.component C CXX)
+project(atom-component C CXX)
 
 
 list(APPEND ${PROJECT_NAME}_SOURCES
@@ -46,6 +46,7 @@ add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} atom-utilsstatic)
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

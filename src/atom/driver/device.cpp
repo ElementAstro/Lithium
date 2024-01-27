@@ -13,7 +13,7 @@ Description: Basic Device Defination
 *************************************************/
 
 #include "device.hpp"
-#include "atom/property/uuid.hpp"
+#include "atom/utils/uuid.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>
@@ -62,11 +62,6 @@ void Device::insertProperty(const std::string &name, const std::any &value, cons
             if (possible_values.has_value() && possible_type != PossibleValueType::None)
                 property->possible_values = std::any_cast<std::vector<std::string>>(possible_values);
             m_properties[name] = property;
-            if (!m_observers.empty())
-                for (const auto &observer : m_observers)
-                {
-                    observer(property);
-                }
         }
         // INumberProperty
         else if (value.type() == typeid(int) || value.type() == typeid(float) || value.type() == typeid(double))
@@ -83,11 +78,6 @@ void Device::insertProperty(const std::string &name, const std::any &value, cons
             property->get_func = bind_get_func;
             property->set_func = bind_set_func;
             m_properties[name] = property;
-            if (!m_observers.empty())
-                for (const auto &observer : m_observers)
-                {
-                    observer(property);
-                }
         }
         // IBoolProperty
         else if (value.type() == typeid(bool))
@@ -102,11 +92,6 @@ void Device::insertProperty(const std::string &name, const std::any &value, cons
             if (possible_values.has_value() && possible_type != PossibleValueType::None)
                 property->possible_values = std::any_cast<std::vector<bool>>(possible_values);
             m_properties[name] = property;
-            if (!m_observers.empty())
-                for (const auto &observer : m_observers)
-                {
-                    observer(property);
-                }
         }
     }
     catch (const std::bad_any_cast &e)
@@ -133,9 +118,9 @@ void Device::setProperty(const std::string &name, const std::any &value)
                 if (!std::any_cast<std::shared_ptr<IPropertyBase>>(property)->set_func.empty())
                 {
 #ifdef __cpp_lib_format
-                    auto res = Dispatch(std::format("set_{}", name), {{name, value}});
+                    auto res = m_commander->Dispatch(std::format("set_{}", name), std::any_cast<std::string>(value));
 #else
-                    auto res = Dispatch(fmt::format("set_{}", name), {{name, value}});
+                    auto res = m_commander->Dispatch(fmt::format("set_{}", name), {{name, value}});
 #endif
                     if (res.find("error") != res.end())
                     {
@@ -199,13 +184,6 @@ void Device::setProperty(const std::string &name, const std::any &value)
             throw InvalidProperty(fmt::format("Failed to convert property {} with {}", name, e.what()));
 #endif
         }
-        if (!m_observers.empty())
-        {
-            for (const auto &observer : m_observers)
-            {
-                observer(getProperty(name, false));
-            }
-        }
     }
     else
     {
@@ -254,9 +232,9 @@ std::any Device::getProperty(const std::string &name, bool need_refresh)
             if (has_func)
             {
 #ifdef __cpp_lib_format
-                Dispatch(std::format("get_{}", name), {});
+                m_commander->Dispatch(std::format("get_{}", name), {});
 #else
-                Dispatch(fmt::format("get_{}", name), {});
+                m_commander->Dispatch(fmt::format("get_{}", name), {});
 #endif
             }
         }
@@ -348,22 +326,14 @@ void Device::removeProperty(const std::string &name)
     }
 }
 
-void Device::insertTask(const std::string &name, std::any defaultValue, Args params_template,
-                        const std::function<Args(const Args &)> &func,
-                        const std::function<Args(const Args &)> &stop_func,
+void Device::insertTask(const std::string &name, std::any defaultValue, json params_template,
+                        const std::function<json(const json &)> &func,
+                        const std::function<json(const json &)> &stop_func,
                         bool isBlock)
 {
     if (name.empty() || !defaultValue.has_value())
     {
         return;
-    }
-    if (!stop_func)
-    {
-        task_map[name] = std::make_shared<DeviceTask>(func, params_template, _name, _uuid, _name, stop_func, false);
-    }
-    else
-    {
-        task_map[name] = std::make_shared<DeviceTask>(func, params_template, _name, _uuid, _name, stop_func, true);
     }
 }
 
@@ -373,27 +343,14 @@ bool Device::removeTask(const std::string &name)
     {
         return false;
     }
-    if (task_map.find(name) != task_map.end())
-    {
-        task_map.erase(name);
-    }
     return true;
 }
 
-std::shared_ptr<Atom::Task::SimpleTask> Device::getTask(const std::string &name, const Args &params)
+std::shared_ptr<DeviceTask> Device::getTask(const std::string &name, const json &params)
 {
     if (name.empty())
     {
         return nullptr;
-    }
-    if (task_map.find(name) != task_map.end())
-    {
-        auto tmp_task = task_map[name];
-        tmp_task->setParams(params);
-        if (tmp_task->validateJsonValue(params, tmp_task->getParamsTemplate()))
-        {
-            return tmp_task;
-        }
     }
     return nullptr;
 }

@@ -14,7 +14,7 @@ Description: Lithium Python scripting engine
 
 #pragma once
 
-#include "pocketpy/pocketpy.h"
+#include "pocketpy/include/pocketpy.h"
 
 #include "config/configor.hpp"
 

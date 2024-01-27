@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.driver C CXX)
+project(atom-driver C CXX)
 
 find_package(Threads REQUIRED)
 
@@ -19,6 +19,9 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     focuser.cpp
     filterwheel.cpp
     guider.cpp
+
+    iproperty.cpp
+    iphoto.cpp
 )
 
 # Headers

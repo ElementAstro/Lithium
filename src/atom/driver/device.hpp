@@ -44,11 +44,11 @@ public:
     virtual ~Device();
 
 public:
-    virtual bool connect(const Args &params) { return true; };
+    virtual bool connect(const json &params) { return true; };
 
-    virtual bool disconnect(const Args &params) { return true; };
+    virtual bool disconnect(const json &params) { return true; };
 
-    virtual bool reconnect(const Args &params) { return true; };
+    virtual bool reconnect(const json &params) { return true; };
 
     virtual bool isConnected() { return true; }
 
@@ -70,14 +70,14 @@ public:
 
     std::shared_ptr<IBoolProperty> getBoolProperty(const std::string &name);
 
-    void insertTask(const std::string &name, std::any defaultValue, Args params_template,
-                    const std::function<Args(const Args &)> &func,
-                    const std::function<Args(const Args &)> &stop_func,
+    void insertTask(const std::string &name, std::any defaultValue, json params_template,
+                    const std::function<json(const json &)> &func,
+                    const std::function<json(const json &)> &stop_func,
                     bool isBlock = false);
 
     bool removeTask(const std::string &name);
 
-    std::shared_ptr<DeviceTask> getTask(const std::string &name, const Args &params);
+    std::shared_ptr<DeviceTask> getTask(const std::string &name, const json &params);
 
 private:
     // Why we use emhash8 : because it is so fast!
@@ -90,25 +90,25 @@ private:
     std::unordered_map<std::string, std::shared_ptr<DeviceTask>> m_task_map;
 #endif
 
-    std::unique_ptr<CommandDispatcher<Args,Args>> m_commander;
+    std::unique_ptr<CommandDispatcher<json,json>> m_commander;
 
     // Basic Device name and UUID
     std::string _name;
     std::string _uuid;
 
 public:
-    typedef bool (*ConnectFunc)(const Args &params);
-    typedef bool (*DisconnectFunc)(const Args &params);
-    typedef bool (*ReconnectFunc)(const Args &params);
+    typedef bool (*ConnectFunc)(const json &params);
+    typedef bool (*DisconnectFunc)(const json &params);
+    typedef bool (*ReconnectFunc)(const json &params);
     typedef void (*InitFunc)();
     typedef void (*InsertPropertyFunc)(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check);
     typedef void (*SetPropertyFunc)(const std::string &name, const std::any &value);
     typedef std::any (*GetPropertyFunc)(const std::string &name);
     typedef void (*RemovePropertyFunc)(const std::string &name);
-    typedef void (*InsertTaskFunc)(const std::string &name, std::any defaultValue, Args params_template, const std::function<Args(const Args &)> &func, const std::function<Args(const Args &)> &stop_func, bool isBlock);
+    typedef void (*InsertTaskFunc)(const std::string &name, std::any defaultValue, json params_template, const std::function<json(const json &)> &func, const std::function<json(const json &)> &stop_func, bool isBlock);
     typedef bool (*RemoveTaskFunc)(const std::string &name);
-    typedef std::shared_ptr<DeviceTask> (*GetTaskFunc)(const std::string &name, const Args &params);
+    typedef std::shared_ptr<DeviceTask> (*GetTaskFunc)(const std::string &name, const json &params);
     typedef void (*AddObserverFunc)(const std::function<void(const std::any &message)> &observer);
     typedef void (*RemoveObserverFunc)(const std::function<void(const std::any &message)> &observer);
-    typedef const Args (*ExportDeviceInfoToArgsFunc)();
+    typedef const json (*ExportDeviceInfoTojsonFunc)();
 };

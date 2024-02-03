@@ -59,7 +59,6 @@ namespace Atom::IO
 
     bool createDirectory(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -75,7 +74,6 @@ namespace Atom::IO
 
     bool removeDirectory(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -92,7 +90,6 @@ namespace Atom::IO
 
     bool renameDirectory(const std::string &old_path, const std::string &new_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(old_path);
         ATOM_IO_CHECK_ARGUMENT(new_path);
         try
@@ -110,7 +107,6 @@ namespace Atom::IO
 
     bool moveDirectory(const std::string &old_path, const std::string &new_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(old_path);
         ATOM_IO_CHECK_ARGUMENT(new_path);
         try
@@ -128,7 +124,6 @@ namespace Atom::IO
 
     bool copyFile(const std::string &src_path, const std::string &dst_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(src_path);
         ATOM_IO_CHECK_ARGUMENT(dst_path);
         try
@@ -146,7 +141,6 @@ namespace Atom::IO
 
     bool moveFile(const std::string &src_path, const std::string &dst_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(src_path);
         ATOM_IO_CHECK_ARGUMENT(dst_path);
         try
@@ -164,7 +158,6 @@ namespace Atom::IO
 
     bool renameFile(const std::string &old_path, const std::string &new_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(old_path);
         ATOM_IO_CHECK_ARGUMENT(new_path);
         try
@@ -182,7 +175,6 @@ namespace Atom::IO
 
     bool removeFile(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -199,7 +191,6 @@ namespace Atom::IO
 
     bool createSymlink(const std::string &target_path, const std::string &symlink_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(target_path);
         ATOM_IO_CHECK_ARGUMENT(symlink_path);
         try
@@ -217,7 +208,6 @@ namespace Atom::IO
 
     bool removeSymlink(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -234,7 +224,6 @@ namespace Atom::IO
 
     std::uintmax_t fileSize(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         try
         {
             return fs::file_size(path);
@@ -310,7 +299,6 @@ namespace Atom::IO
 
     void traverseDirectories(const fs::path &directory, std::vector<std::string> &folders)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         DLOG_F(INFO, "Traversing directory: {}", directory.string());
         for (const auto &entry : fs::directory_iterator(directory))
         {
@@ -351,6 +339,23 @@ namespace Atom::IO
             return false;
         }
         return fs::exists(fileName) && fs::is_regular_file(fileName);
+    }
+
+    bool isFolderEmpty(const std::string &folderName)
+    {
+        if (!isFolderExists(folderName))
+        {
+            return false;
+        }
+        fs::path directory_path = folderName;
+        for (const auto &entry : fs::directory_iterator(directory_path))
+        {
+            if (fs::is_regular_file(entry))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool isAbsolutePath(const std::string &path)

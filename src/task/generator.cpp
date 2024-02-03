@@ -1,5 +1,5 @@
 /*
- * task_generator.cpp
+ * generator.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -12,47 +12,49 @@ Description: Task Generator
 
 **************************************************/
 
-#include "task_generator.hpp"
+#include "generator.hpp"
 
 #include "atom/io/io.hpp"
-
-#include <filesystem>
-
 #include "atom/log/loguru.hpp"
 
-namespace fs = std::filesystem;
+#include <fstream>
 
-namespace Lithium::Task
+namespace Lithium
 {
-    TaskGenerator::TaskGenerator(std::shared_ptr<DeviceManager> deviceManager)
+    TaskGenerator::TaskGenerator(std::shared_ptr<DeviceManager> deviceManager) : m_DeviceManager(deviceManager) {}
+
+    std::shared_ptr<TaskGenerator> createShared(std::shared_ptr<DeviceManager> deviceManager)
     {
-        m_DeviceManager = deviceManager;
+        if (!deviceManager)
+        {
+            LOG_F(ERROR, "Device manager is null");
+            throw std::runtime_error("Device manager is null");
+        }
+        return std::make_shared<TaskGenerator>(deviceManager);
     }
 
     bool TaskGenerator::loadMacros(const std::string &macroFileName)
     {
         try
         {
-            if (!fs::exists(macroFileName))
+            if (!Atom::IO::isFileExists(macroFileName))
             {
-                LOG_F(ERROR, "Macro file not found : {}", macroFileName);
+                LOG_F(ERROR, "Macro file not found: {}", macroFileName);
                 return false;
             }
-            try
+
+            json macros;
+            std::ifstream file(macroFileName);
+            if (!file)
             {
-                json macros;
-                std::ifstream file(macroFileName);
-                file >> macros;
-            }
-            catch (const std::exception &e)
-            {
-                LOG_F(ERROR, "Failed to parse file {} , error : {}", macroFileName, e.what());
+                LOG_F(ERROR, "Failed to open macro file: {}", macroFileName);
                 return false;
             }
+            file >> macros;
         }
         catch (const std::exception &e)
         {
-            LOG_F(ERROR, "Error while loading macro file: {}", e.what());
+            LOG_F(ERROR, "Failed to parse file {}, error: {}", macroFileName, e.what());
             return false;
         }
 
@@ -61,60 +63,21 @@ namespace Lithium::Task
 
     bool TaskGenerator::loadMacrosFromFolder(const std::string &folderPath)
     {
-        try
+        if (!Atom::IO::isFolderExists(folderPath))
         {
-            if (!fs::is_directory(folderPath))
-            {
-                LOG_F(ERROR, "Invalid folder path: {}", folderPath);
-                return false;
-            }
-
-            for (const auto &entry : fs::directory_iterator(folderPath))
-            {
-                const auto &filePath = entry.path();
-
-                if (fs::is_regular_file(filePath) && filePath.extension() == ".json")
-                {
-                    std::ifstream file(filePath);
-                    if (!file)
-                    {
-                        LOG_F(ERROR, "Failed to open macro file: {}", filePath.string());
-                        continue;
-                    }
-
-                    json jsonMacro;
-                    try
-                    {
-                        file >> jsonMacro;
-                    }
-                    catch (const std::exception &e)
-                    {
-                        LOG_F(ERROR, "Failed to parse macro file: {}, error: {}", filePath.string(), e.what());
-                        continue;
-                    }
-
-                    if (jsonMacro.is_object())
-                    {
-                        for (const auto &[name, content] : jsonMacro.items())
-                        {
-                            if (content.is_string())
-                            {
-                                m_MacroMap[name] = content.get<std::string>();
-                            }
-                        }
-                    }
-                    else
-                    {
-                        LOG_F(ERROR, "Invalid macro file format: {}", filePath.string());
-                        continue;
-                    }
-                }
-            }
-        }
-        catch (const std::exception &e)
-        {
-            LOG_F(ERROR, "Error while loading macros from folder: {}", e.what());
+            LOG_F(ERROR, "Invalid folder path: {}", folderPath);
             return false;
+        }
+
+        std::vector<std::future<void>> futures;
+        for (const auto &entry : fs::directory_iterator(folderPath))
+        {
+            futures.push_back(std::async(std::launch::async, &TaskGenerator::processMacroFile, this, entry.path()));
+        }
+
+        for (auto &fut : futures)
+        {
+            fut.wait();
         }
 
         return true;
@@ -122,17 +85,20 @@ namespace Lithium::Task
 
     bool TaskGenerator::addMacro(const std::string &name, const std::string &content)
     {
+        std::lock_guard<std::mutex> lock(m_Mutex);
         m_MacroMap[name] = content;
         return true;
     }
 
     bool TaskGenerator::deleteMacro(const std::string &name)
     {
+        std::lock_guard<std::mutex> lock(m_Mutex);
         return (m_MacroMap.erase(name) > 0);
     }
 
     std::optional<std::string> TaskGenerator::getMacroContent(const std::string &name)
     {
+        std::lock_guard<std::mutex> lock(m_Mutex);
         const auto it = m_MacroMap.find(name);
         if (it != m_MacroMap.end())
         {
@@ -140,7 +106,46 @@ namespace Lithium::Task
         }
         else
         {
+            LOG_F(ERROR, "Macro with name {} not found.", name);
             return std::nullopt;
+        }
+    }
+
+    void TaskGenerator::processMacroFile(const std::string &sfilePath)
+    {
+        if (!Atom::IO::isFileExists(sfilePath))
+        {
+            LOG_F(ERROR, "Macro file not found: {}", filePath);
+            return;
+        }
+        fs::path filePath = sfilePath;
+        if (fs::is_regular_file(filePath) && filePath.extension() == ".json")
+        {
+            std::ifstream file(filePath);
+            if (!file)
+            {
+                LOG_F(ERROR, "Failed to open macro file: {}", filePath.string());
+                return;
+            }
+
+            json jsonMacro;
+            file >> jsonMacro;
+
+            if (jsonMacro.is_object())
+            {
+                std::lock_guard<std::mutex> lock(m_Mutex);
+                for (const auto &[name, content] : jsonMacro.items())
+                {
+                    if (content.is_string())
+                    {
+                        m_MacroMap[name] = content.get<std::string>();
+                    }
+                }
+            }
+            else
+            {
+                LOG_F(ERROR, "Invalid macro file format: {}", filePath.string());
+            }
         }
     }
 

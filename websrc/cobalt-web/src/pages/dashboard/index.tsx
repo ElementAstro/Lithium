@@ -1,6 +1,5 @@
-// Dashboard.jsx
-import React, { useState } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
+import React, { useEffect, useState } from "react";
+import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import CameraView from "./CameraView";
 import CaptureButton from "./CaptureButton";
 import Sidebar from "./Sidebar";
@@ -17,7 +16,7 @@ const Dashboard = () => {
   const [toolbarVisible, setToolbarVisible] = useState(false);
 
   const handleCapture = () => {
-    // handle capture logic
+    // 处理捕捉逻辑
   };
 
   const handleBrightnessChange = (event) => {
@@ -40,23 +39,46 @@ const Dashboard = () => {
     setToolbarVisible(!toolbarVisible);
   };
 
+  function disableScroll() {
+    document.body.style.overflow = "hidden";
+  }
+
+  function enableScroll() {
+    document.body.style.overflow = "auto";
+  }
+
+  // 在组件挂载时添加事件监听器
+  useEffect(() => {
+    disableScroll();
+
+    // 在组件卸载时删除事件监听器
+    return () => {
+      enableScroll();
+    };
+  }, []);
+
   return (
     <Container fluid className="camera-screen">
-      <Row className="h-100">
-        <Col className="d-flex align-items-center justify-content-center">
-          <CameraView />
-        </Col>
-      </Row>
-
-      <Row className="h-100">
-        <Col className="d-flex align-items-center justify-content-center">
-          <CaptureButton onCapture={handleCapture} />
+      <Row className="top-bar">
+        <Col className="d-flex align-items-center">
           <Button variant="secondary" onClick={handleToggleSidebar}>
             调整参数
           </Button>
           <Button variant="secondary" onClick={handleToggleToolbar}>
             {toolbarVisible ? "隐藏工具栏" : "显示工具栏"}
           </Button>
+        </Col>
+      </Row>
+
+      <Row className="camera-view-row">
+        <Col className="d-flex align-items-center justify-content-center">
+          <CameraView />
+        </Col>
+      </Row>
+
+      <Row className="controls-row">
+        <Col className="d-flex align-items-center justify-content-center">
+          <CaptureButton onCapture={handleCapture} />
         </Col>
       </Row>
 

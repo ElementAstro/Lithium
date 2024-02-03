@@ -1,33 +1,73 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Card } from "react-bootstrap";
 import {
   ThreeDotsVertical,
   ArrowsMove,
   ArrowsAngleContract,
 } from "react-bootstrap-icons";
+import { useSwipeable } from "react-swipeable";
+import { Resizable } from "re-resizable";
+import styled from "styled-components";
+
+const ToggleButton = styled(Button)`
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 999;
+`;
+
+const FloatingWindowContainer = styled(Card)`
+  position: fixed;
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 998;
+`;
+
+const DragIcon = styled(ArrowsMove)`
+  cursor: move;
+  margin-right: 8px;
+`;
+
+const ResizeIcon = styled(ArrowsAngleContract)`
+  cursor: nwse-resize;
+  margin-left: auto;
+`;
+
+const ContentContainer = styled.div`
+  padding: 16px;
+`;
 
 const FloatingWindow = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [size, setSize] = useState({
     width: window.innerWidth / 2,
     height: window.innerHeight / 2,
   });
 
-  const handleToggle = () => {
+  useEffect(() => {
+    const handleResize = () => {
+      setSize({ width: window.innerWidth / 2, height: window.innerHeight / 2 });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const toggleOpen = () => {
     setIsOpen(!isOpen);
   };
 
   const handleMouseDown = (e) => {
     setDragging(true);
-    setOffset({ x: e.clientX - position.x, y: e.clientY - position.y });
   };
 
   const handleMouseMove = (e) => {
     if (dragging) {
-      setPosition({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+      setPosition({ x: e.clientX, y: e.clientY });
     }
   };
 
@@ -35,50 +75,63 @@ const FloatingWindow = ({ children }) => {
     setDragging(false);
   };
 
-  const handleResize = () => {
-    setSize({ width: window.innerWidth / 2, height: window.innerHeight / 2 });
+  const handleResize = (event, direction, ref, delta, position) => {
+    setSize({ width: ref.offsetWidth, height: ref.offsetHeight });
   };
+
+  const handlers = useSwipeable({
+    onSwipedDown: () => {
+      setIsOpen(false);
+    },
+  });
 
   return (
     <>
-      <Button
+      <ToggleButton
         variant="primary"
-        onClick={handleToggle}
+        onClick={toggleOpen}
         className={`toggle-button ${isOpen ? "open" : ""}`}
       >
         <ThreeDotsVertical />
-      </Button>
+      </ToggleButton>
       {isOpen && (
-        <Card
-          className="floating-window"
+        <FloatingWindowContainer
           style={{
             top: position.y,
             left: position.x,
-            width: size.width,
-            height: size.height,
-            cursor: dragging ? "grabbing" : "grab",
           }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
+          {...handlers}
         >
           <Card.Header>
-            <ArrowsMove size={16} className="drag-icon" />
-            <ArrowsAngleContract
-              size={16}
-              className="resize-icon"
-              onClick={handleResize}
-            />
+            <DragIcon size={16} className="drag-icon" />
+            <ResizeIcon size={16} className="resize-icon" />
           </Card.Header>
-          <Card.Body>
-            <div
-              className="content-container"
-              style={{ maxHeight: size.height }}
-            >
-              {children}
-            </div>
-          </Card.Body>
-        </Card>
+          <Resizable
+            size={{ width: size.width, height: size.height }}
+            onResizeStop={handleResize}
+            enable={{
+              top: false,
+              right: true,
+              bottom: true,
+              left: false,
+              topRight: false,
+              bottomRight: true,
+              bottomLeft: false,
+              topLeft: false,
+            }}
+            minHeight={200}
+            minWidth={200}
+            maxHeight={window.innerHeight}
+            maxWidth={window.innerWidth}
+          >
+            <Card.Body>
+              <ContentContainer>{children}</ContentContainer>
+            </Card.Body>
+          </Resizable>
+        </FloatingWindowContainer>
       )}
     </>
   );

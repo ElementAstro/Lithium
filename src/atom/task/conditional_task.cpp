@@ -14,28 +14,40 @@ Description: Conditional Task Definition
 
 #include "conditional_task.hpp"
 
-ConditionalTask::ConditionalTask(const std::function<bool(const json &)> &condition_fn,
-                                 const json &params,
-                                 const std::function<void(const json &)> &task_fn,
-                                 std::function<json(const json &)> &stop_fn)
-    : BasicTask(stop_fn, stop_fn != nullptr), condition_fn_(condition_fn), params_(params), task_fn_(task_fn) {}
+ConditionalTask::ConditionalTask(const std::function<json(const json &)> &func,
+                   const std::function<json(const json &)> &stop_fn, 
+                   const json &params_template, 
+                    const std::function<bool(const json &)> &condition_fn,
+                    bool isForce = false)
+    : SimpleTask(func, stop_fn, params_template), m_conditionFunc(condition_fn), m_isForce(isForce){}
 
 // Executes the task
 const json ConditionalTask::execute()
 {
-    if (condition_fn_(params_))
+    m_isExecuting.store(true);
+    if (!m_paramsTemplate.is_null() && !m_params.is_null())
     {
-        task_fn_(params_);
+        if (!validateJsonValue(m_params, m_paramsTemplate))
+        {
+            return {{"status", "error"}, {"error", "Incorrect value type for element:"}, {"code", 500}};
+        }
     }
-    done_ = true;
-    return {{"status", "done"}};
+    if (!m_conditionFunc(m_params))
+    {
+        return {{"status", "error"}, {"error", "Condition not met"}, {"code", 400}};
+    }
+    if (!m_stopFlag)
+    {
+        m_returns = m_function(m_params);
+    }
+    m_isExecuting.store(false);
+    return m_returns;
 }
 
 // Serializes the task to a JSON object
 const json ConditionalTask::toJson() const
 {
-    auto json = BasicTask::toJson();
+    auto json = SimpleTask::toJson();
     json["type"] = "conditional";
-    json["params"] = params_;
     return json;
 }

@@ -15,7 +15,6 @@ Description: Basic and Simple Task Definition
 #pragma once
 
 #include <string>
-#include <iostream>
 #include <fstream>
 #include <vector>
 #include <memory>
@@ -27,219 +26,213 @@ Description: Basic and Simple Task Definition
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-namespace Atom::Task
+/**
+ * @brief The SimpleTask class represents a task that can be merged with other tasks.
+ *
+ * A SimpleTask object can only be executed after being merged with other tasks. It is used to
+ * group multiple tasks into a single unit of work, which can then be executed as a single task.
+ * A SimpleTask object can have a stop function that is called when the user requests to stop
+ * the task. The stop function should stop the task immediately and return a JSON object with the
+ * current status of the task.
+ */
+class SimpleTask
 {
-    class BasicTask
-    {
-    public:
-        /**
-         * @brief BasicTask类构造函数
-         * @param stop_fn 一个可选的停止函数，默认为nullptr
-         * @param can_stop 指示任务是否可以停止，默认为false
-         */
-        BasicTask(const std::function<json(const json &)> &stop_fn, bool can_stop = false);
+public:
+    /**
+     * @brief Constructs a SimpleTask object with a stop function and a flag indicating whether
+     * the task can be stopped.
+     *
+     * @param func A function that is called when the task is executed.
+     * @param stop_fn A function that is called when the user requests to stop the task.
+     * @param params_template A JSON object that is used to generate the parameters of the task.
+     * @note The stop function should stop the task immediately and return a JSON object with the
+     * current status of the task.
+     */
+    SimpleTask(const std::function<json(const json &)> &func,
+               const std::function<json(const json &)> &stop_fn
+               const json &params_template);
 
-        /**
-         * @brief BasicTask类析构函数
-         */
-        virtual ~BasicTask();
+    /**
+     * @brief Destructs the SimpleTask object.
+     *
+     * If the task has been stopped, the stop function will be called before the object is
+     * destructed.
+     */
+    ~SimpleTask();
 
-        /**
-         * @brief 执行任务的纯虚函数，由子类实现具体逻辑
-         * @return 以json格式返回任务执行结果
-         */
-        virtual const json execute() = 0;
+    /**
+     * @brief Returns a JSON object representing the SimpleTask object.
+     *
+     * The returned JSON object contains the following fields:
+     * - "type": "merged"
+     * - "name": The name of the task.
+     * - "id": The ID of the task.
+     * - "description": The description of the task.
+     * - "can_stop": A flag indicating whether the task can be stopped.
+     */
+    const json toJson() const;
 
-        /**
-         * @brief 将任务序列化为JSON对象
-         * @return 表示任务的JSON对象
-         */
-        virtual const json toJson() const;
+    /**
+     * @brief Returns a JSON object representing the result of the SimpleTask object.
+     *
+     * For a SimpleTask object, the result is always an empty JSON object.
+     */
+    const json getResult() const;
 
-        /**
-         * @brief 获取任务的执行结果
-         * @return 任务的执行结果
-         */
-        virtual const json getResult() const;
+    /**
+     * @brief Returns a JSON object representing the template of the parameters required by the
+     * SimpleTask object.
+     *
+     * A SimpleTask object does not require any parameters, so the returned JSON object is always
+     * an empty JSON object.
+     */
+    const json getParamsTemplate() const;
 
-        /**
-         * @brief 获取任务的参数模板，主要用于校验
-         * @return 任务参数模板
-         */
-        virtual const json getParamsTemplate() const;
+    /**
+     * @brief Sets the parameters of the SimpleTask object.
+     *
+     * A SimpleTask object does not require any parameters, so this function does nothing.
+     *
+     * @param params The parameters to set.
+     */
+    void setParams(const json &params);
 
-        /**
-         * @brief 设置任务参数
-         * @param params 要设置的任务参数
-         */
-        virtual void setParams(const json &params);
+    /**
+     * @brief Returns the ID of the SimpleTask object.
+     *
+     * @return The ID of the SimpleTask object.
+     */
+    int getId() const;
 
-        /**
-         * @brief 获取任务ID
-         * @return 任务ID
-         */
-        int getId() const;
+    /**
+     * @brief Sets the ID of the SimpleTask object.
+     *
+     * @param id The ID to set.
+     */
+    void setId(int id);
 
-        /**
-         * @brief 设置任务ID
-         * @param id 要设置的任务ID
-         */
-        void setId(int id);
+    /**
+     * @brief Returns the name of the SimpleTask object.
+     *
+     * @return The name of the SimpleTask object.
+     */
+    const std::string &getName() const;
 
-        /**
-         * @brief 获取任务名称
-         * @return 任务名称
-         */
-        const std::string &getName() const;
+    /**
+     * @brief Sets the name of the SimpleTask object.
+     *
+     * @param name The name to set.
+     */
+    void setName(const std::string &name);
 
-        /**
-         * @brief 设置任务名称
-         * @param name 要设置的任务名称
-         */
-        void setName(const std::string &name);
+    /**
+     * @brief Returns the description of the SimpleTask object.
+     *
+     * @return The description of the SimpleTask object.
+     */
+    const std::string &getDescription() const;
 
-        /**
-         * @brief 获取任务描述
-         * @return 任务描述
-         */
-        const std::string &getDescription() const;
+    /**
+     * @brief Sets the description of the SimpleTask object.
+     *
+     * @param description The description to set.
+     */
+    void setDescription(const std::string &description);
 
-        /**
-         * @brief 设置任务描述
-         * @param description 要设置的任务描述
-         */
-        void setDescription(const std::string &description);
+    /**
+     * @brief Sets whether the SimpleTask object can be executed.
+     *
+     * @param can_execute Whether the SimpleTask object can be executed.
+     */
+    void setCanExecute(bool can_execute);
 
-        /**
-         * @brief 设置任务是否可以执行
-         * @param can_execute 指示任务是否可以执行
-         */
-        void setCanExecute(bool can_execute);
+    /**
+     * @brief Returns whether the SimpleTask object can be executed.
+     *
+     * @return Whether the SimpleTask object can be executed.
+     */
+    bool isExecutable() const;
 
-        /**
-         * @brief 获取任务是否可以执行
-         * @return true表示任务可以执行，false表示任务不可执行
-         */
-        bool isExecutable() const;
+    /**
+     * @brief Sets the stop function of the SimpleTask object.
+     *
+     * The stop function is called when the user requests to stop the task. It should stop the
+     * task immediately and return a JSON object with the current status of the task.
+     *
+     * @param stop_fn The stop function to set.
+     */
+    void setStopFunction(const std::function<json(const json &)> &stop_fn);
 
-        /**
-         * @brief 设置停止函数
-         * @param stop_fn 停止函数
-         */
-        void setStopFunction(const std::function<json(const json &)> &stop_fn);
+    /**
+     * @brief Returns whether the stop flag of the SimpleTask object is set.
+     *
+     * @return Whether the stop flag of the SimpleTask object is set.
+     */
+    bool getStopFlag() const;
 
-        /**
-         * @brief 获取停止标志
-         * @return true表示任务已停止，false表示任务未停止
-         */
-        bool getStopFlag() const;
+    /**
+     * @brief Sets the stop flag of the SimpleTask object.
+     *
+     * The stop flag is set when the user requests to stop the task. It is used to indicate that
+     * the task should be stopped as soon as possible.
+     *
+     * @param flag The value to set the stop flag to.
+     */
+    void setStopFlag(bool flag);
 
-        /**
-         * @brief 设置停止标志
-         * @param flag 停止标志，true表示任务已停止，false表示任务未停止
-         */
-        void setStopFlag(bool flag);
+    /**
+     * @brief Stops the SimpleTask object.
+     *
+     * If the stop function has been set, it will be called before the task is stopped.
+     */
+    void stop();
 
-        /**
-         * @brief 停止任务的虚函数，由子类实现具体停止逻辑
-         */
-        virtual void stop();
+    /**
+     * @brief Validates whether a JSON value matches a template.
+     *
+     * This function is used to validate the parameters passed to the SimpleTask object. It
+     * compares a JSON value with a template and returns true if they match, false otherwise.
+     *
+     * @param data The JSON value to validate.
+     * @param templateValue The template to compare the JSON value with.
+     * @return Whether the JSON value matches the template.
+     */
+    bool validateJsonValue(const json &data, const json &templateValue);
 
-        /**
-         * @brief 验证json值与模板值是否匹配
-         * @param data 要验证的JSON值
-         * @param templateValue 模板值
-         * @return true表示匹配，false表示不匹配
-         */
-        bool validateJsonValue(const json &data, const json &templateValue);
+    /**
+     * @brief Validates whether a JSON string matches a template.
+     *
+     * This function is used to validate the parameters passed to the SimpleTask object. It
+     * compares a JSON string with a template and returns true if they match, false otherwise.
+     *
+     * @param jsonString The JSON string to validate.
+     * @param templateString The template to compare the JSON string with.
+     * @return Whether the JSON string matches the template.
+     */
+    bool validateJsonString(const std::string &jsonString, const std::string &templateString);
 
-        /**
-         * @brief 验证json字符串与模板字符串是否匹配
-         * @param jsonString 要验证的json字符串
-         * @param templateString 模板字符串
-         * @return true表示匹配，false表示不匹配
-         */
-        bool validateJsonString(const std::string &jsonString, const std::string &templateString);
+    /**
+     * @brief Executes the SimpleTask object.
+     *
+     * This function executes the SimpleTask object and returns a JSON object with the current
+     * status of the task. For a SimpleTask object, the returned JSON object is always the JSON
+     * object returned by the toJson() function.
+     *
+     * @return A JSON object with the current status of the task.
+     */
+    const json execute();
 
-    protected:
-        // True if the task is completed
-        std::atomic<bool> done_ = false;
+    std::function<json(const json &)> m_stopFn;
+    bool m_canStop;
+    std::atomic_bool m_stopFlag;
+    std::atomic_bool m_isExecuting;
+    int m_id;
+    std::string m_name;
+    std::string m_description;
+    bool m_canExecute;
 
-        // Task ID
-        int id_;
-
-        // Task name
-        std::string name_;
-
-        // Task description
-        std::string description_;
-
-        // True if the task can be stopped
-        bool can_stop_;
-
-        // Stop function
-        std::function<json(const json &)> stop_fn_;
-
-        // Stop flag
-        bool stop_flag_ = false;
-
-        // True if the task can be executed
-        bool can_execute_ = true;
-    };
-
-    class SimpleTask : public BasicTask
-    {
-    public:
-        /**
-         * @brief SimpleTask类构造函数
-         * @param func 要执行的函数
-         * @param params_template 参数模板，用于参数验证
-         * @param stop_fn 一个可选的停止函数，默认为nullptr
-         * @param can_stop 指示任务是否可以停止，默认为false
-         */
-        SimpleTask(const std::function<json(const json &)> &func,
-                   const json &params_template,
-                   const std::function<json(const json &)> &stop_fn,
-                   bool can_stop = false);
-
-        /**
-         * @brief 执行任务的虚函数，由子类实现具体逻辑
-         * @return 以json格式返回任务执行结果
-         */
-        virtual const json execute() override;
-
-        /**
-         * @brief 设置任务参数
-         * @param params 要设置的任务参数
-         */
-        virtual void setParams(const json &params) override;
-
-        /**
-         * @brief 将任务序列化为JSON对象
-         * @return 表示任务的JSON对象
-         */
-        virtual const json toJson() const override;
-
-        /**
-         * @brief 获取任务的执行结果
-         * @return 任务的执行结果
-         */
-        virtual const json getResult() const override;
-
-        virtual const json getParamsTemplate() const override;
-
-    private:
-        // 要执行的函数
-        std::function<json(const json &)> function_;
-
-        // 参数传递给函数
-        json params_;
-
-        // 用于检查的参数模板
-        json params_template_;
-
-        // 函数的执行结果
-        json returns_;
-    };
-
-}
+    std::function<json(const json &)> m_function;
+    json m_paramsTemplate;
+    json m_params;
+    json m_returns;
+};

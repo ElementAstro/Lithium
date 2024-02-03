@@ -19,6 +19,14 @@ const FloatingUIContainer = styled.div`
 
 const FloatingButton = styled(Button)`
   margin-top: 10px;
+  background-color: #1e90ff;
+  color: #fff;
+  border: none;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+
+  &:hover {
+    background-color: #187bcd;
+  }
 `;
 
 const FloatingUI = () => {
@@ -41,16 +49,20 @@ const FloatingUI = () => {
       {isOpen && (
         <ButtonGroup vertical>
           <FloatingButton onClick={() => handleActionClick("main")}>
-            <PlusSquareFill />
+            <PlusSquareFill size={20} />
+            <span style={{ marginLeft: "10px" }}>Add</span>
           </FloatingButton>
           <FloatingButton onClick={() => handleActionClick("settings")}>
-            <GearFill />
+            <GearFill size={20} />
+            <span style={{ marginLeft: "10px" }}>Settings</span>
           </FloatingButton>
           <FloatingButton onClick={() => handleActionClick("edit")}>
-            <PencilSquare />
+            <PencilSquare size={20} />
+            <span style={{ marginLeft: "10px" }}>Edit</span>
           </FloatingButton>
           <FloatingButton onClick={() => handleActionClick("delete")}>
-            <TrashFill />
+            <TrashFill size={20} />
+            <span style={{ marginLeft: "10px" }}>Delete</span>
           </FloatingButton>
         </ButtonGroup>
       )}

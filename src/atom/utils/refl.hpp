@@ -1,10 +1,34 @@
 #pragma once           // Ubpa Static Reflection -- 99 lines
 #include <string_view> // Repository: https://github.com/Ubpa/USRefl
 #include <tuple>       // License: https://github.com/Ubpa/USRefl/blob/master/LICENSE
+#ifdef __clang__
+#define TSTR(s) ([] { struct tmp { static constexpr auto get() { return std::basic_string_view{s}; } }; \
+  return detail::TSTRH(tmp{}); }())
+#else
 #define TSTR(s) ([] { constexpr std::basic_string_view str{s}; \
   return detail::TStr<detail::fcstr<typename decltype(str)::value_type, str.size()>{str}>{}; }())
+#endif
 namespace detail
 {
+#ifdef __clang__
+template <typename C, C... chars>
+    struct TStr
+    {
+        using Char = C;
+        template <typename T>
+        static constexpr bool Is(T = {}) { return std::is_same_v<T, TStr>; }
+        static constexpr const Char *Data() { return data; }
+        static constexpr std::size_t Size() { return sizeof...(chars); }
+        static constexpr std::basic_string_view<Char> View() { return data; }
+
+    private:
+        static constexpr Char data[]{chars..., Char(0)};
+    };
+    template <typename Char, typename T, std::size_t... Ns>
+    constexpr auto TSTRHI(std::index_sequence<Ns...>) { return TStr<Char, T::get()[Ns]...>{}; }
+    template <typename T>
+    constexpr auto TSTRH(T) { return TSTRHI<typename decltype(T::get())::value_type, T>(std::make_index_sequence<T::get().size()>{}); }
+#else
     template <typename C, std::size_t N>
     struct fcstr
     {
@@ -17,6 +41,7 @@ namespace detail
                 data[i] = str[i];
         }
     };
+
     template <fcstr str>
     struct TStr
     {
@@ -27,6 +52,7 @@ namespace detail
         static constexpr auto Size() { return str.size; }
         static constexpr std::basic_string_view<Char> View() { return str.data; }
     };
+#endif
     template <class L, class F>
     constexpr std::size_t FindIf(const L &, F &&, std::index_sequence<>) { return -1; }
     template <class L, class F, std::size_t N0, std::size_t... Ns>

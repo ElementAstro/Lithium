@@ -18,6 +18,7 @@ Description: IO
 #include <vector>
 #include <cstdint>
 #include <filesystem>
+using fs = std::filesystem;
 
 namespace Atom::IO
 {
@@ -258,6 +259,19 @@ namespace Atom::IO
      * @return 如果文件存在，则返回true，否则返回false。
      */
     [[nodiscard]] bool isFileExists(const std::string &filePath);
+
+    /**
+     * @brief Check if the folder is empty.
+     *
+     * @param folderPath The folder path to check.
+     * @return True if the folder is empty, false otherwise.
+     *
+     * 检查文件夹是否为空。
+     *
+     * @param folderPath 要检查的文件夹路径。
+     * @return 如果文件夹为空，则返回true，否则返回false。
+     */
+    [[nodiscard]] bool isFolderEmpty(const std::string &folderPath);
 
     /**
      * @brief Check if the path is an absolute path.

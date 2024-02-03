@@ -16,40 +16,43 @@ Description: Conditional Task Definition
 
 #include "task.hpp"
 
-class ConditionalTask : public Atom::Task::BasicTask
+class ConditionalTask : public SimpleTask
 {
 public:
     /**
-     * @brief ConditionalTask类构造函数
-     * @param condition_fn 条件函数，用于判断是否执行任务
-     * @param params 任务参数
-     * @param task_fn 任务函数，用于执行任务逻辑
-     * @param stop_fn 一个可选的停止函数，默认为nullptr
+     * @brief Constructor for the ConditionalTask class.
+     *
+     * @param condition_fn The condition function used to determine whether to execute the task.
+     * @param stop_fn An optional stop function. Default is nullptr.
+     * @param params_template The template for the task parameters.
+     * @param task_fn The task function used to execute the task logic.
+     * @param isForce A flag indicating whether to force execution of the task even if the condition is not met. Default is false.
      */
-    ConditionalTask(const std::function<bool(const json &)> &condition_fn,
-                    const json &params,
-                    const std::function<void(const json &)> &task_fn,
-                    std::function<json(const json &)> &stop_fn);
+    ConditionalTask(const std::function<json(const json &)> &task_fn,
+                   const std::function<json(const json &)> &stop_fn = nullptr,
+                   const json &params_template = json(),
+                   const std::function<bool(const json &)> &condition_fn,
+                   bool isForce = false);
 
     /**
-     * @brief 执行任务的虚函数，由子类实现具体逻辑
-     * @return 以json格式返回任务执行结果
+     * @brief Executes the task.
+     *
+     * This function is implemented by the subclass to define the specific logic of the task.
+     *
+     * @return The result of the task execution in JSON format.
      */
     virtual const json execute() override;
 
     /**
-     * @brief 将任务序列化为JSON对象
-     * @return 表示任务的JSON对象
+     * @brief Serializes the task to a JSON object.
+     *
+     * @return A JSON object representing the task.
      */
     virtual const json toJson() const override;
 
 private:
-    // 条件函数，用于判断是否执行任务
-    std::function<bool(const json &)> condition_fn_;
+    // The condition function used to determine whether to execute the task.
+    std::function<bool(const json &)> m_conditionFunc;
 
-    // 任务参数
-    json params_;
-
-    // 任务函数，用于执行任务逻辑
-    std::function<void(const json &)> task_fn_;
+    bool m_isForce;
 };

@@ -99,7 +99,6 @@ namespace Atom::Utils
             DLOG_F(INFO, "Env::add: Add key: {} with value: {}", key, val);
             m_args[key] = val;
         }
-        
     }
 
     bool Env::has(const std::string &key)
@@ -215,22 +214,21 @@ namespace Atom::Utils
 
     std::string Env::getAbsoluteWorkPath(const std::string &path) const
     {
-        if (path.empty())
+        if (!path.empty())
         {
-            return "/";
-        }
 #ifdef _WIN32
-        if (path[1] == ':')
-        {
-            return path;
-        }
+            if (path[1] == ':')
+            {
+                return path;
+            }
 #else
-        if (path[0] == '/')
-        {
-            return path;
-        }
+            if (path[0] == '/')
+            {
+                return path;
+            }
 #endif
-        return path;
+        }
+        return "/";
     }
 
     std::string Env::getConfigPath()

@@ -45,7 +45,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
     type/args.cpp
     type/ini.cpp
-    type/iparams.cpp
     type/message.cpp
     server/variables.cpp
 )
@@ -84,9 +83,9 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     system/dirw.hpp
 
     type/args.hpp
+    type/expected.hpp
     type/json.hpp
     type/ini.hpp
-    type/iparams.hpp
     type/small_vector.hpp
     type/message.hpp
 )

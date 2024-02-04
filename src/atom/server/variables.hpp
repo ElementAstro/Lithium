@@ -23,7 +23,7 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 #include <shared_mutex>
 #include <optional>
 
-#ifdef ENALE_FASTHASH
+#if ENALE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
@@ -35,6 +35,11 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 class VariableRegistry
 {
 public:
+    template <typename T>
+    using Getter = std::function<T()>;
+    template <typename T>
+    using Setter = std::function<bool(const T &)>;
+
     /**
      * @brief 观察者 struct，包含观察者名称和回调函数。
      */
@@ -48,11 +53,12 @@ public:
      * @brief 注册变量，如果变量已经存在，则返回 false。
      * @tparam T 变量类型，任何可转换为 std::any 类型的类型均可。
      * @param name 变量名称。
+     * @param initialValue 变量初始值。
      * @param descirption 变量描述。
      * @return 是否注册成功，如果变量名已经存在，则返回 false。
      */
     template <typename T>
-    bool RegisterVariable(const std::string &name, const std::string descirption = "");
+    bool RegisterVariable(const std::string &name, T &&initialValue, const std::string descirption = "");
 
     /**
      * @brief 设置指定名称的变量值。
@@ -145,7 +151,7 @@ public:
     void AddSetter(const std::string &name, const std::function<void(const std::any &)> &setter);
 
 private:
-#ifdef ENALE_FASTHASH
+#if ENALE_FASTHASH
     emhash8::HashMap<std::string, std::any> m_variables;
     emhash8::HashMap<std::string, std::string> m_descriptions;
     emhash8::HashMap<std::string, std::vector<Observer>> m_observers;
@@ -185,7 +191,7 @@ private:
 };
 
 template <typename T>
-bool VariableRegistry::RegisterVariable(const std::string &name, const std::string descirption)
+bool VariableRegistry::RegisterVariable(const std::string &name, T &&initialValue, const std::string descirption)
 {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
 
@@ -194,7 +200,7 @@ bool VariableRegistry::RegisterVariable(const std::string &name, const std::stri
         return false;
     }
 
-    m_variables[name] = T();
+    m_variables[name] = initialValue;
     m_descriptions[name] = descirption;
     return true;
 }

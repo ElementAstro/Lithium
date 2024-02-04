@@ -1,3 +1,17 @@
+/*
+ * tcp_proxy.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-6-1
+
+Description: Tcp proxy server
+
+*************************************************/
+
 #include <string>
 #include <cstring>
 #include <cstdlib>
@@ -18,52 +32,50 @@
 
 #include "atom/log/loguru.hpp"
 
-#include "config.h"
-
 const int BUFFER_SIZE = 4096;
 
 std::mutex mutex;
 
 // 处理数据传输
-void forward_data(int src_sockfd, int dst_sockfd)
+void forwardData(int srcSockfd, int dstSockfd)
 {
     char buffer[BUFFER_SIZE];
-    int num_bytes;
+    int numBytes;
 
     try
     {
-        while ((num_bytes = recv(src_sockfd, buffer, BUFFER_SIZE, 0)) > 0)
+        while ((numBytes = recv(srcSockfd, buffer, BUFFER_SIZE, 0)) > 0)
         {
-            send(dst_sockfd, buffer, num_bytes, 0);
+            send(dstSockfd, buffer, numBytes, 0);
         }
     }
     catch (const std::exception &e)
     {
-        LOG_F(ERROR, _("Failed to forward data: {}"), e.what());
+        LOG_F(ERROR, "Failed to forward data: {}", e.what());
     }
 }
 
 // 启动代理服务器
-void start_proxy_server(const std::string &src_ip, int src_port, const std::string &dst_ip, int dst_port)
+void startProxyServer(const std::string &srcIp, int srcPort, const std::string &dstIp, int dstPort)
 {
 #ifdef _WIN32
     WSADATA wsData;
     if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0)
     {
-        LOG_F(ERROR, _("Failed to initialize Winsock."));
+        LOG_F(ERROR, "Failed to initialize Winsock.");
         return;
     }
 
-    SOCKET src_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    SOCKET dst_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET srcSockfd = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET dstSockfd = socket(AF_INET, SOCK_STREAM, 0);
 #else
-    int src_sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    int dst_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int srcSockfd = socket(AF_INET, SOCK_STREAM, 0);
+    int dstSockfd = socket(AF_INET, SOCK_STREAM, 0);
 #endif
 
-    if (src_sockfd == -1 || dst_sockfd == -1)
+    if (srcSockfd == -1 || dstSockfd == -1)
     {
-        LOG_F(ERROR, _("Failed to create socket."));
+        LOG_F(ERROR, "Failed to create socket.");
 #ifdef _WIN32
         WSACleanup();
 #endif
@@ -71,72 +83,72 @@ void start_proxy_server(const std::string &src_ip, int src_port, const std::stri
     }
 
     // 绑定源地址和端口
-    sockaddr_in src_addr{};
-    src_addr.sin_family = AF_INET;
-    src_addr.sin_addr.s_addr = inet_addr(src_ip.c_str());
-    src_addr.sin_port = htons(src_port);
+    sockaddr_in srcAddr{};
+    srcAddr.sin_family = AF_INET;
+    srcAddr.sin_addr.s_addr = inet_addr(srcIp.c_str());
+    srcAddr.sin_port = htons(srcPort);
 
-    if (bind(src_sockfd, reinterpret_cast<sockaddr *>(&src_addr), sizeof(src_addr)) == -1)
+    if (bind(srcSockfd, reinterpret_cast<sockaddr *>(&srcAddr), sizeof(srcAddr)) == -1)
     {
-        LOG_F(ERROR, _("Failed to bind source address."));
+        LOG_F(ERROR, "Failed to bind source address.");
 #ifdef _WIN32
-        closesocket(src_sockfd);
+        closesocket(srcSockfd);
         WSACleanup();
 #else
-        close(src_sockfd);
+        close(srcSockfd);
 #endif
         return;
     }
 
     // 连接目标地址和端口
-    sockaddr_in dst_addr{};
-    dst_addr.sin_family = AF_INET;
-    dst_addr.sin_addr.s_addr = inet_addr(dst_ip.c_str());
-    dst_addr.sin_port = htons(dst_port);
+    sockaddr_in dstAddr{};
+    dstAddr.sin_family = AF_INET;
+    dstAddr.sin_addr.s_addr = inet_addr(dstIp.c_str());
+    dstAddr.sin_port = htons(dstPort);
 
-    if (connect(dst_sockfd, reinterpret_cast<sockaddr *>(&dst_addr), sizeof(dst_addr)) == -1)
+    if (connect(dstSockfd, reinterpret_cast<sockaddr *>(&dstAddr), sizeof(dstAddr)) == -1)
     {
-        LOG_F(ERROR, _("Failed to connect to destination address."));
+        LOG_F(ERROR, "Failed to connect to destination address.");
 #ifdef _WIN32
-        closesocket(src_sockfd);
-        closesocket(dst_sockfd);
+        closesocket(srcSockfd);
+        closesocket(dstSockfd);
         WSACleanup();
 #else
-        close(src_sockfd);
-        close(dst_sockfd);
+        close(srcSockfd);
+        close(dstSockfd);
 #endif
         return;
     }
 
     // 开始转发数据
-    forward_data(src_sockfd, dst_sockfd);
+    forwardData(srcSockfd, dstSockfd);
 
 #ifdef _WIN32
-    closesocket(src_sockfd);
-    closesocket(dst_sockfd);
+    closesocket(srcSockfd);
+    closesocket(dstSockfd);
     WSACleanup();
 #else
-    close(src_sockfd);
-    close(dst_sockfd);
+    close(srcSockfd);
+    close(dstSockfd);
 #endif
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 #ifdef _WIN32
     WSADATA wsData;
     if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0)
     {
-        LOG_F(ERROR, _("Failed to initialize Winsock."));
+        LOG_F(ERROR, "Failed to initialize Winsock.");
         return -1;
     }
 #endif
 
-    std::string src_ip = "127.0.0.1"; // 源IP地址
-    int src_port = 12345;             // 源端口
+    std::string srcIp = "127.0.0.1"; // 源IP地址
+    int srcPort = 12345;             // 源端口
 
-    std::string dst_ip = "127.0.0.1"; // 目标IP地址
-    int dst_port = 54321;             // 目标端口
+    std::string dstIp = "127.0.0.1"; // 目标IP地址
+    int dstPort = 54321;             // 目标端口
 
     int option;
     while ((option = getopt(argc, argv, "s:p:d:o:")) != -1)
@@ -144,29 +156,32 @@ int main()
         switch (option)
         {
         case 's':
-            src_ip = optarg;
+            srcIp = optarg;
             break;
         case 'p':
-            src_port = std::stoi(optarg);
+            srcPort = std::stoi(optarg);
             break;
         case 'd':
-            dst_ip = optarg;
+            dstIp = optarg;
             break;
         case 'o':
-            dst_port = std::stoi(optarg);
+            dstPort = std::stoi(optarg);
             break;
         default:
-            std::cerr << "Usage: " << argv[0] << " -s <src_ip> -p <src_port> -d <dst_ip> -o <dst_port>" << std::endl;
+            LOG_F(ERROR, "Usage: {} -s <src_ip> -p <src_port> -d <dst_ip> -o <dst_port>", argv[0]);
             return 1;
         }
     }
-
+#if __cplusplus >= 202002L
+    std::vector<std::jthread> threads;
+#else
     std::vector<std::thread> threads;
+#endif
 
     // 启动多个线程处理并发连接
     for (int i = 0; i < 5; ++i)
     {
-        threads.emplace_back(start_proxy_server, src_ip, src_port, dst_ip, dst_port);
+        threads.emplace_back(startProxyServer, srcIp, srcPort, dstIp, dstPort);
     }
 
     // 等待所有线程结束

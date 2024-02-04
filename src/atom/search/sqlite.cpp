@@ -144,26 +144,20 @@ const unsigned char *SqliteDB::getTextValue(const char *query)
 bool SqliteDB::searchData(const char *query, const char *searchTerm)
 {
     sqlite3_stmt *stmt;
-    int rc = sqlite3_prepare_v2(db, query, -1, &stmt, 0);
-    bool result = false;
-
-    if (rc == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) == SQLITE_OK)
     {
         sqlite3_bind_text(stmt, 1, searchTerm, -1, SQLITE_TRANSIENT);
-
         if (sqlite3_step(stmt) == SQLITE_ROW)
         {
-            result = true;
+            return true;
         }
     }
     else
     {
         errorCallback(sqlite3_errmsg(db));
     }
-
     sqlite3_finalize(stmt);
-
-    return result;
+    return false;
 }
 
 bool SqliteDB::updateData(const char *query)

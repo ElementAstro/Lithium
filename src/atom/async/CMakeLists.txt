@@ -3,7 +3,6 @@ project(atom-async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    ioloop.cpp
     thread.cpp
     timer.cpp
 )
@@ -11,7 +10,6 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
-    ioloop.hpp
     thread_pool.hpp
     thread.hpp
     timer.hpp

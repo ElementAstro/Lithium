@@ -22,6 +22,7 @@ Description: A simple but useful async worker manager
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <type_traits>
 
 #include "atom/utils/exception.hpp"
 
@@ -184,6 +185,7 @@ namespace Atom::Async
     template <typename Func, typename... Args>
     void AsyncWorker<ResultType>::StartAsync(Func &&func, Args &&...args)
     {
+        static_assert(std::is_invocable_r_v<ResultType, Func, Args...>, "Function must return a result");
         task_ = std::async(std::launch::async, std::forward<Func>(func), std::forward<Args>(args)...);
     }
 

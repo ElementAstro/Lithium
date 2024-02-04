@@ -13,14 +13,22 @@ Description: Task Manager
 **************************************************/
 
 #include "task_manager.hpp"
+
 #include "atom/log/loguru.hpp"
 
-using json = nlohmann::json;
-
-namespace Lithium::Task
+namespace Lithium
 {
-    TaskManager::TaskManager(const std::string &fileName)
-        : m_FileName(fileName), m_StopFlag(false) {}
+    TaskManager::TaskManager()
+        : m_StopFlag(false) {}
+
+    TaskManager::~TaskManager()
+    {
+    }
+
+    std::shared_ptr<TaskManager> TaskManager::createShared()
+    {
+        return std::make_shared<TaskManager>();
+    }
 
     bool TaskManager::addTask(const std::shared_ptr<Atom::Task::SimpleTask> &task)
     {

@@ -38,12 +38,6 @@ public:
     std::optional<std::any> deserialize(const std::string &data) const override;
 };
 
-class JsonParamsDeserializer : public DeserializeEngine
-{
-public:
-    std::optional<std::any> deserialize(const std::string &data) const override;
-};
-
 namespace Atom::Server
 {
     /**

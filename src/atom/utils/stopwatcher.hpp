@@ -14,98 +14,43 @@ Description: Simple implementation of a stopwatch
 
 #pragma once
 
+#include <string>
 #include <chrono>
-#include <array>
-#include <utility>
-#include <cstddef>
+#include <vector>
+#include <functional>
 
 namespace Atom::Utils
 {
-    template <size_t CountN = 1, class ClockT = std::chrono::steady_clock>
-    class stopwatch : public ClockT
+    class StopWatcher
     {
-        using base_t = ClockT;
-
-        static_assert(CountN > 0, "The count must be greater than 0");
-
     public:
-        using rep = typename ClockT::rep;
-        using period = typename ClockT::period;
-        using duration = typename ClockT::duration;
-        using time_point = typename ClockT::time_point;
+
+        StopWatcher();
+
+        void start();
+
+        void stop();
+
+        void pause();
+
+        void resume();
+
+        void reset();
+
+        double elapsedMilliseconds() const;
+
+        double elapsedSeconds() const;
+
+        std::string elapsedFormatted() const;
+
+        void registerCallback(std::function<void()> callback, int milliseconds);
 
     private:
-        using pair_t = std::pair<time_point, time_point>;
+        std::chrono::time_point<std::chrono::high_resolution_clock> m_start, m_end, m_pauseTime;
+        std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> m_intervals;
+        bool m_running, m_paused;
+        std::vector<std::pair<std::function<void()>, int>> m_callbacks;
 
-        std::array<pair_t, CountN> points_;
-        bool is_stopped_ = true;
-
-    public:
-        stopwatch(bool start_watch = false)
-        {
-            if (start_watch)
-                start();
-        }
-
-    public:
-        bool is_stopped() const noexcept
-        {
-            return is_stopped_;
-        }
-
-        template <size_t N = 0>
-        bool is_paused() const noexcept
-        {
-            return (points_[N].second != points_[N].first);
-        }
-
-        template <size_t N = 0>
-        duration elapsed()
-        {
-            if (is_stopped())
-                return duration::zero();
-            else if (is_paused<N>())
-                return (points_[N].second - points_[N].first);
-            else
-                return ClockT::now() - points_[N].first;
-        }
-
-        template <typename ToDur, size_t N = 0>
-        auto elapsed() -> decltype(std::declval<ToDur>().count())
-        {
-            return std::chrono::duration_cast<ToDur>(elapsed<N>()).count();
-        }
-
-        template <size_t N = 0>
-        void pause() noexcept
-        {
-            points_[N].second = ClockT::now();
-        }
-
-        template <size_t N = 0>
-        void restart() noexcept
-        {
-            points_[N].second = points_[N].first =
-                ClockT::now() - (points_[N].second - points_[N].first);
-        }
-
-        void start() noexcept
-        {
-            time_point now = ClockT::now();
-            for (auto &pt : points_)
-            {
-                pt.second = pt.first = now - (pt.second - pt.first);
-            }
-            is_stopped_ = false;
-        }
-
-        void stop() noexcept
-        {
-            for (auto &pt : points_)
-            {
-                pt.second = pt.first;
-            }
-            is_stopped_ = true;
-        }
+        void checkCallbacks(const std::chrono::time_point<std::chrono::high_resolution_clock> &currentTime);
     };
 }

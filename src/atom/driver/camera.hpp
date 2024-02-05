@@ -45,7 +45,7 @@ public:
     std::atomic_bool is_fastread;
 };
 
-class Camera : public Device
+class Camera : public AtomDriver
 {
 public:
     /**

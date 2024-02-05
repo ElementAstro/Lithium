@@ -502,7 +502,7 @@ namespace Atom::System
                         storage_device_models.push_back(std::make_pair(drivePath, model));
                     }
                 }
-                drive += strlen_s(drive) + 1;
+                drive += strlen(drive) + 1;
             }
         }
 #else

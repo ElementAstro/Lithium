@@ -16,7 +16,7 @@ Description: Basic Solver Defination
 
 #include "device.hpp"
 
-class Solver : public Device
+class Solver : public AtomDriver
 {
 public:
     Solver(const std::string &name);

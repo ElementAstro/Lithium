@@ -148,7 +148,7 @@ namespace Atom::Connection
 
             clients.push_back(clientSocket);
 
-#ifdef __cplusplus >= 202002L
+#if __cplusplus >= 202002L
             clientThreads.push_back(std::make_unique<std::jthread>([this, clientSocket]()
                                                                    { handleClientMessages(clientSocket); }));
 #else

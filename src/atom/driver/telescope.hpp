@@ -16,7 +16,7 @@ Description: Basic Telescope Defination
 
 #include "device.hpp"
 
-class Telescope : public Device
+class Telescope : public AtomDriver
 {
 public:
     /**

@@ -18,7 +18,7 @@ Description: IO
 #include <vector>
 #include <cstdint>
 #include <filesystem>
-using fs = std::filesystem;
+namespace fs = std::filesystem;
 
 namespace Atom::IO
 {

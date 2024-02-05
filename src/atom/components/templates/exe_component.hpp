@@ -23,13 +23,13 @@ class ExecutableComponent : public Component
 public:
     ExecutableComponent();
 
-    void RunSystemCommand(const Args &m_parmas);
+    json RunSystemCommand(const json &m_parmas);
 
-    void RunSystemCommandOutput(const Args &m_parmas);
+    json RunSystemCommandOutput(const json &m_parmas);
 
-    void RunScript(const Args &m_parmas);
+    json RunScript(const json &m_parmas);
 
-    void RunScriptOutput(const Args &m_parmas);
+    json RunScriptOutput(const json &m_parmas);
 private:
     std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
 };

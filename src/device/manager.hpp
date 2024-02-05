@@ -24,11 +24,10 @@ Description: Device Manager
 #include "atom/driver/device_type.hpp"
 #include "atom/type/message.hpp"
 #include "atom/server/message_bus.hpp"
-#include "atom/async/thread.hpp"
-#include "atom/driver/iproperty.hpp"
 
 #include "addon/loader.hpp"
 #include "config/configor.hpp"
+#include "task/pool.hpp"
 
 #include "server/hydrogen.hpp"
 
@@ -155,7 +154,7 @@ namespace Lithium
          * @param name 设备名称。
          * @return 返回指向设备对象的共享指针，如果设备不存在则返回空指针。
          */
-        std::shared_ptr<Device> getDevice(DeviceType type, const std::string &name);
+        std::shared_ptr<AtomDriver> getDevice(DeviceType type, const std::string &name);
 
         /**
          * @brief 查找指定设备类型和名称的设备在设备管理器中的索引。
@@ -170,35 +169,7 @@ namespace Lithium
          * @param name 设备名称。
          * @return 返回指向设备对象的共享指针，如果设备不存在则返回空指针。
          */
-        std::shared_ptr<Device> findDeviceByName(const std::string &name) const;
-
-        /**
-         * @brief 获取指定设备类型、设备名称、任务名称和参数的简单任务对象。
-         * @param type 设备类型枚举值。
-         * @param device_name 设备名称。
-         * @param task_name 任务名称。
-         * @param params 任务参数的JSON对象。
-         * @return 返回指向简单任务对象的共享指针。
-         */
-        std::shared_ptr<DeviceTask> getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params);
-
-        /**
-         * @brief 发布字符串类型的消息到消息总线。
-         * @param message 字符串属性的共享指针。
-         */
-        void messageBusPublishString(const std::shared_ptr<IStringProperty> &message);
-
-        /**
-         * @brief 发布数字类型的消息到消息总线。
-         * @param message 数字属性的共享指针。
-         */
-        void messageBusPublishNumber(const std::shared_ptr<INumberProperty> &message);
-
-        /**
-         * @brief 发布布尔类型的消息到消息总线。
-         * @param message 布尔属性的共享指针。
-         */
-        void messageBusPublishBool(const std::shared_ptr<IBoolProperty> &message);
+        std::shared_ptr<AtomDriver> findDeviceByName(const std::string &name) const;
 
         /**
          * @brief 设置设备属性值。
@@ -296,14 +267,14 @@ namespace Lithium
         bool stopASCOMDevice();
 
     private:
-        std::vector<std::shared_ptr<Device>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< 存储设备对象的数组，每个设备类型对应一个向量。
+        std::vector<std::shared_ptr<AtomDriver>> m_devices[static_cast<int>(DeviceType::NumDeviceTypes)]; ///< 存储设备对象的数组，每个设备类型对应一个向量。
 
         std::mutex m_mutex; ///< 互斥锁，用于保护设备管理器的并发访问。
 
         std::shared_ptr<ModuleLoader> m_ModuleLoader;           ///< 模块加载器对象的共享指针。
         std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;               ///< 消息总线对象的共享指针。
         std::shared_ptr<ConfigManager> m_ConfigManager; ///< 配置管理器对象的共享指针。
-        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
+        std::shared_ptr<TaskPool> m_TaskPool;
 
     // Device for quick performance
     private:

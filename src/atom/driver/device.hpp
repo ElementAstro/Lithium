@@ -12,9 +12,8 @@ Description: Basic Device Defination
 
 *************************************************/
 
-#pragma once
-
-#define ATOM_DRIVER_DEFINITION
+#ifndef ATOM_DRIVER_HPP
+#define ATOM_DRIVER_HPP
 
 #include <any>
 #include <functional>
@@ -27,88 +26,37 @@ Description: Basic Device Defination
 #include <unordered_map>
 #endif
 
-#include "atom/task/device_task.hpp"
-
-#include "atom/components/component.hpp"
-#include "atom/type/args.hpp"
+#include "atom/components/templates/shared_component.hpp"
 
 #include "device_exception.hpp"
 
-#include "iproperty.hpp"
-
-
-class Device : public Component
+class AtomDriver : public SharedComponent
 {
 public:
-    explicit Device(const std::string &name);
-    virtual ~Device();
+    // -------------------------------------------------------------------
+    // Common methods
+    // -------------------------------------------------------------------
 
-public:
-    virtual bool connect(const json &params) { return true; };
+    explicit AtomDriver(const std::string &name);
 
-    virtual bool disconnect(const json &params) { return true; };
+    virtual ~AtomDriver();
 
-    virtual bool reconnect(const json &params) { return true; };
+    // -------------------------------------------------------------------
+    // Driver basic methods
+    // -------------------------------------------------------------------
 
-    virtual bool isConnected() { return true; }
+    virtual bool connect(const json &params);
 
-    virtual void init();
+    virtual bool disconnect(const json &params);
 
-    const std::string getDeviceName();
+    virtual bool reconnect(const json &params);
 
-    void insertProperty(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check = false);
-
-    void setProperty(const std::string &name, const std::any &value);
-
-    std::any getProperty(const std::string &name, bool need_refresh = true);
-
-    void removeProperty(const std::string &name);
-
-    std::shared_ptr<INumberProperty> getNumberProperty(const std::string &name);
-
-    std::shared_ptr<IStringProperty> getStringProperty(const std::string &name);
-
-    std::shared_ptr<IBoolProperty> getBoolProperty(const std::string &name);
-
-    void insertTask(const std::string &name, std::any defaultValue, json params_template,
-                    const std::function<json(const json &)> &func,
-                    const std::function<json(const json &)> &stop_func,
-                    bool isBlock = false);
-
-    bool removeTask(const std::string &name);
-
-    std::shared_ptr<DeviceTask> getTask(const std::string &name, const json &params);
+    virtual bool isConnected();
 
 private:
-    // Why we use emhash8 : because it is so fast!
-    // Map of the properties
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> m_properties;
-    emhash8::HashMap<std::string, std::shared_ptr<DeviceTask>> m_task_map;
-#else
-    std::unordered_map<std::string, std::any> m_properties;
-    std::unordered_map<std::string, std::shared_ptr<DeviceTask>> m_task_map;
-#endif
 
-    std::unique_ptr<CommandDispatcher<json,json>> m_commander;
-
-    // Basic Device name and UUID
-    std::string _name;
-    std::string _uuid;
-
-public:
-    typedef bool (*ConnectFunc)(const json &params);
-    typedef bool (*DisconnectFunc)(const json &params);
-    typedef bool (*ReconnectFunc)(const json &params);
-    typedef void (*InitFunc)();
-    typedef void (*InsertPropertyFunc)(const std::string &name, const std::any &value, const std::string &bind_get_func, const std::string &bind_set_func, const std::any &possible_values, PossibleValueType possible_type, bool need_check);
-    typedef void (*SetPropertyFunc)(const std::string &name, const std::any &value);
-    typedef std::any (*GetPropertyFunc)(const std::string &name);
-    typedef void (*RemovePropertyFunc)(const std::string &name);
-    typedef void (*InsertTaskFunc)(const std::string &name, std::any defaultValue, json params_template, const std::function<json(const json &)> &func, const std::function<json(const json &)> &stop_func, bool isBlock);
-    typedef bool (*RemoveTaskFunc)(const std::string &name);
-    typedef std::shared_ptr<DeviceTask> (*GetTaskFunc)(const std::string &name, const json &params);
-    typedef void (*AddObserverFunc)(const std::function<void(const std::any &message)> &observer);
-    typedef void (*RemoveObserverFunc)(const std::function<void(const std::any &message)> &observer);
-    typedef const json (*ExportDeviceInfoTojsonFunc)();
+    std::string m_name;
+    std::string m_uuid;
 };
+
+#endif

@@ -14,9 +14,8 @@ Description: Camera Simulator and Basic Definition
 
 #include "camera.hpp"
 
-Camera::Camera(const std::string &name) : Device(name)
+Camera::Camera(const std::string &name) : AtomDriver(name)
 {
-    init();
 }
 
 Camera::~Camera()

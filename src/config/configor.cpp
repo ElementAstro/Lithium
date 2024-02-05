@@ -184,6 +184,7 @@ namespace Lithium
             p = &(*p)[key];
         }
         p->clear();
+        return true;
     }
 
     bool ConfigManager::hasValue(const std::string &key_path) const

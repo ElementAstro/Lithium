@@ -29,10 +29,10 @@ public:
      * @param isForce A flag indicating whether to force execution of the task even if the condition is not met. Default is false.
      */
     ConditionalTask(const std::function<json(const json &)> &task_fn,
-                   const std::function<json(const json &)> &stop_fn = nullptr,
-                   const json &params_template = json(),
-                   const std::function<bool(const json &)> &condition_fn,
-                   bool isForce = false);
+                    const std::function<bool(const json &)> &condition_fn,
+                    const std::function<json(const json &)> &stop_fn = nullptr,
+                    const json &params_template = json(),
+                    bool isForce = false);
 
     /**
      * @brief Executes the task.
@@ -41,14 +41,14 @@ public:
      *
      * @return The result of the task execution in JSON format.
      */
-    virtual const json execute() override;
+    virtual json execute() override;
 
     /**
      * @brief Serializes the task to a JSON object.
      *
      * @return A JSON object representing the task.
      */
-    virtual const json toJson() const override;
+    virtual json toJson() override;
 
 private:
     // The condition function used to determine whether to execute the task.

@@ -16,7 +16,7 @@ Description: Basic Focuser Defination
 
 #include "device.hpp"
 
-class Focuser : public Device
+class Focuser : public AtomDriver
 {
 public:
     /**

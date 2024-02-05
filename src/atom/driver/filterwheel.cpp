@@ -14,11 +14,8 @@ Description: Filterwheel Simulator and Basic Definition
 
 #include "filterwheel.hpp"
 
-#include "atom/log/loguru.hpp"
-
-Filterwheel::Filterwheel(const std::string &name) : Device(name)
+Filterwheel::Filterwheel(const std::string &name) : AtomDriver(name)
 {
-    init();
 }
 
 Filterwheel::~Filterwheel()

@@ -17,7 +17,6 @@ Description: Lithium App Enter
 #include "config.h"
 
 #include "atom/server/global_ptr.hpp"
-#include "atom/driver/iproperty.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
@@ -82,15 +81,8 @@ namespace Lithium
             // Specialized Managers and Threads
             m_ConfigManager = GetPtr<ConfigManager>("lithium.config");
             m_DeviceManager = GetPtr<DeviceManager>("lithium.device");
-            m_ThreadManager = GetPtr<Atom::Async::ThreadManager>("lithium.async.thread");
             m_ProcessManager = GetPtr<Atom::System::ProcessManager>("lithium.system.process");
             m_MessageBus = GetPtr<Atom::Server::MessageBus>("lithium.bus");
-
-            // Specialized Message Processing Threads for Device and Device Manager
-            m_MessageBus->StartProcessingThread<IStringProperty>();
-            m_MessageBus->StartProcessingThread<IBoolProperty>();
-            m_MessageBus->StartProcessingThread<INumberProperty>();
-            m_MessageBus->StartProcessingThread<INumberVector>();
 
             // Common Message Processing Threads
             // Max : Maybe we only need one thread for Message, and dynamically cast message
@@ -124,18 +116,28 @@ namespace Lithium
     void InitLithiumApp()
     {
         LOG_F(INFO, "Init Lithium App");
+        // Config
         AddPtr("lithium.config", ConfigManager::createShared());
+        // Message Bus
         AddPtr("lithium.bus", Atom::Server::MessageBus::createShared());
         // AddPtr("ModuleLoader", ModuleLoader::createShared());
-        AddPtr("lithium.async.thread", Atom::Async::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
+        // AddPtr("lithium.async.thread", Atom::Async::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
         AddPtr("lithium.system.process", Atom::System::ProcessManager::createShared(GetIntConfig("config/server/maxprocess")));
         // AddPtr("PluginManager", PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
         // AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
         // AddPtr("TaskGenerator", std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
         // AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
         // AddPtr("ScriptManager", ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
-        AddPtr("lithium.device", DeviceManager::createShared(GetPtr<Atom::Server::MessageBus>("lithium.bus"), GetPtr<ConfigManager>("ConfigManager")));
+        AddPtr("lithium.device", DeviceManager::createShared(GetPtr<Atom::Server::MessageBus>("lithium.bus"), GetPtr<ConfigManager>("lithium.config")));
         AddPtr("lithium.error.stack", std::make_shared<Atom::Error::ErrorStack>());
+
+        AddPtr("lithium.task.container", TaskContainer::createShared());
+        AddPtr("lithiun.task.generator", TaskGenerator::createShared());
+        AddPtr("lithium.task.loader", TaskLoader::createShared());
+        AddPtr("lithium.task.pool", TaskPool::createShared(std::thread::hardware_concurrency()));
+        AddPtr("lithium.task.tick", TickScheduler::createShared(std::thread::hardware_concurrency()));
+        AddPtr("lithium.task.manager", TaskManager::createShared());
+        
     }
 
     json createSuccessResponse(const std::string &command, const json &value)
@@ -528,48 +530,6 @@ namespace Lithium
             output.push_back(line);
         }
         return createSuccessResponse(__func__, output);
-    }
-
-    // -----------------------------------------------------------------
-    // Thread
-    // -----------------------------------------------------------------
-
-    json LithiumApp::joinAllThreads(const json &params)
-    {
-        INIT_FUNC();
-        if (!m_ThreadManager->joinAllThreads())
-        {
-            return createErrorResponse(__func__, json(), "Failed to join all threads");
-        }
-        return createSuccessResponse(__func__, json());
-    }
-
-    json LithiumApp::joinThreadByName(const json &params)
-    {
-        INIT_FUNC();
-        CHECK_PARAM("name");
-        std::string name = params["name"].get<std::string>();
-        if (!m_ThreadManager->isThreadRunning(name))
-        {
-            return createErrorResponse(__func__, json(), std::format("Thread {} does not exist", name));
-        }
-        if (!m_ThreadManager->joinThreadByName(name))
-        {
-            return createErrorResponse(__func__, json(), std::format("Failed to join thread {}", name));
-        }
-        return createSuccessResponse(__func__, json());
-    }
-
-    json LithiumApp::isThreadRunning(const json &params)
-    {
-        INIT_FUNC();
-        CHECK_PARAM("name");
-        std::string name = params["name"].get<std::string>();
-        if (!m_ThreadManager->isThreadRunning(name))
-        {
-            return createErrorResponse(__func__, json(), std::format("Thread {} does not exist", name));
-        }
-        return createSuccessResponse(__func__, json());
     }
 
     json LithiumApp::DispatchCommand(const std::string &name, const json &params)

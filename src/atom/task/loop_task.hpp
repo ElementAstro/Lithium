@@ -39,14 +39,14 @@ public:
      *
      * @return The result of the task execution in JSON format.
      */
-    virtual const json execute() override;
+    virtual json execute() override;
 
     /**
      * @brief Serializes the task to a JSON object.
      *
      * @return A JSON object representing the task.
      */
-    virtual const json toJson() const override;
+    virtual json toJson() override;
 
 private:
     int m_loopCount;

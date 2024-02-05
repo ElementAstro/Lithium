@@ -14,29 +14,32 @@ Description: Inter-process shared memory for local driver communication.
 
 #include "shared_memory.hpp"
 
-SharedMemory::~SharedMemory()
+namespace Atom::Connection
 {
-#if defined(_WIN32) || defined(_WIN64) // Windows
-    UnmapViewOfFile(buffer_);
-    CloseHandle(handle_);
-#else // Unix-like
-    munmap(buffer_, sizeof(T) + sizeof(bool));
-    if (is_creator_)
+    SharedMemory::~SharedMemory()
     {
-        shm_unlink(name_.c_str());
-    }
+#if defined(_WIN32) || defined(_WIN64) // Windows
+        UnmapViewOfFile(buffer_);
+        CloseHandle(handle_);
+#else // Unix-like
+        munmap(buffer_, sizeof(T) + sizeof(bool));
+        if (is_creator_)
+        {
+            shm_unlink(name_.c_str());
+        }
 #endif
-}
+    }
 
-void SharedMemory::clear()
-{
-    std::unique_lock<std::mutex> lock(mutex_);
-    *reinterpret_cast<bool *>(buffer_) = false;
+    void SharedMemory::clear()
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        *reinterpret_cast<bool *>(buffer_) = false;
 
-    DLOG_F(INFO, "Shared memory cleared.");
-}
+        DLOG_F(INFO, "Shared memory cleared.");
+    }
 
-bool SharedMemory::isOccupied() const
-{
-    return mutex_->test_and_set();
+    bool SharedMemory::isOccupied() const
+    {
+        return flag_->test_and_set();
+    }
 }

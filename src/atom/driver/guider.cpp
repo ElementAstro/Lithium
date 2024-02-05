@@ -14,28 +14,21 @@ Description: Guider Simulator and Basic Definition
 
 #include "guider.hpp"
 
-#include "atom/log/loguru.hpp"
-
-Guider::Guider(const std::string &name) : Device(name)
+Guider::Guider(const std::string &name) : AtomDriver(name)
 {
-    DLOG_F(INFO, "Guider Simulator Loaded : %s", name.c_str());
-    init();
 }
 
 Guider::~Guider()
 {
-    DLOG_F(INFO, "Guider Simulator Destructed");
 }
 
 bool Guider::connect(const nlohmann::json &params)
 {
-    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Guider::disconnect(const nlohmann::json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

@@ -57,8 +57,6 @@ Description: C++ and Modules Loader
 #include "atom/log/loguru.hpp"
 #include "error/error_code.hpp"
 
-#include "atom/async/thread.hpp"
-
 using json = nlohmann::json;
 
 namespace Lithium
@@ -77,7 +75,7 @@ namespace Lithium
          * @param dir_name 模块所在的目录名称。
          * @param threadManager 线程管理器的共享指针。
          */
-        ModuleLoader(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
+        ModuleLoader(const std::string &dir_name);
 
         /**
          * @brief 析构函数，释放 ModuleLoader 对象。
@@ -101,7 +99,7 @@ namespace Lithium
          * @param threadManager 线程管理器的共享指针。
          * @return 新创建的共享 ModuleLoader 指针对象。
          */
-        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
+        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name);
 
         // -------------------------------------------------------------------
         // Module methods
@@ -336,8 +334,6 @@ namespace Lithium
 #else
         std::unordered_map<std::string, std::shared_ptr<ModuleInfo>> modules_; // 模块哈希表
 #endif
-        // Injected Thread Manager
-        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
 
         mutable std::shared_mutex m_SharedMutex;
     };

@@ -23,6 +23,7 @@ set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
 set(lithium_module_dir ${lithium_src_dir}/atom)
 set(lithium_client_dir ${lithium_src_dir}/client)
 set(lithium_component_dir ${lithium_src_dir}/addon)
+set(lithium_task_dir ${lithium_src_dir}/task)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -160,10 +161,14 @@ set(script_module
 )
 
 set(task_module
-    #${lithium_src_dir}/task/task_manager.cpp
-    #${lithium_src_dir}/task/task_stack.cpp
-    #${lithium_src_dir}/task/task_generator.cpp
-    #${lithium_src_dir}/task/task_container.cpp
+    ${lithium_task_dir}/manager.cpp
+    ${lithium_task_dir}/generator.cpp
+    ${lithium_task_dir}/container.cpp
+    ${lithium_task_dir}/tick.cpp
+    ${lithium_task_dir}/loader.cpp
+    ${lithium_task_dir}/list.cpp
+    ${lithium_task_dir}/pool.cpp
+    # ${lithium_task_dir}/chekcer.cpp
 )
 
 set(Lithium_module
@@ -214,12 +219,6 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
 
-# TODO : 更好的构建系统，不需要这样引用
-include_directories(${lithium_src_dir}/)
-include_directories(${lithium_src_dir}/core)
-include_directories(${lithium_src_dir}/core/base)
-include_directories(${lithium_src_dir}/core/property)
-
 # Build all dependencies
 # 构建所有需要的依赖库
 add_subdirectory(libs/)
@@ -235,6 +234,8 @@ add_subdirectory(${lithium_module_dir})
 # 内置的模组
 include_directories(modules)
 add_subdirectory(modules)
+
+add_subdirectory(${lithium_client_dir})
 
 
 add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})

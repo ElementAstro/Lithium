@@ -12,8 +12,8 @@ Description: FIFO Server
 
 *************************************************/
 
-#ifndef FIFOSERVER_H
-#define FIFOSERVER_H
+#ifndef ATOM_CONNECTION_FIFOSERVER_HPP
+#define ATOM_CONNECTION_FIFOSERVER_HPP
 
 #include <string>
 
@@ -26,24 +26,27 @@ Description: FIFO Server
 #include <unistd.h>
 #endif
 
-class FifoServer
+namespace Atom::Connection
 {
-public:
-    FifoServer(const std::string &fifoPath);
+    class FifoServer
+    {
+    public:
+        FifoServer(const std::string &fifoPath);
 
-    void start();
-    std::string receiveMessage();
-    void stop();
+        void start();
+        std::string receiveMessage();
+        void stop();
 
-private:
-    std::string fifoPath;
-    static const int bufferSize = 1024;
+    private:
+        std::string fifoPath;
+        static const int bufferSize = 1024;
 
 #ifdef _WIN32
-    HANDLE pipeHandle;
+        HANDLE pipeHandle;
 #else
-    int pipeFd;
+        int pipeFd;
 #endif
-};
+    };
+}
 
-#endif // FIFOSERVER_H
+#endif // ATOM_CONNECTION_FIFOSERVER_HPP

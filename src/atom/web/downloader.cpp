@@ -18,7 +18,7 @@ Description: Downloader
 #include <thread>
 #include <chrono>
 
-#include "atom/web/httplib.h"
+#include "atom/extra/httplib/httplib.h"
 #include "atom/log/loguru.hpp"
 #include "atom/utils/exception.hpp"
 

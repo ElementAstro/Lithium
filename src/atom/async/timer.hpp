@@ -12,7 +12,8 @@ Description: Timer class for C++
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_ASYNC_TIMER_HPP
+#define ATOM_ASYNC_TIMER_HPP
 
 #include <chrono>
 #include <condition_variable>
@@ -221,3 +222,5 @@ namespace Atom::Async
         m_callback = std::forward<Function>(func);
     }
 }
+
+#endif

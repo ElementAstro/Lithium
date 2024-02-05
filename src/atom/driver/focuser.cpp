@@ -14,28 +14,21 @@ Description: Focuser Simulator and Basic Definition
 
 #include "focuser.hpp"
 
-#include "atom/log/loguru.hpp"
-
-Focuser::Focuser(const std::string &name) : Device(name)
+Focuser::Focuser(const std::string &name) : AtomDriver(name)
 {
-    DLOG_F(INFO, "Focuser Simulator Loaded : %s", name.c_str());
-    init();
 }
 
 Focuser::~Focuser()
 {
-    DLOG_F(INFO, "Focuser Simulator Destructed");
 }
 
 bool Focuser::connect(const json &params)
 {
-    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Focuser::disconnect(const json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

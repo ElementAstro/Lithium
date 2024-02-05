@@ -33,14 +33,14 @@ namespace Lithium
     class TaskGenerator
     {
     public:
-        explicit TaskGenerator(std::shared_ptr<DeviceManager> deviceManager);
+        explicit TaskGenerator();
         ~TaskGenerator() = default;
 
         // -------------------------------------------------------------------
         // Common methods
         // -------------------------------------------------------------------
 
-        static std::shared_ptr<TaskGenerator> createShared(std::shared_ptr<DeviceManager> deviceManager);
+        static std::shared_ptr<TaskGenerator> createShared();
 
         // -------------------------------------------------------------------
         // Macro methods

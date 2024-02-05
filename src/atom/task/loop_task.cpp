@@ -22,7 +22,7 @@ LoopTask::LoopTask(const std::function<json(const json &)> &func,
 {
 }
 
-const json LoopTask::execute()
+json LoopTask::execute()
 {
     if (m_isExecuting.load())
     {
@@ -70,7 +70,7 @@ const json LoopTask::execute()
     return m_returns;
 }
 
-const json LoopTask::toJson() const
+json LoopTask::toJson()
 {
     auto json = SimpleTask::toJson();
     json["type"] = "loop";

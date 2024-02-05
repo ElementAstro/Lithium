@@ -14,11 +14,8 @@ Description: Telescope Simulator and Basic Definition
 
 #include "telescope.hpp"
 
-#include "atom/log/loguru.hpp"
-
-Telescope::Telescope(const std::string &name) : Device(name)
+Telescope::Telescope(const std::string &name) : AtomDriver(name)
 {
-    init();
 }
 
 Telescope::~Telescope()

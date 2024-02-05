@@ -18,7 +18,6 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "atom/async/thread.hpp"
 #include "config/configor.hpp"
 #include "device/manager.hpp"
 #include "atom/system/process.hpp"
@@ -28,6 +27,7 @@ Description: Lithium App Enter
 #include "atom/server/commander.hpp"
 #include "addon/manager.hpp"
 #include "script/python.hpp"
+#include "task/manager.hpp"
 
 // -------------------------------------------------------------------
 // About the LithiumApp
@@ -131,9 +131,6 @@ namespace Lithium
         ReturnMessage returnMessage(const std::string &message);
 
     public:
-        json joinThreadByName(const json &params);
-        json joinAllThreads(const json &params);
-        json isThreadRunning(const json &params);
 
         // -------------------------------------------------------------------
         // Lithium Command methods (the main entry point)
@@ -176,13 +173,14 @@ namespace Lithium
         std::unique_ptr<CommandDispatcher<json, json>> m_CommandDispatcher;
 
     private:
-        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
+        std::shared_ptr<TaskPool> m_TaskPool;
         std::shared_ptr<ConfigManager> m_ConfigManager;
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
         std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
         std::shared_ptr<Atom::Error::ErrorStack> m_ErrorStack;
         std::shared_ptr<ComponentManager> m_ComponentManager;
+        std::shared_ptr<TaskManager> m_TaskManager;
 
         std::shared_ptr<PyScriptManager> m_PyScriptManager;
     };

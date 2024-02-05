@@ -21,6 +21,7 @@ Description: C++ and Modules Loader
 #include <typeinfo>
 #include <cxxabi.h>
 #include <regex>
+#include <mutex>
 
 #include "atom/io/io.hpp"
 
@@ -45,9 +46,8 @@ namespace fs = std::filesystem;
 
 namespace Lithium
 {
-    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
+    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules")
     {
-        m_ThreadManager = threadManager;
         DLOG_F(INFO, "C++ module manager loaded successfully.");
     }
 
@@ -65,12 +65,12 @@ namespace Lithium
 
     std::shared_ptr<ModuleLoader> ModuleLoader::createShared()
     {
-        return std::make_shared<ModuleLoader>("modules", Atom::Async::ThreadManager::createShared());
+        return std::make_shared<ModuleLoader>("modules");
     }
     
-    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules")
     {
-        return std::make_shared<ModuleLoader>(dir_name, threadManager);
+        return std::make_shared<ModuleLoader>(dir_name);
     }
 
     bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)

@@ -12,8 +12,8 @@ Description: FIFO CLient
 
 *************************************************/
 
-#ifndef FIFOCLIENT_H
-#define FIFOCLIENT_H
+#ifndef ATOM_CONNECTION_FIFOCLIENT_HPP
+#define ATOM_CONNECTION_FIFOCLIENT_HPP
 
 #include <string>
 
@@ -26,23 +26,26 @@ Description: FIFO CLient
 #include <unistd.h>
 #endif
 
-class FifoClient
+namespace Atom::Connection
 {
-public:
-    FifoClient(const std::string &fifoPath);
+    class FifoClient
+    {
+    public:
+        FifoClient(const std::string &fifoPath);
 
-    void connect();
-    void sendMessage(const std::string &message);
-    void disconnect();
+        void connect();
+        void sendMessage(const std::string &message);
+        void disconnect();
 
-private:
-    std::string fifoPath;
+    private:
+        std::string fifoPath;
 
 #ifdef _WIN32
-    HANDLE pipeHandle;
+        HANDLE pipeHandle;
 #else
-    int pipeFd;
+        int pipeFd;
 #endif
-};
+    };
+}
 
 #endif // FIFOSERVER_H

@@ -14,7 +14,6 @@ Description: This file contains the declaration of the DeserializationEngine cla
 
 #include "deserialize.hpp"
 
-#include "atom/type/iparams.hpp"
 #include "atom/type/json.hpp"
 #include "atom/log/loguru.hpp"
 
@@ -32,27 +31,6 @@ std::optional<std::any> JsonDeserializer::deserialize(const std::string &data) c
     catch (const json::parse_error &)
     {
         LOG_F(ERROR, "JsonDeserializer::deserialize: Failed to deserialize json data.");
-        return std::nullopt;
-    }
-}
-
-std::optional<std::any> JsonParamsDeserializer::deserialize(const std::string &data) const
-{
-    DLOG_F(INFO, "JsonParamsDeserializer::deserialize called with {}", data);
-    try
-    {
-        std::shared_ptr<IParams> params;
-        if (!params->fromJson(data))
-        {
-            LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
-            return std::nullopt;
-        }
-        DLOG_F(INFO, "JsonParamsDeserializer::deserialize: Successfully deserialized json data.");
-        return params;
-    }
-    catch (const std::exception &)
-    {
-        LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
         return std::nullopt;
     }
 }

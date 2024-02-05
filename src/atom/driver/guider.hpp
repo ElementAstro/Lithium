@@ -16,7 +16,7 @@ Description: Basic Guider Defination
 
 #include "device.hpp"
 
-class Guider : public Device
+class Guider : public AtomDriver
 {
 public:
     /**

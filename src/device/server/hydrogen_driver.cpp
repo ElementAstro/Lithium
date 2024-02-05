@@ -20,7 +20,7 @@ Description: Hydrogen Web Driver
 #include <filesystem>
 #include <stdexcept>
 
-#include "atom/type/tinyxml2.h"
+#include "atom/extra/tinyxml2/tinyxml2.h"
 
 #define LOGURU_USE_FMTLIB 1
 #include "atom/log/loguru.hpp"
@@ -83,6 +83,7 @@ bool HydrogenDriverCollection::parseDrivers(const std::string &path)
     // Sort drivers by label
     std::sort(drivers.begin(), drivers.end(), [](const std::shared_ptr<HydrogenDeviceContainer> a, const std::shared_ptr<HydrogenDeviceContainer> b)
               { return a->label < b->label; });
+    return true;
 }
 
 bool HydrogenDriverCollection::parseCustomDrivers(const json &drivers)

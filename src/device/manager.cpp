@@ -14,6 +14,7 @@ Description: Device Manager
 
 #include "manager.hpp"
 #include "atom/server/global_ptr.hpp"
+#include "task/pool.hpp"
 
 #include "atom/driver/camera.hpp"
 #include "atom/driver/telescope.hpp"
@@ -72,7 +73,7 @@ Description: Device Manager
         if (!(device)->isConnected())                        \
         {                                                    \
             LOG_F(ERROR, "{} is not connected when call {}", \
-                  (device)->getDeviceName(), __func__);      \
+                  (device)->GetName(), __func__);            \
             return DeviceError::NotConnected;                \
         }                                                    \
     } while (false)
@@ -83,7 +84,7 @@ namespace Lithium
     // Constructor
     DeviceManager::DeviceManager(std::shared_ptr<Atom::Server::MessageBus> messageBus, std::shared_ptr<ConfigManager> configManager)
     {
-        m_ModuleLoader = ModuleLoader::createShared("drivers", GetPtr<Atom::Async::ThreadManager>("lithium.async.thread"));
+        m_ModuleLoader = ModuleLoader::createShared("drivers");
         m_ConfigManager = configManager;
         m_MessageBus = messageBus;
         for (auto &devices : m_devices)
@@ -159,7 +160,7 @@ namespace Lithium
             {
                 if (device)
                 {
-                    deviceList.emplace_back(device->getDeviceName());
+                    deviceList.emplace_back(device->GetName());
                 }
             }
         }
@@ -174,7 +175,7 @@ namespace Lithium
         {
             if (device)
             {
-                deviceList.emplace_back(device->getDeviceName());
+                deviceList.emplace_back(device->GetName());
             }
         }
         return deviceList;
@@ -300,11 +301,11 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it)
         {
-            if (*it && (*it)->getDeviceName() == name)
+            if (*it && (*it)->GetName() == name)
             {
                 /*
                 (*it)->AddObserverFunc([this](const std::any &message)
-                                       { 
+                                       {
                                     if(message.has_value())
                                     {
                                         try
@@ -348,9 +349,9 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (auto it = devices.begin(); it != devices.end(); ++it)
         {
-            if (*it && (*it)->getDeviceName() == name)
+            if (*it && (*it)->GetName() == name)
             {
-                (*it)->getTask("disconnect", {});
+                (*it)->RunFunc("disconnect", {});
                 devices.erase(it);
                 DLOG_F(INFO, "Remove device {} successfully", name);
                 if (m_ConfigManager)
@@ -379,8 +380,8 @@ namespace Lithium
         for (auto &devices : m_devices)
         {
             devices.erase(std::remove_if(devices.begin(), devices.end(),
-                                         [&](const std::shared_ptr<Device> &device)
-                                         { return device && device->getDeviceName() == name; }),
+                                         [&](const std::shared_ptr<AtomDriver> &device)
+                                         { return device && device->GetName() == name; }),
                           devices.end());
         }
         if (m_ConfigManager)
@@ -413,7 +414,7 @@ namespace Lithium
         return true;
     }
 
-    std::shared_ptr<Device> DeviceManager::getDevice(DeviceType type, const std::string &name)
+    std::shared_ptr<AtomDriver> DeviceManager::getDevice(DeviceType type, const std::string &name)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -434,7 +435,7 @@ namespace Lithium
         auto &devices = m_devices[static_cast<int>(type)];
         for (size_t i = 0; i < devices.size(); ++i)
         {
-            if (devices[i] && devices[i]->getDeviceName() == name)
+            if (devices[i] && devices[i]->GetName() == name)
             {
                 return i;
             }
@@ -442,13 +443,13 @@ namespace Lithium
         return -1;
     }
 
-    std::shared_ptr<Device> DeviceManager::findDeviceByName(const std::string &name) const
+    std::shared_ptr<AtomDriver> DeviceManager::findDeviceByName(const std::string &name) const
     {
         for (const auto &devices : m_devices)
         {
             for (const auto &device : devices)
             {
-                if (device && device->getDeviceName() == name)
+                if (device && device->GetName() == name)
                 {
                     return device;
                 }
@@ -457,127 +458,10 @@ namespace Lithium
         return nullptr;
     }
 
-    std::shared_ptr<DeviceTask> DeviceManager::getTask(DeviceType type, const std::string &device_name, const std::string &task_name, const json &params)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        DLOG_F(INFO, "Trying to find {} and get {} task", device_name, task_name);
-        auto device = findDeviceByName(device_name);
-
-        if (device != nullptr)
-        {
-            switch (type)
-            {
-            case DeviceType::Camera:
-            {
-                DLOG_F(INFO, "Found Camera device: {} with task: {}", device_name, task_name);
-                return std::dynamic_pointer_cast<Camera>(device)->getTask(task_name, params);
-                break;
-            }
-            case DeviceType::Telescope:
-            {
-                DLOG_F(INFO, "Found Telescope device: {} with driver: {}", device_name, task_name);
-                return std::dynamic_pointer_cast<Telescope>(device)->getTask(task_name, params);
-                break;
-            }
-            case DeviceType::Focuser:
-            {
-                DLOG_F(INFO, "Found Focuser device: {} with driver: {}", device_name, task_name);
-                return std::dynamic_pointer_cast<Focuser>(device)->getTask(task_name, params);
-                break;
-            }
-            case DeviceType::FilterWheel:
-            {
-                DLOG_F(INFO, "Found FilterWheel device: {} with driver: {}", device_name, task_name);
-                return std::dynamic_pointer_cast<Filterwheel>(device)->getTask(task_name, params);
-                break;
-            }
-            case DeviceType::Solver:
-            {
-                break;
-            }
-            case DeviceType::Guider:
-            {
-                break;
-            }
-            default:
-                LOG_F(ERROR, "Invalid device type");
-                break;
-            }
-        }
-        else
-        {
-            DLOG_F(INFO, "Device {} not found", device_name);
-        }
-        return nullptr;
-    }
-
-    void DeviceManager::messageBusPublishString(const std::shared_ptr<IStringProperty> &message)
-    {
-        if (m_MessageBus)
-        {
-            m_MessageBus->Publish<std::shared_ptr<IStringProperty>>("main", message);
-        }
-        if (!m_ConfigManager)
-        {
-            LOG_F(ERROR, "Config manager not initialized");
-        }
-        else
-        {
-            if (!message->value.empty())
-            {
-#ifdef __cpp_lib_format
-                m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
-#else
-                m_ConfigManager->setValue(fmt::format("driver/{}/{}", message->device_name, message->name), message->value);
-#endif
-            }
-        }
-    }
-
-    void DeviceManager::messageBusPublishNumber(const std::shared_ptr<INumberProperty> &message)
-    {
-        if (m_MessageBus)
-        {
-            m_MessageBus->Publish<std::shared_ptr<INumberProperty>>("main", message);
-        }
-        if (!m_ConfigManager)
-        {
-            LOG_F(ERROR, "Config manager not initialized");
-        }
-        else
-        {
-#ifdef __cpp_lib_format
-            m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
-#else
-            m_ConfigManager->setValue(fmt::format("driver/{}/{}", message->device_name, message->name), message->value);
-#endif
-        }
-    }
-
-    void DeviceManager::messageBusPublishBool(const std::shared_ptr<IBoolProperty> &message)
-    {
-        if (m_MessageBus)
-        {
-            m_MessageBus->Publish<std::shared_ptr<IBoolProperty>>("main", message);
-        }
-        if (!m_ConfigManager)
-        {
-            LOG_F(ERROR, "Config manager not initialized");
-        }
-        else
-        {
-#ifdef __cpp_lib_format
-            m_ConfigManager->setValue(std::format("driver/{}/{}", message->device_name, message->name), message->value);
-#else
-            m_ConfigManager->setValue(fmt::format("driver/{}/{}", message->device_name, message->name), message->value);
-#endif
-        }
-    }
-
     bool DeviceManager::setDeviceProperty(DeviceType type, const std::string &name, const std::string &value_name, const std::any &value)
     {
-        m_ThreadManager->addThread([this, &value, &type, &name, &value_name]()
-                                   {
+        m_TaskPool->enqueue([this, &value, &type, &name, &value_name]()
+                            {
                                  auto device = getDevice(type, name);
                                  if (!device)
                                  {
@@ -586,20 +470,22 @@ namespace Lithium
                                  }
                                  try
                                  {
-                                     device->setProperty(value_name,value);
+                                    //if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
+                                    //    device->SetVariable<std::string>(value_name,std::any_cast<std::string>(value));
+                                    //if (value.type() == typeid(int) || value.type() == typeid(double))
+                                    //    device->SetVariable<double>(value_name, std::any_cast<double>(value));
                                  }
                                  catch (const std::bad_any_cast &e)
                                  {
                                      LOG_F(ERROR, "Failed to convert {} of {} with {}", value_name, name, e.what());
-                                 } },
-                                   Atom::Utils::generateRandomString(16));
+                                 } });
         return true;
     }
 
     bool DeviceManager::setDevicePropertyByName(const std::string &name, const std::string &value_name, const std::any &value)
     {
-        m_ThreadManager->addThread([this, &value, &name, &value_name]()
-                                   {
+        m_TaskPool->enqueue([this, &value, &name, &value_name]()
+                            {
                                  auto device = findDeviceByName(name);
                                  if (!device)
                                  {
@@ -608,13 +494,16 @@ namespace Lithium
                                  }
                                  try
                                  {
-                                     device->setProperty(value_name,value);
+                                    //if (value.type() == typeid(std::string) || value.type() == typeid(const char *))
+                                    //    device->SetVariable<std::string>(value_name,std::any_cast<std::string>(value));
+                                    //if (value.type() == typeid(int) || value.type() == typeid(double))
+                                    //    device->SetVariable<double>(value_name, std::any_cast<double>(value));
+
                                  }
                                  catch (const std::bad_any_cast &e)
                                  {
                                      LOG_F(ERROR, "Failed to convert {} of {} with {}", value_name, name, e.what());
-                                 } },
-                                   Atom::Utils::generateRandomString(16));
+                                 } });
         return true;
     }
 
@@ -766,7 +655,7 @@ namespace Lithium
         }
         if (!m_main_camera->startExposure(m_params))
         {
-            LOG_F(ERROR, "{} failed to start exposure", m_main_camera->getDeviceName());
+            LOG_F(ERROR, "{} failed to start exposure", m_main_camera->GetName());
             return DeviceError::ExposureError;
         }
         return DeviceError::None;
@@ -778,16 +667,16 @@ namespace Lithium
         if (!m_main_camera->getExposureStatus({}))
         {
             // TODO: 这里需要一个错误返回吗？
-            DLOG_F(WARNING, "{} is not exposed", m_main_camera->getDeviceName());
+            DLOG_F(WARNING, "{} is not exposed", m_main_camera->GetName());
         }
         else
         {
             if (!m_main_camera->abortExposure(m_params))
             {
-                LOG_F(ERROR, "{} failed to stop exposure", m_main_camera->getDeviceName());
+                LOG_F(ERROR, "{} failed to stop exposure", m_main_camera->GetName());
                 return DeviceError::ExposureError;
             }
-            DLOG_F(INFO, "{} is aborted successfully", m_main_camera->getDeviceName());
+            DLOG_F(INFO, "{} is aborted successfully", m_main_camera->GetName());
         }
         return DeviceError::None;
     }
@@ -797,13 +686,13 @@ namespace Lithium
         CHECK_DEVICE(m_main_camera);
         if (!m_main_camera->isCoolingAvailable())
         {
-            LOG_F(ERROR, "{} did not support cooling mode", m_main_camera->getDeviceName());
+            LOG_F(ERROR, "{} did not support cooling mode", m_main_camera->GetName());
             return DeviceError::NotSupported;
         }
         // TODO: 这里是否需要一个温度的检查，或者说是在启动制冷时是否需要指定问温度
         if (!m_main_camera->startCooling(m_params))
         {
-            LOG_F(ERROR, "{} failed to start cooling mode", m_main_camera->getDeviceName());
+            LOG_F(ERROR, "{} failed to start cooling mode", m_main_camera->GetName());
             return DeviceError::CoolingError;
         }
         return DeviceError::None;
@@ -814,12 +703,12 @@ namespace Lithium
         CHECK_DEVICE(m_main_camera);
         if (!m_main_camera->isCoolingAvailable())
         {
-            LOG_F(ERROR, "{} did not support cooling mode", m_main_camera->getDeviceName());
+            LOG_F(ERROR, "{} did not support cooling mode", m_main_camera->GetName());
             return DeviceError::NotSupported;
         }
         if (!m_main_camera->stopCooling(m_params))
         {
-            LOG_F(ERROR, "{} failed to stop cooling mode", m_main_camera->getDeviceName());
+            LOG_F(ERROR, "{} failed to stop cooling mode", m_main_camera->GetName());
             return DeviceError::CoolingError;
         }
         return DeviceError::None;
@@ -837,7 +726,7 @@ namespace Lithium
         {
             if (!m_main_camera->isGainAvailable())
             {
-                DLOG_F(WARNING, "{} did not support set gain", m_main_camera->getDeviceName());
+                DLOG_F(WARNING, "{} did not support set gain", m_main_camera->GetName());
                 return DeviceError::NotSupported;
             }
             else
@@ -852,7 +741,7 @@ namespace Lithium
                 {
                     if (!m_main_camera->setGain({"gain", value}))
                     {
-                        LOG_F(ERROR, "Failed to set gain of main camera {}", m_main_camera->getDeviceName());
+                        LOG_F(ERROR, "Failed to set gain of main camera {}", m_main_camera->GetName());
                         return DeviceError::GainError;
                     }
                 }
@@ -873,7 +762,7 @@ namespace Lithium
         {
             if (!m_main_camera->isOffsetAvailable())
             {
-                DLOG_F(WARNING, "{} did not support set offset", m_main_camera->getDeviceName());
+                DLOG_F(WARNING, "{} did not support set offset", m_main_camera->GetName());
                 return DeviceError::NotSupported;
             }
             else
@@ -888,7 +777,7 @@ namespace Lithium
                 {
                     if (!m_main_camera->setOffset({"offset", value}))
                     {
-                        LOG_F(ERROR, "Failed to set offset of main camera {}", m_main_camera->getDeviceName());
+                        LOG_F(ERROR, "Failed to set offset of main camera {}", m_main_camera->GetName());
                         return DeviceError::OffsetError;
                     }
                 }
@@ -909,7 +798,7 @@ namespace Lithium
         {
             if (!m_main_camera->isISOAvailable())
             {
-                DLOG_F(WARNING, "{} did not support set iso", m_main_camera->getDeviceName());
+                DLOG_F(WARNING, "{} did not support set iso", m_main_camera->GetName());
                 return DeviceError::NotSupported;
             }
             else
@@ -918,7 +807,7 @@ namespace Lithium
                 // TODO: There needs a ISO value check
                 if (!m_main_camera->setISO({"iso", value}))
                 {
-                    LOG_F(ERROR, "Failed to set iso of main camera {}", m_main_camera->getDeviceName());
+                    LOG_F(ERROR, "Failed to set iso of main camera {}", m_main_camera->GetName());
                     return DeviceError::ISOError;
                 }
             }
@@ -952,7 +841,13 @@ namespace Lithium
             {
                 for (auto it = params.begin(); it != params.end(); ++it)
                 {
-                    m_main_camera->setProperty(it.key(), it.value());
+                    // Max: How to fix the left and right value problem?
+                    //if (it.value().is_number())
+                    //    m_main_camera->SetVariable<double>(it.key(), it.value());
+                    //else if (it.value().is_string())
+                    //    m_main_camera->SetVariable<std::string>(it.key(), it.value());
+                    //else if (it.value().is_boolean())
+                    //    m_main_camera->SetVariable<bool>(it.key(), it.value());
                 }
             }
         }
@@ -960,7 +855,12 @@ namespace Lithium
         {
             for (auto it = m_params.begin(); it != m_params.end(); ++it)
             {
-                m_main_camera->setProperty(it.key(), it.value());
+                //if (it.value().is_number())
+                //    m_main_camera->SetVariable<double>(it.key(), it.value());
+                //else if (it.value().is_string())
+                //    m_main_camera->SetVariable<std::string>(it.key(), it.value());
+                //else if (it.value().is_boolean())
+                //    m_main_camera->SetVariable<bool>(it.key(), it.value());
             }
         }
         return DeviceError::None;
@@ -979,12 +879,12 @@ namespace Lithium
         {
             for (auto it = m_params.begin(); it != m_params.end(); ++it)
             {
-                res[it.key()] = m_main_camera->getStringProperty(it.key())->value;
+                res[it.key()] = m_main_camera->GetVariable<std::string>(it.key()).value();
             }
         }
         else
         {
-            res["value"] = m_main_camera->getStringProperty(m_params["name"])->value;
+            res["value"] = m_main_camera->GetVariable<std::string>(m_params["name"].get<std::string>()).value();
         }
         return res;
     }
@@ -995,12 +895,12 @@ namespace Lithium
         CHECK_DEVICE(m_telescope);
         if (m_telescope->isAtPark({}))
         {
-            LOG_F(ERROR, "{} had already parked, please unpark before {}", m_telescope->getDeviceName(), __func__);
+            LOG_F(ERROR, "{} had already parked, please unpark before {}", m_telescope->GetName(), __func__);
             return DeviceError::ParkedError;
         }
         if (!m_params.contains("ra") || !m_params.contains("dec"))
         {
-            LOG_F(ERROR, "{} failed to goto: Missing RA or DEC value", m_telescope->getDeviceName());
+            LOG_F(ERROR, "{} failed to goto: Missing RA or DEC value", m_telescope->GetName());
             return DeviceError::MissingValue;
         }
         std::string ra = m_params["ra"];
@@ -1038,7 +938,7 @@ namespace Lithium
         }
         if (!m_telescope->SlewTo(m_params))
         {
-            LOG_F(ERROR, "{} failed to slew to {} {}", m_telescope->getDeviceName(), ra, dec);
+            LOG_F(ERROR, "{} failed to slew to {} {}", m_telescope->GetName(), ra, dec);
             return DeviceError::GotoError;
         }
         return DeviceError::None;
@@ -1049,20 +949,20 @@ namespace Lithium
         CHECK_DEVICE(m_telescope);
         if (!m_telescope->isParkAvailable(m_params))
         {
-            LOG_F(ERROR, "{} is not support park function", m_telescope->getDeviceName());
+            LOG_F(ERROR, "{} is not support park function", m_telescope->GetName());
             return DeviceError::NotSupported;
         }
         if (m_telescope->isAtPark(m_params))
         {
-            DLOG_F(WARNING, "{} is already parked, please do not park again!", m_telescope->getDeviceName());
+            DLOG_F(WARNING, "{} is already parked, please do not park again!", m_telescope->GetName());
             return DeviceError::None;
         }
         if (m_telescope->Park(m_params))
         {
-            LOG_F(ERROR, "{} failed to park", m_telescope->getDeviceName());
+            LOG_F(ERROR, "{} failed to park", m_telescope->GetName());
             return DeviceError::ParkError;
         }
-        DLOG_F(INFO, "{} parked successfully", m_telescope->getDeviceName());
+        DLOG_F(INFO, "{} parked successfully", m_telescope->GetName());
         return DeviceError::None;
     }
 
@@ -1071,20 +971,20 @@ namespace Lithium
         CHECK_DEVICE(m_telescope);
         if (!m_telescope->isParkAvailable(m_params))
         {
-            LOG_F(ERROR, "{} is not support park function", m_telescope->getDeviceName());
+            LOG_F(ERROR, "{} is not support park function", m_telescope->GetName());
             return DeviceError::NotSupported;
         }
         if (!m_telescope->isAtPark(m_params))
         {
-            DLOG_F(WARNING, "{} is not parked, please do not unpark before!", m_telescope->getDeviceName());
+            DLOG_F(WARNING, "{} is not parked, please do not unpark before!", m_telescope->GetName());
             return DeviceError::None;
         }
         if (m_telescope->Unpark(m_params))
         {
-            LOG_F(ERROR, "{} failed to unpark", m_telescope->getDeviceName());
+            LOG_F(ERROR, "{} failed to unpark", m_telescope->GetName());
             return DeviceError::ParkError;
         }
-        DLOG_F(INFO, "{} parked successfully", m_telescope->getDeviceName());
+        DLOG_F(INFO, "{} parked successfully", m_telescope->GetName());
         return DeviceError::None;
     }
 
@@ -1093,17 +993,17 @@ namespace Lithium
         CHECK_DEVICE(m_telescope);
         if (!m_telescope->isConnected())
         {
-            LOG_F(ERROR, "{} is not connected when call {}", m_telescope->getDeviceName(), __func__);
+            LOG_F(ERROR, "{} is not connected when call {}", m_telescope->GetName(), __func__);
             return DeviceError::NotConnected;
         }
         if (!m_telescope->isHomeAvailable({}))
         {
-            LOG_F(ERROR, "{} is not support home", m_telescope->getDeviceName());
+            LOG_F(ERROR, "{} is not support home", m_telescope->GetName());
             return DeviceError::NotSupported;
         }
         if (m_telescope->isAtPark({}))
         {
-            LOG_F(ERROR, "{} had already parked, please unpark before {}", m_telescope->getDeviceName(), __func__);
+            LOG_F(ERROR, "{} had already parked, please unpark before {}", m_telescope->GetName(), __func__);
             return DeviceError::ParkedError;
         }
         if (!m_telescope->Home(m_params))
@@ -1111,7 +1011,7 @@ namespace Lithium
             LOG_F(ERROR, "{} Failed to go home position");
             return DeviceError::HomeError;
         }
-        DLOG_F(INFO, "{} go home position successfully!", m_telescope->getDeviceName());
+        DLOG_F(INFO, "{} go home position successfully!", m_telescope->GetName());
         return DeviceError::None;
     }
 

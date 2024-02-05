@@ -12,7 +12,8 @@ Description: Basic and Simple Task Definition
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_TASK_TASK_HPP
+#define ATOM_TASK_TASK_HPP
 
 #include <string>
 #include <fstream>
@@ -49,7 +50,7 @@ public:
      * current status of the task.
      */
     SimpleTask(const std::function<json(const json &)> &func,
-               const std::function<json(const json &)> &stop_fn
+               const std::function<json(const json &)> &stop_fn,
                const json &params_template);
 
     /**
@@ -70,14 +71,14 @@ public:
      * - "description": The description of the task.
      * - "can_stop": A flag indicating whether the task can be stopped.
      */
-    const json toJson() const;
+    virtual json toJson();
 
     /**
      * @brief Returns a JSON object representing the result of the SimpleTask object.
      *
      * For a SimpleTask object, the result is always an empty JSON object.
      */
-    const json getResult() const;
+    json getResult();
 
     /**
      * @brief Returns a JSON object representing the template of the parameters required by the
@@ -86,7 +87,7 @@ public:
      * A SimpleTask object does not require any parameters, so the returned JSON object is always
      * an empty JSON object.
      */
-    const json getParamsTemplate() const;
+    json getParamsTemplate();
 
     /**
      * @brief Sets the parameters of the SimpleTask object.
@@ -220,8 +221,12 @@ public:
      *
      * @return A JSON object with the current status of the task.
      */
-    const json execute();
+    virtual json execute() ;
 
+    std::function<json(const json &)> m_function;
+    json m_paramsTemplate;
+    json m_params;
+    json m_returns;
     std::function<json(const json &)> m_stopFn;
     bool m_canStop;
     std::atomic_bool m_stopFlag;
@@ -230,9 +235,6 @@ public:
     std::string m_name;
     std::string m_description;
     bool m_canExecute;
-
-    std::function<json(const json &)> m_function;
-    json m_paramsTemplate;
-    json m_params;
-    json m_returns;
 };
+
+#endif

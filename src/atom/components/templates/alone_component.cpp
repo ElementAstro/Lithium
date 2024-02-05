@@ -13,7 +13,7 @@ Description: Alone component(run in different process)
 **************************************************/
 
 #include "alone_component.hpp"
-#include "component_marco.hpp"
+#include "atom/components/macro.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "atom/utils/random.hpp"

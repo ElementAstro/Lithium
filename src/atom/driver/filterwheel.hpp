@@ -16,7 +16,7 @@ Description: Basic FilterWheel Defination
 
 #include "device.hpp"
 
-class Filterwheel : public Device
+class Filterwheel : public AtomDriver
 {
 public:
     Filterwheel(const std::string &name);

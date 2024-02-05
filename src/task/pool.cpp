@@ -16,76 +16,147 @@ Description: Specialized task pool
 
 namespace Lithium
 {
-    DynamicThreadPool::DynamicThreadPool(size_t threads = std::thread::hardware_concurrency(), size_t maxThreads = std::numeric_limits<size_t>::max(), TaskSchedulingStrategy strategy = TaskSchedulingStrategy::FIFO)
-        : m_stop(false), m_sleep(false), m_defaultThreadCount(threads), m_maxThreadCount(maxThreads), m_activeThreads(0), m_schedulingStrategy(strategy)
+    // Initialize static thread_local variables
+    thread_local WorkerQueue *TaskPool::t_localQueue = nullptr;
+    thread_local size_t TaskPool::t_index = 0;
+    
+    bool WorkerQueue::tryPop(std::shared_ptr<Task> &task)
     {
-        assert(threads > 0 && maxThreads >= threads);
-        adjustThreadCount(threads);
+        std::lock_guard<std::mutex> lock(mutex);
+        if (queue.empty())
+        {
+            return false;
+        }
+        task = std::move(queue.front());
+        queue.pop_front();
+        return true;
     }
 
-    DynamicThreadPool::~DynamicThreadPool()
+    bool WorkerQueue::trySteal(std::shared_ptr<Task> &task)
     {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (queue.empty())
         {
-            std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_stop = true;
+            return false;
         }
-        m_condition.notify_all();
-        for (std::thread &worker : m_workers)
-            worker.join();
+        task = std::move(queue.back());
+        queue.pop_back();
+        return true;
     }
 
-    void DynamicThreadPool::sleepFor(std::chrono::milliseconds duration)
+    void WorkerQueue::push(std::shared_ptr<Task> task)
     {
-        {
-            std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_sleep = true;
-        }
-        std::this_thread::sleep_for(duration);
-        {
-            std::unique_lock<std::mutex> lock(m_queueMutex);
-            m_sleep = false;
-        }
+        std::lock_guard<std::mutex> lock(mutex);
+        queue.push_front(std::move(task));
     }
 
-    void DynamicThreadPool::adjustThreadCount(size_t newSize)
+    std::optional<std::shared_ptr<Task>> WorkerQueue::tryPop()
     {
-        newSize = std::min(newSize, m_maxThreadCount);
-        while (m_workers.size() < newSize)
+        std::lock_guard<std::mutex> lock(mutex);
+        if (queue.empty())
         {
-            m_workers.emplace_back([this]
-                                   {
-                for (;;) {
-                    std::shared_ptr<Task> task;
-                    {
-                        std::unique_lock<std::mutex> lock(this->m_queueMutex);
-                        this->m_condition.wait(lock, [this] { return this->m_stop || !this->m_tasks.empty(); });
-                        if (this->m_stop && this->m_tasks.empty())
-                            return;
-                        task = std::move(this->m_tasks.top());
-                        this->m_tasks.pop();
-                        ++m_activeThreads;
-                    }
+            return {};
+        }
+        auto task = std::move(queue.front());
+        queue.pop_front();
+        return task;
+    }
+
+    std::optional<std::shared_ptr<Task>> WorkerQueue::trySteal()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (queue.empty())
+        {
+            return {};
+        }
+        auto task = std::move(queue.back());
+        queue.pop_back();
+        return task;
+    }
+
+    TaskPool::TaskPool(size_t threads = std::thread::hardware_concurrency())
+        : m_defaultThreadCount(threads)
+    {
+        for (size_t i = 0; i < m_defaultThreadCount; ++i)
+        {
+            m_queues.emplace_back(std::make_unique<WorkerQueue>());
+        }
+        start();
+    }
+
+    TaskPool::~TaskPool()
+    {
+        stop();
+    }
+
+    std::shared_ptr<TaskPool> TaskPool::createShared(size_t threads)
+    {
+        return std::make_shared<TaskPool>(threads);
+    }
+
+    void TaskPool::workerThread(size_t index)
+    {
+        t_index = index;
+        t_localQueue = m_queues[t_index].get();
+
+        while (!m_stop)
+        {
+            std::shared_ptr<Task> task;
+            for (size_t i = 0; i < m_queues.size(); ++i)
+            {
+                if (m_queues[(t_index + i) % m_queues.size()]->tryPop(task))
+                {
+                    break;
+                }
+            }
+            if (!task && !tryStealing(task))
+            {
+                std::unique_lock<std::mutex> lock(m_conditionMutex);
+                m_condition.wait(lock, [this, &task]
+                                 { return m_stop || tryStealing(task); });
+                if (task)
+                {
                     task->func();
-                    {
-                        std::lock_guard<std::mutex> lock(this->m_queueMutex);
-                        --m_activeThreads;
-                        if (this->shouldReduceThreads()) {
-                            break;
-                        }
-                    }
-                } });
+                }
+            }
+            else if (task)
+            {
+                task->func();
+            }
         }
     }
 
-    void DynamicThreadPool::wait()
+    bool TaskPool::tryStealing(std::shared_ptr<Task> &task)
     {
-        std::unique_lock<std::mutex> lock(m_queueMutex);
-        m_condition.wait(lock, [this]
-                         { return this->m_tasks.empty(); });
+        for (size_t i = 0; i < m_queues.size(); ++i)
+        {
+            if (m_queues[(t_index + i + 1) % m_queues.size()]->trySteal(task))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
-    bool DynamicThreadPool::shouldReduceThreads()
+    void TaskPool::start()
     {
-        return m_workers.size() > m_defaultThreadCount && m_tasks.empty();
+        for (size_t i = 0; i < m_defaultThreadCount; ++i)
+        {
+            m_workers.emplace_back([this, i]
+                                   { workerThread(i); });
+        }
+    }
+
+    void TaskPool::stop()
+    {
+        m_stop = true;
+        m_condition.notify_all();
+        for (auto &worker : m_workers)
+        {
+            if (worker.joinable())
+            {
+                worker.join();
+            }
+        }
     }
 }

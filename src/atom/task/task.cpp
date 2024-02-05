@@ -15,7 +15,7 @@ Description: Basic and Simple Task Definition
 #include "task.hpp"
 
 SimpleTask::SimpleTask(const std::function<json(const json &)> &func,
-               const std::function<json(const json &)> &stop_fn
+               const std::function<json(const json &)> &stop_fn,
                const json &params_template)
     : m_function(func), m_paramsTemplate(params_template), m_stopFn(stop_fn), m_stopFlag(false)
 {
@@ -33,7 +33,7 @@ SimpleTask::~SimpleTask()
     }
 }
 
-const json SimpleTask::toJson() const
+json SimpleTask::toJson()
 {
     return {
         {"type", "merged"},
@@ -43,12 +43,12 @@ const json SimpleTask::toJson() const
         {"can_stop", m_canStop}};
 }
 
-const json SimpleTask::getResult() const
+json SimpleTask::getResult()
 {
     return m_returns;
 }
 
-const json SimpleTask::getParamsTemplate() const
+json SimpleTask::getParamsTemplate()
 {
     return m_paramsTemplate;
 }
@@ -187,7 +187,7 @@ bool SimpleTask::validateJsonString(const std::string &jsonString, const std::st
     return validateJsonValue(jsonData, templateData);
 }
 
-const json SimpleTask::execute()
+json SimpleTask::execute()
 {
     m_isExecuting.store(true);
     if (!m_paramsTemplate.is_null() && !m_params.is_null())

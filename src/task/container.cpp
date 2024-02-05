@@ -18,6 +18,11 @@ Description: Task container class.
 
 namespace Lithium
 {
+    std::shared_ptr<TaskContainer> TaskContainer::createShared()
+    {
+        return std::make_shared<TaskContainer>();
+    }
+    
     void TaskContainer::addTask(const std::shared_ptr<SimpleTask> &task)
     {
         if (!task)

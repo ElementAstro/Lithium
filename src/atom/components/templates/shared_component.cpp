@@ -1,12 +1,12 @@
 #include "shared_component.hpp"
 
-#include "atom/async/thread.hpp"
 #include "atom/server/message_bus.hpp"
-
 #include "atom/utils/string.hpp"
-
 #include "atom/log/loguru.hpp"
+
 #include "config.h"
+
+#include "macro.hpp"
 
 #define GET_ARGUMENT_S(command, type, name)                                           \
     if (!args.get<type>(#name).has_value())                                           \
@@ -87,13 +87,6 @@ SharedComponent::~SharedComponent()
 bool SharedComponent::Initialize()
 {
     // Initialize message handlers
-    // Register message handlers
-    m_handleVoid->registerCase("getVersion", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getVersion", getInfo<std::string>("basic", "version").value()); });
-    m_handleVoid->registerCase("getName", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getName", getInfo<std::string>("basic", "name").value()); });
-    m_handleVoid->registerCase("getAllInfo", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getAllInfo", this->getJsonInfo()); });
     m_handleVoid->registerCase("getAllConfig", [this](const std::shared_ptr<VoidMessage> &message)
                                { this->SendTextMessage("getAllConfig", this->getJsonConfig()); });
 
@@ -218,21 +211,5 @@ bool SharedComponent::SendParamsMessage(const std::string &message, const Args &
         return false;
     }
     m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<ParamsMessage>(message, params, "lithium.app", GetName()));
-    return true;
-}
-
-bool SharedComponent::NeedThreadPool()
-{
-    return true;
-}
-
-bool SharedComponent::InjectThreadPool(std::shared_ptr<Atom::Async::ThreadManager> threadPool)
-{
-    if (!threadPool)
-    {
-        LOG_F(ERROR, "Thread pool is null.");
-        return false;
-    }
-    DLOG_F(INFO, "Thread pool is injected.");
     return true;
 }

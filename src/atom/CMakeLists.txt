@@ -1,17 +1,28 @@
+# CMakeLists.txt for Atom
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Atom
+# Description: Atom Library for all of the Element Astro Project
+# Author: Max Qian
+# License: GPL3
+
 cmake_minimum_required(VERSION 3.20)
 project(atom C CXX)
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 add_subdirectory(async)
+add_subdirectory(components)
+add_subdirectory(connection)
+add_subdirectory(driver)
+add_subdirectory(extra)
 add_subdirectory(io)
 add_subdirectory(log)
-add_subdirectory(type)
-add_subdirectory(web)
-add_subdirectory(components)
+add_subdirectory(server)
 add_subdirectory(task)
-add_subdirectory(driver)
+add_subdirectory(type)
 add_subdirectory(utils)
+add_subdirectory(web)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
@@ -99,12 +110,12 @@ list(APPEND ${PROJECT_NAME}_LIBS
     loguru
     cpp_httplib
     libzippp
-    atom-asyncstatic
-    atom-utilsstatic
-    atom-driverstatic
+    atom-async
+    atom-task
+    atom-driver
     atom-component
-    atom-utilsstatic
-    atom-webstatic
+    atom-utils
+    atom-web
     )
 
 # Build Object Library

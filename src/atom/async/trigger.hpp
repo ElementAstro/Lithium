@@ -12,7 +12,8 @@ Description: Trigger class for C++
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_ASYNC_TRIGGER_HPP
+#define ATOM_ASYNC_TRIGGER_HPP
 
 #include <vector>
 #include <functional>
@@ -115,3 +116,5 @@ private:
 };
 
 #include "trigger_impl.hpp"
+
+#endif

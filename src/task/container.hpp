@@ -38,6 +38,8 @@ namespace Lithium
     class TaskContainer
     {
     public:
+        static std::shared_ptr<TaskContainer> createShared();
+        
         /**
          * @brief Add a task to the container.
          *

@@ -17,20 +17,21 @@ Description: Task Generator
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 
+#include "atom/server/global_ptr.hpp"
+
 #include <fstream>
+#include <future>
 
 namespace Lithium
 {
-    TaskGenerator::TaskGenerator(std::shared_ptr<DeviceManager> deviceManager) : m_DeviceManager(deviceManager) {}
-
-    std::shared_ptr<TaskGenerator> createShared(std::shared_ptr<DeviceManager> deviceManager)
+    TaskGenerator::TaskGenerator()
     {
-        if (!deviceManager)
-        {
-            LOG_F(ERROR, "Device manager is null");
-            throw std::runtime_error("Device manager is null");
-        }
-        return std::make_shared<TaskGenerator>(deviceManager);
+        m_DeviceManager = GetPtr<DeviceManager>("lithium.device");
+    }
+
+    std::shared_ptr<TaskGenerator> TaskGenerator::createShared()
+    {
+        return std::make_shared<TaskGenerator>();
     }
 
     bool TaskGenerator::loadMacros(const std::string &macroFileName)
@@ -72,7 +73,7 @@ namespace Lithium
         std::vector<std::future<void>> futures;
         for (const auto &entry : fs::directory_iterator(folderPath))
         {
-            futures.push_back(std::async(std::launch::async, &TaskGenerator::processMacroFile, this, entry.path()));
+            futures.push_back(std::async(std::launch::async, &TaskGenerator::processMacroFile, this, entry.path().string()));
         }
 
         for (auto &fut : futures)
@@ -115,7 +116,7 @@ namespace Lithium
     {
         if (!Atom::IO::isFileExists(sfilePath))
         {
-            LOG_F(ERROR, "Macro file not found: {}", filePath);
+            LOG_F(ERROR, "Macro file not found: {}", sfilePath);
             return;
         }
         fs::path filePath = sfilePath;

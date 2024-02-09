@@ -2,26 +2,44 @@
 import React from "react";
 import { Button } from "react-bootstrap";
 import { SToolbar } from "./style";
-import { ChevronLeft, Gear, Tools } from "react-bootstrap-icons";
+import {
+  Boxes,
+  ChevronLeft,
+  ChevronRight,
+  Gear,
+  GraphDown,
+  MapFill,
+  Tools,
+  XCircle,
+} from "react-bootstrap-icons";
 
 const Toolbar = ({ visible, onToggle }) => {
   return (
     <SToolbar visible={visible}>
-      <Button variant="secondary" onClick={onToggle}>
-        {visible ? "隐藏工具栏" : "显示工具栏"}
+      <Button variant="light" className="mt-1">
+        <MapFill size={20} />
+        <span style={{ marginLeft: "10px" }}>Guide</span>
       </Button>
-      <Button variant="primary">
-        <Gear />
-        工具1
+      <Button variant="light">
+        <Boxes size={20} className="mt-1"/>
+        <span style={{ marginLeft: "10px" }}>Solve</span>
       </Button>
-      <Button variant="primary">
-        <Tools />
-        工具2
+      <Button variant="light" className="mt-1">
+        <GraphDown size={20} className="mt-1"/>
+        <span style={{ marginLeft: "10px" }}>Hist</span>
       </Button>
-      <Button variant="light" onClick={onToggle} style={{ alignSelf: "flex-start" }}>
-        <ChevronLeft size={20} />
+      <Button variant="light" className="mt-1">
+        <Tools size={20} className="mt-1"/>
+        <span style={{ marginLeft: "10px" }}>Tools</span>
       </Button>
-      {/* ... Add more toolbar buttons with icons and names */}
+      <Button
+        variant="light"
+        onClick={onToggle}
+        style={{ alignSelf: "flex-start" }}
+        className="mt-1 mr-1 mb-1"
+      >
+        {visible ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+      </Button>
     </SToolbar>
   );
 };

@@ -77,4 +77,25 @@ namespace Atom::Utils
         std::strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", std::localtime(&timestamp));
         return std::string(buffer);
     }
+
+    // Specially for Astrometry.net
+    std::string toString(const std::tm &tm, const std::string &format)
+    {
+        std::ostringstream oss;
+        oss << std::put_time(&tm, format.c_str());
+        return oss.str();
+    }
+
+    std::string getUtcTime()
+    {
+        const auto now = std::chrono::system_clock::now();
+        const std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+        std::tm tm;
+#ifdef _WIN32
+        gmtime_s(&tm, &now_time_t);
+#else
+        gmtime_r(&now_time_t, &tm);
+#endif
+        return toString(tm, "%FT%TZ");
+    }
 }

@@ -67,7 +67,7 @@ namespace Atom::Connection
             return;
         }
 
-        if (bind(m_serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+        if (bind(m_serverSocket, reinterpret_cast<struct sockaddr *>(&serverAddr), sizeof(serverAddr)) == SOCKET_ERROR)
         {
             LOG_F(ERROR, "Bind failed with error.");
             closesocket(m_serverSocket);
@@ -117,8 +117,8 @@ namespace Atom::Connection
         targetAddr.sin_port = htons(port);
         inet_pton(AF_INET, ip.c_str(), &targetAddr.sin_addr);
 
-        int sentBytes = sendto(m_serverSocket, message.c_str(), message.length(), 0,
-                               (struct sockaddr *)&targetAddr, sizeof(targetAddr));
+        int sentBytes = sendto(m_serverSocket, message.c_str(), static_cast<int>(message.length()), 0,
+                               reinterpret_cast<struct sockaddr *>(&targetAddr), sizeof(targetAddr));
         if (sentBytes == SOCKET_ERROR)
         {
             LOG_F(ERROR, "Failed to send message.");
@@ -139,7 +139,7 @@ namespace Atom::Connection
         while (m_running.load())
         {
             int bytesReceived = recvfrom(m_serverSocket, buffer, sizeof(buffer), 0,
-                                         (struct sockaddr *)&clientAddr, &clientAddrSize);
+                                         reinterpret_cast<struct sockaddr *>(&clientAddr), &clientAddrSize);
             if (bytesReceived == SOCKET_ERROR)
             {
                 LOG_F(ERROR, "recvfrom failed with error.");

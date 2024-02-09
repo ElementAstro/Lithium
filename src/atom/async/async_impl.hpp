@@ -26,7 +26,7 @@ namespace Atom::Async
     }
 
     template <typename ResultType>
-    ResultType AsyncWorker<ResultType>::GetResult()
+    [[nodiscard]]  ResultType AsyncWorker<ResultType>::GetResult()
     {
         if (!task_.valid())
         {
@@ -110,7 +110,7 @@ namespace Atom::Async
 
     template <typename ResultType>
     template <typename Func, typename... Args>
-    std::shared_ptr<AsyncWorker<ResultType>> AsyncWorkerManager<ResultType>::CreateWorker(Func &&func, Args &&...args)
+    [[nodiscard]]  std::shared_ptr<AsyncWorker<ResultType>> AsyncWorkerManager<ResultType>::CreateWorker(Func &&func, Args &&...args)
     {
         auto worker = std::make_shared<AsyncWorker<ResultType>>();
         workers_.push_back(worker);
@@ -153,6 +153,57 @@ namespace Atom::Async
     void AsyncWorkerManager<ResultType>::Cancel(std::shared_ptr<AsyncWorker<ResultType>> worker)
     {
         worker->Cancel();
+    }
+
+    template <typename Func, typename... Args>
+    [[nodiscard]] std::future<decltype(std::declval<Func>()(std::declval<Args>()...))> asyncRetry(Func &&func, int attemptsLeft, std::chrono::milliseconds delay, Args &&...args)
+    {
+        static_assert(std::is_void<decltype(std::declval<Func>()(std::declval<Args>()...))>::value == false, "Func must return a value");
+
+        if (attemptsLeft <= 1)
+        {
+            // 最后一次尝试，直接执行
+            return std::async(std::launch::deferred, std::forward<Func>(func), std::forward<Args>(args)...);
+        }
+
+        // 尝试执行函数
+        auto attempt = std::async(std::launch::async, std::forward<Func>(func), std::forward<Args>(args)...);
+
+        try
+        {
+            // 立即获取结果，如果有异常会在这里抛出
+            auto result = attempt.get();
+            // 如果成功，则直接返回一个已经有结果的 future
+            return std::async(std::launch::deferred, [result]() -> decltype(func(args...))
+                              { return result; });
+        }
+        catch (...)
+        {
+            if (attemptsLeft <= 1)
+            {
+                // 所有尝试都失败，重新抛出最后一次的异常
+                throw;
+            }
+            else
+            {
+                // 等待一段时间后重试
+                std::this_thread::sleep_for(delay);
+                return asyncRetry(std::forward<Func>(func), attemptsLeft - 1, delay, std::forward<Args>(args)...);
+            }
+        }
+    }
+
+    template <typename ReturnType>
+    ReturnType getWithTimeout(std::future<ReturnType> &future, std::chrono::milliseconds timeout)
+    {
+        if (future.wait_for(timeout) == std::future_status::ready)
+        {
+            return future.get();
+        }
+        else
+        {
+            throw std::runtime_error("Timeout occurred while waiting for future result");
+        }
     }
 } // namespace Atom::Async
 

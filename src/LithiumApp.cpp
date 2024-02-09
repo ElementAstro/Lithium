@@ -84,6 +84,8 @@ namespace Lithium
             m_ProcessManager = GetPtr<Atom::System::ProcessManager>("lithium.system.process");
             m_MessageBus = GetPtr<Atom::Server::MessageBus>("lithium.bus");
 
+            m_TaskManager = GetPtr<TaskManager>("lithium.task.manager");
+
             // Common Message Processing Threads
             // Max : Maybe we only need one thread for Message, and dynamically cast message
             //       to the right type to process.

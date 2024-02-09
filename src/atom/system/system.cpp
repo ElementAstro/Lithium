@@ -113,6 +113,40 @@ namespace Atom::System
         return is_installed;
     }
 
+    bool checkExecutableFile(const std::string &fileName, const std::string &fileExt)
+    {
+#if defined(_WIN32)
+        fs::path filePath = fileName + fileExt;
+#else
+        fs::path filePath = fileName;
+#endif
+
+        DLOG_F(INFO, "Checking file '%s'.", filePath.string().c_str());
+
+        if (!fs::exists(filePath))
+        {
+            DLOG_F(WARNING, "The file '%s' does not exist.", filePath.string().c_str());
+            return false;
+        }
+
+#if defined(_WIN32)
+        if (!fs::is_regular_file(filePath) || !(GetFileAttributesA(filePath.generic_string().c_str()) & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            DLOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", filePath.string().c_str());
+            return false;
+        }
+#else
+        if (!fs::is_regular_file(filePath) || access(filePath.c_str(), X_OK) != 0)
+        {
+            DLOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", filePath.string().c_str());
+            return false;
+        }
+#endif
+
+        DLOG_F(INFO, "The file '%s' exists and is executable.", filePath.string().c_str());
+        return true;
+    }
+
     float GetCpuUsage()
     {
         float cpu_usage = 0.0;
@@ -999,8 +1033,8 @@ namespace Atom::System
             {
                 processInfo.processID = processID;
                 processInfo.executableFile = std::string(exeName);
-                //if (!GetProcessId(reinterpret_cast<HANDLE>(GetParentProcessId(reinterpret_cast<DWORD>(hProcess))), &processInfo.parentProcessID))
-                    processInfo.parentProcessID = 0;
+                // if (!GetProcessId(reinterpret_cast<HANDLE>(GetParentProcessId(reinterpret_cast<DWORD>(hProcess))), &processInfo.parentProcessID))
+                processInfo.parentProcessID = 0;
                 processInfo.basePriority = GetPriorityClass(hProcess);
 
                 CloseHandle(hProcess);

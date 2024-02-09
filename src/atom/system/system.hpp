@@ -48,6 +48,19 @@ namespace Atom::System
     bool CheckSoftwareInstalled(const std::string &software_name);
 
     /**
+     * @brief Check whether the specified file exists.
+     * 检查指定文件是否存在
+     *
+     * @param fileName The name of the file. 文件名称
+     * @param fileExt The extension of the file. 文件扩展名
+     * @return true if the file exists.
+     *         如果文件存在，则返回 true
+     * @return false if the file does not exist or an error occurred.
+     *         如果文件不存在或发生错误，则返回 false
+     */
+    bool checkExecutableFile(const std::string &fileName, const std::string &fileExt);
+
+    /**
      * @brief Get the CPU usage percentage.
      * 获取 CPU 使用率百分比
      *

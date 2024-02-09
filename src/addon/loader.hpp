@@ -75,7 +75,7 @@ namespace Lithium
          * @param dir_name 模块所在的目录名称。
          * @param threadManager 线程管理器的共享指针。
          */
-        ModuleLoader(const std::string &dir_name);
+        explicit ModuleLoader(const std::string &dir_name);
 
         /**
          * @brief 析构函数，释放 ModuleLoader 对象。

@@ -6,12 +6,13 @@ import {
   GearFill,
   PencilSquare,
   TrashFill,
+  XCircle,
 } from "react-bootstrap-icons";
 
 const FloatingUIContainer = styled.div`
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 50px;
+  left: 20px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -44,7 +45,7 @@ const FloatingUI = () => {
   return (
     <FloatingUIContainer>
       <Button variant="primary" onClick={toggleMenu}>
-        {isOpen ? "Close" : "Open"}
+        {isOpen ? <XCircle size={20} /> : <GearFill size={20} />}
       </Button>
       {isOpen && (
         <ButtonGroup vertical>

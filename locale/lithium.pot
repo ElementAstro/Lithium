@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  \n"
 "Report-Msgid-Bugs-To: astro_air@126.com\n"
-"POT-Creation-Date: 2024-02-06 04:56+0800\n"
+"POT-Creation-Date: 2024-02-06 17:50+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: E:/msys64/home/Lithium/src/LithiumApp.cpp:549
+#: E:/msys64/home/Lithium/src/LithiumApp.cpp:551
 #, c++-format
 msgid "Dispatched command {} with result: {}"
 msgstr ""

@@ -181,6 +181,28 @@ namespace Atom::Async
     private:
         std::vector<std::shared_ptr<AsyncWorker<ResultType>>> workers_; ///< The list of managed AsyncWorker instances.
     };
+
+    /**
+     * @brief Async execution with retry.
+     *
+     * @tparam Func The type of the function to be executed asynchronously.
+     * @tparam Args The types of the arguments to be passed to the function.
+     * @param func The function to be executed asynchronously.
+     * @param args The arguments to be passed to the function.
+     * @return A shared pointer to the created AsyncWorker instance.
+     */
+    template <typename Func, typename... Args>
+    std::future<decltype(std::declval<Func>()(std::declval<Args>()...))> asyncRetry(Func &&func, int attemptsLeft, std::chrono::milliseconds delay, Args &&...args);
+
+    /**
+     * @brief Gets the result of the task with a timeout.
+     *
+     * @param future The future representing the asynchronous task.
+     * @param timeout The timeout duration.
+     * @return The result of the task.
+     */
+    template <typename ReturnType>
+    ReturnType getWithTimeout(std::future<ReturnType> &future, std::chrono::milliseconds timeout);
 }
 
 #include "async_impl.hpp"

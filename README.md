@@ -1,4 +1,4 @@
-# Lithium
+## Lithium
 
 <p align="center">
 <img src="https://img.shields.io/badge/dialect-C%2B%2B20-blue">
@@ -10,6 +10,9 @@
 </p>
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/d3fed47a38e642a390d8ee506dc0acb3)](https://app.codacy.com/gh/ElementAstro/Lithium/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ElementAstro_Lithium&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=ElementAstro_Lithium&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ElementAstro_Lithium&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
 
 ## Introduction
 
@@ -130,7 +133,7 @@ Let us nurture a heart that yearns for wisdom and grace,
 And never lose sight of this noble race.
 ```
 
-# 锂
+## 锂
 
 ## 简介
 

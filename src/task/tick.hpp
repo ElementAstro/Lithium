@@ -46,7 +46,7 @@ namespace Lithium
         unsigned long long tick;                             // 任务执行的计划刻
         std::vector<std::shared_ptr<TickTask>> dependencies; // 任务依赖
         std::function<void()> onCompletion;                  // 任务完成时的回调函数
-        std::atomic<bool> isRunning = false;                 // 任务是否正在执行的标志
+        std::atomic_bool isRunning = false;                 // 任务是否正在执行的标志
         std::atomic_bool completed = false;                  // 任务是否已完成的标志
 
         /**

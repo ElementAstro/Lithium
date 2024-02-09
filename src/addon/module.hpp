@@ -27,10 +27,8 @@ namespace Lithium
         void *address;
         std::vector<std::string> parameters;
 
-        FunctionInfo()
+        FunctionInfo() : name(""), address(nullptr)
         {
-            name = "";
-            address = nullptr;
         }
     };
 

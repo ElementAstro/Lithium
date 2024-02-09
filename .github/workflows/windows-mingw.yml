@@ -58,9 +58,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Get submodules
-      run: git submodule init && git submodule update
-
     - name: Build INDI Core
       run: |
         mkdir build

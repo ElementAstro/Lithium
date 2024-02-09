@@ -46,7 +46,7 @@ constexpr std::string DYNAMIC_LIBRARY_EXTENSION = ".so";
 
 namespace Lithium
 {
-    ComponentManager::ComponentManager()
+    ComponentManager::ComponentManager() : m_ModuleLoader(nullptr), m_Env(nullptr), m_ComponentFinder(nullptr), m_Sandbox(nullptr), m_Compiler(nullptr)
     {
         m_ModuleLoader = GetPtr<Lithium::ModuleLoader>("lithium.addon.loader");
         m_Env = GetPtr<Atom::Utils::Env>("lithium.utils.env");

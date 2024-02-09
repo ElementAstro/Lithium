@@ -46,7 +46,7 @@ namespace Atom::Connection
          * @param create 是否创建新的共享内存
          */
         template <typename T>
-        SharedMemory(const std::string &name, bool create = true);
+        explicit SharedMemory(const std::string &name, bool create = true);
 
         /**
          * @brief 析构函数，释放共享内存

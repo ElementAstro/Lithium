@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Cropper, { ReactCropperElement } from "react-cropper";
 import "cropperjs/dist/cropper.css";
 import axios from "axios";
-import { Button, Modal } from "react-bootstrap";
+import { Button, Modal, Row } from "react-bootstrap";
 import { Crop, ArrowRepeat } from "react-bootstrap-icons";
 
 const CameraView = () => {
@@ -50,12 +50,16 @@ const CameraView = () => {
         aspectRatio={16 / 9}
         guides={false}
       />
-      <button onClick={handleCrop}>
-        <Crop /> 裁剪
-      </button>
-      <button onClick={handleRefresh}>
-        <ArrowRepeat /> 刷新
-      </button>
+      <Row className="top-bar">
+        {/*
+          <Button onClick={handleCrop}>
+          <Crop /> 裁剪
+        </Button>
+        <Button onClick={handleRefresh}>
+          <ArrowRepeat /> 刷新
+        </Button>
+          */}
+      </Row>
 
       <Modal
         show={showModal}

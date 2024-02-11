@@ -36,6 +36,24 @@ namespace Atom::System
     };
 
     /**
+     * @brief Battery information.
+     * 电池信息
+     */
+    struct BatteryInfo
+    {
+        bool isBatteryPresent = false;   // 是否存在电池
+        bool isCharging = false;         // 是否正在充电
+        float batteryLifePercent = 0.0;  // 电量百分比
+        float batteryLifeTime = 0.0;     // 剩余电量时间(分钟)
+        float batteryFullLifeTime = 0.0; // 满电状态下电量时间(分钟)
+        float energyNow = 0.0;           // 当前剩余电量(微焦耳)
+        float energyFull = 0.0;          // 电池总容量(微焦耳)
+        float energyDesign = 0.0;        // 电池设计容量(微焦耳)
+        float voltageNow = 0.0;          // 当前电压(伏特)
+        float currentNow = 0.0;          // 电池当前电流(安培)
+    };
+
+    /**
      * @brief Check whether the specified software is installed.
      * 检查指定软件是否已安装
      *
@@ -141,6 +159,15 @@ namespace Atom::System
      *         包含存储设备名称和型号的一对对的向量
      */
     std::vector<std::pair<std::string, std::string>> GetStorageDeviceModels();
+
+    /**
+     * @brief Get the battery information.
+     * 获取电池信息
+     *
+     * @return The battery information.
+     *         电池信息
+     */
+    BatteryInfo getBatteryInfo();
 
     /**
      * @brief Check whether the current user has root/administrator privileges.

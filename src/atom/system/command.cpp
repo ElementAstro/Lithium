@@ -21,11 +21,11 @@ Description: Simple wrapper for executing commands.
 #include <sstream>
 #include <stdexcept>
 #ifdef _WIN32
-#include <windows.h>
 #define SETENV(name, value) SetEnvironmentVariableA(name, value)
 #define UNSETENV(name) SetEnvironmentVariableA(name, NULL)
 #else
 #include <cstdio>
+#include <csignal>
 #include <cstring>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -35,15 +35,47 @@ Description: Simple wrapper for executing commands.
 
 namespace Atom::System
 {
-    std::string executeCommand(const std::string &command)
+    std::string executeCommand(const std::string &command, bool openTerminal = false)
     {
         if (command.empty())
         {
             return "";
         }
+
         auto pipeDeleter = [](FILE *pipe)
-        { if (pipe) pclose(pipe); };
-        std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(popen(command.c_str(), "r"), pipeDeleter);
+        {
+            if (pipe)
+                pclose(pipe);
+        };
+
+        std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
+
+#ifdef _WIN32
+        if (openTerminal)
+        {
+            // 在Windows下打开终端界面
+            STARTUPINFO startupInfo{};
+            PROCESS_INFORMATION processInfo{};
+            if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo))
+            {
+                WaitForSingleObject(processInfo.hProcess, INFINITE);
+                CloseHandle(processInfo.hProcess);
+                CloseHandle(processInfo.hThread);
+                return ""; // 因为终端界面会在新进程中执行，无法获得输出，所以这里返回空字符串。
+            }
+            else
+            {
+                throw std::runtime_error("Error: failed to run command '" + command + "'.");
+            }
+        }
+        else
+        {
+            // 不打开终端界面时，使用popen执行命令
+            pipe.reset(popen(command.c_str(), "r"));
+        }
+#else // 非Windows平台
+        pipe.reset(popen(command.c_str(), "r"));
+#endif
 
         if (!pipe)
         {
@@ -53,12 +85,126 @@ namespace Atom::System
         std::array<char, 4096> buffer{};
         std::ostringstream output;
 
-        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+        bool interrupted = false; // 标记是否收到中断信号
+
+#ifdef _WIN32
+        // Windows下无法捕获中断信号，因此只能在循环中检查键盘输入来模拟中断
+        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr && !interrupted)
+        {
+            output << buffer.data();
+
+            if (_kbhit())
+            {
+                int key = _getch();
+                if (key == 3) // 检查Ctrl+C中断信号
+                {
+                    interrupted = true;
+                }
+            }
+        }
+#else // 非Windows平台
+      // 在非Windows平台下，可以捕获中断信号
+        signal(SIGINT, [](int)
+               { interrupted = true; });
+
+        while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr && !interrupted)
         {
             output << buffer.data();
         }
+#endif
 
         return output.str();
+    }
+
+    void executeCommands(const std::vector<std::string> &commands)
+    {
+        std::vector<std::thread> threads;
+
+        for (const auto &command : commands)
+        {
+            threads.emplace_back([command]()
+                                 {
+#ifdef _WIN32
+                                     STARTUPINFO startupInfo{};
+                                     PROCESS_INFORMATION processInfo{};
+                                     if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo))
+                                     {
+                                         WaitForSingleObject(processInfo.hProcess, INFINITE);
+                                         CloseHandle(processInfo.hProcess);
+                                         CloseHandle(processInfo.hThread);
+                                     }
+#else // 非Windows平台
+                                     int status = system(command.c_str());
+                                     if (!WIFEXITED(status) || !(WEXITSTATUS(status) == 0))
+                                     {
+                                         throw std::runtime_error("Error executing command: " + command);
+                                     }
+#endif
+                                 });
+        }
+        for (auto &thread : threads)
+        {
+            thread.join();
+        }
+    }
+
+    ProcessHandle executeCommand(const std::string &command)
+    {
+        ProcessHandle handle;
+
+#ifdef _WIN32
+        STARTUPINFO startupInfo{};
+        PROCESS_INFORMATION processInfo{};
+        if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo, &processInfo))
+        {
+            CloseHandle(processInfo.hThread);
+            handle.handle = processInfo.hProcess;
+        }
+        else
+        {
+            throw std::runtime_error("Error: failed to run command '" + command + "'.");
+        }
+#else // 非Windows平台
+        pid_t pid = fork();
+        if (pid == -1)
+        {
+            throw std::runtime_error("Error: failed to fork process for command '" + command + "'.");
+        }
+        else if (pid == 0)
+        {
+            // 子进程
+            execl("/bin/sh", "sh", "-c", command.c_str(), NULL);
+            _exit(EXIT_FAILURE);
+        }
+        else
+        {
+            handle.pid = pid;
+        }
+#endif
+
+        return handle;
+    }
+
+    void killProcess(const ProcessHandle &handle)
+    {
+        if (!handle.handle)
+        {
+            return;
+        }
+#ifdef _WIN32
+        TerminateProcess(handle.handle, 0);
+        CloseHandle(handle.handle);
+#else
+        int status;
+        if (kill(handle.pid, SIGKILL) == -1)
+        {
+            throw std::runtime_error("Error: failed to kill process with PID " + std::to_string(handle.pid) + ".");
+        }
+        else
+        {
+            waitpid(handle.pid, &status, 0);
+        }
+#endif
     }
 
     std::string executeCommandWithEnv(const std::string &command, const std::map<std::string, std::string> &envVars)

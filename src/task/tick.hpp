@@ -34,6 +34,11 @@ Description: Tick Sheduler, just like Minecraft's
 
 #include "pool.hpp"
 
+namespace Atom::Utils
+{
+    class StopWatcher;
+}
+
 namespace Lithium
 {
     struct TickTask
@@ -41,13 +46,16 @@ namespace Lithium
         /**
          * @brief 任务结构体，表示一个待执行的任务
          */
-        std::function<void()> func;                          // 任务函数
-        int priority;                                        // 任务优先级
-        unsigned long long tick;                             // 任务执行的计划刻
-        std::vector<std::shared_ptr<TickTask>> dependencies; // 任务依赖
-        std::function<void()> onCompletion;                  // 任务完成时的回调函数
-        std::atomic_bool isRunning = false;                 // 任务是否正在执行的标志
-        std::atomic_bool completed = false;                  // 任务是否已完成的标志
+        std::function<void()> func;
+        int priority;
+        unsigned long long tick;                                                // 任务执行的计划刻
+        std::vector<std::shared_ptr<Task>> dependencies;                        // 任务依赖
+        std::function<void()> onCompletion;                                     // 任务完成时的回调函数
+        std::atomic<bool> isRunning = false;                                    // 任务是否正在执行
+        std::atomic_bool completed = false;                                     // 任务是否完成
+        std::size_t id;                                                         // 任务的唯一标识符
+        unsigned retryCount = 0;                                                // 重试次数
+        std::chrono::milliseconds retryInterval = std::chrono::milliseconds(0); // 重试间隔
 
         /**
          * @brief 比较函数，用于优先级队列的排序
@@ -69,9 +77,7 @@ namespace Lithium
         TickTask(std::function<void()> func, unsigned long long tick, std::vector<std::shared_ptr<TickTask>> dependencies,
                  std::function<void()> onCompletion)
             : func(std::move(func)), priority(0), tick(tick), dependencies(std::move(dependencies)),
-              onCompletion(std::move(onCompletion))
-        {
-        }
+              onCompletion(std::move(onCompletion)) {}
     };
 
     class TickScheduler
@@ -98,14 +104,43 @@ namespace Lithium
          * @return 指向调度的任务的智能指针
          */
         template <typename F, typename... Args>
-        auto scheduleTask(unsigned long long tick, F &&f, Args &&...args) -> std::shared_ptr<TickTask>
+        auto scheduleTask(unsigned long long tick, bool relative, unsigned retryCount, std::chrono::milliseconds retryInterval, F &&f, Args &&...args) -> std::shared_ptr<Task>
         {
-            auto taskFunc = [f = std::forward<F>(f), ... args = std::forward<Args>(args)]() mutable
+            static_assert(std::is_invocable_r_v<void, F, Args...>, "f must be invocable with args... and return void");
+
+            auto effectiveTick = relative ? currentTick.load() + tick : tick;
+            if (effectiveTick < currentTick.load())
             {
-                f(std::forward<Args>(args)...);
+                // 如果计划刻小于当前刻，说明任务已经过期，直接返回
+                return nullptr;
+            }
+
+            // 封装用户函数，以便在执行中捕获异常并应用重试逻辑
+            auto taskFunc = [this, f = std::forward<F>(f), args..., retryCount, retryInterval, effectiveTick]() mutable
+            {
+                try
+                {
+                    f(std::forward<Args>(args)...);
+                }
+                catch (...)
+                { // 捕获所有异常
+                    if (retryCount > 0)
+                    {
+                        // 如果还有重试次数，重新安排任务
+                        scheduleTask(retryInterval.count(), true, retryCount - 1, retryInterval, f, std::forward<Args>(args)...);
+                    }
+                    else
+                    {
+                        throw std::runtime_error("Task execution failed.");
+                    }
+                }
             };
-            std::vector<std::shared_ptr<TickTask>> task_dependencies;
-            auto task = std::make_shared<TickTask>(taskFunc, tick, task_dependencies, nullptr);
+
+            std::vector<std::shared_ptr<Task>> task_dependencies;
+            auto task = std::make_shared<Task>(taskFunc, effectiveTick, task_dependencies, nullptr);
+            task->id = nextTaskId++;
+            task->retryCount = retryCount;
+            task->retryInterval = retryInterval;
             {
                 std::lock_guard<std::mutex> lock(tasksMutex);
                 tasks.push_back(task);
@@ -113,6 +148,19 @@ namespace Lithium
             cv.notify_one();
             return task;
         }
+
+        /**
+         * @brief 取消一个任务
+         * @param taskId 要取消的任务的唯一标识符
+         * @return 是否取消成功
+         */
+        bool cancelTask(std::size_t taskId);
+
+        /**
+         * @brief 获取当前刻
+         * @return 当前刻
+         */
+        unsigned long long getCurrentTick() const;
 
         /**
          * @brief 添加一个任务依赖关系
@@ -138,19 +186,38 @@ namespace Lithium
          */
         void resume();
 
+        /**
+         * @brief 切换到手动模式
+         */
+        void switchToManualMode();
+
+        /**
+         * @brief 切换到自动模式
+         */
+        void switchToAutoMode();
+
+        /**
+         * @brief 触发所有任务
+         */
+        void triggerTasks();
+
     private:
         std::shared_ptr<TaskPool> pool;               // 线程池对象
         std::vector<std::shared_ptr<TickTask>> tasks; // 所有待执行的任务
         std::mutex tasksMutex;                        // 任务队列的互斥锁
         std::condition_variable cv;                   // 条件变量，用于暂停和恢复任务调度器的执行
         std::atomic<unsigned long long> currentTick;  // 当前的计划刻
-        std::atomic<bool> stop;                       // 停止任务调度器的标志
-        std::atomic<bool> isPaused;                   // 暂停任务调度器的标志
+        std::atomic_bool stop;                        // 停止任务调度器的标志
+        std::atomic_bool isPaused;                    // 暂停任务调度器的标志
 #if __cplusplus >= 202002L
         std::jthread schedulerThread; // 任务调度器的线程
 #else
         std::thread schedulerThread; // 任务调度器的线程
 #endif
+        std::atomic_bool manualMode{false};     // 手动模式
+        std::atomic<std::size_t> nextTaskId{0}; // 用于生成任务的唯一标识符
+        std::unique_ptr<Atom::Utils::Stopwatcher> stopwatch;
+
 
         /**
          * @brief 任务调度循环函数，在单独的线程中运行

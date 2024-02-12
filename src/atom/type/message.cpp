@@ -23,7 +23,7 @@ using namespace std;
 Message::Message(Type t, const string &name, const string &target, const string &origin)
     : type_(t), name_(name), target_(target), origin_(origin)
 {
-    timestamp_ = Atom::Utils::GetChinaTimestampString();
+    timestamp_ = Atom::Utils::getChinaTimestampString();
     uuid_ = Atom::Property::UUIDGenerator::generateUUIDWithFormat();
 }
 

@@ -1,0 +1,198 @@
+{
+    "name": "Device",
+    "type": "atom.device",
+    "version": "1.0.0",
+    "license": "GPL-3",
+    "author": "Max Qian",
+    "description": "The basic commands for Atom devices",
+    "deliver": true,
+    "command": {
+        "getProperty": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device to get property"
+                },
+                "value_name": {
+                    "type": "string",
+                    "required": false,
+                    "info": "The name of the property to get"
+                },
+                "refresh": {
+                    "type": "boolean",
+                    "required": false,
+                    "default": true,
+                    "info": "If true, the device will be refreshed before the property is getted. The most common solution is run a function"
+                },
+                "type": {
+                    "type": "string",
+                    "required": false,
+                    "default": "string",
+                    "enum": [
+                        "string",
+                        "number",
+                        "boolean",
+                        "array",
+                        "null"
+                    ],
+                    "info": "The type of the property to get"
+                }
+            },
+            "result": {
+                "type": "string|number|boolean|array|null",
+                "ignore": false,
+                "info": "Return the property value"
+            }
+        },
+        "setProperty": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device to set property"
+                },
+                "refresh": {
+                    "type": "boolean",
+                    "required": false,
+                    "default": true,
+                    "info": "If true, the device will be refreshed after the property is setted"
+                },
+                "value_name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the property to set"
+                },
+                "value": {
+                    "type": "string|number|boolean|array|null",
+                    "required": true,
+                    "info": "The value to set"
+                }
+            },
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the property is setted successfully or false if not"
+            }
+        },
+        "runFunc": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device"
+                },
+                "func_name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the function"
+                },
+                "args": {
+                    "type": "object",
+                    "required": true,
+                    "default": {}
+                }
+            },
+            "result": {
+                "type": "object",
+                "ignore": false,
+                "info": "Return the function result"
+            }
+        },
+        "hasFunc": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device"
+                },
+                "func_name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the function"
+                }
+            },
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the function exists or false if not"
+            }
+        },
+        "connect": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device, it must be unique, if you are using INDI/Hydrogen it should be the same as the INDI device name"
+                },
+                "args": {
+                    "type": "object",
+                    "required": false,
+                    "default": {},
+                    "info": "Some devices require some arguments to connect"
+                }
+            },
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the device is connected or false if not"
+            }
+        },
+        "disconnect": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device, it must be unique, if you are using INDI/Hydrogen it should be the same as the INDI device name"
+                },
+                "args": {
+                    "type": "object",
+                    "required": false,
+                    "default": {},
+                    "info": "Some devices require some arguments to disconnect"
+                }
+            },
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the device is disconnected or false if not"
+            }
+        },
+        "reconnect": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device, it must be unique, if you are using INDI/Hydrogen it should be the same as the INDI device name"
+                }
+            },
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the device is reconnected or false if not"
+            }
+        },
+        "isConnected": {
+            "force": true,
+            "params": {
+                "name": {
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device, it must be unique, if you are using INDI/Hydrogen it should be the same as the INDI device name"
+                }
+            },
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the device is connected or false if not"
+            }
+        }
+    }
+}

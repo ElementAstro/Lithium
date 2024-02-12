@@ -269,7 +269,7 @@ namespace Atom::System
                 ss << env_var << "=" << env_value << std::endl;
                 char delimiter = ':';
 
-                std::vector<std::string> tokens = Utils::SplitString(env_value, delimiter);
+                std::vector<std::string> tokens = Utils::splitString(env_value, delimiter);
 
                 for (const auto &token : tokens)
                 {

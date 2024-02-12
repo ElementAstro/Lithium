@@ -18,7 +18,7 @@ A simple example from the libkev[README](README.md)
 #include <thread>
 #include <memory>
 
-using namespace kev;
+using namespace Atom::Event;
 
 void foo()
 {

@@ -12,7 +12,8 @@ Description: Simple implementation of a stopwatch
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_UTILS_STOPWATCHER_HPP
+#define ATOM_UTILS_STOPWATCHER_HPP
 
 #include <string>
 #include <chrono>
@@ -54,3 +55,5 @@ namespace Atom::Utils
         void checkCallbacks(const std::chrono::time_point<std::chrono::high_resolution_clock> &currentTime);
     };
 }
+
+#endif

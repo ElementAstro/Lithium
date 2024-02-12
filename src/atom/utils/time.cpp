@@ -20,7 +20,7 @@ Description: Some useful functions about time
 
 namespace Atom::Utils
 {
-    std::string GetTimestampString()
+    std::string getTimestampString()
     {
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
@@ -32,7 +32,7 @@ namespace Atom::Utils
         return ss.str();
     }
 
-    std::string ConvertToChinaTime(const std::string &utcTimeStr)
+    std::string convertToChinaTime(const std::string &utcTimeStr)
     {
         // 解析UTC时间字符串
         std::tm tm = {};
@@ -54,7 +54,7 @@ namespace Atom::Utils
         return ss.str();
     }
 
-    std::string GetChinaTimestampString()
+    std::string getChinaTimestampString()
     {
         // 获取当前时间点
         auto now = std::chrono::system_clock::now();
@@ -71,7 +71,7 @@ namespace Atom::Utils
         return ss.str();
     }
 
-    std::string TimeStampToString(time_t timestamp)
+    std::string timeStampToString(time_t timestamp)
     {
         char buffer[80];
         std::strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", std::localtime(&timestamp));
@@ -97,5 +97,11 @@ namespace Atom::Utils
         gmtime_r(&now_time_t, &tm);
 #endif
         return toString(tm, "%FT%TZ");
+    }
+
+    std::tm timestampToTime(long long timestamp)
+    {
+        std::time_t time = static_cast<std::time_t>(timestamp / 1000);
+        return *std::localtime(&time);
     }
 }

@@ -38,8 +38,8 @@ namespace Atom::Async
         std::stringstream ss;
         ss << "[DaemonGuard parentId=" << m_parentId
            << " mainId=" << m_mainId
-           << " parentStartTime=" << Utils::TimeStampToString(m_parentStartTime)
-           << " mainStartTime=" << Utils::TimeStampToString(m_mainStartTime)
+           << " parentStartTime=" << Utils::timeStampToString(m_parentStartTime)
+           << " mainStartTime=" << Utils::timeStampToString(m_mainStartTime)
            << " restartCount=" << m_restartCount << "]";
         return ss.str();
     }

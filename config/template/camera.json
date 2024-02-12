@@ -1,0 +1,44 @@
+{
+    "name": "",
+    "type": "",
+    "version": "1.0.0",
+    "license": "GPL-3",
+    "author": "Max Qian",
+    "description": "",
+    "deliver": true,
+    "public": "atom.device",
+    "command": {
+        "“startExposure": {
+            "force": true,
+            "params": [
+                {
+                    "name": "name",
+                    "type": "string",
+                    "required": true,
+                    "info": "The name of the device to start exposure"
+                },
+                {
+                    "name": "args",
+                    "type": "object",
+                    "required": true,
+                    "info": "Arguments to start exposure",
+                    "params": [
+                        {
+                            "name": "exposure_time",
+                            "type": "number",
+                            "required": true,
+                            "max": 114514,
+                            "min": 0,
+                            "info": "The exposure time in milliseconds"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "result": {
+        "type": "boolean",
+        "ignore": false,
+        "info": "Return true if the exposure is started or false if not"
+    }
+}

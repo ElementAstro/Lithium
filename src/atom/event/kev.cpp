@@ -1,61 +1,51 @@
-/* Copyright (c) 2014-2022, Fengping Bao <jamol@live.com>
+/*
+ * kev.cpp
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
- * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
- * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
- * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#include "kev.h"
-#include "EventLoopImpl.h"
-#include "utils/kmtrace.h"
+/*************************************************
 
-KEV_NS_BEGIN
+Date: 2024-2-10
+
+Description: Main
+
+**************************************************/
+
+#include "kev.hpp"
+#include "eventloop.hpp"
+#include "utils/kmtrace.hpp"
+
+ATOM_NS_BEGIN
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 // class EventLoop
 EventLoop::EventLoop()
-: EventLoop(PollType::DEFAULT)
+    : EventLoop(PollType::DEFAULT)
 {
-
 }
 
 EventLoop::EventLoop(PollType poll_type)
-: pimpl_(std::make_shared<Impl>(poll_type))
+    : pimpl_(std::make_shared<Impl>(poll_type))
 {
-    
 }
 
 EventLoop::EventLoop(EventLoop &&other)
-: pimpl_(std::exchange(other.pimpl_, nullptr))
+    : pimpl_(std::exchange(other.pimpl_, nullptr))
 {
-    
 }
 
 EventLoop::~EventLoop()
 {
-    
 }
 
-EventLoop& EventLoop::operator=(EventLoop &&other)
+EventLoop &EventLoop::operator=(EventLoop &&other)
 {
-    if (this != &other) {
+    if (this != &other)
+    {
         pimpl_ = std::exchange(other.pimpl_, nullptr);
     }
-    
+
     return *this;
 }
 
@@ -67,7 +57,8 @@ bool EventLoop::init()
 EventLoop::Token EventLoop::createToken()
 {
     Token t;
-    if (!t.pimpl_) { // lazy initialize token pimpl
+    if (!t.pimpl_)
+    { // lazy initialize token pimpl
         t.pimpl_ = new Token::Impl();
     }
     t.pimpl()->eventLoop(pimpl());
@@ -81,7 +72,7 @@ PollType EventLoop::getPollType() const
 
 bool EventLoop::isPollLT() const
 {
-    return  pimpl_->isPollLT();
+    return pimpl_->isPollLT();
 }
 
 Result EventLoop::registerFd(SOCKET_FD fd, uint32_t events, IOCallback cb)
@@ -136,22 +127,22 @@ bool EventLoop::inSameThread() const
 
 Result EventLoop::sync(Task task, Token *token, const char *debugStr)
 {
-    return pimpl_->sync(std::move(task), token?token->pimpl():nullptr , debugStr);
+    return pimpl_->sync(std::move(task), token ? token->pimpl() : nullptr, debugStr);
 }
 
 Result EventLoop::async(Task task, Token *token, const char *debugStr)
 {
-    return pimpl_->async(std::move(task), token?token->pimpl():nullptr, debugStr);
+    return pimpl_->async(std::move(task), token ? token->pimpl() : nullptr, debugStr);
 }
 
 Result EventLoop::post(Task task, Token *token, const char *debugStr)
 {
-    return pimpl_->post(std::move(task), token?token->pimpl():nullptr, debugStr);
+    return pimpl_->post(std::move(task), token ? token->pimpl() : nullptr, debugStr);
 }
 
 Result EventLoop::postDelayed(uint32_t delay_ms, Task task, Token *token, const char *debugStr)
 {
-    return pimpl_->postDelayed(delay_ms, std::move(task), token?token->pimpl():nullptr, debugStr);
+    return pimpl_->postDelayed(delay_ms, std::move(task), token ? token->pimpl() : nullptr, debugStr);
 }
 
 void EventLoop::wakeup()
@@ -161,21 +152,20 @@ void EventLoop::wakeup()
 
 void EventLoop::cancel(Token *token)
 {
-    if (token) {
+    if (token)
+    {
         token->pimpl()->clearAllTasks();
     }
 }
 
 EventLoop::Token::Token()
-: pimpl_(nullptr) // lazy initialize pimpl_
+    : pimpl_(nullptr) // lazy initialize pimpl_
 {
-    
 }
 
 EventLoop::Token::Token(Token &&other)
-: pimpl_(std::exchange(other.pimpl_, nullptr))
+    : pimpl_(std::exchange(other.pimpl_, nullptr))
 {
-    
 }
 
 EventLoop::Token::~Token()
@@ -183,10 +173,12 @@ EventLoop::Token::~Token()
     delete pimpl_;
 }
 
-EventLoop::Token& EventLoop::Token::operator=(Token &&other)
+EventLoop::Token &EventLoop::Token::operator=(Token &&other)
 {
-    if (this != &other) {
-        if (pimpl_) {
+    if (this != &other)
+    {
+        if (pimpl_)
+        {
             delete pimpl_;
         }
         pimpl_ = std::exchange(other.pimpl_, nullptr);
@@ -196,29 +188,27 @@ EventLoop::Token& EventLoop::Token::operator=(Token &&other)
 
 void EventLoop::Token::reset()
 {
-    if (pimpl_) {
+    if (pimpl_)
+    {
         pimpl_->reset();
     }
 }
 
-EventLoop::Token::Impl* EventLoop::Token::pimpl()
+EventLoop::Token::Impl *EventLoop::Token::pimpl()
 {
     return pimpl_;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Timer::Timer(EventLoop* loop)
-: pimpl_(new Impl(loop->pimpl()->getTimerMgr()))
+Timer::Timer(EventLoop *loop)
+    : pimpl_(new Impl(loop->pimpl()->getTimerMgr()))
 {
-    
 }
 
 Timer::Timer(Timer &&other)
-: pimpl_(std::exchange(other.pimpl_, nullptr))
+    : pimpl_(std::exchange(other.pimpl_, nullptr))
 {
-    
 }
 
 Timer::~Timer()
@@ -226,15 +216,17 @@ Timer::~Timer()
     delete pimpl_;
 }
 
-Timer& Timer::operator=(Timer &&other)
+Timer &Timer::operator=(Timer &&other)
 {
-    if (this != &other) {
-        if (pimpl_) {
+    if (this != &other)
+    {
+        if (pimpl_)
+        {
             delete pimpl_;
         }
         pimpl_ = std::exchange(other.pimpl_, nullptr);
     }
-    
+
     return *this;
 }
 
@@ -248,7 +240,7 @@ void Timer::cancel()
     pimpl_->cancel();
 }
 
-Timer::Impl* Timer::pimpl()
+Timer::Impl *Timer::pimpl()
 {
     return pimpl_;
 }
@@ -258,4 +250,4 @@ void setLogCallback(LogCallback cb)
     setTraceFunc(cb);
 }
 
-KEV_NS_END
+ATOM_NS_END

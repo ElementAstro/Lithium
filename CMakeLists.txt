@@ -191,22 +191,6 @@ find_package(SQLite3 REQUIRED)
 find_package(LIBZIP REQUIRED)
 
 #################################################################################
-# i18n
-include(cmake_modules/Gettext_helpers.cmake)
-configure_gettext(
-    DOMAIN "lithium"
-    TARGET_NAME "lithium-gettext"
-    SOURCES "${api_module}" "${config_module}" "${io_module}" "${module_module}" "${web_module}" "${device_module}" "${thread_module}" "${task_module}" "${server_module}" "${script_module}" "${system_module}" "${Lithium_module}"
-    POTFILE_DESTINATION "locale"
-    XGETTEXT_ARGS 
-        "--keyword=_" "--keyword=N_" "--keyword=P_:1,2"
-        "--package-name=${PROJECT_NAME}" "--package-version=${PROJECT_VERSION}"
-        "--copyright-holder=Max Qian" "--msgid-bugs-address=astro_air@126.com"
-    LANGUAGES "en_US.UTF-8")
-
-# find_package(Intl REQUIRED)
-
-#################################################################################
 # Main
 
 project(Lithium)
@@ -267,10 +251,6 @@ target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
 target_link_libraries(lithium_server tinyxml2)
 target_link_libraries(lithium_server pocketpy)
-
-target_link_libraries(lithium_server ${Libintl_LIBRARY})
-target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})
-add_dependencies(lithium_server lithium-gettext)
 
 if(WIN32)
     target_link_libraries(lithium_server pdh iphlpapi winmm crypt32 wsock32 ws2_32)

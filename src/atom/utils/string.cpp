@@ -23,7 +23,7 @@ Description: Some useful string functions
 namespace Atom::Utils
 {
 
-    bool HasUppercase(const std::string &str)
+    bool hasUppercase(const std::string &str)
     {
         // 判断字符串中是否存在大写字母
         // 参数：
@@ -34,7 +34,7 @@ namespace Atom::Utils
                            { return std::isupper(ch); });
     }
 
-    std::string ToUnderscore(const std::string &str)
+    std::string toUnderscore(const std::string &str)
     {
         std::string result; // 生成一个空字符串用于存储转换结果
         for (char ch : str) // 遍历输入字符串中的每个字符
@@ -52,7 +52,7 @@ namespace Atom::Utils
         return result; // 返回转换后的字符串结果
     }
 
-    std::string ToCamelCase(const std::string &str)
+    std::string toCamelCase(const std::string &str)
     {
         std::string result;      // 用于保存转换后的字符串结果
         bool capitalize = false; // 用于标记是否需要大写转换
@@ -79,16 +79,16 @@ namespace Atom::Utils
         return result; // 返回转换后的字符串结果
     }
 
-    std::string ConvertToUnderscore(const std::string &str)
+    std::string converttoUnderscore(const std::string &str)
     {
-        return HasUppercase(str) ? ToUnderscore(str) : str;
+        return hasUppercase(str) ? toUnderscore(str) : str;
     }
 
-    std::string ConvertToCamelCase(const std::string &str)
+    std::string convertToCamelCase(const std::string &str)
     {
         if (str.find('_') != std::string::npos)
         {
-            return ToCamelCase(str);
+            return toCamelCase(str);
         }
         else
         {
@@ -98,7 +98,7 @@ namespace Atom::Utils
         }
     }
 
-    std::string UrlEncode(const std::string &str)
+    std::string urlEncode(const std::string &str)
     {
         // 创建一个输出字符串流对象escaped，设置填充字符为'0'，输出基数为十六进制
         std::ostringstream escaped;
@@ -129,7 +129,7 @@ namespace Atom::Utils
         return escaped.str();
     }
 
-    std::string UrlDecode(const std::string &str)
+    std::string urlDecode(const std::string &str)
     {
         // 初始化一个空字符串用于存储解码后的结果
         std::string result;
@@ -155,7 +155,7 @@ namespace Atom::Utils
                 else
                 {
                     // 如果解析失败，则抛出异常
-                    throw Exception::WrongArgument_Error("UrlDecode failed");
+                    throw Exception::WrongArgument_Error("urlDecode failed");
                 }
             }
             // 如果当前字符是 '+'，则将其替换为空格并添加到结果中
@@ -174,22 +174,27 @@ namespace Atom::Utils
         return result;
     }
 
-    std::vector<std::string> SplitString(const std::string &input, char delimiter)
+    std::vector<std::string> splitString(const std::string &input, char delimiter)
     {
         std::vector<std::string> tokens;
+#ifndef ATOM_USE_OBSOLETE
+        std::istringstream ss(input);
+        std::string token;
+        while (std::getline(ss, token, delimiter))
+        {
+            tokens.push_back(token);
+        }
+        return tokens;
+#else
         size_t pos = 0;
         size_t foundPos = input.find(delimiter);
-
         while (foundPos != std::string::npos)
         {
             tokens.push_back(input.substr(pos, foundPos - pos));
             pos = foundPos + 1;
             foundPos = input.find(delimiter, pos);
         }
-
         tokens.push_back(input.substr(pos));
-
+#endif
         return tokens;
     }
-
-}

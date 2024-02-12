@@ -39,7 +39,6 @@ set(${PROJECT_NAME}_HEADERS
     math.hpp
     random.hpp
     refl.hpp
-    sha256.hpp
     string.hpp
     static_switch.hpp
     stopwatcher.hpp

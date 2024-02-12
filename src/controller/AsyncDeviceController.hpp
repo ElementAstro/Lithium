@@ -25,7 +25,7 @@ Description: Device Routes
 #include "data/IODto.hpp"
 #include "data/DeviceDto.hpp"
 
-#include "core/device_type.hpp"
+#include "atom/driver/device_type.hpp"
 
 #include "magic_enum/magic_enum.hpp"
 
@@ -81,7 +81,7 @@ public:
             {
                 auto library_path = body->library_path.getValue("");
                 auto library_name = body->library_name.getValue("");
-                if (!Lithium::MyApp->addDeviceLibrary(library_path, library_name))
+                if (!Lithium::MyApp->addDeviceLibrary({{"lib_path" ,library_path}, {"lib_name",library_name}}))
                 {
                     res->error = "DeviceError";
                     res->message = "Failed to add device library";
@@ -158,18 +158,15 @@ public:
                 auto device_type = body->device_type.getValue("");
                 auto library_name = body->library_name.getValue("");
                 
-                DeviceType device_type_;
-                auto it = DeviceTypeMap.find(device_type);
-                if (it == DeviceTypeMap.end())
+                DeviceType device_type_ = StringToDeviceType(device_type);
+                if (device_type_ == DeviceType::NumDeviceTypes)
                 {
                     res->error = "Invalid Parameters";
                     res->message = "Unsupported device type";
                 }
                 else
                 {
-                    device_type_ = it->second;
-
-                    if (!Lithium::MyApp->addDevice(device_type_, device_name, library_name));
+                    if (!Lithium::MyApp->addDevice({{"type", device_type},{"device_name", device_name},{"library_name", library_name}}));
                     {
                         res->error = "DeviceError";
                         res->message = "Failed to add device";

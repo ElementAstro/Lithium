@@ -2,17 +2,6 @@
  * string.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,7 +12,8 @@ Description: Some useful string functions
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_UTILS_STRING_HPP
+#define ATOM_UTILS_STRING_HPP
 
 #include <string>
 #include <vector>
@@ -35,51 +25,59 @@ namespace Atom::Utils
      * @param str 输入字符串。
      * @return 如果字符串中至少包含一个大写字母，则返回 true，否则返回 false。
      */
-    [[nodiscard]] bool HasUppercase(const std::string &str);
+    [[nodiscard]] bool hasUppercase(const std::string &str);
 
     /**
      * @brief 将字符串转换为下划线命名法（underscore）。
      * @param str 输入字符串。
      * @return 转换后的下划线命名法字符串。
      */
-    [[nodiscard]] std::string ToUnderscore(const std::string &str);
+    [[nodiscard]] std::string toUnderscore(const std::string &str);
 
     /**
      * @brief 将字符串转换为驼峰命名法（camel case）。
      * @param str 输入字符串。
      * @return 转换后的驼峰命名法字符串。
      */
-    [[nodiscard]] std::string ToCamelCase(const std::string &str);
+    [[nodiscard]] std::string toCamelCase(const std::string &str);
 
     /**
      * @brief 将字符串转换为下划线命名法（underscore）。
      * @param str 输入字符串。
      * @return 转换后的下划线命名法字符串。
-     * @deprecated 请使用 ToUnderscore() 函数替代。
+     * @deprecated 请使用 toUnderscore() 函数替代。
      */
-    [[nodiscard]] std::string ConvertToUnderscore(const std::string &str);
+    [[nodiscard]] std::string converttoUnderscore(const std::string &str);
 
     /**
      * @brief 将字符串转换为驼峰命名法（camel case）。
      * @param str 输入字符串。
      * @return 转换后的驼峰命名法字符串。
-     * @deprecated 请使用 ToCamelCase() 函数替代。
+     * @deprecated 请使用 toCamelCase() 函数替代。
      */
-    [[nodiscard]] std::string ConvertToCamelCase(const std::string &str);
+    [[nodiscard]] std::string convertToCamelCase(const std::string &str);
 
     /**
      * @brief 对字符串进行 URL 编码。
      * @param str 输入字符串。
      * @return URL 编码后的字符串。
      */
-    [[nodiscard]] std::string UrlEncode(const std::string &str);
+    [[nodiscard]] std::string urlEncode(const std::string &str);
 
     /**
      * @brief 对 URL 编码的字符串进行解码。
      * @param str 输入字符串。
      * @return 解码后的字符串。
      */
-    [[nodiscard]] std::string UrlDecode(const std::string &str);
+    [[nodiscard]] std::string urlDecode(const std::string &str);
 
-    [[nodiscard]] std::vector<std::string> SplitString(const std::string &input, char delimiter);
+    /**
+     * @brief 将字符串分割为多个字符串。
+     * @param input 输入字符串。
+     * @param delimiter 分隔符。
+     * @return 分割后的字符串数组。
+     */
+    [[nodiscard]] std::vector<std::string> splitString(const std::string &input, char delimiter);
 }
+
+#endif

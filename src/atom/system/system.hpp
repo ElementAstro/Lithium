@@ -2,17 +2,6 @@
  * system.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -28,8 +17,42 @@ Description: System
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace Atom::System
 {
+    /**
+     * @brief Process information.
+     * 进程信息
+     */
+    struct ProcessInfo
+    {
+        int processID;
+        int parentProcessID;
+        int basePriority;
+        std::string executableFile;
+    };
+
+    /**
+     * @brief Battery information.
+     * 电池信息
+     */
+    struct BatteryInfo
+    {
+        bool isBatteryPresent = false;   // 是否存在电池
+        bool isCharging = false;         // 是否正在充电
+        float batteryLifePercent = 0.0;  // 电量百分比
+        float batteryLifeTime = 0.0;     // 剩余电量时间(分钟)
+        float batteryFullLifeTime = 0.0; // 满电状态下电量时间(分钟)
+        float energyNow = 0.0;           // 当前剩余电量(微焦耳)
+        float energyFull = 0.0;          // 电池总容量(微焦耳)
+        float energyDesign = 0.0;        // 电池设计容量(微焦耳)
+        float voltageNow = 0.0;          // 当前电压(伏特)
+        float currentNow = 0.0;          // 电池当前电流(安培)
+    };
+
     /**
      * @brief Check whether the specified software is installed.
      * 检查指定软件是否已安装
@@ -43,6 +66,19 @@ namespace Atom::System
     bool CheckSoftwareInstalled(const std::string &software_name);
 
     /**
+     * @brief Check whether the specified file exists.
+     * 检查指定文件是否存在
+     *
+     * @param fileName The name of the file. 文件名称
+     * @param fileExt The extension of the file. 文件扩展名
+     * @return true if the file exists.
+     *         如果文件存在，则返回 true
+     * @return false if the file does not exist or an error occurred.
+     *         如果文件不存在或发生错误，则返回 false
+     */
+    bool checkExecutableFile(const std::string &fileName, const std::string &fileExt);
+
+    /**
      * @brief Get the CPU usage percentage.
      * 获取 CPU 使用率百分比
      *
@@ -50,6 +86,15 @@ namespace Atom::System
      *         CPU 使用率百分比
      */
     float GetCpuUsage();
+
+    /**
+     * @brief Get the CPU model.
+     * 获取 CPU 型号
+     *
+     * @return The CPU model.
+     *         CPU 型号
+     */
+    std::string GetCPUModel();
 
     /**
      * @brief Get the CPU temperature.
@@ -70,6 +115,24 @@ namespace Atom::System
     float GetMemoryUsage();
 
     /**
+     * @brief Get the total memory size.
+     * 获取总内存大小
+     *
+     * @return The total memory size in bytes.
+     *         可用内存大小（字节）
+     */
+    unsigned long long GetTotalMemorySize();
+
+    /**
+     * @brief Get the available memory size.
+     * 获取可用内存大小
+     *
+     * @return The available memory size in bytes.
+     *         可用内存大小（字节）
+     */
+    unsigned long long GetAvailableMemorySize();
+
+    /**
      * @brief Get the disk usage for all disks.
      * 获取所有磁盘的使用情况
      *
@@ -77,6 +140,34 @@ namespace Atom::System
      *         包含磁盘名称和使用率百分比的一对对的向量
      */
     std::vector<std::pair<std::string, float>> GetDiskUsage();
+
+    /**
+     * @brief Get the drive model.
+     * 获取驱动器型号
+     *
+     * @param drivePath The path of the drive. 驱动器路径
+     * @return The drive model.
+     *         驱动器型号
+     */
+    std::string GetDriveModel(const std::string &drivePath);
+
+    /**
+     * @brief Get the storage device models.
+     * 获取存储设备型号
+     *
+     * @return A vector of pairs containing the storage device name and its model.
+     *         包含存储设备名称和型号的一对对的向量
+     */
+    std::vector<std::pair<std::string, std::string>> GetStorageDeviceModels();
+
+    /**
+     * @brief Get the battery information.
+     * 获取电池信息
+     *
+     * @return The battery information.
+     *         电池信息
+     */
+    BatteryInfo getBatteryInfo();
 
     /**
      * @brief Check whether the current user has root/administrator privileges.
@@ -140,7 +231,7 @@ namespace Atom::System
      *
      * @param program_name The name of the program to check for duplicates. 要检查重复项的程序名称。
      */
-    void CheckDuplicateProcess(const std::string &program_name);
+    bool CheckDuplicateProcess(const std::string &program_name);
 
     /**
      * @brief Check if the specified process is running.
@@ -153,4 +244,43 @@ namespace Atom::System
      *         如果进程没有运行，则返回 false
      */
     bool isProcessRunning(const std::string &processName);
+
+    /**
+     * @brief Get the process details.
+     * 获取进程详细信息
+     *
+     * @return A vector of process details.
+     *         进程详细信息的向量
+     */
+    std::vector<ProcessInfo> GetProcessDetails();
+
+    /**
+     * @brief Get the process information by process ID.
+     * 获取进程信息
+     *
+     * @param processID The process ID. 进程 ID。
+     * @param processInfo The process information. 进程信息。
+     * @return true if the process information is successfully retrieved.
+     *         如果进程信息成功检索，则返回 true
+     * @return false if an error occurred.
+     *         如果发生错误，则返回 false
+     */
+#ifdef _WIN32
+    bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo);
+#else
+    bool GetProcessInfoByID(int processID, ProcessInfo &processInfo);
+#endif
+
+    /**
+     * @brief Get the process information by process name.
+     * 获取进程信息
+     *
+     * @param processName The process name. 进程名称。
+     * @param processInfo The process information. 进程信息。
+     * @return true if the process information is successfully retrieved.
+     *         如果进程信息成功检索，则返回 true
+     * @return false if an error occurred.
+     *         如果发生错误，则返回 false
+     */
+    bool GetProcessInfoByName(const std::string &processName, ProcessInfo &processInfo);
 }

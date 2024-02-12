@@ -2,17 +2,6 @@
  * module_loader.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -31,7 +20,7 @@ Description: C++ and Modules Loader
 #include <atomic>
 #include <shared_mutex>
 
-#include "info.hpp"
+#include "module.hpp"
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
@@ -68,8 +57,6 @@ Description: C++ and Modules Loader
 #include "atom/log/loguru.hpp"
 #include "error/error_code.hpp"
 
-#include "atom/async/thread.hpp"
-
 using json = nlohmann::json;
 
 namespace Lithium
@@ -88,7 +75,7 @@ namespace Lithium
          * @param dir_name 模块所在的目录名称。
          * @param threadManager 线程管理器的共享指针。
          */
-        ModuleLoader(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
+        explicit ModuleLoader(const std::string &dir_name);
 
         /**
          * @brief 析构函数，释放 ModuleLoader 对象。
@@ -112,19 +99,11 @@ namespace Lithium
          * @param threadManager 线程管理器的共享指针。
          * @return 新创建的共享 ModuleLoader 指针对象。
          */
-        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name, std::shared_ptr<Atom::Async::ThreadManager> threadManager);
+        static std::shared_ptr<ModuleLoader> createShared(const std::string &dir_name);
 
         // -------------------------------------------------------------------
         // Module methods
         // -------------------------------------------------------------------
-
-        /**
-         * @brief 根据给定的目录名称加载模块。
-         *
-         * @param dir_name 模块所在的目录名称。
-         * @return 如果成功加载则返回 true，否则返回 false。
-         */
-        bool LoadOnInit(const std::string &dir_name);
 
         /**
          * @brief   Loads a dynamic module from the given path.
@@ -138,6 +117,15 @@ namespace Lithium
          */
         bool LoadModule(const std::string &path, const std::string &name);
 
+        /**
+         * @brief   Loads all functions from the given module.
+         *
+         * This function loads all functions from the given module. If the loading is successful, it returns a vector of FunctionInfo objects.
+         * If the loading fails, it returns an empty vector and logs an error message.
+         *
+         * @param[in]   name    The name of the dynamic module.
+         * @return      A vector of FunctionInfo objects.
+         */
         std::vector<std::unique_ptr<FunctionInfo>> loadModuleFunctions(const std::string &name);
 
         /**
@@ -170,9 +158,9 @@ namespace Lithium
          * @brief 获取指定名称的模块
          *
          * @param name 模块名称
-         * @return std::shared_ptr<Mod> 模块指针
+         * @return std::shared_ptr<ModuleInfo> 模块指针
          */
-        std::shared_ptr<Mod> GetModule(const std::string &name) const;
+        std::shared_ptr<ModuleInfo> GetModule(const std::string &name) const;
 
         /**
          * @brief 检查指定名称的模块是否存在
@@ -342,12 +330,10 @@ namespace Lithium
 
     private:
 #if ENABLE_FASTHASH
-        emhash8::HashMap<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
+        emhash8::HashMap<std::string, std::shared_ptr<ModuleInfo>> modules_; // 模块哈希表
 #else
-        std::unordered_map<std::string, std::shared_ptr<Mod>> modules_; // 模块哈希表
+        std::unordered_map<std::string, std::shared_ptr<ModuleInfo>> modules_; // 模块哈希表
 #endif
-        // Injected Thread Manager
-        std::shared_ptr<Atom::Async::ThreadManager> m_ThreadManager;
 
         mutable std::shared_mutex m_SharedMutex;
     };

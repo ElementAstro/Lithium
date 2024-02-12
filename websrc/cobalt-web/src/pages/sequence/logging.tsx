@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Grid,
   ListGroup,
   ListGroupItem,
   Collapse,
@@ -147,20 +146,22 @@ function LogItem({ task, isCurrentTask }: TaskItemProps) {
   const toggleOpen = () => {
     setOpen(!open);
   };
+
   let typeIcon;
-  let IconColor;
+  let iconColor;
+
   switch (task.type) {
     case "info":
       typeIcon = <InfoIcon />;
-      IconColor = "#90EE90";
+      iconColor = "#90EE90";
       break;
     case "warning":
       typeIcon = <WarningIcon />;
-      IconColor = "#CCCC00";
+      iconColor = "#CCCC00";
       break;
     case "error":
       typeIcon = <ErrorIcon />;
-      IconColor = "#DF4C5B";
+      iconColor = "#DF4C5B";
       break;
     default:
       typeIcon = null;
@@ -173,10 +174,10 @@ function LogItem({ task, isCurrentTask }: TaskItemProps) {
         onClick={toggleOpen}
         style={{ backgroundColor: isCurrentTask ? "#e0f7fa" : "white" }}
       >
-        <Container>
-          <Row>
+        <Container fluid>
+          <Row className="align-items-center">
             <Col xs={1}>
-              <Badge bg={IconColor}>{typeIcon}</Badge>
+              <Badge bg={iconColor}>{typeIcon}</Badge>
             </Col>
             <Col xs={11}>
               <p style={{ marginBottom: "0px" }}>{task.message}</p>
@@ -220,8 +221,7 @@ export default function PAADebugLogging() {
 
   return (
     <Container fluid>
-      <Row>
-        <Col xs={2}></Col>
+      <Row className="justify-content-center" lg={12}>
         <Col xs={8}>
           <ListGroup style={{ height: "80%", margin: "20px 10px" }}>
             <ListGroupItem active>日志界面</ListGroupItem>
@@ -230,7 +230,6 @@ export default function PAADebugLogging() {
             ))}
           </ListGroup>
         </Col>
-        <Col xs={2}></Col>
       </Row>
     </Container>
   );

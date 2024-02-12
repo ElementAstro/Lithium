@@ -4,7 +4,6 @@
 #include "atom/type/message.hpp"
 #include "atom/utils/switch.hpp"
 #include "atom/server/message_bus.hpp"
-#include "atom/async/thread.hpp"
 
 class SharedComponent : public Component
 {
@@ -41,17 +40,9 @@ public:
         m_handleFunction = handleFunction;
     }
 
-    // -------------------------------------------------------------------
-    // Thread methods
-    // -------------------------------------------------------------------
-
-    bool NeedThreadPool();
-    bool InjectThreadPool(std::shared_ptr<Atom::Async::ThreadManager> threadPool);
-
 private:
     // This is a little bit hacky, but it works.
     std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
-    std::shared_ptr<Atom::Async::ThreadManager> m_ThreadPool;
 
     std::function<void(std::shared_ptr<Message>)> m_handleFunction;
 

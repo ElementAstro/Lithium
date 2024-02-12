@@ -2,17 +2,6 @@
  * exe_plugin.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -34,13 +23,13 @@ class ExecutableComponent : public Component
 public:
     ExecutableComponent();
 
-    void RunSystemCommand(const Args &m_parmas);
+    json RunSystemCommand(const json &m_parmas);
 
-    void RunSystemCommandOutput(const Args &m_parmas);
+    json RunSystemCommandOutput(const json &m_parmas);
 
-    void RunScript(const Args &m_parmas);
+    json RunScript(const json &m_parmas);
 
-    void RunScriptOutput(const Args &m_parmas);
+    json RunScriptOutput(const json &m_parmas);
 private:
     std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
 };

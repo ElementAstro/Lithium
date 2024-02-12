@@ -2,17 +2,6 @@
  * pid.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -85,7 +74,7 @@ void PIDWatcher::watch()
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            LOG_F(ERROR, _("CreateToolhelp32Snapshot failed."));
+            LOG_F(ERROR, "CreateToolhelp32Snapshot failed.");
             return;
         }
 
@@ -104,7 +93,7 @@ void PIDWatcher::watch()
 
                 {
                     DWORD pid = entry.th32ProcessID;
-                    DLOG_F(INFO, _("Watching process with PID: {}"), pid);
+                    DLOG_F(INFO, "Watching process with PID: {}", pid);
 
                     HANDLE process = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_INFORMATION, FALSE, pid);
                     if (process != NULL)
@@ -115,7 +104,7 @@ void PIDWatcher::watch()
                             DWORD exitCode;
                             if (GetExitCodeProcess(process, &exitCode))
                             {
-                                DLOG_F(INFO, _("Process exited with code: {}"), exitCode);
+                                DLOG_F(INFO, "Process exited with code: {}", exitCode);
                                 // 触发回调函数
                                 if (callback_)
                                 {
@@ -124,7 +113,7 @@ void PIDWatcher::watch()
                             }
                             else
                             {
-                                LOG_F(ERROR, _("GetExitCodeProcess failed."));
+                                LOG_F(ERROR, "GetExitCodeProcess failed.");
                             }
                             CloseHandle(process);
                             stop();
@@ -134,7 +123,7 @@ void PIDWatcher::watch()
                     }
                     else
                     {
-                        LOG_F(ERROR, _("OpenProcess failed."));
+                        LOG_F(ERROR, "OpenProcess failed.");
                     }
 
                     break;

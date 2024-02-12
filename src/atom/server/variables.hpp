@@ -2,17 +2,6 @@
  * variables.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -34,7 +23,7 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 #include <shared_mutex>
 #include <optional>
 
-#ifdef ENALE_FASTHASH
+#if ENALE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
@@ -46,6 +35,11 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 class VariableRegistry
 {
 public:
+    template <typename T>
+    using Getter = std::function<T()>;
+    template <typename T>
+    using Setter = std::function<bool(const T &)>;
+
     /**
      * @brief 观察者 struct，包含观察者名称和回调函数。
      */
@@ -59,11 +53,12 @@ public:
      * @brief 注册变量，如果变量已经存在，则返回 false。
      * @tparam T 变量类型，任何可转换为 std::any 类型的类型均可。
      * @param name 变量名称。
+     * @param initialValue 变量初始值。
      * @param descirption 变量描述。
      * @return 是否注册成功，如果变量名已经存在，则返回 false。
      */
     template <typename T>
-    bool RegisterVariable(const std::string &name, const std::string descirption = "");
+    bool RegisterVariable(const std::string &name, T &&initialValue, const std::string descirption = "");
 
     /**
      * @brief 设置指定名称的变量值。
@@ -156,7 +151,7 @@ public:
     void AddSetter(const std::string &name, const std::function<void(const std::any &)> &setter);
 
 private:
-#ifdef ENALE_FASTHASH
+#if ENALE_FASTHASH
     emhash8::HashMap<std::string, std::any> m_variables;
     emhash8::HashMap<std::string, std::string> m_descriptions;
     emhash8::HashMap<std::string, std::vector<Observer>> m_observers;
@@ -196,7 +191,7 @@ private:
 };
 
 template <typename T>
-bool VariableRegistry::RegisterVariable(const std::string &name, const std::string descirption)
+bool VariableRegistry::RegisterVariable(const std::string &name, T &&initialValue, const std::string descirption)
 {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
 
@@ -205,7 +200,7 @@ bool VariableRegistry::RegisterVariable(const std::string &name, const std::stri
         return false;
     }
 
-    m_variables[name] = T();
+    m_variables[name] = initialValue;
     m_descriptions[name] = descirption;
     return true;
 }
@@ -245,32 +240,6 @@ std::optional<T> VariableRegistry::GetVariable(const std::string &name) const
     return std::nullopt;
 }
 
-bool VariableRegistry::HasVariable(const std::string &name) const
-{
-    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-    return m_variables.find(name) != m_variables.end();
-}
-
-std::string VariableRegistry::GetDescription(const std::string &name) const
-{
-    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-
-    if (auto it = m_descriptions.find(name); it != m_descriptions.end())
-    {
-        return it->second;
-    }
-    return "";
-}
-
-void VariableRegistry::AddObserver(const std::string &name, const Observer &observer)
-{
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (m_observers.find(name) == m_observers.end())
-    {
-        m_observers[name].push_back(observer);
-    }
-}
-
 template <typename T>
 void VariableRegistry::NotifyObservers(const std::string &name, const T &value) const
 {
@@ -289,37 +258,6 @@ void VariableRegistry::NotifyObservers(const std::string &name, const T &value) 
             observer.callback(valueString);
         }
     }
-}
-
-bool VariableRegistry::RemoveObserver(const std::string &name, const std::string &observerName)
-{
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (auto it = m_observers.find(name); it != m_observers.end())
-    {
-        for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2)
-        {
-            if (it2->name == observerName)
-            {
-                it->second.erase(it2);
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-std::unordered_map<std::string, std::any> VariableRegistry::GetAll() const
-{
-    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-    return m_variables;
-}
-
-bool VariableRegistry::RemoveAll()
-{
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    m_variables.clear();
-    m_observers.clear();
-    return true;
 }
 
 template <typename T>
@@ -344,7 +282,7 @@ void VariableRegistry::AddSetter(const std::string &name, const std::function<vo
     m_setters[name] = setter;
 }
 
-static std::string SerializeVariablesToJson(const VariableRegistry &registry)
+[[maybe_unused]] static std::string SerializeVariablesToJson(const VariableRegistry &registry)
 {
     std::string j = "{";
     for (const auto entry : registry.GetAll())

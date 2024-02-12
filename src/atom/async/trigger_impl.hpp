@@ -1,4 +1,19 @@
-#pragma once
+/*
+ * trigger_impl.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-12-14
+
+Description: Trigger class for C++
+
+**************************************************/
+
+#ifndef ATOM_ASYNC_TRIGGER_IMPL_HPP
+#define ATOM_ASYNC_TRIGGER_IMPL_HPP
 
 #include <vector>
 #include <functional>
@@ -97,3 +112,5 @@ void Trigger<ParamType>::cancelAllTriggers()
     std::lock_guard<std::mutex> lock(m_mutex);
     m_callbacks.clear();
 }
+
+#endif

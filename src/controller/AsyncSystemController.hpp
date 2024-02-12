@@ -24,7 +24,7 @@ Description: System Route
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 
-#include "SystemDto.hpp"
+#include "data/SystemDto.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
 
@@ -53,7 +53,7 @@ public:
     ENDPOINT_INFO(getUICpuUsage)
     {
         info->summary = "Get current CPU usage";
-        info->addResponse<BaseReturnSystemDto>(Status::CODE_200, "application/json", "Usage of CPU");
+        // info->addResponse<StatusDto>(Status::CODE_200, "application/json", "Usage of CPU");
     }
     ENDPOINT_ASYNC("GET", "/api/system/cpu", getUICpuUsage)
     {
@@ -82,7 +82,7 @@ public:
     ENDPOINT_INFO(getUIMemoryUsage)
     {
         info->summary = "Get current RAM usage";
-        info->addResponse<BaseReturnSystemDto>(Status::CODE_200, "application/json", "Usage of RAM");
+        // info->addResponse<StatusDto>(Status::CODE_200, "application/json", "Usage of RAM");
     }
     ENDPOINT_ASYNC("GET", "/api/system/memory", getUIMemoryUsage)
     {
@@ -111,7 +111,7 @@ public:
     ENDPOINT_INFO(getUICpuTemperature)
     {
         info->summary = "Get current CPU temperature";
-        info->addResponse<BaseReturnSystemDto>(Status::CODE_200, "application/json", "Temperature of CPU");
+        // info->addResponse<StatusDto>(Status::CODE_200, "application/json", "Temperature of CPU");
     }
     ENDPOINT_ASYNC("GET", "/api/system/cpu_temp", getUICpuTemperature)
     {
@@ -140,7 +140,7 @@ public:
     ENDPOINT_INFO(getUIDiskUsage)
     {
         info->summary = "Get current disks usage";
-        info->addResponse<ReturnDiskUsageDto>(Status::CODE_200, "application/json", "Usage of disks");
+        // info->addResponse<StatusDto>(Status::CODE_200, "application/json", "Usage of disks");
     }
     ENDPOINT_ASYNC("GET", "/api/system/disk", getUIDiskUsage)
     {
@@ -179,8 +179,8 @@ public:
     ENDPOINT_INFO(getUIProcesses)
     {
         info->summary = "Get all running processes";
-        info->addResponse<String>(Status::CODE_200, "application/json", "Processes");
-        info->addResponse<String>(Status::CODE_404, "text/plain");
+        // info->addResponse<String>(Status::CODE_200, "application/json", "Processes");
+        // info->addResponse<String>(Status::CODE_404, "text/plain");
     }
     ENDPOINT_ASYNC("GET", "/api/system/process", getUIProcesses)
     {
@@ -209,7 +209,7 @@ public:
         Action act() override
         {
             Atom::System::Shutdown();
-            return _return(createResponse(Status::CODE_200, "Wtf, how can you do that?"););
+            return _return(controller->createResponse(Status::CODE_200, "Wtf, how can you do that?"));
         }
     };
 
@@ -223,7 +223,7 @@ public:
         Action act() override
         {
             Atom::System::Reboot();
-            return _return(createResponse(Status::CODE_200, "Wtf, how can you do that?"););
+            return _return(controller->createResponse(Status::CODE_200, "Wtf, how can you do that?"));
         }
     };
 };

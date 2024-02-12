@@ -1,5 +1,13 @@
+# CMakeLists.txt for Atom-Utils
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Atom-Utils
+# Description: A collection of useful functions
+# Author: Max Qian
+# License: GPL3
+
 cmake_minimum_required(VERSION 3.20)
-project(atom.utils C CXX)
+project(atom-utils C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
@@ -10,8 +18,10 @@ set(${PROJECT_NAME}_SOURCES
     hash_util.cpp
     huffman.cpp
     math.cpp
+    random.cpp
     string.cpp
     static_switch.cpp
+    stopwatcher.cpp
     time.cpp
     uuid.cpp
 )
@@ -29,8 +39,6 @@ set(${PROJECT_NAME}_HEADERS
     math.hpp
     random.hpp
     refl.hpp
-    refl_clang.hpp
-    sha256.hpp
     string.hpp
     static_switch.hpp
     stopwatcher.hpp
@@ -60,18 +68,18 @@ target_sources(${PROJECT_NAME}_OBJECT
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
-add_library(${PROJECT_NAME}static STATIC)
+add_library(${PROJECT_NAME} STATIC)
 
-target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
-target_include_directories(${PROJECT_NAME}static PUBLIC .)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_include_directories(${PROJECT_NAME} PUBLIC .)
 
-set_target_properties(${PROJECT_NAME}static PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
     SOVERSION ${HYDROGEN_SOVERSION}
-    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
+    OUTPUT_NAME ${PROJECT_NAME}
 )
 
-install(TARGETS ${PROJECT_NAME}static
+install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )

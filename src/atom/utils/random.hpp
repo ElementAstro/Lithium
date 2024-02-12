@@ -2,17 +2,6 @@
  * random.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -30,7 +19,6 @@ Description: Simple random number generator
 
 namespace Atom::Utils
 {
-
     template <class Engine = std::default_random_engine,
               class Distribution = std::uniform_int_distribution<>>
     class random : public Distribution
@@ -64,23 +52,7 @@ namespace Atom::Utils
         }
     };
 
-    [[nodiscard]] std::string generateRandomString(int length)
-    {
-        const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        std::random_device rd;
-        std::mt19937 generator(rd());
-        std::uniform_int_distribution<int> distribution(0, characters.size() - 1);
-
-        std::string randomString;
-        randomString.reserve(length);
-
-        for (int i = 0; i < length; ++i)
-        {
-            randomString.push_back(characters[distribution(generator)]);
-        }
-
-        return randomString;
-    }
+    [[nodiscard]] std::string generateRandomString(int length);
 }
 
 /*

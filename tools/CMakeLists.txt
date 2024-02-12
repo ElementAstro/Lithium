@@ -21,3 +21,6 @@ target_link_libraries(xml2json tinyxml2)
 
 add_executable(csv2json csv2json.cpp)
 target_link_libraries(csv2json loguru)
+
+add_executable(tcp_proxy tcp_proxy.cpp)
+target_link_libraries(tcp_proxy loguru)

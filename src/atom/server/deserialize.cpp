@@ -2,17 +2,6 @@
  * deserialize.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -25,7 +14,6 @@ Description: This file contains the declaration of the DeserializationEngine cla
 
 #include "deserialize.hpp"
 
-#include "atom/type/iparams.hpp"
 #include "atom/type/json.hpp"
 #include "atom/log/loguru.hpp"
 
@@ -43,27 +31,6 @@ std::optional<std::any> JsonDeserializer::deserialize(const std::string &data) c
     catch (const json::parse_error &)
     {
         LOG_F(ERROR, "JsonDeserializer::deserialize: Failed to deserialize json data.");
-        return std::nullopt;
-    }
-}
-
-std::optional<std::any> JsonParamsDeserializer::deserialize(const std::string &data) const
-{
-    DLOG_F(INFO, "JsonParamsDeserializer::deserialize called with {}", data);
-    try
-    {
-        std::shared_ptr<IParams> params;
-        if (!params->fromJson(data))
-        {
-            LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
-            return std::nullopt;
-        }
-        DLOG_F(INFO, "JsonParamsDeserializer::deserialize: Successfully deserialized json data.");
-        return params;
-    }
-    catch (const std::exception &)
-    {
-        LOG_F(ERROR, "JsonParamsDeserializer::deserialize: Failed to deserialize json data.");
         return std::nullopt;
     }
 }

@@ -2,17 +2,6 @@
  * ini.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,14 +12,15 @@ Description: INI File Read/Write Library
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_TYPE_INI_HPP
+#define ATOM_TYPE_INI_HPP
 
 #include <any>
 #include <optional>
 #include <string>
 #include <mutex>
 #include <shared_mutex>
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
@@ -113,7 +103,7 @@ public:
     std::string toXml() const;
 
 private:
-#ifdef ENABlE_FASTHASH
+#if ENABlE_FASTHASH
     emhash8::HashMap<std::string, emhash8::HashMap<std::string, std::any>> data; // 存储数据的映射表
 #else
     std::unordered_map<std::string, std::unordered_map<std::string, std::any>> data; // 存储数据的映射表
@@ -134,32 +124,6 @@ private:
     std::string trim(const std::string &str);
 };
 
-template <typename T>
-void INIFile::set(const std::string &section, const std::string &key, const T &value)
-{
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    data[section][key] = value;
-}
+#include "ini_impl.hpp"
 
-template <typename T>
-std::optional<T> INIFile::get(const std::string &section, const std::string &key) const
-{
-    std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-    auto it = data.find(section);
-    if (it != data.end())
-    {
-        auto entryIt = it->second.find(key);
-        if (entryIt != it->second.end())
-        {
-            try
-            {
-                return std::any_cast<T>(entryIt->second);
-            }
-            catch (const std::bad_any_cast &)
-            {
-                return std::nullopt;
-            }
-        }
-    }
-    return std::nullopt;
-}
+#endif

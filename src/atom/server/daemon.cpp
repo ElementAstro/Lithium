@@ -2,17 +2,6 @@
  * daemon.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -49,8 +38,8 @@ namespace Atom::Async
         std::stringstream ss;
         ss << "[DaemonGuard parentId=" << m_parentId
            << " mainId=" << m_mainId
-           << " parentStartTime=" << Utils::TimeStampToString(m_parentStartTime)
-           << " mainStartTime=" << Utils::TimeStampToString(m_mainStartTime)
+           << " parentStartTime=" << Utils::timeStampToString(m_parentStartTime)
+           << " mainStartTime=" << Utils::timeStampToString(m_mainStartTime)
            << " restartCount=" << m_restartCount << "]";
         return ss.str();
     }
@@ -58,7 +47,7 @@ namespace Atom::Async
     int DaemonGuard::RealStart(int argc, char **argv,
                                std::function<int(int argc, char **argv)> mainCb)
     {
-        m_mainId = getpid();
+        m_mainId = reinterpret_cast<HANDLE>(getpid());
         m_mainStartTime = time(0);
         return mainCb(argc, argv);
     }
@@ -69,7 +58,7 @@ namespace Atom::Async
 #ifdef _WIN32
         // 在 Windows 平台下模拟守护进程
         FreeConsole();
-        m_parentId = GetCurrentProcessId();
+        m_parentId = reinterpret_cast<HANDLE>(GetCurrentProcessId());
         m_parentStartTime = time(0);
         while (true)
         {
@@ -160,7 +149,7 @@ namespace Atom::Async
 
         if (!isDaemon)
         { // 不需要创建守护进程
-            m_parentId = getpid();
+            m_parentId = reinterpret_cast<HANDLE>(getpid());
             m_parentStartTime = time(0);
             return RealStart(argc, argv, mainCb);
         }

@@ -2,17 +2,6 @@
  * sqlite.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -155,26 +144,20 @@ const unsigned char *SqliteDB::getTextValue(const char *query)
 bool SqliteDB::searchData(const char *query, const char *searchTerm)
 {
     sqlite3_stmt *stmt;
-    int rc = sqlite3_prepare_v2(db, query, -1, &stmt, 0);
-    bool result = false;
-
-    if (rc == SQLITE_OK)
+    if (sqlite3_prepare_v2(db, query, -1, &stmt, 0) == SQLITE_OK)
     {
         sqlite3_bind_text(stmt, 1, searchTerm, -1, SQLITE_TRANSIENT);
-
         if (sqlite3_step(stmt) == SQLITE_ROW)
         {
-            result = true;
+            return true;
         }
     }
     else
     {
         errorCallback(sqlite3_errmsg(db));
     }
-
     sqlite3_finalize(stmt);
-
-    return result;
+    return false;
 }
 
 bool SqliteDB::updateData(const char *query)

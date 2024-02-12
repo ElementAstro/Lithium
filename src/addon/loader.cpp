@@ -21,8 +21,17 @@ Description: C++ and Modules Loader
 #include <typeinfo>
 #include <cxxabi.h>
 #include <regex>
+#include <mutex>
 
 #include "atom/io/io.hpp"
+
+#ifdef _WIN32
+#include <Windows.h>
+#include <psapi.h>
+#else
+#include <dlfcn.h>
+#include <link.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -37,22 +46,9 @@ namespace fs = std::filesystem;
 
 namespace Lithium
 {
-    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
+    ModuleLoader::ModuleLoader(const std::string &dir_name = "modules")
     {
-        m_ThreadManager = threadManager;
         DLOG_F(INFO, "C++ module manager loaded successfully.");
-        if (m_ThreadManager)
-        {
-            m_ThreadManager->addThread([this, dir_name]()
-                                       { if(!LoadOnInit(dir_name)){
-                                    LOG_F(ERROR,"Failed to load modules on init");
-                                   } },
-                                       "LoadOnInit");
-        }
-        else
-        {
-            LOG_F(ERROR, "Failed to initialize thread manager in module loader");
-        }
     }
 
     ModuleLoader::~ModuleLoader()
@@ -69,39 +65,12 @@ namespace Lithium
 
     std::shared_ptr<ModuleLoader> ModuleLoader::createShared()
     {
-        return std::make_shared<ModuleLoader>("modules", Atom::Async::ThreadManager::createShared());
+        return std::make_shared<ModuleLoader>("modules");
     }
     
-    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules", std::shared_ptr<Atom::Async::ThreadManager> threadManager = Atom::Async::ThreadManager::createShared())
+    std::shared_ptr<ModuleLoader> ModuleLoader::createShared(const std::string &dir_name = "modules")
     {
-        return std::make_shared<ModuleLoader>(dir_name, threadManager);
-    }
-
-    bool ModuleLoader::LoadOnInit(const std::string &dir_name)
-    {
-        if (dir_name.empty())
-        {
-            LOG_F(ERROR, "Directory name is empty");
-            return false;
-        }
-        const json dir_info = iterator_modules_dir(dir_name);
-        DLOG_F(INFO, "{}", dir_info.dump(4));
-        if (!dir_info.empty())
-        {
-            if (dir_info["message"].get<std::string>() != "No module found")
-            {
-                for (auto module_ : dir_info)
-                {
-                    const std::string name = module_.value("name", "");
-                    const std::string path = module_.value("path", "");
-                    if (name == "" || path == "")
-                        continue;
-                    if (!LoadModule(path, name))
-                        continue;
-                }
-            }
-        }
-        return true;
+        return std::make_shared<ModuleLoader>(dir_name);
     }
 
     bool ModuleLoader::LoadModule(const std::string &path, const std::string &name)
@@ -156,7 +125,7 @@ namespace Lithium
         }
 
 #ifdef _WIN32
-        HMODULE handle = it->second->handle;
+        HMODULE handle = reinterpret_cast<HMODULE>(it->second->handle);
 
         PIMAGE_DOS_HEADER dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(handle);
         PIMAGE_NT_HEADERS ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS>(reinterpret_cast<char *>(handle) + dosHeader->e_lfanew);
@@ -171,7 +140,7 @@ namespace Lithium
             std::unique_ptr<FunctionInfo> func = std::make_unique<FunctionInfo>();
             func->name = reinterpret_cast<const char *>(reinterpret_cast<char *>(handle) + nameTable[i]);
             func->address = reinterpret_cast<void *>(reinterpret_cast<char *>(handle) + functionTable[ordinalTable[i]]);
-            funcs.push_back(func);
+            // TODO funcs.push_back(std::construct_at(func.get()));
             DLOG_F(INFO, "Function: {}", func->name);
 
             // Trying to get function's parameters, but there are some issues with it
@@ -201,7 +170,7 @@ namespace Lithium
 
                     char parameterBuffer[256];
                     sprintf_s(parameterBuffer, "%#010I64x", dwParameter);
-                    funcs[i].parameters.push_back(parameterBuffer);
+                    funcs[i].get()->parameters.push_back(parameterBuffer);
 
                     ++dwParameterPtr;
                 }
@@ -353,7 +322,7 @@ namespace Lithium
         return true;
     }
 
-    std::shared_ptr<Mod> ModuleLoader::GetModule(const std::string &name) const
+    std::shared_ptr<ModuleInfo> ModuleLoader::GetModule(const std::string &name) const
     {
         std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
         auto it = modules_.find(name);
@@ -390,11 +359,11 @@ namespace Lithium
             LOG_F(ERROR, "Module {} is not loaded", name);
             return false;
         }
-        std::shared_ptr<Mod> mod = GetModule(name);
-        if (!mod->enabled.load())
+        std::shared_ptr<ModuleInfo> mod = GetModule(name);
+        if (!mod->m_enabled.load())
         {
-            mod->enabled.store(true);
-            std::string disabled_file = mod->path;
+            mod->m_enabled.store(true);
+            std::string disabled_file = mod->m_path;
             std::string enabled_file = disabled_file.substr(0, disabled_file.size() - 8);
             if (CheckModuleExists(enabled_file))
             {
@@ -426,10 +395,10 @@ namespace Lithium
             LOG_F(ERROR, "Module {} is not loaded", name);
             return false;
         }
-        std::shared_ptr<Mod> mod = GetModule(name);
-        if (mod->enabled.load())
+        std::shared_ptr<ModuleInfo> mod = GetModule(name);
+        if (mod->m_enabled.load())
         {
-            mod->enabled.store(false);
+            mod->m_enabled.store(false);
             std::string module_path = GetModulePath(name);
             if (module_path.empty())
             {
@@ -459,7 +428,7 @@ namespace Lithium
             LOG_F(ERROR, "Module {} is not loaded", name);
             return false;
         }
-        if (GetModule(name)->enabled.load())
+        if (GetModule(name)->m_enabled.load())
         {
             return true;
         }

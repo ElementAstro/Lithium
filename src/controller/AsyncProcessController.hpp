@@ -28,6 +28,9 @@ Description: Process Route
 #include <string>
 #include <cstdlib>
 
+#include "atom/server/global_ptr.hpp"
+#include "atom/system/process.hpp"
+
 void replaceAll(std::string &str, auto &from, auto &to)
 {
     size_t start_pos = 0;
@@ -42,10 +45,15 @@ void replaceAll(std::string &str, auto &from, auto &to)
 
 class ProcessController : public oatpp::web::server::api::ApiController
 {
+private:
+
+    static std::shared_ptr<Atom::System::ProcessManager> m_processManager;
+    
 public:
     ProcessController(const std::shared_ptr<ObjectMapper> &objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper)
     {
+        m_processManager = GetPtr<Atom::System::ProcessManager>("lithium.system.process");
     }
 
 public:
@@ -74,7 +82,7 @@ public:
             auto processName = request->getPathVariable("process-name");
             auto processId = request->getPathVariable("process-id");
             OATPP_ASSERT_HTTP(processName != "" && processId != "", Status::CODE_400, "process name and id should not be null");
-            if (!Lithium::MyApp->createProcess(processName, processId))
+            if (!m_processManager->createProcess(processName, processId))
             {
                 res->error = "Operate Error";
                 res->message = "Failed to create process";
@@ -104,7 +112,7 @@ public:
             auto processName = body->process_name.getValue("");
             auto processId = body->process_id.getValue("");
             OATPP_ASSERT_HTTP(processName != "" && processId !="" , Status::CODE_400, "process name and id should not be null");
-            if (!Lithium::MyApp->createProcess(processName, processId))
+            if (!m_processManager->createProcess(processName, processId))
             {
                 res->error = "Process Failed";
                 res->message = "Failed to create process";
@@ -129,7 +137,7 @@ public:
             res->command = "TerminateProcess";
             auto processId = std::stoi(request->getPathVariable("process-id"));
             OATPP_ASSERT_HTTP(processId, Status::CODE_400, "process id should not be null");
-            if (!Lithium::MyApp->terminateProcess(processId))
+            if (!m_processManager->terminateProcess(processId))
             {
                 res->error = "Operate Error";
                 res->message = "Failed to create process";
@@ -160,7 +168,7 @@ public:
             res->command = "TerminateProcess";
             auto processId = body->process_id.getValue("");
             OATPP_ASSERT_HTTP(processId != "", Status::CODE_400, "process name and id should not be null");
-            if (!Lithium::MyApp->terminateProcessByName(processId))
+            if (!m_processManager->terminateProcessByName(processId))
             {
                 res->error = "Process Failed";
                 res->message = "Failed to terminate process";
@@ -188,7 +196,7 @@ public:
             auto scriptName = request->getPathVariable("script-name");
             auto scriptId = request->getPathVariable("script-id");
             OATPP_ASSERT_HTTP(scriptName && scriptId, Status::CODE_400, "script name and id should not be null");
-            if (!Lithium::MyApp->runScript(scriptName, scriptId))
+            if (!m_processManager->runScript(scriptName, scriptId))
             {
                 res->error = "Operate Error";
                 res->message = "Failed to run script";
@@ -220,7 +228,7 @@ public:
             auto scriptId = body->script_id.getValue("");
             auto scriptName = body->script_name.getValue("");
             OATPP_ASSERT_HTTP(scriptId != "" && scriptName != "", Status::CODE_400, "script name and id should not be null");
-            if (!Lithium::MyApp->runScript(scriptName,scriptId))
+            if (!m_processManager->runScript(scriptName,scriptId))
             {
                 res->error = "Process Failed";
                 res->message = "Failed to start script";

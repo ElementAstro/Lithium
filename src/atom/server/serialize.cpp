@@ -2,17 +2,6 @@
  * serialize.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -34,8 +23,6 @@ Description: This file contains the declaration of the SerializationEngine class
 #include <fmt/format.h>
 #endif
 
-#include "property/iproperty.hpp"
-#include "atom/type/iparams.hpp"
 #include "atom/log/loguru.hpp"
 
 std::string JsonSerializationEngine::serialize(const std::any &data, bool format) const
@@ -50,82 +37,6 @@ std::string JsonSerializationEngine::serialize(const std::any &data, bool format
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Failed to serialize message: {}", e.what());
-        }
-    }
-    else
-    {
-        if (data.type() == typeid(std::shared_ptr<IBoolProperty>))
-        {
-            try
-            {
-                std::shared_ptr<IBoolProperty> prop = std::any_cast<std::shared_ptr<IBoolProperty>>(data);
-                _data["device_name"] = prop->device_name;
-                _data["device_uuid"] = prop->device_uuid;
-                _data["message_uuid"] = prop->message_uuid;
-                _data["name"] = prop->name;
-                _data["need_check"] = prop->need_check ? "true" : "false";
-                _data["get_func"] = prop->get_func;
-                _data["set_func"] = prop->set_func;
-                _data["value"] = prop->value ? "true" : "false";
-            }
-            catch (const std::exception &e)
-            {
-                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
-            }
-        }
-        else if (data.type() == typeid(std::shared_ptr<IStringProperty>))
-        {
-            try
-            {
-                std::shared_ptr<IStringProperty> prop = std::any_cast<std::shared_ptr<IStringProperty>>(data);
-                _data["device_name"] = prop->device_name;
-                _data["device_uuid"] = prop->device_uuid;
-                _data["message_uuid"] = prop->message_uuid;
-                _data["name"] = prop->name;
-                _data["need_check"] = prop->need_check ? "true" : "false";
-                _data["get_func"] = prop->get_func;
-                _data["set_func"] = prop->set_func;
-                _data["value"] = prop->value;
-            }
-            catch (const std::exception &e)
-            {
-                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
-            }
-        }
-        else if (data.type() == typeid(std::shared_ptr<INumberProperty>))
-        {
-            try
-            {
-                std::shared_ptr<INumberProperty> prop = std::any_cast<std::shared_ptr<INumberProperty>>(data);
-                _data["device_name"] = prop->device_name;
-                _data["device_uuid"] = prop->device_uuid;
-                _data["message_uuid"] = prop->message_uuid;
-                _data["name"] = prop->name;
-                _data["need_check"] = prop->need_check ? "true" : "false";
-                _data["get_func"] = prop->get_func;
-                _data["set_func"] = prop->set_func;
-                _data["value"] = std::to_string(prop->value);
-            }
-            catch (const std::exception &e)
-            {
-                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
-            }
-        }
-        else if (data.type() == typeid(std::shared_ptr<IParams>))
-        {
-            try
-            {
-                return std::any_cast<std::shared_ptr<IParams>>(data)->toJson();
-            }
-            catch (const std::bad_any_cast &e)
-            {
-                LOG_F(ERROR, "Failed to serialize bool property message: {}", e.what());
-            }
-        }
-        else
-        {
-            LOG_F(ERROR, "Unknown type of message!");
-            return "";
         }
     }
     std::ostringstream oss;

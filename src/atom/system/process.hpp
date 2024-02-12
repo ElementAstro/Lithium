@@ -2,17 +2,6 @@
  * process.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -84,17 +73,6 @@ namespace Atom::System
          */
         static std::shared_ptr<ProcessManager> createShared(int maxProcess);
 
-        /**
-         * 创建一个进程管理器。
-         */
-        static std::unique_ptr<ProcessManager> createUnique();
-
-        /**
-         * 创建一个进程管理器。
-         * @param maxProcess 最大进程数。
-         */
-        static std::unique_ptr<ProcessManager> createUnique(int maxProcess);
-
         // -------------------------------------------------------------------
         // Process methods
         // -------------------------------------------------------------------
@@ -113,7 +91,19 @@ namespace Atom::System
          */
         bool terminateProcess(pid_t pid, int signal = SIGTERM);
 
+        /**
+         * 终止一个进程。
+         * @param name 要终止的进程的名称。
+         * @param signal 终止信号，默认为SIGTERM。
+         */
         bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
+
+        /**
+         * 检查是否存在指定进程。
+         * @param identifier 进程的标识符。
+         * @return 是否存在指定进程。
+         */
+        bool hasProcess(const std::string &identifier);
 
         [[nodiscard]] std::vector<Process> getRunningProcesses();
 

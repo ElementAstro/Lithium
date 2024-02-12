@@ -2,17 +2,6 @@
  * focuser.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -25,28 +14,21 @@ Description: Focuser Simulator and Basic Definition
 
 #include "focuser.hpp"
 
-#include "atom/log/loguru.hpp"
-
-Focuser::Focuser(const std::string &name) : Device(name)
+Focuser::Focuser(const std::string &name) : AtomDriver(name)
 {
-    DLOG_F(INFO, "Focuser Simulator Loaded : %s", name.c_str());
-    init();
 }
 
 Focuser::~Focuser()
 {
-    DLOG_F(INFO, "Focuser Simulator Destructed");
 }
 
 bool Focuser::connect(const json &params)
 {
-    DLOG_F(INFO, "%s is connected", getDeviceName());
     return true;
 }
 
 bool Focuser::disconnect(const json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
     return true;
 }
 

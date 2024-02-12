@@ -18,14 +18,38 @@ Description: Addons finder
 
 namespace Lithium
 {
+    DirContainer::DirContainer(const std::filesystem::path &path) : m_path(path) {}
+
+    const std::filesystem::path &DirContainer::getPath() const
+    {
+        return m_path;
+    }
+
+    const std::vector<DirContainer> &DirContainer::getSubdirs() const
+    {
+        return m_subdirs;
+    }
+
+    const std::vector<std::filesystem::path> &DirContainer::getFiles() const
+    {
+        return m_files;
+    }
+
+    void DirContainer::addSubdir(const DirContainer &subdir)
+    {
+        m_subdirs.push_back(subdir);
+    }
+
+    void DirContainer::addFile(const std::filesystem::path &file)
+    {
+        m_files.push_back(file);
+    }
+
+    AddonFinder::FilterFunction AddonFinder::m_filterFunc = nullptr;
+
     AddonFinder::AddonFinder(const std::filesystem::path &path, const FilterFunction &filterFunc)
         : m_path(path), m_dirContainer(m_path)
     {
-    }
-
-    void AddonFinder::print() const
-    {
-        printDir(m_dirContainer);
     }
 
     bool AddonFinder::traverseDir(const std::filesystem::path &path)
@@ -39,7 +63,7 @@ namespace Lithium
             LOG_F(ERROR, "Invalid path: {}", m_path.string());
             return false;
         }
-        return
+        return true;
     }
 
     std::vector<std::string> AddonFinder::getAvailableDirs() const
@@ -86,33 +110,6 @@ namespace Lithium
         return false;
     }
 
-    AddonFinder::DirContainer::DirContainer(const std::filesystem::path &path) : m_path(path) {}
-
-    const std::filesystem::path &AddonFinder::DirContainer::getPath() const
-    {
-        return m_path;
-    }
-
-    const std::vector<DirContainer> &AddonFinder::DirContainer::getSubdirs() const
-    {
-        return m_subdirs;
-    }
-
-    const std::vector<std::filesystem::path> &AddonFinder::DirContainer::getFiles() const
-    {
-        return m_files;
-    }
-
-    void AddonFinder::DirContainer::addSubdir(const DirContainer &subdir)
-    {
-        m_subdirs.push_back(subdir);
-    }
-
-    void AddonFinder::DirContainer::addFile(const std::filesystem::path &file)
-    {
-        m_files.push_back(file);
-    }
-
     void AddonFinder::traverseDir(const std::filesystem::path &path, DirContainer &container)
     {
         for (const auto &entry : std::filesystem::directory_iterator(path))
@@ -135,26 +132,4 @@ namespace Lithium
             }
         }
     }
-
-    void AddonFinder::printDir(const DirContainer &dir, int level)
-    {
-        for (int i = 0; i < level; ++i)
-        {
-            std::cout << "  ";
-        }
-        std::cout << "+ " << dir.getPath().filename() << std::endl;
-        for (const auto &subdir : dir.getSubdirs())
-        {
-            printDir(subdir, level + 1);
-        }
-        for (const auto &file : dir.getFiles())
-        {
-            for (int i = 0; i < level + 1; ++i)
-            {
-                std::cout << "  ";
-            }
-            std::cout << "- " << file.filename() << std::endl;
-        }
-    }
-
 }

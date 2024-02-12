@@ -2,17 +2,6 @@
  * loop_task.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -25,29 +14,66 @@ Description: Loop Task Definition
 
 #include "loop_task.hpp"
 
-LoopTask::LoopTask(const std::function<void(const json &)> &item_fn,
-                   const json &params,
-                   std::function<json(const json &)> &stop_fn)
-    : BasicTask(stop_fn, stop_fn != nullptr), item_fn_(item_fn), params_(params) {}
-
-const json LoopTask::execute()
+LoopTask::LoopTask(const std::function<json(const json &)> &func,
+                   const std::function<json(const json &)> &stop_fn, 
+                   const json &params_template, 
+                   int loop_count)
+    : SimpleTask(func,stop_fn, params_template), m_loopCount(loop_count)
 {
-    for (const auto &item : params_["items"])
-    {
-        if (stop_flag_)
-        {
-            break;
-        }
-        item_fn_({{"item", item}});
-    }
-    done_ = true;
-    return {{"status", "done"}};
 }
 
-const json LoopTask::toJson() const
+json LoopTask::execute()
 {
-    auto json = BasicTask::toJson();
+    if (m_isExecuting.load())
+    {
+        return {{"status", "error"}, {"error", "Task is executing"}, {"code", 400}};
+    }
+    if (m_loopCount == 0)
+    {
+        return {{"status", "error"}, {"error", "Loop count is 0"}, {"code", 400}};
+    }
+    if (m_loopCount < 0)
+    {
+        return {{"status", "error"}, {"error", "Loop count is negative"}, {"code", 400}};
+    }
+
+    int currentCount = 0;
+    try
+    {
+        for (int i = 0; i < m_loopCount; i++)
+        {
+            m_isExecuting.store(true);
+            currentCount++;
+            if (m_stopFlag)
+            {
+                return {{"status", "error"}, {"error", "Task is stopped"}, {"code", 400}, {"count", currentCount}};
+            }
+            if (!m_paramsTemplate.is_null() && !m_params.is_null())
+            {
+                if (!validateJsonValue(m_params, m_paramsTemplate))
+                {
+                    return {{"status", "error"}, {"error", "Incorrect value type for element:"}, {"code", 500}, {"count", currentCount}};
+                }
+            }
+            if (!m_stopFlag)
+            {
+                m_returns.push_back(m_function(m_params));
+            }
+            m_isExecuting.store(false);
+        }
+    }
+    catch (const std::exception &e)
+    {
+        return {{"status", "error"}, {"error", e.what()}, {"code", 500}, {"count", currentCount}};
+    }
+
+    return m_returns;
+}
+
+json LoopTask::toJson()
+{
+    auto json = SimpleTask::toJson();
     json["type"] = "loop";
-    json["params"] = params_;
+    json["loop"] = m_loopCount;
     return json;
 }

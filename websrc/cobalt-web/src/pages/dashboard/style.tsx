@@ -1,25 +1,26 @@
 import styled from "styled-components";
 
-// styles for the sidebar
-export const SSidebar = styled.div`
-  position: absolute;
-  top: 0;
-  left: ${(props) => (props.visible ? "0" : "-300px")};
-  width: 300px;
-  height: 100%;
-  background-color: #fff;
-  z-index: 1;
-  transition: all 0.3s ease;
-`;
-
 // styles for the toolbar
 export const SToolbar = styled.div`
   position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: ${(props) => (props.visible ? "50px" : "0px")};
+  top: 25%;
+  left: ${(props) => (props.visible ? "0" : "-50px")};
+  width: 75px;
+  height: 50%;
   background-color: #fff;
   z-index: 2;
   transition: all 0.3s ease;
+
+  /* 添加更多样式 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  @media (max-width: 768px) {
+    top: 15%;
+  }
+  transparent: ${(props) => (props.visible ? "1" : "0")};
 `;

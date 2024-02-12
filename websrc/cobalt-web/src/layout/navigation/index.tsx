@@ -2,24 +2,18 @@ import React, { useState } from "react";
 import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
-import NavDropdown from "react-bootstrap/NavDropdown";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import { LinkContainer } from "react-router-bootstrap";
 import {
   Info,
-  People,
   House,
-  Cpu,
   Map,
   Gear,
-  WindowDash,
   Webcam,
   Box,
-  Bookmark,
-  Camera
+  Bookmark
 } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
-import { Button } from "react-bootstrap";
 
 function Navigation() {
   const { t } = useTranslation();

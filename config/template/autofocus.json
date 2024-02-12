@@ -1,0 +1,45 @@
+{
+    "name" : "AutoFocus",
+    "version" : "1.0",
+    "author" : "Max Qian",
+    "type" : "group",
+    "error" : "yes",
+    "warning" : "yes",
+    "tasks" : [
+        [
+            {
+                "name" : "AutoFocus.Exposure",
+                "type" : "action",
+                "action" : "start_exposure",
+                "next_step" : "AutoFocus.Calculate",
+                "priority" : 1,
+                "async" : false,
+                "retry" : 1,
+                "target_type" : "device.camera",
+                "target" : "CCD Simulator",
+                "params" : {
+                    "exposure" : "xx.xx",
+                    "is_save" : true,
+                    "filename" : "af_tmp.fits"
+                }
+            }
+        ],
+        [
+            {
+                "name" : "AutoFocus.Calculate",
+                "type" : "action",
+                "action" : "calculate_autofocus",
+                "next_step" : "AutoFocus.Exposure",
+                "priority" : 1,
+                "async" : false,
+                "retry" : 1,
+                "target_type" : "lithium.device",
+                "target" : "",
+                "params" : {
+                    "filename" : "af_tmp.fits"
+                    
+                }
+            }
+        ]
+    ]
+}

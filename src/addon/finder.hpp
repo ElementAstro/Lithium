@@ -21,6 +21,54 @@ Description: Component finder (the core of the plugin system)
 namespace Lithium
 {
     /**
+     * @brief The DirContainer class represents a container for directory contents.
+     */
+    class DirContainer
+    {
+    public:
+        /**
+         * @brief Constructs a DirContainer object with the specified path.
+         * @param path The path of the directory represented by this container.
+         */
+        explicit DirContainer(const std::filesystem::path &path);
+
+        /**
+         * @brief Gets the path of the directory represented by this container.
+         * @return The path of the directory represented by this container.
+         */
+        const std::filesystem::path &getPath() const;
+
+        /**
+         * @brief Gets the subdirectories of the directory represented by this container.
+         * @return The subdirectories of the directory represented by this container.
+         */
+        const std::vector<DirContainer> &getSubdirs() const;
+
+        /**
+         * @brief Gets the files of the directory represented by this container.
+         * @return The files of the directory represented by this container.
+         */
+        const std::vector<std::filesystem::path> &getFiles() const;
+
+        /**
+         * @brief Adds a subdirectory to the directory represented by this container.
+         * @param subdir The subdirectory to add.
+         */
+        void addSubdir(const DirContainer &subdir);
+
+        /**
+         * @brief Adds a file to the directory represented by this container.
+         * @param file The file to add.
+         */
+        void addFile(const std::filesystem::path &file);
+
+    private:
+        std::filesystem::path m_path;               /**< The path of the directory. */
+        std::vector<DirContainer> m_subdirs;        /**< Subdirectories within the directory. */
+        std::vector<std::filesystem::path> m_files; /**< Files within the directory. */
+    };
+
+    /**
      * @brief The AddonFinder class is responsible for finding components within a given directory.
      */
     class AddonFinder
@@ -39,12 +87,16 @@ namespace Lithium
         explicit AddonFinder(const std::filesystem::path &path, const FilterFunction &filterFunc = {});
 
         /**
-         * @brief Prints information about the directory structure and its components.
+         * @brief Traverses the directory structure and populates the DirContainer object.
+         * @param path The path of the directory to traverse.
+         * @return True if the traversal was successful, false otherwise.
          */
-        void print() const;
-
         bool traverseDir(const std::filesystem::path &path);
 
+        /**
+         * @brief Gets the names of the subdirectories that match the filter function.
+         * @return The names of the subdirectories that match the filter function.
+         */
         std::vector<std::string> getAvailableDirs() const;
 
         /**
@@ -57,79 +109,17 @@ namespace Lithium
 
     private:
         /**
-         * @brief The DirContainer class represents a container for directory contents.
-         */
-        class DirContainer
-        {
-        public:
-            /**
-             * @brief Constructs a DirContainer object with the specified path.
-             * @param path The path of the directory represented by this container.
-             */
-            explicit DirContainer(const std::filesystem::path &path);
-
-            /**
-             * @brief Gets the path of the directory represented by this container.
-             * @return The path of the directory represented by this container.
-             */
-            const std::filesystem::path &getPath() const;
-
-            /**
-             * @brief Gets the subdirectories of the directory represented by this container.
-             * @return The subdirectories of the directory represented by this container.
-             */
-            const std::vector<DirContainer> &getSubdirs() const;
-
-            /**
-             * @brief Gets the files of the directory represented by this container.
-             * @return The files of the directory represented by this container.
-             */
-            const std::vector<std::filesystem::path> &getFiles() const;
-
-            /**
-             * @brief Adds a subdirectory to the directory represented by this container.
-             * @param subdir The subdirectory to add.
-             */
-            void addSubdir(const DirContainer &subdir);
-
-            /**
-             * @brief Adds a file to the directory represented by this container.
-             * @param file The file to add.
-             */
-            void addFile(const std::filesystem::path &file);
-
-        private:
-            std::filesystem::path m_path;               /**< The path of the directory. */
-            std::vector<DirContainer> m_subdirs;        /**< Subdirectories within the directory. */
-            std::vector<std::filesystem::path> m_files; /**< Files within the directory. */
-        };
-
-        /**
          * @brief Recursively traverses the directory structure and populates the DirContainer object.
          * @param path The path of the directory to traverse.
          * @param container The DirContainer object to populate with directory contents.
          */
         static void traverseDir(const std::filesystem::path &path, DirContainer &container);
 
-        /**
-         * @brief Prints the directory structure and its components.
-         * @param dir The DirContainer representing the directory.
-         * @param level The level of indentation for printing (optional).
-         */
-        static void printDir(const DirContainer &dir, int level = 0);
-
     private:
         std::filesystem::path m_path;       /**< The path of the directory. */
         DirContainer m_dirContainer;        /**< The DirContainer object representing the directory. */
         static FilterFunction m_filterFunc; /**< The filter function for path filtering. */
     };
-
-    /**
-     * @brief The filter function for path filtering.
-     * @param path The path to be filtered.
-     * @return True if the path should be included, false otherwise.
-     */
-    AddonFinder::FilterFunction AddonFinder::m_filterFunc = nullptr;
 } // namespace Lithium
 
 /*

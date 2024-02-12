@@ -14,6 +14,9 @@ Description: System Script Manager
 
 #include "sheller.hpp"
 
+#include <sstream>
+#include <fstream>
+
 #ifdef _WIN32
 const std::string SHELL_COMMAND = "powershell.exe -Command";
 #else
@@ -129,7 +132,7 @@ namespace Lithium
         }
     }
 
-    bool ScriptManager::RunScript(const std::string &name, const std::vector<std::string> &args = {})
+    bool ScriptManager::RunScript(const std::string &name, const std::vector<std::string> &args)
     {
         if (scripts.empty() && powerShellScripts.empty())
         {
@@ -242,8 +245,6 @@ namespace Lithium
         std::ofstream logFile("error.log", std::ios_base::app);
         logFile << "[" << buffer << "] " << message << std::endl;
         logFile.close();
-
-        std::cerr << message << std::endl;
     }
 }
 

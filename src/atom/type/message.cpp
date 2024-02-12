@@ -2,17 +2,6 @@
  * message.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -26,9 +15,7 @@ Description: A message class, which can be used to store different types of mess
 #include "message.hpp"
 
 #include "atom/utils/time.hpp"
-#include "atom/type/iparams.hpp"
-
-#include "atom/property/uuid.hpp"
+#include "atom/utils/uuid.hpp"
 
 using namespace std;
 
@@ -36,7 +23,7 @@ using namespace std;
 Message::Message(Type t, const string &name, const string &target, const string &origin)
     : type_(t), name_(name), target_(target), origin_(origin)
 {
-    timestamp_ = Atom::Utils::GetChinaTimestampString();
+    timestamp_ = Atom::Utils::getChinaTimestampString();
     uuid_ = Atom::Property::UUIDGenerator::generateUUIDWithFormat();
 }
 

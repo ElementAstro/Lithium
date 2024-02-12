@@ -2,17 +2,6 @@
  * io.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -70,7 +59,6 @@ namespace Atom::IO
 
     bool createDirectory(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -86,7 +74,6 @@ namespace Atom::IO
 
     bool removeDirectory(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -103,7 +90,6 @@ namespace Atom::IO
 
     bool renameDirectory(const std::string &old_path, const std::string &new_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(old_path);
         ATOM_IO_CHECK_ARGUMENT(new_path);
         try
@@ -121,7 +107,6 @@ namespace Atom::IO
 
     bool moveDirectory(const std::string &old_path, const std::string &new_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(old_path);
         ATOM_IO_CHECK_ARGUMENT(new_path);
         try
@@ -139,7 +124,6 @@ namespace Atom::IO
 
     bool copyFile(const std::string &src_path, const std::string &dst_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(src_path);
         ATOM_IO_CHECK_ARGUMENT(dst_path);
         try
@@ -157,7 +141,6 @@ namespace Atom::IO
 
     bool moveFile(const std::string &src_path, const std::string &dst_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(src_path);
         ATOM_IO_CHECK_ARGUMENT(dst_path);
         try
@@ -175,7 +158,6 @@ namespace Atom::IO
 
     bool renameFile(const std::string &old_path, const std::string &new_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(old_path);
         ATOM_IO_CHECK_ARGUMENT(new_path);
         try
@@ -193,7 +175,6 @@ namespace Atom::IO
 
     bool removeFile(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -210,7 +191,6 @@ namespace Atom::IO
 
     bool createSymlink(const std::string &target_path, const std::string &symlink_path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(target_path);
         ATOM_IO_CHECK_ARGUMENT(symlink_path);
         try
@@ -228,7 +208,6 @@ namespace Atom::IO
 
     bool removeSymlink(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         ATOM_IO_CHECK_ARGUMENT(path);
         try
         {
@@ -245,7 +224,6 @@ namespace Atom::IO
 
     std::uintmax_t fileSize(const std::string &path)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         try
         {
             return fs::file_size(path);
@@ -321,7 +299,6 @@ namespace Atom::IO
 
     void traverseDirectories(const fs::path &directory, std::vector<std::string> &folders)
     {
-        DLOG_SCOPE_FUNCTION(INFO);
         DLOG_F(INFO, "Traversing directory: {}", directory.string());
         for (const auto &entry : fs::directory_iterator(directory))
         {
@@ -364,16 +341,27 @@ namespace Atom::IO
         return fs::exists(fileName) && fs::is_regular_file(fileName);
     }
 
+    bool isFolderEmpty(const std::string &folderName)
+    {
+        if (!isFolderExists(folderName))
+        {
+            return false;
+        }
+        fs::path directory_path = folderName;
+        for (const auto &entry : fs::directory_iterator(directory_path))
+        {
+            if (fs::is_regular_file(entry))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool isAbsolutePath(const std::string &path)
     {
         return std::filesystem::path(path).is_absolute();
     }
-
-    enum class FileOption
-    {
-        Path,
-        Name
-    };
 
     std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath, const std::string &fileType, FileOption fileOption)
     {

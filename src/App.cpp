@@ -59,6 +59,16 @@ Description: Main
     router->addController(controller##_ptr);                         \
     DLOG_F(INFO, logMessage " loaded");
 
+void BusLoggerFunction(void *user_data, const loguru::Message &message)
+{
+    Lithium::MyApp->sendJsonMessage(
+        "log", {{"message", message.message},
+                {"level", message.verbosity},
+                {"file", message.filename},
+                {"line", message.line},
+                {"timestamp", message.preamble}});
+}
+
 void runServer()
 {
     DLOG_F(INFO, "Loading App component ...");
@@ -104,6 +114,10 @@ void runServer()
     server.run();
 }
 
+struct MyNetworkLogger
+{
+};
+
 /**
  * @brief setup log file
  * @note This is called in main function
@@ -123,9 +137,12 @@ void setupLogFile()
     std::filesystem::path logFilePath = logsFolder / filename;
     loguru::add_file(logFilePath.string().c_str(), loguru::Append, loguru::Verbosity_MAX);
 
+    MyNetworkLogger network_logger;
+    // TODO loguru::add_callback("network_logger", BusLoggerFunction, &network_logger, loguru::Verbosity_INFO);
+
     loguru::set_fatal_handler([](const loguru::Message &message)
                               { 
-        Lithium::CrashReport::saveCrashLog(std::string(message.prefix) + message.message); 
+        Atom::System::saveCrashLog(std::string(message.prefix) + message.message); 
         oatpp::base::Environment::destroy(); });
 }
 
@@ -153,33 +170,32 @@ int main(int argc, char *argv[])
     /* Parse arguments */
     argparse::ArgumentParser program("Lithium Server");
 
-    program.add_argument("-P", "--port").help(_("port the server running on")).default_value(8000);
-    program.add_argument("-H", "--host").help(_("host the server running on")).default_value("0.0.0.0");
-    program.add_argument("-C", "--config").help(_("path to the config file")).default_value("cpnfig.json");
-    program.add_argument("-M", "--module-path").help(_("path to the modules directory")).default_value("modules");
-    program.add_argument("-W", "--web-panel").help(_("web panel")).default_value(true);
-    program.add_argument("-L", "--log-file").help(_("path to log file"));
+    program.add_argument("-P", "--port").help("port the server running on").default_value(8000);
+    program.add_argument("-H", "--host").help("host the server running on").default_value("0.0.0.0");
+    program.add_argument("-C", "--config").help("path to the config file").default_value("cpnfig.json");
+    program.add_argument("-M", "--module-path").help("path to the modules directory").default_value("modules");
+    program.add_argument("-W", "--web-panel").help("web panel").default_value(true);
+    program.add_argument("-L", "--log-file").help("path to log file");
 
-    program.add_description(_("Lithium Command Line Interface:"));
-    program.add_epilog(_("End."));
+    program.add_description("Lithium Command Line Interface:");
+    program.add_epilog("End.");
 
     program.parse_args(argc, argv);
 
     Lithium::InitLithiumApp();
     // Run oatpp server
     Lithium::MyApp = Lithium::LithiumApp::createShared();
-    Lithium::MyApp->initMyAppChai();
 
     auto cmd_port = program.get<int>("--port");
     if (cmd_port != 8000)
     {
-        DLOG_F(INFO, _("Command line server port : %d"), cmd_port);
+        DLOG_F(INFO, "Command line server port : {}", cmd_port);
 
         auto port = Lithium::MyApp->GetConfig("config/server").value<int>("port", 8000);
         if (port != cmd_port)
         {
-            Lithium::MyApp->SetConfig("config/server/port", cmd_port);
-            DLOG_F(INFO, _("Set server port to %d"), cmd_port);
+            Lithium::MyApp->SetConfig({{"key", "config/server/port"}, {"value", cmd_port}});
+            DLOG_F(INFO, "Set server port to {}", cmd_port);
         }
     }
     try
@@ -191,22 +207,26 @@ int main(int argc, char *argv[])
 
         if (!cmd_host.empty())
         {
-            Lithium::MyApp->SetConfig("config/server/host", cmd_host);
+            Lithium::MyApp->SetConfig({{"key", "config/server/host"}, {"value", cmd_host}});
+            DLOG_F(INFO, "Set server host to {}", cmd_host);
         }
         if (!cmd_config_path.empty())
         {
-            Lithium::MyApp->SetConfig("config/server/configpath", cmd_config_path);
+            Lithium::MyApp->SetConfig({{"key", "config/server/configpath"}, {"value", cmd_config_path}});
+            DLOG_F(INFO, "Set server config path to {}", cmd_config_path);
         }
         if (!cmd_module_path.empty())
         {
-            Lithium::MyApp->SetConfig("config/server/modulepath", cmd_module_path);
+            Lithium::MyApp->SetConfig({{"key", "config/server/modulepath"}, {"value", cmd_module_path}});
+            DLOG_F(INFO, "Set server module path to {}", cmd_module_path);
         }
 
         if (!cmd_web_panel)
         {
             if (Lithium::MyApp->GetConfig("config/server/web").get<bool>())
             {
-                Lithium::MyApp->SetConfig("config/server/web", false);
+                Lithium::MyApp->SetConfig({{"key", "config/server/web"}, {"value", false}});
+                DLOG_F(INFO, "Disable web panel");
             }
         }
     }

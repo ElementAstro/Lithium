@@ -2,17 +2,6 @@
  * switch.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,10 +12,12 @@ Description: Smart Switch just like javascript
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_UTILS_SWITCH_HPP
+#define ATOM_UTILS_SWITCH_HPP
 
 #include <functional>
 #include <string>
+#include <optional>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -48,7 +39,7 @@ namespace Atom::Utils
     {
     public:
         using Func = std::function<void(Args...)>; /**< The function type for handling a case. */
-        using DefaultFunc = std::function<void(Args...)>;
+        using DefaultFunc = std::optional<Func>;   // Optional default function
 
         /**
          * @brief Registers a case with the given string and function.
@@ -57,6 +48,18 @@ namespace Atom::Utils
          * @param func The function to call if the string matches.
          */
         void registerCase(const std::string &str, Func func);
+
+        /**
+         * @brief Unregisters a case with the given string.
+         *
+         * @param str The string to match against.
+         */
+        void unregisterCase(const std::string &str);
+
+        /**
+         * @brief Clears all registered cases.
+         */
+        void clearCases();
 
         /**
          * @brief Matches the given string against the registered cases.
@@ -74,9 +77,20 @@ namespace Atom::Utils
          */
         void setDefault(DefaultFunc func);
 
+        /**
+         * @brief Returns a vector of all registered cases.
+         *
+         * @return A vector of all registered cases.
+         */
+        std::vector<std::string> getCases() const;
+
     private:
+#if ENABLE_FASTHASH
+        emhash8::HashMap<std::string, Func> cases_;
+#else
         std::unordered_map<std::string, Func> cases_; /**< The map of registered cases. */
-        DefaultFunc defaultFunc_;                     /**< The default function to call if no match is found. */
+#endif
+        DefaultFunc defaultFunc_; /**< The default function to call if no match is found. */
     };
 
     template <typename... Args>
@@ -90,18 +104,30 @@ namespace Atom::Utils
     }
 
     template <typename... Args>
+    void StringSwitch<Args...>::unregisterCase(const std::string &str)
+    {
+        cases_.erase(str);
+    }
+
+    template <typename... Args>
+    void StringSwitch<Args...>::clearCases()
+    {
+        cases_.clear();
+    }
+
+    template <typename... Args>
     bool StringSwitch<Args...>::match(const std::string &str, Args... args)
     {
         auto iter = cases_.find(str);
         if (iter != cases_.end())
         {
-            iter->second(args...);
+            std::invoke(iter->second, args...);
             return true;
         }
 
-        if constexpr (std::is_invocable_v<DefaultFunc, Args...>)
+        if constexpr (!std::is_void_v<DefaultFunc>)
         {
-            defaultFunc_(args...);
+            std::invoke(defaultFunc_.value(), args...);
             return true;
         }
 
@@ -113,4 +139,18 @@ namespace Atom::Utils
     {
         defaultFunc_ = func;
     }
+
+    template <typename... Args>
+    std::vector<std::string> StringSwitch<Args...>::getCases() const
+    {
+        std::vector<std::string> caseList;
+        for (const auto &entry : cases_)
+        {
+            caseList.push_back(entry.first);
+        }
+        return caseList;
+    }
+
 }
+
+#endif

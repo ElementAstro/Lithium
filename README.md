@@ -1,5 +1,4 @@
-Lithium
-=======
+## Lithium
 
 <p align="center">
 <img src="https://img.shields.io/badge/dialect-C%2B%2B20-blue">
@@ -11,7 +10,9 @@ Lithium
 </p>
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/d3fed47a38e642a390d8ee506dc0acb3)](https://app.codacy.com/gh/ElementAstro/Lithium/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
-
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=ElementAstro_Lithium&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=ElementAstro_Lithium&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ElementAstro_Lithium&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
 
 ## Introduction
 
@@ -28,7 +29,7 @@ Features:
 - Lightweight software design, while maintaining excellent performance.
 - Provides a rich API, covering all necessary functions for astrophotography. ~~If not? Mods!~~
 - Supports complex shooting sequences, enabling a programmable user experience.
-- Uses the GPL3 open source license, __where the world belongs to open source__
+- Uses the GPL3 open source license, **where the world belongs to open source**
 
 ## About Mod/Plugin
 
@@ -132,8 +133,7 @@ Let us nurture a heart that yearns for wisdom and grace,
 And never lose sight of this noble race.
 ```
 
-锂
-=
+## 锂
 
 ## 简介
 
@@ -142,23 +142,23 @@ And never lose sight of this noble race.
 ## 特性
 
 - 可用作成像软件、设备服务器和系统管理器
-- 基于最新的C++20标准，提供高效的功能实现（兼容部分C++17特性）
-- 支持开放式加载，允许动态加载C++动态库以进行热更新
-- 内置经过优化的Chaiscript解析引擎，提供灵活的脚本支持
+- 基于最新的 C++20 标准，提供高效的功能实现（兼容部分 C++17 特性）
+- 支持开放式加载，允许动态加载 C++动态库以进行热更新
+- 内置经过优化的 Chaiscript 解析引擎，提供灵活的脚本支持
 - 支持多样化插件类型，方便扩展功能
-- 跨平台兼容性，完全支持Windows和Linux操作系统
+- 跨平台兼容性，完全支持 Windows 和 Linux 操作系统
 - 软件设计轻量化，同时保持出色的性能表现
-- 提供丰富的API，覆盖所有天文摄影所需功能,~~功能没有怎么办？写模组！~~
+- 提供丰富的 API，覆盖所有天文摄影所需功能,~~功能没有怎么办？写模组！~~
 - 支持复杂的拍摄序列，实现编程化的使用体验
-- 采用GPL3开源许可协议，__世界属于开源__
+- 采用 GPL3 开源许可协议，**世界属于开源**
 
 ## 关于模组/插件
 
-在Lithium，组件功能是最特殊的功能，提供类似于Minecraft的模组机制。组件功能支持动态添加和插入功能，但由于C++自身的限制，我们对组件的插入进行了一定的限制，以确保系统的稳定性和安全性。
+在 Lithium，组件功能是最特殊的功能，提供类似于 Minecraft 的模组机制。组件功能支持动态添加和插入功能，但由于 C++自身的限制，我们对组件的插入进行了一定的限制，以确保系统的稳定性和安全性。
 
 ### 组件形式
 
-- 注入式组件：这些组件替换了`Lithium`中已实现的功能。它们通过使用`shared_ptr`注入各个Manager（类似与`ConfigManager`），目标与已注入`GlobalPtrManager`的管理器相同。这种形式的组件可以灵活替换现有功能。
+- 注入式组件：这些组件替换了`Lithium`中已实现的功能。它们通过使用`shared_ptr`注入各个 Manager（类似与`ConfigManager`），目标与已注入`GlobalPtrManager`的管理器相同。这种形式的组件可以灵活替换现有功能。
 
 - 独立式组件：这些组件采用分布式架构，在独立的进程中运行，以确保系统的安全性。当需要处理敏感数据或进行复杂的计算时，这种独立的组件能够提供额外的保护和隔离。为了增加组件的安全性，`Lithium`还提供了沙盒功能.
 
@@ -166,9 +166,9 @@ And never lose sight of this noble race.
 
 ### 组件级别
 
-- Addon：最高级的组件，包含一系列的Module和Component
+- Addon：最高级的组件，包含一系列的 Module 和 Component
 
-- Module：模块，包含不定数量Component的动态库（根据平台而定）
+- Module：模块，包含不定数量 Component 的动态库（根据平台而定）
 
 - Component：组件，具体实际功能的`shared_ptr`，或者是可执行的函
 
@@ -180,7 +180,7 @@ And never lose sight of this noble race.
 
 尽管已经尽最大努力减少了库的使用，但仍需要安装一些依赖项
 
-#### 在Windows平台下
+#### 在 Windows 平台下
 
 ```shell
 # 添加清华镜像源，下载速度嘎嘎的

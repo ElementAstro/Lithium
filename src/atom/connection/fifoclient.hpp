@@ -2,17 +2,6 @@
  * fifoclient.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -23,8 +12,8 @@ Description: FIFO CLient
 
 *************************************************/
 
-#ifndef FIFOCLIENT_H
-#define FIFOCLIENT_H
+#ifndef ATOM_CONNECTION_FIFOCLIENT_HPP
+#define ATOM_CONNECTION_FIFOCLIENT_HPP
 
 #include <string>
 
@@ -37,23 +26,26 @@ Description: FIFO CLient
 #include <unistd.h>
 #endif
 
-class FifoClient
+namespace Atom::Connection
 {
-public:
-    FifoClient(const std::string &fifoPath);
+    class FifoClient
+    {
+    public:
+        FifoClient(const std::string &fifoPath);
 
-    void connect();
-    void sendMessage(const std::string &message);
-    void disconnect();
+        void connect();
+        void sendMessage(const std::string &message);
+        void disconnect();
 
-private:
-    std::string fifoPath;
+    private:
+        std::string fifoPath;
 
 #ifdef _WIN32
-    HANDLE pipeHandle;
+        HANDLE pipeHandle;
 #else
-    int pipeFd;
+        int pipeFd;
 #endif
-};
+    };
+}
 
 #endif // FIFOSERVER_H

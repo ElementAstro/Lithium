@@ -1,18 +1,26 @@
+# CMakeLists.txt for Atom
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Atom
+# Description: Atom Library for all of the Element Astro Project
+# Author: Max Qian
+# License: GPL3
+
 cmake_minimum_required(VERSION 3.20)
 project(atom C CXX)
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 
 add_subdirectory(async)
-add_subdirectory(io)
-add_subdirectory(log)
-add_subdirectory(type)
-add_subdirectory(web)
-add_subdirectory(connection)
 add_subdirectory(components)
-add_subdirectory(task)
+add_subdirectory(connection)
 add_subdirectory(driver)
+add_subdirectory(log)
+add_subdirectory(server)
+add_subdirectory(task)
+add_subdirectory(type)
 add_subdirectory(utils)
+add_subdirectory(web)
 
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
@@ -44,9 +52,10 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     # system/filew.cpp
     system/dirw.cpp
 
+    type/args.cpp
     type/ini.cpp
-    type/iparams.cpp
     type/message.cpp
+    server/variables.cpp
 )
 
 # Headers
@@ -83,9 +92,9 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     system/dirw.hpp
 
     type/args.hpp
+    type/expected.hpp
     type/json.hpp
     type/ini.hpp
-    type/iparams.hpp
     type/small_vector.hpp
     type/message.hpp
 )
@@ -99,10 +108,12 @@ list(APPEND ${PROJECT_NAME}_LIBS
     loguru
     cpp_httplib
     libzippp
-    atom.async
-    atom.utils
-    atom.driver
-    atom.component
+    atom-async
+    atom-task
+    atom-driver
+    atom-component
+    atom-utils
+    atom-web
     )
 
 # Build Object Library

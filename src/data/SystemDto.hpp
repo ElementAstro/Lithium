@@ -21,7 +21,7 @@ Description: System Data Transform Object
 
 class BaseReturnSystemDto : public StatusDto
 {
-    DTO_INIT(BaseSystemDto, DTO)
+    DTO_INIT(BaseReturnSystemDto, StatusDto)
 
     DTO_FIELD_INFO(value)
     {
@@ -32,7 +32,7 @@ class BaseReturnSystemDto : public StatusDto
 
 class ReturnDiskUsageDto : public StatusDto
 {
-    DTO_INIT(ReturnDiskUsageDto, DTO)
+    DTO_INIT(ReturnDiskUsageDto, StatusDto)
 
     DTO_FIELD_INFO(value)
     {

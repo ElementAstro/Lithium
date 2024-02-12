@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(atom.component C CXX)
+project(atom-component C CXX)
 
 
 list(APPEND ${PROJECT_NAME}_SOURCES
@@ -15,6 +15,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     component.hpp
+    macro.hpp
+    
     types.hpp
 
     templates/alone_component.hpp
@@ -22,10 +24,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     templates/script_component.hpp
     templates/shared_component.hpp
     templates/task_component.hpp
-)
-
-# Private Headers
-list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
 )
 
 # Build Object Library
@@ -37,7 +35,6 @@ target_sources(${PROJECT_NAME}_OBJECT
     ${${PROJECT_NAME}_HEADERS}
     PRIVATE
     ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
 )
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
@@ -46,6 +43,8 @@ add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} atom-utils)
+target_link_libraries(${PROJECT_NAME} atom-type)
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES

@@ -6,12 +6,13 @@ import {
   GearFill,
   PencilSquare,
   TrashFill,
+  XCircle,
 } from "react-bootstrap-icons";
 
 const FloatingUIContainer = styled.div`
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 50px;
+  left: 20px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -19,6 +20,14 @@ const FloatingUIContainer = styled.div`
 
 const FloatingButton = styled(Button)`
   margin-top: 10px;
+  background-color: #1e90ff;
+  color: #fff;
+  border: none;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+
+  &:hover {
+    background-color: #187bcd;
+  }
 `;
 
 const FloatingUI = () => {
@@ -36,21 +45,25 @@ const FloatingUI = () => {
   return (
     <FloatingUIContainer>
       <Button variant="primary" onClick={toggleMenu}>
-        {isOpen ? "Close" : "Open"}
+        {isOpen ? <XCircle size={20} /> : <GearFill size={20} />}
       </Button>
       {isOpen && (
         <ButtonGroup vertical>
           <FloatingButton onClick={() => handleActionClick("main")}>
-            <PlusSquareFill />
+            <PlusSquareFill size={20} />
+            <span style={{ marginLeft: "10px" }}>Add</span>
           </FloatingButton>
           <FloatingButton onClick={() => handleActionClick("settings")}>
-            <GearFill />
+            <GearFill size={20} />
+            <span style={{ marginLeft: "10px" }}>Settings</span>
           </FloatingButton>
           <FloatingButton onClick={() => handleActionClick("edit")}>
-            <PencilSquare />
+            <PencilSquare size={20} />
+            <span style={{ marginLeft: "10px" }}>Edit</span>
           </FloatingButton>
           <FloatingButton onClick={() => handleActionClick("delete")}>
-            <TrashFill />
+            <TrashFill size={20} />
+            <span style={{ marginLeft: "10px" }}>Delete</span>
           </FloatingButton>
         </ButtonGroup>
       )}

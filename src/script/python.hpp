@@ -12,19 +12,32 @@ Description: Lithium Python scripting engine
 
 **************************************************/
 
-#include "pocketpy/pocketpy.h"
+#pragma once
+
+#include "pocketpy/include/pocketpy.h"
+
+#include "config/configor.hpp"
 
 namespace Lithium
 {
     class PyScriptManager
     {
-    private:
-        /* data */
     public:
         PyScriptManager(/* args */);
         ~PyScriptManager();
+
+        void InjectSystemModule();
+        void InjectDeviceModule();
+        void InjectConfigModule();
+    
+
+    private:
+        pkpy::VM* vm;
+        pkpy::PyObject* m_deviceModule;
+        pkpy::PyObject* m_systemModule;
+        pkpy::PyObject* m_configModule;
+
+        std::shared_ptr<ConfigManager> m_coofigManager;
     };
-    
-    
-    
+
 } // namespace Lithium

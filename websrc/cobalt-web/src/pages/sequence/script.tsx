@@ -23,6 +23,7 @@ import {
   ArrowRepeat as RepeatIcon,
   Pencil,
   ArrowRight,
+  Trash,
 } from "react-bootstrap-icons";
 import { GlobalStore } from "../../store/globalStore";
 import React from "react";
@@ -120,47 +121,54 @@ function DarkTimeScriptItem() {
     <Container style={{ position: "relative", height: "60vh" }}>
       <Row>
         <Col xs={6}>
-          {/* 温度控制 */}
-          <Form.Control
-            type="number"
-            value={scriptSettingDetails.cool_temperature}
-            onChange={(e) => handleTemperatureChange(e.target.value)}
-            placeholder="冷冻温度(℃)"
-          />
-          {/* 拍摄张数选择 */}
-          <Form.Control
-            type="number"
-            value={scriptSettingDetails.repeat}
-            onChange={(e) => handleRepeatChange(e.target.value)}
-            placeholder="拍摄张数"
-          />
-          {/* 关闭制冷 */}
-          <Form.Check
-            type="switch"
-            id="warm-camera-switch"
-            label={scriptSettingDetails.warm_camera ? "ON" : "OFF"}
-            checked={scriptSettingDetails.warm_camera}
-            onChange={handleWarmCameraChange}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "8px",
-            }}
-          >
-            结束后关闭制冷
-          </Form.Check>
-          <Form.Check
-            type="switch"
-            id="bias-switch"
-            label={scriptSettingDetails.bias ? "ON" : "OFF"}
-            checked={scriptSettingDetails.bias}
-            onChange={handleBiasChange}
-            style={{ display: "flex", alignItems: "center" }}
-          >
-            拍摄偏置
-          </Form.Check>
+          <div className="mb-3">
+            <TempIcon className="me-2" />
+            <Form.Control
+              type="number"
+              value={scriptSettingDetails.cool_temperature}
+              onChange={(e) => handleTemperatureChange(e.target.value)}
+              placeholder="冷冻温度(℃)"
+            />
+          </div>
+          <div className="mb-3">
+            <RepeatIcon className="me-2" />
+            <Form.Control
+              type="number"
+              value={scriptSettingDetails.repeat}
+              onChange={(e) => handleRepeatChange(e.target.value)}
+              placeholder="拍摄张数"
+            />
+          </div>
+          <div className="mb-3">
+            <Form.Check
+              type="switch"
+              id="warm-camera-switch"
+              label={scriptSettingDetails.warm_camera ? "ON" : "OFF"}
+              checked={scriptSettingDetails.warm_camera}
+              onChange={handleWarmCameraChange}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "8px",
+              }}
+            >
+              结束后关闭制冷
+            </Form.Check>
+          </div>
+          <div className="mb-3">
+            <Form.Check
+              type="switch"
+              id="bias-switch"
+              label={scriptSettingDetails.bias ? "ON" : "OFF"}
+              checked={scriptSettingDetails.bias}
+              onChange={handleBiasChange}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              拍摄偏置
+            </Form.Check>
+          </div>
         </Col>
-        <Col xs={6}>
+        <Col xs={12} md={6}>
           <div style={{ padding: "16px" }}>
             <ListGroup title="拍摄时间选择">
               {scriptSettingDetails.dark_time.map((entry, index) => (
@@ -240,6 +248,7 @@ export default function SimpleScriptEditor() {
   const [selectedIndex, setSelectedIndex] = useState(1);
 
   const [showMenu, setShowMenu] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
 
   const handleOpenMenu = () => {
     setShowMenu(true);
@@ -381,7 +390,7 @@ export default function SimpleScriptEditor() {
 
       <Button onClick={handleOpenMenu}>打开菜单</Button>
 
-      <Modal show={showMenu} onHide={handleCloseMenu} size="sm">
+      <Modal show={openMenu} onHide={handleCloseMenu} size="sm">
         <Modal.Header closeButton>
           <Modal.Title>脚本模板选择</Modal.Title>
         </Modal.Header>
@@ -404,6 +413,32 @@ export default function SimpleScriptEditor() {
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseMenu}>
             关闭
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Save Script Modal */}
+      <Modal show={openDialog} onHide={() => setOpenDialog(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>保存脚本</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group controlId="scriptName">
+            <Form.Label>脚本名称</Form.Label>
+            <Form.Control
+              type="text"
+              //value={scriptName}
+              //onChange={(e) => setScriptName(e.target.value)}
+              placeholder="请输入脚本名称"
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setOpenDialog(false)}>
+            取消
+          </Button>
+          <Button variant="primary" onClick={handleCloseMenu}>
+            保存
           </Button>
         </Modal.Footer>
       </Modal>

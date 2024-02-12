@@ -5,9 +5,11 @@ on:
   push:
     branches:
       - 'master'
+      - 'dev'
   pull_request:
     branches:
       - 'master'
+      - 'dev'
 
 env:
   # Path to the solution file relative to the root of the project.
@@ -53,12 +55,12 @@ jobs:
           mingw-w64-${{matrix.env}}-libzip
           zlib-devel
 
-    - name: Get INDI Sources
+    - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Build INDI Core
       run: |
         mkdir build
         cd build
-        cmake .. -DINDI_BUILD_SERVER=OFF -DINDI_BUILD_DRIVERS=OFF
+        cmake ..
         cmake --build .

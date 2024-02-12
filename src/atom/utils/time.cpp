@@ -2,17 +2,6 @@
  * time.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -31,7 +20,7 @@ Description: Some useful functions about time
 
 namespace Atom::Utils
 {
-    std::string GetTimestampString()
+    std::string getTimestampString()
     {
         auto now = std::chrono::system_clock::now();
         auto time = std::chrono::system_clock::to_time_t(now);
@@ -43,7 +32,7 @@ namespace Atom::Utils
         return ss.str();
     }
 
-    std::string ConvertToChinaTime(const std::string &utcTimeStr)
+    std::string convertToChinaTime(const std::string &utcTimeStr)
     {
         // 解析UTC时间字符串
         std::tm tm = {};
@@ -65,7 +54,7 @@ namespace Atom::Utils
         return ss.str();
     }
 
-    std::string GetChinaTimestampString()
+    std::string getChinaTimestampString()
     {
         // 获取当前时间点
         auto now = std::chrono::system_clock::now();
@@ -82,10 +71,37 @@ namespace Atom::Utils
         return ss.str();
     }
 
-    std::string TimeStampToString(time_t timestamp)
+    std::string timeStampToString(time_t timestamp)
     {
         char buffer[80];
         std::strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", std::localtime(&timestamp));
         return std::string(buffer);
+    }
+
+    // Specially for Astrometry.net
+    std::string toString(const std::tm &tm, const std::string &format)
+    {
+        std::ostringstream oss;
+        oss << std::put_time(&tm, format.c_str());
+        return oss.str();
+    }
+
+    std::string getUtcTime()
+    {
+        const auto now = std::chrono::system_clock::now();
+        const std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+        std::tm tm;
+#ifdef _WIN32
+        gmtime_s(&tm, &now_time_t);
+#else
+        gmtime_r(&now_time_t, &tm);
+#endif
+        return toString(tm, "%FT%TZ");
+    }
+
+    std::tm timestampToTime(long long timestamp)
+    {
+        std::time_t time = static_cast<std::time_t>(timestamp / 1000);
+        return *std::localtime(&time);
     }
 }

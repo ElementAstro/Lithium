@@ -18,7 +18,7 @@ Description: App Components
 #include "config.h"
 
 #ifdef ENABLE_ASYNC
-#include "websocket/WsServer.hpp"
+#include "websocket/AsyncWsServer.hpp"
 #else
 #include "websocket/WsServer.hpp"
 #endif
@@ -47,7 +47,7 @@ Description: App Components
 #include "oatpp/network/virtual_/Interface.hpp"
 #endif
 
-#include "controller/SwaggerComponent.hpp"
+#include "components/SwaggerComponent.hpp"
 
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-openssl/configurer/TrustStore.hpp"
@@ -195,7 +195,7 @@ public:
 #else
         auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
 #endif
-        connectionHandler->setSocketInstanceListener(std::make_shared<WsServer>());
+        connectionHandler->setSocketInstanceListener(std::make_shared<AsyncWsServer>());
         return connectionHandler; }());
 };
 

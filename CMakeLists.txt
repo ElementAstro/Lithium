@@ -20,9 +20,10 @@ endif()
 # root directory of the project
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
-set(lithium_module_dir ${Lithium_PROJECT_ROOT_DIR}/src/atom)
-set(lithium_client_dir ${Lithium_PROJECT_ROOT_DIR}/src/client)
-set(lithium_component_dir ${Lithium_PROJECT_ROOT_DIR}/src/components)
+set(lithium_module_dir ${lithium_src_dir}/atom)
+set(lithium_client_dir ${lithium_src_dir}/client)
+set(lithium_component_dir ${lithium_src_dir}/addon)
+set(lithium_task_dir ${lithium_src_dir}/task)
 
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
@@ -117,34 +118,57 @@ elseif(LINUX)
 endif()
 
 set(component_module
-    ${lithium_component_dir}/device/ascom_manager.cpp
-    ${lithium_component_dir}/device/device_manager.cpp
-    ${lithium_component_dir}/device/hydrogen_manager.cpp
-    ${lithium_component_dir}/device/device_utils.cpp
-    ${lithium_component_dir}/device/hydrogen_device.cpp
+    ${lithium_src_dir}/device/server/ascom.cpp
+    ${lithium_src_dir}/device/server/hydrogen.cpp
+    ${lithium_src_dir}/device/server/hydrogen_driver.cpp
+    ${lithium_src_dir}/device/server/connector.cpp
 
-    ${lithium_component_dir}/component_manager.cpp
+    ${lithium_src_dir}/device/manager.cpp
+    
+    ${lithium_src_dir}/device/utils/utils.cpp
+
+    ${lithium_component_dir}/addons.cpp
+    ${lithium_component_dir}/compiler.cpp
+    ${lithium_component_dir}/finder.cpp
+    ${lithium_component_dir}/loader.cpp
+    ${lithium_component_dir}/manager.cpp
+    ${lithium_component_dir}/sandbox.cpp
 )
 
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
 )
 
+if (ENABLE_ASYNC_FLAG)
+set(server_module
+    ${lithium_src_dir}/websocket/AsyncWsServer.cpp
+    ${lithium_src_dir}/websocket/AsyncWsHub.cpp
+    ${lithium_src_dir}/websocket/AsyncWsInstance.cpp
+)
+else()
 set(server_module
     ${lithium_src_dir}/websocket/WsServer.cpp
     ${lithium_src_dir}/websocket/WsHub.cpp
     ${lithium_src_dir}/websocket/WsInstance.cpp
 )
+endif()
 
 set(script_module
-    ${lithium_src_dir}/script/script_manager.cpp
+    ${lithium_src_dir}/script/python.cpp
+    ${lithium_src_dir}/script/python_system.cpp
+
+    ${lithium_src_dir}/script/sheller.cpp
 )
 
 set(task_module
-    ${lithium_src_dir}/task/task_manager.cpp
-    ${lithium_src_dir}/task/task_stack.cpp
-    ${lithium_src_dir}/task/task_generator.cpp
-    ${lithium_src_dir}/task/task_container.cpp
+    ${lithium_task_dir}/manager.cpp
+    ${lithium_task_dir}/generator.cpp
+    ${lithium_task_dir}/container.cpp
+    ${lithium_task_dir}/tick.cpp
+    ${lithium_task_dir}/loader.cpp
+    ${lithium_task_dir}/list.cpp
+    ${lithium_task_dir}/pool.cpp
+    # ${lithium_task_dir}/chekcer.cpp
 )
 
 set(Lithium_module
@@ -167,22 +191,6 @@ find_package(SQLite3 REQUIRED)
 find_package(LIBZIP REQUIRED)
 
 #################################################################################
-# i18n
-include(cmake_modules/Gettext_helpers.cmake)
-configure_gettext(
-    DOMAIN "lithium"
-    TARGET_NAME "lithium-gettext"
-    SOURCES "${api_module}" "${config_module}" "${io_module}" "${module_module}" "${web_module}" "${device_module}" "${thread_module}" "${task_module}" "${server_module}" "${script_module}" "${system_module}" "${Lithium_module}"
-    POTFILE_DESTINATION "locale"
-    XGETTEXT_ARGS 
-        "--keyword=_" "--keyword=N_" "--keyword=P_:1,2"
-        "--package-name=${PROJECT_NAME}" "--package-version=${PROJECT_VERSION}"
-        "--copyright-holder=Max Qian" "--msgid-bugs-address=astro_air@126.com"
-    LANGUAGES "en_US.UTF-8")
-
-# find_package(Intl REQUIRED)
-
-#################################################################################
 # Main
 
 project(Lithium)
@@ -194,12 +202,6 @@ include_directories(${CMAKE_SOURCE_DIR}/src/)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
-
-# TODO : 更好的构建系统，不需要这样引用
-include_directories(${lithium_src_dir}/)
-include_directories(${lithium_src_dir}/core)
-include_directories(${lithium_src_dir}/core/base)
-include_directories(${lithium_src_dir}/core/property)
 
 # Build all dependencies
 # 构建所有需要的依赖库
@@ -217,8 +219,10 @@ add_subdirectory(${lithium_module_dir})
 include_directories(modules)
 add_subdirectory(modules)
 
+add_subdirectory(${lithium_client_dir})
 
-add_executable(lithium_server ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+
+add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
@@ -226,9 +230,6 @@ target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-o
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-
-target_link_libraries(lithium_server atom.propertystatic)
-target_link_libraries(lithium_server lithiumpluginstatic)
 if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
 endif()
@@ -249,10 +250,7 @@ target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
 target_link_libraries(lithium_server tinyxml2)
-
-target_link_libraries(lithium_server ${Libintl_LIBRARY})
-target_include_directories(lithium_server PUBLIC ${Libintl_INCLUDE_DIRS})
-add_dependencies(lithium_server lithium-gettext)
+target_link_libraries(lithium_server pocketpy)
 
 if(WIN32)
     target_link_libraries(lithium_server pdh iphlpapi winmm crypt32 wsock32 ws2_32)

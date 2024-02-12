@@ -13,8 +13,8 @@ Description: Hydrogen Device Manager
 **************************************************/
 
 #include "hydrogen.hpp"
-#include "hydrogen_device.hpp"
-#include "../device_utils.hpp"
+#include "hydrogen_driver.hpp"
+#include "../utils/utils.hpp"
 #include "config.h"
 
 #ifdef _WIN32
@@ -27,6 +27,8 @@ Description: Hydrogen Device Manager
 #include "atom/log/loguru.hpp"
 #include "atom/io/io.hpp"
 #include "atom/system/system.hpp"
+
+using namespace Lithium;
 
 HydrogenManager::HydrogenManager(const std::string &hst, int prt, const std::string &cfg, const std::string &dta, const std::string &fif)
 {
@@ -52,12 +54,12 @@ bool HydrogenManager::startServer()
         stopServer();
     }
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    if (!Atom::IO::remove_file(fifo_path))
+    if (!Atom::IO::removeFile(fifo_path))
     {
         LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
         return false;
     }
-#ifdef ENABLE_INDI
+#if ENABLE_INDI
     std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\indiserver.log 2>&1";
 #else
     std::string cmd = "hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\Hydrogenserver.log 2>&1";
@@ -101,7 +103,7 @@ bool HydrogenManager::startServer()
         return false;
     }
     // Just start the server without driver
-#ifdef ENABLE_INDI
+#if ENABLE_INDI
     std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
 #else
     std::string cmd = "hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/hydrogenserver.log 2>&1 &";
@@ -124,7 +126,7 @@ bool HydrogenManager::stopServer()
         DLOG_F(WARNING, "Hydrogen server is not running");
         return true;
     }
-#ifdef ENABLE_INDI
+#if ENABLE_INDI
 #ifdef _WIN32
     std::string cmd = "taskkill /f /im indiserver.exe >nul 2>&1";
 #else
@@ -159,7 +161,7 @@ bool HydrogenManager::isRunning()
 {
     // A little bit hacky, but it works. We need a dynamic way to check if the server is running
     // Not stupid like this :P
-#ifdef ENABLE_INDI
+#if ENABLE_INDI
 #ifdef _WIN32
     std::string processName = "indiserver.exe";
     return Atom::System::isProcessRunning(processName);
@@ -269,14 +271,14 @@ bool HydrogenManager::setProp(const std::string &dev, const std::string &prop, c
         LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
         return false;
     }
-    DLOG_F(INFO, "Set property: {}.{} to {}", dev, prop, value)
+    DLOG_F(INFO, "Set property: {}.{} to {}", dev, prop, value);
     return true;
 }
 
 std::string HydrogenManager::getProp(const std::string &dev, const std::string &prop, const std::string &element)
 {
     std::stringstream ss;
-#ifdef ENABLE_INDI
+#if ENABLE_INDI
     ss << "indi_getprop " << dev << "." << prop << "." << element;
 #else
     ss << "hydrogen_getprop " << dev << "." << prop << "." << element;
@@ -304,7 +306,7 @@ std::string HydrogenManager::getState(const std::string &dev, const std::string 
     return getProp(dev, prop, "_STATE");
 }
 
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
 emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::getRunningDrivers()
 #else
 std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::getRunningDrivers()
@@ -313,18 +315,18 @@ std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> Hydrog
     return running_drivers;
 }
 
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
 std::vector<emhash8::HashMap<std::string, std::string>> HydrogenManager::getDevices()
 #else
 std::vector<std::unordered_map<std::string, std::string>> HydrogenManager::getDevices()
 #endif
 {
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
     std::vector<emhash8::HashMap<std::string, std::string>> devices;
 #else
     std::vector<std::unordered_map<std::string, std::string>> devices;
 #endif
-#ifdef ENABLE_INDI
+#if ENABLE_INDI
     std::string cmd = "indi_getprop *.CONNECTION.CONNECT";
 #else
     std::string cmd = "hydrogen_getprop *.CONNECTION.CONNECT";

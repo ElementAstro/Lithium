@@ -151,7 +151,7 @@ namespace Lithium
                 if (!p->is_object())
                 {
                     LOG_F(ERROR, "Invalid key path: {}", key_path);
-                    return;
+                    return false;
                 }
                 p = &(*p)[key];
             }
@@ -174,16 +174,22 @@ namespace Lithium
         {
             if (!p->is_object())
             {
-                return;
+                return false;
             }
             auto it = p->find(key);
             if (it == p->end())
             {
-                return;
+                return false;
             }
             p = &(*p)[key];
         }
         p->clear();
+        return true;
+    }
+
+    bool ConfigManager::hasValue(const std::string &key_path) const
+    {
+        return getValue(key_path) != nullptr;
     }
 
     void ConfigManager::tidyConfig()
@@ -228,9 +234,9 @@ namespace Lithium
         }
         try
         {
-            fs << config_.dump(4);
+            ofs << config_.dump(4);
         }
-        catch(const std::exception& e)
+        catch (const std::exception &e)
         {
             LOG_F(ERROR, "Failed to save config to file: {}, error message: {}", file_path, e.what());
             ofs.close();

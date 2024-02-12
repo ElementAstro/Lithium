@@ -2,17 +2,6 @@
  * process.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -64,16 +53,6 @@ namespace Atom::System
         return std::make_shared<ProcessManager>(maxProcess);
     }
 
-    std::unique_ptr<ProcessManager> ProcessManager::createUnique()
-    {
-        return std::make_unique<ProcessManager>();
-    }
-
-    std::unique_ptr<ProcessManager> ProcessManager::createUnique(int maxProcess)
-    {
-        return std::make_unique<ProcessManager>(maxProcess);
-    }
-
     bool ProcessManager::createProcess(const std::string &command, const std::string &identifier)
     {
         pid_t pid;
@@ -84,7 +63,7 @@ namespace Atom::System
         std::string cmd = "powershell.exe -Command \"" + command + "\"";
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            LOG_F(ERROR, _("Failed to create PowerShell process"));
+            LOG_F(ERROR, "Failed to create PowerShell process");
             return false;
         }
         pid = pi.dwProcessId;
@@ -120,8 +99,21 @@ namespace Atom::System
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        DLOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
+        DLOG_F(INFO, "Process created: {} (PID: {})", identifier, pid);
         return true;
+    }
+
+    bool ProcessManager::hasProcess(const std::string &identifier)
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        for (auto &process : processes)
+        {
+            if (process.name == identifier)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool ProcessManager::runScript(const std::string &script, const std::string &identifier)
@@ -134,7 +126,7 @@ namespace Atom::System
         PROCESS_INFORMATION pi{};
         if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
         {
-            LOG_F(ERROR, _("Failed to create process"));
+            LOG_F(ERROR, "Failed to create process");
             return false;
         }
         pid = pi.dwProcessId;
@@ -165,7 +157,7 @@ namespace Atom::System
         process.pid = pid;
         process.name = identifier;
         processes.push_back(process);
-        DLOG_F(INFO, _("Process created: {} (PID: {})"), identifier, pid);
+        DLOG_F(INFO, "Process created: {} (PID: {})", identifier, pid);
         return true;
     }
 
@@ -182,11 +174,11 @@ namespace Atom::System
             {
                 TerminateProcess(hProcess, 0);
                 CloseHandle(hProcess);
-                DLOG_F(INFO, _("Process terminated: {} (PID: {})"), it->name, pid);
+                DLOG_F(INFO, "Process terminated: {} (PID: {})", it->name, pid);
             }
             else
             {
-                LOG_F(ERROR, _("Failed to terminate process"));
+                LOG_F(ERROR, "Failed to terminate process");
                 return false;
             }
 #else
@@ -202,7 +194,7 @@ namespace Atom::System
         }
         else
         {
-            LOG_F(ERROR, _("Process not found"));
+            LOG_F(ERROR, "Process not found");
             return false;
         }
         return true;
@@ -217,7 +209,7 @@ namespace Atom::System
         {
             return terminateProcess(it->pid, signal);
         }
-        LOG_F(ERROR, _("Process not found by name: {}"), name);
+        LOG_F(ERROR, "Process not found by name: {}", name);
         return false;
     }
 
@@ -247,7 +239,7 @@ namespace Atom::System
         }
         else
         {
-            LOG_F(ERROR, _("Process not found"));
+            LOG_F(ERROR, "Process not found");
             return std::vector<std::string>();
         }
     }
@@ -262,11 +254,11 @@ namespace Atom::System
             {
                 WaitForSingleObject(hProcess, INFINITE);
                 CloseHandle(hProcess);
-                DLOG_F(INFO, _("Process completed: {} (PID: {})"), process.name, process.pid);
+                DLOG_F(INFO, "Process completed: {} (PID: {})", process.name, process.pid);
             }
             else
             {
-                LOG_F(ERROR, _("Failed to wait for process completion"));
+                LOG_F(ERROR, "Failed to wait for process completion");
             }
 #else
             int status;
@@ -277,7 +269,7 @@ namespace Atom::System
         }
 
         processes.clear();
-        DLOG_F(INFO, _("All processes completed."));
+        DLOG_F(INFO, "All processes completed.");
     }
 
 #if defined(_WIN32)
@@ -288,7 +280,7 @@ namespace Atom::System
         HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
         if (snapshot == INVALID_HANDLE_VALUE)
         {
-            LOG_F(ERROR, _("Failed to create process snapshot"));
+            LOG_F(ERROR, "Failed to create process snapshot");
             return processes;
         }
 

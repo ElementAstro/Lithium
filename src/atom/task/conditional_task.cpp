@@ -2,17 +2,6 @@
  * conditional_task.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -25,28 +14,42 @@ Description: Conditional Task Definition
 
 #include "conditional_task.hpp"
 
-ConditionalTask::ConditionalTask(const std::function<bool(const json &)> &condition_fn,
-                                 const json &params,
-                                 const std::function<void(const json &)> &task_fn,
-                                 std::function<json(const json &)> &stop_fn)
-    : BasicTask(stop_fn, stop_fn != nullptr), condition_fn_(condition_fn), params_(params), task_fn_(task_fn) {}
+ConditionalTask::ConditionalTask(const std::function<json(const json &)> &task_fn,
+                                 const std::function<bool(const json &)> &condition_fn,
+                                 const std::function<json(const json &)> &stop_fn,
+                                 const json &params_template,
+                                 bool isForce)
+    : SimpleTask(task_fn, stop_fn, params_template), m_conditionFunc(condition_fn), m_isForce(isForce)
+{
+}
 
 // Executes the task
-const json ConditionalTask::execute()
+json ConditionalTask::execute()
 {
-    if (condition_fn_(params_))
+    m_isExecuting.store(true);
+    if (!m_paramsTemplate.is_null() && !m_params.is_null())
     {
-        task_fn_(params_);
+        if (!validateJsonValue(m_params, m_paramsTemplate))
+        {
+            return {{"status", "error"}, {"error", "Incorrect value type for element:"}, {"code", 500}};
+        }
     }
-    done_ = true;
-    return {{"status", "done"}};
+    if (!m_conditionFunc(m_params))
+    {
+        return {{"status", "error"}, {"error", "Condition not met"}, {"code", 400}};
+    }
+    if (!m_stopFlag)
+    {
+        m_returns = m_function(m_params);
+    }
+    m_isExecuting.store(false);
+    return m_returns;
 }
 
 // Serializes the task to a JSON object
-const json ConditionalTask::toJson() const
+json ConditionalTask::toJson()
 {
-    auto json = BasicTask::toJson();
+    auto json = SimpleTask::toJson();
     json["type"] = "conditional";
-    json["params"] = params_;
     return json;
 }

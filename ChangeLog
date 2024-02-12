@@ -1,20 +1,20 @@
-OpenAPT Update Log
+# OpenAPT Update Log
 
-23w01a 
+23w01a
 
 update most of the codes , and there is still a long way to go!
 
-23w01b 
+23w01b
 
--- Add Dear Imgui as the GUI library 
--- Trying to create modules and improve the loader 
--- Add crash report and some basic tools 
+-- Add Dear Imgui as the GUI library
+-- Trying to create modules and improve the loader
+-- Add crash report and some basic tools
 -- Improve task manager
 
-23w01c 
+23w01c
 
--- Improve TaskManager and ModuleLoader 
--- Tried to fix the bug of ThreadManager but still failed 
+-- Improve TaskManager and ModuleLoader
+-- Tried to fix the bug of ThreadManager but still failed
 -- Add more test
 
 23w02a
@@ -30,7 +30,7 @@ update most of the codes , and there is still a long way to go!
 -- Added default achievements.
 -- Added certificates to prevent copyright issues.
 
-23w03a 
+23w03a
 
 big update but not finished
 
@@ -42,6 +42,6 @@ big update but not finished
 
 big server update and blackened update
 
-Lithium Update Log
+# Lithium Update Log
 
-23w01a
+24w01a

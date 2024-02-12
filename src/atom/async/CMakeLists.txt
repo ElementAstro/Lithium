@@ -1,26 +1,25 @@
+# CMakeLists.txt for Atom-Async
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Atom-Task
+# Description: Async Implementation of Lithium Server and Driver
+# Author: Max Qian
+# License: GPL3
+
 cmake_minimum_required(VERSION 3.20)
-project(atom.async C CXX)
+project(atom-async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    ioloop.cpp
-    thread.cpp
     timer.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
-    ioloop.hpp
-    thread_pool.hpp
-    thread.hpp
     timer.hpp
     trigger.hpp
     trigger_impl.hpp
-)
-
-# Private Headers
-set(${PROJECT_NAME}_PRIVATE_HEADERS
 )
 
 # Build Object Library
@@ -34,23 +33,22 @@ target_sources(${PROJECT_NAME}_OBJECT
     ${${PROJECT_NAME}_HEADERS}
     PRIVATE
     ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
 )
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
-add_library(${PROJECT_NAME}static STATIC)
+add_library(${PROJECT_NAME} STATIC)
 
-target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
-target_include_directories(${PROJECT_NAME}static PUBLIC .)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_include_directories(${PROJECT_NAME} PUBLIC .)
 
-set_target_properties(${PROJECT_NAME}static PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
     SOVERSION ${HYDROGEN_SOVERSION}
-    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
+    OUTPUT_NAME ${PROJECT_NAME}
 )
 
-install(TARGETS ${PROJECT_NAME}static
+install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )

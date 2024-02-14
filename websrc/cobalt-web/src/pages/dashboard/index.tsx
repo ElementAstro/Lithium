@@ -14,11 +14,12 @@ import {
   StyledRow,
 } from "./style/RightSidebar";
 import { ArrowRepeat, Crop, GearFill, XCircle } from "react-bootstrap-icons";
-import { SquareButton } from "./style/SquareButton";
+import SquareButton from "./style/SquareButton";
 
 const Dashboard = () => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [toolbarVisible, setToolbarVisible] = useState(false);
+  const [handleCrop, setHandleCrop] = useState(false);
 
   const [modalShow, setExpModalShow] = useState(false);
 
@@ -63,8 +64,7 @@ const Dashboard = () => {
             <RightSidebar>
               <FullHeightContainer>
                 <StyledRow>
-                  <SquareButton>
-                    <Crop /> 裁剪
+                  <SquareButton onClick={handleCrop} text={"裁剪"}>
                   </SquareButton>
                 </StyledRow>
                 <StyledRow>
@@ -74,7 +74,6 @@ const Dashboard = () => {
                 </StyledRow>
                 <StyledRow>
                   <SCaptureButton onClick={handleCapture}>
-                    Capture
                   </SCaptureButton>
                 </StyledRow>
                 <StyledRow>
@@ -102,7 +101,6 @@ const Dashboard = () => {
           <SystemPanel />
         </FloatingWindow>
       </CameraContainer>
-      <Footer systemInfo={systemInfo} />
     </>
   );
 };

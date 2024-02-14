@@ -79,25 +79,6 @@ namespace Atom::Utils
         return result; // 返回转换后的字符串结果
     }
 
-    std::string converttoUnderscore(const std::string &str)
-    {
-        return hasUppercase(str) ? toUnderscore(str) : str;
-    }
-
-    std::string convertToCamelCase(const std::string &str)
-    {
-        if (str.find('_') != std::string::npos)
-        {
-            return toCamelCase(str);
-        }
-        else
-        {
-            std::string result = str;
-            result[0] = std::tolower(result[0]);
-            return result;
-        }
-    }
-
     std::string urlEncode(const std::string &str)
     {
         // 创建一个输出字符串流对象escaped，设置填充字符为'0'，输出基数为十六进制

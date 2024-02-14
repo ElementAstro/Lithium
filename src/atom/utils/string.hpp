@@ -42,22 +42,6 @@ namespace Atom::Utils
     [[nodiscard]] std::string toCamelCase(const std::string &str);
 
     /**
-     * @brief 将字符串转换为下划线命名法（underscore）。
-     * @param str 输入字符串。
-     * @return 转换后的下划线命名法字符串。
-     * @deprecated 请使用 toUnderscore() 函数替代。
-     */
-    [[nodiscard]] std::string converttoUnderscore(const std::string &str);
-
-    /**
-     * @brief 将字符串转换为驼峰命名法（camel case）。
-     * @param str 输入字符串。
-     * @return 转换后的驼峰命名法字符串。
-     * @deprecated 请使用 toCamelCase() 函数替代。
-     */
-    [[nodiscard]] std::string convertToCamelCase(const std::string &str);
-
-    /**
      * @brief 对字符串进行 URL 编码。
      * @param str 输入字符串。
      * @return URL 编码后的字符串。

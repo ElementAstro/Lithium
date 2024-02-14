@@ -157,22 +157,5 @@ namespace Lithium
          * @param j JSON 配置
          */
         void mergeConfig(const json &j);
-
-        /**
-         * @brief 将字符串 s 按照指定的分隔符 delimiter 进行分割，并返回分割后的子字符串数组
-         *
-         * @param s 要被分割的字符串
-         * @param delimiter 分隔符，用来指定在哪些位置对字符串进行分割
-         * @return std::vector<std::string> 分割后的字符串数组，其中每个元素为分割后的一个子字符串
-         *
-         * Split the input string s into substrings based on the specified delimiter, and return an array of
-         * substrings after splitting.
-         *
-         * @param s The string to be split.
-         * @param delimiter The delimiter that specifies where to split the string.
-         * @return std::vector<std::string> The array of substrings after splitting. Each element is a substring
-         * obtained after splitting.
-         */
-        std::vector<std::string> split(const std::string &s, const std::string &delimiter) const;
     };
 } // namespace Lithium

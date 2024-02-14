@@ -20,6 +20,7 @@ Description: Simple wrapper for executing commands.
 #include <memory>
 #include <sstream>
 #include <stdexcept>
+#include <chrono>
 #ifdef _WIN32
 #define SETENV(name, value) SetEnvironmentVariableA(name, value)
 #define UNSETENV(name) SetEnvironmentVariableA(name, NULL)
@@ -35,7 +36,7 @@ Description: Simple wrapper for executing commands.
 
 namespace Atom::System
 {
-    std::string executeCommand(const std::string &command, bool openTerminal = false)
+    std::string executeCommand(const std::string &command, bool openTerminal = false, std::function<void(const std::string &)> processLine = nullptr)
     {
         if (command.empty())
         {
@@ -70,8 +71,8 @@ namespace Atom::System
         }
         else
         {
-            // 不打开终端界面时，使用popen执行命令
-            pipe.reset(popen(command.c_str(), "r"));
+            // 不打开终端界面时，使用_popen执行命令
+            pipe.reset(_popen(command.c_str(), "r"));
         }
 #else // 非Windows平台
         pipe.reset(popen(command.c_str(), "r"));
@@ -87,6 +88,8 @@ namespace Atom::System
 
         bool interrupted = false; // 标记是否收到中断信号
 
+        auto start = std::chrono::steady_clock::now(); // 记录开始时间
+
 #ifdef _WIN32
         // Windows下无法捕获中断信号，因此只能在循环中检查键盘输入来模拟中断
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr && !interrupted)
@@ -101,15 +104,25 @@ namespace Atom::System
                     interrupted = true;
                 }
             }
+
+            if (processLine)
+            {
+                processLine(buffer.data());
+            }
         }
 #else // 非Windows平台
-      // 在非Windows平台下，可以捕获中断信号
+        // 在非Windows平台下，可以捕获中断信号
         signal(SIGINT, [](int)
                { interrupted = true; });
 
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr && !interrupted)
         {
-            output << buffer.data();
+            std::string line = buffer.data();
+            output << line;
+            if (processLine)
+            {
+                processLine(line);
+            }
         }
 #endif
 

@@ -12,125 +12,148 @@ Description: A simple type wrapper
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_TYPE_TYPE_HPP
+#define ATOM_TYPE_TYPE_HPP
 
 #include <cstddef>
 #include <tuple>
 #include <type_traits>
 
-namespace Atom::Utils
+namespace Atom::Type
 {
+    class Any
+    {
+    public:
+        template <typename T>
+        Any(const T &value) : m_ptr(new Derived<T>(value)) {}
 
+        template <typename T>
+        T cast() const
+        {
+            return static_cast<Derived<T> *>(m_ptr)->m_value;
+        }
+
+    private:
+        struct Base
+        {
+            virtual ~Base() {}
+        };
+
+        template <typename T>
+        struct Derived : Base
+        {
+            explicit Derived(const T &value) : m_value(value) {}
+            T m_value;
+        };
+
+        Base *m_ptr;
+    };
+
+    // 优化后的自动类型类模板
     template <typename T>
     class AutoType
     {
     public:
         explicit AutoType(const T &value) : m_value(value) {}
 
-        // 加法运算符重载
         template <typename U>
         auto operator+(const AutoType<U> &other) const
         {
-            using ResultType = decltype(m_value + other.m_value);
-            return AutoType<ResultType>(m_value + other.m_value);
+            return AutoType(m_value + other.m_value);
         }
 
-        // 减法运算符重载
         template <typename U>
         auto operator-(const AutoType<U> &other) const
         {
-            using ResultType = decltype(m_value - other.m_value);
-            return AutoType<ResultType>(m_value - other.m_value);
+            return AutoType(m_value - other.m_value);
         }
 
-        // 乘法运算符重载
         template <typename U>
         auto operator*(const AutoType<U> &other) const
         {
-            using ResultType = decltype(m_value * other.m_value);
-            return AutoType<ResultType>(m_value * other.m_value);
+            return AutoType(m_value * other.m_value);
         }
 
-        // 除法运算符重载
         template <typename U>
         auto operator/(const AutoType<U> &other) const
         {
-            using ResultType = decltype(m_value / other.m_value);
-            return AutoType<ResultType>(m_value / other.m_value);
+            return AutoType(m_value / other.m_value);
         }
 
-        // 取模运算符重载
         template <typename U>
         auto operator%(const AutoType<U> &other) const
         {
-            using ResultType = decltype(m_value % other.m_value);
-            return AutoType<ResultType>(m_value % other.m_value);
+            return AutoType(m_value % other.m_value);
         }
 
-        // 等于运算符重载
         template <typename U>
         auto operator==(const AutoType<U> &other) const
         {
             return m_value == other.m_value;
         }
 
-        // 不等于运算符重载
         template <typename U>
         auto operator!=(const AutoType<U> &other) const
         {
             return m_value != other.m_value;
         }
 
-        // 小于运算符重载
         template <typename U>
         auto operator<(const AutoType<U> &other) const
         {
             return m_value < other.m_value;
         }
 
-        // 小于等于运算符重载
         template <typename U>
         auto operator<=(const AutoType<U> &other) const
         {
             return m_value <= other.m_value;
         }
 
-        // 大于运算符重载
         template <typename U>
         auto operator>(const AutoType<U> &other) const
         {
             return m_value > other.m_value;
         }
 
-        // 大于等于运算符重载
         template <typename U>
         auto operator>=(const AutoType<U> &other) const
         {
             return m_value >= other.m_value;
         }
 
+        // 省略其他运算符重载
+
         T m_value; // 成员变量
     };
 
-    template <typename Tuple, std::size_t N = std::tuple_size_v<Tuple>, typename T = void>
+    // 辅助函数模板，用于创建AutoType对象
+    template <typename T>
+    AutoType<T> makeAutoType(const T &value)
+    {
+        return AutoType<T>(value);
+    }
+
+    // 元组打印类模板
+    template <typename Tuple, std::size_t N = std::tuple_size_v<Tuple>>
     struct TuplePrinter
     {
         static void print(const Tuple &t)
         {
-            TuplePrinter<Tuple, N - 1, T>::print(t);
-            std::cout << ", " << std::get<N - 1>(t);
-        }
-    };
-
-    template <typename Tuple, std::size_t N>
-    struct TuplePrinter<Tuple, N, typename std::enable_if<N == 1>::type>
-    {
-        static void print(const Tuple &t)
-        {
-            std::cout << std::get<0>(t);
+            if constexpr (N > 1)
+            {
+                TuplePrinter<Tuple, N - 1>::print(t);
+                std::cout << ", " << std::get<N - 1>(t);
+            }
+            else
+            {
+                std::cout << std::get<0>(t);
+            }
         }
     };
 }
+
+#endif
 
 /*
 int main()

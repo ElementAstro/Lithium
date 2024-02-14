@@ -67,56 +67,9 @@ namespace Atom::Error
         return std::make_unique<ErrorStack>();
     }
 
-    void ErrorStack::InsertError(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName)
+    void ErrorStack::insertError(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName)
     {
-        ErrorInfo error;
-        error.errorMessage = errorMessage;
-        error.moduleName = moduleName;
-        error.timestamp = std::time(nullptr);
-        error.functionName = functionName;
-        error.line = line;
-        error.fileName = fileName;
-
-        errorStack.push_back(error);
-    }
-
-    void ErrorStack::SetFilteredModules(const std::vector<std::string> &modules)
-    {
-        filteredModules = modules;
-    }
-
-    void ErrorStack::ClearFilteredModules()
-    {
-        filteredModules.clear();
-    }
-
-    void ErrorStack::PrintFilteredErrorStack() const
-    {
-        for (const auto &error : errorStack)
-        {
-            if (std::find(filteredModules.begin(), filteredModules.end(), error.moduleName) == filteredModules.end())
-            {
-                LOG_F(ERROR, "%s", error.errorMessage.c_str());
-            }
-        }
-    }
-
-    std::vector<ErrorInfo> ErrorStack::GetFilteredErrorsByModule(const std::string &moduleName) const
-    {
-        std::vector<ErrorInfo> errors;
-
-        std::copy_if(errorStack.begin(), errorStack.end(), std::back_inserter(errors),
-                     [&moduleName, this](const ErrorInfo &error)
-                     {
-                         return error.moduleName == moduleName && std::find(filteredModules.begin(), filteredModules.end(), error.moduleName) == filteredModules.end();
-                     });
-
-        return errors;
-    }
-
-    void ErrorStack::InsertErrorCompressed(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName)
-    {
-        time_t currentTime = std::time(nullptr);
+        auto currentTime = std::time(nullptr);
 
         auto iter = std::find_if(errorStack.begin(), errorStack.end(),
                                  [&errorMessage, &moduleName](const ErrorInfo &error)
@@ -130,33 +83,59 @@ namespace Atom::Error
         }
         else
         {
-            ErrorInfo error;
-            error.errorMessage = errorMessage;
-            error.moduleName = moduleName;
-            error.timestamp = currentTime;
-            error.functionName = functionName;
-            error.line = line;
-            error.fileName = fileName;
-
-            errorStack.push_back(error);
+            errorStack.emplace_back(ErrorInfo{errorMessage, moduleName, functionName, line, fileName, currentTime, ""});
         }
 
-        UpdateCompressedErrors();
+        updateCompressedErrors();
     }
 
-    std::string ErrorStack::GetCompressedErrors() const
+    void ErrorStack::setFilteredModules(const std::vector<std::string> &modules)
     {
-        std::string compressedErrors;
+        filteredModules = modules;
+    }
+
+    void ErrorStack::clearFilteredModules()
+    {
+        filteredModules.clear();
+    }
+
+    void ErrorStack::printFilteredErrorStack() const
+    {
+        for (const auto &error : errorStack)
+        {
+            if (std::find(filteredModules.begin(), filteredModules.end(), error.moduleName) == filteredModules.end())
+            {
+                LOG_F(ERROR, "{}", error.errorMessage);
+            }
+        }
+    }
+
+    std::vector<ErrorInfo> ErrorStack::getFilteredErrorsByModule(const std::string &moduleName) const
+    {
+        std::vector<ErrorInfo> errors;
+
+        std::copy_if(errorStack.begin(), errorStack.end(), std::back_inserter(errors),
+                     [&moduleName, this](const ErrorInfo &error)
+                     {
+                         return error.moduleName == moduleName && std::find(filteredModules.begin(), filteredModules.end(), error.moduleName) == filteredModules.end();
+                     });
+
+        return errors;
+    }
+
+    std::string ErrorStack::getCompressedErrors() const
+    {
+        std::stringstream compressedErrors;
 
         for (const auto &error : compressedErrorStack)
         {
-            compressedErrors << error;
+            compressedErrors << error.errorMessage << " ";
         }
 
-        return compressedErrors;
+        return compressedErrors.str();
     }
 
-    void ErrorStack::UpdateCompressedErrors()
+    void ErrorStack::updateCompressedErrors()
     {
         compressedErrorStack.clear();
 
@@ -178,10 +157,10 @@ namespace Atom::Error
             }
         }
 
-        SortCompressedErrorStack();
+        sortCompressedErrorStack();
     }
 
-    void ErrorStack::SortCompressedErrorStack()
+    void ErrorStack::sortCompressedErrorStack()
     {
         std::sort(compressedErrorStack.begin(), compressedErrorStack.end(),
                   [](const ErrorInfo &error1, const ErrorInfo &error2)

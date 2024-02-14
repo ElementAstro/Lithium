@@ -1,14 +1,5 @@
-import React, { useState, useEffect } from "react";
-import styled from "styled-components";
-import {
-  Container,
-  Row,
-  Col,
-  Form,
-  ButtonToolbar,
-  Button,
-  Modal,
-} from "react-bootstrap";
+import React, { useState, useEffect, useCallback } from "react";
+import { Row, Col, Form, Button, Modal } from "react-bootstrap";
 import { HddRack, Ethernet, People, Key, XCircle } from "react-bootstrap-icons";
 import {
   StyledContainer,
@@ -22,6 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import * as Yup from "yup";
+import StarField from "./star";
 
 const ServerSearch = () => {
   const [serverUrl, setServerUrl] = useState("");
@@ -126,150 +118,151 @@ const ServerSearch = () => {
   };
 
   return (
-    <StyledContainer>
-      <h1>服务器搜索</h1>
+    <>
+      <StarField></StarField>
+      <StyledContainer fluid>
+        <h1>服务器搜索</h1>
 
-      <StyledForm
-        noValidate
-        validated={validated}
-        onSubmit={(e) => {
-          e.preventDefault();
-          setValidated(true);
-        }}
-      >
-        <Row className="mb-3">
-          <Col md="12">
-            <Form.Group controlId="validationServerUrl">
-              <Form.Label>
-                <HddRack /> Server URL
-              </Form.Label>
-              <Form.Control
-                required
-                type="text"
-                name="serverUrl"
-                value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
-                isInvalid={validated && (!!errorMessage || !serverUrl)}
-              />
-              <Form.Control.Feedback type="invalid">
-                {!!errorMessage ? (
-                  <XCircle />
-                ) : (
-                  "请提供有效的服务器URL，并确保服务器可用"
-                )}
-              </Form.Control.Feedback>
-            </Form.Group>
-          </Col>
-        </Row>
-        <Row className="mb-3">
-          <Col md="12">
-            <Form.Group controlId="validationServerPort">
-              <Form.Label>
-                <Ethernet /> Server Port
-              </Form.Label>
-              <Form.Control
-                required
-                type="number"
-                name="serverPort"
-                value={serverPort}
-                max={65535}
-                min={1}
-                onChange={(e) => setServerPort(e.target.value)}
-                isInvalid={validated && (!!errorMessage || !serverPort)}
-              />
-              <Form.Control.Feedback type="invalid">
-                {!!errorMessage ? (
-                  <XCircle />
-                ) : (
-                  "请提供有效的服务器端口，并确保服务器可用"
-                )}
-              </Form.Control.Feedback>
-            </Form.Group>
-          </Col>
-        </Row>
-        <Row className="mb-3">
-          <Col md="6">
-            <Form.Group controlId="validationUsername">
-              <Form.Label>
-                <People /> Username
-              </Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Username"
-                name="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                isValid={validated && !!username}
-              />
-            </Form.Group>
-          </Col>
-          <Col md="6">
-            <Form.Group controlId="validationSslEnabled">
-              <Form.Label>
-                <Key /> SSL Enabled
-              </Form.Label>
-              <Form.Check
-                type="switch"
-                id="sslSwitch"
-                label=""
-                checked={sslEnabled}
-                onChange={(e) => setSslEnabled(e.target.checked)}
-                className="lg"
-              />
-            </Form.Group>
-          </Col>
-        </Row>
-        <Form.Group className="mb-3">
-          <Form.Check
-            required
-            name="terms"
-            label="同意条款和条件"
-            feedback="提交前必须同意"
-          />
-        </Form.Group>
+        <StyledForm
+          noValidate
+          validated={validated}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setValidated(true);
+          }}
+        >
+          <Row className="mb-3">
+            <Col md="6">
+              <Form.Group controlId="validationServerUrl">
+                <Form.Label>
+                  <HddRack /> Server URL
+                </Form.Label>
+                <Form.Control
+                  required
+                  type="text"
+                  name="serverUrl"
+                  value={serverUrl}
+                  onChange={(e) => setServerUrl(e.target.value)}
+                  isInvalid={validated && (!!errorMessage || !serverUrl)}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {!!errorMessage ? (
+                    <XCircle />
+                  ) : (
+                    "请提供有效的服务器URL，并确保服务器可用"
+                  )}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+            <Col md="6">
+              <Form.Group controlId="validationServerPort">
+                <Form.Label>
+                  <Ethernet /> Server Port
+                </Form.Label>
+                <Form.Control
+                  required
+                  type="number"
+                  name="serverPort"
+                  value={serverPort}
+                  max={65535}
+                  min={1}
+                  onChange={(e) => setServerPort(e.target.value)}
+                  isInvalid={validated && (!!errorMessage || !serverPort)}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {!!errorMessage ? (
+                    <XCircle />
+                  ) : (
+                    "请提供有效的服务器端口，并确保服务器可用"
+                  )}
+                </Form.Control.Feedback>
+              </Form.Group>
+            </Col>
+          </Row>
+          <Row className="mb-3">
+            <Col md="6">
+              <Form.Group controlId="validationUsername">
+                <Form.Label>
+                  <People /> Username
+                </Form.Label>
+                <Form.Control
+                  type="text"
+                  placeholder="Username"
+                  name="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  isValid={validated && !!username}
+                />
+              </Form.Group>
+            </Col>
+            <Col md="6">
+              <Form.Group controlId="validationSslEnabled">
+                <Form.Label>
+                  <Key /> SSL Enabled
+                </Form.Label>
+                <Form.Check
+                  type="switch"
+                  id="sslSwitch"
+                  label=""
+                  checked={sslEnabled}
+                  onChange={(e) => setSslEnabled(e.target.checked)}
+                  className="lg"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+          <Form.Group className="mb-3">
+            <Form.Check
+              required
+              name="terms"
+              label="同意条款和条件"
+              feedback="提交前必须同意"
+            />
+          </Form.Group>
 
-        <StyledButtonToolbar>
-          <Button
-            variant="primary"
-            onClick={handleSearch}
-            disabled={searching || connecting}
-            className="mr-2"
-          >
-            {searching ? "搜索中..." : "搜索"}
-          </Button>
-          <Button
-            variant="success"
-            onClick={handleConnect}
-            disabled={connecting || !serverPort}
-          >
-            {connecting ? "连接中..." : "连接"}
-          </Button>
-        </StyledButtonToolbar>
-      </StyledForm>
+          <StyledButtonToolbar>
+            <Button
+              variant="primary"
+              onClick={handleSearch}
+              disabled={searching || connecting}
+              className="mr-2"
+            >
+              {searching ? "搜索中..." : "搜索"}
+            </Button>
+            <Button
+              variant="success"
+              onClick={handleConnect}
+              disabled={connecting || !serverPort}
+            >
+              {connecting ? "连接中..." : "连接"}
+            </Button>
+          </StyledButtonToolbar>
+        </StyledForm>
 
-      {errorMessage && (
-        <StyledErrorMessage>
-          <XCircle /> {errorMessage}
-        </StyledErrorMessage>
-      )}
+        {errorMessage && (
+          <StyledErrorMessage>
+            <XCircle /> {errorMessage}
+          </StyledErrorMessage>
+        )}
 
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Error</Modal.Title>
-        </Modal.Header>
-        <StyledModalBody>
-          <XCircle /> {errorMessage}
-        </StyledModalBody>
-        <StyledModalFooter>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            关闭
-          </Button>
-          <Button variant="primary" onClick={handleConfirm}>
-            确认
-          </Button>
-        </StyledModalFooter>
-      </Modal>
-    </StyledContainer>
+        <Modal show={showModal} onHide={() => setShowModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>Error</Modal.Title>
+          </Modal.Header>
+          <StyledModalBody>
+            <XCircle /> {errorMessage}
+          </StyledModalBody>
+          <StyledModalFooter>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
+              关闭
+            </Button>
+            <Button variant="primary" onClick={handleConfirm}>
+              确认
+            </Button>
+          </StyledModalFooter>
+        </Modal>
+      </StyledContainer>
+    </>
   );
 };
 

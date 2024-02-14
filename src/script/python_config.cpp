@@ -33,6 +33,7 @@ namespace Lithium
                      if (value.is_null() || !value.is_string())
                      {
                          LOG_F(ERROR, "Failed to get config value: {}", key);
+                         return pkpy::py_var(vm, "");
                      }
                      DLOG_F(INFO, "Config value: {}", value.get<std::string>());
                      return pkpy::py_var(vm, value.get<std::string>());
@@ -48,6 +49,7 @@ namespace Lithium
                      if (value.is_null() || !value.is_number())
                      {
                          LOG_F(ERROR, "Failed to get config value: {}", key);
+                         return pkpy::py_var(vm, 0);
                      }
                      DLOG_F(INFO, "Config value: {}", value.get<int>());
                      return pkpy::py_var(vm, value.get<int>());
@@ -63,6 +65,7 @@ namespace Lithium
                      if (value.is_null() || !value.is_number())
                      {
                          LOG_F(ERROR, "Failed to get config value: {}", key);
+                         return pkpy::py_var(vm, 0.0f);
                      }
                      DLOG_F(INFO, "Config value: {}", value.get<float>());
                      return pkpy::py_var(vm, value.get<float>());
@@ -78,6 +81,7 @@ namespace Lithium
                      if (value.is_null() || !value.is_boolean())
                      {
                          LOG_F(ERROR, "Failed to get config value: {}", key);
+                         return pkpy::py_var(vm, false);
                      }
                      DLOG_F(INFO, "Config value: {}", value.get<bool>());
                      return pkpy::py_var(vm, value.get<bool>());

@@ -23,12 +23,13 @@ Description: Simple implementation of Huffman encoding
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_ALGORITHM_HUFFMAN_HPP
+#define ATOM_ALGORITHM_HUFFMAN_HPP
 
 #include <string>
 #include <unordered_map>
 
-namespace Atom::Utils
+namespace Atom::Algorithm
 {
     /**
      * @brief 哈夫曼树节点
@@ -85,3 +86,5 @@ namespace Atom::Utils
      */
     std::string decompressText(const std::string &compressedText, HuffmanNode *root);
 }
+
+#endif

@@ -25,7 +25,7 @@ Description: Basic Component Definition
 
 #include "atom/server/commander.hpp"
 #include "atom/server/variables.hpp"
-#include "atom/type/ini.hpp"
+
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
@@ -44,8 +44,6 @@ using json = nlohmann::json;
 #define SETVAR_DOUBLE(name, value)                      \
     m_VariableRegistry->RegisterVariable<double>(name); \
     m_VariableRegistry->SetVariable(name, value);
-
-using ComponentConfig = std::shared_ptr<INIFile>;
 
 class Component : public std::enable_shared_from_this<Component>
 {
@@ -91,6 +89,7 @@ public:
     // -------------------------------------------------------------------
 
     // Max: Should we use JSON here?
+    // 2024/02/13 Max: Obviously, directly use json.hpp is much simpler than self-implement type
 
     /**
      * @brief Loads the component configuration from a file.
@@ -101,21 +100,7 @@ public:
      */
     bool LoadConfig(const std::string &path);
 
-    template <typename T>
-    std::optional<T> getConfig(const std::string &section, const std::string &key)
-    {
-        return m_Config->get<T>(section, key);
-    }
-
-    template <typename T>
-    bool setConfig(const std::string &section, const std::string &key, const T &value)
-    {
-        return m_Config->set(section, key, value);
-    }
-
-    std::string getJsonConfig() const;
-
-    std::string getXmlConfig() const;
+    json getValue(const std::string &key_path) const;
 
     // -------------------------------------------------------------------
     // Variable methods
@@ -224,8 +209,8 @@ private:
     std::unique_ptr<CommandDispatcher<json, json>> m_CommandDispatcher; ///< The command dispatcher for handling functions.
     std::unique_ptr<VariableRegistry> m_VariableRegistry;               ///< The variable registry for managing variables.
 
-    // Component Config in INI format
-    ComponentConfig m_Config;
+    json m_config;
+        std::mutex m_mutex;
 };
 
 template <typename ClassType>

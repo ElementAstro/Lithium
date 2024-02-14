@@ -17,6 +17,7 @@ Description: Simple wrapper for executing commands.
 
 #include <string>
 #include <map>
+#include <functional>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -42,11 +43,13 @@ namespace Atom::System
      * @brief Execute a command and return the command output as a string.
      *
      * @param command The command to execute.
+     * @param openTerminal Whether to open a terminal window for the command.
+     * @param processLine A callback function to process each line of output.
      * @return The output of the command as a string.
      *
      * @note The function throws a std::runtime_error if the command fails to execute.
      */
-    [[nodiscard]] std::string executeCommand(const std::string &command, bool openTerminal);
+    [[nodiscard]] std::string executeCommand(const std::string &command, bool openTerminal = false, std::function<void(const std::string &)> processLine = nullptr);
 
     /**
      * @brief Execute a list of commands.

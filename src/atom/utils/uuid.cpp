@@ -14,86 +14,56 @@ Description: UUID Generator
 
 #include "uuid.hpp"
 
-namespace Atom::Property
+namespace Atom::Utils
 {
-    UUIDGenerator::UUIDGenerator() : gen_(std::random_device{}()), dis_(0, 15)
-    {
-    }
+    UUIDGenerator::UUIDGenerator() : gen_(rd_()), dis_(0, 0xFFFFFFFF) {}
 
-    void UUIDGenerator::seed(unsigned int seed_value)
+    void UUIDGenerator::seed(unsigned int seed_value) const
     {
         gen_.seed(seed_value);
     }
 
-    unsigned int UUIDGenerator::getRandomNumber()
+    unsigned int UUIDGenerator::getRandomNumber() const
     {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        static std::uniform_int_distribution<int> dis(0, 15);
-        return dis(gen);
+        return dis_(gen_);
     }
 
-    std::string UUIDGenerator::generateUUID()
+    std::string UUIDGenerator::generateUUID(bool use_uppercase, bool use_braces, bool use_hyphens) const
     {
-        std::stringstream ss;
-        for (int i = 0; i < 32; ++i)
-        {
-            if (i == 8 || i == 12 || i == 16 || i == 20)
-                ss << '-';
-            ss << std::hex << getRandomNumber();
-        }
-        return ss.str();
-    }
+        unsigned int time_low = getRandomNumber();
+        unsigned int time_mid = getRandomNumber();
+        unsigned int time_hi_and_version = getRandomNumber();
+        time_hi_and_version &= 0x0FFF;
+        time_hi_and_version |= (4 << 12);
 
-    std::string UUIDGenerator::generateUUIDWithFormat(bool use_braces, bool use_hyphens)
-    {
+        unsigned int clock_seq_hi_and_reserved = getRandomNumber();
+        clock_seq_hi_and_reserved &= 0x3FFF;
+        clock_seq_hi_and_reserved |= 0x8000;
+
+        unsigned int clock_seq_low = getRandomNumber();
+
         std::stringstream ss;
         if (use_braces)
             ss << '{';
-        ss << std::hex << getRandomNumber();
+        if (use_uppercase)
+            ss << std::hex << std::uppercase;
+        ss << std::hex << time_low;
         if (use_hyphens)
             ss << '-';
-        ss << std::hex << getRandomNumber();
-        ss << '-';
-        ss << std::hex << getRandomNumber();
+        ss << std::hex << time_mid;
         if (use_hyphens)
             ss << '-';
-        ss << std::hex << getRandomNumber();
-        ss << '-';
-        for (int i = 0; i < 12; ++i)
-            ss << std::hex << getRandomNumber();
+        ss << std::hex << time_hi_and_version;
+        if (use_hyphens)
+            ss << '-';
+        ss << std::hex << clock_seq_hi_and_reserved;
+        if (use_hyphens)
+            ss << '-';
+        ss << std::hex << clock_seq_low;
+        if (use_uppercase)
+            ss << std::nouppercase;
         if (use_braces)
             ss << '}';
-        return ss.str();
-    }
-
-    std::string UUIDGenerator::generateEnhancedUUID()
-    {
-        std::stringstream ss;
-
-        for (int i = 0; i < 8; ++i)
-            ss << std::hex << getRandomNumber();
-
-        ss << '-';
-
-        for (int i = 0; i < 4; ++i)
-            ss << std::hex << getRandomNumber();
-
-        ss << '-';
-
-        for (int i = 0; i < 4; ++i)
-            ss << std::hex << getRandomNumber();
-
-        ss << '-';
-
-        for (int i = 0; i < 4; ++i)
-            ss << std::hex << getRandomNumber();
-
-        ss << '-';
-
-        for (int i = 0; i < 12; ++i)
-            ss << std::hex << getRandomNumber();
-
         return ss.str();
     }
 }

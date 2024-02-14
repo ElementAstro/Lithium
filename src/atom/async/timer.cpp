@@ -110,7 +110,8 @@ namespace Atom::Async
             std::unique_lock<std::mutex> lock(m_mutex);
             while (!m_stop && m_paused && m_taskQueue.empty())
             {
-                m_cond.wait(lock);
+                m_cond.wait(lock, [&]()
+                            { return m_stop || !m_paused || !m_taskQueue.empty(); });
             }
             if (m_stop)
             {

@@ -25,6 +25,7 @@ Description: Tick Sheduler, just like Minecraft's
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <optional>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -41,21 +42,23 @@ namespace Atom::Utils
 
 namespace Lithium
 {
+    /**
+     * @brief 任务结构体，表示一个待执行的任务
+     */
     struct TickTask
     {
-        /**
-         * @brief 任务结构体，表示一个待执行的任务
-         */
-        std::function<void()> func;
-        int priority;
+        std::function<void()> func;                                             // 任务函数
+        int priority;                                                           // 任务优先级
         unsigned long long tick;                                                // 任务执行的计划刻
         std::vector<std::shared_ptr<Task>> dependencies;                        // 任务依赖
         std::function<void()> onCompletion;                                     // 任务完成时的回调函数
         std::atomic<bool> isRunning = false;                                    // 任务是否正在执行
-        std::atomic_bool completed = false;                                     // 任务是否完成
+        std::atomic_bool completed = false;                                     // 任务是否已完成
         std::size_t id;                                                         // 任务的唯一标识符
         unsigned retryCount = 0;                                                // 重试次数
         std::chrono::milliseconds retryInterval = std::chrono::milliseconds(0); // 重试间隔
+        std::promise<bool> timeoutPromise;                                      // 任务超时时的回调函数
+        int timeout = 0;                                                        //
 
         /**
          * @brief 比较函数，用于优先级队列的排序
@@ -94,6 +97,11 @@ namespace Lithium
          */
         ~TickScheduler();
 
+        /**
+         * @brief 创建一个共享的TickScheduler对象
+         * @param threads 线程池中的线程数量
+         * @return 返回一个指向共享的TickScheduler对象的智能指针
+         */
         static std::shared_ptr<TickScheduler> createShared(size_t threads);
 
         /**
@@ -104,18 +112,30 @@ namespace Lithium
          * @return 指向调度的任务的智能指针
          */
         template <typename F, typename... Args>
-        auto scheduleTask(unsigned long long tick, bool relative, unsigned retryCount, std::chrono::milliseconds retryInterval, F &&f, Args &&...args) -> std::shared_ptr<Task>
+        auto scheduleTask(unsigned long long tick, bool relative, unsigned retryCount, std::chrono::milliseconds retryInterval,
+                          std::optional<std::size_t> afterTaskId, std::optional<unsigned long long> delay,
+                          std::optional<std::size_t> timeout, F &&f, Args &&...args) -> std::shared_ptr<Task>
         {
-            static_assert(std::is_invocable_r_v<void, F, Args...>, "f must be invocable with args... and return void");
+            static_assert(std::is_invocable_r_v<void, F, Args...>, "Task function must return void");
 
             auto effectiveTick = relative ? currentTick.load() + tick : tick;
-            if (effectiveTick < currentTick.load())
+            if (afterTaskId.has_value())
             {
-                // 如果计划刻小于当前刻，说明任务已经过期，直接返回
-                return nullptr;
+                auto it = std::find_if(tasks.begin(), tasks.end(), [id = *afterTaskId](const std::shared_ptr<Task> &task)
+                                       { return task->id == id; });
+                if (it != tasks.end())
+                {
+                    effectiveTick = (*it)->tick;
+                    while (++it != tasks.end() && (*it)->tick == effectiveTick)
+                    {
+                    }
+                }
+            }
+            if (delay.has_value())
+            {
+                effectiveTick += *delay;
             }
 
-            // 封装用户函数，以便在执行中捕获异常并应用重试逻辑
             auto taskFunc = [this, f = std::forward<F>(f), args..., retryCount, retryInterval, effectiveTick]() mutable
             {
                 try
@@ -123,15 +143,14 @@ namespace Lithium
                     f(std::forward<Args>(args)...);
                 }
                 catch (...)
-                { // 捕获所有异常
+                {
                     if (retryCount > 0)
                     {
-                        // 如果还有重试次数，重新安排任务
-                        scheduleTask(retryInterval.count(), true, retryCount - 1, retryInterval, f, std::forward<Args>(args)...);
+                        scheduleTask(retryInterval.count(), true, retryCount - 1, retryInterval, {}, {}, {}, f, std::forward<Args>(args)...);
                     }
                     else
                     {
-                        throw std::runtime_error("Task execution failed.");
+                        std::cerr << "Task failed after all retries\n";
                     }
                 }
             };
@@ -141,9 +160,43 @@ namespace Lithium
             task->id = nextTaskId++;
             task->retryCount = retryCount;
             task->retryInterval = retryInterval;
+            if (timeout.has_value())
+            {
+                task->timeout = timeout.value();
+                task->timeoutPromise.set_value(true);
+            }
+
+            /*
+                    std::future<bool> timeoutFuture = task->timeoutPromise.get_future();
+                    int currentTickLength = tickLength.load();
+                    // 将任务函数包装为一个可调用对象
+                    std::function<void()> taskWrapper = [currentTickLength, timeout, timeoutFuture, taskFunc, args...]()
+                    {
+                        // 在任务函数执行之前等待指定的时间，检查任务是否超时
+                        if (timeout.has_value())
+                        {
+                            if (timeoutFuture.wait_for(std::chrono::milliseconds(timeout.value() * currentTickLength)) == std::future_status::ready)
+                            {
+                                return; // 任务已经超时，不执行任务函数
+                            }
+                        }
+                        taskFunc(args...);
+                    };
+                    task->func = taskWrapper;
+            */
+
             {
                 std::lock_guard<std::mutex> lock(tasksMutex);
-                tasks.push_back(task);
+                if (afterTaskId.has_value())
+                {
+                    tasks.insert(std::find_if(tasks.begin(), tasks.end(), [id = *afterTaskId](const std::shared_ptr<Task> &task)
+                                              { return task->id == id; }),
+                                 task);
+                }
+                else
+                {
+                    tasks.push_back(task);
+                }
             }
             cv.notify_one();
             return task;
@@ -155,6 +208,13 @@ namespace Lithium
          * @return 是否取消成功
          */
         bool cancelTask(std::size_t taskId);
+
+        /**
+         * @brief 延迟一个任务的执行
+         * @param taskId 要延迟的任务的唯一标识符
+         * @param delay 延迟的毫秒数
+         */
+        void delayTask(std::optional<std::size_t> taskId, std::optional<unsigned long long> delay);
 
         /**
          * @brief 获取当前刻
@@ -187,6 +247,29 @@ namespace Lithium
         void resume();
 
         /**
+         * @brief 设置任务调度器的最大并发任务数
+         * @param max 最大并发任务数
+         */
+        void setMaxConcurrentTasks(std::size_t max);
+
+        /**
+         * @brief 设置任务调度器的刻长
+         * @param tickLength 每个刻长的毫秒数
+         */
+        void setTickLength(std::chrono::milliseconds tickLength);
+
+        /**
+         * @brief 切换到手动模式
+         */
+        void setTickLength(unsigned long long tickLength);
+
+        /**
+         * @brief 获取任务调度器的刻长
+         * @return 每个刻长的毫秒数
+         */
+        int getTickLength() const;
+
+        /**
          * @brief 切换到手动模式
          */
         void switchToManualMode();
@@ -217,7 +300,8 @@ namespace Lithium
         std::atomic_bool manualMode{false};     // 手动模式
         std::atomic<std::size_t> nextTaskId{0}; // 用于生成任务的唯一标识符
         std::unique_ptr<Atom::Utils::Stopwatcher> stopwatch;
-
+        std::atomic<std::size_t> concurrentTasks{0}; // 当前正在运行的任务数
+        std::size_t maxTasks{0};                     // 最大同时运行的任务数，0 表示没有限制
 
         /**
          * @brief 任务调度循环函数，在单独的线程中运行

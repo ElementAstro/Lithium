@@ -12,14 +12,14 @@ Description: Extra Math Library
 
 **************************************************/
 
-#ifndef FRACTION_H
-#define FRACTION_H
+#ifndef ATOM_ALGORITHM_MATH_HPP
+#define ATOM_ALGORITHM_MATH_HPP
 
 #include <sstream>
 #include <vector>
 #include "exception.hpp"
 
-namespace Atom::Utils
+namespace Atom::Algorithm
 {
     class Fraction;
     // 运算符，友元函数声明
@@ -147,9 +147,6 @@ namespace Atom::Utils
         friend std::ostream &operator<<(std::ostream &output, const Fraction &f);
         friend std::ostream &operator<<(std::ostream &output, const Fraction &&f);
     };
-
-    [[maybe_unused]] std::vector<std::vector<double>> convolve2D(const std::vector<std::vector<double>> &input, const std::vector<std::vector<double>> &kernel, int numThreads);
-    [[maybe_unused]] std::vector<std::vector<double>> deconvolve2D(const std::vector<std::vector<double>> &signal, const std::vector<std::vector<double>> &kernel);
 }
 
-#endif // FRACTION_H
+#endif // ATOM_ALGORITHM_MATH_HPP

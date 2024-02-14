@@ -12,12 +12,8 @@ project(atom-utils C CXX)
 # Sources
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
-    base64.cpp
     env.cpp
-    guid.cpp
     hash_util.cpp
-    huffman.cpp
-    math.cpp
     random.cpp
     string.cpp
     static_switch.cpp
@@ -29,14 +25,8 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     aes.hpp
-    base64.hpp
     env.hpp
-    exception.hpp
-    guid.hpp
     hash_util.hpp
-    huffman.hpp
-    lock.hpp
-    math.hpp
     random.hpp
     refl.hpp
     string.hpp
@@ -44,7 +34,6 @@ set(${PROJECT_NAME}_HEADERS
     stopwatcher.hpp
     switch.hpp
     time.hpp
-    type.hpp
     uuid.hpp
 )
 

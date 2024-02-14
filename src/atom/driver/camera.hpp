@@ -162,8 +162,19 @@ public:
      */
     virtual bool stopCooling(const json &params);
 
+    /**
+     * @brief 获取冷却状态
+     *
+     * @param params 参数
+     * @return 成功返回true，失败返回false
+     */
     virtual bool getCoolingStatus(const json &params);
 
+    /**
+     * @brief 获取是否支持冷却
+     *
+     * @return 是否支持冷却
+     */
     virtual bool isCoolingAvailable();
 
     /**

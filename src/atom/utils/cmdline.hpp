@@ -203,7 +203,7 @@ std::string joinKeyValuePair(const std::pair<Key, Value> &keyValue, const std::s
 }
 
 template <typename... Args>
-std::string joinCommandLine(const Args &...args)
+[[nodiscard]] std::string joinCommandLine(const Args &...args)
 {
     std::ostringstream oss;
     bool firstArg = true;

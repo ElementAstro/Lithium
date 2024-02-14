@@ -14,9 +14,17 @@ Description: Basic Component Definition
 
 #include "component.hpp"
 
-#include "atom/utils/exception.hpp"
+#include <fstream>
 
+#include "atom/utils/exception.hpp"
+#include "atom/utils/string.hpp"
+#include "atom/log/loguru.hpp"
+
+#if __cplusplus >= 202002L
 #include <format>
+#else
+#include <fmt/format.h>
+#endif
 
 Component::Component()
 {
@@ -51,26 +59,58 @@ std::string Component::GetName() const
 
 bool Component::LoadConfig(const std::string &path)
 {
+    std::unique_lock<std::mutex> lock(m_mutex);
     try
     {
-        m_Config->load(path);
+        std::ifstream ifs(path);
+        if (!ifs.is_open())
+        {
+            LOG_F(ERROR, "Failed to open file: {}", path);
+            return false;
+        }
+        json j = json::parse(ifs);
+        const std::string basename = fs::path(path).stem().string();
+        m_config[basename] = j["config"];
+        DLOG_F(INFO, "Loaded config file {} successfully", path);
+        return true;
     }
-    catch (const Atom::Utils::Exception::FileNotReadable_Error &e)
+    catch (const json::exception &e)
     {
-        return false;
+        LOG_F(ERROR, "Failed to parse file: {}, error message: {}", path, e.what());
     }
-    m_ConfigPath = path;
-    return true;
+    catch (const std::exception &e)
+    {
+        LOG_F(ERROR, "Failed to load config file: {}, error message: {}", path, e.what());
+    }
+    return false;
 }
 
-std::string Component::getJsonConfig() const
+json Component::getValue(const std::string &key_path) const
 {
-    return m_Config->toJson();
-}
-
-std::string Component::getXmlConfig() const
-{
-    return m_Config->toXml();
+    // std::lock_guard<std::shared_mutex> lock(rw_m_mutex);
+    try
+    {
+        const json *p = &m_config;
+        for (const auto &key : Atom::Utils::splitString(key_path, "/"))
+        {
+            if (p->is_object() && p->contains(key))
+            {
+                p = &(*p)[key];
+            }
+            else
+            {
+                LOG_F(ERROR, "Key not found: {}", key_path);
+                return nullptr;
+            }
+        }
+        return *p;
+    }
+    catch (const std::exception &e)
+    {
+        LOG_F(ERROR, "Failed to get value: {} {}", key_path, e.what());
+        return nullptr;
+    }
+    return nullptr;
 }
 
 std::string Component::GetVariableInfo(const std::string &name) const

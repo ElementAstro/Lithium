@@ -27,7 +27,7 @@ Description: Simple implementation of Huffman encoding
 
 #include <queue>
 
-namespace Atom::Utils
+namespace Atom::Algorithm
 {
     // 定义优先队列中的比较函数
     struct Compare
@@ -126,31 +126,3 @@ namespace Atom::Utils
         return decompressedText;
     }
 }
-
-/*
-int main()
-{
-    std::string text = "Hello, world!";
-    std::unordered_map<char, int> frequencies;
-
-    // 统计文本中每个字符的频率
-    for (char c : text)
-    {
-        frequencies[c]++;
-    }
-
-    HuffmanNode *root = createHuffmanTree(frequencies);
-
-    std::unordered_map<char, std::string> huffmanCodes;
-    generateHuffmanCodes(root, "", huffmanCodes);
-
-    std::string compressedText = compressText(text, huffmanCodes);
-    std::string decompressedText = decompressText(compressedText, root);
-
-    std::cout << "Original text: " << text << std::endl;
-    std::cout << "Compressed text: " << compressedText << std::endl;
-    std::cout << "Decompressed text: " << decompressedText << std::endl;
-
-    return 0;
-}
-*/

@@ -19,7 +19,7 @@ Description: Tick Sheduler, just like Minecraft's
 
 namespace Lithium
 {
-    TickScheduler::TickScheduler(size_t threads) : currentTick(0), stop(false)
+    TickScheduler::TickScheduler(size_t threads) : currentTick(0), stop(false), tickLength(100)
     {
 #if __cplusplus >= 202002L
         schedulerThread = std::jthread([this]
@@ -55,6 +55,27 @@ namespace Lithium
         return false;
     }
 
+    void TickScheduler::delayTask(std::optional<std::size_t> taskId, std::optional<unsigned long long> delay)
+    {
+        std::lock_guard<std::mutex> lock(tasksMutex);
+        if (taskId.has_value())
+        {
+            auto it = std::find_if(tasks.begin(), tasks.end(), [id = *taskId](const std::shared_ptr<Task> &task)
+                                   { return task->id == id; });
+            if (it != tasks.end())
+            {
+                (*it)->tick += *delay;
+            }
+        }
+        else
+        {
+            for (auto &task : tasks)
+            {
+                task->tick += *delay;
+            }
+        }
+    }
+
     unsigned long long TickScheduler::getCurrentTick() const
     {
         return currentTick.load();
@@ -79,6 +100,26 @@ namespace Lithium
     {
         isPaused.store(false);
         cv.notify_all();
+    }
+
+    void setMaxConcurrentTasks(std::size_t max)
+    {
+        maxTasks = max;
+    }
+
+    void setTickLength(std::chrono::milliseconds tickLength)
+    {
+        this->tickLength = tickLength.count();
+    }
+
+    void setTickLength(unsigned long long tickLength)
+    {
+        this->tickLength = tickLength;
+    }
+
+    int getTickLength() const
+    {
+        return tickLength.load();
     }
 
     void TickScheduler::switchToManualMode()
@@ -134,10 +175,10 @@ namespace Lithium
             stopwatch->start();
             if (manualMode.load())
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 手动模式下，简单地等待
+                std::this_thread::sleep_for(std::chrono::milliseconds(tickLength.load())); // 手动模式下，简单地等待
                 stopwatch->stop();
                 stopwatch->reset();
-                continue;                                                    // 如果处于手动模式，跳过自动执行的逻辑
+                continue; // 如果处于手动模式，跳过自动执行的逻辑
             }
             {
                 std::unique_lock<std::mutex> lock(tasksMutex);
@@ -148,20 +189,23 @@ namespace Lithium
                     break;
 
                 auto it = tasks.begin();
-                while (it != tasks.end())
+                while (it != tasks.end() && (maxTasks == 0 || concurrentTasks < maxTasks))
                 {
                     auto task = *it;
-                    // Check if the task's tick has come and dependencies are met
                     if (task->tick <= currentTick.load() && allDependenciesMet(task))
                     {
-                        pool->enqueue([task]()
+                        pool->enqueue([this, task]()
                                       {
-                            task->func();
-                            task->completed.store(true);
-                            if (task->onCompletion) {
-                                task->onCompletion();
-                            } });
-                        it = tasks.erase(it); // Remove the task from the list
+                        task->isRunning.store(true);
+                        task->func();
+                        task->completed.store(true);
+                        if (task->onCompletion) {
+                            task->onCompletion();
+                        }
+                        task->isRunning.store(false);
+                        concurrentTasks--; });
+                        concurrentTasks++;
+                        it = tasks.erase(it);
                     }
                     else
                     {
@@ -169,7 +213,7 @@ namespace Lithium
                     }
                 }
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Simulate a tick
+            std::this_thread::sleep_for(std::chrono::milliseconds(tickLength.load())); // Simulate a tick
             stopwatch->stop();
             stopwatch->reset();
             DLOG_F(INFO, "Tick %llu took %f ms", currentTick.load(), stopwatch->elapsedMilliseconds());

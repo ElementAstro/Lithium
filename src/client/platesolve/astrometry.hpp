@@ -12,14 +12,13 @@ Description: Astrometry Command Line
 
 **************************************************/
 
-#pragma once
+#ifndef LITHIUM_CLIENT_ASTROMETRY_HPP
+#define LITHIUM_CLIENT_ASTROMETRY_HPP
+
 
 #include "atom/type/json.hpp"
-
 using json = nlohmann::json;
 
-namespace Lithium::API::Astrometry
-{
     /**
      * @brief 利用 Astrometry.net 的 solve-field 工具对图像进行求解
      *
@@ -48,4 +47,5 @@ namespace Lithium::API::Astrometry
                const std::vector<int> &depth = {}, const double &scale_low = -1.0, const double &scale_high = -1.0, const int &width = -1, const int &height = -1,
                const std::string &scale_units = "degwidth", const bool &overwrite = true, const bool &no_plot = true, const bool &verify = false,
                const bool &debug = false, const int &timeout = 30, const bool &resort = false, const bool &_continue = false, const bool &no_tweak = false);
-} // namespace Lithium::API:Astrometry
+
+#endif

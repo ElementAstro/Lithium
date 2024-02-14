@@ -92,7 +92,6 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     system/dirw.hpp
 
     type/args.hpp
-    type/expected.hpp
     type/json.hpp
     type/ini.hpp
     type/small_vector.hpp

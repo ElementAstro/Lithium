@@ -221,6 +221,7 @@ add_subdirectory(modules)
 
 add_subdirectory(${lithium_client_dir})
 
+add_subdirectory(driver)
 
 add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 

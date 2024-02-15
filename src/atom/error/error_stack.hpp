@@ -62,21 +62,15 @@ namespace Atom::Error
 
     public:
         /// Default constructor.
-        ErrorStack() = default;
+        ErrorStack();
 
         /// Create a shared pointer to an ErrorStack object.
         /// \return A shared pointer to the ErrorStack object.
-        std::shared_ptr<ErrorStack> createShared()
-        {
-            return std::make_shared<ErrorStack>();
-        }
+        std::shared_ptr<ErrorStack> createShared();
 
         /// Create a unique pointer to an ErrorStack object.
         /// \return A unique pointer to the ErrorStack object.
-        std::unique_ptr<ErrorStack> createUnique()
-        {
-            return std::make_unique<ErrorStack>();
-        }
+        std::unique_ptr<ErrorStack> createUnique();
 
         /// Insert a new error into the error stack.
         /// \param errorMessage The error message.

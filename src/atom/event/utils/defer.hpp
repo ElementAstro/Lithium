@@ -57,5 +57,5 @@ namespace Atom::Event
 } // namespace Atom::Event
 
 #define CONCAT_XY(x, y) x##y
-#define MAKE_DEFER(r, l) auto CONCAT_XY(defer_exec_, l) = kev::make_defer([&]() { r; })
+#define MAKE_DEFER(r, l) auto CONCAT_XY(defer_exec_, l) = Atom::Event::make_defer([&]() { r; })
 #define DEFER(r) MAKE_DEFER(r, __LINE__)

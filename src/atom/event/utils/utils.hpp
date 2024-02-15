@@ -87,7 +87,7 @@ using LPFN_CANCELIOEX = BOOL(WINAPI *)(HANDLE, LPOVERLAPPED);
 
 template <typename T, size_t N>
 char (&ArraySizeHelper(const T (&array)[N]))[N];
-#define ARRAY_SIZE(array) (sizeof(kev::ArraySizeHelper(array)))
+#define ARRAY_SIZE(array) (sizeof(Atom::Event::ArraySizeHelper(array)))
 
 int set_nonblocking(SOCKET_FD fd);
 int set_tcpnodelay(SOCKET_FD fd);

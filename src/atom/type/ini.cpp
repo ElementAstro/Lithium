@@ -17,7 +17,7 @@ Description: INI File Read/Write Library
 #include <fstream>
 #include <sstream>
 
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 
 bool INIFile::has(const std::string &section, const std::string &key) const
 {
@@ -49,7 +49,7 @@ void INIFile::load(const std::string &filename)
     std::ifstream file(filename);
     if (!file.is_open())
     {
-        throw Atom::Utils::Exception::FileNotReadable_Error("Failed to open file: " + filename);
+        throw Atom::Error::FileNotReadable("Failed to open file: " + filename);
     }
 
     std::string line;
@@ -68,7 +68,7 @@ void INIFile::save(const std::string &filename)
     std::ofstream file(filename);
     if (!file.is_open())
     {
-        throw Atom::Utils::Exception::FileNotWritable_Error("Failed to create file: " + filename);
+        throw Atom::Error::FileNotWritable("Failed to create file: " + filename);
     }
 
     for (const auto &section : data)
@@ -102,7 +102,7 @@ void INIFile::save(const std::string &filename)
             }
             else
             {
-                throw Atom::Utils::Exception::InvalidArgument_Error("Unsupported type");
+                throw Atom::Error::InvalidArgument("Unsupported type");
             }
         }
         file << "\n";
@@ -188,7 +188,7 @@ std::string INIFile::toJson() const
             }
             catch (const std::bad_any_cast &e)
             {
-                throw Atom::Utils::Exception::InvalidArgument_Error("Unsupported type");
+                throw Atom::Error::InvalidArgument("Unsupported type");
             }
         }
     }
@@ -235,7 +235,7 @@ std::string INIFile::toXml() const
                         }
             catch (const std::bad_any_cast &e)
             {
-                throw Atom::Utils::Exception::InvalidArgument_Error("Unsupported type");
+                throw Atom::Error::InvalidArgument("Unsupported type");
             }
         }
         oss << "  </section>\n";

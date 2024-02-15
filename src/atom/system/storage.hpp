@@ -70,7 +70,7 @@ namespace Atom::System
          */
         [[nodiscard]] bool isNewMediaInserted(const std::string &path);
 
-#ifdef DEBUG
+#if ENABLE_DEBUG
         /**
          * @brief 列举所有已挂载的存储空间。
          */

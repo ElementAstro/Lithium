@@ -41,8 +41,6 @@ Description: Task Manager
 
 #include "atom/utils/stopwatcher.hpp"
 
-#include "atom/type/expected.hpp"
-
 namespace Lithium
 {
     /**

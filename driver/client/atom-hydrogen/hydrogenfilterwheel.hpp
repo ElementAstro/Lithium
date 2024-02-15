@@ -12,15 +12,14 @@ Description: Hydrogen Filterwheel
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_HYDROGEN_FILTERWHEEL_HPP
+#define ATOM_HYDROGEN_FILTERWHEEL_HPP
 
-#include "hydrogendevice.hpp"
-#include "core/filterwheel.hpp"
+#include "atom/driver/filterwheel.hpp"
+#include "hydrogenbasic.hpp"
+#include "atom/utils/switch.hpp"
 
-template <typename... Args>
-class StringSwitch;
-
-class HydrogenFilterwheel : public Filterwheel, public LithiumIndiClient
+class HydrogenFilterwheel : public Filterwheel, public HYDROGEN::BaseClient
 {
 public:
     HydrogenFilterwheel(const std::string &name);
@@ -39,18 +38,19 @@ public:
     virtual bool getCurrentPosition(const json &params) override;
 
 protected:
-    void newDevice(HYDROGEN::BaseDevice *dp) override;
-    void removeDevice(HYDROGEN::BaseDevice *dp) override;
-    void newProperty(HYDROGEN::Property *property) override;
-    void removeProperty(HYDROGEN::Property *property) override {}
-    void newBLOB(IBLOB *bp) override;
-    void newSwitch(ISwitchVectorProperty *svp) override;
-    void newNumber(INumberVectorProperty *nvp) override;
-    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
-    void newText(ITextVectorProperty *tvp) override;
-    void newLight(ILightVectorProperty *lvp) override {}
-    void IndiServerConnected() override;
-    void IndiServerDisconnected(int exit_code) override;
+    void newDevice(HYDROGEN::BaseDevice dp) override;
+    void removeDevice(HYDROGEN::BaseDevice dp) override;
+    void newProperty(HYDROGEN::Property property) override;
+    void updateProperty(HYDROGEN::Property property) override;
+    void removeProperty(HYDROGEN::Property property) override {}
+    void newMessage(HYDROGEN::BaseDevice dp, int messageID) override;
+    void serverConnected() override;
+    void serverDisconnected(int exit_code) override;
+
+    void newSwitch(HYDROGEN::PropertyViewSwitch *svp);
+    void newNumber(HYDROGEN::PropertyViewNumber *nvp);
+    void newText(HYDROGEN::PropertyViewText *tvp);
+    void newBLOB(HYDROGEN::PropertyViewBlob *bp);
 
 protected:
 
@@ -63,7 +63,7 @@ private:
     std::shared_ptr<ITextVectorProperty> filter_port;
     std::shared_ptr<ISwitchVectorProperty> rate_prop;
     std::shared_ptr<ITextVectorProperty> filter_prop;
-    HYDROGEN::BaseDevice *filter_device;
+    HYDROGEN::BaseDevice filter_device;
 
     std::atomic_bool is_ready; // 是否就绪
     std::atomic_bool has_blob; // 是否有 BLOB 数据
@@ -78,7 +78,9 @@ private:
     std::string hydrogen_filter_version = "";
     std::string hydrogen_filter_interface = "";
 
-    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
-    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
-    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
 };
+
+#endif

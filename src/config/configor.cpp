@@ -120,7 +120,7 @@ namespace Lithium
         try
         {
             const json *p = &config_;
-            for (const auto &key : Atom::Utils::splitString(key_path, "/"))
+            for (const auto &key : Atom::Utils::splitString(key_path, '/'))
             {
                 if (p->is_object() && p->contains(key))
                 {
@@ -147,7 +147,7 @@ namespace Lithium
         try
         {
             json *p = &config_;
-            for (const auto &key : Atom::Utils::splitString(key_path, "/"))
+            for (const auto &key : Atom::Utils::splitString(key_path, '/'))
             {
                 if (!p->is_object())
                 {
@@ -169,7 +169,7 @@ namespace Lithium
     bool ConfigManager::deleteValue(const std::string &key_path)
     {
         std::lock_guard<std::shared_mutex> lock(rw_mutex_);
-        std::vector<std::string> keys = Atom::Utils::splitString(key_path, "/");
+        std::vector<std::string> keys = Atom::Utils::splitString(key_path, '/');
         json *p = &config_;
         for (const auto &key : keys)
         {
@@ -201,7 +201,7 @@ namespace Lithium
 
         for (const auto &[key, value] : config_.items())
         {
-            std::vector<std::string> keys = Atom::Utils::splitString(key, "/");
+            std::vector<std::string> keys = Atom::Utils::splitString(key, '/');
             json *p = &updated_config;
 
             for (const auto &sub_key : keys)
@@ -247,15 +247,4 @@ namespace Lithium
         DLOG_F(INFO, "Save config to file: {}", file_path);
         return true;
     }
-
-    std::vector<std::string> ConfigManager::Atom::Utils::splitString(const std::string &s, const std::string &delimiter) const
-    {
-        std::vector<std::string> tokens;
-        std::regex regex(delimiter);
-        std::copy(std::sregex_token_iterator(s.begin(), s.end(), regex, -1),
-                  std::sregex_token_iterator(),
-                  std::back_inserter(tokens));
-        return tokens;
-    }
-
 }

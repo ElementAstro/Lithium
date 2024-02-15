@@ -26,39 +26,39 @@ namespace Atom::Event
 #define KM_TRACE(l, x)                                \
     do                                                \
     {                                                 \
-        if (l <= kev::getTraceLevel())                \
+        if (l <= Atom::Event::getTraceLevel())                \
         {                                             \
             std::ostringstream __kev_oss_42__;        \
             __kev_oss_42__ << x;                      \
-            kev::traceWrite(l, __kev_oss_42__.str()); \
+            Atom::Event::traceWrite(l, __kev_oss_42__.str()); \
         }                                             \
     } while (0)
 
 #define KM_XTRACE(l, x)                                  \
     do                                                   \
     {                                                    \
-        if (l <= kev::getTraceLevel())                   \
+        if (l <= Atom::Event::getTraceLevel())                   \
         {                                                \
             std::ostringstream __kev_oss_42__;           \
             __kev_oss_42__ << getObjKey() << ":: " << x; \
-            kev::traceWrite(l, __kev_oss_42__.str());    \
+            Atom::Event::traceWrite(l, __kev_oss_42__.str());    \
         }                                                \
     } while (0)
 
-#define KM_INFOXTRACE(x) KM_XTRACE(kev::TRACE_LEVEL_INFO, x)
-#define KM_WARNXTRACE(x) KM_XTRACE(kev::TRACE_LEVEL_WARN, x)
-#define KM_ERRXTRACE(x) KM_XTRACE(kev::TRACE_LEVEL_ERROR, x)
-#define KM_DBGXTRACE(x) KM_XTRACE(kev::TRACE_LEVEL_DEBUG, x)
+#define KM_INFOXTRACE(x) KM_XTRACE(Atom::Event::TRACE_LEVEL_INFO, x)
+#define KM_WARNXTRACE(x) KM_XTRACE(Atom::Event::TRACE_LEVEL_WARN, x)
+#define KM_ERRXTRACE(x) KM_XTRACE(Atom::Event::TRACE_LEVEL_ERROR, x)
+#define KM_DBGXTRACE(x) KM_XTRACE(Atom::Event::TRACE_LEVEL_DEBUG, x)
 
-#define KM_INFOTRACE(x) KM_TRACE(kev::TRACE_LEVEL_INFO, x)
-#define KM_WARNTRACE(x) KM_TRACE(kev::TRACE_LEVEL_WARN, x)
-#define KM_ERRTRACE(x) KM_TRACE(kev::TRACE_LEVEL_ERROR, x)
-#define KM_DBGTRACE(x) KM_TRACE(kev::TRACE_LEVEL_DEBUG, x)
+#define KM_INFOTRACE(x) KM_TRACE(Atom::Event::TRACE_LEVEL_INFO, x)
+#define KM_WARNTRACE(x) KM_TRACE(Atom::Event::TRACE_LEVEL_WARN, x)
+#define KM_ERRTRACE(x) KM_TRACE(Atom::Event::TRACE_LEVEL_ERROR, x)
+#define KM_DBGTRACE(x) KM_TRACE(Atom::Event::TRACE_LEVEL_DEBUG, x)
 
-#define KM_INFOTRACE_THIS(x) KM_TRACE(kev::TRACE_LEVEL_INFO, x << ", this=" << this)
-#define KM_WARNTRACE_THIS(x) KM_TRACE(kev::TRACE_LEVEL_WARN, x << ", this=" << this)
-#define KM_ERRTRACE_THIS(x) KM_TRACE(kev::TRACE_LEVEL_ERROR, x << ", this=" << this)
-#define KM_DBGTRACE_THIS(x) KM_TRACE(kev::TRACE_LEVEL_DEBUG, x << ", this=" << this)
+#define KM_INFOTRACE_THIS(x) KM_TRACE(Atom::Event::TRACE_LEVEL_INFO, x << ", this=" << this)
+#define KM_WARNTRACE_THIS(x) KM_TRACE(Atom::Event::TRACE_LEVEL_WARN, x << ", this=" << this)
+#define KM_ERRTRACE_THIS(x) KM_TRACE(Atom::Event::TRACE_LEVEL_ERROR, x << ", this=" << this)
+#define KM_DBGTRACE_THIS(x) KM_TRACE(Atom::Event::TRACE_LEVEL_DEBUG, x << ", this=" << this)
 
 #define KM_ASSERT(x) assert(x)
 

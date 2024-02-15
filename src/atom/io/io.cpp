@@ -18,6 +18,7 @@ Description: IO
 #include <iostream>
 #include <algorithm>
 #include <regex>
+#include <ctime>
 
 #include "atom/log/loguru.hpp"
 
@@ -25,11 +26,7 @@ Description: IO
 #include <windows.h>
 const std::string PATH_SEPARATOR = "\\";
 const std::regex folderNameRegex("^[^\\/?*:;{}\\\\]+[^\\\\]*$");
-#ifndef _WIN64
 const std::regex fileNameRegex("^[^\\/:*?\"<>|]+$");
-#else
-const std::regex fileNameRegex("^[^\\/:*?\"<>|]+$");
-#endif
 #else
 #include <unistd.h>
 #include <limits.h>
@@ -361,6 +358,118 @@ namespace Atom::IO
     bool isAbsolutePath(const std::string &path)
     {
         return std::filesystem::path(path).is_absolute();
+    }
+
+    std::string normPath(const std::string &path)
+    {
+        std::vector<std::string> components;
+        std::istringstream iss(path);
+        std::string component;
+
+        // 分割路径为组件
+        while (std::getline(iss, component, '/'))
+        {
+            if (component == "" || component == ".")
+            {
+                continue; // 忽略空和当前目录符号
+            }
+            else if (component == "..")
+            {
+                if (!components.empty() && components.back() != "..")
+                {
+                    components.pop_back(); // 弹出上一级目录符号
+                }
+                else
+                {
+                    components.push_back(".."); // 保留多余的上一级目录符号
+                }
+            }
+            else
+            {
+                components.push_back(component); // 添加有效组件
+            }
+        }
+
+        // 重新组合路径
+        std::string result;
+        for (const std::string &comp : components)
+        {
+            result += "/" + comp;
+        }
+
+        return result.empty() ? "/" : result;
+    }
+
+    bool changeWorkingDirectory(const std::string &directoryPath)
+    {
+        if (!isFolderNameValid(directoryPath) || !isFolderExists(directoryPath))
+        {
+            LOG_F(ERROR, "Directory does not exist: {}", directoryPath);
+            return false;
+        }
+        try
+        {
+            fs::current_path(directoryPath);
+            return true;
+        }
+        catch (const std::filesystem::filesystem_error &e)
+        {
+            LOG_F(ERROR, "Failed to change working directory: {}", e.what());
+            return false;
+        }
+    }
+
+    std::pair<std::string, std::string> getFileTimes(const std::string &filePath)
+    {
+        std::pair<std::string, std::string> fileTimes;
+
+#ifdef _WIN32
+        WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+        if (!GetFileAttributesEx(filePath.c_str(), GetFileExInfoStandard, &fileInfo))
+        {
+            LOG_F(ERROR, "Error getting file information.");
+            return fileTimes;
+        }
+
+        FILETIME createTime, modifyTime;
+        FileTimeToLocalFileTime(&fileInfo.ftCreationTime, &createTime);
+        FileTimeToLocalFileTime(&fileInfo.ftLastWriteTime, &modifyTime);
+
+        SYSTEMTIME createSysTime, modifySysTime;
+        FileTimeToSystemTime(&createTime, &createSysTime);
+        FileTimeToSystemTime(&modifyTime, &modifySysTime);
+
+        char createTimeStr[20], modifyTimeStr[20];
+        sprintf_s(createTimeStr, "%04d/%02d/%02d %02d:%02d:%02d", createSysTime.wYear, createSysTime.wMonth, createSysTime.wDay, createSysTime.wHour, createSysTime.wMinute, createSysTime.wSecond);
+        sprintf_s(modifyTimeStr, "%04d/%02d/%02d %02d:%02d:%02d", modifySysTime.wYear, modifySysTime.wMonth, modifySysTime.wDay, modifySysTime.wHour, modifySysTime.wMinute, modifySysTime.wSecond);
+
+        fileTimes.first = createTimeStr;
+        fileTimes.second = modifyTimeStr;
+
+#else
+        struct stat fileInfo;
+        if (stat(filePath.c_str(), &fileInfo) != 0)
+        {
+            LOG_F(ERROR, "Error getting file information.");
+            return fileTimes;
+        }
+
+        std::time_t createTime = fileInfo.st_ctime;
+        std::time_t modifyTime = fileInfo.st_mtime;
+
+        struct tm *createTimeTm = localtime(&createTime);
+        struct tm *modifyTimeTm = localtime(&modifyTime);
+
+        char createTimeStr[20], modifyTimeStr[20];
+        strftime(createTimeStr, sizeof(createTimeStr), "%Y/%m/%d %H:%M:%S", createTimeTm);
+        strftime(modifyTimeStr, sizeof(modifyTimeStr), "%Y/%m/%d %H:%M:%S", modifyTimeTm);
+
+        fileTimes.first = createTimeStr;
+        fileTimes.second = modifyTimeStr;
+
+#endif
+
+        return fileTimes;
     }
 
     std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath, const std::string &fileType, FileOption fileOption)

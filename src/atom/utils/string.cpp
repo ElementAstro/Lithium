@@ -18,11 +18,10 @@ Description: Some useful string functions
 #include <sstream>
 #include <iomanip>
 
-#include "exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::Utils
 {
-
     bool hasUppercase(const std::string &str)
     {
         // 判断字符串中是否存在大写字母
@@ -136,7 +135,7 @@ namespace Atom::Utils
                 else
                 {
                     // 如果解析失败，则抛出异常
-                    throw Exception::WrongArgument_Error("urlDecode failed");
+                    throw Error::WrongArgument("urlDecode failed");
                 }
             }
             // 如果当前字符是 '+'，则将其替换为空格并添加到结果中
@@ -179,3 +178,4 @@ namespace Atom::Utils
 #endif
         return tokens;
     }
+}

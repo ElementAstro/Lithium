@@ -69,7 +69,7 @@ namespace Atom::Algorithm
         {
             if (this->denominator == 0)
             {
-                throw Exception::WrongArgument_Error("Got 0 in the denominator of Math::Fraction object!");
+                throw Exception::WrongArgument("Got 0 in the denominator of Math::Fraction object!");
             }
         };
         Fraction(int num_value) : numerator(num_value), denominator(1){};

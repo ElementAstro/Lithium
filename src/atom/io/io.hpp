@@ -286,6 +286,12 @@ namespace Atom::IO
      */
     [[nodiscard]] bool isAbsolutePath(const std::string &path);
 
+    [[nodiscard]] std::string normPath(const std::string& path);
+
+    [[nodiscard]] bool changeWorkingDirectory(const std::string &directoryPath);
+
+    [[nodiscard]] std::pair<std::string, std::string> getFileTimes(const std::string &filePath);
+
     /**
      * @brief The option to check the file type.
      *

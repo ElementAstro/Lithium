@@ -90,7 +90,7 @@ Result EventLoop::Impl::registerFd(SOCKET_FD fd, uint32_t events, IOCallback cb)
     {
         return poll_->registerFd(fd, events, std::move(cb));
     }
-    return async([=, cb = std::move(cb)]() mutable
+    return async([this, cb = std::move(cb), fd, events]() mutable
                  {
         auto ret = poll_->registerFd(fd, events, std::move(cb));
         if(ret != Result::OK) {
@@ -108,7 +108,7 @@ Result EventLoop::Impl::updateFd(SOCKET_FD fd, uint32_t events)
     {
         return poll_->updateFd(fd, events);
     }
-    return async([=]
+    return async([this, fd, events]
                  {
         auto ret = poll_->updateFd(fd, events);
         if(ret != Result::OK) {
@@ -133,7 +133,7 @@ Result EventLoop::Impl::unregisterFd(SOCKET_FD fd, bool close_fd)
     }
     else
     {
-        auto ret = sync([=]
+        auto ret = sync([this, fd, close_fd]
                         {
             poll_->unregisterFd(fd);
             if(close_fd) {

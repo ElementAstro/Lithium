@@ -12,15 +12,49 @@ Description: Hydrogen Camera
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_HYDROGEN_CAMERA_HPP
+#define ATOM_HYDROGEN_CAMERA_HPP
 
-#include "hydrogendevice.hpp"
-#include "core/camera.hpp"
+#include "atom/driver/camera.hpp"
+#include "hydrogenbasic.hpp"
+#include "atom/utils/switch.hpp"
 
-template <typename... Args>
-class StringSwitch;
+class CapturedFrame
+{
+public:
+    void *m_data;
+    size_t m_size;
+    char m_format[MAXHYDROGENBLOBFMT];
 
-class HydrogenCamera : public Camera, public LithiumIndiClient
+    CapturedFrame()
+    {
+        m_data = nullptr;
+        m_size = 0;
+        m_format[0] = 0;
+    }
+
+    ~CapturedFrame()
+    {
+#ifdef HYDROGEN_SHARED_BLOB_SUPPORT
+        IDSharedBlobFree(m_data);
+#else
+        free(m_data);
+#endif
+    }
+
+    // Take ownership of this blob's data, so HYDROGEN won't overwrite/free the memory
+    void steal(IBLOB *bp)
+    {
+        m_data = bp->blob;
+        m_size = bp->size;
+        strncpy(m_format, bp->format, MAXHYDROGENBLOBFMT);
+
+        bp->blob = nullptr;
+        bp->size = 0;
+    }
+};
+
+class HydrogenCamera : public Camera, public HYDROGEN::BaseClient
 {
 public:
     // 构造函数
@@ -245,94 +279,83 @@ protected:
 
     // Hydrogen Client API
 protected:
-    // 新设备
-    void newDevice(HYDROGEN::BaseDevice *dp) override;
-    // 删除设备
-    void removeDevice(HYDROGEN::BaseDevice *dp) override;
-    // 新属性
-    void newProperty(HYDROGEN::Property *property) override;
-    // 删除属性
-    void removeProperty(HYDROGEN::Property *property) override {}
-    // 新 BLOB 数据
-    void newBLOB(IBLOB *bp) override;
-    // 新开关属性
-    void newSwitch(ISwitchVectorProperty *svp) override;
-    // 新数值属性
-    void newNumber(INumberVectorProperty *nvp) override;
-    // 新消息
-    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
-    // 新文本属性
-    void newText(ITextVectorProperty *tvp) override;
-    // 新灯属性
-    void newLight(ILightVectorProperty *lvp) override {}
-    // Hydrogen 服务器连接成功
-    void IndiServerConnected() override;
-    // Hydrogen 服务器断开连接
-    void IndiServerDisconnected(int exit_code) override;
+    void newDevice(HYDROGEN::BaseDevice dp) override;
+    void removeDevice(HYDROGEN::BaseDevice dp) override;
+    void newProperty(HYDROGEN::Property property) override;
+    void updateProperty(HYDROGEN::Property property) override;
+    void removeProperty(HYDROGEN::Property property) override {}
+    void newMessage(HYDROGEN::BaseDevice dp, int messageID) override;
+    void serverConnected() override;
+    void serverDisconnected(int exit_code) override;
+
+    void newSwitch(HYDROGEN::PropertyViewSwitch *svp);
+    void newNumber(HYDROGEN::PropertyViewNumber *nvp);
+    void newText(HYDROGEN::PropertyViewText *tvp);
+    void newBLOB(HYDROGEN::PropertyViewBlob *bp);
 
     // Hydrogen Parameters
 private:
     // 连接属性
-    std::shared_ptr<ISwitchVectorProperty> m_connection_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_connection_prop;
     // 曝光属性
-    std::shared_ptr<INumberVectorProperty> exposure_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> exposure_prop;
     // 停止曝光属性
-    std::shared_ptr<ISwitchVectorProperty> abort_exposure_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> abort_exposure_prop;
     // 帧属性
-    std::shared_ptr<INumberVectorProperty> frame_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> frame_prop;
     // 温度属性
-    std::shared_ptr<INumberVectorProperty> temperature_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> temperature_prop;
     // 增益属性
-    std::shared_ptr<INumberVectorProperty> gain_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> gain_prop;
     // 偏移属性
-    std::shared_ptr<INumberVectorProperty> offset_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> offset_prop;
     // 帧区域参数
     std::shared_ptr<INumber> hydrogen_frame_x;
     std::shared_ptr<INumber> hydrogen_frame_y;
     std::shared_ptr<INumber> hydrogen_frame_width;
     std::shared_ptr<INumber> hydrogen_frame_height;
     // 帧类型
-    std::shared_ptr<ISwitchVectorProperty> frame_type_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> frame_type_prop;
     // 图像类型
-    std::shared_ptr<ISwitchVectorProperty> frame_format_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> frame_format_prop;
     // CCD 设备信息
-    std::shared_ptr<INumberVectorProperty> ccdinfo_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> ccdinfo_prop;
     // 二次取样属性
-    std::shared_ptr<INumberVectorProperty> binning_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> binning_prop;
     // 二次取样 X 轴
     std::shared_ptr<INumber> hydrogen_binning_x;
     // 二次取样 Y 轴
     std::shared_ptr<INumber> hydrogen_binning_y;
     // 视频属性
-    std::shared_ptr<ISwitchVectorProperty> video_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> video_prop;
     // 视频延迟
-    std::shared_ptr<INumberVectorProperty> video_delay_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> video_delay_prop;
     // 视频曝光时间
-    std::shared_ptr<INumberVectorProperty> video_exposure_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> video_exposure_prop;
     // 视频帧率
-    std::shared_ptr<INumberVectorProperty> video_fps_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> video_fps_prop;
     // 相机端口
-    std::shared_ptr<ITextVectorProperty> camera_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewText> camera_prop;
     // 相机设备
-    HYDROGEN::BaseDevice *camera_device;
+    HYDROGEN::BaseDevice camera_device;
     // 调试模式
-    std::shared_ptr<ISwitchVectorProperty> debug_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> debug_prop;
     // 信息刷新间隔
-    std::shared_ptr<INumberVectorProperty> polling_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> polling_prop;
     // 已连接的辅助设备
-    std::shared_ptr<ITextVectorProperty> active_device_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewText> active_device_prop;
     // 是否压缩
-    std::shared_ptr<ISwitchVectorProperty> compression_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> compression_prop;
     // 图像上传模式
-    std::shared_ptr<ISwitchVectorProperty> image_upload_mode_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> image_upload_mode_prop;
     // 快速读出模式
-    std::shared_ptr<ISwitchVectorProperty> fast_read_out_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> fast_read_out_prop;
     // 相机限制
-    std::shared_ptr<INumberVectorProperty> camera_limit_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> camera_limit_prop;
     // 相机温度
-    std::shared_ptr<INumberVectorProperty> camera_temperature_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> camera_temperature_prop;
 
-    std::shared_ptr<ITextVectorProperty> cfa_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewText> cfa_prop;
 
     std::shared_ptr<IText> cfa_type_prop;
 
@@ -362,36 +385,38 @@ private:
 
     std::atomic<double> polling_period;
 
-    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
-    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
-    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
 
 private:
     // For Hydrogen Toupcamera
 
-    std::shared_ptr<ISwitchVectorProperty> toupcam_fan_control_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_fan_control_prop;
 
-    std::shared_ptr<ISwitchVectorProperty> toupcam_heat_control_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_heat_control_prop;
 
-    std::shared_ptr<ISwitchVectorProperty> toupcam_hcg_control_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_hcg_control_prop;
 
-    std::shared_ptr<ISwitchVectorProperty> toupcam_low_noise_control_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_low_noise_control_prop;
 
-    std::shared_ptr<ISwitchVectorProperty> toupcam_simulation_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_simulation_prop;
 
-    std::shared_ptr<ISwitchVectorProperty> toupcam_binning_mode_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_binning_mode_prop;
 
     // For Hydrogen ZWOASI
 
     // 图像翻转
-    std::shared_ptr<ISwitchVectorProperty> asi_image_flip_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> asi_image_flip_prop;
     // 图像翻转
-    std::shared_ptr<ISwitchVectorProperty> asi_image_flip_hor_prop;
-    std::shared_ptr<ISwitchVectorProperty> asi_image_flip_ver_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> asi_image_flip_hor_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> asi_image_flip_ver_prop;
     // 控制模式
-    std::shared_ptr<INumberVectorProperty> asi_controls_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> asi_controls_prop;
     // 控制模式
-    std::shared_ptr<ISwitchVectorProperty> asi_controls_mode_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> asi_controls_mode_prop;
 
     // For Hydrogen QHYCCD
 };
+
+#endif

@@ -178,7 +178,7 @@ namespace Lithium
         std::shared_ptr<DeviceManager> m_DeviceManager;
         std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
         std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
-        std::shared_ptr<Atom::Error::ErrorStack> m_ErrorStack;
+        std::shared_ptr<Atom::Error::ErrorStack> mStack;
         std::shared_ptr<ComponentManager> m_ComponentManager;
         std::shared_ptr<TaskManager> m_TaskManager;
 

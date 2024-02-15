@@ -18,7 +18,7 @@ Description: Quote manager for crash report.
 #include <fstream>
 #include <random>
 
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::System
 {
@@ -94,7 +94,7 @@ namespace Atom::System
         }
         catch (const std::exception &e)
         {
-            throw Utils::Exception::FileUnknown_Error(e.what());
+            throw Error::FileUnknown(e.what());
         }
     }
 

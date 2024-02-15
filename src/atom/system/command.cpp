@@ -21,9 +21,11 @@ Description: Simple wrapper for executing commands.
 #include <sstream>
 #include <stdexcept>
 #include <chrono>
+#include <thread>
 #ifdef _WIN32
 #define SETENV(name, value) SetEnvironmentVariableA(name, value)
 #define UNSETENV(name) SetEnvironmentVariableA(name, NULL)
+#include <conio.h>
 #else
 #include <cstdio>
 #include <csignal>
@@ -243,7 +245,7 @@ namespace Atom::System
         }
 
         // 执行命令
-        auto result = executeCommand(command);
+        auto result = executeCommand(command, false);
 
         // 清理：恢复环境变量到之前的状态
         for (const auto &var : envVars)

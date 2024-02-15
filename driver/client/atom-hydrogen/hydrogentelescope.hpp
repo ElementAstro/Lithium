@@ -14,13 +14,11 @@ Description: Hydrogen Telescope
 
 #pragma once
 
-#include "hydrogendevice.hpp"
-#include "core/telescope.hpp"
+#include "atom/driver/telescope.hpp"
+#include "hydrogenbasic.hpp"
+#include "atom/utils/switch.hpp"
 
-template <typename... Args>
-class StringSwitch;
-
-class HydrogenTelescope : public Telescope, public LithiumIndiClient
+class HydrogenTelescope : public Telescope, public HYDROGEN::BaseClient
 {
 
 public:
@@ -181,27 +179,28 @@ protected:
 
 protected:
     // Hydrogen 回调函数
-    void newDevice(HYDROGEN::BaseDevice *dp) override;
-    void removeDevice(HYDROGEN::BaseDevice *dp) override;
-    void newProperty(HYDROGEN::Property *property) override;
-    void removeProperty(HYDROGEN::Property *property) override {}
-    void newBLOB(IBLOB *bp) override;
-    void newSwitch(ISwitchVectorProperty *svp) override;
-    void newNumber(INumberVectorProperty *nvp) override;
-    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
-    void newText(ITextVectorProperty *tvp) override;
-    void newLight(ILightVectorProperty *lvp) override {}
-    void IndiServerConnected() override;
-    void IndiServerDisconnected(int exit_code) override;
+    void newDevice(HYDROGEN::BaseDevice dp) override;
+    void removeDevice(HYDROGEN::BaseDevice dp) override;
+    void newProperty(HYDROGEN::Property property) override;
+    void updateProperty(HYDROGEN::Property property) override;
+    void removeProperty(HYDROGEN::Property property) override {}
+    void newMessage(HYDROGEN::BaseDevice dp, int messageID) override;
+    void serverConnected() override;
+    void serverDisconnected(int exit_code) override;
+
+    void newSwitch(HYDROGEN::PropertyViewSwitch *svp);
+    void newNumber(HYDROGEN::PropertyViewNumber *nvp);
+    void newText(HYDROGEN::PropertyViewText *tvp);
+    void newBLOB(HYDROGEN::PropertyViewBlob *bp);
 
 private:
     // Hydrogen 客户端参数
-    std::shared_ptr<ISwitchVectorProperty> m_connection_prop;    // 连接属性指针
-    std::shared_ptr<INumberVectorProperty> telescopeinfo_prop; // 望远镜信息属性指针
-    std::shared_ptr<ITextVectorProperty> telescope_port;       // 望远镜端口属性指针
-    std::shared_ptr<ISwitchVectorProperty> rate_prop;          // 望远镜速率属性指针
-    std::shared_ptr<ITextVectorProperty> telescope_prop;
-    HYDROGEN::BaseDevice *telescope_device;                    // 望远镜设备指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_connection_prop;    // 连接属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> telescopeinfo_prop; // 望远镜信息属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewText> telescope_port;       // 望远镜端口属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> rate_prop;          // 望远镜速率属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewText> telescope_prop;
+    HYDROGEN::BaseDevice telescope_device;                    // 望远镜设备指针
 
     std::atomic_bool is_ready; // 是否就绪
     std::atomic_bool has_blob; // 是否有 BLOB 数据
@@ -216,7 +215,7 @@ private:
     std::string hydrogen_telescope_version = "";   // Hydrogen 设备固件版本
     std::string hydrogen_telescope_interface = ""; // Hydrogen 接口版本
 
-    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
-    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
-    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
 };

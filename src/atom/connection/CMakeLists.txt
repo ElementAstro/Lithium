@@ -9,6 +9,12 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom-connnection C CXX)
 
+if (ENABLE_SSH)
+find_package(LibSSH REQUIRED)
+include_directories(${LIBSSH_INCLUDE_DIRS})
+link_directories(${LIBSSH_LIBRARY_DIRS})
+endif()
+
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
     fifoclient.cpp
@@ -26,6 +32,15 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     sockethub.hpp
     udp_server.hpp
 )
+
+if (ENABLE_LIBSSH)
+list(APPEND ${PROJECT_NAME}_SOURCES
+    sshclient.cpp
+)
+list(APPEND ${PROJECT_NAME}_HEADERS
+    sshclient.hpp
+)
+endif()
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)

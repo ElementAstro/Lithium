@@ -12,7 +12,7 @@ public:
 
     virtual bool reconnect(const json &params) override;
 
-    virtual bool isConnected() const override;
+    virtual bool isConnected() override;
 
     virtual bool solveImage(const std::string &image, const int &timeout, const bool &debug);
 

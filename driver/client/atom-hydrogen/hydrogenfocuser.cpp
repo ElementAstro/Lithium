@@ -14,8 +14,6 @@ Description: Hydrogen Focuser
 
 #include "hydrogenfocuser.hpp"
 
-#include "atom/utils/switch.hpp"
-
 #include "config.h"
 
 #include "atom/log/loguru.hpp"
@@ -24,30 +22,30 @@ HydrogenFocuser::HydrogenFocuser(const std::string &name) : Focuser(name)
 {
     DLOG_F(INFO, "Hydrogen Focuser {} init successfully", name);
 
-    m_number_switch = std::make_unique<StringSwitch<INumberVectorProperty *>>();
-    m_switch_switch = std::make_unique<StringSwitch<ISwitchVectorProperty *>>();
-    m_text_switch = std::make_unique<StringSwitch<ITextVectorProperty *>>();
+    m_number_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
+    m_switch_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
+    m_text_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
 
-    m_switch_switch->registerCase("CONNECTION", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase("CONNECTION", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   {
         m_connection_prop.reset(svp);
         if (auto connectswitch = IUFindSwitch(svp, "CONNECT"); connectswitch->s == ISS_ON)
         {
-            setProperty("connect", true);
+            SetVariable("connect", true);
             is_connected.store(true);
-            DLOG_F(INFO, "{} is connected", getDeviceName());
+            DLOG_F(INFO, "{} is connected", GetName());
         }
         else
         {
             if (is_ready.load())
             {
-                setProperty("connect", false);
+                SetVariable("connect", false);
                 is_connected.store(true);
-                DLOG_F(INFO, "{} is disconnected", getDeviceName());
+                DLOG_F(INFO, "{} is disconnected", GetName());
             }
         } });
 
-    m_switch_switch->registerCase("DEVICE_BAUD_RATE", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase("DEVICE_BAUD_RATE", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   {
         std::string const baud_9600{"9600"};
         std::string const baud_19200{"19200"};
@@ -69,9 +67,9 @@ HydrogenFocuser::HydrogenFocuser(const std::string &name) : Focuser(name)
         else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
             hydrogen_focuser_rate = baud_230400;
 
-        DLOG_F(INFO, "{} baud rate: {}", getDeviceName(), hydrogen_focuser_rate); });
+        DLOG_F(INFO, "{} baud rate: {}", GetName(), hydrogen_focuser_rate); });
 
-    m_switch_switch->registerCase("Mode", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase("Mode", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   {
         m_mode_prop.reset(svp);
         ISwitch *modeswitch = IUFindSwitch(svp, "All");
@@ -95,69 +93,69 @@ HydrogenFocuser::HydrogenFocuser(const std::string &name) : Focuser(name)
             }
         } });
 
-    m_switch_switch->registerCase(hydrogen_focuser_cmd + "FOCUS_MOTION", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase(hydrogen_focuser_cmd + "FOCUS_MOTION", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   { 
                                     m_motion_prop.reset(svp);
                                     m_current_motion.store((IUFindSwitch(svp, "FOCUS_INWARD")->s == ISS_ON) ? 0: 1); });
 
-    m_switch_switch->registerCase(hydrogen_focuser_cmd + "FOCUS_BACKLASH_TOGGLE", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase(hydrogen_focuser_cmd + "FOCUS_BACKLASH_TOGGLE", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   { 
                                     m_backlash_prop.reset(svp);
                                     has_backlash = (IUFindSwitch(svp, "HYDROGEN_ENABLED")->s == ISS_ON); });
 
-    m_number_switch->registerCase("FOCUS_ABSOLUTE_POSITION", [this](INumberVectorProperty *nvp)
+    m_number_switch->registerCase("FOCUS_ABSOLUTE_POSITION", [this](HYDROGEN::PropertyViewNumber *nvp)
                                   {
         m_absolute_position_prop.reset(nvp);
         INumber *num_value = IUFindNumber(nvp, "FOCUS_ABSOLUTE_POSITION");
         if (num_value)
         {
             m_current_absolute_position.store(num_value->value);
-             DLOG_F(INFO, "{} Current Absolute Position: {}", getDeviceName(), m_current_absolute_position.load());
+             DLOG_F(INFO, "{} Current Absolute Position: {}", GetName(), m_current_absolute_position.load());
         } });
 
-    m_number_switch->registerCase("FOCUS_SPEED", [this](INumberVectorProperty *nvp)
+    m_number_switch->registerCase("FOCUS_SPEED", [this](HYDROGEN::PropertyViewNumber *nvp)
                                   {
                                       m_speed_prop.reset(nvp);
                                       INumber *num_value = IUFindNumber(nvp, "FOCUS_SPEED");
                                       if (num_value)
                                       {
                                           m_current_speed.store(num_value->value);
-                                          DLOG_F(INFO, "{} Current Speed: {}", getDeviceName(), m_current_speed.load());
+                                          DLOG_F(INFO, "{} Current Speed: {}", GetName(), m_current_speed.load());
                                       }
                                   });
 
-    m_number_switch->registerCase("ABS_FOCUS_POSITION", [this](INumberVectorProperty *nvp) {
+    m_number_switch->registerCase("ABS_FOCUS_POSITION", [this](HYDROGEN::PropertyViewNumber *nvp) {
 
     });
 
-    m_number_switch->registerCase("DELAY", [this](INumberVectorProperty *nvp)
+    m_number_switch->registerCase("DELAY", [this](HYDROGEN::PropertyViewNumber *nvp)
                                   {
         m_delay_prop.reset(nvp);
         INumber *num_value = IUFindNumber(nvp, "DELAY");
         if(num_value)
         {
             m_delay = num_value->value;
-            DLOG_F(INFO, "{} Current Delay: {}", getDeviceName(), m_delay);
+            DLOG_F(INFO, "{} Current Delay: {}", GetName(), m_delay);
         } });
 
-    m_number_switch->registerCase("FOCUS_TEMPERATURE", [this](INumberVectorProperty *nvp)
+    m_number_switch->registerCase("FOCUS_TEMPERATURE", [this](HYDROGEN::PropertyViewNumber *nvp)
                                   {
         m_temperature_prop.reset(nvp);
         INumber *num_value = IUFindNumber(nvp, "FOCUS_TEMPERATURE");
         if(num_value)
         {
             m_current_temperature.store(num_value->value);
-            DLOG_F(INFO, "{} Current Temperature: {}", getDeviceName(), m_current_temperature.load());
+            DLOG_F(INFO, "{} Current Temperature: {}", GetName(), m_current_temperature.load());
         } });
 
-    m_number_switch->registerCase("FOCUS_MAX", [this](INumberVectorProperty *nvp)
+    m_number_switch->registerCase("FOCUS_MAX", [this](HYDROGEN::PropertyViewNumber *nvp)
                                   {
         m_max_position_prop.reset(nvp);
         INumber *num_value = IUFindNumber(nvp, "FOCUS_MAX");
         if(num_value)
         {
             m_max_position = num_value->value;
-            DLOG_F(INFO, "{} Current Speed: {}", getDeviceName(), m_max_position);
+            DLOG_F(INFO, "{} Current Speed: {}", GetName(), m_max_position);
         } });
 }
 
@@ -177,7 +175,7 @@ bool HydrogenFocuser::connect(const json &params)
     // Connect to server.
     if (connectServer())
     {
-        DLOG_F(INFO, "{}: connectServer done ready", getDeviceName());
+        DLOG_F(INFO, "{}: connectServer done ready", GetName());
         connectDevice(name.c_str());
         return !is_ready.load();
     }
@@ -186,7 +184,7 @@ bool HydrogenFocuser::connect(const json &params)
 
 bool HydrogenFocuser::disconnect(const json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", GetName());
     return true;
 }
 
@@ -270,22 +268,34 @@ bool HydrogenFocuser::setBacklash(const json &params)
     return true;
 }
 
-void HydrogenFocuser::newDevice(HYDROGEN::BaseDevice *dp)
+void HydrogenFocuser::newDevice(HYDROGEN::BaseDevice dp)
 {
-    if (dp->getDeviceName() == getDeviceName())
+    if (dp.getDeviceName() == GetName().c_str())
     {
         focuser_device = dp;
     }
 }
 
-void HydrogenFocuser::newSwitch(ISwitchVectorProperty *svp)
+void HydrogenFocuser::newSwitch(HYDROGEN::PropertyViewSwitch *svp)
 {
     m_switch_switch->match(svp->name, svp);
 }
 
-void HydrogenFocuser::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
+void HydrogenFocuser::newMessage(HYDROGEN::BaseDevice dp, int messageID)
 {
-    DLOG_F(INFO, "{} Received message: {}", getDeviceName(), dp->messageQueue(messageID));
+    DLOG_F(INFO, "{} Received message: {}", GetName(), dp.messageQueue(messageID));
+}
+
+void HydrogenFocuser::serverConnected()
+{
+    DLOG_F(INFO, "{} Connected to server", GetName());
+}
+
+void HydrogenFocuser::serverDisconnected(int exit_code)
+{
+    DLOG_F(INFO, "{} Disconnected from server", GetName());
+
+    ClearStatus();
 }
 
 inline static const char *StateStr(IPState st)
@@ -304,71 +314,65 @@ inline static const char *StateStr(IPState st)
     }
 }
 
-void HydrogenFocuser::newNumber(INumberVectorProperty *nvp)
+void HydrogenFocuser::newNumber(HYDROGEN::PropertyViewNumber *nvp)
 {
     m_number_switch->match(nvp->name, nvp);
 }
 
-void HydrogenFocuser::newText(ITextVectorProperty *tvp)
+void HydrogenFocuser::newText(HYDROGEN::PropertyViewText *tvp)
 {
     m_text_switch->match(tvp->name, tvp);
 }
 
-void HydrogenFocuser::newBLOB(IBLOB *bp)
+void HydrogenFocuser::newBLOB(HYDROGEN::PropertyViewBlob *bp)
 {
-    // we go here every time a new blob is available
-    // this is normally the image from the Focuser
-    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", getDeviceName(), bp->name, bp->bloblen, bp->size);
+    DLOG_F(INFO, "{} Received BLOB {}", GetName(), bp->name);
 }
 
-void HydrogenFocuser::newProperty(HYDROGEN::Property *property)
+void HydrogenFocuser::newProperty(HYDROGEN::Property property)
 {
-    std::string PropName(property->getName());
-    HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
+    std::string PropName(property.getName());
+    HYDROGEN_PROPERTY_TYPE Proptype = property.getType();
 
-    // DLOG_F(INFO,"{} Property: {}", getDeviceName(), property->getName());
+    DLOG_F(INFO,"{} Property: {}", GetName(), property.getName());
 
-    if (Proptype == HYDROGEN_NUMBER)
+    switch (property.getType())
     {
-        newNumber(property->getNumber());
-    }
-    else if (Proptype == HYDROGEN_SWITCH)
+    case HYDROGEN_SWITCH:
     {
-        newSwitch(property->getSwitch());
+        auto svp = property.getSwitch();
+        DLOG_F(INFO, "{}: {}", GetName(), svp->name);
+        newSwitch(svp);
     }
-    else if (Proptype == HYDROGEN_TEXT)
+    break;
+    case HYDROGEN_NUMBER:
     {
-        newText(property->getText());
+        auto nvp = property.getNumber();
+        DLOG_F(INFO, "{}: {}", GetName(), nvp->name);
+        newNumber(nvp);
     }
+    break;
+    case HYDROGEN_TEXT:
+    {
+        auto tvp = property.getText();
+        DLOG_F(INFO, "{}: {}", GetName(), tvp->name);
+        newText(tvp);
+    }
+    break;
+    default:
+        break;
+    };
 }
 
-void HydrogenFocuser::IndiServerConnected()
-{
-    DLOG_F(INFO, "{} connection succeeded", getDeviceName());
-    is_connected.store(true);
-}
-
-void HydrogenFocuser::IndiServerDisconnected(int exit_code)
-{
-    DLOG_F(INFO, "{}: serverDisconnected", getDeviceName());
-    // after disconnection we reset the connection status and the properties pointers
-    ClearStatus();
-    // in case the connection lost we must reset the client socket
-    if (exit_code == -1)
-        DLOG_F(INFO, "{}: Hydrogen server disconnected", getDeviceName());
-}
-
-void HydrogenFocuser::removeDevice(HYDROGEN::BaseDevice *dp)
+void HydrogenFocuser::removeDevice(HYDROGEN::BaseDevice dp)
 {
     ClearStatus();
-    DLOG_F(INFO, "{} disconnected", getDeviceName());
+    DLOG_F(INFO, "{} disconnected", GetName());
 }
 
 void HydrogenFocuser::ClearStatus()
 {
     m_connection_prop = nullptr;
-    focuser_port = nullptr;
-    focuser_device = nullptr;
     m_connection_prop = nullptr;
     m_mode_prop = nullptr;              // Focuser mode , absolute or relative
     m_motion_prop = nullptr;            // Focuser motion , inward or outward
@@ -384,5 +388,4 @@ void HydrogenFocuser::ClearStatus()
     m_hydrogen_focuser_temperature = nullptr;
     m_focuserinfo_prop = nullptr;
     focuser_port = nullptr;
-    focuser_device = nullptr;
 }

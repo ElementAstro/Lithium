@@ -7,6 +7,17 @@
 
 AstrometrySolver::AstrometrySolver(const std::string &name) : Solver(name)
 {
+    RegisterFunc("solveImage", &AstrometrySolver::_solveImage, this);
+    RegisterFunc("getSolveResult", &AstrometrySolver::_getSolveResult, this);
+    RegisterFunc("getSolveStatus", &AstrometrySolver::_getSolveStatus, this);
+    RegisterFunc("setSolveParams", &AstrometrySolver::_setSolveParams, this);
+    RegisterFunc("getSolveParams", &AstrometrySolver::_getSolveParams, this);
+
+    RegisterFunc("connect", &AstrometrySolver::connect, this);
+    RegisterFunc("disconnect", &AstrometrySolver::disconnect, this);
+    RegisterFunc("reconnect", &AstrometrySolver::reconnect, this);
+    RegisterFunc("isConnected", &AstrometrySolver::isConnected, this);
+    
     DLOG_F(INFO, "Initializing Astrometry Solver...");
 }
 
@@ -18,6 +29,7 @@ AstrometrySolver::~AstrometrySolver()
 bool AstrometrySolver::connect(const json &params)
 {
     DLOG_F(INFO, "Connecting to Astrometry Solver...");
+    // Check the path
     if (!params.contains("path") || !params["path"].is_string())
     {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);
@@ -29,6 +41,8 @@ bool AstrometrySolver::connect(const json &params)
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);
         return false;
     }
+    // Check whether the file is a executable file
+
     SetVariable("solverPath", params["path"].get<std::string>());
     DLOG_F(INFO, "Connected to Astrometry Solver");
     return true;
@@ -57,7 +71,7 @@ bool AstrometrySolver::reconnect(const json &params)
     return true;
 }
 
-bool AstrometrySolver::isConnected() const
+bool AstrometrySolver::isConnected()
 {
     return GetVariable<std::string>("solverPath").has_value();
 }
@@ -80,9 +94,9 @@ bool AstrometrySolver::solveImage(const std::string &image, const int &timeout, 
     {
         std::string command = makeCommand();
 
-        std::string output = Atom::System::executeCommand(command);
+        std::string output = Atom::System::executeCommand(command, false);
 
-        result = parse_output(output);
+        result = parseOutput(output);
     }
     catch (const std::exception &e)
     {
@@ -154,8 +168,9 @@ bool AstrometrySolver::setSolveParams(const json &params)
         for (auto &i : params["depth"].get<std::vector<int>>())
         {
             DLOG_F(INFO, "Setting Depth {}", i);
+            ///status = SetVariable("depth", i);
         }
-        status = SetVariable("depth", params["depth"].get<std::vector<int>>());
+        //status = SetVariable("depth_x", params["depth"].get<std::vector<int>>());
     }
     if (params.contains("scale_low") && params["scale_low"].is_number())
     {
@@ -200,28 +215,28 @@ bool AstrometrySolver::setSolveParams(const json &params)
     return status;
 }
 
-virtual json AstrometrySolver::getSolveParams()
+json AstrometrySolver::getSolveParams()
 {
     return json{};
 }
 
 std::string AstrometrySolver::makeCommand()
 {
-    std::string solverPath = GetVariable("solverPath");
-    std::string image = GetVariable("imagePath");
-    std::string ra = GetVariable("target_ra");
-    std::string dec = GetVariable("target_dec");
-    double radius = GetVariable("radius");
-    int downsample = GetVariable("downsample");
-    std::vector<int> depth = GetVariable("depth");
-    double scale_low = GetVariable("scale_low");
-    double scale_high = GetVariable("scale_high");
-    int width = GetVariable("width");
-    int height = GetVariable("height");
-    std::string scale_units = GetVariable("scale_units");
-    bool overwrite = GetVariable("overwrite");
-    bool no_plot = GetVariable("no_plot");
-    bool verify = GetVariable("verify");
+    auto solverPath = GetVariable<std::string>("solverPath").value();
+    auto image = GetVariable<std::string>("imagePath").value();
+    auto ra = GetVariable<std::string>("target_ra").value();
+    auto dec = GetVariable<std::string>("target_dec").value();
+    auto radius = GetVariable<double>("radius").value();
+    auto downsample = GetVariable<int>("downsample").value();
+    auto depth = GetVariable<std::vector<int>>("depth").value();
+    auto scale_low = GetVariable<double>("scale_low").value();
+    auto scale_high = GetVariable<double>("scale_high").value();
+    auto width = GetVariable<int>("width").value();
+    auto height = GetVariable<int>("height").value();
+    auto scale_units = GetVariable<std::string>("scale_units").value();
+    auto overwrite = GetVariable<bool>("overwrite").value();
+    auto no_plot = GetVariable<bool>("no_plot").value();
+    auto verify = GetVariable<bool>("verify").value();
 
     // Max: Here we should use cmdline.hpp to make the command
 
@@ -278,22 +293,6 @@ std::string AstrometrySolver::makeCommand()
     if (verify)
     {
         ss << " --verify";
-    }
-    if (debug)
-    {
-        ss << " --debug";
-    }
-    if (resort)
-    {
-        ss << " --resort";
-    }
-    if (_continue)
-    {
-        ss << " --continue";
-    }
-    if (no_tweak)
-    {
-        ss << " --no-tweak";
     }
 
     std::string cmd = ss.str();

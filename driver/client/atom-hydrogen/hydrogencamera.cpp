@@ -16,12 +16,14 @@ Description: Hydorgen Camera
 
 #include "config.h"
 
-#include "atom/utils/switch.hpp"
-
 #include "atom/log/loguru.hpp"
 
 HydrogenCamera::HydrogenCamera(const std::string &name) : Camera(name)
 {
+    DLOG_F(INFO, "Hydorgen camera {} init successfully", name);
+    m_number_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
+    m_switch_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
+    m_text_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
 }
 
 HydrogenCamera::~HydrogenCamera()
@@ -40,7 +42,7 @@ bool HydrogenCamera::connect(const json &params)
     // Connect to server.
     if (connectServer())
     {
-        DLOG_F(INFO, "{}: connectServer done ready", getDeviceName());
+        DLOG_F(INFO, "{}: connectServer done ready", GetName());
         connectDevice(name.c_str());
         return !is_ready.load();
     }
@@ -49,7 +51,7 @@ bool HydrogenCamera::connect(const json &params)
 
 bool HydrogenCamera::disconnect(const json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", GetName());
     return true;
 }
 
@@ -208,37 +210,107 @@ bool HydrogenCamera::isFrameSettingAvailable()
     return true;
 }
 
-void HydrogenCamera::newDevice(HYDROGEN::BaseDevice *dp)
+void HydrogenCamera::newDevice(HYDROGEN::BaseDevice dp)
 {
-    if (strcmp(dp->getDeviceName(), getDeviceName().c_str()) == 0)
+    if (strcmp(dp.getDeviceName(), GetName().c_str()) == 0)
     {
         camera_device = dp;
     }
 }
 
-void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
+void HydrogenCamera::removeDevice(HYDROGEN::BaseDevice dp)
+{
+    ClearStatus();
+    DLOG_F(INFO, "{} disconnected", dp.getDeviceName());
+}
+
+void HydrogenCamera::newProperty(HYDROGEN::Property property)
+{
+    std::string PropName(property.getName());
+    HYDROGEN_PROPERTY_TYPE Proptype = property.getType();
+
+    switch (Proptype)
+    {
+    case HYDROGEN_SWITCH:
+        newSwitch(property.getSwitch());
+        break;
+    case HYDROGEN_NUMBER:
+        newNumber(property.getNumber());
+        break;
+    case HYDROGEN_TEXT:
+        newText(property.getText());
+        break;
+    case HYDROGEN_BLOB:
+        newBLOB(property.getBLOB());
+        break;
+    };
+}
+
+void HydrogenCamera::updateProperty(HYDROGEN::Property property)
+{
+    // we go here every time a Switch state change
+
+    switch (property.getType())
+    {
+    case HYDROGEN_SWITCH:
+    {
+        auto svp = property.getSwitch();
+        DLOG_F(INFO, "{}: {}", GetName(), svp->name);
+        newSwitch(svp);
+    }
+    break;
+    case HYDROGEN_NUMBER:
+    {
+        auto nvp = property.getNumber();
+        DLOG_F(INFO, "{}: {}", GetName(), nvp->name);
+        newNumber(nvp);
+    }
+    break;
+    case HYDROGEN_TEXT:
+    {
+        auto tvp = property.getText();
+        DLOG_F(INFO, "{}: {}", GetName(), tvp->name);
+        newText(tvp);
+    }
+    break;
+    case HYDROGEN_BLOB:
+    {
+        // we go here every time a new blob is available
+        // this is normally the image from the camera
+
+        auto bvp = property.getBLOB();
+        auto bp = bvp->at(0);
+        newBLOB(bvp);
+    }
+    break;
+    default:
+        break;
+    }
+}
+
+void HydrogenCamera::newSwitch(HYDROGEN::PropertyViewSwitch *svp)
 {
     std::string name = svp->name;
 
-    DLOG_F(INFO, "{} Received Switch: {}", getDeviceName(), name);
+    DLOG_F(INFO, "{} Received Switch: {}", GetName(), name);
 
     if (name == "CONNECTION")
     {
         m_connection_prop.reset(svp);
         if (auto connectswitch = IUFindSwitch(svp, "CONNECT"); connectswitch->s == ISS_ON)
         {
-            setProperty("connect", true);
+            SetVariable("connect", true);
             is_connected.store(true);
-            DLOG_F(INFO, "{} is connected", getDeviceName());
+            DLOG_F(INFO, "{} is connected", GetName());
         }
         else
         {
             if (is_ready.load())
             {
                 ClearStatus();
-                setProperty("connect", false);
+                SetVariable("connect", false);
                 is_connected.store(true);
-                DLOG_F(INFO, "{} is disconnected", getDeviceName());
+                DLOG_F(INFO, "{} is disconnected", GetName());
             }
         }
     }
@@ -247,15 +319,15 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
         debug_prop.reset(svp);
         if (auto debugswitch = IUFindSwitch(svp, "ENABLE"); debugswitch->s == ISS_ON)
         {
-            setProperty("debug", true);
+            SetVariable("debug", true);
             is_debug.store(true);
-            DLOG_F(INFO, "DEBUG mode of {} is enabled", getDeviceName());
+            DLOG_F(INFO, "DEBUG mode of {} is enabled", GetName());
         }
         else
         {
-            setProperty("debug", false);
+            SetVariable("debug", false);
             is_debug.store(false);
-            DLOG_F(INFO, "DEBUG mode of {} is disabled", getDeviceName());
+            DLOG_F(INFO, "DEBUG mode of {} is disabled", GetName());
         }
     }
     else if (name == "CCD_FRAME_TYPE")
@@ -270,9 +342,9 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
             type = "Flat";
         else if (auto biasswitch = IUFindSwitch(svp, "FRAME_BIAS"); biasswitch->s == ISS_ON)
             type = "Bias";
-        setProperty("frame_type", type);
+        SetVariable("frame_type", type);
         frame.frame_type = type;
-        DLOG_F(INFO, "Current frame type of {} is {}", getDeviceName(), frame.frame_type);
+        DLOG_F(INFO, "Current frame type of {} is {}", GetName(), frame.frame_type);
     }
     else if (name == "CCD_TRANSFER_FORMAT")
     {
@@ -284,18 +356,18 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
             format = "Raw";
         else if (auto xisfswitch = IUFindSwitch(svp, "FORMAT_XISF"); xisfswitch->s == ISS_ON)
             format = "Xisf";
-        setProperty("frame_format", format);
+        SetVariable("frame_format", format);
         frame.frame_format = format;
-        DLOG_F(INFO, "Current frame format of {} is {}", getDeviceName(), frame.frame_format);
+        DLOG_F(INFO, "Current frame format of {} is {}", GetName(), frame.frame_format);
     }
     else if (name == "CCD_ABORT_EXPOSURE")
     {
         abort_exposure_prop.reset(svp);
         if (auto abortswitch = IUFindSwitch(svp, "ABORT_EXPOSURE"); abortswitch->s == ISS_ON)
         {
-            setProperty("is_exposure", false);
+            SetVariable("is_exposure", false);
             is_exposure.store(false);
-            DLOG_F(INFO, "{} is stopped", getDeviceName());
+            DLOG_F(INFO, "{} is stopped", GetName());
         }
     }
     else if (name == "UPLOAD_MODE")
@@ -309,22 +381,22 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
         else if (auto bothswitch = IUFindSwitch(svp, "UPLOAD_BOTH"); bothswitch->s == ISS_ON)
             mode = "Both";
         frame.upload_mode = mode;
-        DLOG_F(INFO, "Current upload mode of {} is {}", getDeviceName(), frame.upload_mode);
+        DLOG_F(INFO, "Current upload mode of {} is {}", GetName(), frame.upload_mode);
     }
     else if (name == "CCD_FAST_TOGGLE")
     {
         fast_read_out_prop.reset(svp);
         if (auto enabledswitch = IUFindSwitch(svp, "HYDROGEN_ENABLED"); enabledswitch->s == ISS_ON)
         {
-            setProperty("is_fastread", true);
+            SetVariable("is_fastread", true);
             frame.is_fastread.store(true);
-            DLOG_F(INFO, "Current fast readout mode of {} is enabled", getDeviceName());
+            DLOG_F(INFO, "Current fast readout mode of {} is enabled", GetName());
         }
         else if (auto disabledswitch = IUFindSwitch(svp, "HYDROGEN_DISABLED"); disabledswitch->s == ISS_ON)
         {
-            setProperty("is_fastread", false);
+            SetVariable("is_fastread", false);
             frame.is_fastread.store(false);
-            DLOG_F(INFO, "Current fast readout mode of {} is disabled", getDeviceName());
+            DLOG_F(INFO, "Current fast readout mode of {} is disabled", GetName());
         }
     }
     else if (name == "CCD_VIDEO_STREAM")
@@ -332,15 +404,15 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
         video_prop.reset(svp);
         if (auto onswitch = IUFindSwitch(svp, "STREAM_ON"); onswitch->s == ISS_ON)
         {
-            setProperty("is_video", true);
+            SetVariable("is_video", true);
             is_video.store(true);
-            DLOG_F(INFO, "{} start video capture", getDeviceName());
+            DLOG_F(INFO, "{} start video capture", GetName());
         }
         else if (auto offswitch = IUFindSwitch(svp, "STREAM_OFF"); offswitch->s == ISS_ON)
         {
-            setProperty("is_video", false);
+            SetVariable("is_video", false);
             is_video.store(false);
-            DLOG_F(INFO, "{} stop video capture", getDeviceName());
+            DLOG_F(INFO, "{} stop video capture", GetName());
         }
     }
     else if (name == "FLIP")
@@ -382,9 +454,21 @@ void HydrogenCamera::newSwitch(ISwitchVectorProperty *svp)
     */
 }
 
-void HydrogenCamera::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
+void HydrogenCamera::newMessage(HYDROGEN::BaseDevice dp, int messageID)
 {
-    DLOG_F(INFO, "{} Received message: {}", getDeviceName(), dp->messageQueue(messageID));
+    DLOG_F(INFO, "{} Received message: {}", GetName(), dp.messageQueue(messageID));
+}
+
+void HydrogenCamera::serverConnected()
+{
+    DLOG_F(INFO, "{} Connected to server", GetName());
+}
+
+void HydrogenCamera::serverDisconnected(int exit_code)
+{
+    DLOG_F(INFO, "{} Disconnected from server", GetName());
+
+    ClearStatus();
 }
 
 inline static const char *StateStr(IPState st)
@@ -403,7 +487,7 @@ inline static const char *StateStr(IPState st)
     }
 }
 
-void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
+void HydrogenCamera::newNumber(HYDROGEN::PropertyViewNumber *nvp)
 {
     using namespace std::string_literals;
     const std::string name = nvp->name;
@@ -411,7 +495,7 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
     {
         const double exposure = nvp->np->value;
         current_exposure.store(exposure);
-        DLOG_F(INFO, "Current CCD_EXPOSURE for {} is {}", getDeviceName(), exposure);
+        DLOG_F(INFO, "Current CCD_EXPOSURE for {} is {}", GetName(), exposure);
     }
     else if (name == "CCD_INFO")
     {
@@ -424,7 +508,7 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
         frame.pixel_depth.store(IUFindNumber(nvp, "CCD_BITSPERPIXEL")->value);
 
         DLOG_F(INFO, "{} pixel {} pixel_x {} pixel_y {} max_frame_x {} max_frame_y {} pixel_depth {}",
-               getDeviceName(), frame.pixel.load(), frame.pixel_x.load(), frame.pixel_y.load(), frame.max_frame_x.load(), frame.max_frame_y.load(), frame.pixel_depth.load());
+               GetName(), frame.pixel.load(), frame.pixel_x.load(), frame.pixel_y.load(), frame.max_frame_x.load(), frame.max_frame_y.load(), frame.pixel_depth.load());
     }
     else if (name == "CCD_BINNING")
     {
@@ -432,7 +516,7 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
         hydrogen_binning_y.reset(IUFindNumber(nvp, "VER_BIN"));
         frame.binning_x.store(hydrogen_binning_x->value);
         frame.binning_y.store(hydrogen_binning_y->value);
-        DLOG_F(INFO, "Current binning_x and y of {} are {} {}", getDeviceName(), hydrogen_binning_x->value, hydrogen_binning_y->value);
+        DLOG_F(INFO, "Current binning_x and y of {} are {} {}", GetName(), hydrogen_binning_x->value, hydrogen_binning_y->value);
     }
     else if (name == "CCD_FRAME")
     {
@@ -446,59 +530,59 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
         frame.frame_height.store(hydrogen_frame_height->value);
         frame.frame_width.store(hydrogen_frame_width->value);
 
-        DLOG_F(INFO, "Current frame of {} are {} {} {} {}", getDeviceName(), hydrogen_frame_width->value, hydrogen_frame_y->value, hydrogen_frame_width->value, hydrogen_frame_height->value);
+        DLOG_F(INFO, "Current frame of {} are {} {} {} {}", GetName(), hydrogen_frame_width->value, hydrogen_frame_y->value, hydrogen_frame_width->value, hydrogen_frame_height->value);
     }
     else if (name == "CCD_TEMPERATURE")
     {
         camera_temperature_prop.reset(nvp);
         current_temperature.store(IUFindNumber(nvp, "CCD_TEMPERATURE_VALUE")->value);
-        DLOG_F(INFO, "Current temperature of {} is {}", getDeviceName(), current_temperature.load());
+        DLOG_F(INFO, "Current temperature of {} is {}", GetName(), current_temperature.load());
     }
     else if (name == "CCD_GAIN")
     {
         gain_prop.reset(nvp);
         current_gain.store(IUFindNumber(nvp, "GAIN")->value);
-        setProperty("gain", current_gain.load());
-        DLOG_F(INFO, "Current camera gain of {} is {}", getDeviceName(), current_gain.load());
+        SetVariable("gain", current_gain.load());
+        DLOG_F(INFO, "Current camera gain of {} is {}", GetName(), current_gain.load());
     }
     else if (name == "CCD_OFFSET")
     {
         offset_prop.reset(nvp);
         current_offset.store(IUFindNumber(nvp, "OFFSET")->value);
-        setProperty("offset", current_offset.load());
-        DLOG_F(INFO, "Current camera offset of {} is {}", getDeviceName(), current_offset.load());
+        SetVariable("offset", current_offset.load());
+        DLOG_F(INFO, "Current camera offset of {} is {}", GetName(), current_offset.load());
     }
     /*
      else if (name == "POLLING_PERIOD")
     {
         device_info["network"]["period"] = IUFindNumber(nvp, "PERIOD_MS")->value;
-        DLOG_F(INFO, "Current period of {} is {}", getDeviceName(), device_info["network"]["period"].dump());
+        DLOG_F(INFO, "Current period of {} is {}", GetName(), device_info["network"]["period"].dump());
     }
     else if (name == "LIMITS")
     {
         device_info["limits"]["maxbuffer"] = IUFindNumber(nvp, "LIMITS_BUFFER_MAX")->value;
-        DLOG_F(INFO, "Current max buffer of {} is {}", getDeviceName(), device_info["limits"]["maxbuffer"].dump());
+        DLOG_F(INFO, "Current max buffer of {} is {}", GetName(), device_info["limits"]["maxbuffer"].dump());
         device_info["limits"]["maxfps"] = IUFindNumber(nvp, "LIMITS_PREVIEW_FPS")->value;
-        DLOG_F(INFO, "Current max fps of {} is {}", getDeviceName(), device_info["limits"]["maxfps"].dump());
+        DLOG_F(INFO, "Current max fps of {} is {}", GetName(), device_info["limits"]["maxfps"].dump());
     }
     else if (name == "STREAM_DELAY")
     {
         device_info["video"]["delay"] = IUFindNumber(nvp, "STREAM_DELAY_TIME")->value;
-        DLOG_F(INFO, "Current stream delay of {} is {}", getDeviceName(), device_info["video"]["delay"].dump());
+        DLOG_F(INFO, "Current stream delay of {} is {}", GetName(), device_info["video"]["delay"].dump());
     }
     else if (name == "STREAMING_EXPOSURE")
     {
         device_info["video"]["exposure"] = IUFindNumber(nvp, "STREAMING_EXPOSURE_VALUE")->value;
-        DLOG_F(INFO, "Current streaming exposure of {} is {}", getDeviceName(), device_info["video"]["exposure"].dump());
+        DLOG_F(INFO, "Current streaming exposure of {} is {}", GetName(), device_info["video"]["exposure"].dump());
         device_info["video"]["division"] = IUFindNumber(nvp, "STREAMING_DIVISOR_VALUE")->value;
-        DLOG_F(INFO, "Current streaming division of {} is {}", getDeviceName(), device_info["video"]["division"].dump());
+        DLOG_F(INFO, "Current streaming division of {} is {}", GetName(), device_info["video"]["division"].dump());
     }
     else if (name == "FPS")
     {
         device_info["video"]["fps"] = IUFindNumber(nvp, "EST_FPS")->value;
-        DLOG_F(INFO, "Current fps of {} is {}", getDeviceName(), device_info["video"]["fps"].dump());
+        DLOG_F(INFO, "Current fps of {} is {}", GetName(), device_info["video"]["fps"].dump());
         device_info["video"]["avgfps"] = IUFindNumber(nvp, "AVG_FPS")->value;
-        DLOG_F(INFO, "Current average fps of {} is {}", getDeviceName(), device_info["video"]["avgfps"].dump());
+        DLOG_F(INFO, "Current average fps of {} is {}", GetName(), device_info["video"]["avgfps"].dump());
     }
     else if (PropName == "TC_HGC_SET" && Proptype == HYDROGEN_NUMBER)
     {
@@ -516,10 +600,10 @@ void HydrogenCamera::newNumber(INumberVectorProperty *nvp)
     */
 }
 
-void HydrogenCamera::newText(ITextVectorProperty *tvp)
+void HydrogenCamera::newText(HYDROGEN::PropertyViewText *tvp)
 {
     const std::string name = tvp->name;
-    DLOG_F(INFO, "{} Received Text: {} = {}", getDeviceName(), name, tvp->tp->text);
+    DLOG_F(INFO, "{} Received Text: {} = {}", GetName(), name, tvp->tp->text);
 
     if (name == hydrogen_camera_cmd + "CFA")
     {
@@ -527,28 +611,28 @@ void HydrogenCamera::newText(ITextVectorProperty *tvp)
         cfa_type_prop.reset(IUFindText(tvp, "CFA_TYPE"));
         if (cfa_type_prop && cfa_type_prop->text && *cfa_type_prop->text)
         {
-            DLOG_F(INFO, "{} CFA_TYPE is {}", getDeviceName(), cfa_type_prop->text);
+            DLOG_F(INFO, "{} CFA_TYPE is {}", GetName(), cfa_type_prop->text);
             is_color = true;
-            setProperty("is_color", true);
+            SetVariable("is_color", true);
         }
         else
         {
-            setProperty("is_color", false);
+            SetVariable("is_color", false);
         }
     }
     else if (name == "DEVICE_PORT")
     {
         camera_prop.reset(tvp);
         hydrogen_camera_port = tvp->tp->text;
-        setProperty("port", hydrogen_camera_port);
-        DLOG_F(INFO, "Current device port of {} is {}", getDeviceName(), camera_prop->tp->text);
+        SetVariable("port", hydrogen_camera_port);
+        DLOG_F(INFO, "Current device port of {} is {}", GetName(), camera_prop->tp->text);
     }
     else if (name == "DRIVER_INFO")
     {
         hydrogen_camera_exec = IUFindText(tvp, "DRIVER_EXEC")->text;
         hydrogen_camera_version = IUFindText(tvp, "DRIVER_VERSION")->text;
         hydrogen_camera_interface = IUFindText(tvp, "DRIVER_INTERFACE")->text;
-        DLOG_F(INFO, "Camera Name : {} connected exec {}", getDeviceName(), getDeviceName(), hydrogen_camera_exec);
+        DLOG_F(INFO, "Camera Name : {} connected exec {}", GetName(), GetName(), hydrogen_camera_exec);
     }
     else if (name == "ACTIVE_DEVICES")
     {
@@ -556,81 +640,30 @@ void HydrogenCamera::newText(ITextVectorProperty *tvp)
     }
 }
 
-void HydrogenCamera::newBLOB(IBLOB *bp)
+void HydrogenCamera::newBLOB(HYDROGEN::PropertyViewBlob *bp)
 {
     // we go here every time a new blob is available
     // this is normally the image from the camera
 
-    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", getDeviceName(), bp->name, bp->bloblen, bp->size);
+    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", GetName(), bp->name);
 
     if (exposure_prop)
     {
         if (bp->name == hydrogen_blob_name.c_str())
         {
-            // updateLastFrame(bp);
+            has_blob = 1;
+            // set option to receive blob and messages for the selected CCD
+            setBLOBMode(B_ALSO, GetName().c_str(), hydrogen_blob_name.c_str());
+
+#ifdef HYDROGEN_SHARED_BLOB_SUPPORT
+            // Allow faster mode provided we don't modify the blob content or free/realloc it
+            enableDirectBlobAccess(GetName().c_str(), hydrogen_blob_name.c_str());
+#endif
         }
     }
     else if (video_prop)
     {
     }
-}
-
-void HydrogenCamera::newProperty(HYDROGEN::Property *property)
-{
-    std::string PropName(property->getName());
-    HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
-
-    // DLOG_F(INFO,"{} Property: {}", getDeviceName(), property->getName());
-
-    if (Proptype == HYDROGEN_BLOB)
-    {
-
-        if (PropName == hydrogen_blob_name.c_str())
-        {
-            has_blob = 1;
-            // set option to receive blob and messages for the selected CCD
-            setBLOBMode(B_ALSO, getDeviceName().c_str(), hydrogen_blob_name.c_str());
-
-#ifdef HYDROGEN_SHARED_BLOB_SUPPORT
-            // Allow faster mode provided we don't modify the blob content or free/realloc it
-            enableDirectBlobAccess(getDeviceName().c_str(), hydrogen_blob_name.c_str());
-#endif
-        }
-    }
-    else if (Proptype == HYDROGEN_NUMBER)
-    {
-        newNumber(property->getNumber());
-    }
-    else if (Proptype == HYDROGEN_SWITCH)
-    {
-        newSwitch(property->getSwitch());
-    }
-    else if (Proptype == HYDROGEN_TEXT)
-    {
-        newText(property->getText());
-    }
-}
-
-void HydrogenCamera::IndiServerConnected()
-{
-    DLOG_F(INFO, "{} connection succeeded", getDeviceName());
-    is_connected = true;
-}
-
-void HydrogenCamera::IndiServerDisconnected(int exit_code)
-{
-    DLOG_F(INFO, "{}: serverDisconnected", getDeviceName());
-    // after disconnection we reset the connection status and the properties pointers
-    ClearStatus();
-    // in case the connection lost we must reset the client socket
-    if (exit_code == -1)
-        DLOG_F(INFO, "{} : Hydorgen server disconnected", getDeviceName());
-}
-
-void HydrogenCamera::removeDevice(HYDROGEN::BaseDevice *dp)
-{
-    ClearStatus();
-    DLOG_F(INFO, "{} disconnected", getDeviceName());
 }
 
 void HydrogenCamera::ClearStatus()
@@ -643,7 +676,6 @@ void HydrogenCamera::ClearStatus()
     binning_prop = nullptr;
     video_prop = nullptr;
     camera_prop = nullptr;
-    camera_device = nullptr;
     debug_prop = nullptr;
     polling_prop = nullptr;
     active_device_prop = nullptr;

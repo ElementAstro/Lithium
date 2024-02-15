@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
-project(lithium-driver-hydrogen-client C CXX)
+project(atom-hydrogen C CXX)
+
+include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen_core)
+include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen_core/base)
+include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen_core/property)
+include_directories(${CMAKE_SOURCE_DIR}/modules/hydrogen_core/util)
 
 list(APPEND ${PROJECT_NAME}_SOURCES
-    hydrogenbasic.cpp
     hydrogencamera.cpp
-    hydrogenclient.cpp
     hydrogendome.cpp
     hydrogenfilterwheel.cpp
     hydrogenfocuser.cpp
@@ -13,10 +16,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    hydrogenbasic.hpp   
     hydrogencamera.hpp
-    hydrogenclient.hpp
-    hydrogendevice.hpp
+    hydrogenbasic.hpp
     hydrogendome.hpp
     hydrogenfilterwheel.hpp
     hydrogenfocuser.hpp

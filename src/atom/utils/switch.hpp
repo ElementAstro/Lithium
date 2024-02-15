@@ -24,7 +24,7 @@ Description: Smart Switch just like javascript
 #include <unordered_map>
 #endif
 
-#include "exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::Utils
 {
@@ -98,7 +98,7 @@ namespace Atom::Utils
     {
         if (cases_.find(str) != cases_.end())
         {
-            throw Exception::ObjectAlreadyExist_Error("Case already registered");
+            throw Error::ObjectAlreadyExist("Case already registered");
         }
         cases_[str] = func;
     }

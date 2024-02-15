@@ -25,7 +25,7 @@ Description: A simple but useful async worker manager
 #include <algorithm>
 #include <type_traits>
 
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::Async
 {

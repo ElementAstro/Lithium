@@ -61,6 +61,11 @@ bool Solver::reconnect(const json &params)
     return true;
 }
 
+bool Solver::isConnected()
+{
+    return true;
+}
+
 bool Solver::_solveImage(const json &params)
 {
     GET_PARAM(std::string, image)

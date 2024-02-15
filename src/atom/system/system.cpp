@@ -18,6 +18,8 @@ Description: System
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -49,14 +51,14 @@ Description: System
 #endif
 
 #include "atom/log/loguru.hpp"
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::System
 {
     bool CheckSoftwareInstalled(const std::string &software_name)
     {
         bool is_installed = false;
-#if defined(_WIN32)
+#ifdef _WIN32
         HKEY hKey;
         std::string regPath = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
         if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS)
@@ -116,7 +118,7 @@ namespace Atom::System
 
     bool checkExecutableFile(const std::string &fileName, const std::string &fileExt)
     {
-#if defined(_WIN32)
+#ifdef _WIN32
         fs::path filePath = fileName + fileExt;
 #else
         fs::path filePath = fileName;
@@ -130,7 +132,7 @@ namespace Atom::System
             return false;
         }
 
-#if defined(_WIN32)
+#ifdef _WIN32
         if (!fs::is_regular_file(filePath) || !(GetFileAttributesA(filePath.generic_string().c_str()) & FILE_ATTRIBUTE_DIRECTORY))
         {
             DLOG_F(WARNING, "The file '%s' is not a regular file or is not executable.", filePath.string().c_str());

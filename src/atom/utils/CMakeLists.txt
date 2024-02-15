@@ -20,6 +20,7 @@ set(${PROJECT_NAME}_SOURCES
     stopwatcher.cpp
     time.cpp
     uuid.cpp
+    xml.cpp
 )
 
 # Headers
@@ -35,6 +36,7 @@ set(${PROJECT_NAME}_HEADERS
     switch.hpp
     time.hpp
     uuid.hpp
+    xml.hpp
 )
 
 # Private Headers
@@ -45,7 +47,7 @@ set(${PROJECT_NAME}_PRIVATE_HEADERS
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
 set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-target_link_libraries(${PROJECT_NAME}_OBJECT loguru)
+target_link_libraries(${PROJECT_NAME}_OBJECT loguru tinyxml2)
 
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC

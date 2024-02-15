@@ -260,7 +260,7 @@ namespace Atom::Utils
                 input >> f.denominator;
                 if (f.denominator == 0)
                 {
-                    throw Exception::WrongArgument_Error("Got 0 in the denominator of Math::Fraction object!");
+                    throw Exception::WrongArgument("Got 0 in the denominator of Math::Fraction object!");
                 }
                 if (f.denominator < 0)
                 {

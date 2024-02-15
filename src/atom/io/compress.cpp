@@ -38,7 +38,7 @@ Description: Compressor using ZLib
 #endif
 
 #include "atom/log/loguru.hpp"
-#include "atom/io/libzippp.h"
+#include "libzippp/libzippp.h"
 #include "atom/type/json.hpp"
 
 using json = nlohmann::json;

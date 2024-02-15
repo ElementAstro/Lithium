@@ -12,15 +12,14 @@ Description: Hydrogen Focuser
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_HYDROGEN_FOCUSER_HPP
+#define ATOM_HYDROGEN_FOCUSER_HPP
 
-#include "hydrogendevice.hpp"
-#include "core/focuser.hpp"
+#include "atom/driver/focuser.hpp"
+#include "hydrogenbasic.hpp"
+#include "atom/utils/switch.hpp"
 
-template <typename... Args>
-class StringSwitch;
-
-class HydrogenFocuser : public Focuser, public LithiumIndiClient
+class HydrogenFocuser : public Focuser, public HYDROGEN::BaseClient
 {
 
 public:
@@ -157,37 +156,38 @@ protected:
     void ClearStatus();
 
 protected:
-    void newDevice(HYDROGEN::BaseDevice *dp) override;
-    void removeDevice(HYDROGEN::BaseDevice *dp) override;
-    void newProperty(HYDROGEN::Property *property) override;
-    void removeProperty(HYDROGEN::Property *property) override {}
-    void newBLOB(IBLOB *bp) override;
-    void newSwitch(ISwitchVectorProperty *svp) override;
-    void newNumber(INumberVectorProperty *nvp) override;
-    void newMessage(HYDROGEN::BaseDevice *dp, int messageID) override;
-    void newText(ITextVectorProperty *tvp) override;
-    void newLight(ILightVectorProperty *lvp) override {}
-    void IndiServerConnected() override;
-    void IndiServerDisconnected(int exit_code) override;
+    void newDevice(HYDROGEN::BaseDevice dp) override;
+    void removeDevice(HYDROGEN::BaseDevice dp) override;
+    void newProperty(HYDROGEN::Property property) override;
+    void updateProperty(HYDROGEN::Property property) override;
+    void removeProperty(HYDROGEN::Property property) override {}
+    void newMessage(HYDROGEN::BaseDevice dp, int messageID) override;
+    void serverConnected() override;
+    void serverDisconnected(int exit_code) override;
+
+    void newSwitch(HYDROGEN::PropertyViewSwitch *svp);
+    void newNumber(HYDROGEN::PropertyViewNumber *nvp);
+    void newText(HYDROGEN::PropertyViewText *tvp);
+    void newBLOB(HYDROGEN::PropertyViewBlob *bp);
 
 private:
     // Hydrogen 客户端参数
-    std::shared_ptr<ISwitchVectorProperty> m_connection_prop;        // 连接属性指针
-    std::shared_ptr<ISwitchVectorProperty> m_mode_prop;              // 焦距器模式（绝对或相对）属性指针
-    std::shared_ptr<ISwitchVectorProperty> m_motion_prop;            // 焦距器运动方向（向内或向外）属性指针
-    std::shared_ptr<INumberVectorProperty> m_speed_prop;             // 焦距器速度属性指针，默认为 1
-    std::shared_ptr<INumberVectorProperty> m_absolute_position_prop; // 焦距器绝对位置属性指针
-    std::shared_ptr<INumberVectorProperty> m_relative_position_prop; // 焦距器相对位置属性指针
-    std::shared_ptr<INumberVectorProperty> m_max_position_prop;      // 焦距器最大位置属性指针
-    std::shared_ptr<INumberVectorProperty> m_temperature_prop;       // 焦距器温度属性指针
-    std::shared_ptr<ISwitchVectorProperty> m_rate_prop;              // 焦距器速率属性指针
-    std::shared_ptr<INumberVectorProperty> m_delay_prop;             // 焦距器延迟属性指针
-    std::shared_ptr<ISwitchVectorProperty> m_backlash_prop;          // 焦距器反向间隙属性指针
-    std::shared_ptr<INumberVectorProperty> m_focuserinfo_prop;       // 焦距器用户信息属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_connection_prop;        // 连接属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_mode_prop;              // 焦距器模式（绝对或相对）属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_motion_prop;            // 焦距器运动方向（向内或向外）属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_speed_prop;             // 焦距器速度属性指针，默认为 1
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_absolute_position_prop; // 焦距器绝对位置属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_relative_position_prop; // 焦距器相对位置属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_max_position_prop;      // 焦距器最大位置属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_temperature_prop;       // 焦距器温度属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_rate_prop;              // 焦距器速率属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_delay_prop;             // 焦距器延迟属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_backlash_prop;          // 焦距器反向间隙属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_focuserinfo_prop;       // 焦距器用户信息属性指针
     INumber *m_hydrogen_max_position;                                    // 焦距器 hydrogen 最大位置属性指针
     INumber *m_hydrogen_focuser_temperature;                             // 焦距器 hydrogen 温度属性指针
-    std::shared_ptr<ITextVectorProperty> focuser_port;                             // 焦距器端口属性指针
-    HYDROGEN::BaseDevice *focuser_device;                          // 焦距器设备指针
+    std::shared_ptr<HYDROGEN::PropertyViewText> focuser_port;                             // 焦距器端口属性指针
+    HYDROGEN::BaseDevice focuser_device;                          // 焦距器设备指针
 
     std::atomic_bool is_ready; // 是否就绪
     std::atomic_bool has_blob; // 是否有 BLOB 数据
@@ -214,7 +214,9 @@ private:
     std::string hydrogen_focuser_version = "";   // Hydrogen 设备固件版本
     std::string hydrogen_focuser_interface = ""; // Hydrogen 接口版本
 
-    std::unique_ptr<StringSwitch<INumberVectorProperty *>> m_number_switch;
-    std::unique_ptr<StringSwitch<ISwitchVectorProperty *>> m_switch_switch;
-    std::unique_ptr<StringSwitch<ITextVectorProperty *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
 };
+
+#endif

@@ -16,6 +16,7 @@ Description: Tick Sheduler, just like Minecraft's
 
 #include "atom/server/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/utils/stopwatcher.hpp"
 
 namespace Lithium
 {
@@ -29,7 +30,7 @@ namespace Lithium
                                       { this->taskSchedulerLoop(); });
 #endif
         pool = GetPtr<TaskPool>("lithium.task.pool");
-        stopwatch = std::make_unique<Atom::Utils::Stopwatcher>();
+        stopwatch = std::make_unique<Atom::Utils::StopWatcher>();
     }
 
     TickScheduler::~TickScheduler()
@@ -45,7 +46,7 @@ namespace Lithium
     bool TickScheduler::cancelTask(std::size_t taskId)
     {
         std::lock_guard<std::mutex> lock(tasksMutex);
-        auto it = std::find_if(tasks.begin(), tasks.end(), [taskId](const std::shared_ptr<Task> &task)
+        auto it = std::find_if(tasks.begin(), tasks.end(), [taskId](const std::shared_ptr<TickTask> &task)
                                { return task->id == taskId; });
         if (it != tasks.end())
         {
@@ -60,7 +61,7 @@ namespace Lithium
         std::lock_guard<std::mutex> lock(tasksMutex);
         if (taskId.has_value())
         {
-            auto it = std::find_if(tasks.begin(), tasks.end(), [id = *taskId](const std::shared_ptr<Task> &task)
+            auto it = std::find_if(tasks.begin(), tasks.end(), [id = *taskId](const std::shared_ptr<TickTask> &task)
                                    { return task->id == id; });
             if (it != tasks.end())
             {
@@ -102,22 +103,22 @@ namespace Lithium
         cv.notify_all();
     }
 
-    void setMaxConcurrentTasks(std::size_t max)
+    void TickScheduler::setMaxConcurrentTasks(std::size_t max)
     {
         maxTasks = max;
     }
 
-    void setTickLength(std::chrono::milliseconds tickLength)
+    void TickScheduler::setTickLength(std::chrono::milliseconds tickLength)
     {
         this->tickLength = tickLength.count();
     }
 
-    void setTickLength(unsigned long long tickLength)
+    void TickScheduler::setTickLength(unsigned long long tickLength)
     {
         this->tickLength = tickLength;
     }
 
-    int getTickLength() const
+    int TickScheduler::getTickLength() const
     {
         return tickLength.load();
     }

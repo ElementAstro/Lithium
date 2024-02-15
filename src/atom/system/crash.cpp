@@ -44,7 +44,7 @@ Description: Crash Report
 #include "atom/log/loguru.hpp"
 
 #include "atom/utils/string.hpp"
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::System
 {

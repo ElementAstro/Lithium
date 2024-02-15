@@ -30,7 +30,7 @@ namespace Atom::Async
     {
         if (!task_.valid())
         {
-            throw Utils::Exception::InvalidArgument_Error("Task is not valid");
+            throw Utils::Exception::InvalidArgument("Task is not valid");
         }
         return task_.get();
     }

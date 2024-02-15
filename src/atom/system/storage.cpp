@@ -18,6 +18,7 @@ Description: Storage Monitor
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <dbt.h>
 #elif __linux__
 #include <sys/statvfs.h>
 #include <unistd.h>
@@ -45,8 +46,9 @@ namespace Atom::System
         {
             m_isRunning = true;
             DLOG_F(INFO, "Storage monitor started.");
+#if ENABLE_DEBUG
             listAllStorage();
-
+#endif
             while (m_isRunning)
             {
                 for (const auto &path : m_storagePaths)
@@ -54,7 +56,9 @@ namespace Atom::System
                     if (isNewMediaInserted(path))
                     {
                         DLOG_F(INFO, "New storage media inserted. Path: {}", path);
+#if ENABLE_DEBUG
                         listFiles(path);
+#endif
                         triggerCallbacks(path);
                     }
                 }
@@ -106,7 +110,7 @@ namespace Atom::System
         return false;
     }
 
-#ifdef DEBUG
+#if ENABLE_DEBUG
     void StorageMonitor::listAllStorage()
     {
         DLOG_F(INFO, "List all storage devices.");
@@ -165,7 +169,7 @@ void monitorUdisk()
             if (hdr != nullptr && hdr->dbch_devicetype == DBT_DEVTYP_VOLUME)
             {
                 PDEV_BROADCAST_VOLUME volume = reinterpret_cast<PDEV_BROADCAST_VOLUME>(hdr);
-                if (volume->dbcv_flags == DBTF_MEDIAINSERTED)
+                if (volume->dbcv_flags == DBT_DEVICEARRIVAL)
                 {
                     char driveLetter = 'A';
                     DWORD mask = volume->dbcv_unitmask;
@@ -181,7 +185,7 @@ void monitorUdisk()
                         ++driveLetter;
                     }
                 }
-                else if (volume->dbcv_flags == DBTF_MEDIAREMOVED)
+                else if (volume->dbcv_flags == DBT_DEVICEREMOVECOMPLETE)
                 {
                     char driveLetter = 'A';
                     DWORD mask = volume->dbcv_unitmask;

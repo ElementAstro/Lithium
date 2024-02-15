@@ -86,38 +86,6 @@ SharedComponent::~SharedComponent()
 
 bool SharedComponent::Initialize()
 {
-    // Initialize message handlers
-    m_handleVoid->registerCase("getAllConfig", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getAllConfig", this->getJsonConfig()); });
-
-    m_handleParams->registerCase("getConfig", [this](const std::shared_ptr<ParamsMessage> &message)
-                                 { 
-                                Args args = message->value();
-                                if (args.size() < 1)
-                                {
-                                    this->SendTextMessage("getConfig", "Invalid arguments.");
-                                    return;
-                                }
-                                GET_ARGUMENT_S("getConfig", std::string, section);
-                                GET_ARGUMENT_S("getConfig", std::string, key);
-                                GET_ARGUMENT_S("getConfig", std::string, type);
-
-                                if (type == "text")
-                                {
-                                    this->SendTextMessage("getConfig", this->getConfig<std::string>(section, key).value());
-                                }
-                                else if (type == "number")
-                                {
-                                    this->SendNumberMessage("getConfig", this->getConfig<int>(section, key).value());
-                                }
-                                else if (type == "boolean")
-                                {
-                                    this->SendBooleanMessage("getConfig", this->getConfig<bool>(section, key).value());
-                                }
-                                else
-                                {
-                                    this->SendTextMessage("getConfig", "Invalid type:" + type);
-                                }; });
     return true;
 }
 

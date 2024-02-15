@@ -50,7 +50,7 @@ namespace Lithium
         std::function<void()> func;                                             // 任务函数
         int priority;                                                           // 任务优先级
         unsigned long long tick;                                                // 任务执行的计划刻
-        std::vector<std::shared_ptr<Task>> dependencies;                        // 任务依赖
+        std::vector<std::shared_ptr<TickTask>> dependencies;                        // 任务依赖
         std::function<void()> onCompletion;                                     // 任务完成时的回调函数
         std::atomic<bool> isRunning = false;                                    // 任务是否正在执行
         std::atomic_bool completed = false;                                     // 任务是否已完成
@@ -114,14 +114,14 @@ namespace Lithium
         template <typename F, typename... Args>
         auto scheduleTask(unsigned long long tick, bool relative, unsigned retryCount, std::chrono::milliseconds retryInterval,
                           std::optional<std::size_t> afterTaskId, std::optional<unsigned long long> delay,
-                          std::optional<std::size_t> timeout, F &&f, Args &&...args) -> std::shared_ptr<Task>
+                          std::optional<std::size_t> timeout, F &&f, Args &&...args) -> std::shared_ptr<TickTask>
         {
             static_assert(std::is_invocable_r_v<void, F, Args...>, "Task function must return void");
 
             auto effectiveTick = relative ? currentTick.load() + tick : tick;
             if (afterTaskId.has_value())
             {
-                auto it = std::find_if(tasks.begin(), tasks.end(), [id = *afterTaskId](const std::shared_ptr<Task> &task)
+                auto it = std::find_if(tasks.begin(), tasks.end(), [id = *afterTaskId](const std::shared_ptr<TickTask> &task)
                                        { return task->id == id; });
                 if (it != tasks.end())
                 {
@@ -150,13 +150,12 @@ namespace Lithium
                     }
                     else
                     {
-                        std::cerr << "Task failed after all retries\n";
                     }
                 }
             };
 
-            std::vector<std::shared_ptr<Task>> task_dependencies;
-            auto task = std::make_shared<Task>(taskFunc, effectiveTick, task_dependencies, nullptr);
+            std::vector<std::shared_ptr<TickTask>> task_dependencies;
+            auto task = std::make_shared<TickTask>(taskFunc, effectiveTick, task_dependencies, nullptr);
             task->id = nextTaskId++;
             task->retryCount = retryCount;
             task->retryInterval = retryInterval;
@@ -189,7 +188,7 @@ namespace Lithium
                 std::lock_guard<std::mutex> lock(tasksMutex);
                 if (afterTaskId.has_value())
                 {
-                    tasks.insert(std::find_if(tasks.begin(), tasks.end(), [id = *afterTaskId](const std::shared_ptr<Task> &task)
+                    tasks.insert(std::find_if(tasks.begin(), tasks.end(), [id = *afterTaskId](const std::shared_ptr<TickTask> &task)
                                               { return task->id == id; }),
                                  task);
                 }
@@ -290,6 +289,7 @@ namespace Lithium
         std::mutex tasksMutex;                        // 任务队列的互斥锁
         std::condition_variable cv;                   // 条件变量，用于暂停和恢复任务调度器的执行
         std::atomic<unsigned long long> currentTick;  // 当前的计划刻
+        std::atomic_int tickLength;                   // 每个刻长的毫秒数
         std::atomic_bool stop;                        // 停止任务调度器的标志
         std::atomic_bool isPaused;                    // 暂停任务调度器的标志
 #if __cplusplus >= 202002L
@@ -299,7 +299,7 @@ namespace Lithium
 #endif
         std::atomic_bool manualMode{false};     // 手动模式
         std::atomic<std::size_t> nextTaskId{0}; // 用于生成任务的唯一标识符
-        std::unique_ptr<Atom::Utils::Stopwatcher> stopwatch;
+        std::unique_ptr<Atom::Utils::StopWatcher> stopwatch;
         std::atomic<std::size_t> concurrentTasks{0}; // 当前正在运行的任务数
         std::size_t maxTasks{0};                     // 最大同时运行的任务数，0 表示没有限制
 

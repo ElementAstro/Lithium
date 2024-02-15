@@ -10,3 +10,4 @@ cmake_minimum_required(VERSION 3.20)
 project(atom-driver-interface C CXX)
 
 add_subdirectory(solver)
+add_subdirectory(client)

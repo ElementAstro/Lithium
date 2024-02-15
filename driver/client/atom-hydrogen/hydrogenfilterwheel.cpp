@@ -14,8 +14,6 @@ Description: Hydrogen Filterwheel
 
 #include "hydrogenfilterwheel.hpp"
 
-#include "atom/utils/switch.hpp"
-
 #include "config.h"
 
 #include "atom/log/loguru.hpp"
@@ -24,30 +22,30 @@ HydrogenFilterwheel::HydrogenFilterwheel(const std::string &name) : Filterwheel(
 {
     DLOG_F(INFO, "Hydrogen filterwheel {} init successfully", name);
 
-    m_number_switch = std::make_unique<StringSwitch<INumberVectorProperty *>>();
-    m_switch_switch = std::make_unique<StringSwitch<ISwitchVectorProperty *>>();
-    m_text_switch = std::make_unique<StringSwitch<ITextVectorProperty *>>();
+    m_number_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
+    m_switch_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
+    m_text_switch = std::make_unique<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
 
-    m_switch_switch->registerCase("CONNECTION", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase("CONNECTION", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   {
         m_connection_prop.reset(svp);
         if (auto connectswitch = IUFindSwitch(svp, "CONNECT"); connectswitch->s == ISS_ON)
         {
-            setProperty("connect", true);
+            SetVariable("connect", true);
             is_connected.store(true);
-            DLOG_F(INFO, "{} is connected", getDeviceName());
+            DLOG_F(INFO, "{} is connected", GetName());
         }
         else
         {
             if (is_ready.load())
             {
-                setProperty("connect", false);
+                SetVariable("connect", false);
                 is_connected.store(true);
-                DLOG_F(INFO, "{} is disconnected", getDeviceName());
+                DLOG_F(INFO, "{} is disconnected", GetName());
             }
         } });
 
-    m_switch_switch->registerCase("DEVICE_BAUD_RATE", [this](ISwitchVectorProperty *svp)
+    m_switch_switch->registerCase("DEVICE_BAUD_RATE", [this](HYDROGEN::PropertyViewSwitch *svp)
                                   {
         std::string const baud_9600{"9600"};
         std::string const baud_19200{"19200"};
@@ -69,21 +67,21 @@ HydrogenFilterwheel::HydrogenFilterwheel(const std::string &name) : Filterwheel(
         else if (IUFindSwitch(svp, "230400")->s == ISS_ON)
             hydrogen_filter_rate = baud_230400;
 
-        DLOG_F(INFO, "{} baud rate : {}", getDeviceName(), hydrogen_filter_rate); });
+        DLOG_F(INFO, "{} baud rate : {}", GetName(), hydrogen_filter_rate); });
 
-    m_text_switch->registerCase("DEVICE_PORT", [this](ITextVectorProperty *tvp)
+    m_text_switch->registerCase("DEVICE_PORT", [this](HYDROGEN::PropertyViewText *tvp)
                                 {
                                     filter_prop.reset(tvp);
                                     hydrogen_filter_port = tvp->tp->text;
-                                    setProperty("port", hydrogen_filter_port);
-                                    DLOG_F(INFO, "Current device port of {} is {}", getDeviceName(), filter_prop->tp->text); });
+                                    SetVariable("port", hydrogen_filter_port);
+                                    DLOG_F(INFO, "Current device port of {} is {}", GetName(), filter_prop->tp->text); });
 
-    m_text_switch->registerCase("DRIVER_INFO", [this](ITextVectorProperty *tvp)
+    m_text_switch->registerCase("DRIVER_INFO", [this](HYDROGEN::PropertyViewText *tvp)
                                 {
         hydrogen_filter_exec = IUFindText(tvp, "DRIVER_EXEC")->text;
         hydrogen_filter_version = IUFindText(tvp, "DRIVER_VERSION")->text;
         hydrogen_filter_interface = IUFindText(tvp, "DRIVER_INTERFACE")->text;
-        DLOG_F(INFO, "Filterwheel Name : {} connected exec {}", getDeviceName(), getDeviceName(), hydrogen_filter_exec); });
+        DLOG_F(INFO, "Filterwheel Name : {} connected exec {}", GetName(), GetName(), hydrogen_filter_exec); });
 }
 
 HydrogenFilterwheel::~HydrogenFilterwheel()
@@ -102,7 +100,7 @@ bool HydrogenFilterwheel::connect(const json &params)
     // Connect to server.
     if (connectServer())
     {
-        DLOG_F(INFO, "{}: connectServer done ready", getDeviceName());
+        DLOG_F(INFO, "{}: connectServer done ready", GetName());
         connectDevice(name.c_str());
         return !is_ready.load();
     }
@@ -111,7 +109,7 @@ bool HydrogenFilterwheel::connect(const json &params)
 
 bool HydrogenFilterwheel::disconnect(const json &params)
 {
-    DLOG_F(INFO, "%s is disconnected", getDeviceName());
+    DLOG_F(INFO, "%s is disconnected", GetName());
     return true;
 }
 
@@ -135,22 +133,40 @@ bool HydrogenFilterwheel::getCurrentPosition(const json &params)
     return true;
 }
 
-void HydrogenFilterwheel::newDevice(HYDROGEN::BaseDevice *dp)
+void HydrogenFilterwheel::newDevice(HYDROGEN::BaseDevice dp)
 {
-    if (strcmp(dp->getDeviceName(), getDeviceName().c_str()) == 0)
+    if (strcmp(dp.getDeviceName(), GetName().c_str()) == 0)
     {
         filter_device = dp;
     }
 }
 
-void HydrogenFilterwheel::newSwitch(ISwitchVectorProperty *svp)
+void HydrogenFilterwheel::removeDevice(HYDROGEN::BaseDevice dp)
+{
+    ClearStatus();
+    DLOG_F(INFO, "{} disconnected", GetName());
+}
+
+void HydrogenFilterwheel::newSwitch(HYDROGEN::PropertyViewSwitch *svp)
 {
     m_switch_switch->match(svp->name, svp);
 }
 
-void HydrogenFilterwheel::newMessage(HYDROGEN::BaseDevice *dp, int messageID)
+void HydrogenFilterwheel::newMessage(HYDROGEN::BaseDevice dp, int messageID)
 {
-    DLOG_F(INFO, "{} Received message: {}", getDeviceName(), dp->messageQueue(messageID));
+    DLOG_F(INFO, "{} Received message: {}", GetName(), dp.messageQueue(messageID));
+}
+
+void HydrogenFilterwheel::serverConnected()
+{
+    DLOG_F(INFO, "{} Connected to server", GetName());
+}
+
+void HydrogenFilterwheel::serverDisconnected(int exit_code)
+{
+    DLOG_F(INFO, "{} Disconnected from server", GetName());
+
+    ClearStatus();
 }
 
 inline static const char *StateStr(IPState st)
@@ -169,63 +185,57 @@ inline static const char *StateStr(IPState st)
     }
 }
 
-void HydrogenFilterwheel::newNumber(INumberVectorProperty *nvp)
+void HydrogenFilterwheel::newNumber(HYDROGEN::PropertyViewNumber *nvp)
 {
     m_number_switch->match(nvp->name, nvp);
 }
 
-void HydrogenFilterwheel::newText(ITextVectorProperty *tvp)
+void HydrogenFilterwheel::newText(HYDROGEN::PropertyViewText *tvp)
 {
     m_text_switch->match(tvp->name, tvp);
 }
 
-void HydrogenFilterwheel::newBLOB(IBLOB *bp)
+void HydrogenFilterwheel::newBLOB(HYDROGEN::PropertyViewBlob *bp)
 {
-    DLOG_F(INFO, "{} Received BLOB {} len = {} size = {}", getDeviceName(), bp->name, bp->bloblen, bp->size);
+    DLOG_F(INFO, "{} Received BLOB {}", GetName(), bp->name);
 }
 
-void HydrogenFilterwheel::newProperty(HYDROGEN::Property *property)
+void HydrogenFilterwheel::newProperty(HYDROGEN::Property property)
 {
-    std::string PropName(property->getName());
-    HYDROGEN_PROPERTY_TYPE Proptype = property->getType();
+    std::string PropName(property.getName());
+    HYDROGEN_PROPERTY_TYPE Proptype = property.getType();
 
-    // DLOG_F(INFO,"{} Property: {}", getDeviceName(), property->getName());
+    DLOG_F(INFO, "{} Property: {}", GetName(), property.getName());
 
-    if (Proptype == HYDROGEN_NUMBER)
+    switch (property.getType())
     {
-        newNumber(property->getNumber());
-    }
-    else if (Proptype == HYDROGEN_SWITCH)
+    case HYDROGEN_SWITCH:
     {
-        newSwitch(property->getSwitch());
+        auto svp = property.getSwitch();
+        DLOG_F(INFO, "{}: {}", GetName(), svp->name);
+        newSwitch(svp);
     }
-    else if (Proptype == HYDROGEN_TEXT)
+    break;
+    case HYDROGEN_NUMBER:
     {
-        newText(property->getText());
+        auto nvp = property.getNumber();
+        DLOG_F(INFO, "{}: {}", GetName(), nvp->name);
+        newNumber(nvp);
+    }
+    break;
+    case HYDROGEN_TEXT:
+    {
+        auto tvp = property.getText();
+        DLOG_F(INFO, "{}: {}", GetName(), tvp->name);
+        newText(tvp);
+    }
+    break;
+    default:
+        break;
     }
 }
 
-void HydrogenFilterwheel::IndiServerConnected()
-{
-    DLOG_F(INFO, "{} connection succeeded", getDeviceName());
-    is_connected = true;
-}
 
-void HydrogenFilterwheel::IndiServerDisconnected(int exit_code)
-{
-    DLOG_F(INFO, "{}: serverDisconnected", getDeviceName());
-    // after disconnection we reset the connection status and the properties pointers
-    ClearStatus();
-    // in case the connection lost we must reset the client socket
-    if (exit_code == -1)
-        DLOG_F(INFO, "{} : Hydrogen server disconnected", getDeviceName());
-}
-
-void HydrogenFilterwheel::removeDevice(HYDROGEN::BaseDevice *dp)
-{
-    ClearStatus();
-    DLOG_F(INFO, "{} disconnected", getDeviceName());
-}
 
 void HydrogenFilterwheel::ClearStatus()
 {

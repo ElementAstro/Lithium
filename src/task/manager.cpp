@@ -81,7 +81,7 @@ namespace Lithium
             if (auto task = m_TaskContainer->getTask(task_type); task.has_value())
             {
                 json t_params = params["params"];
-                auto handle = m_TickScheduler->scheduleTask(1, task.value()->m_function, t_params);
+                auto handle = m_TickScheduler->scheduleTask(1, false, 1, std::chrono::milliseconds(0), std::nullopt, std::nullopt, std::nullopt, task.value()->m_function, t_params);
 
                 if (params.contains("callbacks"))
                 {
@@ -111,7 +111,7 @@ namespace Lithium
                             int tick = timer["delay"];
                             if (auto tt_task = m_TaskContainer->getTask(name); tt_task.has_value())
                             {
-                                m_TickScheduler->scheduleTask(tick, tt_task.value()->m_function, timer["params"]);
+                                m_TickScheduler->scheduleTask(tick, false, 1, std::chrono::milliseconds(0), std::nullopt, std::nullopt, std::nullopt, tt_task.value()->m_function, timer["params"]);
                             }
                         }
                     }

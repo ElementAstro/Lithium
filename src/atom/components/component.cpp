@@ -15,8 +15,10 @@ Description: Basic Component Definition
 #include "component.hpp"
 
 #include <fstream>
+#include <filesystem>
+namespace fs = std::filesystem;
 
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 #include "atom/utils/string.hpp"
 #include "atom/log/loguru.hpp"
 
@@ -91,7 +93,7 @@ json Component::getValue(const std::string &key_path) const
     try
     {
         const json *p = &m_config;
-        for (const auto &key : Atom::Utils::splitString(key_path, "/"))
+        for (const auto &key : Atom::Utils::splitString(key_path, '/'))
         {
             if (p->is_object() && p->contains(key))
             {
@@ -149,7 +151,7 @@ std::function<json(const json &)> Component::GetFunc(const std::string &name)
 {
     if (!m_CommandDispatcher->HasHandler(name))
     {
-        throw Atom::Utils::Exception::InvalidArgument_Error("Function not found");
+        throw Atom::Error::InvalidArgument("Function not found");
     }
     return m_CommandDispatcher->GetHandler(name);
 }

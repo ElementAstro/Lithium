@@ -24,8 +24,10 @@ Description: Basic Device Defination
 #include <typeinfo>
 #include <typeindex>
 
-AtomDriver::AtomDriver(const std::string &name) : SharedComponent(), m_name(name), m_uuid(Atom::Property::UUIDGenerator::generateUUIDWithFormat())
+AtomDriver::AtomDriver(const std::string &name) : SharedComponent(), m_name(name)
 {
+    Atom::Utils::UUIDGenerator generator;
+    m_uuid = generator.generateUUID();
     SetVariable("uuid", m_uuid);
     SetVariable("name", m_name);
 }

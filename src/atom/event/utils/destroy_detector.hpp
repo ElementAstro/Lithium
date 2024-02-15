@@ -69,7 +69,7 @@ namespace Atom::Event
     };
 
 #define DESTROY_DETECTOR_SETUP() \
-    kev::DestroyDetector::Checker __dd_check(this);
+    Atom::Event::DestroyDetector::Checker __dd_check(this);
 
 #define DESTROY_DETECTOR_CHECK(ret) \
     if (__dd_check.isDestroyed())   \

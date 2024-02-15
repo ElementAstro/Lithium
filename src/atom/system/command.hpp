@@ -49,7 +49,7 @@ namespace Atom::System
      *
      * @note The function throws a std::runtime_error if the command fails to execute.
      */
-    [[nodiscard]] std::string executeCommand(const std::string &command, bool openTerminal = false, std::function<void(const std::string &)> processLine = nullptr);
+    [[nodiscard]] std::string executeCommand(const std::string &command, bool openTerminal, std::function<void(const std::string &)> processLine);
 
     /**
      * @brief Execute a list of commands.

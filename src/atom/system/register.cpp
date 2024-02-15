@@ -313,7 +313,7 @@ void FindRegistryValue(HKEY hRootKey, const std::string &subKey, const std::stri
         {
             if (achValue == searchValue)
             {
-                LOG_F(INFO, "Found value: {}", achValue)
+                LOG_F(INFO, "Found value: {}", achValue);
             }
             cchValue = MAX_VALUE_NAME;
             dwDataSize = sizeof(lpData);
@@ -336,7 +336,6 @@ bool ExportRegistry(HKEY hRootKey, const std::string &subKey, const std::string 
     if (lRes != ERROR_SUCCESS)
     {
         LOG_F(ERROR, "Could not save key: {}", lRes);
-        std::cerr << "Could not save key: " << lRes << std::endl;
         return false;
     }
 

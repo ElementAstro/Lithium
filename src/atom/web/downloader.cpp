@@ -18,9 +18,9 @@ Description: Downloader
 #include <thread>
 #include <chrono>
 
-#include "atom/extra/httplib/httplib.h"
+#include "cpp_httplib/httplib.h"
 #include "atom/log/loguru.hpp"
-#include "atom/utils/exception.hpp"
+#include "atom/error/exception.hpp"
 
 namespace Atom::Web
 {
@@ -32,7 +32,7 @@ namespace Atom::Web
             if (!infile)
             {
                 LOG_F(ERROR, "Failed to open task file {}", task_file_);
-                throw Utils::Exception::FileNotWritable_Error("Failed to open task file.");
+                throw Error::FileNotWritable("Failed to open task file.");
             }
             while (infile >> std::ws && !infile.eof())
             {
@@ -48,7 +48,7 @@ namespace Atom::Web
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Error: {}", e.what());
-            throw Utils::Exception::FileUnknown_Error(fmt::format("Error: {}", e.what()).c_str());
+            throw Error::FileUnknown(fmt::format("Error: {}", e.what()).c_str());
         }
     }
 
@@ -65,7 +65,7 @@ namespace Atom::Web
             if (!outfile)
             {
                 LOG_F(ERROR, "Failed to open task file {}", task_file_);
-                throw Utils::Exception::FileNotWritable_Error("Failed to open task file.");
+                throw Error::FileNotWritable("Failed to open task file.");
             }
             outfile << url << " " << filepath << std::endl;
             outfile.close();
@@ -73,7 +73,7 @@ namespace Atom::Web
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Error: {}", e.what());
-            throw Utils::Exception::FileUnknown_Error(fmt::format("Error: {}", e.what()).c_str());
+            throw Error::FileUnknown(fmt::format("Error: {}", e.what()).c_str());
         }
         tasks_.push_back({url, filepath, false, false, 0, priority});
     }
@@ -288,7 +288,7 @@ namespace Atom::Web
         catch (const std::exception &e)
         {
             LOG_F(ERROR, "Error: {}", e.what());
-            throw Utils::Exception::FileUnknown_Error(fmt::format("Error: {}", e.what()).c_str());
+            throw Error::FileUnknown(fmt::format("Error: {}", e.what()).c_str());
         }
     }
 }

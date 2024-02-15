@@ -70,6 +70,9 @@ public:
     template <typename T>
     bool SetVariable(const std::string &name, T &&value);
 
+    template <typename T>
+    bool SetVariable(const std::string &name, T &value);
+
     /**
      * @brief 获取指定名称的变量值。
      * @tparam T 变量类型，需要与注册时相同。
@@ -121,7 +124,7 @@ public:
      * @brief 获取所有变量。
      * @return 所有变量的 map。
      */
-#ifdef ENALE_FASTHASH
+#if ENALE_FASTHASH
     emhash8::HashMap<std::string, std::any> GetAll() const;
 #else
     std::unordered_map<std::string, std::any> GetAll() const;
@@ -207,6 +210,23 @@ bool VariableRegistry::RegisterVariable(const std::string &name, T &&initialValu
 
 template <typename T>
 bool VariableRegistry::SetVariable(const std::string &name, T &&value)
+{
+    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (auto it = m_variables.find(name); it != m_variables.end())
+    {
+        if (auto setter = m_setters.find(name); setter != m_setters.end())
+        {
+            setter->second(std::forward<T>(value));
+        }
+        it->second = std::forward<T>(value);
+        NotifyObservers(name, value);
+        return true;
+    }
+    return false;
+}
+
+template <typename T>
+bool VariableRegistry::SetVariable(const std::string &name, T &value)
 {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     if (auto it = m_variables.find(name); it != m_variables.end())

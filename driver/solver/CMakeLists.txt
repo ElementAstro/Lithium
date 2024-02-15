@@ -10,3 +10,4 @@ cmake_minimum_required(VERSION 3.20)
 project(atom-solver C CXX)
 
 add_subdirectory(atom-astrometry)
+add_subdirectory(atom-astap)

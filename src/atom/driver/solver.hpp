@@ -31,7 +31,10 @@ struct SolveResult
     std::string dec;
     double fov_x = 0;
     double fov_y = 0;
+    double fov_avg = 0;
     double rotation = 0;
+
+    std::string error;
 };
 
 class Solver : public AtomDriver
@@ -46,7 +49,7 @@ public:
 
     virtual bool reconnect(const json &params) override;
 
-    virtual bool isConnected() const override;
+    virtual bool isConnected() override;
 
 public:
     virtual bool _solveImage(const json &params);

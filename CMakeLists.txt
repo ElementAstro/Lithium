@@ -219,8 +219,6 @@ add_subdirectory(${lithium_module_dir})
 include_directories(modules)
 add_subdirectory(modules)
 
-add_subdirectory(${lithium_client_dir})
-
 add_subdirectory(driver)
 
 add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
@@ -231,9 +229,7 @@ target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-o
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
-endif()
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 if(NOT HAS_STD_FORMAT)

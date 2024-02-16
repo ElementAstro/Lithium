@@ -636,7 +636,11 @@ namespace Atom::System
 #ifdef _WIN32
         ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, 0);
 #else
-        system("shutdown -h now");
+        int ret = system("shutdown -h now");
+        if  (ret == 0 || ret == 1 /* success */)
+        {
+            return true;
+        }
 #endif
         return true;
     }
@@ -647,7 +651,11 @@ namespace Atom::System
 #ifdef _WIN32
         ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
 #else
-        system("reboot");
+        int ret = system("reboot");
+        if  (ret == 0 || ret == 1 /* success */)
+        {
+            return true;
+        }
 #endif
         return true;
     }
@@ -893,7 +901,7 @@ namespace Atom::System
         if (pids.size() <= 1)
         {
             DLOG_F(INFO, "No duplicate {} process found", program_name);
-            return;
+            return true;
         }
 
         for (auto pid : pids)

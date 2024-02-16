@@ -19,7 +19,6 @@ endif()
 list(APPEND ${PROJECT_NAME}_SOURCES
     fifoclient.cpp
     fifoserver.cpp
-    shared_memory.cpp
     sockethub.cpp
     udp_server.cpp
 )

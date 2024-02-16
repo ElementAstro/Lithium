@@ -26,7 +26,7 @@ Description: XML to JSON conversion
 #include <fstream>
 #include <string>
 #include "atom/type/json.hpp"
-#include "atom/type/tinyxml2.h"
+#include "tinyxml2/tinyxml2.h"
 #include "atom/log/loguru.hpp"
 #include <argparse/argparse.hpp>
 

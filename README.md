@@ -79,7 +79,7 @@ pacman -S mingw-w64-x86_64-libnova
 ```shell
 sudo apt-get update && sudo apt-get upgrade -y
 sudo apt install gcc g++ cmake
-sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev
+sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libudev-dev libuv1-dev
 ```
 
 Alternatively, you can directly run the provided script according to your platform:

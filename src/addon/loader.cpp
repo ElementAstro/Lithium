@@ -188,7 +188,7 @@ namespace Lithium
 
             Dl_info dl_info;
             memset(&dl_info, 0, sizeof(Dl_info));
-            dladdr(info->dlpi_addr, &dl_info);
+            dladdr(reinterpret_cast<const void*>(info->dlpi_addr), &dl_info);
 
             ElfW(Ehdr)* elfHeader = reinterpret_cast<ElfW(Ehdr)*>(info->dlpi_addr);
             int numOfSymbols = elfHeader->e_shnum;
@@ -197,6 +197,8 @@ namespace Lithium
             char* strTable = nullptr;
             int strTableSize = 0;
 
+/*
+TODO: fix  this when we have a way to get the correct module base address from lldb
             for (int i = 0; i < numOfSymbols; ++i) {
                 ElfW(Shdr)* sectionHeader = reinterpret_cast<ElfW(Shdr)*>(info->dlpi_addr + elfHeader->e_shoff + i * elfHeader->e_shentsize);
                 if (sectionHeader->sh_type == SHT_DYNSYM) {
@@ -236,6 +238,8 @@ namespace Lithium
                     }
                 }
             }
+*/
+            
 
             if (symbolTable && symbolSection) {
                 int numOfSymbols = symbolSection->sh_size / sizeof(ElfW(Sym));
@@ -244,10 +248,10 @@ namespace Lithium
                     char* symName = &strTable[symbol->st_name];
 
                     if (ELF64_ST_TYPE(symbol->st_info) == STT_FUNC && symName[0] != '\0') {
-                        FunctionInfo func;
+                        std::unique_ptr<FunctionInfo> func = std::make_unique<FunctionInfo>();
                         func->name = symName;
                         func->address = reinterpret_cast<void*>(info->dlpi_addr + symbol->st_value);
-                        funcs->push_back(func);
+                        //funcs->push_back(std::move(func));
                         LOG_F(INFO, "Function: {}", symName);
                     }
                 }

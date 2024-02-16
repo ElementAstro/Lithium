@@ -113,9 +113,6 @@ namespace Atom::System
             }
         }
 #else // 非Windows平台
-        // 在非Windows平台下，可以捕获中断信号
-        signal(SIGINT, [](int)
-               { interrupted = true; });
 
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr && !interrupted)
         {
@@ -202,7 +199,11 @@ namespace Atom::System
 
     void killProcess(const ProcessHandle &handle)
     {
+#ifdef _WIN32
         if (!handle.handle)
+#else
+        if (!handle.pid)
+#endif
         {
             return;
         }

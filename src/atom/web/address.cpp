@@ -14,6 +14,11 @@ Description: Address class for IPv4, IPv6, and Unix domain sockets.
 
 #include "address.hpp"
 
+#include <cstring>
+#ifndef _WIN32
+#include <netdb.h>
+#endif
+
 namespace Atom::Web
 {
     Address::ptr Address::Create(const std::string &address, uint16_t port)
@@ -194,7 +199,7 @@ namespace Atom::Web
             }
             else if (family == AF_INET6 && ifa->ifa_addr->sa_family == AF_INET6)
             {
-                addr = Create(ifa->ifa_addr, sizeof(sockaddr_in6), false);
+                addr = Create(ifa->ifa_addr, sizeof(sockaddr_in6));
                 sockaddr_in6 *sai6 = (sockaddr_in6 *)ifa->ifa_addr;
                 prefix_len = CountBytes(sai6->sin6_addr.__in6_u.__u6_addr8);
             }

@@ -207,19 +207,19 @@ void monitorUdisk()
     UnregisterDeviceNotification(hDevNotify);
 }
 #else
-static void monitorUdisk(StorageMonitor &monitor)
+static void monitorUdisk(Atom::System::StorageMonitor &monitor)
 {
     struct udev *udev = udev_new();
     if (!udev)
     {
-        std::cerr << "Failed to create udev context" << std::endl;
+        LOG_F(ERROR, "Failed to initialize udev");
         return;
     }
 
     struct udev_monitor *udevMon = udev_monitor_new_from_netlink(udev, "udev");
     if (!udevMon)
     {
-        std::cerr << "Failed to create udev monitor" << std::endl;
+        LOG_F(ERROR, "Failed to create udev monitor");
         udev_unref(udev);
         return;
     }
@@ -237,7 +237,7 @@ static void monitorUdisk(StorageMonitor &monitor)
         int ret = select(fd + 1, &fds, nullptr, nullptr, nullptr);
         if (ret < 0)
         {
-            std::cerr << "Error in select function" << std::endl;
+            LOG_F(ERROR, "Select failed: {}", strerror(errno));
             break;
         }
         else if (ret > 0 && FD_ISSET(fd, &fds))
@@ -249,12 +249,12 @@ static void monitorUdisk(StorageMonitor &monitor)
                 std::string devNode = udev_device_get_devnode(dev);
                 if (action == "add" && !devNode.empty())
                 {
-                    std::cout << "U disk inserted. Device node: " << devNode << std::endl;
+                    LOG_F(INFO, "New disk found: {}", devNode);
                     monitor.triggerCallbacks(devNode);
                 }
                 else if (action == "remove" && !devNode.empty())
                 {
-                    std::cout << "U disk removed. Device node: " << devNode << std::endl;
+                    LOG_F(INFO, "Removed disk: {}", devNode);
                     // TODO: Handle USB media removal event
                 }
                 udev_device_unref(dev);
@@ -266,46 +266,3 @@ static void monitorUdisk(StorageMonitor &monitor)
     udev_unref(udev);
 }
 #endif
-
-/*
-
-int main()
-{
-    if (!checkIsRoot())
-    {
-        std::cerr << "This program requires root/administrator privileges." << std::endl;
-        return 1;
-    }
-
-    StorageMonitor monitor;
-
-    monitor.registerCallback([](const std::string &path)
-                             {
-                                 std::cout << "Callback triggered. Storage path: " << path << std::endl;
-                                 if (fs::exists(path + "/autorun.inf") || fs::exists(path + "/AutoRun.inf"))
-                                 {
-                                     std::cout << "U disk inserted." << std::endl;
-                                     // TODO: Handle USB media insertion event
-                                 } });
-
-    // Start monitoring
-    if (monitor.startMonitoring())
-    {
-        // Perform other tasks in the main thread...
-
-#ifdef __linux__
-        std::thread udiskThread(monitorUdisk, std::ref(monitor));
-#endif
-
-        // Stop monitoring
-        monitor.stopMonitoring();
-
-#ifdef __linux__
-        udiskThread.join();
-#endif
-    }
-
-    return 0;
-}
-
-*/

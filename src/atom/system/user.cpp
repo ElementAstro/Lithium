@@ -22,6 +22,8 @@ Description: Some system functions to get user information.
 #include <sys/types.h>
 #include <unistd.h>
 #include <grp.h>
+#include <locale>
+#include <codecvt>
 #endif
 
 #include "atom/log/loguru.hpp"
@@ -114,7 +116,8 @@ namespace Atom::System
             if (grp != nullptr)
             {
                 std::wstring groupName = L"";
-                std::wstring nameStr(grp->gr_name);
+                std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+                std::wstring nameStr = converter.from_bytes(grp->gr_name);
                 groupName += nameStr;
                 groups.push_back(groupName);
             }

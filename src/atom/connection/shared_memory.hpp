@@ -37,6 +37,7 @@ namespace Atom::Connection
     /**
      * @brief 实现共享内存，可用于进程间通信
      */
+    template <typename T>
     class SharedMemory
     {
     public:
@@ -45,7 +46,6 @@ namespace Atom::Connection
          * @param name 共享内存名称
          * @param create 是否创建新的共享内存
          */
-        template <typename T>
         explicit SharedMemory(const std::string &name, bool create = true);
 
         /**
@@ -58,7 +58,6 @@ namespace Atom::Connection
          * @param data 要写入的数据
          * @param timeout 超时时间，默认为0，表示不设超时时间
          */
-        template <typename T>
         void write(const T &data, std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
 
         /**
@@ -66,7 +65,6 @@ namespace Atom::Connection
          * @param timeout 超时时间，默认为0，表示不设超时时间
          * @return 读取到的数据
          */
-        template <typename T>
         T read(std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const;
 
         /**
@@ -94,8 +92,12 @@ namespace Atom::Connection
     };
 
     template <typename T>
-    SharedMemory::SharedMemory(const std::string &name, bool create)
+    SharedMemory<T>::SharedMemory(const std::string &name, bool create)
+#ifdef _WIN32
         : name_(name), handle_(nullptr), buffer_(nullptr), flag_(), is_creator_(create)
+#else
+        : name_(name), fd_(nullptr), buffer_(nullptr), flag_(), is_creator_(create)
+#endif
     {
         static_assert(std::is_trivially_copyable<T>::value, "T must be a trivially copyable type.");
         static_assert(std::is_standard_layout<T>::value, "T must be a standard layout type.");
@@ -167,7 +169,22 @@ namespace Atom::Connection
     }
 
     template <typename T>
-    void SharedMemory::write(const T &data, std::chrono::milliseconds timeout)
+    SharedMemory<T>::~SharedMemory()
+    {
+#if defined(_WIN32) || defined(_WIN64) // Windows
+        UnmapViewOfFile(buffer_);
+        CloseHandle(handle_);
+#else // Unix-like
+        munmap(buffer_, sizeof(T) + sizeof(bool));
+        if (is_creator_)
+        {
+            shm_unlink(name_.c_str());
+        }
+#endif
+    }
+
+    template <typename T>
+    void SharedMemory<T>::write(const T &data, std::chrono::milliseconds timeout)
     {
         static_assert(std::is_trivially_copyable<T>::value, "T must be a trivially copyable type.");
         static_assert(std::is_standard_layout<T>::value, "T must be a standard layout type.");
@@ -200,7 +217,7 @@ namespace Atom::Connection
     }
 
     template <typename T>
-    T SharedMemory::read(std::chrono::milliseconds timeout) const
+    T SharedMemory<T>::read(std::chrono::milliseconds timeout) const
     {
         static_assert(std::is_trivially_copyable<T>::value, "T must be a trivially copyable type.");
         static_assert(std::is_standard_layout<T>::value, "T must be a standard layout type.");
@@ -234,23 +251,21 @@ namespace Atom::Connection
 
         return data;
     }
+
+    template <typename T>
+    void SharedMemory<T>::clear()
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        *reinterpret_cast<bool *>(buffer_) = false;
+
+        DLOG_F(INFO, "Shared memory cleared.");
+    }
+
+    template <typename T>
+    bool SharedMemory<T>::isOccupied() const
+    {
+        return flag_->test_and_set();
+    }
 }
 
 #endif
-
-/*
-// Usage example
-int main()
-{
-    SharedMemory<int> shared_mem("my_shared_memory");
-
-    // Write data to shared memory
-    int data_to_write = 42;
-    shared_mem.write(data_to_write);
-
-    // Read data from shared memory
-    int data_read = shared_mem.read<int>();
-
-    return 0;
-}
-*/

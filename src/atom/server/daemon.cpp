@@ -19,6 +19,10 @@ Description: Daemon process implementation for Linux and Windows. But there is s
 #include <fstream>
 #include <thread>
 
+#ifndef _WIN32
+#include <unistd.h>
+#endif
+
 #include "atom/log/loguru.hpp"
 #include "atom/utils/time.hpp"
 
@@ -47,7 +51,11 @@ namespace Atom::Async
     int DaemonGuard::RealStart(int argc, char **argv,
                                std::function<int(int argc, char **argv)> mainCb)
     {
+#ifdef _WIN32
         m_mainId = reinterpret_cast<HANDLE>(getpid());
+#else
+        m_mainId = getpid();
+#endif
         m_mainStartTime = time(0);
         return mainCb(argc, argv);
     }
@@ -82,7 +90,12 @@ namespace Atom::Async
             Sleep(g_daemonRestartInterval * 1000);
         }
 #else
-        daemon(1, 0); // 转化为守护进程
+        if (daemon(1, 0) == -1)
+        {
+            perror("daemon");
+            exit(EXIT_FAILURE);
+        }
+
         m_parentId = getpid();
         m_parentStartTime = time(0);
         while (true)
@@ -92,7 +105,7 @@ namespace Atom::Async
             { // 子进程
                 m_mainId = getpid();
                 m_mainStartTime = time(0);
-                LOG_F(INFO, "daemon process start pid={} argv={}", getpid(), argv)
+                LOG_F(INFO, "daemon process start pid={}", reinterpret_cast<int>(getpid()));
                 return RealStart(argc, argv, mainCb);
             }
             else if (pid < 0)
@@ -149,7 +162,11 @@ namespace Atom::Async
 
         if (!isDaemon)
         { // 不需要创建守护进程
+#ifdef _WIN32
             m_parentId = reinterpret_cast<HANDLE>(getpid());
+#else
+            m_parentId = getpid();
+#endif
             m_parentStartTime = time(0);
             return RealStart(argc, argv, mainCb);
         }

@@ -30,6 +30,8 @@ const std::regex fileNameRegex("^[^\\/:*?\"<>|]+$");
 #else
 #include <unistd.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 const std::string PATH_SEPARATOR = "/";
 const std::regex folderNameRegex("^[^/]+$");
 const std::regex fileNameRegex("^[^/]+$");

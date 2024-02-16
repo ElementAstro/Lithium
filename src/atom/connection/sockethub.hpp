@@ -93,10 +93,15 @@ namespace Atom::Connection
                                               ///< Maximum number of connections.
         std::atomic<bool> running;            ///< 指示服务是否正在运行的标志。
                                               ///< Flag indicating whether the service is running.
+#ifdef _WIN32
         SOCKET serverSocket;                  ///< 服务器socket。
                                               ///< Server socket.
         std::vector<SOCKET> clients;          ///< 客户端sockets列表。
                                               ///< List of client sockets.
+#else
+        int serverSocket;
+        std::vector<int> clients;
+#endif
 #if __cplusplus >= 202002L
         std::unique_ptr<std::jthread> acceptThread;               ///< 用于接受连接的线程。
                                                                   ///< Thread for accepting connections.
@@ -135,7 +140,11 @@ namespace Atom::Connection
          *
          * @param socket The socket to close.
          */
+#ifdef _WIN32
         void closeSocket(SOCKET socket);
+#else
+        void closeSocket(int socket);
+#endif
 
         /**
          * @brief 接受客户端连接并将它们添加到clients列表。
@@ -151,8 +160,11 @@ namespace Atom::Connection
          *
          * @param clientSocket The client socket.
          */
+#ifdef _WIN32
         void handleClientMessages(SOCKET clientSocket);
-
+#else
+        void handleClientMessages(int clientSocket);
+#endif
         /**
          * @brief 清理sockets资源，关闭所有客户端连接。
          * @brief Cleans up socket resources, closing all client connections.

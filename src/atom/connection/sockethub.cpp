@@ -21,6 +21,10 @@ Description: SocketHub类用于管理socket连接的类。
 
 #include "atom/log/loguru.hpp"
 
+#ifndef _WIN32
+typedef int SOCKET;
+#endif
+
 namespace Atom::Connection
 {
     SocketHub::SocketHub() : running(false) {}
@@ -44,7 +48,11 @@ namespace Atom::Connection
         }
 
         serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+#ifdef _WIN32
         if (serverSocket == INVALID_SOCKET)
+#else
+        if (serverSocket < 0)
+#endif
         {
             LOG_F(ERROR, "Failed to create server socket.");
             cleanupWinsock();
@@ -56,14 +64,22 @@ namespace Atom::Connection
         serverAddress.sin_addr.s_addr = INADDR_ANY;
         serverAddress.sin_port = htons(port);
 
+#ifdef _WIN32
         if (bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress)) == SOCKET_ERROR)
+#else
+        if (bind(serverSocket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress)) < 0)
+#endif
         {
             LOG_F(ERROR, "Failed to bind server socket.");
             cleanupSocket();
             return;
         }
 
+#ifdef _WIN32
         if (listen(serverSocket, maxConnections) == SOCKET_ERROR)
+#else
+        if (listen(serverSocket, maxConnections) < 0)
+#endif
         {
             LOG_F(ERROR, "Failed to listen on server socket.");
             cleanupSocket();
@@ -120,7 +136,11 @@ namespace Atom::Connection
 #endif
     }
 
+#ifdef _WIN32
     void SocketHub::closeSocket(SOCKET socket)
+#else
+    void SocketHub::closeSocket(int socket)
+#endif
     {
 #ifdef _WIN32
         closesocket(socket);
@@ -137,7 +157,11 @@ namespace Atom::Connection
             socklen_t clientAddressLength = sizeof(clientAddress);
 
             SOCKET clientSocket = accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress), &clientAddressLength);
+#ifdef _WIN32
             if (clientSocket == INVALID_SOCKET)
+#else
+            if (clientSocket < 0)
+#endif
             {
                 if (running.load())
                 {

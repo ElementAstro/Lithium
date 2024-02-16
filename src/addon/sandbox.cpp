@@ -20,6 +20,9 @@ Description: A sandbox for alone componnents, such as executables.
 #else
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
 #endif
 
 namespace Lithium
@@ -171,7 +174,15 @@ namespace Lithium
         else if (pid == 0)
         { // child process
             ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-            execvp(m_programPath.c_str(), const_cast<char **>(&m_programArgs[0]));
+            // 将 std::string 类型的数组转换为 char* 类型的指针数组
+            std::vector<char *> args;
+            for (const auto &arg : m_programArgs)
+            {
+                args.push_back(const_cast<char *>(arg.c_str()));
+            }
+            args.push_back(nullptr); // execvp 需要以 nullptr 结尾
+
+            execvp(m_programPath.c_str(), args.data());
             exit(0);
         }
         else

@@ -63,7 +63,7 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-component
     atom-type
     atom-utils
-    aton-search
+    atom-search
     atom-web
     atom-system
     atom-server

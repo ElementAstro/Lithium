@@ -89,7 +89,7 @@ namespace Atom::System
         else if (pid < 0)
         {
             // Error handling
-            LOG_F(ERROR, _("Failed to create process"));
+            LOG_F(ERROR, "Failed to create process");
             return false;
         }
 #endif
@@ -147,7 +147,7 @@ namespace Atom::System
         else if (pid < 0)
         {
             // Error handling
-            LOG_F(ERROR, _("Failed to create process"));
+            LOG_F(ERROR, "Failed to create process");
             return false;
         }
 #endif
@@ -321,7 +321,7 @@ namespace Atom::System
         DIR *procDir = opendir("/proc");
         if (!procDir)
         {
-            LOG_F(ERROR, _("Failed to open /proc directory"));
+            LOG_F(ERROR, "Failed to open /proc directory");
             return processes;
         }
 

@@ -14,16 +14,17 @@ set(${PROJECT_NAME}_SOURCES
     command.cpp
     crash_quotes.cpp
     crash.cpp
-    dirw.cpp
-    #filew.cpp
-    pid.cpp
-    pidw.cpp
+    pidwatcher.cpp
     process.cpp
     register.cpp
     storage.cpp
-    syslog.cpp
     system.cpp
     user.cpp
+
+    module/cpu.cpp
+    module/disk.cpp
+    module/memory.cpp
+    module/battery.cpp
 )
 
 # Headers
@@ -31,16 +32,17 @@ set(${PROJECT_NAME}_HEADERS
     command.hpp
     crash_quotes.hpp
     crash.hpp
-    dirw.hpp
-    #filew.hpp
-    pid.hpp
-    pidw.hpp
+    pidwatcher.hpp
     process.hpp
     register.hpp
     storage.hpp
-    syslog.hpp
     system.hpp
     user.hpp
+
+    module/cpu.hpp
+    module/disk.hpp
+    module/memory.hpp
+    module/battery.hpp
 )
 
 # Private Headers

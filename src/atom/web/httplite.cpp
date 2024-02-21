@@ -14,182 +14,254 @@ Description: Simple Http Client
 
 #include "httplite.hpp"
 
-#include <cstring>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include "atom/log/loguru.hpp"
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#endif
-
-std::string httpRequest(const std::string &url, const std::string &method, std::function<void(const std::string &)> errorHandler)
+namespace Atom::Web
 {
-    std::string response;
 
-    // 解析URL
-    std::string host;
-    std::string path;
-    size_t pos = url.find("://");
-    if (pos != std::string::npos)
+    HttpClient::HttpClient() : socketfd(0) {}
+
+    HttpClient::~HttpClient()
     {
-        pos += 3;
-        size_t slashPos = url.find('/', pos);
-        if (slashPos != std::string::npos)
+        closeSocket();
+    }
+
+    void HttpClient::setErrorHandler(std::function<void(const std::string &)> errorHandler)
+    {
+        this->errorHandler = errorHandler;
+    }
+
+    bool HttpClient::initialize()
+    {
+#ifdef _WIN32
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
         {
-            host = url.substr(pos, slashPos - pos);
-            path = url.substr(slashPos);
+            errorHandler("Failed to initialize Winsock");
+            return false;
+        }
+#endif
+        socketfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (socketfd == -1)
+        {
+            errorHandler("Failed to create socket");
+            return false;
+        }
+        return true;
+    }
+
+    bool HttpClient::connectToServer(const std::string &host, int port, bool useHttps)
+    {
+        struct sockaddr_in serverAddr
+        {
+        };
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(port);
+
+#ifdef _WIN32
+        if (InetPton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0)
+#else
+        if (inet_pton(AF_INET, host.c_str(), &(serverAddr.sin_addr)) <= 0)
+#endif
+        {
+            errorHandler("Failed to parse server address");
+            closeSocket();
+            return false;
+        }
+
+        if (connect(socketfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
+        {
+            errorHandler("Failed to connect to server");
+            closeSocket();
+            return false;
+        }
+
+        if (useHttps)
+        {
+            SSL_load_error_strings();
+            SSL_library_init();
+            SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
+            SSL *ssl = SSL_new(ctx);
+            SSL_set_fd(ssl, socketfd);
+            if (SSL_connect(ssl) != 1)
+            {
+                errorHandler("Failed to establish SSL connection");
+                closeSocket();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool HttpClient::sendRequest(const std::string &request)
+    {
+        if (send(socketfd, request.c_str(), request.length(), 0) < 0)
+        {
+            errorHandler("Failed to send request");
+            closeSocket();
+            return false;
+        }
+        return true;
+    }
+
+    HttpResponse HttpClient::receiveResponse()
+    {
+        HttpResponse response;
+
+        char buffer[4096];
+        while (true)
+        {
+            memset(buffer, 0, sizeof(buffer));
+            int bytesRead = recv(socketfd, buffer, sizeof(buffer) - 1, 0);
+            if (bytesRead <= 0)
+            {
+                break;
+            }
+            response.body += buffer;
+        }
+
+        closeSocket();
+        return response;
+    }
+
+    void HttpClient::closeSocket()
+    {
+        if (socketfd != 0)
+        {
+#ifdef _WIN32
+            closesocket(socketfd);
+            WSACleanup();
+#else
+            close(socketfd);
+#endif
+            socketfd = 0;
+        }
+    }
+
+    HttpRequestBuilder::HttpRequestBuilder(HttpMethod method, const std::string &url)
+        : method(method), url(url), timeout(10) {}
+
+    HttpRequestBuilder &HttpRequestBuilder::setBody(const std::string &bodyText)
+    {
+        body = bodyText;
+        return *this;
+    }
+
+    HttpRequestBuilder &HttpRequestBuilder::setContentType(const std::string &contentTypeValue)
+    {
+        contentType = contentTypeValue;
+        return *this;
+    }
+
+    HttpRequestBuilder &HttpRequestBuilder::setTimeout(std::chrono::seconds timeoutValue)
+    {
+        timeout = timeoutValue;
+        return *this;
+    }
+
+    HttpRequestBuilder &HttpRequestBuilder::addHeader(const std::string &key, const std::string &value)
+    {
+        headers[key] = value;
+        return *this;
+    }
+
+    HttpResponse HttpRequestBuilder::send()
+    {
+        HttpClient client;
+        client.setErrorHandler([](const std::string &error)
+                               { std::cerr << "Error: " << error << std::endl; });
+
+        if (!client.initialize())
+        {
+            return HttpResponse{};
+        }
+
+        std::string host;
+        std::string path;
+        bool useHttps = false;
+        size_t pos = url.find("://");
+        if (pos != std::string::npos)
+        {
+            std::string protocol = url.substr(0, pos);
+            if (protocol == "https")
+            {
+                useHttps = true;
+            }
+            pos += 3;
+            size_t slashPos = url.find('/', pos);
+            if (slashPos != std::string::npos)
+            {
+                host = url.substr(pos, slashPos - pos);
+                path = url.substr(slashPos);
+            }
+            else
+            {
+                std::cerr << "Invalid URL" << std::endl;
+                return HttpResponse{};
+            }
         }
         else
         {
-            errorHandler("Invalid URL");
-            return response;
+            std::cerr << "Invalid URL" << std::endl;
+            return HttpResponse{};
         }
-    }
-    else
-    {
-        errorHandler("Invalid URL");
-        return response;
-    }
 
-    // 创建socket
-    int socketfd;
-#ifdef _WIN32
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-    {
-        errorHandler("Failed to initialize Winsock");
-        return response;
-    }
-    socketfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-#else
-    socketfd = socket(AF_INET, SOCK_STREAM, 0);
-#endif
-
-    // 连接服务器
-    struct sockaddr_in serverAddr
-    {
-    };
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(80); // HTTP默认端口为80
-#ifdef _WIN32
-    if (InetPton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0)
-#else
-    if (inet_pton(AF_INET, host.c_str(), &(serverAddr.sin_addr)) <= 0)
-#endif
-    {
-        errorHandler("Failed to parse server address");
-#ifdef _WIN32
-        closesocket(socketfd);
-        WSACleanup();
-#else
-        close(socketfd);
-#endif
-        return response;
-    }
-    if (connect(socketfd, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) < 0)
-    {
-        errorHandler("Failed to connect to server");
-#ifdef _WIN32
-        closesocket(socketfd);
-        WSACleanup();
-#else
-        close(socketfd);
-#endif
-        return response;
-    }
-
-    // 构建请求
-    std::string request = method + " " + path + " HTTP/1.1\r\n";
-    request += "Host: " + host + "\r\n";
-    request += "Connection: close\r\n\r\n";
-
-    // 发送请求
-    if (send(socketfd, request.c_str(), request.length(), 0) < 0)
-    {
-        errorHandler("Failed to send request");
-#ifdef _WIN32
-        closesocket(socketfd);
-        WSACleanup();
-#else
-        close(socketfd);
-#endif
-        return response;
-    }
-
-    // 接收响应
-    char buffer[4096];
-    while (true)
-    {
-        memset(buffer, 0, sizeof(buffer));
-        int bytesRead = recv(socketfd, buffer, sizeof(buffer) - 1, 0);
-        if (bytesRead <= 0)
+        if (!client.connectToServer(host, useHttps ? 443 : 80, useHttps))
         {
+            return HttpResponse{};
+        }
+
+        std::string request = buildRequestString(host, path);
+        if (!client.sendRequest(request))
+        {
+            return HttpResponse{};
+        }
+
+        return client.receiveResponse();
+    }
+
+    std::string HttpRequestBuilder::buildRequestString(const std::string &host, const std::string &path)
+    {
+        std::string request;
+        switch (method)
+        {
+        case HttpMethod::GET:
+            request = "GET ";
+            break;
+        case HttpMethod::POST:
+            request = "POST ";
+            break;
+        case HttpMethod::PUT:
+            request = "PUT ";
+            break;
+        case HttpMethod::DELETE:
+            request = "DELETE ";
             break;
         }
-        response += buffer;
+        request += path + " HTTP/1.1\r\n";
+        request += "Host: " + host + "\r\n";
+        for (const auto &header : headers)
+        {
+            request += header.first + ": " + header.second + "\r\n";
+        }
+        if (!contentType.empty())
+        {
+            request += "Content-Type: " + contentType + "\r\n";
+        }
+        if (!body.empty())
+        {
+            request += "Content-Length: " + std::to_string(body.length()) + "\r\n";
+        }
+        request += "Connection: close\r\n\r\n";
+        if (!body.empty())
+        {
+            request += body;
+        }
+
+        return request;
     }
-
-// 关闭socket
-#ifdef _WIN32
-    closesocket(socketfd);
-    WSACleanup();
-#else
-    close(socketfd);
-#endif
-
-    return response;
 }
-
-/*
-void handleError(const std::string &errorMessage)
-{
-    LOG_F(ERROR, "Error: %s", errorMessage.c_str());
-    // 可以在这里进行其他的错误处理操作
-}
-
-int main()
-{
-    loguru::init();
-
-    std::string url = "http://example.com";
-
-    std::string getResponse = httpRequest(url, "GET", handleError);
-    if (!getResponse.empty())
-    {
-        LOG_F(INFO, "GET Response: %s", getResponse.c_str());
-    }
-
-    // 发送POST请求
-    std::string postData = "key1=value1&key2=value2";
-    std::string postResponse = httpRequest(url, "POST", handleError);
-    if (!postResponse.empty())
-    {
-        LOG_F(INFO, "POST Response: %s", postResponse.c_str());
-    }
-
-    // 发送PUT请求
-    std::string putData = "new content";
-    std::string putResponse = httpRequest(url, "PUT", handleError);
-    if (!putResponse.empty())
-    {
-        LOG_F(INFO, "PUT Response: %s", putResponse.c_str());
-    }
-
-    // 发送DELETE请求
-    std::string deleteResponse = httpRequest(url, "DELETE", handleError);
-    if (!deleteResponse.empty())
-    {
-        LOG_F(INFO, "DELETE Response: %s", deleteResponse.c_str());
-    }
-
-    loguru::shutdown();
-
-    return 0;
-}
-*/

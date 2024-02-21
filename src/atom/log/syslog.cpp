@@ -14,7 +14,7 @@ Description: Simple syslog wrapper for Windows and Linux
 
 #include "syslog.hpp"
 
-namespace Atom::System
+namespace Atom::Log
 {
     SyslogWrapper::SyslogWrapper(LogLevel logLevel, const std::string &target) : m_logLevel(logLevel)
     {
@@ -56,16 +56,3 @@ namespace Atom::System
 #endif
     }
 }
-
-/*
-int main() {
-    SyslogWrapper logger(LogLevel::Debug, "Event");
-
-    logger.log(LogLevel::Debug, "This is a debug message.");
-    logger.log(LogLevel::Info, "This is an info message.");
-    logger.log(LogLevel::Warning, "This is a warning message.");
-    logger.log(LogLevel::Error, "This is an error message.");
-
-    return 0;
-}
-*/

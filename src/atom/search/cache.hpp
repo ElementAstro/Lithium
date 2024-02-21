@@ -215,3 +215,7 @@ private:
      */
     void evict();
 };
+
+#include "cache_impl.hpp"
+
+#endif

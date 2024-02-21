@@ -12,7 +12,8 @@ Description: ResourceCache class implementation
 
 **************************************************/
 
-#include "cache.hpp"
+#ifndef ATOM_SEARCH_CACHE_IMPL_HPP
+#define ATOM_SEARCH_CACHE_IMPL_HPP
 
 #include "atom/log/loguru.hpp"
 
@@ -181,7 +182,7 @@ std::future<void> ResourceCache<T>::asyncLoad(const std::string &key, std::funct
                     insert(key, value, std::chrono::seconds(60));
                 }
             } catch (const std::exception& e) {
-                std::cerr << "Async load failed: " << e.what() << std::endl;
+                LOG_F(ERROR, "Async load failed: {}", e.what());
             } });
 }
 
@@ -297,3 +298,5 @@ void ResourceCache<T>::writeToJsonFile(const std::string &filePath, const std::f
         outputFile.close();
     }
 }
+
+#endif

@@ -170,6 +170,46 @@ namespace Atom::Server
         }
 
         template <typename T>
+        bool TryPublish(const std::string &topic, const T &message, const std::string &namespace_ = "", std::chrono::milliseconds timeout = std::chrono::milliseconds(100))
+        {
+            std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
+
+            if (messageQueueLock_.try_lock_for(timeout))
+            {
+                messageQueue_.push({fullTopic, std::any(message)});
+                messageQueueLock_.unlock();
+                messageAvailableFlag_.notify_one();
+
+                DLOG_F(INFO, "Published message to topic: {}", fullTopic);
+                return true;
+            }
+            else
+            {
+                LOG_F(WARNING, "Failed to publish message to topic: {} due to timeout", fullTopic);
+                return false;
+            }
+        }
+
+        template <typename T>
+        bool TryReceive(T &outMessage, std::chrono::milliseconds timeout = std::chrono::milliseconds(100))
+        {
+            std::unique_lock<std::mutex> lock(waitingMutex_);
+            if (messageAvailableFlag_.wait_for(lock, timeout, [this]
+                                               { return !messageQueue_.empty(); }))
+            {
+                auto message = std::move(messageQueue_.front());
+                messageQueue_.pop();
+                outMessage = std::any_cast<T>(message.second);
+                return true;
+            }
+            else
+            {
+                LOG_F(WARNING, "Failed to receive message due to timeout");
+                return false;
+            }
+        }
+
+        template <typename T>
         void GlobalSubscribe(std::function<void(const T &)> callback)
         {
             globalSubscribersLock_.lock();

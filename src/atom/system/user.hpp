@@ -37,6 +37,30 @@ namespace Atom::System
      * @return Host name.
     */
     [[nodiscard]] std::string getHostname();
+
+    /**
+     * @brief Get user id.
+     * @return User id.
+    */
+    [[nodiscard]] int getUserId();
+
+    /**
+     * @brief Get group id.
+     * @return Group id.
+    */
+    [[nodiscard]] int getGroupId();
+
+    /**
+     * @brief Get user profile directory.
+     * @return User profile directory.
+    */
+    [[nodiscard]] std::string getHomeDirectory();
+
+    /**
+     * @brief Get login shell.
+     * @return Login shell.
+    */
+    [[nodiscard]] std::string getLoginShell();
 }
 
 #endif

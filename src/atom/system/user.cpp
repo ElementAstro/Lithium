@@ -169,4 +169,108 @@ namespace Atom::System
 #endif
         return hostname;
     }
+
+    int getUserId()
+    {
+        int userId = 0;
+#ifdef _WIN32
+        HANDLE hToken;
+        if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+        {
+            DWORD dwLengthNeeded;
+            GetTokenInformation(hToken, TokenUser, NULL, 0, &dwLengthNeeded);
+            TOKEN_USER *pTokenUser = (TOKEN_USER *)malloc(dwLengthNeeded);
+            if (GetTokenInformation(hToken, TokenUser, pTokenUser, dwLengthNeeded, &dwLengthNeeded))
+            {
+                PSID sid = pTokenUser->User.Sid;
+                DWORD subAuthorityCount = *GetSidSubAuthorityCount(sid);
+                DWORD *subAuthority = GetSidSubAuthority(sid, subAuthorityCount - 1);
+                userId = *subAuthority;
+            }
+            CloseHandle(hToken);
+            free(pTokenUser);
+        }
+#else
+        userId = getuid();
+#endif
+        return userId;
+    }
+
+    int getGroupId()
+    {
+        int groupId = 0;
+#ifdef _WIN32
+        HANDLE hToken;
+        if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+        {
+            DWORD dwLengthNeeded;
+            GetTokenInformation(hToken, TokenPrimaryGroup, NULL, 0, &dwLengthNeeded);
+            TOKEN_PRIMARY_GROUP *pTokenPrimaryGroup = (TOKEN_PRIMARY_GROUP *)malloc(dwLengthNeeded);
+            if (GetTokenInformation(hToken, TokenPrimaryGroup, pTokenPrimaryGroup, dwLengthNeeded, &dwLengthNeeded))
+            {
+                PSID sid = pTokenPrimaryGroup->PrimaryGroup;
+                DWORD subAuthorityCount = *GetSidSubAuthorityCount(sid);
+                DWORD *subAuthority = GetSidSubAuthority(sid, subAuthorityCount - 1);
+                groupId = *subAuthority;
+            }
+            CloseHandle(hToken);
+            free(pTokenPrimaryGroup);
+        }
+#else
+        groupId = getgid();
+#endif
+        return groupId;
+    }
+
+#ifdef _WIN32
+    std::string getUserProfileDirectory()
+    {
+        std::string userProfileDir;
+        HANDLE hToken;
+        if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+        {
+            DWORD dwSize = 0;
+            GetUserProfileDirectoryA(hToken, NULL, &dwSize);
+            char *buffer = new char[dwSize];
+            if (GetUserProfileDirectoryA(hToken, buffer, &dwSize))
+            {
+                userProfileDir = buffer;
+            }
+            delete[] buffer;
+            CloseHandle(hToken);
+        }
+        return userProfileDir;
+    }
+#endif
+
+    std::string getHomeDirectory()
+    {
+        std::string homeDir;
+#ifdef _WIN32
+        homeDir = getUserProfileDirectory();
+#else
+        int userId = getUserId();
+        struct passwd *userInfo = getpwuid(userId);
+        homeDir = std::string(userInfo->pw_dir);
+#endif
+        return homeDir;
+    }
+
+    std::string getLoginShell()
+    {
+        std::string loginShell;
+#ifdef _WIN32
+        char buf[MAX_PATH];
+        DWORD bufSize = sizeof(buf) / sizeof(buf[0]);
+        if (GetEnvironmentVariableA("COMSPEC", buf, bufSize) != 0)
+        {
+            loginShell = std::string(buf);
+        }
+#else
+        int userId = getUserId();
+        struct passwd *userInfo = getpwuid(userId);
+        loginShell = std::string(userInfo->pw_shell);
+#endif
+        return loginShell;
+    }
 }

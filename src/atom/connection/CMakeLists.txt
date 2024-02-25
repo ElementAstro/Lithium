@@ -1,7 +1,7 @@
 # CMakeLists.txt for Atom-Connection
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Atom-Task
+# Project Name: Atom-Connection
 # Description: Connection Between Lithium Drivers, TCP and IPC
 # Author: Max Qian
 # License: GPL3

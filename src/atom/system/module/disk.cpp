@@ -42,11 +42,13 @@ Description: System Information Module - Disk
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <DiskArbitration/DiskArbitration.h>
+#include <CoreFoundation/CoreFoundation.h>
 #endif
 
 namespace Atom::System
 {
-std::vector<std::pair<std::string, float>> getDiskUsage()
+    std::vector<std::pair<std::string, float>> getDiskUsage()
     {
         std::vector<std::pair<std::string, float>> disk_usage;
 
@@ -133,7 +135,35 @@ std::vector<std::pair<std::string, float>> getDiskUsage()
             }
             CloseHandle(hDevice);
         }
-#else
+#elif __APPLE__
+        DASessionRef session = DASessionCreate(kCFAllocatorDefault);
+        if (session != nullptr)
+        {
+            CFURLRef url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, CFStringCreateWithCString(kCFAllocatorDefault, drivePath.c_str(), kCFStringEncodingUTF8), kCFURLPOSIXPathStyle, false);
+            if (url != nullptr)
+            {
+                DADiskRef disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, CFURLGetFileSystemRepresentation(url));
+                if (disk != nullptr)
+                {
+                    CFDictionaryRef desc = DADiskCopyDescription(disk);
+                    if (desc != nullptr)
+                    {
+                        CFStringRef modelRef = (CFStringRef)CFDictionaryGetValue(desc, kDADiskDescriptionDeviceModelKey);
+                        if (modelRef != nullptr)
+                        {
+                            char buffer[256];
+                            CFStringGetCString(modelRef, buffer, 256, kCFStringEncodingUTF8);
+                            model = buffer;
+                        }
+                        CFRelease(desc);
+                    }
+                    CFRelease(disk);
+                }
+                CFRelease(url);
+            }
+            CFRelease(session);
+        }
+#elif __linux__
         std::ifstream inFile("/sys/block/" + drivePath + "/device/model");
         if (inFile.is_open())
         {
@@ -193,4 +223,3 @@ std::vector<std::pair<std::string, float>> getDiskUsage()
         return storage_device_models;
     }
 }
-

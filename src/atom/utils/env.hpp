@@ -32,7 +32,7 @@ namespace Atom::Utils
          * @param argc 命令行参数数量。
          * @param argv 命令行参数数组。
          */
-        Env(int argc, char **argv);
+        explicit Env(int argc, char **argv);
 
         /**
          * @brief 添加一个键值对到环境变量中。
@@ -60,7 +60,7 @@ namespace Atom::Utils
          * @param default_value 默认值。
          * @return 键值或默认值。
          */
-        std::string get(const std::string &key, const std::string &default_value);
+        [[nodiscard]] std::string get(const std::string &key, const std::string &default_value);
 
         /**
          * @brief 添加一个命令行参数和描述到帮助信息列表中。
@@ -94,27 +94,27 @@ namespace Atom::Utils
          * @param default_value 默认值。
          * @return 键值或默认值。
          */
-        std::string getEnv(const std::string &key, const std::string &default_value);
+        [[nodiscard]] std::string getEnv(const std::string &key, const std::string &default_value);
 
         /**
          * @brief 获取指定路径的绝对路径。
          * @param path 路径。
          * @return 绝对路径。
          */
-        std::string getAbsolutePath(const std::string &path) const;
+        [[nodiscard]] std::string getAbsolutePath(const std::string &path) const;
 
         /**
          * @brief 获取工作目录下指定路径的绝对路径。
          * @param path 路径。
          * @return 绝对路径。
          */
-        std::string getAbsoluteWorkPath(const std::string &path) const;
+        [[nodiscard]] std::string getAbsoluteWorkPath(const std::string &path) const;
 
         /**
          * @brief 获取配置文件的路径。默认情况下，配置文件与程序在同一目录下。
          * @return 配置文件路径。
          */
-        std::string getConfigPath();
+        [[nodiscard]] std::string getConfigPath();
 
     private:
         std::string m_exe;     ///< 可执行文件的全路径。

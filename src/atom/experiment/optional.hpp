@@ -107,6 +107,24 @@ public:
         return *this;
     }
 
+    T &operator*()
+    {
+        if (!hasValue)
+        {
+            throw std::runtime_error("Optional has no value");
+        }
+        return *reinterpret_cast<T *>(storage);
+    }
+
+    const T &operator*() const
+    {
+        if (!hasValue)
+        {
+            throw std::runtime_error("Optional has no value");
+        }
+        return *reinterpret_cast<const T *>(storage);
+    }
+
     void reset()
     {
         if (hasValue)

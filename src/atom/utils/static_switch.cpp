@@ -26,13 +26,13 @@ namespace Atom::Utils
         defaultFunc = std::move(func);
     }
 
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
     emhash8::HashMap<std::string, StringSwitch::Func> &StringSwitch::cases()
 #else
     std::unordered_map<std::string, StringSwitch::Func> &StringSwitch::cases()
 #endif
     {
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
         static emhash8::HashMap<std::string, Func> cases;
 #else
         static std::unordered_map<std::string, Func> cases;

@@ -119,6 +119,8 @@ namespace Atom::System
 
         unsigned long long used_space = total_space - free_space;
         memory_usage = static_cast<float>(used_space) / total_space * 100.0;
+#elif defined(__ANDROID__)
+        LOG_F(ERROR, "GetTotalMemorySize error: not support");
 #endif
 
         return memory_usage;
@@ -126,26 +128,62 @@ namespace Atom::System
 
     unsigned long long getTotalMemorySize()
     {
+        unsigned long long totalMemorySize = 0;
+
 #ifdef _WIN32
         MEMORYSTATUSEX status;
         status.dwLength = sizeof(status);
         GlobalMemoryStatusEx(&status);
-        return status.ullTotalPhys;
-#else
+        totalMemorySize = status.ullTotalPhys;
+#elif defined(__APPLE__)
+        FILE *pipe = popen("sysctl -n hw.memsize", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                totalMemorySize = std::stoull(buffer);
+            }
+            else
+            {
+                LOG_F(ERROR, "GetTotalMemorySize error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         long pages = sysconf(_SC_PHYS_PAGES);
         long page_size = sysconf(_SC_PAGE_SIZE);
-        return pages * page_size;
+        totalMemorySize = static_cast<unsigned long long>(pages) * static_cast<unsigned long long>(page_size);
 #endif
+
+        return totalMemorySize;
     }
 
     unsigned long long getAvailableMemorySize()
     {
+        unsigned long long availableMemorySize = 0;
+
 #ifdef _WIN32
         MEMORYSTATUSEX status;
         status.dwLength = sizeof(status);
         GlobalMemoryStatusEx(&status);
-        return status.ullAvailPhys;
-#else
+        availableMemorySize = status.ullAvailPhys;
+#elif defined(__APPLE__)
+        FILE *pipe = popen("vm_stat | grep 'Pages free:' | awk '{print $3}'", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                availableMemorySize = std::stoull(buffer) * getpagesize();
+            }
+            else
+            {
+                LOG_F(ERROR, "GetAvailableMemorySize error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         std::ifstream meminfo("/proc/meminfo");
         std::string line;
         while (std::getline(meminfo, line))
@@ -154,12 +192,14 @@ namespace Atom::System
             {
                 unsigned long long availableMemory;
                 std::sscanf(line.c_str(), "MemAvailable: %llu kB", &availableMemory);
-                return availableMemory * 1024; // 转换为字节
+                availableMemorySize = availableMemory * 1024; // 转换为字节
+                break;
             }
         }
         meminfo.close();
-        return 0;
 #endif
+
+        return availableMemorySize;
     }
 
     MemoryInfo::MemorySlot getPhysicalMemoryInfo()
@@ -167,14 +207,27 @@ namespace Atom::System
         MemoryInfo::MemorySlot slot;
 
 #ifdef _WIN32
-        // Get physical memory info on Windows
         MEMORYSTATUSEX memoryStatus;
         memoryStatus.dwLength = sizeof(memoryStatus);
         GlobalMemoryStatusEx(&memoryStatus);
 
         slot.capacity = std::to_string(memoryStatus.ullTotalPhys / (1024 * 1024)); // Convert bytes to MB
-#else
-        // Get physical memory info on Linux
+#elif defined(__APPLE__)
+        FILE *pipe = popen("sysctl hw.memsize | awk '{print $2}'", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                slot.capacity = std::string(buffer) / (1024 * 1024);
+            }
+            else
+            {
+                LOG_F(ERROR, "GetPhysicalMemoryInfo error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         std::ifstream meminfo("/proc/meminfo");
         std::string line;
         while (std::getline(meminfo, line))
@@ -198,13 +251,26 @@ namespace Atom::System
         unsigned long long virtualMemoryMax;
 
 #ifdef _WIN32
-        // Get virtual memory info on Windows
         MEMORYSTATUSEX memoryStatus;
         memoryStatus.dwLength = sizeof(memoryStatus);
         GlobalMemoryStatusEx(&memoryStatus);
         virtualMemoryMax = memoryStatus.ullTotalVirtual / (1024 * 1024);
-#else
-        // Get virtual memory info on Linux
+#elif defined(__APPLE__)
+        FILE *pipe = popen("sysctl vm.swapusage | awk '{print $2}'", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                virtualMemoryMax = std::stoull(buffer) / (1024 * 1024);
+            }
+            else
+            {
+                LOG_F(ERROR, "GetVirtualMemoryMax error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         struct sysinfo si;
         sysinfo(&si);
         virtualMemoryMax = (si.totalram + si.totalswap) / 1024;
@@ -218,13 +284,27 @@ namespace Atom::System
         unsigned long long virtualMemoryUsed;
 
 #ifdef _WIN32
-        // Get virtual memory info on Windows
+        // Windows 实现
         MEMORYSTATUSEX memoryStatus;
         memoryStatus.dwLength = sizeof(memoryStatus);
         GlobalMemoryStatusEx(&memoryStatus);
         virtualMemoryUsed = (memoryStatus.ullTotalVirtual - memoryStatus.ullAvailVirtual) / (1024 * 1024);
-#else
-        // Get virtual memory info on Linux
+#elif defined(__APPLE__)
+        FILE *pipe = popen("sysctl vm.swapusage | awk '{print $6}'", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                virtualMemoryUsed = std::stoull(buffer) / (1024 * 1024);
+            }
+            else
+            {
+                LOG_F(ERROR, "GetVirtualMemoryUsed error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         struct sysinfo si;
         sysinfo(&si);
         virtualMemoryUsed = (si.totalram - si.freeram + si.totalswap - si.freeswap) / 1024;
@@ -235,16 +315,29 @@ namespace Atom::System
 
     unsigned long long getSwapMemoryTotal()
     {
-        unsigned long long swapMemoryTotal;
+        unsigned long long swapMemoryTotal = 0;
 
 #ifdef _WIN32
-        // Get swap memory info on Windows
         MEMORYSTATUSEX memoryStatus;
         memoryStatus.dwLength = sizeof(memoryStatus);
         GlobalMemoryStatusEx(&memoryStatus);
         swapMemoryTotal = memoryStatus.ullTotalPageFile / (1024 * 1024);
-#else
-        // Get swap memory info on Linux
+#elif defined(__APPLE__)
+        FILE *pipe = popen("sysctl vm.swapusage | awk '{print $2}'", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                swapMemoryTotal = std::stoull(buffer) / (1024 * 1024);
+            }
+            else
+            {
+                LOG_F(ERROR, "GetSwapMemoryTotal error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         struct sysinfo si;
         sysinfo(&si);
         swapMemoryTotal = si.totalswap / 1024;
@@ -255,16 +348,29 @@ namespace Atom::System
 
     unsigned long long getSwapMemoryUsed()
     {
-        unsigned long long swapMemoryUsed;
+        unsigned long long swapMemoryUsed = 0;
 
 #ifdef _WIN32
-        // Get swap memory info on Windows
         MEMORYSTATUSEX memoryStatus;
         memoryStatus.dwLength = sizeof(memoryStatus);
         GlobalMemoryStatusEx(&memoryStatus);
         swapMemoryUsed = (memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile) / (1024 * 1024);
-#else
-        // Get swap memory info on Linux
+#elif defined(__APPLE__)
+        FILE *pipe = popen("sysctl vm.swapusage | awk '{print $6}'", "r");
+        if (pipe != nullptr)
+        {
+            char buffer[128];
+            if (fgets(buffer, sizeof(buffer), pipe) != nullptr)
+            {
+                swapMemoryUsed = std::stoull(buffer) / (1024 * 1024);
+            }
+            else
+            {
+                LOG_F(ERROR, "GetSwapMemoryUsed error: popen error");
+            }
+            pclose(pipe);
+        }
+#elif defined(__linux__)
         struct sysinfo si;
         sysinfo(&si);
         swapMemoryUsed = (si.totalswap - si.freeswap) / 1024;
@@ -272,4 +378,5 @@ namespace Atom::System
 
         return swapMemoryUsed;
     }
+
 }

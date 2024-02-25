@@ -35,7 +35,6 @@ const int AES_BLOCK_SIZE = 16;
 
 namespace Atom::Utils
 {
-    // AES加密函数
     std::string encryptAES(const std::string &plaintext, const std::string &key)
     {
         EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
@@ -59,7 +58,6 @@ namespace Atom::Utils
         return result;
     }
 
-    // AES解密函数
     std::string decryptAES(const std::string &ciphertext, const std::string &key)
     {
         EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
@@ -83,7 +81,6 @@ namespace Atom::Utils
         return result;
     }
 
-    // 使用Zlib进行压缩
     std::string compress(const std::string &data)
     {
         z_stream zs;
@@ -118,7 +115,6 @@ namespace Atom::Utils
         return compressed;
     }
 
-    // 使用Zlib进行解压
     std::string decompress(const std::string &data)
     {
         z_stream zs;
@@ -154,18 +150,3 @@ namespace Atom::Utils
     }
 }
 
-/*
-int main()
-{
-    std::string plaintext = "Hello, world!";
-    std::string key = "my_secret_key";
-
-    // 加密
-    std::string encrypted = encryptAES(plaintext, key);
-    // 解密
-    std::string decrypted = decryptAES(encrypted, key);
-    std::cout << "Decrypted data: " << decrypted << std::endl;
-
-    return 0;
-}
-*/

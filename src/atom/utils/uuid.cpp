@@ -14,6 +14,12 @@ Description: UUID Generator
 
 #include "uuid.hpp"
 
+#if defined(_WIN32)
+#include <objbase.h>
+#elif defined(__linux__) || defined(__APPLE__)
+#include <uuid/uuid.h>
+#endif
+
 namespace Atom::Utils
 {
     UUIDGenerator::UUIDGenerator() : gen_(rd_()), dis_(0, 0xFFFFFFFF) {}
@@ -65,5 +71,33 @@ namespace Atom::Utils
         if (use_braces)
             ss << '}';
         return ss.str();
+    }
+
+    std::string generateSystemUUID()
+    {
+        std::string uuid;
+
+#if defined(_WIN32)
+        GUID guid;
+        CoCreateGuid(&guid);
+
+        char uuidStr[40] = {0};
+        snprintf(uuidStr, sizeof(uuidStr),
+                 "{%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}",
+                 guid.Data1, guid.Data2, guid.Data3,
+                 guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+                 guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+        uuid = uuidStr;
+
+#elif defined(__linux__) || defined(__APPLE__)
+        uuid_t id;
+        uuid_generate(id);
+
+        char uuidStr[40] = {0};
+        uuid_unparse(id, uuidStr);
+        uuid = uuidStr;
+#endif
+
+        return uuid;
     }
 }

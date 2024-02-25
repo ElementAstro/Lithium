@@ -21,14 +21,17 @@ Description: System Information Module - Battery
 #ifdef _WIN32
 #include <Windows.h>
 #include <conio.h>
-#else
+#elif defined(__APPLE__)
+#include <IOKit/ps/IOPowerSources.h>
+#include <IOKit/ps/IOPSKeys.h>
+#elif defined(__linux__)
 #include <cstdio>
 #include <csignal>
 #endif
 
 namespace Atom::System
 {
-BatteryInfo getBatteryInfo()
+    BatteryInfo getBatteryInfo()
     {
         BatteryInfo info;
 
@@ -43,7 +46,53 @@ BatteryInfo getBatteryInfo()
             info.batteryFullLifeTime = powerStatus.BatteryFullLifeTime == 0xFFFFFFFF ? 0.0 : static_cast<float>(powerStatus.BatteryFullLifeTime);
             // 其他电池信息...
         }
-#else
+#elif defined(__APPLE__)
+        CFTypeRef powerSourcesInfo = IOPSCopyPowerSourcesInfo();
+        CFArrayRef powerSources = IOPSCopyPowerSourcesList(powerSourcesInfo);
+
+        CFIndex count = CFArrayGetCount(powerSources);
+        if (count > 0)
+        {
+            CFDictionaryRef powerSource = CFArrayGetValueAtIndex(powerSources, 0);
+
+            // 是否连接电源
+            CFBooleanRef isCharging = (CFBooleanRef)CFDictionaryGetValue(powerSource, kIOPSIsChargingKey);
+            if (isCharging != nullptr)
+            {
+                info.isCharging = CFBooleanGetValue(isCharging);
+            }
+
+            // 电池剩余容量百分比
+            CFNumberRef capacity = (CFNumberRef)CFDictionaryGetValue(powerSource, kIOPSCurrentCapacityKey);
+            if (capacity != nullptr)
+            {
+                SInt32 value;
+                CFNumberGetValue(capacity, kCFNumberSInt32Type, &value);
+                info.batteryLifePercent = static_cast<float>(value);
+            }
+
+            // 电池剩余时间
+            CFNumberRef timeToEmpty = (CFNumberRef)CFDictionaryGetValue(powerSource, kIOPSTimeToEmptyKey);
+            if (timeToEmpty != nullptr)
+            {
+                SInt32 value;
+                CFNumberGetValue(timeToEmpty, kCFNumberSInt32Type, &value);
+                info.batteryLifeTime = static_cast<float>(value) / 60.0f; // 转换为分钟
+            }
+
+            // 电池总容量
+            CFNumberRef capacityMax = (CFNumberRef)CFDictionaryGetValue(powerSource, kIOPSMaxCapacityKey);
+            if (capacityMax != nullptr)
+            {
+                SInt32 value;
+                CFNumberGetValue(capacityMax, kCFNumberSInt32Type, &value);
+                info.batteryFullLifeTime = static_cast<float>(value);
+            }
+        }
+
+        CFRelease(powerSources);
+        CFRelease(powerSourcesInfo);
+#elif defined(__linux__)
         std::ifstream batteryInfo("/sys/class/power_supply/BAT0/uevent");
         if (batteryInfo.is_open())
         {

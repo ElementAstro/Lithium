@@ -24,214 +24,195 @@ Description: Http Client
 
 using namespace httplib;
 
-HttpClient::HttpClient(const std::string &host, int port)
-    : host_(host), port_(port), ssl_enabled_(false)
+namespace Atom::Web
 {
-    DLOG_F(INFO, "Initializing HttpClient for {}:%d", host_, port_);
-}
-
-bool HttpClient::SendGetRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
-{
-    Client client(host_, port_);
-    if (ssl_enabled_)
+    class HttpClient::HttpClientImpl
     {
-        client.enable_server_certificate_verification(true);
-        client.set_ca_cert_path(ca_cert_path_);
-        if (!client_cert_path_.empty() && !client_key_path_.empty())
+    public:
+        explicit HttpClientImpl(const std::string &host, int port, bool ssl_enabled);
+        ~HttpClientImpl();
+
+        template <typename RequestT>
+        bool sendRequest(const std::string &method, const std::string &path, const std::map<std::string, std::string> &params,
+                         const json &data, json &response, std::string &err);
+
+        bool scanPort(int startPort, int endPort, std::vector<int> &openPorts);
+        bool checkServerStatus(std::string &status);
+
+        void setSslEnabled(bool enabled);
+        void setCaCertPath(const std::string &path);
+        void setClientCertPath(const std::string &path);
+        void setClientKeyPath(const std::string &path);
+
+    private:
+        std::string host_;
+        int port_;
+        bool sslEnabled_;
+        std::string caCertPath_;
+        std::string clientCertPath_;
+        std::string clientKeyPath_;
+    };
+
+    HttpClient::HttpClientImpl::HttpClientImpl(const std::string &host, int port, bool ssl_enabled)
+    {
+        DLOG_F(INFO, "Initializing HttpClient for {}: {}", host_, port_);
+    }
+
+    HttpClient::HttpClientImpl::~HttpClientImpl()
+    {
+        DLOG_F(INFO, "Destroying HttpClient for {}: {}", host_, port_);
+    }
+
+    template <typename RequestT>
+    bool HttpClient::HttpClientImpl::sendRequest(const std::string &method, const std::string &path, const std::map<std::string, std::string> &params,
+                                 const json &data, json &response, std::string &err)
+    {
+        Client client(host_.c_str(), port_);
+        if (ssl_enabled_)
         {
-            // client.set_client_cert_and_key(client_cert_path_, client_key_path_);
+            client.enable_server_certificate_verification(true);
+            client.set_ca_cert_path(ca_cert_path_);
+            if (!client_cert_path_.empty() && !client_key_path_.empty())
+            {
+                // client.set_client_cert_and_key(client_cert_path_, client_key_path_);
+            }
         }
-    }
 
-    auto res = client.Get(path);
-    if (!res || res->status != 200)
-    {
-        err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send GET request to {}{}. Error message: {}", host_, path, err);
-        return false;
-    }
-
-    try
-    {
-        response = json::parse(res->body);
-        DLOG_F(INFO, "Received response from {}{}: {}", host_, path, response.dump());
-    }
-    catch (const std::exception &e)
-    {
-        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
-        return false;
-    }
-
-    return true;
-}
-
-bool HttpClient::SendPostRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
-{
-    Client client(host_, port_);
-    if (ssl_enabled_)
-    {
-        // client.enable_server_certificate_verification(true);
-        client.set_ca_cert_path(ca_cert_path_);
-        if (!client_cert_path_.empty() && !client_key_path_.empty())
+        auto res = RequestT::run(client, path.c_str(), params, data.dump(), "application/json");
+        if (!res || res->status != 200)
         {
-            // client.set_client_cert_and_key(client_cert_path_, client_key_path_);
+            err = res ? res->body : "Unknown error";
+            LOG_F(ERROR, "Failed to send {} request to {}{}, data {}. Error message: {}", method, host_, path, data.dump(), err);
+            return false;
         }
-    }
 
-    auto res = client.Post(path);
-    if (!res || res->status != 200)
-    {
-        err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send POST request to {}{}, data {}. Error message: {}", host_, path, data.dump(), err);
-        return false;
-    }
-
-    try
-    {
-        response = json::parse(res->body);
-        DLOG_F(INFO, "Received response from {}{}: {}", host_, path, response.dump());
-    }
-    catch (const std::exception &e)
-    {
-        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
-        return false;
-    }
-
-    return true;
-}
-
-bool HttpClient::SendPutRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
-{
-    Client client(host_, port_);
-    if (ssl_enabled_)
-    {
-        // client.enable_server_certificate_verification(true);
-        client.set_ca_cert_path(ca_cert_path_);
-        if (!client_cert_path_.empty() && !client_key_path_.empty())
+        try
         {
-            // client.set_client_cert_and_key(client_cert_path_, client_key_path_);
+            response = json::parse(res->body);
+            DLOG_F(INFO, "Received response from {}{}: {}", host_, path, response.dump());
         }
-    }
-
-    auto res = client.Put(path);
-    if (!res || res->status != 200)
-    {
-        err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send PUT request to {}{}, data {}. Error message: {}", host_, path, data.dump(), err);
-        return false;
-    }
-
-    try
-    {
-        response = json::parse(res->body);
-        DLOG_F(INFO, "Received response from {}{}: {}", host_, path, response.dump());
-    }
-    catch (const std::exception &e)
-    {
-        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
-        return false;
-    }
-
-    return true;
-}
-
-bool HttpClient::SendDeleteRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
-{
-    Client client(host_, port_);
-    if (ssl_enabled_)
-    {
-        // client.enable_server_certificate_verification(true);
-        client.set_ca_cert_path(ca_cert_path_);
-        if (!client_cert_path_.empty() && !client_key_path_.empty())
+        catch (const std::exception &e)
         {
-            // client.set_client_cert_and_key(client_cert_path_, client_key_path_);
+            LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
+            return false;
         }
+
+        return true;
     }
 
-    auto res = client.Delete(path);
-    if (!res || res->status != 200)
+    void HttpClient::HttpClientImpl::setSslEnabled(bool enabled)
     {
-        err = res ? res->body : "Unknown error";
-        LOG_F(ERROR, "Failed to send DELETE request to {}{}, data {}. Error message: {}", host_, path, res->body, err);
-        return false;
+        ssl_enabled_ = enabled;
     }
 
-    try
+    void HttpClient::HttpClientImpl::setCaCertPath(const std::string &path)
     {
-        response = json::parse(res->body);
-        DLOG_F(INFO, "Received response from {}{}: {}", host_, path, response.dump());
-    }
-    catch (const std::exception &e)
-    {
-        LOG_F(ERROR, "Failed to parse response from {}{}. Error message: {}", host_, path, e.what());
-        return false;
+        ca_cert_path_ = path;
     }
 
-    return true;
-}
-
-void HttpClient::SetSslEnabled(bool enabled)
-{
-    ssl_enabled_ = enabled;
-}
-
-void HttpClient::SetCaCertPath(const std::string &path)
-{
-    ca_cert_path_ = path;
-}
-
-void HttpClient::SetClientCertPath(const std::string &path)
-{
-    client_cert_path_ = path;
-}
-
-void HttpClient::SetClientKeyPath(const std::string &path)
-{
-    client_key_path_ = path;
-}
-
-bool HttpClient::ScanPort(int start_port, int end_port, std::vector<int> &open_ports)
-{
-    DLOG_F(INFO, "Scanning ports from %d to %d on {}:%d", start_port, end_port, host_, port_);
-
-    open_ports.clear();
-    Client client(host_, port_);
-
-    for (int port = start_port; port <= end_port; port++)
+    void HttpClient::HttpClientImpl::setClientCertPath(const std::string &path)
     {
-#if __cplusplus >= 202002L
-        auto res = client.Head(std::format("/{}", port));
-#else
-        auto path = "/" + std::to_string(port);
-        auto res = client.Head(path);
-#endif
+        client_cert_path_ = path;
+    }
 
-        if (res && res->status == 200)
+    void HttpClient::HttpClientImpl::setClientKeyPath(const std::string &path)
+    {
+        client_key_path_ = path;
+    }
+
+    bool HttpClient::HttpClientImpl::scanPort(int start_port, int end_port, std::vector<int> &open_ports)
+    {
+        DLOG_F(INFO, "Scanning ports from {} to {} on {}:{}", start_port, end_port, host_, port_);
+
+        open_ports.clear();
+        Client client(host_.c_str(), port_);
+
+        for (int port = start_port; port <= end_port; port++)
         {
-            open_ports.push_back(port);
-            DLOG_F(INFO, "Port %d is open on {}:%d", port, host_, port_);
+            auto res = client.Head(std::to_string(port).c_str());
+            if (res && res->status == 200)
+            {
+                open_ports.push_back(port);
+                DLOG_F(INFO, "Port {} is open on {}:{}", port, host_, port_);
+            }
         }
+
+        return true;
     }
 
-    return true;
-}
-
-bool HttpClient::CheckServerStatus(std::string &status)
-{
-    DLOG_F(INFO, "Checking server status on {}:%d", host_, port_);
-    Client client(host_, port_);
-    auto res = client.Head("/");
-    if (!res || res->status != 200)
+    bool HttpClient::HttpClientImpl::checkServerStatus(std::string &status)
     {
-        status = res ? std::to_string(res->status) : "Unknown error";
-        LOG_F(ERROR, "Failed to check server status on {}:%d with error message: {}", host_, port_, status);
-        return false;
+        DLOG_F(INFO, "Checking server status on {}: {}", host_, port_);
+        Client client(host_.c_str(), port_);
+        auto res = client.Head("/");
+        if (!res || res->status != 200)
+        {
+            status = res ? std::to_string(res->status) : "Unknown error";
+            LOG_F(ERROR, "Failed to check server status on {}: {} with error message: {}", host_, port_, status);
+            return false;
+        }
+
+        status = "Running";
+        return true;
     }
 
-    status = "Running";
-    return true;
-}
+    HttpClient::HttpClient(const std::string &host, int port, bool sslEnabled)
+    {
+        m_impl = std::make_unique<HttpClientImpl>(host, port, ssl_enabled);
+    }
 
-HttpClient::~HttpClient()
-{
+    HttpClient::~HttpClient()
+    {
+        m_impl.reset();
+    }
+
+    bool HttpClient::sendGetRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
+    {
+        return m_impl->sendRequest<::Get>(path, params, json(), response, err);
+    }
+
+    bool HttpClient::sendPostRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
+    {
+        return m_impl->sendRequest<::Post>(path, params, data, response, err);
+    }
+
+    bool HttpClient::sendPutRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
+    {
+        return m_impl->sendRequest<::Put>(path, params, data, response, err);
+    }
+
+    bool HttpClient::sendDeleteRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
+    {
+        return m_impl->sendRequest<::Delete>(path, params, json(), response, err);
+    }
+
+    void HttpClient::setSslEnabled(bool enabled)
+    {
+        m_impl->setSslEnabled(enabled);
+    }
+
+    void HttpClient::setCaCertPath(const std::string &path)
+    {
+        m_impl->setCaCertPath(path);
+    }
+
+    void HttpClient::setClientCertPath(const std::string &path)
+    {
+        m_impl->setClientCertPath(path);
+    }
+
+    void HttpClient::setClientKeyPath(const std::string &path)
+    {
+        m_impl->setClientKeyPath(path);
+    }
+
+    bool HttpClient::scanPort(int start_port, int end_port, std::vector<int> &open_ports)
+    {
+        return m_impl->scanPort(start_port, end_port, open_ports);
+    }
+
+    bool HttpClient::checkServerStatus(std::string &status)
+    {
+        return m_impl->checkServerStatus(status);
+    }
 }

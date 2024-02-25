@@ -337,3 +337,5 @@ public:
         return DequeIterator<T>(nullptr);
     }
 };
+
+#endif

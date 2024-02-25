@@ -27,11 +27,6 @@ namespace Atom::Utils
      */
     class UUIDGenerator
     {
-    private:
-        mutable std::random_device rd_;                           // 随机设备
-        mutable std::mt19937 gen_;                                // Mersenne Twister 19937伪随机数生成器
-        mutable std::uniform_int_distribution<unsigned int> dis_; // 均匀分布
-
     public:
         /**
          * @brief 构造函数，初始化随机设备、生成器和均匀分布
@@ -61,7 +56,7 @@ namespace Atom::Utils
          * @param use_hyphens 是否使用短横线
          * @return 生成的UUID字符串
          */
-        std::string generateUUID(bool use_uppercase = false, bool use_braces = false, bool use_hyphens = true) const;
+        [[nodiscard]] std::string generateUUID(bool use_uppercase = false, bool use_braces = false, bool use_hyphens = true) const;
 
         /**
          * @brief 重载输出运算符，用于将UUIDGenerator对象输出到流中
@@ -75,7 +70,20 @@ namespace Atom::Utils
             os << uuid_gen.generateUUID();
             return os;
         }
+
+    private:
+        mutable std::random_device rd_;                           // 随机设备
+        mutable std::mt19937 gen_;                                // Mersenne Twister 19937伪随机数生成器
+        mutable std::uniform_int_distribution<unsigned int> dis_; // 均匀分布
     };
+
+    /**
+     * @brief 生成系统UUID的函数
+     *
+     * @return 生成的UUID字符串
+     * @note UUID的格式为xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx，其中x为16进制数字，且大写或小写均可
+     */
+    [[maybe_unused]][[nodiscard]] std::string generateSystemUUID();
 } // namespace Atom::Utils
 
 #endif

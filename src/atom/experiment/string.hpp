@@ -1,3 +1,17 @@
+/*
+ * string.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-2-10
+
+Description: A super enhanced string class.
+
+**************************************************/
+
 #ifndef ATOM_EXPERIMENT_STRING_HPP
 #define ATOM_EXPERIMENT_STRING_HPP
 
@@ -7,25 +21,39 @@
 #include <cstdarg>
 #include <algorithm>
 
+/**
+ * @brief A super enhanced string class.
+ */
 class String
 {
 public:
-    // 默认构造函数
-    String() {}
+    /**
+     * @brief Constructor.
+     */
+    String();
 
-    // 根据C风格字符串构造
-    String(const char *str)
-        : m_data(str) {}
+    /**
+     * @brief Constructor.
+     * @param str - C-style string.
+     */
+    String(const char *str);
 
-    // 根据std::string构造
-    String(const std::string &str)
-        : m_data(str) {}
+    /**
+     * @brief Constructor.
+     * @param str - std::string.
+     */
+    String(const std::string &str);
 
-    // 拷贝构造函数
-    String(const String &other)
-        : m_data(other.m_data) {}
+    /**
+     * @brief Copy constructor.
+     * @param other - other String.
+     */
+    String(const String &other);
 
-    // 赋值运算符重载
+    /**
+     * @brief Copy assignment.
+     * @param other - other String.
+     */
     String &operator=(const String &other)
     {
         if (this != &other)
@@ -35,319 +63,224 @@ public:
         return *this;
     }
 
-    // 比较运算符重载
+    /**
+     * @brief Equality.
+     * @param other - other String.
+     */
     bool operator==(const String &other) const
     {
         return m_data == other.m_data;
     }
 
+    /**
+     * @brief Inequality.
+     * @param other - other String.
+     */
     bool operator!=(const String &other) const
     {
         return m_data != other.m_data;
     }
 
+    /**
+     * @brief Less than.
+     * @param other - other String.
+     */
     bool operator<(const String &other) const
     {
         return m_data < other.m_data;
     }
 
+    /**
+     * @brief Greater than.
+     * @param other - other String.
+     */
     bool operator>(const String &other) const
     {
         return m_data > other.m_data;
     }
 
+    /**
+     * @brief Less than or equal.
+     * @param other - other String.
+     */
     bool operator<=(const String &other) const
     {
         return m_data <= other.m_data;
     }
 
+    /**
+     * @brief Greater than or equal.
+     * @param other - other String.
+     */
     bool operator>=(const String &other) const
     {
         return m_data >= other.m_data;
     }
 
-    // 追加字符串
+    /**
+     * @brief Concatenation.
+     * @param other - other String.
+     */
     String &operator+=(const String &other)
     {
         m_data += other.m_data;
         return *this;
     }
 
+    /**
+     * @brief Concatenation.
+     * @param str - C-style string.
+     */
     String &operator+=(const char *str)
     {
         m_data += str;
         return *this;
     }
 
+    /**
+     * @brief Concatenation.
+     * @param c - char.
+     */
     String &operator+=(char c)
     {
         m_data += c;
         return *this;
     }
 
-    // 获取字符数组
-    const char *toCharArray() const
-    {
-        return m_data.c_str();
-    }
+    /**
+     * @brief Get C-style string.
+     */
+    const char *toCharArray() const;
 
-    // 获取字符串长度
-    size_t length() const
-    {
-        return m_data.length();
-    }
+    /**
+     * @brief Get length.
+     */
+    size_t length() const;
 
-    // 子字符串提取
-    String substring(size_t pos, size_t len = std::string::npos) const
-    {
-        return m_data.substr(pos, len);
-    }
+    /**
+     * @brief Get substring.
+     * @param pos - start position.
+     * @param len - length.
+     */
+    String substring(size_t pos, size_t len = std::string::npos) const;
 
-    // 查找和替换
-    size_t find(const String &str, size_t pos = 0) const
-    {
-        return m_data.find(str.m_data, pos);
-    }
+    /**
+     * @brief Find.
+     * @param str - string to find.
+     * @param pos - start position.
+     */
+    size_t find(const String &str, size_t pos = 0) const;
 
-    size_t replace(const String &oldStr, const String &newStr)
-    {
-        size_t count = 0;
-        size_t pos = 0;
+    /**
+     * @brief Replace.
+     * @param oldStr - old string.
+     * @param newStr - new string.
+     */
+    size_t replace(const String &oldStr, const String &newStr);
 
-        while ((pos = m_data.find(oldStr.m_data, pos)) != std::string::npos)
-        {
-            m_data.replace(pos, oldStr.length(), newStr.m_data);
-            pos += newStr.length();
-            ++count;
-        }
+    /**
+     * @brief To uppercase.
+     */
+    String toUpperCase() const;
 
-        return count;
-    }
+    /**
+     * @brief To lowercase.
+     */
+    String toLowerCase() const;
 
-    // 大小写转换
-    String toUpperCase() const
-    {
-        String result(*this);
+    /**
+     * @brief Split.
+     * @param delimiter - delimiter.
+     */
+    std::vector<String> split(const String &delimiter) const;
 
-        for (size_t i = 0; i < result.length(); ++i)
-        {
-            result.m_data[i] = toupper(result.m_data[i]);
-        }
+    /**
+     * @brief Join.
+     * @param strings - strings.
+     * @param separator - separator.
+     */
+    static String join(const std::vector<String> &strings, const String &separator);
 
-        return result;
-    }
+    /**
+     * @brief Replace all.
+     * @param oldStr - old string.
+     * @param newStr - new string.
+     */
+    size_t replaceAll(const String &oldStr, const String &newStr);
 
-    String toLowerCase() const
-    {
-        String result(*this);
+    /**
+     * @brief Insert char.
+     * @param pos - position.
+     * @param c - char.
+     */
+    void insertChar(size_t pos, char c);
 
-        for (size_t i = 0; i < result.length(); ++i)
-        {
-            result.m_data[i] = tolower(result.m_data[i]);
-        }
+    /**
+     * @brief Delete char.
+     * @param pos - position.
+     */
+    void deleteChar(size_t pos);
 
-        return result;
-    }
+    /**
+     * @brief Reverse.
+     */
+    String reverse() const;
 
-    // 字符串拆分和连接
-    std::vector<String> split(const String &delimiter) const
-    {
-        std::vector<String> tokens;
+    /**
+     * @brief Equals.
+     * @param other - other String.
+     */
+    bool equalsIgnoreCase(const String &other) const;
 
-        size_t start = 0;
-        size_t end = m_data.find(delimiter.m_data);
+    /**
+     * @brief Index of.
+     * @param subStr - sub string.
+     * @param startPos - start position.
+     */
+    size_t indexOf(const String &subStr, size_t startPos = 0) const;
 
-        while (end != std::string::npos)
-        {
-            tokens.push_back(substring(start, end - start));
-            start = end + delimiter.length();
-            end = m_data.find(delimiter.m_data, start);
-        }
+    /**
+     * @brief Trim.
+     */
+    void trim();
 
-        tokens.push_back(substring(start));
+    /**
+     * @brief Start with.
+     * @param prefix - prefix.
+     */
+    bool startsWith(const String &prefix) const;
 
-        return tokens;
-    }
+    /**
+     * @brief End with.
+     * @param suffix - suffix.
+     */
+    bool endsWith(const String &suffix) const;
 
-    static String join(const std::vector<String> &strings, const String &separator)
-    {
-        String result;
+    /**
+     * @brief Escape.
+     */
+    String escape() const;
 
-        for (size_t i = 0; i < strings.size(); ++i)
-        {
-            if (i > 0)
-            {
-                result += separator;
-            }
+    /**
+     * @brief Unescape.
+     */
+    String unescape() const;
 
-            result += strings[i];
-        }
+    /**
+     * @brief To int.
+     */
+    int toInt() const;
 
-        return result;
-    }
+    /**
+     * @brief To float.
+     */
+    float toFloat() const;
 
-    size_t replaceAll(const String &oldStr, const String &newStr)
-    {
-        size_t count = 0;
-        size_t pos = 0;
-
-        while ((pos = m_data.find(oldStr.m_data, pos)) != std::string::npos)
-        {
-            m_data.replace(pos, oldStr.length(), newStr.m_data);
-            pos += newStr.length();
-            ++count;
-        }
-
-        return count;
-    }
-
-    // 插入字符
-    void insertChar(size_t pos, char c)
-    {
-        if (pos <= m_data.length())
-        {
-            m_data.insert(pos, 1, c);
-        }
-    }
-
-    // 删除字符
-    void deleteChar(size_t pos)
-    {
-        if (pos < m_data.length())
-        {
-            m_data.erase(pos, 1);
-        }
-    }
-
-    // 字符串反转
-    String reverse() const
-    {
-        String result(*this);
-        std::reverse(result.m_data.begin(), result.m_data.end());
-        return result;
-    }
-
-    // 字符串比较（忽略大小写）
-    bool equalsIgnoreCase(const String &other) const
-    {
-        return std::equal(m_data.begin(), m_data.end(), other.m_data.begin(), other.m_data.end(),
-                          [](char a, char b)
-                          {
-                              return std::tolower(a) == std::tolower(b);
-                          });
-    }
-
-    // 获取子串出现的位置
-    size_t indexOf(const String &subStr, size_t startPos = 0) const
-    {
-        return m_data.find(subStr.m_data, startPos);
-    }
-
-    // 去除首尾空格
-    void trim()
-    {
-        size_t startPos = m_data.find_first_not_of(" \t\r\n");
-        size_t endPos = m_data.find_last_not_of(" \t\r\n");
-
-        if (startPos == std::string::npos || endPos == std::string::npos)
-        {
-            m_data.clear();
-        }
-        else
-        {
-            m_data = m_data.substr(startPos, endPos - startPos + 1);
-        }
-    }
-
-    // 判断字符串是否以指定的前缀开头
-    bool startsWith(const String &prefix) const
-    {
-        if (prefix.length() > m_data.length())
-        {
-            return false;
-        }
-
-        return std::equal(prefix.m_data.begin(), prefix.m_data.end(), m_data.begin());
-    }
-
-    // 判断字符串是否以指定的后缀结尾
-    bool endsWith(const String &suffix) const
-    {
-        if (suffix.length() > m_data.length())
-        {
-            return false;
-        }
-
-        return std::equal(suffix.m_data.rbegin(), suffix.m_data.rend(), m_data.rbegin());
-    }
-
-    // 字符串转义
-    String escape() const
-    {
-        String result;
-        for (char c : m_data)
-        {
-            if (c == '\\' || c == '\"' || c == '\'')
-            {
-                result += '\\';
-            }
-            result += c;
-        }
-        return result;
-    }
-
-    // 字符串反转义
-    String unescape() const
-    {
-        String result;
-        bool escaped = false;
-
-        for (char c : m_data)
-        {
-            if (escaped)
-            {
-                if (c == '\\' || c == '\"' || c == '\'')
-                {
-                    result += c;
-                }
-                else
-                {
-                    result += '\\';
-                    result += c;
-                }
-                escaped = false;
-            }
-            else if (c == '\\')
-            {
-                escaped = true;
-            }
-            else
-            {
-                result += c;
-            }
-        }
-
-        return result;
-    }
-
-    // 数字转换
-    int toInt() const
-    {
-        std::istringstream iss(m_data);
-        int value = 0;
-        iss >> value;
-        return value;
-    }
-
-    float toFloat() const
-    {
-        std::istringstream iss(m_data);
-        float value = 0;
-        iss >> value;
-        return value;
-    }
-
-    // 字符串格式化
+    /**
+     * @brief Format.
+     * @param format - format.
+     * @param ... - arguments.
+     */
     static String format(const char *format, ...)
     {
         char buffer[1024];
@@ -360,16 +293,25 @@ public:
         return String(buffer);
     }
 
+    static const size_t npos;
+
 private:
     std::string m_data;
 };
 
-// 重载+运算符
+/**
+ * @brief Concatenation.
+ * @param lhs - left operand.
+ * @param rhs - right operand.
+ * @return - result.
+ */
 String operator+(const String &lhs, const String &rhs)
 {
     String result(lhs);
     result += rhs;
     return result;
 }
+
+const size_t String::npos = -1;
 
 #endif

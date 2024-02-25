@@ -28,7 +28,6 @@ Description: Implementation of murmur3 hash and quick hash
 
 namespace Atom::Utils
 {
-
     static inline uint32_t fmix32(uint32_t h)
     {
         h ^= h >> 16;
@@ -40,19 +39,29 @@ namespace Atom::Utils
         return h;
     }
 
-    uint32_t murmur3_hash(const void *data, const uint32_t &size, const uint32_t &seed)
+    uint32_t murmur3Hash(const char *str, const uint32_t &seed = 1060627423)
+    {
+        if (!str)
+            return 0;
+
+        int len = strlen(str);
+        return murmur3Hash(str, len, seed);
+    }
+
+    uint32_t murmur3Hash(const void *data, const uint32_t &size, const uint32_t &seed = 1060627423)
     {
         if (!data)
             return 0;
 
         const char *str = (const char *)data;
+        int len = size;
+
         uint32_t s, h = seed,
                     seed1 = 0xcc9e2d51,
                     seed2 = 0x1b873593,
                     *ptr = (uint32_t *)str;
 
         // handle begin blocks
-        int len = size;
         int blk = len / 4;
         for (int i = 0; i < blk; i++)
         {
@@ -88,55 +97,11 @@ namespace Atom::Utils
         return fmix32(h ^ len);
     }
 
-    uint32_t murmur3_hash(const char *str, const uint32_t &seed)
+    uint32_t quickHash(const char *str)
     {
         if (!str)
             return 0;
 
-        uint32_t s, h = seed,
-                    seed1 = 0xcc9e2d51,
-                    seed2 = 0x1b873593,
-                    *ptr = (uint32_t *)str;
-
-        // handle begin blocks
-        int len = (int)strlen(str);
-        int blk = len / 4;
-        for (int i = 0; i < blk; i++)
-        {
-            s = ptr[i];
-            s *= seed1;
-            s = ROTL(s, 15);
-            s *= seed2;
-
-            h ^= s;
-            h = ROTL(h, 13);
-            h *= 5;
-            h += 0xe6546b64;
-        }
-
-        // handle tail
-        s = 0;
-        uint8_t *tail = (uint8_t *)(str + blk * 4);
-        switch (len & 3)
-        {
-        case 3:
-            s |= tail[2] << 16;
-        case 2:
-            s |= tail[1] << 8;
-        case 1:
-            s |= tail[0];
-
-            s *= seed1;
-            s = ROTL(s, 15);
-            s *= seed2;
-            h ^= s;
-        };
-
-        return fmix32(h ^ len);
-    }
-
-    uint32_t quick_hash(const char *str)
-    {
         unsigned int h = 0;
         for (; *str; str++)
         {
@@ -145,22 +110,26 @@ namespace Atom::Utils
         return h;
     }
 
-    uint32_t quick_hash(const void *tmp, uint32_t size)
+    uint32_t quickHash(const void *tmp, uint32_t size)
     {
+        if (!tmp)
+            return 0;
+
         const char *str = (const char *)tmp;
         unsigned int h = 0;
-        for (uint32_t i = 0; i < size; ++i)
+        for (uint32_t i = 0; i < size; ++i, ++str)
         {
             h = 31 * h + *str;
         }
         return h;
     }
 
-    uint64_t murmur3_hash64(const void *str, const uint32_t &size, const uint32_t &seed, const uint32_t &seed2)
+    uint64_t murmur3Hash64(const void *str, const uint32_t &size, const uint32_t &seed= 1060627423, const uint32_t &seed2 = 1050126127)
     {
         return (((uint64_t)murmur3_hash(str, size, seed)) << 32 | murmur3_hash(str, size, seed2));
     }
-    uint64_t murmur3_hash64(const char *str, const uint32_t &seed, const uint32_t &seed2)
+
+    uint64_t murmur3Hash64(const char *str, const uint32_t &seed = 1060627423, const uint32_t &seed2 = 1050126127)
     {
         return (((uint64_t)murmur3_hash(str, seed)) << 32 | murmur3_hash(str, seed2));
     }
@@ -384,101 +353,5 @@ namespace Atom::Utils
     std::string data_from_hexstring(const std::string &hexstring)
     {
         return data_from_hexstring(hexstring.c_str(), hexstring.size());
-    }
-
-    std::string replace(const std::string &str1, char find, char replaceWith)
-    {
-        auto str = str1;
-        size_t index = str.find(find);
-        while (index != std::string::npos)
-        {
-            str[index] = replaceWith;
-            index = str.find(find, index + 1);
-        }
-        return str;
-    }
-
-    std::string replace(const std::string &str1, char find, const std::string &replaceWith)
-    {
-        auto str = str1;
-        size_t index = str.find(find);
-        while (index != std::string::npos)
-        {
-            str = str.substr(0, index) + replaceWith + str.substr(index + 1);
-            index = str.find(find, index + replaceWith.size());
-        }
-        return str;
-    }
-
-    std::string replace(const std::string &str1, const std::string &find, const std::string &replaceWith)
-    {
-        auto str = str1;
-        size_t index = str.find(find);
-        while (index != std::string::npos)
-        {
-            str = str.substr(0, index) + replaceWith + str.substr(index + find.size());
-            index = str.find(find, index + replaceWith.size());
-        }
-        return str;
-    }
-
-    std::vector<std::string> split(const std::string &str, char delim, size_t max)
-    {
-        std::vector<std::string> result;
-        if (str.empty())
-        {
-            return result;
-        }
-
-        size_t last = 0;
-        size_t pos = str.find(delim);
-        while (pos != std::string::npos)
-        {
-            result.push_back(str.substr(last, pos - last));
-            last = pos + 1;
-            if (--max == 1)
-                break;
-            pos = str.find(delim, last);
-        }
-        result.push_back(str.substr(last));
-        return result;
-    }
-
-    std::vector<std::string> split(const std::string &str, const char *delims, size_t max)
-    {
-        std::vector<std::string> result;
-        if (str.empty())
-        {
-            return result;
-        }
-
-        size_t last = 0;
-        size_t pos = str.find_first_of(delims);
-        while (pos != std::string::npos)
-        {
-            result.push_back(str.substr(last, pos - last));
-            last = pos + 1;
-            if (--max == 1)
-                break;
-            pos = str.find_first_of(delims, last);
-        }
-        result.push_back(str.substr(last));
-        return result;
-    }
-
-    std::string random_string(size_t len, const std::string &chars)
-    {
-        if (len == 0 || chars.empty())
-        {
-            return "";
-        }
-        std::string rt;
-        rt.resize(len);
-        int count = chars.size();
-        for (size_t i = 0; i < len; ++i)
-        {
-            rt[i] = chars[rand() % count];
-        }
-        return rt;
     }
 }

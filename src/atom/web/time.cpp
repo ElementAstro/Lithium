@@ -12,6 +12,8 @@ Description: Time
 
 **************************************************/
 
+#include "time.hpp"
+
 #include <chrono>
 #include <string>
 #include <iostream>
@@ -38,11 +40,12 @@ Description: Time
 #include <unistd.h>
 #endif
 
+#include "atom/system/system.hpp"
+
 #include "atom/log/loguru.hpp"
 
-namespace Lithium::Time
+namespace Atom::Web
 {
-
     std::time_t getSystemTime()
     {
         return std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -70,7 +73,7 @@ namespace Lithium::Time
 
     bool GetTimeZoneInformationByName(const std::string &timezone, DWORD *tz_id);
 
-    bool set_system_timezone(const std::string &timezone)
+    bool setSystemTimezone(const std::string &timezone)
     {
         bool success = true;
         DWORD tz_id;
@@ -141,7 +144,7 @@ namespace Lithium::Time
         return false;
     }
 
-    bool SyncTimeFromRTC()
+    bool syncTimeFromRTC()
     {
         // 获取当前时间戳（单位：秒）
         time_t now = time(nullptr);
@@ -193,6 +196,11 @@ namespace Lithium::Time
         FILETIME ft;
         ft.dwLowDateTime = (DWORD)new_timestamp;
         ft.dwHighDateTime = (DWORD)(new_timestamp >> 32);
+        if (!System::IsRoot())
+        {
+            LOG_F(ERROR, "Permission denied. Need root privilege to set system time.");
+            return false;
+        }
         SetSystemTime(&local_time); // 此处需要管理员权限才能调用成功
         return true;
     }
@@ -201,7 +209,7 @@ namespace Lithium::Time
 
     void setSystemTime(int year, int month, int day, int hour, int minute, int second)
     {
-        if (geteuid() != 0)
+        if (!System::IsRoot())
         {
             LOG_F(ERROR, "Permission denied. Need root privilege to set system time.");
             return;
@@ -233,7 +241,7 @@ namespace Lithium::Time
         }
     }
 
-    bool set_system_timezone(const std::string &timezone)
+    bool setSystemTimezone(const std::string &timezone)
     {
         bool success = true;
         struct tm new_time;
@@ -261,7 +269,7 @@ namespace Lithium::Time
         return success;
     }
 
-    bool SyncTimeFromRTC()
+    bool syncTimeFromRTC()
     {
         // 获取当前时间戳（单位：秒）
         time_t now = time(nullptr);
@@ -412,27 +420,8 @@ namespace Lithium::Time
 
         timestamp -= 2208988800UL; // 将从 1900 年至今的秒数转换为从 1970 年至今的秒数
 
-        DLOG_F(INFO, "从 {} 获取到的时间戳是：{}", hostname, timestamp);
+        DLOG_F(INFO, "From NTP server: {} {}", hostname, timestamp);
 
         return (time_t)timestamp;
     }
-
 }
-
-/*
-int main() {
-    // Initialize spdlog logger
-    auto logger = //spdlog::stdout_color_mt("console");
-
-    // Test the function on Windows and Linux
-    std::string timezone = "Asia/Shanghai";
-    bool success = set_system_timezone(timezone);
-    if (success) {
-        logger->info("Time zone set successfully!");
-    } else {
-        logger->error("Failed to set time zone.");
-    }
-    return 0;
-}
-
-*/

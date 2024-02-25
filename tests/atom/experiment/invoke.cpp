@@ -1,28 +1,27 @@
 #include "atom/experiment/invoke.hpp"
 
-#include <iostream>
+#include <gtest/gtest.h>
 
-void print_message(const std::string &message)
+TEST(DelayInvokeTest, InvokeLambdaWithArgs)
 {
-    std::cout << message << std::endl;
-}
-
-int add_numbers(int a, int b)
-{
-    return a + b;
-}
-
-int main()
-{
-    auto delayed_print = delay_invoke(print_message, "Hello, World!");
-    auto delayed_add = delay_invoke(add_numbers, 10, 20);
-
-    // 延迟调用print_message函数
-    delayed_print();
-
-    // 延迟调用add_numbers函数并获取结果
+    auto delayed_add = delay_invoke<std::function<int(int, int)>>([](int a, int b)
+                                                                  { return a + b; },
+                                                                  3, 4);
     int result = delayed_add();
-    std::cout << "Result: " << result << std::endl;
+    EXPECT_EQ(result, 7);
+}
 
-    return 0;
+TEST(DelayInvokeTest, InvokeFunctionWithArgs)
+{
+    auto multiply = [](int a, int b)
+    { return a * b; };
+    auto delayed_multiply = delay_invoke<std::function<int(int, int)>>(multiply, 5, 6);
+    int result = delayed_multiply();
+    EXPECT_EQ(result, 30);
+}
+
+int main(int argc, char **argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

@@ -117,23 +117,3 @@ namespace Atom::Utils
         }
     }
 }
-
-/*
-int main()
-{
-    StopWatcher timer;
-
-    // Register a simple callback to be called after 2.5 seconds
-    timer.registerCallback([]()
-                           { std::cout << "Callback triggered!" << std::endl; },
-                           2500);
-
-    timer.start();
-    std::this_thread::sleep_for(std::chrono::seconds(3)); // Simulate work by sleeping for 3 seconds
-    timer.stop();
-
-    std::cout << "Total elapsed time in formatted string: " << timer.elapsedFormatted() << std::endl;
-
-    return 0;
-}
-*/

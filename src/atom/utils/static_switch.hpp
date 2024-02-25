@@ -12,7 +12,8 @@ Description: Smart Static Switch just like javascript (One Instance Per Process)
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_UTILS_STATIC_SWITCH_HPP
+#define ATOM_UTILS_STATIC_SWITCH_HPP
 
 #include <string>
 #include <functional>
@@ -60,7 +61,7 @@ namespace Atom::Utils
         static void setDefault(DefaultFunc func);
 
     private:
-#ifdef ENABLE_FASTHASH
+#if ENABLE_FASTHASH
         static emhash8::HashMap<std::string, Func> &cases();
 #else
         static std::unordered_map<std::string, Func> &cases(); /**< Returns the map of registered cases. */
@@ -90,3 +91,5 @@ namespace Atom::Utils
         return false;
     }
 }
+
+#endif

@@ -1,64 +1,63 @@
 ---
 import Credits from "../components/_credits.astro";
-
 ---
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1,user-scalable=no"
-		/>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no"
+    />
 
-		<title>锂 - 控制台</title>
+    <title>锂 - 控制台</title>
 
-		<link
-			rel="icon"
-			sizes="16x16"
-			type="image/icon"
-			href="/textures/icon.ico"
-		/>
+    <link
+      rel="icon"
+      sizes="16x16"
+      type="image/icon"
+      href="/textures/icon.ico"
+    />
 
-		<link rel="stylesheet" type="text/css" href="/css/client/index.css" />
+    <link rel="stylesheet" type="text/css" href="/css/client/index.css" />
 
-		<script src="/js/client/particles.min.js" is:inline></script>
-	</head>
+    <script src="/js/client/particles.min.js" is:inline></script>
 
-	<body>
-		<div id="particles-js"></div>
-		<div id="welcome">
-			<h1>欢迎来到锂</h1>
-			<p>
-				使用锂服务器可以合理的调度您的天文设备。<br
-				/>只需连接您的设备，即可体验宇宙。
-			</p>
-			<a id="connect" href="/client">网络工具</a>
-			<p style="width:70%;display:block;float:left;">
-				多种多样的功能等待您去体验
-			</p>
-			<p
-				id="version"
-				style="font-size:1.5em;font-weight:bold;width:30%;display:block;float:left;text-align:right;"
-			>
-			</p>
-			<div id="credits">
-				<a style="vertical-align:top;">技术支持</a>
-			</div>
-			<a
-				id="logo"
-				href="https://lightapt.cn/"
-				target="_blank"
-				rel="noopener">v2.0.0</a
-			>
-		</div>
-	</body>
-	<Credits />
-	<script is:inline>
-		particlesJS.load("particles-js", "/json/particles.json", function () {
-			console.log("callback - particles.js config loaded");
-		});
-	</script>
+    <style>
+      
+    </style>
+  </head>
+
+  <body>
+    <div id="particles-js"></div>
+    <div id="welcome">
+      <h1>欢迎来到锂</h1>
+      <p>
+        使用锂服务器可以合理地调度您的天文设备。<br
+        />只需连接您的设备，即可体验宇宙。
+      </p>
+      <a id="connect" href="/client">网络工具</a>
+      <a id="logo" href="https://lightapt.cn/" target="_blank" rel="noopener"
+        >Powered by ElementAstro</a
+      >
+      <div id="credits">
+        <a style="vertical-align:top;">技术支持</a>
+        
+      </div>
+      
+    </div>
+    <div class="floating">深空摄影</div>
+    <div class="floating">原神启动</div>
+    <div class="floating">最喜欢晴天的一集</div>
+    <div class="floating">ElementAstro</div>
+    <div class="floating">Lithium</div>"
+  </body>
+  <Credits client:visible />
+  <script is:inline>
+    particlesJS.load("particles-js", "/json/particles.json", function () {
+      console.log("callback - particles.js config loaded");
+    });
+  </script>
 </html>

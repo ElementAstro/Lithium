@@ -10,12 +10,14 @@
 #include <stdexcept>
 #include <vector>
 
+#include "atom/experiment/noncopyable.hpp"
+
 namespace Atom::Async
 {
     template <typename T>
-    struct ThreadSafeQueue
+    struct ThreadSafeQueue : public NonCopyable
     {
-        ThreadSafeQueue() {}
+        ThreadSafeQueue() = default;
 
         void put(T element)
         {
@@ -213,7 +215,7 @@ namespace Atom::Async
 
     private:
         std::queue<T> m_queue;
-        std::mutex m_mutex;
+        mutable std::mutex m_mutex;
         std::condition_variable m_conditionVariable;
 
         std::atomic<bool> m_mustReturnNullptr{false};

@@ -22,7 +22,7 @@ Description: Hydrogen Filterwheel
 class HydrogenFilterwheel : public Filterwheel, public HYDROGEN::BaseClient
 {
 public:
-    HydrogenFilterwheel(const std::string &name);
+    explicit HydrogenFilterwheel(const std::string &name);
     ~HydrogenFilterwheel();
 
     virtual bool connect(const json &params) override;

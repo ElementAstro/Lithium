@@ -15,6 +15,10 @@ Description: System module for Python scripting engine
 #include "python.hpp"
 
 #include "atom/system/system.hpp"
+#include "atom/system/module/cpu.hpp"
+#include "atom/system/module/memory.hpp"
+#include "atom/system/module/battery.hpp"
+#include "atom/system/module/disk.hpp"
 
 #include "atom/log/loguru.hpp"
 
@@ -72,7 +76,7 @@ namespace Lithium
                 "get CPU usage, and return a float value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     float cpu_usage = Atom::System::GetCpuUsage();
+                     float cpu_usage = Atom::System::getCurrentCpuUsage();
                      if (cpu_usage < 0.0f)
                      {
                          LOG_F(ERROR, "Failed to get cpu usage: {}", cpu_usage);
@@ -85,7 +89,7 @@ namespace Lithium
                  "get CPU temperature, and return a float value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     float cpu_temperature = Atom::System::GetCpuTemperature();
+                     float cpu_temperature = Atom::System::getCurrentCpuTemperature();
                      if (cpu_temperature < 0.0f)
                      {
                          LOG_F(ERROR, "Failed to get cpu temperature: {}", cpu_temperature);
@@ -98,7 +102,7 @@ namespace Lithium
                  "get CPU model, and return a string value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     std::string cpu_model = Atom::System::GetCPUModel();
+                     std::string cpu_model = Atom::System::getCPUModel();
                      if (cpu_model.empty())
                      {
                          LOG_F(ERROR, "Failed to get cpu model: {}", cpu_model);
@@ -111,7 +115,7 @@ namespace Lithium
                  "get memory usage, and return a float value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     float memory_usage = Atom::System::GetMemoryUsage();
+                     float memory_usage = Atom::System::getMemoryUsage();
                      if (memory_usage < 0.0f)
                      {
                          LOG_F(ERROR, "Failed to get memory usage: {}", memory_usage);
@@ -124,7 +128,7 @@ namespace Lithium
                  "get total memory size, and return a float value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     float memory_total = Atom::System::GetTotalMemorySize();
+                     float memory_total = Atom::System::getTotalMemorySize();
                      if (memory_total < 0.0f)
                      {
                          LOG_F(ERROR, "Failed to get memory total: {}", memory_total);
@@ -137,7 +141,7 @@ namespace Lithium
                  "get available memory size, and return a float value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     float available_memory = Atom::System::GetAvailableMemorySize();
+                     float available_memory = Atom::System::getAvailableMemorySize();
                      if (available_memory < 0.0f)
                      {
                          LOG_F(ERROR, "Failed to get available memory: {}", available_memory);
@@ -150,7 +154,7 @@ namespace Lithium
                  "get disk usage, and return a dict value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     std::vector<std::pair<std::string, float>> disk_usage = Atom::System::GetDiskUsage();
+                     std::vector<std::pair<std::string, float>> disk_usage = Atom::System::getDiskUsage();
                      if (disk_usage.empty())
                      {
                         // LOG_F(ERROR, "Failed to get disk usage: {}", disk_usage);
@@ -171,7 +175,7 @@ namespace Lithium
                      pkpy::PyObject *name_obj = args[0];
                      pkpy::Str &name = pkpy::py_cast<pkpy::Str &>(vm, name_obj);
 
-                     std::string driver_model = Atom::System::GetDriveModel(name.c_str());
+                     std::string driver_model = Atom::System::getDriveModel(name.c_str());
                      if (driver_model.empty())
                      {
                          LOG_F(ERROR, "Failed to get disk model: {}", driver_model);
@@ -184,7 +188,7 @@ namespace Lithium
                  "get disk models, and return a dict value",
                  [](pkpy::VM *vm, pkpy::ArgsView args)
                  {
-                     std::vector<std::pair<std::string, std::string>> disk_models = Atom::System::GetStorageDeviceModels();
+                     std::vector<std::pair<std::string, std::string>> disk_models = Atom::System::getStorageDeviceModels();
                      if (disk_models.empty())
                      {
                         // LOG_F(ERROR, "Failed to get disk models: {}", disk_models);

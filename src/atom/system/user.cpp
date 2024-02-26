@@ -18,6 +18,7 @@ Description: Some system functions to get user information.
 #include <Windows.h>
 #include <tchar.h>
 #include <lmcons.h>
+#include <userenv.h>
 #else
 #include <sys/types.h>
 #include <unistd.h>

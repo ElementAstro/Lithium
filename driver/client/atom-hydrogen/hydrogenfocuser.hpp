@@ -28,7 +28,7 @@ public:
      *
      * @param name 焦距器名字
      */
-    HydrogenFocuser(const std::string &name);
+    explicit HydrogenFocuser(const std::string &name);
 
     /**
      * @brief 析构函数，释放 HydrogenFocuser 类相关资源

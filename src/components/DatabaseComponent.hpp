@@ -11,7 +11,7 @@ public:
   /**
    * Create database connection provider component
    */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::provider::Provider<oatpp::sqlite::Connection>>, dbConnectionProvider)([] {
+  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::provider::Provider<oatpp::sqlite::Connection>>, connectionPool)([] {
 
     /* Create database-specific ConnectionProvider */
     auto connectionProvider = std::make_shared<oatpp::sqlite::ConnectionProvider>("./sql/db.sqlite");
@@ -27,7 +27,7 @@ public:
   ([]
    {
      /* get connection pool component */
-     OATPP_COMPONENT(std::shared_ptr<oatpp::sqlite::ConnectionPool>, connectionPool);
+     OATPP_COMPONENT(std::shared_ptr<oatpp::provider::Provider<oatpp::sqlite::Connection>>, connectionPool);
 
      /* Create database-specific Executor */
      return std::make_shared<oatpp::sqlite::Executor>(connectionPool);

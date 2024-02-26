@@ -16,6 +16,10 @@ Description: System Route
 #define LITHIUM_ASYNC_SYSTEM_CONTROLLER_HPP
 
 #include "atom/system/system.hpp"
+#include "atom/system/module/cpu.hpp"
+#include "atom/system/module/memory.hpp"
+#include "atom/system/module/disk.hpp"
+#include "atom/system/module/battery.hpp"
 
 #include "config.h"
 
@@ -61,7 +65,7 @@ public:
         Action act() override
         {
             auto res = BaseReturnSystemDto::createShared();
-            if(float cpu_usage = Atom::System::GetCpuUsage(); cpu_usage <= 0.0f)
+            if(float cpu_usage = Atom::System::getCurrentCpuUsage(); cpu_usage <= 0.0f)
             {
                 res->status = "error";
                 res->message = "Failed to get current CPU usage";
@@ -90,7 +94,7 @@ public:
         Action act() override
         {
             auto res = BaseReturnSystemDto::createShared();
-            if(float memory_usage = Atom::System::GetMemoryUsage(); memory_usage <= 0.0f)
+            if(float memory_usage = Atom::System::getMemoryUsage(); memory_usage <= 0.0f)
             {
                 res->code = 500;
                 res->status = "error";
@@ -119,7 +123,7 @@ public:
         Action act() override
         {
             auto res = BaseReturnSystemDto::createShared();
-            if(float cpu_temp = Atom::System::GetCpuTemperature(); cpu_temp <= 0.0f)
+            if(float cpu_temp = Atom::System::getCurrentCpuTemperature(); cpu_temp <= 0.0f)
             {
                 res->code = 500;
                 res->status = "error";
@@ -148,7 +152,7 @@ public:
         Action act() override
         {
             auto res = ReturnDiskUsageDto::createShared();
-            if (const auto tmp = Atom::System::GetDiskUsage(); tmp.empty())
+            if (const auto tmp = Atom::System::getDiskUsage(); tmp.empty())
             {
                 res->code = 500;
                 res->status = "error";

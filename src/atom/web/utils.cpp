@@ -196,7 +196,7 @@ namespace Atom::Web
                 cmd = fmt::format("{}{}", (_WIN32 ? "netstat -ano | find \"LISTENING\" | find \"" : "lsof -i :{} -t"), port);
 #endif
 
-                std::string pid_str = System::executeCommand(cmd, false);
+                std::string pid_str = System::executeCommand(cmd, false, [](const std::string &line){return line.find("LISTENING") != std::string::npos;});
                 if (pid_str.empty())
                 {
                     LOG_F(ERROR, "Failed to get the PID of the process on port({}): {}", port, pid_str);
@@ -217,7 +217,7 @@ namespace Atom::Web
                         kill_cmd = fmt::format("{}{}", (_WIN32 ? "taskkill /F /PID " : "kill "), pid_str);
 #endif
 
-                        if (!System::executeCommand(kill_cmd, false).empty())
+                        if (!System::executeCommand(kill_cmd, false, [pid_str](const std::string &line){return line.find(pid_str) != std::string::npos;}).empty())
                         {
                             LOG_F(ERROR, "Failed to kill the process: {}", pid_str);
                             success = false;

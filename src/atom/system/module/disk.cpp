@@ -190,7 +190,7 @@ namespace Atom::System
                 if (driveType == DRIVE_FIXED)
                 {
                     std::string drivePath = drive;
-                    std::string model = GetDriveModel(drivePath);
+                    std::string model = getDriveModel(drivePath);
                     if (!model.empty())
                     {
                         storage_device_models.push_back(std::make_pair(drivePath, model));

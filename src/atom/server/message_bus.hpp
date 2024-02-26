@@ -174,7 +174,7 @@ namespace Atom::Server
         {
             std::string fullTopic = namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
-            if (messageQueueLock_.try_lock_for(timeout))
+            if (messageQueueLock_.try_lock_until(std::chrono::steady_clock::now() + timeout))
             {
                 messageQueue_.push({fullTopic, std::any(message)});
                 messageQueueLock_.unlock();
@@ -339,7 +339,7 @@ namespace Atom::Server
         std::unordered_map<std::string, std::vector<std::pair<int, std::any>>> subscribers_;
         std::mutex subscribersLock_;
         std::queue<std::pair<std::string, std::any>> messageQueue_;
-        std::mutex messageQueueLock_;
+        std::timed_mutex messageQueueLock_;
         std::condition_variable messageAvailableFlag_;
         std::mutex waitingMutex_;
 #if __cplusplus >= 202002L

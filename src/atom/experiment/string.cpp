@@ -112,7 +112,7 @@ std::vector<String> String::split(const String &delimiter) const
     return tokens;
 }
 
-static String String::join(const std::vector<String> &strings, const String &separator)
+String String::join(const std::vector<String> &strings, const String &separator)
 {
     String result;
 

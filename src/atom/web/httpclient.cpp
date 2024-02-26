@@ -65,16 +65,16 @@ namespace Atom::Web
 
     template <typename RequestT>
     bool HttpClient::HttpClientImpl::sendRequest(const std::string &method, const std::string &path, const std::map<std::string, std::string> &params,
-                                 const json &data, json &response, std::string &err)
+                                                 const json &data, json &response, std::string &err)
     {
         Client client(host_.c_str(), port_);
-        if (ssl_enabled_)
+        if (sslEnabled_)
         {
             client.enable_server_certificate_verification(true);
-            client.set_ca_cert_path(ca_cert_path_);
-            if (!client_cert_path_.empty() && !client_key_path_.empty())
+            client.set_ca_cert_path(caCertPath_);
+            if (!clientCertPath_.empty() && !clientKeyPath_.empty())
             {
-                // client.set_client_cert_and_key(client_cert_path_, client_key_path_);
+                // client.set_client_cert_and_key(clientCertPath_, clientKeyPath_);
             }
         }
 
@@ -102,22 +102,22 @@ namespace Atom::Web
 
     void HttpClient::HttpClientImpl::setSslEnabled(bool enabled)
     {
-        ssl_enabled_ = enabled;
+        sslEnabled_ = enabled;
     }
 
     void HttpClient::HttpClientImpl::setCaCertPath(const std::string &path)
     {
-        ca_cert_path_ = path;
+        caCertPath_ = path;
     }
 
     void HttpClient::HttpClientImpl::setClientCertPath(const std::string &path)
     {
-        client_cert_path_ = path;
+        clientCertPath_ = path;
     }
 
     void HttpClient::HttpClientImpl::setClientKeyPath(const std::string &path)
     {
-        client_key_path_ = path;
+        clientKeyPath_ = path;
     }
 
     bool HttpClient::HttpClientImpl::scanPort(int start_port, int end_port, std::vector<int> &open_ports)
@@ -158,7 +158,7 @@ namespace Atom::Web
 
     HttpClient::HttpClient(const std::string &host, int port, bool sslEnabled)
     {
-        m_impl = std::make_unique<HttpClientImpl>(host, port, ssl_enabled);
+        m_impl = std::make_unique<HttpClientImpl>(host, port, sslEnabled);
     }
 
     HttpClient::~HttpClient()
@@ -168,22 +168,26 @@ namespace Atom::Web
 
     bool HttpClient::sendGetRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
     {
-        return m_impl->sendRequest<::Get>(path, params, json(), response, err);
+        // return m_impl->sendRequest<httplib::Client::Get>("GET", path, params, json(), response, err);
+        return false;
     }
 
     bool HttpClient::sendPostRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
     {
-        return m_impl->sendRequest<::Post>(path, params, data, response, err);
+        // return m_impl->sendRequest<httplib::Client::Post>("POST", path, params, data, response, err);
+        return false;
     }
 
     bool HttpClient::sendPutRequest(const std::string &path, const std::map<std::string, std::string> &params, const json &data, json &response, std::string &err)
     {
-        return m_impl->sendRequest<::Put>(path, params, data, response, err);
+        // return m_impl->sendRequest<httplib::Client::Put>("PUT", path, params, data, response, err);
+        return false;
     }
 
     bool HttpClient::sendDeleteRequest(const std::string &path, const std::map<std::string, std::string> &params, json &response, std::string &err)
     {
-        return m_impl->sendRequest<::Delete>(path, params, json(), response, err);
+        // return m_impl->sendRequest<httplib::Client::Delete>("DELETE", path, params, json(), response, err);
+        return false;
     }
 
     void HttpClient::setSslEnabled(bool enabled)

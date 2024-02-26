@@ -27,7 +27,7 @@ public:
      *
      * @param name 望远镜名字
      */
-    HydrogenTelescope(const std::string &name);
+    explicit HydrogenTelescope(const std::string &name);
 
     /**
      * @brief 析构函数

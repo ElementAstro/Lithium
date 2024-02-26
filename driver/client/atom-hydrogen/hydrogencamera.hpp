@@ -58,7 +58,7 @@ class HydrogenCamera : public Camera, public HYDROGEN::BaseClient
 {
 public:
     // 构造函数
-    HydrogenCamera(const std::string &name);
+    explicit HydrogenCamera(const std::string &name);
     // 析构函数
     ~HydrogenCamera();
 

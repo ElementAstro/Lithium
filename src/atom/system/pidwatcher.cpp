@@ -27,6 +27,8 @@ Description: PID Watcher
 
 namespace fs = std::filesystem;
 
+#include "atom/log/loguru.hpp"
+
 namespace Atom::System
 {
     PidWatcher::PidWatcher() : running_(false), monitoring_(false) {}
@@ -105,22 +107,27 @@ namespace Atom::System
 
         if (running_)
         {
-            std::cout << "Already running." << std::endl;
+            LOG_F(ERROR, "Already running.");
             return false;
         }
 
         pid_ = GetPidByName(name);
         if (pid_ == 0)
         {
-            std::cout << "Failed to get PID." << std::endl;
+            LOG_F(ERROR, "Failed to get PID.");
             return false;
         }
 
         running_ = true;
         monitoring_ = true;
 
+#if __cplusplus >= 202002L
+        monitor_thread_ = std::jthread(&PidWatcher::MonitorThread, this);
+        exit_thread_ = std::jthread(&PidWatcher::ExitThread, this);
+#else
         monitor_thread_ = std::thread(&PidWatcher::MonitorThread, this);
         exit_thread_ = std::thread(&PidWatcher::ExitThread, this);
+#endif
 
         return true;
     }
@@ -158,14 +165,14 @@ namespace Atom::System
 
         if (!running_)
         {
-            std::cout << "Not running." << std::endl;
+            LOG_F(ERROR, "Not running.");
             return false;
         }
 
         pid_ = GetPidByName(name);
         if (pid_ == 0)
         {
-            std::cout << "Failed to get PID." << std::endl;
+            LOG_F(ERROR, "Failed to get PID.");
             return false;
         }
 
@@ -199,7 +206,7 @@ namespace Atom::System
             HANDLE process_handle = OpenProcess(SYNCHRONIZE, FALSE, pid_);
             if (process_handle == NULL)
             {
-                std::cout << "Failed to open process." << std::endl;
+                LOG_F(ERROR, "Failed to open process.");
                 break;
             }
             DWORD wait_result = WaitForSingleObject(process_handle, INFINITE);
@@ -252,7 +259,7 @@ namespace Atom::System
             HANDLE process_handle = OpenProcess(SYNCHRONIZE, FALSE, pid_);
             if (process_handle == NULL)
             {
-                std::cout << "Failed to open process." << std::endl;
+                LOG_F(ERROR, "Failed to open process.");
                 break;
             }
             DWORD wait_result = WaitForSingleObject(process_handle, 0);

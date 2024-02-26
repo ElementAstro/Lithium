@@ -67,6 +67,10 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
 add_library(${PROJECT_NAME} STATIC)
 
+if(WIN32)
+target_link_libraries(${PROJECT_NAME} pdh)
+endif()
+
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(${PROJECT_NAME} PUBLIC .)

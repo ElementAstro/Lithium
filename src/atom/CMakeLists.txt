@@ -63,6 +63,7 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-io
     atom-driver
     atom-event
+    atom-experiment
     atom-component
     atom-type
     atom-utils

@@ -126,12 +126,12 @@ namespace Atom::Utils
 
     uint64_t murmur3Hash64(const void *str, const uint32_t &size, const uint32_t &seed= 1060627423, const uint32_t &seed2 = 1050126127)
     {
-        return (((uint64_t)murmur3_hash(str, size, seed)) << 32 | murmur3_hash(str, size, seed2));
+        return (((uint64_t)murmur3Hash(str, size, seed)) << 32 | murmur3Hash(str, size, seed2));
     }
 
     uint64_t murmur3Hash64(const char *str, const uint32_t &seed = 1060627423, const uint32_t &seed2 = 1050126127)
     {
-        return (((uint64_t)murmur3_hash(str, seed)) << 32 | murmur3_hash(str, seed2));
+        return (((uint64_t)murmur3Hash(str, seed)) << 32 | murmur3Hash(str, seed2));
     }
 
     std::string base64decode(const std::string &src)

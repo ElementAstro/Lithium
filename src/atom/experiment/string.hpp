@@ -162,14 +162,14 @@ public:
      * @param pos - start position.
      * @param len - length.
      */
-    String substring(size_t pos, size_t len = std::string::npos) const;
+    String substring(size_t pos, size_t len) const;
 
     /**
      * @brief Find.
      * @param str - string to find.
      * @param pos - start position.
      */
-    size_t find(const String &str, size_t pos = 0) const;
+    size_t find(const String &str, size_t pos) const;
 
     /**
      * @brief Replace.
@@ -237,7 +237,7 @@ public:
      * @param subStr - sub string.
      * @param startPos - start position.
      */
-    size_t indexOf(const String &subStr, size_t startPos = 0) const;
+    size_t indexOf(const String &subStr, size_t startPos) const;
 
     /**
      * @brief Trim.

@@ -172,7 +172,6 @@ set(task_module
 )
 
 set(Lithium_module
-    ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp
 	${lithium_src_dir}/ErrorHandler.cpp
     ${lithium_src_dir}/LithiumApp.cpp
@@ -220,10 +219,11 @@ add_subdirectory(modules)
 
 add_subdirectory(driver)
 
-add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
-
+add_library(lithium_server-library STATIC ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
+target_link_libraries(lithium_server lithium_server-library)
 target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)

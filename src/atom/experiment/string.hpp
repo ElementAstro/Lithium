@@ -82,6 +82,14 @@ public:
     }
 
     /**
+     * @brief Check if the String is empth
+     */
+    operator bool() const
+    {
+        return !m_data.empty();
+    }
+
+    /**
      * @brief Less than.
      * @param other - other String.
      */
@@ -305,13 +313,6 @@ private:
  * @param rhs - right operand.
  * @return - result.
  */
-String operator+(const String &lhs, const String &rhs)
-{
-    String result(lhs);
-    result += rhs;
-    return result;
-}
-
-const size_t String::npos = -1;
+String operator+(const String &lhs, const String &rhs);
 
 #endif

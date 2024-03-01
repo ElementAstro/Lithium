@@ -8,15 +8,15 @@
 class SharedComponent : public Component
 {
 public:
-    SharedComponent();
+    explicit SharedComponent(const std::string &name);
     ~SharedComponent();
 
     // -------------------------------------------------------------------
     // Common methods
     // -------------------------------------------------------------------
 
-    bool Initialize() override;
-    bool Destroy() override;
+    virtual bool initialize() override;
+    virtual bool destroy() override;
 
     // -------------------------------------------------------------------
     // Message methods

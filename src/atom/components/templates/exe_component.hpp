@@ -21,7 +21,7 @@ Description: Executable Plugin
 class ExecutableComponent : public Component
 {
 public:
-    ExecutableComponent();
+    explicit ExecutableComponent(const std::string &name);
 
     json RunSystemCommand(const json &m_parmas);
 

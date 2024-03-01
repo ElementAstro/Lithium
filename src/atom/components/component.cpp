@@ -28,38 +28,47 @@ namespace fs = std::filesystem;
 #include <fmt/format.h>
 #endif
 
-Component::Component()
+Component::Component(const std::string &name) : m_CommandDispatcher(std::make_unique<CommandDispatcher<json, json>>()),
+                                           m_VariableRegistry(std::make_unique<VariableRegistry>(name)),
+                                           m_name(name)
 {
-    // Just for safety, initialize the members
-    m_CommandDispatcher = std::make_unique<CommandDispatcher<json, json>>();
-    m_VariableRegistry = std::make_unique<VariableRegistry>();
+    if (!initialize())
+    {
+        LOG_F(ERROR, "Failed to initialize {}", name);
+    }
 }
 
 Component::~Component()
 {
-
-    m_CommandDispatcher->RemoveAll();
-    m_VariableRegistry->RemoveAll();
-    m_CommandDispatcher.reset();
-    m_VariableRegistry.reset();
+    destroy();
 }
 
-bool Component::Initialize()
+bool Component::initialize()
 {
     return true;
 }
 
-bool Component::Destroy()
+bool Component::destroy()
 {
+    if (m_CommandDispatcher)
+    {
+        m_CommandDispatcher->RemoveAll();
+        m_CommandDispatcher.reset();
+    }
+    if (m_VariableRegistry)
+    {
+        m_VariableRegistry->RemoveAll();
+        m_VariableRegistry.reset();
+    }
     return true;
 }
 
-std::string Component::GetName() const
+std::string Component::getName() const
 {
     return m_name;
 }
 
-bool Component::LoadConfig(const std::string &path)
+bool Component::loadConfig(const std::string &path)
 {
     std::unique_lock<std::mutex> lock(m_mutex);
     try
@@ -73,6 +82,7 @@ bool Component::LoadConfig(const std::string &path)
         json j = json::parse(ifs);
         const std::string basename = fs::path(path).stem().string();
         m_config[basename] = j["config"];
+        m_ConfigPath = path;
         DLOG_F(INFO, "Loaded config file {} successfully", path);
         return true;
     }
@@ -85,6 +95,40 @@ bool Component::LoadConfig(const std::string &path)
         LOG_F(ERROR, "Failed to load config file: {}, error message: {}", path, e.what());
     }
     return false;
+}
+
+bool Component::saveConfig()
+{
+    if (m_ConfigPath.empty())
+    {
+        LOG_F(ERROR, "No path provided, will not save {}'s config", m_name);
+        return false;
+    }
+    std::ofstream ofs(m_ConfigPath);
+    if (!ofs.is_open())
+    {
+        LOG_F(ERROR, "Failed to open file: {}", m_ConfigPath);
+        return false;
+    }
+    try
+    {
+        ofs << m_config.dump(4);
+    }
+    catch (const json::parse_error &e)
+    {
+        LOG_F(ERROR, "Failed to sace config {} for JSON error: {}", m_ConfigPath, e.what());
+        ofs.close();
+        return false;
+    }
+    catch (const std::exception &e)
+    {
+        LOG_F(ERROR, "Failed to save config to file: {}, error message: {}", m_ConfigPath, e.what());
+        ofs.close();
+        return false;
+    }
+    ofs.close();
+    DLOG_F(INFO, "Save config to file: {}", m_ConfigPath);
+    return true;
 }
 
 json Component::getValue(const std::string &key_path) const
@@ -115,7 +159,7 @@ json Component::getValue(const std::string &key_path) const
     return nullptr;
 }
 
-std::string Component::GetVariableInfo(const std::string &name) const
+std::string Component::getVariableInfo(const std::string &name) const
 {
     if (!m_VariableRegistry->HasVariable(name))
     {
@@ -124,7 +168,7 @@ std::string Component::GetVariableInfo(const std::string &name) const
     return m_VariableRegistry->GetDescription(name);
 }
 
-bool Component::RunFunc(const std::string &name, const json &params)
+bool Component::runFunc(const std::string &name, const json &params)
 {
     if (!m_CommandDispatcher->HasHandler(name))
     {
@@ -134,7 +178,7 @@ bool Component::RunFunc(const std::string &name, const json &params)
     return true;
 }
 
-json Component::GetFuncInfo(const std::string &name)
+json Component::getFuncInfo(const std::string &name)
 {
     if (m_CommandDispatcher->HasHandler(name))
     {
@@ -147,7 +191,7 @@ json Component::GetFuncInfo(const std::string &name)
     return {};
 }
 
-std::function<json(const json &)> Component::GetFunc(const std::string &name)
+std::function<json(const json &)> Component::getFunc(const std::string &name)
 {
     if (!m_CommandDispatcher->HasHandler(name))
     {

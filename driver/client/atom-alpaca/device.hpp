@@ -1,4 +1,19 @@
-#pragma once
+/*
+ * device.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 20234-3-1
+
+Description: Basic Device Definition of Alpaca
+
+**************************************************/
+
+#ifndef ATOM_ALPACA_DEVICE_HPP
+#define ATOM_ALPACA_DEVICE_HPP
 
 #include <string>
 #include <vector>
@@ -27,7 +42,7 @@ public:
      * @param device_number The number of the device.
      * @param protocol The communication protocol used to connect to the device.
      */
-    Device(const std::string &address, const std::string &device_type, int device_number, const std::string &protocol);
+    explicit Device(const std::string &address, const std::string &device_type, int device_number, const std::string &protocol);
 
     /**
      * @brief Executes an action on the device with the specified name and parameters.
@@ -168,3 +183,5 @@ private:
     /** The mutex used for thread-safe access to the client transaction ID. */
     static std::mutex _ctid_lock;
 };
+
+#endif

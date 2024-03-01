@@ -15,6 +15,7 @@ Description: Basic Device Defination
 #include "device.hpp"
 
 #include "atom/utils/uuid.hpp"
+#include "atom/experiment/decorate.hpp"
 
 #ifdef __cpp_lib_format
 #include <format>
@@ -41,3 +42,29 @@ bool AtomDriver::disconnect(const json &params) { return true; };
 bool AtomDriver::reconnect(const json &params) { return true; };
 
 bool AtomDriver::isConnected() { return true; }
+
+json AtomDriver::Connect(const json &params)
+{
+    if (!params.contains("name"))
+    {
+        return {{
+            "command" : 
+        }};
+    }
+    auto d_connect = make_decorator()
+}
+
+json AtomDriver::Disconnect(const json &params)
+{
+
+}
+
+json AtomDriver::Reconnect(const json &params)
+{
+
+}
+
+json AtomDriver::IsConnected(const json &params)
+{
+
+}

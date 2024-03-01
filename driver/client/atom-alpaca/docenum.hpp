@@ -1,10 +1,26 @@
-#pragma once
+/*
+ * docenum.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 20234-3-1
+
+Description: Enum with documents just like Python
+
+**************************************************/
+
+#ifndef ATOM_ALPACA_DOCENUM_HPP
+#define ATOM_ALPACA_DOCENUM_HPP
 
 #include <map>
 #include <string>
 #include <string_view>
 
-class DocIntEnum {
+class DocIntEnum
+{
 private:
     std::map<int, std::string_view> enumMap;
 
@@ -21,3 +37,5 @@ public:
 
     void clearEnums();
 };
+
+#endif

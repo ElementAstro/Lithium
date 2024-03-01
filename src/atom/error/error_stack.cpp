@@ -30,7 +30,7 @@ namespace Atom::Error
            << "\"functionName\": \"" << error.functionName << "\","
            << "\"line\": " << error.line << ","
            << "\"fileName\": \"" << error.fileName << "\","
-           << "\"timestamp\": \"" << Atom::Utils::timeStampToString(error.timestamp) << "\","
+           << "\"timestamp\": \"" << Atom::Utils::timeStampTostd::string(error.timestamp) << "\","
            << "\"uuid\": \"" << error.uuid << "\""
            << "}";
 
@@ -46,7 +46,7 @@ namespace Atom::Error
            << "\"functionName\": \"" << error.functionName << "\","
            << "\"line\": " << error.line << ","
            << "\"fileName\": \"" << error.fileName << "\","
-           << "\"timestamp\": \"" << Atom::Utils::timeStampToString(error.timestamp) << "\","
+           << "\"timestamp\": \"" << Atom::Utils::timeStampTostd::string(error.timestamp) << "\","
            << "\"uuid\": \"" << error.uuid << "\""
            << "}";
 

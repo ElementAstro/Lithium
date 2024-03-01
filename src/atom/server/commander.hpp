@@ -27,106 +27,88 @@ Description: Commander
 #include <unordered_map>
 #endif
 
+/**
+ * @brief Generic command dispatcher class for handling and dispatching commands.
+ *
+ * This class allows registration of handler functions for specific commands, along with optional undo handlers and decorators
+ * to modify or enhance the behavior of the registered handlers. It also provides functionality for dispatching commands, undoing
+ * and redoing commands, and managing function descriptions and command history.
+ *
+ * @tparam Result The result type of the command handler function.
+ * @tparam Argument The argument type of the command handler function.
+ */
 template <typename Result, typename Argument>
 class CommandDispatcher
 {
 public:
-    /**
-     * @brief 定义处理函数类型
-     */
     using HandlerFunc = std::function<Result(const Argument &)>;
+    using DecoratorFunc = std::shared_ptr<decorator<HandlerFunc>>;
 
-    /**
-     * @brief 注册命令处理函数和撤销函数
-     * @param name 命令名称
-     * @param handler 命令处理函数
-     * @param undoHandler 撤销函数，默认为nullptr
+     /**
+     * @brief Registers a handler function for a specific command.
+     *
+     * @param name The name of the command.
+     * @param handler The handler function for the command.
+     * @param undoHandler Optional undo handler function for the command.
      */
-    void RegisterHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler = nullptr);
+    void registerHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler = nullptr);
 
     /**
-     * @brief 注册成员函数处理函数
-     * @param name 命令名称
-     * @param object 命令处理函数所属对象
-     * @param memberFunc 命令处理函数
+     * @brief Registers a member function handler for a specific command.
+     *
+     * @tparam T The type of the object.
+     * @param name The name of the command.
+     * @param object The object.
+     * @param memberFunc The member function of the object.
+     * @param undoHandler Optional undo handler function for the command.
      */
     template <class T>
-    void RegisterMemberHandler(const std::string &name, T *object, Result (T::*memberFunc)(const Argument &));
+    void registerMemberHandler(const std::string &name, T *object, Result (T::*memberFunc)(const Argument &));
 
-    /**
-     * @brief 获取特定名称的命令处理函数
-     * @param name 命令名称
-     * @return 命令处理函数
-     */
-    std::function<Result(const Argument &)> GetHandler(const std::string &name);
+    void registerDecorator(const std::string &name, const DecoratorFunc &decorator);
 
-    /**
-     * @brief 检查是否存在特定名称的命令处理函数
-     * @param name 命令名称
-     * @return 存在返回true，否则返回false
-     */
-    bool HasHandler(const std::string &name);
+    HandlerFunc getHandler(const std::string &name);
 
-    /**
-     * @brief 分派命令并执行处理函数
-     * @param name 命令名称
-     * @param data 命令参数
-     * @return 处理函数的返回结果
-     */
-    Result Dispatch(const std::string &name, const Argument &data);
+    bool hasHandler(const std::string &name);
 
-    /**
-     * @brief 执行撤销操作
-     * @return 撤销成功返回true，无可撤销的命令返回false
-     */
-    bool Undo();
+    Result dispatch(const std::string &name, const Argument &data);
 
-    /**
-     * @brief 执行重做操作
-     * @return 重做成功返回true，无可重做的命令返回false
-     */
-    bool Redo();
+    bool undo();
 
-    /**
-     * @brief 清空所有命令处理函数
-     */
-    bool RemoveAll();
+    bool redo();
 
-    /**
-     * @brief 注册函数的描述信息
-     * @param name 函数名称
-     * @param description 函数描述信息
-     */
-    void RegisterFunctionDescription(const std::string &name, const std::string &description);
+    bool removeAll();
 
-    /**
-     * @brief 获取函数的描述信息
-     * @param name 函数名称
-     * @return 函数描述信息
-     */
-    std::string GetFunctionDescription(const std::string &name);
+    void registerFunctionDescription(const std::string &name, const std::string &description);
 
-    /** @brief 删除函数的描述信息 */
-    void RemoveFunctionDescription(const std::string &name);
+    std::string getFunctionDescription(const std::string &name);
 
-    /** @brief 清空函数的描述信息 */
-    void ClearFunctionDescriptions();
+    void removeFunctionDescription(const std::string &name);
+
+    void clearFunctionDescriptions();
+
+    void setMaxHistorySize(size_t maxSize);
+
+    size_t getMaxHistorySize() const;
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, HandlerFunc> handlers_;
-    emhash8::HashMap<std::string, HandlerFunc> undoHandlers_;
-    emhash8::HashMap<std::string, std::string> descriptions_;
+    emhash8::HashMap<std::string, HandlerFunc> m_handlers;
+    emhash8::HashMap<std::string, DecoratorFunc> m_decorators;
+    emhash8::HashMap<std::string, HandlerFunc> m_undoHandlers;
+    emhash8::HashMap<std::string, std::string> m_descriptions;
 #else
-    std::unordered_map<std::string, HandlerFunc> handlers_;
-    std::unordered_map<std::string, HandlerFunc> undoHandlers_;
-    std::unordered_map<std::string, std::string> descriptions_;
+    std::unordered_map<std::string, HandlerFunc> m_handlers;
+    std::unordered_map<std::string, DecoratorFunc> m_decorators;
+    std::unordered_map<std::string, HandlerFunc> m_undoHandlers;
+    std::unordered_map<std::string, std::string> m_descriptions;
 #endif
 
-    std::stack<std::pair<std::string, Argument>> commandHistory_;
-    std::stack<std::pair<std::string, Argument>> undoneCommands_;
+    std::stack<std::pair<std::string, Argument>> m_commandHistory;
+    std::stack<std::pair<std::string, Argument>> m_undoneCommands;
 
     mutable std::shared_mutex m_sharedMutex;
+    size_t m_maxHistorySize = 100;
 };
 
 #include "commander_impl.hpp"

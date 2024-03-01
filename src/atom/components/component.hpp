@@ -1,5 +1,5 @@
 /*
- * connection.hpp
+ * component.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -17,7 +17,6 @@ Description: Basic Component Definition
 #ifndef ATOM_COMPONENT_HPP
 #define ATOM_COMPONENT_HPP
 
-#include <string>
 #include <memory>
 #include <vector>
 
@@ -29,7 +28,7 @@ Description: Basic Component Definition
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-#define SETVAR_STR(name, value)                              \
+#define SETVAR_STR(name, value)                         \
     m_VariableRegistry->RegisterVariable<std::string>(name); \
     m_VariableRegistry->SetVariable(name, value);
 
@@ -51,7 +50,7 @@ public:
     /**
      * @brief Constructs a new Component object.
      */
-    explicit Component();
+    explicit Component(const std::string &name);
 
     /**
      * @brief Destroys the Component object.
@@ -69,7 +68,7 @@ public:
      * @note This function is called by the server when the plugin is loaded.
      * @note This function should be overridden by the plugin.
      */
-    virtual bool Initialize();
+    virtual bool initialize();
 
     /**
      * @brief Destroys the plugin.
@@ -80,9 +79,9 @@ public:
      * @note The plugin should not be used after this function is called.
      * @note This is for the plugin to release any resources it has allocated.
      */
-    virtual bool Destroy();
+    virtual bool destroy();
 
-    std::string GetName() const;
+    std::string getName() const;
 
     // -------------------------------------------------------------------
     // Component Configuration methods
@@ -98,7 +97,9 @@ public:
      * @return True if the component configuration was loaded successfully, false otherwise.
      * @note Usually, the component configuration file is stored in the plugin's directory.
      */
-    bool LoadConfig(const std::string &path);
+    bool loadConfig(const std::string &path);
+
+    bool saveConfig();
 
     json getValue(const std::string &key_path) const;
 
@@ -117,9 +118,9 @@ public:
      * @param object The object instance that owns the handler function.
      */
     template <typename T>
-    bool RegisterVariable(const std::string &name)
+    bool registerVariable(const std::string &name, const T &value, const std::string &description = "")
     {
-        return m_VariableRegistry->RegisterVariable<T>(name);
+        return m_VariableRegistry->RegisterVariable<T>(name, value, description);
     }
 
     /**
@@ -130,7 +131,7 @@ public:
      * @return An optional containing the value of the variable, or empty if the variable does not exist.
      */
     template <typename T>
-    bool SetVariable(const std::string &name, T &&value)
+    bool setVariable(const std::string &name, const T &value)
     {
         return m_VariableRegistry->SetVariable<T>(name, value);
     }
@@ -146,7 +147,7 @@ public:
      * @note This function is for the server to get the value of a variable of the plugin.
      */
     template <typename T>
-    std::optional<T> GetVariable(const std::string &name) const
+    [[nodiscard]] std::optional<T> getVariable(const std::string &name) const
     {
         return m_VariableRegistry->GetVariable<T>(name);
     }
@@ -157,7 +158,7 @@ public:
      * @param name The name of the variable.
      * @return The information about the variable.
      */
-    std::string GetVariableInfo(const std::string &name) const;
+    std::string getVariableInfo(const std::string &name) const;
 
     // -------------------------------------------------------------------
     // Function methods
@@ -172,7 +173,7 @@ public:
      * @return True if the variable was set successfully, false otherwise.
      */
     template <typename ClassType>
-    void RegisterFunc(const std::string &name, json (ClassType::*handler)(const json &), ClassType *object);
+    void registerFunc(const std::string &name, json (ClassType::*handler)(const json &), ClassType *object);
 
     /**
      * @brief Gets the information about the function with the specified name.
@@ -180,7 +181,7 @@ public:
      * @param name The name of the function.
      * @return The information about the function in JSON format.
      */
-    json GetFuncInfo(const std::string &name);
+    json getFuncInfo(const std::string &name);
 
     /**
      * @brief Runs the function with the specified name and parameters.
@@ -191,9 +192,9 @@ public:
      * @param params The parameters for the function.
      * @return True if the function was executed successfully, false otherwise.
      */
-    bool RunFunc(const std::string &name, const json &params);
+    bool runFunc(const std::string &name, const json &params);
 
-    std::function<json(const json &)> GetFunc(const std::string &name);
+    std::function<json(const json &)> getFunc(const std::string &name);
 
     json createSuccessResponse(const std::string &command, const json &value);
 
@@ -210,11 +211,11 @@ private:
     std::unique_ptr<VariableRegistry> m_VariableRegistry;               ///< The variable registry for managing variables.
 
     json m_config;
-        std::mutex m_mutex;
+    std::mutex m_mutex;
 };
 
 template <typename ClassType>
-void Component::RegisterFunc(const std::string &name, json (ClassType::*handler)(const json &), ClassType *object)
+void Component::registerFunc(const std::string &name, json (ClassType::*handler)(const json &), ClassType *object)
 {
     if (!m_CommandDispatcher->HasHandler(name))
         m_CommandDispatcher->RegisterMemberHandler(name, object, handler);

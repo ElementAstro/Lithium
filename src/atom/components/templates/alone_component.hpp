@@ -20,6 +20,6 @@ Description: Alone component(run in different process)
 class AloneComponent : public Component
 {
 public:
-    AloneComponent();
+    explicit AloneComponent(const std::string &name);
 
 };

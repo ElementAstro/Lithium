@@ -23,7 +23,8 @@ Description: All of the error code
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_ERROR_CODE_HPP
+#define ATOM_ERROR_CODE_HPP
 
 enum class LIError
 {
@@ -103,3 +104,5 @@ enum class ServerError
     UnknownDeviceName,
     UnknownDeviceID
 };
+
+#endif

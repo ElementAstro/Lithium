@@ -1,4 +1,19 @@
-#pragma once
+/*
+ * exception.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 20234-3-1
+
+Description: the Same Expectations like Alpaca
+
+**************************************************/
+
+#ifndef ATOM_ALPACA_EXCEPTION_HPP
+#define ATOM_ALPACA_EXCEPTION_HPP
 
 #include <exception>
 #include <string>
@@ -6,7 +21,7 @@
 class ActionNotImplementedException : public std::exception
 {
 public:
-    ActionNotImplementedException(const std::string &message) : message_(message) {}
+    explicit ActionNotImplementedException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -20,7 +35,7 @@ private:
 class AlpacaRequestException : public std::exception
 {
 public:
-    AlpacaRequestException(int number, const std::string &message) : number_(number), message_(message) {}
+    explicit AlpacaRequestException(int number, const std::string &message) : number_(number), message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -40,7 +55,7 @@ private:
 class DriverException : public std::exception
 {
 public:
-    DriverException(int number, const std::string &message) : number_(number), message_(message) {}
+    explicit DriverException(int number, const std::string &message) : number_(number), message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -60,7 +75,7 @@ private:
 class InvalidOperationException : public std::exception
 {
 public:
-    InvalidOperationException(const std::string &message) : message_(message) {}
+    explicit InvalidOperationException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -74,7 +89,7 @@ private:
 class InvalidValueException : public std::exception
 {
 public:
-    InvalidValueException(const std::string &message) : message_(message) {}
+    explicit InvalidValueException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -88,7 +103,7 @@ private:
 class NotConnectedException : public std::exception
 {
 public:
-    NotConnectedException(const std::string &message) : message_(message) {}
+    explicit NotConnectedException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -102,7 +117,7 @@ private:
 class NotImplementedException : public std::exception
 {
 public:
-    NotImplementedException(const std::string &message) : message_(message) {}
+    explicit NotImplementedException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -116,7 +131,7 @@ private:
 class ParkedException : public std::exception
 {
 public:
-    ParkedException(const std::string &message) : message_(message) {}
+    explicit ParkedException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -130,7 +145,7 @@ private:
 class SlavedException : public std::exception
 {
 public:
-    SlavedException(const std::string &message) : message_(message) {}
+    explicit SlavedException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -144,7 +159,7 @@ private:
 class ValueNotSetException : public std::exception
 {
 public:
-    ValueNotSetException(const std::string &message) : message_(message) {}
+    explicit ValueNotSetException(const std::string &message) : message_(message) {}
 
     const char *what() const noexcept override
     {
@@ -154,3 +169,5 @@ public:
 private:
     std::string message_;
 };
+
+#endif

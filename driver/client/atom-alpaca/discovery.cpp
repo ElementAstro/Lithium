@@ -1,18 +1,34 @@
+/*
+ * discovery.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 20234-3-1
+
+Description: A simple way to discover HTTP server
+
+**************************************************/
+
 #include "discovery.hpp"
 
-#include <iostream>
 #include <chrono>
 #include <thread>
 #include <iomanip>
 #include <sstream>
 
+#include "atom/log/loguru.hpp"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <iphlpapi.h>
 #include <ws2tcpip.h>
+#ifdef _MSVC
 #pragma comment(lib, "iphlpapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
-
+#endif
 bool init_winsock()
 {
     WSADATA wsaData;
@@ -60,21 +76,21 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
 
     // Enable broadcasting
     int broadcast = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char*)&broadcast, sizeof(broadcast)) < 0)
+    if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcast, sizeof(broadcast)) < 0)
     {
         std::cerr << "failed to enable broadcasting" << std::endl;
         close(sock);
         return addrs;
     }
 
-    struct sockaddr_in addr = { 0 };
+    struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(PORT);
 
     char buf[1024];
     for (int i = 0; i < numquery; ++i)
     {
-        struct ifaddrs* ifaddr, *ifa;
+        struct ifaddrs *ifaddr, *ifa;
         if (getifaddrs(&ifaddr) == -1)
         {
             std::cerr << "failed to get interface addresses" << std::endl;
@@ -88,7 +104,7 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
 
             if (ifa->ifa_addr->sa_family == AF_INET)
             {
-                auto sin = (struct sockaddr_in*)ifa->ifa_addr;
+                auto sin = (struct sockaddr_in *)ifa->ifa_addr;
                 std::string ip = inet_ntoa(sin->sin_addr);
                 if (ip == "127.0.0.1")
                 {
@@ -96,7 +112,7 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
                 }
                 else
                 {
-                    auto netmask = (struct sockaddr_in*)ifa->ifa_netmask;
+                    auto netmask = (struct sockaddr_in *)ifa->ifa_netmask;
                     std::string netmask_str = inet_ntoa(netmask->sin_addr);
                     std::string broadcast_str = "";
                     for (int i = 0; i < 4; ++i)
@@ -111,9 +127,9 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
                         unsigned char m4 = netmask->sin_addr.S_un.S_un_b.s_b4;
 
                         unsigned char b = ((b1 & m1) | (~m1 & 0xff)) << 24 |
-                            ((b2 & m2) | (~m2 & 0xff)) << 16 |
-                            ((b3 & m3) | (~m3 & 0xff)) << 8 |
-                            ((b4 & m4) | (~m4 & 0xff));
+                                          ((b2 & m2) | (~m2 & 0xff)) << 16 |
+                                          ((b3 & m3) | (~m3 & 0xff)) << 8 |
+                                          ((b4 & m4) | (~m4 & 0xff));
 
                         std::stringstream ss;
                         ss << (int)(b >> (i * 8) & 0xff);
@@ -126,7 +142,7 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
 
                 // Send discovery message
                 if (sendto(sock, ALPACA_DISCOVERY.c_str(), ALPACA_DISCOVERY.length(),
-                    0, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+                           0, (struct sockaddr *)&addr, sizeof(addr)) < 0)
                 {
                     std::cerr << "failed to send discovery message" << std::endl;
                     freeifaddrs(ifaddr);
@@ -135,10 +151,10 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
                 }
 
                 // Receive response
-                struct sockaddr_in remote_addr = { 0 };
+                struct sockaddr_in remote_addr = {0};
                 socklen_t addrlen = sizeof(remote_addr);
                 int len = recvfrom(sock, buf, sizeof(buf), 0,
-                    (struct sockaddr*)&remote_addr, &addrlen);
+                                   (struct sockaddr *)&remote_addr, &addrlen);
                 if (len < 0)
                 {
                     // Timeout or error occurred
@@ -158,7 +174,7 @@ std::vector<std::string> search_ipv4(int numquery = 2, int timeout = 2)
                         addrs.push_back(addr_str);
                     }
                 }
-                catch (std::exception& e)
+                catch (std::exception &e)
                 {
                     std::cerr << "failed to parse response: " << e.what() << std::endl;
                 }
@@ -186,14 +202,14 @@ std::vector<std::string> search_ipv6(int numquery = 2, int timeout = 2)
         return addrs;
     }
 
-    struct sockaddr_in6 addr = { 0 };
+    struct sockaddr_in6 addr = {0};
     addr.sin6_family = AF_INET6;
     addr.sin6_port = htons(PORT);
 
     char buf[1024];
     for (int i = 0; i < numquery; ++i)
     {
-        struct ifaddrs* ifaddr, *ifa;
+        struct ifaddrs *ifaddr, *ifa;
         if (getifaddrs(&ifaddr) == -1)
         {
             std::cerr << "failed to get interface addresses" << std::endl;
@@ -207,7 +223,7 @@ std::vector<std::string> search_ipv6(int numquery = 2, int timeout = 2)
 
             if (ifa->ifa_addr->sa_family == AF_INET6)
             {
-                auto sin6 = (struct sockaddr_in6*)ifa->ifa_addr;
+                auto sin6 = (struct sockaddr_in6 *)ifa->ifa_addr;
                 if (IN6_IS_ADDR_LOOPBACK(&sin6->sin6_addr) ||
                     IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr))
                 {
@@ -219,7 +235,7 @@ std::vector<std::string> search_ipv6(int numquery = 2, int timeout = 2)
 
                 // Send discovery message
                 if (sendto(sock, ALPACA_DISCOVERY.c_str(), ALPACA_DISCOVERY.length(),
-                    0, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+                           0, (struct sockaddr *)&addr, sizeof(addr)) < 0)
                 {
                     std::cerr << "failed to send discovery message" << std::endl;
                     freeifaddrs(ifaddr);
@@ -228,10 +244,10 @@ std::vector<std::string> search_ipv6(int numquery = 2, int timeout = 2)
                 }
 
                 // Receive response
-                struct sockaddr_in6 remote_addr = { 0 };
+                struct sockaddr_in6 remote_addr = {0};
                 socklen_t addrlen = sizeof(remote_addr);
                 int len = recvfrom(sock, buf, sizeof(buf), 0,
-                    (struct sockaddr*)&remote_addr, &addrlen);
+                                   (struct sockaddr *)&remote_addr, &addrlen);
                 if (len < 0)
                 {
                     // Timeout or error occurred
@@ -252,7 +268,7 @@ std::vector<std::string> search_ipv6(int numquery = 2, int timeout = 2)
                         addrs.push_back(addr_str);
                     }
                 }
-                catch (std::exception& e)
+                catch (std::exception &e)
                 {
                     std::cerr << "failed to parse response: " << e.what() << std::endl;
                 }

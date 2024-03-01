@@ -14,6 +14,11 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 
 #include "variables.hpp"
 
+VariableRegistry::VariableRegistry(const std::string &name)
+{
+    m_name = name;
+}
+
 bool VariableRegistry::HasVariable(const std::string &name) const
 {
     std::shared_lock<std::shared_mutex> lock(m_sharedMutex);

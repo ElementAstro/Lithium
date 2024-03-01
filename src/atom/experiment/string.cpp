@@ -14,6 +14,8 @@ Description: A super enhanced string class.
 
 #include "string.hpp"
 
+const size_t String::npos = -1;
+
 String::String() {}
 
 // 根据C风格字符串构造
@@ -278,4 +280,11 @@ float String::toFloat() const
     float value = 0;
     iss >> value;
     return value;
+}
+
+String operator+(const String &lhs, const String &rhs)
+{
+    String result(lhs);
+    result += rhs;
+    return result;
 }

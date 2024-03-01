@@ -1,3 +1,17 @@
+/*
+ * device.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 20234-3-1
+
+Description: Basic Device Definition of Alpaca
+
+**************************************************/
+
 #include "device.hpp"
 
 #include <iostream>

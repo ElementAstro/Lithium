@@ -1,30 +1,49 @@
-add_library(
-    ascom_remote SHARED
-    ascom_camera.cpp
-    ascom_camera.hpp
+cmake_minimum_required(VERSION 3.13)
+project(atom-ascom C CXX)
 
-    ascom_covercalibrator.cpp
-    ascom_covercalibrator.hpp
-
-    ascom_device.cpp
-    ascom_device.hpp
-
-    ascom_filterwheel.cpp
-    ascom_filterwheel.hpp
-
-    ascom_focuser.cpp
-    ascom_focuser.hpp
-
-    ascom_telescope.cpp
-    ascom_telescope.hpp
+list(APPEND ${PROJECT_NAME}_SOURCES
+    camera.cpp
+    covercalibrator.cpp
+    device.cpp
+    filterwheel.cpp
+    focuser.cpp
+    telescope.cpp
 )
 
-target_link_libraries(ascom_remote PRIVATE LithiumDriver LithiumProperty loguru cpp_httplib)
+# Headers
+list(APPEND ${PROJECT_NAME}_HEADERS
+    camera.hpp
+    covercalibrator.hpp
+    device.hpp
+    filterwheel.hpp
+    focuser.hpp
+    telescope.hpp
+)
 
-target_link_libraries(ascom_remote PRIVATE ${OPENSSL_LIBRARIES})
+# Build Object Library
+add_library(${PROJECT_NAME}_OBJECT OBJECT)
+set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-if(WIN32)
-target_link_libraries(ascom_remote PRIVATE wsock32 ws2_32)
-endif()
+target_sources(${PROJECT_NAME}_OBJECT
+    PUBLIC
+    ${${PROJECT_NAME}_HEADERS}
+    PRIVATE
+    ${${PROJECT_NAME}_SOURCES}
+)
 
-include_directories(${CMAKE_SOURCE_DIR}/atom/lidrvier)
+target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+add_library(${PROJECT_NAME} STATIC)
+
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_include_directories(${PROJECT_NAME} PUBLIC .)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
+    SOVERSION ${HYDROGEN_SOVERSION}
+    OUTPUT_NAME ${PROJECT_NAME}
+)
+
+install(TARGETS ${PROJECT_NAME}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)

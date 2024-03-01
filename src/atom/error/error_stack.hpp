@@ -12,13 +12,14 @@ Description: Error Stack
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_ERROR_STACK_HPP
+#define ATOM_ERROR_STACK_HPP
 
-#include <string>
-#include <vector>
 #include <ostream>
 #include <algorithm>
 #include <memory>
+
+#include "atom/experiment/string.hpp"
 
 namespace Atom::Error
 {
@@ -66,11 +67,11 @@ namespace Atom::Error
 
         /// Create a shared pointer to an ErrorStack object.
         /// \return A shared pointer to the ErrorStack object.
-        std::shared_ptr<ErrorStack> createShared();
+        [[nodiscard]] std::shared_ptr<ErrorStack> createShared();
 
         /// Create a unique pointer to an ErrorStack object.
         /// \return A unique pointer to the ErrorStack object.
-        std::unique_ptr<ErrorStack> createUnique();
+        [[nodiscard]] std::unique_ptr<ErrorStack> createUnique();
 
         /// Insert a new error into the error stack.
         /// \param errorMessage The error message.
@@ -93,11 +94,11 @@ namespace Atom::Error
         /// Get a vector of errors filtered by a specific module.
         /// \param moduleName The module name for which errors are to be retrieved.
         /// \return A vector of errors filtered by the given module.
-        std::vector<ErrorInfo> getFilteredErrorsByModule(const std::string &moduleName) const;
+        [[nodiscard]] std::vector<ErrorInfo> getFilteredErrorsByModule(const std::string &moduleName) const;
 
         /// Get a string containing the compressed errors in the stack.
         /// \return A string containing the compressed errors.
-        std::string getCompressedErrors() const;
+        [[nodiscard]] std::string getCompressedErrors() const;
 
     private:
         /// Update the compressed error stack based on the current error stack.
@@ -107,3 +108,5 @@ namespace Atom::Error
         void sortCompressedErrorStack();
     };
 }
+
+#endif

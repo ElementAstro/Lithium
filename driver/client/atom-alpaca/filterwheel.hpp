@@ -1,13 +1,12 @@
-#pragma once
-
-
+#ifndef ATOM_ALPACA_FILTERWHEEL_HPP
+#define ATOM_ALPACA_FILTERWHEEL_HPP
 
 #include "device.hpp"
 
 class Filterwheel : public Device
 {
 public:
-    Filterwheel(const std::string &address, int device_number, const std::string &protocol);
+    explicit Filterwheel(const std::string &address, int device_number, const std::string &protocol);
     
     std::vector<int> get_FocusOffsets() const;
 
@@ -17,3 +16,5 @@ public:
 
     void set_Position(int position);
 };
+
+#endif

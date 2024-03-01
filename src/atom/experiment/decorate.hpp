@@ -19,18 +19,34 @@ Description: An implementation of decorate function. Just like Python's decorato
 #include <chrono>
 #include <utility>
 
-template <typename F>
-struct decorator
-{
-    decorator(F f) : func(f) {}
+template <typename FuncType>
+struct decorator;
 
-    template <typename... Args>
-    auto operator()(Args &&...args) const
+template <typename R, typename... Args>
+struct decorator<std::function<R(Args...)>>
+{
+    using FuncType = std::function<R(Args...)>;
+
+    decorator(FuncType f) : func(f) {}
+
+    template <typename Before, typename Callback = std::function<void(R)>, typename After = std::function<void(long long)>>
+    decorator<FuncType> with_hooks(
+        Before b, Callback c = [](R) {}, After a = [](long long) {}) const
+    {
+        decorator<FuncType> copy(func);
+        copy.before = b;
+        copy.callback = c;
+        copy.after = a;
+        return copy;
+    }
+
+    template <typename T, typename... TArgs>
+    auto operator()(T &obj, TArgs &&...args) const
     {
         if (before)
             before();
         auto start = std::chrono::high_resolution_clock::now();
-        auto result = func(std::forward<Args>(args)...);
+        auto result = std::invoke(func, obj, std::forward<TArgs>(args)...);
         auto end = std::chrono::high_resolution_clock::now();
         if (callback)
             callback(result);
@@ -39,20 +55,25 @@ struct decorator
         return result;
     }
 
-    template <typename Before, typename Callback, typename After>
-    decorator<F> with_hooks(Before b, Callback c, After a) const
+    template <typename... TArgs>
+    auto operator()(TArgs &&...args) const
     {
-        decorator<F> copy(func);
-        copy.before = b;
-        copy.callback = c;
-        copy.after = a;
-        return copy;
+        if (before)
+            before();
+        auto start = std::chrono::high_resolution_clock::now();
+        auto result = func(std::forward<TArgs>(args)...);
+        auto end = std::chrono::high_resolution_clock::now();
+        if (callback)
+            callback(result);
+        if (after)
+            after(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+        return result;
     }
 
     std::function<void()> before = nullptr;
-    std::function<void(int)> callback = nullptr;
+    std::function<void(R)> callback = nullptr;
     std::function<void(long long)> after = nullptr;
-    F func;
+    FuncType func;
 };
 
 template <typename F>

@@ -13,7 +13,7 @@ private:
     int z_size;
 
 public:
-    ImageMetadata(
+    explicit ImageMetadata(
         int metadata_version,
         ImageArrayElementTypes image_element_type,
         ImageArrayElementTypes transmission_element_type,

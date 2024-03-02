@@ -12,40 +12,29 @@ project(atom-utils C CXX)
 # Sources
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
-    base64.cpp
     env.cpp
-    guid.cpp
     hash_util.cpp
-    huffman.cpp
-    math.cpp
     random.cpp
     string.cpp
-    static_switch.cpp
     stopwatcher.cpp
     time.cpp
     uuid.cpp
+    xml.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
     aes.hpp
-    base64.hpp
     env.hpp
-    exception.hpp
-    guid.hpp
     hash_util.hpp
-    huffman.hpp
-    lock.hpp
-    math.hpp
     random.hpp
     refl.hpp
     string.hpp
-    static_switch.hpp
     stopwatcher.hpp
     switch.hpp
     time.hpp
-    type.hpp
     uuid.hpp
+    xml.hpp
 )
 
 # Private Headers
@@ -56,7 +45,7 @@ set(${PROJECT_NAME}_PRIVATE_HEADERS
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
 set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-target_link_libraries(${PROJECT_NAME}_OBJECT loguru)
+target_link_libraries(${PROJECT_NAME}_OBJECT loguru tinyxml2)
 
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC

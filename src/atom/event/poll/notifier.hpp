@@ -15,14 +15,13 @@ Description: Notifier
 #ifndef __Notifier_HPP
 #define __Notifier_HPP
 
-#include "kevdefs.h"
+#include "kevdefs.hpp"
 
 #include <memory>
 
 ATOM_NS_BEGIN
 
-class Notifier
-{
+class Notifier {
 public:
     virtual ~Notifier() {}
     virtual bool init() = 0;

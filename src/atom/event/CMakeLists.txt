@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-project(atom-event)
+project(atom-event C CXX)
 
 #set(CMAKE_DEBUG_POSTFIX "d")
 
-set(PROJ_ROOT_DIR ${PROJECT_SOURCE_DIR})
+set(PROJ_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(SIZEOF_VOIDP ${CMAKE_SIZEOF_VOID_P})
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -16,30 +16,31 @@ else()
   set(PROCESSOR_ARCH "x86")
 endif()
 
-include_directories(${PROJ_ROOT_DIR}/include)
-include_directories(${PROJ_ROOT_DIR}/src)
+include_directories(${PROJ_ROOT_DIR})
+include_directories(${PROJ_ROOT_DIR}/utils)
+include_directories(${PROJ_ROOT_DIR}/poll)
 
 file(GLOB SOURCE_FILES
-  ${PROJ_ROOT_DIR}/src/*.cpp
-  ${PROJ_ROOT_DIR}/src/utils/*.cpp
-  ${PROJ_ROOT_DIR}/src/poll/select_poll.cpp
-  ${PROJ_ROOT_DIR}/src/poll/vpoll.cpp
-  ${PROJ_ROOT_DIR}/src/poll/cvpoll.cpp
-  ${PROJ_ROOT_DIR}/src/poll/notifier.cpp)
+  ${PROJ_ROOT_DIR}/*.cpp
+  ${PROJ_ROOT_DIR}/utils/*.cpp
+  ${PROJ_ROOT_DIR}/poll/select_poll.cpp
+  ${PROJ_ROOT_DIR}/poll/vpoll.cpp
+  ${PROJ_ROOT_DIR}/poll/cvpoll.cpp
+  ${PROJ_ROOT_DIR}/poll/notifier.cpp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-  file(GLOB WINDOWS_SOURCES ${PROJ_ROOT_DIR}/src/poll/iocp.cpp)
+  file(GLOB WINDOWS_SOURCES ${PROJ_ROOT_DIR}/poll/iocp.cpp)
   set(SOURCE_FILES ${SOURCE_FILES} ${WINDOWS_SOURCES})
 elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   set(CMAKE_MACOSX_RPATH 1)
-  file(GLOB DARWIN_SOURCES ${PROJ_ROOT_DIR}/src/poll/kqueue.cpp
-                           ${PROJ_ROOT_DIR}/src/poll/runloop.mm)
+  file(GLOB DARWIN_SOURCES ${PROJ_ROOT_DIR}/poll/kqueue.cpp
+                           ${PROJ_ROOT_DIR}/poll/runloop.mm)
   set(SOURCE_FILES ${SOURCE_FILES} ${DARWIN_SOURCES})
 elseif (CMAKE_SYSTEM_NAME MATCHES "Android")
-  file(GLOB ANDROID_SOURCES ${PROJ_ROOT_DIR}/src/poll/epoll.cpp)
+  file(GLOB ANDROID_SOURCES ${PROJ_ROOT_DIR}/poll/epoll.cpp)
   set(SOURCE_FILES ${SOURCE_FILES} ${ANDROID_SOURCES})
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
-  file(GLOB LINUX_SOURCES ${PROJ_ROOT_DIR}/src/poll/epoll.cpp)
+  file(GLOB LINUX_SOURCES ${PROJ_ROOT_DIR}/poll/epoll.cpp)
   set(SOURCE_FILES ${SOURCE_FILES} ${LINUX_SOURCES})
 endif ()
 
@@ -65,14 +66,8 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   #message(STATUS "++++++++ flags=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
   if (WIN_USE_MD)
     message("Using DLL-specific version of multithread runtime library (/MD)")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MD /O2 /Zi -DNDEBUG -DNVALGRIND -DDYNAMIC_ANNOTATIONS_ENABLED=0")
-    set(CMAKE_CXX_FLAGS_DEBUG "/MDd /D_DEBUG /Zi /Ob0 /Od /RTC1 -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /O2 /Zi -DNDEBUG -DNVALGRIND -DDYNAMIC_ANNOTATIONS_ENABLED=0")
   else ()
     message("Using static version of multithread runtime library (/MT)")
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Zi -DNDEBUG -DNVALGRIND -DDYNAMIC_ANNOTATIONS_ENABLED=0")
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd /D_DEBUG /Zi /Ob0 /Od /RTC1 -D_DEBUG -DDYNAMIC_ANNOTATIONS_ENABLED=1 -DWTF_USE_DYNAMIC_ANNOTATIONS=1")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MT /O2 /Zi -DNDEBUG -DNVALGRIND -DDYNAMIC_ANNOTATIONS_ENABLED=0")
   endif ()
   #message(STATUS "++++++++ flags2=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin")

@@ -3,6 +3,8 @@ import sitemap from '@astrojs/sitemap';
 import compressor from "astro-compressor";
 import markdoc from "@astrojs/markdoc";
 
+import node from "@astrojs/node";
+
 // https://astro.build/config
 export default defineConfig({
   integrations: [sitemap(), compressor(), markdoc()],
@@ -12,5 +14,9 @@ export default defineConfig({
     routing: {
       prefixDefaultLocale: false
     }
-  }
+  },
+  output: "server",
+  adapter: node({
+    mode: "standalone"
+  })
 });

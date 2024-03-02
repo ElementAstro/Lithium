@@ -172,7 +172,6 @@ set(task_module
 )
 
 set(Lithium_module
-    ${lithium_src_dir}/App.cpp
 	${lithium_src_dir}/AppComponent.hpp
 	${lithium_src_dir}/ErrorHandler.cpp
     ${lithium_src_dir}/LithiumApp.cpp
@@ -188,7 +187,6 @@ endif()
 find_package(CFITSIO REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
-find_package(LIBZIP REQUIRED)
 
 #################################################################################
 # Main
@@ -198,7 +196,7 @@ project(Lithium)
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${lithium_src_dir})
 include_directories(${lithium_module_dir})
-include_directories(${CMAKE_SOURCE_DIR}/src/)
+include_directories(${lithium_src_dir})
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
@@ -219,20 +217,18 @@ add_subdirectory(${lithium_module_dir})
 include_directories(modules)
 add_subdirectory(modules)
 
-add_subdirectory(${lithium_client_dir})
+add_subdirectory(driver)
 
-
-add_executable(lithium_server ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
-
+add_library(lithium_server-library STATIC ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
+target_link_libraries(lithium_server lithium_server-library)
 target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-if(NOT WIN32)
 target_link_libraries(lithium_server hydrogenclientstatic)
-endif()
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 if(NOT HAS_STD_FORMAT)
@@ -245,7 +241,6 @@ target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
 target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
-target_link_libraries(lithium_server libzip::zip)
 target_link_libraries(lithium_server sqlite3)
 target_link_libraries(lithium_server cpp_httplib)
 target_link_libraries(lithium_server backward)
@@ -268,3 +263,43 @@ set_target_properties(
     PROPERTIES
     OUTPUT_NAME lithium_server
 )
+
+#################################################################################
+# Hello Element Astro Launcher
+
+add_library(heal-library STATIC
+    ${lithium_src_dir}/auth/AuthHandler.cpp
+    ${lithium_src_dir}/auth/AuthHandler.hpp
+    ${lithium_src_dir}/auth/JWT.cpp
+    ${lithium_src_dir}/auth/JWT.hpp
+    ${lithium_src_dir}/controller/StaticController.hpp
+    ${lithium_src_dir}/controller/StoryController.hpp
+    ${lithium_src_dir}/controller/AuthController.hpp
+    ${lithium_src_dir}/database/model/StoryModel.hpp
+    ${lithium_src_dir}/database/model/UserModel.hpp
+    ${lithium_src_dir}/database/StoryDb.hpp
+    ${lithium_src_dir}/database/UserDb.hpp
+    ${lithium_src_dir}/data/AuthDto.hpp
+    ${lithium_src_dir}/data/PageDto.hpp
+    ${lithium_src_dir}/data/SignInDto.hpp
+    ${lithium_src_dir}/data/SignUpDto.hpp
+    ${lithium_src_dir}/data/StatusDto.hpp
+    ${lithium_src_dir}/data/StoryDto.hpp
+    ${lithium_src_dir}/interceptor/AuthInterceptor.cpp
+    ${lithium_src_dir}/interceptor/AuthInterceptor.hpp
+    ${lithium_src_dir}/service/AuthService.cpp
+    ${lithium_src_dir}/service/AuthService.hpp
+    ${lithium_src_dir}/service/StoryService.cpp
+    ${lithium_src_dir}/service/StoryService.hpp
+    ${lithium_src_dir}/LauncherComponent.hpp
+    ${lithium_src_dir}/components/DatabaseComponent.hpp
+    ${lithium_src_dir}/components/SwaggerComponent.hpp
+    ${lithium_src_dir}/ErrorHandler.cpp
+    ${lithium_src_dir}/ErrorHandler.hpp
+)
+
+target_include_directories(heal-library PUBLIC ${lithium_src_dir})
+
+add_executable(heal ${lithium_src_dir}/Launcher.cpp)
+target_link_libraries(heal heal-library)
+target_link_libraries(heal oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp-sqlite oatpp)

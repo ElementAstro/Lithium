@@ -23,49 +23,50 @@ Description: WebSocket Connections hub.
 #include <unordered_map>
 #endif
 
-#include "atom/server/serialize.hpp"
 #include "atom/server/deserialize.hpp"
 #include "atom/server/message_bus.hpp"
+#include "atom/server/serialize.hpp"
 
-class AsyncWsHub
-{
+class AsyncWsHub {
 public:
-	AsyncWsHub(const oatpp::String &name);
+    AsyncWsHub(const oatpp::String &name);
 
-	/**
-	 * Add Connection to the AsyncWsHub.
-	 * @param Connection
-	 */
-	void addConnection(const std::shared_ptr<AsyncWsInstance> &Connection);
+    /**
+     * Add Connection to the AsyncWsHub.
+     * @param Connection
+     */
+    void addConnection(const std::shared_ptr<AsyncWsInstance> &Connection);
 
-	/**
-	 * Remove Connection from the AsyncWsHub.
-	 * @param userId
-	 */
-	void removeConnectionByUserId(v_int32 userId);
+    /**
+     * Remove Connection from the AsyncWsHub.
+     * @param userId
+     */
+    void removeConnectionByUserId(v_int32 userId);
 
-	/**
-	 * Send message to all Connections in the AsyncWsHub.
-	 * @param message
-	 */
-	void sendMessage(const oatpp::String &message);
+    /**
+     * Send message to all Connections in the AsyncWsHub.
+     * @param message
+     */
+    void sendMessage(const oatpp::String &message);
 
-	/**
-	 * Send binary message to all Connections in the AsyncWsHub.
-	 * @param binary_message
-	 * @param size
-	 */
-	void sendBinaryMessage(const void *binary_message, int size);
+    /**
+     * Send binary message to all Connections in the AsyncWsHub.
+     * @param binary_message
+     * @param size
+     */
+    void sendBinaryMessage(const void *binary_message, int size);
 
 private:
-	oatpp::String m_name;
-	std::unordered_map<v_int32, std::shared_ptr<AsyncWsInstance>> m_ConnectionById;
-	std::mutex m_ConnectionByIdLock;
-	// Serialization and Deserialization Engine
-	std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
-	std::shared_ptr<Atom::Server::DeserializationEngine> m_DeserializationEngine;
-	// Message Bus
-	std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
+    oatpp::String m_name;
+    std::unordered_map<v_int32, std::shared_ptr<AsyncWsInstance>>
+        m_ConnectionById;
+    std::mutex m_ConnectionByIdLock;
+    // Serialization and Deserialization Engine
+    std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
+    std::shared_ptr<Atom::Server::DeserializationEngine>
+        m_DeserializationEngine;
+    // Message Bus
+    std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
 };
 
-#endif // WsHUB_HPP
+#endif  // WsHUB_HPP

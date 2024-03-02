@@ -19,28 +19,22 @@ Description: System Data Transform Object
 
 #include OATPP_CODEGEN_BEGIN(DTO)
 
-class BaseReturnSystemDto : public StatusDto
-{
+class BaseReturnSystemDto : public StatusDto {
     DTO_INIT(BaseReturnSystemDto, StatusDto)
 
-    DTO_FIELD_INFO(value)
-    {
+    DTO_FIELD_INFO(value) {
         info->description = "The value of the system info";
     }
     DTO_FIELD(Float32, value);
 };
 
-class ReturnDiskUsageDto : public StatusDto
-{
+class ReturnDiskUsageDto : public StatusDto {
     DTO_INIT(ReturnDiskUsageDto, StatusDto)
 
-    DTO_FIELD_INFO(value)
-    {
-        info->description = "The value of the disk usage";
-    }
+    DTO_FIELD_INFO(value) { info->description = "The value of the disk usage"; }
     DTO_FIELD(UnorderedFields<Float32>, value);
 };
 
 #include OATPP_CODEGEN_END(DTO)
 
-#endif // SYSTEMDTO_HPP
+#endif  // SYSTEMDTO_HPP

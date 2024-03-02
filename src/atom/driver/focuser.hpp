@@ -16,8 +16,7 @@ Description: Basic Focuser Defination
 
 #include "device.hpp"
 
-class Focuser : public AtomDriver
-{
+class Focuser : public AtomDriver {
 public:
     /**
      * @brief 构造函数，创建一个名为 name 的电调对象

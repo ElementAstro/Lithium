@@ -14,7 +14,7 @@ export const StyledContainer = styled(Container)`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  z-index: 100;
 `;
 
 export const StyledForm = styled(Form)`

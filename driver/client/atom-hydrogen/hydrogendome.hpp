@@ -1,0 +1,4 @@
+#ifndef ATOM_HYDROGEN_DOME_HPP
+#define ATOM_HYDROGEN_DOME_HPP
+
+#endif

@@ -16,7 +16,7 @@
     }                                                                                 \
     type name = args.get<type>(#name).value();
 
-SharedComponent::SharedComponent() : Component()
+SharedComponent::SharedComponent(const std::string &name) : Component(name)
 {
     DLOG_F(INFO, "Shared component is created.");
 
@@ -84,44 +84,12 @@ SharedComponent::~SharedComponent()
     DLOG_F(INFO, "Shared component is destroyed.");
 }
 
-bool SharedComponent::Initialize()
+bool SharedComponent::initialize()
 {
-    // Initialize message handlers
-    m_handleVoid->registerCase("getAllConfig", [this](const std::shared_ptr<VoidMessage> &message)
-                               { this->SendTextMessage("getAllConfig", this->getJsonConfig()); });
-
-    m_handleParams->registerCase("getConfig", [this](const std::shared_ptr<ParamsMessage> &message)
-                                 { 
-                                Args args = message->value();
-                                if (args.size() < 1)
-                                {
-                                    this->SendTextMessage("getConfig", "Invalid arguments.");
-                                    return;
-                                }
-                                GET_ARGUMENT_S("getConfig", std::string, section);
-                                GET_ARGUMENT_S("getConfig", std::string, key);
-                                GET_ARGUMENT_S("getConfig", std::string, type);
-
-                                if (type == "text")
-                                {
-                                    this->SendTextMessage("getConfig", this->getConfig<std::string>(section, key).value());
-                                }
-                                else if (type == "number")
-                                {
-                                    this->SendNumberMessage("getConfig", this->getConfig<int>(section, key).value());
-                                }
-                                else if (type == "boolean")
-                                {
-                                    this->SendBooleanMessage("getConfig", this->getConfig<bool>(section, key).value());
-                                }
-                                else
-                                {
-                                    this->SendTextMessage("getConfig", "Invalid type:" + type);
-                                }; });
     return true;
 }
 
-bool SharedComponent::Destroy()
+bool SharedComponent::destroy()
 {
     return true;
 }
@@ -177,7 +145,7 @@ bool SharedComponent::SendTextMessage(const std::string &message, const std::str
         LOG_F(ERROR, "Message bus is null.");
         return false;
     }
-    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<TextMessage>(message, text, "lithium.app", GetName()));
+    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<TextMessage>(message, text, "lithium.app", getName()));
     return true;
 }
 
@@ -188,7 +156,7 @@ bool SharedComponent::SendNumberMessage(const std::string &message, const double
         LOG_F(ERROR, "Message bus is null.");
         return false;
     }
-    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<NumberMessage>(message, number, "lithium.app", GetName()));
+    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<NumberMessage>(message, number, "lithium.app", getName()));
     return true;
 }
 
@@ -199,7 +167,7 @@ bool SharedComponent::SendBooleanMessage(const std::string &message, const bool 
         LOG_F(ERROR, "Message bus is null.");
         return false;
     }
-    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<BooleanMessage>(message, boolean, "lithium.app", GetName()));
+    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<BooleanMessage>(message, boolean, "lithium.app", getName()));
     return true;
 }
 
@@ -210,6 +178,6 @@ bool SharedComponent::SendParamsMessage(const std::string &message, const Args &
         LOG_F(ERROR, "Message bus is null.");
         return false;
     }
-    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<ParamsMessage>(message, params, "lithium.app", GetName()));
+    m_MessageBus->Publish<std::shared_ptr<Message>>(message, std::make_shared<ParamsMessage>(message, params, "lithium.app", getName()));
     return true;
 }

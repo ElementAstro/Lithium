@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAQ Page</title>
+    <link rel="stylesheet" href="/css/adminlte.min.css" />
+    <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css" />
+    <link rel="stylesheet" href="/css/client/loading.css" />
+    <style>
+      .solutions-list {
+        background-color: #f5f5f5;
+      }
+    </style>
+  </head>
+  <body class="container-fluid dark-mode">
+    <!-- loading开始 -->
+    <div id="loading-animation">
+      <div id="loading-animation-center">
+        <div id="loading-animation-center-absolute">
+          <div class="loading_object" id="loading_four"></div>
+          <div class="loading_object" id="loading_three"></div>
+          <div class="loading_object" id="loading_two"></div>
+          <div class="loading_object" id="loading_one"></div>
+        </div>
+      </div>
+    </div>
+    <script is:inline>
+      !(function () {
+        function e() {
+          setTimeout(() => {
+            $("#loading-animation").fadeOut(540);
+          }, 500);
+        }
+        window.jQuery
+          ? $(document).ready(() => {
+              e();
+            })
+          : (document.onreadystatechange = () => {
+              "interactive" === document.readyState && e();
+            });
+      })();
+    </script>
+    <!-- loading 结束 -->
+    <div class="container">
+      <nav class="navbar navbar-expand sticky-top">
+        <!-- 左侧导航栏链接 -->
+        <ul class="navbar-nav">
+          <li class="nav-item">
+            <a class="nav-link" data-widget="pushmenu" href="#" role="button"
+              ><i class="fas fa-bars"></i></a
+            >
+          </li>
+          <li class="nav-item d-none d-sm-inline-block">
+            <a href="#" class="nav-link">FAQ</a>
+          </li>
+          <li class="nav-item d-none d-sm-inline-block">
+            <a href="https://github.com/ElementAstro" class="nav-link">Github</a
+            >
+          </li>
+        </ul>
+
+        <!-- 右侧导航栏链接 -->
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item d-flex">
+            <div class="row">
+              <div class="col-md-3">
+                <button
+                  id="refreshBtn"
+                  class="btn btn-outline-primary btn-md btn-block">刷新</button
+                >
+              </div>
+              <div class="col-md-9">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="form-control"
+                  placeholder="Search by name, difficulty, or category"
+                />
+              </div>
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+              <i class="fas fa-expand-arrows-alt"></i>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              data-widget="control-sidebar"
+              data-slide="true"
+              href="#"
+              role="button"
+            >
+              <i class="fas fa-th-large"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <div id="faqContainer"></div>
+    </div>
+
+    <script src="/js/jquery.min.js" is:inline></script>
+    <script src="/js/bootstrap.bundle.min.js" is:inline></script>
+    <script src="/js/adminlte.min.js" is:inline></script>
+    <script is:inline>
+      $(document).ready(function () {
+        var faqs = []; // Initialize with empty array
+
+        function fetchData() {
+          // Simulate fetching data from backend API
+          setTimeout(function () {
+            faqs = [
+              {
+                category: "软件",
+                description: "NINA无法调用Astap",
+                difficulty: 2,
+                links: [
+                  "https://www.cplusplus.com/",
+                  "https://en.cppreference.com/",
+                ],
+                question: "NINA无法调用Astap",
+                solutions: [
+                  "检查Astap是否安装了",
+                  "检查Astap是否安装在了能够识别到的位置",
+                ],
+                update: "2024-02-25",
+              },
+              {
+                category: "Language",
+                description:
+                  "You can declare a variable using the syntax: type name;",
+                difficulty: 1,
+                links: ["https://www.geeksforgeeks.org/variables-cpp/"],
+                question: "How to declare a variable in C++?",
+                solutions: ["int x;", "float y = 3.14;"],
+                update: "2024-02-25",
+              },
+            ];
+
+            renderFAQs(faqs);
+          }, 1000); // Simulate delay
+        }
+
+        function renderFAQs(faqs) {
+          $("#faqContainer").empty();
+
+          faqs.forEach(function (faq) {
+            var card = `
+            <div class="card mb-3 card-primary card-outline">
+                <div class="card-header">
+                  <div class="card-title">
+                    ${faq.question}
+                    <small class="badge badge-success"><i class="fas fa-book"></i> ${faq.category}</small>
+                    <small class="badge badge-danger"><i class="fas fa-timer"></i> ${faq.difficulty}</small>
+                  </div>
+                  <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                      <i class="fas fa-minus"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body ">
+                    <p class="card-text">${faq.description}</p>
+                    <a href="${faq.links[0]}" class="btn btn-primary mr-2" target="_blank">Learn More</a>
+
+                    <button class="btn btn-secondary show-solutions-btn">Show Solutions</button>
+
+                    <ul class="list-group mt-3 solutions-list" style="display: none;">
+                        ${faq.solutions.map((solution) => `<li class="list-group-item">${solution}</li>`).join("")}
+                    </ul>
+                </div>
+                <div class="card-footer text-muted">${faq.update}</div>
+            </div>
+            `;
+
+            $("#faqContainer").append(card);
+          });
+        }
+
+        // Initial data fetch
+        fetchData();
+
+        // Search functionality
+        $("#searchInput").on("input", function () {
+          var searchTerm = $(this).val().toLowerCase();
+
+          var filteredFAQs = faqs.filter(function (faq) {
+            return (
+              faq.question.toLowerCase().includes(searchTerm) ||
+              faq.difficulty.toString().includes(searchTerm) ||
+              faq.category.toLowerCase().includes(searchTerm)
+            );
+          });
+
+          renderFAQs(filteredFAQs);
+        });
+
+        // Toggle solutions
+        $("#faqContainer").on("click", ".show-solutions-btn", function () {
+          $(this).siblings(".solutions-list").slideToggle();
+        });
+
+        // Refresh data button
+        $("#refreshBtn").on("click", function () {
+          fetchData();
+        });
+      });
+    </script>
+  </body>
+</html>

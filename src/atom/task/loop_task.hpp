@@ -12,12 +12,12 @@ Description: Loop Task Definition
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_TASK_LOOP_TASK_HPP
+#define ATOM_TASK_LOOP_TASK_HPP
 
 #include "task.hpp"
 
-class LoopTask : public SimpleTask
-{
+class LoopTask : public SimpleTask {
 public:
     /**
      * @brief Constructor for the LoopTask class.
@@ -28,14 +28,14 @@ public:
      * @param loop_count The number of times the task will be executed.
      */
     LoopTask(const std::function<json(const json &)> &func,
-                   const std::function<json(const json &)> &stop_fn, 
-                   const json &params_template, 
-                   int loop_count);
+             const std::function<json(const json &)> &stop_fn,
+             const json &params_template, int loop_count);
 
     /**
      * @brief Executes the task.
      *
-     * This function is implemented by the subclass to define the specific logic of the task.
+     * This function is implemented by the subclass to define the specific logic
+     * of the task.
      *
      * @return The result of the task execution in JSON format.
      */
@@ -51,3 +51,5 @@ public:
 private:
     int m_loopCount;
 };
+
+#endif

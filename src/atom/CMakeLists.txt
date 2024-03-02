@@ -15,8 +15,13 @@ add_subdirectory(async)
 add_subdirectory(components)
 add_subdirectory(connection)
 add_subdirectory(driver)
+add_subdirectory(event)
+add_subdirectory(experiment)
+add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(server)
+add_subdirectory(search)
+add_subdirectory(system)
 add_subdirectory(task)
 add_subdirectory(type)
 add_subdirectory(utils)
@@ -29,33 +34,9 @@ endif()
 list(APPEND ${PROJECT_NAME}_SOURCES
     error/error_stack.cpp
 
-    io/compress.cpp
-    io/file.cpp
-    io/io.cpp
-
     log/logger.cpp
     log/global_logger.cpp
-
-    search/sqlite.cpp
-
-    server/daemon.cpp
-    server/serialize.cpp
-    server/deserialize.cpp
-    server/json_checker.cpp
-    server/global_ptr.cpp
-
-    system/system.cpp
-    system/crash.cpp
-    system/process.cpp
-    system/pid.cpp
-    system/pidw.cpp
-    # system/filew.cpp
-    system/dirw.cpp
-
-    type/args.cpp
-    type/ini.cpp
-    type/message.cpp
-    server/variables.cpp
+    log/syslog.cpp
 )
 
 # Headers
@@ -63,40 +44,9 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     error/error_code.hpp
     error/error_stack.hpp
 
-    io/compress.hpp
-    io/file.hpp
-    io/glob.hpp
-    io/io.hpp
-
     log/logger.hpp
     log/global_logger.hpp
-
-    search/sqlite.hpp
-
-    server/daemon.hpp
-    server/serialize.hpp
-    server/deserialize.hpp
-    server/json_checker.hpp
-    server/global_ptr.hpp
-    server/commander.hpp
-    server/message_bus.hpp
-    server/message_queue.hpp
-    server/variables.hpp
-
-    system/system.hpp
-    system/crash.hpp
-    system/process.hpp
-    system/pid.hpp
-    system/pidw.hpp
-    # system/filew.hpp
-    system/dirw.hpp
-
-    type/args.hpp
-    type/expected.hpp
-    type/json.hpp
-    type/ini.hpp
-    type/small_vector.hpp
-    type/message.hpp
+    log/syslog.hpp
 )
 
 # Private Headers
@@ -110,10 +60,17 @@ list(APPEND ${PROJECT_NAME}_LIBS
     libzippp
     atom-async
     atom-task
+    atom-io
     atom-driver
+    atom-event
+    atom-experiment
     atom-component
+    atom-type
     atom-utils
+    atom-search
     atom-web
+    atom-system
+    atom-server
     )
 
 # Build Object Library

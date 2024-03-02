@@ -1,0 +1,1330 @@
+---
+import Head from "../../components/_head.astro";
+import Scripts from "../../components/_scripts.astro";
+const title = "Tools";
+const version = "1.0.0";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <Head title={title} />
+
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow-y: scroll;
+      }
+
+      ::-webkit-scrollbar {
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body class="dark-mode">
+    <!-- loading开始 -->
+    <div id="loading-animation">
+      <div id="loading-animation-center">
+        <div id="loading-animation-center-absolute">
+          <div class="loading_object" id="loading_four"></div>
+          <div class="loading_object" id="loading_three"></div>
+          <div class="loading_object" id="loading_two"></div>
+          <div class="loading_object" id="loading_one"></div>
+        </div>
+      </div>
+    </div>
+    <script is:inline>
+      !(function () {
+        function e() {
+          setTimeout(() => {
+            $("#loading-animation").fadeOut(540);
+          }, 500);
+        }
+        window.jQuery
+          ? $(document).ready(() => {
+              e();
+            })
+          : (document.onreadystatechange = () => {
+              "interactive" === document.readyState && e();
+            });
+      })();
+    </script>
+    <!-- loading 结束 -->
+
+    <div class="wrapper">
+      <!-- Main content -->
+      <section class="content">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="row">
+                <div class="col-sm-12">
+                  <div class="card card-default card-primary collapsed-card">
+                    <div class="card-header">
+                      <div class="card-title">
+                        <i class="fas fa-timer"></i>
+                        时间同步
+                      </div>
+                      <div class="card-tools">
+                        <button
+                          type="button"
+                          class="btn btn-tool"
+                          data-card-widget="collapse"
+                          title="Collapse"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <div class="input-group input-group-sm">
+                            <input
+                              type="text"
+                              class="form-control form-control-sm text-white text-center bg-dark"
+                              id="time"
+                              placeholder="客户端时间"
+                            />
+                            <button
+                              id="get_time"
+                              class="btn btn-sm btn-outline-primary"
+                            >
+                              <i class="fas fa-times-circle"></i>
+                              获取
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row pt-1">
+                        <div class="col-sm-12">
+                          <div class="input-group input-group-sm">
+                            <div class="col p-0">
+                              <button
+                                id="sync_time"
+                                class="btn btn-sm btn-outline-primary btn-block"
+                              >
+                                <i class="fas fa-sync"></i>
+                                同步
+                              </button>
+                            </div>
+                            <div class="col p-0">
+                              <button
+                                id="reset_time"
+                                class="btn btn-sm btn-outline-warning btn-block"
+                              >
+                                <i class="fas fa-redo"></i>
+                                重置
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row pt-2">
+                        <div class="col-sm-12">
+                          <div
+                            id="time_error"
+                            hidden
+                            class="alert alert-danger alert-dismissible"
+                          >
+                            <button
+                              type="button"
+                              class="close"
+                              data-dismiss="alert"
+                              aria-hidden="true">×</button
+                            >
+                            <h5><i class="icon fas fa-ban"></i>错误</h5>
+                            <p id="time_error_message"></p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row pt-2">
+                        <div class="col-sm-12">
+                          <div
+                            id="time_info"
+                            hidden
+                            class="alert alert-info alert-dismissible"
+                          >
+                            <button
+                              type="button"
+                              class="close"
+                              data-dismiss="alert"
+                              aria-hidden="true">×</button
+                            >
+                            <h5><i class="icon fas fa-info"></i>提示</h5>
+                            <p id="time_info_message"></p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-12">
+                  <div class="card card-default card-info collapsed-card">
+                    <div class="card-header">
+                      <div class="card-title">
+                        <i class="fas fa-satellite"></i>
+                        定位
+                      </div>
+                      <div class="card-tools">
+                        <button
+                          type="button"
+                          class="btn btn-tool"
+                          data-card-widget="collapse"
+                          title="Collapse"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <div class="input-group input-group-sm">
+                            <div class="col p-0">
+                              <label>经度</label>
+                              <input
+                                type="text"
+                                class="form-control form-control-sm text-white text-center bg-dark"
+                                id="lon"
+                                placeholder=""
+                              />
+                            </div>
+                            <div class="col p-0">
+                              <label>纬度</label>
+                              <input
+                                type="text"
+                                class="form-control form-control-sm text-white text-center bg-dark"
+                                id="lat"
+                                placeholder=""
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row pt-1">
+                        <div class="col-sm-12">
+                          <div class="input-group input-group-sm">
+                            <div class="col p-0">
+                              <button
+                                id="get_location"
+                                class="btn btn-sm btn-outline-warning btn-block"
+                              >
+                                <i class="fas fa-refresh"></i>
+                                获取
+                              </button>
+                            </div>
+                            <div class="col p-0">
+                              <button
+                                id="sync_location"
+                                class="btn btn-sm btn-outline-primary btn-block"
+                              >
+                                <i class="fas fa-sync"></i>
+                                同步
+                              </button>
+                            </div>
+                            <div class="col p-0">
+                              <button
+                                id="reset_location"
+                                class="btn btn-sm btn-outline-danger btn-block"
+                              >
+                                <i class="fas fa-redo"></i>
+                                重置
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row pt-2">
+                        <div class="col-sm-12">
+                          <div
+                            id="location_error"
+                            hidden
+                            class="alert alert-danger alert-dismissible"
+                          >
+                            <button
+                              type="button"
+                              class="close"
+                              data-dismiss="alert"
+                              aria-hidden="true">×</button
+                            >
+                            <h5><i class="icon fas fa-ban"></i>错误</h5>
+                            <p id="location_error_message"></p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row pt-2">
+                        <div class="col-sm-12">
+                          <div
+                            id="location_info"
+                            hidden
+                            class="alert alert-info alert-dismissible"
+                          >
+                            <button
+                              type="button"
+                              class="close"
+                              data-dismiss="alert"
+                              aria-hidden="true">×</button
+                            >
+                            <h5><i class="icon fas fa-info"></i>提示</h5>
+                            <p id="location_info_message"></p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-12">
+                  <div class="card card-default card-indigo collapsed-card">
+                    <div class="card-header">
+                      <div class="card-title">
+                        <i class="fas fa-soft-serve"></i>
+                        更新
+                      </div>
+                      <div class="card-tools">
+                        <button
+                          type="button"
+                          class="btn btn-tool"
+                          data-card-widget="collapse"
+                          title="Collapse"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col p-1">
+                          <button
+                            id="update_kstars"
+                            class="btn btn-sm btn-info btn-block"
+                          >
+                            <i class="fas fa-telescope"></i>
+                            更新Kstars
+                          </button>
+                        </div>
+                        <div class="col p-1">
+                          <button
+                            id="update_phd2"
+                            class="btn btn-sm btn-primary btn-block"
+                          >
+                            <i class="fas fa-crosshairs"></i>
+                            更新PHD2
+                          </button>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col p-1">
+                          <button
+                            id="update_astap"
+                            class="btn btn-sm btn-primary btn-block"
+                          >
+                            <i class="fas fa-camera-viewfinder"></i>
+                            更新Astap
+                          </button>
+                        </div>
+                        <div class="col p-1">
+                          <button
+                            id="update_python"
+                            class="btn btn-sm btn-info btn-block"
+                          >
+                            <i class="fas fa-map"></i>
+                            更新Python
+                          </button>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col p-1">
+                          <button
+                            id="update_plugins"
+                            class="btn btn-sm btn-info btn-block"
+                          >
+                            <i class="fas fa-plug"></i>
+                            更新插件
+                          </button>
+                        </div>
+                        <div class="col p-1">
+                          <button
+                            id="update_all"
+                            class="btn btn-sm btn-primary btn-block"
+                          >
+                            <i class="fas fa-server"></i>
+                            更新所有软件
+                          </button>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <textarea
+                            id="update_log"
+                            rows="5"
+                            style="width: 100%; font-family: monospace;"
+                            readonly
+                            class="text-white form-control form-control-sm"
+                          ></textarea>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-sm-12">
+                  <div class="card card-default card-pink collapsed-card">
+                    <div class="card-header">
+                      <div class="card-title">
+                        <i class="fas fa-file-download"></i>
+                        下载解析文件
+                      </div>
+                      <div class="card-tools">
+                        <button
+                          type="button"
+                          class="btn btn-tool"
+                          data-card-widget="collapse"
+                          title="Collapse"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <div class="input-group d-flex">
+                            <select
+                              id="solver"
+                              data-style="btn-outline-warning"
+                              class="selectpicker form-control form-control-sm pr-1"
+                            >
+                              <option value="astap">ASTAP</option>
+                              <option value="astrometry">Astrometry</option>
+                            </select>
+                            <select
+                              id="template_list"
+                              data-live-search="true"
+                              data-style="btn-outline-primary"
+                              multiple
+                              class="selectpicker form-control form-control-sm"
+                            >
+                            </select>
+                            <button
+                              id="refresh_template_list"
+                              class="btn btn-sm btn-outline-success p-0 pl-1"
+                            >
+                              <i class="fas fa-redo"></i>
+                              刷新
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-sm-12 pt-2">
+                          <button
+                            id="download_template"
+                            class="btn btn-sm btn-outline-primary btn-block"
+                          >
+                            <i class="fas fa-download"></i>
+                            下载
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row">
+                <div class="col-sm-12">
+                  <div class="card card-default card-secondary collapsed-card">
+                    <div class="card-header">
+                      <div class="card-title">
+                        <i class="fas fa-react"></i>
+                        GPS
+                      </div>
+                      <div class="card-tools">
+                        <button
+                          type="button"
+                          class="btn btn-tool"
+                          data-card-widget="collapse"
+                          title="Collapse"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-sm-12"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-sm-12">
+                  <div class="card card-default card-successs collapsed-card">
+                    <div class="card-header">
+                      <div class="card-title">
+                        <i class="fas fa-timeline"></i>
+                        天体信息
+                      </div>
+                      <div class="card-tools">
+                        <button
+                          type="button"
+                          class="btn btn-tool"
+                          data-card-widget="collapse"
+                          title="Collapse"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body">
+                      <div class="row">
+                        <div class="col-sm-12">
+                          <div class="card card-primary card-tabs">
+                            <div class="card-header p-0 pt-1">
+                              <ul
+                                class="nav nav-tabs"
+                                id="custom-tabs-one-tab"
+                                role="tablist"
+                              >
+                                <li class="nav-item">
+                                  <a
+                                    class="nav-link active"
+                                    id="custom-tabs-one-home-tab"
+                                    data-toggle="pill"
+                                    href="#custom-tabs-one-home"
+                                    role="tab"
+                                    aria-controls="custom-tabs-one-home"
+                                    aria-selected="true">极轴</a
+                                  >
+                                </li>
+                                <li class="nav-item">
+                                  <a
+                                    class="nav-link"
+                                    id="custom-tabs-one-profile-tab"
+                                    data-toggle="pill"
+                                    href="#custom-tabs-one-profile"
+                                    role="tab"
+                                    aria-controls="custom-tabs-one-profile"
+                                    aria-selected="false">太阳</a
+                                  >
+                                </li>
+                                <li class="nav-item">
+                                  <a
+                                    class="nav-link"
+                                    id="custom-tabs-one-messages-tab"
+                                    data-toggle="pill"
+                                    href="#custom-tabs-one-messages"
+                                    role="tab"
+                                    aria-controls="custom-tabs-one-messages"
+                                    aria-selected="false">月球</a
+                                  >
+                                </li>
+                                <li class="nav-item">
+                                  <a
+                                    class="nav-link"
+                                    id="custom-tabs-one-settings-tab"
+                                    data-toggle="pill"
+                                    href="#custom-tabs-one-settings"
+                                    role="tab"
+                                    aria-controls="custom-tabs-one-settings"
+                                    aria-selected="false">太阳系</a
+                                  >
+                                </li>
+                              </ul>
+                            </div>
+                            <div class="card-body">
+                              <div
+                                class="tab-content"
+                                id="custom-tabs-one-tabContent"
+                              >
+                                <div
+                                  class="tab-pane fade show active"
+                                  id="custom-tabs-one-home"
+                                  role="tabpanel"
+                                  aria-labelledby="custom-tabs-one-home-tab"
+                                >
+                                  <div class="row">
+                                    <div class="col-sm-6">
+                                      <div id="reticle">
+                                        <img
+                                          id="polaris_marker"
+                                          src="/static/textures/icons/polaris.png"
+                                        />
+                                        <p id="legend">极轴镜中的视野</p>
+                                      </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                      <table>
+                                        <tr>
+                                          <td class="polarishdr">时角</td>
+                                          <td class="polarisdata"
+                                            ><span id="pha"></span></td
+                                          >
+                                        </tr>
+                                        <tr>
+                                          <td class="polarishdr">下次中天</td>
+                                          <td class="polarisdata"
+                                            ><span id="polaris_next_transit"
+                                            ></span>
+                                          </td>
+                                          <tr>
+                                            <td class="polarishdr">高度</td>
+                                            <td class="polarisdata"
+                                              ><span id="polaris_alt"></span>
+                                            </td>
+                                          </tr>
+                                        </tr>
+                                      </table>
+                                    </div>
+                                    <div
+                                      class="tab-pane fade"
+                                      id="custom-tabs-one-profile"
+                                      role="tabpanel"
+                                      aria-labelledby="custom-tabs-one-profile-tab"
+                                    >
+                                      <div class="row">
+                                        <div class="col-sm-6">
+                                          <img
+                                            class="img-responsive"
+                                            src="/static/textures/icons/sun.png"
+                                          />
+                                        </div>
+                                        <div class="col-sm-6">
+                                          <table>
+                                            <tr>
+                                              <td class="sunhdr"
+                                                >天文黄昏开始</td
+                                              >
+                                              <td class="sundata"
+                                                ><span id="sun_at_start"></span>
+                                              </td>
+                                              <tr>
+                                                <td class="sunhdr"
+                                                  >民用黄昏开始</td
+                                                >
+                                                <td class="sundata"
+                                                  ><span id="sun_ct_start"
+                                                  ></span>
+                                                </td>
+                                                <tr>
+                                                  <td class="sunhdr">升起</td>
+                                                  <td class="sundata"
+                                                    ><span id="sun_rise">
+                                                    </span>
+                                                  </td>
+                                                  <tr>
+                                                    <td class="sunhdr">中天</td>
+                                                    <td class="sundata"
+                                                      ><span id="sun_transit"
+                                                      ></span>
+                                                    </td>
+                                                    <tr>
+                                                      <td class="sunhdr"
+                                                        >落下</td
+                                                      >
+                                                      <td class="sundata"
+                                                        ><span id="sun_set">
+                                                        </span>
+                                                      </td>
+                                                      <tr>
+                                                        <td class="sunhdr"
+                                                          >民用黄昏结束</td
+                                                        >
+                                                        <td class="sundata"
+                                                          ><span id="sun_ct_end"
+                                                          ></span>
+                                                        </td>
+                                                        <tr>
+                                                          <td class="sunhdr"
+                                                            >天文黄昏结束</td
+                                                          >
+                                                          <td class="sundata"
+                                                            ><span
+                                                              id="sun_at_end"
+                                                            ></span>
+                                                          </td>
+                                                          <tr>
+                                                            <td class="sunhdr"
+                                                              >地平经度</td
+                                                            >
+                                                            <td class="sundata"
+                                                              ><span
+                                                                id="sun_az"
+                                                              >
+                                                              </span>
+                                                            </td>
+                                                            <tr>
+                                                              <td class="sunhdr"
+                                                                >地平纬度</td
+                                                              >
+                                                              <td
+                                                                class="sundata"
+                                                                ><span
+                                                                  id="sun_alt"
+                                                                >
+                                                                </span>
+                                                              </td>
+                                                              <tr>
+                                                                <td
+                                                                  class="sunhdr"
+                                                                  >赤经</td
+                                                                >
+                                                                <td
+                                                                  class="sundata"
+                                                                  ><span
+                                                                    id="sun_ra"
+                                                                  >
+                                                                  </span>
+                                                                </td>
+                                                                <tr>
+                                                                  <td
+                                                                    class="sunhdr"
+                                                                    >赤纬</td
+                                                                  >
+                                                                  <td
+                                                                    class="sundata"
+                                                                    ><span
+                                                                      id="sun_dec"
+                                                                    >
+                                                                    </span>
+                                                                  </td>
+                                                                </tr>
+                                                              </tr>
+                                                            </tr>
+                                                          </tr>
+                                                          <div
+                                                            class="tab-pane fade"
+                                                            id="custom-tabs-one-messages"
+                                                            role="tabpanel"
+                                                            aria-labelledby="custom-tabs-one-messages-tab"
+                                                          >
+                                                            <div class="row">
+                                                              <div
+                                                                class="col-sm-6"
+                                                              >
+                                                                <img
+                                                                  class="img-responsive"
+                                                                  src="/static/textures/moon/moon01.png"
+                                                                />
+                                                              </div>
+                                                              <div
+                                                                class="col-sm-6"
+                                                              >
+                                                                <p>
+                                                                  <span
+                                                                    id="moon_phase"
+                                                                    >&nbsp;</span>
+                                                                </p>
+                                                                <table>
+                                                                  <tr>
+                                                                    <td
+                                                                      class="moonhdr"
+                                                                      >升起</td
+                                                                    >
+                                                                    <td
+                                                                      class="moondata"
+                                                                      ><span
+                                                                        id="moon_rise"
+                                                                      >
+                                                                      </span></td
+                                                                    >
+                                                                  </tr>
+                                                                  <tr>
+                                                                    <td
+                                                                      class="moonhdr"
+                                                                      >中天</td
+                                                                    >
+                                                                    <td
+                                                                      class="moondata"
+                                                                      ><span
+                                                                        id="moon_transit"
+                                                                      >
+                                                                      </span>
+                                                                    </td>
+                                                                    <tr>
+                                                                      <td
+                                                                        class="moonhdr"
+                                                                        >落下</td
+                                                                      >
+                                                                      <td
+                                                                        class="moondata"
+                                                                        ><span
+                                                                          id="moon_set"
+                                                                        ></span>
+                                                                      </td>
+                                                                      <tr>
+                                                                        <td
+                                                                          class="moonhdr"
+                                                                          >地平经度</td
+                                                                        >
+                                                                        <td
+                                                                          class="moondata"
+                                                                          ><span
+                                                                            id="moon_az"
+                                                                          >
+                                                                          </span>
+                                                                        </td>
+                                                                        <tr>
+                                                                          <td
+                                                                            class="moonhdr"
+                                                                            >地平纬度</td
+                                                                          >
+                                                                          <td
+                                                                            class="moondata"
+                                                                            ><span
+                                                                              id="moon_alt"
+                                                                            >
+                                                                            </span>
+                                                                          </td>
+                                                                          <tr>
+                                                                            <td
+                                                                              class="moonhdr"
+                                                                              >赤经</td
+                                                                            >
+                                                                            <td
+                                                                              class="moondata"
+                                                                              ><span
+                                                                                id="moon_ra"
+                                                                              >
+                                                                              </span>
+                                                                            </td>
+                                                                            <tr>
+                                                                              <td
+                                                                                class="moonhdr"
+                                                                                >赤纬</td
+                                                                              >
+                                                                              <td
+                                                                                class="moondata"
+                                                                                ><span
+                                                                                  id="moon_dec"
+                                                                                >
+                                                                                </span>
+                                                                              </td>
+                                                                              <tr
+                                                                                id="new_moon_first"
+                                                                              >
+                                                                                <td
+                                                                                  class="moonhdr"
+                                                                                  >下一个新月</td
+                                                                                >
+                                                                                <td
+                                                                                  class="moondata"
+                                                                                  ><span
+                                                                                    class="moon_new"
+                                                                                  >
+                                                                                  </span></td
+                                                                                >
+                                                                              </tr>
+                                                                              <tr
+                                                                              >
+                                                                                <td
+                                                                                  class="moonhdr"
+                                                                                  >下一个新月</td
+                                                                                >
+                                                                                <td
+                                                                                  class="moondata"
+                                                                                  ><span
+                                                                                    id="moon_full"
+                                                                                  >
+                                                                                  </span></td
+                                                                                >
+                                                                              </tr>
+                                                                              <tr
+                                                                                id="new_moon_second"
+                                                                                style="display:none;"
+                                                                              >
+                                                                                <td
+                                                                                  class="moonhdr"
+                                                                                  >再下一个满月</td
+                                                                                >
+                                                                                <td
+                                                                                  class="moondata"
+                                                                                  ><span
+                                                                                    class="moon_new"
+                                                                                  >
+                                                                                  </span></td
+                                                                                >
+                                                                              </tr>
+                                                                            </tr>
+                                                                          </tr>
+                                                                        </tr>
+                                                                      </tr>
+                                                                      <div
+                                                                        class="tab-pane fade"
+                                                                        id="custom-tabs-one-settings"
+                                                                        role="tabpanel"
+                                                                        aria-labelledby="custom-tabs-one-settings-tab"
+                                                                      >
+                                                                        <div
+                                                                          class="row"
+                                                                        >
+                                                                          <div
+                                                                            class="col-sm-12"
+                                                                          >
+                                                                            <table
+                                                                              style="width: 100%;"
+                                                                            >
+                                                                              <tr
+                                                                              >
+                                                                                <td
+                                                                                  class="planetshdr"
+                                                                                  >&nbsp;</td
+                                                                                >
+                                                                                <td
+                                                                                  class="planetshdrdata"
+                                                                                  >升起</td
+                                                                                >
+                                                                                <td
+                                                                                  class="planetshdrdata"
+                                                                                  >中天</td
+                                                                                >
+                                                                                <td
+                                                                                  class="planetshdrdata"
+                                                                                  >落下</td
+                                                                                >
+                                                                                <td
+                                                                                  class="planetshdrdata"
+                                                                                  >地平经度</td
+                                                                                >
+                                                                                <td
+                                                                                  class="planetshdrdata"
+                                                                                  >地平纬度</td
+                                                                                >
+                                                                              </tr>
+                                                                              <tr
+                                                                                id="mercury"
+                                                                              >
+                                                                                <td
+                                                                                  class="planetshdr"
+                                                                                  >水星</td
+                                                                                >
+                                                                                <td
+                                                                                  class="planetsdata"
+                                                                                  ><span
+                                                                                    id="mercury_rise"
+                                                                                  >
+                                                                                  </span>
+                                                                                  <td
+                                                                                    class="planetsdata"
+                                                                                    ><span
+                                                                                      id="mercury_transit"
+                                                                                    >
+                                                                                    </span>
+                                                                                    <td
+                                                                                      class="planetsdata"
+                                                                                      ><span
+                                                                                        id="mercury_set"
+                                                                                      >
+                                                                                      </span>
+                                                                                      <td
+                                                                                        class="planetsdata"
+                                                                                        ><span
+                                                                                          id="mercury_az"
+                                                                                        >
+                                                                                        </span>
+                                                                                        <td
+                                                                                          class="planetsdata"
+                                                                                          ><span
+                                                                                            id="mercury_alt"
+                                                                                          >
+                                                                                          </span>
+                                                                                        </td>
+                                                                                        <tr
+                                                                                          id="venus"
+                                                                                        >
+                                                                                          <td
+                                                                                            class="planetshdr"
+                                                                                            >金星</td
+                                                                                          >
+                                                                                          <td
+                                                                                            class="planetsdata"
+                                                                                            ><span
+                                                                                              id="venus_rise"
+                                                                                            >
+                                                                                            </span>
+                                                                                            <td
+                                                                                              class="planetsdata"
+                                                                                              ><span
+                                                                                                id="venus_transit"
+                                                                                              >
+                                                                                              </span>
+                                                                                              <td
+                                                                                                class="planetsdata"
+                                                                                                ><span
+                                                                                                  id="venus_set"
+                                                                                                >
+                                                                                                </span>
+                                                                                                <td
+                                                                                                  class="planetsdata"
+                                                                                                  ><span
+                                                                                                    id="venus_az"
+                                                                                                  >
+                                                                                                  </span>
+                                                                                                  <td
+                                                                                                    class="planetsdata"
+                                                                                                    ><span
+                                                                                                      id="venus_alt"
+                                                                                                    >
+                                                                                                    </span>
+                                                                                                  </td>
+                                                                                                  <tr
+                                                                                                    id="mars"
+                                                                                                  >
+                                                                                                    <td
+                                                                                                      class="planetshdr"
+                                                                                                      >火星</td
+                                                                                                    >
+                                                                                                    <td
+                                                                                                      class="planetsdata"
+                                                                                                      ><span
+                                                                                                        id="mars_rise"
+                                                                                                      >
+                                                                                                      </span>
+                                                                                                      <td
+                                                                                                        class="planetsdata"
+                                                                                                        ><span
+                                                                                                          id="mars_transit"
+                                                                                                        >
+                                                                                                        </span>
+                                                                                                        <td
+                                                                                                          class="planetsdata"
+                                                                                                          ><span
+                                                                                                            id="mars_set"
+                                                                                                          >
+                                                                                                          </span>
+                                                                                                          <td
+                                                                                                            class="planetsdata"
+                                                                                                            ><span
+                                                                                                              id="mars_az"
+                                                                                                            >
+                                                                                                            </span>
+                                                                                                            <td
+                                                                                                              class="planetsdata"
+                                                                                                              ><span
+                                                                                                                id="mars_alt"
+                                                                                                              >
+                                                                                                              </span>
+                                                                                                            </td>
+                                                                                                            <tr
+                                                                                                              id="jupiter"
+                                                                                                            >
+                                                                                                              <td
+                                                                                                                class="planetshdr"
+                                                                                                                >木星</td
+                                                                                                              >
+                                                                                                              <td
+                                                                                                                class="planetsdata"
+                                                                                                                ><span
+                                                                                                                  id="jupiter_rise"
+                                                                                                                >
+                                                                                                                </span>
+                                                                                                                <td
+                                                                                                                  class="planetsdata"
+                                                                                                                  ><span
+                                                                                                                    id="jupiter_transit"
+                                                                                                                  >
+                                                                                                                  </span>
+                                                                                                                  <td
+                                                                                                                    class="planetsdata"
+                                                                                                                    ><span
+                                                                                                                      id="jupiter_set"
+                                                                                                                    >
+                                                                                                                    </span>
+                                                                                                                    <td
+                                                                                                                      class="planetsdata"
+                                                                                                                      ><span
+                                                                                                                        id="jupiter_az"
+                                                                                                                      >
+                                                                                                                      </span>
+                                                                                                                      <td
+                                                                                                                        class="planetsdata"
+                                                                                                                        ><span
+                                                                                                                          id="jupiter_alt"
+                                                                                                                        >
+                                                                                                                        </span>
+                                                                                                                      </td>
+                                                                                                                      <tr
+                                                                                                                        id="saturn"
+                                                                                                                      >
+                                                                                                                        <td
+                                                                                                                          class="planetshdr"
+                                                                                                                          >土星</td
+                                                                                                                        >
+                                                                                                                        <td
+                                                                                                                          class="planetsdata"
+                                                                                                                          ><span
+                                                                                                                            id="saturn_rise"
+                                                                                                                          >
+                                                                                                                          </span>
+                                                                                                                          <td
+                                                                                                                            class="planetsdata"
+                                                                                                                            ><span
+                                                                                                                              id="saturn_transit"
+                                                                                                                            >
+                                                                                                                            </span>
+                                                                                                                            <td
+                                                                                                                              class="planetsdata"
+                                                                                                                              ><span
+                                                                                                                                id="saturn_set"
+                                                                                                                              >
+                                                                                                                              </span>
+                                                                                                                              <td
+                                                                                                                                class="planetsdata"
+                                                                                                                                ><span
+                                                                                                                                  id="saturn_az"
+                                                                                                                                >
+                                                                                                                                </span>
+                                                                                                                                <td
+                                                                                                                                  class="planetsdata"
+                                                                                                                                  ><span
+                                                                                                                                    id="saturn_alt"
+                                                                                                                                  >
+                                                                                                                                  </span>
+                                                                                                                                </td>
+                                                                                                                                <tr
+                                                                                                                                  id="uranus"
+                                                                                                                                >
+                                                                                                                                  <td
+                                                                                                                                    class="planetshdr"
+                                                                                                                                    >天王星</td
+                                                                                                                                  >
+                                                                                                                                  <td
+                                                                                                                                    class="planetsdata"
+                                                                                                                                    ><span
+                                                                                                                                      id="uranus_rise"
+                                                                                                                                    >
+                                                                                                                                    </span>
+                                                                                                                                    <td
+                                                                                                                                      class="planetsdata"
+                                                                                                                                      ><span
+                                                                                                                                        id="uranus_transit"
+                                                                                                                                      >
+                                                                                                                                      </span>
+                                                                                                                                      <td
+                                                                                                                                        class="planetsdata"
+                                                                                                                                        ><span
+                                                                                                                                          id="uranus_set"
+                                                                                                                                        >
+                                                                                                                                        </span>
+                                                                                                                                        <td
+                                                                                                                                          class="planetsdata"
+                                                                                                                                          ><span
+                                                                                                                                            id="uranus_az"
+                                                                                                                                          >
+                                                                                                                                          </span>
+                                                                                                                                          <td
+                                                                                                                                            class="planetsdata"
+                                                                                                                                            ><span
+                                                                                                                                              id="uranus_alt"
+                                                                                                                                            >
+                                                                                                                                            </span>
+                                                                                                                                          </td>
+                                                                                                                                          <tr
+                                                                                                                                            id="neptune"
+                                                                                                                                          >
+                                                                                                                                            <td
+                                                                                                                                              class="planetshdr"
+                                                                                                                                              >海王星</td
+                                                                                                                                            >
+                                                                                                                                            <td
+                                                                                                                                              class="planetsdata"
+                                                                                                                                              ><span
+                                                                                                                                                id="neptune_rise"
+                                                                                                                                              >
+                                                                                                                                              </span>
+                                                                                                                                              <td
+                                                                                                                                                class="planetsdata"
+                                                                                                                                                ><span
+                                                                                                                                                  id="neptune_transit"
+                                                                                                                                                >
+                                                                                                                                                </span>
+                                                                                                                                                <td
+                                                                                                                                                  class="planetsdata"
+                                                                                                                                                  ><span
+                                                                                                                                                    id="neptune_set"
+                                                                                                                                                  >
+                                                                                                                                                  </span>
+                                                                                                                                                  <td
+                                                                                                                                                    class="planetsdata"
+                                                                                                                                                    ><span
+                                                                                                                                                      id="neptune_az"
+                                                                                                                                                    >
+                                                                                                                                                    </span>
+                                                                                                                                                    <td
+                                                                                                                                                      class="planetsdata"
+                                                                                                                                                      ><span
+                                                                                                                                                        id="neptune_alt"
+                                                                                                                                                      >
+                                                                                                                                                      </span>
+                                                                                                                                                    </td>
+                                                                                                                                                  </td>
+                                                                                                                                                </td>
+                                                                                                                                              </td>
+                                                                                                                                              <div
+                                                                                                                                                class="row"
+                                                                                                                                              >
+                                                                                                                                                <div
+                                                                                                                                                  class="col-sm-12"
+                                                                                                                                                >
+                                                                                                                                                  <img
+                                                                                                                                                    class="img-responsive"
+                                                                                                                                                    style="width: 100%;"
+                                                                                                                                                    src="/static/textures/icons/solar_system.png"
+                                                                                                                                                  />
+                                                                                                                                                </div>
+                                                                                                                                              </div>
+                                                                                                                                            </td>
+                                                                                                                                          </tr>
+                                                                                                                                        </td>
+                                                                                                                                        <!-- /.card -->
+                                                                                                                                      </td>
+                                                                                                                                    </td>
+                                                                                                                                  </td>
+                                                                                                                                </tr>
+                                                                                                                              </td>
+                                                                                                                            </td>
+                                                                                                                          </td>
+
+                                                                                                                          <div
+                                                                                                                            class="row"
+                                                                                                                          >
+                                                                                                                            <div
+                                                                                                                              class="col-sm-12"
+                                                                                                                            >
+                                                                                                                              <div
+                                                                                                                                class="card card-default card-orange collapsed-card"
+                                                                                                                              >
+                                                                                                                                <div
+                                                                                                                                  class="card-header"
+                                                                                                                                >
+                                                                                                                                  <div
+                                                                                                                                    class="card-title"
+                                                                                                                                  >
+                                                                                                                                    <i
+                                                                                                                                      class="fas fa-vr-cardboard"
+                                                                                                                                    >
+                                                                                                                                    </i>
+                                                                                                                                    虚拟星空
+                                                                                                                                  </div>
+                                                                                                                                  <div
+                                                                                                                                    class="card-tools"
+                                                                                                                                  >
+                                                                                                                                    <button
+                                                                                                                                      type="button"
+                                                                                                                                      class="btn btn-tool"
+                                                                                                                                      data-card-widget="collapse"
+                                                                                                                                      title="Collapse"
+                                                                                                                                    >
+                                                                                                                                      <i
+                                                                                                                                        class="fas fa-minus"
+                                                                                                                                      >
+                                                                                                                                      </i>
+                                                                                                                                    </button>
+                                                                                                                                  </div>
+                                                                                                                                </div>
+                                                                                                                                <div
+                                                                                                                                  class="card-body active"
+                                                                                                                                >
+                                                                                                                                  <div
+                                                                                                                                    class="row"
+                                                                                                                                  >
+                                                                                                                                    <div
+                                                                                                                                      class="col-sm-12"
+                                                                                                                                    >
+                                                                                                                                      <div
+                                                                                                                                        id="starmap"
+                                                                                                                                        class="img-responsive"
+                                                                                                                                        style="max-width: fit-content;width: 100%;height: 100%;max-height: 500px;"
+                                                                                                                                      >
+                                                                                                                                      </div>
+                                                                                                                                    </div>
+                                                                                                                                  </div>
+                                                                                                                                </div>
+                                                                                                                              </div>
+                                                                                                                            </div>
+                                                                                                                          </div>
+                                                                                                                        </td>
+                                                                                                                      </tr>
+                                                                                                                    </td>
+                                                                                                                  </td>
+                                                                                                                </td>
+
+                                                                                                                <Scripts
+                                                                                                                />
+
+                                                                                                                <!-- Bootstrap select -->
+                                                                                                                <script
+                                                                                                                  src="/js/bootstrap/bootstrap-select.min.js"
+                                                                                                                  is:inline
+                                                                                                                >
+                                                                                                                </script>
+                                                                                                                <!-- Tools JS -->
+                                                                                                                <script
+                                                                                                                  src="/js/client/tools.js"
+                                                                                                                  is:inline
+                                                                                                                >
+                                                                                                                </script>
+                                                                                                              </td>
+                                                                                                            </tr></td
+                                                                                                          ></td
+                                                                                                        ></td
+                                                                                                      ></td
+                                                                                                    ></tr
+                                                                                                  ></td
+                                                                                                ></td
+                                                                                              ></td
+                                                                                            ></td
+                                                                                          ></tr
+                                                                                        ></td
+                                                                                      ></td
+                                                                                    ></td
+                                                                                  ></td
+                                                                                ></tr>
+                                                                            </table>
+                                                                          </div>
+                                                                        </div>
+                                                                      </div></tr
+                                                                    ></tr>
+                                                                </table>
+                                                              </div>
+                                                            </div>
+                                                          </div></tr
+                                                        ></tr
+                                                      ></tr
+                                                    ></tr
+                                                  ></tr
+                                                ></tr
+                                              ></tr>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div></body>
+</html>

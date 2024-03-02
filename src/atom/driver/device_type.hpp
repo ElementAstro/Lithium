@@ -1,7 +1,6 @@
 #pragma once
 
-enum class DeviceType
-{
+enum class DeviceType {
     Camera,
     Telescope,
     Focuser,
@@ -11,37 +10,34 @@ enum class DeviceType
     NumDeviceTypes
 };
 
-inline const char *DeviceTypeToString(DeviceType type)
-{
-    switch (type)
-    {
-    case DeviceType::Camera:
-        return "Camera";
-        break;
-    case DeviceType::Telescope:
-        return "Telescope";
-        break;
-    case DeviceType::Focuser:
-        return "Focuser";
-        break;
-    case DeviceType::FilterWheel:
-        return "FilterWheel";
-        break;
-    case DeviceType::Solver:
-        return "Solver";
-        break;
-    case DeviceType::Guider:
-        return "Guider";
-        break;
-    default:
-        return "Unknown";
-        break;
+inline const char *DeviceTypeToString(DeviceType type) {
+    switch (type) {
+        case DeviceType::Camera:
+            return "Camera";
+            break;
+        case DeviceType::Telescope:
+            return "Telescope";
+            break;
+        case DeviceType::Focuser:
+            return "Focuser";
+            break;
+        case DeviceType::FilterWheel:
+            return "FilterWheel";
+            break;
+        case DeviceType::Solver:
+            return "Solver";
+            break;
+        case DeviceType::Guider:
+            return "Guider";
+            break;
+        default:
+            return "Unknown";
+            break;
     }
     return "Unknown";
 }
 
-inline DeviceType StringToDeviceType(const std::string &type)
-{
+inline DeviceType StringToDeviceType(const std::string &type) {
     if (type == "Camera")
         return DeviceType::Camera;
     else if (type == "Telescope")

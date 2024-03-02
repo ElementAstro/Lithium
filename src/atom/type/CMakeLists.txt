@@ -19,7 +19,7 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     args.hpp
-    expected.hpp
+    autotype.hpp
     ini_impl.hpp
     ini.hpp
     json.hpp

@@ -21,13 +21,13 @@ Description: Executable Plugin
 #include <fstream>
 #include <sstream>
 
-ExecutableComponent::ExecutableComponent()
-    : Component()
+ExecutableComponent::ExecutableComponent(const std::string &name)
+    : Component(name)
 {
-    RegisterFunc("run_system_command", &ExecutableComponent::RunSystemCommand, this);
-    RegisterFunc("run_system_command_with_output", &ExecutableComponent::RunSystemCommandOutput, this);
-    RegisterFunc("run_script", &ExecutableComponent::RunScript, this);
-    RegisterFunc("run_script_with_output", &ExecutableComponent::RunScriptOutput, this);
+    registerFunc("run_system_command", &ExecutableComponent::RunSystemCommand, this);
+    registerFunc("run_system_command_with_output", &ExecutableComponent::RunSystemCommandOutput, this);
+    registerFunc("run_script", &ExecutableComponent::RunScript, this);
+    registerFunc("run_script_with_output", &ExecutableComponent::RunScriptOutput, this);
 }
 
 json ExecutableComponent::RunSystemCommand(const json &params)

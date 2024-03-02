@@ -12,38 +12,31 @@ Description: Global Logger for Atom - Lithium Framework.
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_LOG_GLOBAL_LOGGER_HPP
+#define ATOM_LOG_GLOBAL_LOGGER_HPP
 
-#include <vector>
-#include <string>
 #include <chrono>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
-#include <queue>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <string>
+#include <thread>
+#include <vector>
 
-enum class LogLevel
-{
-    Debug,
-    Info,
-    Warning,
-    Error
-};
+enum class LogLevel { Debug, Info, Warning, Error };
 
 /**
  * @class Logger
  * @brief 日志记录器类，支持动态调整日志级别、异步记录和多订阅者。
  */
-class Logger
-{
+class Logger {
 public:
     /**
      * @class Subscriber
      * @brief 日志订阅者接口类，用于接收日志消息。
      */
-    class Subscriber
-    {
+    class Subscriber {
     public:
         /**
          * @brief 记录日志消息。
@@ -99,14 +92,18 @@ public:
      * @param levelString 日志级别字符串表示。
      * @param message 日志消息。
      */
-    void writeToLogFile(const std::string &levelString, const std::string &message);
+    void writeToLogFile(const std::string &levelString,
+                        const std::string &message);
 
 private:
-    LogLevel logLevel_;                                     /**< 日志级别。*/
-    std::vector<std::shared_ptr<Subscriber>> subscribers_;                 /**< 订阅者列表。*/
-    std::queue<std::pair<LogLevel, std::string>> logQueue_; /**< 日志消息队列。*/
-    std::mutex mutex_;                                      /**< 互斥锁，用于保护日志消息队列。*/
-    std::condition_variable cv_;                            /**< 条件变量，用于线程同步。*/
-    bool running_;                                          /**< 工作线程运行标志。*/
-    std::thread workerThread_;                              /**< 工作线程对象。*/
+    LogLevel logLevel_; /**< 日志级别。*/
+    std::vector<std::shared_ptr<Subscriber>> subscribers_; /**< 订阅者列表。*/
+    std::queue<std::pair<LogLevel, std::string>>
+        logQueue_;     /**< 日志消息队列。*/
+    std::mutex mutex_; /**< 互斥锁，用于保护日志消息队列。*/
+    std::condition_variable cv_; /**< 条件变量，用于线程同步。*/
+    bool running_;               /**< 工作线程运行标志。*/
+    std::thread workerThread_;   /**< 工作线程对象。*/
 };
+
+#endif

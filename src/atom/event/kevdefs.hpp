@@ -17,13 +17,12 @@ Description: Some defines for kev
 
 #include "kmconf.hpp"
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <functional>
 
-#define ATOM_NS_BEGIN \
-    namespace Atom::Event    \
-    {
+
+#define ATOM_NS_BEGIN namespace Atom::Event {
 #define ATOM_NS_END }
 #define ATOM_NS_USING using namespace Atom::Event;
 
@@ -45,8 +44,7 @@ const uint32_t kEventWrite = (1 << 1);
 const uint32_t kEventError = (1 << 2);
 const uint32_t kEventNetwork = (kEventRead | kEventWrite | kEventError);
 
-enum class Result : int
-{
+enum class Result : int {
     OK = 0,
     FAILED = -1,
     FATAL = -2,
@@ -73,8 +71,7 @@ enum class Result : int
     DESTROYED = -699
 };
 
-enum class PollType
-{
+enum class PollType {
     DEFAULT,
     SELECT,
     POLL,
@@ -82,12 +79,11 @@ enum class PollType
     KQUEUE,
     IOCP,
     RUNLOOP,
-    STLCV, // none IO event loop
+    STLCV,  // none IO event loop
 };
 
 #ifdef ATOM_OS_WIN
-struct iovec
-{
+struct iovec {
     unsigned long iov_len;
     char *iov_base;
 };

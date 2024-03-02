@@ -26,56 +26,60 @@ Description: WebSocket Server
 #endif
 #include <mutex>
 
-#include "atom/server/serialize.hpp"
 #include "atom/server/deserialize.hpp"
+#include "atom/server/serialize.hpp"
 #include "atom/type/message.hpp"
 
 class MessageBus;
 
-class AsyncWsServer : public oatpp::websocket::AsyncConnectionHandler::SocketInstanceListener
-{
+class AsyncWsServer
+    : public oatpp::websocket::AsyncConnectionHandler::SocketInstanceListener {
 public:
-	std::atomic<v_int32> m_ConnectionCounter;
+    std::atomic<v_int32> m_ConnectionCounter;
 #if ENABLE_FASTHASH
-	emhash8::HashMap<oatpp::String, std::shared_ptr<AsyncWsHub>> m_hubs;
+    emhash8::HashMap<oatpp::String, std::shared_ptr<AsyncWsHub>> m_hubs;
 #else
-	std::unordered_map<oatpp::String, std::shared_ptr<AsyncWsHub>> m_hubs;
+    std::unordered_map<oatpp::String, std::shared_ptr<AsyncWsHub>> m_hubs;
 #endif
-	std::mutex m_hubsMutex;
+    std::mutex m_hubsMutex;
 
 public:
-	AsyncWsServer();
+    AsyncWsServer();
 
 public:
-	/**
-	 *  Called when socket is created
-	 */
-	void onAfterCreate_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket, const std::shared_ptr<const ParameterMap> &params) override;
+    /**
+     *  Called when socket is created
+     */
+    void onAfterCreate_NonBlocking(
+        const std::shared_ptr<AsyncWebSocket> &socket,
+        const std::shared_ptr<const ParameterMap> &params) override;
 
-	/**
-	 *  Called before socket instance is destroyed.
-	 */
-	void onBeforeDestroy_NonBlocking(const std::shared_ptr<AsyncWebSocket> &socket) override;
+    /**
+     *  Called before socket instance is destroyed.
+     */
+    void onBeforeDestroy_NonBlocking(
+        const std::shared_ptr<AsyncWebSocket> &socket) override;
 
-	/**
-	 * Generate id for new connection.
-	 * @return
-	 */
-	v_int32 obtainNewConnectionId();
+    /**
+     * Generate id for new connection.
+     * @return
+     */
+    v_int32 obtainNewConnectionId();
 
-	/**
-	 * Get plugin hub by name or create new one if not exists.
-	 * @param hubName
-	 * @return
-	 */
-	std::shared_ptr<AsyncWsHub> getOrCreateHub(const oatpp::String &hubName);
+    /**
+     * Get plugin hub by name or create new one if not exists.
+     * @param hubName
+     * @return
+     */
+    std::shared_ptr<AsyncWsHub> getOrCreateHub(const oatpp::String &hubName);
 
 private:
-	// Serialization and Deserialization Engine
-	std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
-	std::shared_ptr<Atom::Server::DeserializationEngine> m_DeserializationEngine;
-	// Message Bus
-	std::shared_ptr<MessageBus> m_MessageBus;
+    // Serialization and Deserialization Engine
+    std::shared_ptr<Atom::Server::SerializationEngine> m_SerializationEngine;
+    std::shared_ptr<Atom::Server::DeserializationEngine>
+        m_DeserializationEngine;
+    // Message Bus
+    std::shared_ptr<MessageBus> m_MessageBus;
 };
 
-#endif // ASYNC_WS_SERVER_HPP
+#endif  // ASYNC_WS_SERVER_HPP

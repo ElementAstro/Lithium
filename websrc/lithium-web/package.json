@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@astrojs/markdoc": "^0.8.2",
+    "@astrojs/node": "^8.2.1",
     "@astrojs/sitemap": "^3.0.4",
     "@popperjs/core": "^2.11.8",
     "astro": "^4.0.8",

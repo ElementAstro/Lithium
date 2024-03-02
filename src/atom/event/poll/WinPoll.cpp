@@ -23,8 +23,7 @@ ATOM_NS_BEGIN
 
 #define KM_WIN_CLASS_NAME "kev_win_class_name"
 
-class WinPoll : public IOPoll
-{
+class WinPoll : public IOPoll {
 public:
     WinPoll();
     ~WinPoll();
@@ -53,112 +52,87 @@ private:
     PollItemVector poll_items_;
 };
 
-WinPoll::WinPoll()
-    : hwnd_(NULL)
-{
-}
+WinPoll::WinPoll() : hwnd_(NULL) {}
 
-WinPoll::~WinPoll()
-{
-    if (hwnd_)
-    {
-        if (::IsWindow(hwnd_))
-        {
+WinPoll::~WinPoll() {
+    if (hwnd_) {
+        if (::IsWindow(hwnd_)) {
             DestroyWindow(hwnd_);
         }
         hwnd_ = NULL;
     }
 }
 
-bool WinPoll::init()
-{
-    hwnd_ = ::CreateWindow(KM_WIN_CLASS_NAME, NULL, WS_OVERLAPPED, 0,
-                           0, 0, 0, NULL, NULL, NULL, 0);
-    if (NULL == hwnd_)
-    {
+bool WinPoll::init() {
+    hwnd_ = ::CreateWindow(KM_WIN_CLASS_NAME, NULL, WS_OVERLAPPED, 0, 0, 0, 0,
+                           NULL, NULL, NULL, 0);
+    if (NULL == hwnd_) {
         return false;
     }
     SetWindowLong(hwnd_, 0, (LONG)this);
     return true;
 }
 
-uint32_t WinPoll::get_events(uint32_t kuma_events)
-{
+uint32_t WinPoll::get_events(uint32_t kuma_events) {
     uint32_t ev = 0;
-    if (kuma_events & kEventRead)
-    {
+    if (kuma_events & kEventRead) {
         ev |= FD_READ;
     }
-    if (kuma_events & kEventWrite)
-    {
+    if (kuma_events & kEventWrite) {
         ev |= FD_WRITE;
     }
-    if (kuma_events & kEventError)
-    {
+    if (kuma_events & kEventError) {
         ev |= FD_CLOSE;
     }
     return ev;
 }
 
-uint32_t WinPoll::get_kuma_events(uint32_t events)
-{
+uint32_t WinPoll::get_kuma_events(uint32_t events) {
     uint32_t ev = 0;
-    if (events & FD_CONNECT)
-    { // writeable
+    if (events & FD_CONNECT) {  // writeable
         ev |= kEventWrite;
     }
-    if (events & FD_ACCEPT)
-    { // writeable
+    if (events & FD_ACCEPT) {  // writeable
         ev |= kEventRead;
     }
-    if (events & FD_READ)
-    {
+    if (events & FD_READ) {
         ev |= kEventRead;
     }
-    if (events & FD_WRITE)
-    {
+    if (events & FD_WRITE) {
         ev |= kEventWrite;
     }
-    if (events & FD_CLOSE)
-    {
+    if (events & FD_CLOSE) {
         ev |= kEventError;
     }
     return ev;
 }
 
-void WinPoll::resizePollItems(SOCKET_FD fd)
-{
-    if (fd >= poll_items_.size())
-    {
+void WinPoll::resizePollItems(SOCKET_FD fd) {
+    if (fd >= poll_items_.size()) {
         poll_items_.resize(fd + 1);
     }
 }
 
-Result WinPoll::registerFd(SOCKET_FD fd, uint32_t events, IOCallback cb)
-{
+Result WinPoll::registerFd(SOCKET_FD fd, uint32_t events, IOCallback cb) {
     KM_INFOTRACE("WinPoll::registerFd, fd=" << fd << ", events=" << events);
     resizePollItems(fd);
     poll_items_[fd].fd = fd;
     poll_items_[fd].cb = std::move(cb);
-    WSAAsyncSelect(fd, hwnd_, WM_SOCKET_NOTIFY, get_events(events) | FD_CONNECT);
+    WSAAsyncSelect(fd, hwnd_, WM_SOCKET_NOTIFY,
+                   get_events(events) | FD_CONNECT);
     return Result::OK;
 }
 
-Result WinPoll::unregisterFd(SOCKET_FD fd)
-{
+Result WinPoll::unregisterFd(SOCKET_FD fd) {
     KM_INFOTRACE("WinPoll::unregisterFd, fd=" << fd);
     SOCKET_FD max_fd = poll_items_.size() - 1;
-    if (fd < 0 || -1 == max_fd || fd > max_fd)
-    {
+    if (fd < 0 || -1 == max_fd || fd > max_fd) {
         KM_WARNTRACE("WinPoll::unregisterFd, failed, max_fd=" << max_fd);
         return Result::INVALID_PARAM;
     }
-    if (fd == max_fd)
-    {
+    if (fd == max_fd) {
         poll_items_.pop_back();
-    }
-    else
-    {
+    } else {
         poll_items_[fd].cb = nullptr;
         poll_items_[fd].fd = INVALID_FD;
     }
@@ -166,83 +140,68 @@ Result WinPoll::unregisterFd(SOCKET_FD fd)
     return Result::OK;
 }
 
-Result WinPoll::updateFd(SOCKET_FD fd, uint32_t events)
-{
+Result WinPoll::updateFd(SOCKET_FD fd, uint32_t events) {
     SOCKET_FD max_fd = poll_items_.size() - 1;
-    if (fd < 0 || -1 == max_fd || fd > max_fd)
-    {
-        KM_WARNTRACE("WinPoll::updateFd, failed, fd=" << fd << ", max_fd=" << max_fd);
+    if (fd < 0 || -1 == max_fd || fd > max_fd) {
+        KM_WARNTRACE("WinPoll::updateFd, failed, fd=" << fd
+                                                      << ", max_fd=" << max_fd);
         return Result::INVALID_PARAM;
     }
-    if (poll_items_[fd].fd != fd)
-    {
-        KM_WARNTRACE("WinPoll::updateFd, failed, fd=" << fd << ", fd1=" << poll_items_[fd].fd);
+    if (poll_items_[fd].fd != fd) {
+        KM_WARNTRACE("WinPoll::updateFd, failed, fd=" << fd << ", fd1="
+                                                      << poll_items_[fd].fd);
         return Result::INVALID_PARAM;
     }
     return Result::OK;
 }
 
-Result WinPoll::wait(uint32_t wait_ms)
-{
+Result WinPoll::wait(uint32_t wait_ms) {
     MSG msg;
-    if (GetMessage(&msg, NULL, 0, 0))
-    {
+    if (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
     return Result::OK;
 }
 
-void WinPoll::notify()
-{
-    if (hwnd_)
-    {
+void WinPoll::notify() {
+    if (hwnd_) {
         ::PostMessage(hwnd_, WM_POLLER_NOTIFY, 0, 0);
     }
 }
 
-void WinPoll::on_socket_notify(SOCKET_FD fd, uint32_t events)
-{
+void WinPoll::on_socket_notify(SOCKET_FD fd, uint32_t events) {
     int err = WSAGETSELECTERROR(events);
     int evt = WSAGETSELECTEVENT(events);
 }
 
-void WinPoll::on_poller_notify()
-{
-}
+void WinPoll::on_poller_notify() {}
 
-IOPoll *createWinPoll()
-{
-    return new WinPoll();
-}
+IOPoll *createWinPoll() { return new WinPoll(); }
 
 //////////////////////////////////////////////////////////////////////////
 //
-LRESULT CALLBACK km_notify_wnd_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-    switch (uMsg)
-    {
-    case WM_SOCKET_NOTIFY:
-    {
-        WinPoll *poll = (WinPoll *)GetWindowLong(hwnd, 0);
-        if (poll)
-            poll->on_socket_notify(wParam, lParam);
-        return 0L;
-    }
+LRESULT CALLBACK km_notify_wnd_proc(HWND hwnd, UINT uMsg, WPARAM wParam,
+                                    LPARAM lParam) {
+    switch (uMsg) {
+        case WM_SOCKET_NOTIFY: {
+            WinPoll *poll = (WinPoll *)GetWindowLong(hwnd, 0);
+            if (poll)
+                poll->on_socket_notify(wParam, lParam);
+            return 0L;
+        }
 
-    case WM_POLLER_NOTIFY:
-    {
-        WinPoll *poll = (WinPoll *)GetWindowLong(hwnd, 0);
-        if (poll)
-            poll->on_poller_notify();
-        return 0L;
-    }
+        case WM_POLLER_NOTIFY: {
+            WinPoll *poll = (WinPoll *)GetWindowLong(hwnd, 0);
+            if (poll)
+                poll->on_poller_notify();
+            return 0L;
+        }
     }
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-static void initWinClass()
-{
+static void initWinClass() {
     WNDCLASS wc = {0};
     wc.style = 0;
     wc.lpfnWndProc = (WNDPROC)km_notify_wnd_proc;
@@ -257,10 +216,7 @@ static void initWinClass()
     RegisterClass(&wc);
 }
 
-static void uninitWinClass()
-{
-    UnregisterClass(KM_WIN_CLASS_NAME, NULL);
-}
+static void uninitWinClass() { UnregisterClass(KM_WIN_CLASS_NAME, NULL); }
 
 // WBX_Init_Object g_init_obj(poller_load, poller_unload);
 

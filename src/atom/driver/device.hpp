@@ -30,8 +30,7 @@ Description: Basic Device Defination
 
 #include "device_exception.hpp"
 
-class AtomDriver : public SharedComponent
-{
+class AtomDriver : public SharedComponent {
 public:
     // -------------------------------------------------------------------
     // Common methods
@@ -53,8 +52,19 @@ public:
 
     virtual bool isConnected();
 
-private:
+    // -------------------------------------------------------------------
+    // Driver basic methods vrapper (from command dispatcher)
+    // -------------------------------------------------------------------
 
+    json Connect(const json &params);
+
+    json Disconnect(const json &params);
+
+    json Reconnect(const json &params);
+
+    json IsConnected(const json &params);
+
+private:
     std::string m_name;
     std::string m_uuid;
 };

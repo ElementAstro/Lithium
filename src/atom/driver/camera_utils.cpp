@@ -1,13 +1,10 @@
 #include "camera_utils.hpp"
 
-bool isValidISOValue(int isoValue, int minISO, int maxISO, int isoStep)
-{
-    if (isoValue < minISO || isoValue > maxISO)
-    {
+bool isValidISOValue(int isoValue, int minISO, int maxISO, int isoStep) {
+    if (isoValue < minISO || isoValue > maxISO) {
         return false;
     }
-    if ((isoValue - minISO) % isoStep != 0)
-    {
+    if ((isoValue - minISO) % isoStep != 0) {
         return false;
     }
     return true;

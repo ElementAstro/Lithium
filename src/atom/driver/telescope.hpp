@@ -16,8 +16,7 @@ Description: Basic Telescope Defination
 
 #include "device.hpp"
 
-class Telescope : public AtomDriver
-{
+class Telescope : public AtomDriver {
 public:
     /**
      * @brief 构造函数

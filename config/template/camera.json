@@ -1,44 +1,158 @@
 {
-    "name": "",
-    "type": "",
+    "name": "Camera",
+    "type": "template",
     "version": "1.0.0",
     "license": "GPL-3",
     "author": "Max Qian",
-    "description": "",
+    "description": "Camera command template for Atom",
     "deliver": true,
     "public": "atom.device",
     "command": {
-        "“startExposure": {
+        "startExposure": {
             "force": true,
+            "command": "start_exposure",
+            "async": true,
+            "info": "Start exposure in async mode",
             "params": [
                 {
-                    "name": "name",
-                    "type": "string",
+                    "name": "exposure_time",
+                    "type": "number",
                     "required": true,
-                    "info": "The name of the device to start exposure"
+                    "max": 100000000000,
+                    "min": 0,
+                    "default": 1000,
+                    "info": "The exposure time in milliseconds"
                 },
                 {
-                    "name": "args",
-                    "type": "object",
-                    "required": true,
-                    "info": "Arguments to start exposure",
-                    "params": [
-                        {
-                            "name": "exposure_time",
-                            "type": "number",
-                            "required": true,
-                            "max": 114514,
-                            "min": 0,
-                            "info": "The exposure time in milliseconds"
-                        }
-                    ]
+                    "name": "is_save",
+                    "type": "boolean",
+                    "required": false,
+                    "default": true,
+                    "info": "Save the exposure image"
+                },
+                {
+                    "name": "is_dark",
+                    "type": "boolean",
+                    "required": false,
+                    "default": false,
+                    "info": "If the image is dark"
                 }
-            ]
+            ],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the exposure is started or false if not"
+            }
+        },
+        "stopExposure": {
+            "force": true,
+            "command": "stop_exposure",
+            "async": true,
+            "info": "Stop exposure in async mode",
+            "params": [],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the exposure is stopped or false if not"
+            }
+        },
+        "getExposureStatus": {
+            "force": true,
+            "command": "get_exposure_status",
+            "async": true,
+            "info": "Get exposure status in async mode",
+            "params": [],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the camera is exposed or false if not"
+            }
+        },
+        "getExposureResult": {
+            "force": true,
+            "command": "get_exposure_result",
+            "async": true,
+            "info": "Get exposure image in async mode",
+            "params": [],
+            "result": {
+                "type": "string",
+                "ignore": false,
+                "info": "Return the exposure image in base64 format"
+            }
+        },
+        "startCooling": {
+            "force": true,
+            "command": "start_cooling",
+            "async": true,
+            "info": "Start cooling in async mode",
+            "params": [
+                {
+                    "name": "temperature",
+                    "type": "number",
+                    "required": false,
+                    "max": 100,
+                    "min": 0,
+                    "default": 0,
+                    "info": "The target temperature in Celsius",
+                    "note": "The target temperature is only valid when the camera is in cooling mode"
+                }
+            ],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the cooling is started or false if not",
+                "note": "The temperature will slowly change to the target temperature, and the camera will be in cooling mode"
+            }
+        },
+        "stopCooling": {
+            "force": true,
+            "command": "stop_cooling",
+            "async": true,
+            "info": "Stop cooling in async mode",
+            "params": [],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the cooling is stopped or false if not",
+                "note": "The camera will be in idle mode"
+            }
+        },
+        "getCoolingStatus": {
+            "force": true,
+            "command": "get_cooling_status",
+            "async": true,
+            "info": "Get cooling status in async mode",
+            "params": [],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the camera is cooling or false if not"
+            }
+        },
+        "isCoolingAvailable": {
+            "force": true,
+            "command": "is_cooling_available",
+            "async": true,
+            "info": "Check if cooling is available in async mode",
+            "params": [],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if cooling is available or false if not"
+            }
+        },
+        "getCoolingTemperature": {
+            "force": true,
+            "command": "get_cooling_temperature",
+            "async": true,
+            "info": "Get cooling temperature in async mode",
+            "params": [],
+            "result": {
+                "type": "boolean",
+                "ignore": false,
+                "info": "Return true if the current temperature is got successfully or false if not"
+            }
         }
-    },
-    "result": {
-        "type": "boolean",
-        "ignore": false,
-        "info": "Return true if the exposure is started or false if not"
     }
+    
 }

@@ -5,6 +5,8 @@ project(atom-component C CXX)
 list(APPEND ${PROJECT_NAME}_SOURCES
     component.cpp
 
+    types.cpp
+
     templates/alone_component.cpp
     templates/exe_component.cpp
     templates/script_component.cpp
@@ -25,6 +27,14 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     templates/shared_component.hpp
     templates/task_component.hpp
 )
+
+list(APPEND ${PROJECT_NAME}_LIBS
+    loguru
+    atom-experiment
+    atom-type
+    atom-utils
+    atom-server
+    )
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
@@ -56,3 +66,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+add_executable(shared_component_test base/main.cpp)
+target_link_libraries(shared_component_test atom-component)

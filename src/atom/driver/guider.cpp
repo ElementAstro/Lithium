@@ -14,25 +14,12 @@ Description: Guider Simulator and Basic Definition
 
 #include "guider.hpp"
 
-Guider::Guider(const std::string &name) : AtomDriver(name)
-{
-}
+Guider::Guider(const std::string &name) : AtomDriver(name) {}
 
-Guider::~Guider()
-{
-}
+Guider::~Guider() {}
 
-bool Guider::connect(const nlohmann::json &params)
-{
-    return true;
-}
+bool Guider::connect(const nlohmann::json &params) { return true; }
 
-bool Guider::disconnect(const nlohmann::json &params)
-{
-    return true;
-}
+bool Guider::disconnect(const nlohmann::json &params) { return true; }
 
-bool Guider::reconnect(const nlohmann::json &params)
-{
-    return true;
-}
+bool Guider::reconnect(const nlohmann::json &params) { return true; }

@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modpack Information</title>
+    <link rel="stylesheet" href="/css/adminlte.min.css" />
+    <link rel="stylesheet" href="/css/client/atom-one-dark-reasonable.min.css" />"
+    <style>
+      .highlight {
+        background-color: yellow;
+        font-weight: bold;
+      }
+      .json-display {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 300px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <a class="navbar-brand" href="#">Modpack Manager</a>
+      <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+          <button class="btn btn-primary" id="highlightJsonBtn"
+            >Highlight JSON</button
+          >
+        </li>
+        <li class="nav-item ml-2">
+          <button class="btn btn-secondary" id="clearHighlightBtn"
+            >Clear Highlights</button
+          >
+        </li>
+        <li class="nav-item ml-2">
+          <button class="btn btn-danger" id="deleteModpackBtn" disabled
+            >Delete Modpack</button
+          >
+        </li>
+      </ul>
+    </nav>
+
+    <div class="container mt-4">
+      <form>
+        <div class="form-group">
+          <label for="searchInput">Search by Name:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="searchInput"
+            placeholder="Enter modpack name"
+          />
+        </div>
+      </form>
+      <div id="modpackCards"></div>
+      <div class="mt-4">
+        <button class="btn btn-primary install-btn" disabled
+          >Install Selected Modpack</button
+        >
+      </div>
+    </div>
+
+    <script
+      src="/js/client/highlight.min.js" is:inline
+    ></script>
+    <script is:inline>
+      document.addEventListener("DOMContentLoaded", function () {
+        var modpacksData = [
+          {
+            manifestType: "minecraftModpack",
+            manifestVersion: 1,
+            name: "Modpack 1",
+            version: "1.0",
+            author: "AI Modpacks Inc.",
+            description: "This is Modpack 1 description.",
+            fileApi: "https://example.com/api/files",
+            url: "https://example.com/modpack1",
+            forceUpdate: true,
+            origin: ["CurseForge", "Modrinth"],
+            addons: [
+              { id: "mod1", version: "1.2" },
+              { id: "mod2", version: "3.0" },
+            ],
+            files: [
+              {
+                path: "mods/mod1.jar",
+                hash: "abc123",
+                force: false,
+                type: "mod",
+              },
+              {
+                path: "mods/mod2.jar",
+                hash: "def456",
+                force: false,
+                type: "mod",
+              },
+            ],
+            libraries: ["lib1", "lib2"],
+            settings: {
+              install_mods: true,
+              install_resourcepack: false,
+            },
+            launchInfo: {
+              minMemory: 1024,
+              launchArgument: ["-Xmx4G", "-XX:+UseConcMarkSweepGC"],
+              javaArgument: ["-Dfml.ignoreInvalidMinecraftCertificates=true"],
+            },
+            depends_on: ["modpack2"],
+          },
+          {
+            manifestType: "minecraftModpack",
+            manifestVersion: 1,
+            name: "Modpack 2",
+            version: "1.0",
+            author: "AI Modpacks Inc.",
+            description: "This is Modpack 2 description.",
+            fileApi: "https://example.com/api/files",
+            url: "https://example.com/modpack2",
+            forceUpdate: true,
+            origin: ["CurseForge", "Modrinth"],
+            addons: [
+              { id: "mod3", version: "1.0" },
+              { id: "mod4", version: "2.5" },
+            ],
+            files: [
+              {
+                path: "mods/mod3.jar",
+                hash: "xyz789",
+                force: false,
+                type: "mod",
+              },
+              {
+                path: "mods/mod4.jar",
+                hash: "pqr456",
+                force: false,
+                type: "mod",
+              },
+            ],
+            libraries: ["lib3", "lib4"],
+            settings: {
+              install_mods: true,
+              install_resourcepack: false,
+            },
+            launchInfo: {
+              minMemory: 2048,
+              launchArgument: ["-Xmx8G", "-XX:+UseG1GC"],
+              javaArgument: ["-Dfml.ignoreInvalidMinecraftCertificates=true"],
+            },
+            depends_on: ["modpack1"],
+          },
+        ];
+
+        var modpackCards = document.getElementById("modpackCards");
+        var searchInput = document.getElementById("searchInput");
+        var installBtn = document.querySelector(".install-btn");
+        var deleteBtn = document.getElementById("deleteModpackBtn");
+        var highlightJsonBtn = document.getElementById("highlightJsonBtn");
+        var clearHighlightBtn = document.getElementById("clearHighlightBtn");
+        var selectedModpack = null;
+        var jsonDisplay = null;
+
+        function renderModpacks(modpacks) {
+          modpackCards.innerHTML = "";
+          modpacks.forEach(function (modpack) {
+            var cardHtml = `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">${modpack.name}</h5>
+                                <p class="card-text">${modpack.description}</p>
+                                <p class="card-text">Author: ${modpack.author}</p>
+                                <p class="card-text">Version: ${modpack.version}</p>
+                                <p class="card-text">Origin: ${modpack.origin.join(", ")}</p>
+                                <a href="${modpack.url}" class="btn btn-primary mr-2" target="_blank">View Modpack</a>
+                                <button class="btn btn-secondary show-files-btn">Show Files</button>
+                                <ul class="list-group mt-3 files-list" style="display: none;">
+                                    ${modpack.files.map((file) => `<li class="list-group-item">${file.path} (${file.type}) - Hash: ${file.hash}</li>`).join("")}
+                                </ul>
+                                <button class="btn btn-primary select-btn mt-3">Select Modpack</button>
+                            </div>
+                            <div class="json-display" style="display: none;">
+                                <pre><code class="json">${JSON.stringify(modpack, null, 2)}</code></pre>
+                            </div>
+                        </div>
+                    `;
+            modpackCards.innerHTML += cardHtml;
+          });
+
+          // Toggle files
+          modpackCards.addEventListener("click", function (e) {
+            if (e.target && e.target.classList.contains("show-files-btn")) {
+              e.target.nextElementSibling.slideToggle();
+            }
+          });
+
+          // Select modpack
+          modpackCards.addEventListener("click", function (e) {
+            if (e.target && e.target.classList.contains("select-btn")) {
+              var cardBody = e.target.closest(".card-body");
+              var modpackName =
+                cardBody.querySelector(".card-title").textContent;
+              selectedModpack = modpacks.find(
+                (modpack) => modpack.name === modpackName
+              );
+              installBtn.disabled = false;
+              deleteBtn.disabled = false;
+
+              // Show JSON data
+              var card = e.target.closest(".card");
+              var jsonDisplay = card.querySelector(".json-display");
+              jsonDisplay.style.display = "block";
+            }
+          });
+        }
+
+        renderModpacks(modpacksData);
+
+        // Real-time search
+        searchInput.addEventListener("input", function () {
+          var searchTerm = searchInput.value.trim().toLowerCase();
+          var filteredModpacks = modpacksData.filter((modpack) =>
+            modpack.name.toLowerCase().includes(searchTerm)
+          );
+          renderModpacks(filteredModpacks);
+        });
+
+        // Install selected modpack
+        installBtn.addEventListener("click", function () {
+          fetch("/api/install-modpack", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(selectedModpack),
+          })
+            .then(function (response) {
+              if (response.ok) {
+                alert("Modpack installed successfully!");
+              } else {
+                alert("Modpack installation failed.");
+              }
+            })
+            .catch(function (error) {
+              console.log(error);
+              alert("Modpack installation failed.");
+            });
+        });
+
+        // Delete modpack
+        deleteBtn.addEventListener("click", function () {
+          if (
+            confirm("Are you sure you want to delete the selected modpack?")
+          ) {
+            // Delete modpack logic...
+            alert("Modpack deleted successfully!");
+          }
+        });
+
+        // Highlight JSON
+        highlightJsonBtn.addEventListener("click", function () {
+          var jsonCodes = document.getElementsByClassName("json");
+          Array.from(jsonCodes).forEach(function (jsonCode) {
+            var jsonText = jsonCode.textContent;
+            jsonCode.innerHTML = "";
+            var highlightedJson = hljs.highlight("json", jsonText).value;
+            jsonCode.innerHTML = highlightedJson;
+          });
+        });
+
+        // Clear Highlights
+        clearHighlightBtn.addEventListener("click", function () {
+          var cardTitles = document.getElementsByClassName("card-title");
+          Array.from(cardTitles).forEach(function (cardTitle) {
+            cardTitle.classList.remove("hljs");
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

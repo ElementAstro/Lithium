@@ -21,8 +21,8 @@ Description: Alone component(run in different process)
 #include <fstream>
 #include <sstream>
 
-AloneComponent::AloneComponent()
-    : Component()
+AloneComponent::AloneComponent(const std::string &name)
+    : Component(name)
 {
 
 }

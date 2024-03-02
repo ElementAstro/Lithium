@@ -12,18 +12,18 @@ Description: Simple Sqilte3 wrapper
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_SEARCH_SQLITE_HPP
+#define ATOM_SEARCH_SQLITE_HPP
 
 #include <sqlite3.h>
-#include <string>
 #include <functional>
+#include <string>
 
 /**
  * @class SqliteDB
  * @brief 表示一个用于操作SQLite数据库的类
  */
-class SqliteDB
-{
+class SqliteDB {
 private:
     sqlite3 *db; /**< SQLite数据库连接对象 */
 
@@ -138,64 +138,12 @@ public:
      * @brief 设置错误消息回调函数
      * @param errorCallback 错误消息回调函数
      */
-    void setErrorMessageCallback(const std::function<void(const char *)> &errorCallback);
+    void setErrorMessageCallback(
+        const std::function<void(const char *)> &errorCallback);
 
 private:
-    std::function<void(const char *)> errorCallback = [](const char *errorMessage)
-    {
-    };
+    std::function<void(const char *)> errorCallback =
+        [](const char *errorMessage) {};
 };
 
-/*
-int main()
-{
-    // 创建数据库对象，并指定数据库文件路径
-    SqliteDB db("example.db");
-
-    db.setErrorMessageCallback([](const char *errorMessage)
-                               {
-                                   std::cerr << "Error: " << errorMessage << std::endl;
-                                   // 进行其他处理，如记录日志等
-                               });
-
-    // 执行创建表的 SQL 语句
-    const char *createTableQuery = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)";
-    db.executeQuery(createTableQuery);
-
-    // 执行插入数据的 SQL 语句
-    const char *insertQuery = "INSERT INTO users (name, age) VALUES ('Alice', 25)";
-    db.executeQuery(insertQuery);
-
-    // 执行查询数据的 SQL 语句
-    const char *selectQuery = "SELECT * FROM users";
-    db.selectData(selectQuery);
-
-    bool exists = db.searchData("SELECT * FROM users WHERE name = 'Alice'", "Alice");
-    if (exists)
-    {
-        std::cout << "User Alice exists" << std::endl;
-    }
-    else
-    {
-        std::cout << "User Alice does not exist" << std::endl;
-    }
-
-    // 获取整数、浮点数和文本值
-    int userId = db.getIntValue("SELECT id FROM users WHERE name = 'Alice'");
-    double userAge = db.getDoubleValue("SELECT age FROM users WHERE name = 'Alice'");
-    const unsigned char *userName = db.getTextValue("SELECT name FROM users WHERE id = 1");
-    std::cout << "User Age: " << userAge << std::endl;
-    std::cout << "User ID: " << userId << std::endl;
-    std::cout << "User Name: " << userName << std::endl;
-
-    // 更新数据
-    const char *updateQuery = "UPDATE users SET age = 26 WHERE name = 'Alice'";
-    db.updateData(updateQuery);
-
-    // 删除数据
-    const char *deleteQuery = "DELETE FROM users WHERE name = 'Alice'";
-    db.deleteData(deleteQuery);
-
-    return 0;
-}
-*/
+#endif

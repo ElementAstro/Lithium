@@ -15,36 +15,37 @@ Description: Address class for IPv4, IPv6, and Unix domain sockets.
 #pragma once
 
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <iphlpapi.h>
 #include <iptypes.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 #else
+#include <arpa/inet.h>
+#include <ifaddrs.h>
 #include <netinet/in.h>
+#include <sys/types.h>
 #endif
 
-#include <vector>
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
+
+namespace Atom::Web {
 
 template <class T>
-static T CreateMask(uint32_t bits)
-{
+static T CreateMask(uint32_t bits) {
     return (1 << (sizeof(T) * 8 - bits)) - 1;
 }
 
 template <class T>
-static uint32_t CountBytes(T value)
-{
+static uint32_t CountBytes(T value) {
     uint32_t result = 0;
     uint8_t *ptr = reinterpret_cast<uint8_t *>(&value);
-    for (size_t i = 0; i < sizeof(T); ++i)
-    {
+    for (size_t i = 0; i < sizeof(T); ++i) {
         uint8_t byte = ptr[i];
-        for (; byte; ++result)
-        {
+        for (; byte; ++result) {
             byte &= byte - 1;
         }
     }
@@ -53,7 +54,7 @@ static uint32_t CountBytes(T value)
 
 class IPAddress;
 
-/** 
+/**
  * @brief The base class for all socket addresses.
  *
  * This class provides a common interface for all socket address
@@ -64,8 +65,7 @@ class IPAddress;
  * directly. Instead, use one of the derived classes to create or manipulate
  * socket addresses.
  */
-class Address
-{
+class Address {
 public:
     /**
      * Shared pointer to an Address.
@@ -105,8 +105,9 @@ public:
      * @param protocol The protocol.
      * @return True if the lookup succeeded, false otherwise.
      */
-    static bool Lookup(std::vector<Address::ptr> &result, const std::string &host,
-                       int family = AF_INET, int type = 0, int protocol = 0);
+    static bool Lookup(std::vector<Address::ptr> &result,
+                       const std::string &host, int family = AF_INET,
+                       int type = 0, int protocol = 0);
 
     /**
      * Looks up the address of a host.
@@ -117,8 +118,8 @@ public:
      * @param protocol The protocol.
      * @return The address.
      */
-    static Address::ptr LookupAny(const std::string &host,
-                                  int family = AF_INET, int type = SOCK_STREAM, int protocol = 0);
+    static Address::ptr LookupAny(const std::string &host, int family = AF_INET,
+                                  int type = SOCK_STREAM, int protocol = 0);
 
     /**
      * Looks up the address of a host.
@@ -129,8 +130,9 @@ public:
      * @param protocol The protocol.
      * @return The address.
      */
-    static std::shared_ptr<IPAddress> LookupAnyIPAddress(const std::string &host,
-                                                         int family = AF_INET, int type = SOCK_STREAM, int protocol = 0);
+    static std::shared_ptr<IPAddress> LookupAnyIPAddress(
+        const std::string &host, int family = AF_INET, int type = SOCK_STREAM,
+        int protocol = 0);
 
     /**
      * Gets the addresses of all network interfaces.
@@ -139,9 +141,9 @@ public:
      * @param family The address family.
      * @return True if the lookup succeeded, false otherwise.
      */
-    static bool GetInterfaceAddresses(std::multimap<std::string,
-                                                    std::pair<Address::ptr, uint32_t>> &result,
-                                      int family = AF_INET);
+    static bool GetInterfaceAddresses(
+        std::multimap<std::string, std::pair<Address::ptr, uint32_t>> &result,
+        int family = AF_INET);
 
     /**
      * Gets the addresses of all network interfaces.
@@ -151,8 +153,9 @@ public:
      * @param family The address family.
      * @return True if the lookup succeeded, false otherwise.
      */
-    static bool GetInterfaceAddresses(std::vector<std::pair<Address::ptr, uint32_t>> &result,
-                                      const std::string &iface, int family = AF_INET);
+    static bool GetInterfaceAddresses(
+        std::vector<std::pair<Address::ptr, uint32_t>> &result,
+        const std::string &iface, int family = AF_INET);
 
     /**
      * Gets the address of the local host.
@@ -224,13 +227,12 @@ public:
     bool operator!=(const Address &rhs) const;
 };
 
-/** 
+/**
  * @brief The IPv4 address.
  *
  * This class represents an IPv4 address.
  */
-class IPAddress : public Address
-{
+class IPAddress : public Address {
 public:
     /**
      * Shared pointer to an IPv4Address.
@@ -293,13 +295,12 @@ public:
     virtual void setPort(uint16_t v) = 0;
 };
 
-/** 
+/**
  * @brief The IPv4 address.
  *
  * This class represents an IPv4 address.
  */
-class IPv4Address : public IPAddress
-{
+class IPv4Address : public IPAddress {
 public:
     /**
      * Shared pointer to an IPv4Address.
@@ -398,13 +399,12 @@ private:
     sockaddr_in m_addr;
 };
 
-/** 
+/**
  * @brief The IPv6 address.
  *
  * This class represents an IPv6 address.
  */
-class IPv6Address : public IPAddress
-{
+class IPv6Address : public IPAddress {
 public:
     /**
      * Shared pointer to an IPv6Address.
@@ -507,3 +507,16 @@ public:
 private:
     sockaddr_in6 m_addr;
 };
+
+/**
+ * @brief 获取IPv4地址
+ * @return std::vector<std::string>
+ */
+[[nodiscard]] std::vector<std::string> getIPv4Addresses();
+
+/**
+ * @brief 获取IPv6地址
+ * @return std::vector<std::string>
+ */
+[[nodiscard]] std::vector<std::string> getIPv6Addresses();
+}  // namespace Atom::Web

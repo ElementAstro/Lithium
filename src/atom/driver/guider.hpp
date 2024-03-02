@@ -16,8 +16,7 @@ Description: Basic Guider Defination
 
 #include "device.hpp"
 
-class Guider : public AtomDriver
-{
+class Guider : public AtomDriver {
 public:
     /**
      * @brief 构造函数，创建一个名为 name 的电调对象

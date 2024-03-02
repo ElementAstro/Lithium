@@ -12,14 +12,15 @@ Description: Global shared pointer manager
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_SERVER_GLOBAL_PTR_HPP
+#define ATOM_SERVER_GLOBAL_PTR_HPP
 
-#include <shared_mutex>
 #include <any>
+#include <functional>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
-#include <functional>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -30,21 +31,23 @@ Description: Global shared pointer manager
 #define AddPtr GlobalSharedPtrManager::getInstance().addSharedPtr
 
 /**
- * @brief The GlobalSharedPtrManager class manages a collection of shared pointers and weak pointers.
- *        It provides functions to add, remove, and retrieve shared pointers and weak pointers by key.
+ * @brief The GlobalSharedPtrManager class manages a collection of shared
+ * pointers and weak pointers. It provides functions to add, remove, and
+ * retrieve shared pointers and weak pointers by key.
  */
-class GlobalSharedPtrManager
-{
+class GlobalSharedPtrManager {
 public:
     /**
-     * @brief getInstance returns the singleton instance of the GlobalSharedPtrManager.
+     * @brief getInstance returns the singleton instance of the
+     * GlobalSharedPtrManager.
      *
      * @return the singleton instance of the GlobalSharedPtrManager.
      */
     static GlobalSharedPtrManager &getInstance();
 
     /**
-     * @brief getSharedPtr retrieves a shared pointer from the shared pointer map with the specified key.
+     * @brief getSharedPtr retrieves a shared pointer from the shared pointer
+     * map with the specified key.
      *
      * @tparam T the type of the shared pointer.
      * @param key the key associated with the shared pointer.
@@ -54,7 +57,8 @@ public:
     std::shared_ptr<T> getSharedPtr(const std::string &key);
 
     /**
-     * @brief addSharedPtr adds a shared pointer to the shared pointer map with the specified key.
+     * @brief addSharedPtr adds a shared pointer to the shared pointer map with
+     * the specified key.
      *
      * @tparam T the type of the shared pointer.
      * @param key the key associated with the shared pointer.
@@ -64,14 +68,16 @@ public:
     void addSharedPtr(const std::string &key, std::shared_ptr<T> sharedPtr);
 
     /**
-     * @brief removeSharedPtr removes a shared pointer from the shared pointer map with the specified key.
+     * @brief removeSharedPtr removes a shared pointer from the shared pointer
+     * map with the specified key.
      *
      * @param key the key associated with the shared pointer to remove.
      */
     void removeSharedPtr(const std::string &key);
 
     /**
-     * @brief addWeakPtr adds a weak pointer to the shared pointer map with the specified key.
+     * @brief addWeakPtr adds a weak pointer to the shared pointer map with the
+     * specified key.
      *
      * @tparam T the type of the weak pointer.
      * @param key the key associated with the weak pointer.
@@ -81,34 +87,41 @@ public:
     void addWeakPtr(const std::string &key, const std::weak_ptr<T> &weakPtr);
 
     /**
-     * @brief getSharedPtrFromWeakPtr retrieves a shared pointer from a weak pointer in the shared pointer map with the specified key.
+     * @brief getSharedPtrFromWeakPtr retrieves a shared pointer from a weak
+     * pointer in the shared pointer map with the specified key.
      *
      * @tparam T the type of the shared pointer.
      * @param key the key associated with the weak pointer.
-     * @return the shared pointer if the weak pointer is valid and the shared object still exists, nullptr otherwise.
+     * @return the shared pointer if the weak pointer is valid and the shared
+     * object still exists, nullptr otherwise.
      */
     template <typename T>
     std::shared_ptr<T> getSharedPtrFromWeakPtr(const std::string &key);
 
     /**
-     * @brief removeExpiredWeakPtrs removes all expired weak pointers from the shared pointer map.
-     *        Expired weak pointers are weak pointers whose shared objects have been deleted.
+     * @brief removeExpiredWeakPtrs removes all expired weak pointers from the
+     * shared pointer map. Expired weak pointers are weak pointers whose shared
+     * objects have been deleted.
      */
     template <typename T>
     void removeExpiredWeakPtrs();
 
     /**
-     * @brief addDeleter adds a custom deleter function for the shared object associated with the specified key.
+     * @brief addDeleter adds a custom deleter function for the shared object
+     * associated with the specified key.
      *
      * @tparam T the type of the shared object.
      * @param key the key associated with the shared object.
-     * @param deleter the deleter function that takes a pointer to the shared object as its parameter.
+     * @param deleter the deleter function that takes a pointer to the shared
+     * object as its parameter.
      */
     template <typename T>
-    void addDeleter(const std::string &key, const std::function<void(T *)> &deleter);
+    void addDeleter(const std::string &key,
+                    const std::function<void(T *)> &deleter);
 
     /**
-     * @brief deleteObject deletes the shared object associated with the specified key.
+     * @brief deleteObject deletes the shared object associated with the
+     * specified key.
      *
      * @tparam T the type of the shared object.
      * @param key the key associated with the shared object to delete.
@@ -126,9 +139,12 @@ private:
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string, std::any> sharedPtrMap;
 #else
-    std::unordered_map<std::string, std::any> sharedPtrMap; /**< The map that stores the shared pointers and weak pointers. */
+    std::unordered_map<std::string, std::any>
+        sharedPtrMap; /**< The map that stores the shared pointers and weak
+                         pointers. */
 #endif
-    mutable std::shared_mutex mtx;                          /**< The mutex used for thread-safe access to the shared pointer map. */
+    mutable std::shared_mutex mtx; /**< The mutex used for thread-safe access to
+                                      the shared pointer map. */
 
     /**
      * @brief GlobalSharedPtrManager is a singleton class.
@@ -137,19 +153,15 @@ private:
 };
 
 template <typename T>
-std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtr(const std::string &key)
-{
+std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtr(
+    const std::string &key) {
     std::shared_lock<std::shared_mutex> lock(mtx);
     auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end())
-    {
-        try
-        {
+    if (it != sharedPtrMap.end()) {
+        try {
             return std::any_cast<std::shared_ptr<T>>(it->second);
-        }
-        catch (const std::bad_any_cast &)
-        {
-            return nullptr; // 类型转换失败，返回空指针
+        } catch (const std::bad_any_cast &) {
+            return nullptr;  // 类型转换失败，返回空指针
         }
     }
 
@@ -157,33 +169,29 @@ std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtr(const std::string &key)
 }
 
 template <typename T>
-void GlobalSharedPtrManager::addSharedPtr(const std::string &key, std::shared_ptr<T> sharedPtr)
-{
+void GlobalSharedPtrManager::addSharedPtr(const std::string &key,
+                                          std::shared_ptr<T> sharedPtr) {
     std::unique_lock<std::shared_mutex> lock(mtx);
     sharedPtrMap[key] = sharedPtr;
 }
 
 template <typename T>
-void GlobalSharedPtrManager::addWeakPtr(const std::string &key, const std::weak_ptr<T> &weakPtr)
-{
+void GlobalSharedPtrManager::addWeakPtr(const std::string &key,
+                                        const std::weak_ptr<T> &weakPtr) {
     std::unique_lock<std::shared_mutex> lock(mtx);
     sharedPtrMap[key] = weakPtr;
 }
 
 template <typename T>
-std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtrFromWeakPtr(const std::string &key)
-{
+std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtrFromWeakPtr(
+    const std::string &key) {
     std::shared_lock<std::shared_mutex> lock(mtx);
     auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end())
-    {
-        try
-        {
+    if (it != sharedPtrMap.end()) {
+        try {
             return std::any_cast<std::weak_ptr<T>>(it->second).lock();
-        }
-        catch (const std::bad_any_cast &)
-        {
-            return nullptr; // 类型转换失败，返回空指针
+        } catch (const std::bad_any_cast &) {
+            return nullptr;  // 类型转换失败，返回空指针
         }
     }
 
@@ -191,52 +199,45 @@ std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtrFromWeakPtr(const std::st
 }
 
 template <typename T>
-void GlobalSharedPtrManager::removeExpiredWeakPtrs()
-{
+void GlobalSharedPtrManager::removeExpiredWeakPtrs() {
     std::vector<std::string> keysToRemove;
     {
         std::shared_lock<std::shared_mutex> lock(mtx);
-        for (auto &it : sharedPtrMap)
-        {
-            if (auto weakPtr = std::any_cast<std::weak_ptr<T>>(it.second); weakPtr.expired())
-            {
+        for (auto &it : sharedPtrMap) {
+            if (auto weakPtr = std::any_cast<std::weak_ptr<T>>(it.second);
+                weakPtr.expired()) {
                 keysToRemove.push_back(it.first);
             }
         }
     }
 
-    if (!keysToRemove.empty())
-    {
+    if (!keysToRemove.empty()) {
         std::unique_lock<std::shared_mutex> lock(mtx);
-        for (auto &key : keysToRemove)
-        {
+        for (auto &key : keysToRemove) {
             sharedPtrMap.erase(key);
         }
     }
 }
 
 template <typename T>
-void GlobalSharedPtrManager::addDeleter(const std::string &key, const std::function<void(T *)> &deleter)
-{
+void GlobalSharedPtrManager::addDeleter(
+    const std::string &key, const std::function<void(T *)> &deleter) {
     std::unique_lock<std::shared_mutex> lock(mtx);
     sharedPtrMap[key] = deleter;
 }
 
 template <typename T>
-void GlobalSharedPtrManager::deleteObject(const std::string &key, T *ptr)
-{
+void GlobalSharedPtrManager::deleteObject(const std::string &key, T *ptr) {
     std::unique_lock<std::shared_mutex> lock(mtx);
     auto it = sharedPtrMap.find(key);
-    if (it != sharedPtrMap.end())
-    {
-        try
-        {
-            std::function<void(T *)> deleter = std::any_cast<std::function<void(T *)>>(it->second);
+    if (it != sharedPtrMap.end()) {
+        try {
+            std::function<void(T *)> deleter =
+                std::any_cast<std::function<void(T *)>>(it->second);
             deleter(ptr);
-        }
-        catch (const std::bad_any_cast &)
-        {
-            // 类型转换失败，不做处理
+        } catch (const std::bad_any_cast &) {
         }
     }
 }
+
+#endif

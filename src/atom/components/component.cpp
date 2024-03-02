@@ -14,88 +14,136 @@ Description: Basic Component Definition
 
 #include "component.hpp"
 
-#include "atom/utils/exception.hpp"
+#include <filesystem>
+#include <fstream>
+namespace fs = std::filesystem;
 
+#include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
+
+#if __cplusplus >= 202002L
 #include <format>
+#else
+#include <fmt/format.h>
+#endif
 
-Component::Component()
-{
-    // Just for safety, initialize the members
-    m_CommandDispatcher = std::make_unique<CommandDispatcher<json, json>>();
-    m_VariableRegistry = std::make_unique<VariableRegistry>();
-}
-
-Component::~Component()
-{
-
-    m_CommandDispatcher->RemoveAll();
-    m_VariableRegistry->RemoveAll();
-    m_CommandDispatcher.reset();
-    m_VariableRegistry.reset();
-}
-
-bool Component::Initialize()
-{
-    return true;
-}
-
-bool Component::Destroy()
-{
-    return true;
-}
-
-std::string Component::GetName() const
-{
-    return m_name;
-}
-
-bool Component::LoadConfig(const std::string &path)
-{
-    try
-    {
-        m_Config->load(path);
+Component::Component(const std::string &name)
+    : m_CommandDispatcher(std::make_unique<CommandDispatcher<json, json>>()),
+      m_VariableRegistry(std::make_unique<VariableRegistry>(name)),
+      m_name(name) {
+    if (!initialize()) {
+        LOG_F(ERROR, "Failed to initialize {}", name);
     }
-    catch (const Atom::Utils::Exception::FileNotReadable_Error &e)
-    {
+}
+
+Component::~Component() { destroy(); }
+
+bool Component::initialize() { return true; }
+
+bool Component::destroy() {
+    if (m_CommandDispatcher) {
+        m_CommandDispatcher->RemoveAll();
+        m_CommandDispatcher.reset();
+    }
+    if (m_VariableRegistry) {
+        m_VariableRegistry->RemoveAll();
+        m_VariableRegistry.reset();
+    }
+    return true;
+}
+
+std::string Component::getName() const { return m_name; }
+
+bool Component::loadConfig(const std::string &path) {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    try {
+        std::ifstream ifs(path);
+        if (!ifs.is_open()) {
+            LOG_F(ERROR, "Failed to open file: {}", path);
+            return false;
+        }
+        json j = json::parse(ifs);
+        const std::string basename = fs::path(path).stem().string();
+        m_config[basename] = j["config"];
+        m_ConfigPath = path;
+        DLOG_F(INFO, "Loaded config file {} successfully", path);
+        return true;
+    } catch (const json::exception &e) {
+        LOG_F(ERROR, "Failed to parse file: {}, error message: {}", path,
+              e.what());
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Failed to load config file: {}, error message: {}", path,
+              e.what());
+    }
+    return false;
+}
+
+bool Component::saveConfig() {
+    if (m_ConfigPath.empty()) {
+        LOG_F(ERROR, "No path provided, will not save {}'s config", m_name);
         return false;
     }
-    m_ConfigPath = path;
+    std::ofstream ofs(m_ConfigPath);
+    if (!ofs.is_open()) {
+        LOG_F(ERROR, "Failed to open file: {}", m_ConfigPath);
+        return false;
+    }
+    try {
+        ofs << m_config.dump(4);
+    } catch (const json::parse_error &e) {
+        LOG_F(ERROR, "Failed to sace config {} for JSON error: {}",
+              m_ConfigPath, e.what());
+        ofs.close();
+        return false;
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Failed to save config to file: {}, error message: {}",
+              m_ConfigPath, e.what());
+        ofs.close();
+        return false;
+    }
+    ofs.close();
+    DLOG_F(INFO, "Save config to file: {}", m_ConfigPath);
     return true;
 }
 
-std::string Component::getJsonConfig() const
-{
-    return m_Config->toJson();
+json Component::getValue(const std::string &key_path) const {
+    // std::lock_guard<std::shared_mutex> lock(rw_m_mutex);
+    try {
+        const json *p = &m_config;
+        for (const auto &key : Atom::Utils::splitString(key_path, '/')) {
+            if (p->is_object() && p->contains(key)) {
+                p = &(*p)[key];
+            } else {
+                LOG_F(ERROR, "Key not found: {}", key_path);
+                return nullptr;
+            }
+        }
+        return *p;
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Failed to get value: {} {}", key_path, e.what());
+        return nullptr;
+    }
+    return nullptr;
 }
 
-std::string Component::getXmlConfig() const
-{
-    return m_Config->toXml();
-}
-
-std::string Component::GetVariableInfo(const std::string &name) const
-{
-    if (!m_VariableRegistry->HasVariable(name))
-    {
+std::string Component::getVariableInfo(const std::string &name) const {
+    if (!m_VariableRegistry->HasVariable(name)) {
         return "";
     }
     return m_VariableRegistry->GetDescription(name);
 }
 
-bool Component::RunFunc(const std::string &name, const json &params)
-{
-    if (!m_CommandDispatcher->HasHandler(name))
-    {
+bool Component::runFunc(const std::string &name, const json &params) {
+    if (!m_CommandDispatcher->HasHandler(name)) {
         return false;
     }
     m_CommandDispatcher->Dispatch(name, params);
     return true;
 }
 
-json Component::GetFuncInfo(const std::string &name)
-{
-    if (m_CommandDispatcher->HasHandler(name))
-    {
+json Component::getFuncInfo(const std::string &name) {
+    if (m_CommandDispatcher->HasHandler(name)) {
         json args;
         args = {
             {"name", name},
@@ -105,17 +153,15 @@ json Component::GetFuncInfo(const std::string &name)
     return {};
 }
 
-std::function<json(const json &)> Component::GetFunc(const std::string &name)
-{
-    if (!m_CommandDispatcher->HasHandler(name))
-    {
-        throw Atom::Utils::Exception::InvalidArgument_Error("Function not found");
+std::function<json(const json &)> Component::getFunc(const std::string &name) {
+    if (!m_CommandDispatcher->HasHandler(name)) {
+        throw Atom::Error::InvalidArgument("Function not found");
     }
     return m_CommandDispatcher->GetHandler(name);
 }
 
-json Component::createSuccessResponse(const std::string &command, const json &value)
-{
+json Component::createSuccessResponse(const std::string &command,
+                                      const json &value) {
     json res;
     res["command"] = command;
     res["value"] = value;
@@ -129,45 +175,45 @@ json Component::createSuccessResponse(const std::string &command, const json &va
     return res;
 }
 
-json Component::createErrorResponse(const std::string &command, const json &error, const std::string &message = "")
-{
+json Component::createErrorResponse(const std::string &command,
+                                    const json &error,
+                                    const std::string &message = "") {
     json res;
     res["command"] = command;
     res["status"] = "error";
     res["code"] = 500;
 #if __cplusplus >= 202003L
-    res["message"] = std::format("{} operated on failure, message: {}", command, message);
+    res["message"] =
+        std::format("{} operated on failure, message: {}", command, message);
 #else
-    res["message"] = std::format("{} operated on failure, message: {}", command, message);
+    res["message"] =
+        std::format("{} operated on failure, message: {}", command, message);
 #endif
-    if (!error.empty())
-    {
+    if (!error.empty()) {
         res["error"] = error;
-    }
-    else
-    {
+    } else {
         res["error"] = "Unknown Error";
     }
     return res;
 }
 
-json Component::createWarningResponse(const std::string &command, const json &warning, const std::string &message = "")
-{
+json Component::createWarningResponse(const std::string &command,
+                                      const json &warning,
+                                      const std::string &message = "") {
     json res;
     res["command"] = command;
     res["status"] = "warning";
     res["code"] = 400;
 #if __cplusplus >= 202003L
-    res["message"] = std::format("{} operated on warning, message: {}", command, message);
+    res["message"] =
+        std::format("{} operated on warning, message: {}", command, message);
 #else
-    res["message"] = std::format("{} operated on warning, message: {}", command, message);
+    res["message"] =
+        std::format("{} operated on warning, message: {}", command, message);
 #endif
-    if (!warning.empty())
-    {
+    if (!warning.empty()) {
         res["warning"] = warning;
-    }
-    else
-    {
+    } else {
         res["warning"] = "Unknown Warning";
     }
     return res;

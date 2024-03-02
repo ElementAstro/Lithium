@@ -12,125 +12,106 @@ Description: Error Stack
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_ERROR_STACK_HPP
+#define ATOM_ERROR_STACK_HPP
 
-#include <string>
-#include <vector>
-#include <ostream>
 #include <algorithm>
 #include <memory>
+#include <ostream>
 
-namespace Atom::Error
-{
-    /**
-     * @brief Error information structure.
-     */
-    struct ErrorInfo
-    {
-        std::string errorMessage; /**< Error message. */
-        std::string moduleName;   /**< Module name. */
-        std::string functionName; /**< Function name where the error occurred. */
-        int line;                 /**< Line number where the error occurred. */
-        std::string fileName;     /**< File name where the error occurred. */
-        time_t timestamp;         /**< Timestamp of the error. */
-        std::string uuid;         /**< UUID of the error. */
-    };
+#include "atom/experiment/string.hpp"
 
-    /**
-     * @brief Overloaded stream insertion operator to print ErrorInfo object.
-     * @param os Output stream.
-     * @param error ErrorInfo object to be printed.
-     * @return Reference to the output stream.
-     */
-    std::ostream &operator<<(std::ostream &os, const ErrorInfo &error);
+namespace Atom::Error {
+/**
+ * @brief Error information structure.
+ */
+struct ErrorInfo {
+    std::string errorMessage; /**< Error message. */
+    std::string moduleName;   /**< Module name. */
+    std::string functionName; /**< Function name where the error occurred. */
+    int line;                 /**< Line number where the error occurred. */
+    std::string fileName;     /**< File name where the error occurred. */
+    time_t timestamp;         /**< Timestamp of the error. */
+    std::string uuid;         /**< UUID of the error. */
+};
 
-    /**
-     * @brief Overloaded string concatenation operator to concatenate ErrorInfo object with a string.
-     * @param str Input string.
-     * @param error ErrorInfo object to be concatenated.
-     * @return Concatenated string.
-     */
-    std::string operator<<(const std::string &str, const ErrorInfo &error);
+/**
+ * @brief Overloaded stream insertion operator to print ErrorInfo object.
+ * @param os Output stream.
+ * @param error ErrorInfo object to be printed.
+ * @return Reference to the output stream.
+ */
+std::ostream &operator<<(std::ostream &os, const ErrorInfo &error);
 
-    /**
-     * @brief Error stack class for managing and handling errors.
-     */
-    class ErrorStack
-    {
-    public:
-        /**
-         * @brief Default constructor for ErrorStack.
-         */
-        ErrorStack();
+/**
+ * @brief Overloaded string concatenation operator to concatenate ErrorInfo
+ * object with a string.
+ * @param str Input string.
+ * @param error ErrorInfo object to be concatenated.
+ * @return Concatenated string.
+ */
+std::string operator<<(const std::string &str, const ErrorInfo &error);
 
-        /**
-         * @brief Create shared ErrorStack object.
-         * @return Shared ErrorStack object.
-         */
-        static std::shared_ptr<ErrorStack> createShared();
+/// Represents a stack of errors and provides operations to manage and retrieve
+/// them.
+class ErrorStack {
+private:
+    std::vector<ErrorInfo> errorStack;  ///< The stack of all errors.
+    std::vector<ErrorInfo>
+        compressedErrorStack;  ///< The compressed stack of unique errors.
+    std::vector<std::string>
+        filteredModules;  ///< Modules to be filtered out while printing errors.
 
-        /**
-         * @brief Create unique ErrorStack object.
-         * @return Unique ErrorStack object.
-         */
-        static std::unique_ptr<ErrorStack> createUnique();
+public:
+    /// Default constructor.
+    ErrorStack();
 
-        /**
-         * @brief Insert an error into the stack.
-         * @param errorMessage Error message.
-         * @param moduleName Module name where the error occurred.
-         */
-        void InsertError(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName);
+    /// Create a shared pointer to an ErrorStack object.
+    /// \return A shared pointer to the ErrorStack object.
+    [[nodiscard]] std::shared_ptr<ErrorStack> createShared();
 
-        /**
-         * @brief Set the filtered modules for printing the error stack.
-         * @param modules List of module names to filter.
-         */
-        void SetFilteredModules(const std::vector<std::string> &modules);
+    /// Create a unique pointer to an ErrorStack object.
+    /// \return A unique pointer to the ErrorStack object.
+    [[nodiscard]] std::unique_ptr<ErrorStack> createUnique();
 
-        /**
-         * @brief Clear the filtered modules.
-         */
-        void ClearFilteredModules();
+    /// Insert a new error into the error stack.
+    /// \param errorMessage The error message.
+    /// \param moduleName The module name where the error occurred.
+    /// \param functionName The function name where the error occurred.
+    /// \param line The line number where the error occurred.
+    /// \param fileName The file name where the error occurred.
+    void insertError(const std::string &errorMessage,
+                     const std::string &moduleName,
+                     const std::string &functionName, int line,
+                     const std::string &fileName);
 
-        /**
-         * @brief Print the filtered error stack.
-         */
-        void PrintFilteredErrorStack() const;
+    /// Set the modules to be filtered out while printing the error stack.
+    /// \param modules The modules to be filtered out.
+    void setFilteredModules(const std::vector<std::string> &modules);
 
-        /**
-         * @brief Get the filtered errors by module.
-         * @param moduleName Module name to filter.
-         * @return Vector of ErrorInfo objects filtered by module.
-         */
-        std::vector<ErrorInfo> GetFilteredErrorsByModule(const std::string &moduleName) const;
+    /// Clear the list of filtered modules.
+    void clearFilteredModules();
 
-        /**
-         * @brief Insert an error into the stack and compress duplicate errors.
-         * @param errorMessage Error message.
-         * @param moduleName Module name where the error occurred.
-         */
-        void InsertErrorCompressed(const std::string &errorMessage, const std::string &moduleName, const std::string &functionName, int line, const std::string &fileName);
+    /// Print the filtered error stack to the standard output.
+    void printFilteredErrorStack() const;
 
-        /**
-         * @brief Get the compressed errors as a string.
-         * @return Compressed errors as a string.
-         */
-        std::string GetCompressedErrors() const;
+    /// Get a vector of errors filtered by a specific module.
+    /// \param moduleName The module name for which errors are to be retrieved.
+    /// \return A vector of errors filtered by the given module.
+    [[nodiscard]] std::vector<ErrorInfo> getFilteredErrorsByModule(
+        const std::string &moduleName) const;
 
-    private:
-        std::vector<ErrorInfo> errorStack;           /**< Error stack to store all errors. */
-        std::vector<std::string> filteredModules;    /**< Filtered modules for printing the error stack. */
-        std::vector<ErrorInfo> compressedErrorStack; /**< Compressed error stack with unique errors only. */
+    /// Get a string containing the compressed errors in the stack.
+    /// \return A string containing the compressed errors.
+    [[nodiscard]] std::string getCompressedErrors() const;
 
-        /**
-         * @brief Update the compressed error stack by removing duplicate errors.
-         */
-        void UpdateCompressedErrors();
+private:
+    /// Update the compressed error stack based on the current error stack.
+    void updateCompressedErrors();
 
-        /**
-         * @brief Sort the compressed error stack based on timestamp.
-         */
-        void SortCompressedErrorStack();
-    };
-}
+    /// Sort the compressed error stack based on the timestamp of errors.
+    void sortCompressedErrorStack();
+};
+}  // namespace Atom::Error
+
+#endif

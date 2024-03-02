@@ -91,7 +91,7 @@ bool HydrogenManager::startServer()
     }
     // Clear old fifo pipe and create new one
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    if (!Atom::IO::remove_file(fifo_path))
+    if (!Atom::IO::removeFile(fifo_path))
     {
         LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
         return false;

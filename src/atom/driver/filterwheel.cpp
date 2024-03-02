@@ -14,40 +14,18 @@ Description: Filterwheel Simulator and Basic Definition
 
 #include "filterwheel.hpp"
 
-Filterwheel::Filterwheel(const std::string &name) : AtomDriver(name)
-{
-}
+Filterwheel::Filterwheel(const std::string &name) : AtomDriver(name) {}
 
-Filterwheel::~Filterwheel()
-{
-}
+Filterwheel::~Filterwheel() {}
 
-bool Filterwheel::connect(const json &params)
-{
-    return true;
-}
+bool Filterwheel::connect(const json &params) { return true; }
 
-bool Filterwheel::disconnect(const json &params)
-{
-    return true;
-}
+bool Filterwheel::disconnect(const json &params) { return true; }
 
-bool Filterwheel::reconnect(const json &params)
-{
-    return true;
-}
+bool Filterwheel::reconnect(const json &params) { return true; }
 
-bool Filterwheel::isConnected()
-{
-    return true;
-}
+bool Filterwheel::isConnected() { return true; }
 
-bool Filterwheel::moveTo(const json &params)
-{
-    return true;
-}
+bool Filterwheel::moveTo(const json &params) { return true; }
 
-bool Filterwheel::getCurrentPosition(const json &params)
-{
-    return true;
-}
+bool Filterwheel::getCurrentPosition(const json &params) { return true; }

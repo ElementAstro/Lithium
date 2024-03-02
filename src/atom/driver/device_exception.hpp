@@ -17,71 +17,51 @@ Description: Basic Device Exception Defination
 #include <stdexcept>
 #include <string>
 
-class InvalidDeviceType : public std::exception
-{
+class InvalidDeviceType : public std::exception {
 public:
     InvalidDeviceType(const std::string &message) : m_message(message) {}
 
-    const char *what() const noexcept override
-    {
-        return m_message.c_str();
-    }
+    const char *what() const noexcept override { return m_message.c_str(); }
 
 private:
     std::string m_message;
 };
 
-class InvalidParameters : public std::exception
-{
+class InvalidParameters : public std::exception {
 public:
     InvalidParameters(const std::string &message) : m_message(message) {}
 
-    const char *what() const noexcept override
-    {
-        return m_message.c_str();
-    }
+    const char *what() const noexcept override { return m_message.c_str(); }
 
 private:
     std::string m_message;
 };
 
-class InvalidProperty : public std::exception
-{
+class InvalidProperty : public std::exception {
 public:
     InvalidProperty(const std::string &message) : m_message(message) {}
 
-    const char *what() const noexcept override
-    {
-        return m_message.c_str();
-    }
+    const char *what() const noexcept override { return m_message.c_str(); }
 
 private:
     std::string m_message;
 };
 
-class InvalidReturn : public std::exception
-{
+class InvalidReturn : public std::exception {
 public:
     InvalidReturn(const std::string &message) : m_message(message) {}
 
-    const char *what() const noexcept override
-    {
-        return m_message.c_str();
-    }
+    const char *what() const noexcept override { return m_message.c_str(); }
 
 private:
     std::string m_message;
 };
 
-class DispatchError : public std::exception
-{
+class DispatchError : public std::exception {
 public:
     DispatchError(const std::string &message) : m_message(message) {}
 
-    const char *what() const noexcept override
-    {
-        return m_message.c_str();
-    }
+    const char *what() const noexcept override { return m_message.c_str(); }
 
 private:
     std::string m_message;

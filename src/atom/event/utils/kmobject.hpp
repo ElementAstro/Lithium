@@ -15,41 +15,34 @@ Description: KMObject
 #ifndef ATOM_EVENT_OBJECT_HPP
 #define ATOM_EVENT_OBJECT_HPP
 
-#include <string>
 #include <atomic>
 #include <sstream>
+#include <string>
 
-namespace Atom::Event
-{
-    class KMObject
-    {
-    public:
-        KMObject()
-        {
-            static std::atomic<long> s_objIdSeed{0};
-            objId_ = ++s_objIdSeed;
-        }
+namespace Atom::Event {
+class KMObject {
+public:
+    KMObject() {
+        static std::atomic<long> s_objIdSeed{0};
+        objId_ = ++s_objIdSeed;
+    }
 
-        const std::string &getObjKey() const
-        {
-            return objKey_;
-        }
+    const std::string &getObjKey() const { return objKey_; }
 
-        long getObjId() const { return objId_; }
+    long getObjId() const { return objId_; }
 
-    protected:
-        std::string objKey_;
-        long objId_ = 0;
-    };
+protected:
+    std::string objKey_;
+    long objId_ = 0;
+};
 
 #define KM_SetObjKey(x)           \
-    do                            \
-    {                             \
+    do {                          \
         std::stringstream ss;     \
         ss << x << "_" << objId_; \
         objKey_ = ss.str();       \
     } while (0)
 
-} // namespace Atom::Event
+}  // namespace Atom::Event
 
 #endif /* ATOM_EVENT_OBJECT_HPP */

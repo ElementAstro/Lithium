@@ -1,0 +1,1415 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Telescope Catalog</title>
+    <link rel="stylesheet" href="/css/adminlte.min.css" />
+    <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css" />
+    <link rel="stylesheet" href="/css/bootstrap/bootstrap-select.min.css" />
+    <link rel="icon" sizes="16x16" type="image/icon" href="/textures/icon.ico" />
+    <style>
+      .telescope-card {
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 20px;
+        position: relative;
+      }
+      .telescope-make {
+        color: #007bff;
+        font-weight: bold;
+      }
+      .telescope-model {
+        color: #28a745;
+      }
+      .telescope-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+      }
+      .telescope-actions button {
+        margin-left: 5px;
+      }
+
+      #editModal input {
+        margin-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body class="dark-mode">
+    <div class="container mt-5">
+      <h1 class="mb-4">
+        <i class="fas fa-binoculars"></i> Telescope Catalog <i
+          class="fas fa-binoculars"></i>
+      </h1>
+
+      <div class="row mb-4">
+        <div class="col-md-2 text-center">
+          <button
+            id="refreshBtn"
+            class="btn btn-success btn-animate animate__animated animate__bounce"
+            >Refresh Data</button
+          >
+        </div>
+        <div class="col-md-5 input-group">
+          <span class="input-group-text">Search:</span>
+          <input type="text" id="searchInput" class="form-control" />
+        </div>
+        <div class="col-md-5">
+          <label for="sortSelect" class="form-label">Sort By:</label>
+          <select
+            id="sortSelect"
+            class="form-select selectpicker lg"
+            data-style="btn-primary"
+            data-width="fit"
+          >
+            <option value="make">Make</option>
+            <option value="model">Model</option>
+            <option value="aperture">Aperture</option>
+            <option value="focalLength">Focal Length</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="telescopesList" class="row">
+        <!-- Telescopes list will be dynamically populated here -->
+      </div>
+
+      <!-- Modal for editing telescope -->
+      <div
+        class="modal fade"
+        id="editModal"
+        tabindex="-1"
+        aria-labelledby="editModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="editModalLabel">Edit Telescope</h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <input
+                type="text"
+                id="editMake"
+                class="form-control mb-3"
+                placeholder="Make"
+              />
+              <input
+                type="text"
+                id="editModel"
+                class="form-control mb-3"
+                placeholder="Model"
+              />
+              <input
+                type="number"
+                id="editAperture"
+                class="form-control mb-3"
+                placeholder="Aperture (mm)"
+              />
+              <input
+                type="number"
+                id="editFocalLength"
+                class="form-control"
+                placeholder="Focal Length (mm)"
+              />
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal">Close</button
+              >
+              <button type="button" class="btn btn-primary" id="saveChangesBtn"
+                >Save changes</button
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/jquery.min.js" is:inline></script>
+    <script src="/js/bootstrap.bundle.min.js" is:inline></script>
+    <script src="/js/bootstrap/bootstrap-select.min.js" is:inline></script>
+    <script is:inline>
+      $(document).ready(function () {
+        $("#sortSelect").selectpicker();
+
+        let telescopes = [
+          {
+            aperture: 304.8,
+            focalLength: 1500.0,
+            make: "Zhumell",
+            model: "Z12",
+          },
+          {
+            aperture: 95.0,
+            focalLength: 1045.0,
+            make: "Vixen",
+            model: "VMC95L",
+          },
+          {
+            aperture: 330.0,
+            focalLength: 4300.0,
+            make: "Vixen",
+            model: "VMC330L",
+          },
+          {
+            aperture: 260.0,
+            focalLength: 2990.0,
+            make: "Vixen",
+            model: "VMC260L",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 1950.0,
+            make: "Vixen",
+            model: "VMC200L",
+          },
+          {
+            aperture: 110.0,
+            focalLength: 1035.0,
+            make: "Vixen",
+            model: "VMC110L",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 1800.0,
+            make: "Vixen",
+            model: "VC200L",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 800.0,
+            make: "Vixen",
+            model: "R200SS",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 750.0,
+            make: "Vixen",
+            model: "R150S",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 650.0,
+            make: "Vixen",
+            model: "R130S",
+          },
+          {
+            aperture: 140.0,
+            focalLength: 800.0,
+            make: "Vixen",
+            model: "NA140SSf",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 1200.0,
+            make: "Vixen",
+            model: "MC90L",
+          },
+          {
+            aperture: 81.0,
+            focalLength: 625.0,
+            make: "Vixen",
+            model: "ED81S",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 600.0,
+            make: "Vixen",
+            model: "ED80SF",
+          },
+          {
+            aperture: 115.0,
+            focalLength: 890.0,
+            make: "Vixen",
+            model: "ED115S",
+          },
+          {
+            aperture: 103.0,
+            focalLength: 795.0,
+            make: "Vixen",
+            model: "ED103S",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 900.0,
+            make: "Vixen",
+            model: "AL70LF",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 400.0,
+            make: "Vixen",
+            model: "A80SSWT",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 910.0,
+            make: "Vixen",
+            model: "A80Mf",
+          },
+          {
+            aperture: 108.0,
+            focalLength: 540.0,
+            make: "Vixen",
+            model: "108DED",
+          },
+          {
+            aperture: 92.0,
+            focalLength: 506.0,
+            make: "TMB",
+            model: "TMB92-SS",
+          },
+          {
+            aperture: 203.0,
+            focalLength: 1420.0,
+            make: "TMB",
+            model: "TMB203/1420",
+          },
+          {
+            aperture: 105.0,
+            focalLength: 650.0,
+            make: "TMB",
+            model: "TMB105/650",
+          },
+          {
+            aperture: 180.0,
+            focalLength: 1260.0,
+            make: "TEC",
+            model: "APO180FL",
+          },
+          {
+            aperture: 160.0,
+            focalLength: 1120.0,
+            make: "TEC",
+            model: "APO160FL",
+          },
+          {
+            aperture: 140.0,
+            focalLength: 980.0,
+            make: "TEC",
+            model: "APO140ED",
+          },
+          {
+            aperture: 110.0,
+            focalLength: 616.0,
+            make: "TEC",
+            model: "APO110FL",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 526.0,
+            make: "TAL",
+            model: "TAL-M",
+          },
+          {
+            aperture: 65.0,
+            focalLength: 500.0,
+            make: "TAL",
+            model: "TAL-65",
+          },
+          {
+            aperture: 250.0,
+            focalLength: 2130.0,
+            make: "TAL",
+            model: "TAL-250K",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 2000.0,
+            make: "TAL",
+            model: "TAL-200K",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 1200.0,
+            make: "TAL",
+            model: "TAL-2",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 1200.0,
+            make: "TAL",
+            model: "TAL-150P8",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 750.0,
+            make: "TAL",
+            model: "TAL-150P",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 1550.0,
+            make: "TAL",
+            model: "TAL-150K",
+          },
+          {
+            aperture: 125.0,
+            focalLength: 1124.0,
+            make: "TAL",
+            model: "TAL-125R",
+          },
+          {
+            aperture: 120.0,
+            focalLength: 805.0,
+            make: "TAL",
+            model: "TAL-120",
+          },
+          {
+            aperture: 100.0,
+            focalLength: 1000.0,
+            make: "TAL",
+            model: "TAL-100RS",
+          },
+          {
+            aperture: 110.0,
+            focalLength: 800.0,
+            make: "TAL",
+            model: "TAL-1",
+          },
+          {
+            aperture: 120.0,
+            focalLength: 900.0,
+            make: "Takahashi",
+            model: "TSA-120",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 816.0,
+            make: "Takahashi",
+            model: "TSA-102",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 1100.0,
+            make: "Takahashi",
+            model: "TOA-150",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 1000.0,
+            make: "Takahashi",
+            model: "TOA-130",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 500.0,
+            make: "Takahashi",
+            model: "SKY-90",
+          },
+          {
+            aperture: 300.0,
+            focalLength: 3572.0,
+            make: "Takahashi",
+            model: "Mewlon-300",
+          },
+          {
+            aperture: 250.0,
+            focalLength: 3000.0,
+            make: "Takahashi",
+            model: "Mewlon-250",
+          },
+          {
+            aperture: 210.0,
+            focalLength: 2415.0,
+            make: "Takahashi",
+            model: "Mewlon-210",
+          },
+          {
+            aperture: 85.0,
+            focalLength: 450.0,
+            make: "Takahashi",
+            model: "FSQ-85ED",
+          },
+          {
+            aperture: 106.0,
+            focalLength: 530.0,
+            make: "Takahashi",
+            model: "FSQ-106ED",
+          },
+          {
+            aperture: 78.0,
+            focalLength: 630.0,
+            make: "Takahashi",
+            model: "FS-78",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 355.0,
+            make: "Takahashi",
+            model: "FS-60C",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 820.0,
+            make: "Takahashi",
+            model: "FS-102",
+          },
+          {
+            aperture: 300.0,
+            focalLength: 2400.0,
+            make: "Takahashi",
+            model: "FET-300",
+          },
+          {
+            aperture: 250.0,
+            focalLength: 2500.0,
+            make: "Takahashi",
+            model: "FCT-250",
+          },
+          {
+            aperture: 100.0,
+            focalLength: 800.0,
+            make: "Takahashi",
+            model: "FC-100",
+          },
+          {
+            aperture: 180.0,
+            focalLength: 500.0,
+            make: "Takahashi",
+            model: "Epsilon-180ED",
+          },
+          {
+            aperture: 250.0,
+            focalLength: 1250.0,
+            make: "Takahashi",
+            model: "CCA-250",
+          },
+          {
+            aperture: 400.0,
+            focalLength: 5600.0,
+            make: "Takahashi",
+            model: "C-400",
+          },
+          {
+            aperture: 105.0,
+            focalLength: 105.0,
+            make: "Stellarvue",
+            model: "SVR",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 90.0,
+            make: "Stellarvue",
+            model: "SV",
+          },
+          {
+            aperture: 160.0,
+            focalLength: 160.0,
+            make: "Stellarvue",
+            model: "SV",
+          },
+          {
+            aperture: 130.0,
+            focalLength: -3.0,
+            make: "Stellarvue",
+            model: "SV",
+          },
+          {
+            aperture: 110.0,
+            focalLength: -25.0,
+            make: "Stellarvue",
+            model: "SV",
+          },
+          {
+            aperture: 105.0,
+            focalLength: -25.0,
+            make: "Stellarvue",
+            model: "SV",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 400.0,
+            make: "Skywatcher",
+            model: "Startravel-80",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 750.0,
+            make: "Skywatcher",
+            model: "Startravel-150",
+          },
+          {
+            aperture: 120.0,
+            focalLength: 600.0,
+            make: "Skywatcher",
+            model: "Startravel-120",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 500.0,
+            make: "Skywatcher",
+            model: "Startravel-102",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 1250.0,
+            make: "Skywatcher",
+            model: "Skymax-90",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 1000.0,
+            make: "Skywatcher",
+            model: "Skymax-40",
+          },
+          {
+            aperture: 127.0,
+            focalLength: 1500.0,
+            make: "Skywatcher",
+            model: "Skymax-127",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 1300.0,
+            make: "Skywatcher",
+            model: "Skymax-102",
+          },
+          {
+            aperture: 300.0,
+            focalLength: 1500.0,
+            make: "Skywatcher",
+            model: "Skyliner-300P",
+          },
+          {
+            aperture: 250.0,
+            focalLength: 1200.0,
+            make: "Skywatcher",
+            model: "Skyliner-250PX",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 1200.0,
+            make: "Skywatcher",
+            model: "Skyliner-200",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 1200.0,
+            make: "Skywatcher",
+            model: "Skyliner-150",
+          },
+          {
+            aperture: 114.0,
+            focalLength: 500.0,
+            make: "Skywatcher",
+            model: "Skyhawk-1145pm",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 700.0,
+            make: "Skywatcher",
+            model: "Mercury-707",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 500.0,
+            make: "Skywatcher",
+            model: "Mercury-705",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 900.0,
+            make: "Skywatcher",
+            model: "Mercury-609",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 700.0,
+            make: "Skywatcher",
+            model: "Mercury-607",
+          },
+          {
+            aperture: 76.0,
+            focalLength: 76.0,
+            make: "Skywatcher",
+            model: "Heritage",
+          },
+          {
+            aperture: 300.0,
+            focalLength: 1500.0,
+            make: "Skywatcher",
+            model: "Explorer-300PDS",
+          },
+          {
+            aperture: 250.0,
+            focalLength: 1200.0,
+            make: "Skywatcher",
+            model: "Explorer-250PX",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 1000.0,
+            make: "Skywatcher",
+            model: "Explorer-200",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 1200.0,
+            make: "Skywatcher",
+            model: "Explorer-150PL",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 750.0,
+            make: "Skywatcher",
+            model: "Explorer-150P",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 650.0,
+            make: "Skywatcher",
+            model: "Explorer-130pm",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 650.0,
+            make: "Skywatcher",
+            model: "Explorer-130P",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 900.0,
+            make: "Skywatcher",
+            model: "Evostar-90",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 900.0,
+            make: "Skywatcher",
+            model: "Evostar-80",
+          },
+          {
+            aperture: 150.0,
+            focalLength: 1200.0,
+            make: "Skywatcher",
+            model: "Evostar-150",
+          },
+          {
+            aperture: 120.0,
+            focalLength: 1000.0,
+            make: "Skywatcher",
+            model: "Evostar-120",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 1000.0,
+            make: "Skywatcher",
+            model: "Evostar-102",
+          },
+          {
+            aperture: 120.0,
+            focalLength: 840.0,
+            make: "Skywatcher",
+            model: "Esprit-120ED",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 900.0,
+            make: "Skywatcher",
+            model: "Capricorn-70",
+          },
+          {
+            aperture: 76.0,
+            focalLength: 700.0,
+            make: "Skywatcher",
+            model: "Astrolux",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 700.0,
+            make: "Pentaflex",
+            model: "60/700",
+          },
+          {
+            aperture: 6.0,
+            focalLength: 152.0,
+            make: "Orion",
+            model: "StarBlast",
+          },
+          {
+            aperture: 4.5,
+            focalLength: 114.3,
+            make: "Orion",
+            model: "StarBlast",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 400.0,
+            make: "Orion",
+            model: "ST80",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 480.0,
+            make: "Orion",
+            model: "ED80T-CF",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 714.0,
+            make: "Orion",
+            model: "ED102T",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 600.0,
+            make: "Orion",
+            model: "80ED",
+          },
+          {
+            aperture: 120.0,
+            focalLength: 600.0,
+            make: "Orion",
+            model: "120ST",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 1900.0,
+            make: "Opticstar",
+            model: "MG152",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 500.0,
+            make: "Opticstar",
+            model: "ED80S",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 495.0,
+            make: "Opticstar",
+            model: "AR90s",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 400.0,
+            make: "Opticstar",
+            model: "AR80s",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 102.0,
+            make: "Meade",
+            model: "StarNavigator",
+          },
+          {
+            aperture: 5000.0,
+            focalLength: 80.0,
+            make: "Meade",
+            model: "Series",
+          },
+          {
+            aperture: 5000.0,
+            focalLength: 127.0,
+            make: "Meade",
+            model: "Series",
+          },
+          {
+            aperture: 5000.0,
+            focalLength: 102.0,
+            make: "Meade",
+            model: "Series",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 700.0,
+            make: "Meade",
+            model: "NGC-70",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 700.0,
+            make: "Meade",
+            model: "NG-70",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 350.0,
+            make: "Meade",
+            model: "ETX60",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 1250.0,
+            make: "Meade",
+            model: "ETX-90",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 400.0,
+            make: "Meade",
+            model: "ETX-80",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 350.0,
+            make: "Meade",
+            model: "ETX-70",
+          },
+          {
+            aperture: 125.0,
+            focalLength: 1900.0,
+            make: "Meade",
+            model: "ETX-125",
+          },
+          {
+            aperture: 105.0,
+            focalLength: 1470.0,
+            make: "Meade",
+            model: "ETX-105",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 800.0,
+            make: "Meade",
+            model: "DS2090AT",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 1000.0,
+            make: "Meade",
+            model: "DS-2130ATS-LNT",
+          },
+          {
+            aperture: 114.0,
+            focalLength: 1000.0,
+            make: "Meade",
+            model: "DS-2114ATS-LNT",
+          },
+          {
+            aperture: 102.0,
+            focalLength: 1356.0,
+            make: "Meade",
+            model: "DS-2102MAK",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 1250.0,
+            make: "Meade",
+            model: "DS-2090MAK",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 800.0,
+            make: "Meade",
+            model: "DS-2080AT-LNT",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 900.0,
+            make: "Meade",
+            model: "80EQ-A",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 350.0,
+            make: "Meade",
+            model: "70AZ-T",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 350.0,
+            make: "Meade",
+            model: "60AZ-T",
+          },
+          {
+            aperture: 114.0,
+            focalLength: 910.0,
+            make: "Meade",
+            model: "114EQ-AST",
+          },
+          {
+            aperture: 114.0,
+            focalLength: 910.0,
+            make: "Meade",
+            model: "114EQ-A",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 200.0,
+            make: "Konus",
+            model: "Konusky",
+          },
+          {
+            aperture: 235.0,
+            focalLength: 540.0,
+            make: "Hyperstar",
+            model: "C9.25",
+          },
+          {
+            aperture: 203.0,
+            focalLength: 425.0,
+            make: "Hyperstar",
+            model: "C8",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 290.0,
+            make: "Hyperstar",
+            model: "C6",
+          },
+          {
+            aperture: 355.6,
+            focalLength: 675.0,
+            make: "Hyperstar",
+            model: "C14",
+          },
+          {
+            aperture: 280.0,
+            focalLength: 560.0,
+            make: "Hyperstar",
+            model: "C11",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 90.0,
+            make: "Coronado",
+            model: "SolarMax",
+          },
+          {
+            aperture: 70.0,
+            focalLength: 70.0,
+            make: "Coronado",
+            model: "SolarMax",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 60.0,
+            make: "Coronado",
+            model: "SolarMax",
+          },
+          {
+            aperture: 40.0,
+            focalLength: 40.0,
+            make: "Coronado",
+            model: "SolarMax",
+          },
+          {
+            aperture: 40.0,
+            focalLength: 400.0,
+            make: "Coronado",
+            model: "PST",
+          },
+          {
+            aperture: 50.0,
+            focalLength: 50.0,
+            make: "Celestron",
+            model: "TravelScope",
+          },
+          {
+            aperture: 8.0,
+            focalLength: 203.0,
+            make: "Celestron",
+            model: "StarHopper",
+          },
+          {
+            aperture: 6.0,
+            focalLength: 152.0,
+            make: "Celestron",
+            model: "StarHopper",
+          },
+          {
+            aperture: 12.0,
+            focalLength: 304.8,
+            make: "Celestron",
+            model: "StarHopper",
+          },
+          {
+            aperture: 10.0,
+            focalLength: 254.0,
+            make: "Celestron",
+            model: "StarHopper",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 90.0,
+            make: "Celestron",
+            model: "SkyProdigy",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 130.0,
+            make: "Celestron",
+            model: "SkyProdigy",
+          },
+          {
+            aperture: 76.0,
+            focalLength: 76.0,
+            make: "Celestron",
+            model: "Powerseeker",
+          },
+          {
+            aperture: 60.0,
+            focalLength: 60.0,
+            make: "Celestron",
+            model: "Powerseeker",
+          },
+          {
+            aperture: 50.0,
+            focalLength: 50.0,
+            make: "Celestron",
+            model: "Powerseeker",
+          },
+          {
+            aperture: 76.0,
+            focalLength: 300.0,
+            make: "Celestron",
+            model: "FirstScope",
+          },
+          {
+            aperture: 80.0,
+            focalLength: 600.0,
+            make: "Celestron",
+            model: "C80ED-RGT",
+          },
+          {
+            aperture: 203.0,
+            focalLength: 1000.0,
+            make: "Celestron",
+            model: "C8-NGT",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 1500.0,
+            make: "Celestron",
+            model: "C6-SGT",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 1200.0,
+            make: "Celestron",
+            model: "C6-RGT",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 750.0,
+            make: "Celestron",
+            model: "C6-NGT",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 1500.0,
+            make: "Celestron",
+            model: "C6-A-XLT",
+          },
+          {
+            aperture: 127.0,
+            focalLength: 1250.0,
+            make: "Celestron",
+            model: "C5",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 2000.0,
+            make: "Celestron",
+            model: "C130-MGT",
+          },
+          {
+            aperture: 100.0,
+            focalLength: 900.0,
+            make: "Celestron",
+            model: "C100ED-RGT",
+          },
+          {
+            aperture: 254.0,
+            focalLength: 1200.0,
+            make: "Celestron",
+            model: "C10-NGT",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 600.0,
+            make: "Astro-Tech",
+            model: "AT90EDT",
+          },
+          {
+            aperture: 203.0,
+            focalLength: 1625.0,
+            make: "Astro-Tech",
+            model: "AT8RC",
+          },
+          {
+            aperture: 203.0,
+            focalLength: 800.0,
+            make: "Astro-Tech",
+            model: "AT8IN",
+          },
+          {
+            aperture: 72.0,
+            focalLength: 430.0,
+            make: "Astro-Tech",
+            model: "AT72ED",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 1370.0,
+            make: "Astro-Tech",
+            model: "AT6RC",
+          },
+          {
+            aperture: 65.0,
+            focalLength: 420.0,
+            make: "Astro-Tech",
+            model: "AT65EDQ",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 780.0,
+            make: "Astro-Tech",
+            model: "AT130",
+          },
+          {
+            aperture: 300.0,
+            focalLength: 1200.0,
+            make: "Astro-Tech",
+            model: "AT12IN",
+          },
+          {
+            aperture: 111.0,
+            focalLength: 777.0,
+            make: "Astro-Tech",
+            model: "AT111EDT",
+          },
+          {
+            aperture: 254.0,
+            focalLength: 2000.0,
+            make: "Astro-Tech",
+            model: "AT10RC",
+          },
+          {
+            aperture: 254.0,
+            focalLength: 1016.0,
+            make: "Astro-Tech",
+            model: "AT10IN",
+          },
+          {
+            aperture: 106.0,
+            focalLength: 690.0,
+            make: "Astro-Tech",
+            model: "AT106",
+          },
+          {
+            aperture: 155.0,
+            focalLength: 1085.0,
+            make: "Astro-Physics",
+            model: "155EDF",
+          },
+          {
+            aperture: 130.0,
+            focalLength: 819.0,
+            make: "Astro-Physics",
+            model: "130GT",
+          },
+          {
+            aperture: 90.0,
+            focalLength: 500.0,
+            make: "Antares",
+            model: "905",
+          },
+          {
+            aperture: 200.0,
+            focalLength: 1000.0,
+            make: "Antares",
+            model: "520",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 750.0,
+            make: "Antares",
+            model: "515",
+          },
+          {
+            aperture: 152.0,
+            focalLength: 990.0,
+            make: "Antares",
+            model: "1529",
+          },
+          {
+            aperture: 127.0,
+            focalLength: 820.0,
+            make: "Antares",
+            model: "1208",
+          },
+          {
+            aperture: 127.0,
+            focalLength: 1220.0,
+            make: "Antares",
+            model: "12012",
+          },
+          {
+            aperture: 114.0,
+            focalLength: 900.0,
+            make: "Antares",
+            model: "1149",
+          },
+        ];
+
+        // Populate telescopes list
+        function populateTelescopes(telescopesData) {
+          $("#telescopesList").empty();
+          telescopesData.forEach((telescope) => {
+            const randomColor = getRandomColor();
+            const telescopeCard = $('<div class="col-md-4"></div>');
+            const cardContent = `
+                    <div class="telescope-card" style="border: 2px solid ${randomColor};">
+                        <h5 class="telescope-make">${telescope.make}</h5>
+                        <p class="telescope-model">${telescope.model}</p>
+                        <p>Aperture: ${telescope.aperture} mm</p>
+                        <p>Focal Length: ${telescope.focalLength} mm</p>
+                        <div class="telescope-actions">
+                            <button class="btn btn-sm btn-primary edit-btn"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger delete-btn"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                `;
+            telescopeCard.html(cardContent);
+            $("#telescopesList").append(telescopeCard);
+          });
+        }
+
+        // Initial population of telescopes
+        populateTelescopes(telescopes);
+
+        // Search functionality
+        $("#searchInput").on("input", function () {
+          const searchTerm = $(this).val().toLowerCase();
+          const filteredTelescopes = telescopes.filter(
+            (telescope) =>
+              telescope.make.toLowerCase().includes(searchTerm) ||
+              telescope.model.toLowerCase().includes(searchTerm)
+          );
+
+          populateTelescopes(filteredTelescopes);
+        });
+
+        // Sort functionality
+        $("#sortSelect").on("change", function () {
+          const sortBy = $(this).val();
+          const sortedTelescopes = telescopes.sort((a, b) => {
+            if (a[sortBy] < b[sortBy]) return -1;
+            if (a[sortBy] > b[sortBy]) return 1;
+            return 0;
+          });
+
+          populateTelescopes(sortedTelescopes);
+        });
+
+        // Edit functionality
+        $(document).on("click", ".edit-btn", function () {
+          const telescopeCard = $(this).closest(".telescope-card");
+          const make = telescopeCard.find(".telescope-make").text();
+          const model = telescopeCard.find(".telescope-model").text();
+          const aperture = telescopeCard
+            .find("p:nth-child(3)")
+            .text()
+            .replace("Aperture: ", "");
+          const focalLength = telescopeCard
+            .find("p:nth-child(4)")
+            .text()
+            .replace("Focal Length: ", "");
+
+          // Add your logic for editing here
+          console.log("Edit:", make, model, aperture, focalLength);
+        });
+
+        // Delete functionality
+        $(document).on("click", ".delete-btn", function () {
+          const telescopeCard = $(this).closest(".telescope-card");
+          const make = telescopeCard.find(".telescope-make").text();
+          const model = telescopeCard.find(".telescope-model").text();
+
+          // Add your logic for deleting here
+          console.log("Delete:", make, model);
+
+          telescopeCard.remove(); // Remove the card from the UI
+        });
+
+        // Generate random color
+        function getRandomColor() {
+          const letters = "0123456789ABCDEF";
+          let color = "#";
+          for (let i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+        }
+
+        // Edit functionality
+        let editedTelescopeIndex = -1;
+
+        $(document).on("click", ".edit-btn", function () {
+          const telescopeCard = $(this).closest(".telescope-card");
+          const make = telescopeCard.find(".telescope-make").text();
+          const model = telescopeCard.find(".telescope-model").text();
+          const aperture = telescopeCard
+            .find("p:nth-child(3)")
+            .text()
+            .replace("Aperture: ", "");
+          const focalLength = telescopeCard
+            .find("p:nth-child(4)")
+            .text()
+            .replace("Focal Length: ", "");
+
+          $("#editMake").val(make);
+          $("#editModel").val(model);
+          $("#editAperture").val(aperture);
+          $("#editFocalLength").val(focalLength);
+
+          editedTelescopeIndex = telescopeCard.index();
+
+          $("#editModal").modal("show");
+        });
+
+        // Save changes button click event
+        $("#saveChangesBtn").on("click", function () {
+          const make = $("#editMake").val();
+          const model = $("#editModel").val();
+          const aperture = $("#editAperture").val();
+          const focalLength = $("#editFocalLength").val();
+
+          // Update data in telescopes array
+          telescopes[editedTelescopeIndex].make = make;
+          telescopes[editedTelescopeIndex].model = model;
+          telescopes[editedTelescopeIndex].aperture = parseFloat(aperture);
+          telescopes[editedTelescopeIndex].focalLength =
+            parseFloat(focalLength);
+
+          // Update UI
+          populateTelescopes(telescopes);
+
+          // Close the modal
+          $("#editModal").modal("hide");
+        });
+
+        // Refresh button click event
+        $("#refreshBtn").on("click", function () {
+          // Make an AJAX request to the backend to fetch the latest data
+          $.ajax({
+            url: "/fetch-latest-data", // Update the URL with your backend endpoint
+            method: "GET",
+            success: function (response) {
+              // Assuming response is an array of telescopes
+              telescopes = response;
+
+              // Update UI with the latest data
+              populateTelescopes(telescopes);
+            },
+            error: function (xhr, status, error) {
+              console.error("Error fetching latest data:", error);
+            },
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

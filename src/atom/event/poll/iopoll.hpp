@@ -19,60 +19,64 @@ Description: IOPoll implementation
 
 #ifdef ATOM_OS_WIN
 #include <Ws2tcpip.h>
-#include <windows.h>
 #include <time.h>
+#include <windows.h>
+
 #elif defined(ATOM_OS_LINUX)
-#include <string.h>
-#include <pthread.h>
-#include <unistd.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
-#include <sys/types.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <pthread.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <signal.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
-
-#elif defined(ATOM_OS_MAC)
-#include <string.h>
-#include <pthread.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/fcntl.h>
-#include <sys/time.h>
-#include <sys/uio.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
+
+#elif defined(ATOM_OS_MAC)
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+
+
 #include <arpa/inet.h>
-#include <netdb.h>
 #include <ifaddrs.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+
 
 #else
 #error "UNSUPPORTED OS"
 #endif
 
-#include <stdarg.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 
-#include <map>
+
 #include <list>
+#include <map>
 #include <vector>
+
 
 ATOM_NS_BEGIN
 
-struct PollItem
-{
-    void reset()
-    {
+struct PollItem {
+    void reset() {
         fd = INVALID_FD;
         idx = -1;
         events = 0;
@@ -81,14 +85,13 @@ struct PollItem
     }
     SOCKET_FD fd{INVALID_FD};
     int idx{-1};
-    KMEvent events{0};  // kuma events registered
-    KMEvent revents{0}; // kuma events received
+    KMEvent events{0};   // kuma events registered
+    KMEvent revents{0};  // kuma events received
     IOCallback cb;
 };
 typedef std::vector<PollItem> PollItemVector;
 
-class IOPoll
-{
+class IOPoll {
 public:
     virtual ~IOPoll() {}
 
@@ -102,17 +105,12 @@ public:
     virtual bool isLevelTriggered() const = 0;
 
 protected:
-    void resizePollItems(SOCKET_FD fd)
-    {
+    void resizePollItems(SOCKET_FD fd) {
         auto count = poll_items_.size();
-        if (fd >= count)
-        {
-            if (fd > count + 1024)
-            {
+        if (fd >= count) {
+            if (fd > count + 1024) {
                 poll_items_.resize(fd + 1);
-            }
-            else
-            {
+            } else {
                 poll_items_.resize(count + 1024);
             }
         }

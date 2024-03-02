@@ -15,30 +15,36 @@ Description: Single thread pool for executing temporary tasks asynchronously.
 #ifndef LITHIUM_TASK_SINGLEPOOL_HPP
 #define LITHIUM_TASK_SINGLEPOOL_HPP
 
-#include <functional>
 #include <atomic>
-#include <thread>
+#include <functional>
 #include <memory>
+#include <thread>
 
-namespace Lithium
-{
-    class SingleThreadPoolPrivate;
 
-    class SingleThreadPool
-    {
-    public:
-        SingleThreadPool();
-        ~SingleThreadPool();
+namespace Lithium {
+class SingleThreadPoolPrivate;
 
-        bool start(const std::function<void(const std::atomic_bool &isAboutToClose)> &functionToRun);
-        void startDetach(const std::function<void(const std::atomic_bool &isAboutToClose)> &functionToRun);
-        bool tryStart(const std::function<void(const std::atomic_bool &isAboutToClose)> &functionToRun);
-        void tryStartDetach(const std::function<void(const std::atomic_bool &isAboutToClose)> &functionToRun);
-        void quit();
+class SingleThreadPool {
+public:
+    SingleThreadPool();
+    ~SingleThreadPool();
 
-    private:
-        std::shared_ptr<SingleThreadPoolPrivate> d_ptr;
-    };
-}
+    bool start(const std::function<void(const std::atomic_bool &isAboutToClose)>
+                   &functionToRun);
+    void startDetach(
+        const std::function<void(const std::atomic_bool &isAboutToClose)>
+            &functionToRun);
+    bool tryStart(
+        const std::function<void(const std::atomic_bool &isAboutToClose)>
+            &functionToRun);
+    void tryStartDetach(
+        const std::function<void(const std::atomic_bool &isAboutToClose)>
+            &functionToRun);
+    void quit();
+
+private:
+    std::shared_ptr<SingleThreadPoolPrivate> d_ptr;
+};
+}  // namespace Lithium
 
 #endif

@@ -21,15 +21,15 @@ Description: ResourceCache class for Atom Search
 #include <unordered_map>
 #endif
 
-#include <string>
+#include <algorithm>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <functional>
 #include <future>
 #include <mutex>
+#include <string>
 #include <thread>
-#include <functional>
-#include <fstream>
-#include <filesystem>
-#include <algorithm>
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
@@ -37,15 +37,16 @@ using json = nlohmann::json;
 /**
  * @brief A cache for storing and managing resources of type T.
  *
- * The ResourceCache class provides functionalities to insert, retrieve, remove, and manage resources with expiration times.
- * It supports asynchronous operations for getting and inserting resources.
+ * The ResourceCache class provides functionalities to insert, retrieve, remove,
+ * and manage resources with expiration times. It supports asynchronous
+ * operations for getting and inserting resources.
  *
  * @tparam T The type of resource to be stored in the cache.
  */
 template <typename T>
-class ResourceCache
-{
-    static_assert(std::is_copy_constructible_v<T>, "T must be copy constructible");
+class ResourceCache {
+    static_assert(std::is_copy_constructible_v<T>,
+                  "T must be copy constructible");
     static_assert(std::is_copy_assignable_v<T>, "T must be copy assignable");
 
 public:
@@ -63,7 +64,8 @@ public:
      * @param value The value of the resource to insert.
      * @param expirationTime The expiration time of the resource.
      */
-    void insert(const std::string &key, const T &value, std::chrono::seconds expirationTime);
+    void insert(const std::string &key, const T &value,
+                std::chrono::seconds expirationTime);
 
     /**
      * @brief Checks if the cache contains a resource with the given key.
@@ -97,14 +99,16 @@ public:
     std::future<T> asyncGet(const std::string &key);
 
     /**
-     * @brief Inserts a resource into the cache with an expiration time asynchronously.
+     * @brief Inserts a resource into the cache with an expiration time
+     * asynchronously.
      *
      * @param key The key associated with the resource.
      * @param value The value of the resource to insert.
      * @param expirationTime The expiration time of the resource.
      * @return A future to the inserted resource.
      */
-    std::future<void> asyncInsert(const std::string &key, const T &value, const std::chrono::seconds &expirationTime);
+    std::future<void> asyncInsert(const std::string &key, const T &value,
+                                  const std::chrono::seconds &expirationTime);
 
     /**
      * @brief Clears the cache.
@@ -145,7 +149,8 @@ public:
      * @param loadDataFunction The function to load the resource.
      * @return A future to the loaded resource.
      */
-    std::future<void> asyncLoad(const std::string &key, std::function<T()> loadDataFunction);
+    std::future<void> asyncLoad(const std::string &key,
+                                std::function<T()> loadDataFunction);
 
     /**
      * @brief Sets the maximum size of the cache.
@@ -160,7 +165,8 @@ public:
      * @param key The key of the resource.
      * @param expirationTime The expiration time of the resource.
      */
-    void setExpirationTime(const std::string &key, std::chrono::seconds expirationTime);
+    void setExpirationTime(const std::string &key,
+                           std::chrono::seconds expirationTime);
 
     /**
      * @brief Reads a resource from a file asynchronously.
@@ -169,7 +175,9 @@ public:
      * @param loadDataFunction The function to load the resource.
      * @return A future to the loaded resource.
      */
-    void readFromFile(const std::string &filePath, const std::function<T(const std::string &)> &deserializer);
+    void readFromFile(
+        const std::string &filePath,
+        const std::function<T(const std::string &)> &deserializer);
 
     /**
      * @brief Writes a resource to a file asynchronously.
@@ -178,7 +186,8 @@ public:
      * @param serializer The function to serialize the resource.
      * @return A future to the written resource.
      */
-    void writeToFile(const std::string &filePath, const std::function<std::string(const T &)> &serializer);
+    void writeToFile(const std::string &filePath,
+                     const std::function<std::string(const T &)> &serializer);
 
     /**
      * @brief Removes expired resources from the cache.
@@ -192,7 +201,8 @@ public:
      * @param loadDataFunction The function to load the resource.
      * @return A future to the loaded resource.
      */
-    void readFromJsonFile(const std::string &filePath, const std::function<T(const json &)> &fromJson);
+    void readFromJsonFile(const std::string &filePath,
+                          const std::function<T(const json &)> &fromJson);
 
     /**
      * @brief Writes a resource to a JSON file asynchronously.
@@ -201,13 +211,17 @@ public:
      * @param serializer The function to serialize the resource.
      * @return A future to the written resource.
      */
-    void writeToJsonFile(const std::string &filePath, const std::function<json(const T &)> &toJson);
+    void writeToJsonFile(const std::string &filePath,
+                         const std::function<json(const T &)> &toJson);
 
 private:
-    std::unordered_map<std::string, std::pair<T, std::chrono::steady_clock::time_point>> cache;
+    std::unordered_map<std::string,
+                       std::pair<T, std::chrono::steady_clock::time_point>>
+        cache;
     int maxSize;
     std::unordered_map<std::string, std::chrono::seconds> expirationTimes;
-    std::unordered_map<std::string, std::chrono::steady_clock::time_point> lastAccessTimes;
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point>
+        lastAccessTimes;
     mutable std::recursive_mutex cacheMutex;
 
     /**

@@ -3,8 +3,7 @@
 #include "ascom_device.hpp"
 #include "core/camera.hpp"
 
-class ASCOMCamera : public Camera, public ASCOMDevice
-{
+class ASCOMCamera : public Camera, public ASCOMDevice {
 public:
     explicit ASCOMCamera(const std::string &name);
     ~ASCOMCamera();
@@ -41,6 +40,4 @@ public:
     virtual bool setFrame(const nlohmann::json &params) override;
 
 public:
-
-    
 };

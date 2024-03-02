@@ -23,40 +23,40 @@ Description: Oatpp Swagger component
  *  Swagger ui is served at
  *  http://host:port/swagger/ui
  */
-class SwaggerComponent
-{
+class SwaggerComponent {
 public:
     /**
      *  General API docs info
      */
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::swagger::DocumentInfo>, swaggerDocumentInfo)
-    ([]
-     {
-         oatpp::swagger::DocumentInfo::Builder builder;
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::swagger::DocumentInfo>,
+                           swaggerDocumentInfo)
+    ([] {
+        oatpp::swagger::DocumentInfo::Builder builder;
 
-         builder
-             .setTitle("Lithium API")
-             .setDescription("Lithium API")
-             .setVersion("1.0")
-             .setContactName("Max Qian")
-             .setContactUrl("https://lightapt.com/")
+        builder.setTitle("Lithium API")
+            .setDescription("Lithium API")
+            .setVersion("1.0")
+            .setContactName("Max Qian")
+            .setContactUrl("https://lightapt.com/")
 
-             .setLicenseName("GNU GENERAL PUBLIC LICENSE, Version 3")
-             .setLicenseUrl("https://www.gnu.org/licenses/gpl-3.0.en.html")
+            .setLicenseName("GNU GENERAL PUBLIC LICENSE, Version 3")
+            .setLicenseUrl("https://www.gnu.org/licenses/gpl-3.0.en.html")
 
-             .addServer("http://localhost:8000", "server on localhost");
+            .addServer("http://localhost:8000", "server on localhost");
 
-         return builder.build();
-     }());
+        return builder.build();
+    }());
 
     /**
      *  Swagger-Ui Resources (<oatpp-examples>/lib/oatpp-swagger/res)
      */
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::swagger::Resources>, swaggerResources)
-    ([]
-     {
-    // Make sure to specify correct full path to oatpp-swagger/res folder !!!
-    return oatpp::swagger::Resources::loadResources("websrc/swagger"); }());
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::swagger::Resources>,
+                           swaggerResources)
+    ([] {
+        // Make sure to specify correct full path to oatpp-swagger/res folder
+        // !!!
+        return oatpp::swagger::Resources::loadResources("websrc/swagger");
+    }());
 };
 
 #endif /* SwaggerComponent_hpp */

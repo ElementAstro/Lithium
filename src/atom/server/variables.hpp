@@ -15,13 +15,13 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 #ifndef ATOM_SERVER_VARIABLES_HPP
 #define ATOM_SERVER_VARIABLES_HPP
 
-#include <string>
 #include <any>
 #include <functional>
-#include <sstream>
 #include <mutex>
-#include <shared_mutex>
 #include <optional>
+#include <shared_mutex>
+#include <sstream>
+#include <string>
 
 #if ENALE_FASTHASH
 #include "emhash/hash_table8.hpp"
@@ -37,8 +37,7 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 /**
  * @brief 变量注册器类，用于注册、获取和观察变量值。
  */
-class VariableRegistry : public NonCopyable
-{
+class VariableRegistry : public NonCopyable {
 public:
     explicit VariableRegistry(const std::string &name);
 
@@ -56,8 +55,7 @@ public:
     /**
      * @brief 观察者 struct，包含观察者名称和回调函数。
      */
-    struct Observer
-    {
+    struct Observer {
         std::string name;
         std::function<void(const std::string &)> callback;
     };
@@ -71,10 +69,12 @@ public:
      * @return 是否注册成功，如果变量名已经存在，则返回 false。
      */
     template <typename T>
-    bool RegisterVariable(const std::string &name, const T &initialValue, const std::string descirption = "");
+    bool RegisterVariable(const std::string &name, const T &initialValue,
+                          const std::string descirption = "");
 
     template <typename T>
-    void SetVariableRange(const std::string &name, const T &lower, const T &upper);
+    void SetVariableRange(const std::string &name, const T &lower,
+                          const T &upper);
 
     /**
      * @brief 设置指定名称的变量值。
@@ -131,7 +131,8 @@ public:
      * @param observerName 观察者名称。
      * @return 是否移除成功，如果观察者不存在，则返回 false。
      */
-    bool RemoveObserver(const std::string &name, const std::string &observerName);
+    bool RemoveObserver(const std::string &name,
+                        const std::string &observerName);
 
     /**
      * @brief 获取所有变量。
@@ -164,7 +165,8 @@ public:
      * @param setter 检测变量修改的函数。
      */
     template <typename T>
-    void AddSetter(const std::string &name, const std::function<void(const std::any &)> &setter);
+    void AddSetter(const std::string &name,
+                   const std::function<void(const std::any &)> &setter);
 
 private:
     std::string m_name;
@@ -173,7 +175,8 @@ private:
     emhash8::HashMap<std::string, std::string> m_descriptions;
     emhash8::HashMap<std::string, std::vector<Observer>> m_observers;
     emhash8::HashMap<std::string, std::function<std::any()>> m_getters;
-    emhash8::HashMap<std::string, std::function<void(const std::any &)>> m_setters;
+    emhash8::HashMap<std::string, std::function<void(const std::any &)>>
+        m_setters;
 #else
     /**
      * @brief 所有变量的集合。
@@ -204,7 +207,8 @@ private:
     /**
      * @brief 检测修改函数的集合，以变量名称为键。
      */
-    std::unordered_map<std::string, std::function<void(const std::any &)>> m_setters;
+    std::unordered_map<std::string, std::function<void(const std::any &)>>
+        m_setters;
 #endif
 
     /**
@@ -214,12 +218,12 @@ private:
 };
 
 template <typename T>
-bool VariableRegistry::RegisterVariable(const std::string &name, const T &initialValue, const std::string descirption)
-{
+bool VariableRegistry::RegisterVariable(const std::string &name,
+                                        const T &initialValue,
+                                        const std::string descirption) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
 
-    if (m_variables.find(name) != m_variables.end())
-    {
+    if (m_variables.find(name) != m_variables.end()) {
         return false;
     }
 
@@ -229,30 +233,23 @@ bool VariableRegistry::RegisterVariable(const std::string &name, const T &initia
 }
 
 template <typename T>
-bool VariableRegistry::SetVariable(const std::string &name, const T &value)
-{
-    //std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (auto it = m_variables.find(name); it != m_variables.end())
-    {
-        if (auto range = m_ranges.find(name); range != m_ranges.end())
-        {
-            if (range->second.first.has_value() && range->second.second.has_value())
-            {
-                try
-                {
-                    if (value < std::any_cast<T>(range->second.first) || value > std::any_cast<T>(range->second.second))
-                    {
+bool VariableRegistry::SetVariable(const std::string &name, const T &value) {
+    // std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (auto it = m_variables.find(name); it != m_variables.end()) {
+        if (auto range = m_ranges.find(name); range != m_ranges.end()) {
+            if (range->second.first.has_value() &&
+                range->second.second.has_value()) {
+                try {
+                    if (value < std::any_cast<T>(range->second.first) ||
+                        value > std::any_cast<T>(range->second.second)) {
                         return false;
                     }
-                }
-                catch (const std::bad_any_cast &e)
-                {
+                } catch (const std::bad_any_cast &e) {
                     return false;
                 }
             }
         }
-        if (auto setter = m_setters.find(name); setter != m_setters.end())
-        {
+        if (auto setter = m_setters.find(name); setter != m_setters.end()) {
             setter->second(value);
         }
         it->second = value;
@@ -263,32 +260,26 @@ bool VariableRegistry::SetVariable(const std::string &name, const T &value)
 }
 
 template <typename T>
-void VariableRegistry::SetVariableRange(const std::string &name, const T &lower, const T &upper)
-{
-    static_assert(std::is_arithmetic<T>::value, "Only numeric types are supported.");
+void VariableRegistry::SetVariableRange(const std::string &name, const T &lower,
+                                        const T &upper) {
+    static_assert(std::is_arithmetic<T>::value,
+                  "Only numeric types are supported.");
     m_ranges[name] = std::make_pair(lower, upper);
 }
 
 template <typename T>
-std::optional<T> VariableRegistry::GetVariable(const std::string &name) const
-{
-    //std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (auto it = m_variables.find(name); it != m_variables.end())
-    {
-        if (typeid(T) != it->second.type())
-        {
+std::optional<T> VariableRegistry::GetVariable(const std::string &name) const {
+    // std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
+    if (auto it = m_variables.find(name); it != m_variables.end()) {
+        if (typeid(T) != it->second.type()) {
             return std::nullopt;
         }
-        if (auto getter = m_getters.find(name); getter != m_getters.end())
-        {
+        if (auto getter = m_getters.find(name); getter != m_getters.end()) {
             getter->second();
         }
-        try
-        {
+        try {
             return std::any_cast<T>(it->second);
-        }
-        catch (const std::bad_any_cast &)
-        {
+        } catch (const std::bad_any_cast &) {
             return std::nullopt;
         }
     }
@@ -296,42 +287,38 @@ std::optional<T> VariableRegistry::GetVariable(const std::string &name) const
 }
 
 template <typename T>
-void VariableRegistry::NotifyObservers(const std::string &name, const T &value) const
-{
+void VariableRegistry::NotifyObservers(const std::string &name,
+                                       const T &value) const {
     std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (!HasVariable(name))
-    {
+    if (!HasVariable(name)) {
         return;
     }
-    if (auto it = m_observers.find(name); it != m_observers.end())
-    {
+    if (auto it = m_observers.find(name); it != m_observers.end()) {
         std::stringstream ss;
         ss << value;
         std::string valueSring = ss.str();
-        for (const auto &observer : it->second)
-        {
+        for (const auto &observer : it->second) {
             observer.callback(valueSring);
         }
     }
 }
 
 template <typename T>
-void VariableRegistry::AddGetter(const std::string &name, const std::function<T()> &getter)
-{
+void VariableRegistry::AddGetter(const std::string &name,
+                                 const std::function<T()> &getter) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (m_getters.find(name) != m_getters.end())
-    {
+    if (m_getters.find(name) != m_getters.end()) {
         return;
     }
     m_getters[name] = getter;
 }
 
 template <typename T>
-void VariableRegistry::AddSetter(const std::string &name, const std::function<void(const std::any &)> &setter)
-{
+void VariableRegistry::AddSetter(
+    const std::string &name,
+    const std::function<void(const std::any &)> &setter) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    if (m_setters.find(name) != m_setters.end())
-    {
+    if (m_setters.find(name) != m_setters.end()) {
         return;
     }
     m_setters[name] = setter;

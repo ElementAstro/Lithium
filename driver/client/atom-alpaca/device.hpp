@@ -15,10 +15,10 @@ Description: Basic Device Definition of Alpaca
 #ifndef ATOM_ALPACA_DEVICE_HPP
 #define ATOM_ALPACA_DEVICE_HPP
 
+#include <any>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <any>
 
 #include "json.hpp"
 using json = nlohmann::json;
@@ -28,30 +28,33 @@ constexpr int API_VERSION = 1;
 /**
  * @brief The Device class represents a device connected to a network.
  *
- * This class provides methods for interacting with the device, such as executing actions, sending commands,
- * and retrieving information.
+ * This class provides methods for interacting with the device, such as
+ * executing actions, sending commands, and retrieving information.
  */
-class Device
-{
+class Device {
 public:
     /**
-     * @brief Constructs a Device object with the specified address, device type, device number, and protocol.
+     * @brief Constructs a Device object with the specified address, device
+     * type, device number, and protocol.
      *
      * @param address The address of the device.
      * @param device_type The type of the device.
      * @param device_number The number of the device.
      * @param protocol The communication protocol used to connect to the device.
      */
-    explicit Device(const std::string &address, const std::string &device_type, int device_number, const std::string &protocol);
+    explicit Device(const std::string &address, const std::string &device_type,
+                    int device_number, const std::string &protocol);
 
     /**
-     * @brief Executes an action on the device with the specified name and parameters.
+     * @brief Executes an action on the device with the specified name and
+     * parameters.
      *
      * @param ActionName The name of the action to execute.
      * @param Parameters The parameters to pass to the action.
      * @return The result of the action execution.
      */
-    std::string Action(const std::string &ActionName, const std::vector<std::string> &Parameters);
+    std::string Action(const std::string &ActionName,
+                       const std::vector<std::string> &Parameters);
 
     /**
      * @brief Sends a command to the device without waiting for a response.
@@ -136,24 +139,28 @@ public:
     std::vector<std::string> get_SupportedActions() const;
 
     /**
-     * @brief Sends a GET request to the device with the specified attribute and data.
+     * @brief Sends a GET request to the device with the specified attribute and
+     * data.
      *
      * @param attribute The attribute to retrieve.
      * @param data The additional data to include in the request.
      * @param tmo The timeout for the request.
      * @return The JSON response from the device.
      */
-    json _get(const std::string &attribute, const std::map<std::string, std::string> &data, double tmo) const;
+    json _get(const std::string &attribute,
+              const std::map<std::string, std::string> &data, double tmo) const;
 
     /**
-     * @brief Sends a PUT request to the device with the specified attribute and data.
+     * @brief Sends a PUT request to the device with the specified attribute and
+     * data.
      *
      * @param attribute The attribute to modify.
      * @param data The data to send in the request.
      * @param tmo The timeout for the request.
      * @return The JSON response from the device.
      */
-    json _put(const std::string &attribute, const std::map<std::string, std::any> &data, double tmo) const;
+    json _put(const std::string &attribute,
+              const std::map<std::string, std::any> &data, double tmo) const;
 
 private:
     /** The address of the device. */

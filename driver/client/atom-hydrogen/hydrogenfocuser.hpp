@@ -16,12 +16,10 @@ Description: Hydrogen Focuser
 #define ATOM_HYDROGEN_FOCUSER_HPP
 
 #include "atom/driver/focuser.hpp"
-#include "hydrogenbasic.hpp"
 #include "atom/utils/switch.hpp"
+#include "hydrogenbasic.hpp"
 
-class HydrogenFocuser : public Focuser, public HYDROGEN::BaseClient
-{
-
+class HydrogenFocuser : public Focuser, public HYDROGEN::BaseClient {
 public:
     /**
      * @brief 构造函数，初始化 HydrogenFocuser 类
@@ -172,25 +170,38 @@ protected:
 
 private:
     // Hydrogen 客户端参数
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_connection_prop;        // 连接属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_mode_prop;              // 焦距器模式（绝对或相对）属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_motion_prop;            // 焦距器运动方向（向内或向外）属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_speed_prop;             // 焦距器速度属性指针，默认为 1
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_absolute_position_prop; // 焦距器绝对位置属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_relative_position_prop; // 焦距器相对位置属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_max_position_prop;      // 焦距器最大位置属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_temperature_prop;       // 焦距器温度属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_rate_prop;              // 焦距器速率属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_delay_prop;             // 焦距器延迟属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_backlash_prop;          // 焦距器反向间隙属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> m_focuserinfo_prop;       // 焦距器用户信息属性指针
-    INumber *m_hydrogen_max_position;                                    // 焦距器 hydrogen 最大位置属性指针
-    INumber *m_hydrogen_focuser_temperature;                             // 焦距器 hydrogen 温度属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewText> focuser_port;                             // 焦距器端口属性指针
-    HYDROGEN::BaseDevice focuser_device;                          // 焦距器设备指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        m_connection_prop;  // 连接属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        m_mode_prop;  // 焦距器模式（绝对或相对）属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        m_motion_prop;  // 焦距器运动方向（向内或向外）属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_speed_prop;  // 焦距器速度属性指针，默认为 1
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_absolute_position_prop;  // 焦距器绝对位置属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_relative_position_prop;  // 焦距器相对位置属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_max_position_prop;  // 焦距器最大位置属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_temperature_prop;  // 焦距器温度属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        m_rate_prop;  // 焦距器速率属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_delay_prop;  // 焦距器延迟属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        m_backlash_prop;  // 焦距器反向间隙属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        m_focuserinfo_prop;            // 焦距器用户信息属性指针
+    INumber *m_hydrogen_max_position;  // 焦距器 hydrogen 最大位置属性指针
+    INumber *m_hydrogen_focuser_temperature;  // 焦距器 hydrogen 温度属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewText>
+        focuser_port;                     // 焦距器端口属性指针
+    HYDROGEN::BaseDevice focuser_device;  // 焦距器设备指针
 
-    std::atomic_bool is_ready; // 是否就绪
-    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_ready;  // 是否就绪
+    std::atomic_bool has_blob;  // 是否有 BLOB 数据
     std::atomic_bool is_debug;
     std::atomic_bool is_connected;
 
@@ -206,17 +217,20 @@ private:
     int m_delay = 0;
     int m_max_position = 0;
 
-    std::string hydrogen_focuser_port = ""; // 焦距器所选端口
-    std::string hydrogen_focuser_rate = ""; // 焦距器所选速率
+    std::string hydrogen_focuser_port = "";  // 焦距器所选端口
+    std::string hydrogen_focuser_rate = "";  // 焦距器所选速率
 
-    std::string hydrogen_focuser_cmd;            // Hydrogen 命令字符串
-    std::string hydrogen_focuser_exec = "";      // Hydrogen 设备执行文件路径
-    std::string hydrogen_focuser_version = "";   // Hydrogen 设备固件版本
-    std::string hydrogen_focuser_interface = ""; // Hydrogen 接口版本
+    std::string hydrogen_focuser_cmd;        // Hydrogen 命令字符串
+    std::string hydrogen_focuser_exec = "";  // Hydrogen 设备执行文件路径
+    std::string hydrogen_focuser_version = "";    // Hydrogen 设备固件版本
+    std::string hydrogen_focuser_interface = "";  // Hydrogen 接口版本
 
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>
+        m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>
+        m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>
+        m_text_switch;
 };
 
 #endif

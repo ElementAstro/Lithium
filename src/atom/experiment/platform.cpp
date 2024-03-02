@@ -16,43 +16,32 @@ Description: A platform information collection.
 
 #if defined(_WIN32)
 #include <windows.h>
-std::string getWindowsVersion()
-{
+std::string getWindowsVersion() {
     OSVERSIONINFOEX osvi;
     ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
     GetVersionEx((OSVERSIONINFO *)&osvi);
 
-    if (osvi.dwMajorVersion == 11) [[likely]]
-    {
+    if (osvi.dwMajorVersion == 11) [[likely]] {
         return "Windows 11";
-    }
-    else if (osvi.dwMajorVersion == 10) [[likely]]
-    {
+    } else if (osvi.dwMajorVersion == 10) [[likely]] {
         return "Windows 10";
-    }
-    else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 3) [[unlikely]]
-    {
+    } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 3)
+        [[unlikely]] {
         return "Windows 8.1";
-    }
-    else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2) [[unlikely]]
-    {
+    } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2)
+        [[unlikely]] {
         return "Windows 8";
-    }
-    else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1) [[likely]]
-    {
+    } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1)
+        [[likely]] {
         return "Windows 7";
-    }
-    else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0) [[unlikely]]
-    {
+    } else if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 0)
+        [[unlikely]] {
         return "Windows Vista";
-    }
-    else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1) [[unlikely]]
-    {
+    } else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1)
+        [[unlikely]] {
         return "Windows XP";
-    }
-    else [[unlikely]]
-    {
+    } else [[unlikely]] {
         return "Unknown Windows version";
     }
 }
@@ -66,20 +55,18 @@ std::string getWindowsVersion()
 #include <CoreServices/CoreServices.h>
 #endif
 
-bool hasGUI()
-{
+bool hasGUI() {
 #if defined(_WIN32)
     return GetSystemMetrics(SM_CXSCREEN) > 0;
 #elif defined(__linux__)
     Display *display = XOpenDisplay(NULL);
-    if (display != NULL)
-    {
+    if (display != NULL) {
         XCloseDisplay(display);
         return true;
     }
     return false;
 #elif defined(__APPLE__)
-    return true; // macOS 系统默认支持 GUI
+    return true;  // macOS 系统默认支持 GUI
 #else
     return false;
 #endif

@@ -1,7 +1,6 @@
 #include "atom/driver/solver.hpp"
 
-class AstrometrySolver : public Solver
-{
+class AstrometrySolver : public Solver {
 public:
     explicit AstrometrySolver(const std::string &name);
     virtual ~AstrometrySolver();
@@ -14,7 +13,8 @@ public:
 
     virtual bool isConnected() override;
 
-    virtual bool solveImage(const std::string &image, const int &timeout, const bool &debug);
+    virtual bool solveImage(const std::string &image, const int &timeout,
+                            const bool &debug);
 
     virtual bool getSolveResult(const int &timeout, const bool &debug);
 
@@ -25,7 +25,6 @@ public:
     virtual json getSolveParams();
 
 private:
-
     std::string makeCommand();
 
     SolveResult parseOutput(const std::string &output);

@@ -15,17 +15,16 @@ Description: A super enhanced string class.
 #ifndef ATOM_EXPERIMENT_STRING_HPP
 #define ATOM_EXPERIMENT_STRING_HPP
 
+#include <algorithm>
+#include <cstdarg>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
-#include <cstdarg>
-#include <algorithm>
 
 /**
  * @brief A super enhanced string class.
  */
-class String
-{
+class String {
 public:
     /**
      * @brief Constructor.
@@ -54,10 +53,8 @@ public:
      * @brief Copy assignment.
      * @param other - other String.
      */
-    String &operator=(const String &other)
-    {
-        if (this != &other)
-        {
+    String &operator=(const String &other) {
+        if (this != &other) {
             m_data = other.m_data;
         }
         return *this;
@@ -67,8 +64,7 @@ public:
      * @brief Equality.
      * @param other - other String.
      */
-    bool operator==(const String &other) const
-    {
+    bool operator==(const String &other) const {
         return m_data == other.m_data;
     }
 
@@ -76,43 +72,32 @@ public:
      * @brief Inequality.
      * @param other - other String.
      */
-    bool operator!=(const String &other) const
-    {
+    bool operator!=(const String &other) const {
         return m_data != other.m_data;
     }
 
     /**
      * @brief Check if the String is empth
      */
-    operator bool() const
-    {
-        return !m_data.empty();
-    }
+    operator bool() const { return !m_data.empty(); }
 
     /**
      * @brief Less than.
      * @param other - other String.
      */
-    bool operator<(const String &other) const
-    {
-        return m_data < other.m_data;
-    }
+    bool operator<(const String &other) const { return m_data < other.m_data; }
 
     /**
      * @brief Greater than.
      * @param other - other String.
      */
-    bool operator>(const String &other) const
-    {
-        return m_data > other.m_data;
-    }
+    bool operator>(const String &other) const { return m_data > other.m_data; }
 
     /**
      * @brief Less than or equal.
      * @param other - other String.
      */
-    bool operator<=(const String &other) const
-    {
+    bool operator<=(const String &other) const {
         return m_data <= other.m_data;
     }
 
@@ -120,8 +105,7 @@ public:
      * @brief Greater than or equal.
      * @param other - other String.
      */
-    bool operator>=(const String &other) const
-    {
+    bool operator>=(const String &other) const {
         return m_data >= other.m_data;
     }
 
@@ -129,8 +113,7 @@ public:
      * @brief Concatenation.
      * @param other - other String.
      */
-    String &operator+=(const String &other)
-    {
+    String &operator+=(const String &other) {
         m_data += other.m_data;
         return *this;
     }
@@ -139,8 +122,7 @@ public:
      * @brief Concatenation.
      * @param str - C-style string.
      */
-    String &operator+=(const char *str)
-    {
+    String &operator+=(const char *str) {
         m_data += str;
         return *this;
     }
@@ -149,8 +131,7 @@ public:
      * @brief Concatenation.
      * @param c - char.
      */
-    String &operator+=(char c)
-    {
+    String &operator+=(char c) {
         m_data += c;
         return *this;
     }
@@ -207,7 +188,8 @@ public:
      * @param strings - strings.
      * @param separator - separator.
      */
-    static String join(const std::vector<String> &strings, const String &separator);
+    static String join(const std::vector<String> &strings,
+                       const String &separator);
 
     /**
      * @brief Replace all.
@@ -289,8 +271,7 @@ public:
      * @param format - format.
      * @param ... - arguments.
      */
-    static String format(const char *format, ...)
-    {
+    static String format(const char *format, ...) {
         char buffer[1024];
 
         va_list args;

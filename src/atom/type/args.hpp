@@ -12,10 +12,8 @@ Description: Argument Container Library for C++
 
 **************************************************/
 
-#pragma once
-
-#ifndef ARG_HPP
-#define ARG_HPP
+#ifndef ATOM_TYPE_ARG_HPP
+#define ATOM_TYPE_ARG_HPP
 
 #include <any>
 #include <optional>
@@ -31,7 +29,8 @@ Description: Argument Container Library for C++
 #define SET_ARGUMENT(container, name, value) container.set(#name, value)
 
 // 获取参数的便捷宏
-#define GET_ARGUMENT(container, name, type) container.get<type>(#name).value_or(type{})
+#define GET_ARGUMENT(container, name, type) \
+    container.get<type>(#name).value_or(type{})
 
 // 检查参数是否存在的便捷宏
 #define HAS_ARGUMENT(container, name) container.contains(#name)
@@ -43,8 +42,7 @@ Description: Argument Container Library for C++
  * @brief 用于存储和获取参数的容器。
  * @brief A container for storing and retrieving arguments.
  */
-class ArgumentContainer
-{
+class ArgumentContainer {
 public:
     /**
      * @brief 设置参数值。
@@ -69,7 +67,8 @@ public:
      * @param name 参数的名称。
      * @param name The name of the parameter.
      * @return 参数的值（如果存在），否则返回std::nullopt。
-     * @return The value of the parameter (if it exists), otherwise return std::nullopt.
+     * @return The value of the parameter (if it exists), otherwise return
+     * std::nullopt.
      */
     template <typename T>
     std::optional<T> get(const std::string &name) const;
@@ -80,7 +79,8 @@ public:
      * @param name 要移除的参数的名称。
      * @param name The name of the parameter to be removed.
      * @return 如果成功移除参数，则返回true；否则返回false
-     * @return If the parameter is successfully removed, return true; otherwise return false。
+     * @return If the parameter is successfully removed, return true; otherwise
+     * return false。
      */
     bool remove(const std::string &name);
 
@@ -112,7 +112,8 @@ public:
 
     /**
      * @brief 重载索引运算符[]以获取和设置参数值。
-     * @brief Overload the index operator [] to get and set the value of a parameter.
+     * @brief Overload the index operator [] to get and set the value of a
+     * parameter.
      * @tparam T 参数的类型。
      * @tparam T The type of the parameter.
      * @param name 参数的名称。
@@ -121,28 +122,28 @@ public:
      * @return A reference to the parameter.
      */
     template <typename T>
-    T &operator[](const std::string &name)
-    {
+    T &operator[](const std::string &name) {
         return std::any_cast<T &>(m_arguments[name]);
     }
 
     /**
      * @brief 重载赋值运算符=以设置参数值。
-     * @brief Overload the assignment operator = to set the value of a parameter.
+     * @brief Overload the assignment operator = to set the value of a
+     * parameter.
      * @tparam T 参数的类型。
      * @tparam T The type of the parameter.
      * @param argument 要设置的参数（名称和值）。
      * @param argument The parameter to be set (name and value).
      */
     template <typename T>
-    void operator=(const std::pair<std::string, T> &argument)
-    {
+    void operator=(const std::pair<std::string, T> &argument) {
         set(argument.first, argument.second);
     }
 
     /**
      * @brief 重载赋值运算符=以设置参数值。
-     * @brief Overload the assignment operator = to set the value of a parameter.
+     * @brief Overload the assignment operator = to set the value of a
+     * parameter.
      * @param container 要设置的参数容器。
      * @param container The parameter container to be set.
      */
@@ -159,43 +160,33 @@ public:
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> m_arguments; // 存储参数的容器
+    emhash8::HashMap<std::string, std::any> m_arguments;  // 存储参数的容器
 #else
-    std::unordered_map<std::string, std::any> m_arguments; // 存储参数的容器
+    std::unordered_map<std::string, std::any> m_arguments;  // 存储参数的容器
 #endif
 };
 
 template <typename T>
-void ArgumentContainer::set(const std::string &name, const T &value)
-{
-    if (m_arguments.find(name) != m_arguments.end())
-    {
+void ArgumentContainer::set(const std::string &name, const T &value) {
+    if (m_arguments.find(name) != m_arguments.end()) {
         m_arguments.erase(name);
     }
     m_arguments[name] = value;
 }
 
 template <typename T>
-std::optional<T> ArgumentContainer::get(const std::string &name) const
-{
+std::optional<T> ArgumentContainer::get(const std::string &name) const {
     auto it = m_arguments.find(name);
-    if (it != m_arguments.end())
-    {
-        try
-        {
+    if (it != m_arguments.end()) {
+        try {
             return std::any_cast<T>(it->second);
-        }
-        catch (const std::bad_any_cast &)
-        {
+        } catch (const std::bad_any_cast &) {
             return std::nullopt;
         }
-    }
-    else
-    {
+    } else {
         return std::nullopt;
     }
 }
-
 
 using Args = ArgumentContainer;
 

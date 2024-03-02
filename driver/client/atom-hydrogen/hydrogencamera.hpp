@@ -16,25 +16,22 @@ Description: Hydrogen Camera
 #define ATOM_HYDROGEN_CAMERA_HPP
 
 #include "atom/driver/camera.hpp"
-#include "hydrogenbasic.hpp"
 #include "atom/utils/switch.hpp"
+#include "hydrogenbasic.hpp"
 
-class CapturedFrame
-{
+class CapturedFrame {
 public:
     void *m_data;
     size_t m_size;
     char m_format[MAXHYDROGENBLOBFMT];
 
-    CapturedFrame()
-    {
+    CapturedFrame() {
         m_data = nullptr;
         m_size = 0;
         m_format[0] = 0;
     }
 
-    ~CapturedFrame()
-    {
+    ~CapturedFrame() {
 #ifdef HYDROGEN_SHARED_BLOB_SUPPORT
         IDSharedBlobFree(m_data);
 #else
@@ -42,9 +39,9 @@ public:
 #endif
     }
 
-    // Take ownership of this blob's data, so HYDROGEN won't overwrite/free the memory
-    void steal(IBLOB *bp)
-    {
+    // Take ownership of this blob's data, so HYDROGEN won't overwrite/free the
+    // memory
+    void steal(IBLOB *bp) {
         m_data = bp->blob;
         m_size = bp->size;
         strncpy(m_format, bp->format, MAXHYDROGENBLOBFMT);
@@ -54,8 +51,7 @@ public:
     }
 };
 
-class HydrogenCamera : public Camera, public HYDROGEN::BaseClient
-{
+class HydrogenCamera : public Camera, public HYDROGEN::BaseClient {
 public:
     // 构造函数
     explicit HydrogenCamera(const std::string &name);
@@ -360,8 +356,8 @@ private:
     std::shared_ptr<IText> cfa_type_prop;
 
     // 标志位
-    std::atomic_bool is_ready; // 是否就绪
-    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_ready;  // 是否就绪
+    std::atomic_bool has_blob;  // 是否有 BLOB 数据
     std::atomic_bool is_debug;
     std::atomic_bool is_connected;
     std::atomic_bool is_exposure;
@@ -374,9 +370,9 @@ private:
     std::atomic<double> current_temperature;
 
     // Hydrogen 指令
-    std::string hydrogen_camera_cmd = "CCD_"; // Hydrogen 控制命令前缀
-    std::string hydrogen_blob_name;           // BLOB 文件名
-    std::string hydrogen_camera_exec = "";    // Hydrogen 执行命令
+    std::string hydrogen_camera_cmd = "CCD_";  // Hydrogen 控制命令前缀
+    std::string hydrogen_blob_name;            // BLOB 文件名
+    std::string hydrogen_camera_exec = "";     // Hydrogen 执行命令
     std::string hydrogen_camera_version;
     std::string hydrogen_camera_interface;
     std::string hydrogen_camera_port;
@@ -385,9 +381,12 @@ private:
 
     std::atomic<double> polling_period;
 
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>
+        m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>
+        m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>
+        m_text_switch;
 
 private:
     // For Hydrogen Toupcamera
@@ -398,7 +397,8 @@ private:
 
     std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_hcg_control_prop;
 
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_low_noise_control_prop;
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        toupcam_low_noise_control_prop;
 
     std::shared_ptr<HYDROGEN::PropertyViewSwitch> toupcam_simulation_prop;
 

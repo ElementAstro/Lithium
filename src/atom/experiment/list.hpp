@@ -19,8 +19,7 @@ Description: An implementation of deque. Using C++11 and C++17.
 #include <optional>
 
 template <typename T>
-struct Node
-{
+struct Node {
     T data;
     Node *prev;
     Node *next;
@@ -29,56 +28,44 @@ struct Node
 };
 
 template <typename T>
-class DequeIterator
-{
+class DequeIterator {
 private:
     Node<T> *current;
 
 public:
     DequeIterator(Node<T> *node) : current(node) {}
 
-    bool operator==(const DequeIterator &other) const
-    {
+    bool operator==(const DequeIterator &other) const {
         return current == other.current;
     }
 
-    bool operator!=(const DequeIterator &other) const
-    {
+    bool operator!=(const DequeIterator &other) const {
         return !(*this == other);
     }
 
-    T &operator*() const
-    {
-        return current->data;
-    }
+    T &operator*() const { return current->data; }
 
-    DequeIterator &operator++()
-    {
-        if (current != nullptr)
-        {
+    DequeIterator &operator++() {
+        if (current != nullptr) {
             current = current->next;
         }
         return *this;
     }
 
-    DequeIterator operator++(int)
-    {
+    DequeIterator operator++(int) {
         DequeIterator temp = *this;
         ++(*this);
         return temp;
     }
 
-    DequeIterator &operator--()
-    {
-        if (current != nullptr)
-        {
+    DequeIterator &operator--() {
+        if (current != nullptr) {
             current = current->prev;
         }
         return *this;
     }
 
-    DequeIterator operator--(int)
-    {
+    DequeIterator operator--(int) {
         DequeIterator temp = *this;
         --(*this);
         return temp;
@@ -86,8 +73,7 @@ public:
 };
 
 template <typename T>
-class Deque
-{
+class Deque {
 private:
     Node<T> *head;
     Node<T> *tail;
@@ -96,16 +82,12 @@ private:
 public:
     Deque() : head(nullptr), tail(nullptr), size(0) {}
 
-    void push_front(const T &value)
-    {
+    void push_front(const T &value) {
         Node<T> *newNode = new Node<T>(value);
-        if (head == nullptr)
-        {
+        if (head == nullptr) {
             head = newNode;
             tail = newNode;
-        }
-        else
-        {
+        } else {
             newNode->next = head;
             head->prev = newNode;
             head = newNode;
@@ -113,16 +95,12 @@ public:
         size++;
     }
 
-    void push_back(const T &value)
-    {
+    void push_back(const T &value) {
         Node<T> *newNode = new Node<T>(value);
-        if (tail == nullptr)
-        {
+        if (tail == nullptr) {
             head = newNode;
             tail = newNode;
-        }
-        else
-        {
+        } else {
             newNode->prev = tail;
             tail->next = newNode;
             tail = newNode;
@@ -130,21 +108,16 @@ public:
         size++;
     }
 
-    std::optional<T> pop_front()
-    {
-        if (head == nullptr)
-        {
+    std::optional<T> pop_front() {
+        if (head == nullptr) {
             return {};
         }
         T value = head->data;
         Node<T> *temp = head;
         head = head->next;
-        if (head != nullptr)
-        {
+        if (head != nullptr) {
             head->prev = nullptr;
-        }
-        else
-        {
+        } else {
             tail = nullptr;
         }
         delete temp;
@@ -152,21 +125,16 @@ public:
         return value;
     }
 
-    std::optional<T> pop_back()
-    {
-        if (tail == nullptr)
-        {
+    std::optional<T> pop_back() {
+        if (tail == nullptr) {
             return {};
         }
         T value = tail->data;
         Node<T> *temp = tail;
         tail = tail->prev;
-        if (tail != nullptr)
-        {
+        if (tail != nullptr) {
             tail->next = nullptr;
-        }
-        else
-        {
+        } else {
             head = nullptr;
         }
         delete temp;
@@ -174,33 +142,24 @@ public:
         return value;
     }
 
-    std::optional<T> peek_front() const
-    {
-        if (head == nullptr)
-        {
+    std::optional<T> peek_front() const {
+        if (head == nullptr) {
             return {};
         }
         return head->data;
     }
 
-    std::optional<T> peek_back() const
-    {
-        if (tail == nullptr)
-        {
+    std::optional<T> peek_back() const {
+        if (tail == nullptr) {
             return {};
         }
         return tail->data;
     }
 
-    size_t get_size() const
-    {
-        return size;
-    }
+    size_t get_size() const { return size; }
 
-    void clear()
-    {
-        while (head != nullptr)
-        {
+    void clear() {
+        while (head != nullptr) {
             Node<T> *temp = head;
             head = head->next;
             delete temp;
@@ -209,20 +168,14 @@ public:
         size = 0;
     }
 
-    bool empty() const
-    {
-        return head == nullptr;
-    }
+    bool empty() const { return head == nullptr; }
 
     // 查找元素，返回第一次出现的位置（从头向尾）
-    std::optional<size_t> find(const T &value)
-    {
+    std::optional<size_t> find(const T &value) {
         Node<T> *current = head;
         size_t index = 0;
-        while (current != nullptr)
-        {
-            if (current->data == value)
-            {
+        while (current != nullptr) {
+            if (current->data == value) {
                 return index;
             }
             current = current->next;
@@ -232,25 +185,17 @@ public:
     }
 
     // 在指定位置插入元素
-    void insert(size_t index, const T &value)
-    {
-        if (index > size)
-        {
-            return; // 超出范围
+    void insert(size_t index, const T &value) {
+        if (index > size) {
+            return;  // 超出范围
         }
-        if (index == 0)
-        {
+        if (index == 0) {
             push_front(value);
-        }
-        else if (index == size)
-        {
+        } else if (index == size) {
             push_back(value);
-        }
-        else
-        {
+        } else {
             Node<T> *current = head;
-            for (size_t i = 0; i < index; i++)
-            {
+            for (size_t i = 0; i < index; i++) {
                 current = current->next;
             }
             Node<T> *newNode = new Node<T>(value);
@@ -263,27 +208,19 @@ public:
     }
 
     // 移除指定位置的元素
-    void remove_at(size_t index)
-    {
-        if (index >= size)
-        {
-            return; // 超出范围
+    void remove_at(size_t index) {
+        if (index >= size) {
+            return;  // 超出范围
         }
         Node<T> *current = head;
-        for (size_t i = 0; i < index; i++)
-        {
+        for (size_t i = 0; i < index; i++) {
             current = current->next;
         }
-        if (current == head)
-        {
+        if (current == head) {
             pop_front();
-        }
-        else if (current == tail)
-        {
+        } else if (current == tail) {
             pop_back();
-        }
-        else
-        {
+        } else {
             current->prev->next = current->next;
             current->next->prev = current->prev;
             delete current;
@@ -292,11 +229,9 @@ public:
     }
 
     // 反向遍历链表
-    void reverse_traversal()
-    {
+    void reverse_traversal() {
         Node<T> *current = tail;
-        while (current != nullptr)
-        {
+        while (current != nullptr) {
             std::cout << current->data << " ";
             current = current->prev;
         }
@@ -304,19 +239,14 @@ public:
     }
 
     // 将另一个链表连接到当前链表后面
-    void concatenate(Deque &other)
-    {
-        if (other.empty())
-        {
+    void concatenate(Deque &other) {
+        if (other.empty()) {
             return;
         }
-        if (empty())
-        {
+        if (empty()) {
             head = other.head;
             tail = other.tail;
-        }
-        else
-        {
+        } else {
             tail->next = other.head;
             other.head->prev = tail;
             tail = other.tail;
@@ -327,15 +257,9 @@ public:
         other.size = 0;
     }
 
-    DequeIterator<T> begin() const
-    {
-        return DequeIterator<T>(head);
-    }
+    DequeIterator<T> begin() const { return DequeIterator<T>(head); }
 
-    DequeIterator<T> end() const
-    {
-        return DequeIterator<T>(nullptr);
-    }
+    DequeIterator<T> end() const { return DequeIterator<T>(nullptr); }
 };
 
 #endif

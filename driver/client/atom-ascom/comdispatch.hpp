@@ -15,47 +15,48 @@ Description: Dispatch ASCOM command to COM
 #ifndef ATOM_ASCOM_COMDISPATCH_HPP
 #define ATOM_ASCOM_COMDISPATCH_HPP
 
-#include <string>
 #include <map>
+#include <string>
 
 class _com_error;
 
-std::string ExcepMsg(const EXCEPINFO& excep);
-std::string ExcepMsg(const std::string& prefix, const EXCEPINFO& excep);
+std::string ExcepMsg(const EXCEPINFO &excep);
+std::string ExcepMsg(const std::string &prefix, const EXCEPINFO &excep);
 
-struct Variant : public VARIANT
-{
+struct Variant : public VARIANT {
     Variant() { VariantInit(this); }
 };
 
-class ExcepInfo : public EXCEPINFO
-{
-    ExcepInfo& operator=(const ExcepInfo& rhs) = delete;
+class ExcepInfo : public EXCEPINFO {
+    ExcepInfo &operator=(const ExcepInfo &rhs) = delete;
+
 public:
     ExcepInfo();
     ~ExcepInfo();
-    void Assign(HRESULT hr, const std::string& source);
-    void Assign(const _com_error& err, const std::string& source);
+    void Assign(HRESULT hr, const std::string &source);
+    void Assign(const _com_error &err, const std::string &source);
 };
 
 typedef Variant VariantArg;
 
-class DispatchClass
-{
+class DispatchClass {
     typedef std::map<std::string, DISPID> idmap_t;
     idmap_t m_idmap;
+
 public:
-    DispatchClass() { }
-    ~DispatchClass() { }
-    static bool dispid(DISPID *ret, IDispatch *idisp, OLECHAR *name, ExcepInfo *excep);
-    bool dispid_cached(DISPID *ret, IDispatch *idisp, OLECHAR *name, ExcepInfo *excep);
+    DispatchClass() {}
+    ~DispatchClass() {}
+    static bool dispid(DISPID *ret, IDispatch *idisp, OLECHAR *name,
+                       ExcepInfo *excep);
+    bool dispid_cached(DISPID *ret, IDispatch *idisp, OLECHAR *name,
+                       ExcepInfo *excep);
 };
 
-class DispatchObj
-{
+class DispatchObj {
     DispatchClass *m_class;
     IDispatch *m_idisp;
     ExcepInfo m_excep;
+
 public:
     DispatchObj();
     DispatchObj(DispatchClass *cls);
@@ -76,37 +77,33 @@ public:
     bool InvokeMethod(Variant *res, OLECHAR *name, double arg1, double arg2);
     bool InvokeMethod(Variant *res, DISPID dispid, double arg1, double arg2);
     bool InvokeMethod(Variant *res, DISPID dispid);
-    const EXCEPINFO& Excep() const { return m_excep; }
+    const EXCEPINFO &Excep() const { return m_excep; }
     IDispatch *IDisp() const { return m_idisp; }
 };
 
 // IGlobalInterfaceTable wrapper
-class GITEntry
-{
+class GITEntry {
     IGlobalInterfaceTable *m_pIGlobalInterfaceTable;
     DWORD m_dwCookie;
+
 public:
     GITEntry();
     ~GITEntry();
     void Register(IDispatch *idisp);
-    void Register(const DispatchObj& obj) { Register(obj.IDisp()); }
+    void Register(const DispatchObj &obj) { Register(obj.IDisp()); }
     void Unregister();
     bool IsRegistered() const { return m_dwCookie != 0; }
-    IDispatch *Get() const
-    {
+    IDispatch *Get() const {
         IDispatch *idisp = 0;
         if (m_dwCookie)
-            m_pIGlobalInterfaceTable->GetInterfaceFromGlobal(m_dwCookie, IID_IDispatch, (LPVOID *)&idisp);
+            m_pIGlobalInterfaceTable->GetInterfaceFromGlobal(
+                m_dwCookie, IID_IDispatch, (LPVOID *)&idisp);
         return idisp;
     }
 };
 
-struct GITObjRef : public DispatchObj
-{
-    GITObjRef(const GITEntry& gitentry)
-    {
-        Attach(gitentry.Get(), 0);
-    }
+struct GITObjRef : public DispatchObj {
+    GITObjRef(const GITEntry &gitentry) { Attach(gitentry.Get(), 0); }
 };
 
 #endif

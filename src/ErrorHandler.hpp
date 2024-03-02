@@ -17,24 +17,26 @@ Description: Error Handle (404 or 500)
 
 #include "data/StatusDto.hpp"
 
-#include "oatpp/web/server/handler/ErrorHandler.hpp"
 #include "oatpp/web/protocol/http/outgoing/ResponseFactory.hpp"
+#include "oatpp/web/server/handler/ErrorHandler.hpp"
 
-class ErrorHandler : public oatpp::web::server::handler::ErrorHandler
-{
+class ErrorHandler : public oatpp::web::server::handler::ErrorHandler {
 private:
-  typedef oatpp::web::protocol::http::outgoing::Response OutgoingResponse;
-  typedef oatpp::web::protocol::http::Status Status;
-  typedef oatpp::web::protocol::http::outgoing::ResponseFactory ResponseFactory;
+    typedef oatpp::web::protocol::http::outgoing::Response OutgoingResponse;
+    typedef oatpp::web::protocol::http::Status Status;
+    typedef oatpp::web::protocol::http::outgoing::ResponseFactory
+        ResponseFactory;
 
 private:
-  std::shared_ptr<oatpp::data::mapping::ObjectMapper> m_objectMapper;
+    std::shared_ptr<oatpp::data::mapping::ObjectMapper> m_objectMapper;
 
 public:
-  ErrorHandler(const std::shared_ptr<oatpp::data::mapping::ObjectMapper> &objectMapper);
+    ErrorHandler(const std::shared_ptr<oatpp::data::mapping::ObjectMapper>
+                     &objectMapper);
 
-  std::shared_ptr<OutgoingResponse>
-  handleError(const Status &status, const oatpp::String &message, const Headers &headers) override;
+    std::shared_ptr<OutgoingResponse> handleError(
+        const Status &status, const oatpp::String &message,
+        const Headers &headers) override;
 };
 
-#endif // ERRORHANDLER_HPP
+#endif  // ERRORHANDLER_HPP

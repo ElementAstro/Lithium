@@ -21,20 +21,14 @@ using namespace std::chrono;
 
 ATOM_NS_BEGIN
 
-class CVPoll : public IOPoll
-{
+class CVPoll : public IOPoll {
 public:
     bool init() override;
-    Result registerFd(SOCKET_FD fd, KMEvent events, IOCallback cb) override
-    {
+    Result registerFd(SOCKET_FD fd, KMEvent events, IOCallback cb) override {
         return Result::NOT_SUPPORTED;
     }
-    Result unregisterFd(SOCKET_FD fd) override
-    {
-        return Result::NOT_SUPPORTED;
-    }
-    Result updateFd(SOCKET_FD fd, KMEvent events) override
-    {
+    Result unregisterFd(SOCKET_FD fd) override { return Result::NOT_SUPPORTED; }
+    Result updateFd(SOCKET_FD fd, KMEvent events) override {
         return Result::NOT_SUPPORTED;
     }
     Result wait(uint32_t wait_ms) override;
@@ -48,8 +42,7 @@ private:
     std::condition_variable cv_;
 };
 
-bool CVPoll::init()
-{
+bool CVPoll::init() {
     {
         std::lock_guard<std::mutex> g(mutex_);
         ready_ = false;
@@ -57,15 +50,12 @@ bool CVPoll::init()
     return true;
 }
 
-Result CVPoll::wait(uint32_t wait_ms)
-{
+Result CVPoll::wait(uint32_t wait_ms) {
     auto ms = milliseconds(wait_ms);
     {
         std::unique_lock<std::mutex> lk(mutex_);
         // bool ret = timeBeginPeriod(1) == TIMERR_NOERROR;
-        if (cv_.wait_for(lk, ms, [this]
-                         { return ready_; }))
-        {
+        if (cv_.wait_for(lk, ms, [this] { return ready_; })) {
             ready_ = false;
         }
         // if (ret) timeEndPeriod(1);
@@ -73,8 +63,7 @@ Result CVPoll::wait(uint32_t wait_ms)
     return Result::OK;
 }
 
-void CVPoll::notify()
-{
+void CVPoll::notify() {
     {
         std::lock_guard<std::mutex> g(mutex_);
         ready_ = true;
@@ -82,9 +71,6 @@ void CVPoll::notify()
     cv_.notify_one();
 }
 
-IOPoll *createCVPoll()
-{
-    return new CVPoll();
-}
+IOPoll *createCVPoll() { return new CVPoll(); }
 
 ATOM_NS_END

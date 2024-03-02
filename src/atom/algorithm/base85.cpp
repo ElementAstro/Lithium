@@ -16,62 +16,55 @@ Description: Base85 encoding and decoding
 
 #include <iostream>
 
-namespace Atom::Algorithm
-{
-    const std::string base85_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~";
+namespace Atom::Algorithm {
+const std::string base85_chars =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<"
+    "=>?@^_`{|}~";
 
-    std::string encodeBase85(const std::vector<unsigned char> &data)
-    {
-        std::string result;
+std::string encodeBase85(const std::vector<unsigned char> &data) {
+    std::string result;
 
-        unsigned int value = 0;
-        int count = 0;
+    unsigned int value = 0;
+    int count = 0;
 
-        for (unsigned char byte : data)
-        {
-            value = value * 256 + byte;
-            count += 8;
+    for (unsigned char byte : data) {
+        value = value * 256 + byte;
+        count += 8;
 
-            while (count >= 5)
-            {
-                int index = (value >> (count - 5)) & 0x1F;
-                result += base85_chars[index];
-                count -= 5;
-            }
-        }
-
-        if (count > 0)
-        {
-            value <<= (5 - count);
-            int index = value & 0x1F;
+        while (count >= 5) {
+            int index = (value >> (count - 5)) & 0x1F;
             result += base85_chars[index];
+            count -= 5;
         }
-
-        return result;
     }
 
-    std::vector<unsigned char> decodeBase85(const std::string &data)
-    {
-        std::vector<unsigned char> result;
+    if (count > 0) {
+        value <<= (5 - count);
+        int index = value & 0x1F;
+        result += base85_chars[index];
+    }
 
-        unsigned int value = 0;
-        int count = 0;
+    return result;
+}
 
-        for (char c : data)
-        {
-            if (c >= '!' && c <= 'u')
-            {
-                value = value * 85 + (c - '!');
-                count += 5;
+std::vector<unsigned char> decodeBase85(const std::string &data) {
+    std::vector<unsigned char> result;
 
-                if (count >= 8)
-                {
-                    result.push_back((value >> (count - 8)) & 0xFF);
-                    count -= 8;
-                }
+    unsigned int value = 0;
+    int count = 0;
+
+    for (char c : data) {
+        if (c >= '!' && c <= 'u') {
+            value = value * 85 + (c - '!');
+            count += 5;
+
+            if (count >= 8) {
+                result.push_back((value >> (count - 8)) & 0xFF);
+                count -= 8;
             }
         }
-
-        return result;
     }
+
+    return result;
 }
+}  // namespace Atom::Algorithm

@@ -30,8 +30,7 @@ Description: Basic Device Defination
 
 #include "device_exception.hpp"
 
-class AtomDriver : public SharedComponent
-{
+class AtomDriver : public SharedComponent {
 public:
     // -------------------------------------------------------------------
     // Common methods

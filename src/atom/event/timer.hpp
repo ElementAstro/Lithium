@@ -15,13 +15,15 @@ Description: Timer manager.
 #ifndef ATOM_EVENT_TIMER_HPP
 #define ATOM_EVENT_TIMER_HPP
 
-#include "kevdefs.hpp"
 #include "kev.hpp"
+#include "kevdefs.hpp"
 
+
+#include <atomic>
 #include <memory>
 #include <mutex>
-#include <atomic>
 #include <utility>
+
 
 #ifndef TICK_COUNT_TYPE
 #define TICK_COUNT_TYPE uint64_t
@@ -34,8 +36,7 @@ ATOM_NS_BEGIN
 #define TIMER_VECTOR_MASK (TIMER_VECTOR_SIZE - 1)
 #define TV_COUNT 4
 
-class TimerManager
-{
+class TimerManager {
 public:
     using Ptr = std::shared_ptr<TimerManager>;
     using TimerCallback = std::function<void(void)>;
@@ -44,36 +45,32 @@ public:
     TimerManager(EventLoop::Impl *loop);
     ~TimerManager();
 
-    bool scheduleTimer(TimerNode *timer, uint32_t delay_ms, Timer::Mode mode, TimerCallback cb);
+    bool scheduleTimer(TimerNode *timer, uint32_t delay_ms, Timer::Mode mode,
+                       TimerCallback cb);
     void cancelTimer(TimerNode *timer);
 
     int checkExpire(unsigned long *remain_ms = nullptr);
 
 public:
-    class TimerNode
-    {
+    class TimerNode {
     public:
         TimerNode() = default;
         TimerNode(const TimerNode &) = delete;
         TimerNode(TimerNode &&other) = delete;
         TimerNode &operator=(const TimerNode &other) = delete;
         TimerNode &operator=(TimerNode &&other) = delete;
-        void operator()()
-        {
-            if (!cancelled_ && cb_)
-            {
+        void operator()() {
+            if (!cancelled_ && cb_) {
                 cb_();
             }
         }
-        void resetNode()
-        {
+        void resetNode() {
             tv_index_ = -1;
             tl_index_ = -1;
             prev_ = nullptr;
             next_ = nullptr;
         }
-        auto cancel()
-        {
+        auto cancel() {
             cancelled_ = true;
             // NOTE: this TimerNode object may be destroyed when cb_ is reset
             return std::exchange(cb_, nullptr);
@@ -89,7 +86,8 @@ public:
         //       for example, the DealyedTaskSlotPtr is stored in TimerCallback
         //       and will be destroyed when TimerCallback is reset
         // NOTE: must not destruct the cb_ under lock of TimerManager::mutex_,
-        //       since its destruction may result to another timer to be cancelled
+        //       since its destruction may result to another timer to be
+        //       cancelled
         TimerCallback cb_;
 
     protected:
@@ -101,17 +99,11 @@ public:
     };
 
 private:
-    typedef enum
-    {
-        FROM_SCHEDULE,
-        FROM_CASCADE,
-        FROM_RESCHEDULE
-    } FROM;
+    typedef enum { FROM_SCHEDULE, FROM_CASCADE, FROM_RESCHEDULE } FROM;
     bool addTimer(TimerNode *timer_node, FROM from);
     void removeTimer(TimerNode *timer_node);
     int cascadeTimer(int tv_idx, int tl_idx);
-    bool isTimerPending(TimerNode *timer_node)
-    {
+    bool isTimerPending(TimerNode *timer_node) {
         return timer_node->next_ != nullptr;
     }
 
@@ -135,12 +127,11 @@ private:
     unsigned long last_remain_ms_ = -1;
     TICK_COUNT_TYPE last_tick_{0};
     uint32_t timer_count_{0};
-    uint32_t tv0_bitmap_[8];                    // 1 -- have timer in this slot
-    TimerNode tv_[TV_COUNT][TIMER_VECTOR_SIZE]; // timer vectors
+    uint32_t tv0_bitmap_[8];                     // 1 -- have timer in this slot
+    TimerNode tv_[TV_COUNT][TIMER_VECTOR_SIZE];  // timer vectors
 };
 
-class Timer::Impl
-{
+class Timer::Impl {
 public:
     using TimerCallback = Timer::TimerCallback;
 
@@ -152,9 +143,9 @@ public:
     Impl &operator=(const Impl &other) = delete;
     Impl &operator=(Impl &&other) = delete;
 
-    template <typename F, std::enable_if_t<!std::is_copy_constructible<F>{}, int> = 0>
-    bool schedule(uint32_t delay_ms, Mode mode, F &&f)
-    {
+    template <typename F,
+              std::enable_if_t<!std::is_copy_constructible<F>{}, int> = 0>
+    bool schedule(uint32_t delay_ms, Mode mode, F &&f) {
         lambda_wrapper<F> wf{std::forward<F>(f)};
         return schedule(delay_ms, mode, TimerCallback(std::move(wf)));
     }
@@ -164,7 +155,7 @@ public:
 private:
     friend class TimerManager;
     std::weak_ptr<TimerManager> timer_mgr_;
-    TimerManager::TimerNode timer_node_; // intrusive list node
+    TimerManager::TimerNode timer_node_;  // intrusive list node
 };
 
 ATOM_NS_END

@@ -15,8 +15,7 @@ Description: A simple implementation of noncopyable.
 #ifndef ATOM_EXPERIMENT_NONCOPYABLE_HPP
 #define ATOM_EXPERIMENT_NONCOPYABLE_HPP
 
-class NonCopyable
-{
+class NonCopyable {
 public:
     NonCopyable() = default;
 

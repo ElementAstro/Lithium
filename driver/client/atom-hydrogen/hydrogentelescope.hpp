@@ -15,12 +15,10 @@ Description: Hydrogen Telescope
 #pragma once
 
 #include "atom/driver/telescope.hpp"
-#include "hydrogenbasic.hpp"
 #include "atom/utils/switch.hpp"
+#include "hydrogenbasic.hpp"
 
-class HydrogenTelescope : public Telescope, public HYDROGEN::BaseClient
-{
-
+class HydrogenTelescope : public Telescope, public HYDROGEN::BaseClient {
 public:
     /**
      * @brief 构造函数
@@ -195,27 +193,34 @@ protected:
 
 private:
     // Hydrogen 客户端参数
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> m_connection_prop;    // 连接属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewNumber> telescopeinfo_prop; // 望远镜信息属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewText> telescope_port;       // 望远镜端口属性指针
-    std::shared_ptr<HYDROGEN::PropertyViewSwitch> rate_prop;          // 望远镜速率属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        m_connection_prop;  // 连接属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewNumber>
+        telescopeinfo_prop;  // 望远镜信息属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewText>
+        telescope_port;  // 望远镜端口属性指针
+    std::shared_ptr<HYDROGEN::PropertyViewSwitch>
+        rate_prop;  // 望远镜速率属性指针
     std::shared_ptr<HYDROGEN::PropertyViewText> telescope_prop;
-    HYDROGEN::BaseDevice telescope_device;                    // 望远镜设备指针
+    HYDROGEN::BaseDevice telescope_device;  // 望远镜设备指针
 
-    std::atomic_bool is_ready; // 是否就绪
-    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_ready;  // 是否就绪
+    std::atomic_bool has_blob;  // 是否有 BLOB 数据
     std::atomic_bool is_debug;
     std::atomic_bool is_connected;
 
-    std::string hydrogen_telescope_port = ""; // 望远镜所选端口
-    std::string hydrogen_telescope_rate = ""; // 望远镜所选速率
+    std::string hydrogen_telescope_port = "";  // 望远镜所选端口
+    std::string hydrogen_telescope_rate = "";  // 望远镜所选速率
 
-    std::string hydrogen_telescope_cmd;            // Hydrogen 命令字符串
-    std::string hydrogen_telescope_exec = "";      // Hydrogen 设备执行文件路径
-    std::string hydrogen_telescope_version = "";   // Hydrogen 设备固件版本
-    std::string hydrogen_telescope_interface = ""; // Hydrogen 接口版本
+    std::string hydrogen_telescope_cmd;        // Hydrogen 命令字符串
+    std::string hydrogen_telescope_exec = "";  // Hydrogen 设备执行文件路径
+    std::string hydrogen_telescope_version = "";  // Hydrogen 设备固件版本
+    std::string hydrogen_telescope_interface = "";  // Hydrogen 接口版本
 
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>
+        m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>
+        m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>
+        m_text_switch;
 };

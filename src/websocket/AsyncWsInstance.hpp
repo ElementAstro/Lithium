@@ -16,21 +16,19 @@ Description: WebSocket Instance
 #define ASYNC_WS_INSTANCE_HPP
 
 #include "oatpp-websocket/AsyncWebSocket.hpp"
-#include "oatpp/core/async/Lock.hpp"
 #include "oatpp/core/async/Executor.hpp"
+#include "oatpp/core/async/Lock.hpp"
 #include "oatpp/core/macro/component.hpp"
 
 #include <memory>
 
-class AsyncWsHub; // FWD
+class AsyncWsHub;  // FWD
 
-class AsyncWsInstance : public oatpp::websocket::AsyncWebSocket::Listener
-{
+class AsyncWsInstance : public oatpp::websocket::AsyncWebSocket::Listener {
 public:
     AsyncWsInstance(const std::shared_ptr<AsyncWebSocket> &socket,
-                     const std::shared_ptr<AsyncWsHub> &hub,
-                     const oatpp::String &connection_name,
-                     v_int32 userId);
+                    const std::shared_ptr<AsyncWsHub> &hub,
+                    const oatpp::String &connection_name, v_int32 userId);
 
     // ----------------------------------------------------------------------
     // The AsyncWsInstance methods
@@ -62,11 +60,17 @@ public:
      */
     v_int32 getId();
 
-public: // WebSocket Listener methods
-    CoroutineStarter onPing(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;
-    CoroutineStarter onPong(const std::shared_ptr<AsyncWebSocket> &socket, const oatpp::String &message) override;
-    CoroutineStarter onClose(const std::shared_ptr<AsyncWebSocket> &socket, v_uint16 code, const oatpp::String &message) override;
-    CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket, v_uint8 opcode, p_char8 data, oatpp::v_io_size size) override;
+public:  // WebSocket Listener methods
+    CoroutineStarter onPing(const std::shared_ptr<AsyncWebSocket> &socket,
+                            const oatpp::String &message) override;
+    CoroutineStarter onPong(const std::shared_ptr<AsyncWebSocket> &socket,
+                            const oatpp::String &message) override;
+    CoroutineStarter onClose(const std::shared_ptr<AsyncWebSocket> &socket,
+                             v_uint16 code,
+                             const oatpp::String &message) override;
+    CoroutineStarter readMessage(const std::shared_ptr<AsyncWebSocket> &socket,
+                                 v_uint8 opcode, p_char8 data,
+                                 oatpp::v_io_size size) override;
 
 private:
     /**
@@ -78,8 +82,6 @@ private:
      * Lock for synchronization of writes to the web socket.
      */
     oatpp::async::Lock m_writeLock;
-
-    
 
 private:
     /**
@@ -93,4 +95,4 @@ private:
     v_int32 m_userId;
 };
 
-#endif // WsINSTANCE_HPP
+#endif  // WsINSTANCE_HPP

@@ -18,12 +18,11 @@ Description: Some registry functions for Windows
 
 #include "atom/log/loguru.hpp"
 
-bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey, std::vector<std::string> &subKeys)
-{
+bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
+                        std::vector<std::string> &subKeys) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return false;
     }
@@ -33,21 +32,15 @@ bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey, std::vector<st
     DWORD cchKey = MAX_KEY_LENGTH;
 
     DWORD i = 0;
-    while (true)
-    {
+    while (true) {
         lRes = RegEnumKeyEx(hKey, i, achKey, &cchKey, NULL, NULL, NULL, NULL);
-        if (lRes == ERROR_NO_MORE_ITEMS)
-        {
+        if (lRes == ERROR_NO_MORE_ITEMS) {
             break;
-        }
-        else if (lRes == ERROR_SUCCESS)
-        {
+        } else if (lRes == ERROR_SUCCESS) {
             subKeys.push_back(achKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
-        }
-        else
-        {
+        } else {
             LOG_F(ERROR, "Could not enum key: {}", lRes);
             RegCloseKey(hKey);
             return false;
@@ -58,12 +51,12 @@ bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey, std::vector<st
     return true;
 }
 
-bool GetRegistryValues(HKEY hRootKey, const std::string &subKey, std::vector<std::pair<std::string, std::string>> &values)
-{
+bool GetRegistryValues(
+    HKEY hRootKey, const std::string &subKey,
+    std::vector<std::pair<std::string, std::string>> &values) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return false;
     }
@@ -77,28 +70,20 @@ bool GetRegistryValues(HKEY hRootKey, const std::string &subKey, std::vector<std
     DWORD dwDataSize = sizeof(lpData);
 
     DWORD i = 0;
-    while (true)
-    {
-        lRes = RegEnumValue(hKey, i, achValue, &cchValue, NULL, &dwType, (LPBYTE)lpData, &dwDataSize);
-        if (lRes == ERROR_NO_MORE_ITEMS)
-        {
+    while (true) {
+        lRes = RegEnumValue(hKey, i, achValue, &cchValue, NULL, &dwType,
+                            (LPBYTE)lpData, &dwDataSize);
+        if (lRes == ERROR_NO_MORE_ITEMS) {
             break;
-        }
-        else if (lRes == ERROR_SUCCESS)
-        {
+        } else if (lRes == ERROR_SUCCESS) {
             std::string valueName = achValue;
             std::string valueData;
-            if (dwType == REG_SZ || dwType == REG_EXPAND_SZ)
-            {
+            if (dwType == REG_SZ || dwType == REG_EXPAND_SZ) {
                 valueData = lpData;
-            }
-            else if (dwType == REG_DWORD)
-            {
+            } else if (dwType == REG_DWORD) {
                 DWORD data = *(DWORD *)lpData;
                 valueData = std::to_string(data);
-            }
-            else
-            {
+            } else {
                 valueData = "<unsupported type>";
             }
 
@@ -106,9 +91,7 @@ bool GetRegistryValues(HKEY hRootKey, const std::string &subKey, std::vector<std
             cchValue = MAX_VALUE_NAME;
             dwDataSize = sizeof(lpData);
             i++;
-        }
-        else
-        {
+        } else {
             LOG_F(ERROR, "Could not enum value: {}", lRes);
             RegCloseKey(hKey);
             return false;
@@ -119,12 +102,12 @@ bool GetRegistryValues(HKEY hRootKey, const std::string &subKey, std::vector<std
     return true;
 }
 
-bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey, const std::string &valueName, const std::string &newValue)
-{
+bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey,
+                         const std::string &valueName,
+                         const std::string &newValue) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_SET_VALUE, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return false;
     }
@@ -134,8 +117,7 @@ bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey, const std::st
     DWORD dataSize = static_cast<DWORD>(newValue.length());
 
     lRes = RegSetValueEx(hKey, valueName.c_str(), 0, dwType, data, dataSize);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not set value type: {}", lRes);
         RegCloseKey(hKey);
         return false;
@@ -145,11 +127,9 @@ bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey, const std::st
     return true;
 }
 
-bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey)
-{
+bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey) {
     LONG lRes = RegDeleteKey(hRootKey, subKey.c_str());
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not delete subkey: {}", lRes);
         return false;
     }
@@ -157,19 +137,17 @@ bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey)
     return true;
 }
 
-bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey, const std::string &valueName)
-{
+bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey,
+                         const std::string &valueName) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_SET_VALUE, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return false;
     }
 
     lRes = RegDeleteValue(hKey, valueName.c_str());
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not delete value: {}", lRes);
         RegCloseKey(hKey);
         return false;
@@ -179,12 +157,11 @@ bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey, const std::st
     return true;
 }
 
-void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey, const std::string &subKey)
-{
+void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
+                                         const std::string &subKey) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return;
     }
@@ -194,23 +171,17 @@ void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey, const std::string &subKe
     DWORD cchKey = MAX_KEY_LENGTH;
 
     DWORD i = 0;
-    while (true)
-    {
+    while (true) {
         lRes = RegEnumKeyEx(hKey, i, achKey, &cchKey, NULL, NULL, NULL, NULL);
-        if (lRes == ERROR_NO_MORE_ITEMS)
-        {
+        if (lRes == ERROR_NO_MORE_ITEMS) {
             break;
-        }
-        else if (lRes == ERROR_SUCCESS)
-        {
+        } else if (lRes == ERROR_SUCCESS) {
             DLOG_F(INFO, "Sub Key: {}", achKey);
             std::string newSubKey = subKey + "\\" + achKey;
             RecursivelyEnumerateRegistrySubKeys(hRootKey, newSubKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
-        }
-        else
-        {
+        } else {
             LOG_F(ERROR, "Could not enum key: {}", lRes);
             RegCloseKey(hKey);
             return;
@@ -220,18 +191,16 @@ void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey, const std::string &subKe
     RegCloseKey(hKey);
 }
 
-bool BackupRegistry(HKEY hRootKey, const std::string &subKey, const std::string &backupFilePath)
-{
+bool BackupRegistry(HKEY hRootKey, const std::string &subKey,
+                    const std::string &backupFilePath) {
     LONG lRes = RegSaveKey(hRootKey, subKey.c_str(), NULL);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not save key: {}", lRes);
         return false;
     }
 
     bool success = CopyFileA("NTUSER.DAT", backupFilePath.c_str(), FALSE);
-    if (!success)
-    {
+    if (!success) {
         LOG_F(ERROR, "Could not create backup file");
         return false;
     }
@@ -239,12 +208,11 @@ bool BackupRegistry(HKEY hRootKey, const std::string &subKey, const std::string 
     return true;
 }
 
-void FindRegistryKey(HKEY hRootKey, const std::string &subKey, const std::string &searchKey)
-{
+void FindRegistryKey(HKEY hRootKey, const std::string &subKey,
+                     const std::string &searchKey) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return;
     }
@@ -254,26 +222,19 @@ void FindRegistryKey(HKEY hRootKey, const std::string &subKey, const std::string
     DWORD cchKey = MAX_KEY_LENGTH;
 
     DWORD i = 0;
-    while (true)
-    {
+    while (true) {
         lRes = RegEnumKeyEx(hKey, i, achKey, &cchKey, NULL, NULL, NULL, NULL);
-        if (lRes == ERROR_NO_MORE_ITEMS)
-        {
+        if (lRes == ERROR_NO_MORE_ITEMS) {
             break;
-        }
-        else if (lRes == ERROR_SUCCESS)
-        {
-            if (achKey == searchKey)
-            {
+        } else if (lRes == ERROR_SUCCESS) {
+            if (achKey == searchKey) {
                 DLOG_F(INFO, "Found key: {}", achKey);
             }
             std::string newSubKey = subKey + "\\" + achKey;
             FindRegistryKey(hRootKey, newSubKey, searchKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
-        }
-        else
-        {
+        } else {
             LOG_F(ERROR, "Could not enum key: {}", lRes);
             RegCloseKey(hKey);
             return;
@@ -283,12 +244,11 @@ void FindRegistryKey(HKEY hRootKey, const std::string &subKey, const std::string
     RegCloseKey(hKey);
 }
 
-void FindRegistryValue(HKEY hRootKey, const std::string &subKey, const std::string &searchValue)
-{
+void FindRegistryValue(HKEY hRootKey, const std::string &subKey,
+                       const std::string &searchValue) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not open key: {}", lRes);
         return;
     }
@@ -302,25 +262,19 @@ void FindRegistryValue(HKEY hRootKey, const std::string &subKey, const std::stri
     DWORD dwDataSize = sizeof(lpData);
 
     DWORD i = 0;
-    while (true)
-    {
-        lRes = RegEnumValue(hKey, i, achValue, &cchValue, NULL, &dwType, (LPBYTE)lpData, &dwDataSize);
-        if (lRes == ERROR_NO_MORE_ITEMS)
-        {
+    while (true) {
+        lRes = RegEnumValue(hKey, i, achValue, &cchValue, NULL, &dwType,
+                            (LPBYTE)lpData, &dwDataSize);
+        if (lRes == ERROR_NO_MORE_ITEMS) {
             break;
-        }
-        else if (lRes == ERROR_SUCCESS)
-        {
-            if (achValue == searchValue)
-            {
+        } else if (lRes == ERROR_SUCCESS) {
+            if (achValue == searchValue) {
                 LOG_F(INFO, "Found value: {}", achValue);
             }
             cchValue = MAX_VALUE_NAME;
             dwDataSize = sizeof(lpData);
             i++;
-        }
-        else
-        {
+        } else {
             LOG_F(ERROR, "Could not enum value: {}", lRes);
             RegCloseKey(hKey);
             return;
@@ -330,18 +284,16 @@ void FindRegistryValue(HKEY hRootKey, const std::string &subKey, const std::stri
     RegCloseKey(hKey);
 }
 
-bool ExportRegistry(HKEY hRootKey, const std::string &subKey, const std::string &exportFilePath)
-{
+bool ExportRegistry(HKEY hRootKey, const std::string &subKey,
+                    const std::string &exportFilePath) {
     LONG lRes = RegSaveKey(hRootKey, subKey.c_str(), NULL);
-    if (lRes != ERROR_SUCCESS)
-    {
+    if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not save key: {}", lRes);
         return false;
     }
 
     bool success = CopyFileA("NTUSER.DAT", exportFilePath.c_str(), FALSE);
-    if (!success)
-    {
+    if (!success) {
         LOG_F(ERROR, "Could not create export file");
         return false;
     }
@@ -353,18 +305,17 @@ bool ExportRegistry(HKEY hRootKey, const std::string &subKey, const std::string 
 int main()
 {
     std::vector<std::string> subKeys;
-    if (GetRegistrySubKeys(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", subKeys)) {
-        std::cout << "Sub Keys:" << std::endl;
-        for (const auto& subKey : subKeys) {
-            std::cout << "  " << subKey << std::endl;
+    if (GetRegistrySubKeys(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows
+NT\\CurrentVersion", subKeys)) { std::cout << "Sub Keys:" << std::endl; for
+(const auto& subKey : subKeys) { std::cout << "  " << subKey << std::endl;
         }
     }
 
     std::vector<std::pair<std::string, std::string>> values;
-    if (GetRegistryValues(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", values)) {
-        std::cout << "Values:" << std::endl;
-        for (const auto& value : values) {
-            std::cout << "  " << value.first << " = " << value.second << std::endl;
+    if (GetRegistryValues(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows
+NT\\CurrentVersion", values)) { std::cout << "Values:" << std::endl; for (const
+auto& value : values) { std::cout << "  " << value.first << " = " <<
+value.second << std::endl;
         }
     }
 

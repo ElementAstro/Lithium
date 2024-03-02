@@ -15,11 +15,11 @@ Description: Commander
 #ifndef ATOM_SERVER_COMMANDER_HPP
 #define ATOM_SERVER_COMMANDER_HPP
 
-#include <string>
 #include <functional>
-#include <stack>
-#include <shared_mutex>
 #include <mutex>
+#include <shared_mutex>
+#include <stack>
+#include <string>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
@@ -28,30 +28,33 @@ Description: Commander
 #endif
 
 /**
- * @brief Generic command dispatcher class for handling and dispatching commands.
+ * @brief Generic command dispatcher class for handling and dispatching
+ * commands.
  *
- * This class allows registration of handler functions for specific commands, along with optional undo handlers and decorators
- * to modify or enhance the behavior of the registered handlers. It also provides functionality for dispatching commands, undoing
- * and redoing commands, and managing function descriptions and command history.
+ * This class allows registration of handler functions for specific commands,
+ * along with optional undo handlers and decorators to modify or enhance the
+ * behavior of the registered handlers. It also provides functionality for
+ * dispatching commands, undoing and redoing commands, and managing function
+ * descriptions and command history.
  *
  * @tparam Result The result type of the command handler function.
  * @tparam Argument The argument type of the command handler function.
  */
 template <typename Result, typename Argument>
-class CommandDispatcher
-{
+class CommandDispatcher {
 public:
     using HandlerFunc = std::function<Result(const Argument &)>;
     using DecoratorFunc = std::shared_ptr<decorator<HandlerFunc>>;
 
-     /**
+    /**
      * @brief Registers a handler function for a specific command.
      *
      * @param name The name of the command.
      * @param handler The handler function for the command.
      * @param undoHandler Optional undo handler function for the command.
      */
-    void registerHandler(const std::string &name, const HandlerFunc &handler, const HandlerFunc &undoHandler = nullptr);
+    void registerHandler(const std::string &name, const HandlerFunc &handler,
+                         const HandlerFunc &undoHandler = nullptr);
 
     /**
      * @brief Registers a member function handler for a specific command.
@@ -63,9 +66,11 @@ public:
      * @param undoHandler Optional undo handler function for the command.
      */
     template <class T>
-    void registerMemberHandler(const std::string &name, T *object, Result (T::*memberFunc)(const Argument &));
+    void registerMemberHandler(const std::string &name, T *object,
+                               Result (T::*memberFunc)(const Argument &));
 
-    void registerDecorator(const std::string &name, const DecoratorFunc &decorator);
+    void registerDecorator(const std::string &name,
+                           const DecoratorFunc &decorator);
 
     HandlerFunc getHandler(const std::string &name);
 
@@ -79,7 +84,8 @@ public:
 
     bool removeAll();
 
-    void registerFunctionDescription(const std::string &name, const std::string &description);
+    void registerFunctionDescription(const std::string &name,
+                                     const std::string &description);
 
     std::string getFunctionDescription(const std::string &name);
 

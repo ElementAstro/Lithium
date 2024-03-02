@@ -19,8 +19,7 @@ Description: Enum with documents just like Python
 #include <string>
 #include <string_view>
 
-class DocIntEnum
-{
+class DocIntEnum {
 private:
     std::map<int, std::string_view> enumMap;
 

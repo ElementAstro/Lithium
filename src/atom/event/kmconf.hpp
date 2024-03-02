@@ -15,7 +15,8 @@ Description: Configuration
 #ifndef ATOM_EVENT_CONF_HPP
 #define ATOM_EVENT_CONF_HPP
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(_WIN64) || defined(__CYGWIN__)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || \
+    defined(_WIN64) || defined(__CYGWIN__)
 #define ATOM_OS_WIN
 #elif defined(linux) || defined(__linux) || defined(__linux__)
 #define ATOM_OS_LINUX

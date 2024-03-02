@@ -17,26 +17,22 @@ Description: Dispatch ASCOM command to COM
 
 #include "atom/log/loguru.hpp"
 
-std::string ExcepMsg(const EXCEPINFO& excep)
-{
+std::string ExcepMsg(const EXCEPINFO &excep) {
     if (excep.bstrSource || excep.bstrDescription)
-        return std::string::Format("(%s) %s", excep.bstrSource, excep.bstrDescription);
+        return std::string::Format("(%s) %s", excep.bstrSource,
+                                   excep.bstrDescription);
     else
-        return _("A COM Error occurred. There may be more info in the Debug Log.");
+        return _(
+            "A COM Error occurred. There may be more info in the Debug Log.");
 }
 
-std::string ExcepMsg(const std::string& prefix, const EXCEPINFO& excep)
-{
+std::string ExcepMsg(const std::string &prefix, const EXCEPINFO &excep) {
     return prefix + ":\n" + ExcepMsg(excep);
 }
 
-ExcepInfo::ExcepInfo()
-{
-    memset(this, 0, sizeof(*this));
-}
+ExcepInfo::ExcepInfo() { memset(this, 0, sizeof(*this)); }
 
-inline static void FreeExcep(EXCEPINFO& ex)
-{
+inline static void FreeExcep(EXCEPINFO &ex) {
     if (ex.bstrSource)
         SysFreeString(ex.bstrSource);
     if (ex.bstrDescription)
@@ -45,8 +41,7 @@ inline static void FreeExcep(EXCEPINFO& ex)
         SysFreeString(ex.bstrHelpFile);
 }
 
-void ExcepInfo::Assign(const _com_error& err, const std::string& source)
-{
+void ExcepInfo::Assign(const _com_error &err, const std::string &source) {
     FreeExcep(*this);
 
     wCode = 0;
@@ -60,35 +55,32 @@ void ExcepInfo::Assign(const _com_error& err, const std::string& source)
     scode = err.Error();
 }
 
-void ExcepInfo::Assign(HRESULT hr, const std::string& source)
-{
+void ExcepInfo::Assign(HRESULT hr, const std::string &source) {
     Assign(_com_error(hr), source);
 }
 
-ExcepInfo::~ExcepInfo()
-{
-    FreeExcep(*this);
-}
+ExcepInfo::~ExcepInfo() { FreeExcep(*this); }
 
-bool DispatchClass::dispid(DISPID *ret, IDispatch *idisp, OLECHAR *wname, ExcepInfo *excep)
-{
-    HRESULT hr = idisp->GetIDsOfNames(IID_NULL, &wname, 1, LOCALE_USER_DEFAULT, ret);
-    if (FAILED(hr))
-    {
+bool DispatchClass::dispid(DISPID *ret, IDispatch *idisp, OLECHAR *wname,
+                           ExcepInfo *excep) {
+    HRESULT hr =
+        idisp->GetIDsOfNames(IID_NULL, &wname, 1, LOCALE_USER_DEFAULT, ret);
+    if (FAILED(hr)) {
         _com_error err(hr);
-        Debug.AddLine(std::string::Format("dispid(%s): [%x] %s", wname, hr, err.ErrorMessage()));
-        excep->Assign(err, std::string::Format(_("Driver error preparing to call %s"), wname));
+        Debug.AddLine(std::string::Format("dispid(%s): [%x] %s", wname, hr,
+                                          err.ErrorMessage()));
+        excep->Assign(err, std::string::Format(
+                               _("Driver error preparing to call %s"), wname));
     }
     return SUCCEEDED(hr);
 }
 
-bool DispatchClass::dispid_cached(DISPID *ret, IDispatch *idisp, OLECHAR *wname, ExcepInfo *excep)
-{
+bool DispatchClass::dispid_cached(DISPID *ret, IDispatch *idisp, OLECHAR *wname,
+                                  ExcepInfo *excep) {
     std::string name(wname);
 
     idmap_t::const_iterator it = m_idmap.find(name);
-    if (it != m_idmap.end())
-    {
+    if (it != m_idmap.end()) {
         *ret = it->second;
         return true;
     }
@@ -100,79 +92,67 @@ bool DispatchClass::dispid_cached(DISPID *ret, IDispatch *idisp, OLECHAR *wname,
     return true;
 }
 
-DispatchObj::DispatchObj()
-    : m_class(0),
-      m_idisp(0)
-{
-}
+DispatchObj::DispatchObj() : m_class(0), m_idisp(0) {}
 
-DispatchObj::DispatchObj(DispatchClass *cls)
-    : m_class(cls),
-      m_idisp(0)
-{
-}
+DispatchObj::DispatchObj(DispatchClass *cls) : m_class(cls), m_idisp(0) {}
 
 DispatchObj::DispatchObj(IDispatch *idisp, DispatchClass *cls)
-    : m_class(cls),
-      m_idisp(idisp)
-{
+    : m_class(cls), m_idisp(idisp) {
     if (m_idisp)
         m_idisp->AddRef();
 }
 
-DispatchObj::~DispatchObj()
-{
+DispatchObj::~DispatchObj() {
     if (m_idisp)
         m_idisp->Release();
 }
 
-void DispatchObj::Attach(IDispatch *idisp, DispatchClass *cls)
-{
+void DispatchObj::Attach(IDispatch *idisp, DispatchClass *cls) {
     m_class = cls;
     if (m_idisp)
         m_idisp->Release();
     m_idisp = idisp;
 }
 
-bool DispatchObj::Create(OLECHAR *progid)
-{
+bool DispatchObj::Create(OLECHAR *progid) {
     CLSID clsid;
     if (FAILED(CLSIDFromProgID(progid, &clsid)))
         return false;
     IDispatch *idisp;
     HRESULT hr;
-    if (FAILED(hr = CoCreateInstance(clsid, NULL, CLSCTX_SERVER, IID_IDispatch, (LPVOID *)&idisp)))
-    {
-        Debug.AddLine(std::string::Format("CoCreateInstance: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+    if (FAILED(hr = CoCreateInstance(clsid, NULL, CLSCTX_SERVER, IID_IDispatch,
+                                     (LPVOID *)&idisp))) {
+        Debug.AddLine(std::string::Format("CoCreateInstance: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
         return false;
     }
     m_idisp = idisp;
     return true;
 }
 
-bool DispatchObj::GetDispatchId(DISPID *ret, OLECHAR *name)
-{
+bool DispatchObj::GetDispatchId(DISPID *ret, OLECHAR *name) {
     if (m_class)
         return m_class->dispid_cached(ret, m_idisp, name, &m_excep);
     else
         return DispatchClass::dispid(ret, m_idisp, name, &m_excep);
 }
 
-bool DispatchObj::GetProp(Variant *res, DISPID dispid)
-{
+bool DispatchObj::GetProp(Variant *res, DISPID dispid) {
     DISPPARAMS dispParms;
     dispParms.cArgs = 0;
     dispParms.rgvarg = NULL;
     dispParms.cNamedArgs = 0;
     dispParms.rgdispidNamedArgs = NULL;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET, &dispParms, res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT,
+                        DISPATCH_PROPERTYGET, &dispParms, res, &m_excep, NULL);
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("invoke: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("invoke: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::GetProp(Variant *res, OLECHAR *name)
-{
+bool DispatchObj::GetProp(Variant *res, OLECHAR *name) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
@@ -180,8 +160,7 @@ bool DispatchObj::GetProp(Variant *res, OLECHAR *name)
     return GetProp(res, dispid);
 }
 
-bool DispatchObj::GetProp(Variant *res, OLECHAR *name, int arg)
-{
+bool DispatchObj::GetProp(Variant *res, OLECHAR *name, int arg) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
@@ -194,16 +173,18 @@ bool DispatchObj::GetProp(Variant *res, OLECHAR *name, int arg)
     dispParms.rgvarg = rgvarg;
     dispParms.cNamedArgs = 0;
     dispParms.rgdispidNamedArgs = NULL;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYGET, &dispParms, res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT,
+                        DISPATCH_PROPERTYGET, &dispParms, res, &m_excep, NULL);
 
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("getprop: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("getprop: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
 
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::PutProp(OLECHAR *name, OLECHAR *val)
-{
+bool DispatchObj::PutProp(OLECHAR *name, OLECHAR *val) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
@@ -219,17 +200,19 @@ bool DispatchObj::PutProp(OLECHAR *name, OLECHAR *val)
     dispParms.cNamedArgs = 1;
     dispParms.rgdispidNamedArgs = &dispidNamed;
     Variant res;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYPUT, &dispParms, &res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT,
+                        DISPATCH_PROPERTYPUT, &dispParms, &res, &m_excep, NULL);
     SysFreeString(bs);
 
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("putprop: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("putprop: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
 
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::PutProp(DISPID dispid, bool val)
-{
+bool DispatchObj::PutProp(DISPID dispid, bool val) {
     VARIANTARG rgvarg[1];
     rgvarg[0].vt = VT_BOOL;
     rgvarg[0].boolVal = val ? VARIANT_TRUE : VARIANT_FALSE;
@@ -240,14 +223,16 @@ bool DispatchObj::PutProp(DISPID dispid, bool val)
     dispParms.cNamedArgs = 1;
     dispParms.rgdispidNamedArgs = &dispidNamed;
     Variant res;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYPUT, &dispParms, &res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT,
+                        DISPATCH_PROPERTYPUT, &dispParms, &res, &m_excep, NULL);
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("putprop: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("putprop: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::PutProp(DISPID dispid, double val)
-{
+bool DispatchObj::PutProp(DISPID dispid, double val) {
     VARIANTARG rgvarg[1];
     rgvarg[0].vt = VT_R8;
     rgvarg[0].dblVal = val;
@@ -258,22 +243,23 @@ bool DispatchObj::PutProp(DISPID dispid, double val)
     dispParms.cNamedArgs = 1;
     dispParms.rgdispidNamedArgs = &dispidNamed;
     Variant res;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_PROPERTYPUT, &dispParms, &res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT,
+                        DISPATCH_PROPERTYPUT, &dispParms, &res, &m_excep, NULL);
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("putprop: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("putprop: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::PutProp(OLECHAR *name, bool val)
-{
+bool DispatchObj::PutProp(OLECHAR *name, bool val) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
     return PutProp(dispid, val);
 }
 
-bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name, OLECHAR *arg)
-{
+bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name, OLECHAR *arg) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
@@ -287,15 +273,18 @@ bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name, OLECHAR *arg)
     dispParms.rgvarg = rgvarg;
     dispParms.cNamedArgs = 0;
     dispParms.rgdispidNamedArgs = NULL;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &dispParms, res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD,
+                        &dispParms, res, &m_excep, NULL);
     SysFreeString(bs);
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("invoke(%s): [%x] %s", name, hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("invoke(%s): [%x] %s", name, hr,
+                                          _com_error(hr).ErrorMessage()));
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::InvokeMethod(Variant *res, DISPID dispid, double arg1, double arg2)
-{
+bool DispatchObj::InvokeMethod(Variant *res, DISPID dispid, double arg1,
+                               double arg2) {
     VARIANTARG rgvarg[2];
     rgvarg[0].vt = VT_R8;
     rgvarg[0].dblVal = arg2;
@@ -306,80 +295,80 @@ bool DispatchObj::InvokeMethod(Variant *res, DISPID dispid, double arg1, double 
     dispParms.rgvarg = rgvarg;
     dispParms.cNamedArgs = 0;
     dispParms.rgdispidNamedArgs = NULL;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &dispParms, res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD,
+                        &dispParms, res, &m_excep, NULL);
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("invoke: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("invoke: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name, double arg1, double arg2)
-{
+bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name, double arg1,
+                               double arg2) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
     return InvokeMethod(res, dispid, arg1, arg2);
 }
 
-bool DispatchObj::InvokeMethod(Variant *res, DISPID dispid)
-{
+bool DispatchObj::InvokeMethod(Variant *res, DISPID dispid) {
     DISPPARAMS dispParms;
     dispParms.cArgs = 0;
     dispParms.rgvarg = NULL;
     dispParms.cNamedArgs = 0;
     dispParms.rgdispidNamedArgs = NULL;
-    HRESULT hr = m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD, &dispParms, res, &m_excep, NULL);
+    HRESULT hr =
+        m_idisp->Invoke(dispid, IID_NULL, LOCALE_USER_DEFAULT, DISPATCH_METHOD,
+                        &dispParms, res, &m_excep, NULL);
     if (FAILED(hr))
-        Debug.AddLine(std::string::Format("invoke: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+        Debug.AddLine(std::string::Format("invoke: [%x] %s", hr,
+                                          _com_error(hr).ErrorMessage()));
     return SUCCEEDED(hr);
 }
 
-bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name)
-{
+bool DispatchObj::InvokeMethod(Variant *res, OLECHAR *name) {
     DISPID dispid;
     if (!GetDispatchId(&dispid, name))
         return false;
     return InvokeMethod(res, dispid);
 }
 
-GITEntry::GITEntry()
-    : m_pIGlobalInterfaceTable(0), m_dwCookie(0)
-{
-}
+GITEntry::GITEntry() : m_pIGlobalInterfaceTable(0), m_dwCookie(0) {}
 
-GITEntry::~GITEntry()
-{
-    Unregister();
-}
+GITEntry::~GITEntry() { Unregister(); }
 
-void GITEntry::Register(IDispatch *idisp)
-{
-    if (!m_pIGlobalInterfaceTable)
-    {
+void GITEntry::Register(IDispatch *idisp) {
+    if (!m_pIGlobalInterfaceTable) {
         // first find the global table
         HRESULT hr;
-        if (FAILED(hr = ::CoCreateInstance(CLSID_StdGlobalInterfaceTable, NULL, CLSCTX_INPROC_SERVER, IID_IGlobalInterfaceTable,
-            (void **)&m_pIGlobalInterfaceTable)))
-        {
-            Debug.AddLine(std::string::Format("create global interface table: [%x] %s", hr, _com_error(hr).ErrorMessage()));
-            throw ERROR_INFO("Cannot CoCreateInstance of Global Interface Table");
+        if (FAILED(hr = ::CoCreateInstance(
+                       CLSID_StdGlobalInterfaceTable, NULL,
+                       CLSCTX_INPROC_SERVER, IID_IGlobalInterfaceTable,
+                       (void **)&m_pIGlobalInterfaceTable))) {
+            Debug.AddLine(
+                std::string::Format("create global interface table: [%x] %s",
+                                    hr, _com_error(hr).ErrorMessage()));
+            throw ERROR_INFO(
+                "Cannot CoCreateInstance of Global Interface Table");
         }
     }
 
-    // add the Interface to the global table. Any errors past this point need to remove the interface from the global table.
+    // add the Interface to the global table. Any errors past this point need to
+    // remove the interface from the global table.
     HRESULT hr;
-    if (FAILED(hr = m_pIGlobalInterfaceTable->RegisterInterfaceInGlobal(idisp, IID_IDispatch, &m_dwCookie)))
-    {
-        Debug.AddLine(std::string::Format("register in global interface table: [%x] %s", hr, _com_error(hr).ErrorMessage()));
+    if (FAILED(hr = m_pIGlobalInterfaceTable->RegisterInterfaceInGlobal(
+                   idisp, IID_IDispatch, &m_dwCookie))) {
+        Debug.AddLine(
+            std::string::Format("register in global interface table: [%x] %s",
+                                hr, _com_error(hr).ErrorMessage()));
         throw ERROR_INFO("Cannot register object in Global Interface Table");
     }
 }
 
-void GITEntry::Unregister()
-{
-    if (m_pIGlobalInterfaceTable)
-    {
-        if (m_dwCookie)
-        {
+void GITEntry::Unregister() {
+    if (m_pIGlobalInterfaceTable) {
+        if (m_dwCookie) {
             m_pIGlobalInterfaceTable->RevokeInterfaceFromGlobal(m_dwCookie);
             m_dwCookie = 0;
         }

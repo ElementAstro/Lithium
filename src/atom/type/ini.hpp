@@ -16,18 +16,17 @@ Description: INI File Read/Write Library
 #define ATOM_TYPE_INI_HPP
 
 #include <any>
-#include <optional>
-#include <string>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
+#include <string>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
 #include <unordered_map>
 #endif
 
-class INIFile
-{
+class INIFile {
 public:
     /**
      * @brief 加载INI文件
@@ -53,7 +52,8 @@ public:
      * @param value 值
      */
     template <typename T>
-    void set(const std::string &section, const std::string &key, const T &value);
+    void set(const std::string &section, const std::string &key,
+             const T &value);
 
     /**
      * @brief 获取INI文件中的值
@@ -63,7 +63,8 @@ public:
      * @return 值，如果不存在则返回std::nullopt
      */
     template <typename T>
-    std::optional<T> get(const std::string &section, const std::string &key) const;
+    std::optional<T> get(const std::string &section,
+                         const std::string &key) const;
 
     /**
      * @brief 判断INI文件中是否存在指定键
@@ -85,8 +86,8 @@ public:
      * @param section 部分名
      * @return 部分内容
      */
-    std::unordered_map<std::string, std::any> operator[](const std::string &section)
-    {
+    std::unordered_map<std::string, std::any> operator[](
+        const std::string &section) {
         return data[section];
     }
 
@@ -104,12 +105,14 @@ public:
 
 private:
 #if ENABlE_FASTHASH
-    emhash8::HashMap<std::string, emhash8::HashMap<std::string, std::any>> data; // 存储数据的映射表
+    emhash8::HashMap<std::string, emhash8::HashMap<std::string, std::any>>
+        data;  // 存储数据的映射表
 #else
-    std::unordered_map<std::string, std::unordered_map<std::string, std::any>> data; // 存储数据的映射表
+    std::unordered_map<std::string, std::unordered_map<std::string, std::any>>
+        data;  // 存储数据的映射表
 #endif
 
-    mutable std::shared_mutex m_sharedMutex; // 共享互斥锁，用于线程安全
+    mutable std::shared_mutex m_sharedMutex;  // 共享互斥锁，用于线程安全
     /**
      * @brief 解析INI文件的一行，并更新当前部分
      * @param line 行内容

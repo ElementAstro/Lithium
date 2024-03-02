@@ -14,46 +14,42 @@ Description: Module Information
 
 #pragma once
 
+#include <atomic>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <atomic>
 
-namespace Lithium
-{
-    struct FunctionInfo
-    {
-        std::string name;
-        void *address;
-        std::vector<std::string> parameters;
 
-        FunctionInfo() : name(""), address(nullptr)
-        {
-        }
-    };
+namespace Lithium {
+struct FunctionInfo {
+    std::string name;
+    void *address;
+    std::vector<std::string> parameters;
 
-    class ModuleInfo
-    {
-        // All of the module information
-    public:
-        std::string m_name;
-        std::string m_description;
-        std::string m_version;
-        std::string m_status;
-        std::string m_type;
-        std::string m_author;
-        std::string m_license;
-        std::string m_path;
-        std::string m_config_path;
-        std::string m_config_file;
+    FunctionInfo() : name(""), address(nullptr) {}
+};
 
-        // Module enable status
-        std::atomic_bool m_enabled;
+class ModuleInfo {
+    // All of the module information
+public:
+    std::string m_name;
+    std::string m_description;
+    std::string m_version;
+    std::string m_status;
+    std::string m_type;
+    std::string m_author;
+    std::string m_license;
+    std::string m_path;
+    std::string m_config_path;
+    std::string m_config_file;
 
-        // All of the functions in the module(dynamic loaded)
-        std::vector<std::unique_ptr<FunctionInfo>> functions;
+    // Module enable status
+    std::atomic_bool m_enabled;
 
-        // Module handle pointer
-        void *handle;
-    };
-} // namespace Lithium
+    // All of the functions in the module(dynamic loaded)
+    std::vector<std::unique_ptr<FunctionInfo>> functions;
+
+    // Module handle pointer
+    void *handle;
+};
+}  // namespace Lithium

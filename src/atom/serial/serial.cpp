@@ -17,115 +17,104 @@ Description: Serial Helper
 #ifdef _WIN32
 #include <winbase.h>
 #else
+#include <dirent.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
-#include <dirent.h>
 #endif
 
-namespace Atom::Serial
-{
-    SerialPort::SerialPort(const std::string &portName, int baudRate, int dataBits, Parity parity, StopBits stopBits)
-        : portName_(portName), baudRate_(baudRate), dataBits_(dataBits), parity_(parity), stopBits_(stopBits), handle_(-1) {}
+namespace Atom::Serial {
+SerialPort::SerialPort(const std::string &portName, int baudRate, int dataBits,
+                       Parity parity, StopBits stopBits)
+    : portName_(portName),
+      baudRate_(baudRate),
+      dataBits_(dataBits),
+      parity_(parity),
+      stopBits_(stopBits),
+      handle_(-1) {}
 
-    SerialPort::~SerialPort()
-    {
-        close();
-    }
+SerialPort::~SerialPort() { close(); }
 
-    bool SerialPort::open()
-    {
+bool SerialPort::open() {
 #ifdef _WIN32
-        handle_ = CreateFile(portName_.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-        if (handle_ == INVALID_HANDLE_VALUE)
-        {
-            return false;
-        }
+    handle_ = CreateFile(portName_.c_str(), GENERIC_READ | GENERIC_WRITE, 0,
+                         NULL, OPEN_EXISTING, 0, NULL);
+    if (handle_ == INVALID_HANDLE_VALUE) {
+        return false;
+    }
 #else
-        handle_ = ::open(portName_.c_str(), O_RDWR | O_NOCTTY);
-        if (handle_ == -1)
-        {
-            return false;
-        }
+    handle_ = ::open(portName_.c_str(), O_RDWR | O_NOCTTY);
+    if (handle_ == -1) {
+        return false;
+    }
 #endif
 
-        setParameters();
+    setParameters();
 
-        return true;
-    }
+    return true;
+}
 
-    void SerialPort::close()
-    {
-        if (handle_ != -1)
-        {
+void SerialPort::close() {
+    if (handle_ != -1) {
 #ifdef _WIN32
-            CloseHandle(handle_);
+        CloseHandle(handle_);
 #else
-            ::close(handle_);
+        ::close(handle_);
 #endif
-            handle_ = -1;
-        }
+        handle_ = -1;
     }
+}
 
-    bool SerialPort::read(char *buffer, int bufferSize)
-    {
+bool SerialPort::read(char *buffer, int bufferSize) {
 #ifdef _WIN32
-        DWORD bytesRead;
-        if (!ReadFile(handle_, buffer, bufferSize, &bytesRead, NULL))
-        {
-            // 处理读取失败的情况
-            return false;
-        }
+    DWORD bytesRead;
+    if (!ReadFile(handle_, buffer, bufferSize, &bytesRead, NULL)) {
+        // 处理读取失败的情况
+        return false;
+    }
 #else
-        ssize_t bytesRead = ::read(handle_, buffer, bufferSize);
-        if (bytesRead == -1)
-        {
-            // 处理读取失败的情况
-            return false;
-        }
+    ssize_t bytesRead = ::read(handle_, buffer, bufferSize);
+    if (bytesRead == -1) {
+        // 处理读取失败的情况
+        return false;
+    }
 #endif
 
-        return true;
-    }
+    return true;
+}
 
-    bool SerialPort::write(const char *data, int dataSize)
-    {
+bool SerialPort::write(const char *data, int dataSize) {
 #ifdef _WIN32
-        DWORD bytesWritten;
-        if (!WriteFile(handle_, data, dataSize, &bytesWritten, NULL))
-        {
-            // 处理写入失败的情况
-            return false;
-        }
+    DWORD bytesWritten;
+    if (!WriteFile(handle_, data, dataSize, &bytesWritten, NULL)) {
+        // 处理写入失败的情况
+        return false;
+    }
 #else
-        ssize_t bytesWritten = ::write(handle_, data, dataSize);
-        if (bytesWritten == -1)
-        {
-            // 处理写入失败的情况
-            return false;
-        }
+    ssize_t bytesWritten = ::write(handle_, data, dataSize);
+    if (bytesWritten == -1) {
+        // 处理写入失败的情况
+        return false;
+    }
 #endif
 
-        return true;
+    return true;
+}
+
+void SerialPort::setParameters() {
+#ifdef _WIN32
+    DCB dcbSerialParams = {0};
+    dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+    if (!GetCommState(handle_, &dcbSerialParams)) {
+        // 处理获取串口状态失败的情况
+        return;
     }
 
-    void SerialPort::setParameters()
-    {
-#ifdef _WIN32
-        DCB dcbSerialParams = {0};
-        dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-        if (!GetCommState(handle_, &dcbSerialParams))
-        {
-            // 处理获取串口状态失败的情况
-            return;
-        }
+    // 设置波特率
+    dcbSerialParams.BaudRate = baudRate_;
 
-        // 设置波特率
-        dcbSerialParams.BaudRate = baudRate_;
-
-        // 设置数据位
-        switch (dataBits_)
-        {
+    // 设置数据位
+    switch (dataBits_) {
         case 5:
             dcbSerialParams.ByteSize = 5;
             break;
@@ -141,11 +130,10 @@ namespace Atom::Serial
         default:
             // 处理无效的数据位设置
             return;
-        }
+    }
 
-        // 设置奇偶校验
-        switch (parity_)
-        {
+    // 设置奇偶校验
+    switch (parity_) {
         case Parity::None:
             dcbSerialParams.Parity = NOPARITY;
             break;
@@ -158,11 +146,10 @@ namespace Atom::Serial
         default:
             // 处理无效的奇偶校验设置
             return;
-        }
+    }
 
-        // 设置停止位
-        switch (stopBits_)
-        {
+    // 设置停止位
+    switch (stopBits_) {
         case StopBits::One:
             dcbSerialParams.StopBits = ONESTOPBIT;
             break;
@@ -175,25 +162,22 @@ namespace Atom::Serial
         default:
             // 处理无效的停止位设置
             return;
-        }
+    }
 
-        if (!SetCommState(handle_, &dcbSerialParams))
-        {
-            // 处理设置串口状态失败的情况
-            return;
-        }
+    if (!SetCommState(handle_, &dcbSerialParams)) {
+        // 处理设置串口状态失败的情况
+        return;
+    }
 #else
-        struct termios options;
-        if (tcgetattr(handle_, &options) == -1)
-        {
-            // 处理获取串口属性失败的情况
-            return;
-        }
+    struct termios options;
+    if (tcgetattr(handle_, &options) == -1) {
+        // 处理获取串口属性失败的情况
+        return;
+    }
 
-        // 设置波特率
-        speed_t baudRateConstant;
-        switch (baudRate_)
-        {
+    // 设置波特率
+    speed_t baudRateConstant;
+    switch (baudRate_) {
         case 9600:
             baudRateConstant = B9600;
             break;
@@ -207,14 +191,13 @@ namespace Atom::Serial
         default:
             // 处理无效的波特率设置
             return;
-        }
-        cfsetispeed(&options, baudRateConstant);
-        cfsetospeed(&options, baudRateConstant);
+    }
+    cfsetispeed(&options, baudRateConstant);
+    cfsetospeed(&options, baudRateConstant);
 
-        // 设置数据位
-        options.c_cflag &= ~CSIZE;
-        switch (dataBits_)
-        {
+    // 设置数据位
+    options.c_cflag &= ~CSIZE;
+    switch (dataBits_) {
         case 5:
             options.c_cflag |= CS5;
             break;
@@ -230,90 +213,86 @@ namespace Atom::Serial
         default:
             // 处理无效的数据位设置
             return;
-        }
+    }
 
-        // 设置奇偶校验
-        switch (parity_)
-        {
+    // 设置奇偶校验
+    switch (parity_) {
         case Parity::None:
-            options.c_cflag &= ~PARENB; // 禁用奇偶校验
-            options.c_iflag &= ~INPCK;  // 禁用输入奇偶校验
+            options.c_cflag &= ~PARENB;  // 禁用奇偶校验
+            options.c_iflag &= ~INPCK;   // 禁用输入奇偶校验
             break;
         case Parity::Odd:
-            options.c_cflag |= (PARENB | PARODD); // 启用奇偶校验，奇校验
-            options.c_iflag |= INPCK;             // 启用输入奇偶校验
+            options.c_cflag |= (PARENB | PARODD);  // 启用奇偶校验，奇校验
+            options.c_iflag |= INPCK;              // 启用输入奇偶校验
             break;
         case Parity::Even:
-            options.c_cflag |= PARENB; // 启用奇偶校验，偶校验
+            options.c_cflag |= PARENB;  // 启用奇偶校验，偶校验
             options.c_cflag &= ~PARODD;
-            options.c_iflag |= INPCK; // 启用输入奇偶校验
+            options.c_iflag |= INPCK;  // 启用输入奇偶校验
             break;
         default:
             // 处理无效的奇偶校验设置
 
             return;
-        }
+    }
 
-        // 设置停止位
-        switch (stopBits_)
-        {
+    // 设置停止位
+    switch (stopBits_) {
         case StopBits::One:
-            options.c_cflag &= ~CSTOPB; // 1位停止位
+            options.c_cflag &= ~CSTOPB;  // 1位停止位
             break;
         case StopBits::Two:
-            options.c_cflag |= CSTOPB; // 2位停止位
+            options.c_cflag |= CSTOPB;  // 2位停止位
             break;
         default:
             // 处理无效的停止位设置
             return;
-        }
-
-        if (tcsetattr(handle_, TCSANOW, &options) == -1)
-        {
-            // 处理设置串口属性失败的情况
-            return;
-        }
-#endif
     }
 
-    std::vector<std::string> SerialPortFactory::getAvailablePorts()
-    {
-        std::vector<std::string> ports;
+    if (tcsetattr(handle_, TCSANOW, &options) == -1) {
+        // 处理设置串口属性失败的情况
+        return;
+    }
+#endif
+}
+
+std::vector<std::string> SerialPortFactory::getAvailablePorts() {
+    std::vector<std::string> ports;
 
 #ifdef _WIN32
-        for (int i = 1; i <= 256; i++)
-        {
-            std::string portName = "COM" + std::to_string(i);
-            HANDLE handle = CreateFile(portName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-            if (handle != INVALID_HANDLE_VALUE)
-            {
-                ports.push_back(portName);
-                CloseHandle(handle);
-            }
+    for (int i = 1; i <= 256; i++) {
+        std::string portName = "COM" + std::to_string(i);
+        HANDLE handle =
+            CreateFile(portName.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL,
+                       OPEN_EXISTING, 0, NULL);
+        if (handle != INVALID_HANDLE_VALUE) {
+            ports.push_back(portName);
+            CloseHandle(handle);
         }
+    }
 #else
-        DIR *dir = opendir("/dev");
-        if (dir != NULL)
-        {
-            struct dirent *entry;
-            while ((entry = readdir(dir)) != NULL)
-            {
-                std::string portName = entry->d_name;
-                if (portName.find("tty") != std::string::npos || portName.find("cu") != std::string::npos)
-                {
-                    ports.push_back("/dev/" + portName);
-                }
+    DIR *dir = opendir("/dev");
+    if (dir != NULL) {
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL) {
+            std::string portName = entry->d_name;
+            if (portName.find("tty") != std::string::npos ||
+                portName.find("cu") != std::string::npos) {
+                ports.push_back("/dev/" + portName);
             }
-            closedir(dir);
         }
+        closedir(dir);
+    }
 #endif
 
-        return ports;
-    }
-
-    SerialPort SerialPortFactory::createSerialPort(const std::string &portName, int baudRate, int dataBits, Parity parity, StopBits stopBits)
-    {
-        return SerialPort(portName, baudRate, dataBits, parity, stopBits);
-    }
-
+    return ports;
 }
+
+SerialPort SerialPortFactory::createSerialPort(const std::string &portName,
+                                               int baudRate, int dataBits,
+                                               Parity parity,
+                                               StopBits stopBits) {
+    return SerialPort(portName, baudRate, dataBits, parity, stopBits);
+}
+
+}  // namespace Atom::Serial

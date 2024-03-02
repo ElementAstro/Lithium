@@ -19,139 +19,116 @@ Description: A simple type wrapper
 #include <tuple>
 #include <type_traits>
 
-namespace Atom::Type
-{
-    class Any
-    {
-    public:
-        template <typename T>
-        Any(const T &value) : m_ptr(new Derived<T>(value)) {}
-
-        template <typename T>
-        T cast() const
-        {
-            return static_cast<Derived<T> *>(m_ptr)->m_value;
-        }
-
-    private:
-        struct Base
-        {
-            virtual ~Base() {}
-        };
-
-        template <typename T>
-        struct Derived : Base
-        {
-            explicit Derived(const T &value) : m_value(value) {}
-            T m_value;
-        };
-
-        Base *m_ptr;
-    };
-
-    // 优化后的自动类型类模板
+namespace Atom::Type {
+class Any {
+public:
     template <typename T>
-    class AutoType
-    {
-    public:
-        explicit AutoType(const T &value) : m_value(value) {}
+    Any(const T &value) : m_ptr(new Derived<T>(value)) {}
 
-        template <typename U>
-        auto operator+(const AutoType<U> &other) const
-        {
-            return AutoType(m_value + other.m_value);
-        }
-
-        template <typename U>
-        auto operator-(const AutoType<U> &other) const
-        {
-            return AutoType(m_value - other.m_value);
-        }
-
-        template <typename U>
-        auto operator*(const AutoType<U> &other) const
-        {
-            return AutoType(m_value * other.m_value);
-        }
-
-        template <typename U>
-        auto operator/(const AutoType<U> &other) const
-        {
-            return AutoType(m_value / other.m_value);
-        }
-
-        template <typename U>
-        auto operator%(const AutoType<U> &other) const
-        {
-            return AutoType(m_value % other.m_value);
-        }
-
-        template <typename U>
-        auto operator==(const AutoType<U> &other) const
-        {
-            return m_value == other.m_value;
-        }
-
-        template <typename U>
-        auto operator!=(const AutoType<U> &other) const
-        {
-            return m_value != other.m_value;
-        }
-
-        template <typename U>
-        auto operator<(const AutoType<U> &other) const
-        {
-            return m_value < other.m_value;
-        }
-
-        template <typename U>
-        auto operator<=(const AutoType<U> &other) const
-        {
-            return m_value <= other.m_value;
-        }
-
-        template <typename U>
-        auto operator>(const AutoType<U> &other) const
-        {
-            return m_value > other.m_value;
-        }
-
-        template <typename U>
-        auto operator>=(const AutoType<U> &other) const
-        {
-            return m_value >= other.m_value;
-        }
-
-        // 省略其他运算符重载
-
-        T m_value; // 成员变量
-    };
-
-    // 辅助函数模板，用于创建AutoType对象
     template <typename T>
-    AutoType<T> makeAutoType(const T &value)
-    {
-        return AutoType<T>(value);
+    T cast() const {
+        return static_cast<Derived<T> *>(m_ptr)->m_value;
     }
 
-    // 元组打印类模板
-    template <typename Tuple, std::size_t N = std::tuple_size_v<Tuple>>
-    struct TuplePrinter
-    {
-        static void print(const Tuple &t)
-        {
-            if constexpr (N > 1)
-            {
-                TuplePrinter<Tuple, N - 1>::print(t);
-                std::cout << ", " << std::get<N - 1>(t);
-            }
-            else
-            {
-                std::cout << std::get<0>(t);
-            }
-        }
+private:
+    struct Base {
+        virtual ~Base() {}
     };
+
+    template <typename T>
+    struct Derived : Base {
+        explicit Derived(const T &value) : m_value(value) {}
+        T m_value;
+    };
+
+    Base *m_ptr;
+};
+
+// 优化后的自动类型类模板
+template <typename T>
+class AutoType {
+public:
+    explicit AutoType(const T &value) : m_value(value) {}
+
+    template <typename U>
+    auto operator+(const AutoType<U> &other) const {
+        return AutoType(m_value + other.m_value);
+    }
+
+    template <typename U>
+    auto operator-(const AutoType<U> &other) const {
+        return AutoType(m_value - other.m_value);
+    }
+
+    template <typename U>
+    auto operator*(const AutoType<U> &other) const {
+        return AutoType(m_value * other.m_value);
+    }
+
+    template <typename U>
+    auto operator/(const AutoType<U> &other) const {
+        return AutoType(m_value / other.m_value);
+    }
+
+    template <typename U>
+    auto operator%(const AutoType<U> &other) const {
+        return AutoType(m_value % other.m_value);
+    }
+
+    template <typename U>
+    auto operator==(const AutoType<U> &other) const {
+        return m_value == other.m_value;
+    }
+
+    template <typename U>
+    auto operator!=(const AutoType<U> &other) const {
+        return m_value != other.m_value;
+    }
+
+    template <typename U>
+    auto operator<(const AutoType<U> &other) const {
+        return m_value < other.m_value;
+    }
+
+    template <typename U>
+    auto operator<=(const AutoType<U> &other) const {
+        return m_value <= other.m_value;
+    }
+
+    template <typename U>
+    auto operator>(const AutoType<U> &other) const {
+        return m_value > other.m_value;
+    }
+
+    template <typename U>
+    auto operator>=(const AutoType<U> &other) const {
+        return m_value >= other.m_value;
+    }
+
+    // 省略其他运算符重载
+
+    T m_value;  // 成员变量
+};
+
+// 辅助函数模板，用于创建AutoType对象
+template <typename T>
+AutoType<T> makeAutoType(const T &value) {
+    return AutoType<T>(value);
 }
+
+// 元组打印类模板
+template <typename Tuple, std::size_t N = std::tuple_size_v<Tuple>>
+struct TuplePrinter {
+    static void print(const Tuple &t) {
+        if constexpr (N > 1) {
+            TuplePrinter<Tuple, N - 1>::print(t);
+            std::cout << ", " << std::get<N - 1>(t);
+        } else {
+            std::cout << std::get<0>(t);
+        }
+    }
+};
+}  // namespace Atom::Type
 
 #endif
 

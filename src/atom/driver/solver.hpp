@@ -16,8 +16,7 @@ Description: Basic Solver Defination
 
 #include "device.hpp"
 
-enum class SolveStatus
-{
+enum class SolveStatus {
     Success = 0,
     Error = 1,
     Timeout = 2,
@@ -25,8 +24,7 @@ enum class SolveStatus
     Unknown = 4,
 };
 
-struct SolveResult
-{
+struct SolveResult {
     std::string ra;
     std::string dec;
     double fov_x = 0;
@@ -37,8 +35,7 @@ struct SolveResult
     std::string error;
 };
 
-class Solver : public AtomDriver
-{
+class Solver : public AtomDriver {
 public:
     Solver(const std::string &name);
     ~Solver();
@@ -54,7 +51,8 @@ public:
 public:
     virtual bool _solveImage(const json &params);
 
-    virtual bool solveImage(const std::string &image, const int &timeout, const bool &debug);
+    virtual bool solveImage(const std::string &image, const int &timeout,
+                            const bool &debug);
 
     virtual bool _getSolveResult(const json &params);
 

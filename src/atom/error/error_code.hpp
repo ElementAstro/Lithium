@@ -2,17 +2,6 @@
  * error_code.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -26,8 +15,7 @@ Description: All of the error code
 #ifndef ATOM_ERROR_CODE_HPP
 #define ATOM_ERROR_CODE_HPP
 
-enum class LIError
-{
+enum class LIError {
     None,              // 无错误
     NotFound,          // 文件未找到
     OepnError,         // 无法打开
@@ -35,18 +23,17 @@ enum class LIError
     ReadError,         // 读取错误
     WriteError,        // 写入错误
     PermissionDenied,  // 权限被拒绝
-    ParseError,        // 解析错误，通常由json.hpp抛出异常然后捕获
-    InvalidPath,       // 无效路径
-    FileExists,        // 文件已存在
-    DirectoryNotEmpty, // 目录非空
-    TooManyOpenFiles,  // 打开的文件过多
-    DiskFull,          // 磁盘已满
-    LoadError,         // 动态库加载错误
-    UnLoadError        // 动态卸载错误
+    ParseError,   // 解析错误，通常由json.hpp抛出异常然后捕获
+    InvalidPath,  // 无效路径
+    FileExists,   // 文件已存在
+    DirectoryNotEmpty,  // 目录非空
+    TooManyOpenFiles,   // 打开的文件过多
+    DiskFull,           // 磁盘已满
+    LoadError,          // 动态库加载错误
+    UnLoadError         // 动态卸载错误
 };
 
-enum class DeviceError
-{
+enum class DeviceError {
     None,
     NotSpecific,
     NotFound,
@@ -71,8 +58,7 @@ enum class DeviceError
     HomeError
 };
 
-enum class DeviceWarning
-{
+enum class DeviceWarning {
     // For Camera
     ExposureWarning,
     GainWarning,
@@ -88,15 +74,14 @@ enum class DeviceWarning
     HomeWarning
 };
 
-enum class ServerError
-{
+enum class ServerError {
     None,
     InvalidParameters,
     InvalidFormat,
     MissingParameters,
 
     RunFailed,
-    
+
     UnknownError,
     UnknownCommand,
     UnknownDevice,

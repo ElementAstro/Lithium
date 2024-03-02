@@ -18,36 +18,39 @@ Description: Notifier for poll
 #include <Ws2tcpip.h>
 #include <windows.h>
 #elif defined(ATOM_OS_LINUX)
-#include <string.h>
-#include <pthread.h>
-#include <unistd.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
-#include <sys/types.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <pthread.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <signal.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
-
-#elif defined(ATOM_OS_MAC)
-#include <string.h>
-#include <pthread.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <sys/fcntl.h>
-#include <sys/time.h>
-#include <sys/uio.h>
-#include <netinet/tcp.h>
-#include <netinet/in.h>
+
+#elif defined(ATOM_OS_MAC)
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
+
+
 #include <arpa/inet.h>
-#include <netdb.h>
 #include <ifaddrs.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+
 
 #else
 #error "UNSUPPORTED OS"
@@ -63,8 +66,7 @@ Description: Notifier for poll
 
 ATOM_NS_USING
 
-NotifierPtr Notifier::createNotifier()
-{
+NotifierPtr Notifier::createNotifier() {
 #ifdef ATOM_OS_LINUX
     return NotifierPtr(new EventNotifier());
 #elif !defined(ATOM_OS_WIN)

@@ -19,8 +19,7 @@ Description: Basic Component Types Definition and Some Utilities
 
 #include <string>
 
-enum class ComponentType
-{
+enum class ComponentType {
     NONE,
     SHREAD,
     ALONE,
@@ -35,7 +34,8 @@ enum class ComponentType
 
 [[maybe_unused]] std::ostream &operator<<(std::ostream &os, ComponentType type);
 
-[[maybe_unused]] std::istream &operator>>(std::istream &is, ComponentType &type);
+[[maybe_unused]] std::istream &operator>>(std::istream &is,
+                                          ComponentType &type);
 
 [[maybe_unused]] [[nodiscard]] ComponentType toComponentType(const int &type);
 

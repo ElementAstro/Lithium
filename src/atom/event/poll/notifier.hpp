@@ -21,8 +21,7 @@ Description: Notifier
 
 ATOM_NS_BEGIN
 
-class Notifier
-{
+class Notifier {
 public:
     virtual ~Notifier() {}
     virtual bool init() = 0;

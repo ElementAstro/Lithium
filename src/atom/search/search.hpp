@@ -12,37 +12,40 @@ Description: A search engine
 
 **************************************************/
 
-#pragma once
+#ifndef ATOM_SEARCH_SEARCH_HPP
+#define ATOM_SEARCH_SEARCH_HPP
 
-#include <vector>
-#include <unordered_map>
-#include <string>
-#include <regex>
-#include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include <regex>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 /**
  * @brief Abstract base class for matching strategies.
  */
-class MatchStrategy
-{
+class MatchStrategy {
 public:
     /**
-     * @brief Matches the given query against the index using a specific strategy.
+     * @brief Matches the given query against the index using a specific
+     * strategy.
      * @param query The query string to match.
      * @param index The index containing the data to match against.
      * @param threshold The matching threshold (optional).
      * @return A vector of matched strings.
      */
-    virtual std::vector<std::string> match(const std::string &query, const std::unordered_map<size_t, std::vector<std::string>> &index, int threshold = 3) = 0;
+    virtual std::vector<std::string> match(
+        const std::string &query,
+        const std::unordered_map<size_t, std::vector<std::string>> &index,
+        int threshold = 3) = 0;
 };
 
 /**
  * @brief Fuzzy matching strategy based on edit distance.
  */
-class FuzzyMatch : public MatchStrategy
-{
+class FuzzyMatch : public MatchStrategy {
 public:
     /**
      * @brief Matches the given query against the index using fuzzy matching.
@@ -51,7 +54,10 @@ public:
      * @param threshold The matching threshold.
      * @return A vector of matched strings.
      */
-    std::vector<std::string> match(const std::string &query, const std::unordered_map<size_t, std::vector<std::string>> &index, int threshold) override;
+    std::vector<std::string> match(
+        const std::string &query,
+        const std::unordered_map<size_t, std::vector<std::string>> &index,
+        int threshold) override;
 
 private:
     /**
@@ -66,27 +72,30 @@ private:
 /**
  * @brief Regular expression matching strategy.
  */
-class RegexMatch : public MatchStrategy
-{
+class RegexMatch : public MatchStrategy {
 public:
     /**
-     * @brief Matches the given query against the index using regular expressions.
+     * @brief Matches the given query against the index using regular
+     * expressions.
      * @param query The query string to match.
      * @param index The index containing the data to match against.
      * @param threshold The matching threshold (not used in this strategy).
      * @return A vector of matched strings.
      */
-    std::vector<std::string> match(const std::string &query, const std::unordered_map<size_t, std::vector<std::string>> &index, int /*threshold*/) override;
+    std::vector<std::string> match(
+        const std::string &query,
+        const std::unordered_map<size_t, std::vector<std::string>> &index,
+        int /*threshold*/) override;
 };
 
 /**
  * @brief Hamming distance matching strategy.
  */
-class HammingMatch : public MatchStrategy
-{
+class HammingMatch : public MatchStrategy {
 public:
     /**
-     * @brief Constructs a new HammingMatch object with the specified maximum distance.
+     * @brief Constructs a new HammingMatch object with the specified maximum
+     * distance.
      * @param maxDistance The maximum Hamming distance allowed for a match.
      */
     HammingMatch(int maxDistance);
@@ -98,10 +107,13 @@ public:
      * @param threshold The matching threshold (not used in this strategy).
      * @return A vector of matched strings.
      */
-    std::vector<std::string> match(const std::string &query, const std::unordered_map<size_t, std::vector<std::string>> &index, int /*threshold*/) override;
+    std::vector<std::string> match(
+        const std::string &query,
+        const std::unordered_map<size_t, std::vector<std::string>> &index,
+        int /*threshold*/) override;
 
 private:
-    int maxDistance_; ///< The maximum Hamming distance allowed for a match.
+    int maxDistance_;  ///< The maximum Hamming distance allowed for a match.
 
     /**
      * @brief Calculates the Hamming distance between two strings.
@@ -115,8 +127,7 @@ private:
 /**
  * @brief TF-IDF matching strategy.
  */
-class TfIdfMatch : public MatchStrategy
-{
+class TfIdfMatch : public MatchStrategy {
 public:
     /**
      * @brief Constructs a new TfIdfMatch object with the given data.
@@ -131,11 +142,16 @@ public:
      * @param threshold The matching threshold (not used in this strategy).
      * @return A vector of matched strings.
      */
-    std::vector<std::string> match(const std::string &query, const std::unordered_map<size_t, std::vector<std::string>> &index, int /*threshold*/) override;
+    std::vector<std::string> match(
+        const std::string &query,
+        const std::unordered_map<size_t, std::vector<std::string>> &index,
+        int /*threshold*/) override;
 
 private:
-    std::vector<std::unordered_map<std::string, double>> termFrequency_; ///< The term frequency for each document.
-    std::unordered_map<std::string, double> inverseDocumentFrequency_;   ///< The inverse document frequency.
+    std::vector<std::unordered_map<std::string, double>>
+        termFrequency_;  ///< The term frequency for each document.
+    std::unordered_map<std::string, double>
+        inverseDocumentFrequency_;  ///< The inverse document frequency.
 
     /**
      * @brief Builds the index from the given data.
@@ -160,21 +176,24 @@ private:
      * @param strList The input vector of strings.
      * @return The term frequency map for the input vector of strings.
      */
-    std::unordered_map<std::string, double> calculateTf(const std::vector<std::string> &strList);
+    std::unordered_map<std::string, double> calculateTf(
+        const std::vector<std::string> &strList);
 
     /**
      * @brief Calculates the TF-IDF score for a map of term frequency (TF).
      * @param tf The term frequency map.
      * @return The TF-IDF map.
      */
-    std::unordered_map<std::string, double> calculateTfidf(const std::unordered_map<std::string, double> &tf);
+    std::unordered_map<std::string, double> calculateTfidf(
+        const std::unordered_map<std::string, double> &tf);
 
     /**
      * @brief Calculates the TF-IDF score for a vector of strings.
      * @param strList The input vector of strings.
      * @return The TF-IDF map.
      */
-    std::unordered_map<std::string, double> calculateTfidf(const std::vector<std::string> &strList);
+    std::unordered_map<std::string, double> calculateTfidf(
+        const std::vector<std::string> &strList);
 
     /**
      * @brief Calculates the cosine similarity between two TF-IDF maps.
@@ -182,17 +201,19 @@ private:
      * @param tfidf2 The second TF-IDF map.
      * @return The cosine similarity between the two maps.
      */
-    double cosineSimilarity(const std::unordered_map<std::string, double> &tfidf1, const std::unordered_map<std::string, double> &tfidf2);
+    double cosineSimilarity(
+        const std::unordered_map<std::string, double> &tfidf1,
+        const std::unordered_map<std::string, double> &tfidf2);
 };
 
 /**
  * @brief Search engine class that uses a specific matching strategy.
  */
-class SearchEngine
-{
+class SearchEngine {
 public:
     /**
-     * @brief Constructs a new SearchEngine object with the given data and matching strategy.
+     * @brief Constructs a new SearchEngine object with the given data and
+     * matching strategy.
      * @param data The vector of strings to build the index from.
      * @param strategy The matching strategy to use.
      */
@@ -205,7 +226,8 @@ public:
     void setMatchStrategy(MatchStrategy *strategy);
 
     /**
-     * @brief Searches for matches to the given query using the current matching strategy.
+     * @brief Searches for matches to the given query using the current matching
+     * strategy.
      * @param query The query string to search for.
      * @param threshold The matching threshold (optional).
      * @return A vector of matched strings.
@@ -225,8 +247,9 @@ public:
     void removeData(const std::string &str);
 
 private:
-    std::unordered_map<size_t, std::vector<std::string>> index_; ///< The index containing the data.
-    MatchStrategy *strategy_;                                    ///< The matching strategy to use.
+    std::unordered_map<size_t, std::vector<std::string>>
+        index_;                ///< The index containing the data.
+    MatchStrategy *strategy_;  ///< The matching strategy to use.
 
     /**
      * @brief Builds the index from the given data.
@@ -235,53 +258,4 @@ private:
     void buildIndex(const std::vector<std::string> &data);
 };
 
-/*
-int main()
-{
-    std::vector<std::string> data = {"apple", "banana", "orange", "watermelon", "pineapple", "mango", "peach", "pear", "grape", "kiwi"};
-    FuzzyMatch fuzzyMatch;
-    RegexMatch regexMatch;
-    HammingMatch hammingMatch(2);
-    TfIdfMatch tfidfMatch(data);
-
-    SearchEngine engine(data, &fuzzyMatch);
-
-    std::string query = "appel";
-    auto results = engine.search(query);
-    std::cout << "Fuzzy search results for '" << query << "':\n";
-    for (const auto &str : results)
-    {
-        std::cout << "- " << str << "\n";
-    }
-
-    query = ".*e.*";
-    engine.setMatchStrategy(&regexMatch);
-    results = engine.search(query);
-    std::cout << "\nRegex search results for pattern '" << query << "':\n";
-    for (const auto &str : results)
-    {
-        std::cout << "- " << str << "\n";
-    }
-
-    query = "appl";
-    engine.setMatchStrategy(&hammingMatch);
-    results = engine.search(query);
-    std::cout << "\nHamming search results for '" << query << "':\n";
-    for (const auto &str : results)
-    {
-        std::cout << "- " << str << "\n";
-    }
-
-    query = "apple";
-    engine.setMatchStrategy(&tfidfMatch);
-    results = engine.search(query);
-    std::cout << "\nTF-IDF search results for '" << query << "':\n";
-    for (const auto &str : results)
-    {
-        std::cout << "- " << str << "\n";
-    }
-
-    return 0;
-}
-
-*/
+#endif

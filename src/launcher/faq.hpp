@@ -1,13 +1,13 @@
-#include <string>
-#include <vector>
 #include <mutex>
+#include <string>
 #include <unordered_map>
+#include <vector>
+
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-struct FAQ
-{
+struct FAQ {
     std::string question;
     std::string description;
     std::string category;
@@ -16,8 +16,7 @@ struct FAQ
     std::vector<std::string> links;
 };
 
-class FAQManager
-{
+class FAQManager {
 public:
     void addFAQ(const FAQ &faq);
 

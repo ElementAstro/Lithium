@@ -20,8 +20,7 @@ Description: Camera Simulator and Basic Definition
 #include "shared_memory.hpp"
 #endif
 
-class CameraFrame
-{
+class CameraFrame {
 public:
     std::atomic_int binning_x;
     std::atomic_int binning_y;
@@ -38,15 +37,14 @@ public:
 
     std::atomic_int frame_height;
     std::atomic_int frame_width;
-    
+
     std::string frame_type;
     std::string frame_format;
     std::string upload_mode;
     std::atomic_bool is_fastread;
 };
 
-class Camera : public AtomDriver
-{
+class Camera : public AtomDriver {
 public:
     /**
      * @brief 构造函数

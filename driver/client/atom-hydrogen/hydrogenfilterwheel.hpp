@@ -16,11 +16,10 @@ Description: Hydrogen Filterwheel
 #define ATOM_HYDROGEN_FILTERWHEEL_HPP
 
 #include "atom/driver/filterwheel.hpp"
-#include "hydrogenbasic.hpp"
 #include "atom/utils/switch.hpp"
+#include "hydrogenbasic.hpp"
 
-class HydrogenFilterwheel : public Filterwheel, public HYDROGEN::BaseClient
-{
+class HydrogenFilterwheel : public Filterwheel, public HYDROGEN::BaseClient {
 public:
     explicit HydrogenFilterwheel(const std::string &name);
     ~HydrogenFilterwheel();
@@ -53,7 +52,6 @@ protected:
     void newBLOB(HYDROGEN::PropertyViewBlob *bp);
 
 protected:
-
     void ClearStatus();
 
     // Hydrogen Parameters
@@ -65,8 +63,8 @@ private:
     std::shared_ptr<ITextVectorProperty> filter_prop;
     HYDROGEN::BaseDevice filter_device;
 
-    std::atomic_bool is_ready; // 是否就绪
-    std::atomic_bool has_blob; // 是否有 BLOB 数据
+    std::atomic_bool is_ready;  // 是否就绪
+    std::atomic_bool has_blob;  // 是否有 BLOB 数据
     std::atomic_bool is_debug;
     std::atomic_bool is_connected;
 
@@ -78,9 +76,12 @@ private:
     std::string hydrogen_filter_version = "";
     std::string hydrogen_filter_interface = "";
 
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>> m_number_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>> m_switch_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>> m_text_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>
+        m_number_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>
+        m_switch_switch;
+    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>
+        m_text_switch;
 };
 
 #endif

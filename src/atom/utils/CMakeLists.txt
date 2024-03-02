@@ -16,7 +16,6 @@ set(${PROJECT_NAME}_SOURCES
     hash_util.cpp
     random.cpp
     string.cpp
-    static_switch.cpp
     stopwatcher.cpp
     time.cpp
     uuid.cpp
@@ -31,7 +30,6 @@ set(${PROJECT_NAME}_HEADERS
     random.hpp
     refl.hpp
     string.hpp
-    static_switch.hpp
     stopwatcher.hpp
     switch.hpp
     time.hpp

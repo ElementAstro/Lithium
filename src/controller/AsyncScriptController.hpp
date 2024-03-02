@@ -28,25 +28,22 @@ Description: Async Script Controller
 
 #include "config.h"
 
-#include "oatpp/web/server/api/ApiController.hpp"
-#include "oatpp/parser/json/mapping/ObjectMapper.hpp"
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
+#include "oatpp/parser/json/mapping/ObjectMapper.hpp"
+#include "oatpp/web/server/api/ApiController.hpp"
 
 #include "data/ScriptDto.hpp"
 #include "data/StatusDto.hpp"
 
 #include "LithiumApp.hpp"
 
-#include OATPP_CODEGEN_BEGIN(ApiController) //<- Begin Codegen
+#include OATPP_CODEGEN_BEGIN(ApiController)  //<- Begin Codegen
 
-class ScriptController : public oatpp::web::server::api::ApiController
-{
+class ScriptController : public oatpp::web::server::api::ApiController {
 public:
-    ScriptController(const std::shared_ptr<ObjectMapper> &objectMapper)
-        : oatpp::web::server::api::ApiController(objectMapper)
-    {
-    }
+    ScriptController(const std::shared_ptr<ObjectMapper>& objectMapper)
+        : oatpp::web::server::api::ApiController(objectMapper) {}
 
 public:
     // ----------------------------------------------------------------
@@ -57,9 +54,7 @@ public:
      * @param objectMapper - &id:oatpp::data::mapping::ObjectMapper;.
      */
     static std::shared_ptr<ScriptController> createShared(
-        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)
-    )
-    {
+        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)) {
         return std::make_shared<ScriptController>(objectMapper);
     }
 
@@ -68,9 +63,7 @@ public:
      * @param objectMapper - &id:oatpp::data::mapping::ObjectMapper;.
      */
     static std::unique_ptr<ScriptController> createUnique(
-        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)
-    )
-    {
+        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)) {
         return std::make_unique<ScriptController>(objectMapper);
     }
 
@@ -79,166 +72,161 @@ public:
     // Script Http Handler
     // ----------------------------------------------------------------
 
-
-    ENDPOINT_INFO(getUIRunScript)
-    {
+    ENDPOINT_INFO(getUIRunScript) {
         info->summary = "Run a single line script and get the result";
         info->addConsumes<Object<RunCScriptDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+        info->addResponse<Object<StatusDto>>(Status::CODE_200,
+                                             "application/json");
     }
-    ENDPOINT_ASYNC("GET", "/api/script/run", getUIRunScript)
-    {
-        ENDPOINT_ASYNC_INIT(getUIRunScript)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIRunScript::returnResponse);
-        }
+    ENDPOINT_ASYNC("GET", "/api/script/run", getUIRunScript){
+        ENDPOINT_ASYNC_INIT(getUIRunScript) Action act()
+            override{return request
+                         ->readBodyToDtoAsync<oatpp::Object<RunCScriptDTO>>(
+                             controller->getDefaultObjectMapper())
+                         .callbackTo(&getUIRunScript::returnResponse);
+}
 
-        Action returnResponse(const oatpp::Object<RunCScriptDTO>& body)
-        {
-            auto res = StatusDto::createShared();
+Action
+returnResponse(const oatpp::Object<RunCScriptDTO>& body) {
+    auto res = StatusDto::createShared();
 
-            auto script = body->script.getValue("");
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
+    auto script = body->script.getValue("");
 
-    ENDPOINT_INFO(getUIRunCScriptFile)
-    {
-        info->summary = "Run a script file and get the result";
-        info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-    }
-    ENDPOINT_ASYNC("GET", "/api/script/run", getUIRunCScriptFile)
-    {
-        ENDPOINT_ASYNC_INIT(getUIRunCScriptFile)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIRunCScriptFile::returnResponse);
-        }
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
 
-        Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
-        {
-            auto res = StatusDto::createShared();
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
+ENDPOINT_INFO(getUIRunCScriptFile) {
+    info->summary = "Run a script file and get the result";
+    info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
+    info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+}
+ENDPOINT_ASYNC("GET", "/api/script/run", getUIRunCScriptFile){
+    ENDPOINT_ASYNC_INIT(getUIRunCScriptFile) Action act()
+        override{return request
+                     ->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(
+                         controller->getDefaultObjectMapper())
+                     .callbackTo(&getUIRunCScriptFile::returnResponse);
+}
 
-    // ----------------------------------------------------------------
-    // Some useful Functions about chaiscript
-    // ----------------------------------------------------------------
+Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body) {
+    auto res = StatusDto::createShared();
 
-    ENDPOINT_INFO(getUICheckScriptFile)
-    {
-        info->summary = "Check script file";
-        info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-    }
-    ENDPOINT_ASYNC("GET", "/apt/script/check",getUICheckScriptFile)
-    {
-        ENDPOINT_ASYNC_INIT(getUICheckScriptFile)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUICheckScriptFile::returnResponse);
-        }
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
 
-        Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
-        {
-            auto res = StatusDto::createShared();
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
+// ----------------------------------------------------------------
+// Some useful Functions about chaiscript
+// ----------------------------------------------------------------
 
-    ENDPOINT_INFO(getUIGetScriptFile)
-    {
-        info->summary = "Get script file";
-        info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-    }
-    ENDPOINT_ASYNC("GET", "/api/script/get", getUIGetScriptFile)
-    {
-        ENDPOINT_ASYNC_INIT(getUIGetScriptFile)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIGetScriptFile::returnResponse);
-        }
+ENDPOINT_INFO(getUICheckScriptFile) {
+    info->summary = "Check script file";
+    info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
+    info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+}
+ENDPOINT_ASYNC("GET", "/apt/script/check", getUICheckScriptFile){
+    ENDPOINT_ASYNC_INIT(getUICheckScriptFile) Action act()
+        override{return request
+                     ->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(
+                         controller->getDefaultObjectMapper())
+                     .callbackTo(&getUICheckScriptFile::returnResponse);
+}
 
-        Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
-        {
-            auto res = StatusDto::createShared();
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
+Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body) {
+    auto res = StatusDto::createShared();
 
-    ENDPOINT_INFO(getUIListScriptFiles)
-    {
-        info->summary = "List script files";
-        info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-    }
-    ENDPOINT_ASYNC("GET", "/api/script/list", getUIListScriptFiles)
-    {
-        ENDPOINT_ASYNC_INIT(getUIListScriptFiles)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIListScriptFiles::returnResponse);
-        }
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
 
-        Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
-        {
-            auto res = StatusDto::createShared();
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
+ENDPOINT_INFO(getUIGetScriptFile) {
+    info->summary = "Get script file";
+    info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
+    info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+}
+ENDPOINT_ASYNC("GET", "/api/script/get", getUIGetScriptFile){
+    ENDPOINT_ASYNC_INIT(getUIGetScriptFile) Action act()
+        override{return request
+                     ->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(
+                         controller->getDefaultObjectMapper())
+                     .callbackTo(&getUIGetScriptFile::returnResponse);
+}
 
-    ENDPOINT_INFO(getUILoadScript)
-    {
-        info->summary = "Load script into cache";
-        info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-    }
-    ENDPOINT_ASYNC("GET", "/api/script/load", getUILoadScript)
-    {
-        ENDPOINT_ASYNC_INIT(getUILoadScript)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUILoadScript::returnResponse);
-        }
-        Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
-        {
-            auto res = StatusDto::createShared();
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
+Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body) {
+    auto res = StatusDto::createShared();
 
-    ENDPOINT_INFO(getUIUnloadScriptFile)
-    {
-        info->summary = "Unload script from cache";
-        info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
-        info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
-    }
-    ENDPOINT_ASYNC("GET", "/api/script/unload", getUIUnloadScriptFile)
-    {
-        ENDPOINT_ASYNC_INIT(getUIUnloadScriptFile)
-        Action act() override
-        {
-            return request->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(controller->getDefaultObjectMapper()).callbackTo(&getUIUnloadScriptFile::returnResponse);
-        }
-        Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body)
-        {
-            auto res = StatusDto::createShared();
-            
-            return _return(controller->createDtoResponse(Status::CODE_200, res));
-        }
-    };
-};
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
 
-#include OATPP_CODEGEN_END(ApiController) //<- End Codegen
+ENDPOINT_INFO(getUIListScriptFiles) {
+    info->summary = "List script files";
+    info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
+    info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+}
+ENDPOINT_ASYNC("GET", "/api/script/list", getUIListScriptFiles){
+    ENDPOINT_ASYNC_INIT(getUIListScriptFiles) Action act()
+        override{return request
+                     ->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(
+                         controller->getDefaultObjectMapper())
+                     .callbackTo(&getUIListScriptFiles::returnResponse);
+}
 
-#endif // Lithium_SCRIPTCONTROLLER_HPP
+Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body) {
+    auto res = StatusDto::createShared();
+
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
+
+ENDPOINT_INFO(getUILoadScript) {
+    info->summary = "Load script into cache";
+    info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
+    info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+}
+ENDPOINT_ASYNC("GET", "/api/script/load", getUILoadScript){
+    ENDPOINT_ASYNC_INIT(getUILoadScript) Action act()
+        override{return request
+                     ->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(
+                         controller->getDefaultObjectMapper())
+                     .callbackTo(&getUILoadScript::returnResponse);
+}
+Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body) {
+    auto res = StatusDto::createShared();
+
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
+
+ENDPOINT_INFO(getUIUnloadScriptFile) {
+    info->summary = "Unload script from cache";
+    info->addConsumes<Object<RunCScriptFileDTO>>("application/json");
+    info->addResponse<Object<StatusDto>>(Status::CODE_200, "application/json");
+}
+ENDPOINT_ASYNC("GET", "/api/script/unload", getUIUnloadScriptFile){
+    ENDPOINT_ASYNC_INIT(getUIUnloadScriptFile) Action act()
+        override{return request
+                     ->readBodyToDtoAsync<oatpp::Object<RunCScriptFileDTO>>(
+                         controller->getDefaultObjectMapper())
+                     .callbackTo(&getUIUnloadScriptFile::returnResponse);
+}
+Action returnResponse(const oatpp::Object<RunCScriptFileDTO>& body) {
+    auto res = StatusDto::createShared();
+
+    return _return(controller->createDtoResponse(Status::CODE_200, res));
+}
+}
+;
+}
+;
+
+#include OATPP_CODEGEN_END(ApiController)  //<- End Codegen
+
+#endif  // Lithium_SCRIPTCONTROLLER_HPP

@@ -15,9 +15,10 @@ Description: Thread safe task list
 #ifndef LITHIUM_TASK_LIST_HPP
 #define LITHIUM_TASK_LIST_HPP
 
-#include <string>
-#include <shared_mutex>
 #include <optional>
+#include <shared_mutex>
+#include <string>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -27,33 +28,32 @@ Description: Thread safe task list
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-namespace Lithium
-{
-    class TaskList
-    {
-    public:
-        static std::shared_ptr<TaskList> createShared();
+namespace Lithium {
+class TaskList {
+public:
+    static std::shared_ptr<TaskList> createShared();
 
-        bool addOrUpdateTask(const std::string &name, const json &params);
+    bool addOrUpdateTask(const std::string &name, const json &params);
 
-        bool insertTask(const std::string &name, const json &params, const int &position);
+    bool insertTask(const std::string &name, const json &params,
+                    const int &position);
 
-        bool removeTask(const std::string &name);
+    bool removeTask(const std::string &name);
 
-        std::optional<json> getTaskParams(const std::string &name) const;
+    std::optional<json> getTaskParams(const std::string &name) const;
 
-        void listTasks() const;
+    void listTasks() const;
 
-        std::unordered_map<std::string, json> getTasks();
+    std::unordered_map<std::string, json> getTasks();
 
-    private:
-        mutable std::shared_mutex mtx;
+private:
+    mutable std::shared_mutex mtx;
 #if ENABLE_FASTHASH
-        emhash8::HashMap<std::string, json> tasks;
+    emhash8::HashMap<std::string, json> tasks;
 #else
-        std::unordered_map<std::string, json> tasks;
+    std::unordered_map<std::string, json> tasks;
 #endif
-    };
-}
+};
+}  // namespace Lithium
 
 #endif

@@ -519,7 +519,7 @@ json LithiumApp::DispatchCommand(const std::string &name, const json &params) {
         return json();
     }
     if (m_CommandDispatcher) {
-        if (m_CommandDispatcher->HasHandler(name)) {
+        if (m_CommandDispatcher->hasHandler(name)) {
             DLOG_F(INFO, "Dispatching command {}", name);
 #if ENABLE_DEBUG
             json res = m_CommandDispatcher->Dispatch(name, params);
@@ -527,7 +527,7 @@ json LithiumApp::DispatchCommand(const std::string &name, const json &params) {
                    res.dump());
             return res;
 #else
-            return m_CommandDispatcher->Dispatch(name, params);
+            return m_CommandDispatcher->dispatch(name, params);
 #endif
         } else {
             LOG_F(ERROR, "Command {} not found", name);
@@ -540,7 +540,7 @@ json LithiumApp::DispatchCommand(const std::string &name, const json &params) {
 
 bool LithiumApp::hasCommand(const std::string &name) {
     if (m_CommandDispatcher) {
-        return m_CommandDispatcher->HasHandler(name);
+        return m_CommandDispatcher->hasHandler(name);
     } else {
         return false;
     }

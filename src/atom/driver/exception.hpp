@@ -1,5 +1,5 @@
 /*
- * device_exception.hpp
+ * exception.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -12,14 +12,15 @@ Description: Basic Device Exception Defination
 
 *************************************************/
 
-#pragma once
+#ifndef ATOM_DRIVER_EXCEPTION_HPP
+#define ATOM_DRIVER_EXCEPTION_HPP
 
 #include <stdexcept>
 #include <string>
 
 class InvalidDeviceType : public std::exception {
 public:
-    InvalidDeviceType(const std::string &message) : m_message(message) {}
+    explicit InvalidDeviceType(const std::string &message) : m_message(message) {}
 
     const char *what() const noexcept override { return m_message.c_str(); }
 
@@ -29,7 +30,7 @@ private:
 
 class InvalidParameters : public std::exception {
 public:
-    InvalidParameters(const std::string &message) : m_message(message) {}
+    explicit InvalidParameters(const std::string &message) : m_message(message) {}
 
     const char *what() const noexcept override { return m_message.c_str(); }
 
@@ -39,7 +40,7 @@ private:
 
 class InvalidProperty : public std::exception {
 public:
-    InvalidProperty(const std::string &message) : m_message(message) {}
+    explicit InvalidProperty(const std::string &message) : m_message(message) {}
 
     const char *what() const noexcept override { return m_message.c_str(); }
 
@@ -49,7 +50,7 @@ private:
 
 class InvalidReturn : public std::exception {
 public:
-    InvalidReturn(const std::string &message) : m_message(message) {}
+    explicit InvalidReturn(const std::string &message) : m_message(message) {}
 
     const char *what() const noexcept override { return m_message.c_str(); }
 
@@ -59,10 +60,12 @@ private:
 
 class DispatchError : public std::exception {
 public:
-    DispatchError(const std::string &message) : m_message(message) {}
+    explicit DispatchError(const std::string &message) : m_message(message) {}
 
     const char *what() const noexcept override { return m_message.c_str(); }
 
 private:
     std::string m_message;
 };
+
+#endif

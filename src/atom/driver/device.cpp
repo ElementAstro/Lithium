@@ -26,14 +26,23 @@ Description: Basic Device Defination
 #include <typeinfo>
 
 AtomDriver::AtomDriver(const std::string &name)
-    : SharedComponent(), m_name(name) {
-    Atom::Utils::UUIDGenerator generator;
-    m_uuid = generator.generateUUID();
-    SetVariable("uuid", m_uuid);
-    SetVariable("name", m_name);
-}
+    : SharedComponent(name), m_name(name) {}
 
 AtomDriver::~AtomDriver() {}
+
+bool AtomDriver::initialize() {
+    SharedComponent::initialize();
+    Atom::Utils::UUIDGenerator generator;
+    m_uuid = generator.generateUUID();
+    setVariable("DEVICE_UUID", m_uuid);
+    setVariable("DEVICE_NAME", m_name);
+
+    registerFunc("connect", &AtomDriver::Connect, this);
+    registerFunc("disconnect", &AtomDriver::Disconnect, this);
+    registerFunc("reconnect", &AtomDriver::Reconnect, this);
+    registerFunc("isConnected", &AtomDriver::IsConnected, this);
+    return true;
+}
 
 bool AtomDriver::connect(const json &params) { return true; };
 
@@ -45,13 +54,13 @@ bool AtomDriver::isConnected() { return true; }
 
 json AtomDriver::Connect(const json &params) {
     if (!params.contains("name")) {
-        return {{"command" : }};
+        return {{"command", ""}};
     }
-    auto d_connect = make_decorator()
+    return {};
 }
 
-json AtomDriver::Disconnect(const json &params) {}
+json AtomDriver::Disconnect(const json &params) { return {}; }
 
-json AtomDriver::Reconnect(const json &params) {}
+json AtomDriver::Reconnect(const json &params) { return {}; }
 
-json AtomDriver::IsConnected(const json &params) {}
+json AtomDriver::IsConnected(const json &params) { return {}; }

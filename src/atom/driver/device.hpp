@@ -28,7 +28,7 @@ Description: Basic Device Defination
 
 #include "atom/components/templates/shared_component.hpp"
 
-#include "device_exception.hpp"
+#include "exception.hpp"
 
 class AtomDriver : public SharedComponent {
 public:
@@ -39,6 +39,8 @@ public:
     explicit AtomDriver(const std::string &name);
 
     virtual ~AtomDriver();
+
+    virtual bool initialize() override;
 
     // -------------------------------------------------------------------
     // Driver basic methods

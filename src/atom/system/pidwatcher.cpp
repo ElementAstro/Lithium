@@ -17,9 +17,8 @@ Description: PID Watcher
 #include <filesystem>
 
 #ifdef _WIN32
-#include <psapi.h>
 #include <windows.h>
-
+#include <psapi.h>
 #else
 #include <dirent.h>
 #include <signal.h>

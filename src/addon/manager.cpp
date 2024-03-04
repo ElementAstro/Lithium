@@ -303,7 +303,7 @@ bool ComponentManager::loadSharedComponent(const std::string &component_name) {
         component) {
         try {
             // Initialize the component
-            component->Initialize();
+            component->initialize();
         } catch (const std::exception &e) {
             LOG_F(ERROR, "Failed to initialize component: {}", e.what());
             return false;

@@ -27,6 +27,8 @@ Description: Commander
 #include <unordered_map>
 #endif
 
+#include "atom/experiment/decorate.hpp"
+
 /**
  * @brief Generic command dispatcher class for handling and dispatching
  * commands.
@@ -45,6 +47,9 @@ class CommandDispatcher {
 public:
     using HandlerFunc = std::function<Result(const Argument &)>;
     using DecoratorFunc = std::shared_ptr<decorator<HandlerFunc>>;
+    using LoopDecoratorFunc = std::shared_ptr<LoopDecorator<HandlerFunc>>;
+    using ConditionalDecoratorFunc =
+        std::shared_ptr<ConditionCheckDecorator<HandlerFunc>>;
 
     /**
      * @brief Registers a handler function for a specific command.
@@ -71,6 +76,12 @@ public:
 
     void registerDecorator(const std::string &name,
                            const DecoratorFunc &decorator);
+
+    void registerLoopDecorator(const std::string &name,
+                               const LoopDecoratorFunc &decorator);
+
+    void registerConditionalDecorator(const std::string &name,
+                                    const ConditionalDecoratorFunc &decorator);
 
     HandlerFunc getHandler(const std::string &name);
 

@@ -63,3 +63,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+add_executable(shared_driver_test main.cpp)
+target_link_libraries(shared_driver_test atom-driver)

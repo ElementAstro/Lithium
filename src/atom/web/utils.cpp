@@ -22,11 +22,11 @@ Description: Network Utils
 #include <string>
 
 #ifdef _WIN32
-#include <Psapi.h>
 #include <iphlpapi.h>
 #include <tlhelp32.h>
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
+#include <Psapi.h>
 #define close closesocket
 #elif __linux__
 #include <arpa/inet.h>

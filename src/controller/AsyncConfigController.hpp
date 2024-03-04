@@ -59,7 +59,7 @@ public:
         info->addResponse<Object<ReturnConfigDTO>>(Status::CODE_200,
                                                    "application/json");
     }
-    ENDPOINT_ASYNC("GET", "/api/config/get", getUIGetConfig){
+    ENDPOINT_ASYNC("PUSH", "/api/config/get", getUIGetConfig){
         ENDPOINT_ASYNC_INIT(getUIGetConfig) Action act()
             override{return request
                          ->readBodyToDtoAsync<oatpp::Object<GetConfigDTO>>(

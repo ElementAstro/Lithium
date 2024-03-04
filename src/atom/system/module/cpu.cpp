@@ -21,8 +21,8 @@ Description: System Information Module - CPU
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
-#include <Psapi.h>
 #include <Windows.h>
+#include <Psapi.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <pdh.h>

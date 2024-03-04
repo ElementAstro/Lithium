@@ -145,7 +145,7 @@ public:
 
     void LiRegisterFunc(const std::string &name,
                         std::function<json(const json &)> handler) {
-        m_CommandDispatcher->RegisterHandler(name, handler);
+        m_CommandDispatcher->registerHandler(name, handler);
     }
 
     template <typename T>
@@ -154,7 +154,7 @@ public:
         if (!m_CommandDispatcher)
             m_CommandDispatcher =
                 std::make_unique<CommandDispatcher<json, json>>();
-        m_CommandDispatcher->RegisterMemberHandler(name, this, memberFunc);
+        m_CommandDispatcher->registerMemberHandler(name, this, memberFunc);
     }
 
     // Max: The async func will be executed in a separate thread, and the return
@@ -167,7 +167,7 @@ public:
         if (!m_CommandDispatcher)
             m_CommandDispatcher =
                 std::make_unique<CommandDispatcher<json, json>>();
-        m_CommandDispatcher->RegisterMemberHandler(name + "_async", this,
+        m_CommandDispatcher->registerMemberHandler(name + "_async", this,
                                                    memberFunc);
     }
 

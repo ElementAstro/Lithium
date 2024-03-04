@@ -24,19 +24,19 @@ Description: Configor
 using json = nlohmann::json;
 
 #define GetIntConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<int>()
+    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<int>()
 
 #define GetFloatConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<float>()
+    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<float>()
 
 #define GetBoolConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<bool>()
+    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<bool>()
 
 #define GetDoubleConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<double>()
+    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<double>()
 
 #define GetStringConfig(path) \
-    GetPtr<ConfigManager>("ConfigManager")->getValue(path).get<std::string>()
+    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<std::string>()
 
 namespace Lithium {
 /**

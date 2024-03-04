@@ -17,8 +17,8 @@ Description: System Information Module - Disk
 #include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
-#include <Psapi.h>
 #include <Windows.h>
+#include <Psapi.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <pdh.h>

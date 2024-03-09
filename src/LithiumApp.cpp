@@ -18,6 +18,9 @@ Description: Lithium App Enter
 
 #include "atom/server/global_ptr.hpp"
 
+#include "device/server/hydrogen.hpp"
+#include "device/server/ascom.hpp"
+
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/time.hpp"
@@ -132,6 +135,8 @@ void InitLithiumApp() {
            DeviceManager::createShared(
                GetPtr<Atom::Server::MessageBus>("lithium.bus"),
                GetPtr<ConfigManager>("lithium.config")));
+    AddPtr("lithium.device.hydrogen", HydrogenManager::createShared())
+    
     AddPtr("lithium.error.stack", std::make_shared<Atom::Error::ErrorStack>());
 
     AddPtr("lithium.task.container", TaskContainer::createShared());
@@ -142,6 +147,8 @@ void InitLithiumApp() {
     AddPtr("lithium.task.tick",
            TickScheduler::createShared(std::thread::hardware_concurrency()));
     AddPtr("lithium.task.manager", TaskManager::createShared());
+
+    AddPtr("lithium.cmd.global", CommandDispatcher<json, json>::createShared());
 }
 
 json createSuccessResponse(const std::string &command, const json &value) {

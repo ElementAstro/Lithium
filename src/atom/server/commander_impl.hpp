@@ -16,6 +16,14 @@ Description: Commander
 #define ATOM_SERVER_COMMANDER_IMPL_HPP
 
 template <typename Result, typename Argument>
+CommandDispatcher<Result, Argument>::~CommandDispatcher() {
+    m_handlers.clear();
+    m_decorators.clear();
+    m_undoHandlers.clear();
+    m_descriptions.clear();
+}
+
+template <typename Result, typename Argument>
 void CommandDispatcher<Result, Argument>::registerHandler(
     const std::string &name, const HandlerFunc &handler,
     const HandlerFunc &undoHandler) {

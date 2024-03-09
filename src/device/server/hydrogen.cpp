@@ -13,9 +13,9 @@ Description: Hydrogen Device Manager
 **************************************************/
 
 #include "hydrogen.hpp"
-#include "hydrogen_driver.hpp"
 #include "../utils/utils.hpp"
 #include "config.h"
+#include "hydrogen_driver.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -24,14 +24,14 @@ Description: Hydrogen Device Manager
 
 #include <regex>
 
-#include "atom/log/loguru.hpp"
 #include "atom/io/io.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/system/system.hpp"
 
-using namespace Lithium;
-
-HydrogenManager::HydrogenManager(const std::string &hst, int prt, const std::string &cfg, const std::string &dta, const std::string &fif)
-{
+namespace Lithium {
+HydrogenManager::HydrogenManager(const std::string &hst, int prt,
+                                 const std::string &cfg, const std::string &dta,
+                                 const std::string &fif) {
     host = hst;
     port = prt;
     config_path = cfg;
@@ -39,41 +39,48 @@ HydrogenManager::HydrogenManager(const std::string &hst, int prt, const std::str
     fifo_path = fif;
 }
 
-HydrogenManager::~HydrogenManager()
-{
+HydrogenManager::~HydrogenManager() {}
+
+std::shared_ptr<HydrogenManager> HydrogenManager::createShared(
+    const std::string &hst, int prt, const std::string &cfg,
+    const std::string &dta, const std::string &fif) {
+    return std::make_shared<HydrogenManager>(hst, prt, cfg, dta, fif);
+}
+
+std::unique_ptr<HydrogenManager> HydrogenManager::createUnique(
+    const std::string &hst, int prt, const std::string &cfg,
+    const std::string &dta, const std::string &fif) {
+    return std::make_unique<HydrogenManager>(hst, prt, cfg, dta, fif);
 }
 
 #ifdef _WIN32
-bool HydrogenManager::startServer()
-{
+bool HydrogenManager::startServer() {
     // If there is an Hydrogen server running, just kill it
     // Surely, this is not the best way to do this, but it works.
     // If there is no server running, start it.
-    if (isRunning())
-    {
+    if (isRunning()) {
         stopServer();
     }
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    if (!Atom::IO::removeFile(fifo_path))
-    {
+    if (!Atom::IO::removeFile(fifo_path)) {
         LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
         return false;
     }
 #if ENABLE_INDI
-    std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\indiserver.log 2>&1";
+    std::string cmd = "indiserver -p " + std::to_string(port) +
+                      " -m 100 -v -f " + fifo_path +
+                      " > C:\\tmp\\indiserver.log 2>&1";
 #else
-    std::string cmd = "hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > C:\\tmp\\Hydrogenserver.log 2>&1";
+    std::string cmd = "hydrogenserver -p " + std::to_string(port) +
+                      " -m 100 -v -f " + fifo_path +
+                      " > C:\\tmp\\Hydrogenserver.log 2>&1";
 #endif
-    try
-    {
-        if (executeCommand(cmd) != "")
-        {
+    try {
+        if (executeCommand(cmd) != "") {
             LOG_F(ERROR, "Failed to execute command: {}", cmd);
             return false;
         }
-    }
-    catch (const std::runtime_error &e)
-    {
+    } catch (const std::runtime_error &e) {
         LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
         return false;
     }
@@ -82,35 +89,34 @@ bool HydrogenManager::startServer()
     return true;
 }
 #else
-bool HydrogenManager::startServer()
-{
+bool HydrogenManager::startServer() {
     // If there is a Hydrogen server running, just kill it
-    if (isRunning())
-    {
+    if (isRunning()) {
         stopServer();
     }
     // Clear old fifo pipe and create new one
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    if (!Atom::IO::removeFile(fifo_path))
-    {
+    if (!Atom::IO::removeFile(fifo_path)) {
         LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
         return false;
     }
     int res = system(("mkfifo " + fifo_path).c_str());
-    if (res != 0)
-    {
+    if (res != 0) {
         LOG_F(ERROR, "Failed to create fifo pipe at: {}", fifo_path);
         return false;
     }
     // Just start the server without driver
 #if ENABLE_INDI
-    std::string cmd = "indiserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/indiserver.log 2>&1 &";
+    std::string cmd = "indiserver -p " + std::to_string(port) +
+                      " -m 100 -v -f " + fifo_path +
+                      " > /tmp/indiserver.log 2>&1 &";
 #else
-    std::string cmd = "hydrogenserver -p " + std::to_string(port) + " -m 100 -v -f " + fifo_path + " > /tmp/hydrogenserver.log 2>&1 &";
+    std::string cmd = "hydrogenserver -p " + std::to_string(port) +
+                      " -m 100 -v -f " + fifo_path +
+                      " > /tmp/hydrogenserver.log 2>&1 &";
 #endif
     res = system(cmd.c_str());
-    if (res != 0)
-    {
+    if (res != 0) {
         LOG_F(ERROR, "Failed to start Hydrogenserver, error code is {}", res);
         return false;
     }
@@ -119,10 +125,8 @@ bool HydrogenManager::startServer()
 }
 #endif
 
-bool HydrogenManager::stopServer()
-{
-    if (!isRunning())
-    {
+bool HydrogenManager::stopServer() {
+    if (!isRunning()) {
         DLOG_F(WARNING, "Hydrogen server is not running");
         return true;
     }
@@ -140,16 +144,12 @@ bool HydrogenManager::stopServer()
 #endif
 #endif
     DLOG_F(INFO, "Terminating Hydrogen server");
-    try
-    {
-        if (executeCommand(cmd) != "")
-        {
+    try {
+        if (executeCommand(cmd) != "") {
             LOG_F(ERROR, "Failed to execute command: {}", cmd);
             return false;
         }
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception &e) {
         LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
         return false;
     }
@@ -157,10 +157,9 @@ bool HydrogenManager::stopServer()
     return true;
 }
 
-bool HydrogenManager::isRunning()
-{
-    // A little bit hacky, but it works. We need a dynamic way to check if the server is running
-    // Not stupid like this :P
+bool HydrogenManager::isRunning() {
+    // A little bit hacky, but it works. We need a dynamic way to check if the
+    // server is running Not stupid like this :P
 #if ENABLE_INDI
 #ifdef _WIN32
     std::string processName = "indiserver.exe";
@@ -180,70 +179,59 @@ bool HydrogenManager::isRunning()
 #endif
 }
 
-bool HydrogenManager::isInstalled()
-{
+bool HydrogenManager::isInstalled() {
 #ifdef _WIN32
-    if(!Atom::System::CheckSoftwareInstalled("hydrogenserver.exe"))
-    {
+    if (!Atom::System::CheckSoftwareInstalled("hydrogenserver.exe")) {
         return false;
     }
 #else
-    if(!Atom::System::CheckSoftwareInstalled("hydrogenserver"))
-    {
+    if (!Atom::System::CheckSoftwareInstalled("hydrogenserver")) {
         return false;
     }
 #endif
     return true;
 }
 
-bool HydrogenManager::startDriver(std::shared_ptr<HydrogenDeviceContainer> driver)
-{
+bool HydrogenManager::startDriver(
+    std::shared_ptr<HydrogenDeviceContainer> driver) {
     std::string cmd = "start " + driver->binary;
-    if (driver->skeleton != "")
-    {
+    if (driver->skeleton != "") {
         cmd += " -s \"" + driver->skeleton + "\"";
     }
     cmd = std::regex_replace(cmd, std::regex("\""), "\\\"");
     std::string full_cmd = "echo \"" + cmd + "\" > " + fifo_path;
     DLOG_F(INFO, "Cmd: {}", full_cmd);
-    try
-    {
-        if (executeCommand(full_cmd) != "")
-        {
+    try {
+        if (executeCommand(full_cmd) != "") {
             LOG_F(ERROR, "Failed to execute command: {}", full_cmd);
             return false;
         }
-    }
-    catch (const std::runtime_error &e)
-    {
-        LOG_F(ERROR, "Failed to execute command: {} with {}", full_cmd, e.what());
+    } catch (const std::runtime_error &e) {
+        LOG_F(ERROR, "Failed to execute command: {} with {}", full_cmd,
+              e.what());
         return false;
     }
     running_drivers.emplace(driver->label, driver);
     return true;
 }
 
-bool HydrogenManager::stopDriver(std::shared_ptr<HydrogenDeviceContainer> driver)
-{
+bool HydrogenManager::stopDriver(
+    std::shared_ptr<HydrogenDeviceContainer> driver) {
     std::string cmd = "stop " + driver->binary;
-    if (driver->binary.find("@") == std::string::npos)
-    {
+    if (driver->binary.find("@") == std::string::npos) {
         cmd += " -n \"" + driver->label + "\"";
     }
     cmd = std::regex_replace(cmd, std::regex("\""), "\\\"");
     std::string full_cmd = "echo \"" + cmd + "\" > " + fifo_path;
     DLOG_F(INFO, "Cmd: {}", full_cmd);
-    try
-    {
-        if (executeCommand(full_cmd) != "")
-        {
+    try {
+        if (executeCommand(full_cmd) != "") {
             LOG_F(ERROR, "Failed to execute command: {}", full_cmd);
             return false;
         }
-    }
-    catch (const std::runtime_error &e)
-    {
-        LOG_F(ERROR, "Failed to execute command: {} with {}", full_cmd, e.what());
+    } catch (const std::runtime_error &e) {
+        LOG_F(ERROR, "Failed to execute command: {} with {}", full_cmd,
+              e.what());
         return false;
     }
     DLOG_F(INFO, "Stop running driver: {}", driver->label);
@@ -251,23 +239,21 @@ bool HydrogenManager::stopDriver(std::shared_ptr<HydrogenDeviceContainer> driver
     return true;
 }
 
-bool HydrogenManager::setProp(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value)
-{
+bool HydrogenManager::setProp(const std::string &dev, const std::string &prop,
+                              const std::string &element,
+                              const std::string &value) {
     std::stringstream ss;
 
-    ss << "hydrogen_setprop " << dev << "." << prop << "." << element << "=" << value;
+    ss << "hydrogen_setprop " << dev << "." << prop << "." << element << "="
+       << value;
     std::string cmd = ss.str();
     DLOG_F(INFO, "Cmd: {}", cmd);
-    try
-    {
-        if (executeCommand(cmd) != "")
-        {
+    try {
+        if (executeCommand(cmd) != "") {
             LOG_F(ERROR, "Failed to execute command: {}", cmd);
             return false;
         }
-    }
-    catch (const std::runtime_error &e)
-    {
+    } catch (const std::runtime_error &e) {
         LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
         return false;
     }
@@ -275,8 +261,9 @@ bool HydrogenManager::setProp(const std::string &dev, const std::string &prop, c
     return true;
 }
 
-std::string HydrogenManager::getProp(const std::string &dev, const std::string &prop, const std::string &element)
-{
+std::string HydrogenManager::getProp(const std::string &dev,
+                                     const std::string &prop,
+                                     const std::string &element) {
     std::stringstream ss;
 #if ENABLE_INDI
     ss << "indi_getprop " << dev << "." << prop << "." << element;
@@ -284,41 +271,42 @@ std::string HydrogenManager::getProp(const std::string &dev, const std::string &
     ss << "hydrogen_getprop " << dev << "." << prop << "." << element;
 #endif
     std::string cmd = ss.str();
-    try
-    {
+    try {
         std::string output = executeCommand(cmd);
         size_t equalsPos = output.find('=');
-        if (equalsPos != std::string::npos && equalsPos + 1 < output.length())
-        {
-            return output.substr(equalsPos + 1, output.length() - equalsPos - 2);
+        if (equalsPos != std::string::npos && equalsPos + 1 < output.length()) {
+            return output.substr(equalsPos + 1,
+                                 output.length() - equalsPos - 2);
         }
-    }
-    catch (const std::runtime_error &e)
-    {
+    } catch (const std::runtime_error &e) {
         LOG_F(ERROR, "Failed to execute command: {} with {}", cmd, e.what());
         return "";
     }
     return "";
 }
 
-std::string HydrogenManager::getState(const std::string &dev, const std::string &prop)
-{
+std::string HydrogenManager::getState(const std::string &dev,
+                                      const std::string &prop) {
     return getProp(dev, prop, "_STATE");
 }
 
 #if ENABLE_FASTHASH
-emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::getRunningDrivers()
+emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>>
+HydrogenManager::getRunningDrivers()
 #else
-std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> HydrogenManager::getRunningDrivers()
+std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>>
+HydrogenManager::getRunningDrivers()
 #endif
 {
     return running_drivers;
 }
 
 #if ENABLE_FASTHASH
-std::vector<emhash8::HashMap<std::string, std::string>> HydrogenManager::getDevices()
+std::vector<emhash8::HashMap<std::string, std::string>>
+HydrogenManager::getDevices()
 #else
-std::vector<std::unordered_map<std::string, std::string>> HydrogenManager::getDevices()
+std::vector<std::unordered_map<std::string, std::string>>
+HydrogenManager::getDevices()
 #endif
 {
 #if ENABLE_FASTHASH
@@ -333,44 +321,35 @@ std::vector<std::unordered_map<std::string, std::string>> HydrogenManager::getDe
 #endif
     std::array<char, 128> buffer;
     std::string result = "";
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
-    if (!pipe)
-    {
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"),
+                                                  pclose);
+    if (!pipe) {
         LOG_F(ERROR, "Failed to execute command: {}", cmd);
         throw std::runtime_error("popen() failed!");
     }
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
-    {
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
         result += buffer.data();
     }
     std::vector<std::string> lines = {"", ""};
-    for (char token : result)
-    {
-        if (token == '\n')
-        {
+    for (char token : result) {
+        if (token == '\n') {
             std::unordered_map<std::string, std::string> device;
             std::stringstream ss(lines[0]);
             std::string item;
-            while (getline(ss, item, '.'))
-            {
+            while (getline(ss, item, '.')) {
                 device["device"] = item;
             }
             device["connected"] = (lines[1] == "On") ? "true" : "false";
             devices.push_back(device);
             lines = {"", ""};
-        }
-        else if (token == '=')
-        {
+        } else if (token == '=') {
             lines[1] = lines[1].substr(0, lines[1].length() - 1);
-        }
-        else if (token == ' ')
-        {
+        } else if (token == ' ') {
             continue;
-        }
-        else
-        {
+        } else {
             lines[(lines[0] == "") ? 0 : 1] += token;
         }
     }
     return devices;
 }
+}  // namespace Lithium

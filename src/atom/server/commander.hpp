@@ -51,6 +51,17 @@ public:
     using ConditionalDecoratorFunc =
         std::shared_ptr<ConditionCheckDecorator<HandlerFunc>>;
 
+    CommandDispatcher() = default;
+    ~CommandDispatcher();
+
+    static std::shared_ptr<CommandDispatcher> createShared() {
+        return std::make_shared<CommandDispatcher>();
+    }
+
+    static std::unique_ptr<CommandDispatcher> createUnique() {
+        return std::make_unique<CommandDispatcher>();
+    }
+
     /**
      * @brief Registers a handler function for a specific command.
      *

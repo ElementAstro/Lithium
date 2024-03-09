@@ -56,6 +56,8 @@ Description: App Components
 
 #include <thread>  // for std::thread::hardware_concurrency
 
+//#include "data/SystemCustom.hpp"
+
 /**
  *  Class which creates and holds Application components and registers
  * components in oatpp::base::Environment Order of components initialization is
@@ -124,6 +126,11 @@ public:
                 serializeConfig, deserializeConfig);
         objectMapper->getDeserializer()->getConfig()->allowUnknownFields =
             false;
+
+        //objectMapper->getSerializer()->getConfig()->enabledInterpretations = {
+        //    "system::memory"};
+        //objectMapper->getDeserializer()->getConfig()->enabledInterpretations = {
+        //    "system::memory"};
         return objectMapper;
     }());
 

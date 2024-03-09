@@ -17,8 +17,8 @@ Description: System Information Module - Disk
 #include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
-#include <Windows.h>
 #include <Psapi.h>
+#include <Windows.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <pdh.h>
@@ -212,5 +212,38 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
     }
 #endif
     return storage_device_models;
+}
+
+std::vector<std::string> getAvailableDrives() {
+    std::vector<std::string> drives;
+
+#ifdef _WIN32
+    DWORD drivesBitMask = GetLogicalDrives();
+    for (char i = 'A'; i <= 'Z'; ++i) {
+        if (drivesBitMask & 1) {
+            std::string drive(1, i);
+            drives.push_back(drive + ":\\");
+        }
+        drivesBitMask >>= 1;
+    }
+#elif __linux__
+    // Linux 下不需要获取可用驱动器列表
+    drives.push_back("/");
+#elif __APPLE__
+    struct statfs *mounts;
+    int numMounts = getmntinfo(&mounts, MNT_NOWAIT);
+    for (int i = 0; i < numMounts; ++i) {
+        drives.push_back(mounts[i].f_mntonname);
+    }
+#endif
+
+    return drives;
+}
+
+double calculateDiskUsagePercentage(unsigned long totalSpace,
+                                    unsigned long freeSpace) {
+    return ((static_cast<double>(totalSpace) - static_cast<double>(freeSpace)) /
+            totalSpace) *
+           100.0;
 }
 }  // namespace Atom::System

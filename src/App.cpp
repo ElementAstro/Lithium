@@ -23,7 +23,6 @@ Description: Main
 #include "controller/AsyncSystemController.hpp"
 #include "controller/AsyncUploadController.hpp"
 #include "controller/AsyncWebSocketController.hpp"
-
 #else
 
 #endif
@@ -91,6 +90,21 @@ void runServer() {
 
     ADD_CONTROLLER(ConfigController, docEndpoints, router,
                    "AsyncConfigController");
+
+    ADD_CONTROLLER(StaticController, docEndpoints, router,
+               "AsyncStaticController");
+
+    ADD_CONTROLLER(SystemController, docEndpoints, router,
+               "AsyncSystemController");
+
+    ADD_CONTROLLER(WebSocketController, docEndpoints, router,
+               "AsyncWebSocketController");
+
+    ADD_CONTROLLER(IOController, docEndpoints, router,
+               "AsyncIOController");
+
+    ADD_CONTROLLER(ProcessController, docEndpoints, router,
+               "AsyncProcessController");
 
     DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC

@@ -224,11 +224,10 @@ add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
 target_link_libraries(lithium_server lithium_server-library)
-target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
+target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-target_link_libraries(lithium_server hydrogenclientstatic)
 
 CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 if(NOT HAS_STD_FORMAT)

@@ -12,15 +12,16 @@ Description: Hydrogen Device Manager
 
 **************************************************/
 
-
-#pragma once
+#ifndef LITHIUM_DEVICE_HYDROGEN_HPP
+#define LITHIUM_DEVICE_HYDROGEN_HPP
 
 #include "config.h"
 
 #include "connector.hpp"
 
-#include <vector>
 #include <memory>
+#include <vector>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -28,8 +29,9 @@ Description: Hydrogen Device Manager
 #endif
 #include "hydrogen_driver.hpp"
 
-class HydrogenManager : public BasicManager
-{
+namespace Lithium {
+
+class HydrogenManager : public BasicManager {
 public:
     /**
      * @brief 构造函数
@@ -39,9 +41,22 @@ public:
      * @param dta Hydrogen驱动程序路径，默认为"/usr/share/Hydrogen"
      * @param fif Hydrogen FIFO路径，默认为"/tmp/HydrogenFIFO"
      */
-    HydrogenManager(const std::string &hst = "localhost", int prt = 7624, const std::string &cfg = "", const std::string &dta = "/usr/share/hydrogen", const std::string &fif = "/tmp/hydrogenFIFO");
+    explicit HydrogenManager(const std::string &hst = "localhost",
+                             int prt = 7624, const std::string &cfg = "",
+                             const std::string &dta = "/usr/share/hydrogen",
+                             const std::string &fif = "/tmp/hydrogenFIFO");
 
     virtual ~HydrogenManager();
+
+    static std::shared_ptr<HydrogenManager> createShared(const std::string &hst = "localhost",
+                                             int prt = 7624, const std::string &cfg = "",
+                                             const std::string &dta = "/usr/share/hydrogen",
+                                             const std::string &fif = "/tmp/hydrogenFIFO");
+                                             
+    static std::unique_ptr<HydrogenManager> createUnique(const std::string &hst = "localhost",
+                                             int prt = 7624, const std::string &cfg = "",
+                                             const std::string &dta = "/usr/share/hydrogen",
+                                             const std::string &fif = "/tmp/hydrogenFIFO");
 
     /**
      * @brief 启动Hydrogen服务器
@@ -62,7 +77,7 @@ public:
     /**
      * @brief 检查Hydrogen驱动程序是否已安装
      * @return 如果Hydrogen驱动程序已安装，则返回true；否则返回false
-    */
+     */
     virtual bool isInstalled() override;
 
     /**
@@ -84,7 +99,8 @@ public:
      * @param element 元素名称
      * @param value 要设置的属性值
      */
-    bool setProp(const std::string &dev, const std::string &prop, const std::string &element, const std::string &value);
+    bool setProp(const std::string &dev, const std::string &prop,
+                 const std::string &element, const std::string &value);
 
     /**
      * @brief 获取设备属性值
@@ -93,7 +109,8 @@ public:
      * @param element 元素名称
      * @return 获取到的属性值
      */
-    std::string getProp(const std::string &dev, const std::string &prop, const std::string &element);
+    std::string getProp(const std::string &dev, const std::string &prop,
+                        const std::string &element);
 
     /**
      * @brief 获取设备状态
@@ -105,33 +122,43 @@ public:
 
     /**
      * @brief 获取正在运行的驱动程序列表
-     * @return 包含正在运行的驱动程序的映射表，键为驱动程序名称，值为HydrogenDeviceContainer对象
+     * @return
+     * 包含正在运行的驱动程序的映射表，键为驱动程序名称，值为HydrogenDeviceContainer对象
      */
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>> getRunningDrivers();
+    emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>>
+    getRunningDrivers();
 #else
-    std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> getRunningDrivers();
+    std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>>
+    getRunningDrivers();
 #endif
 
     /**
      * @brief 获取设备列表
-     * @return 包含设备信息的向量，每个元素是一个映射表，包含设备名称和设备类型等信息
+     * @return
+     * 包含设备信息的向量，每个元素是一个映射表，包含设备名称和设备类型等信息
      */
 #if ENABLE_FASTHASH
     static std::vector<emhash8::HashMap<std::string, std::string>> getDevices();
 #else
-    static std::vector<std::unordered_map<std::string, std::string>> getDevices();
+    static std::vector<std::unordered_map<std::string, std::string>>
+    getDevices();
 #endif
 
 private:
-    std::string host;                                                            ///< Hydrogen服务器的主机名
-    int port;                                                                    ///< Hydrogen服务器的端口号
-    std::string config_path;                                                     ///< Hydrogen配置文件路径
-    std::string data_path;                                                       ///< Hydrogen驱动程序路径
-    std::string fifo_path;                                                       ///< Hydrogen FIFO路径
+    std::string host;         ///< Hydrogen服务器的主机名
+    int port;                 ///< Hydrogen服务器的端口号
+    std::string config_path;  ///< Hydrogen配置文件路径
+    std::string data_path;    ///< Hydrogen驱动程序路径
+    std::string fifo_path;    ///< Hydrogen FIFO路径
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>> running_drivers;
+    emhash8::HashMap<std::string, std::shared_ptr<HydrogenDeviceContainer>>
+        running_drivers;
 #else
-    std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>> running_drivers; ///< 正在运行的驱动程序列表
+    std::unordered_map<std::string, std::shared_ptr<HydrogenDeviceContainer>>
+        running_drivers;  ///< 正在运行的驱动程序列表
 #endif
 };
+}  // namespace Lithium
+
+#endif

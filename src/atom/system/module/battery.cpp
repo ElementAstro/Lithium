@@ -14,6 +14,7 @@ Description: System Information Module - Battery
 
 #include "battery.hpp"
 
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>

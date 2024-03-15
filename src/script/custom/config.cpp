@@ -142,8 +142,8 @@ void addConfigModule(VM *vm) {
                  pkpy::PyObject *path_obj = args[0];
                  pkpy::Str &path = pkpy::py_cast<pkpy::Str &>(vm, path_obj);
                  return pkpy::py_var(
-                     vm, GetPtr<Lithium::ConfigManager>("lithium.config")->saveConfig(
-                             path.empty() ? "config/config.json" : path));
+                     vm, GetPtr<Lithium::ConfigManager>("lithium.config")->saveToFile(
+                             path.str().empty() ? "config/config.json" : path.str()));
              });
 
     vm->bind(mod, "load_config(path : str) -> bool",
@@ -153,7 +153,7 @@ void addConfigModule(VM *vm) {
                  pkpy::Str &path = pkpy::py_cast<pkpy::Str &>(vm, path_obj);
                  return pkpy::py_var(
                      vm, GetPtr<Lithium::ConfigManager>("lithium.config")->loadFromFile(
-                             path.empty() ? "config/config.json" : path));
+                             path.str().empty() ? "config/config.json" : path.str()));
              });
 }
 }  // namespace Lithium

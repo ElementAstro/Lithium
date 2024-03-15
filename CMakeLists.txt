@@ -226,6 +226,7 @@ endif()
 find_package(CFITSIO REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(fmt REQUIRED)
 
 #################################################################################
 # Main
@@ -239,12 +240,7 @@ target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-
-CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
-if(NOT HAS_STD_FORMAT)
-    find_package(fmt REQUIRED)
-    target_link_libraries(lithium_server fmt::fmt)
-endif()
+target_link_libraries(lithium_server-library fmt::fmt)
 
 target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 

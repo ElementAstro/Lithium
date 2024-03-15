@@ -18,6 +18,7 @@ Description: System Information Module - CPU
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <vector>
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
@@ -47,6 +48,8 @@ namespace fs = std::filesystem;
 #include <sys/mount.h>
 #include <sys/param.h>
 #endif
+
+#include "atom/log/loguru.hpp"
 
 namespace Atom::System {
 float getCurrentCpuUsage() {

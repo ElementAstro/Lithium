@@ -16,6 +16,9 @@ Description: System Information Module - Disk
 
 #include "atom/log/loguru.hpp"
 
+#include <fstream>
+#include <sstream>
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <Psapi.h>
@@ -201,7 +204,7 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
             std::string deviceName = ent->d_name;
             if (deviceName != "." && deviceName != "..") {
                 std::string devicePath = deviceName;
-                std::string model = GetDriveModel(devicePath);
+                std::string model = getDriveModel(devicePath);
                 if (!model.empty()) {
                     storage_device_models.push_back(
                         std::make_pair(devicePath, model));

@@ -9,6 +9,14 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom-system C CXX)
 
+set(CMAKE_ATOM_SYSTEM_VERSION_MAJOR 1)
+set(CMAKE_ATOM_SYSTEM_VERSION_MINOR 0)
+set(CMAKE_ATOM_SYSTEM_VERSION_RELEASE 0)
+
+set(ATOM_SYSTEM_SOVERSION ${CMAKE_ATOM_SYSTEM_VERSION_MAJOR})
+set(CMAKE_ATOM_SYSTEM_VERSION_STRING "${CMAKE_ATOM_SYSTEM_VERSION_MAJOR}.${CMAKE_ATOM_SYSTEM_VERSION_MINOR}.${CMAKE_ATOM_SYSTEM_VERSION_RELEASE}")
+set(ATOM_SYSTEM_VERSION ${CMAKE_ATOM_SYSTEM_VERSION_MAJOR}.${CMAKE_ATOM_SYSTEM_VERSION_MINOR}.${CMAKE_ATOM_SYSTEM_VERSION_RELEASE})
+
 # Sources
 set(${PROJECT_NAME}_SOURCES
     command.cpp
@@ -25,6 +33,8 @@ set(${PROJECT_NAME}_SOURCES
     module/disk.cpp
     module/memory.cpp
     module/battery.cpp
+    module/wifi.cpp
+    module/os.cpp
 )
 
 # Headers
@@ -68,7 +78,7 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 add_library(${PROJECT_NAME} STATIC)
 
 if(WIN32)
-target_link_libraries(${PROJECT_NAME} pdh)
+target_link_libraries(${PROJECT_NAME} pdh wlanapi)
 endif()
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})

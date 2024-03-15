@@ -19,6 +19,8 @@
 
 #include "atom/log/loguru.hpp"
 
+namespace Atom::System
+{
 // 获取当前连接的WIFI
 std::string getCurrentWifi() {
     std::string wifiName;
@@ -217,4 +219,5 @@ bool isHotspotConnected() {
 #endif
 
     return isConnected;
+}
 }

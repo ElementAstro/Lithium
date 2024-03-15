@@ -28,6 +28,7 @@ Description: Hydrogen Device Manager
 #include <unordered_map>
 #endif
 #include "hydrogen_driver.hpp"
+#include "atom/experiment/decorate.hpp"
 
 namespace Lithium {
 
@@ -57,6 +58,8 @@ public:
                                              int prt = 7624, const std::string &cfg = "",
                                              const std::string &dta = "/usr/share/hydrogen",
                                              const std::string &fif = "/tmp/hydrogenFIFO");
+
+    std::vector<decorator<std::function<json(const json &)>>> getFunctions();
 
     /**
      * @brief 启动Hydrogen服务器
@@ -144,6 +147,9 @@ public:
     static std::vector<std::unordered_map<std::string, std::string>>
     getDevices();
 #endif
+
+protected:
+    json _startServer(const json &params);
 
 private:
     std::string host;         ///< Hydrogen服务器的主机名

@@ -154,7 +154,9 @@ class ReturnDiskUsageDto : public StatusDto {
 class ReturnAvailableDrivesDto : public StatusDto {
     DTO_INIT(ReturnAvailableDrivesDto, StatusDto)
 
-    DTO_FIELD_INFO(value) { info->description = "The value of the available drives"; }
+    DTO_FIELD_INFO(value) {
+        info->description = "The value of the available drives";
+    }
     DTO_FIELD(Vector<String>, value);
 };
 
@@ -167,6 +169,33 @@ class ReturnNetworkInfoDto : public StatusDto {
     DTO_FIELD(String, wired);
     DTO_FIELD_INFO(hotspot) { info->description = "The value of the hotspot"; }
     DTO_FIELD(Boolean, hotspot);
+};
+
+class ReturnOSInfoDto : public StatusDto {
+    DTO_INIT(ReturnOSInfoDto, StatusDto)
+
+    DTO_FIELD_INFO(name) { info->description = "The value of the OS name"; }
+    DTO_FIELD(String, name);
+
+    DTO_FIELD_INFO(version) {
+        info->description = "The value of the OS version";
+    }
+    DTO_FIELD(String, version);
+
+    DTO_FIELD_INFO(kernelVersion) {
+        info->description = "The value of the OS kernel version";
+    }
+    DTO_FIELD(String, kernelVersion);
+
+    DTO_FIELD_INFO(architecture) {
+        info->description = "The value of the OS architecture";
+    }
+    DTO_FIELD(String, architecture);
+
+    DTO_FIELD_INFO(compiler) {
+        info->description = "The value of the OS compiler";
+    }
+    DTO_FIELD(String, compiler);
 };
 
 #include OATPP_CODEGEN_END(DTO)

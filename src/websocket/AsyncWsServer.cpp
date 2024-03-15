@@ -42,6 +42,12 @@ void AsyncWsServer::onAfterCreate_NonBlocking(
     const std::shared_ptr<const ParameterMap> &params) {
     auto pluginName = params->find("pluginName")->second;
     auto pluginHub = params->find("pluginHub")->second;
+    if (pluginName->empty()) {
+        pluginName = "default";
+    }
+    if (pluginHub->empty()) {
+        pluginHub = "default";
+    }
     auto hub = getOrCreateHub(pluginHub);
 
     auto plugin = std::make_shared<AsyncWsInstance>(socket, hub, pluginName,

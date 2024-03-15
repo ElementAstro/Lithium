@@ -53,6 +53,40 @@ std::unique_ptr<HydrogenManager> HydrogenManager::createUnique(
     return std::make_unique<HydrogenManager>(hst, prt, cfg, dta, fif);
 }
 
+std::vector<decorator<std::function<json(const json &)>>> HydrogenManager::getFunctions()
+{
+    std::vector<decorator<std::function<json(const json &)>>> functions;
+    //auto startServer = make_decorator(std::function<json(HydrogenManager*,json)>(
+    //    &HydrogenManager::_startServer
+    //));
+    //functions.push_back(startServer);
+    return functions;
+}
+
+json HydrogenManager::_startServer(const json &params)
+{
+    if (!isInstalled()) {
+        LOG_F(ERROR, "Hydrogen is not installed");
+        return {
+            {"error", "Hydrogen is not installed"}
+        };
+    }
+    if (!isRunning())
+    {
+        LOG_F(INFO, "Starting server");
+        if (!startServer())
+        {
+            LOG_F(ERROR, "Failed to start server");
+            return {
+                {"error", "Failed to start server"}
+            };
+        }
+    }
+    return {
+        {"success", true}
+    };
+}
+
 #ifdef _WIN32
 bool HydrogenManager::startServer() {
     // If there is an Hydrogen server running, just kill it

@@ -26,17 +26,46 @@ Description: Some useful system functions from Python.
 #endif
 
 #include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
+
+#include "atom/io/io.hpp"
+
+using json = nlohmann::json;
 
 namespace Atom::System {
 void walk(const fs::path &root) {
     for (const auto &entry : fs::directory_iterator(root)) {
         if (fs::is_directory(entry)) {
-            LOG_F(INFO, "Directory: {}", entry.path().generic_string());
+            DLOG_F(INFO, "Directory: {}", entry.path().generic_string());
             walk(entry);
         } else {
-            LOG_F(INFO, "File: {}", entry.path().generic_string());
+            DLOG_F(INFO, "File: {}", entry.path().generic_string());
         }
     }
+}
+
+std::string jwalk(const std::string &root) {
+    DLOG_F(INFO, "Walking: {}", root.generic_string());
+    if (!Atom::IO::isFolderExists(root))
+    {
+        LOG_F(ERROR, "Directory not exists: {}", root);
+        return "";
+    }
+    json folder = {{"path", root.generic_string()},
+                   {"directories", json::array()},
+                   {"files", json::array()}};
+
+    for (const auto &entry : fs::directory_iterator(root)) {
+        if (fs::is_directory(entry)) {
+            DLOG_F(INFO, "Directory: {}", entry.path().generic_string());
+            folder["directories"].push_back(walk(entry));
+        } else {
+            DLOG_F(INFO, "File: {}", entry.path().generic_string());
+            folder["files"].push_back(entry.path().generic_string());
+        }
+    }
+
+    return folder.dump();
 }
 
 void fwalk(const fs::path &root,

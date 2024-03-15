@@ -20,7 +20,7 @@ Description: Component Manager (the core of the plugin system)
 
 #include "atom/io/io.hpp"
 
-#include <memory>
+#include "utils/marco.hpp"
 
 #ifdef _WIN32
 constexpr std::string PATH_SEPARATOR = "\\";
@@ -43,33 +43,37 @@ constexpr std::string DYNAMIC_LIBRARY_EXTENSION = ".so";
     type name = params[#name].get<type>();
 
 namespace Lithium {
-ComponentManager::ComponentManager()
-    : m_ModuleLoader(nullptr),
-      m_Env(nullptr),
+ComponentManager::ComponentManager():
       m_ComponentFinder(nullptr),
       m_Sandbox(nullptr),
       m_Compiler(nullptr) {
-    m_ModuleLoader = GetPtr<Lithium::ModuleLoader>("lithium.addon.loader");
-    m_Env = GetPtr<Atom::Utils::Env>("lithium.utils.env");
+    m_ModuleLoader = GetWeakPtr<Lithium::ModuleLoader>("lithium.addon.loader");
+    CHECK_WEAK_PTR_EXPIRED(m_ModuleLoader, "load module loader from gpm: lithium.addon.loader");
+    m_Env = GetWeakPtr<Atom::Utils::Env>("lithium.utils.env");
+    CHECK_WEAK_PTR_EXPIRED(m_Env, "load env from gpm: lithium.utils.env");
+    m_AddonManager = GetWeakPtr<Lithium::AddonManager>("lithium.addon.addon");
+    CHECK_WEAK_PTR_EXPIRED(m_AddonManager, "load addon manager from gpm: lithium.addon.addon");
 
     m_ComponentFinder = std::make_unique<AddonFinder>(
-        m_Env->getEnv("LITHIUM_ADDON_PATH", "./modules"));
+        m_Env.lock()->getEnv("LITHIUM_ADDON_PATH", "./modules"));
     m_Sandbox = std::make_unique<Sandbox>();
     m_Compiler = std::make_unique<Compiler>();
 }
 
-ComponentManager::~ComponentManager() {}
+ComponentManager::~ComponentManager() {
+    m_ModuleLoader.reset();
+    m_Env.reset();
+    m_AddonManager.reset();
+    m_ComponentFinder.reset();
+    m_Sandbox.reset();
+    m_Compiler.reset();
+}
 
 bool ComponentManager::Initialize() {
-    if (!m_ModuleLoader) {
-        LOG_F(ERROR, "Failed to load component manager: {}",
-              "lithium.addon.loader");
-        return false;
-    }
     // Check if the module path is valid or reset by the user
     // Default path is ./modules
     const std::string &module_path =
-        m_Env->getEnv("LITHIUM_ADDON_PATH", "./modules");
+        m_Env.lock()->getEnv("LITHIUM_ADDON_PATH", "./modules");
     // Get all of the available addon path
     if (!m_ComponentFinder->traverseDir(std::filesystem::path(module_path))) {
         LOG_F(ERROR, "Failed to traversing module path");
@@ -78,16 +82,16 @@ bool ComponentManager::Initialize() {
     for (const auto &dir : m_ComponentFinder->getAvailableDirs()) {
         std::filesystem::path path = std::filesystem::path(module_path) / dir;
 
-        if (!m_AddonManager->addModule(path, dir)) {
+        if (!m_AddonManager.lock()->addModule(path, dir)) {
             LOG_F(ERROR, "Failed to load module: {}", path.string());
             continue;
         }
-        const json &addon_info = m_AddonManager->getModule(dir);
+        const json &addon_info = m_AddonManager.lock()->getModule(dir);
 
         for (const auto &module_name :
              addon_info["modules"].get<std::vector<std::string>>()) {
             std::filesystem::path module_path = path / module_name;
-            if (!m_ModuleLoader->LoadModule(module_path.string(),
+            if (!m_ModuleLoader.lock()->LoadModule(module_path.string(),
                                             module_name)) {
                 LOG_F(ERROR, "Failed to load module: {}/{}", path.string(),
                       module_name);
@@ -149,7 +153,7 @@ bool ComponentManager::loadComponent(ComponentType component_type,
 bool ComponentManager::checkComponent(const std::string &module_name,
                                       const std::string &module_path) {
     // Check if the module has been loaded
-    if (m_ModuleLoader->HasModule(module_name)) {
+    if (m_ModuleLoader.lock()->HasModule(module_name)) {
         LOG_F(WARNING, "Module {} has been loaded, please do not load again",
               module_name);
         return true;
@@ -180,7 +184,7 @@ bool ComponentManager::checkComponent(const std::string &module_name,
     auto it = std::find(files.begin(), files.end(),
                         module_name + DYNAMIC_LIBRARY_EXTENSION);
     if (it != files.end()) {
-        if (!m_ModuleLoader->LoadModule(module_path + PATH_SEPARATOR +
+        if (!m_ModuleLoader.lock()->LoadModule(module_path + PATH_SEPARATOR +
                                             module_name +
                                             DYNAMIC_LIBRARY_EXTENSION,
                                         module_name)) {
@@ -242,7 +246,7 @@ bool ComponentManager::checkComponentInfo(const std::string &module_name,
         component_info["main"][component_name]["m_func_name"];
     std::string component_type =
         component_info["main"][component_name]["m_component_type"];
-    if (!m_ModuleLoader->HasFunction(module_name, func_name)) {
+    if (!m_ModuleLoader.lock()->HasFunction(module_name, func_name)) {
         LOG_F(ERROR, "Failed to load module: {}'s function {}", component_name,
               func_name);
         return false;
@@ -298,7 +302,7 @@ bool ComponentManager::loadSharedComponent(const std::string &component_name) {
     // There we need some json parameters support for better get the component
     // instance
     if (std::shared_ptr<SharedComponent> component =
-            m_ModuleLoader->GetInstance<SharedComponent>(
+            m_ModuleLoader.lock()->GetInstance<SharedComponent>(
                 it->second->m_name, {}, it->second->m_func_name);
         component) {
         try {
@@ -320,7 +324,7 @@ bool ComponentManager::loadSharedComponent(const std::string &component_name) {
 bool ComponentManager::unloadSharedComponent(const json &params) {
     IS_ARGUMENT_EMPTY();
     GET_ARGUMENT_C(component_name, std::string);
-    if (!m_ModuleLoader->UnloadModule(component_name)) {
+    if (!m_ModuleLoader.lock()->UnloadModule(component_name)) {
         LOG_F(ERROR, "Failed to unload module: {}", component_name);
         return false;
     }

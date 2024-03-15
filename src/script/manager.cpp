@@ -12,7 +12,10 @@ Description: Lithium Python scripting engine
 
 **************************************************/
 
-#include "python.hpp"
+#include "manager.hpp"
+
+#include "pocketpy/include/pocketpy.h"
+using namespace pkpy;
 
 #include "atom/log/loguru.hpp"
 
@@ -21,12 +24,16 @@ Description: Lithium Python scripting engine
 #include "atom/io/io.hpp"
 
 namespace Lithium {
-PyScriptManager::PyScriptManager(/* args */)
-    : vm(new pkpy::VM()),
-      m_deviceModule(vm->new_module("lithium_device")),
-      m_systemModule(vm->new_module("lithium_system")),
-      m_configModule(vm->new_module("lithium_config")) {}
+class PyManagerImpl {
+public:
+    PyManagerImpl() : vm(new VM()) {}
+    ~PyManagerImpl() { delete vm;}
+    VM *vm;
+};
 
-PyScriptManager::~PyScriptManager() { delete vm; }
+PyScriptManager::PyScriptManager(/* args */)
+    : m_impl(std::make_unique<PyManagerImpl>()) {}
+
+PyScriptManager::~PyScriptManager() {  }
 
 }  // namespace Lithium

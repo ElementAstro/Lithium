@@ -32,8 +32,8 @@ Description: Crash Report
 #include <pdh.h>
 #include <pdhmsg.h>
 #include <winsock2.h>
-#include <windows.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>

@@ -13,7 +13,7 @@ Description: Process Manager
 **************************************************/
 
 #include "process.hpp"
-#include "config.h"
+//#include "config.h"
 
 #if defined(_WIN32)
 #include <tlhelp32.h>

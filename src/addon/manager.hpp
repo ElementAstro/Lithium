@@ -88,7 +88,7 @@ public:
      * @brief Creates a shared pointer to the component manager
      * @return A shared pointer to the component manager
      */
-    std::shared_ptr<ComponentManager> createShared();
+    static std::shared_ptr<ComponentManager> createShared();
 
     // -------------------------------------------------------------------
     // Components methods (main entry)
@@ -256,9 +256,10 @@ public:
     bool reloadScriptComponent(const json& params);
 
 private:
-    std::shared_ptr<ModuleLoader> m_ModuleLoader;
-    std::shared_ptr<Atom::Utils::Env> m_Env;
+    std::weak_ptr<ModuleLoader> m_ModuleLoader;
+    std::weak_ptr<Atom::Utils::Env> m_Env;
 
+    // The finder used to find the components
     std::unique_ptr<AddonFinder> m_ComponentFinder;
 
     // The sandbox used to run the components in a safe way
@@ -269,7 +270,7 @@ private:
 
     // This is used to solve the circular dependency problem
     // And make sure we can unload the components in the correct order
-    std::shared_ptr<AddonManager> m_AddonManager;
+    std::weak_ptr<AddonManager> m_AddonManager;
 
     std::unordered_map<std::string, std::shared_ptr<ComponentEntry>>
         m_ComponentEntries;

@@ -19,6 +19,7 @@ Description: System Route
 #include "atom/system/module/cpu.hpp"
 #include "atom/system/module/disk.hpp"
 #include "atom/system/module/memory.hpp"
+#include "atom/system/module/os.hpp"
 #include "atom/system/module/wifi.hpp"
 #include "atom/system/system.hpp"
 
@@ -49,6 +50,10 @@ public:
 
     // ----------------------------------------------------------------
     // System Http Handler
+    // ----------------------------------------------------------------
+
+    // ----------------------------------------------------------------
+    // CPU Methods
     // ----------------------------------------------------------------
 
     ENDPOINT_INFO(getUICpuUsage) {
@@ -158,6 +163,10 @@ public:
         }
     };
 
+    // ----------------------------------------------------------------
+    // Memory Methods
+    // ----------------------------------------------------------------
+
     ENDPOINT_INFO(getUIMemoryUsage) {
         info->summary = "Get current RAM usage";
         info->addResponse<Object<BaseReturnSystemDto>>(
@@ -225,7 +234,6 @@ public:
                 res->swap_memory_used = swap_memory_used;
                 if (!physical_memory.capacity.empty() &&
                     !physical_memory.clockSpeed.empty() &&
-                    !physical_memory.manufacturer.empty() &&
                     !physical_memory.type.empty()) {
                     res->memory_slot["capacity"] = physical_memory.capacity;
                     res->memory_slot["clockSpeed"] = physical_memory.clockSpeed;
@@ -238,6 +246,10 @@ public:
                 res->code == 500 ? Status::CODE_500 : Status::CODE_200, res));
         }
     };
+
+    // ----------------------------------------------------------------
+    // Disk Methods
+    // ----------------------------------------------------------------
 
     ENDPOINT_INFO(getUIDiskUsage) {
         info->summary = "Get current disks usage";
@@ -290,7 +302,7 @@ public:
                 res->error = "System Error";
             } else {
                 for (auto drive : tmp) {
-                    res->value.push_back(drive);
+                    res->value->push_back(drive);
                 }
 
                 res->status = "success";
@@ -301,6 +313,10 @@ public:
                 res->code == 500 ? Status::CODE_500 : Status::CODE_200, res));
         }
     };
+
+    // ----------------------------------------------------------------
+    // Battery Methods
+    // ----------------------------------------------------------------
 
     ENDPOINT_INFO(getUIBatteryInfo) {
         info->summary = "Get battery info";
@@ -335,10 +351,16 @@ public:
         }
     };
 
+    // ----------------------------------------------------------------
+    // Network Methods
+    // ----------------------------------------------------------------
+
     ENDPOINT_INFO(getUINetworkInfo) {
         info->summary = "Get network info";
         info->addResponse<Object<ReturnNetworkInfoDto>>(
             Status::CODE_200, "application/json", "Network info");
+        info->addResponse<Object<ReturnNetworkInfoDto>>(
+            Status::CODE_500, "application/json", "Network info");
     }
     ENDPOINT_ASYNC("GET", "/api/system/network", getUINetworkInfo) {
         ENDPOINT_ASYNC_INIT(getUINetworkInfo);
@@ -369,6 +391,49 @@ public:
         }
     };
 
+    // ----------------------------------------------------------------
+    // OS Infomation Methods
+    // ----------------------------------------------------------------
+
+    ENDPOINT_INFO(getUIOSInfo) {
+        info->summary = "Get OS info";
+        info->addResponse<Object<ReturnOSInfoDto>>(
+            Status::CODE_200, "application/json", "OS info");
+    }
+    ENDPOINT_ASYNC("GET", "/api/system/os", getUIOSInfo) {
+        ENDPOINT_ASYNC_INIT(getUIOSInfo);
+        Action act() override {
+            auto res = ReturnOSInfoDto::createShared();
+            res->command = "getUIOSInfo";
+
+            auto tmp = Atom::System::getOperatingSystemInfo();
+
+            if (tmp.osName.empty() || tmp.osVersion.empty() ||
+                tmp.kernelVersion.empty()) {
+                res->code = 500;
+                res->status = "error";
+                res->message = "Failed to get OS info";
+                res->error = "System Error";
+            } else {
+                res->code = 200;
+                res->status = "success";
+                res->message = "Success get OS info";
+                res->name = tmp.osName;
+                res->version = tmp.osVersion;
+                res->kernelVersion = tmp.kernelVersion;
+                res->architecture = tmp.architecture;
+                res->compiler = tmp.compiler;
+            }
+            return _return(controller->createDtoResponse(
+                res->code == 500 ? Status::CODE_500 : Status::CODE_200, res));
+        }
+    };
+
+    // ----------------------------------------------------------------
+    // Process Methods
+    // TODO: This is a little bit complicated.
+    // ----------------------------------------------------------------
+
     ENDPOINT_INFO(getUIProcesses) {
         info->summary = "Get all running processes";
         // info->addResponse<String>(Status::CODE_200, "application/json",
@@ -391,6 +456,10 @@ public:
             return _return(response);
         }
     };
+
+    // ----------------------------------------------------------------
+    // System Operating Methods
+    // ----------------------------------------------------------------
 
     ENDPOINT_INFO(getUIShutdown) { info->summary = "Shutdown system"; }
     ENDPOINT_ASYNC("GET", "/api/system/shutdown", getUIShutdown) {

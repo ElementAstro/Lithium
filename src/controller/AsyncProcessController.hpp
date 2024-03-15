@@ -48,8 +48,6 @@ private:
 public:
     ProcessController(const std::shared_ptr<ObjectMapper> &objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper) {
-        m_processManager =
-            GetPtr<Atom::System::ProcessManager>("lithium.system.process");
     }
 
 public:
@@ -238,6 +236,9 @@ public:
         }
     };
 };
+
+std::shared_ptr<Atom::System::ProcessManager> ProcessController::m_processManager =
+    GetPtr<Atom::System::ProcessManager>("lithium.system.process");
 
 #include OATPP_CODEGEN_END(ApiController)  //<- End Codegen
 

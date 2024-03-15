@@ -26,7 +26,7 @@ Description: Lithium App Enter
 #include "atom/type/message.hpp"
 #include "config/configor.hpp"
 #include "device/manager.hpp"
-#include "script/python.hpp"
+#include "script/manager.hpp"
 #include "task/manager.hpp"
 
 // -------------------------------------------------------------------
@@ -78,10 +78,10 @@ public:
             bool removeDevice(DeviceType type, const std::string &name);
             bool removeDeviceByName(const std::string &name);
             bool removeDeviceLibrary(const std::string &lib_name);
-            std::shared_ptr<Device> getDevice(DeviceType type, const std::string
+            std::weak_ptr<Device> getDevice(DeviceType type, const std::string
        &name); size_t findDevice(DeviceType type, const std::string &name);
-            std::shared_ptr<Device> findDeviceByName(const std::string &name)
-       const; std::shared_ptr<SimpleTask> getTask(DeviceType type, const
+            std::weak_ptr<Device> findDeviceByName(const std::string &name)
+       const; std::weak_ptr<SimpleTask> getTask(DeviceType type, const
        std::string &device_name, const std::string &task_name, const json
        &params); bool getProperty(const std::string &name, const std::string
        &property_name); bool setProperty(const std::string &name, const
@@ -107,26 +107,26 @@ public:
     void MSSubscribe(const std::string &topic,
                      std::function<void(const T &)> callback,
                      int priority = 0) {
-        m_MessageBus->Subscribe(topic, callback, priority);
+        m_MessageBus.lock()->Subscribe(topic, callback, priority);
     }
 
     template <typename T>
     void MSUnsubscribe(const std::string &topic,
                        std::function<void(const T &)> callback) {
-        m_MessageBus->Unsubscribe(topic, callback);
+        m_MessageBus.lock()->Unsubscribe(topic, callback);
     }
 
     void sendStringMessage(const std::string &topic,
                            const std::string &message) {
-        m_MessageBus->Publish<std::string>(topic, message);
+        m_MessageBus.lock()->Publish<std::string>(topic, message);
     }
 
     void sendJsonMessage(const std::string &topic, const json &message) {
         if (message.is_null())
             return;
-        if (!m_MessageBus)
+        if (m_MessageBus.expired())
             return;
-        m_MessageBus->Publish<json>(topic, message);
+        m_MessageBus.lock()->Publish<json>(topic, message);
     }
 
     ReturnMessage returnMessage(const std::string &message);
@@ -179,18 +179,18 @@ private:
     std::unique_ptr<CommandDispatcher<json, json>> m_CommandDispatcher;
 
 private:
-    std::shared_ptr<TaskPool> m_TaskPool;
-    std::shared_ptr<ConfigManager> m_ConfigManager;
-    std::shared_ptr<DeviceManager> m_DeviceManager;
-    std::shared_ptr<Atom::System::ProcessManager> m_ProcessManager;
-    std::shared_ptr<Atom::Server::MessageBus> m_MessageBus;
-    std::shared_ptr<Atom::Error::ErrorStack> mStack;
-    std::shared_ptr<ComponentManager> m_ComponentManager;
-    std::shared_ptr<TaskManager> m_TaskManager;
+    std::weak_ptr<TaskPool> m_TaskPool;
+    std::weak_ptr<ConfigManager> m_ConfigManager;
+    std::weak_ptr<DeviceManager> m_DeviceManager;
+    std::weak_ptr<Atom::System::ProcessManager> m_ProcessManager;
+    std::weak_ptr<Atom::Server::MessageBus> m_MessageBus;
+    std::weak_ptr<Atom::Error::ErrorStack> mStack;
+    std::weak_ptr<ComponentManager> m_ComponentManager;
+    std::weak_ptr<TaskManager> m_TaskManager;
 
-    std::shared_ptr<PyScriptManager> m_PyScriptManager;
+    std::weak_ptr<PyScriptManager> m_PyScriptManager;
 };
 extern std::shared_ptr<LithiumApp> MyApp;
 
-void InitLithiumApp();
+void InitLithiumApp(int argc, char **argv);
 }  // namespace Lithium

@@ -35,7 +35,9 @@ public:
     static std::shared_ptr<Lithium::ConfigManager> m_configManager;
 
     ConfigController(const std::shared_ptr<ObjectMapper>& objectMapper)
-        : oatpp::web::server::api::ApiController(objectMapper) {}
+        : oatpp::web::server::api::ApiController(objectMapper) {
+            m_configManager = GetPtr<Lithium::ConfigManager>("lithium.config");
+        }
 
     // ----------------------------------------------------------------
     // Pointer creator

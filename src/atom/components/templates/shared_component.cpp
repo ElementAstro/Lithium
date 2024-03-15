@@ -4,7 +4,7 @@
 #include "atom/server/message_bus.hpp"
 #include "atom/utils/string.hpp"
 
-#include "config.h"
+//#include "config.h"
 
 #include "macro.hpp"
 

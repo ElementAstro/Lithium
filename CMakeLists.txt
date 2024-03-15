@@ -8,6 +8,7 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+project(Lithium)
 enable_language(C CXX)
 
 if(COMMAND cmake_policy)
@@ -65,7 +66,10 @@ if(UNIX OR APPLE)
     endif()
 endif()
 
-# ####################################  Lithium version  ################################################
+#################################################################################
+#
+# Lithium version
+
 set(CMAKE_LITHIUM_VERSION_MAJOR 1)
 set(CMAKE_LITHIUM_VERSION_MINOR 0)
 set(CMAKE_LITHIUM_VERSION_RELEASE 0)
@@ -77,6 +81,40 @@ set(LITHIUM_VERSION ${CMAKE_LITHIUM_VERSION_MAJOR}.${CMAKE_LITHIUM_VERSION_MINOR
 if(APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
 endif(APPLE)
+
+#################################################################################
+#
+# Lithium includes
+
+include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${lithium_src_dir})
+include_directories(${lithium_module_dir})
+include_directories(${lithium_src_dir})
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
+
+#################################################################################
+#
+# Subdirectories of Lithium
+
+# Build all dependencies
+# 构建所有需要的依赖库
+add_subdirectory(libs/)
+
+# Build all tools
+# 所有的工具组件
+add_subdirectory(tools)
+
+# Build Atom core library
+# 构建Atom核心库
+add_subdirectory(${lithium_module_dir})
+
+# 内置的模组
+include_directories(modules)
+add_subdirectory(modules)
+
+add_subdirectory(driver)
 
 #################################################################################
 #
@@ -154,8 +192,9 @@ set(server_module
 endif()
 
 set(script_module
-    ${lithium_src_dir}/script/python.cpp
-    ${lithium_src_dir}/script/python_system.cpp
+    ${lithium_src_dir}/script/manager.cpp
+    ${lithium_src_dir}/script/custom/sys.cpp
+    ${lithium_src_dir}/script/custom/config.cpp
 
     ${lithium_src_dir}/script/sheller.cpp
 )
@@ -190,34 +229,6 @@ find_package(SQLite3 REQUIRED)
 
 #################################################################################
 # Main
-
-project(Lithium)
-
-include_directories(${CMAKE_SOURCE_DIR}/libs/)
-include_directories(${lithium_src_dir})
-include_directories(${lithium_module_dir})
-include_directories(${lithium_src_dir})
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
-
-# Build all dependencies
-# 构建所有需要的依赖库
-add_subdirectory(libs/)
-
-# Build all tools
-# 所有的工具组件
-add_subdirectory(tools)
-
-# Build Atom core library
-# 构建Atom核心库
-add_subdirectory(${lithium_module_dir})
-
-# 内置的模组
-include_directories(modules)
-add_subdirectory(modules)
-
-add_subdirectory(driver)
 
 add_library(lithium_server-library STATIC ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 add_executable(lithium_server ${lithium_src_dir}/App.cpp)

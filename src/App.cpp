@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
 
     program.parse_args(argc, argv);
 
-    Lithium::InitLithiumApp();
+    Lithium::InitLithiumApp(argc, argv);
     // Run oatpp server
     Lithium::MyApp = Lithium::LithiumApp::createShared();
 

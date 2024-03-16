@@ -97,16 +97,12 @@ Result CommandDispatcher<Result, Argument>::dispatch(const std::string &name,
                                                      const Argument &data) {
     std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
 
+    // Max: Here we check if a decorator is registered for the command and run it in advance
     // Check if a decorator is registered for the command
     auto it = m_decorators.find(name);
     if (it != m_decorators.end()) {
         auto decorator = it->second;
         return decorator->operator()(data);
-        // This is a wrony way to run a decorator!
-        // return (*decorator)([&]()
-        //                     { return dispatch(name, data); }); // Recursively
-        //                     call dispatch with the original command name and
-        //                     data
     }
 
     // If no decorator found, proceed with the original handler

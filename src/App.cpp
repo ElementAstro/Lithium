@@ -22,7 +22,8 @@ Description: Main
 #include "controller/AsyncStaticController.hpp"
 #include "controller/AsyncSystemController.hpp"
 #include "controller/AsyncUploadController.hpp"
-#include "controller/AsyncWebSocketController.hpp"
+//#include "controller/AsyncWebSocketController.hpp"
+#include "controller/AsyncClientController.hpp"
 #else
 
 #endif
@@ -97,14 +98,17 @@ void runServer() {
     ADD_CONTROLLER(SystemController, docEndpoints, router,
                "AsyncSystemController");
 
-    ADD_CONTROLLER(WebSocketController, docEndpoints, router,
-               "AsyncWebSocketController");
+    //ADD_CONTROLLER(WebSocketController, docEndpoints, router,
+    //           "AsyncWebSocketController");
 
     ADD_CONTROLLER(IOController, docEndpoints, router,
                "AsyncIOController");
 
     ADD_CONTROLLER(ProcessController, docEndpoints, router,
                "AsyncProcessController");
+
+    ADD_CONTROLLER(ClientController, docEndpoints, router,
+               "AsyncClientController");
 
     DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
@@ -117,7 +121,7 @@ void runServer() {
     DLOG_F(INFO, "API doc controller loaded");
 
     /* Load websocket route */
-    router->addController(WebSocketController::createShared());
+    //router->addController(WebSocketController::createShared());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,

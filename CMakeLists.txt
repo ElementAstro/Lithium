@@ -179,9 +179,10 @@ set(config_module
 
 if (ENABLE_ASYNC_FLAG)
 set(server_module
-    ${lithium_src_dir}/websocket/AsyncWsServer.cpp
-    ${lithium_src_dir}/websocket/AsyncWsHub.cpp
-    ${lithium_src_dir}/websocket/AsyncWsInstance.cpp
+    ${lithium_src_dir}/websocket/Game.cpp
+    ${lithium_src_dir}/websocket/Peer.cpp
+    ${lithium_src_dir}/websocket/Registry.cpp
+    ${lithium_src_dir}/websocket/Session.cpp
 )
 else()
 set(server_module

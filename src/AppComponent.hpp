@@ -17,14 +17,7 @@ Description: App Components
 
 #include "config.h"
 
-#ifdef ENABLE_ASYNC
-#include "websocket/AsyncWsServer.hpp"
-#else
-#include "websocket/WsServer.hpp"
-#endif
-
-#include "ErrorHandler.hpp"
-
+#include "websocket/Registry.hpp"
 #if ENABLE_ASYNC
 #include "oatpp-websocket/AsyncConnectionHandler.hpp"
 #include "oatpp/web/server/AsyncHttpConnectionHandler.hpp"
@@ -33,7 +26,11 @@ Description: App Components
 #include "oatpp/web/server/HttpConnectionHandler.hpp"
 #endif
 
+#include "ErrorHandler.hpp"
+
+#include "oatpp/core/base/CommandLineArguments.hpp"
 #include "oatpp/core/macro/component.hpp"
+#include "oatpp/core/utils/ConversionUtils.hpp"
 #include "oatpp/network/monitor/ConnectionInactivityChecker.hpp"
 #include "oatpp/network/monitor/ConnectionMaxAgeChecker.hpp"
 #include "oatpp/network/monitor/ConnectionMonitor.hpp"
@@ -56,7 +53,7 @@ Description: App Components
 
 #include <thread>  // for std::thread::hardware_concurrency
 
-//#include "data/SystemCustom.hpp"
+// #include "data/SystemCustom.hpp"
 
 /**
  *  Class which creates and holds Application components and registers
@@ -76,7 +73,7 @@ public:
      *  @param host - host name
      *  @param port - port number
      */
-    AppComponent(oatpp::String host, v_uint16 port)
+    explicit AppComponent(oatpp::String host, v_uint16 port)
         : m_host(host), m_port(port) {}
     /**
      *  Swagger component
@@ -127,11 +124,26 @@ public:
         objectMapper->getDeserializer()->getConfig()->allowUnknownFields =
             false;
 
-        //objectMapper->getSerializer()->getConfig()->enabledInterpretations = {
-        //    "system::memory"};
-        //objectMapper->getDeserializer()->getConfig()->enabledInterpretations = {
-        //    "system::memory"};
+        // objectMapper->getSerializer()->getConfig()->enabledInterpretations =
+        // {
+        //     "system::memory"};
+        // objectMapper->getDeserializer()->getConfig()->enabledInterpretations
+        // = {
+        //     "system::memory"};
         return objectMapper;
+    }());
+
+    /**
+     *  Create ObjectMapper component to serialize/deserialize DTOs in WS
+     * communication
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
+                           wsApiObjectMapper)
+    (Constants::COMPONENT_WS_API, [] {
+        auto mapper =
+            oatpp::parser::json::mapping::ObjectMapper::createShared();
+        mapper->getSerializer()->getConfig()->includeNullFields = false;
+        return mapper;
     }());
 
     /**
@@ -223,18 +235,21 @@ public:
         return connectionHandler;
     }());
 
+    /**
+     *  Create websocket connection handler
+     */
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
                            websocketConnectionHandler)
-    ("websocket", [] {
-#if ENABLE_ASYNC
+    (Constants::COMPONENT_WS_API, [] {
         OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
+        OATPP_COMPONENT(std::shared_ptr<Registry>, registry);
+#if ENABLE_ASYNC
         auto connectionHandler =
             oatpp::websocket::AsyncConnectionHandler::createShared(executor);
+        connectionHandler->setSocketInstanceListener(registry);
 #else
         auto connectionHandler = oatpp::websocket::ConnectionHandler::createShared();
 #endif
-        connectionHandler->setSocketInstanceListener(
-            std::make_shared<AsyncWsServer>());
         return connectionHandler;
     }());
 };

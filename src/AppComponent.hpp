@@ -12,10 +12,13 @@ Description: App Components
 
 **************************************************/
 
-#ifndef AppComponent_hpp
-#define AppComponent_hpp
+#ifndef LITHIUM_APP_COMPONENT_HPP
+#define LITHIUM_APP_COMPONENT_HPP
 
 #include "config.h"
+
+#include "config/Config.hpp"
+#include "config/HubsConfig.hpp"
 
 #include "websocket/Registry.hpp"
 #if ENABLE_ASYNC
@@ -51,6 +54,7 @@ Description: App Components
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 #include "oatpp-zlib/EncoderProvider.hpp"
 
+#include <cstdlib>
 #include <thread>  // for std::thread::hardware_concurrency
 
 // #include "data/SystemCustom.hpp"
@@ -67,6 +71,8 @@ private:
     oatpp::String m_host;
     v_uint16 m_port;
 
+    oatpp::base::CommandLineArguments m_cmdArgs;  // command line arguments
+
 public:
     /**
      *  Create components
@@ -79,6 +85,42 @@ public:
      *  Swagger component
      */
     SwaggerComponent swaggerComponent;
+
+    /**
+     * Create config component
+     */
+    OATPP_CREATE_COMPONENT(oatpp::Object<ConfigDto>, appConfig)
+    ([this] {
+        auto config = ConfigDto::createShared();
+
+        auto hostServer = ServerConfigDto::createShared();
+        hostServer->host = "0.0.0.0";
+        hostServer->port = 8000;
+
+        auto clientServer = ServerConfigDto::createShared();
+        clientServer->host = "0.0.0.0";
+        clientServer->port = 8001;
+
+        config->hostAPIServer = hostServer;
+        config->clientAPIServer = clientServer;
+
+        return config;
+    }());
+
+    /**
+     * Hub configs
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<HubsConfig>, hubConfig)
+    ([] {
+        auto config = std::make_shared<HubsConfig>(nullptr);
+        auto Hub1 = HubConfigDto::createShared();
+        auto Hub2 = HubConfigDto::createShared();
+        Hub1->hubId = "device";
+        Hub2->hubId = "script";
+        config->putHubConfig(Hub1);
+        config->putHubConfig(Hub2);
+        return config;
+    }());
 
 #if ENABLE_ASYNC
     /**
@@ -94,6 +136,9 @@ public:
     }());
 #endif
 
+    /**
+     * Create Debug virtual interface component
+     */
 #if ENABLE_DEBUG
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>,
                            virtualInterface)
@@ -103,12 +148,19 @@ public:
 #endif
 
     /**
+     *  Create Router component
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>,
+                           httpRouter)
+    ([] { return oatpp::web::server::HttpRouter::createShared(); }());
+
+    /**
      * Create ObjectMapper component to serialize/deserialize DTOs in
      * Controller's API
      */
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
                            apiObjectMapper)
-    ([] {
+    (Constants::COMPONENT_REST_API, [] {
         /* create serializer and deserializer configurations */
         auto serializeConfig =
             oatpp::parser::json::mapping::Serializer::Config::createShared();
@@ -147,6 +199,12 @@ public:
     }());
 
     /**
+     *  Create hubs sessions Registry component.
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<Registry>, hubsSessionsRegistry)
+    ([] { return std::make_shared<Registry>(); }());
+
+    /**
      *  Create ConnectionProvider component which listens on the port
      */
     OATPP_CREATE_COMPONENT(
@@ -157,36 +215,24 @@ public:
             connectionProvider;
         if (m_port == 0) {
 #if ENABLE_DEBUG
-            OATPP_LOGD("Debug", "Debug server is starting ...");
             OATPP_COMPONENT(
                 std::shared_ptr<oatpp::network::virtual_::Interface>,
                 interface);
             connectionProvider = oatpp::network::virtual_::server::
                 ConnectionProvider::createShared(interface);
-#else
-            OATPP_LOGE("Debug",
-                       "Debug mode is not enabled,please enable when compile");
 #endif
         } else {
+            connectionProvider =
+                oatpp::network::tcp::server::ConnectionProvider::createShared(
 #if ENABLE_IPV6
-            connectionProvider =
-                oatpp::network::tcp::server::ConnectionProvider::createShared(
-                    {m_host, m_port, oatpp::network::Address::IP_6});
+                    { m_host, m_port, oatpp::network::Address::IP_6 }
 #else
-            connectionProvider =
-                oatpp::network::tcp::server::ConnectionProvider::createShared(
-                    {m_host, m_port, oatpp::network::Address::IP_4});
+                    {m_host, m_port, oatpp::network::Address::IP_4}
 #endif
+                );
         }
         return connectionProvider;
     }());
-
-    /**
-     *  Create Router component
-     */
-    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>,
-                           httpRouter)
-    ([] { return oatpp::web::server::HttpRouter::createShared(); }());
 
     /**
      *  Create ConnectionHandler component which uses Router component to route
@@ -254,4 +300,4 @@ public:
     }());
 };
 
-#endif /* AppComponent_hpp */
+#endif /* LITHIUM_APP_COMPONENT_HPP */

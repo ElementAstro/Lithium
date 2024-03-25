@@ -41,7 +41,7 @@ public:
      * for infinite repetition.
      * @param priority The priority of the task.
      */
-    TimerTask(std::function<void()> func, unsigned int delay, int repeatCount,
+    explicit TimerTask(std::function<void()> func, unsigned int delay, int repeatCount,
               int priority);
 
     /**

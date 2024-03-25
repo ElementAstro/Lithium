@@ -22,7 +22,6 @@ Description: Async Client Controller
 #include "oatpp/network/ConnectionHandler.hpp"
 #include "oatpp/web/server/api/ApiController.hpp"
 
-
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 
@@ -41,6 +40,15 @@ public:
                                      objectMapper,
                                      Constants::COMPONENT_REST_API))
         : oatpp::web::server::api::ApiController(objectMapper) {}
+
+    // ----------------------------------------------------------------
+    // Pointer creator
+    // ----------------------------------------------------------------
+
+    static std::shared_ptr<ClientController> createShared(
+        OATPP_COMPONENT(std::shared_ptr<ObjectMapper>, objectMapper)) {
+        return std::make_shared<ClientController>(objectMapper);
+    }
 
 public:
     /**

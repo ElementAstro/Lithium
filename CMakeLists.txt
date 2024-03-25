@@ -175,12 +175,13 @@ set(component_module
 
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
+    ${lithium_src_dir}/config/HubsConfig.cpp
 )
 
 if (ENABLE_ASYNC_FLAG)
 set(server_module
-    ${lithium_src_dir}/websocket/Game.cpp
-    ${lithium_src_dir}/websocket/Peer.cpp
+    ${lithium_src_dir}/websocket/Hub.cpp
+    ${lithium_src_dir}/websocket/Connection.cpp
     ${lithium_src_dir}/websocket/Registry.cpp
     ${lithium_src_dir}/websocket/Session.cpp
 )

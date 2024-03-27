@@ -12,8 +12,8 @@ Description: System Information Module - OS Information
 
 **************************************************/
 
-#ifndef ATOM_SYSTEM_OS_HPP
-#define ATOM_SYSTEM_OS_HPP
+#ifndef ATOM_SYSTEM_MODULE_OS_HPP
+#define ATOM_SYSTEM_MODULE_OS_HPP
 
 #include <string>
 

@@ -19,7 +19,7 @@ public:
      * @param Kd The derivative gain.
      * @param Ki The integral gain.
      */
-    PID(double dt, double max, double min, double Kp, double Kd, double Ki);
+    explicit PID(double dt, double max, double min, double Kp, double Kd, double Ki);
 
     /**
      * @brief Set the limits for the integrator term.

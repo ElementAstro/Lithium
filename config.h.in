@@ -1,5 +1,30 @@
+/*
+ * config.h.in
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-3-12
+
+Description: CMake config file
+
+*************************************************/
+
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
+
 #cmakedefine01 ENABLE_ASYNC
 #cmakedefine01 ENABLE_NATIVE_SERVER
 #cmakedefine01 ENABLE_FASTHASH
 #cmakedefine01 ENABLE_DEBUG
 #cmakedefine01 ENABLE_SSL
+
+// Lithium version
+#define LITHIUM_VERSION_MAJOR @CMAKE_LITHIUM_VERSION_MAJOR@
+#define LITHIUM_VERSION_MINOR @CMAKE_LITHIUM_VERSION_MINOR@
+#define LITHIUM_VERSION_RELEASE @CMAKE_LITHIUM_VERSION_RELEASE@
+#define LITHIUM_VERSION_STRING "@LITHIUM_VERSION@"
+
+#endif

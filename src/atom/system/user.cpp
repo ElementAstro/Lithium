@@ -21,6 +21,7 @@ Description: Some system functions to get user information.
 #include <userenv.h>
 #else
 #include <grp.h>
+#include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <codecvt>

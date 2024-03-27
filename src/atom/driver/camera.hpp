@@ -8,7 +8,7 @@
 
 Date: 2023-6-1
 
-Description: Camera Simulator and Basic Definition
+Description: AtomCamera Simulator and Basic Definition
 
 *************************************************/
 
@@ -20,7 +20,7 @@ Description: Camera Simulator and Basic Definition
 #include "shared_memory.hpp"
 #endif
 
-class CameraFrame {
+class AtomCameraFrame {
 public:
     std::atomic_int binning_x;
     std::atomic_int binning_y;
@@ -44,16 +44,21 @@ public:
     std::atomic_bool is_fastread;
 };
 
-class Camera : public AtomDriver {
+enum class FrameType { FITS, NATIVE, XISF, JPG, PNG, TIFF };
+
+enum class UploadMode { CLIENT, LOCAL, BOTH, CLOUD };
+class AtomCamera : public AtomDriver {
 public:
     /**
      * @brief 构造函数
      *
      * @param name 摄像机名称
      */
-    explicit Camera(const std::string &name);
+    explicit AtomCamera(const std::string &name);
 
-    virtual ~Camera();
+    virtual ~AtomCamera();
+
+    virtual bool initialize() override;
 
     virtual bool connect(const json &params) override;
 
@@ -64,218 +69,127 @@ public:
     virtual bool isConnected() override;
 
 public:
-    /**
-     * @brief 启动曝光
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool startExposure(const json &params);
+    virtual bool startExposure(const double &duration);
 
-    /**
-     * @brief 中止曝光
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool abortExposure(const json &params);
+    virtual bool abortExposure();
 
-    /**
-     * @brief 获取曝光状态
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getExposureStatus(const json &params);
+    virtual bool getExposureStatus();
 
-    /**
-     * @brief 获取曝光结果
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getExposureResult(const json &params);
+    virtual bool getExposureResult();
 
-    /**
-     * @brief 保存曝光结果
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool saveExposureResult(const json &params);
+    virtual bool saveExposureResult();
 
-    /**
-     * @brief 启动视频
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool startVideo(const json &params);
+    virtual bool startVideo();
 
-    /**
-     * @brief 停止视频
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool stopVideo(const json &params);
+    virtual bool stopVideo();
 
-    /**
-     * @brief 获取视频状态
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getVideoStatus(const json &params);
+    virtual bool getVideoStatus();
 
-    /**
-     * @brief 获取视频结果
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getVideoResult(const json &params);
+    virtual bool getVideoResult();
 
-    /**
-     * @brief 保存视频结果
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool saveVideoResult(const json &params);
+    virtual bool saveVideoResult();
 
-    /**
-     * @brief 启动冷却
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool startCooling(const json &params);
+    virtual bool startCooling();
 
-    /**
-     * @brief 停止冷却
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool stopCooling(const json &params);
+    virtual bool stopCooling();
 
-    /**
-     * @brief 获取冷却状态
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getCoolingStatus(const json &params);
+    virtual bool getCoolingStatus();
 
-    /**
-     * @brief 获取是否支持冷却
-     *
-     * @return 是否支持冷却
-     */
     virtual bool isCoolingAvailable();
 
-    /**
-     * @brief 获取温度
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getTemperature(const json &params);
+    virtual bool getTemperature();
 
-    /**
-     * @brief 获取冷却功率
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getCoolingPower(const json &params);
+    virtual bool getCoolingPower();
 
-    /**
-     * @brief 设置温度
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool setTemperature(const json &params);
+    virtual bool setTemperature(const double &temperature);
 
-    /**
-     * @brief 设置冷却功率
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool setCoolingPower(const json &params);
+    virtual bool setCoolingPower(const double &power);
 
-    /**
-     * @brief 获取增益值
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getGain(const json &params);
+    virtual bool getGain();
 
-    /**
-     * @brief 设置增益值
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool setGain(const json &params);
+    virtual bool setGain(const int &gain);
 
     virtual bool isGainAvailable();
 
-    /**
-     * @brief 获取偏移量
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getOffset(const json &params);
+    virtual bool getOffset();
 
-    /**
-     * @brief 设置偏移量
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool setOffset(const json &params);
+    virtual bool setOffset(const int &offset);
 
     virtual bool isOffsetAvailable();
 
-    /**
-     * @brief 获取ISO值
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getISO(const json &params);
+    virtual bool getISO();
 
-    /**
-     * @brief 设置ISO值
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool setISO(const json &params);
+    virtual bool setISO(const int &iso);
 
     virtual bool isISOAvailable();
 
-    /**
-     * @brief 获取帧数
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool getFrame(const json &params);
+    virtual bool getFrame();
 
-    /**
-     * @brief 设置帧数
-     *
-     * @param params 参数
-     * @return 成功返回true，失败返回false
-     */
-    virtual bool setFrame(const json &params);
+    virtual bool setFrame(const int &x, const int &y, const int &w,
+                          const int &h);
 
     virtual bool isFrameSettingAvailable();
+
+    virtual bool getBinning();
+
+    virtual bool setBinning(const int &hor, const int &ver);
+
+    virtual bool getFrameType();
+
+    virtual bool setFrameType(FrameType type);
+
+    virtual bool getUploadMode();
+
+    virtual bool setUploadMode(UploadMode mode);
+
+protected:
+    json _startExposure(const json &params);
+
+    json _abortExposure(const json &params);
+
+    json _getExposureStatus(const json &params);
+
+    json _getExposureResult(const json &params);
+
+    json _saveExposureResult(const json &params);
+
+    json _startVideo(const json &params);
+
+    json _stopVideo(const json &params);
+
+    json _getVideoStatus(const json &params);
+
+    json _getVideoResult(const json &params);
+
+    json _saveVideoResult(const json &params);
+
+    json _startCooling(const json &params);
+
+    json _stopCooling(const json &params);
+
+    json _getCoolingStatus(const json &params);
+
+    json _getTemperature(const json &params);
+
+    json _getCoolingPower(const json &params);
+
+    json _setTemperature(const json &params);
+
+    json _setCoolingPower(const json &params);
+
+    json _getGain(const json &params);
+
+    json _setGain(const json &params);
+
+    json _getOffset(const json &params);
+
+    json _setOffset(const json &params);
+
+    json _getISO(const json &params);
+
+    json _setISO(const json &params);
+
+    json _getFrame(const json &params);
+
+    json _setFrame(const json &params);
 };

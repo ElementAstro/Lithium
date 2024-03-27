@@ -27,23 +27,45 @@ Description: FIFO CLient
 #endif
 
 namespace Atom::Connection {
+/**
+ * @brief The FifoClient class provides functionality to connect to a FIFO
+ * (First In First Out) pipe, send messages through the pipe, and disconnect
+ * from the pipe.
+ */
 class FifoClient {
 public:
-    FifoClient(const std::string &fifoPath);
+    /**
+     * @brief Constructor for FifoClient.
+     * @param fifoPath The path to the FIFO pipe.
+     */
+    explicit FifoClient(const std::string &fifoPath);
 
+    /**
+     * @brief Connects to the FIFO pipe.
+     */
     void connect();
+
+    /**
+     * @brief Sends a message through the FIFO pipe.
+     * @param message The message to send.
+     */
     void sendMessage(const std::string &message);
+
+    /**
+     * @brief Disconnects from the FIFO pipe.
+     */
     void disconnect();
 
 private:
-    std::string fifoPath;
+    std::string fifoPath; /**< The path to the FIFO pipe. */
 
 #ifdef _WIN32
-    HANDLE pipeHandle;
+    HANDLE pipeHandle; /**< Handle to the pipe (Windows). */
 #else
-    int pipeFd;
+    int pipeFd; /**< File descriptor for the pipe (Unix/Linux). */
 #endif
 };
+
 }  // namespace Atom::Connection
 
 #endif  // FIFOSERVER_H

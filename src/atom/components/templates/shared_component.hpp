@@ -1,12 +1,11 @@
 #pragma once
 
 #include "atom/components/component.hpp"
+#include "atom/server/message_bus.hpp"
 #include "atom/type/message.hpp"
 #include "atom/utils/switch.hpp"
-#include "atom/server/message_bus.hpp"
 
-class SharedComponent : public Component
-{
+class SharedComponent : public Component {
 public:
     explicit SharedComponent(const std::string &name);
     ~SharedComponent();
@@ -35,8 +34,8 @@ public:
     // Handbler methods
     // -------------------------------------------------------------------
 
-    void SetHandleFunction(std::function<void(std::shared_ptr<Message>)> handleFunction)
-    {
+    void SetHandleFunction(
+        std::function<void(std::shared_ptr<Message>)> handleFunction) {
         m_handleFunction = handleFunction;
     }
 
@@ -47,10 +46,19 @@ private:
     std::function<void(std::shared_ptr<Message>)> m_handleFunction;
 
     // Message handlers
-    std::unique_ptr<Atom::Utils::StringSwitch<const std::shared_ptr<VoidMessage> &>> m_handleVoid;
-    std::unique_ptr<Atom::Utils::StringSwitch<const std::shared_ptr<TextMessage> &>> m_handleText;
-    std::unique_ptr<Atom::Utils::StringSwitch<const std::shared_ptr<NumberMessage> &>> m_handleNumber;
-    std::unique_ptr<Atom::Utils::StringSwitch<const std::shared_ptr<BooleanMessage> &>> m_handleBoolean;
-    std::unique_ptr<Atom::Utils::StringSwitch<const std::shared_ptr<ParamsMessage> &>> m_handleParams;
-
+    std::unique_ptr<
+        Atom::Utils::StringSwitch<const std::shared_ptr<VoidMessage> &>>
+        m_handleVoid;
+    std::unique_ptr<
+        Atom::Utils::StringSwitch<const std::shared_ptr<TextMessage> &>>
+        m_handleText;
+    std::unique_ptr<
+        Atom::Utils::StringSwitch<const std::shared_ptr<NumberMessage> &>>
+        m_handleNumber;
+    std::unique_ptr<
+        Atom::Utils::StringSwitch<const std::shared_ptr<BooleanMessage> &>>
+        m_handleBoolean;
+    std::unique_ptr<
+        Atom::Utils::StringSwitch<const std::shared_ptr<ParamsMessage> &>>
+        m_handleParams;
 };

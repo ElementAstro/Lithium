@@ -27,24 +27,47 @@ Description: FIFO Server
 #endif
 
 namespace Atom::Connection {
+/**
+ * @brief The FifoServer class provides functionality to start a server that
+ * listens on a FIFO (First In First Out) pipe, receive messages from the pipe,
+ * and stop the server.
+ */
 class FifoServer {
 public:
+    /**
+     * @brief Constructor for FifoServer.
+     * @param fifoPath The path to the FIFO pipe.
+     */
     FifoServer(const std::string &fifoPath);
 
+    /**
+     * @brief Starts the FIFO server to listen for incoming messages.
+     */
     void start();
+
+    /**
+     * @brief Receives a message from the FIFO pipe.
+     * @return The received message as a string.
+     */
     std::string receiveMessage();
+
+    /**
+     * @brief Stops the FIFO server.
+     */
     void stop();
 
 private:
-    std::string fifoPath;
-    static const int bufferSize = 1024;
+    std::string fifoPath; /**< The path to the FIFO pipe. */
+    static const int bufferSize =
+        1024; /**< The size of the buffer for receiving messages. */
 
 #ifdef _WIN32
-    HANDLE pipeHandle;
+    HANDLE pipeHandle; /**< Handle to the pipe (Windows). */
 #else
-    int pipeFd;
+    int pipeFd; /**< File descriptor for the pipe (Unix/Linux). */
 #endif
 };
+
 }  // namespace Atom::Connection
 
 #endif  // ATOM_CONNECTION_FIFOSERVER_HPP

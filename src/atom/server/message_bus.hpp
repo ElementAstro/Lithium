@@ -351,7 +351,7 @@ private:
     std::mutex waitingMutex_;
 #if __cplusplus >= 202002L
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::type_index, std::thread> processingThreads_;
+    emhash8::HashMap<std::type_index, std::jthread> processingThreads_;
 #else
     std::unordered_map<std::type_index, std::jthread> processingThreads_;
 #endif

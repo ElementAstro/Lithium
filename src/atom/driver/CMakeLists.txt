@@ -49,6 +49,9 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 target_link_libraries(${PROJECT_NAME}_OBJECT atom-component)
 target_link_libraries(${PROJECT_NAME}_OBJECT atom-server)
 target_link_libraries(${PROJECT_NAME}_OBJECT fmt::fmt)
+if (LINUX)
+target_link_libraries(${PROJECT_NAME}_OBJECT uuid)
+endif()
 add_library(${PROJECT_NAME} SHARED)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
@@ -63,3 +66,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+add_executable(shared_driver_test main.cpp)
+target_link_libraries(shared_driver_test atom-driver)

@@ -22,16 +22,18 @@ Description: Network Utils
 #include <string>
 
 #ifdef _WIN32
-#include <Psapi.h>
 #include <iphlpapi.h>
 #include <tlhelp32.h>
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
+#include <Psapi.h>
 #define close closesocket
+#define WIN_FLAG true
 #elif __linux__
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#define WIN_FLAG false
 #elif __APPLE__
 #include <mach/mach_init.h>
 #include <mach/task_info.h>
@@ -185,13 +187,13 @@ bool checkAndKillProgramOnPort(int port) {
 #ifdef __cpp_lib_format
             cmd = std::format(
                 "{}{}",
-                (_WIN32 ? "netstat -ano | find \"LISTENING\" | find \""
+                (WIN_FLAG ? "netstat -ano | find \"LISTENING\" | find \""
                         : "lsof -i :{} -t"),
                 port);
 #else
             cmd = fmt::format(
                 "{}{}",
-                (_WIN32 ? "netstat -ano | find \"LISTENING\" | find \""
+                (WIN_FLAG ? "netstat -ano | find \"LISTENING\" | find \""
                         : "lsof -i :{} -t"),
                 port);
 #endif
@@ -215,11 +217,11 @@ bool checkAndKillProgramOnPort(int port) {
                     std::string kill_cmd;
 #ifdef __cpp_lib_format
                     kill_cmd = std::format(
-                        "{}{}", (_WIN32 ? "taskkill /F /PID " : "kill "),
+                        "{}{}", (WIN_FLAG ? "taskkill /F /PID " : "kill "),
                         pid_str);
 #else
                     kill_cmd = fmt::format(
-                        "{}{}", (_WIN32 ? "taskkill /F /PID " : "kill "),
+                        "{}{}", (WIN_FLAG ? "taskkill /F /PID " : "kill "),
                         pid_str);
 #endif
 

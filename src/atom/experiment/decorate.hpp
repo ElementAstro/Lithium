@@ -195,12 +195,10 @@ public:
             std::make_unique<Decorator>(std::forward<DArgs>(args)...));
     }
 
-    // 执行装饰器链
     R execute(Args... args) {
         try {
             FuncType currentFunction = baseFunction;
 
-            // 按顺序执行装饰器链
             for (auto& decorator : decorators) {
                 currentFunction = [&,
                                    nextFunction = std::move(currentFunction)](
@@ -210,7 +208,6 @@ public:
                 };
             }
 
-            // 执行最终的函数
             return currentFunction(std::forward<Args>(args)...);
         } catch (const DecoratorError& e) {
             return R();  // 返回默认值

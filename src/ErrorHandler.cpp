@@ -25,6 +25,7 @@ std::shared_ptr<ErrorHandler::OutgoingResponse> ErrorHandler::handleError(
     error->status = "ERROR";
     error->code = status.code;
     error->message = message;
+    error->command = "";
 
     auto response =
         ResponseFactory::createResponse(status, error, m_objectMapper);

@@ -46,6 +46,18 @@ void walk(const fs::path &root);
  * This function traverses a directory and its subdirectories, calling the
  * specified callback function for each file encountered.
  *
+ * @param root The root path of the directory to walk.
+ * @return a json string containing the file information.
+ */
+std::string jwalk(const std::string &root);
+
+/**
+ * @brief Recursively walks through a directory and its subdirectories, applying
+ * a callback function to each file.
+ *
+ * This function traverses a directory and its subdirectories, calling the
+ * specified callback function for each file encountered.
+ *
  * @param root     The root path of the directory to walk.
  * @param callback The callback function to execute for each file.
  */

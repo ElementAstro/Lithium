@@ -23,7 +23,7 @@ namespace Atom::System {
  * @brief Get user groups.
  * @return User groups.
  */
-[[nodiscard]] std::vector<std::wstring> GetUserGroups();
+[[nodiscard]] std::vector<std::wstring> getUserGroups();
 
 /**
  * @brief Get user name.

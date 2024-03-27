@@ -19,6 +19,7 @@ Description: Environment variable management
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 namespace Atom::Utils {
 /**
@@ -32,6 +33,20 @@ public:
      * @param argv 命令行参数数组。
      */
     explicit Env(int argc, char **argv);
+
+    /**
+     * @brief 构造函数，初始化环境变量信息。
+     * @param argc 命令行参数数量。
+     * @param argv 命令行参数数组。
+     */
+    static std::shared_ptr<Env> createShared(int argc, char **argv);
+
+    /**
+     * @brief 构造函数，初始化环境变量信息。
+     * @param argc 命令行参数数量。
+     * @param argv 命令行参数数组。
+     */
+    static std::unique_ptr<Env> createUnique(int argc, char **argv);
 
     /**
      * @brief 添加一个键值对到环境变量中。

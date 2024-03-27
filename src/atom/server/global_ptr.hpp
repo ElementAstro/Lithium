@@ -27,15 +27,19 @@ Description: Global shared pointer manager
 #include <unordered_map>
 #endif
 
+#include "atom/experiment/noncopyable.hpp"
+
 #define GetPtr GlobalSharedPtrManager::getInstance().getSharedPtr
+#define GetWeakPtr GlobalSharedPtrManager::getInstance().getWeakPtr
 #define AddPtr GlobalSharedPtrManager::getInstance().addSharedPtr
+#define RemovePtr GlobalSharedPtrManager::getInstance().removeSharedPtr
 
 /**
  * @brief The GlobalSharedPtrManager class manages a collection of shared
  * pointers and weak pointers. It provides functions to add, remove, and
  * retrieve shared pointers and weak pointers by key.
  */
-class GlobalSharedPtrManager {
+class GlobalSharedPtrManager : public NonCopyable {
 public:
     /**
      * @brief getInstance returns the singleton instance of the
@@ -55,6 +59,18 @@ public:
      */
     template <typename T>
     std::shared_ptr<T> getSharedPtr(const std::string &key);
+
+    /**
+     * @brief getWeakPtr retrieves a weak pointer from the shared pointer map
+     * with the specified key.
+     *
+     * @tparam T the type of the weak pointer.
+     * @param key the key associated with the weak pointer.
+     * @return the weak pointer if found, nullptr otherwise.
+     * @note The weak pointer is not guaranteed to be valid after the shared
+     */
+    template <typename T>
+    std::weak_ptr<T> getWeakPtr(const std::string &key);
 
     /**
      * @brief addSharedPtr adds a shared pointer to the shared pointer map with
@@ -145,11 +161,6 @@ private:
 #endif
     mutable std::shared_mutex mtx; /**< The mutex used for thread-safe access to
                                       the shared pointer map. */
-
-    /**
-     * @brief GlobalSharedPtrManager is a singleton class.
-     */
-    GlobalSharedPtrManager() {}
 };
 
 template <typename T>
@@ -166,6 +177,20 @@ std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtr(
     }
 
     return nullptr;
+}
+
+template <typename T>
+std::weak_ptr<T> GlobalSharedPtrManager::getWeakPtr(const std::string &key) {
+    std::shared_lock<std::shared_mutex> lock(mtx);
+    auto it = sharedPtrMap.find(key);
+    if (it != sharedPtrMap.end()) {
+        try {
+            return std::weak_ptr<T>(
+                std::any_cast<std::shared_ptr<T>>(it->second));
+        } catch (const std::bad_any_cast &) {
+        }
+    }
+    return std::weak_ptr<T>();
 }
 
 template <typename T>

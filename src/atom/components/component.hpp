@@ -110,6 +110,8 @@ public:
     // Variable methods
     // -------------------------------------------------------------------
 
+    json _registerVariable(const json &params);
+
     /**
      * @brief Registers a member function with a specific name and handler.
      *
@@ -127,6 +129,8 @@ public:
         return m_VariableRegistry->RegisterVariable<T>(name, value,
                                                        description);
     }
+
+    bool registerVariableRanges(const std::string &name, const double &low, const double &high);
 
     /**
      * @brief Gets the value of the variable with the specified name.
@@ -233,8 +237,8 @@ template <typename ClassType>
 void Component::registerFunc(const std::string &name,
                              json (ClassType::*handler)(const json &),
                              ClassType *object) {
-    if (!m_CommandDispatcher->HasHandler(name))
-        m_CommandDispatcher->RegisterMemberHandler(name, object, handler);
+    if (!m_CommandDispatcher->hasHandler(name))
+        m_CommandDispatcher->registerMemberHandler(name, object, handler);
 }
 
 #endif

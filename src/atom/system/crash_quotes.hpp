@@ -19,7 +19,6 @@ Description: Quote manager for crash report.
 #include <vector>
 
 namespace Atom::System {
-
 /**
  * @brief Represents a quote with its text and author.
  */
@@ -31,7 +30,7 @@ public:
      * @param text The text of the quote.
      * @param author The author of the quote.
      */
-    Quote(const std::string &text, const std::string &author);
+    explicit Quote(const std::string &text, const std::string &author);
 
     /**
      * @brief Gets the text of the quote.

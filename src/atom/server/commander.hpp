@@ -27,6 +27,9 @@ Description: Commander
 #include <unordered_map>
 #endif
 
+#include "atom/experiment/decorate.hpp"
+#include "atom/experiment/noncopyable.hpp"
+
 /**
  * @brief Generic command dispatcher class for handling and dispatching
  * commands.
@@ -41,10 +44,36 @@ Description: Commander
  * @tparam Argument The argument type of the command handler function.
  */
 template <typename Result, typename Argument>
-class CommandDispatcher {
+class CommandDispatcher : public NonCopyable {
 public:
     using HandlerFunc = std::function<Result(const Argument &)>;
     using DecoratorFunc = std::shared_ptr<decorator<HandlerFunc>>;
+    using LoopDecoratorFunc = std::shared_ptr<LoopDecorator<HandlerFunc>>;
+    using ConditionalDecoratorFunc =
+        std::shared_ptr<ConditionCheckDecorator<HandlerFunc>>;
+
+    CommandDispatcher() = default;
+    ~CommandDispatcher();
+
+    /**
+     * @brief Creates a shared pointer to a CommandDispatcher instance.
+     *
+     * @return std::shared_ptr<CommandDispatcher> A shared pointer to a
+     * CommandDispatcher instance.
+     */
+    static std::shared_ptr<CommandDispatcher> createShared() {
+        return std::make_shared<CommandDispatcher>();
+    }
+
+    /**
+     * @brief Creates a unique pointer to a CommandDispatcher instance.
+     *
+     * @return std::unique_ptr<CommandDispatcher> A unique pointer to a
+     * CommandDispatcher instance.
+     */
+    static std::unique_ptr<CommandDispatcher> createUnique() {
+        return std::make_unique<CommandDispatcher>();
+    }
 
     /**
      * @brief Registers a handler function for a specific command.
@@ -69,35 +98,133 @@ public:
     void registerMemberHandler(const std::string &name, T *object,
                                Result (T::*memberFunc)(const Argument &));
 
+    /**
+     * @brief Registers a decorator for a specific command.
+     *
+     * @param name The name of the command.
+     * @param decorator The decorator function for the command.
+     */
     void registerDecorator(const std::string &name,
                            const DecoratorFunc &decorator);
 
+    /**
+     * @brief Registers a loop decorator for a specific command.
+     *
+     * @param name The name of the command.
+     * @param decorator The decorator function for the command.
+     */
+    void registerLoopDecorator(const std::string &name,
+                               const LoopDecoratorFunc &decorator);
+
+    /**
+     * @brief Registers a conditional decorator for a specific command.
+     *
+     * @param name The name of the command.
+     * @param decorator The decorator function for the command.
+     */
+    void registerConditionalDecorator(const std::string &name,
+                                    const ConditionalDecoratorFunc &decorator);
+
+    /**
+     * @brief Returns the handler function for a specific command.
+     *
+     * @param name The name of the command.
+     * @return The handler function for the command.
+     */
     HandlerFunc getHandler(const std::string &name);
 
+    /**
+     * @brief Returns whether a handler function is registered for a specific
+     * command.
+     *
+     * @param name The name of the command.
+     * @return Whether a handler function is registered for the command.
+     */
     bool hasHandler(const std::string &name);
 
+    /**
+     * @brief Dispatches a command.
+     *
+     * @param name The name of the command.
+     * @param data The data to pass to the command handler.
+     * @return The result of the command handler.
+     */
     Result dispatch(const std::string &name, const Argument &data);
+    
+    // Max: Redo and Undo system is not ready to be used.
 
+    /**
+     * @brief Undoes the last dispatched command.
+     *
+     * @return Whether the command was successfully undone.
+     */
     bool undo();
 
+    /**
+     * @brief Redoes the last undone command.
+     *
+     * @return Whether the command was successfully redone.
+     */
     bool redo();
 
+    /**
+     * @brief Removes all registered handler functions.
+     *
+     * @return Whether the handler functions were successfully removed.
+     */
     bool removeAll();
 
+    /**
+     * @brief Registers a description for a specific command.
+     *
+     * @param name The name of the command.
+     * @param description The description of the command.
+     */
     void registerFunctionDescription(const std::string &name,
                                      const std::string &description);
 
+    /**
+     * @brief Returns the description of a specific command.
+     *
+     * @param name The name of the command.
+     * @return The description of the command.
+     */
     std::string getFunctionDescription(const std::string &name);
 
+    /**
+     * @brief Removes the description of a specific command.
+     *
+     * @param name The name of the command.
+     */
     void removeFunctionDescription(const std::string &name);
 
+    /**
+     * @brief Removes all registered descriptions.
+     *
+     * @return Whether the descriptions were successfully removed.
+     */
     void clearFunctionDescriptions();
 
+    /**
+     * @brief Sets the maximum number of commands that can be stored in the
+     * command history.
+     *
+     * @param maxSize The maximum number of commands that can be stored in the
+     * command history.
+     */
     void setMaxHistorySize(size_t maxSize);
 
+    /**
+     * @brief Returns the maximum number of commands that can be stored in the
+     * command history.
+     *
+     * @return The maximum number of commands that can be stored in the command
+     * history.
+     */
     size_t getMaxHistorySize() const;
 
 private:
+    // Max: Emhash8 is used to speed up the command dispatcher.
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string, HandlerFunc> m_handlers;
     emhash8::HashMap<std::string, DecoratorFunc> m_decorators;

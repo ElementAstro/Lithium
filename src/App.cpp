@@ -22,8 +22,8 @@ Description: Main
 #include "controller/AsyncStaticController.hpp"
 #include "controller/AsyncSystemController.hpp"
 #include "controller/AsyncUploadController.hpp"
-#include "controller/AsyncWebSocketController.hpp"
-
+// #include "controller/AsyncWebSocketController.hpp"
+#include "controller/AsyncClientController.hpp"
 #else
 
 #endif
@@ -44,7 +44,6 @@ Description: Main
 #include "atom/server/global_ptr.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
-
 
 #include <chrono>
 #include <ctime>
@@ -77,9 +76,14 @@ void runServer() {
         Lithium::MyApp->GetConfig("config/server")
             .value("port", 8000));  // Create scope Environment components
 #else
+    DLOG_F(INFO, "Server host:", Lithium::MyApp->GetConfig({"key", "config/server"})
+                                   .value("host", "0.0.0.0"));
+    DLOG_F(INFO, "Server port:", Lithium::MyApp->GetConfig({"key", "config/server"})
+                                   .value("port", 8000));
     AppComponent components(
-        Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0"),
-        Lithium::MyApp->GetConfig("config/server")
+        Lithium::MyApp->GetConfig({"key", "config/server"})
+            .value("host", "0.0.0.0"),
+        Lithium::MyApp->GetConfig({"key", "config/server"})
             .value("port", 8000));  // Create scope Environment components
 #endif
     DLOG_F(INFO, "App component loaded");
@@ -92,6 +96,23 @@ void runServer() {
     ADD_CONTROLLER(ConfigController, docEndpoints, router,
                    "AsyncConfigController");
 
+    ADD_CONTROLLER(StaticController, docEndpoints, router,
+                   "AsyncStaticController");
+
+    ADD_CONTROLLER(SystemController, docEndpoints, router,
+                   "AsyncSystemController");
+
+    // ADD_CONTROLLER(WebSocketController, docEndpoints, router,
+    //            "AsyncWebSocketController");
+
+    ADD_CONTROLLER(IOController, docEndpoints, router, "AsyncIOController");
+
+    ADD_CONTROLLER(ProcessController, docEndpoints, router,
+                   "AsyncProcessController");
+
+    ADD_CONTROLLER(ClientController, docEndpoints, router,
+                   "AsyncClientController");
+
     DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
     router->addController(
@@ -103,7 +124,7 @@ void runServer() {
     DLOG_F(INFO, "API doc controller loaded");
 
     /* Load websocket route */
-    router->addController(WebSocketController::createShared());
+    // router->addController(WebSocketController::createShared());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
@@ -201,7 +222,7 @@ int main(int argc, char *argv[]) {
 
     program.parse_args(argc, argv);
 
-    Lithium::InitLithiumApp();
+    Lithium::InitLithiumApp(argc, argv);
     // Run oatpp server
     Lithium::MyApp = Lithium::LithiumApp::createShared();
 

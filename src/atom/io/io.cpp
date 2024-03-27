@@ -21,6 +21,7 @@ Description: IO
 #include <regex>
 
 #include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -62,6 +63,38 @@ bool createDirectory(const std::string &path) {
         LOG_F(ERROR, "Failed to create directory {}: {}", path, e.what());
     }
     return false;
+}
+
+void createDirectory(const std::string &date, const std::string &rootDir) {
+    // Parameter validation
+    if (date.empty()) {
+        LOG_F(ERROR, "Error: Date cannot be empty");
+        return;
+    }
+
+    if (rootDir.empty()) {
+        LOG_F(ERROR, "Error: Root directory cannot be empty");
+        return;
+    }
+
+    std::vector<std::string> tokens = Atom::Utils::splitString(date, '/');
+
+    // Create directories
+    fs::path currentDir = rootDir;
+    for (const auto &token : tokens) {
+        currentDir /= token;
+
+        if (!fs::is_directory(currentDir)) {
+            if (!fs::create_directory(currentDir)) {
+                LOG_F(ERROR, "Error: Failed to create directory - {}"
+                          , currentDir.string());
+                return;
+            }
+        } else {
+            DLOG_F(INFO, "Directory already exists: {}", currentDir.string());
+        }
+    }
+    DLOG_F(INFO, "Directory creation completed: {}", currentDir.string());
 }
 
 bool removeDirectory(const std::string &path) {

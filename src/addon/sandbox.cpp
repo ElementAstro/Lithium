@@ -15,8 +15,8 @@ Description: A sandbox for alone componnents, such as executables.
 #include "sandbox.hpp"
 
 #ifdef _WIN32
-#include <psapi.h>
 #include <windows.h>
+#include <psapi.h>
 #else
 #include <sys/ptrace.h>
 #include <sys/resource.h>

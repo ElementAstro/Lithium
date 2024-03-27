@@ -1,4 +1,6 @@
-# OpenAPT Update Log
+# ChangeLog
+
+## OpenAPT Update Log
 
 23w01a
 
@@ -6,42 +8,44 @@ update most of the codes , and there is still a long way to go!
 
 23w01b
 
--- Add Dear Imgui as the GUI library
--- Trying to create modules and improve the loader
--- Add crash report and some basic tools
--- Improve task manager
+- Add Dear Imgui as the GUI library
+- Trying to create modules and improve the loader
+- Add crash report and some basic tools
+- Improve task manager
 
 23w01c
 
--- Improve TaskManager and ModuleLoader
--- Tried to fix the bug of ThreadManager but still failed
--- Add more test
+- Improve TaskManager and ModuleLoader
+- Tried to fix the bug of ThreadManager but still failed
+- Add more test
 
 23w02a
 
--- Cleaned up all files using clang-tidy to improve code quality and readability.
--- Implemented an achievement system for players to track and earn in-game accomplishments.
--- Added client web pages and prepared for future online features.
+- Cleaned up all files using clang-tidy to improve code quality and readability.
+- Implemented an achievement system for players to track and earn in-game accomplishments.
+- Added client web pages and prepared for future online features.
 
 23w02b
 
--- Reorganized file directory.
--- Added a feature to dynamically compile and load code. Currently does not support clang.
--- Added default achievements.
--- Added certificates to prevent copyright issues.
+- Reorganized file directory.
+- Added a feature to dynamically compile and load code. Currently does not support clang.
+- Added default achievements.
+- Added certificates to prevent copyright issues.
 
-23w03a
-
-big update but not finished
-
-23w03b
+### 23w03a
 
 big update but not finished
 
-23w04a
+### 23w03b
+
+big update but not finished
+
+### 23w04a
 
 big server update and blackened update
 
-# Lithium Update Log
+## Lithium Update Log
 
-24w01a
+### 24w01a
+
+- Add Lithium Web Client

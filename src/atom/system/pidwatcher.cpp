@@ -15,16 +15,18 @@ Description: PID Watcher
 #include "pidwatcher.hpp"
 
 #include <filesystem>
+#include <fstream>
+#include <istream>
 
 #ifdef _WIN32
-#include <psapi.h>
 #include <windows.h>
-
+#include <psapi.h>
 #else
 #include <dirent.h>
 #include <signal.h>
 #include <unistd.h>
-
+#include <sys/types.h> 
+#include <sys/wait.h>
 #endif
 
 namespace fs = std::filesystem;

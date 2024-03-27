@@ -89,7 +89,7 @@ namespace Atom::Utils {
  * @param output The output buffer to store the hexadecimal string (length must
  * be len * 2).
  */
-[[nodiscard]] void hexstring_from_data(const void *data, size_t len,
+void hexstring_from_data(const void *data, size_t len,
                                        char *output);
 
 /**
@@ -117,7 +117,7 @@ namespace Atom::Utils {
  * @param output The output buffer to store the binary data (length must be
  * length / 2).
  */
-[[nodiscard]] void data_from_hexstring(const char *hexstring, size_t length,
+void data_from_hexstring(const char *hexstring, size_t length,
                                        void *output);
 
 /**

@@ -16,21 +16,27 @@ Description: A simple implementation of any type.
 #define ATOM_EXPERIMENT_ANY_HPP
 
 #include <memory>
+#include <stdexcept>
+#include <type_traits>
 #include <typeinfo>
 #include <utility>
+
+class Any;
+
+template <typename T>
+concept Derived = std::is_base_of_v<std::remove_reference_t<T>, Any>;
 
 class Any {
 public:
     Any() : ptr(nullptr) {}
 
     template <typename T>
-    Any(const T &value) : ptr(new holder<T>(value)) {}
+        requires(!Derived<T>)
+    Any(T &&value) : ptr(new holder<std::decay_t<T>>(std::forward<T>(value))) {}
 
     Any(const Any &other) : ptr(other.ptr ? other.ptr->clone() : nullptr) {}
 
-    Any(Any &&other) noexcept : ptr(std::move(other.ptr)) {
-        other.ptr = nullptr;
-    }
+    Any(Any &&other) noexcept : ptr(std::exchange(other.ptr, nullptr)) {}
 
     ~Any() { delete ptr; }
 
@@ -49,8 +55,9 @@ public:
     }
 
     template <typename T>
-    Any &operator=(const T &value) {
-        Any(value).swap(*this);
+        requires(!Derived<T>)
+    Any &operator=(T &&value) {
+        Any(std::forward<T>(value)).swap(*this);
         return *this;
     }
 
@@ -75,9 +82,14 @@ private:
     template <typename T>
     class holder : public placeholder {
     public:
+        holder(T &&value) : held(std::move(value)) {}
+
         holder(const T &value) : held(value) {}
+
         const std::type_info &type() const { return typeid(T); }
-        placeholder *clone() const { return new holder(held); }
+
+        placeholder *clone() const { return new holder<T>(held); }
+
         void swap(placeholder &other) {
             if (holder *other_holder = dynamic_cast<holder *>(&other)) {
                 std::swap(held, other_holder->held);
@@ -98,6 +110,14 @@ T any_cast(const Any &operand) {
         throw std::bad_cast();
     }
     return static_cast<Any::holder<T> *>(operand.ptr)->held;
+}
+
+template <typename T>
+T any_cast(Any &&operand) {
+    if (typeid(T) != operand.type()) {
+        throw std::bad_cast();
+    }
+    return static_cast<Any::holder<T> *>(std::move(operand.ptr))->held;
 }
 
 #endif

@@ -31,9 +31,9 @@ Description: Crash Report
 #if defined(_WIN32) || defined(_WIN64)
 #include <pdh.h>
 #include <pdhmsg.h>
-#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 #else
 #include <arpa/inet.h>
 #include <netinet/in.h>

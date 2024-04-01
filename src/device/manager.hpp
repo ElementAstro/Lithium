@@ -33,7 +33,7 @@ Description: Device Manager
 
 #include "error/error_code.hpp"
 
-class Camera;
+class AtomCamera;
 class Telescope;
 class Focuser;
 class Filterwheel;
@@ -41,10 +41,6 @@ class Guider;
 class Solver;
 
 using json = nlohmann::json;
-
-#define DEVICE_FUNC(func_name) DeviceError func_name(const json &m_params)
-
-#define DEVICE_FUNC_J(func_name) const json func_name(const json &m_params)
 
 namespace Lithium {
 /**
@@ -58,7 +54,7 @@ public:
      * @param messageBus 消息总线对象的共享指针。
      * @param configManager 配置管理器对象的共享指针。
      */
-    DeviceManager(std::shared_ptr<Atom::Server::MessageBus> messageBus,
+    explicit DeviceManager(std::shared_ptr<Atom::Server::MessageBus> messageBus,
                   std::shared_ptr<ConfigManager> configManager);
 
     /**
@@ -208,57 +204,6 @@ public:
     bool setFilterwheel(const std::string &name);
     bool setGuider(const std::string &name);
 
-    // Device Function
-public:
-    // For camera
-    DEVICE_FUNC(startExposure);
-    DEVICE_FUNC(stopExposure);
-    DEVICE_FUNC(setGain);
-    DEVICE_FUNC(setOffset);
-    DEVICE_FUNC(setISO);
-    DEVICE_FUNC(startCooling);
-    DEVICE_FUNC(stopCooling);
-    DEVICE_FUNC(setCamareParams);
-    DEVICE_FUNC_J(getCameraParams);
-
-    // For telescope
-    DEVICE_FUNC(gotoTarget);
-    DEVICE_FUNC(park);
-    DEVICE_FUNC(unpark);
-    DEVICE_FUNC(goHome);
-    DEVICE_FUNC(sync);
-    DEVICE_FUNC_J(getCroods);
-    DEVICE_FUNC_J(getObserver);
-    DEVICE_FUNC_J(getTime);
-    DEVICE_FUNC(setTelescopeParams);
-    DEVICE_FUNC_J(getTelescopeParams);
-
-    // For focuser
-    DEVICE_FUNC(moveStep);
-    DEVICE_FUNC(moveTo);
-    DEVICE_FUNC_J(getTemperatrue);
-    DEVICE_FUNC_J(getFocuserPosition);
-    DEVICE_FUNC_J(getBacklash);
-    DEVICE_FUNC(setFocuserParams);
-    DEVICE_FUNC_J(getFocuserParams);
-
-    // For filterwheel
-    DEVICE_FUNC(slewTo);
-    DEVICE_FUNC_J(getFilterwheelPosition);
-    DEVICE_FUNC_J(getFilters);
-    DEVICE_FUNC_J(getOffsets);
-    DEVICE_FUNC(setFilterwheelParams);
-    DEVICE_FUNC_J(getFilterwheelParams);
-
-    // For guider
-    DEVICE_FUNC(startGuiding);
-    DEVICE_FUNC(stopGuiding);
-    DEVICE_FUNC(startCalibration);
-    DEVICE_FUNC(stopCalibration);
-
-    // For astrometry and astap
-    DEVICE_FUNC_J(solveImage);
-
 public:
     bool startHydrogenServer();
     bool stopHydrogenServer();
@@ -287,8 +232,8 @@ private:
 
     // Device for quick performance
 private:
-    std::shared_ptr<Camera> m_main_camera;
-    std::shared_ptr<Camera> m_guiding_camera;
+    std::shared_ptr<AtomCamera> m_main_camera;
+    std::shared_ptr<AtomCamera> m_guiding_camera;
     std::shared_ptr<Telescope> m_telescope;
     std::shared_ptr<Focuser> m_focuser;
     std::shared_ptr<Filterwheel> m_filterwheel;

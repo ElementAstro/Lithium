@@ -24,6 +24,10 @@ struct MemoryInfo {
         std::string capacity;
         std::string clockSpeed;
         std::string type;
+
+        MemorySlot() = default;
+        MemorySlot(const std::string &capacity, const std::string &clockSpeed, const std::string &type)
+            : capacity(capacity), clockSpeed(clockSpeed), type(type) {}
     };
 
     std::vector<MemorySlot> slots;

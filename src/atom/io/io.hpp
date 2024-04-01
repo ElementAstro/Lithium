@@ -36,6 +36,21 @@ namespace Atom::IO {
 [[nodiscard]] bool createDirectory(const std::string &path);
 
 /**
+ * @brief Creates a directory with the specified path.
+ *
+ * @param date The directory to create.
+ * @param rootDir The root directory of the directory to create.
+ * @return True if the operation was successful, false otherwise.
+ *
+ * 使用指定路径创建一个目录。
+ *
+ * @param date 要创建的目录。
+ * @param rootDir 要创建的目录的根目录。
+ * @return 如果操作成功，则返回true，否则返回false。
+ */
+void createDirectory(const std::string &date, const std::string &rootDir);
+
+/**
  * @brief Removes an empty directory with the specified path.
  *
  * @param path The path of the directory to remove.

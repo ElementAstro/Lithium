@@ -18,7 +18,7 @@ Description: Some registry functions for Windows
 
 #include "atom/log/loguru.hpp"
 
-bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
+bool getRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
                         std::vector<std::string> &subKeys) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
@@ -51,7 +51,7 @@ bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
     return true;
 }
 
-bool GetRegistryValues(
+bool getRegistryValues(
     HKEY hRootKey, const std::string &subKey,
     std::vector<std::pair<std::string, std::string>> &values) {
     HKEY hKey;
@@ -102,7 +102,7 @@ bool GetRegistryValues(
     return true;
 }
 
-bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey,
+bool modifyRegistryValue(HKEY hRootKey, const std::string &subKey,
                          const std::string &valueName,
                          const std::string &newValue) {
     HKEY hKey;
@@ -127,7 +127,7 @@ bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey,
     return true;
 }
 
-bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey) {
+bool deleteRegistrySubKey(HKEY hRootKey, const std::string &subKey) {
     LONG lRes = RegDeleteKey(hRootKey, subKey.c_str());
     if (lRes != ERROR_SUCCESS) {
         LOG_F(ERROR, "Could not delete subkey: {}", lRes);
@@ -137,7 +137,7 @@ bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey) {
     return true;
 }
 
-bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey,
+bool deleteRegistryValue(HKEY hRootKey, const std::string &subKey,
                          const std::string &valueName) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_SET_VALUE, &hKey);
@@ -157,7 +157,7 @@ bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey,
     return true;
 }
 
-void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
+void recursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
                                          const std::string &subKey) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
@@ -178,7 +178,7 @@ void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
         } else if (lRes == ERROR_SUCCESS) {
             DLOG_F(INFO, "Sub Key: {}", achKey);
             std::string newSubKey = subKey + "\\" + achKey;
-            RecursivelyEnumerateRegistrySubKeys(hRootKey, newSubKey);
+            recursivelyEnumerateRegistrySubKeys(hRootKey, newSubKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
         } else {
@@ -191,7 +191,7 @@ void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
     RegCloseKey(hKey);
 }
 
-bool BackupRegistry(HKEY hRootKey, const std::string &subKey,
+bool backupRegistry(HKEY hRootKey, const std::string &subKey,
                     const std::string &backupFilePath) {
     LONG lRes = RegSaveKey(hRootKey, subKey.c_str(), NULL);
     if (lRes != ERROR_SUCCESS) {
@@ -208,7 +208,7 @@ bool BackupRegistry(HKEY hRootKey, const std::string &subKey,
     return true;
 }
 
-void FindRegistryKey(HKEY hRootKey, const std::string &subKey,
+void findRegistryKey(HKEY hRootKey, const std::string &subKey,
                      const std::string &searchKey) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
@@ -231,7 +231,7 @@ void FindRegistryKey(HKEY hRootKey, const std::string &subKey,
                 DLOG_F(INFO, "Found key: {}", achKey);
             }
             std::string newSubKey = subKey + "\\" + achKey;
-            FindRegistryKey(hRootKey, newSubKey, searchKey);
+            findRegistryKey(hRootKey, newSubKey, searchKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
         } else {
@@ -244,7 +244,7 @@ void FindRegistryKey(HKEY hRootKey, const std::string &subKey,
     RegCloseKey(hKey);
 }
 
-void FindRegistryValue(HKEY hRootKey, const std::string &subKey,
+void findRegistryValue(HKEY hRootKey, const std::string &subKey,
                        const std::string &searchValue) {
     HKEY hKey;
     LONG lRes = RegOpenKeyEx(hRootKey, subKey.c_str(), 0, KEY_READ, &hKey);
@@ -284,7 +284,7 @@ void FindRegistryValue(HKEY hRootKey, const std::string &subKey,
     RegCloseKey(hKey);
 }
 
-bool ExportRegistry(HKEY hRootKey, const std::string &subKey,
+bool exportRegistry(HKEY hRootKey, const std::string &subKey,
                     const std::string &exportFilePath) {
     LONG lRes = RegSaveKey(hRootKey, subKey.c_str(), NULL);
     if (lRes != ERROR_SUCCESS) {
@@ -300,27 +300,5 @@ bool ExportRegistry(HKEY hRootKey, const std::string &subKey,
 
     return true;
 }
-
-/*
-int main()
-{
-    std::vector<std::string> subKeys;
-    if (GetRegistrySubKeys(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows
-NT\\CurrentVersion", subKeys)) { std::cout << "Sub Keys:" << std::endl; for
-(const auto& subKey : subKeys) { std::cout << "  " << subKey << std::endl;
-        }
-    }
-
-    std::vector<std::pair<std::string, std::string>> values;
-    if (GetRegistryValues(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows
-NT\\CurrentVersion", values)) { std::cout << "Values:" << std::endl; for (const
-auto& value : values) { std::cout << "  " << value.first << " = " <<
-value.second << std::endl;
-        }
-    }
-
-    return 0;
-}
-*/
 
 #endif

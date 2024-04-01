@@ -23,13 +23,12 @@ Description: Component Manager (the core of the plugin system)
 #include "atom/type/args.hpp"
 #include "atom/utils/env.hpp"
 
-#include "addons.hpp"
-#include "compiler.hpp"
-#include "finder.hpp"
-#include "loader.hpp"
-#include "sandbox.hpp"
-
 namespace Lithium {
+    class AddonManager;
+    class Compiler;
+    class ModuleLoader;
+class Sandbox;
+
 class ComponentEntry {
 public:
     std::string m_name;
@@ -88,7 +87,7 @@ public:
      * @brief Creates a shared pointer to the component manager
      * @return A shared pointer to the component manager
      */
-    std::shared_ptr<ComponentManager> createShared();
+    static std::shared_ptr<ComponentManager> createShared();
 
     // -------------------------------------------------------------------
     // Components methods (main entry)
@@ -256,10 +255,27 @@ public:
     bool reloadScriptComponent(const json& params);
 
 private:
-    std::shared_ptr<ModuleLoader> m_ModuleLoader;
-    std::shared_ptr<Atom::Utils::Env> m_Env;
 
-    std::unique_ptr<AddonFinder> m_ComponentFinder;
+    /**
+     * @brief Get all files in a directory
+     * @param path The path of the directory
+     * @return The files in the directory
+     */
+    std::vector<std::string> getFilesInDir(const std::string &path);
+
+    /**
+     * @brief Get all sub directories in a directory
+     * @param path The path of the directory
+     * @return The sub directories in the directory
+     */
+    std::vector<std::string> getQualifiedSubDirs(const std::string &path);
+
+private:
+    std::weak_ptr<ModuleLoader> m_ModuleLoader;
+    std::weak_ptr<Atom::Utils::Env> m_Env;
+
+    // The finder used to find the components
+    // std::unique_ptr<AddonFinder> m_ComponentFinder;
 
     // The sandbox used to run the components in a safe way
     std::unique_ptr<Sandbox> m_Sandbox;
@@ -269,7 +285,7 @@ private:
 
     // This is used to solve the circular dependency problem
     // And make sure we can unload the components in the correct order
-    std::shared_ptr<AddonManager> m_AddonManager;
+    std::weak_ptr<AddonManager> m_AddonManager;
 
     std::unordered_map<std::string, std::shared_ptr<ComponentEntry>>
         m_ComponentEntries;

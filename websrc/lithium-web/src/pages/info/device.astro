@@ -7,7 +7,12 @@
     <link rel="stylesheet" href="/css/adminlte.min.css" />
     <link rel="stylesheet" href="/css/fontawesome/fontawesome.min.css" />
     <link rel="stylesheet" href="/css/bootstrap/bootstrap-select.min.css" />
-    <link rel="icon" sizes="16x16" type="image/icon" href="/textures/icon.ico" />
+    <link
+      rel="icon"
+      sizes="16x16"
+      type="image/icon"
+      href="/textures/icon.ico"
+    />
     <style>
       .telescope-card {
         border-radius: 10px;
@@ -87,11 +92,6 @@
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="editModalLabel">Edit Telescope</h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <input
@@ -123,6 +123,7 @@
               <button
                 type="button"
                 class="btn btn-secondary"
+                id="cancelChangesBtn"
                 data-bs-dismiss="modal">Close</button
               >
               <button type="button" class="btn btn-primary" id="saveChangesBtn"
@@ -134,7 +135,9 @@
       </div>
     </div>
 
-    <script src="/js/jquery.min.js" is:inline></script>
+    <script src="/js/jquery.min.js" is:inline>
+import { $ } from "../../../dist/server/chunks/pages/bugreport_AAIoV9b5.mjs";
+</script>
     <script src="/js/bootstrap.bundle.min.js" is:inline></script>
     <script src="/js/bootstrap/bootstrap-select.min.js" is:inline></script>
     <script is:inline>
@@ -1368,6 +1371,18 @@
           editedTelescopeIndex = telescopeCard.index();
 
           $("#editModal").modal("show");
+        });
+
+        $("#editModal").on("hidden.bs.modal", function () {
+          $("#editMake").val("");
+          $("#editModel").val("");
+          $("#editAperture").val("");
+          $("#editFocalLength").val("");
+          editedTelescopeIndex = -1;
+        });
+
+        $("#cancelChangesBtn").on("click", function () {
+          $("#editModal").modal("hide");
         });
 
         // Save changes button click event

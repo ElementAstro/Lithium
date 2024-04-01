@@ -28,7 +28,7 @@ Description: Some registry functions for Windows
  * @param subKeys 子键名称的字符串向量。
  * @return true 表示成功，false 表示失败。
  */
-bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
+bool getRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
                         std::vector<std::string> &subKeys);
 
 /**
@@ -38,7 +38,7 @@ bool GetRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
  * @param values 名称和数据的字符串对向量。
  * @return true 表示成功，false 表示失败。
  */
-bool GetRegistryValues(
+bool getRegistryValues(
     HKEY hRootKey, const std::string &subKey,
     std::vector<std::pair<std::string, std::string>> &values);
 
@@ -50,7 +50,7 @@ bool GetRegistryValues(
  * @param newValue 新的值数据。
  * @return true 表示成功，false 表示失败。
  */
-bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey,
+bool modifyRegistryValue(HKEY hRootKey, const std::string &subKey,
                          const std::string &valueName,
                          const std::string &newValue);
 
@@ -60,7 +60,7 @@ bool ModifyRegistryValue(HKEY hRootKey, const std::string &subKey,
  * @param subKey 要删除的键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  * @return true 表示成功，false 表示失败。
  */
-bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey);
+bool deleteRegistrySubKey(HKEY hRootKey, const std::string &subKey);
 
 /**
  * @brief 删除指定注册表键下的指定值。
@@ -69,7 +69,7 @@ bool DeleteRegistrySubKey(HKEY hRootKey, const std::string &subKey);
  * @param valueName 要删除的值的名称。
  * @return true 表示成功，false 表示失败。
  */
-bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey,
+bool deleteRegistryValue(HKEY hRootKey, const std::string &subKey,
                          const std::string &valueName);
 
 /**
@@ -77,7 +77,7 @@ bool DeleteRegistryValue(HKEY hRootKey, const std::string &subKey,
  * @param hRootKey 根键句柄。
  * @param subKey 指定键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  */
-void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
+void recursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
                                          const std::string &subKey);
 
 /**
@@ -87,7 +87,7 @@ void RecursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
  * @param backupFilePath 备份文件的完整路径。
  * @return true 表示成功，false 表示失败。
  */
-bool BackupRegistry(HKEY hRootKey, const std::string &subKey,
+bool backupRegistry(HKEY hRootKey, const std::string &subKey,
                     const std::string &backupFilePath);
 
 /**
@@ -96,7 +96,7 @@ bool BackupRegistry(HKEY hRootKey, const std::string &subKey,
  * @param subKey 指定键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  * @param searchKey 要查找的字符串。
  */
-void FindRegistryKey(HKEY hRootKey, const std::string &subKey,
+void findRegistryKey(HKEY hRootKey, const std::string &subKey,
                      const std::string &searchKey);
 
 /**
@@ -105,7 +105,7 @@ void FindRegistryKey(HKEY hRootKey, const std::string &subKey,
  * @param subKey 指定键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  * @param searchValue 要查找的字符串。
  */
-void FindRegistryValue(HKEY hRootKey, const std::string &subKey,
+void findRegistryValue(HKEY hRootKey, const std::string &subKey,
                        const std::string &searchValue);
 
 /**
@@ -115,7 +115,7 @@ void FindRegistryValue(HKEY hRootKey, const std::string &subKey,
  * @param exportFilePath 导出文件的完整路径。
  * @return true 表示成功，false 表示失败。
  */
-bool ExportRegistry(HKEY hRootKey, const std::string &subKey,
+bool exportRegistry(HKEY hRootKey, const std::string &subKey,
                     const std::string &exportFilePath);
 
 #endif

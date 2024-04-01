@@ -12,6 +12,9 @@ Description: Main
 
 **************************************************/
 
+#ifdef ENABLE_WEB_SERVER
+// This is for debug only, please remove it in production
+// Oatpp server is still experimental, it may be improved in the future
 #include "AppComponent.hpp"
 
 #ifdef ENABLE_ASYNC
@@ -22,13 +25,8 @@ Description: Main
 #include "controller/AsyncStaticController.hpp"
 #include "controller/AsyncSystemController.hpp"
 #include "controller/AsyncUploadController.hpp"
-#include "controller/AsyncWebSocketController.hpp"
-
-#else
-
-#endif
-
-#if ENABLE_ASYNC
+// #include "controller/AsyncWebSocketController.hpp"
+#include "controller/AsyncClientController.hpp"
 #include "oatpp-swagger/AsyncController.hpp"
 #else
 #include "oatpp-swagger/Controller.hpp"
@@ -36,6 +34,13 @@ Description: Main
 
 #include "oatpp/network/Server.hpp"
 
+#define ADD_CONTROLLER(controller, docEndpoints, router, logMessage) \
+    auto controller##_ptr = controller::createShared();              \
+    docEndpoints.append(controller##_ptr->getEndpoints());           \
+    router->addController(controller##_ptr);                         \
+    DLOG_F(INFO, logMessage " loaded");
+
+#endif
 #include <argparse/argparse.hpp>
 
 #include "LithiumApp.hpp"
@@ -45,6 +50,12 @@ Description: Main
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
 
+// TODO: This is for debug only, please remove it in production
+#define ENABLE_TERMINAL 1
+#if ENABLE_TERMINAL
+#include "debug/terminal.hpp"
+using namespace Lithium::Terminal;
+#endif
 
 #include <chrono>
 #include <ctime>
@@ -55,12 +66,6 @@ Description: Main
 #include <signal.h>
 #endif
 
-#define ADD_CONTROLLER(controller, docEndpoints, router, logMessage) \
-    auto controller##_ptr = controller::createShared();              \
-    docEndpoints.append(controller##_ptr->getEndpoints());           \
-    router->addController(controller##_ptr);                         \
-    DLOG_F(INFO, logMessage " loaded");
-
 void BusLoggerFunction(void *user_data, const loguru::Message &message) {
     Lithium::MyApp->sendJsonMessage("log", {{"message", message.message},
                                             {"level", message.verbosity},
@@ -69,6 +74,7 @@ void BusLoggerFunction(void *user_data, const loguru::Message &message) {
                                             {"timestamp", message.preamble}});
 }
 
+#ifdef ENABLE_WEB_SERVER
 void runServer() {
     DLOG_F(INFO, "Loading App component ...");
 #if ENABLE_IPV6
@@ -77,9 +83,14 @@ void runServer() {
         Lithium::MyApp->GetConfig("config/server")
             .value("port", 8000));  // Create scope Environment components
 #else
+    DLOG_F(INFO, "Server host:", Lithium::MyApp->GetConfig({"key", "config/server"})
+                                   .value("host", "0.0.0.0"));
+    DLOG_F(INFO, "Server port:", Lithium::MyApp->GetConfig({"key", "config/server"})
+                                   .value("port", 8000));
     AppComponent components(
-        Lithium::MyApp->GetConfig("config/server").value("host", "0.0.0.0"),
-        Lithium::MyApp->GetConfig("config/server")
+        Lithium::MyApp->GetConfig({"key", "config/server"})
+            .value("host", "0.0.0.0"),
+        Lithium::MyApp->GetConfig({"key", "config/server"})
             .value("port", 8000));  // Create scope Environment components
 #endif
     DLOG_F(INFO, "App component loaded");
@@ -92,6 +103,23 @@ void runServer() {
     ADD_CONTROLLER(ConfigController, docEndpoints, router,
                    "AsyncConfigController");
 
+    ADD_CONTROLLER(StaticController, docEndpoints, router,
+                   "AsyncStaticController");
+
+    ADD_CONTROLLER(SystemController, docEndpoints, router,
+                   "AsyncSystemController");
+
+    // ADD_CONTROLLER(WebSocketController, docEndpoints, router,
+    //            "AsyncWebSocketController");
+
+    ADD_CONTROLLER(IOController, docEndpoints, router, "AsyncIOController");
+
+    ADD_CONTROLLER(ProcessController, docEndpoints, router,
+                   "AsyncProcessController");
+
+    ADD_CONTROLLER(ClientController, docEndpoints, router,
+                   "AsyncClientController");
+
     DLOG_F(INFO, "Starting to load API doc controller");
 #if ENABLE_ASYNC
     router->addController(
@@ -103,7 +131,7 @@ void runServer() {
     DLOG_F(INFO, "API doc controller loaded");
 
     /* Load websocket route */
-    router->addController(WebSocketController::createShared());
+    // router->addController(WebSocketController::createShared());
 
     /* Get connection handler component */
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
@@ -124,8 +152,11 @@ void runServer() {
      */
     server.run();
 }
+#endif
 
-struct MyNetworkLogger {};
+
+// TODO: add network logger, not implemented yet
+// struct MyNetworkLogger {};
 
 /**
  * @brief setup log file
@@ -145,14 +176,16 @@ void setupLogFile() {
     loguru::add_file(logFilePath.string().c_str(), loguru::Append,
                      loguru::Verbosity_MAX);
 
-    MyNetworkLogger network_logger;
+    // MyNetworkLogger network_logger;
     // TODO loguru::add_callback("network_logger", BusLoggerFunction,
     // &network_logger, loguru::Verbosity_INFO);
 
     loguru::set_fatal_handler([](const loguru::Message &message) {
         Atom::System::saveCrashLog(std::string(message.prefix) +
                                    message.message);
+#if ENABLE_WEB_SERVER
         oatpp::base::Environment::destroy();
+#endif
     });
 }
 
@@ -187,7 +220,7 @@ int main(int argc, char *argv[]) {
         .default_value("0.0.0.0");
     program.add_argument("-C", "--config")
         .help("path to the config file")
-        .default_value("cpnfig.json");
+        .default_value("config.json");
     program.add_argument("-M", "--module-path")
         .help("path to the modules directory")
         .default_value("modules");
@@ -201,7 +234,7 @@ int main(int argc, char *argv[]) {
 
     program.parse_args(argc, argv);
 
-    Lithium::InitLithiumApp();
+    Lithium::InitLithiumApp(argc, argv);
     // Run oatpp server
     Lithium::MyApp = Lithium::LithiumApp::createShared();
 
@@ -250,11 +283,45 @@ int main(int argc, char *argv[]) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
     }
 
+#if ENABLE_TERMINAL
+    Lithium::MyApp->SetConfig(
+        {{"key", "config/terminal/enabled"}, {"value", true}});
+
+    CommandManager manager;
+
+    // 注册指令函数
+    manager.registerCommand("ls", lsCommand);
+    manager.registerCommand("pwd", pwdCommand);
+    manager.registerCommand("mkdir", mkdirCommand);
+    manager.registerCommand("cp", cpCommand);
+    manager.registerCommand("system", systemCommand);
+
+    clearTerminal();
+
+    // 打印终端头部信息
+    printHeader();
+
+    while (true)
+    {
+        // 获取终端输入
+        std::string input = getTerminalInput(manager);
+
+        // 运行指令函数
+        std::string result = manager.runCommand(input, "");
+
+        // 在终端上显示执行结果
+        std::cout << result << std::endl;
+    }
+
+#endif
+
+#if ENABLE_WEB_SERVER
     oatpp::base::Environment::init();
     // Run the main server
     runServer();
     // Clean up all
     oatpp::base::Environment::destroy();
+#endif
 
     return 0;
 }

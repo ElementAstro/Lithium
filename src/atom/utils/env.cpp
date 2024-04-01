@@ -73,6 +73,16 @@ Env::Env(int argc, char **argv) {
     }
 }
 
+std::shared_ptr<Env> Env::createShared(int argc, char **argv)
+{
+    return std::make_shared<Env>(argc, argv);
+}
+
+std::unique_ptr<Env> Env::createUnique(int argc, char **argv)
+{
+    return std::make_unique<Env>(argc, argv);
+}
+
 void Env::add(const std::string &key, const std::string &val) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (has(key)) {

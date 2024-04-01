@@ -33,7 +33,7 @@ public:
      * @param password The password for the MySQL database.
      * @param database The name of the database to connect to.
      */
-    MysqlDB(const char *host, const char *user, const char *password,
+    explicit MysqlDB(const char *host, const char *user, const char *password,
             const char *database);
 
     /**

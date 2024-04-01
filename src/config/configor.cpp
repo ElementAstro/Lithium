@@ -116,6 +116,7 @@ bool ConfigManager::setValue(const std::string &key_path, const json &value) {
     try {
         json *p = &config_;
         for (const auto &key : Atom::Utils::splitString(key_path, '/')) {
+            DLOG_F(INFO, "Key: {}" , key);
             if (!p->is_object()) {
                 LOG_F(ERROR, "Invalid key path: {}", key_path);
                 return false;

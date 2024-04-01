@@ -8,6 +8,7 @@
 
 cmake_minimum_required(VERSION 3.13)
 
+project(Lithium)
 enable_language(C CXX)
 
 if(COMMAND cmake_policy)
@@ -65,7 +66,10 @@ if(UNIX OR APPLE)
     endif()
 endif()
 
-# ####################################  Lithium version  ################################################
+#################################################################################
+#
+# Lithium version
+
 set(CMAKE_LITHIUM_VERSION_MAJOR 1)
 set(CMAKE_LITHIUM_VERSION_MINOR 0)
 set(CMAKE_LITHIUM_VERSION_RELEASE 0)
@@ -77,6 +81,40 @@ set(LITHIUM_VERSION ${CMAKE_LITHIUM_VERSION_MAJOR}.${CMAKE_LITHIUM_VERSION_MINOR
 if(APPLE)
     set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
 endif(APPLE)
+
+#################################################################################
+#
+# Lithium includes
+
+include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${lithium_src_dir})
+include_directories(${lithium_module_dir})
+include_directories(${lithium_src_dir})
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
+include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
+
+#################################################################################
+#
+# Subdirectories of Lithium
+
+# Build all dependencies
+# 构建所有需要的依赖库
+add_subdirectory(libs/)
+
+# Build all tools
+# 所有的工具组件
+add_subdirectory(tools)
+
+# Build Atom core library
+# 构建Atom核心库
+add_subdirectory(${lithium_module_dir})
+
+# 内置的模组
+include_directories(modules)
+add_subdirectory(modules)
+
+add_subdirectory(driver)
 
 #################################################################################
 #
@@ -92,18 +130,30 @@ set(USE_FOLDERS TRUE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(ENABLE_ASYNC "Enable Async Server Mode" ON)
+option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
+option(ENABLE_DEBUG "Enable Debug Mode" OFF)
+
+option(ENABLE_FASHHASH "Enable Using emhash8 as fast hash map" OFF)
+option(ENABLE_WEB_SERVER "Enable Web Server" ON)
+option(ENABLE_WEB_CLIENT "Enable Web Client" ON)
+
 if(ENABLE_ASYNC)
     set(ENABLE_ASYNC_FLAG "1")
 endif()
-
-option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
+if(ENABLE_DEBUG)
+    set(ENABLE_DEBUG_FLAG "1")
+endif()
 if(ENABLE_NATIVE_SERVER)
     set(ENABLE_NATIVE_SERVER_FLAG "1")
 endif()
-
-option(ENABLE_DEBUG "Enable Debug Mode" OFF)
-if(ENABLE_DEBUG)
-    set(ENABLE_DEBUG_FLAG "1")
+if(ENABLE_FASHHASH)
+    set(ENABLE_FASHHASH_FLAG "1")
+endif()
+if(ENABLE_WEB_SERVER)
+    set(ENABLE_WEB_SERVER_FLAG "1")
+endif()
+if(ENABLE_WEB_CLIENT)
+    set(ENABLE_WEB_CLIENT_FLAG "1")
 endif()
 
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -137,13 +187,25 @@ set(component_module
 
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
+    ${lithium_src_dir}/config/HubsConfig.cpp
 )
+
+if (ENABLE_DEBUG_FLAG)
+set(debug_module
+    ${lithium_src_dir}/debug/terminal.cpp
+)
+else()
+set(debug_module
+    ${lithium_src_dir}/debug/terminal.cpp
+)
+endif()
 
 if (ENABLE_ASYNC_FLAG)
 set(server_module
-    ${lithium_src_dir}/websocket/AsyncWsServer.cpp
-    ${lithium_src_dir}/websocket/AsyncWsHub.cpp
-    ${lithium_src_dir}/websocket/AsyncWsInstance.cpp
+    ${lithium_src_dir}/websocket/Hub.cpp
+    ${lithium_src_dir}/websocket/Connection.cpp
+    ${lithium_src_dir}/websocket/Registry.cpp
+    ${lithium_src_dir}/websocket/Session.cpp
 )
 else()
 set(server_module
@@ -154,8 +216,9 @@ set(server_module
 endif()
 
 set(script_module
-    ${lithium_src_dir}/script/python.cpp
-    ${lithium_src_dir}/script/python_system.cpp
+    ${lithium_src_dir}/script/manager.cpp
+    ${lithium_src_dir}/script/custom/sys.cpp
+    ${lithium_src_dir}/script/custom/config.cpp
 
     ${lithium_src_dir}/script/sheller.cpp
 )
@@ -187,54 +250,21 @@ endif()
 find_package(CFITSIO REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(fmt REQUIRED)
 
 #################################################################################
 # Main
 
-project(Lithium)
-
-include_directories(${CMAKE_SOURCE_DIR}/libs/)
-include_directories(${lithium_src_dir})
-include_directories(${lithium_module_dir})
-include_directories(${lithium_src_dir})
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
-include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
-
-# Build all dependencies
-# 构建所有需要的依赖库
-add_subdirectory(libs/)
-
-# Build all tools
-# 所有的工具组件
-add_subdirectory(tools)
-
-# Build Atom core library
-# 构建Atom核心库
-add_subdirectory(${lithium_module_dir})
-
-# 内置的模组
-include_directories(modules)
-add_subdirectory(modules)
-
-add_subdirectory(driver)
-
-add_library(lithium_server-library STATIC ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
 target_link_libraries(lithium_server lithium_server-library)
-target_link_libraries(lithium_server oatpp oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib)
+target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-target_link_libraries(lithium_server hydrogenclientstatic)
-
-CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
-if(NOT HAS_STD_FORMAT)
-    find_package(fmt REQUIRED)
-    target_link_libraries(lithium_server fmt::fmt)
-endif()
+target_link_libraries(lithium_server-library fmt::fmt)
 
 target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 

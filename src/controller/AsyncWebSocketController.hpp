@@ -57,40 +57,40 @@ public:
     // Websocket Handler
     // ----------------------------------------------------------------
 
-    ENDPOINT_ASYNC("GET", "/ws/{hub-name}", wsConsole){
-        ENDPOINT_ASYNC_INIT(wsConsole) Action act()
-            override{auto hubType = request->getPathVariable("hub-type");
-    auto response = oatpp::websocket::Handshaker::serversideHandshake(
-        request->getHeaders(), controller->websocketConnectionHandler);
-    auto parameters =
-        std::make_shared<oatpp::network::ConnectionHandler::ParameterMap>();
-    (*parameters)["type"] = hubType;
-    response->setConnectionUpgradeParameters(parameters);
+    ENDPOINT_ASYNC("GET", "/ws/{hub-name}", wsConsole) {
+        ENDPOINT_ASYNC_INIT(wsConsole);
+        Action act() override {
+            auto hubType = request->getPathVariable("hub-type");
+            auto response = oatpp::websocket::Handshaker::serversideHandshake(
+                request->getHeaders(), controller->websocketConnectionHandler);
+            auto parameters = std::make_shared<
+                oatpp::network::ConnectionHandler::ParameterMap>();
+            (*parameters)["type"] = hubType;
+            response->setConnectionUpgradeParameters(parameters);
 
-    if (const std::string hub_type = hubType.getValue("");
-        hub_type == "device") {
-        std::vector<std::string> available_device_types = {
-            "camera",      "telescope", "focuser",
-            "filterwheel", "solver",    "guider"};
-        auto it = std::find(available_device_types.begin(),
-                            available_device_types.end(), hubType.getValue(""));
-        OATPP_ASSERT_HTTP(it != available_device_types.end(), Status::CODE_500,
-                          "Invalid device type");
-    } else if (hub_type == "plugin") {
-        std::vector<std::string> available_plugins = {"script", "exe",
-                                                      "liscript"};
-        auto it = std::find(available_plugins.begin(), available_plugins.end(),
-                            hubType->c_str());
-        OATPP_ASSERT_HTTP(it != available_plugins.end(), Status::CODE_500,
-                          "Invalid plugin type");
-    }
+            if (const std::string hub_type = hubType.getValue("");
+                hub_type == "device") {
+                std::vector<std::string> available_device_types = {
+                    "camera",      "telescope", "focuser",
+                    "filterwheel", "solver",    "guider"};
+                auto it = std::find(available_device_types.begin(),
+                                    available_device_types.end(),
+                                    hubType.getValue(""));
+                OATPP_ASSERT_HTTP(it != available_device_types.end(),
+                                  Status::CODE_500, "Invalid device type");
+            } else if (hub_type == "plugin") {
+                std::vector<std::string> available_plugins = {"script", "exe",
+                                                              "liscript"};
+                auto it = std::find(available_plugins.begin(),
+                                    available_plugins.end(), hubType->c_str());
+                OATPP_ASSERT_HTTP(it != available_plugins.end(),
+                                  Status::CODE_500, "Invalid plugin type");
+            }
 
-    return _return(response);
-}
-}
-;
-}
-;
+            return _return(response);
+        }
+    };
+};
 
 #include OATPP_CODEGEN_END(ApiController)  //<-- codegen end
 

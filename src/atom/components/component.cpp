@@ -31,19 +31,20 @@ namespace fs = std::filesystem;
 Component::Component(const std::string &name)
     : m_CommandDispatcher(std::make_unique<CommandDispatcher<json, json>>()),
       m_VariableRegistry(std::make_unique<VariableRegistry>(name)),
-      m_name(name) {
-    if (!initialize()) {
-        LOG_F(ERROR, "Failed to initialize {}", name);
-    }
-}
+      m_name(name) {}
 
 Component::~Component() { destroy(); }
 
-bool Component::initialize() { return true; }
+bool Component::initialize() {
+    DLOG_F(INFO, "Component is initializing ...");
+    registerFunc("registerVariable", &Component::_registerVariable, this);
+    DLOG_F(INFO, "Component is initialized");
+    return true;
+}
 
 bool Component::destroy() {
     if (m_CommandDispatcher) {
-        m_CommandDispatcher->RemoveAll();
+        m_CommandDispatcher->removeAll();
         m_CommandDispatcher.reset();
     }
     if (m_VariableRegistry) {
@@ -134,30 +135,38 @@ std::string Component::getVariableInfo(const std::string &name) const {
     return m_VariableRegistry->GetDescription(name);
 }
 
+bool Component::registerVariableRanges(const std::string &name,
+                                       const double &low, const double &high) {
+    if (name.empty())
+        return false;
+    m_VariableRegistry->SetVariableRange(name, low, high);
+    return true;
+}
+
 bool Component::runFunc(const std::string &name, const json &params) {
-    if (!m_CommandDispatcher->HasHandler(name)) {
+    if (!m_CommandDispatcher->hasHandler(name)) {
         return false;
     }
-    m_CommandDispatcher->Dispatch(name, params);
+    m_CommandDispatcher->dispatch(name, params);
     return true;
 }
 
 json Component::getFuncInfo(const std::string &name) {
-    if (m_CommandDispatcher->HasHandler(name)) {
+    if (m_CommandDispatcher->hasHandler(name)) {
         json args;
         args = {
             {"name", name},
-            {"description", m_CommandDispatcher->GetFunctionDescription(name)}};
+            {"description", m_CommandDispatcher->getFunctionDescription(name)}};
         return args;
     }
     return {};
 }
 
 std::function<json(const json &)> Component::getFunc(const std::string &name) {
-    if (!m_CommandDispatcher->HasHandler(name)) {
+    if (!m_CommandDispatcher->hasHandler(name)) {
         throw Atom::Error::InvalidArgument("Function not found");
     }
-    return m_CommandDispatcher->GetHandler(name);
+    return m_CommandDispatcher->getHandler(name);
 }
 
 json Component::createSuccessResponse(const std::string &command,
@@ -217,4 +226,42 @@ json Component::createWarningResponse(const std::string &command,
         res["warning"] = "Unknown Warning";
     }
     return res;
+}
+
+json Component::_registerVariable(const json &params) {
+    // Check Parameters
+    if (!params.contains("name") || !params.contains("value")) {
+        return createErrorResponse(__func__, {{"error", "Invalid Parameters"}},
+                                   "Missing 'name' or 'value'");
+    }
+    if (!params["name"].is_string()) {
+        return createErrorResponse(__func__, {{"error", "Invalid Parameters"}},
+                                   "'name' must be a string value");
+    }
+    std::string name = params["name"].get<std::string>();
+    std::string description = "";
+    // Get description if have
+    if (params.contains("description") && params["description"].is_string()) {
+        description = params["description"];
+    }
+    bool status = false;
+    if (params["value"].is_string()) {
+        status = registerVariable(name, params["value"].get<std::string>(),
+                                  description);
+    } else if (params["value"].is_number()) {
+        status =
+            registerVariable(name, params["value"].get<double>(), description);
+    } else if (params["value"].is_boolean()) {
+        status =
+            registerVariable(name, params["value"].get<bool>(), description);
+    } else {
+        return createErrorResponse(
+            __func__, {{"error", "Unknown Type"}},
+            "Value type must be one of number|boolean|string");
+    }
+    if (!status) {
+        return createErrorResponse(__func__, {{"error", "Operation Failed"},
+                                              "Failed to register value"});
+    }
+    return createSuccessResponse(__func__, {});
 }

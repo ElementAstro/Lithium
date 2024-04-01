@@ -16,19 +16,27 @@ Description: Lithium App Enter
 
 #include "config.h"
 
-#include "atom/server/global_ptr.hpp"
-#include "utils/marco.hpp"
+#include "addon/addons.hpp"
+#include "addon/manager.hpp"
 
+#include "config/configor.hpp"
+
+#include "device/manager.hpp"
 #include "device/server/ascom.hpp"
 #include "device/server/hydrogen.hpp"
 
-#include "atom/log/loguru.hpp"
-#include "atom/type/json.hpp"
-#include "atom/utils/time.hpp"
-
-#include "magic_enum/magic_enum.hpp"
+#include "task/manager.hpp"
 
 #include "script/manager.hpp"
+
+#include "atom/error/error_stack.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/system/process.hpp"
+#include "atom/utils/time.hpp"
+#include "atom/server/global_ptr.hpp"
+#include "utils/marco.hpp"
+
+#include "magic_enum/magic_enum.hpp"
 
 using json = nlohmann::json;
 
@@ -76,6 +84,8 @@ namespace Lithium {
 std::shared_ptr<LithiumApp> MyApp = nullptr;
 
 LithiumApp::LithiumApp() {
+    DLOG_SCOPE_FUNCTION(INFO);
+    DLOG_F(INFO, "LithiumApp Constructor");
     try {
         // Specialized Managers and Threads
         m_ConfigManager = GetWeakPtr<ConfigManager>("lithium.config");
@@ -102,7 +112,10 @@ LithiumApp::LithiumApp() {
         // message
         //       to the right type to process.
         //       All of the messages are based on the Message class.
+        DLOG_SCOPE_F(INFO, "Start Message Processing Thread");
         m_MessageBus.lock()->StartProcessingThread<Message>();
+
+        DLOG_SCOPE_F(INFO, "Register LithiumApp Member Functions");
 
         LiRegisterMemberFunc("GetConfig", &LithiumApp::GetConfig);
         LiRegisterMemberFunc("SetConfig", &LithiumApp::SetConfig);
@@ -112,6 +125,7 @@ LithiumApp::LithiumApp() {
         LOG_F(ERROR, "Failed to load Lithium App , error : {}", e.what());
         throw std::runtime_error("Failed to load Lithium App");
     }
+    DLOG_SCOPE_F(INFO, "Lithium App Initialized");
 }
 
 LithiumApp::~LithiumApp() {

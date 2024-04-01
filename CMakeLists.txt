@@ -130,18 +130,30 @@ set(USE_FOLDERS TRUE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 option(ENABLE_ASYNC "Enable Async Server Mode" ON)
+option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
+option(ENABLE_DEBUG "Enable Debug Mode" OFF)
+
+option(ENABLE_FASHHASH "Enable Using emhash8 as fast hash map" OFF)
+option(ENABLE_WEB_SERVER "Enable Web Server" ON)
+option(ENABLE_WEB_CLIENT "Enable Web Client" ON)
+
 if(ENABLE_ASYNC)
     set(ENABLE_ASYNC_FLAG "1")
 endif()
-
-option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
+if(ENABLE_DEBUG)
+    set(ENABLE_DEBUG_FLAG "1")
+endif()
 if(ENABLE_NATIVE_SERVER)
     set(ENABLE_NATIVE_SERVER_FLAG "1")
 endif()
-
-option(ENABLE_DEBUG "Enable Debug Mode" OFF)
-if(ENABLE_DEBUG)
-    set(ENABLE_DEBUG_FLAG "1")
+if(ENABLE_FASHHASH)
+    set(ENABLE_FASHHASH_FLAG "1")
+endif()
+if(ENABLE_WEB_SERVER)
+    set(ENABLE_WEB_SERVER_FLAG "1")
+endif()
+if(ENABLE_WEB_CLIENT)
+    set(ENABLE_WEB_CLIENT_FLAG "1")
 endif()
 
 configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -177,6 +189,16 @@ set(config_module
     ${lithium_src_dir}/config/configor.cpp
     ${lithium_src_dir}/config/HubsConfig.cpp
 )
+
+if (ENABLE_DEBUG_FLAG)
+set(debug_module
+    ${lithium_src_dir}/debug/terminal.cpp
+)
+else()
+set(debug_module
+    ${lithium_src_dir}/debug/terminal.cpp
+)
+endif()
 
 if (ENABLE_ASYNC_FLAG)
 set(server_module
@@ -233,7 +255,7 @@ find_package(fmt REQUIRED)
 #################################################################################
 # Main
 
-add_library(lithium_server-library STATIC ${component_module} ${config_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
+add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
 add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 

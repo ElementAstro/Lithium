@@ -5,3 +5,4 @@
             throw std::runtime_error("Failed to " errorMsg); \
         } \
     } while(0)
+    

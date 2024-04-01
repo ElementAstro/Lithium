@@ -18,16 +18,11 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "addon/manager.hpp"
-#include "atom/error/error_stack.hpp"
 #include "atom/server/commander.hpp"
 #include "atom/server/message_bus.hpp"
-#include "atom/system/process.hpp"
 #include "atom/type/message.hpp"
-#include "config/configor.hpp"
-#include "device/manager.hpp"
-#include "script/manager.hpp"
-#include "task/manager.hpp"
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
 
 // -------------------------------------------------------------------
 // About the LithiumApp
@@ -40,8 +35,30 @@ Description: Lithium App Enter
 //       parameters. However, It is more convenient to use json object.
 // -------------------------------------------------------------------
 
+namespace Atom
+{
+    namespace Error
+    {
+        class ErrorStack;
+    }
+
+    namespace System
+    {
+        class ProcessManager;
+    }
+}
 namespace Lithium {
 class PyScriptManager;  // FWD
+
+class ComponentManager; // FWD
+
+class ConfigManager;
+
+class TaskPool;
+
+class TaskManager;
+
+class DeviceManager;
 
 class LithiumApp {
 public:

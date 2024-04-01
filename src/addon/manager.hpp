@@ -23,13 +23,12 @@ Description: Component Manager (the core of the plugin system)
 #include "atom/type/args.hpp"
 #include "atom/utils/env.hpp"
 
-#include "addons.hpp"
-#include "compiler.hpp"
-#include "finder.hpp"
-#include "loader.hpp"
-#include "sandbox.hpp"
-
 namespace Lithium {
+    class AddonManager;
+    class Compiler;
+    class ModuleLoader;
+class Sandbox;
+
 class ComponentEntry {
 public:
     std::string m_name;
@@ -256,11 +255,27 @@ public:
     bool reloadScriptComponent(const json& params);
 
 private:
+
+    /**
+     * @brief Get all files in a directory
+     * @param path The path of the directory
+     * @return The files in the directory
+     */
+    std::vector<std::string> getFilesInDir(const std::string &path);
+
+    /**
+     * @brief Get all sub directories in a directory
+     * @param path The path of the directory
+     * @return The sub directories in the directory
+     */
+    std::vector<std::string> getQualifiedSubDirs(const std::string &path);
+
+private:
     std::weak_ptr<ModuleLoader> m_ModuleLoader;
     std::weak_ptr<Atom::Utils::Env> m_Env;
 
     // The finder used to find the components
-    std::unique_ptr<AddonFinder> m_ComponentFinder;
+    // std::unique_ptr<AddonFinder> m_ComponentFinder;
 
     // The sandbox used to run the components in a safe way
     std::unique_ptr<Sandbox> m_Sandbox;

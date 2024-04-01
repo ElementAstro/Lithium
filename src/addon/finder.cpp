@@ -61,7 +61,7 @@ std::vector<std::string> AddonFinder::getAvailableDirs() const {
     std::function<void(const DirContainer &)> findMatchingSubdirs =
         [&](const DirContainer &dir) {
             for (const auto &subdir : dir.getSubdirs()) {
-                if (m_filterFunc(subdir.getPath())) {
+                if (!m_filterFunc && m_filterFunc(subdir.getPath())) {
                     matchingSubdirs.push_back(
                         subdir.getPath().filename().string());
                 }

@@ -178,7 +178,7 @@ void recursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
         } else if (lRes == ERROR_SUCCESS) {
             DLOG_F(INFO, "Sub Key: {}", achKey);
             std::string newSubKey = subKey + "\\" + achKey;
-            RecursivelyEnumerateRegistrySubKeys(hRootKey, newSubKey);
+            recursivelyEnumerateRegistrySubKeys(hRootKey, newSubKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
         } else {
@@ -231,7 +231,7 @@ void findRegistryKey(HKEY hRootKey, const std::string &subKey,
                 DLOG_F(INFO, "Found key: {}", achKey);
             }
             std::string newSubKey = subKey + "\\" + achKey;
-            FindRegistryKey(hRootKey, newSubKey, searchKey);
+            findRegistryKey(hRootKey, newSubKey, searchKey);
             cchKey = MAX_KEY_LENGTH;
             i++;
         } else {

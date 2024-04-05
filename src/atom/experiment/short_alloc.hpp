@@ -40,7 +40,7 @@ public:
     void reset() noexcept { ptr_ = buf_; }
 
 private:
-    static std::size_t align_up(std::size_t n) noexcept {
+    static constexpr std::size_t align_up(std::size_t n) noexcept {
         return (n + (alignment - 1)) & ~(alignment - 1);
     }
 

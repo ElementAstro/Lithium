@@ -16,6 +16,8 @@ Description: Implementation of murmur3 hash and quick hash
 #define ATOM_UTILS_HASH_UTIL_HPP
 
 #include <stdint.h>
+#include <cstdint>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -89,8 +91,7 @@ namespace Atom::Utils {
  * @param output The output buffer to store the hexadecimal string (length must
  * be len * 2).
  */
-void hexstring_from_data(const void *data, size_t len,
-                                       char *output);
+void hexstring_from_data(const void *data, size_t len, char *output);
 
 /**
  * @brief Converts binary data to a hexadecimal string representation.
@@ -117,8 +118,7 @@ void hexstring_from_data(const void *data, size_t len,
  * @param output The output buffer to store the binary data (length must be
  * length / 2).
  */
-void data_from_hexstring(const char *hexstring, size_t length,
-                                       void *output);
+void data_from_hexstring(const char *hexstring, size_t length, void *output);
 
 /**
  * @brief Converts a hexadecimal string representation to binary data.
@@ -141,6 +141,11 @@ void data_from_hexstring(const char *hexstring, size_t length,
  * hexadecimal string.
  */
 [[nodiscard]] std::string data_from_hexstring(const std::string &data);
+
+[[nodiscard]] constexpr std::uint32_t fnv1aHash(
+    std::span<const std::byte> data, std::uint32_t hash = fnv1a_offset_basis);
+
+[[nodiscard]] constexpr std::uint32_t fnv1aHash(const std::string &text);
 }  // namespace Atom::Utils
 
 #endif

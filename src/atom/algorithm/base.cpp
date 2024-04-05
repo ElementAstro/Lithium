@@ -12,13 +12,12 @@ Description: A collection of algorithms for C++
 
 **************************************************/
 
-#include "base16.hpp"
+#include "base.hpp"
 
 #include <algorithm>
 #include <bit>
 #include <iomanip>
 #include <iostream>
-#include <span>
 #include <stdexcept>
 
 

@@ -60,6 +60,10 @@ public:
      */
     ~ConfigManager();
 
+    // -------------------------------------------------------------------
+    // Common methods
+    // -------------------------------------------------------------------
+
     /**
      * @brief 创建一个全局唯一的ConfigManager实例
      *
@@ -67,24 +71,9 @@ public:
      */
     static std::shared_ptr<ConfigManager> createShared();
 
-    /**
-     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
-     *
-     * Load JSON configuration from the specified file and merge with the
-     * existing configuration.
-     *
-     * @param path 配置文件路径
-     */
-    bool loadFromFile(const std::string &path);
-
-    /**
-     * @brief 加载指定目录下的所有JSON配置文件
-     *
-     * Load all JSON configuration files in the specified directory.
-     *
-     * @param dir_path 配置文件所在目录的路径
-     */
-    bool loadFromDir(const std::string &dir_path, bool recursive);
+    // -------------------------------------------------------------------
+    // Config methods
+    // -------------------------------------------------------------------
 
     /**
      * @brief 获取一个配置项的值
@@ -95,7 +84,7 @@ public:
      * "database/username"
      * @return json 配置项对应的值，如果键不存在则返回 nullptr
      */
-    json getValue(const std::string &key_path) const;
+    [[nodiscard]] json getValue(const std::string &key_path) const;
 
     /**
      * @brief 添加或更新一个配置项
@@ -129,6 +118,25 @@ public:
      * @return bool 存在返回 true，不存在返回 false
      */
     bool hasValue(const std::string &key_path) const;
+
+    /**
+     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
+     *
+     * Load JSON configuration from the specified file and merge with the
+     * existing configuration.
+     *
+     * @param path 配置文件路径
+     */
+    bool loadFromFile(const std::string &path);
+
+    /**
+     * @brief 加载指定目录下的所有JSON配置文件
+     *
+     * Load all JSON configuration files in the specified directory.
+     *
+     * @param dir_path 配置文件所在目录的路径
+     */
+    bool loadFromDir(const std::string &dir_path, bool recursive);
 
     /**
      * @brief 将当前配置保存到指定文件

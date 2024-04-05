@@ -20,6 +20,7 @@ Description: Implementation of murmur3 hash and quick hash
 #include <openssl/sha.h>
 #include <string.h>
 #include <algorithm>
+#include <bit>
 #include <cstdlib>
 #include <sstream>
 #include <stdexcept>
@@ -311,4 +312,33 @@ std::string data_from_hexstring(const char *hexstring, size_t length) {
 std::string data_from_hexstring(const std::string &hexstring) {
     return data_from_hexstring(hexstring.c_str(), hexstring.size());
 }
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Winvalid-constexpr"
+#endif
+
+#ifdef _MSC_VER
+#pragma warning(disable : 4244)
+#pragma warning(push)
+#pragma warning(disable : 4307)
+#endif
+
+constexpr std::uint32_t fnv1a_prime = 16777619u;
+constexpr std::uint32_t fnv1a_offset_basis = 2166136261u;
+
+constexpr std::uint32_t fnv1aHash(std::span<const std::byte> data,
+                                  std::uint32_t hash = fnv1a_offset_basis) {
+    for (std::byte byte : data) {
+        hash ^= std::to_integer<std::uint32_t>(byte);
+        hash *= fnv1a_prime;
+    }
+    return hash;
+}
+
+constexpr std::uint32_t fnv1aHash(const std::string &text) {
+    return fnv1aHash(std::as_bytes(std::span(text)));
+}
+
 }  // namespace Atom::Utils

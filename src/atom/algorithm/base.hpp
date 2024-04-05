@@ -18,7 +18,7 @@ Description: A collection of algorithms for C++
 #include <cstdint>
 #include <string>
 #include <vector>
-
+#include <span>
 
 namespace Atom::Algorithm {
 /**

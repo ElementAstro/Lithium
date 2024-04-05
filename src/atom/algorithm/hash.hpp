@@ -21,7 +21,7 @@ Description: A collection of hash algorithms
 #include <type_traits>
 #include <vector>
 
-
+namespace Atom::Algorithm {
 template <typename T>
 concept Hashable = requires(T a) {
     { std::hash<T>{}(a) } -> std::convertible_to<std::size_t>;
@@ -64,5 +64,6 @@ std::size_t computeHash(const std::array<T, N>& array) {
     }
     return result;
 }
+}  // namespace Atom::Algorithm
 
 #endif

@@ -15,27 +15,75 @@ Description: An implementation of invoke function. Support C++11 and C++17.
 #ifndef ATOM_EXPERIMENTAL_INVOKE_HPP
 #define ATOM_EXPERIMENTAL_INVOKE_HPP
 
+#include <exception>
 #include <functional>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
+
 
 #if __cplusplus >= 201703L
 
 #include <type_traits>
 
 template <typename F, typename... Args>
-using is_invocable_with_args = std::is_invocable<F, Args...>;
+concept Invocable = std::is_invocable_v<std::decay_t<F>, std::decay_t<Args>...>;
 
-template <class F, class... Args>
+template <typename F, typename... Args>
 auto delay_invoke(F &&f, Args &&...args) {
-    static_assert(is_invocable_with_args<F, Args...>::value,
-                  "F must be callable with Args...");
+    static_assert(Invocable<F, Args...>, "F must be callable with Args...");
 
     return [f = std::forward<F>(f),
             args = std::make_tuple(std::forward<Args>(args)...)]() mutable {
-        return std::apply(f, args);
+        return std::apply(std::move(f), std::move(args));
     };
 }
+
+template <typename Func, typename... Args>
+std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...> safe_call(
+    Func &&func, Args &&...args) {
+    try {
+        return std::invoke(std::forward<Func>(func),
+                           std::forward<Args>(args)...);
+    } catch (...) {
+        using ReturnType =
+            std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...>;
+        if constexpr (std::is_default_constructible_v<ReturnType>) {
+            return ReturnType{};
+        } else {
+            throw std::runtime_error("An exception occurred in safe_call");
+        }
+    }
+}
+
+template <typename Func, typename... Args>
+auto safe_try_catch(Func &&func, Args &&...args) {
+    try {
+        return std::invoke(std::forward<Func>(func),
+                           std::forward<Args>(args)...);
+    } catch (...) {
+        if constexpr (std::is_void_v<std::invoke_result_t<
+                          std::decay_t<Func>, std::decay_t<Args>...>>) {
+            std::rethrow_exception(std::current_exception());
+        } else
+            return std::make_tuple(std::current_exception());
+    }
+}
+
+template <typename Func, typename... Args>
+auto safe_try_catch_or_default(
+    Func &&func,
+    std::invoke_result_t<std::decay_t<Func>, std::decay_t<Args>...>
+        default_value,
+    Args &&...args) {
+    try {
+        return std::invoke(std::forward<Func>(func),
+                           std::forward<Args>(args)...);
+    } catch (...) {
+        return default_value;
+    }
+}
+
 #else
 template <std::size_t... I>
 struct index_sequence {};

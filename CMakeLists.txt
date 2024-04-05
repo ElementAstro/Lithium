@@ -87,6 +87,7 @@ endif(APPLE)
 # Lithium includes
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${CMAKE_SOURCE_DIR}/driverlibs/)
 include_directories(${lithium_src_dir})
 include_directories(${lithium_module_dir})
 include_directories(${lithium_src_dir})

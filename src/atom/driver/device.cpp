@@ -34,8 +34,20 @@ bool AtomDriver::initialize() {
     SharedComponent::initialize();
     Atom::Utils::UUIDGenerator generator;
     m_uuid = generator.generateUUID();
-    setVariable("DEVICE_UUID", m_uuid);
-    setVariable("DEVICE_NAME", m_name);
+
+    registerVariable("DEVICE_NAME", m_name);
+    registerVariable("DEVICE_ID", 0, "Device ID");
+    registerVariable("DEVICE_UUID", m_uuid);
+    registerVariable("DEVICE_TYPE", "", "Device Type");
+    registerVariable("DEVICE_VERSION", "1.0.0", "Device Version");
+    registerVariable("DEVICE_MANUFACTURER", "Atom", "Device Manufacturer");
+    registerVariable("DEVICE_MODEL", "Atom", "Device Model");
+    registerVariable("DEVICE_SERIAL_NUMBER", "00000000",
+                     "Device Serial Number");
+
+    registerVariable("DEVICE_CONNECTED", false, "Device Connected");
+    registerVariable("DEVICE_CONNECTION_STATUS", "Disconnected",
+                     "Device Connection Status");
 
     registerFunc("connect", &AtomDriver::Connect, this);
     registerFunc("disconnect", &AtomDriver::Disconnect, this);

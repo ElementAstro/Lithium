@@ -1,4 +1,3 @@
-
 declare interface IPAAFixedStatus {
   success: boolean;
   data: {
@@ -28,10 +27,39 @@ declare interface IPAAFixedGotoRequest {
   dec: number;
 }
 
-declare interface IPAAFixedPolarAlignmentRequest{
-  start_from: 'West' | 'East';
+declare interface IPAAFixedPolarAlignmentRequest {
+  start_from: "West" | "East";
   move_time: number;
   solve_retry: number;
   manual_start?: boolean;
+  search_radius?: number;
 }
 
+declare interface IPAAFixedAutofocusRequest {
+  filter_index: "current" | number;
+  start_side: boolean;
+}
+
+// PPA scripts
+
+declare interface PAAEmptyProps {}
+
+declare interface PAAScriptBaseHanlder {
+  savePAAScript: () => void;
+}
+
+declare interface TargetSelectDialogHandler {
+  open_dialog: () => void;
+}
+
+declare interface PAA_step_info {
+  data: {
+    params?: {
+      count: number;
+    };
+  };
+  device_name: string;
+  instruction: string;
+  message: string;
+  type: string;
+}

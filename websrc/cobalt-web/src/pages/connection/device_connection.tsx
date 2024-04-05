@@ -1,7 +1,17 @@
 import React, { useState } from "react";
 
-import { Modal, Form, Button, Row, Col } from "react-bootstrap";
-import { Trash, ArrowRight, CheckCircle } from "react-bootstrap-icons";
+import { Modal, Form, Button, Row, Col, Container } from "react-bootstrap";
+import {
+  Trash,
+  ArrowRight,
+  CheckCircle,
+  Send,
+  Plus,
+  CircleFill,
+  XCircle,
+  Archive,
+  CodeSquare,
+} from "react-bootstrap-icons";
 
 import { useTranslation } from "react-i18next";
 
@@ -71,9 +81,7 @@ const DeviceConnection = () => {
     GlobalStore.actions.connect.setState({
       config_name: value,
     });
-    if (value !== "") {
-      GlobalStore.actions.connect.setProfile(selectedConfig);
-    }
+    GlobalStore.actions.connect.setProfile(selectedConfig);
   };
   // 重置
   const handleResetDeviceSelections = () => {
@@ -101,6 +109,7 @@ const DeviceConnection = () => {
   const handleStartPHD2 = async () => {
     let connectReady = await GlobalStore.actions.connect.startPhd2();
     if (connectReady) {
+      // todo modify later.
       alert("PHD2 start OK");
     } else {
       alert("PHD2 Error");
@@ -128,119 +137,145 @@ const DeviceConnection = () => {
   };
 
   return (
-    <>
-      {brand_type_cn.map((item, type_index) => (
-        <Row key={type_index}>
-          <Col md={6}>
-            <div style={{ display: "flex", alignItems: "center" }}>
+    <Container
+      fluid
+      style={{ flexGrow: 1, height: "calc(100vh - 32px)", overflow: "auto" }}
+    >
+      <Row>
+        <Col xs={6}>
+          <div style={{ overflow: "auto" }}>
+            {brand_type_cn.map((item: string, type_index: number) => (
+              <React.Fragment key={type_index}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <Form.Group
+                    controlId={`device-select-${type_index}`}
+                    style={{ margin: "1rem", width: "90%" }}
+                  >
+                    <Form.Label>选择{item}配置</Form.Label>
+                    <Form.Select
+                      size="sm"
+                      value={
+                        device_selections !== null
+                          ? device_selections[
+                              brand_type_en[
+                                type_index
+                              ] as keyof typeof device_selections
+                            ]?.device_name || ""
+                          : ""
+                      }
+                      onChange={(e) => handleDeviceChange(e, type_index)}
+                    >
+                      <option value="">空</option>
+                      {device_list !== null
+                        ? device_list[brand_type_en[type_index]].map(
+                            (item: any, index: number) => (
+                              <option key={index} value={item.device_name}>
+                                {item.device_name}
+                              </option>
+                            )
+                          )
+                        : null}
+                    </Form.Select>
+                  </Form.Group>
+                  {brand_connection[brand_type_en[type_index]] === 0 ? null : (
+                    <div className="ms-2">
+                      {brand_connection[brand_type_en[type_index]] === 1 ? (
+                        <CircleFill size={20} />
+                      ) : (
+                        <CheckCircle size={20} />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+        </Col>
+        <Col xs={6}>
+          <div className="d-grid gap-2">
+            <Form.Group controlId="config-select" style={{ margin: "1rem" }}>
+              <Form.Label>加载已有配置</Form.Label>
               <Form.Select
+                onChange={handleUserConfigLoad}
                 className="m-1"
-                aria-label={`选择${item}配置`}
-                value={
-                  device_selections !== null
-                    ? device_selections[brand_type_en[type_index]]
-                        ?.device_name || ""
-                    : ""
-                }
-                onChange={(e) => handleDeviceChange(e, type_index)}
+                aria-label="加载已有配置"
+                value={device_selections !== null ? device_selections.name : ""}
               >
                 <option value="">空</option>
-                {device_list !== null
-                  ? device_list[brand_type_en[type_index]].map(
-                      (item, index) => (
-                        <option key={index} value={item.device_name}>
-                          {item.device_name}
-                        </option>
-                      )
-                    )
+                {user_config_list !== null
+                  ? user_config_list.map((item: any, index: number) => (
+                      <option key={index} value={item}>
+                        {item}
+                      </option>
+                    ))
                   : null}
               </Form.Select>
-              {brand_connection[brand_type_en[type_index]] === 0 ? null : (
-                <span>
-                  {brand_connection[brand_type_en[type_index]] === 1 ? (
-                    <Trash color="red" />
-                  ) : (
-                    <ArrowRight color="green" />
-                  )}
-                </span>
-              )}
-            </div>
-          </Col>
-        </Row>
-      ))}
-      <Row>
-        <Col md={6}>
-          <Form.Select
-            className="m-1"
-            aria-label="加载已有配置"
-            value={device_selections !== null ? device_selections.name : ""}
-            onChange={handleUserConfigLoad}
-          >
-            <option value="">空</option>
-            {user_config_list !== null
-              ? user_config_list.map((item, index) => (
-                  <option key={index} value={item.name}>
-                    {item.name}
-                  </option>
-                ))
-              : null}
-          </Form.Select>
-          <Button
-            variant="outline-danger"
-            className="m-1"
-            onClick={handleResetDeviceSelections}
-          >
-            重置
+            </Form.Group>
+            <Button
+              variant="outline-secondary"
+              style={{ margin: "1rem" }}
+              onClick={handleResetDeviceSelections}
+            >
+              <Trash size={20} /> 重置
+            </Button>
+            <Button
+              variant="outline-primary"
+              style={{ margin: "1rem" }}
+              onClick={handleCreateOpen}
+            >
+              <Plus size={20} /> 建立新配置
+            </Button>
+            <Button
+              variant="primary"
+              style={{ margin: "2rem" }}
+              onClick={handleConnectDevice}
+            >
+              <ArrowRight size={20} />
+              连接设备
+            </Button>
+            {phd2_connect_ready && (
+              <Button
+                variant="primary"
+                style={{ margin: "2rem" }}
+                onClick={handleStartPHD2}
+              >
+                <Send size={20} />
+                启动并连接PHD2
+              </Button>
+            )}
+          </div>
+          <Modal show={open_dialog} onHide={handleCreateClose}>
+            <Modal.Header closeButton>
+              <Modal.Title>配置命名</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <Form.Group controlId="config-name" style={{ margin: "1rem" }}>
+                <Form.Label>配置名称</Form.Label>
+                <Form.Control
+                  type="text"
+                  autoFocus
+                  id="name"
+                  title="名称"
+                  onChange={handleSettingChange}
+                />
+              </Form.Group>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button onClick={handleCreateClose}>
+                <XCircle size={20} /> 取消
+              </Button>
+              <Button onClick={handleNewSetting}>
+                <Archive size={20} /> 提交
+              </Button>
+            </Modal.Footer>
+          </Modal>
+          <Button onClick={handleOpenDialog}>
+            <CodeSquare size={20} /> 配置Phd2相关内容
           </Button>
-          <Button
-            variant="outline-primary"
-            className="m-1"
-            onClick={handleCreateOpen}
-          >
-            建立一个新的配置
-          </Button>
-          <Button
-            variant="primary"
-            className="m-2"
-            onClick={handleConnectDevice}
-          >
-            连接设备
-            <ArrowRight />
-          </Button>
+          <Phd2ConfigEditor open={isDialogOpen} onClose={handleCloseDialog} />
         </Col>
       </Row>
-      {phd2_connect_ready ? (
-        <Button
-          variant="contained"
-          onClick={async () => {
-            handleStartPHD2();
-          }}
-        >
-          <CheckCircle />
-          启动并连接PHD2
-        </Button>
-      ) : null}
-      <Modal show={open_dialog} onHide={handleCreateClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>配置命名</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>给新配置取一个名字，使得之后可以使用</p>
-          <Form.Control
-            autoFocus
-            id="name"
-            placeholder="名称"
-            onChange={handleSettingChange}
-          />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button onClick={handleCreateClose}>取消</Button>
-          <Button onClick={handleNewSetting}>提交</Button>
-        </Modal.Footer>
-      </Modal>
-      <Button onClick={handleOpenDialog}>配置Phd2相关内容</Button>
-      <Phd2ConfigEditor open={isDialogOpen} onClose={handleCloseDialog} />
-    </>
+    </Container>
   );
 };
 

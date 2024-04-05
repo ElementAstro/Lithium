@@ -4,10 +4,20 @@ import {
   GetCurrentDeviceProfile,
   getDeviceBrand,
   getDeviceList,
+  getDriverServerStatus,
+  postCheckPhd2,
+  postCloseDeviceServer,
+  postConnectPhd2,
   postDeviceStatus,
   postStartDeviceServer,
+  postStartPhd2,
 } from "../services/api";
-import { postGLobalParameterOnStart } from "../services/global_parameter_api";
+import {
+  postGlobalLoadProfile,
+  postGLobalParameterOnStart,
+  postGLobalParameterProfileDelete,
+} from "../services/global_parameter_api";
+import { filter, values } from "lodash";
 
 interface DeviceSelection {
   device_name: string;
@@ -28,7 +38,13 @@ interface Phd2Config {
   calibration_distance: number;
 }
 
-type AllowedDeviceTypes = "telescope" | "camera" | "focus" | "filter" | "polar";
+type AllowedDeviceTypes =
+  | "telescope"
+  | "camera"
+  | "focus"
+  | "filter"
+  | "polar"
+  | "guider";
 let deviceType: AllowedDeviceTypes = "telescope";
 
 export interface ConnectModel {
@@ -42,7 +58,7 @@ export interface ConnectModel {
   // 所有的device
   device_list: any | null;
   // 所有的brand类别
-  brand_type_en: any;
+  brand_type_en: Array<AllowedDeviceTypes>;
   brand_type_cn: any;
   brand_connection: any;
   // 所有的用户配置
@@ -66,13 +82,13 @@ export interface ConnectModel {
   all_profiles: [];
 
   // 用户选择的brand
-  brand_selections: any | null;
+  brand_selections: IConnectSelectedBrandList;
   device_selections: any | null;
 
   setState: Action<ConnectModel, Partial<ConnectModel>>;
   setSelectBrand: Action<
     ConnectModel,
-    { type: string; brand_name: string | null }
+    { type: AllowedDeviceTypes; brand_name: IConnectBrandSelection }
   >;
   setSelectDevice: Action<ConnectModel, { type: string; device_infor: any }>;
   resetDeviceSelections: Action<ConnectModel>;
@@ -92,18 +108,23 @@ export interface ConnectModel {
 
   // 注意，前端维护用户userConfigList，但是这个应该要用到localStorage等方法
   connectDeviceServer: Thunk<ConnectModel>;
+  closeDeviceServer: Thunk<ConnectModel>;
   connectDevice: Thunk<ConnectModel>;
+
+  // 用于一口气刷新所有device的connect状态的
+  refreshDeviceConnectionStatus: Thunk<ConnectModel>;
+  setBrandInLoading: Action<ConnectModel, { device: string; flag: boolean }>;
 }
 
 export const getConnectModel = (): ConnectModel => ({
   brand_list: null,
   brand_selections: {
-    camera: "",
-    telescope: "",
-    guider: "",
-    focus: "",
-    filter: "",
-    polar: "",
+    camera: { zh: "", en: "", driver: "" },
+    telescope: { zh: "", en: "", driver: "" },
+    guider: { zh: "", en: "", driver: "" },
+    focus: { zh: "", en: "", driver: "" },
+    filter: { zh: "", en: "", driver: "" },
+    polar: { zh: "", en: "", driver: "" },
   },
   allDrivers: [],
   device_list: null,
@@ -140,7 +161,7 @@ export const getConnectModel = (): ConnectModel => ({
   },
   phd2_connect_ready: false,
 
-  // 0:未选中，1:连接失败, 2:连接成功
+  // 0:未选中，1:连接失败, 2:连接成功，-1更新中
   brand_connection: {
     telescope: 0,
     camera: 0,
@@ -229,17 +250,22 @@ export const getConnectModel = (): ConnectModel => ({
           });
         }
       }
+      console.log(getState().device_selections);
     }
   }),
 
   setProfile: thunk(async (state, payload, { getState }) => {
-    await postGlobalLoadProfile(payload);
+    if (payload == "") {
+      state.resetDeviceSelections();
+    } else {
+      await postGlobalLoadProfile(payload);
 
-    // 调用一次重新获取
-    await state.getProfileList();
+      // 调用一次重新获取
+      await state.getProfileList();
 
-    // 更新当前页面
-    await state.getProfileDevice();
+      // 更新当前页面
+      await state.getProfileDevice();
+    }
   }),
 
   deleteProfile: thunk(async (state, payload, { getState }) => {
@@ -280,6 +306,7 @@ export const getConnectModel = (): ConnectModel => ({
       const filteredData = res.data.filter(
         (item: { device_name: string }) => item.device_name !== ""
       );
+
       // 加载失败
       if (filteredData.length == 0) {
         return false;
@@ -376,20 +403,24 @@ export const getConnectModel = (): ConnectModel => ({
 
   connectDeviceServer: thunk(async (state, payload, { getState }) => {
     let postBrandData: string[] = [];
-    if (getState().brand_selections === null) {
-      alert("当前尚未选择品牌，请选择！");
-    } else {
-      state.resetDeviceSelections();
-      Object.entries(
-        getState().brand_selections as Record<string, string>
-      ).forEach(async ([device, values]) => {
-        if (values != "") {
+    state.resetDeviceSelections();
+    Object.entries(getState().brand_selections).forEach(
+      async ([device, values]) => {
+        if (values.driver != "") {
           postBrandData.push(values);
         }
-      });
-      const res = await postStartDeviceServer(postBrandData);
-      return res;
+      }
+    );
+    if (postBrandData.length == 0) {
+      return false;
     }
+    const res = await postStartDeviceServer(postBrandData);
+    return res;
+  }),
+
+  closeDeviceServer: thunk(async (state, payload, { getState }) => {
+    const res = await postCloseDeviceServer();
+    return res;
   }),
 
   // 正式连接，一个一个连，生成连接状态并且即时返回给用户
@@ -460,16 +491,55 @@ export const getConnectModel = (): ConnectModel => ({
   startPhd2: thunk(async (state) => {
     try {
       const res = await postStartPhd2();
-      if (res.data == true) {
+      if (res.data.flag == true) {
         await Sleep(1000);
         const res2 = await postConnectPhd2();
-        if (res2.data === true) {
+        if (res2.data.flag === true) {
           return true;
         }
       }
       return false;
     } catch (error) {
       return false;
+    }
+  }),
+
+  refreshDeviceConnectionStatus: thunk(async (state, payload, { getState }) => {
+    let to_update_devices = [
+      "camera",
+      "telescope",
+      "focus",
+      "guider",
+      "filter",
+    ];
+    to_update_devices.map(async (device, index) => {
+      state.setBrandInLoading({ device: device, flag: true });
+      try {
+        const res = await postDeviceStatus({
+          device: device,
+        });
+        // 回显
+        if (res && res.data === "Connected") {
+          state.setState({
+            brand_connection: { ...getState().brand_connection, [device]: 2 },
+          });
+        } else {
+          state.setState({
+            brand_connection: { ...getState().brand_connection, [device]: 1 },
+          });
+        }
+      } catch (error) {
+        state.setState({
+          brand_connection: { ...getState().brand_connection, [device]: 1 },
+        });
+      }
+    });
+  }),
+  setBrandInLoading: action((state, payload) => {
+    if (payload.flag) {
+      state.brand_connection[payload.device] = -1;
+    } else {
+      state.brand_connection[payload.device] = 0;
     }
   }),
 });

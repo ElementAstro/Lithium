@@ -3,20 +3,20 @@ import { Thunk, Action, Computed } from "easy-peasy";
 import * as AXIOSPAAF from "../services/paa_fixed_procedure_api";
 
 export interface IProcessDataSaveModels {
-  // process_ws_message: (message: any) => void;
-  //
-  // newest_camera_jpg: string |null;
   camera_jpg_updated: number;
   newest_camera_jpg_url: string;
   guider_jpg_updates: number;
-  // newest_guider_jpg:  string |null;
   newest_guider_jpg_url: string;
   show_camera: number; // 0 means camera, 1 means guider
   HFR_points_list: ICHFRDataPointList;
   newest_HFR_info: ICSingleHFRPointData;
   PHD2_guide_data_list: ICPHD2GuideDataPointList;
+  PHD2_calibration_result: ICPHD2InterfaceCalibrationResult;
+  PHD2_calibrated: boolean;
   send_ws_message_handler: ((message: any) => void) | null;
   registered: Computed<IProcessDataSaveModels, boolean>;
+  //
+  setState: Action<IProcessDataSaveModels, Partial<IProcessDataSaveModels>>;
   at_start_add_ws_listener: Action<
     IProcessDataSaveModels,
     (message: any) => void
@@ -27,7 +27,7 @@ export interface IProcessDataSaveModels {
     IProcessDataSaveModels,
     ICSingleHFRPointData
   >;
-  fetch_history_PHD2_guide_data: Thunk<IProcessDataSaveModels>;
+  fetch_history_PHD2_guide_data: Action<IProcessDataSaveModels, any>;
   append_newest_PHD2_guide_data: Action<
     IProcessDataSaveModels,
     ICPHD2InterfaceGuideStep
@@ -69,6 +69,17 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     RaControl: [],
     DecControl: [],
   },
+  PHD2_calibration_result: {
+    calibrated: false,
+    xAngle: 0,
+    xRate: 0,
+    xParity: "+",
+    yAngle: 0,
+    yRate: 0,
+    yParity: "+",
+    declination: 0,
+  },
+  PHD2_calibrated: false,
   send_ws_message_handler: null,
   registered: computed((state) => {
     if (state.send_ws_message_handler != null) {
@@ -76,6 +87,9 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     } else {
       return false;
     }
+  }),
+  setState: action((state, payload) => {
+    state = Object.assign(state, payload);
   }),
   at_start_add_ws_listener: action((state, payload) => {
     // const {sendMessage, removeListener} = useEchoWebSocket(process_ws_message);
@@ -94,21 +108,29 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     state.HFR_points_list.star_count.push(payload.star_count);
     state.newest_HFR_info = payload;
   }),
-  fetch_history_PHD2_guide_data: thunk(async (actions) => {}),
+  fetch_history_PHD2_guide_data: action((state, pyaload) => {}),
   append_newest_PHD2_guide_data: action((state, payload) => {
     state.PHD2_guide_data_list.dx.push(payload.dx);
     state.PHD2_guide_data_list.dy.push(payload.dy);
     state.PHD2_guide_data_list.RaDistance.push(payload.RADistanceRaw);
     state.PHD2_guide_data_list.DecDistance.push(payload.DECDistanceRaw);
     if (payload.RADirection == "East") {
-      state.PHD2_guide_data_list.RaControl.push(payload.RADuration);
+      state.PHD2_guide_data_list.RaControl.push(payload.RADistanceGuide);
     } else {
-      state.PHD2_guide_data_list.RaControl.push(-payload.RADuration);
+      state.PHD2_guide_data_list.RaControl.push(-payload.RADistanceGuide);
     }
     if (payload.DECDirection == "North") {
-      state.PHD2_guide_data_list.DecControl.push(payload.DECDuration);
+      state.PHD2_guide_data_list.DecControl.push(payload.DECDistanceGuide);
     } else {
-      state.PHD2_guide_data_list.DecControl.push(-payload.DECDuration);
+      state.PHD2_guide_data_list.DecControl.push(-payload.DECDistanceGuide);
+    }
+    if (state.PHD2_guide_data_list.dx.length > 300) {
+      state.PHD2_guide_data_list.dx.shift();
+      state.PHD2_guide_data_list.dy.shift();
+      state.PHD2_guide_data_list.RaDistance.shift();
+      state.PHD2_guide_data_list.DecDistance.shift();
+      state.PHD2_guide_data_list.RaControl.shift();
+      state.PHD2_guide_data_list.DecControl.shift();
     }
   }),
   // update_jpg_data: action((state, payload) => {
@@ -142,7 +164,7 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     if (payload.device.includes("camera")) {
       state.newest_camera_jpg_url = payload.data;
       state.camera_jpg_updated = state.camera_jpg_updated + 1;
-      console.log("before generating url", typeof payload.data);
+      // console.log('before generating url', typeof(payload.data));
       // let new_url = URL.createObjectURL(payload.data);
       // console.log(new_url);
       // if (state.newest_camera_jpg_url !== null){

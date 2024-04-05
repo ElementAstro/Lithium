@@ -152,7 +152,7 @@ const DeviceControlPanelPage = () => {
   }, []);
 
   return (
-    <Row lg={"auto"}>
+    <Row lg={12}>
       <Col md={3}>
         <Row md={"auto"}>
           <Form.Group>

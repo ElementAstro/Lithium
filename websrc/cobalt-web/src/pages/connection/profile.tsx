@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Accordion, Button, Card, Container, Form } from "react-bootstrap";
+import {
+  Accordion,
+  Button,
+  Card,
+  Col,
+  Container,
+  Form,
+  Row,
+} from "react-bootstrap";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
@@ -15,12 +23,11 @@ const ProfileConnection = () => {
   useEffect(() => {
     async function fetchConfigOptions() {
       try {
-        const response = await fetch("/api/config/options"); // 替换成实际的后端接口地址
+        const response = await fetch("/api/config/options");
         if (response.ok) {
           const data = await response.json();
           setConfigOptions(data.options);
 
-          // 从 Cookie 中读取已有的配置
           const selectedOption = getCookie("selectedConfig");
           if (selectedOption && data.options.includes(selectedOption)) {
             setSelectedConfig(selectedOption);
@@ -39,7 +46,6 @@ const ProfileConnection = () => {
   }, []);
 
   useEffect(() => {
-    // 将选中的配置和内容写入 Cookie
     if (selectedConfig) {
       setCookie("selectedConfig", selectedConfig);
       setCookie(`configContent_${selectedConfig}`, configContent);
@@ -52,7 +58,7 @@ const ProfileConnection = () => {
 
     if (selectedOption) {
       try {
-        const response = await fetch(`/api/config/${selectedOption}`); // 替换成实际的后端接口地址
+        const response = await fetch(`/api/config/${selectedOption}`);
         if (response.ok) {
           const data = await response.json();
           setConfigContent(data.content);
@@ -69,48 +75,54 @@ const ProfileConnection = () => {
   };
 
   const handleCreateConfig = () => {
-    window.location.href = "/create-config"; // 替换为实际的创建配置页面 URL
+    window.location.href = "/create-config";
   };
 
   return (
     <Container>
-      <h2>Configuration Selection</h2>
-      <Form>
-        <Form.Group controlId="configSelect">
-          <Form.Label>Select Configuration:</Form.Label>
-          <Form.Select value={selectedConfig} onChange={handleConfigSelect}>
-            <option value="">Select...</option>
-            {configOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </Form.Select>
-        </Form.Group>
-      </Form>
+      <Row className="justify-content-center">
+        <Col xs={12} md={8}>
+          <h2 className="text-center mb-4">{t("配置选择")}</h2>
+          <Form>
+            <Form.Group controlId="已有配置选择">
+              <Form.Label>{t("选择配置")}:</Form.Label>
+              <Form.Select value={selectedConfig} onChange={handleConfigSelect}>
+                <option value="">{t("选中")}...</option>
+                {configOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </Form>
 
-      <Accordion>
-        <Accordion.Item eventKey="0">
-          <Accordion.Header>{t("Config Details")}</Accordion.Header>
-          <Accordion.Body>
-            <Card>
-              <Card.Body>
-                {configContent ? (
-                  <SyntaxHighlighter language="json" style={dark}>
-                    {configContent}
-                  </SyntaxHighlighter>
-                ) : (
-                  <p>{t("No configuration selected.")}</p>
-                )}
-              </Card.Body>
-            </Card>
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
+          <Accordion className="mt-4">
+            <Accordion.Item eventKey="0">
+              <Accordion.Header>{t("配置详细信息")}</Accordion.Header>
+              <Accordion.Body>
+                <Card>
+                  <Card.Body>
+                    {configContent ? (
+                      <SyntaxHighlighter language="json" style={dark}>
+                        {configContent}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <p className="text-center">{t("未选择任何配置")}</p>
+                    )}
+                  </Card.Body>
+                </Card>
+              </Accordion.Body>
+            </Accordion.Item>
+          </Accordion>
 
-      <Button variant="primary" onClick={handleCreateConfig}>
-        {t("Create New Configuration")}
-      </Button>
+          <div className="d-grid gap-2 mt-4">
+            <Button variant="primary" size="lg" onClick={handleCreateConfig}>
+              {t("创建新的配置")}
+            </Button>
+          </div>
+        </Col>
+      </Row>
     </Container>
   );
 };

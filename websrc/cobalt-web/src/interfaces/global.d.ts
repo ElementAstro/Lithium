@@ -1,7 +1,7 @@
 declare global {
-    interface Window {
-      A:any
-    }
+  interface Window {
+    A: any;
   }
-  
-  export {}
+}
+
+export {};

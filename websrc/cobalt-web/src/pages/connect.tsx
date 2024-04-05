@@ -8,6 +8,7 @@ import {
   Form,
   FormControl,
 } from "react-bootstrap";
+import { Plug, Power } from "react-bootstrap-icons";
 
 const DeviceConnection = () => {
   const [camera, setCamera] = useState("");
@@ -54,7 +55,25 @@ const DeviceConnection = () => {
     // Perform client command action
   };
 
-  // Add similar handleChange functions for other select inputs
+  const handleTelescopeChange = (e) => {
+    setTelescope(e.target.value);
+  };
+
+  const handleFilterwheelChange = (e) => {
+    setFilterwheel(e.target.value);
+  };
+
+  const handleFocuserChange = (e) => {
+    setFocuser(e.target.value);
+  };
+
+  const handleGuiderChange = (e) => {
+    setGuider(e.target.value);
+  };
+
+  const handleSolverChange = (e) => {
+    setSolver(e.target.value);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,111 +108,116 @@ const DeviceConnection = () => {
       <Form onSubmit={handleSubmit}>
         <Row>
           <Col sm={6}>
-            <Form.Group>
+            <Form.Group controlId="cameraSelect">
+              <Form.Label>相机</Form.Label>
               <Form.Control
                 as="select"
                 size="sm"
                 value={camera}
                 onChange={handleCameraChange}
               >
-                <option>相机</option>
+                <option>选择相机</option>
+                {/* 添加相机选项 */}
               </Form.Control>
             </Form.Group>
           </Col>
           <Col sm={6}>
-            <Form.Group>
+            <Form.Group controlId="telescopeSelect">
+              <Form.Label>赤道仪</Form.Label>
               <Form.Control
                 as="select"
                 size="sm"
                 value={telescope}
-                onChange={handleCameraChange}
+                onChange={handleTelescopeChange}
               >
-                <option>望远镜</option>
+                <option>选择赤道仪</option>
+                {/* 添加赤道仪选项 */}
               </Form.Control>
             </Form.Group>
           </Col>
+        </Row>
+        <Row>
           <Col sm={6}>
-            <Form.Group>
+            <Form.Group controlId="filterwheelSelect">
+              <Form.Label>滤镜轮</Form.Label>
               <Form.Control
                 as="select"
                 size="sm"
                 value={filterwheel}
-                onChange={handleCameraChange}
+                onChange={handleFilterwheelChange}
               >
-                <option>滤波器</option>
+                <option>选择滤镜轮</option>
+                {/* 添加滤镜轮选项 */}
               </Form.Control>
             </Form.Group>
           </Col>
           <Col sm={6}>
-            <Form.Group>
+            <Form.Group controlId="focuserSelect">
+              <Form.Label>电调</Form.Label>
               <Form.Control
                 as="select"
                 size="sm"
                 value={focuser}
-                onChange={handleCameraChange}
+                onChange={handleFocuserChange}
               >
-                <option>焦点</option>
+                <option>选择电调</option>
+                {/* 添加电调选项 */}
               </Form.Control>
             </Form.Group>
           </Col>
+        </Row>
+        <Row>
           <Col sm={6}>
-            <Form.Group>
+            <Form.Group controlId="guiderSelect">
+              <Form.Label>导星</Form.Label>
               <Form.Control
                 as="select"
                 size="sm"
                 value={guider}
-                onChange={handleCameraChange}
+                onChange={handleGuiderChange}
               >
-                <option>巡视器</option>
+                <option>选择导星</option>
+                {/* 添加导星选项 */}
               </Form.Control>
             </Form.Group>
           </Col>
           <Col sm={6}>
-            <Form.Group>
+            <Form.Group controlId="solverSelect">
+              <Form.Label>板解器</Form.Label>
               <Form.Control
                 as="select"
                 size="sm"
                 value={solver}
-                onChange={handleCameraChange}
+                onChange={handleSolverChange}
               >
-                <option>光学校正</option>
+                <option>选择板解器</option>
+                {/* 添加板解器选项 */}
               </Form.Control>
             </Form.Group>
           </Col>
-
-          {/* Add similar Form.Group components for other select inputs */}
         </Row>
-
-        {/* Add similar Rows and Form.Group components for other select inputs */}
-
         <Row>
-          <Col md={12}>
-            <Button variant="outline-info" size="sm" type="submit">
-              <i className="fas fa-light-switch-on"></i> 启动
-            </Button>
-          </Col>
-          <Col md={12}>
-            <Button
-              variant="outline-success"
-              size="sm"
-              onClick={handleClientCommand}
-            >
-              <i className="fas fa-user"></i> 连接
+          <Col>
+            <Button variant="primary" size="sm" type="submit">
+              <Power size={20} /> 启动
+            </Button>{" "}
+            <Button variant="success" size="sm" onClick={handleClientCommand}>
+              <Plug size={20} /> 连接
             </Button>
           </Col>
         </Row>
       </Form>
 
       <Row>
-        <Col md={12}>
+        <Col>
           <Alert variant="info">{/* 服务器通知 */}</Alert>
         </Col>
       </Row>
 
       <Row>
-        <Col md={12}>
+        <Col>
           <Alert variant="warning">
-            <p className="alert alert-warning">客户端未连接</p>
+            <i className="fas fa-exclamation-triangle"></i> 客户端未连接
           </Alert>
         </Col>
       </Row>

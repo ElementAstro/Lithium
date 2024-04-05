@@ -44,7 +44,7 @@ const Connect = () => {
         <Tab
           eventKey={2}
           title={t("按照配置连接选项")}
-          disabled={!brand_selection_over}
+          //disabled={!brand_selection_over}
         >
           <DeviceConnection />
         </Tab>

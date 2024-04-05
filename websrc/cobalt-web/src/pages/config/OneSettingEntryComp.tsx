@@ -15,6 +15,7 @@ import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Dropdown from "react-bootstrap/Dropdown";
 
 import GPRedDotComp from "./ClickQuestionTooltips";
+import { GlobalStore } from "../../store/globalStore";
 
 interface SingleSettingPartProps {
   setting_part_key: string;
@@ -84,7 +85,7 @@ const GlobalSettingSingleSettingEntry: React.FC<SingleSettingPartProps> = (
         <Col sm={10}>
           <FloatingLabel label="解析使用引擎">
             <Form.Select
-              value={show_setting_value}
+              title={show_setting_value}
               onChange={(event) =>
                 props.handleSettingChange(
                   props.setting_part_key,

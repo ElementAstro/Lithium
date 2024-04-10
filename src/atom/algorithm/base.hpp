@@ -18,7 +18,6 @@ Description: A collection of algorithms for C++
 #include <cstdint>
 #include <string>
 #include <vector>
-#include <span>
 
 namespace Atom::Algorithm {
 /**
@@ -56,7 +55,7 @@ decodeBase16(const std::string &data);
  * @return The encoded string
  */
 [[nodiscard("The result of base32Encode is not used.")]] std::string
-encodeBase32(const std::string &data);
+base32Encode(const uint8_t *data, size_t length);
 
 /**
  * @brief Decodes a Base32 string
@@ -64,7 +63,7 @@ encodeBase32(const std::string &data);
  * @return The decoded string
  */
 [[nodiscard("The result of base32Decode is not used.")]] std::string
-decodeBase32(const std::string &data);
+base32Decode(std::string_view encoded);
 
 /**
  * @brief Base64编码函数
@@ -141,8 +140,8 @@ decodeBase85(const std::string &data);
  * @param data The vector of unsigned characters to be encoded.
  * @return The Base128 encoded string.
  */
-[[nodiscard("The result of encodeBase128 is not used.")]] std::vector<uint8_t>
-encodeBase128(const std::span<const uint8_t> &data);
+[[nodiscard("The result of encodeBase128 is not used.")]] std::string
+base128Encode(const uint8_t *data, size_t length);
 
 /**
  * @brief Decodes a Base128 string into a vector of unsigned characters.
@@ -154,8 +153,14 @@ encodeBase128(const std::span<const uint8_t> &data);
  * @param data The Base128 encoded string to be decoded.
  * @return The decoded vector of unsigned characters.
  */
-[[nodiscard("The result of decodeBase128 is not used.")]] std::vector<uint8_t>
-decodeBase128(const std::span<const uint8_t> &data);
+[[nodiscard("The result of decodeBase128 is not used.")]] std::string
+base128Decode(std::string_view encoded);
+
+[[nodiscard("The result of xorEncrypt is not used.")]] std::string xorEncrypt(
+    std::string_view plaintext, uint8_t key);
+
+[[nodiscard("The result of xorDecrypt is not used.")]] std::string xorDecrypt(
+    std::string_view ciphertext, uint8_t key);
 }  // namespace Atom::Algorithm
 
 #endif

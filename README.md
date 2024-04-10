@@ -79,7 +79,7 @@ pacman -S mingw-w64-x86_64-libnova
 ```shell
 sudo apt-get update && sudo apt-get upgrade -y
 sudo apt install gcc g++ cmake
-sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libudev-dev libuv1-dev
+sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libudev-dev
 ```
 
 Alternatively, you can directly run the provided script according to your platform:
@@ -96,10 +96,18 @@ Unfortunately, the newest GCC and CMake are not available on Github Codespace, s
 ```shell
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
 sudo apt-get update
-sudo apt-get install gcc-13 # GCC13 is the best choice
+sudo apt-get install gcc-13 g++-13 # GCC13 is the best choice, clang is alse OK
 
 wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
 tar -zxvf cmake-3.28.0-rc5.tar.gz
+./bootstrap && make && sudo make install
+
+#install newest clang-format
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+sudo nano /etc/apt/sources.list
+#deb http://apt.llvm.org/focal/ llvm-toolchain-focal-17 main
+#deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-17 main
+sudo apt install -y clang-format-17
 ```
 
 Build the code:

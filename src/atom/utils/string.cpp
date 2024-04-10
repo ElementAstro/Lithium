@@ -137,25 +137,38 @@ std::string urlDecode(const std::string &str) {
     return result;
 }
 
-std::vector<std::string> splitString(const std::string &input, char delimiter) {
-    std::vector<std::string> tokens;
-#ifndef ATOM_USE_OBSOLETE
-    std::istringstream ss(input);
-    std::string token;
-    while (std::getline(ss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-    return tokens;
-#else
+std::vector<std::string_view> splitString(const std::string &str,
+                                          char delimiter) {
+    std::vector<std::string_view> result;
+    std::string_view view(str);
     size_t pos = 0;
-    size_t foundPos = input.find(delimiter);
-    while (foundPos != std::string::npos) {
-        tokens.push_back(input.substr(pos, foundPos - pos));
-        pos = foundPos + 1;
-        foundPos = input.find(delimiter, pos);
+
+    while (true) {
+        size_t next_pos = view.find(delimiter, pos);
+        if (next_pos == std::string_view::npos) {
+            result.emplace_back(view.substr(pos));
+            break;
+        }
+        result.emplace_back(view.substr(pos, next_pos - pos));
+        pos = next_pos + 1;
     }
-    tokens.push_back(input.substr(pos));
-#endif
-    return tokens;
+
+    return result;
+}
+
+std::string joinStrings(const std::vector<std::string_view> &strings,
+                        const std::string_view &delimiter) {
+    std::ostringstream oss;
+    bool first = true;
+
+    for (const auto &str : strings) {
+        if (!first) {
+            oss << delimiter;
+        }
+        oss << str;
+        first = false;
+    }
+
+    return oss.str();
 }
 }  // namespace Atom::Utils

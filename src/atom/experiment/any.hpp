@@ -28,26 +28,29 @@ concept Derived = std::is_base_of_v<std::remove_reference_t<T>, Any>;
 
 class Any {
 public:
-    Any() : ptr(nullptr) {}
+    constexpr Any() noexcept : ptr(nullptr) {}
 
     template <typename T>
         requires(!Derived<T>)
-    Any(T &&value) : ptr(new holder<std::decay_t<T>>(std::forward<T>(value))) {}
+    constexpr Any(T &&value)
+        : ptr(new holder<std::decay_t<T>>(std::forward<T>(value))) {}
 
-    Any(const Any &other) : ptr(other.ptr ? other.ptr->clone() : nullptr) {}
+    constexpr Any(const Any &other)
+        : ptr(other.ptr ? other.ptr->clone() : nullptr) {}
 
-    Any(Any &&other) noexcept : ptr(std::exchange(other.ptr, nullptr)) {}
+    constexpr Any(Any &&other) noexcept
+        : ptr(std::exchange(other.ptr, nullptr)) {}
 
     ~Any() { delete ptr; }
 
-    Any &operator=(const Any &other) {
+    constexpr Any &operator=(const Any &other) {
         if (this != &other) {
             Any(other).swap(*this);
         }
         return *this;
     }
 
-    Any &operator=(Any &&other) noexcept {
+    constexpr Any &operator=(Any &&other) noexcept {
         if (this != &other) {
             Any(std::move(other)).swap(*this);
         }
@@ -56,14 +59,14 @@ public:
 
     template <typename T>
         requires(!Derived<T>)
-    Any &operator=(T &&value) {
+    constexpr Any &operator=(T &&value) {
         Any(std::forward<T>(value)).swap(*this);
         return *this;
     }
 
-    bool empty() const { return !ptr; }
+    [[nodiscard]] constexpr bool empty() const noexcept { return !ptr; }
 
-    const std::type_info &type() const {
+    [[nodiscard]] constexpr const std::type_info &type() const noexcept {
         return ptr ? ptr->type() : typeid(void);
     }
 
@@ -73,25 +76,29 @@ public:
 private:
     class placeholder {
     public:
-        virtual ~placeholder() {}
-        virtual const std::type_info &type() const = 0;
-        virtual placeholder *clone() const = 0;
+        virtual ~placeholder() = default;
+        [[nodiscard]] virtual const std::type_info &type() const noexcept = 0;
+        [[nodiscard]] virtual placeholder *clone() const = 0;
         virtual void swap(placeholder &other) = 0;
     };
 
     template <typename T>
     class holder : public placeholder {
     public:
-        holder(T &&value) : held(std::move(value)) {}
+        constexpr holder(T &&value) : held(std::move(value)) {}
 
-        holder(const T &value) : held(value) {}
+        constexpr holder(const T &value) : held(value) {}
 
-        const std::type_info &type() const { return typeid(T); }
+        [[nodiscard]] const std::type_info &type() const noexcept override {
+            return typeid(T);
+        }
 
-        placeholder *clone() const { return new holder<T>(held); }
+        [[nodiscard]] placeholder *clone() const override {
+            return new holder<T>(held);
+        }
 
-        void swap(placeholder &other) {
-            if (holder *other_holder = dynamic_cast<holder *>(&other)) {
+        void swap(placeholder &other) override {
+            if (auto other_holder = dynamic_cast<holder *>(&other)) {
                 std::swap(held, other_holder->held);
             }
         }
@@ -101,7 +108,7 @@ private:
 
     placeholder *ptr;
 
-    void swap(Any &other) { std::swap(ptr, other.ptr); }
+    constexpr void swap(Any &other) noexcept { std::swap(ptr, other.ptr); }
 };
 
 template <typename T>

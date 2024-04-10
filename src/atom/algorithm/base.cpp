@@ -20,7 +20,6 @@ Description: A collection of algorithms for C++
 #include <iostream>
 #include <stdexcept>
 
-
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -52,75 +51,58 @@ std::vector<unsigned char> decodeBase16(const std::string &data) {
     return result;
 }
 
-std::string base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+constexpr std::string_view base32_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
-std::string encodeBase32(const std::string &data) {
-    std::string output;
+std::string base32Encode(const uint8_t *data, size_t length) {
+    std::string result;
+    result.reserve((length + 4) / 5 * 8);
 
-    auto getChunk = [&](size_t index) {
-        uint64_t chunk = 0;
-        for (size_t i = 0; i < 5; ++i) {
-            if (index * 5 + i < data.size()) {
-                chunk |= static_cast<uint64_t>(data[index * 5 + i])
-                         << (32 - i * 8);
-            }
-        }
-        return chunk;
-    };
-
-    for (size_t i = 0; i < (data.size() + 4) / 5; ++i) {
-        uint64_t chunk = getChunk(i);
-
-        for (size_t j = 0; j < 8; ++j) {
-            uint8_t index = (chunk >> (35 - j * 5)) & 0x1f;
-            output += base32Chars[index];
-        }
-
-        if (data.size() - i * 5 < 5) {
-            output.replace(output.size() - (5 - data.size() % 5),
-                           5 - data.size() % 5, 5 - data.size() % 5, '=');
+    size_t bits = 0;
+    int num_bits = 0;
+    for (size_t i = 0; i < length; ++i) {
+        bits = (bits << 8) | data[i];
+        num_bits += 8;
+        while (num_bits >= 5) {
+            result.push_back(base32_chars[(bits >> (num_bits - 5)) & 0x1F]);
+            num_bits -= 5;
         }
     }
 
-    return output;
+    if (num_bits > 0) {
+        bits <<= (5 - num_bits);
+        result.push_back(base32_chars[bits & 0x1F]);
+    }
+
+    int padding_chars = (8 - result.size() % 8) % 8;
+    result.append(padding_chars, '=');
+
+    return result;
 }
 
-std::string decodeBase32(const std::string &data) {
-    std::string output;
-    std::vector<uint8_t> bytes;
+std::string base32Decode(std::string_view encoded) {
+    std::string result;
+    result.reserve(encoded.size() * 5 / 8);
 
-    auto getChunk = [&](size_t index) {
-        uint64_t chunk = 0;
-        for (size_t i = 0; i < 8; ++i) {
-            char c = data[index * 8 + i];
-            if (c == '=') {
-                break;
-            }
-
-            uint8_t base32Index = base32Chars.find(c);
-            if (base32Index == std::string::npos) {
-                throw std::invalid_argument("Invalid Base32 character: " + c);
-            }
-
-            chunk |= static_cast<uint64_t>(base32Index) << (35 - i * 5);
+    size_t bits = 0;
+    int num_bits = 0;
+    for (char c : encoded) {
+        if (c == '=') {
+            break;
         }
-        return chunk;
-    };
-
-    for (size_t i = 0; i < data.size() / 8; ++i) {
-        uint64_t chunk = getChunk(i);
-
-        for (size_t j = 0; j < 5; ++j) {
-            uint8_t byte = (chunk >> (32 - j * 8)) & 0xff;
-            if (byte != 0) {
-                bytes.push_back(byte);
-            }
+        auto pos = base32_chars.find(c);
+        if (pos == std::string_view::npos) {
+            throw std::invalid_argument(
+                "Invalid character in Base32 encoded string");
+        }
+        bits = (bits << 5) | pos;
+        num_bits += 5;
+        if (num_bits >= 8) {
+            result.push_back(static_cast<char>(bits >> (num_bits - 8)));
+            num_bits -= 8;
         }
     }
 
-    output.assign(bytes.begin(), bytes.end());
-
-    return output;
+    return result;
 }
 
 std::string base64Encode(const std::vector<unsigned char> &bytes_to_encode) {
@@ -346,52 +328,62 @@ std::vector<unsigned char> decodeBase85(const std::string &data) {
     return result;
 }
 
-std::vector<uint8_t> encodeBase128(const std::span<const uint8_t> &input) {
-    std::vector<uint8_t> output;
-    output.reserve(input.size() * 8 / 7);  // 预留足够的空间
+std::string base128Encode(const uint8_t *data, size_t length) {
+    std::string result;
+    result.reserve((length * 8 + 6) / 7);
 
     size_t bits = 0;
-    uint32_t value = 0;
-
-    for (auto byte : input) {
-        value = (value << 8) | byte;  // 将新字节加入到value中
-        bits += 8;
-
-        while (bits >= 7) {
-            bits -= 7;
-            output.push_back((value >> bits) & 0x7F);  // 提取最高的7位
+    int num_bits = 0;
+    for (size_t i = 0; i < length; ++i) {
+        bits = (bits << 8) | data[i];
+        num_bits += 8;
+        while (num_bits >= 7) {
+            result.push_back(
+                static_cast<char>((bits >> (num_bits - 7)) & 0x7F));
+            num_bits -= 7;
         }
     }
 
-    if (bits > 0) {  // 处理剩余的bits
-        output.push_back((value << (7 - bits)) & 0x7F);
+    if (num_bits > 0) {
+        bits <<= (7 - num_bits);
+        result.push_back(static_cast<char>(bits & 0x7F));
     }
 
-    return output;
+    return result;
 }
 
-// 解码
-std::vector<uint8_t> decodeBase128(const std::span<const uint8_t> &input) {
-    std::vector<uint8_t> output;
-    output.reserve(input.size() * 7 / 8);  // 预留足够的空间
+std::string base128Decode(std::string_view encoded) {
+    std::string result;
+    result.reserve(encoded.size() * 7 / 8);
 
     size_t bits = 0;
-    uint32_t value = 0;
-
-    for (auto byte : input) {
-        if (byte & 0x80) {
-            throw std::invalid_argument("Input is not valid Base128 encoded.");
+    int num_bits = 0;
+    for (char c : encoded) {
+        if (static_cast<uint8_t>(c) > 127) {
+            throw std::invalid_argument(
+                "Invalid character in Base128 encoded string");
         }
-
-        value = (value << 7) | byte;
-        bits += 7;
-
-        if (bits >= 8) {
-            bits -= 8;
-            output.push_back((value >> bits) & 0xFF);  // 提取最高的8位
+        bits = (bits << 7) | static_cast<uint8_t>(c);
+        num_bits += 7;
+        if (num_bits >= 8) {
+            result.push_back(static_cast<char>(bits >> (num_bits - 8)));
+            num_bits -= 8;
         }
     }
 
-    return output;
+    return result;
+}
+
+std::string xorEncrypt(std::string_view plaintext, uint8_t key) {
+    std::string ciphertext;
+    ciphertext.reserve(plaintext.size());
+    for (char c : plaintext) {
+        ciphertext.push_back(static_cast<char>(static_cast<uint8_t>(c) ^ key));
+    }
+    return ciphertext;
+}
+
+std::string xorDecrypt(std::string_view ciphertext, uint8_t key) {
+    return xorEncrypt(ciphertext, key);
 }
 }  // namespace Atom::Algorithm

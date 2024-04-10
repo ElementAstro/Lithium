@@ -15,114 +15,307 @@ Description: A Small Vector Implementation
 #ifndef ATOM_TYPE_SMALL_VECTOR_HPP
 #define ATOM_TYPE_SMALL_VECTOR_HPP
 
-#include <algorithm>
-#include <vector>
+#include <cstddef>
+#include <cstring>
+#include <iostream>
+#include <memory>
+#include <new>
+#include <utility>
 
-template <typename T, size_t N>
+// 内部存储的最大容量
+constexpr std::size_t InternalBufferSize = 16;
+
+template <typename T, std::size_t N = InternalBufferSize>
 class SmallVector {
 public:
-    // 构造函数
-    SmallVector() : m_size(0), m_capacity(N) { m_data = m_inlineData; }
+    SmallVector() noexcept : m_size(0), m_isExternal(false) {}
 
-    // 复制构造函数
-    SmallVector(const SmallVector &other)
-        : m_size(other.m_size), m_capacity(other.m_capacity) {
-        if (other.m_size > N) {
-            m_data = new T[other.m_capacity];
-            std::copy(other.m_data, other.m_data + other.m_size, m_data);
-        } else {
-            m_data = m_inlineData;
-            std::copy(other.m_data, other.m_data + other.m_size, m_data);
-        }
+    SmallVector(std::initializer_list<T> ilist) : SmallVector() {
+        reserve(ilist.size());
+        std::uninitialized_copy(ilist.begin(), ilist.end(),
+                                m_isExternal ? m_external : m_internal);
+        m_size = ilist.size();
     }
 
-    // 移动构造函数
-    SmallVector(SmallVector &&other) noexcept
-        : m_size(other.m_size),
-          m_capacity(other.m_capacity),
-          m_data(other.m_data) {
-        if (other.m_size > N) {
-            other.m_data = nullptr;
-        } else {
-            std::copy(other.m_inlineData, other.m_inlineData + other.m_size,
-                      m_inlineData);
-        }
+    SmallVector(const SmallVector& other) : SmallVector() {
+        reserve(other.m_size);
+        std::uninitialized_copy(other.begin(), other.end(),
+                                m_isExternal ? m_external : m_internal);
+        m_size = other.m_size;
     }
 
-    // 析构函数
-    ~SmallVector() {
-        if (m_data != m_inlineData) {
-            delete[] m_data;
-        }
+    SmallVector(SmallVector&& other) noexcept : SmallVector() {
+        moveAssign(std::move(other));
     }
 
-    // 赋值操作符重载
-    SmallVector &operator=(const SmallVector &other) {
+    ~SmallVector() { clear(); }
+
+    SmallVector& operator=(const SmallVector& other) {
         if (this != &other) {
+            clear();
+            reserve(other.m_size);
+            std::uninitialized_copy(other.begin(), other.end(),
+                                    m_isExternal ? m_external : m_internal);
             m_size = other.m_size;
-            m_capacity = other.m_capacity;
-            if (other.m_size > N) {
-                if (m_data != m_inlineData) {
-                    delete[] m_data;
-                }
-                m_data = new T[other.m_capacity];
-                std::copy(other.m_data, other.m_data + other.m_size, m_data);
-            } else {
-                if (m_data != m_inlineData) {
-                    delete[] m_data;
-                }
-                m_data = m_inlineData;
-                std::copy(other.m_data, other.m_data + other.m_size, m_data);
-            }
         }
         return *this;
     }
 
-    // 添加元素
-    void push_back(const T &value) {
-        if (m_size == m_capacity) {
-            if (m_capacity == N) {
-                m_capacity *= 2;
-                m_data = new T[m_capacity];
-                std::copy(m_inlineData, m_inlineData + m_size, m_data);
-            } else {
-                m_capacity *= 2;
-                T *newData = new T[m_capacity];
-                std::copy(m_data, m_data + m_size, newData);
-                delete[] m_data;
-                m_data = newData;
+    SmallVector& operator=(SmallVector&& other) noexcept {
+        if (this != &other) {
+            moveAssign(std::move(other));
+        }
+        return *this;
+    }
+
+    T& operator[](std::size_t index) {
+        return const_cast<T&>(static_cast<const SmallVector&>(*this)[index]);
+    }
+
+    const T& operator[](std::size_t index) const {
+        return m_isExternal ? m_external[index] : m_internal[index];
+    }
+
+    bool operator==(const SmallVector& other) const {
+        if (m_size != other.m_size) {
+            return false;
+        }
+        for (std::size_t i = 0; i < m_size; ++i) {
+            if ((*this)[i] != other[i]) {
+                return false;
             }
         }
-        m_data[m_size++] = value;
+        return true;
     }
 
-    // 删除最后一个元素
-    void pop_back() {
-        if (m_size > 0) {
-            --m_size;
+    bool operator!=(const SmallVector& other) const {
+        return !(*this == other);
+    }
+
+    T* data() noexcept { return m_isExternal ? m_external : m_internal; }
+
+    const T* data() const noexcept {
+        return m_isExternal ? m_external : m_internal;
+    }
+
+    std::size_t size() const noexcept { return m_size; }
+
+    std::size_t capacity() const noexcept {
+        return m_isExternal ? m_externalCapacity : N;
+    }
+
+    bool empty() const noexcept { return m_size == 0; }
+
+    void clear() noexcept {
+        if (m_isExternal) {
+            std::destroy(m_external, m_external + m_size);
+            ::operator delete(m_external, m_externalCapacity * sizeof(T));
+            m_external = nullptr;
+            m_externalCapacity = 0;
+        } else {
+            std::destroy(m_internal, m_internal + m_size);
+        }
+        m_size = 0;
+        m_isExternal = false;
+    }
+
+    void reserve(std::size_t newCapacity) {
+        if (newCapacity <= capacity()) {
+            return;
+        }
+
+        if (newCapacity > N) {
+            if (m_isExternal) {
+                m_external =
+                    static_cast<T*>(::operator new(newCapacity * sizeof(T)));
+                std::uninitialized_copy(
+                    std::make_move_iterator(m_external),
+                    std::make_move_iterator(m_external + m_size), m_external);
+                std::destroy(m_external, m_external + m_size);
+                ::operator delete(m_external, m_externalCapacity * sizeof(T));
+                m_externalCapacity = newCapacity;
+            } else {
+                T* newBuffer =
+                    static_cast<T*>(::operator new(newCapacity * sizeof(T)));
+                std::uninitialized_copy(
+                    std::make_move_iterator(m_internal),
+                    std::make_move_iterator(m_internal + m_size), newBuffer);
+                std::destroy(m_internal, m_internal + m_size);
+                m_external = newBuffer;
+                m_externalCapacity = newCapacity;
+                m_isExternal = true;
+            }
         }
     }
 
-    // 清空向量
-    void clear() { m_size = 0; }
+    void resize(std::size_t newSize) {
+        reserve(newSize);
+        if (newSize > m_size) {
+            std::uninitialized_fill(
+                m_isExternal ? m_external + m_size : m_internal + m_size,
+                m_isExternal ? m_external + newSize : m_internal + newSize,
+                T());
+        } else {
+            std::destroy(
+                m_isExternal ? m_external + newSize : m_internal + newSize,
+                m_isExternal ? m_external + m_size : m_internal + m_size);
+        }
+        m_size = newSize;
+    }
 
-    // 获取元素个数
-    size_t size() const { return m_size; }
+    void push_back(const T& value) {
+        reserve(m_size + 1);
+        ::new (m_isExternal ? m_external + m_size : m_internal + m_size)
+            T(value);
+        ++m_size;
+    }
 
-    // 获取容量大小
-    size_t capacity() const { return m_capacity; }
+    void push_back(T&& value) {
+        reserve(m_size + 1);
+        ::new (m_isExternal ? m_external + m_size : m_internal + m_size)
+            T(std::move(value));
+        ++m_size;
+    }
 
-    // 判断向量是否为空
-    bool empty() const { return m_size == 0; }
+    template <typename... Args>
+    T& emplace_back(Args&&... args) {
+        reserve(m_size + 1);
+        T* newElement =
+            m_isExternal ? m_external + m_size : m_internal + m_size;
+        ::new (newElement) T(std::forward<Args>(args)...);
+        ++m_size;
+        return *newElement;
+    }
 
-    // 通过索引访问元素
-    T &operator[](size_t index) { return m_data[index]; }
+    void pop_back() {
+        --m_size;
+        std::destroy_at(m_isExternal ? m_external + m_size
+                                     : m_internal + m_size);
+    }
+
+public:
+    // 迭代器类型别名
+    using iterator = T*;
+    using const_iterator = const T*;
+
+    // 迭代器方法
+    iterator begin() noexcept { return data(); }
+
+    const_iterator begin() const noexcept { return data(); }
+
+    iterator end() noexcept { return data() + m_size; }
+
+    const_iterator end() const noexcept { return data() + m_size; }
+
+    const_iterator cbegin() const noexcept { return begin(); }
+
+    const_iterator cend() const noexcept { return end(); }
+
+    // 反向迭代器方法
+    std::reverse_iterator<iterator> rbegin() noexcept {
+        return std::reverse_iterator<iterator>(end());
+    }
+
+    std::reverse_iterator<const_iterator> rbegin() const noexcept {
+        return std::reverse_iterator<const_iterator>(end());
+    }
+
+    std::reverse_iterator<iterator> rend() noexcept {
+        return std::reverse_iterator<iterator>(begin());
+    }
+
+    std::reverse_iterator<const_iterator> rend() const noexcept {
+        return std::reverse_iterator<const_iterator>(begin());
+    }
+
+    std::reverse_iterator<const_iterator> crbegin() const noexcept {
+        return rbegin();
+    }
+
+    std::reverse_iterator<const_iterator> crend() const noexcept {
+        return rend();
+    }
+
+public:
+    // 三路比较运算符
+public:
+    /*
+    // 三路比较运算符
+        auto operator<=>(const SmallVector& other) const {
+            if constexpr (std::is_arithmetic_v<T>) {
+                // 对于内置算术类型,使用 std::is_eq 和 std::is_neq
+                for (std::size_t i = 0; i < std::min(m_size, other.m_size); ++i)
+    { if (std::is_neq((*this)[i], other[i])) { return (*this)[i] < other[i] ?
+    std::partial_ordering::less : (*this)[i] > other[i] ?
+    std::partial_ordering::greater : std::partial_ordering::unordered;
+                    }
+                }
+
+                return m_size < other.m_size   ? std::partial_ordering::less
+                       : m_size > other.m_size ? std::partial_ordering::greater
+                                               :
+    std::partial_ordering::equivalent; } else {
+                // 对于自定义类型,使用 operator<=>
+                using BuiltinThreeWay =
+                    std::partial_ordering (*)(const T&, const T&);
+                BuiltinThreeWay cmp = &T::operator<=>;
+
+                for (std::size_t i = 0; i < std::min(m_size, other.m_size); ++i)
+    { auto result = cmp((*this)[i], other[i]); if (result !=
+    std::partial_ordering::equivalent) { return result;
+                    }
+                }
+
+                return m_size < other.m_size   ? std::partial_ordering::less
+                       : m_size > other.m_size ? std::partial_ordering::greater
+                                               :
+    std::partial_ordering::equivalent;
+            }
+        }
+    */
+
+public:
+    static std::string partialOrderingToString(std::partial_ordering order) {
+        switch (order) {
+            case std::partial_ordering::less:
+                return "less";
+            case std::partial_ordering::equivalent:
+                return "equivalent";
+            case std::partial_ordering::greater:
+                return "greater";
+            case std::partial_ordering::unordered:
+                return "unordered";
+            default:
+                return "unknown";
+        }
+    }
 
 private:
-    size_t m_size;      // 元素个数
-    size_t m_capacity;  // 容量大小
-    T *m_data;          // 存储数据的指针
-    T m_inlineData[N];  // 内置的数据存储空间
+    void moveAssign(SmallVector&& other) noexcept {
+        clear();
+        if (other.m_isExternal) {
+            m_external = other.m_external;
+            m_externalCapacity = other.m_externalCapacity;
+            other.m_external = nullptr;
+            other.m_externalCapacity = 0;
+        } else {
+            std::uninitialized_copy(
+                std::make_move_iterator(other.m_internal),
+                std::make_move_iterator(other.m_internal + other.m_size),
+                m_internal);
+        }
+        m_size = other.m_size;
+        m_isExternal = other.m_isExternal;
+        other.m_size = 0;
+        other.m_isExternal = false;
+    }
+
+    alignas(T) std::byte m_internalBuffer[N * sizeof(T)];
+    T* m_internal = reinterpret_cast<T*>(m_internalBuffer);
+    T* m_external = nullptr;
+    std::size_t m_externalCapacity = 0;
+    std::size_t m_size = 0;
+    bool m_isExternal = false;
 };
 
 #endif

@@ -4,6 +4,8 @@
 #define CARBON_ANY_HPP
 
 #include <utility>
+#include <exception>
+#include <memory>
 
 namespace Carbon {
 namespace detail {

@@ -15,7 +15,7 @@
 #include <variant>
 #include <vector>
 #include "../defines.hpp"
-#include "quick_flat_map.hpp"
+#include "atom/experiment/flatmap.hpp"
 
 namespace Carbon::json {
 using std::enable_if;
@@ -38,9 +38,9 @@ public:
     };
 
 private:
-    using Data = std::variant<
-        std::nullptr_t, Carbon::utility::QuickFlatMap<std::string, JSON>,
-        std::vector<JSON>, std::string, double, std::int64_t, bool>;
+    using Data = std::variant<std::nullptr_t, QuickFlatMap<std::string, JSON>,
+                              std::vector<JSON>, std::string, double,
+                              std::int64_t, bool>;
 
     struct Internal {
         Internal(std::nullptr_t) : d(nullptr) {}
@@ -54,7 +54,7 @@ private:
                 case Class::Null:
                     return nullptr;
                 case Class::Object:
-                    return Carbon::utility::QuickFlatMap<std::string, JSON>{};
+                    return QuickFlatMap<std::string, JSON>{};
                 case Class::Array:
                     return std::vector<JSON>{};
                 case Class::String:
@@ -278,8 +278,7 @@ public:
             [](const auto &o) { return o; }, []() { return false; });
     }
 
-    JSONWrapper<Carbon::utility::QuickFlatMap<std::string, JSON>>
-    object_range() {
+    JSONWrapper<QuickFlatMap<std::string, JSON>> object_range() {
         return std::get_if<static_cast<std::size_t>(Class::Object)>(
             &internal.d);
     }
@@ -288,8 +287,7 @@ public:
         return std::get_if<static_cast<std::size_t>(Class::Array)>(&internal.d);
     }
 
-    JSONConstWrapper<Carbon::utility::QuickFlatMap<std::string, JSON>>
-    object_range() const {
+    JSONConstWrapper<QuickFlatMap<std::string, JSON>> object_range() const {
         return std::get_if<static_cast<std::size_t>(Class::Object)>(
             &internal.d);
     }

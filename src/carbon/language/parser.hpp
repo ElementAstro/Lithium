@@ -13,8 +13,8 @@
 #include <vector>
 
 #include "../command/boxed_value.hpp"
-#include "../utils/hash.hpp"
-#include "../utils/static_string.hpp"
+#include "atom/algorithm/hash.hpp"
+#include "atom/experiment/sstring.hpp"
 #include "common.hpp"
 #include "optimizer.hpp"
 #include "tracer.hpp"
@@ -100,14 +100,14 @@ struct Char_Parser_Helper<std::string> {
 }  // namespace detail
 
 template <typename Tracer, typename Optimizer, std::size_t Parse_Depth = 512>
-class ChaiScript_Parser final : public ChaiScript_Parser_Base {
+class Carbon_Parser final : public Carbon_Parser_Base {
     void *get_tracer_ptr() noexcept override { return &m_tracer; }
 
     std::size_t m_current_parse_depth = 0;
 
     struct Depth_Counter {
         static const auto max_depth = Parse_Depth;
-        Depth_Counter(ChaiScript_Parser *t_parser) : parser(t_parser) {
+        Depth_Counter(Carbon_Parser *t_parser) : parser(t_parser) {
             ++parser->m_current_parse_depth;
             if (parser->m_current_parse_depth > max_depth) {
                 throw exception::eval_error(
@@ -120,7 +120,7 @@ class ChaiScript_Parser final : public ChaiScript_Parser_Base {
 
         ~Depth_Counter() noexcept { --parser->m_current_parse_depth; }
 
-        ChaiScript_Parser *parser;
+        Carbon_Parser *parser;
     };
 
     template <typename Array2D, typename First, typename Second>
@@ -217,22 +217,22 @@ class ChaiScript_Parser final : public ChaiScript_Parser_Base {
     }
 
     struct Operator_Matches {
-        using SS = utility::Static_String;
+        using SS = Static_String;
 
-        std::array<utility::Static_String, 1> m_0{{SS("?")}};
-        std::array<utility::Static_String, 1> m_1{{SS("||")}};
-        std::array<utility::Static_String, 1> m_2{{SS("&&")}};
-        std::array<utility::Static_String, 1> m_3{{SS("|")}};
-        std::array<utility::Static_String, 1> m_4{{SS("^")}};
-        std::array<utility::Static_String, 1> m_5{{SS("&")}};
-        std::array<utility::Static_String, 2> m_6{{SS("=="), SS("!=")}};
-        std::array<utility::Static_String, 4> m_7{
+        std::array<Static_String, 1> m_0{{SS("?")}};
+        std::array<Static_String, 1> m_1{{SS("||")}};
+        std::array<Static_String, 1> m_2{{SS("&&")}};
+        std::array<Static_String, 1> m_3{{SS("|")}};
+        std::array<Static_String, 1> m_4{{SS("^")}};
+        std::array<Static_String, 1> m_5{{SS("&")}};
+        std::array<Static_String, 2> m_6{{SS("=="), SS("!=")}};
+        std::array<Static_String, 4> m_7{
             {SS("<"), SS("<="), SS(">"), SS(">=")}};
-        std::array<utility::Static_String, 2> m_8{{SS("<<"), SS(">>")}};
+        std::array<Static_String, 2> m_8{{SS("<<"), SS(">>")}};
         // We share precedence here but then separate them later
-        std::array<utility::Static_String, 2> m_9{{SS("+"), SS("-")}};
-        std::array<utility::Static_String, 3> m_10{{SS("*"), SS("/"), SS("%")}};
-        std::array<utility::Static_String, 6> m_11{
+        std::array<Static_String, 2> m_9{{SS("+"), SS("-")}};
+        std::array<Static_String, 3> m_10{{SS("*"), SS("/"), SS("%")}};
+        std::array<Static_String, 6> m_11{
             {SS("++"), SS("--"), SS("-"), SS("+"), SS("!"), SS("~")}};
 
         bool is_match(std::string_view t_str) const noexcept {
@@ -331,11 +331,11 @@ class ChaiScript_Parser final : public ChaiScript_Parser_Base {
         return operators;
     }
 
-    constexpr static utility::Static_String m_multiline_comment_end{"*/"};
-    constexpr static utility::Static_String m_multiline_comment_begin{"/*"};
-    constexpr static utility::Static_String m_singleline_comment{"//"};
-    constexpr static utility::Static_String m_annotation{"#"};
-    constexpr static utility::Static_String m_cr_lf{"\r\n"};
+    constexpr static Static_String m_multiline_comment_end{"*/"};
+    constexpr static Static_String m_multiline_comment_begin{"/*"};
+    constexpr static Static_String m_singleline_comment{"//"};
+    constexpr static Static_String m_annotation{"#"};
+    constexpr static Static_String m_cr_lf{"\r\n"};
     constexpr static auto m_operators = create_operators();
 
     std::shared_ptr<std::string> m_filename;
@@ -455,7 +455,7 @@ class ChaiScript_Parser final : public ChaiScript_Parser_Base {
     }
 
 public:
-    explicit ChaiScript_Parser(Tracer tracer = Tracer(),
+    explicit Carbon_Parser(Tracer tracer = Tracer(),
                                Optimizer optimizer = Optimizer())
         : m_tracer(std::move(tracer)), m_optimizer(std::move(optimizer)) {
         m_match_stack.reserve(2);
@@ -465,10 +465,10 @@ public:
 
     Optimizer &get_optimizer() noexcept { return m_optimizer; }
 
-    ChaiScript_Parser(const ChaiScript_Parser &) = delete;
-    ChaiScript_Parser &operator=(const ChaiScript_Parser &) = delete;
-    ChaiScript_Parser(ChaiScript_Parser &&) = default;
-    ChaiScript_Parser &operator=(ChaiScript_Parser &&) = delete;
+    Carbon_Parser(const Carbon_Parser &) = delete;
+    Carbon_Parser &operator=(const Carbon_Parser &) = delete;
+    Carbon_Parser(Carbon_Parser &&) = default;
+    Carbon_Parser &operator=(Carbon_Parser &&) = delete;
 
     constexpr static auto m_alphabet = build_alphabet();
     constexpr static Operator_Matches m_operator_matches{};
@@ -535,7 +535,7 @@ public:
 
     /// Reads a symbol group from input if it matches the parameter, without
     /// skipping initial whitespace
-    inline auto Symbol_(const utility::Static_String &sym) noexcept {
+    inline auto Symbol_(const Static_String &sym) noexcept {
         const auto len = sym.size();
         if (m_position.remaining() >= len) {
             const char *file_pos = &(*m_position);
@@ -1007,7 +1007,7 @@ public:
         const auto start = m_position;
         if (Id_()) {
             auto text = Position::str(start, m_position);
-            const auto text_hash = utility::hash(text);
+            const auto text_hash = Atom::Algorithm::fnv1a_hash(text);
 
             if (validate) {
                 validate_object_name(text);
@@ -1019,43 +1019,43 @@ public:
 #endif
 
             switch (text_hash) {
-                case utility::hash("true"): {
+                case Atom::Algorithm::fnv1a_hash("true"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col, const_var(true)));
                 } break;
-                case utility::hash("false"): {
+                case Atom::Algorithm::fnv1a_hash("false"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col, const_var(false)));
                 } break;
-                case utility::hash("Infinity"): {
+                case Atom::Algorithm::fnv1a_hash("Infinity"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(
                                 std::numeric_limits<double>::infinity())));
                 } break;
-                case utility::hash("NaN"): {
+                case Atom::Algorithm::fnv1a_hash("NaN"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(
                                 std::numeric_limits<double>::quiet_NaN())));
                 } break;
-                case utility::hash("__LINE__"): {
+                case Atom::Algorithm::fnv1a_hash("__LINE__"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(start.line)));
                 } break;
-                case utility::hash("__FILE__"): {
+                case Atom::Algorithm::fnv1a_hash("__FILE__"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(m_filename)));
                 } break;
-                case utility::hash("__FUNC__"): {
+                case Atom::Algorithm::fnv1a_hash("__FUNC__"): {
                     std::string fun_name = "NOT_IN_FUNCTION";
                     for (size_t idx = m_match_stack.empty()
                                           ? 0
@@ -1073,7 +1073,7 @@ public:
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col, const_var(fun_name)));
                 } break;
-                case utility::hash("__CLASS__"): {
+                case Atom::Algorithm::fnv1a_hash("__CLASS__"): {
                     std::string fun_name = "NOT_IN_CLASS";
                     for (size_t idx = m_match_stack.empty()
                                           ? 0
@@ -1094,7 +1094,7 @@ public:
                             std::move(text), start.line, start.col,
                             const_var(fun_name)));
                 } break;
-                case utility::hash("_"): {
+                case Atom::Algorithm::fnv1a_hash("_"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             std::move(text), start.line, start.col,
@@ -1613,7 +1613,7 @@ public:
 
     /// Reads a string from input if it matches the parameter, without skipping
     /// initial whitespace
-    bool Keyword_(const utility::Static_String &t_s) {
+    bool Keyword_(const Static_String &t_s) {
         const auto len = t_s.size();
         if (m_position.remaining() >= len) {
             auto tmp = m_position;
@@ -1632,7 +1632,7 @@ public:
 
     /// Reads (and potentially captures) a string from input if it matches the
     /// parameter
-    bool Keyword(const utility::Static_String &t_s) {
+    bool Keyword(const Static_String &t_s) {
         Depth_Counter dc{this};
         SkipWS();
         const auto start = m_position;
@@ -1653,7 +1653,7 @@ public:
 
     /// Reads (and potentially captures) a symbol group from input if it matches
     /// the parameter
-    bool Symbol(const utility::Static_String &t_s,
+    bool Symbol(const Static_String &t_s,
                 const bool t_disallow_prevention = false) {
         Depth_Counter dc{this};
         SkipWS();
@@ -2820,8 +2820,8 @@ public:
     bool Prefix() {
         Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
-        using SS = utility::Static_String;
-        const std::array<utility::Static_String, 6> prefix_opers{
+        using SS = Static_String;
+        const std::array<Static_String, 6> prefix_opers{
             {SS{"++"}, SS{"--"}, SS{"-"}, SS{"+"}, SS{"!"}, SS{"~"}}};
 
         for (const auto &oper : prefix_opers) {
@@ -3009,7 +3009,7 @@ public:
         Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
-        using SS = utility::Static_String;
+        using SS = Static_String;
 
         if (Operator()) {
             for (const auto &sym : {SS{"="}, SS{":="}, SS{"+="}, SS{"-="},
@@ -3109,7 +3109,7 @@ public:
 
     AST_NodePtr parse(const std::string &t_input,
                       const std::string &t_fname) override {
-        ChaiScript_Parser<Tracer, Optimizer> parser(m_tracer, m_optimizer);
+        Carbon_Parser<Tracer, Optimizer> parser(m_tracer, m_optimizer);
         return parser.parse_internal(t_input, t_fname);
     }
 

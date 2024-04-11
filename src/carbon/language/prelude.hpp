@@ -3,8 +3,10 @@
 #ifndef CARBON_PRELUDE_HPP
 #define CARBON_PRELUDE_HPP
 
+#include <string>
+
 namespace Carbon {
-struct ChaiScript_Prelude {
+struct Carbon_Prelude {
     static std::string prelude() {
         return R"chaiscript(
 

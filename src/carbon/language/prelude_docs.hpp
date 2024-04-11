@@ -4,7 +4,7 @@
 
 /// \brief Items in this namespace exist in the ChaiScript language runtime.
 /// They are not part of the C++ API
-namespace ChaiScript_Language {
+namespace Carbon_Language {
 /// \page LangStandardLibraryRef ChaiScript Language Standard Library Reference
 ///
 /// ChaiScript, at its core, has some very functional programming-inspired
@@ -829,4 +829,4 @@ Const_Range retro(Const_Range);
 ///
 /// \sa \ref keywordtry
 void throw(Object);
-}  // namespace ChaiScript_Language
+}  // namespace Carbon_Language

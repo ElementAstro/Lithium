@@ -53,7 +53,7 @@ public:
 
     const Boxed_Value &method_missing(const std::string &t_method_name) const;
 
-    std::map<std::string, Boxed_Value> get_attrs();
+    std::map<std::string, Boxed_Value> get_attrs() const;
 
 private:
     const std::string m_type_name = "";

@@ -1,3 +1,4 @@
+#include "eval.hpp"
 
 
 #ifndef CARBON_TRACER_HPP

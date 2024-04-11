@@ -18,7 +18,7 @@
 
 #include "../defines.hpp"
 #include "../threading.hpp"
-#include "../utils/quick_flat_map.hpp"
+#include "atom/experiment/flatmap.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
@@ -36,7 +36,7 @@ class Boxed_Number;
 
 namespace Carbon {
 namespace parser {
-class ChaiScript_Parser_Base;
+class Carbon_Parser_Base;
 }
 namespace dispatch {
 class Dynamic_Proxy_Function;
@@ -388,7 +388,7 @@ public:
         Type_Name_Map m_types;
     };
 
-    explicit Dispatch_Engine(Carbon::parser::ChaiScript_Parser_Base &parser)
+    explicit Dispatch_Engine(Carbon::parser::Carbon_Parser_Base &parser)
         : m_stack_holder(), m_parser(parser) {}
 
     /// \brief casts an object while applying any Dynamic_Conversion available
@@ -1189,7 +1189,7 @@ public:
         return m_stack_holder->stacks.back();
     }
 
-    parser::ChaiScript_Parser_Base &get_parser() noexcept {
+    parser::Carbon_Parser_Base &get_parser() noexcept {
         return m_parser.get();
     }
 
@@ -1350,7 +1350,7 @@ private:
 
     Type_Conversions m_conversions;
     Carbon::detail::threading::Thread_Storage<Stack_Holder> m_stack_holder;
-    std::reference_wrapper<parser::ChaiScript_Parser_Base> m_parser;
+    std::reference_wrapper<parser::Carbon_Parser_Base> m_parser;
 
     mutable std::atomic_uint_fast32_t m_method_missing_loc = {0};
 

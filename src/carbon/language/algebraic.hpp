@@ -3,7 +3,7 @@
 #ifndef CARBON_ALGEBRAIC_HPP
 #define CARBON_ALGEBRAIC_HPP
 
-#include "../utils/hash.hpp"
+#include "atom/algorithm/hash.hpp"
 
 #include <string>
 
@@ -61,93 +61,93 @@ struct Operators {
 #pragma warning(disable : 4307)
 #endif
 
-        const auto op_hash = utility::hash(t_str);
+        const auto op_hash = Atom::Algorithm::fnv1a_hash(t_str);
         switch (op_hash) {
-            case utility::hash("=="): {
+            case Atom::Algorithm::fnv1a_hash("=="): {
                 return Opers::equals;
             }
-            case utility::hash("<"): {
+            case Atom::Algorithm::fnv1a_hash("<"): {
                 return Opers::less_than;
             }
-            case utility::hash(">"): {
+            case Atom::Algorithm::fnv1a_hash(">"): {
                 return Opers::greater_than;
             }
-            case utility::hash("<="): {
+            case Atom::Algorithm::fnv1a_hash("<="): {
                 return Opers::less_than_equal;
             }
-            case utility::hash(">="): {
+            case Atom::Algorithm::fnv1a_hash(">="): {
                 return Opers::greater_than_equal;
             }
-            case utility::hash("!="): {
+            case Atom::Algorithm::fnv1a_hash("!="): {
                 return Opers::not_equal;
             }
-            case utility::hash("="): {
+            case Atom::Algorithm::fnv1a_hash("="): {
                 return Opers::assign;
             }
-            case utility::hash("++"): {
+            case Atom::Algorithm::fnv1a_hash("++"): {
                 return Opers::pre_increment;
             }
-            case utility::hash("--"): {
+            case Atom::Algorithm::fnv1a_hash("--"): {
                 return Opers::pre_decrement;
             }
-            case utility::hash("*="): {
+            case Atom::Algorithm::fnv1a_hash("*="): {
                 return Opers::assign_product;
             }
-            case utility::hash("+="): {
+            case Atom::Algorithm::fnv1a_hash("+="): {
                 return Opers::assign_sum;
             }
-            case utility::hash("-="): {
+            case Atom::Algorithm::fnv1a_hash("-="): {
                 return Opers::assign_difference;
             }
-            case utility::hash("&="): {
+            case Atom::Algorithm::fnv1a_hash("&="): {
                 return Opers::assign_bitwise_and;
             }
-            case utility::hash("|="): {
+            case Atom::Algorithm::fnv1a_hash("|="): {
                 return Opers::assign_bitwise_or;
             }
-            case utility::hash("<<="): {
+            case Atom::Algorithm::fnv1a_hash("<<="): {
                 return Opers::assign_shift_left;
             }
-            case utility::hash(">>="): {
+            case Atom::Algorithm::fnv1a_hash(">>="): {
                 return Opers::assign_shift_right;
             }
-            case utility::hash("%="): {
+            case Atom::Algorithm::fnv1a_hash("%="): {
                 return Opers::assign_remainder;
             }
-            case utility::hash("^="): {
+            case Atom::Algorithm::fnv1a_hash("^="): {
                 return Opers::assign_bitwise_xor;
             }
-            case utility::hash("<<"): {
+            case Atom::Algorithm::fnv1a_hash("<<"): {
                 return Opers::shift_left;
             }
-            case utility::hash(">>"): {
+            case Atom::Algorithm::fnv1a_hash(">>"): {
                 return Opers::shift_right;
             }
-            case utility::hash("%"): {
+            case Atom::Algorithm::fnv1a_hash("%"): {
                 return Opers::remainder;
             }
-            case utility::hash("&"): {
+            case Atom::Algorithm::fnv1a_hash("&"): {
                 return Opers::bitwise_and;
             }
-            case utility::hash("|"): {
+            case Atom::Algorithm::fnv1a_hash("|"): {
                 return Opers::bitwise_or;
             }
-            case utility::hash("^"): {
+            case Atom::Algorithm::fnv1a_hash("^"): {
                 return Opers::bitwise_xor;
             }
-            case utility::hash("~"): {
+            case Atom::Algorithm::fnv1a_hash("~"): {
                 return Opers::bitwise_complement;
             }
-            case utility::hash("+"): {
+            case Atom::Algorithm::fnv1a_hash("+"): {
                 return t_is_unary ? Opers::unary_plus : Opers::sum;
             }
-            case utility::hash("-"): {
+            case Atom::Algorithm::fnv1a_hash("-"): {
                 return t_is_unary ? Opers::unary_minus : Opers::difference;
             }
-            case utility::hash("/"): {
+            case Atom::Algorithm::fnv1a_hash("/"): {
                 return Opers::quotient;
             }
-            case utility::hash("*"): {
+            case Atom::Algorithm::fnv1a_hash("*"): {
                 return Opers::product;
             }
             default: {

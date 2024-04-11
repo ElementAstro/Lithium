@@ -3,7 +3,7 @@
 
 #include "json.hpp"
 
-namespace chaiscript {
+namespace Carbon {
 class json_wrap {
 public:
     static Module &library(Module &m) {
@@ -133,6 +133,6 @@ private:
     }
 };
 
-}  // namespace chaiscript
+}  // namespace Carbon
 
 #endif

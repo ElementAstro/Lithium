@@ -11,11 +11,11 @@
 #include <vector>
 
 #include <unordered_set>
-#include "../defines.hpp"
 #include "../command/boxed_value.hpp"
 #include "../command/dispatchkit.hpp"
 #include "../command/proxy_functions.hpp"
-#include "../command/type_info.hpp"
+#include "../defines.hpp"
+#include "atom/experiment/type_info.hpp"
 
 namespace Carbon {
 struct AST_Node;
@@ -30,20 +30,32 @@ struct Name_Validator {
     template <typename T>
     static bool is_reserved_word(const T &s) noexcept {
         const static std::unordered_set<std::uint32_t> words{
-            utility::hash("def"),      utility::hash("fun"),
-            utility::hash("while"),    utility::hash("for"),
-            utility::hash("if"),       utility::hash("else"),
-            utility::hash("&&"),       utility::hash("||"),
-            utility::hash(","),        utility::hash("auto"),
-            utility::hash("return"),   utility::hash("break"),
-            utility::hash("true"),     utility::hash("false"),
-            utility::hash("class"),    utility::hash("attr"),
-            utility::hash("var"),      utility::hash("global"),
-            utility::hash("GLOBAL"),   utility::hash("_"),
-            utility::hash("__LINE__"), utility::hash("__FILE__"),
-            utility::hash("__FUNC__"), utility::hash("__CLASS__")};
+            Atom::Algorithm::fnv1a_hash("def"),
+            Atom::Algorithm::fnv1a_hash("fun"),
+            Atom::Algorithm::fnv1a_hash("while"),
+            Atom::Algorithm::fnv1a_hash("for"),
+            Atom::Algorithm::fnv1a_hash("if"),
+            Atom::Algorithm::fnv1a_hash("else"),
+            Atom::Algorithm::fnv1a_hash("&&"),
+            Atom::Algorithm::fnv1a_hash("||"),
+            Atom::Algorithm::fnv1a_hash(","),
+            Atom::Algorithm::fnv1a_hash("auto"),
+            Atom::Algorithm::fnv1a_hash("return"),
+            Atom::Algorithm::fnv1a_hash("break"),
+            Atom::Algorithm::fnv1a_hash("true"),
+            Atom::Algorithm::fnv1a_hash("false"),
+            Atom::Algorithm::fnv1a_hash("class"),
+            Atom::Algorithm::fnv1a_hash("attr"),
+            Atom::Algorithm::fnv1a_hash("var"),
+            Atom::Algorithm::fnv1a_hash("global"),
+            Atom::Algorithm::fnv1a_hash("GLOBAL"),
+            Atom::Algorithm::fnv1a_hash("_"),
+            Atom::Algorithm::fnv1a_hash("__LINE__"),
+            Atom::Algorithm::fnv1a_hash("__FILE__"),
+            Atom::Algorithm::fnv1a_hash("__FUNC__"),
+            Atom::Algorithm::fnv1a_hash("__CLASS__")};
 
-        return words.count(utility::hash(s)) == 1;
+        return words.count(Atom::Algorithm::fnv1a_hash(s)) == 1;
     }
 
     template <typename T>
@@ -232,8 +244,7 @@ public:
     }
 
     static inline bool get_bool_condition(
-        const Boxed_Value &t_bv,
-        const Carbon::detail::Dispatch_State &t_ss);
+        const Boxed_Value &t_bv, const Carbon::detail::Dispatch_State &t_ss);
 
     virtual ~AST_Node() noexcept = default;
     AST_Node(AST_Node &&) = default;
@@ -635,8 +646,8 @@ struct file_not_found_error : std::runtime_error {
 }  // namespace exception
 
 // static
-bool AST_Node::get_bool_condition(
-    const Boxed_Value &t_bv, const Carbon::detail::Dispatch_State &t_ss) {
+bool AST_Node::get_bool_condition(const Boxed_Value &t_bv,
+                                  const Carbon::detail::Dispatch_State &t_ss) {
     try {
         return t_ss->boxed_cast<bool>(t_bv);
     } catch (const exception::bad_boxed_cast &) {
@@ -645,18 +656,18 @@ bool AST_Node::get_bool_condition(
 }
 
 namespace parser {
-class ChaiScript_Parser_Base {
+class Carbon_Parser_Base {
 public:
     virtual AST_NodePtr parse(const std::string &t_input,
                               const std::string &t_fname) = 0;
     virtual void debug_print(const AST_Node &t,
                              std::string prepend = "") const = 0;
     virtual void *get_tracer_ptr() = 0;
-    virtual ~ChaiScript_Parser_Base() = default;
-    ChaiScript_Parser_Base() = default;
-    ChaiScript_Parser_Base(ChaiScript_Parser_Base &&) = default;
-    ChaiScript_Parser_Base &operator=(ChaiScript_Parser_Base &&) = delete;
-    ChaiScript_Parser_Base &operator=(const ChaiScript_Parser_Base &&) = delete;
+    virtual ~Carbon_Parser_Base() = default;
+    Carbon_Parser_Base() = default;
+    Carbon_Parser_Base(Carbon_Parser_Base &&) = default;
+    Carbon_Parser_Base &operator=(Carbon_Parser_Base &&) = delete;
+    Carbon_Parser_Base &operator=(const Carbon_Parser_Base &&) = delete;
 
     template <typename T>
     T &get_tracer() noexcept {
@@ -665,7 +676,7 @@ public:
     }
 
 protected:
-    ChaiScript_Parser_Base(const ChaiScript_Parser_Base &) = default;
+    Carbon_Parser_Base(const Carbon_Parser_Base &) = default;
 };
 }  // namespace parser
 

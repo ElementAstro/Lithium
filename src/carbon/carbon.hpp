@@ -20,7 +20,7 @@
 ///
 /// @sa chaiscript
 /// @sa Carbon::ChaiScript
-/// @sa ChaiScript_Language for Built in Functions
+/// @sa Carbon_Language for Built in Functions
 /// @sa @ref LangGettingStarted
 /// @sa @ref LangKeywordRef
 /// @sa @ref LangInPlaceRef
@@ -670,7 +670,7 @@
 /// -----------------------------------------------------------------------
 ///
 /// @sa @ref LangKeywordRef
-/// @sa ChaiScript_Language for Built in Functions
+/// @sa Carbon_Language for Built in Functions
 
 /// @page LangKeywordRef ChaiScript Language Keyword Reference
 ///
@@ -809,7 +809,7 @@
 ///    ["finally" block]
 /// ~~~~~~~~
 ///
-/// @sa ChaiScript_Language::throw
+/// @sa Carbon_Language::throw
 ///
 ///
 /// -----------------------------------------------------------------------
@@ -851,14 +851,14 @@
 #include "stdlib.hpp"
 
 namespace Carbon {
-class ChaiScript : public ChaiScript_Basic {
+class ChaiScript : public Carbon_Basic {
 public:
     ChaiScript(std::vector<std::string> t_modulepaths = {},
                std::vector<std::string> t_usepaths = {},
                std::vector<Options> t_opts = Carbon::default_options())
-        : ChaiScript_Basic(
+        : Carbon_Basic(
               Carbon::Std_Lib::library(),
-              std::make_unique<parser::ChaiScript_Parser<
+              std::make_unique<parser::Carbon_Parser<
                   eval::Noop_Tracer, optimizer::Optimizer_Default>>(),
               std::move(t_modulepaths), std::move(t_usepaths),
               std::move(t_opts)) {}

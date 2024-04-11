@@ -22,9 +22,9 @@
 #include "language/parser.hpp"
 #include "stdlib.hpp"
 
-ChaiScript_Basic chai(
+Carbon_Basic chai(
           Carbon::Std_Lib::library(),
-          std::make_unique<parser::ChaiScript_Parser<eval::Noop_Tracer,
+          std::make_unique<parser::Carbon_Parser<eval::Noop_Tracer,
 optimizer::Optimizer_Default>>());
 
 */

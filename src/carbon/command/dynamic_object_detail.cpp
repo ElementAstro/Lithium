@@ -62,7 +62,7 @@ Dynamic_Object_Function::get_contained_functions() const {
     return {m_func};
 }
 
-Boxed_Value do_call(const Carbon::Function_Params &params,
+Boxed_Value Dynamic_Object_Function::do_call(const Carbon::Function_Params &params,
                     const Type_Conversions_State &t_conversions) const {
     if (dynamic_object_typename_match(params, m_type_name, m_ti,
                                       t_conversions)) {

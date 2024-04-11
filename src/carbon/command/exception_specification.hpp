@@ -7,6 +7,7 @@
 
 #include "../defines.hpp"
 #include "boxed_cast.hpp"
+#include "dispatchkit.hpp"
 
 namespace Carbon {
 namespace detail {

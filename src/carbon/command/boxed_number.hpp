@@ -12,7 +12,7 @@
 #include "boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
 #include "boxed_value.hpp"
-#include "type_info.hpp"
+#include "atom/experiment/type_info.hpp"
 
 namespace Carbon {
 class Type_Conversions;

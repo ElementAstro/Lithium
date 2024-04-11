@@ -12,7 +12,7 @@
 #include <typeinfo>
 
 #include "../threading.hpp"
-#include "../utils/static_string.hpp"
+#include "atom/experiment/sstring.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
 #include "boxed_value.hpp"
@@ -25,7 +25,7 @@ namespace exception {
 class conversion_error : public bad_boxed_cast {
 public:
     conversion_error(const Type_Info t_to, const Type_Info t_from,
-                     const utility::Static_String what) noexcept
+                     const Static_String what) noexcept
         : bad_boxed_cast(t_from, (*t_to.bare_type_info()), what),
           type_to(t_to) {}
 
@@ -35,14 +35,14 @@ public:
 class bad_boxed_dynamic_cast : public bad_boxed_cast {
 public:
     bad_boxed_dynamic_cast(const Type_Info &t_from, const std::type_info &t_to,
-                           const utility::Static_String &t_what) noexcept
+                           const Static_String &t_what) noexcept
         : bad_boxed_cast(t_from, t_to, t_what) {}
 
     bad_boxed_dynamic_cast(const Type_Info &t_from,
                            const std::type_info &t_to) noexcept
         : bad_boxed_cast(t_from, t_to) {}
 
-    explicit bad_boxed_dynamic_cast(const utility::Static_String &w) noexcept
+    explicit bad_boxed_dynamic_cast(const Static_String &w) noexcept
         : bad_boxed_cast(w) {}
 
     bad_boxed_dynamic_cast(const bad_boxed_dynamic_cast &) = default;
@@ -53,14 +53,14 @@ public:
 class bad_boxed_type_cast : public bad_boxed_cast {
 public:
     bad_boxed_type_cast(const Type_Info &t_from, const std::type_info &t_to,
-                        const utility::Static_String &t_what) noexcept
+                        const Static_String &t_what) noexcept
         : bad_boxed_cast(t_from, t_to, t_what) {}
 
     bad_boxed_type_cast(const Type_Info &t_from,
                         const std::type_info &t_to) noexcept
         : bad_boxed_cast(t_from, t_to) {}
 
-    explicit bad_boxed_type_cast(const utility::Static_String &w) noexcept
+    explicit bad_boxed_type_cast(const Static_String &w) noexcept
         : bad_boxed_cast(w) {}
 
     bad_boxed_type_cast(const bad_boxed_type_cast &) = default;

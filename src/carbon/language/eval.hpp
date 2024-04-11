@@ -22,7 +22,7 @@
 #include "../command/proxy_functions.hpp"
 #include "../command/proxy_functions_detail.hpp"
 #include "../command/register_function.hpp"
-#include "../command/type_info.hpp"
+#include "atom/experiment/type_info.hpp"
 #include "algebraic.hpp"
 #include "common.hpp"
 

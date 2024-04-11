@@ -3,6 +3,9 @@
 #ifndef CARBON_POSIX_HPP
 #define CARBON_POSIX_HPP
 
+#include <dlfcn.h>
+#include <string>
+
 namespace Carbon::detail {
 struct Loadable_Module {
     struct DLModule {

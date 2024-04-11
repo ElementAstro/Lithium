@@ -25,7 +25,7 @@
 
 #ifndef CARBON_NO_THREADS
 #include <future>
-#endif
+#endif\
 
 /// @file
 ///
@@ -60,7 +60,7 @@ public:
 
         json_wrap::library(*lib);
 
-        lib->eval(ChaiScript_Prelude::prelude() /*, "standard prelude"*/);
+        lib->eval(Carbon_Prelude::prelude() /*, "standard prelude"*/);
 
         return lib;
     }

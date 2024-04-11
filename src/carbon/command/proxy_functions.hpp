@@ -39,80 +39,194 @@ std::function<FunctionType> functor(
     std::shared_ptr<const Proxy_Function_Base> func,
     const Type_Conversions_State *t_conversions);
 
+/**
+ * @brief A class representing the parameter types of a function.
+ *
+ * This class stores information about the types of parameters in a function.
+ */
 class Param_Types {
 public:
+    /**
+     * @brief Default constructor.
+     */
     Param_Types();
 
+    /**
+     * @brief Constructor with parameters.
+     *
+     * @param t_types A vector of pairs containing parameter names and type
+     * information.
+     */
     explicit Param_Types(
         std::vector<std::pair<std::string, Type_Info>> t_types);
 
+    /**
+     * @brief Pushes a new parameter type to the front of the list.
+     *
+     * @param t_name The name of the parameter.
+     * @param t_ti The type information of the parameter.
+     */
     void push_front(const std::string &t_name, Type_Info t_ti);
 
+    /**
+     * @brief Checks if two Param_Types objects are equal.
+     *
+     * @param t_rhs The right-hand side Param_Types object.
+     * @return True if the objects are equal, false otherwise.
+     */
     bool operator==(const Param_Types &t_rhs) const noexcept;
 
+    /**
+     * @brief Converts function parameters to boxed values using type
+     * conversions.
+     *
+     * @param t_params The function parameters.
+     * @param t_conversions The state of type conversions.
+     * @return A vector of boxed values representing the converted parameters.
+     */
     std::vector<Boxed_Value> convert(
         Function_Params t_params,
         const Type_Conversions_State &t_conversions) const;
 
-    // first result: is a match
-    // second result: needs conversions
+    /**
+     * @brief Checks if given values match the parameter types.
+     *
+     * @param vals The values to check.
+     * @param t_conversions The state of type conversions.
+     * @return A pair of booleans indicating if there is a match and if
+     * conversions are needed.
+     */
     std::pair<bool, bool> match(
         const Function_Params &vals,
         const Type_Conversions_State &t_conversions) const noexcept;
 
+    /**
+     * @brief Gets the vector of parameter types.
+     *
+     * @return A vector of pairs containing parameter names and type
+     * information.
+     */
     const std::vector<std::pair<std::string, Type_Info>> &types()
         const noexcept;
 
 private:
+    /**
+     * @brief Updates the flag indicating whether the Param_Types object has
+     * types.
+     */
     void update_has_types();
 
-    std::vector<std::pair<std::string, Type_Info>> m_types;
-    bool m_has_types;
+    std::vector<std::pair<std::string, Type_Info>>
+        m_types;       ///< Vector of parameter names and type information.
+    bool m_has_types;  ///< Flag indicating whether the Param_Types object has
+                       ///< types.
 };
 
 /**
- * Pure virtual base class for all Proxy_Function implementations
- * Proxy_Functions are a type erasure of type safe C++
- * function calls. At runtime parameter types are expected to be
- * tested against passed in types.
+ * @brief Pure virtual base class for all Proxy_Function implementations.
+ *
+ * Proxy_Functions are a type erasure of type safe C++ function calls. At
+ * runtime, parameter types are expected to be tested against passed in types.
  * Dispatch_Engine only knows how to work with Proxy_Function, no other
  * function classes.
  */
 class Proxy_Function_Base {
 public:
+    /**
+     * @brief Virtual destructor.
+     */
     virtual ~Proxy_Function_Base() = default;
 
+    /**
+     * @brief Calls the function with the given parameters.
+     *
+     * @param params The parameters to pass to the function.
+     * @param t_conversions The state of type conversions.
+     * @return The result of the function call.
+     */
     Boxed_Value operator()(
         const Function_Params &params,
         const Carbon::Type_Conversions_State &t_conversions) const;
 
-    /// Returns a vector containing all of the types of the parameters the
-    /// function returns/takes if the function is variadic or takes no arguments
-    /// (arity of 0 or -1), the returned value contains exactly 1 Type_Info
-    /// object: the return type \returns the types of all parameters.
+    /**
+     * @brief Returns the types of all parameters.
+     *
+     * If the function is variadic or takes no arguments (arity of 0 or -1),
+     * the returned value contains exactly 1 Type_Info object: the return type.
+     *
+     * @return A vector containing all of the types of the parameters the
+     * function returns/takes.
+     */
     const std::vector<Type_Info> &get_param_types() const noexcept;
 
+    /**
+     * @brief Checks if two Proxy_Function_Base objects are equal.
+     *
+     * @param rhs The right-hand side Proxy_Function_Base object.
+     * @return True if the objects are equal, false otherwise.
+     */
     virtual bool operator==(const Proxy_Function_Base &) const noexcept = 0;
+
+    /**
+     * @brief Checks if the function matches the given parameters.
+     *
+     * @param vals The values to check.
+     * @param t_conversions The state of type conversions.
+     * @return True if the function matches, false otherwise.
+     */
     virtual bool call_match(
         const Function_Params &vals,
         const Type_Conversions_State &t_conversions) const = 0;
 
+    /**
+     * @brief Checks if the function is an attribute function.
+     *
+     * @return True if the function is an attribute function, false otherwise.
+     */
     virtual bool is_attribute_function() const noexcept;
 
+    /**
+     * @brief Checks if the function has an arithmetic parameter.
+     *
+     * @return True if the function has an arithmetic parameter, false
+     * otherwise.
+     */
     bool has_arithmetic_param() const noexcept;
 
+    /**
+     * @brief Gets the contained functions.
+     *
+     * @return A vector containing shared pointers to the contained functions.
+     */
     virtual std::vector<std::shared_ptr<const Proxy_Function_Base>>
     get_contained_functions() const;
 
-    //! Return true if the function is a possible match
-    //! to the passed in values
+    /**
+     * @brief Filters the function based on the passed in values.
+     *
+     * @param vals The values to filter.
+     * @param t_conversions The state of type conversions.
+     * @return True if the function is a possible match to the passed in values,
+     * false otherwise.
+     */
     bool filter(const Function_Params &vals,
                 const Type_Conversions_State &t_conversions) const noexcept;
 
-    /// \returns the number of arguments the function takes or -1 if it is
-    /// variadic
+    /**
+     * @brief Gets the number of arguments the function takes.
+     *
+     * @return The number of arguments the function takes, or -1 if it is
+     * variadic.
+     */
     int get_arity() const noexcept;
 
+    /**
+     * @brief Compares a type to the first parameter.
+     *
+     * @param bv The boxed value to compare.
+     * @param t_conversions The state of type conversions.
+     * @return True if the type matches the first parameter, false otherwise.
+     */
     static bool compare_type_to_param(
         const Type_Info &ti, const Boxed_Value &bv,
         const Type_Conversions_State &t_conversions) noexcept;
@@ -125,19 +239,41 @@ public:
     }
 
 protected:
+    /**
+     * @brief Performs the function call.
+     *
+     * @param params The parameters to pass to the function.
+     * @param t_conversions The state of type conversions.
+     * @return The result of the function call.
+     */
     virtual Boxed_Value do_call(
         const Function_Params &params,
         const Type_Conversions_State &t_conversions) const = 0;
 
+    /**
+     * @brief Constructor.
+     *
+     * @param t_types The types of the parameters.
+     * @param t_arity The arity of the function.
+     */
     Proxy_Function_Base(std::vector<Type_Info> t_types, int t_arity);
 
+    /**
+     * @brief Compares types to parameters.
+     *
+     * @param tis The types to compare.
+     * @param bvs The parameters to compare against.
+     * @param t_conversions The state of type conversions.
+     * @return True if the types match the parameters, false otherwise.
+     */
     static bool compare_types(
         const std::vector<Type_Info> &tis, const Function_Params &bvs,
         const Type_Conversions_State &t_conversions) noexcept;
 
-    std::vector<Type_Info> m_types;
-    int m_arity;
-    bool m_has_arithmetic_param;
+    std::vector<Type_Info> m_types;  ///< Vector of parameter types.
+    int m_arity;                     ///< The arity of the function.
+    bool m_has_arithmetic_param;     ///< Flag indicating if the function has an
+                                     ///< arithmetic parameter.
 };
 }  // namespace dispatch
 
@@ -164,48 +300,112 @@ public:
 }  // namespace exception
 
 namespace dispatch {
-/// A Proxy_Function implementation that is not type safe, the called function
-/// is expecting a vector<Boxed_Value> that it works with how it chooses.
+/**
+ * @brief A Proxy_Function implementation that is not type safe.
+ *
+ * The called function is expecting a vector<Boxed_Value> that it works with how
+ * it chooses.
+ */
 class Dynamic_Proxy_Function : public Proxy_Function_Base {
 public:
+    /**
+     * @brief Constructor.
+     *
+     * @param t_arity The arity of the function.
+     * @param t_parsenode The parse node.
+     * @param t_param_types The parameter types.
+     * @param t_guard The guard function.
+     */
     explicit Dynamic_Proxy_Function(const int t_arity,
                                     std::shared_ptr<AST_Node> t_parsenode,
                                     Param_Types t_param_types = Param_Types(),
                                     Proxy_Function t_guard = Proxy_Function());
 
+    /**
+     * @brief Checks if two Dynamic_Proxy_Function objects are equal.
+     *
+     * @param rhs The right-hand side Dynamic_Proxy_Function object.
+     * @return True if the objects are equal, false otherwise.
+     */
     bool operator==(const Proxy_Function_Base &rhs) const noexcept override;
 
+    /**
+     * @brief Checks if the function matches the given parameters.
+     *
+     * @param vals The values to check.
+     * @param t_conversions The state of type conversions.
+     * @return True if the function matches, false otherwise.
+     */
     bool call_match(const Function_Params &vals,
                     const Type_Conversions_State &t_conversions) const override;
 
+    /**
+     * @brief Checks if the function has a guard.
+     *
+     * @return True if the function has a guard, false otherwise.
+     */
     bool has_guard() const noexcept;
 
+    /**
+     * @brief Gets the guard function.
+     *
+     * @return The guard function.
+     */
     Proxy_Function get_guard() const noexcept;
 
+    /**
+     * @brief Checks if the function has a parse tree.
+     *
+     * @return True if the function has a parse tree, false otherwise.
+     */
     bool has_parse_tree() const noexcept;
 
+    /**
+     * @brief Gets the parse tree.
+     *
+     * @return The parse tree.
+     */
     const AST_Node &get_parse_tree() const;
 
 protected:
+    /**
+     * @brief Tests the guard function.
+     *
+     * @param params The parameters to test.
+     * @param t_conversions The state of type conversions.
+     * @return True if the guard function passes, false otherwise.
+     */
     bool test_guard(const Function_Params &params,
                     const Type_Conversions_State &t_conversions) const;
 
-    // first result: is a match
-    // second result: needs conversions
+    /**
+     * @brief Checks if the function matches the given parameters internally.
+     *
+     * @param vals The values to check.
+     * @param t_conversions The state of type conversions.
+     * @return A pair of booleans indicating if there is a match and if
+     * conversions are needed.
+     */
     std::pair<bool, bool> call_match_internal(
         const Function_Params &vals,
         const Type_Conversions_State &t_conversions) const;
 
 private:
+    /**
+     * @brief Builds a list of parameter types.
+     *
+     * @param t_types The parameter types.
+     * @return A vector containing the parameter types.
+     */
     static std::vector<Type_Info> build_param_type_list(
         const Param_Types &t_types);
 
 protected:
-    Param_Types m_param_types;
+    Param_Types m_param_types;  ///< The parameter types.
 
 private:
-    Proxy_Function m_guard;
-    std::shared_ptr<AST_Node> m_parsenode;
+    Proxy_Function m_guard;                 ///< The guard function.
+    std::shared_ptr<AST_Node> m_parsenode;  ///< The parse node.
 };
 
 template <typename Callable>
@@ -253,44 +453,109 @@ Proxy_Function make_dynamic_proxy_function(Callable &&c, Arg &&...a) {
 /// of a binding. This allows for unbound parameters during bind.
 struct Placeholder_Object {};
 
-/// An implementation of Proxy_Function that takes a Proxy_Function
-/// and substitutes bound parameters into the parameter list
-/// at runtime, when call() is executed.
-/// it is used for bind(function, param1, _, param2) style calls
+/**
+ * @brief An implementation of Proxy_Function that takes a Proxy_Function
+ * and substitutes bound parameters into the parameter list
+ * at runtime, when call() is executed.
+ * It is used for bind(function, param1, _, param2) style calls.
+ */
 class Bound_Function final : public Proxy_Function_Base {
 public:
+    /**
+     * @brief Constructor.
+     *
+     * @param t_f The original function.
+     * @param t_args The arguments to bind.
+     */
     Bound_Function(const Const_Proxy_Function &t_f,
                    const std::vector<Boxed_Value> &t_args);
 
+    /**
+     * @brief Checks if two Bound_Function objects are equal.
+     *
+     * @param t_f The right-hand side Bound_Function object.
+     * @return True if the objects are equal, false otherwise.
+     */
     bool operator==(const Proxy_Function_Base &t_f) const noexcept override;
 
+    /**
+     * @brief Checks if the function matches the given parameters.
+     *
+     * @param vals The values to check.
+     * @param t_conversions The state of type conversions.
+     * @return True if the function matches, false otherwise.
+     */
     bool call_match(const Function_Params &vals,
                     const Type_Conversions_State &t_conversions) const override;
 
+    /**
+     * @brief Gets the contained functions.
+     *
+     * @return A vector containing shared pointers to the contained functions.
+     */
     std::vector<Const_Proxy_Function> get_contained_functions() const override;
 
+    std::vector<Boxed_Value> build_param_list(
+        const Function_Params &params) const;
+
 protected:
+    /**
+     * @brief Builds parameter type information.
+     *
+     * @param t_f The original function.
+     * @param t_args The arguments.
+     * @return A vector containing the parameter type information.
+     */
     static std::vector<Type_Info> build_param_type_info(
         const Const_Proxy_Function &t_f,
         const std::vector<Boxed_Value> &t_args);
 
+    /**
+     * @brief Executes the function call.
+     *
+     * @param params The parameters to pass to the function.
+     * @param t_conversions The state of type conversions.
+     * @return The result of the function call.
+     */
     Boxed_Value do_call(
         const Function_Params &params,
         const Type_Conversions_State &t_conversions) const override;
 
 private:
-    Const_Proxy_Function m_f;
-    std::vector<Boxed_Value> m_args;
+    Const_Proxy_Function m_f;         ///< The original function.
+    std::vector<Boxed_Value> m_args;  ///< The bound arguments.
 };
 
+/**
+ * @brief Base class for Proxy_Function implementations.
+ */
 class Proxy_Function_Impl_Base : public Proxy_Function_Base {
 public:
+    /**
+     * @brief Constructor.
+     *
+     * @param t_types The types of the parameters.
+     */
     explicit Proxy_Function_Impl_Base(const std::vector<Type_Info> &t_types);
 
+    /**
+     * @brief Checks if the function matches the given parameters.
+     *
+     * @param vals The values to check.
+     * @param t_conversions The state of type conversions.
+     * @return True if the function matches, false otherwise.
+     */
     bool call_match(
         const Function_Params &vals,
         const Type_Conversions_State &t_conversions) const noexcept override;
 
+    /**
+     * @brief Compares types with casting.
+     *
+     * @param vals The values to compare.
+     * @param t_conversions The state of type conversions.
+     * @return True if the types match with casting, false otherwise.
+     */
     virtual bool compare_types_with_cast(
         const Function_Params &vals,
         const Type_Conversions_State &t_conversions) const noexcept = 0;

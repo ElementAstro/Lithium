@@ -172,7 +172,7 @@ const std::vector<Type_Info> &Proxy_Function_Base::get_param_types() const {
     return m_types;
 }
 
-bool Proxy_Function_Base::is_attribute_function() const;
+bool Proxy_Function_Base::is_attribute_function() const
 { return false; }
 
 bool Proxy_Function_Base::has_arithmetic_param() const {
@@ -232,10 +232,6 @@ bool Proxy_Function_Base::compare_first_type(
     /// TODO is m_types guaranteed to be at least 2??
     return compare_type_to_param(m_types[1], bv, t_conversions);
 }
-
-Boxed_Value Proxy_Function_Base::do_call(
-    const Function_Params &params,
-    const Type_Conversions_State &t_conversions) const = 0;
 
 Proxy_Function_Base::Proxy_Function_Base(std::vector<Type_Info> t_types,
                                          int t_arity)

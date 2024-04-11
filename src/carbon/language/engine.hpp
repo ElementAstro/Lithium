@@ -56,7 +56,7 @@ using Loadable_Module_Ptr = std::shared_ptr<Loadable_Module>;
 }
 
 /// \brief The main object that the ChaiScript user will use.
-class ChaiScript_Basic {
+class Carbon_Basic {
     mutable Carbon::detail::threading::shared_mutex m_mutex;
     mutable Carbon::detail::threading::recursive_mutex m_use_mutex;
 
@@ -67,7 +67,7 @@ class ChaiScript_Basic {
     std::vector<std::string> m_module_paths;
     std::vector<std::string> m_use_paths;
 
-    std::unique_ptr<parser::ChaiScript_Parser_Base> m_parser;
+    std::unique_ptr<parser::Carbon_Parser_Base> m_parser;
 
     Carbon::detail::Dispatch_Engine m_engine;
 
@@ -320,15 +320,15 @@ class ChaiScript_Basic {
 
 public:
     /// \brief Virtual destructor for ChaiScript
-    virtual ~ChaiScript_Basic() = default;
+    virtual ~Carbon_Basic() = default;
 
     /// \brief Constructor for ChaiScript
     /// \param[in] t_lib Standard library to apply to this ChaiScript instance
     /// \param[in] t_modulepaths Vector of paths to search when attempting to
     /// load a binary module \param[in] t_usepaths Vector of paths to search
     /// when attempting to "use" an included ChaiScript file
-    ChaiScript_Basic(const ModulePtr &t_lib,
-                     std::unique_ptr<parser::ChaiScript_Parser_Base> &&parser,
+    Carbon_Basic(const ModulePtr &t_lib,
+                     std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
                      std::vector<std::string> t_module_paths = {},
                      std::vector<std::string> t_use_paths = {},
                      const std::vector<Carbon::Options> &t_opts =
@@ -343,14 +343,14 @@ public:
         // search path as windows would do
 
         union cast_union {
-            Boxed_Value (ChaiScript_Basic::*in_ptr)(const std::string &);
+            Boxed_Value (Carbon_Basic::*in_ptr)(const std::string &);
             void *out_ptr;
         };
 
         Dl_info rInfo;
         memset(&rInfo, 0, sizeof(rInfo));
         cast_union u;
-        u.in_ptr = &ChaiScript_Basic::use;
+        u.in_ptr = &Carbon_Basic::use;
         if ((dladdr(static_cast<void *>(u.out_ptr), &rInfo) != 0) &&
             (rInfo.dli_fname != nullptr)) {
             std::string dllpath(rInfo.dli_fname);
@@ -383,13 +383,13 @@ public:
     /// \param[in] t_modulepaths Vector of paths to search when attempting to
     /// load a binary module \param[in] t_usepaths Vector of paths to search
     /// when attempting to "use" an included ChaiScript file
-    explicit ChaiScript_Basic(
-        std::unique_ptr<parser::ChaiScript_Parser_Base> &&parser,
+    explicit Carbon_Basic(
+        std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
         std::vector<std::string> t_module_paths = {},
         std::vector<std::string> t_use_paths = {},
         const std::vector<Carbon::Options> &t_opts =
             Carbon::default_options())
-        : ChaiScript_Basic({}, std::move(parser), t_module_paths, t_use_paths,
+        : Carbon_Basic({}, std::move(parser), t_module_paths, t_use_paths,
                            t_opts) {
         try {
             // attempt to load the stdlib
@@ -411,15 +411,15 @@ public:
         }
     }
 #else  // CARBON_NO_DYNLOAD
-    explicit ChaiScript_Basic(
-        std::unique_ptr<parser::ChaiScript_Parser_Base> &&parser,
+    explicit Carbon_Basic(
+        std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
         std::vector<std::string> t_module_paths = {},
         std::vector<std::string> t_use_paths = {},
         const std::vector<Carbon::Options> &t_opts =
             Carbon::default_options()) = delete;
 #endif
 
-    parser::ChaiScript_Parser_Base &get_parser() noexcept { return *m_parser; }
+    parser::Carbon_Parser_Base &get_parser() noexcept { return *m_parser; }
 
     const Boxed_Value eval(const AST_Node &t_ast) {
         try {
@@ -492,7 +492,7 @@ public:
     /// t_name Name of the value to add \throw
     /// Carbon::exception::global_non_const If t_bv is not a constant object
     /// \sa Boxed_Value::is_const
-    ChaiScript_Basic &add_global_const(const Boxed_Value &t_bv,
+    Carbon_Basic &add_global_const(const Boxed_Value &t_bv,
                                        const std::string &t_name) {
         Name_Validator::validate_object_name(t_name);
         m_engine.add_global_const(t_bv, t_name);
@@ -505,14 +505,14 @@ public:
     /// making sure the object is thread-safe if necessary
     ///          ChaiScript is thread-safe but provides no threading locking
     ///          mechanism to the script
-    ChaiScript_Basic &add_global(const Boxed_Value &t_bv,
+    Carbon_Basic &add_global(const Boxed_Value &t_bv,
                                  const std::string &t_name) {
         Name_Validator::validate_object_name(t_name);
         m_engine.add_global(t_bv, t_name);
         return *this;
     }
 
-    ChaiScript_Basic &set_global(const Boxed_Value &t_bv,
+    Carbon_Basic &set_global(const Boxed_Value &t_bv,
                                  const std::string &t_name) {
         Name_Validator::validate_object_name(t_name);
         m_engine.set_global(t_bv, t_name);
@@ -620,7 +620,7 @@ public:
     ///
     /// \sa \ref adding_items
     template <typename T>
-    ChaiScript_Basic &add(const T &t_t, const std::string &t_name) {
+    Carbon_Basic &add(const T &t_t, const std::string &t_name) {
         Name_Validator::validate_object_name(t_name);
         m_engine.add(t_t, t_name);
         return *this;
@@ -635,7 +635,7 @@ public:
     /// Carbon::ChaiScript chai;
     /// chai.add(Carbon::base_class<std::runtime_error,
     /// Carbon::dispatch_error>()); \endcode
-    ChaiScript_Basic &add(const Type_Conversion &d) {
+    Carbon_Basic &add(const Type_Conversion &d) {
         m_engine.add(d);
         return *this;
     }
@@ -643,7 +643,7 @@ public:
     /// \brief Adds all elements of a module to ChaiScript runtime
     /// \param[in] t_p The module to add.
     /// \sa Carbon::Module
-    ChaiScript_Basic &add(const ModulePtr &t_p) {
+    Carbon_Basic &add(const ModulePtr &t_p) {
         t_p->apply(*this, this->get_eval_engine());
         return *this;
     }

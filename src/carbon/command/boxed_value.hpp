@@ -43,7 +43,7 @@ private:
 
     struct Object_Data {
         static auto get(Boxed_Value::Void_Type, bool t_return_value) {
-            return std::make_shared<Data>(detail::Get_Type_Info<void>::get(),
+            return std::make_shared<Data>(Get_Type_Info<void>::get(),
                                           Carbon::detail::Any(), false,
                                           nullptr, t_return_value);
         }

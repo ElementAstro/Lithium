@@ -24,12 +24,29 @@ else
     echo "gcc and g++ are already installed."
 fi
 
+# Check if g++ version is at least 10
+gpp_version=$(g++ --version | grep -oP '(?<=g\+\+ )[0-9]+')
+if [ "$gpp_version" -lt "10" ]; then
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+    sudo apt-get install gcc-13 g++-13 -y
+fi
+
 # Check if CMake is installed
 if ! command -v cmake &> /dev/null; then
     echo "CMake is not installed. Installing..."
     apt-get install -y cmake
 else
     echo "CMake is already installed."
+fi
+
+# Check if CMake version is at least 3.20
+cmake_version=$(cmake --version | grep -oP '(?<=version )([0-9]+\.[0-9]+)')
+if [ "$(printf "%s\n" "3.20" "$cmake_version" | sort -V | head -n1)" != "3.20" ]; then
+    wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
+    tar -zxvf cmake-3.28.0-rc5.tar.gz
+    cd cmake-3.28.0-rc5
+    ./bootstrap && make && sudo make install
+    cd ..
 fi
 
 echo "Updating system packages..."

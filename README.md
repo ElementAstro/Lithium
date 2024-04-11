@@ -1,4 +1,4 @@
-## Lithium
+# Lithium
 
 <p align="center">
 <img src="https://img.shields.io/badge/dialect-C%2B%2B20-blue">
@@ -124,7 +124,7 @@ Everything is very simple. The entire process is straightforward.
 
 Here is a poem adapted from a quote :
 
-```
+```txt
 Learning requires not mere imagination,
 Nor can it be attained through mediocre dedication.
 It is through diligent accumulation,

@@ -40,7 +40,7 @@ std::string errorCodes(HRESULT rc) {
         return it->second;
     else {
         char str[256];
-        sprintf(str, "Unknown error: 0x%08x", rc);
+        snprintf(str, sizeof(str), "Unknown error: 0x%08x", rc);
         return std::string(str);
     }
 }

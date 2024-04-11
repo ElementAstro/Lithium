@@ -19,6 +19,7 @@ Description: Global shared pointer manager
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #if ENABLE_FASTHASH
@@ -57,8 +58,10 @@ public:
      * @param key the key associated with the shared pointer.
      * @return the shared pointer if found, nullptr otherwise.
      */
+
     template <typename T>
-    std::shared_ptr<T> getSharedPtr(const std::string &key);
+    [[nodiscard]] std::optional<std::shared_ptr<T>> getSharedPtr(
+        const std::string &key);
 
     /**
      * @brief getWeakPtr retrieves a weak pointer from the shared pointer map
@@ -70,7 +73,7 @@ public:
      * @note The weak pointer is not guaranteed to be valid after the shared
      */
     template <typename T>
-    std::weak_ptr<T> getWeakPtr(const std::string &key);
+    [[nodiscard]] std::weak_ptr<T> getWeakPtr(const std::string &key);
 
     /**
      * @brief addSharedPtr adds a shared pointer to the shared pointer map with
@@ -112,7 +115,7 @@ public:
      * object still exists, nullptr otherwise.
      */
     template <typename T>
-    std::shared_ptr<T> getSharedPtrFromWeakPtr(const std::string &key);
+    [[nodiscard]] std::shared_ptr<T> getSharedPtrFromWeakPtr(const std::string &key);
 
     /**
      * @brief removeExpiredWeakPtrs removes all expired weak pointers from the
@@ -164,19 +167,16 @@ private:
 };
 
 template <typename T>
-std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtr(
+std::optional<std::shared_ptr<T>> GlobalSharedPtrManager::getSharedPtr(
     const std::string &key) {
-    std::shared_lock<std::shared_mutex> lock(mtx);
+    std::shared_lock lock(mtx);
     auto it = sharedPtrMap.find(key);
     if (it != sharedPtrMap.end()) {
-        try {
-            return std::any_cast<std::shared_ptr<T>>(it->second);
-        } catch (const std::bad_any_cast &) {
-            return nullptr;  // 类型转换失败，返回空指针
+        if (auto ptr = std::any_cast<std::shared_ptr<T>>(&it->second)) {
+            return *ptr;
         }
     }
-
-    return nullptr;
+    return std::nullopt;
 }
 
 template <typename T>
@@ -196,14 +196,14 @@ std::weak_ptr<T> GlobalSharedPtrManager::getWeakPtr(const std::string &key) {
 template <typename T>
 void GlobalSharedPtrManager::addSharedPtr(const std::string &key,
                                           std::shared_ptr<T> sharedPtr) {
-    std::unique_lock<std::shared_mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     sharedPtrMap[key] = sharedPtr;
 }
 
 template <typename T>
 void GlobalSharedPtrManager::addWeakPtr(const std::string &key,
                                         const std::weak_ptr<T> &weakPtr) {
-    std::unique_lock<std::shared_mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     sharedPtrMap[key] = weakPtr;
 }
 
@@ -227,17 +227,21 @@ template <typename T>
 void GlobalSharedPtrManager::removeExpiredWeakPtrs() {
     std::vector<std::string> keysToRemove;
     {
-        std::shared_lock<std::shared_mutex> lock(mtx);
+        std::shared_lock lock(mtx);
         for (auto &it : sharedPtrMap) {
-            if (auto weakPtr = std::any_cast<std::weak_ptr<T>>(it.second);
-                weakPtr.expired()) {
-                keysToRemove.push_back(it.first);
+            try {
+                if (auto weakPtr = std::any_cast<std::weak_ptr<T>>(&it.second);
+                    weakPtr && weakPtr->expired()) {
+                    keysToRemove.push_back(it.first);
+                }
+            } catch (const std::bad_any_cast &) {
+                // TODO: Handle or ignore bad cast
             }
         }
     }
 
     if (!keysToRemove.empty()) {
-        std::unique_lock<std::shared_mutex> lock(mtx);
+        std::scoped_lock lock(mtx);
         for (auto &key : keysToRemove) {
             sharedPtrMap.erase(key);
         }

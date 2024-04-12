@@ -138,7 +138,7 @@ void TickScheduler::triggerTasks() {
 void TickScheduler::taskSchedulerLoop() {
     while (!stop.load()) {
         // 记录每个Tick需要的时间
-        DLOG_F(INFO, "Tick %llu", currentTick.load());
+        DLOG_F(INFO, "Tick {}", currentTick.load());
         stopwatch->start();
         if (manualMode.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(
@@ -183,7 +183,7 @@ void TickScheduler::taskSchedulerLoop() {
             std::chrono::milliseconds(tickLength.load()));  // Simulate a tick
         stopwatch->stop();
         stopwatch->reset();
-        DLOG_F(INFO, "Tick %llu took %f ms", currentTick.load(),
+        DLOG_F(INFO, "Tick {} took {} ms", currentTick.load(),
                stopwatch->elapsedMilliseconds());
         currentTick++;
     }

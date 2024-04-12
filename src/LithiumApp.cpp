@@ -31,9 +31,9 @@ Description: Lithium App Enter
 
 #include "atom/error/error_stack.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/server/global_ptr.hpp"
 #include "atom/system/process.hpp"
 #include "atom/utils/time.hpp"
-#include "atom/server/global_ptr.hpp"
 #include "utils/marco.hpp"
 
 #include "magic_enum/magic_enum.hpp"
@@ -178,7 +178,7 @@ void InitLithiumApp(int argc, char **argv) {
 
     AddPtr("lithium.utils.env", Atom::Utils::Env::createShared(argc, argv));
 
-        // TODO: Addons path need to be configurable
+    // TODO: Addons path need to be configurable
     AddPtr("lithium.addon.loader", ModuleLoader::createShared("./modules"));
     AddPtr("lithium.addon.addon", AddonManager::createShared());
     AddPtr("lithium.addon.manager", ComponentManager::createShared());
@@ -249,9 +249,9 @@ json LithiumApp::GetConfig(const json &params) {
     CHECK_PARAM("key");
     std::string key_path = params["key"].get<std::string>();
     json res;
-    if (json value = m_ConfigManager.lock()->getValue(key_path);
-        !value.is_null()) {
-        return createSuccessResponse(__func__, value);
+    if (auto value = m_ConfigManager.lock()->getValue(key_path);
+        value.has_value()) {
+        return createSuccessResponse(__func__, value.value());
     }
     return createErrorResponse(__func__, json(),
                                std::format("Key {} not found", key_path));

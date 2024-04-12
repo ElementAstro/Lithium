@@ -255,20 +255,6 @@ void addSysModule(VM *vm) {
                  return py_var(vm, is_root);
              });
 
-    vm->bind(mod, "get_current_username() -> str",
-             "get current username, and return a string value",
-             [](VM *vm, ArgsView args) {
-                 DLOG_F(INFO, "Get current username");
-                 std::string current_username =
-                     Atom::System::GetCurrentUsername();
-                 if (current_username.empty()) {
-                     LOG_F(ERROR, "Failed to get current username: {}",
-                           current_username);
-                 }
-                 DLOG_F(INFO, "Current username: {}", current_username);
-                 return py_var(vm, current_username);
-             });
-
     vm->bind(mod, "shutdown() -> bool", "shutdown the system",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Shutdown the system");

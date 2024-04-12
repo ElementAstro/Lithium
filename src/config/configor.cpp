@@ -59,7 +59,7 @@ bool ConfigManager::loadFromFile(const fs::path& path) {
     try {
         std::ifstream ifs(path);
         if (!ifs || ifs.peek() == std::ifstream::traits_type::eof()) {
-            LOG_F(ERROR, "Failed to open file: {}", path);
+            LOG_F(ERROR, "Failed to open file: {}", path.string());
             return false;
         }
         json j = json::parse(ifs);
@@ -70,10 +70,10 @@ bool ConfigManager::loadFromFile(const fs::path& path) {
         mergeConfig(j);
         return true;
     } catch (const json::exception& e) {
-        LOG_F(ERROR, "Failed to parse file: {}, error message: {}", path,
+        LOG_F(ERROR, "Failed to parse file: {}, error message: {}", path.string(),
               e.what());
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to load config file: {}, error message: {}", path,
+        LOG_F(ERROR, "Failed to load config file: {}, error message: {}", path.string(),
               e.what());
     }
     return false;
@@ -92,7 +92,7 @@ bool ConfigManager::loadFromDir(const fs::path& dir_path, bool recursive) {
         }
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to load config file from: {}, error message: {}",
-              dir_path, e.what());
+              dir_path.string(), e.what());
         return false;
     }
     return true;
@@ -171,7 +171,7 @@ bool ConfigManager::saveToFile(const fs::path& file_path) const {
     std::unique_lock lock(m_impl->rw_mutex_);
     std::ofstream ofs(file_path);
     if (!ofs) {
-        LOG_F(ERROR, "Failed to open file: {}", file_path);
+        LOG_F(ERROR, "Failed to open file: {}", file_path.string());
         return false;
     }
     try {
@@ -180,7 +180,7 @@ bool ConfigManager::saveToFile(const fs::path& file_path) const {
         return true;
     } catch (const std::exception& e) {
         LOG_F(ERROR, "Failed to save config to file: {}, error message: {}",
-              file_path, e.what());
+              file_path.string(), e.what());
         return false;
     }
 }

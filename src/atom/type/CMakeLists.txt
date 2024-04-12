@@ -19,7 +19,6 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     args.hpp
-    autotype.hpp
     ini_impl.hpp
     ini.hpp
     json.hpp

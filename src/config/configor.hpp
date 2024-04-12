@@ -15,9 +15,9 @@ Description: Configor
 #ifndef LITHIUM_CONFIG_CONFIGOR_HPP
 #define LITHIUM_CONFIG_CONFIGOR_HPP
 
+#include <filesystem>
 #include <mutex>
 #include <shared_mutex>
-#include <filesystem>
 namespace fs = std::filesystem;
 
 #include "error/error_code.hpp"
@@ -25,25 +25,39 @@ namespace fs = std::filesystem;
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-#define GetIntConfig(path) \
-    GetPtr<ConfigManager>("lithium.config").value()->getValue(path).get<int>()
+#define GetIntConfig(path)                  \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<int>()
 
-#define GetFloatConfig(path) \
-    GetPtr<ConfigManager>("lithium.config").value()->getValue(path).get<float>()
+#define GetFloatConfig(path)                \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<float>()
 
-#define GetBoolConfig(path) \
-    GetPtr<ConfigManager>("lithium.config").value()->getValue(path).get<bool>()
+#define GetBoolConfig(path)                 \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<bool>()
 
 #define GetDoubleConfig(path)               \
     GetPtr<ConfigManager>("lithium.config") \
         .value()                            \
         ->getValue(path)                    \
+        .value()                            \
         .get<double>()
 
 #define GetStringConfig(path)               \
     GetPtr<ConfigManager>("lithium.config") \
         .value()                            \
         ->getValue(path)                    \
+        .value()                            \
         .get<std::string>()
 
 namespace Lithium {

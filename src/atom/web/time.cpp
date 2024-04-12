@@ -22,9 +22,9 @@ Description: Time
 #include <string>
 
 #ifdef _WIN32  // Windows
+#include <winsock2.h>
 #include <windows.h>
 #include <winreg.h>
-#include <winsock2.h>
 #include <ws2tcpip.h>
 #else  // Linux
 #include <arpa/inet.h>

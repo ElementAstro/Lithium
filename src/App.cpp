@@ -287,31 +287,8 @@ int main(int argc, char *argv[]) {
     Lithium::MyApp->SetConfig(
         {{"key", "config/terminal/enabled"}, {"value", true}});
 
-    CommandManager manager;
-
-    // 注册指令函数
-    manager.registerCommand("ls", lsCommand);
-    manager.registerCommand("pwd", pwdCommand);
-    manager.registerCommand("mkdir", mkdirCommand);
-    manager.registerCommand("cp", cpCommand);
-    manager.registerCommand("system", systemCommand);
-
-    clearTerminal();
-
-    // 打印终端头部信息
-    printHeader();
-
-    while (true)
-    {
-        // 获取终端输入
-        std::string input = getTerminalInput(manager);
-
-        // 运行指令函数
-        std::string result = manager.runCommand(input, "");
-
-        // 在终端上显示执行结果
-        std::cout << result << std::endl;
-    }
+    ConsoleTerminal terminal;
+    terminal.run();
 
 #endif
 

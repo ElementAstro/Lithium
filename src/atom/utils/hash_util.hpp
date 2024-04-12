@@ -141,11 +141,6 @@ void data_from_hexstring(const char *hexstring, size_t length, void *output);
  * hexadecimal string.
  */
 [[nodiscard]] std::string data_from_hexstring(const std::string &data);
-
-[[nodiscard]] constexpr std::uint32_t fnv1aHash(
-    std::span<const std::byte> data, std::uint32_t hash = fnv1a_offset_basis);
-
-[[nodiscard]] constexpr std::uint32_t fnv1aHash(const std::string &text);
 }  // namespace Atom::Utils
 
 #endif

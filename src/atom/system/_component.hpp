@@ -1,3 +1,17 @@
+/*
+ * _component.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-13
+
+Description: Component of Atom-System
+
+**************************************************/
+
 #ifndef ATOM_SYSTEM_COMPONENT_HPP
 #define ATOM_SYSTEM_COMPONENT_HPP
 
@@ -28,8 +42,6 @@ public:
     json getBatteryInfo(const json &m_params);
     json getOSInfo(const json &m_params);
 
-private:
-    std::unique_ptr<Lithium::SystemManager> m_configManager;
 };
 
 #endif

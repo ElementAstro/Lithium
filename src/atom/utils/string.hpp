@@ -60,11 +60,19 @@ namespace Atom::Utils {
  * @param delimiter 分隔符。
  * @return 分割后的字符串数组。
  */
-[[nodiscard]] std::vector<std::string_view> splitString(const std::string &str,
-                                           char delimiter);
+[[nodiscard(
+    "the result of splitString is not used")]] std::vector<std::string_view>
+splitString(const std::string &str, char delimiter);
 
-                                           std::string joinStrings(const std::vector<std::string_view> &strings,
-                        const std::string_view &delimiter)
+/**
+ * @brief 将字符串数组连接为一个字符串。
+ * @param strings 字符串数组。
+ * @param delimiter 分隔符。
+ * @return 连接后的字符串。
+ */
+[[nodiscard("the result of joinStrings is not used")]] std::string joinStrings(
+    const std::vector<std::string_view> &strings,
+    const std::string_view &delimiter);
 }  // namespace Atom::Utils
 
 #endif

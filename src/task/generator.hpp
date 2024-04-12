@@ -80,7 +80,7 @@ private:
 
     std::mutex m_Mutex;
 
-    std::shared_ptr<DeviceManager> m_DeviceManager;
+    std::weak_ptr<DeviceManager> m_DeviceManager;
 };
 
 }  // namespace Lithium

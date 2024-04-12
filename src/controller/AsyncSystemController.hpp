@@ -445,7 +445,7 @@ public:
         ENDPOINT_ASYNC_INIT(getUIProcesses);
         Action act() override {
             nlohmann::json res;
-            for (const auto &process : Atom::System::GetProcessInfo()) {
+            for (const auto &process : Atom::System::getProcessInfo()) {
                 OATPP_LOGD("System", "Process Name: %s File Address: %s",
                            process.first.c_str(), process.second.c_str());
                 res["value"][process.first] = process.second;
@@ -465,7 +465,7 @@ public:
     ENDPOINT_ASYNC("GET", "/api/system/shutdown", getUIShutdown) {
         ENDPOINT_ASYNC_INIT(getUIShutdown);
         Action act() override {
-            Atom::System::Shutdown();
+            Atom::System::shutdown();
             return _return(controller->createResponse(
                 Status::CODE_200, "Wtf, how can you do that?"));
         }
@@ -475,7 +475,7 @@ public:
     ENDPOINT_ASYNC("GET", "/api/system/reboot", getUIReboot) {
         ENDPOINT_ASYNC_INIT(getUIReboot);
         Action act() override {
-            Atom::System::Reboot();
+            Atom::System::reboot();
             return _return(controller->createResponse(
                 Status::CODE_200, "Wtf, how can you do that?"));
         }

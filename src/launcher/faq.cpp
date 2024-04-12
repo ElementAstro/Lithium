@@ -1,14 +1,25 @@
+/*
+ * faq.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-13
+
+Description: F&Q Manager for HEAL
+
+**************************************************/
+
+#include "faq.hpp"
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <mutex>
 #include <thread>
-#include <unordered_map>
 #include <vector>
-#include "json.hpp"
-
-
-using json = nlohmann::json;
+#include <mutex>
 
 struct FAQ {
     std::string question;
@@ -19,22 +30,21 @@ struct FAQ {
     std::vector<std::string> links;
 };
 
-public:
-void addFAQ(const FAQ &faq) {
-    std::lock_guard<std::mutex> lock(mutex);
+void FAQManager::addFAQ(const FAQ &faq) {
+    std::lock_guard lock(mutex);
     faqs.push_back(faq);
 }
 
-void deleteFAQ(const std::string &question) {
-    std::lock_guard<std::mutex> lock(mutex);
+void FAQManager::deleteFAQ(const std::string &question) {
+    std::lock_guard lock(mutex);
     faqs.erase(std::remove_if(
                    faqs.begin(), faqs.end(),
                    [&](const FAQ &faq) { return faq.question == question; }),
                faqs.end());
 }
 
-std::vector<FAQ> searchFAQs(const std::string &keyword) {
-    std::lock_guard<std::mutex> lock(mutex);
+std::vector<FAQ> FAQManager::searchFAQs(const std::string &keyword) {
+    std::lock_guard lock(mutex);
 
     // 检查缓存中是否存在搜索结果
     if (cache.find(keyword) != cache.end()) {
@@ -56,13 +66,13 @@ std::vector<FAQ> searchFAQs(const std::string &keyword) {
     return results;
 }
 
-std::vector<FAQ> getFAQs() const {
-    std::lock_guard<std::mutex> lock(mutex);
+std::vector<FAQ> FAQManager::getFAQs() const {
+    std::lock_guard lock(mutex);
     return faqs;
 }
 
-std::vector<FAQ> getCategorizedFAQs(const std::string &category) {
-    std::lock_guard<std::mutex> lock(mutex);
+std::vector<FAQ> FAQManager::getCategorizedFAQs(const std::string &category) {
+    std::lock_guard lock(mutex);
 
     // 检查缓存中是否存在分类结果
     if (categoryCache.find(category) != categoryCache.end()) {
@@ -82,8 +92,8 @@ std::vector<FAQ> getCategorizedFAQs(const std::string &category) {
     return results;
 }
 
-void saveToFile(const std::string &filename) {
-    std::lock_guard<std::mutex> lock(mutex);
+void FAQManager::saveToFile(const std::string &filename) {
+    std::lock_guard lock(mutex);
     json jsonData;
 
     for (const auto &faq : faqs) {
@@ -102,8 +112,8 @@ void saveToFile(const std::string &filename) {
     file << jsonData.dump(4);  // 4-space indentation for pretty printing
 }
 
-void loadFromFile(const std::string &filename) {
-    std::lock_guard<std::mutex> lock(mutex);
+void FAQManager::loadFromFile(const std::string &filename) {
+    std::lock_guard lock(mutex);
     std::ifstream file(filename);
     json jsonData;
     file >> jsonData;
@@ -125,8 +135,8 @@ void loadFromFile(const std::string &filename) {
     }
 }
 
-void printFAQs() const {
-    std::lock_guard<std::mutex> lock(mutex);
+void FAQManager::printFAQs() const {
+    std::lock_guard lock(mutex);
     json jsonData;
 
     for (const auto &faq : faqs) {

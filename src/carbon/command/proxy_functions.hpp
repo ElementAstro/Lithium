@@ -25,9 +25,6 @@ namespace exception {
 class bad_boxed_cast;
 struct arity_error;
 }  // namespace exception
-}  // namespace Carbon
-
-namespace Carbon {
 class Boxed_Number;
 struct AST_Node;
 

@@ -197,7 +197,7 @@ bool syncTimeFromRTC() {
     FILETIME ft;
     ft.dwLowDateTime = (DWORD)new_timestamp;
     ft.dwHighDateTime = (DWORD)(new_timestamp >> 32);
-    if (!System::IsRoot()) {
+    if (!System::isRoot()) {
         LOG_F(ERROR,
               "Permission denied. Need root privilege to set system time.");
         return false;
@@ -210,7 +210,7 @@ bool syncTimeFromRTC() {
 
 void setSystemTime(int year, int month, int day, int hour, int minute,
                    int second) {
-    if (!System::IsRoot()) {
+    if (!System::isRoot()) {
         LOG_F(ERROR,
               "Permission denied. Need root privilege to set system time.");
         return;

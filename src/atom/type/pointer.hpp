@@ -22,8 +22,9 @@ Description: Pointer Sentinel for Atom
 #include <variant>
 
 /**
- * @brief Concept to check if a type is a pointer type, including raw pointers, std::shared_ptr, and std::unique_ptr.
- * 
+ * @brief Concept to check if a type is a pointer type, including raw pointers,
+ * std::shared_ptr, and std::unique_ptr.
+ *
  * @tparam T The type to check.
  */
 template <typename T>
@@ -33,8 +34,9 @@ concept PointerType =
     std::is_same_v<T, std::unique_ptr<typename std::remove_pointer<T>::type>>;
 
 /**
- * @brief A class template to hold different types of pointers using std::variant.
- * 
+ * @brief A class template to hold different types of pointers using
+ * std::variant.
+ *
  * @tparam T The type of the pointed-to object.
  */
 template <typename T>
@@ -45,31 +47,31 @@ public:
 
     /**
      * @brief Construct a new Pointer Sentinel object from a shared pointer.
-     * 
+     *
      * @param p The shared pointer.
      */
-    PointerSentinel(std::shared_ptr<T> p) : ptr(p) {}
+    explicit PointerSentinel(std::shared_ptr<T> p) : ptr(p) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a unique pointer.
-     * 
+     *
      * @param p The unique pointer.
      */
-    PointerSentinel(std::unique_ptr<T>&& p) : ptr(std::move(p)) {}
+    explicit PointerSentinel(std::unique_ptr<T>&& p) : ptr(std::move(p)) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a raw pointer.
-     * 
+     *
      * @param p The raw pointer.
      */
-    PointerSentinel(T* p) : ptr(p) {}
+    explicit PointerSentinel(T* p) : ptr(p) {}
 
     /**
      * @brief Get the raw pointer stored in the variant.
-     * 
+     *
      * @return T* The raw pointer.
      */
-    T* get() const {
+    [[nodiscard]] T* get() const {
         return std::visit(
             [](auto&& arg) -> T* {
                 using U = std::decay_t<decltype(arg)>;
@@ -84,7 +86,7 @@ public:
 
     /**
      * @brief Helper method to invoke member functions on the pointed-to object.
-     * 
+     *
      * @tparam Func The type of the member function pointer.
      * @tparam Args The types of the arguments to the member function.
      * @param func The member function pointer.
@@ -92,7 +94,7 @@ public:
      * @return auto The return type of the member function.
      */
     template <typename Func, typename... Args>
-    auto invoke(Func func, Args&&... args) {
+    [[nodiscard]] auto invoke(Func func, Args&&... args) {
         static_assert(std::is_member_function_pointer_v<Func>,
                       "Func must be a member function pointer");
         T* p = get();

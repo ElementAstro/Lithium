@@ -159,8 +159,8 @@ void InitLithiumApp(int argc, char **argv) {
     // ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
     AddPtr("lithium.device",
            DeviceManager::createShared(
-               GetPtr<Atom::Server::MessageBus>("lithium.bus"),
-               GetPtr<ConfigManager>("lithium.config")));
+               GetPtr<Atom::Server::MessageBus>("lithium.bus").value(),
+               GetPtr<ConfigManager>("lithium.config").value()));
     AddPtr("lithium.device.hydrogen", HydrogenManager::createShared());
 
     AddPtr("lithium.error.stack", std::make_shared<Atom::Error::ErrorStack>());

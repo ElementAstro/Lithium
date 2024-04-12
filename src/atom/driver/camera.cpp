@@ -28,10 +28,10 @@ bool AtomCamera::initialize() {
     // Primary CCD Exposure
     registerVariable("CCD_EXPOSURE_VALUE", 1.0, "Duration (s)");
     registerVariableRanges("CCD_EXPOSURE_VALUE", 0.01, 3600);
-    registerVariable("CCD_EXPOSURE_STATUS", false, "Status")
+    registerVariable("CCD_EXPOSURE_STATUS", false, "Status");
 
-        // Primary CCD Abort
-        registerVariable("CCD_ABORT_EXPOSURE", false, "Abort");
+    // Primary CCD Abort
+    registerVariable("CCD_ABORT_EXPOSURE", false, "Abort");
 
     registerVariable("CCD_VIDEO_STATUS", false, "Status");
 

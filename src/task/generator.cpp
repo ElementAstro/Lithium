@@ -24,7 +24,7 @@ Description: Task Generator
 
 namespace Lithium {
 TaskGenerator::TaskGenerator() {
-    m_DeviceManager = GetPtr<DeviceManager>("lithium.device");
+    m_DeviceManager = GetWeakPtr<DeviceManager>("lithium.device");
 }
 
 std::shared_ptr<TaskGenerator> TaskGenerator::createShared() {

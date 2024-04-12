@@ -72,6 +72,10 @@ pacman -S mingw-w64-x86_64-libzip
 pacman -S mingw-w64-x86_64-zlib
 pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
+pacman -S mingw-w64-x86_64-gsl
+
+# for test
+pacman -S mingw-w64-x86_64-gtest
 ```
 
 #### On Ubuntu or other similar Linux platforms (No INDI needed)
@@ -204,6 +208,11 @@ pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
 # 如果想用make构建
 pacman -S make # 注意添加对应的目录，否则会当场爆炸
+
+pacman -S mingw-w64-x86_64-gsl
+
+# 测试用
+pacman -S mingw-w64-x86_64-gtest
 ```
 
 #### Ubuntu/Debian/Other Linux

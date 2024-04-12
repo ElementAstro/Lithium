@@ -110,7 +110,7 @@ auto make_callable(Func &&func,
                        fs) {
     return make_callable_impl(std::forward<Func>(func), fs);
 }
-
+}  // namespace dispatch::detail
 template <typename T>
 Proxy_Function fun(T &&t) {
     return dispatch::detail::make_callable(
@@ -131,7 +131,6 @@ template <typename T, typename Q>
 Proxy_Function fun(T &&t, const Q &q) {
     return fun(detail::bind_first(std::forward<T>(t), q));
 }
-}  // namespace dispatch::detail
 }  // namespace Carbon
 
 #endif

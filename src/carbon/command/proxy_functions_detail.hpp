@@ -13,7 +13,7 @@
 #include "boxed_value.hpp"
 #include "function_params.hpp"
 #include "handle_return.hpp"
-#include "type_info.hpp"
+#include "atom/experiment/type_info.hpp"
 
 namespace Carbon {
 class Type_Conversions_State;

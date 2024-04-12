@@ -44,21 +44,7 @@ struct ProcessInfo {
  * @return false if the software is not installed or an error occurred.
  *         如果软件未安装或发生错误，则返回 false
  */
-bool CheckSoftwareInstalled(const std::string &software_name);
-
-/**
- * @brief Check whether the specified file exists.
- * 检查指定文件是否存在
- *
- * @param fileName The name of the file. 文件名称
- * @param fileExt The extension of the file. 文件扩展名
- * @return true if the file exists.
- *         如果文件存在，则返回 true
- * @return false if the file does not exist or an error occurred.
- *         如果文件不存在或发生错误，则返回 false
- */
-bool checkExecutableFile(const std::string &fileName,
-                         const std::string &fileExt);
+bool checkSoftwareInstalled(const std::string &software_name);
 
 /**
  * @brief Check whether the current user has root/administrator privileges.
@@ -69,16 +55,7 @@ bool checkExecutableFile(const std::string &fileName,
  * @return false if the current user does not have root/administrator
  * privileges. 如果当前用户没有根/管理员权限，则返回 false
  */
-bool IsRoot();
-
-/**
- * @brief Get the current user name.
- * 获取当前用户名
- *
- * @return The current user name.
- *         当前用户名
- */
-std::string GetCurrentUsername();
+bool isRoot();
 
 // Max: Surely, we will not recieve any signal after we call this function.
 
@@ -91,7 +68,7 @@ std::string GetCurrentUsername();
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool Shutdown();
+bool shutdown();
 
 /**
  * @brief Reboot the system.
@@ -102,7 +79,7 @@ bool Shutdown();
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool Reboot();
+bool reboot();
 
 /**
  * @brief Get the process information and file address.
@@ -112,7 +89,7 @@ bool Reboot();
  * process ID) and its file address.
  *         包含进程信息（名称和进程ID）以及对应文件地址的一对对的向量
  */
-std::vector<std::pair<std::string, std::string>> GetProcessInfo();
+std::vector<std::pair<std::string, std::string>> getProcessInfo();
 
 /**
  * @brief Check if there are duplicate processes with the same program name.
@@ -125,7 +102,7 @@ std::vector<std::pair<std::string, std::string>> GetProcessInfo();
  * @param program_name The name of the program to check for duplicates.
  * 要检查重复项的程序名称。
  */
-bool CheckDuplicateProcess(const std::string &program_name);
+bool checkDuplicateProcess(const std::string &program_name);
 
 /**
  * @brief Check if the specified process is running.
@@ -160,9 +137,9 @@ std::vector<ProcessInfo> GetProcessDetails();
  *         如果发生错误，则返回 false
  */
 #ifdef _WIN32
-bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo);
+bool getProcessInfoByID(DWORD processID, ProcessInfo &processInfo);
 #else
-bool GetProcessInfoByID(int processID, ProcessInfo &processInfo);
+bool getProcessInfoByID(int processID, ProcessInfo &processInfo);
 #endif
 
 /**
@@ -176,7 +153,7 @@ bool GetProcessInfoByID(int processID, ProcessInfo &processInfo);
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool GetProcessInfoByName(const std::string &processName,
+bool getProcessInfoByName(const std::string &processName,
                           ProcessInfo &processInfo);
 }  // namespace Atom::System
 

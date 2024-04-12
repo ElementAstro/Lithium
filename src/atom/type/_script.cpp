@@ -1,5 +1,7 @@
-#ifndef CARBON_SIMPLEJSON_WRAP_HPP
-#define CARBON_SIMPLEJSON_WRAP_HPP
+#ifndef CARBON_NLOHMANN_JSON_WRAP_HPP
+#define CARBON_NLOHMANN_JSON_WRAP_HPP
+
+#include "carbon/carbon.hpp"
 
 #include "json.hpp"
 
@@ -16,36 +18,38 @@ public:
     }
 
 private:
-    static Boxed_Value from_json(const json::JSON &t_json) {
-        switch (t_json.JSONType()) {
-            case json::JSON::Class::Null:
+    static Boxed_Value from_json(const nlohmann::json &t_json) {
+        switch (t_json.type()) {
+            case nlohmann::json::value_t::null:
                 return Boxed_Value();
-            case json::JSON::Class::Object: {
+            case nlohmann::json::value_t::object: {
                 std::map<std::string, Boxed_Value> m;
 
-                for (const auto &p : t_json.object_range()) {
+                for (const auto &p :
+                     t_json.get<std::map<std::string, nlohmann::json>>()) {
                     m.insert(std::make_pair(p.first, from_json(p.second)));
                 }
 
                 return Boxed_Value(m);
             }
-            case json::JSON::Class::Array: {
+            case nlohmann::json::value_t::array: {
                 std::vector<Boxed_Value> vec;
 
-                for (const auto &p : t_json.array_range()) {
+                for (const auto &p :
+                     t_json.get<std::vector<nlohmann::json>>()) {
                     vec.emplace_back(from_json(p));
                 }
 
                 return Boxed_Value(vec);
             }
-            case json::JSON::Class::String:
-                return Boxed_Value(t_json.to_string());
-            case json::JSON::Class::Floating:
-                return Boxed_Value(t_json.to_float());
-            case json::JSON::Class::Integral:
-                return Boxed_Value(t_json.to_int());
-            case json::JSON::Class::Boolean:
-                return Boxed_Value(t_json.to_bool());
+            case nlohmann::json::value_t::string:
+                return Boxed_Value(t_json.get<std::string>());
+            case nlohmann::json::value_t::number_float:
+                return Boxed_Value(t_json.get<float>());
+            case nlohmann::json::value_t::number_integer:
+                return Boxed_Value(t_json.get<int>());
+            case nlohmann::json::value_t::boolean:
+                return Boxed_Value(t_json.get<bool>());
         }
 
         throw std::runtime_error("Unknown JSON type");
@@ -53,7 +57,7 @@ private:
 
     static Boxed_Value from_json(const std::string &t_json) {
         try {
-            return from_json(json::JSON::Load(t_json));
+            return from_json(nlohmann::json::parse(t_json));
         } catch (const std::out_of_range &) {
             throw std::runtime_error("Unparsed JSON input");
         }
@@ -63,12 +67,13 @@ private:
         return to_json_object(t_bv).dump();
     }
 
-    static json::JSON to_json_object(const Boxed_Value &t_bv) {
+    static nlohmann::json to_json_object(const Boxed_Value &t_bv) {
         try {
-            const std::map<std::string, Boxed_Value> m = Carbon::boxed_cast<
-                const std::map<std::string, Boxed_Value> &>(t_bv);
+            const std::map<std::string, Boxed_Value> m =
+                Carbon::boxed_cast<const std::map<std::string, Boxed_Value> &>(
+                    t_bv);
 
-            json::JSON obj(json::JSON::Class::Object);
+            nlohmann::json obj(nlohmann::json::value_t::object);
             for (const auto &o : m) {
                 obj[o.first] = to_json_object(o.second);
             }
@@ -81,7 +86,7 @@ private:
             const std::vector<Boxed_Value> v =
                 Carbon::boxed_cast<const std::vector<Boxed_Value> &>(t_bv);
 
-            json::JSON obj(json::JSON::Class::Array);
+            nlohmann::json obj(nlohmann::json::value_t::array);
             for (size_t i = 0; i < v.size(); ++i) {
                 obj[i] = to_json_object(v[i]);
             }
@@ -93,22 +98,22 @@ private:
         try {
             Boxed_Number bn(t_bv);
             if (Boxed_Number::is_floating_point(t_bv)) {
-                return json::JSON(bn.get_as<double>());
+                return nlohmann::json(bn.get_as<double>());
             } else {
-                return json::JSON(bn.get_as<std::int64_t>());
+                return nlohmann::json(bn.get_as<std::int64_t>());
             }
         } catch (const Carbon::detail::exception::bad_any_cast &) {
             // not a number
         }
 
         try {
-            return json::JSON(boxed_cast<bool>(t_bv));
+            return nlohmann::json(boxed_cast<bool>(t_bv));
         } catch (const Carbon::exception::bad_boxed_cast &) {
             // not a bool
         }
 
         try {
-            return json::JSON(boxed_cast<std::string>(t_bv));
+            return nlohmann::json(boxed_cast<std::string>(t_bv));
         } catch (const Carbon::exception::bad_boxed_cast &) {
             // not a string
         }
@@ -117,7 +122,7 @@ private:
             const Carbon::dispatch::Dynamic_Object &o =
                 boxed_cast<const dispatch::Dynamic_Object &>(t_bv);
 
-            json::JSON obj(json::JSON::Class::Object);
+            nlohmann::json obj(nlohmann::json::value_t::object);
             for (const auto &attr : o.get_attrs()) {
                 obj[attr.first] = to_json_object(attr.second);
             }
@@ -127,7 +132,7 @@ private:
         }
 
         if (t_bv.is_null())
-            return json::JSON();  // a null value
+            return nlohmann::json();  // a null value
 
         throw std::runtime_error("Unknown object type to convert to JSON");
     }

@@ -292,7 +292,7 @@ public:
     void triggerTasks();
 
 private:
-    std::shared_ptr<TaskPool> pool;                // 线程池对象
+    std::weak_ptr<TaskPool> pool;                // 线程池对象
     std::vector<std::shared_ptr<TickTask>> tasks;  // 所有待执行的任务
     std::mutex tasksMutex;                         // 任务队列的互斥锁
     std::condition_variable cv;  // 条件变量，用于暂停和恢复任务调度器的执行

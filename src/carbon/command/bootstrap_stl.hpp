@@ -15,7 +15,7 @@
 #include "operators.hpp"
 #include "proxy_constructors.hpp"
 #include "register_function.hpp"
-#include "type_info.hpp"
+#include "atom/experiment/type_info.hpp"
 
 namespace Carbon::bootstrap::standard_library {
 /// Bidir_Range, based on the D concept of ranges.

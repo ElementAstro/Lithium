@@ -54,7 +54,7 @@ namespace fs = std::filesystem;
 #include "atom/log/loguru.hpp"
 
 namespace Atom::System {
-bool CheckSoftwareInstalled(const std::string &software_name) {
+bool checkSoftwareInstalled(const std::string &software_name) {
     bool is_installed = false;
 #ifdef _WIN32
     HKEY hKey;
@@ -116,46 +116,7 @@ bool CheckSoftwareInstalled(const std::string &software_name) {
     return is_installed;
 }
 
-bool checkExecutableFile(const std::string &fileName,
-                         const std::string &fileExt) {
-#ifdef _WIN32
-    fs::path filePath = fileName + fileExt;
-#else
-    fs::path filePath = fileName;
-#endif
-
-    DLOG_F(INFO, "Checking file '%s'.", filePath.string().c_str());
-
-    if (!fs::exists(filePath)) {
-        DLOG_F(WARNING, "The file '%s' does not exist.",
-               filePath.string().c_str());
-        return false;
-    }
-
-#ifdef _WIN32
-    if (!fs::is_regular_file(filePath) ||
-        !(GetFileAttributesA(filePath.generic_string().c_str()) &
-          FILE_ATTRIBUTE_DIRECTORY)) {
-        DLOG_F(WARNING,
-               "The file '%s' is not a regular file or is not executable.",
-               filePath.string().c_str());
-        return false;
-    }
-#else
-    if (!fs::is_regular_file(filePath) || access(filePath.c_str(), X_OK) != 0) {
-        DLOG_F(WARNING,
-               "The file '%s' is not a regular file or is not executable.",
-               filePath.string().c_str());
-        return false;
-    }
-#endif
-
-    DLOG_F(INFO, "The file '%s' exists and is executable.",
-           filePath.string().c_str());
-    return true;
-}
-
-bool Shutdown() {
+bool shutdown() {
 #ifdef _WIN32
     ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, 0);
 #else
@@ -168,7 +129,7 @@ bool Shutdown() {
 }
 
 // 重启函数
-bool Reboot() {
+bool reboot() {
 #ifdef _WIN32
     ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
 #else
@@ -180,20 +141,20 @@ bool Reboot() {
     return true;
 }
 
-bool IsRoot() {
+bool isRoot() {
 #ifdef _WIN32
     HANDLE hToken;
     TOKEN_ELEVATION elevation;
     DWORD dwSize;
 
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
-        LOG_F(ERROR, "IsRoot error: OpenProcessToken error");
+        LOG_F(ERROR, "isRoot error: OpenProcessToken error");
         return false;
     }
 
     if (!GetTokenInformation(hToken, TokenElevation, &elevation,
                              sizeof(elevation), &dwSize)) {
-        LOG_F(ERROR, "IsRoot error: GetTokenInformation error");
+        LOG_F(ERROR, "isRoot error: GetTokenInformation error");
         CloseHandle(hToken);
         return false;
     }
@@ -206,27 +167,10 @@ bool IsRoot() {
 #endif
 }
 
-std::string GetCurrentUsername() {
-#ifdef _WIN32
-    char username[UNLEN + 1];
-    DWORD usernameLen = UNLEN + 1;
-    if (GetUserNameA(username, &usernameLen)) {
-        return std::string(username);
-    }
-#else
-    char username[256];
-    if (getlogin_r(username, sizeof(username)) == 0) {
-        return std::string(username);
-    }
-#endif
-    return "";
-}
-
-std::vector<std::pair<std::string, std::string>> GetProcessInfo() {
+std::vector<std::pair<std::string, std::string>> getProcessInfo() {
     std::vector<std::pair<std::string, std::string>> processInfo;
 
 #ifdef _WIN32
-    // 使用 Windows API 获取进程信息和文件地址
     DWORD processes[1024];
     DWORD cbNeeded;
     if (EnumProcesses(processes, sizeof(processes), &cbNeeded)) {
@@ -330,7 +274,7 @@ std::vector<std::pair<std::string, std::string>> GetProcessInfo() {
     return processInfo;
 }
 
-bool CheckDuplicateProcess(const std::string &program_name) {
+bool checkDuplicateProcess(const std::string &program_name) {
 #ifdef _WIN32
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE) {
@@ -450,22 +394,6 @@ bool isProcessRunning(const std::string &processName) {
 
     closedir(dir);
     return true;
-    // An alternative way to check
-    /*
-    std::string command = "pgrep -c " + processName;
-    std::string output;
-    std::ifstream pipe(command.c_str());
-    if (pipe)
-    {
-        if (getline(pipe, output))
-        {
-            int count = std::stoi(output);
-            return (count > 0);
-        }
-    }
-
-    return false;
-    */
 #endif
 }
 
@@ -550,7 +478,7 @@ std::vector<ProcessInfo> GetProcessDetails() {
 }
 
 #ifdef _WIN32
-DWORD GetParentProcessId(DWORD processId) {
+DWORD getParentProcessId(DWORD processId) {
     DWORD parentProcessId = 0;
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot != INVALID_HANDLE_VALUE) {
@@ -571,7 +499,7 @@ DWORD GetParentProcessId(DWORD processId) {
     return parentProcessId;
 }
 
-bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo) {
+bool getProcessInfoByID(DWORD processID, ProcessInfo &processInfo) {
     HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
                                   FALSE, processID);
     if (hProcess != NULL) {
@@ -582,7 +510,7 @@ bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo) {
             processInfo.processID = processID;
             processInfo.executableFile = std::string(exeName);
             // if
-            // (!GetProcessId(reinterpret_cast<HANDLE>(GetParentProcessId(reinterpret_cast<DWORD>(hProcess))),
+            // (!GetProcessId(reinterpret_cast<HANDLE>(getParentProcessId(reinterpret_cast<DWORD>(hProcess))),
             // &processInfo.parentProcessID))
             processInfo.parentProcessID = 0;
             processInfo.basePriority = GetPriorityClass(hProcess);
@@ -597,12 +525,12 @@ bool GetProcessInfoByID(DWORD processID, ProcessInfo &processInfo) {
     return false;
 }
 
-bool GetProcessInfoByName(const std::string &processName,
+bool getProcessInfoByName(const std::string &processName,
                           ProcessInfo &processInfo) {
     std::vector<ProcessInfo> processes = GetProcessDetails();
     for (const auto &process : processes) {
         if (process.executableFile == processName) {
-            if (GetProcessInfoByID(process.processID, processInfo))
+            if (getProcessInfoByID(process.processID, processInfo))
                 return true;
         }
     }
@@ -610,7 +538,7 @@ bool GetProcessInfoByName(const std::string &processName,
     return false;
 }
 #else
-bool GetProcessInfoByID(int processID, ProcessInfo &processInfo) {
+bool getProcessInfoByID(int processID, ProcessInfo &processInfo) {
     std::string statPath = "/proc/" + std::to_string(processID) + "/stat";
 
     std::ifstream statFile(statPath);
@@ -644,7 +572,7 @@ bool GetProcessInfoByID(int processID, ProcessInfo &processInfo) {
     return false;
 }
 
-bool GetProcessInfoByName(const std::string &processName,
+bool getProcessInfoByName(const std::string &processName,
                           ProcessInfo &processInfo) {
     std::vector<ProcessInfo> processes = GetProcessDetails();
     for (const auto &process : processes) {
@@ -652,7 +580,7 @@ bool GetProcessInfoByName(const std::string &processName,
         if (pos != std::string::npos) {
             std::string fileName = process.executableFile.substr(pos + 1);
             if (fileName == processName) {
-                if (GetProcessInfoByID(process.processID, processInfo))
+                if (getProcessInfoByID(process.processID, processInfo))
                     return true;
             }
         }
@@ -662,60 +590,3 @@ bool GetProcessInfoByName(const std::string &processName,
 }
 #endif
 }  // namespace Atom::System
-
-/*
-int main()
-{
-    float cpu_usage = cpustat();
-    float mem_usage = memstat();
-    float gpu_usage = gpustat();
-
-    std::cout << "CPU Usage: " << cpu_usage << "%" << std::endl;
-    std::cout << "Memory Usage: " << mem_usage << "%" << std::endl;
-    std::cout << "GPU Usage: " << gpu_usage << "%" << std::endl;
-
-    std::vector<std::pair<std::string, float>> disk_usage = diskstat();
-    for (const auto &disk : disk_usage)
-    {
-        std::cout << "Disk " << disk.first << " Usage: " << disk.second << "%"
-<< std::endl;
-    }
-
-    std::vector<std::string> net_connections = netstat();
-    for (const auto &conn : net_connections)
-    {
-        std::cout << "Network Connection: " << conn << std::endl;
-    }
-
-    float cpuTemperature = GetCpuTemperature();
-
-    std::cout << "CPU Temperature: " << cpuTemperature << "°C" << std::endl;
-
-    bool isConnected = IsConnectedToInternet();
-    if (isConnected) {
-        std::cout << "Connected to the Internet." << std::endl;
-    } else {
-        std::cout << "Not connected to the Internet." << std::endl;
-    }
-
-    bool elevated = IsRoot();
-    if (elevated) {
-        std::cout << "Current process has elevated privileges." << std::endl;
-    } else {
-        std::cout << "Current process does not have elevated privileges." <<
-std::endl;
-    }
-
-    std::vector<std::pair<std::string, std::string>> processInfo =
-GetProcessInfo();
-
-    for (const auto &info : processInfo)
-    {
-        std::cout << "Process Name: " << info.first << std::endl;
-        std::cout << "File Address: " << info.second << std::endl;
-        std::cout << std::endl;
-    }
-
-    return 0;
-}
-*/

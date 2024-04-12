@@ -1,3 +1,17 @@
+/*
+ * _component.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-13
+
+Description: Component of Atom-System
+
+**************************************************/
+
 #include "_component.hpp"
 
 #include "atom/log/loguru.hpp"
@@ -25,7 +39,16 @@ using json = nlohmann::json;
 #define GET_CPU_INFO(name, func)                                              \
     auto name = func();                                                       \
     if (name < 0 || name > 100) {                                             \
-        LOG_F(ERROR, "SystemComponent::getCPUInfo: Failed to get %s", #name); \
+        LOG_F(ERROR, "SystemComponent::getCPUInfo: Failed to get {}", #name); \
+        return createErrorResponse(__func__,                                  \
+                                   {"error", "failed to get " #name},         \
+                                   Constants::SYSTEM_ERROR);                  \
+    }
+
+#define GET_CPU_INFO_S(name, func)                                            \
+    auto name = func();                                                       \
+    if (name.empty()) {                                                       \
+        LOG_F(ERROR, "SystemComponent::getCPUInfo: Failed to get {}", #name); \
         return createErrorResponse(__func__,                                  \
                                    {"error", "failed to get " #name},         \
                                    Constants::SYSTEM_ERROR);                  \
@@ -45,20 +68,21 @@ SystemComponent::SystemComponent(const std::string &name)
     : SharedComponent(name) {
     DLOG_F(INFO, "SystemComponent::SystemComponent");
 
-    regiterFunc("getCPUInfo", &SystemComponent::getCPUInfo, this);
-    regiterFunc("getMemoryInfo", &SystemComponent::getMemoryInfo, this);
-    regiterFunc("getDiskInfo", &SystemComponent::getDiskInfo, this);
-    regiterFunc("getNetworkInfo", &SystemComponent::getNetworkInfo, this);
-    regiterFunc("getBatteryInfo", &SystemComponent::getBatteryInfo, this);
-    regiterFunc("getGPUInfo", &SystemComponent::getGPUInfo, this);
-    regiterFunc("getOSInfo", &SystemComponent::getOSInfo, this);
+    registerFunc("getCPUInfo", &SystemComponent::getCPUInfo, this);
+    registerFunc("getMemoryInfo", &SystemComponent::getMemoryInfo, this);
+    registerFunc("getDiskInfo", &SystemComponent::getDiskInfo, this);
+    registerFunc("getNetworkInfo", &SystemComponent::getNetworkInfo, this);
+    registerFunc("getBatteryInfo", &SystemComponent::getBatteryInfo, this);
+    registerFunc("getGPUInfo", &SystemComponent::getGPUInfo, this);
+    registerFunc("getOSInfo", &SystemComponent::getOSInfo, this);
 
     registerVariable("cpuUsage", "", "The CPU usage");
     registerVariable("cpuTemperature", "", "The CPU temperature");
     registerVariable("cpuModel", "", "The CPU model");
     registerVariable("cpuFrequency", "", "The CPU frequency");
-    registerVariable("numberOfPhysicalPackages", "", "The number of physical "
-                                                      "packages");
+    registerVariable("numberOfPhysicalPackages", "",
+                     "The number of physical "
+                     "packages");
     registerVariable("numberOfPhysicalCPUs", "", "The number of physical CPUs");
     registerVariable("processorIdentifier", "", "The processor identifier");
     registerVariable("processorFrequency", "", "The processor frequency");
@@ -84,6 +108,10 @@ SystemComponent::~SystemComponent() {
     DLOG_F(INFO, "SystemComponent::~SystemComponent");
 }
 
+bool SystemComponent::initialize() { return true; }
+
+bool SystemComponent::destroy() { return true; }
+
 json SystemComponent::getCPUInfo(const json &m_params) {
     DLOG_F(INFO, "SystemComponent::getCPUInfo");
 
@@ -92,8 +120,8 @@ json SystemComponent::getCPUInfo(const json &m_params) {
     GET_CPU_INFO(current_cpu_usage, Atom::System::getCurrentCpuUsage);
     GET_CPU_INFO(current_cpu_temperature,
                  Atom::System::getCurrentCpuTemperature);
-    GET_CPU_INFO(cpu_model, Atom::System::getCPUModel);
-    GET_CPU_INFO(processor_identifier, Atom::System::getProcessorIdentifier);
+    GET_CPU_INFO_S(cpu_model, Atom::System::getCPUModel);
+    GET_CPU_INFO_S(processor_identifier, Atom::System::getProcessorIdentifier);
     GET_CPU_INFO(processor_frequency, Atom::System::getProcessorFrequency);
     GET_CPU_INFO(number_of_physical_packages,
                  Atom::System::getNumberOfPhysicalPackages);
@@ -211,4 +239,4 @@ json SystemComponent::getOSInfo(const json &m_params) {
                                   {"kernelVersion", os_info.kernelVersion},
                                   {"architecture", os_info.architecture},
                                   {"compiler", os_info.compiler}});
-})
+}

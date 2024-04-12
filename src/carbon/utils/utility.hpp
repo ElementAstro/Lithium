@@ -1,7 +1,7 @@
 
 
-#ifndef CHAISCRIPT_UTILITY_UTILITY_HPP_
-#define CHAISCRIPT_UTILITY_UTILITY_HPP_
+#ifndef CARBON_UTILITY_UTILITY_HPP_
+#define CARBON_UTILITY_UTILITY_HPP_
 
 #include <string>
 #include <type_traits>

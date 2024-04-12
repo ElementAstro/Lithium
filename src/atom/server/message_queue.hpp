@@ -24,10 +24,15 @@ Description: A simple message queue (just learn something)
 #include <string>
 #include <thread>
 #include <typeinfo>
-#include <unordered_map>
 #include <vector>
 
-namespace Atom::Async {
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
+
+namespace Atom::Server {
 /**
  * @brief A message queue that allows subscribers to receive messages of type T.
  *
@@ -198,6 +203,6 @@ void MessageQueue<T>::stopProcessingThread() {
     }
     m_processingThreads.clear();
 }
-}  // namespace Atom::Async
+}  // namespace Atom::Server
 
 #endif

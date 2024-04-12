@@ -32,7 +32,7 @@ namespace Atom::Algorithm {
  * @return The Base16 encoded string.
  */
 [[nodiscard("The result of base16Encode is not used.")]] std::string
-encodeBase16(const std::vector<unsigned char> &data);
+base16Encode(const std::vector<unsigned char> &data);
 
 /**
  * @brief Decodes a Base16 string into a vector of unsigned characters.
@@ -47,7 +47,7 @@ encodeBase16(const std::vector<unsigned char> &data);
  */
 [[nodiscard(
     "The result of base16Decode is not used.")]] std::vector<unsigned char>
-decodeBase16(const std::string &data);
+base16Decode(const std::string &data);
 
 /**
  * @brief Encodes a string to Base32
@@ -114,7 +114,7 @@ base64DecodeEnhance(const std::string &encoded_string);
  * @return The Base85 encoded string.
  */
 [[nodiscard("The result of base85Encode is not used.")]] std::string
-encodeBase85(const std::vector<unsigned char> &data);
+base85Encode(const std::vector<unsigned char> &data);
 
 /**
  * @brief Decodes a Base85 string into a vector of unsigned characters.
@@ -128,7 +128,7 @@ encodeBase85(const std::vector<unsigned char> &data);
  */
 [[nodiscard(
     "The result of base85Decode is not used.")]] std::vector<unsigned char>
-decodeBase85(const std::string &data);
+base85Decode(const std::string &data);
 
 /**
  * @brief Encodes a vector of unsigned characters into a Base128 string.

@@ -7,7 +7,8 @@
 
 #include "../defines.hpp"
 #include "any.hpp"
-#include "type_info.hpp"
+#include "atom/experiment/type_info.hpp"
+#include "atom/type/pointer.hpp"
 
 namespace Carbon {
 /// \brief A wrapper for holding any valid C++ type. All types in ChaiScript are

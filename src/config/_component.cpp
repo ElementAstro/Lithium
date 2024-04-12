@@ -1,3 +1,17 @@
+/*
+ * _component.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-13
+
+Description: Config Component for Atom Addon
+
+**************************************************/
+
 #include "_component.hpp"
 
 #include "configor.hpp"
@@ -21,7 +35,7 @@
 
 ConfigComponent::ConfigComponent(const std::string& name)
     : SharedComponent(name),
-      m_configManager(Lithium::ConfigManager::createShared()) {
+      m_configManager(Lithium::ConfigManager::createUnique()) {
     DLOG_F(INFO, "ConfigComponent::Constructor");
 
     DLOG_F(INFO, "Injecting commands");
@@ -44,7 +58,7 @@ bool ConfigComponent::initialize() {
 }
 
 bool ConfigComponent::destroy() {
-    DLOG_F(INFO, "ConfigComponent::destroy")
+    DLOG_F(INFO, "ConfigComponent::destroy");
     return true;
 }
 
@@ -57,8 +71,8 @@ json ConfigComponent::getConfig(const json& m_params) {
         return createErrorResponse("getConfig", {"error", "key not found"},
                                    "key not found");
     }
-    if (auto value = m_configManager->getValue(key); value) {
-        return createSuccessResponse("getConfig", {"value", value});
+    if (auto value = m_configManager->getValue(key); value.has_value()) {
+        return createSuccessResponse("getConfig", {"value", value.value()});
     }
     return createErrorResponse(
         "getConfig", {"error", {"error", "failed to get config by key"}},
@@ -166,5 +180,11 @@ json ConfigComponent::loadConfigs(const json& m_params) {
         return createErrorResponse(__func__, {"error", "path not set"},
                                    "path not set");
     }
+    return createSuccessResponse(__func__, {});
+}
+
+json ConfigComponent::tidyConfig(const json& m_params) {
+    CONFIG_MANAGER_CHECK;
+    m_configManager->tidyConfig();
     return createSuccessResponse(__func__, {});
 }

@@ -77,7 +77,7 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
         return;
     }
 
-    std::vector<std::string> tokens = Atom::Utils::splitString(date, '/');
+    auto tokens = Atom::Utils::splitString(date, '/');
 
     // Create directories
     fs::path currentDir = rootDir;
@@ -86,8 +86,8 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
 
         if (!fs::is_directory(currentDir)) {
             if (!fs::create_directory(currentDir)) {
-                LOG_F(ERROR, "Error: Failed to create directory - {}"
-                          , currentDir.string());
+                LOG_F(ERROR, "Error: Failed to create directory - {}",
+                      currentDir.string());
                 return;
             }
         } else {
@@ -459,5 +459,41 @@ std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath,
     }
 
     return files;
+}
+
+bool isExecutableFile(const std::string &fileName, const std::string &fileExt) {
+#ifdef _WIN32
+    fs::path filePath = fileName + fileExt;
+#else
+    fs::path filePath = fileName;
+#endif
+
+    DLOG_F(INFO, "Checking file '{}'.", filePath.string());
+
+    if (!fs::exists(filePath)) {
+        DLOG_F(WARNING, "The file '{}' does not exist.", filePath.string());
+        return false;
+    }
+
+#ifdef _WIN32
+    if (!fs::is_regular_file(filePath) ||
+        !(GetFileAttributesA(filePath.generic_string().c_str()) &
+          FILE_ATTRIBUTE_DIRECTORY)) {
+        DLOG_F(WARNING,
+               "The file '{}' is not a regular file or is not executable.",
+               filePath.string());
+        return false;
+    }
+#else
+    if (!fs::is_regular_file(filePath) || access(filePath.c_str(), X_OK) != 0) {
+        DLOG_F(WARNING,
+               "The file '{}' is not a regular file or is not executable.",
+               filePath.string());
+        return false;
+    }
+#endif
+
+    DLOG_F(INFO, "The file '{}' exists and is executable.", filePath.string());
+    return true;
 }
 }  // namespace Atom::IO

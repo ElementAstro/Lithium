@@ -27,7 +27,7 @@ Description: A collection of algorithms for C++
 #endif
 
 namespace Atom::Algorithm {
-std::string encodeBase16(const std::vector<unsigned char> &data) {
+std::string base16Encode(const std::vector<unsigned char> &data) {
     std::stringstream ss;
     ss << std::hex << std::uppercase << std::setfill('0');
 
@@ -38,7 +38,7 @@ std::string encodeBase16(const std::vector<unsigned char> &data) {
     return ss.str();
 }
 
-std::vector<unsigned char> decodeBase16(const std::string &data) {
+std::vector<unsigned char> base16Decode(const std::string &data) {
     std::vector<unsigned char> result;
 
     for (size_t i = 0; i < data.length(); i += 2) {
@@ -281,7 +281,7 @@ const std::string base85_chars =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<"
     "=>?@^_`{|}~";
 
-std::string encodeBase85(const std::vector<unsigned char> &data) {
+std::string base85Encode(const std::vector<unsigned char> &data) {
     std::string result;
 
     unsigned int value = 0;
@@ -307,7 +307,7 @@ std::string encodeBase85(const std::vector<unsigned char> &data) {
     return result;
 }
 
-std::vector<unsigned char> decodeBase85(const std::string &data) {
+std::vector<unsigned char> base85Decode(const std::string &data) {
     std::vector<unsigned char> result;
 
     unsigned int value = 0;

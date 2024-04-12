@@ -1,15 +1,27 @@
+/*
+ * _component.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-13
+
+Description: Config Component for Atom Addon
+
+**************************************************/
+
 #ifndef LITHIUM_CONFIG_COMPONENT_HPP
 #define LITHIUM_CONFIG_COMPONENT_HPP
 
 #include "atom/components/templates/shared_component.hpp"
 
-namespace Lithium
-{
-    class ConfigManager;
+namespace Lithium {
+class ConfigManager;
 }
 
-class ConfigComponent : public SharedComponent
-{
+class ConfigComponent : public SharedComponent {
 public:
     explicit ConfigComponent(const std::string &name);
     ~ConfigComponent();
@@ -33,6 +45,7 @@ public:
     json loadConfig(const json &m_params);
     json loadConfigs(const json &m_params);
     json saveConfig(const json &m_params);
+    json tidyConfig(const json &m_params);
 
 private:
     std::unique_ptr<Lithium::ConfigManager> m_configManager;

@@ -16,12 +16,14 @@ Description: make a callabel object
 #define ATOM_EXPERIMENT_CALLABLE_HPP
 
 #include <memory>
+#include <tuple>
 #include <type_traits>
+#include <utility>
 
 template <typename Class, typename... Param>
 struct Constructor {
     template <typename... Inner>
-    std::shared_ptr<Class> operator()(Inner &&...inner) const {
+    auto operator()(Inner &&...inner) const -> std::shared_ptr<Class> {
         return std::make_shared<Class>(std::forward<Inner>(inner)...);
     }
 };
@@ -33,9 +35,8 @@ struct Const_Caller {
         : m_func(t_func) {}
 
     template <typename... Inner>
-    constexpr Ret operator()(const Class &o, Inner &&...inner) const
-        noexcept(noexcept((std::declval<const Class &>().*
-                           m_func)(std::declval<Inner>()...))) {
+    constexpr auto operator()(const Class &o, Inner &&...inner) const
+        noexcept(noexcept((o.*m_func)(std::forward<Inner>(inner)...))) -> Ret {
         return (o.*m_func)(std::forward<Inner>(inner)...);
     }
 
@@ -48,9 +49,9 @@ struct Fun_Caller {
         : m_func(t_func) {}
 
     template <typename... Inner>
-    constexpr Ret operator()(Inner &&...inner) const
-        noexcept(noexcept(m_func(std::declval<Inner>()...))) {
-        return (m_func)(std::forward<Inner>(inner)...);
+    constexpr auto operator()(Inner &&...inner) const
+        noexcept(noexcept(m_func(std::forward<Inner>(inner)...))) -> Ret {
+        return m_func(std::forward<Inner>(inner)...);
     }
 
     Ret (*m_func)(Param...);
@@ -62,9 +63,8 @@ struct Caller {
         : m_func(t_func) {}
 
     template <typename... Inner>
-    constexpr Ret operator()(Class &o, Inner &&...inner) const
-        noexcept(noexcept((std::declval<Class &>().*
-                           m_func)(std::declval<Inner>()...))) {
+    constexpr auto operator()(Class &o, Inner &&...inner) const
+        noexcept(noexcept((o.*m_func)(std::forward<Inner>(inner)...))) -> Ret {
         return (o.*m_func)(std::forward<Inner>(inner)...);
     }
 
@@ -72,11 +72,11 @@ struct Caller {
 };
 
 template <typename T>
-struct Arity
-    : std::integral_constant<std::size_t, std::tuple_size_v<std::tuple<T>>> {};
+struct Arity : std::integral_constant<std::size_t,
+                                      std::tuple_size<std::tuple<T>>::value> {};
 
 template <typename T>
-struct Function_Signature {};
+struct Function_Signature;
 
 template <typename Ret, typename... Params>
 struct Function_Signature<Ret(Params...)> {
@@ -98,4 +98,4 @@ struct Callable_Traits {
         decltype(&std::remove_reference_t<T>::operator())>::Return_Type;
 };
 
-#endif
+#endif  // ATOM_EXPERIMENT_CALLABLE_HPP

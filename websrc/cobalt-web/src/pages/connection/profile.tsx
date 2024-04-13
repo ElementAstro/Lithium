@@ -11,6 +11,8 @@ import {
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { dark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
+import ConfigCreationModal from "./create_config";
+
 import { useTranslation } from "react-i18next";
 
 const ProfileConnection = () => {
@@ -116,11 +118,7 @@ const ProfileConnection = () => {
             </Accordion.Item>
           </Accordion>
 
-          <div className="d-grid gap-2 mt-4">
-            <Button variant="primary" size="lg" onClick={handleCreateConfig}>
-              {t("创建新的配置")}
-            </Button>
-          </div>
+          <ConfigCreationModal />
         </Col>
       </Row>
     </Container>

@@ -8,7 +8,7 @@ import {
   Form,
   FormControl,
 } from "react-bootstrap";
-import { Plug, Power } from "react-bootstrap-icons";
+import { ExclamationCircle, Plug, Power } from "react-bootstrap-icons";
 
 const DeviceConnection = () => {
   const [camera, setCamera] = useState("");
@@ -104,9 +104,9 @@ const DeviceConnection = () => {
   };
 
   return (
-    <Container>
+    <Container fluid>
       <Form onSubmit={handleSubmit}>
-        <Row>
+        <Row className="mb-3">
           <Col sm={6}>
             <Form.Group controlId="cameraSelect">
               <Form.Label>相机</Form.Label>
@@ -136,7 +136,7 @@ const DeviceConnection = () => {
             </Form.Group>
           </Col>
         </Row>
-        <Row>
+        <Row className="mb-3">
           <Col sm={6}>
             <Form.Group controlId="filterwheelSelect">
               <Form.Label>滤镜轮</Form.Label>
@@ -166,7 +166,7 @@ const DeviceConnection = () => {
             </Form.Group>
           </Col>
         </Row>
-        <Row>
+        <Row className="mb-3">
           <Col sm={6}>
             <Form.Group controlId="guiderSelect">
               <Form.Label>导星</Form.Label>
@@ -196,14 +196,25 @@ const DeviceConnection = () => {
             </Form.Group>
           </Col>
         </Row>
-        <Row>
-          <Col>
-            <Button variant="primary" size="sm" type="submit">
-              <Power size={20} /> 启动
-            </Button>{" "}
-            <Button variant="success" size="sm" onClick={handleClientCommand}>
-              <Plug size={20} /> 连接
-            </Button>
+        <Row className="mb-3">
+          <Col sm={6}>
+            <div className="d-grid gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                type="submit"
+                className="me-2"
+              >
+                <Power size={20} /> 启动
+              </Button>
+            </div>
+          </Col>
+          <Col sm={6}>
+            <div className="d-grid gap-2">
+              <Button variant="success" size="sm" onClick={handleClientCommand}>
+                <Plug size={20} /> 连接
+              </Button>
+            </div>
           </Col>
         </Row>
       </Form>
@@ -217,7 +228,7 @@ const DeviceConnection = () => {
       <Row>
         <Col>
           <Alert variant="warning">
-            <i className="fas fa-exclamation-triangle"></i> 客户端未连接
+            <ExclamationCircle size={20}></ExclamationCircle> 客户端未连接
           </Alert>
         </Col>
       </Row>

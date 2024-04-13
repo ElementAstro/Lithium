@@ -6,6 +6,7 @@ import {
   InputGroup,
   Col,
   Row,
+  Container,
 } from "react-bootstrap";
 import {
   ArrowLeft,
@@ -192,7 +193,7 @@ const DeviceGuiderGeneralControlPanel = () => {
   }, []);
 
   return (
-    <div className="container mt-3">
+    <Container fluid>
       <div className="row">
         <div className="col-md-6">
           <Card className="p-3">
@@ -597,7 +598,7 @@ const DeviceGuiderGeneralControlPanel = () => {
         </div>
       </div>
       <HelperSnackbar help_text={""} close_signal={false} />
-    </div>
+    </Container>
   );
 };
 

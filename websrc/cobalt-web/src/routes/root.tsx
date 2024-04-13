@@ -32,7 +32,7 @@ import ErrorPage from "../pages/error";
 import ObjectFinding from "../pages/skymap";
 import Dashboard from "../pages/dashboard/index";
 import PAAIndexPage from "../pages/sequence"
-import Test from "../pages/test/test";
+//import Test from "../pages/test/test";
 
 interface IndexRouteObjectPlus extends IndexRouteObject {
   title?: string;
@@ -152,12 +152,12 @@ export const routesConfig: RouteObjectPlus[] = [
     title: "错误",
     icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
   },
-  {
-    path: "/test",
-    element: <Test />,
-    title: "测试",
-    icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
-  }
+  //{
+  //  path: "/test",
+  //  element: <Test />,
+  //  title: "测试",
+  //  icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+  //}
 ];
 
 const Route = () => {

@@ -23,6 +23,7 @@ import DeviceFocuserGeneralControlPanel from "./focuser";
 import DeviceGuiderGeneralControlPanel from "./guider";
 import DevicePHD2GeneralControlPanel from "./phd2";
 import DeviceTelescopeGeneralControlPanel from "./telescope";
+import DeviceSolverGeneralControlPanel from "./solver";
 
 import DeviceCameraDetailedControlPanel from "./detail/camera";
 import DeviceTelescopeDetailedControlPanel from "./detail/telescope";
@@ -66,6 +67,8 @@ const DeviceControlPanelPage = () => {
     } else if (device_key === "guider") {
       return true;
     } else if (device_key === "phd2") {
+      return true;
+    } else if (device_key == "solver") {
       return true;
     }
   };
@@ -144,6 +147,18 @@ const DeviceControlPanelPage = () => {
           </Alert>
         </Container>
       );
+    } else if (device_key == "solver") {
+      return (
+        <Container>
+          <Alert variant="danger">
+            <Alert.Heading>
+              <XCircle color="disabled" />
+              Solver未连接
+            </Alert.Heading>
+            <p>Solver未连接</p>
+          </Alert>
+        </Container>
+      );
     }
   };
 
@@ -153,28 +168,31 @@ const DeviceControlPanelPage = () => {
 
   return (
     <Row lg={12}>
-      <Col md={3}>
-        <Row md={"auto"}>
-          <Form.Group>
-            <Form.Check
-              type="radio"
-              label="基础参数"
-              name="select-set-format"
-              value="basic"
-              checked={!show_detail}
-              onChange={() => set_show_detail(false)}
-            />
-            <Form.Check
-              type="radio"
-              label="详细配置"
-              name="select-set-format"
-              value="detailed"
-              checked={show_detail}
-              onChange={() => setShowAdvancedMode(true)}
-              size={32}
-            />
-          </Form.Group>
+      <Col sm={2}>
+        <Row className="justify-content-center ml-1 mt-3">
+          <Col>
+            <div className="d-grid gap-2 ml-1">
+              <Button
+                variant={show_detail ? "outline-primary" : "primary"}
+                onClick={() => set_show_detail(false)}
+                className="mr-2"
+              >
+                基础参数
+              </Button>
+            </div>
+          </Col>
         </Row>
+        <Row className="justify-content-center ml-1 mt-3">
+          <div className="d-grid gap-2">
+            <Button
+              variant={show_detail ? "danger" : "outline-danger"}
+              onClick={() => setShowAdvancedMode(true)}
+            >
+              详细配置
+            </Button>
+          </div>
+        </Row>
+
         <Row md={"auto"}>
           <DeviceAdvancedControlModal
             showModal={showAdvancedMode}
@@ -183,7 +201,7 @@ const DeviceControlPanelPage = () => {
           />
         </Row>
       </Col>
-      <Col md={9}>
+      <Col sm={10}>
         <Tabs defaultActiveKey="camera">
           <Tab
             eventKey="camera"
@@ -267,6 +285,20 @@ const DeviceControlPanelPage = () => {
               <DevicePHD2GeneralControlPanel />
             ) : (
               <DevicePHD2DetailedControlPanel />
+            )}
+          </Tab>
+          <Tab
+            eventKey="solver"
+            // disabled={!check_device_connection("solver")}
+            title="解析"
+          >
+            {
+              //show_device_icon_if_not_connected("solver")
+            }
+            {!show_detail ? (
+              <DeviceSolverGeneralControlPanel />
+            ) : (
+              <DeviceSolverDetailedControlPanel />
             )}
           </Tab>
         </Tabs>

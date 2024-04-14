@@ -29,7 +29,7 @@ Description: Device Routes
 
 #include "magic_enum/magic_enum.hpp"
 
-#include "LithiumApp.hpp"
+#include "lithiumapp.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController)  //<- Begin Codegen
 

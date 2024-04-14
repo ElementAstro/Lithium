@@ -77,7 +77,6 @@ void Trigger<ParamType>::trigger(const std::string &event,
         try {
             callback.second(param);
         } catch (std::exception &e) {
-            throw std::throw_with_nested(std::nested_exception(e));
         }
     }
 }
@@ -86,7 +85,7 @@ template <typename ParamType>
 void Trigger<ParamType>::scheduleTrigger(const std::string &event,
                                          const ParamType &param,
                                          std::chrono::milliseconds delay) {
-    std::thread([=]() {
+    std::thread([this, event, param, delay]() {
         std::this_thread::sleep_for(delay);
         trigger(event, param);
     }).detach();
@@ -97,7 +96,7 @@ std::future<void> Trigger<ParamType>::scheduleAsyncTrigger(
     const std::string &event, const ParamType &param) {
     auto promise = std::make_shared<std::promise<void>>();
     auto future = promise->get_future();
-    std::thread([=]() mutable {
+    std::thread([this, event, param, promise]() mutable {
         try {
             trigger(event, param);
             promise->set_value();

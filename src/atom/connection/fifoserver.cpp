@@ -14,98 +14,80 @@ Description: FIFO Server
 
 #include "fifoserver.hpp"
 
-#include <stdexcept>
+#include <filesystem>
+#include <iostream>
+#include <mutex>
 
-#include "atom/log/loguru.hpp"
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 namespace Atom::Connection {
 
+FIFOServer::FIFOServer(const std::string& fifo_path) : fifo_path_(fifo_path) {
+// 创建 FIFO 文件
 #ifdef _WIN32
-FifoServer::FifoServer(const std::string &fifoPath)
-    : fifoPath(fifoPath),
-      pipeHandle(INVALID_HANDLE_VALUE)
-#else
-FifoServer::FifoServer(const std::string &fifoPath)
-    : fifoPath(fifoPath),
-      pipeFd()
+    CreateNamedPipeA(fifo_path_.c_str(), PIPE_ACCESS_DUPLEX,
+                     PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+                     PIPE_UNLIMITED_INSTANCES, 4096, 4096, 0, NULL);
+#elif __APPLE__ || __linux__
+    mkfifo(fifo_path_.c_str(), 0666);
 #endif
-{
+
+    // 启动服务器线程
+    server_thread_ = std::thread([this] { serverLoop(); });
 }
 
-void FifoServer::start() {
-    DLOG_F(INFO, "Starting FIFO server...");
+FIFOServer::~FIFOServer() {
+    // 停止服务器线程
+    stop_server_ = true;
+    server_thread_.join();
 
+// 删除 FIFO 文件
 #ifdef _WIN32
-    if (!WaitNamedPipeA(fifoPath.c_str(), NMPWAIT_WAIT_FOREVER)) {
-        throw std::runtime_error("Failed to connect to FIFO");
-    }
-
-    pipeHandle =
-        CreateNamedPipeA(fifoPath.c_str(), PIPE_ACCESS_INBOUND,
-                         PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT, 1,
-                         bufferSize, bufferSize, 0, nullptr);
-
-    if (pipeHandle == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error("Failed to create FIFO");
-    }
-
-    if (!ConnectNamedPipe(pipeHandle, nullptr)) {
-        throw std::runtime_error("Failed to establish connection with client");
-    }
-#else
-    if (mkfifo(fifoPath.c_str(), 0666) == -1) {
-        throw std::runtime_error("Failed to create FIFO");
-    }
-
-    int fd = open(fifoPath.c_str(), O_RDONLY);
-    if (fd == -1) {
-        throw std::runtime_error("Failed to open FIFO");
-    }
-
-    pipeFd = fd;
+    DeleteFileA(fifo_path_.c_str());
+#elif __APPLE__ || __linux__
+    std::filesystem::remove(fifo_path_);
 #endif
-
-    DLOG_F(INFO, "FIFO server started");
 }
 
-std::string FifoServer::receiveMessage() {
-    DLOG_F(INFO, "Receiving message...");
-
-    char buffer[bufferSize];
-
-#ifdef _WIN32
-    DWORD numBytesRead;
-    if (!ReadFile(pipeHandle, buffer, bufferSize - 1, &numBytesRead, nullptr) ||
-        numBytesRead == 0) {
-        return "";
-    }
-#else
-    ssize_t numBytesRead = read(pipeFd, buffer, bufferSize - 1);
-    if (numBytesRead == -1 || numBytesRead == 0) {
-        return "";
-    }
-#endif
-
-    buffer[numBytesRead] = '\0';
-    std::string receivedMessage(buffer);
-
-    DLOG_F(INFO, "Received message: %s", receivedMessage.c_str());
-
-    return receivedMessage;
+void FIFOServer::sendMessage(const std::string& message) {
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+    message_queue_.push(message);
+    message_cv_.notify_one();
 }
 
-void FifoServer::stop() {
-    DLOG_F(INFO, "Stopping FIFO server...");
+void FIFOServer::serverLoop() {
+    while (!stop_server_) {
+        std::string message;
+        {
+            std::unique_lock<std::mutex> lock(queue_mutex_);
+            message_cv_.wait(lock, [this] { return !message_queue_.empty(); });
+            message = message_queue_.front();
+            message_queue_.pop();
+        }
 
 #ifdef _WIN32
-    DisconnectNamedPipe(pipeHandle);
-    CloseHandle(pipeHandle);
-    DeleteFileA(fifoPath.c_str());
-#else
-    close(pipeFd);
-    unlink(fifoPath.c_str());
+        HANDLE pipe = CreateFileA(fifo_path_.c_str(), GENERIC_WRITE, 0, NULL,
+                                  OPEN_EXISTING, 0, NULL);
+        DWORD bytes_written;
+        WriteFile(pipe, message.c_str(), message.length(), &bytes_written,
+                  NULL);
+        CloseHandle(pipe);
+#elif __APPLE__
+        int fd = open(fifo_path_.c_str(), O_WRONLY);
+        write(fd, message.c_str(), message.length());
+        close(fd);
+#elif __linux__
+        int fd = open(fifo_path_.c_str(), O_WRONLY);
+        write(fd, message.c_str(), message.length());
+        close(fd);
 #endif
-
-    DLOG_F(INFO, "FIFO server stopped");
+    }
 }
 }  // namespace Atom::Connection

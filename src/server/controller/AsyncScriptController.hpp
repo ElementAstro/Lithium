@@ -36,7 +36,7 @@ Description: Async Script Controller
 #include "data/ScriptDto.hpp"
 #include "data/StatusDto.hpp"
 
-#include "LithiumApp.hpp"
+#include "lithiumapp.hpp"
 
 #include OATPP_CODEGEN_BEGIN(ApiController)  //<- Begin Codegen
 

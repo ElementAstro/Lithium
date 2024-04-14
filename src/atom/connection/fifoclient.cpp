@@ -14,79 +14,66 @@ Description: FIFO CLient
 
 #include "fifoclient.hpp"
 
+#include <cstdlib>
+#include <cstring>
 #include <stdexcept>
-
-#include "atom/log/loguru.hpp"
+#include <vector>
 
 namespace Atom::Connection {
+FifoClient::FifoClient(const std::string& fifoPath) : m_fifoPath(fifoPath) {
 #ifdef _WIN32
-FifoClient::FifoClient(const std::string &fifoPath)
-    : fifoPath(fifoPath),
-      pipeHandle(INVALID_HANDLE_VALUE)
+    m_fifo = CreateFile(m_fifoPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0,
+                        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+#elif __APPLE__
+    // 在 macOS 上使用命名管道
+    m_fifo = open(m_fifoPath.c_str(), O_RDWR);
 #else
-FifoClient::FifoClient(const std::string &fifoPath)
-    : fifoPath(fifoPath),
-      pipeFd()
+    m_fifo = open(m_fifoPath.c_str(), O_RDWR);
 #endif
-{
 }
 
-void FifoClient::connect() {
-    DLOG_F(INFO, "Connecting to FIFO...");
-
+FifoClient::~FifoClient() {
 #ifdef _WIN32
-    if (!WaitNamedPipeA(fifoPath.c_str(), NMPWAIT_WAIT_FOREVER)) {
-        throw std::runtime_error("Failed to connect to FIFO");
-    }
-
-    pipeHandle = CreateFileA(fifoPath.c_str(), GENERIC_WRITE, 0, nullptr,
-                             OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-
-    if (pipeHandle == INVALID_HANDLE_VALUE) {
-        throw std::runtime_error("Failed to open FIFO");
-    }
+    CloseHandle(m_fifo);
 #else
-    int fd = open(fifoPath.c_str(), O_WRONLY);
-    if (fd == -1) {
-        throw std::runtime_error("Failed to open FIFO");
-    }
-
-    pipeFd = fd;
+    close(m_fifo);
 #endif
-
-    DLOG_F(INFO, "Connected to FIFO");
 }
 
-void FifoClient::sendMessage(const std::string &message) {
-    DLOG_F(INFO, "Sending message...");
+bool FifoClient::write(const std::string& data) {
+    std::vector<char> buffer(data.begin(), data.end());
+    buffer.push_back('\0');  // 添加字符串结束符
 
 #ifdef _WIN32
-    DWORD numBytesWritten;
-    if (!WriteFile(pipeHandle, message.c_str(), message.length(),
-                   &numBytesWritten, nullptr) ||
-        numBytesWritten != message.length()) {
-        throw std::runtime_error("Failed to write message to FIFO");
+    DWORD bytesWritten;
+    return WriteFile(m_fifo, buffer.data(), static_cast<DWORD>(buffer.size()),
+                     &bytesWritten, nullptr) != 0;
+#else
+    return write(m_fifo, buffer.data(), buffer.size()) != -1;
+#endif
+}
+
+std::string FifoClient::read() {
+    std::string data;
+    char buffer[1024];
+
+#ifdef _WIN32
+    DWORD bytesRead;
+    while (ReadFile(m_fifo, buffer, sizeof(buffer) - 1, &bytesRead, nullptr) !=
+               0 &&
+           bytesRead != 0) {
+        buffer[bytesRead] = '\0';
+        data += buffer;
     }
 #else
-    ssize_t numBytesWritten = write(pipeFd, message.c_str(), message.length());
-    if (numBytesWritten == -1 ||
-        static_cast<size_t>(numBytesWritten) != message.length()) {
-        throw std::runtime_error("Failed to write message to FIFO");
+    ssize_t bytesRead;
+    while ((bytesRead = read(m_fifo, buffer, sizeof(buffer) - 1)) > 0) {
+        buffer[bytesRead] = '\0';
+        data += buffer;
     }
 #endif
 
-    DLOG_F(INFO, "Message sent");
+    return data;
 }
 
-void FifoClient::disconnect() {
-    DLOG_F(INFO, "Disconnecting from FIFO...");
-
-#ifdef _WIN32
-    CloseHandle(pipeHandle);
-#else
-    close(pipeFd);
-#endif
-
-    DLOG_F(INFO, "Disconnected from FIFO");
-}
 }  // namespace Atom::Connection

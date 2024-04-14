@@ -11,24 +11,24 @@ project(atom-algorithm C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
+    algorithm.cpp
     base.cpp
     convolve.cpp
     fraction.cpp
     huffman.cpp
     math.cpp
-    mathutils.cpp
     md5.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
+    algorithm.hpp
     base.hpp
     convolve.hpp
     fraction.hpp
     hash.hpp
     huffman.hpp
     math.hpp
-    mathutils.hpp
     md5.hpp
 )
 
@@ -60,3 +60,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+if (ATOM_BUILD_PYTHON)
+pybind11_add_module(${PROJECT_NAME}-py _pybind.cpp)
+target_link_libraries(${PROJECT_NAME}-py PRIVATE ${PROJECT_NAME})
+endif()

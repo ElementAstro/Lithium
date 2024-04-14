@@ -12,7 +12,7 @@ Description: Lithium App Enter
 
 **************************************************/
 
-#include "LithiumApp.hpp"
+#include "lithiumapp.hpp"
 
 #include "config.h"
 

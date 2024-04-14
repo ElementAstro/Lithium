@@ -15,6 +15,7 @@ Description: A collection of algorithms for C++
 #include "base.hpp"
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <iomanip>
 #include <iostream>
@@ -323,6 +324,92 @@ std::vector<unsigned char> base85Decode(const std::string &data) {
                 count -= 8;
             }
         }
+    }
+
+    return result;
+}
+
+constexpr std::array<char, 91> kEncodeTable = {
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+    'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '!', '#', '$',
+    '%', '&', '(', ')', '*', '+', ',', '.', '/', ':', ';', '<', '=',
+    '>', '?', '@', '[', ']', '^', '_', '`', '{', '|', '}', '~', '"'};
+
+constexpr std::array<int, 256> kDecodeTable = []() {
+    std::array<int, 256> table{};
+    table.fill(-1);
+    for (int i = 0; i < kEncodeTable.size(); ++i) {
+        table[kEncodeTable[i]] = i;
+    }
+    return table;
+}();
+
+std::string base91Encode(std::string_view data) {
+    std::string result;
+    result.reserve(data.size() * 2);
+
+    int ebq = 0;
+    int en = 0;
+    for (char c : data) {
+        ebq |= static_cast<unsigned char>(c) << en;
+        en += 8;
+        if (en > 13) {
+            int ev = ebq & 8191;
+            if (ev > 88) {
+                ebq >>= 13;
+                en -= 13;
+            } else {
+                ev = ebq & 16383;
+                ebq >>= 14;
+                en -= 14;
+            }
+            result += kEncodeTable[ev % 91];
+            result += kEncodeTable[ev / 91];
+        }
+    }
+
+    if (en > 0) {
+        result += kEncodeTable[ebq % 91];
+        if (en > 7 || ebq > 90) {
+            result += kEncodeTable[ebq / 91];
+        }
+    }
+
+    return result;
+}
+
+std::string base91Decode(std::string_view data) {
+    std::string result;
+    result.reserve(data.size());
+
+    int dbq = 0;
+    int dn = 0;
+    int dv = -1;
+
+    for (char c : data) {
+        if (c == '"') {
+            continue;
+        }
+        if (dv == -1) {
+            dv = kDecodeTable[c];
+        } else {
+            dv += kDecodeTable[c] * 91;
+            dbq |= dv << dn;
+            dn += (dv & 8191) > 88 ? 13 : 14;
+            do {
+                result += static_cast<char>(dbq & 0xFF);
+                dbq >>= 8;
+                dn -= 8;
+            } while (dn > 7);
+            dv = -1;
+        }
+    }
+
+    if (dv != -1) {
+        result += static_cast<char>((dbq | dv << dn) & 0xFF);
     }
 
     return result;

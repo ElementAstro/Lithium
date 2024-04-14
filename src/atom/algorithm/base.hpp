@@ -131,6 +131,22 @@ base85Encode(const std::vector<unsigned char> &data);
 base85Decode(const std::string &data);
 
 /**
+ * @brief Encodes a string to Base91
+ * @param data The string to encode
+ * @return The encoded string
+ */
+[[nodiscard("The result of base91Encode is not used.")]]
+std::string base91Encode(std::string_view data);
+
+/**
+ * @brief Decodes a Base91 string
+ * @param data The string to decode
+ * @return The decoded string
+ */
+[[nodiscard("The result of base91Decode is not used.")]] std::string
+base91Decode(std::string_view data);
+
+/**
  * @brief Encodes a vector of unsigned characters into a Base128 string.
  *
  * This function takes a vector of unsigned characters and encodes it into a

@@ -110,6 +110,10 @@ void SocketHub::stop() {
     DLOG_F(INFO, "SocketHub stopped.");
 }
 
+void SocketHub::addHandler(std::function<void(std::string)> handler) {
+    this->handler = std::move(handler);
+}
+
 bool SocketHub::initWinsock() {
 #ifdef _WIN32
     WSADATA wsaData;

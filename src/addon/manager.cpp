@@ -19,20 +19,14 @@ Description: Component Manager (the core of the plugin system)
 // #include "finder.hpp"
 #include "loader.hpp"
 #include "sandbox.hpp"
+#include "sort.hpp"
 
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/server/global_ptr.hpp"
 
+#include "utils/constant.hpp"
 #include "utils/marco.hpp"
-
-#ifdef _WIN32
-constexpr std::string PATH_SEPARATOR = "\\";
-constexpr std::string DYNAMIC_LIBRARY_EXTENSION = ".dll";
-#else
-constexpr std::string PATH_SEPARATOR = "/";
-constexpr std::string DYNAMIC_LIBRARY_EXTENSION = ".so";
-#endif
 
 #define IS_ARGUMENT_EMPTY() \
     if (params.is_null()) { \
@@ -47,19 +41,23 @@ constexpr std::string DYNAMIC_LIBRARY_EXTENSION = ".so";
     type name = params[#name].get<type>();
 
 namespace Lithium {
-ComponentManager::ComponentManager()
-    :  m_Sandbox(nullptr), m_Compiler(nullptr) {
-    m_ModuleLoader = GetWeakPtr<Lithium::ModuleLoader>("lithium.addon.loader");
+ComponentManager::ComponentManager() : m_Sandbox(nullptr), m_Compiler(nullptr) {
+    m_ModuleLoader =
+        GetWeakPtr<Lithium::ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
     CHECK_WEAK_PTR_EXPIRED(m_ModuleLoader,
                            "load module loader from gpm: lithium.addon.loader");
-    m_Env = GetWeakPtr<Atom::Utils::Env>("lithium.utils.env");
+    m_Env = GetWeakPtr<Atom::Utils::Env>(constants::LITHIUM_UTILS_ENV);
     CHECK_WEAK_PTR_EXPIRED(m_Env, "load env from gpm: lithium.utils.env");
-    m_AddonManager = GetWeakPtr<Lithium::AddonManager>("lithium.addon.addon");
+    m_AddonManager =
+        GetWeakPtr<Lithium::AddonManager>(constants::LITHIUM_ADDON_MANAGER);
     CHECK_WEAK_PTR_EXPIRED(m_AddonManager,
                            "load addon manager from gpm: lithium.addon.addon");
 
     // m_ComponentFinder = std::make_unique<AddonFinder>(
     //     m_Env.lock()->getEnv("LITHIUM_ADDON_PATH", "./modules"), checkFunc);
+    // NOTE: AddonFinder is not supported yet
+
+    // Initialize sandbox and compiler, these are not shared objects
     m_Sandbox = std::make_unique<Sandbox>();
     m_Compiler = std::make_unique<Compiler>();
 
@@ -83,8 +81,8 @@ bool ComponentManager::Initialize() {
     // Check if the module path is valid or reset by the user
     // Default path is ./modules
     // TODO: Windows support
-    const std::string &module_path =
-        m_Env.lock()->getEnv("LITHIUM_ADDON_PATH", "./modules");
+    const std::string &module_path = m_Env.lock()->getEnv(
+        constants::ENV_VAR_MODULE_PATH, constants::MODULE_FOLDER);
     // Get all of the available addon path
     /*
     /if (!m_ComponentFinder->traverseDir(std::filesystem::path(module_path))) {
@@ -93,7 +91,15 @@ bool ComponentManager::Initialize() {
     }
     */
 
-    for (const auto &dir : getQualifiedSubDirs(module_path)) {
+    // make a loading list of modules
+    std::vector<std::string> qualified_subdirs =
+        resolveDependencies(getQualifiedSubDirs(module_path));
+    if (qualified_subdirs.empty()) {
+        LOG_F(WARNING, "No modules found");
+        return true;
+    }
+
+    for (const auto &dir : qualified_subdirs) {
         std::filesystem::path path = std::filesystem::path(module_path) / dir;
 
         if (!m_AddonManager.lock()->addModule(path, dir)) {
@@ -127,7 +133,8 @@ std::shared_ptr<ComponentManager> ComponentManager::createShared() {
     return std::make_shared<ComponentManager>();
 }
 
-std::vector<std::string> ComponentManager::getFilesInDir(const std::string &path) {
+std::vector<std::string> ComponentManager::getFilesInDir(
+    const std::string &path) {
     std::vector<std::string> files;
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
         if (!entry.is_directory()) {
@@ -137,7 +144,8 @@ std::vector<std::string> ComponentManager::getFilesInDir(const std::string &path
     return files;
 }
 
-std::vector<std::string> ComponentManager::getQualifiedSubDirs(const std::string &path) {
+std::vector<std::string> ComponentManager::getQualifiedSubDirs(
+    const std::string &path) {
     std::vector<std::string> qualifiedSubDirs;
     for (const auto &entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_directory()) {
@@ -145,11 +153,11 @@ std::vector<std::string> ComponentManager::getQualifiedSubDirs(const std::string
             std::vector<std::string> files =
                 getFilesInDir(entry.path().string());
             for (const auto &fileName : files) {
-                if (fileName == "package.json") {
+                if (fileName == constants::PACKAGE_NAME) {
                     hasJson = true;
                 } else if (fileName.size() > 4 &&
                            fileName.substr(fileName.size() - 4) ==
-                               DYNAMIC_LIBRARY_EXTENSION) {
+                               constants::LIB_EXTENSION) {
                     hasLib = true;
                 }
                 if (hasJson && hasLib) {
@@ -221,15 +229,15 @@ bool ComponentManager::checkComponent(const std::string &module_name,
     }
     // Check component package.json file, this is for the first time loading
     // And we need to know how to load component's ptr from this file
-    if (!Atom::IO::isFileExists(module_path + PATH_SEPARATOR +
-                                "package.json")) {
+    if (!Atom::IO::isFileExists(module_path + constants::PATH_SEPARATOR +
+                                constants::PACKAGE_NAME)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
     }
     // Check component library files
     std::vector<std::string> files = Atom::IO::checkFileTypeInFolder(
-        module_path, DYNAMIC_LIBRARY_EXTENSION, Atom::IO::FileOption::Name);
+        module_path, constants::LIB_EXTENSION, Atom::IO::FileOption::Name);
 
     if (files.empty()) {
         LOG_F(ERROR, "Component path {} does not contain dll or so file",
@@ -237,12 +245,12 @@ bool ComponentManager::checkComponent(const std::string &module_name,
         return false;
     }
     auto it = std::find(files.begin(), files.end(),
-                        module_name + DYNAMIC_LIBRARY_EXTENSION);
+                        module_name + constants::LIB_EXTENSION);
     if (it != files.end()) {
-        if (!m_ModuleLoader.lock()->LoadModule(module_path + PATH_SEPARATOR +
-                                                   module_name +
-                                                   DYNAMIC_LIBRARY_EXTENSION,
-                                               module_name)) {
+        if (!m_ModuleLoader.lock()->LoadModule(
+                module_path + constants::PATH_SEPARATOR + module_name +
+                    constants::LIB_EXTENSION,
+                module_name)) {
             LOG_F(ERROR, "Failed to load module: {}'s library {}", module_name,
                   module_path);
             return false;
@@ -259,14 +267,15 @@ bool ComponentManager::checkComponent(const std::string &module_name,
 bool ComponentManager::loadComponentInfo(const std::string &module_path) {
     // Load the Package.json
     // Max: We will only load the root package.json
-    std::string file_path = module_path + PATH_SEPARATOR + "package.json";
+    std::string file_path =
+        module_path + constants::PATH_SEPARATOR + constants::PACKAGE_NAME;
     if (!Atom::IO::isFileExists(file_path)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
     }
-    std::string module_name =
-        module_path.substr(module_path.find_last_of(PATH_SEPARATOR) + 1);
+    std::string module_name = module_path.substr(
+        module_path.find_last_of(constants::PATH_SEPARATOR) + 1);
     try {
         m_ComponentInfos[module_name] = json::parse(std::ifstream(file_path));
     } catch (const json::parse_error &e) {

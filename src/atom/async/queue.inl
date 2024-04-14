@@ -202,3 +202,5 @@ std::vector<ThreadSafeQueue<T>> ThreadSafeQueue<T>::groupBy(
 */
 
 }  // namespace Atom::Async
+
+#endif

@@ -28,7 +28,7 @@ void AsyncWorker<ResultType>::StartAsync(Func &&func, Args &&...args) {
 template <typename ResultType>
 [[nodiscard]] ResultType AsyncWorker<ResultType>::GetResult() {
     if (!task_.valid()) {
-        throw Utils::Exception::InvalidArgument("Task is not valid");
+        throw std::invalid_argument("Task is not valid");
     }
     return task_.get();
 }

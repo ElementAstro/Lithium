@@ -20,7 +20,7 @@ Description: Self implemented MD5 algorithm.
 #include <vector>
 
 
-namespace Atom::Utils {
+namespace Atom::Algorithm {
 /**
  * @brief The MD5 class for calculating MD5 hash of input data.
  */
@@ -97,6 +97,6 @@ private:
     std::vector<uint8_t> _buffer; /**< Buffer for input data. */
 };
 
-}  // namespace Atom::Utils
+}  // namespace Atom::Algorithm
 
 #endif  // MD5_H

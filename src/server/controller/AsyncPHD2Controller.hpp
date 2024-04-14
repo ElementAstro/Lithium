@@ -15,7 +15,7 @@ Description: PHD2 Route
 #ifndef ASYNC_PHD2_CONTROLLER_HPP
 #define ASYNC_PHD2_CONTROLLER_HPP
 
-#include "LithiumApp.hpp"
+#include "lithiumapp.hpp"
 
 #include "config.h"
 

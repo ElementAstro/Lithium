@@ -70,3 +70,11 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+if (ATOM_BUILD_PYTHON)
+pybind11_add_module(${PROJECT_NAME}-py _pybind.cpp)
+target_link_libraries(${PROJECT_NAME}-py PRIVATE ${PROJECT_NAME})
+if (WIN32)
+target_link_libraries(${PROJECT_NAME}-py PRIVATE ws2_32)
+endif()
+endif()

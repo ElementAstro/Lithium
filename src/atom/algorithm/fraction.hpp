@@ -113,7 +113,7 @@ public:
      * @param other The fraction to compare with.
      * @return An integer indicating the comparison result.
      */
-    auto Fraction::operator<=>(const Fraction& other) const {
+    auto operator<=>(const Fraction& other) const {
         double diff = this->to_double() - other.to_double();
         if (diff > 0)
             return std::strong_ordering::greater;

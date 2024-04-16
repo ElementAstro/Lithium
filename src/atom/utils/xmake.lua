@@ -47,7 +47,7 @@ local private_headers = {
 -- Build Object Library
 target("atom-utils-object")
     set_kind("object")
-    add_files(headers, {public = true})
+    add_headerfiles(headers, {public = true})
     add_files(sources, private_headers, {public = false})
     add_packages("loguru", "tinyxml2")
 

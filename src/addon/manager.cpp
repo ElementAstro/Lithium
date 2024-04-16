@@ -135,7 +135,7 @@ bool ComponentManager::Initialize() {
                       module_name);
                 continue;
             }
-            DLOG_F(INFO, "Loaded module: {}/{}", path.string(), module_info);
+            DLOG_F(INFO, "Loaded module: {}/{}", path.string(), module_info.dump());
         }
     }
     return true;

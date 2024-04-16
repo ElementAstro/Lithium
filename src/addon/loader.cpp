@@ -69,7 +69,7 @@ std::shared_ptr<ModuleLoader> ModuleLoader::createShared(
 
 bool ModuleLoader::LoadModule(const std::string &path,
                               const std::string &name) {
-    std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
+    // std::unique_lock lock(m_SharedMutex);
     try {
         // Max : The mod's name should be unique, so we check if it already
         // exists
@@ -280,13 +280,15 @@ std::vector<std::unique_ptr<FunctionInfo>> ModuleLoader::loadModuleFunctions(
 }
 
 bool ModuleLoader::UnloadModule(const std::string &name) {
-    std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
+    // Check if the module is loaded and has a valid handle
+    // Max: Check before loading to avaid dead lock
+    if (!HasModule(name)) {
+        LOG_F(ERROR, "Module {} is not loaded", name);
+        return false;
+    };
+    // TODO: Fix this, maybe use a lock
+    // std::unique_lock lock(m_SharedMutex);
     try {
-        // Check if the module is loaded and has a valid handle
-        if (!HasModule(name)) {
-            LOG_F(ERROR, "Module {} is not loaded", name);
-            return false;
-        };
         // Unload the library and remove its handle from handles_ map
         int result = UNLOAD_LIBRARY(GetModule(name)->handle);
         if (result != 0) {
@@ -302,7 +304,7 @@ bool ModuleLoader::UnloadModule(const std::string &name) {
 }
 
 bool ModuleLoader::UnloadAllModules() {
-    std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::unique_lock lock(m_SharedMutex);
     for (auto entry : modules_) {
         int result = UNLOAD_LIBRARY(entry.second->handle);
         if (result != 0) {
@@ -315,7 +317,7 @@ bool ModuleLoader::UnloadAllModules() {
 }
 
 bool ModuleLoader::CheckModuleExists(const std::string &name) const {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     // Max : Directly check if the library exists seems to be a litle bit slow.
     // May we use filesystem instead?
     void *handle = LOAD_LIBRARY(name.c_str());
@@ -330,7 +332,7 @@ bool ModuleLoader::CheckModuleExists(const std::string &name) const {
 
 std::shared_ptr<ModuleInfo> ModuleLoader::GetModule(
     const std::string &name) const {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     auto it = modules_.find(name);
     if (it == modules_.end()) {
         return nullptr;
@@ -339,7 +341,7 @@ std::shared_ptr<ModuleInfo> ModuleLoader::GetModule(
 }
 
 void *ModuleLoader::GetHandle(const std::string &name) const {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     auto it = modules_.find(name);
     if (it == modules_.end()) {
         return nullptr;
@@ -348,12 +350,12 @@ void *ModuleLoader::GetHandle(const std::string &name) const {
 }
 
 bool ModuleLoader::HasModule(const std::string &name) const {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     return modules_.count(name) > 0;
 }
 
 bool ModuleLoader::EnableModule(const std::string &name) {
-    std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::unique_lock lock(m_SharedMutex);
     // Check if the module is loaded
     if (!HasModule(name)) {
         LOG_F(ERROR, "Module {} is not loaded", name);
@@ -381,7 +383,7 @@ bool ModuleLoader::EnableModule(const std::string &name) {
 }
 
 bool ModuleLoader::DisableModule(const std::string &name) {
-    std::unique_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::unique_lock lock(m_SharedMutex);
     // Check if the module is loaded
     if (!HasModule(name)) {
         LOG_F(ERROR, "Module {} is not loaded", name);
@@ -408,7 +410,7 @@ bool ModuleLoader::DisableModule(const std::string &name) {
 }
 
 bool ModuleLoader::IsModuleEnabled(const std::string &name) const {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     if (!HasModule(name)) {
         LOG_F(ERROR, "Module {} is not loaded", name);
         return false;
@@ -420,7 +422,7 @@ bool ModuleLoader::IsModuleEnabled(const std::string &name) const {
 }
 
 std::string ModuleLoader::GetModuleVersion(const std::string &name) {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     if (HasModule(name)) {
         return GetFunction<std::string (*)()>(name, "GetVersion")();
     }
@@ -428,7 +430,7 @@ std::string ModuleLoader::GetModuleVersion(const std::string &name) {
 }
 
 std::string ModuleLoader::GetModuleDescription(const std::string &name) {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     if (HasModule(name)) {
         return GetFunction<std::string (*)()>(name, "GetDescription")();
     }
@@ -436,7 +438,7 @@ std::string ModuleLoader::GetModuleDescription(const std::string &name) {
 }
 
 std::string ModuleLoader::GetModuleAuthor(const std::string &name) {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     if (HasModule(name)) {
         return GetFunction<std::string (*)()>(name, "GetAuthor")();
     }
@@ -444,7 +446,7 @@ std::string ModuleLoader::GetModuleAuthor(const std::string &name) {
 }
 
 std::string ModuleLoader::GetModuleLicense(const std::string &name) {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     if (HasModule(name)) {
         return GetFunction<std::string (*)()>(name, "GetLicense")();
     }
@@ -452,7 +454,7 @@ std::string ModuleLoader::GetModuleLicense(const std::string &name) {
 }
 
 std::string ModuleLoader::GetModulePath(const std::string &name) {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     auto it = modules_.find(name);
     if (it != modules_.end()) {
         Dl_info dl_info;
@@ -471,7 +473,7 @@ json ModuleLoader::GetModuleConfig(const std::string &name) {
 }
 
 const std::vector<std::string> ModuleLoader::GetAllExistedModules() const {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     std::vector<std::string> modules_name;
     if (modules_.empty()) {
         return modules_name;
@@ -484,7 +486,7 @@ const std::vector<std::string> ModuleLoader::GetAllExistedModules() const {
 
 bool ModuleLoader::HasFunction(const std::string &name,
                                const std::string &function_name) {
-    std::shared_lock<std::shared_mutex> lock(m_SharedMutex);
+    std::shared_lock lock(m_SharedMutex);
     auto handle_it = modules_.find(name);
     if (handle_it == modules_.end()) {
         LOG_F(ERROR, "Failed to find module {}", name);

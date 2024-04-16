@@ -16,6 +16,7 @@ Description: Some useful string functions
 #define ATOM_UTILS_STRING_HPP
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace Atom::Utils {
@@ -73,6 +74,15 @@ splitString(const std::string &str, char delimiter);
 [[nodiscard("the result of joinStrings is not used")]] std::string joinStrings(
     const std::vector<std::string_view> &strings,
     const std::string_view &delimiter);
+
+[[nodiscard("the result of replaceString is not used")]] std::string
+replaceString(std::string_view text, std::string_view oldStr,
+              std::string_view newStr);
+
+[[nodiscard("the result of replaceStrings is not used")]] std::string
+replaceStrings(std::string_view text,
+               const std::vector<std::pair<std::string_view, std::string_view>>
+                   &replacements);
 }  // namespace Atom::Utils
 
 #endif

@@ -317,6 +317,7 @@ bool isFolderExists(const fs::path &folderName) {
 
 bool isFileExists(const std::string &fileName) {
     if (!isFileNameValid(fileName)) {
+        LOG_F(ERROR, "Invalid file name: {}", fileName);
         return false;
     }
     return fs::exists(fileName) && fs::is_regular_file(fileName);

@@ -34,7 +34,7 @@ public:
 #endif
 
     // Package info
-    static constexpr const char* PACKAGE_NAME = "package.lithium";
+    static constexpr const char* PACKAGE_NAME = "package.json";
     static constexpr const char* PACKAGE_NAME_SHORT = "lithium";
     static constexpr const char* PACKAGE_VERSION = "0.1.0";
 

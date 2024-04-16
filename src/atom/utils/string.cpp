@@ -171,4 +171,22 @@ std::string joinStrings(const std::vector<std::string_view> &strings,
 
     return oss.str();
 }
+
+std::string replaceString(std::string_view text, std::string_view oldStr, std::string_view newStr) {
+    std::string result = text.data();
+    size_t pos = 0;
+    while ((pos = result.find(std::string(oldStr), pos)) != std::string::npos) {
+        result.replace(pos, oldStr.length(), std::string(newStr));
+        pos += newStr.length();
+    }
+    return result;
+}
+
+std::string replaceStrings(std::string_view text, const std::vector<std::pair<std::string_view, std::string_view>>& replacements) {
+    std::string result(text);
+    for (const auto& [oldStr, newStr] : replacements) {
+        result = replaceString(result, oldStr, newStr);
+    }
+    return result;
+}
 }  // namespace Atom::Utils

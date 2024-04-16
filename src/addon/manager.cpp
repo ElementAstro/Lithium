@@ -24,6 +24,7 @@ Description: Component Manager (the core of the plugin system)
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/server/global_ptr.hpp"
+#include "atom/utils/string.hpp"
 
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"
@@ -107,6 +108,12 @@ bool ComponentManager::Initialize() {
             continue;
         }
         const json &addon_info = m_AddonManager.lock()->getModule(dir);
+        if (!addon_info.is_object() || !addon_info.contains("name") ||
+            !addon_info["name"].is_string()) {
+            LOG_F(ERROR, "Invalid module name: {}", path.string());
+            continue;
+        }
+        auto addon_name = addon_info["name"].get<std::string>();
         // Check if the addon info is valid
         if (!addon_info.contains("modules") || addon_info.is_null()) {
             LOG_F(ERROR, "Failed to load module: {}", path.string());
@@ -123,19 +130,64 @@ bool ComponentManager::Initialize() {
                       module_info.dump());
                 continue;
             }
-            auto module_name = module_info["name"].get<std::string>();
+            auto module_name =
+                addon_name + "." + module_info["name"].get<std::string>();
             std::filesystem::path module_path =
-                path / module_name / constants::LIB_EXTENSION;
+                path / (module_info["name"].get<std::string>() +
+                        std::string(constants::LIB_EXTENSION));
 
-            DLOG_F(INFO, "Loading module: {}/{}", path.string(), module_name);
+            DLOG_F(INFO, "Loading module: {}", module_path.string());
+#ifdef _WIN32
+            // This is to pass file name check
+            auto module_path_str =
+                Atom::Utils::replaceString(module_path.string(), "/", "\\");
+#else
+            auto module_path_str =
+                Atom::Utils::replaceString(module_path.string(), "\\", "/");
+#endif
+
             // This step is to load the dynamic library
-            if (!m_ModuleLoader.lock()->LoadModule(module_path.string(),
+            if (!m_ModuleLoader.lock()->LoadModule(module_path_str,
                                                    module_name)) {
+                LOG_F(ERROR, "Failed to load module: {}", module_path_str);
+                continue;
+            }
+            DLOG_F(INFO, "Loaded module: {}/{}", path.string(),
+                   module_info.dump());
+            auto component_entry = module_info["entry"].get<std::string>();
+            if (component_entry.empty()) {
                 LOG_F(ERROR, "Failed to load module: {}/{}", path.string(),
                       module_name);
                 continue;
             }
-            DLOG_F(INFO, "Loaded module: {}/{}", path.string(), module_info.dump());
+            auto component_identifier =
+                addon_name + module_name + component_entry;
+            if (auto component =
+                    m_ModuleLoader.lock()->GetInstance<SharedComponent>(
+                        module_name, {}, component_entry);
+                component) {
+                LOG_F(INFO, "Loaded shared component: {}",
+                      component_identifier);
+                try {
+                    if (component->initialize()) {
+                        m_SharedComponents[addon_name + module_name] =
+                            component;
+                        LOG_F(INFO, "Loaded shared component: {}",
+                              component_identifier);
+                    } else {
+                        LOG_F(ERROR,
+                              "Failed to initialize shared component: {}",
+                              component_identifier);
+                    }
+                } catch (const std::exception &e) {
+                    LOG_F(ERROR, "Failed to initialize shared component: {}",
+                          component_identifier);
+                }
+
+            } else {
+                LOG_F(ERROR, "Failed to load shared component: {}",
+                      component_identifier);
+            }
         }
     }
     return true;

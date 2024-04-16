@@ -11,12 +11,18 @@ project(atom-async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
+    lock.cpp
     timer.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
+    async_impl.hpp
+    lock.hpp
+    queue.hpp
+    queue.inl
+    thread_wrapper.hpp
     timer.hpp
     trigger.hpp
     trigger_impl.hpp

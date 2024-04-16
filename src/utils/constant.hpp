@@ -18,8 +18,13 @@ Description: Constants for Lithium
 class constants {
 public:
 #ifdef _WIN32
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    static constexpr const char* PATH_SEPARATOR = "/";
+    static constexpr const char* LIB_EXTENSION = ".dll";
+#else
     static constexpr const char* PATH_SEPARATOR = "\\";
     static constexpr const char* LIB_EXTENSION = ".dll";
+#endif
 #elif defined(__APPLE__)
     static constexpr const char* PATH_SEPARATOR = "/";
     static constexpr const char* LIB_EXTENSION = ".dylib";
@@ -35,7 +40,11 @@ public:
 
     // Module info
 #ifdef _WIN32
+#if defined(__MINGW32__) || defined(__MINGW64__)
+    static constexpr const char* MODULE_FOLDER = "./modules";
+#else
     static constexpr const char* MODULE_FOLDER = ".\\modules";
+#endif
 #else
     static constexpr const char* MODULE_FOLDER = "./modules";
 #endif

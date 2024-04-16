@@ -12,88 +12,88 @@ public:
     explicit ToupCamera(const std::string &name);
     ~ToupCamera();
 
-    bool initialize() override;
-    bool destroy() override;
+    bool initialize() final;
+    bool destroy() final;
 
-    bool connect(const json &params) override;
+    bool connect(const json &params) final;
 
-    bool disconnect(const json &params) override;
+    bool disconnect(const json &params) final;
 
-    bool reconnect(const json &params) override;
+    bool reconnect(const json &params) final;
 
-    bool isConnected() override;
+    bool isConnected() final;
 
-    bool startExposure(const double &duration);
+    bool startExposure(const double &duration) final;
 
-    bool abortExposure();
+    bool abortExposure() final;
 
-    bool getExposureStatus();
+    bool getExposureStatus() final;
 
-    bool getExposureResult();
+    bool getExposureResult() final;
 
-    bool saveExposureResult();
+    bool saveExposureResult() final;
 
-    bool startVideo();
+    bool startVideo() final;
 
-    bool stopVideo();
+    bool stopVideo() final;
 
-    bool getVideoStatus();
+    bool getVideoStatus() final;
 
-    bool getVideoResult();
+    bool getVideoResult() final;
 
-    bool saveVideoResult();
+    bool saveVideoResult() final;
 
-    bool startCooling();
+    bool startCooling() final;
 
-    bool stopCooling();
+    bool stopCooling() final;
 
-    bool getCoolingStatus();
+    bool getCoolingStatus() final;
 
-    bool isCoolingAvailable();
+    bool isCoolingAvailable() final;
 
-    bool getTemperature();
+    bool getTemperature() final;
 
-    bool getCoolingPower();
+    bool getCoolingPower() final;
 
-    bool setTemperature(const double &temperature);
+    bool setTemperature(const double &temperature) final;
 
-    bool setCoolingPower(const double &power);
+    bool setCoolingPower(const double &power) final;
 
-    bool getGain();
+    bool getGain() final;
 
-    bool setGain(const int &gain);
+    bool setGain(const int &gain) final;
 
-    bool isGainAvailable();
+    bool isGainAvailable() final;
 
-    bool getOffset();
+    bool getOffset() final;
 
-    bool setOffset(const int &offset);
+    bool setOffset(const int &offset) final;
 
-    bool isOffsetAvailable();
+    bool isOffsetAvailable() final;
 
-    bool getISO();
+    bool getISO() final;
 
-    bool setISO(const int &iso);
+    bool setISO(const int &iso) final;
 
-    bool isISOAvailable();
+    bool isISOAvailable() final;
 
-    bool getFrame();
+    bool getFrame() final;
 
-    bool setFrame(const int &x, const int &y, const int &w, const int &h);
+    bool setFrame(const int &x, const int &y, const int &w, const int &h) final;
 
-    bool isFrameSettingAvailable();
+    bool isFrameSettingAvailable() final;
 
-    bool getBinning();
+    bool getBinning() final;
 
-    bool setBinning(const int &hor, const int &ver);
+    bool setBinning(const int &hor, const int &ver) final;
 
-    bool getFrameType();
+    bool getFrameType() final;
 
-    bool setFrameType(FrameType type);
+    bool setFrameType(FrameType type) final;
 
-    bool getUploadMode();
+    bool getUploadMode() final;
 
-    bool setUploadMode(UploadMode mode);
+    bool setUploadMode(UploadMode mode) final;
 
 private:
 };

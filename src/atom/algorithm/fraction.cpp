@@ -76,16 +76,6 @@ Fraction Fraction::operator/(const Fraction &other) const {
     return result;
 }
 
-auto Fraction::operator<=>(const Fraction &other) const {
-    double diff = this->to_double() - other.to_double();
-    if (diff > 0)
-        return std::strong_ordering::greater;
-    else if (diff < 0)
-        return std::strong_ordering::less;
-    else
-        return std::strong_ordering::equal;
-}
-
 bool Fraction::operator==(const Fraction &other) const {
     return (numerator == other.numerator) && (denominator == other.denominator);
 }

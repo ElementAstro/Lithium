@@ -14,8 +14,10 @@ Description: ASICamera Simulator and Basic Definition
 
 #include "camera.hpp"
 
+#include "atom/driver/macro.hpp"
 #include "atom/log/loguru.hpp"
 
+#include <unistd.h>
 #include <memory>
 
 #define ASI_CAMERA_CONNECTION_CHECK                 \
@@ -44,7 +46,7 @@ Description: ASICamera Simulator and Basic Definition
 
 using ImgBufferPtr = std::unique_ptr<unsigned char[]>;
 
-ASICamera::ASICamera(const std::string &name) : AtomDriver(name) {}
+ASICamera::ASICamera(const std::string &name) : AtomCamera(name) {}
 
 ASICamera::~ASICamera() {}
 
@@ -95,9 +97,9 @@ bool ASICamera::connect(const json &params) {
             /*打开相机*/
             if ((errCode = ASIOpenCamera(ASICameraInfo.CameraID)) !=
                 ASI_SUCCESS) {
-                    LOG_F(ERROR,"Unable to turn on the {}, error code: {}."),
-                          ASICameraInfo.Name, errCode);
-                    return false;
+                LOG_F(ERROR, "Unable to turn on the {}, error code: {}.",
+                      ASICameraInfo.Name, errCode);
+                return false;
             }
             /*初始化相机*/
             if ((errCode = ASIInitCamera(ASICameraInfo.CameraID)) !=
@@ -110,8 +112,7 @@ bool ASICamera::connect(const json &params) {
             }
             setVariable("DEVICE_CONNECTED", true);
             is_connected.store(true);
-            LOG_F(INFO, "Camera connected successfully\n")
-            updateCameraInfo();
+            LOG_F(INFO, "Camera connected successfully\n");
             return true;
         } else {
             LOG_F(ERROR, "This is not a designated camera");
@@ -148,7 +149,7 @@ bool ASICamera::disconnect(const json &params) { /*在关闭相机之前停止�
         {
             LOG_F(ERROR,
                   "Unable to stop exposure,error code is {}, please try again.",
-                  errCode)
+                  errCode);
             return false;
         }
         is_exposing.store(false);
@@ -187,7 +188,7 @@ bool ASICamera::reconnect(const json &params) {
     return true;
 }
 
-bool ASICamera::isConnected() { return is_connected.load() }
+bool ASICamera::isConnected() { return is_connected.load(); }
 
 bool ASICamera::startExposure(const double &duration) {
     ASI_CAMERA_CONNECT_CHECK;
@@ -258,8 +259,11 @@ bool ASICamera::getExposureResult() {
     ASI_CAMERA_CONNECT_CHECK;
     ASI_CAMERA_EXPOSURE_CHECK;
 
-    long imgSize = getVariable<int>("WIDTH") * getVariable<int>("HEIGHT") *
-                   (1 + (ASICAMERA->ImageType == ASI_IMG_RAW16));
+    GET_INT_VARIABLE(width);
+    GET_INT_VARIABLE(height);
+
+    long imgSize = width * height;
+    //* (1 + (ASICAMERA->ImageType == ASI_IMG_RAW16));
 
     // 使用智能指针管理图像缓冲区内存
     ImgBufferPtr imgBuf(new unsigned char[imgSize]);
@@ -276,21 +280,22 @@ bool ASICamera::getExposureResult() {
     // 图像下载完成
     LOG_F(INFO, "Download from camera completely.");
 
-    std::string upload_mode = getVariable<std::string>("UPLOAD_MODE");
+    GET_STR_VARIABLE(upload_mode);
     if (upload_mode == "LOCAL") [[likely]] {
         // Max: image filename generation logic is needed
         std::string FitsName = "test.fits";
-        LOG_F(INFO, "Upload mode is LOCAL, save image to {}", FitsName)
+        LOG_F(INFO, "Upload mode is LOCAL, save image to {}", FitsName);
         /*将图像写入本地文件*/
-        auto res = getComponent("LITHIUM_IMAGE")
-                       ->runFunc("SaveImage", {{"filename", FitsName},
-                                               {"data", imgBuf},
-                                               {"size", imgSize}});
-        if (res.contains("error")) {
-            LOG_F(ERROR, "Unable to save image to {}, error: {}", FitsName,
-                  res["error"].get<std::string>());
-            return false;
-        }
+        // auto res = getComponent("LITHIUM_IMAGE")
+        //                ->runFunc("SaveImage", {{"filename", FitsName},
+        //                                       {"data", imgBuf},
+        //{ "size", imgSize }
+        //});
+        // if (res.contains("error")) {
+        //    LOG_F(ERROR, "Unable to save image to {}, error: {}", FitsName,
+        //          res["error"].get<std::string>());
+        //    return false;
+        //}
     } else if (upload_mode == "CLIENT") [[unlikely]] {
     } else if (upload_mode == "None") [[unlikely]] {
         LOG_F(INFO, "Upload mode is NONE, skip upload");

@@ -1,55 +1,36 @@
 {
-    "name": "example",
-    "version": "0.0.0",
+    "name": "atom-config",
+    "version": "1.0.0",
     "type": "shared",
-    "description": "An example project",
+    "description": "Atom driver for Touptek Camera",
     "license": "LGPL-3.0-or-later",
     "author": "Max Qian",
     "repository": {
         "type": "git",
-        "url": "https://github.com/maxqian/cobalt-example.git"
+        "url": "https://github.com/ElementAstro/Atom-Touptek"
     },
     "bugs": {
-        "url": "https://github.com/maxqian/cobalt-example/issues"
+        "url": "https://github.com/ElementAstro/Atom-Touptek/issues"
     },
-    "homepage": "https://github.com/maxqian/cobalt-example",
+    "homepage": "https://github.com/ElementAstro/Atom-Touptek",
     "keywords": [
-        "cobalt",
-        "example"
+        "asi",
+        "camera",
+        "filter wheel"
     ],
     "scripts": {
-        "dev": "vite",
-        "build": "vite build",
-        "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-        "preview": "vite preview"
+        "build": "cmake --build-type=Release -- -j 4",
+        "foramt": "clang-format -i src/*.cpp src/*.h",
+        "lint": "clang-tidy src/*.cpp src/*.h",
+        "test": "echo \"Error: no test specified\" && exit 1"
     },
     "dependencies": {
-        "axios": "^1.6.2",
-        "bootstrap": "^5.3.2",
-        "chart.js": "^4.4.1",
-        "easy-peasy": "^6.0.4",
-        "formik": "^2.4.5",
-        "isomorphic-ws": "^5.0.0",
-        "less": "^4.2.0",
-        "localforage": "^1.10.0",
-        "lodash": "^4.17.21",
-        "lodash-es": "^4.17.21",
-        "match-sorter": "^6.3.1",
-        "react": "^18.2.0",
-        "react-bootstrap": "^2.9.1",
-        "react-bootstrap-icons": "^1.10.3",
-        "react-dom": "^18.2.0",
-        "react-router-bootstrap": "^0.26.2",
-        "react-router-dom": "^6.21.1",
-        "redux": "^4.2.1",
-        "sort-by": "^0.0.2",
-        "vite-plugin-svgr": "^4.2.0",
-        "yup": "^1.3.3"
+        "asi-sdk": "^1.34"
     },
-    "main": {
-        "example1": {
-            "func": "getExample1",
-            "type" : "shared"
+    "modules": {
+        "main": {
+            "func": "getInstance",
+            "check": true
         }
     }
 }

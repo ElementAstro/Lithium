@@ -37,7 +37,7 @@ class Fraction {
      */
     void reduce();
 
-// For pybind11 compatibility
+    // For pybind11 compatibility
 public:
     int numerator;   /**< The numerator of the fraction. */
     int denominator; /**< The denominator of the fraction. */
@@ -107,12 +107,22 @@ public:
      */
     Fraction operator/(const Fraction& other) const;
 
+#if __cplusplus >= 202002L
     /**
      * @brief Compares this fraction with another fraction.
      * @param other The fraction to compare with.
      * @return An integer indicating the comparison result.
      */
-    auto operator<=>(const Fraction& other) const;
+    auto Fraction::operator<=>(const Fraction& other) const {
+        double diff = this->to_double() - other.to_double();
+        if (diff > 0)
+            return std::strong_ordering::greater;
+        else if (diff < 0)
+            return std::strong_ordering::less;
+        else
+            return std::strong_ordering::equal;
+    }
+#endif
 
     /**
      * @brief Checks if this fraction is equal to another fraction.

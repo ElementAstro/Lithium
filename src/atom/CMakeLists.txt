@@ -74,6 +74,8 @@ list(APPEND ${PROJECT_NAME}_LIBS
     loguru
     cpp_httplib
     libzippp
+    atom-algorithm
+    atom-connection
     atom-async
     atom-task
     atom-io

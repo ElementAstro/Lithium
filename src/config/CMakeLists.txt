@@ -1,34 +1,29 @@
-# CMakeLists.txt for Atom-Type
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Atom-Type
-# Description: All of the self-implement types
+# Project Name: Lithium-Config
+# Description: the official config module for lithium server
 # Author: Max Qian
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom-type C CXX)
+project(lithium-config C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    args.cpp
-    ini.cpp
-    message.cpp
+    _main.cpp
+    _component.cpp
+    configor.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    abi.hpp
-    args.hpp
-    enum_flag.hpp
-    enum_flag.inl
-    flatset.hpp
-    ini_impl.hpp
-    ini.hpp
-    json.hpp
-    message.hpp
-    pointer.hpp
-    small_vector.hpp
+    _component.hpp
+    configor.hpp
+)
+
+set(${PROJECT_NAME}_LIBS
+    loguru
+    atom-component
 )
 
 # Build Object Library
@@ -44,19 +39,20 @@ target_sources(${PROJECT_NAME}_OBJECT
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
-add_library(${PROJECT_NAME} STATIC)
+add_library(${PROJECT_NAME} SHARED)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} atom-utils)
+target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
     SOVERSION ${HYDROGEN_SOVERSION}
     OUTPUT_NAME ${PROJECT_NAME}
-    TARGET ${CMAKE_BINARY_DIR}
 )
 
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+

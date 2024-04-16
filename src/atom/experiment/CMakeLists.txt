@@ -11,18 +11,33 @@ project(atom-experiment C CXX)
 
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
+    platform.cpp
     string.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     any.hpp
+    anyutils.hpp
+    bind_first.hpp
+    callable.hpp
     decorate.hpp
+    flatmap.hpp
+    func_traits.hpp
     invoke.hpp
     list.hpp
+    memory.hpp
     noncopyable.hpp
+    object.hpp
     optional.hpp
+    platform.hpp
+    ranges.hpp
+    short_alloc.hpp
+    stack_vector.hpp
+    static_vector.hpp
     string.hpp
+    to_string.hpp
+    type_info.hpp
 )
 
 # Build Object Library

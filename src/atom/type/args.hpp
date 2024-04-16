@@ -195,10 +195,11 @@ std::optional<T> ArgumentContainer::get(const std::string &name) const {
 using Args = ArgumentContainer;
 
 /**
- * @brief 通用容器，用于存储任意类型的键值对。
+ * @brief 通用容器,用于存储任意类型的键值对。
  * @brief A universal container for storing any type of key-value pairs.
- * @note 这是ArgumentContainer的弱化版，虽然功能少，但是性能更好
+ * @note 这是ArgumentContainer的弱化版,虽然功能少,但是性能更好。
  * @note This is a weak version of ArgumentContainer, although it has fewer
+ * features, it has better performance.
  */
 class UniversalContainer {
 public:
@@ -209,12 +210,12 @@ public:
      * @param key Key.
      * @param value 值。
      * @param value Value.
-     * @note 如果键已存在，则会覆盖原有的值。
+     * @note 如果键已存在,则会覆盖原有的值。
      * @note If the key exists, it will overwrite the original value.
      */
     template <typename T>
     void set(std::string_view key, T &&value) {
-        _data[std::string(key)] = std::any(std::forward<T>(value));
+        m_data.emplace(key, std::forward<T>(value));
     }
 
     /**
@@ -224,16 +225,16 @@ public:
      * @param key Key.
      * @return 值。
      * @return Value.
-     * @note 如果键不存在，则会抛出异常。
+     * @note 如果键不存在,则会抛出异常。
      * @note If the key does not exist, an exception will be thrown.
      */
     template <typename T>
     T get(std::string_view key) const {
-        auto it = _data.find(std::string(key));
-        if (it == _data.end()) {
+        try {
+            return std::any_cast<T>(m_data.at(key));
+        } catch (const std::out_of_range &) {
             throw std::runtime_error("Key not found");
         }
-        return std::any_cast<T>(it->second);
     }
 
     /**
@@ -241,18 +242,18 @@ public:
      * @brief Check if the key exists.
      * @param key 键。
      * @param key Key.
-     * @return 如果键存在，则返回true；否则返回false。
+     * @return 如果键存在,则返回true；否则返回false。
      * @return If the key exists, return true; otherwise return false.
      */
-    bool contains(std::string_view key) const {
-        return _data.find(std::string(key)) != _data.end();
+    bool contains(std::string_view key) const noexcept {
+        return m_data.find(key) != m_data.end();
     }
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> _data;
+    emhash8::HashMap<std::string_view, std::any> m_data;
 #else
-    std::unordered_map<std::string, std::any> _data;
+    std::unordered_map<std::string_view, std::any> m_data;
 #endif
 };
 

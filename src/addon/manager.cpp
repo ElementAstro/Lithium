@@ -110,18 +110,32 @@ bool ComponentManager::Initialize() {
         // Check if the addon info is valid
         if (!addon_info.contains("modules") || addon_info.is_null()) {
             LOG_F(ERROR, "Failed to load module: {}", path.string());
+            LOG_F(ERROR, "Missing modules field in addon info");
+            m_AddonManager.lock()->removeModule(dir);
             continue;
         }
-        for (const auto &module_name :
-             addon_info["modules"].get<std::vector<std::string>>()) {
-            std::filesystem::path module_path = path / module_name;
+        // loading
+        for (const auto &module_info :
+             addon_info["modules"].get<json::array_t>()) {
+            if (module_info.is_null() || !module_info.contains("name") ||
+                !module_info.contains("entry")) {
+                LOG_F(ERROR, "Failed to load module: {}/{}", path.string(),
+                      module_info.dump());
+                continue;
+            }
+            auto module_name = module_info["name"].get<std::string>();
+            std::filesystem::path module_path =
+                path / module_name / constants::LIB_EXTENSION;
+
+            DLOG_F(INFO, "Loading module: {}/{}", path.string(), module_name);
+            // This step is to load the dynamic library
             if (!m_ModuleLoader.lock()->LoadModule(module_path.string(),
                                                    module_name)) {
                 LOG_F(ERROR, "Failed to load module: {}/{}", path.string(),
                       module_name);
                 continue;
             }
-            DLOG_F(INFO, "Loaded module: {}/{}", path.string(), module_name);
+            DLOG_F(INFO, "Loaded module: {}/{}", path.string(), module_info);
         }
     }
     return true;

@@ -15,11 +15,21 @@ Description: A simple C++ ABI wrapper
 #ifndef ATOM_TYPE_ABI_HPP
 #define ATOM_TYPE_ABI_HPP
 
-#include <cxxabi.h>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <typeinfo>
 #include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <dbghelp.h>
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
+#pragma comment(lib, "dbghelp.lib")
+#endif
+#else
+#include <cxxabi.h>
+#endif
 
 class DemangleHelper {
 public:
@@ -34,17 +44,30 @@ public:
     }
 
 private:
-    static std::string Demangle(const char* mangled_name) {
-        int status = -1;
-        std::unique_ptr<char, void (*)(void*)> demangled_name(
-            abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status),
-            std::free);
+    static std::string Demangle(std::string_view mangled_name) {
+#ifdef _WIN32
+        char buffer[1024];
+        DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer,
+                                            sizeof(buffer), UNDNAME_COMPLETE);
 
-        if (status == 0) {
-            return std::string(demangled_name.get());
+        if (length > 0) {
+            return std::string(buffer, length);
         } else {
             return std::string(mangled_name);
         }
+#else
+        int status = -1;
+        std::size_t length = 0;
+        std::unique_ptr<char, void (*)(void*)> demangled_name(
+            abi::__cxa_demangle(mangled_name.data(), nullptr, &length, &status),
+            std::free);
+
+        if (status == 0) {
+            return std::string(demangled_name.get(), length);
+        } else {
+            return std::string(mangled_name);
+        }
+#endif
     }
 };
 

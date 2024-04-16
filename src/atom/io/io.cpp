@@ -311,6 +311,10 @@ bool isFolderExists(const std::string &folderName) {
     return fs::exists(folderName) && fs::is_directory(folderName);
 }
 
+bool isFolderExists(const fs::path &folderName) {
+    return isFolderExists(folderName.string());
+}
+
 bool isFileExists(const std::string &fileName) {
     if (!isFileNameValid(fileName)) {
         return false;

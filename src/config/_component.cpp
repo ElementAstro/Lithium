@@ -26,11 +26,12 @@ Description: Config Component for Atom Addon
                                    "key not found");                     \
     }
 
-#define LITHIUM_CONFIG_KEY_CHECK(key)                                     \
-    if (!m_params.contains(key) || !m_params[key].is_string()) {          \
-        LOG_F(ERROR, "ConfigComponent::{}: {} not found", __func__, key); \
-        return createErrorResponse(__func__, {"error", "missing " + key}, \
-                                   "missing " + key);                     \
+#define LITHIUM_CONFIG_KEY_CHECK(key)                                        \
+    if (!m_params.contains(key) || !m_params[key].is_string()) {             \
+        LOG_F(ERROR, "ConfigComponent::{}: {} not found", __func__, key);    \
+        return createErrorResponse(__func__,                                 \
+                                   {"error", std::string("missing ") + key}, \
+                                   std::string("missing ") + key);           \
     }
 
 ConfigComponent::ConfigComponent(const std::string& name)

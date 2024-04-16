@@ -117,6 +117,8 @@ add_subdirectory(modules)
 
 add_subdirectory(driver)
 
+add_subdirectory(${lithium_src_dir}/config)
+
 #################################################################################
 #
 # General defines for compatibility across different platforms

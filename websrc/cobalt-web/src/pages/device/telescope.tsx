@@ -20,7 +20,6 @@ import {
 import { useImmer } from "use-immer";
 import { useEchoWebSocket } from "../../utils/websocketProvider";
 import { map } from "lodash";
-import Scrollbar from "react-smooth-scrollbar";
 
 const DeviceTelescopeGeneralControlPanel: React.FC = () => {
   const [geo_location, update_geo_location] = useImmer({
@@ -445,163 +444,161 @@ const DeviceTelescopeGeneralControlPanel: React.FC = () => {
           </Card>
         </Col>
         <Col xs={12} md={6}>
-          <Scrollbar continuousScrolling={true}>
-            <Card className="border-primary">
-              <Form.Group>
-                <Form.Label>设置赤道仪移动速率</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={selected_slew_speed}
-                  onChange={(event) => {
-                    set_selected_slew_speed(event.target.value);
-                  }}
-                >
-                  {slew_speed_selections.map((one_slew_selection, index) => {
-                    return (
-                      <option value={one_slew_selection.value} key={index}>
-                        {one_slew_selection.label}
-                      </option>
-                    );
-                  })}
-                </Form.Control>
-              </Form.Group>
-            </Card>
-            <Card className="border-info">
-              <Form.Group>
-                <Form.Check
-                  type="switch"
-                  id="fixTimeSwitch"
-                  label={fix_time_selection ? "固定时间模式" : "模拟手柄模式"}
-                  checked={fix_time_selection}
-                  onChange={(event) => {
-                    if (!arrow_in_action) {
-                      set_fix_time_selection(event.target.checked);
-                    } else {
-                      // 提示松开按钮
-                    }
-                  }}
-                />
-                {fix_time_selection && (
-                  <Form.Group>
-                    <Form.Label>选择手动移动时长(s)</Form.Label>
-                    <Form.Control
-                      as="select"
-                      value={moving_time}
-                      onChange={(event) => {
-                        set_moving_time(event.target.value);
-                      }}
-                    >
-                      {time_selections.map((one_time_select, index) => {
-                        return (
-                          <option value={one_time_select.value} key={index}>
-                            {one_time_select.label}
-                          </option>
-                        );
-                      })}
-                    </Form.Control>
-                  </Form.Group>
-                )}
-                <Card.Title>
-                  {fix_time_selection ? "固定移动时间" : "长按手柄模式"}
-                </Card.Title>
-                <Container>
-                  <Row>
-                    <Col xs={4}></Col>
-                    <Col xs={4}>
-                      <div className="d-grid gap-2">
-                        <Button
-                          variant="outline-primary"
-                          size="lg"
-                          onMouseDown={() => {
-                            arrow_action_func("up", "press");
-                          }}
-                          onMouseUp={() => {
-                            arrow_action_func("up", "release");
-                          }}
-                        >
-                          <ArrowUp />
-                        </Button>
-                      </div>
-                    </Col>
-                    <Col xs={4}></Col>
-                  </Row>
-                  <Row className="mt-3">
-                    <Col xs={4}>
-                      <div className="d-grid gap-2">
-                        <Button
-                          variant="outline-primary"
-                          size="lg"
-                          onMouseDown={() => {
-                            arrow_action_func("left", "press");
-                          }}
-                          onMouseUp={() => {
-                            arrow_action_func("left", "release");
-                          }}
-                        >
-                          <ArrowLeft />
-                        </Button>
-                      </div>
-                    </Col>
-                    <Col xs={4}>
-                      <div className="d-grid gap-2">
-                        <Button
-                          variant="danger"
-                          size="lg"
-                          onClick={() => {
-                            sendMessage(
-                              JSON.stringify({
-                                device_name: "telescope",
-                                instruction: "abort",
-                                params: [],
-                              })
-                            );
-                          }}
-                        >
-                          <XCircle />
-                        </Button>
-                      </div>
-                    </Col>
-                    <Col xs={4}>
-                      <div className="d-grid gap-2">
-                        <Button
-                          variant="outline-primary"
-                          size="lg"
-                          onMouseDown={() => {
-                            arrow_action_func("right", "press");
-                          }}
-                          onMouseUp={() => {
-                            arrow_action_func("right", "release");
-                          }}
-                        >
-                          <ArrowRight />
-                        </Button>
-                      </div>
-                    </Col>
-                  </Row>
-                  <Row className="mt-3">
-                    <Col xs={4}></Col>
-                    <Col xs={4}>
-                      <div className="d-grid gap-2">
-                        <Button
-                          variant="outline-primary"
-                          size="lg"
-                          onMouseDown={() => {
-                            arrow_action_func("down", "press");
-                          }}
-                          onMouseUp={() => {
-                            arrow_action_func("down", "release");
-                          }}
-                        >
-                          <ArrowDown />
-                        </Button>
-                      </div>
-                    </Col>
-                    <Col xs={4}></Col>
-                  </Row>
-                </Container>
-              </Form.Group>
-            </Card>
-          </Scrollbar>
+          <Card className="border-primary">
+            <Form.Group>
+              <Form.Label>设置赤道仪移动速率</Form.Label>
+              <Form.Control
+                as="select"
+                value={selected_slew_speed}
+                onChange={(event) => {
+                  set_selected_slew_speed(event.target.value);
+                }}
+              >
+                {slew_speed_selections.map((one_slew_selection, index) => {
+                  return (
+                    <option value={one_slew_selection.value} key={index}>
+                      {one_slew_selection.label}
+                    </option>
+                  );
+                })}
+              </Form.Control>
+            </Form.Group>
+          </Card>
+          <Card className="border-info">
+            <Form.Group>
+              <Form.Check
+                type="switch"
+                id="fixTimeSwitch"
+                label={fix_time_selection ? "固定时间模式" : "模拟手柄模式"}
+                checked={fix_time_selection}
+                onChange={(event) => {
+                  if (!arrow_in_action) {
+                    set_fix_time_selection(event.target.checked);
+                  } else {
+                    // 提示松开按钮
+                  }
+                }}
+              />
+              {fix_time_selection && (
+                <Form.Group>
+                  <Form.Label>选择手动移动时长(s)</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={moving_time}
+                    onChange={(event) => {
+                      set_moving_time(event.target.value);
+                    }}
+                  >
+                    {time_selections.map((one_time_select, index) => {
+                      return (
+                        <option value={one_time_select.value} key={index}>
+                          {one_time_select.label}
+                        </option>
+                      );
+                    })}
+                  </Form.Control>
+                </Form.Group>
+              )}
+              <Card.Title>
+                {fix_time_selection ? "固定移动时间" : "长按手柄模式"}
+              </Card.Title>
+              <Container>
+                <Row>
+                  <Col xs={4}></Col>
+                  <Col xs={4}>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("up", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("up", "release");
+                        }}
+                      >
+                        <ArrowUp />
+                      </Button>
+                    </div>
+                  </Col>
+                  <Col xs={4}></Col>
+                </Row>
+                <Row className="mt-3">
+                  <Col xs={4}>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("left", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("left", "release");
+                        }}
+                      >
+                        <ArrowLeft />
+                      </Button>
+                    </div>
+                  </Col>
+                  <Col xs={4}>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="danger"
+                        size="lg"
+                        onClick={() => {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "telescope",
+                              instruction: "abort",
+                              params: [],
+                            })
+                          );
+                        }}
+                      >
+                        <XCircle />
+                      </Button>
+                    </div>
+                  </Col>
+                  <Col xs={4}>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("right", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("right", "release");
+                        }}
+                      >
+                        <ArrowRight />
+                      </Button>
+                    </div>
+                  </Col>
+                </Row>
+                <Row className="mt-3">
+                  <Col xs={4}></Col>
+                  <Col xs={4}>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("down", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("down", "release");
+                        }}
+                      >
+                        <ArrowDown />
+                      </Button>
+                    </div>
+                  </Col>
+                  <Col xs={4}></Col>
+                </Row>
+              </Container>
+            </Form.Group>
+          </Card>
         </Col>
       </Row>
     </Container>

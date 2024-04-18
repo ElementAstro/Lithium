@@ -24,6 +24,7 @@ Description: Main Message Bus
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <shared_mutex>
 #include <string>
 #include <thread>
 #include <typeindex>
@@ -46,22 +47,8 @@ public:
         maxMessageBusSize_.store(max_queue_size);
     }
 
-    ~MessageBus() {
-        if (!subscribers_.empty()) {
-            subscribers_.clear();
-        }
-        if (!processingThreads_.empty()) {
-            for (auto &thread : processingThreads_) {
-                if (thread.second.joinable()) {
-#if __cplusplus >= 202002L
-                    thread.second.request_stop();
-#endif
-                    thread.second.join();
-                }
-            }
-            processingThreads_.clear();
-        }
-    }
+    ~MessageBus() { StopAllProcessingThreads(); }
+
     // -------------------------------------------------------------------
     // Common methods
     // -------------------------------------------------------------------
@@ -86,12 +73,11 @@ public:
         std::string fullTopic =
             namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
-        subscribersLock_.lock();
-        subscribers_[fullTopic].push_back({priority, std::any(callback)});
+        std::scoped_lock lock(subscribersLock_);
+        subscribers_[fullTopic].emplace_back(priority, std::move(callback));
         std::sort(
             subscribers_[fullTopic].begin(), subscribers_[fullTopic].end(),
             [](const auto &a, const auto &b) { return a.first > b.first; });
-        subscribersLock_.unlock();
 
         DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
     }
@@ -111,7 +97,7 @@ public:
         std::string fullTopic =
             namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
-        subscribersLock_.lock();
+        std::scoped_lock lock(subscribersLock_);
         auto it = subscribers_.find(fullTopic);
         if (it != subscribers_.end()) {
             auto &topicSubscribers = it->second;
@@ -125,7 +111,6 @@ public:
 
             DLOG_F(INFO, "Unsubscribed from topic: {}", fullTopic);
         }
-        subscribersLock_.unlock();
     }
 
     template <typename T>
@@ -138,9 +123,8 @@ public:
     void UnsubscribeAll(const std::string &namespace_ = "") {
         std::string fullTopic = namespace_.empty() ? "*" : (namespace_ + "::*");
 
-        subscribersLock_.lock();
+        std::scoped_lock lock(subscribersLock_);
         subscribers_.erase(fullTopic);
-        subscribersLock_.unlock();
 
         DLOG_F(INFO, "Unsubscribed from all topics");
     }
@@ -151,9 +135,15 @@ public:
         std::string fullTopic =
             namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
-        messageQueueLock_.lock();
-        messageQueue_.push({fullTopic, std::any(message)});
-        messageQueueLock_.unlock();
+        {
+            std::scoped_lock lock(messageQueueLock_);
+            if (messageQueue_.size() >= maxMessageBusSize_) {
+                LOG_F(WARNING,
+                      "Message queue is full. Discarding oldest message.");
+                messageQueue_.pop();
+            }
+            messageQueue_.emplace(fullTopic, message);
+        }
         messageAvailableFlag_.notify_one();
 
         DLOG_F(INFO, "Published message to topic: {}", fullTopic);
@@ -167,28 +157,31 @@ public:
         std::string fullTopic =
             namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
-        if (messageQueueLock_.try_lock_until(std::chrono::steady_clock::now() +
-                                             timeout)) {
-            messageQueue_.push({fullTopic, std::any(message)});
-            messageQueueLock_.unlock();
-            messageAvailableFlag_.notify_one();
-
-            DLOG_F(INFO, "Published message to topic: {}", fullTopic);
-            return true;
-        } else {
-            LOG_F(WARNING,
-                  "Failed to publish message to topic: {} due to timeout",
-                  fullTopic);
-            return false;
+        {
+            std::unique_lock lock(messageQueueLock_);
+            if (messageQueueCondition_.wait_for(lock, timeout, [this] {
+                    return messageQueue_.size() < maxMessageBusSize_;
+                })) {
+                messageQueue_.emplace(fullTopic, message);
+                messageAvailableFlag_.notify_one();
+                DLOG_F(INFO, "Published message to topic: {}", fullTopic);
+                return true;
+            } else {
+                LOG_F(WARNING,
+                      "Failed to publish message to topic: {} due to timeout",
+                      fullTopic);
+                return false;
+            }
         }
     }
 
     template <typename T>
     bool TryReceive(T &outMessage, std::chrono::milliseconds timeout =
                                        std::chrono::milliseconds(100)) {
-        std::unique_lock<std::mutex> lock(waitingMutex_);
+        std::unique_lock lock(waitingMutex_);
         if (messageAvailableFlag_.wait_for(
                 lock, timeout, [this] { return !messageQueue_.empty(); })) {
+            std::scoped_lock messageLock(messageQueueLock_);
             auto message = std::move(messageQueue_.front());
             messageQueue_.pop();
             outMessage = std::any_cast<T>(message.second);
@@ -201,64 +194,53 @@ public:
 
     template <typename T>
     void GlobalSubscribe(std::function<void(const T &)> callback) {
-        globalSubscribersLock_.lock();
-        globalSubscribers_.push_back({std::any(callback)});
-        globalSubscribersLock_.unlock();
+        std::scoped_lock lock(globalSubscribersLock_);
+        globalSubscribers_.emplace_back(std::move(callback));
     }
 
     template <typename T>
     void GlobalUnsubscribe(std::function<void(const T &)> callback) {
-        globalSubscribersLock_.lock();
+        std::scoped_lock lock(globalSubscribersLock_);
         globalSubscribers_.erase(
             std::remove_if(globalSubscribers_.begin(), globalSubscribers_.end(),
                            [&](const auto &subscriber) {
                                return subscriber.type() == typeid(callback);
                            }),
             globalSubscribers_.end());
-        globalSubscribersLock_.unlock();
     }
 
     template <typename T>
     void StartProcessingThread() {
         std::type_index typeIndex = typeid(T);
-#if __cplusplus >= 202002L
-        processingThreads_.emplace(
-            typeIndex,
-            std::jthread(
-                [&]()
-#else
-        processingThreads_.emplace(
-            typeIndex,
-            std::thread(
-                [&]()
-#endif
-                {
-                    while (isRunning_.load()) {
+        if (processingThreads_.find(typeIndex) == processingThreads_.end()) {
+            processingThreads_.emplace(
+                typeIndex,
+                std::jthread([this, typeIndex](std::stop_token stopToken) {
+                    while (!stopToken.stop_requested()) {
                         std::pair<std::string, std::any> message;
                         bool hasMessage = false;
 
-                        while (isRunning_.load()) {
-                            messageQueueLock_.lock();
+                        {
+                            std::unique_lock lock(waitingMutex_);
+                            messageAvailableFlag_.wait(lock, stopToken, [this] {
+                                return !messageQueue_.empty();
+                            });
+                            if (stopToken.stop_requested()) {
+                                break;
+                            }
+                            std::scoped_lock messageLock(messageQueueLock_);
                             if (!messageQueue_.empty()) {
                                 message = std::move(messageQueue_.front());
                                 messageQueue_.pop();
                                 hasMessage = true;
                             }
-                            messageQueueLock_.unlock();
-
-                            if (hasMessage) {
-                                break;
-                            }
-
-                            std::unique_lock<std::mutex> lock(waitingMutex_);
-                            messageAvailableFlag_.wait(lock);
                         }
 
                         if (hasMessage) {
                             const std::string &topic = message.first;
                             const std::any &data = message.second;
 
-                            subscribersLock_.lock();
+                            std::shared_lock subscribersLock(subscribersLock_);
                             auto it = subscribers_.find(topic);
                             if (it != subscribers_.end()) {
                                 try {
@@ -281,9 +263,8 @@ public:
                                           "message processing");
                                 }
                             }
-                            subscribersLock_.unlock();
 
-                            globalSubscribersLock_.lock();
+                            std::shared_lock globalLock(globalSubscribersLock_);
                             try {
                                 for (const auto &subscriber :
                                      globalSubscribers_) {
@@ -304,13 +285,13 @@ public:
                                       "Unknown error occurred during global "
                                       "message processing");
                             }
-                            globalSubscribersLock_.unlock();
 
                             DLOG_F(INFO, "Processed message on topic: {}",
                                    topic);
                         }
                     }
                 }));
+        }
     }
 
     template <typename T>
@@ -318,9 +299,7 @@ public:
         std::type_index typeIndex = typeid(T);
         auto it = processingThreads_.find(typeIndex);
         if (it != processingThreads_.end()) {
-#if __cplusplus >= 202002L
             it->second.request_stop();
-#endif
             it->second.join();
             processingThreads_.erase(it);
             DLOG_F(INFO, "Processing thread for type {} stopped",
@@ -329,12 +308,10 @@ public:
     }
 
     void StopAllProcessingThreads() {
-        isRunning_.store(false);
-        messageAvailableFlag_.notify_one();
         for (auto &thread : processingThreads_) {
-#if __cplusplus >= 202002L
             thread.second.request_stop();
-#endif
+        }
+        for (auto &thread : processingThreads_) {
             thread.second.join();
         }
         processingThreads_.clear();
@@ -342,31 +319,30 @@ public:
     }
 
 private:
-    std::unordered_map<std::string, std::vector<std::pair<int, std::any>>>
-        subscribers_;
-    std::mutex subscribersLock_;
-    std::queue<std::pair<std::string, std::any>> messageQueue_;
-    std::timed_mutex messageQueueLock_;
+    using SubscriberCallback = std::function<void(const std::any &)>;
+    using SubscriberList = std::vector<std::pair<int, SubscriberCallback>>;
+    using SubscriberMap = std::unordered_map<std::string, SubscriberList>;
+
+    SubscriberMap subscribers_;
+    std::shared_mutex subscribersLock_;
+
+    using MessageQueue = std::queue<std::pair<std::string, std::any>>;
+    MessageQueue messageQueue_;
+    std::mutex messageQueueLock_;
+    std::condition_variable messageQueueCondition_;
     std::condition_variable messageAvailableFlag_;
     std::mutex waitingMutex_;
-#if __cplusplus >= 202002L
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::type_index, std::jthread> processingThreads_;
-#else
-    std::unordered_map<std::type_index, std::jthread> processingThreads_;
-#endif
-#else
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::type_index, std::thread> processingThreads_;
-#else
-    std::unordered_map<std::type_index, std::thread> processingThreads_;
-#endif
-#endif
-    std::atomic<bool> isRunning_{true};
+
+    using ProcessingThread = std::jthread;
+    using ProcessingThreadMap =
+        std::unordered_map<std::type_index, ProcessingThread>;
+    ProcessingThreadMap processingThreads_;
+
     std::atomic_int maxMessageBusSize_{1000};
 
-    std::vector<std::any> globalSubscribers_;
-    std::mutex globalSubscribersLock_;
+    using GlobalSubscriberList = std::vector<SubscriberCallback>;
+    GlobalSubscriberList globalSubscribers_;
+    std::shared_mutex globalSubscribersLock_;
 };
 }  // namespace Atom::Server
 

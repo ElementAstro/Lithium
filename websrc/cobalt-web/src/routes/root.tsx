@@ -32,6 +32,7 @@ import ErrorPage from "../pages/error";
 import ObjectFinding from "../pages/skymap";
 import Dashboard from "../pages/dashboard/index";
 import PAAIndexPage from "../pages/sequence"
+import Console from "../pages/dashboard2/index";
 //import Test from "../pages/test/test";
 
 interface IndexRouteObjectPlus extends IndexRouteObject {
@@ -151,6 +152,12 @@ export const routesConfig: RouteObjectPlus[] = [
     element: <ErrorPage />,
     title: "错误",
     icon: <InfoCircle fill="#333" width={28} height={28}></InfoCircle>,
+  },
+  {
+    path: "/console",
+    element: <Console />,
+    title: "控制台",
+    icon: <Box fill="#333" width={28} height={28}></Box>,
   },
   //{
   //  path: "/test",

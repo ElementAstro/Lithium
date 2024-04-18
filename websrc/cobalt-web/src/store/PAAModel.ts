@@ -76,6 +76,7 @@ export interface PAAModel {
   // modified by gao
   can_start_paa: boolean; // 表示是否具备启动paa的状态。
   paa_in_progress: boolean; // 表示是否有一个paa进程在运行
+
   // 如果有相机在单独拍摄，但是没有paa在运行，can start paa也会是false。也就是说，即使没有paa在运行，也存在可能没法启动paa。
   check_PAA_start_status: Thunk<PAAModel>; // 这个函数就是用来专门刷新上面两个边练改的。
   change_paa_loop_step: Action<PAAModel, any>;
@@ -143,8 +144,9 @@ export const getPAAModel = (): PAAModel => ({
     };
     const res = await postPAAGenerate(props);
     // todo, 需要修改成当前脚本就是刚刚生成的
+    // 记得后续修改回原来的版本, all_step_data = res.data.script
     state.setState({
-      all_step_data: res.data.script,
+      all_step_data: res.data,
       this_script_type: res.data.type,
       this_script_setting: res.data.setting,
     });
@@ -166,10 +168,6 @@ export const getPAAModel = (): PAAModel => ({
         this_script_type: res.data.type,
         this_script_setting: res.data.setting,
       });
-      // state.setState({
-      //     setting_mode: 1,
-      //     current_script_info: getState().all_script_info.find((item) => item.file_name == payload.file_name)
-      // })
     }
   }),
   // todo modifed need test
@@ -200,7 +198,7 @@ export const getPAAModel = (): PAAModel => ({
       state.setState({
         current_script_info: payload,
         setting_mode: 1,
-        all_step_data: res.data.script,
+        all_step_data: res.data,
         this_script_type: res.data.type,
         this_script_setting: res.data.setting,
       });

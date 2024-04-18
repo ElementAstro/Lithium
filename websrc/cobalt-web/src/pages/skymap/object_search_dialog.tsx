@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Modal, Button } from "react-bootstrap";
 import ObjectSearch from "./object_search";
-import { XCricle } from "react-bootstrap-icons";
+import { XCircle } from "react-bootstrap-icons";
 import { ArrowUpCircle } from "react-bootstrap-icons";
 
 interface ObjectSearchDialogProps {
@@ -33,7 +33,7 @@ const ObjectSearchDialog: React.FC<ObjectSearchDialogProps> = (props) => {
         </Modal.Body>
         <Modal.Footer>
           <Button size="sm" variant="danger" onClick={() => setOpen(false)}>
-            <XCricle size={20} />
+            <XCircle size={20} />
             关闭
           </Button>
         </Modal.Footer>

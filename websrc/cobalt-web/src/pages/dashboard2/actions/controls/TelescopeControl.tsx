@@ -8,7 +8,7 @@ import {
   Button,
   Modal,
 } from "react-bootstrap";
-import { Gear, ArrowClockwise, XLg, Settings } from "react-bootstrap-icons";
+import { Gear, ArrowClockwise, XLg } from "react-bootstrap-icons";
 import { useEchoWebSocket } from "../../../../utils/websocketProvider";
 
 import SquareButton from "../../../device/SquareButton";
@@ -175,18 +175,18 @@ const DeviceTelescopeSimpleControlPanel: React.FC = () => {
   };
 
   return (
-    <Card
-      style={{
-        position: "absolute",
-        top: "50%",
-        backgroundColor: "transparent",
-        right: 5,
-        transform: "translateY(-50%)",
-        zIndex: 20,
-      }}
-    >
-      <Container>
-        <Row className="mb-1">
+    <Container fluid>
+      <Card
+        style={{
+          position: "absolute",
+          top: "50%",
+          backgroundColor: "transparent",
+          right: 5,
+          transform: "translateY(-50%)",
+          zIndex: 20,
+        }}
+      >
+        <Row className="mb-1" lg={12}>
           <Col>
             {fix_time_selection ? (
               <h4
@@ -216,7 +216,7 @@ const DeviceTelescopeSimpleControlPanel: React.FC = () => {
               style={{ width: "100%" }}
               onClick={() => set_setting_open(true)}
             >
-              <Settings /> 设置
+              <Gear /> 设置
             </SquareButton>
           </Col>
           <Col xs={4}>
@@ -324,63 +324,65 @@ const DeviceTelescopeSimpleControlPanel: React.FC = () => {
             </SquareButton>
           </Col>
         </Row>
-      </Container>
 
-      <Modal show={setting_open} onHide={() => set_setting_open(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>赤道仪手控器参数设置</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group controlId="selectSlewRate">
-            <Form.Label>设置赤道仪移动速率</Form.Label>
-            <Form.Control
-              as="select"
-              value={selected_slew_speed}
-              onChange={(event) => set_selected_slew_speed(event.target.value)}
-            >
-              {slew_speed_selections.map((one_slew_selection, index) => (
-                <option value={one_slew_selection.value} key={index}>
-                  {one_slew_selection.label}
-                </option>
-              ))}
-            </Form.Control>
-          </Form.Group>
-          <Form.Group controlId="switchMode" className="my-3">
-            <Form.Check
-              type="switch"
-              checked={fix_time_selection}
-              onChange={(event) => {
-                if (!arrow_in_action) {
-                  set_fix_time_selection(event.target.checked);
-                }
-              }}
-              label={fix_time_selection ? "固定时间模式" : "模拟手柄模式"}
-            />
-          </Form.Group>
-          {fix_time_selection && (
-            <Form.Group controlId="selectSlewTime">
-              <Form.Label>选择手动移动时长(s)</Form.Label>
+        <Modal show={setting_open} onHide={() => set_setting_open(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>赤道仪手控器参数设置</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group controlId="selectSlewRate">
+              <Form.Label>设置赤道仪移动速率</Form.Label>
               <Form.Control
                 as="select"
-                value={moving_time}
-                onChange={(event) => set_moving_time(event.target.value)}
+                value={selected_slew_speed}
+                onChange={(event) =>
+                  set_selected_slew_speed(event.target.value)
+                }
               >
-                {time_selections.map((one_time_select, index) => (
-                  <option value={one_time_select.value} key={index}>
-                    {one_time_select.label}
+                {slew_speed_selections.map((one_slew_selection, index) => (
+                  <option value={one_slew_selection.value} key={index}>
+                    {one_slew_selection.label}
                   </option>
                 ))}
               </Form.Control>
             </Form.Group>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={() => set_setting_open(false)}>
-            确认
-          </Button>
-        </Modal.Footer>
-      </Modal>
-    </Card>
+            <Form.Group controlId="switchMode" className="my-3">
+              <Form.Check
+                type="switch"
+                checked={fix_time_selection}
+                onChange={(event) => {
+                  if (!arrow_in_action) {
+                    set_fix_time_selection(event.target.checked);
+                  }
+                }}
+                label={fix_time_selection ? "固定时间模式" : "模拟手柄模式"}
+              />
+            </Form.Group>
+            {fix_time_selection && (
+              <Form.Group controlId="selectSlewTime">
+                <Form.Label>选择手动移动时长(s)</Form.Label>
+                <Form.Control
+                  as="select"
+                  value={moving_time}
+                  onChange={(event) => set_moving_time(event.target.value)}
+                >
+                  {time_selections.map((one_time_select, index) => (
+                    <option value={one_time_select.value} key={index}>
+                      {one_time_select.label}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={() => set_setting_open(false)}>
+              确认
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </Card>
+    </Container>
   );
 };
 

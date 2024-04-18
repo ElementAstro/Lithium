@@ -8,7 +8,7 @@ import {
   ArrowRightSquareFill,
   CursorFill,
 } from "react-bootstrap-icons";
-import HelperSnackbar from "@/pages/DeviceControl/Description/HelperSnackbar";
+import HelperSnackbar from '../../../device/description/helper_snackbar'
 
 const DeviceFocuserSimpleControlPanel: React.FC = () => {
   const [current_step, set_current_step] = React.useState(0);

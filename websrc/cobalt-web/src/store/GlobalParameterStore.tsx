@@ -22,6 +22,16 @@ export interface IGLobalParametersModels {
     IGLobalParametersModels,
     IGPFilterSelection[]
   >;
+
+  // for phone side local storage
+  ui_setting: IGPManualHelpSetting;
+  initial_ui_setting: Action<IGLobalParametersModels>;
+  load_ui_setting: Action<IGLobalParametersModels>;
+  save_ui_setting: Action<IGLobalParametersModels>;
+  set_ui_setting: Action<
+    IGLobalParametersModels,
+    Partial<IGPManualHelpSetting>
+  >;
 }
 
 export const GlobalParameterStore = (): IGLobalParametersModels => ({
@@ -135,5 +145,33 @@ export const GlobalParameterStore = (): IGLobalParametersModels => ({
     } else {
       return ret_struct;
     }
+  }),
+
+  // ui setting part
+  ui_setting: {
+    show_three_point_help: true,
+  },
+  initial_ui_setting: action((state) => {
+    state.ui_setting = {
+      show_three_point_help: true,
+    };
+  }),
+  load_ui_setting: action((state) => {
+    let loaded_ui_setting_string = localStorage.getItem("UISetting");
+    if (loaded_ui_setting_string != null) {
+      let loaded_ui_setting = JSON.parse(
+        loaded_ui_setting_string
+      ) as Partial<IGPManualHelpSetting>;
+      state.ui_setting = Object.assign({}, state.ui_setting, {
+        ...loaded_ui_setting,
+      });
+    }
+  }),
+  save_ui_setting: action((state) => {
+    localStorage.setItem("UISetting", JSON.stringify(state.ui_setting));
+  }),
+  set_ui_setting: action((state, payload) => {
+    state.ui_setting = Object.assign({}, state.ui_setting, { ...payload });
+    localStorage.setItem("UISetting", JSON.stringify(state.ui_setting));
   }),
 });

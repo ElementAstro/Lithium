@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Button, ButtonGroup } from "react-bootstrap";
 import {
-  AccessTime,
-  RadioCircle,
+  ClockFill,
+  Radioactive,
   GraphUp,
   Gear,
   StopFill,
@@ -17,7 +17,8 @@ import { ListGroup } from "react-bootstrap";
 import { Toast, ToastContainer } from "react-bootstrap";
 import "./style.less";
 
-import { ReactComponent as CameraShootSVG } from "../../icons/console/camera_shoot.svg";
+import { ReactSVG } from "react-svg";
+
 import { useEchoWebSocket } from "../../../../utils/websocketProvider";
 
 const Shoot = () => {
@@ -213,9 +214,13 @@ const Shoot = () => {
                   top: "50%",
                 }}
               >
-                <CameraShootSVG
-                  fill="white"
-                  style={{ width: 24, height: 24 }}
+                <ReactSVG
+                  beforeInjection={(svg) => {
+                    svg.classList.add("svg-class-name");
+                    svg.setAttribute("style", "width: 24px");
+                    svg.setAttribute("style", "height: 24px");
+                  }}
+                  src="../../../../icons/console/camera_shoot.svg"
                 />
               </Button>
             )
@@ -237,7 +242,7 @@ const Shoot = () => {
           )}
           <div className="shoot-button-exposure-time">
             <Button onClick={on_exposure_time_clicked}>
-              <AccessTime /> {exposure_time}秒
+              <ClockFill /> {exposure_time}秒
             </Button>
           </div>
           {loop ? (
@@ -302,7 +307,7 @@ const Shoot = () => {
               overlay={<Tooltip>星点数据</Tooltip>}
             >
               <Button variant="primary" onClick={on_hfr_show_clicked}>
-                <RadioCircle />
+                <Radioactive />
               </Button>
             </OverlayTrigger>
             <OverlayTrigger

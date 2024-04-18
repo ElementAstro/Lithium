@@ -23,17 +23,40 @@ GlobalSharedPtrManager &GlobalSharedPtrManager::getInstance() {
 }
 
 void GlobalSharedPtrManager::removeSharedPtr(const std::string &key) {
-    std::unique_lock<std::shared_mutex> lock(mtx);
+    std::unique_lock lock(mtx);
     sharedPtrMap.erase(key);
 }
 
+void GlobalSharedPtrManager::removeExpiredWeakPtrs() {
+    std::unique_lock lock(mtx);
+    auto it = sharedPtrMap.begin();
+    while (it != sharedPtrMap.end()) {
+        try {
+            if (std::any_cast<std::weak_ptr<void>>(it->second).expired()) {
+                it = sharedPtrMap.erase(it);
+            } else {
+                ++it;
+            }
+        } catch (const std::bad_any_cast &) {
+            ++it;
+        }
+    }
+}
+
+void GlobalSharedPtrManager::clearAll() {
+    std::unique_lock lock(mtx);
+    sharedPtrMap.clear();
+}
+
+size_t GlobalSharedPtrManager::size() const {
+    std::shared_lock lock(mtx);
+    return sharedPtrMap.size();
+}
+
 void GlobalSharedPtrManager::printSharedPtrMap() const {
-    std::shared_lock<std::shared_mutex> lock(mtx);
-    std::cout << "Shared pointer map:" << std::endl;
-    for (const auto &it : sharedPtrMap) {
-        std::ostringstream oss;
-        oss << it.second.type().name();
-        std::cout << "- Key: " << it.first << ", Type: " << oss.str()
-                  << std::endl;
+    std::shared_lock lock(mtx);
+    std::cout << "GlobalSharedPtrManager:\n";
+    for (const auto &pair : sharedPtrMap) {
+        std::cout << "  " << pair.first << "\n";
     }
 }

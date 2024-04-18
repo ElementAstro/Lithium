@@ -15,6 +15,8 @@ Description: Commander
 #ifndef ATOM_SERVER_COMMANDER_IMPL_HPP
 #define ATOM_SERVER_COMMANDER_IMPL_HPP
 
+#include "commander.hpp"
+
 template <typename Result, typename Argument>
 CommandDispatcher<Result, Argument>::~CommandDispatcher() {
     m_handlers.clear();
@@ -97,8 +99,8 @@ Result CommandDispatcher<Result, Argument>::dispatch(const std::string &name,
                                                      const Argument &data) {
     std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
 
-    // Max: Here we check if a decorator is registered for the command and run it in advance
-    // Check if a decorator is registered for the command
+    // Max: Here we check if a decorator is registered for the command and run
+    // it in advance Check if a decorator is registered for the command
     auto it = m_decorators.find(name);
     if (it != m_decorators.end()) {
         auto decorator = it->second;

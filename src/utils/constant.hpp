@@ -15,6 +15,9 @@ Description: Constants for Lithium
 #ifndef LITHIUM_UTILS_CONSTANTS_HPP
 #define LITHIUM_UTILS_CONSTANTS_HPP
 
+#include <string>
+#include <vector>
+
 class constants {
 public:
 #ifdef _WIN32
@@ -47,6 +50,36 @@ public:
 #endif
 #else
     static constexpr const char* MODULE_FOLDER = "./modules";
+#endif
+
+#ifdef _WIN32
+    static constexpr const char* COMPILER = "cl.exe";
+#elif __APPLE__
+    static constexpr const char* COMPILER = "clang++";
+#else
+    static constexpr const char* COMPILER = "g++";
+#endif
+
+#ifdef _WIN32
+    static const std::vector<std::string> COMMON_COMPILERS = {
+        "cl.exe", "g++.exe", "clang++.exe"};
+    static const std::vector<std::string> COMPILER_PATHS = {
+        "C:\\Program Files (x86)\\Microsoft Visual "
+        "Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.29."
+        "30133\\bin\\Hostx64\\x64",
+        "C:\\Program Files\\Microsoft Visual "
+        "Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.35."
+        "32215\\bin\\Hostx64\\x64",
+        "C:\\msys64\\mingw64\\bin", "C:\\MinGW\\bin",
+        "C:\\Program Files\\LLVM\\bin"};
+#elif __APPLE__
+    static const std::vector<std::string> COMMON_COMPILERS = {"clang++", "g++"};
+    static const std::vector<std::string> COMPILER_PATHS = {
+        "/usr/bin", "/usr/local/bin", "/opt/local/bin"};
+#elif __linux__
+    static const std::vector<std::string> COMMON_COMPILERS = {"g++", "clang++"};
+    static const std::vector<std::string> COMPILER_PATHS = {"/usr/bin",
+                                                            "/usr/local/bin"};
 #endif
 
     // Env info

@@ -71,8 +71,8 @@ function Welcome() {
         }}
       ></div>
       <OpeningAnimation animationDone={animationDone}>
-        <img
-          src="/background.png"
+        {/*<img
+          src="/assets/imgs/bg.png"
           alt="Welcome"
           style={{
             position: "absolute",
@@ -81,7 +81,7 @@ function Welcome() {
             top: 0,
             left: 0,
           }}
-        />
+        />*/}
         <Title animationDone={animationDone}>Cobalt WebClient</Title>
       </OpeningAnimation>
     </div>

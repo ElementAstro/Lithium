@@ -86,7 +86,7 @@ bool Sandbox::run() {
         commandLine += ' ' + arg;
     }
 
-    if (!CreateProcess(nullptr, Atom::Utils::CharToLPWSTR(commandLine.data()),
+    if (!CreateProcess(nullptr, commandLine.data(),
                        nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr,
                        nullptr, &startupInfo, &processInfo)) {
         return false;

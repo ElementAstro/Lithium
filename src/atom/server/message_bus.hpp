@@ -222,7 +222,7 @@ public:
 
                         {
                             std::unique_lock lock(waitingMutex_);
-                            messageAvailableFlag_.wait(lock, stopToken, [this] {
+                            messageAvailableFlag_.wait(lock, [this] {
                                 return !messageQueue_.empty();
                             });
                             if (stopToken.stop_requested()) {
@@ -319,7 +319,8 @@ public:
     }
 
 private:
-    using SubscriberCallback = std::function<void(const std::any &)>;
+    // using SubscriberCallback = std::function<void(const std::any &)>;
+    using SubscriberCallback = std::any;
     using SubscriberList = std::vector<std::pair<int, SubscriberCallback>>;
     using SubscriberMap = std::unordered_map<std::string, SubscriberList>;
 

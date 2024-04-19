@@ -23,11 +23,10 @@ public:
 #ifdef _WIN32
 #if defined(__MINGW32__) || defined(__MINGW64__)
     static constexpr const char* PATH_SEPARATOR = "/";
-    static constexpr const char* LIB_EXTENSION = ".dll";
 #else
     static constexpr const char* PATH_SEPARATOR = "\\";
-    static constexpr const char* LIB_EXTENSION = ".dll";
 #endif
+    static constexpr const char* LIB_EXTENSION = ".dll";
 #elif defined(__APPLE__)
     static constexpr const char* PATH_SEPARATOR = "/";
     static constexpr const char* LIB_EXTENSION = ".dylib";
@@ -61,25 +60,14 @@ public:
 #endif
 
 #ifdef _WIN32
-    static const std::vector<std::string> COMMON_COMPILERS = {
-        "cl.exe", "g++.exe", "clang++.exe"};
-    static const std::vector<std::string> COMPILER_PATHS = {
-        "C:\\Program Files (x86)\\Microsoft Visual "
-        "Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.29."
-        "30133\\bin\\Hostx64\\x64",
-        "C:\\Program Files\\Microsoft Visual "
-        "Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.35."
-        "32215\\bin\\Hostx64\\x64",
-        "C:\\msys64\\mingw64\\bin", "C:\\MinGW\\bin",
-        "C:\\Program Files\\LLVM\\bin"};
+    static std::vector<std::string> COMMON_COMPILERS;
+    static std::vector<std::string> COMPILER_PATHS;
 #elif __APPLE__
-    static const std::vector<std::string> COMMON_COMPILERS = {"clang++", "g++"};
-    static const std::vector<std::string> COMPILER_PATHS = {
-        "/usr/bin", "/usr/local/bin", "/opt/local/bin"};
+    static std::vector<std::string> COMMON_COMPILERS;
+    static std::vector<std::string> COMPILER_PATHS;
 #elif __linux__
-    static const std::vector<std::string> COMMON_COMPILERS = {"g++", "clang++"};
-    static const std::vector<std::string> COMPILER_PATHS = {"/usr/bin",
-                                                            "/usr/local/bin"};
+    static std::vector<std::string> COMMON_COMPILERS;
+    static std::vector<std::string> COMPILER_PATHS;
 #endif
 
     // Env info
@@ -91,5 +79,27 @@ public:
     static constexpr const char* LITHIUM_ADDON_MANAGER = "lithium.addon.addon";
     static constexpr const char* LITHIUM_UTILS_ENV = "lithium.utils.env";
 };
+
+#ifdef _WIN32
+std::vector<std::string> constants::COMMON_COMPILERS = {"cl.exe", "g++.exe",
+                                                        "clang++.exe"};
+std::vector<std::string> constants::COMPILER_PATHS = {
+    "C:\\Program Files (x86)\\Microsoft Visual "
+    "Studio\\2019\\Community\\VC\\Tools\\MSVC\\14.29."
+    "30133\\bin\\Hostx64\\x64",
+    "C:\\Program Files\\Microsoft Visual "
+    "Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.35."
+    "32215\\bin\\Hostx64\\x64",
+    "C:\\msys64\\mingw64\\bin", "C:\\MinGW\\bin",
+    "C:\\Program Files\\LLVM\\bin"};
+#elif __APPLE__
+std::vector<std::string> constants::COMMON_COMPILERS = {"clang++", "g++"};
+std::vector<std::string> constants::COMPILER_PATHS = {
+    "/usr/bin", "/usr/local/bin", "/opt/local/bin"};
+#elif __linux__
+std::vector<std::string> constants::COMMON_COMPILERS = {"g++", "clang++"};
+std::vector<std::string> constants::COMPILER_PATHS = {"/usr/bin",
+                                                      "/usr/local/bin"};
+#endif
 
 #endif  // LITHIUM_UTILS_CONSTANTS_HPP

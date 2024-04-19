@@ -182,7 +182,6 @@ set(component_module
 
     ${lithium_component_dir}/addons.cpp
     ${lithium_component_dir}/compiler.cpp
-    ${lithium_component_dir}/finder.cpp
     ${lithium_component_dir}/loader.cpp
     ${lithium_component_dir}/manager.cpp
     ${lithium_component_dir}/sandbox.cpp

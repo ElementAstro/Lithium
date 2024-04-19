@@ -19,6 +19,7 @@ Description: Compiler
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 namespace Lithium {
 class Compiler {
@@ -69,8 +70,8 @@ private:
      * 查找可用的编译器
      * @return 可用的编译器列表
      */
-    [[nodiscard]]std::vector<std::string> findAvailableCompilers();
-    
+    [[nodiscard]] std::vector<std::string> findAvailableCompilers();
+
     /**
      * 运行外部 shell 命令，并将标准输入输出流转发到命令的标准输入输出流中
      * @param command 要运行的命令

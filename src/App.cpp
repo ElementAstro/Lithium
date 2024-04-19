@@ -26,6 +26,10 @@ Description: Main Entry
 using namespace Lithium::Terminal;
 #endif
 
+#if ENABLE_WEBPANEL
+#include "server/App.hpp"
+#endif
+
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -168,15 +172,17 @@ int main(int argc, char *argv[]) {
                 terminal.run();
             }
         } else {
-            if (Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
-                Lithium::MyApp->SetConfig(
-                    {{"key", "config/server/debug"}, {"value", false}});
-                DLOG_F(INFO, "Disable debug mode");
-            }
+            Lithium::MyApp->SetConfig(
+                {{"key", "config/server/debug"}, {"value", false}});
+            DLOG_F(INFO, "Disable debug mode");
         }
     } catch (const std::bad_any_cast &e) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
     }
+
+#if ENABLE_WEBPANEL
+    runServer(argc, argv);
+#endif
 
     return 0;
 }

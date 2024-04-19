@@ -22,9 +22,9 @@ Description: Main
 
 #include <iostream>
 
-void run(const oatpp::base::CommandLineArguments& args) {
+void run() {
     /* Register Components in scope of run() method */
-    AppComponent components(args);
+    AppComponent components;
 
     Runner runner(OATPP_GET_COMPONENT(oatpp::Object<ConfigDto>),
                   OATPP_GET_COMPONENT(std::shared_ptr<oatpp::async::Executor>));
@@ -34,10 +34,10 @@ void run(const oatpp::base::CommandLineArguments& args) {
     runner.join();
 }
 
-int runServer(int argc, const char* argv[]) {
+int runServer() {
     oatpp::base::Environment::init();
 
-    run(oatpp::base::CommandLineArguments(argc, argv));
+    run();
 
     oatpp::base::Environment::destroy();
 

@@ -14,14 +14,33 @@ Description: Lithium Server Runner
 
 #include "Runner.hpp"
 
+#include "ErrorHandler.hpp"
+
 #include "controller/AsyncClientController.hpp"
+#include "controller/AsyncConfigController.hpp"
+/*
+#include "controller/AsyncDeviceController.hpp"
+#include "controller/AsyncIOController.hpp"
+#include "controller/AsyncStaticController.hpp"
+#include "controller/AsyncSystemController.hpp"
+*/
+
+#include "oatpp-swagger/AsyncController.hpp"
 
 #include "oatpp-openssl/server/ConnectionProvider.hpp"
 
 #include "oatpp/network/tcp/server/ConnectionProvider.hpp"
+#include "oatpp/web/protocol/http/incoming/SimpleBodyDecoder.hpp"
 #include "oatpp/web/server/AsyncHttpConnectionHandler.hpp"
 
 #include "oatpp/network/Server.hpp"
+
+#include "oatpp-zlib/EncoderProvider.hpp"
+
+#define ADD_CONTROLLER(controller, router)                 \
+    auto controller##_ptr = controller::createShared();    \
+    docEndpoints.append(controller##_ptr->getEndpoints()); \
+    router->getRouter()->addController(controller##_ptr);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // APIServer
@@ -49,9 +68,35 @@ APIServer::APIServer(const oatpp::Object<ServerConfigDto>& config,
                 {config->host, config->port, oatpp::network::Address::IP_4});
     }
 
+    auto components =
+        std::make_shared<oatpp::web::server::HttpProcessor::Components>(
+            m_router);
+    /* Add content encoders */
+    auto encoders = std::make_shared<
+        oatpp::web::protocol::http::encoding::ProviderCollection>();
+    encoders->add(std::make_shared<oatpp::zlib::DeflateEncoderProvider>());
+    encoders->add(std::make_shared<oatpp::zlib::GzipEncoderProvider>());
+    /* Set content encoders */
+    components->contentEncodingProviders = encoders;
+
+    auto decoders = std::make_shared<
+        oatpp::web::protocol::http::encoding::ProviderCollection>();
+    decoders->add(std::make_shared<oatpp::zlib::DeflateDecoderProvider>());
+    decoders->add(std::make_shared<oatpp::zlib::GzipDecoderProvider>());
+    /* Set Body Decoder */
+    components->bodyDecoder = std::make_shared<
+        oatpp::web::protocol::http::incoming::SimpleBodyDecoder>(decoders);
+
     m_connectionHandler =
-        oatpp::web::server::AsyncHttpConnectionHandler::createShared(m_router,
+        oatpp::web::server::AsyncHttpConnectionHandler::createShared(components,
                                                                      executor);
+    OATPP_COMPONENT(
+        std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
+
+        apiObjectMapper,
+        Constants::COMPONENT_REST_API);  // get ObjectMapper component
+    m_connectionHandler->setErrorHandler(
+        std::make_shared<ErrorHandler>(apiObjectMapper));
 }
 
 std::shared_ptr<oatpp::web::server::HttpRouter> APIServer::getRouter() {
@@ -59,7 +104,7 @@ std::shared_ptr<oatpp::web::server::HttpRouter> APIServer::getRouter() {
 }
 
 void APIServer::start() {
-    m_serverThread = std::thread([this] {
+    m_serverThread = std::jthread([this] {
         oatpp::network::Server server(m_connectionProvider,
                                       m_connectionHandler);
         server.run();
@@ -78,7 +123,20 @@ Runner::Runner(const oatpp::Object<ConfigDto>& config,
 
     auto hostServer =
         std::make_shared<APIServer>(config->hostAPIServer, executor);
-    hostServer->getRouter()->addController(std::make_shared<HostController>());
+
+    oatpp::web::server::api::Endpoints docEndpoints;
+    ADD_CONTROLLER(ClientController, hostServer);
+    ADD_CONTROLLER(ConfigController, hostServer);
+    /*
+    ADD_CONTROLLER(DeviceController, hostServer);
+    ADD_CONTROLLER(IOController, hostServer);
+    ADD_CONTROLLER(StaticController, hostServer);
+    ADD_CONTROLLER(SystemController, hostServer);
+    */
+
+    hostServer->getRouter()->addController(
+        oatpp::swagger::AsyncController::createShared(docEndpoints));
+
     m_servers.push_back(hostServer);
 
     /* client API server */
@@ -86,16 +144,14 @@ Runner::Runner(const oatpp::Object<ConfigDto>& config,
 
     if (config->clientAPIServer->host == config->hostAPIServer->host &&
         config->clientAPIServer->port == config->hostAPIServer->port) {
-        hostServer->getRouter()->addController(
-            std::make_shared<ClientController>());
+        ADD_CONTROLLER(ClientController, hostServer);
 
     } else {
         assertServerConfig(config->clientAPIServer, "clientAPIServer", true);
 
         auto clientServer =
             std::make_shared<APIServer>(config->clientAPIServer, executor);
-        clientServer->getRouter()->addController(
-            std::make_shared<ClientController>());
+        ADD_CONTROLLER(ClientController, clientServer);
         m_servers.push_back(clientServer);
     }
 }

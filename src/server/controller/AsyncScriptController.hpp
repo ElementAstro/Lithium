@@ -26,8 +26,6 @@ Description: Async Script Controller
 #ifndef Lithium_SCRIPTCONTROLLER_HPP
 #define Lithium_SCRIPTCONTROLLER_HPP
 
-#include "config.h"
-
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"

@@ -15,8 +15,6 @@ Description: Process Route
 #ifndef LITHIUM_ASYNC_PROCESS_CONTROLLER_HPP
 #define LITHIUM_ASYNC_PROCESS_CONTROLLER_HPP
 
-#include "config.h"
-
 #include "data/ProcessDto.hpp"
 #include "data/StatusDto.hpp"
 

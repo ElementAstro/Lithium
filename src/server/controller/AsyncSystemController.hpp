@@ -23,8 +23,6 @@ Description: System Route
 #include "atom/system/module/wifi.hpp"
 #include "atom/system/system.hpp"
 
-#include "config.h"
-
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"

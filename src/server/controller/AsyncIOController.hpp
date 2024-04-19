@@ -15,8 +15,6 @@ Description: IO Route
 #ifndef LITHIUM_ASYNC_IO_CONTROLLER_HPP
 #define LITHIUM_ASYNC_IO_CONTROLLER_HPP
 
-#include "config.h"
-
 #include "atom/io/compress.hpp"
 #include "atom/io/file.hpp"
 #include "atom/io/io.hpp"

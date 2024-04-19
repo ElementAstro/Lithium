@@ -15,8 +15,6 @@ Description: Device Routes
 #ifndef LITHIUM_ASYNC_DEVICE_CONTROLLER_HPP
 #define LITHIUM_ASYNC_DEVICE_CONTROLLER_HPP
 
-#include "config.h"
-
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"

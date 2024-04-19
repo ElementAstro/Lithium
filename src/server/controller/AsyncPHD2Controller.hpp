@@ -17,8 +17,6 @@ Description: PHD2 Route
 
 #include "lithiumapp.hpp"
 
-#include "config.h"
-
 #include "data/PHD2Dto.hpp"
 #include "data/StatusDto.hpp"
 

@@ -18,6 +18,7 @@ set(${PROJECT_NAME}_SOURCES
     huffman.cpp
     math.cpp
     md5.cpp
+    mhash.cpp
 )
 
 # Headers
@@ -30,6 +31,7 @@ set(${PROJECT_NAME}_HEADERS
     huffman.hpp
     math.hpp
     md5.hpp
+    mhash.hpp
 )
 
 # Build Object Library

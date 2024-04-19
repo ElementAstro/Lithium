@@ -14,6 +14,8 @@ Description: Main Entry
 
 #include "lithiumapp.hpp"
 
+#include "preload.hpp"
+
 #include "atom/log/loguru.hpp"
 #include "atom/server/global_ptr.hpp"
 #include "atom/system/crash.hpp"
@@ -26,9 +28,7 @@ Description: Main Entry
 using namespace Lithium::Terminal;
 #endif
 
-#if ENABLE_WEBPANEL
 #include "server/App.hpp"
-#endif
 
 #include <chrono>
 #include <ctime>
@@ -180,9 +180,7 @@ int main(int argc, char *argv[]) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
     }
 
-#if ENABLE_WEBPANEL
-    runServer(argc, argv);
-#endif
+    runServer();
 
     return 0;
 }

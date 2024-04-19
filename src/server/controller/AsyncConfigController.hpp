@@ -15,8 +15,6 @@ Description: Async Config Controller
 #ifndef LITHIUM_ASYNC_SCRIPT_CONTROLLER_HPP
 #define LITHIUM_ASYNC_SCRIPT_CONTROLLER_HPP
 
-#include "config.h"
-
 #include "oatpp/core/macro/codegen.hpp"
 #include "oatpp/core/macro/component.hpp"
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
@@ -32,11 +30,11 @@ Description: Async Config Controller
 
 class ConfigController : public oatpp::web::server::api::ApiController {
 public:
-    static std::shared_ptr<Lithium::ConfigManager> m_configManager;
+    static std::weak_ptr<Lithium::ConfigManager> m_configManager;
 
     ConfigController(const std::shared_ptr<ObjectMapper>& objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper) {
-            m_configManager = GetPtr<Lithium::ConfigManager>("lithium.config");
+            m_configManager = GetWeakPtr<Lithium::ConfigManager>("lithium.config");
         }
 
     // ----------------------------------------------------------------
@@ -73,16 +71,16 @@ public:
 
             auto res = ReturnConfigDTO::createShared();
             res->status = "getConfig";
-            if (!m_configManager) {
+            if (m_configManager.expired()) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "ConfigManager is null";
             } else {
                 std::string path = body->path.getValue("");
-                if (auto tmp = m_configManager->getValue(path); tmp) {
+                if (auto tmp = m_configManager.lock()->getValue(path); tmp) {
                     res->status = "success";
                     res->code = 200;
-                    res->value = tmp.dump();
+                    res->value = tmp.value().dump();
                     res->type = "string";
                 } else {
                     res->status = "error";
@@ -119,14 +117,14 @@ public:
             auto res = StatusDto::createShared();
             res->command = "setConfig";
 
-            if (!m_configManager) {
+            if (m_configManager.expired()) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "ConfigManager is null";
             } else {
                 std::string path = body->path.getValue("");
                 std::string value = body->value.getValue("");
-                if (m_configManager->setValue(path, value)) {
+                if (m_configManager.lock()->setValue(path, value)) {
                     res->status = "success";
                     res->code = 200;
                 } else {
@@ -162,13 +160,13 @@ public:
             auto res = StatusDto::createShared();
             res->command = "deleteConfig";
 
-            if (!m_configManager) {
+            if (m_configManager.expired()) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "ConfigManager is null";
             } else {
                 std::string path = body->path.getValue("");
-                if (m_configManager->deleteValue(path)) {
+                if (m_configManager.lock()->deleteValue(path)) {
                     res->status = "success";
                     res->code = 200;
                 } else {
@@ -205,13 +203,13 @@ public:
             auto res = StatusDto::createShared();
             res->command = "loadConfig";
 
-            if (!m_configManager) {
+            if (m_configManager.expired()) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "ConfigManager is null";
             } else {
                 std::string path = body->path.getValue("");
-                if (m_configManager->loadFromFile(path)) {
+                if (m_configManager.lock()->loadFromFile(path)) {
                     res->status = "success";
                     res->code = 200;
                 } else {
@@ -248,14 +246,14 @@ public:
 
             auto res = StatusDto::createShared();
             res->command = "saveConfig";
-            if (!m_configManager) {
+            if (m_configManager.expired()) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "ConfigManager is null";
             } else {
                 std::string path = body->path.getValue("");
                 bool isAbsolute = body->isAbsolute.getValue(true);
-                if (m_configManager->saveToFile(path)) {
+                if (m_configManager.lock()->saveToFile(path)) {
                     res->status = "success";
                     res->code = 200;
                 } else {
@@ -270,8 +268,7 @@ public:
     };
 };
 
-std::shared_ptr<Lithium::ConfigManager> ConfigController::m_configManager =
-    GetPtr<Lithium::ConfigManager>("lithium.config");
+std::weak_ptr<Lithium::ConfigManager> ConfigController::m_configManager = {};
 
 #include OATPP_CODEGEN_END(ApiController)  //<- End Codegen
 

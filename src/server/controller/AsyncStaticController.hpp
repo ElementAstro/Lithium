@@ -20,8 +20,6 @@ Description: Static Route
 #include "oatpp/parser/json/mapping/ObjectMapper.hpp"
 #include "oatpp/web/server/api/ApiController.hpp"
 
-#include "config.h"
-
 #include <filesystem>
 #include <fstream>
 #include <sstream>

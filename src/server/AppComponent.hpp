@@ -15,8 +15,6 @@ Description: App Components
 #ifndef LITHIUM_APP_COMPONENT_HPP
 #define LITHIUM_APP_COMPONENT_HPP
 
-#include "config.h"
-
 #include "config/Config.hpp"
 #include "config/HubsConfig.hpp"
 
@@ -28,7 +26,6 @@ Description: App Components
 
 #include "ErrorHandler.hpp"
 
-#include "oatpp/core/base/CommandLineArguments.hpp"
 #include "oatpp/core/macro/component.hpp"
 #include "oatpp/core/utils/ConversionUtils.hpp"
 #include "oatpp/network/monitor/ConnectionInactivityChecker.hpp"
@@ -63,42 +60,45 @@ Description: App Components
 #include <cstdlib>
 
 /**
- *  Class which creates and holds Application components and registers components in oatpp::base::Environment
- *  Order of components initialization is from top to bottom
+ *  Class which creates and holds Application components and registers
+ * components in oatpp::base::Environment Order of components initialization is
+ * from top to bottom
  */
 class AppComponent {
-private:
-  oatpp::base::CommandLineArguments m_cmdArgs;
 public:
-  AppComponent(const oatpp::base::CommandLineArguments& cmdArgs)
-    : m_cmdArgs(cmdArgs)
-  {}
+    AppComponent() = default;
+
 public:
+    /**
+     *  Swagger component
+     */
+    SwaggerComponent swaggerComponent;
 
-  /**
-   * Create config component
-   */
-  OATPP_CREATE_COMPONENT(oatpp::Object<ConfigDto>, appConfig)([this] {
-    auto config = ConfigDto::createShared();
+    /**
+     * Create config component
+     */
+    OATPP_CREATE_COMPONENT(oatpp::Object<ConfigDto>, appConfig)
+    ([this] {
+        auto config = ConfigDto::createShared();
 
-    auto hostServer = ServerConfigDto::createShared();
-    hostServer->host = "0.0.0.0";
-    hostServer->port = 8000;
+        auto hostServer = ServerConfigDto::createShared();
+        hostServer->host = "0.0.0.0";
+        hostServer->port = 8000;
 
-    auto clientServer = ServerConfigDto::createShared();
-    clientServer->host = "0.0.0.0";
-    clientServer->port = 8001;
+        auto clientServer = ServerConfigDto::createShared();
+        clientServer->host = "0.0.0.0";
+        clientServer->port = 8001;
 
-    config->hostAPIServer = hostServer;
-    config->clientAPIServer = clientServer;
+        config->hostAPIServer = hostServer;
+        config->clientAPIServer = clientServer;
 
-    return config;
-  }());
+        return config;
+    }());
 
-  /**
-   * Hub configs
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<HubsConfig>, hubConfig)
+    /**
+     * Hub configs
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<HubsConfig>, hubConfig)
     ([] {
         // We specify the default config here
         auto config = std::make_shared<HubsConfig>(nullptr);
@@ -112,56 +112,95 @@ public:
         return config;
     }());
 
-  /**
-   * Create Async Executor
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor)([] {
-    return std::make_shared<oatpp::async::Executor>();
-  }());
+    /**
+     * Create Async Executor
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor)
+    ([] { return std::make_shared<oatpp::async::Executor>(); }());
 
-  /**
-   *  Create Router component
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, httpRouter)([] {
-    return oatpp::web::server::HttpRouter::createShared();
-  }());
+    /**
+     *  Create Router component
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>,
+                           httpRouter)
+    ([] { return oatpp::web::server::HttpRouter::createShared(); }());
 
-  /**
-   *  Create ObjectMapper component to serialize/deserialize DTOs in Contoller's API
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, apiObjectMapper)(Constants::COMPONENT_REST_API,[] {
-    auto mapper = oatpp::parser::json::mapping::ObjectMapper::createShared();
-    mapper->getSerializer()->getConfig()->includeNullFields = false;
-    return mapper;
-  }());
+    /**
+     *  Create ObjectMapper component to serialize/deserialize DTOs in
+     * Contoller's API
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
+                           apiObjectMapper)
+    (Constants::COMPONENT_REST_API, [] {
+        /* create serializer and deserializer configurations */
+        auto serializeConfig =
+            oatpp::parser::json::mapping::Serializer::Config::createShared();
+        auto deserializeConfig =
+            oatpp::parser::json::mapping::Deserializer::Config::createShared();
 
-  /**
-   *  Create ObjectMapper component to serialize/deserialize DTOs in WS communication
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>, wsApiObjectMapper)(Constants::COMPONENT_WS_API,[] {
-    auto mapper = oatpp::parser::json::mapping::ObjectMapper::createShared();
-    mapper->getSerializer()->getConfig()->includeNullFields = false;
-    return mapper;
-  }());
+        /* enable beautifier */
+        serializeConfig->useBeautifier = true;
 
-  /**
-   *  Create games sessions Registry component.
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<Registry>, gamesSessionsRegistry)([] {
-    return std::make_shared<Registry>();
-  }());
+        auto objectMapper =
+            oatpp::parser::json::mapping::ObjectMapper::createShared(
+                serializeConfig, deserializeConfig);
+        objectMapper->getDeserializer()->getConfig()->allowUnknownFields =
+            false;
 
-  /**
-   *  Create websocket connection handler
-   */
-  OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, websocketConnectionHandler)(Constants::COMPONENT_WS_API, [] {
-    OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
-    OATPP_COMPONENT(std::shared_ptr<Registry>, registry);
-    auto connectionHandler = oatpp::websocket::AsyncConnectionHandler::createShared(executor);
-    connectionHandler->setSocketInstanceListener(registry);
-    return connectionHandler;
-  }());
+        // objectMapper->getSerializer()->getConfig()->enabledInterpretations =
+        // {
+        //     "system::memory"};
+        // objectMapper->getDeserializer()->getConfig()->enabledInterpretations
+        // = {
+        //     "system::memory"};
+        return objectMapper;
+    }());
 
+    /**
+     *  Create ObjectMapper component to serialize/deserialize DTOs in WS
+     * communication
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
+                           wsApiObjectMapper)
+    (Constants::COMPONENT_WS_API, [] {
+        auto mapper =
+            oatpp::parser::json::mapping::ObjectMapper::createShared();
+        mapper->getSerializer()->getConfig()->includeNullFields = false;
+        return mapper;
+    }());
+
+    /**
+     *  Create games sessions Registry component.
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<Registry>, gamesSessionsRegistry)
+    ([] { return std::make_shared<Registry>(); }());
+
+    
+
+    /**
+     *  Create websocket connection handler
+     */
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
+                           websocketConnectionHandler)
+    (Constants::COMPONENT_WS_API, [] {
+        OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, executor);
+        OATPP_COMPONENT(std::shared_ptr<Registry>, registry);
+        auto connectionHandler =
+            oatpp::websocket::AsyncConnectionHandler::createShared(executor);
+        connectionHandler->setSocketInstanceListener(registry);
+        return connectionHandler;
+    }());
+
+    /**
+     * Create Debug virtual interface component
+     */
+#if ENABLE_DEBUG
+    OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::network::virtual_::Interface>,
+                           virtualInterface)
+    ([] {
+        return oatpp::network::virtual_::Interface::obtainShared("virtualhost");
+    }());
+#endif
 };
 
 #endif /* LITHIUM_APP_COMPONENT_HPP */

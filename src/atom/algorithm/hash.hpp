@@ -239,6 +239,29 @@ inline std::uint32_t jenkins_one_at_a_time_hash(const std::string& s) noexcept {
     return jenkins_one_at_a_time_hash(std::string_view{s});
 }
 
+inline uint32_t quickHash(const char* str) {
+    if (!str)
+        return 0;
+
+    unsigned int h = 0;
+    for (; *str; str++) {
+        h = 31 * h + *str;
+    }
+    return h;
+}
+
+inline uint32_t quickHash(const void* tmp, uint32_t size) {
+    if (!tmp)
+        return 0;
+
+    const char* str = (const char*)tmp;
+    unsigned int h = 0;
+    for (uint32_t i = 0; i < size; ++i, ++str) {
+        h = 31 * h + *str;
+    }
+    return h;
+}
+
 }  // namespace Atom::Algorithm
 
 #endif

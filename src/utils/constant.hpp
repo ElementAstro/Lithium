@@ -78,6 +78,9 @@ public:
     static constexpr const char* LITHIUM_MODULE_LOADER = "lithium.addon.loader";
     static constexpr const char* LITHIUM_ADDON_MANAGER = "lithium.addon.addon";
     static constexpr const char* LITHIUM_UTILS_ENV = "lithium.utils.env";
+
+    static std::vector<std::string> LITHIUM_RESOURCES;
+    static std::vector<std::string_view> LITHIUM_RESOURCES_SHA256;
 };
 
 #ifdef _WIN32
@@ -101,5 +104,7 @@ std::vector<std::string> constants::COMMON_COMPILERS = {"g++", "clang++"};
 std::vector<std::string> constants::COMPILER_PATHS = {"/usr/bin",
                                                       "/usr/local/bin"};
 #endif
+
+
 
 #endif  // LITHIUM_UTILS_CONSTANTS_HPP

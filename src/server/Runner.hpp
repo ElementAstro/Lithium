@@ -22,6 +22,9 @@ Description: Lithium Server Runner
 #include "oatpp/network/ConnectionHandler.hpp"
 #include "oatpp/network/ConnectionProvider.hpp"
 
+#include "oatpp-websocket/AsyncConnectionHandler.hpp"
+#include "oatpp/web/server/AsyncHttpConnectionHandler.hpp"
+
 #include "oatpp/core/async/Executor.hpp"
 
 class APIServer {
@@ -29,7 +32,8 @@ private:
     std::shared_ptr<oatpp::web::server::HttpRouter> m_router;
     std::shared_ptr<oatpp::network::ServerConnectionProvider>
         m_connectionProvider;
-    std::shared_ptr<oatpp::network::ConnectionHandler> m_connectionHandler;
+    std::shared_ptr<oatpp::web::server::AsyncHttpConnectionHandler>
+        m_connectionHandler;
 
 private:
 #if __cplusplus >= 202002L

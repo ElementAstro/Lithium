@@ -67,23 +67,6 @@ namespace Atom::Utils {
                                      const uint32_t &seed2);
 
 /**
- * @brief Calculates the quick hash value for a given string.
- *
- * @param str The input string.
- * @return uint32_t The calculated hash value.
- */
-[[nodiscard]] uint32_t quickHash(const char *str);
-
-/**
- * @brief Calculates the quick hash value for a given data buffer.
- *
- * @param str The input data buffer.
- * @param size The size of the data buffer.
- * @return uint32_t The calculated hash value.
- */
-[[nodiscard]] uint32_t quickHash(const void *str, uint32_t size);
-
-/**
  * @brief Converts binary data to a hexadecimal string representation.
  *
  * @param data The input data buffer.
@@ -91,7 +74,7 @@ namespace Atom::Utils {
  * @param output The output buffer to store the hexadecimal string (length must
  * be len * 2).
  */
-void hexstring_from_data(const void *data, size_t len, char *output);
+void hexstringFromData(const void *data, size_t len, char *output);
 
 /**
  * @brief Converts binary data to a hexadecimal string representation.
@@ -100,7 +83,7 @@ void hexstring_from_data(const void *data, size_t len, char *output);
  * @param len The length of the data buffer.
  * @return std::string The hexadecimal string representation.
  */
-[[nodiscard]] std::string hexstring_from_data(const void *data, size_t len);
+[[nodiscard]] std::string hexstringFromData(const void *data, size_t len);
 
 /**
  * @brief Converts a string to a hexadecimal string representation.
@@ -108,7 +91,7 @@ void hexstring_from_data(const void *data, size_t len, char *output);
  * @param data The input string.
  * @return std::string The hexadecimal string representation.
  */
-[[nodiscard]] std::string hexstring_from_data(const std::string &data);
+[[nodiscard]] std::string hexstringFromData(const std::string &data);
 
 /**
  * @brief Converts a hexadecimal string representation to binary data.
@@ -118,7 +101,7 @@ void hexstring_from_data(const void *data, size_t len, char *output);
  * @param output The output buffer to store the binary data (length must be
  * length / 2).
  */
-void data_from_hexstring(const char *hexstring, size_t length, void *output);
+void dataFromHexstring(const char *hexstring, size_t length, void *output);
 
 /**
  * @brief Converts a hexadecimal string representation to binary data.
@@ -129,7 +112,7 @@ void data_from_hexstring(const char *hexstring, size_t length, void *output);
  * @throw std::invalid_argument If the input hexstring is not a valid
  * hexadecimal string.
  */
-[[nodiscard]] std::string data_from_hexstring(const char *hexstring,
+[[nodiscard]] std::string dataFromHexstring(const char *hexstring,
                                               size_t length);
 
 /**
@@ -140,7 +123,7 @@ void data_from_hexstring(const char *hexstring, size_t length, void *output);
  * @throw std::invalid_argument If the input hexstring is not a valid
  * hexadecimal string.
  */
-[[nodiscard]] std::string data_from_hexstring(const std::string &data);
+[[nodiscard]] std::string dataFromHexstring(const std::string &data);
 }  // namespace Atom::Utils
 
 #endif

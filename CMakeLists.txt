@@ -95,6 +95,18 @@ include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
 
+find_package(OpenSSL REQUIRED)
+if(OpenSSL_FOUND)
+    message("-- Found OpenSSL ${OPENSSL_VERSION}: ${OPENSSL_LIBRARIES}")
+else()
+    message("-- OpenSSL Not Found")
+endif()
+
+find_package(CFITSIO REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(SQLite3 REQUIRED)
+find_package(fmt REQUIRED)
+
 #################################################################################
 #
 # Subdirectories of Lithium
@@ -118,6 +130,7 @@ add_subdirectory(modules)
 add_subdirectory(driver)
 
 add_subdirectory(${lithium_src_dir}/config)
+add_subdirectory(${lithium_src_dir}/server)
 
 #################################################################################
 #
@@ -219,18 +232,6 @@ set(Lithium_module
     ${lithium_src_dir}/LithiumApp.cpp
 )
 
-find_package(OpenSSL REQUIRED)
-if(OpenSSL_FOUND)
-    message("-- Found OpenSSL ${OPENSSL_VERSION}: ${OPENSSL_LIBRARIES}")
-else()
-    message("-- OpenSSL Not Found")
-endif()
-
-find_package(CFITSIO REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(SQLite3 REQUIRED)
-find_package(fmt REQUIRED)
-
 #################################################################################
 # Main
 
@@ -239,6 +240,7 @@ add_executable(lithium_server ${lithium_src_dir}/app.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
 target_link_libraries(lithium_server lithium_server-library)
+target_link_libraries(lithium_server lithium_webserver)
 target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)

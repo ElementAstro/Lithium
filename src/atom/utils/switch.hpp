@@ -43,6 +43,8 @@ public:
     using Func = std::function<void(Args...)>;
     using DefaultFunc = std::optional<Func>;
 
+    StringSwitch() = default;
+
     // Register a case with the given string and function
     void registerCase(const std::string &str, Func func) {
         if (cases_.find(str) != cases_.end()) {

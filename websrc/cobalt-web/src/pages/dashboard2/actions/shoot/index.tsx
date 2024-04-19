@@ -21,6 +21,8 @@ import { ReactSVG } from "react-svg";
 
 import { useEchoWebSocket } from "../../../../utils/websocketProvider";
 
+import { CaptureButton } from "../../CaptureButton";
+
 const Shoot = () => {
   const [can_shoot, set_can_shoot] = React.useState(false);
   const [exposure_time_select_open, set_exposure_time_select_open] =
@@ -205,7 +207,7 @@ const Shoot = () => {
                 <StopFill />
               </Button>
             ) : (
-              <Button
+              <CaptureButton
                 variant="primary"
                 onClick={start_exposure}
                 style={{
@@ -222,10 +224,10 @@ const Shoot = () => {
                   }}
                   src="../../../../icons/console/camera_shoot.svg"
                 />
-              </Button>
+              </CaptureButton>
             )
           ) : (
-            <Button
+            <CaptureButton
               variant="danger"
               style={{
                 position: "absolute",
@@ -238,7 +240,7 @@ const Shoot = () => {
               }}
             >
               <XLg />
-            </Button>
+            </CaptureButton>
           )}
           <div className="shoot-button-exposure-time">
             <Button onClick={on_exposure_time_clicked}>

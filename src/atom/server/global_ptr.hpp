@@ -32,7 +32,7 @@ Description: Global shared pointer manager
 #include "atom/experiment/noncopyable.hpp"
 
 #define GetPtr GlobalSharedPtrManager::getInstance().getSharedPtr
-#define GetWeakPtr GlobalSharedPtrManager::getInstance().getWeakPtr
+#define GetWeakPtr GlobalSharedPtrManager::getInstance().getWeakPtrFromSharedPtr
 #define AddPtr GlobalSharedPtrManager::getInstance().addSharedPtr
 #define RemovePtr GlobalSharedPtrManager::getInstance().removeSharedPtr
 #define GetPtrOrCreate \
@@ -133,6 +133,19 @@ public:
      */
     template <typename T>
     [[nodiscard]] std::shared_ptr<T> getSharedPtrFromWeakPtr(
+        const std::string &key);
+
+    /**
+     * @brief getWeakPtrFromSharedPtr retrieves a weak pointer from a shared
+     * pointer in the shared pointer map with the specified key.
+     *
+     * @tparam T the type of the shared pointer.
+     * @param key the key associated with the shared pointer.
+     * @return the weak pointer if the shared pointer is valid, an empty weak
+     * pointer otherwise.
+     */
+    template <typename T>
+    [[nodiscard]] std::weak_ptr<T> getWeakPtrFromSharedPtr(
         const std::string &key);
 
     /**
@@ -273,6 +286,21 @@ std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtrFromWeakPtr(
         }
     }
     return std::shared_ptr<T>();
+}
+
+template <typename T>
+std::weak_ptr<T> GlobalSharedPtrManager::getWeakPtrFromSharedPtr(
+    const std::string &key) {
+    std::shared_lock lock(mtx);
+    auto it = sharedPtrMap.find(key);
+    if (it != sharedPtrMap.end()) {
+        try {
+            return std::weak_ptr(std::any_cast<std::shared_ptr<T>>(it->second));
+        } catch (const std::bad_any_cast &) {
+            return std::weak_ptr<T>();
+        }
+    }
+    return std::weak_ptr<T>();
 }
 
 template <typename T>

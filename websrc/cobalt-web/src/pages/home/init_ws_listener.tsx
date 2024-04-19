@@ -19,6 +19,12 @@ const WS_LISTENER_COMP: React.FC = () => {
     GlobalStore.actions.ProcessDataSaveStore.get_newest_jpg;
   const load_saved_targets =
     GlobalStore.actions.TargetListStore.load_all_targets;
+  const initial_ui_setting =
+    GlobalStore.actions.GlobalParameterStore.initial_ui_setting;
+  const load_ui_setting =
+    GlobalStore.actions.GlobalParameterStore.load_ui_setting;
+  const get_all_global_parameters =
+    GlobalStore.actions.GlobalParameterStore.get_all_paramters;
 
   const process_ws_message = (message: any) => {
     // listening signals and other important data
@@ -77,7 +83,10 @@ const WS_LISTENER_COMP: React.FC = () => {
   // useEffect
   React.useEffect(() => {
     load_saved_targets();
+    initial_ui_setting();
+    load_ui_setting();
     register_send_message(sendMessage);
+    get_all_global_parameters();
     // get history guiding data
     // todo fatal bug, this sendMessage is not available at this step.
     setTimeout(() => {

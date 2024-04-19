@@ -81,6 +81,7 @@ const ConsoleSelectComp: React.FC = () => {
                     boxShadow: "none",
                     cursor: "pointer",
                   }}
+                  className="outline-primary"
                   onClick={() => {
                     GlobalStore.actions.console.setState({
                       menu: item.id as any,
@@ -108,6 +109,7 @@ const ConsoleSelectComp: React.FC = () => {
                     checked={state.menu === item.id}
                     value={item.id}
                     style={{ marginTop: "-8px" }}
+                    size={24}
                   />
                 </Card>
               ))}

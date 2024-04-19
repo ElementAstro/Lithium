@@ -10,6 +10,8 @@ import { Router } from "react-router";
 import translationEN from "./locales/en/translation.json";
 import translationZH from "./locales/zh/translation.json";
 
+import "./index.less";
+
 i18n
   .use(initReactI18next) // passes i18n down to react-i18next
   .init({
@@ -32,7 +34,7 @@ i18n
     },
   });
 
-import "./index.css";
+import "./index.less";
 import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(

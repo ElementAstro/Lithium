@@ -107,6 +107,7 @@ declare interface IGPParameterExplain {
 
 declare interface IGPPorfileList {
   data: any;
+  success: boolean;
   current_profile: string;
   all_profiles: Array<string>;
 }
@@ -114,4 +115,8 @@ declare interface IGPPorfileList {
 declare interface IGPFilterSelection {
   label: string;
   value: number | string;
+}
+
+declare interface IGPManualHelpSetting {
+  show_three_point_help: boolean;
 }

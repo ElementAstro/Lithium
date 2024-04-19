@@ -17,9 +17,7 @@ import {
 import Welcome from "../pages/home/animation";
 import Home from "../pages/home";
 import ServerSearch from "../pages/server";
-import DeviceConnection from "../pages/connect";
 import DeviceControlPanelPage from "../pages/device";
-import ConfigManager from "../pages/settings";
 import ModuleManager from "../pages/module";
 import Help from "../pages/about/help";
 import AboutPage from "../pages/about";
@@ -30,7 +28,6 @@ import Connect from "../pages/connection/index";
 import Helper from "../pages/helper";
 import ErrorPage from "../pages/error";
 import ObjectFinding from "../pages/skymap";
-import Dashboard from "../pages/dashboard/index";
 import PAAIndexPage from "../pages/sequence"
 import Console from "../pages/dashboard2/index";
 //import Test from "../pages/test/test";
@@ -63,23 +60,10 @@ export const routesConfig: RouteObjectPlus[] = [
     errorElement: <ErrorPage />
   },
   {
-    path: "/dashboard",
-    element: <Dashboard />,
-    title: "Dashboard",
-    icon: <Box fill="#333" width={28} height={28}></Box>,
-    errorElement: <ErrorPage />
-  },
-  {
     path: "/server",
     element: <ServerSearch />,
     title: "服务器连接",
     icon: <Server fill="#333" width={28} height={28}></Server>,
-  },
-  {
-    path: "/device_connect",
-    element: <DeviceConnection />,
-    title: "设备连接",
-    icon: <Motherboard fill="#333" width={28} height={28}></Motherboard>,
   },
   {
     path: "/device",
@@ -92,12 +76,6 @@ export const routesConfig: RouteObjectPlus[] = [
     element: <Connect />,
     title: "连接",
     icon: <Motherboard fill="#333" width={28} height={28}></Motherboard>,
-  },
-  {
-    path: "/settings",
-    element: <ConfigManager />,
-    title: "配置管理",
-    icon: <Gear fill="#333" width={28} height={28}></Gear>,
   },
   {
     path : "/config",

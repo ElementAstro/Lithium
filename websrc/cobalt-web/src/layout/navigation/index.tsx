@@ -11,7 +11,8 @@ import {
   Gear,
   Webcam,
   Box,
-  Bookmark
+  Bookmark,
+  HouseAdd,
 } from "react-bootstrap-icons";
 import { useTranslation } from "react-i18next";
 
@@ -21,12 +22,13 @@ function Navigation() {
   const [language, setLanguage] = useState("en");
 
   const navLinks = [
-    { to: "/dashboard", text: "Dashboard", icon: House },
+    { to: "/home", text: "Home", icon: HouseAdd },
+    { to: "/console", text: "Dashboard", icon: House },
     { to: "/server", text: "Server Finder", icon: Info },
-    { to: "/device_connect", text: "Device Connector", icon: Webcam },
+    { to: "/connect", text: "Device Connector", icon: Webcam },
     { to: "/device", text: "Device Control", icon: Box },
     { to: "/skymap", text: "Skymap & Object", icon: Map },
-    { to: "/settings", text: "Settings", icon: Gear },
+    { to: "/config", text: "Settings", icon: Gear },
     { to: "/about", text: "About", icon: Bookmark },
   ];
 
@@ -36,7 +38,7 @@ function Navigation() {
 
   return (
     <>
-      <Navbar key="xxl" expand="xxl" className="bg-body-tertiary mb-3">
+      <Navbar key="xxl" expand="xxl" className="bg-body-tertiary">
         <Container fluid>
           <Navbar.Brand href="#home">
             <img

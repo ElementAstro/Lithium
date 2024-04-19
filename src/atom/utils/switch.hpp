@@ -18,6 +18,8 @@ Description: Smart Switch just like javascript
 #include <functional>
 #include <optional>
 #include <string>
+#include <type_traits>
+#include <vector>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -25,122 +27,88 @@ Description: Smart Switch just like javascript
 #endif
 
 #include "atom/error/exception.hpp"
+#include "atom/experiment/noncopyable.hpp"
 
 namespace Atom::Utils {
 /**
- * @brief A class for implementing a switch statement with string cases.
+ * @brief A class for implementing a switch statement with string cases,
+ * enhanced with C++17/20 features.
  *
  * @tparam DefaultFunc The function type for handling the default case.
  * @tparam Args The types of additional arguments to pass to the functions.
  */
 template <typename... Args>
-class StringSwitch {
+class StringSwitch : public NonCopyable {
 public:
-    using Func = std::function<void(Args...)>; /**< The function type for
-                                                  handling a case. */
-    using DefaultFunc = std::optional<Func>;   // Optional default function
+    using Func = std::function<void(Args...)>;
+    using DefaultFunc = std::optional<Func>;
 
-    /**
-     * @brief Registers a case with the given string and function.
-     *
-     * @param str The string to match against.
-     * @param func The function to call if the string matches.
-     */
-    void registerCase(const std::string &str, Func func);
+    // Register a case with the given string and function
+    void registerCase(const std::string &str, Func func) {
+        if (cases_.find(str) != cases_.end()) {
+            throw Error::ObjectAlreadyExist("Case already registered");
+        }
+        cases_[str] = std::move(func);  // Use move semantics for efficiency
+    }
 
-    /**
-     * @brief Unregisters a case with the given string.
-     *
-     * @param str The string to match against.
-     */
-    void unregisterCase(const std::string &str);
+    // Unregister a case with the given string
+    void unregisterCase(const std::string &str) { cases_.erase(str); }
 
-    /**
-     * @brief Clears all registered cases.
-     */
-    void clearCases();
+    // Clear all registered cases
+    void clearCases() { cases_.clear(); }
 
-    /**
-     * @brief Matches the given string against the registered cases.
-     *
-     * @param str The string to match against.
-     * @param args Additional arguments to pass to the function.
-     * @return true if a match was found, false otherwise.
-     */
-    bool match(const std::string &str, Args... args);
+    // Match the given string against the registered cases
+    bool match(const std::string &str, Args... args) {
+        auto iter = cases_.find(str);
+        if (iter != cases_.end()) {
+            std::invoke(iter->second, args...);
+            return true;
+        }
 
-    /**
-     * @brief Sets the default function to be called if no match is found.
-     *
-     * @param func The function to call for the default case.
-     */
-    void setDefault(DefaultFunc func);
+        if (defaultFunc_) {
+            std::invoke(*defaultFunc_,
+                        args...);  // Use optional's value() for clarity
+            return true;
+        }
 
-    /**
-     * @brief Returns a vector of all registered cases.
-     *
-     * @return A vector of all registered cases.
-     */
-    std::vector<std::string> getCases() const;
+        return false;
+    }
+
+    // Set the default function to be called if no match is found
+    void setDefault(DefaultFunc func) { defaultFunc_ = std::move(func); }
+
+    // Get a vector of all registered cases
+    std::vector<std::string> getCases() const {
+        std::vector<std::string> caseList;
+        for (const auto &[key, value] :
+             cases_) {  // Use structured bindings for clarity
+            caseList.push_back(key);
+        }
+        return caseList;
+    }
+
+    // C++17 deduction guide for easier initialization
+    template <typename T,
+              typename = std::enable_if_t<std::is_invocable_v<T, Args...>>>
+    void registerCase(const std::string &str, T &&func) {
+        registerCase(str, std::forward<T>(func));
+    }
+
+    // C++20 designated initializers for easier case registration
+    StringSwitch(std::initializer_list<std::pair<std::string, Func>> initList) {
+        for (auto [str, func] : initList) {
+            registerCase(str, std::move(func));
+        }
+    }
 
 private:
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string, Func> cases_;
 #else
-    std::unordered_map<std::string, Func>
-        cases_; /**< The map of registered cases. */
+    std::unordered_map<std::string, Func> cases_;
 #endif
-    DefaultFunc
-        defaultFunc_; /**< The default function to call if no match is found. */
+    DefaultFunc defaultFunc_;
 };
-
-template <typename... Args>
-void StringSwitch<Args...>::registerCase(const std::string &str, Func func) {
-    if (cases_.find(str) != cases_.end()) {
-        throw Error::ObjectAlreadyExist("Case already registered");
-    }
-    cases_[str] = func;
-}
-
-template <typename... Args>
-void StringSwitch<Args...>::unregisterCase(const std::string &str) {
-    cases_.erase(str);
-}
-
-template <typename... Args>
-void StringSwitch<Args...>::clearCases() {
-    cases_.clear();
-}
-
-template <typename... Args>
-bool StringSwitch<Args...>::match(const std::string &str, Args... args) {
-    auto iter = cases_.find(str);
-    if (iter != cases_.end()) {
-        std::invoke(iter->second, args...);
-        return true;
-    }
-
-    if constexpr (!std::is_void_v<DefaultFunc>) {
-        std::invoke(defaultFunc_.value(), args...);
-        return true;
-    }
-
-    return false;
-}
-
-template <typename... Args>
-void StringSwitch<Args...>::setDefault(DefaultFunc func) {
-    defaultFunc_ = func;
-}
-
-template <typename... Args>
-std::vector<std::string> StringSwitch<Args...>::getCases() const {
-    std::vector<std::string> caseList;
-    for (const auto &entry : cases_) {
-        caseList.push_back(entry.first);
-    }
-    return caseList;
-}
 
 }  // namespace Atom::Utils
 

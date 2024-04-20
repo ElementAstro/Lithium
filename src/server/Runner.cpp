@@ -18,12 +18,10 @@ Description: Lithium Server Runner
 
 #include "controller/AsyncClientController.hpp"
 #include "controller/AsyncConfigController.hpp"
-/*
 #include "controller/AsyncDeviceController.hpp"
 #include "controller/AsyncIOController.hpp"
 #include "controller/AsyncStaticController.hpp"
 #include "controller/AsyncSystemController.hpp"
-*/
 
 #include "oatpp-swagger/AsyncController.hpp"
 
@@ -127,12 +125,10 @@ Runner::Runner(const oatpp::Object<ConfigDto>& config,
     oatpp::web::server::api::Endpoints docEndpoints;
     ADD_CONTROLLER(ClientController, hostServer);
     ADD_CONTROLLER(ConfigController, hostServer);
-    /*
     ADD_CONTROLLER(DeviceController, hostServer);
     ADD_CONTROLLER(IOController, hostServer);
     ADD_CONTROLLER(StaticController, hostServer);
     ADD_CONTROLLER(SystemController, hostServer);
-    */
 
     hostServer->getRouter()->addController(
         oatpp::swagger::AsyncController::createShared(docEndpoints));

@@ -15,10 +15,52 @@ Description: Better Exception Library
 #ifndef ATOM_ERROR_EXCEPTION_HPP
 #define ATOM_ERROR_EXCEPTION_HPP
 
+#include <exception>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 namespace Atom::Error {
+
+class Exception : public std::exception {
+public:
+    template <typename... Args>
+    Exception(const char *file, int line, const char *func, Args &&...args)
+        : file_(file),
+          line_(line),
+          func_(func),
+          thread_id_(std::this_thread::get_id()) {
+        std::ostringstream oss;
+        ((oss << std::forward<Args>(args)), ...);
+        message_ = oss.str();
+    }
+
+    const char *what() const noexcept override;
+
+    const std::string &getFile() const;
+    int getLine() const;
+    const std::string &getFunction() const;
+    const std::string &getMessage() const;
+    std::thread::id getThreadId() const;
+
+private:
+    std::string getCurrentTime() const;
+
+    std::string getStackTrace() const;
+
+    std::string file_;
+    int line_;
+    std::string func_;
+    std::string message_;
+    mutable std::string full_message_;
+    std::thread::id thread_id_;
+};
+
+#define THROW_EXCEPTION(...) \
+    throw Exception(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
 class ObjectAlreadyExist : public std::logic_error {
 public:
     explicit ObjectAlreadyExist(const std::string &msg)

@@ -25,8 +25,8 @@ namespace Atom::Utils {
  * @param key 加密密钥
  * @return 加密后的密文数据
  */
-[[nodiscard]] std::string encryptAES(
-    std::string_view plaintext, std::string_view key);
+[[nodiscard]] std::string encryptAES(std::string_view plaintext,
+                                     std::string_view key);
 
 /**
  * @brief 使用AES算法对输入的密文进行解密。
@@ -35,8 +35,8 @@ namespace Atom::Utils {
  * @param key 解密密钥
  * @return 解密后的明文数据
  */
-[[nodiscard]] std::string decryptAES(
-    std::string_view ciphertext, std::string_view key);
+[[nodiscard]] std::string decryptAES(std::string_view ciphertext,
+                                     std::string_view key);
 
 /**
  * @brief 使用Zlib库对输入的数据进行压缩。
@@ -54,7 +54,13 @@ namespace Atom::Utils {
  */
 [[nodiscard]] std::string decompress(std::string_view data);
 
-[[nodiscard]]std::string calculateSha256(std::string_view filename);
+/**
+ * @brief 计算文件的SHA-256哈希值。
+ *
+ * @param filename 文件名
+ * @return 文件的SHA-256哈希值
+ */
+[[nodiscard]] std::string calculateSha256(std::string_view filename);
 }  // namespace Atom::Utils
 
 #endif

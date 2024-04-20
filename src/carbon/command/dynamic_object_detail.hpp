@@ -40,11 +40,11 @@ class Dynamic_Object_Function final : public Proxy_Function_Base {
 public:
     Dynamic_Object_Function(std::string t_type_name,
                             const Proxy_Function &t_func,
-                            bool t_is_attribute = false);
+                            bool t_is_attribute);
 
     Dynamic_Object_Function(std::string t_type_name,
                             const Proxy_Function &t_func, const Type_Info &t_ti,
-                            bool t_is_attribute = false);
+                            bool t_is_attribute);
 
     Dynamic_Object_Function &operator=(const Dynamic_Object_Function) = delete;
     Dynamic_Object_Function(Dynamic_Object_Function &) = delete;

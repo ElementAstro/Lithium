@@ -80,6 +80,8 @@ struct Loadable_Module {
         HMODULE m_data;
     };
 
+    /*
+    TODO: Fix -Wcast-function-type here
     template <typename T>
     struct DLSym {
         DLSym(DLModule &t_mod, const std::string &t_symbol)
@@ -92,6 +94,34 @@ struct Loadable_Module {
         }
 
         T m_symbol;
+    };
+    */
+    template <typename T>
+    struct DLSym {
+        using FunctionPtr = T;
+
+        DLSym(DLModule &t_mod, const std::string &t_symbol)
+            : m_symbol(get_function_pointer(t_mod, t_symbol)) {
+            if (!m_symbol) {
+                throw Carbon::exception::load_module_error(
+                    get_error_message(GetLastError()));
+            }
+        }
+
+        FunctionPtr m_symbol;
+
+    private:
+        // Helper function to safely retrieve the function pointer
+        static FunctionPtr get_function_pointer(DLModule &t_mod,
+                                                const std::string &t_symbol) {
+            FARPROC proc = GetProcAddress(t_mod.m_data, t_symbol.c_str());
+            if (!proc) {
+                throw std::runtime_error(
+                    "Failed to retrieve function pointer for symbol: " +
+                    t_symbol);
+            }
+            return reinterpret_cast<FunctionPtr>(proc);
+        }
     };
 
     Loadable_Module(const std::string &t_module_name,

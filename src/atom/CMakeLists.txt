@@ -49,6 +49,7 @@ endif()
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
     error/error_stack.cpp
+    error/exception.cpp
 
     log/logger.cpp
     log/global_logger.cpp

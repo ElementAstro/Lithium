@@ -230,10 +230,7 @@ public:
 
     virtual bool compare_first_type(
         const Boxed_Value &bv,
-        const Type_Conversions_State &t_conversions) const noexcept {
-        /// TODO is m_types guaranteed to be at least 2??
-        return compare_type_to_param(m_types[1], bv, t_conversions);
-    }
+        const Type_Conversions_State &t_conversions) const noexcept;
 
 protected:
     /**
@@ -315,8 +312,8 @@ public:
      */
     explicit Dynamic_Proxy_Function(const int t_arity,
                                     std::shared_ptr<AST_Node> t_parsenode,
-                                    Param_Types t_param_types = Param_Types(),
-                                    Proxy_Function t_guard = Proxy_Function());
+                                    Param_Types t_param_types,
+                                    Proxy_Function t_guard);
 
     /**
      * @brief Checks if two Dynamic_Proxy_Function objects are equal.

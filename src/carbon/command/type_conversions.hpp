@@ -13,11 +13,10 @@
 
 #include "../threading.hpp"
 #include "atom/experiment/sstring.hpp"
+#include "atom/experiment/type_info.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
 #include "boxed_value.hpp"
-#include "atom/experiment/type_info.hpp"
-#include "atom/experiment/sstring.hpp"
 
 namespace Carbon {
 namespace exception {
@@ -95,7 +94,7 @@ template <typename From, typename To>
 class Static_Caster {
 public:
     static Boxed_Value cast(const Boxed_Value &t_from) {
-        if (t_from.get_type_info().bare_equal(Carbon::user_type<From>())) {
+        if (t_from.get_type_info().bare_equal(user_type<From>())) {
             if (t_from.is_pointer()) {
                 // Dynamic cast out the contained boxed value, which we know is
                 // the type we want
@@ -148,7 +147,7 @@ template <typename From, typename To>
 class Dynamic_Caster {
 public:
     static Boxed_Value cast(const Boxed_Value &t_from) {
-        if (t_from.get_type_info().bare_equal(Carbon::user_type<From>())) {
+        if (t_from.get_type_info().bare_equal(user_type<From>())) {
             if (t_from.is_pointer()) {
                 // Dynamic cast out the contained boxed value, which we know is
                 // the type we want
@@ -217,8 +216,7 @@ template <typename Base, typename Derived>
 class Dynamic_Conversion_Impl : public Type_Conversion_Base {
 public:
     Dynamic_Conversion_Impl()
-        : Type_Conversion_Base(Carbon::user_type<Base>(),
-                               Carbon::user_type<Derived>()) {}
+        : Type_Conversion_Base(user_type<Base>(), user_type<Derived>()) {}
 
     Boxed_Value convert_down(const Boxed_Value &t_base) const override {
         return Dynamic_Caster<Base, Derived>::cast(t_base);
@@ -233,8 +231,7 @@ template <typename Base, typename Derived>
 class Static_Conversion_Impl : public Type_Conversion_Base {
 public:
     Static_Conversion_Impl()
-        : Type_Conversion_Base(Carbon::user_type<Base>(),
-                               Carbon::user_type<Derived>()) {}
+        : Type_Conversion_Base(user_type<Base>(), user_type<Derived>()) {}
 
     Boxed_Value convert_down(const Boxed_Value &t_base) const override {
         throw Carbon::exception::bad_boxed_dynamic_cast(

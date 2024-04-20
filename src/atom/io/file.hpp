@@ -26,11 +26,6 @@ namespace Atom::IO {
 class FileManager {
 public:
     /**
-     * 默认构造函数
-     */
-    FileManager();
-
-    /**
      * 创建文件
      * @param filename 文件名
      * @return 是否成功创建文件
@@ -81,12 +76,6 @@ public:
     long getFileSize();
 
     /**
-     * 计算文件的MD5值
-     * @return 文件的MD5值
-     */
-    std::string calculateSHA256();
-
-    /**
      * 获取文件所在目录路径
      * @param filename 文件名
      * @return 文件所在目录的路径
@@ -97,13 +86,6 @@ private:
     std::fstream m_file;     ///< 文件流对象
     std::string m_filename;  ///< 当前打开的文件名
 };
-
-/**
- * 检查文件是否存在
- * @param filename 文件名
- * @return 文件是否存在
- */
-bool fileExists(const std::string &filename);
 
 }  // namespace Atom::IO
 

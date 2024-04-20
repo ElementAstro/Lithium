@@ -33,7 +33,8 @@ Module &Module::eval(std::string str) {
     return *this;
 }
 
-bool Module::has_function(const Proxy_Function &new_f, std::string_view name) {
+bool Module::has_function(const Proxy_Function &new_f,
+                          std::string_view name) noexcept {
     return std::any_of(
         m_funcs.begin(), m_funcs.end(),
         [&](const std::pair<Proxy_Function, std::string> &existing_f) {
@@ -47,7 +48,7 @@ Dispatch_Function::Dispatch_Function(std::vector<Proxy_Function> t_funcs)
       m_funcs(std::move(t_funcs)) {}
 
 bool Dispatch_Function::operator==(
-    const dispatch::Proxy_Function_Base &rhs) const {
+    const dispatch::Proxy_Function_Base &rhs) const noexcept {
     try {
         const auto &dispatch_fun = dynamic_cast<const Dispatch_Function &>(rhs);
         return m_funcs == dispatch_fun.m_funcs;
@@ -62,7 +63,7 @@ std::vector<Const_Proxy_Function> Dispatch_Function::get_contained_functions()
 }
 
 int Dispatch_Function::calculate_arity(
-    const std::vector<Proxy_Function> &t_funcs) {
+    const std::vector<Proxy_Function> &t_funcs) noexcept {
     if (t_funcs.empty()) {
         return -1;
     }
@@ -81,7 +82,7 @@ int Dispatch_Function::calculate_arity(
 
 bool Dispatch_Function::call_match(
     const Function_Params &vals,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     return std::any_of(std::begin(m_funcs), std::end(m_funcs),
                        [&vals, &t_conversions](const Proxy_Function &f) {
                            return f->call_match(vals, t_conversions);
@@ -533,13 +534,13 @@ Dispatch_Engine::get_functions() const {
     return rets;
 }
 
-const Type_Conversions &Dispatch_Engine::conversions() const {
+const Type_Conversions &Dispatch_Engine::conversions() const noexcept {
     return m_conversions;
 }
 
 bool Dispatch_Engine::is_attribute_call(
     const std::vector<Proxy_Function> &t_funs, const Function_Params &t_params,
-    bool t_has_params, const Type_Conversions_State &t_conversions) {
+    bool t_has_params, const Type_Conversions_State &t_conversions) noexcept {
     if (!t_has_params || t_params.empty()) {
         return false;
     }
@@ -772,7 +773,7 @@ void Dispatch_Engine::dump_system() const {
 
 /// return true if the Boxed_Value matches the registered type by name
 bool Dispatch_Engine::is_type(const Boxed_Value &r,
-                              std::string_view user_typename) const {
+                              std::string_view user_typename) const noexcept {
     try {
         if (get_type(user_typename).bare_equal(r.get_type_info())) {
             return true;
@@ -864,27 +865,30 @@ void Dispatch_Engine::pop_function_call() {
     pop_function_call(*m_stack_holder, m_conversions.conversion_saves());
 }
 
-Stack_Holder &Dispatch_Engine::get_stack_holder() { return *m_stack_holder; }
+Stack_Holder &Dispatch_Engine::get_stack_holder() noexcept {
+    return *m_stack_holder;
+}
 
-const Dispatch_Engine::StackData &Dispatch_Engine::get_stack_data() const {
+const Dispatch_Engine::StackData &Dispatch_Engine::get_stack_data()
+    const noexcept {
     return m_stack_holder->stacks.back();
 }
 
 Dispatch_Engine::StackData &Dispatch_Engine::get_stack_data(
-    Stack_Holder &t_holder) {
+    Stack_Holder &t_holder) noexcept {
     return t_holder.stacks.back();
 }
 
-Dispatch_Engine::StackData &Dispatch_Engine::get_stack_data() {
+Dispatch_Engine::StackData &Dispatch_Engine::get_stack_data() noexcept {
     return m_stack_holder->stacks.back();
 }
 
-parser::Carbon_Parser_Base &Dispatch_Engine::get_parser() {
+parser::Carbon_Parser_Base &Dispatch_Engine::get_parser() noexcept {
     return m_parser.get();
 }
 
 bool Dispatch_Engine::function_less_than(const Proxy_Function &lhs,
-                                         const Proxy_Function &rhs) {
+                                         const Proxy_Function &rhs) noexcept {
     auto dynamic_lhs(
         std::dynamic_pointer_cast<const dispatch::Dynamic_Proxy_Function>(lhs));
     auto dynamic_rhs(
@@ -1010,19 +1014,24 @@ Dispatch_State::Dispatch_State(Dispatch_Engine &t_engine)
       m_conversions(t_engine.conversions(),
                     t_engine.conversions().conversion_saves()) {}
 
-Dispatch_Engine *Dispatch_State::operator->() const { return &m_engine.get(); }
+Dispatch_Engine *Dispatch_State::operator->() const noexcept {
+    return &m_engine.get();
+}
 
-Dispatch_Engine &Dispatch_State::operator*() const { return m_engine.get(); }
+Dispatch_Engine &Dispatch_State::operator*() const noexcept {
+    return m_engine.get();
+}
 
-Stack_Holder &Dispatch_State::stack_holder() const {
+Stack_Holder &Dispatch_State::stack_holder() const noexcept {
     return m_stack_holder.get();
 }
 
-const Type_Conversions_State &Dispatch_State::conversions() const {
+const Type_Conversions_State &Dispatch_State::conversions() const noexcept {
     return m_conversions;
 }
 
-Type_Conversions::Conversion_Saves &Dispatch_State::conversion_saves() const {
+Type_Conversions::Conversion_Saves &Dispatch_State::conversion_saves()
+    const noexcept {
     return m_conversions.saves();
 }
 

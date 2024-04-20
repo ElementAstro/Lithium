@@ -32,10 +32,8 @@ Dynamic_Object_Function::Dynamic_Object_Function(std::string t_type_name,
            "one parameter (this)");
 }
 
-Dynamic_Object_Function &Dynamic_Object_Function::operator=(
-    const Dynamic_Object_Function) = delete;
-
-bool Dynamic_Object_Function::operator==(const Proxy_Function_Base &f) const {
+bool Dynamic_Object_Function::operator==(
+    const Proxy_Function_Base &f) const noexcept {
     if (const auto *df = dynamic_cast<const Dynamic_Object_Function *>(&f)) {
         return df->m_type_name == m_type_name && (*df->m_func) == (*m_func);
     } else {
@@ -43,13 +41,13 @@ bool Dynamic_Object_Function::operator==(const Proxy_Function_Base &f) const {
     }
 }
 
-bool Dynamic_Object_Function::is_attribute_function() const {
+bool Dynamic_Object_Function::is_attribute_function() const noexcept {
     return m_is_attribute;
 }
 
 bool Dynamic_Object_Function::call_match(
     const Carbon::Function_Params &vals,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     if (dynamic_object_typename_match(vals, m_type_name, m_ti, t_conversions)) {
         return m_func->call_match(vals, t_conversions);
     } else {
@@ -62,8 +60,9 @@ Dynamic_Object_Function::get_contained_functions() const {
     return {m_func};
 }
 
-Boxed_Value Dynamic_Object_Function::do_call(const Carbon::Function_Params &params,
-                    const Type_Conversions_State &t_conversions) const {
+Boxed_Value Dynamic_Object_Function::do_call(
+    const Carbon::Function_Params &params,
+    const Type_Conversions_State &t_conversions) const {
     if (dynamic_object_typename_match(params, m_type_name, m_ti,
                                       t_conversions)) {
         return (*m_func)(params, t_conversions);
@@ -73,7 +72,8 @@ Boxed_Value Dynamic_Object_Function::do_call(const Carbon::Function_Params &para
 }
 
 bool Dynamic_Object_Function::compare_first_type(
-    const Boxed_Value &bv, const Type_Conversions_State &t_conversions) const {
+    const Boxed_Value &bv,
+    const Type_Conversions_State &t_conversions) const noexcept {
     return dynamic_object_typename_match(bv, m_type_name, m_ti, t_conversions);
 }
 
@@ -90,7 +90,7 @@ std::vector<Type_Info> Dynamic_Object_Function::build_param_types(
 bool Dynamic_Object_Function::dynamic_object_typename_match(
     const Boxed_Value &bv, const std::string &name,
     const std::unique_ptr<Type_Info> &ti,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     if (bv.get_type_info().bare_equal(m_doti)) {
         try {
             const Dynamic_Object &d =
@@ -111,7 +111,7 @@ bool Dynamic_Object_Function::dynamic_object_typename_match(
 bool Dynamic_Object_Function::dynamic_object_typename_match(
     const Carbon::Function_Params &bvs, const std::string &name,
     const std::unique_ptr<Type_Info> &ti,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     if (!bvs.empty()) {
         return dynamic_object_typename_match(bvs[0], name, ti, t_conversions);
     } else {
@@ -143,7 +143,7 @@ std::vector<Type_Info> Dynamic_Object_Constructor::build_type_list(
 }
 
 bool Dynamic_Object_Constructor::operator==(
-    const Proxy_Function_Base &f) const {
+    const Proxy_Function_Base &f) const noexcept {
     const Dynamic_Object_Constructor *dc =
         dynamic_cast<const Dynamic_Object_Constructor *>(&f);
     return (dc != nullptr) && dc->m_type_name == m_type_name &&

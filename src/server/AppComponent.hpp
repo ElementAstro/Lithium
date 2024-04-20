@@ -160,6 +160,7 @@ public:
      *  Create ObjectMapper component to serialize/deserialize DTOs in WS
      * communication
      */
+    /*
     OATPP_CREATE_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
                            wsApiObjectMapper)
     (Constants::COMPONENT_WS_API, [] {
@@ -168,7 +169,8 @@ public:
         mapper->getSerializer()->getConfig()->includeNullFields = false;
         return mapper;
     }());
-
+    */
+   
     /**
      *  Create games sessions Registry component.
      */

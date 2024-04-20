@@ -12,12 +12,12 @@
 #include "proxy_functions.hpp"
 
 #include "../defines.hpp"
+#include "atom/experiment/type_info.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_value.hpp"
 #include "dynamic_object.hpp"
 #include "function_params.hpp"
 #include "proxy_functions_detail.hpp"
-#include "atom/experiment/type_info.hpp"
 
 namespace Carbon {
 
@@ -35,7 +35,7 @@ void Param_Types::push_front(const std::string &t_name, Type_Info t_ti) {
     update_has_types();
 }
 
-bool Param_Types::operator==(const Param_Types &t_rhs) const {
+bool Param_Types::operator==(const Param_Types &t_rhs) const noexcept {
     return m_types == t_rhs.m_types;
 }
 
@@ -91,7 +91,7 @@ std::vector<Boxed_Value> Param_Types::convert(
 // second result: needs conversions
 std::pair<bool, bool> Param_Types::match(
     const Function_Params &vals,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     const auto dynamic_object_type_info = user_type<Dynamic_Object>();
     bool needs_conversion = false;
 
@@ -139,7 +139,7 @@ std::pair<bool, bool> Param_Types::match(
 }
 
 const std::vector<std::pair<std::string, Type_Info>> &Param_Types::types()
-    const {
+    const noexcept {
     return m_types;
 }
 
@@ -168,14 +168,16 @@ Boxed_Value Proxy_Function_Base::operator()(
 /// function returns/takes if the function is variadic or takes no arguments
 /// (arity of 0 or -1), the returned value contains exactly 1 Type_Info
 /// object: the return type \returns the types of all parameters.
-const std::vector<Type_Info> &Proxy_Function_Base::get_param_types() const {
+const std::vector<Type_Info> &Proxy_Function_Base::get_param_types()
+    const noexcept {
     return m_types;
 }
 
-bool Proxy_Function_Base::is_attribute_function() const
-{ return false; }
+bool Proxy_Function_Base::is_attribute_function() const noexcept {
+    return false;
+}
 
-bool Proxy_Function_Base::has_arithmetic_param() const {
+bool Proxy_Function_Base::has_arithmetic_param() const noexcept {
     return m_has_arithmetic_param;
 }
 
@@ -188,7 +190,7 @@ Proxy_Function_Base::get_contained_functions() const {
 //! to the passed in values
 bool Proxy_Function_Base::filter(
     const Function_Params &vals,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     assert(m_arity == -1 ||
            (m_arity > 0 && static_cast<int>(vals.size()) == m_arity));
 
@@ -204,11 +206,11 @@ bool Proxy_Function_Base::filter(
 
 /// \returns the number of arguments the function takes or -1 if it is
 /// variadic
-int Proxy_Function_Base::get_arity() const { return m_arity; }
+int Proxy_Function_Base::get_arity() const noexcept { return m_arity; }
 
 bool Proxy_Function_Base::compare_type_to_param(
     const Type_Info &ti, const Boxed_Value &bv,
-    const Type_Conversions_State &t_conversions) {
+    const Type_Conversions_State &t_conversions) noexcept {
     const auto boxed_value_ti = user_type<Boxed_Value>();
     const auto boxed_number_ti = user_type<Boxed_Number>();
     const auto function_ti =
@@ -228,7 +230,8 @@ bool Proxy_Function_Base::compare_type_to_param(
 }
 
 bool Proxy_Function_Base::compare_first_type(
-    const Boxed_Value &bv, const Type_Conversions_State &t_conversions) const {
+    const Boxed_Value &bv,
+    const Type_Conversions_State &t_conversions) const noexcept {
     /// TODO is m_types guaranteed to be at least 2??
     return compare_type_to_param(m_types[1], bv, t_conversions);
 }
@@ -248,7 +251,7 @@ Proxy_Function_Base::Proxy_Function_Base(std::vector<Type_Info> t_types,
 
 bool Proxy_Function_Base::compare_types(
     const std::vector<Type_Info> &tis, const Function_Params &bvs,
-    const Type_Conversions_State &t_conversions) {
+    const Type_Conversions_State &t_conversions) noexcept {
     if (tis.size() - 1 != bvs.size()) {
         return false;
     } else {
@@ -276,7 +279,8 @@ Dynamic_Proxy_Function::Dynamic_Proxy_Function(
     // assert(t_parsenode);
 }
 
-bool Dynamic_Proxy_Function::operator==(const Proxy_Function_Base &rhs) const {
+bool Dynamic_Proxy_Function::operator==(
+    const Proxy_Function_Base &rhs) const noexcept {
     const Dynamic_Proxy_Function *prhs =
         dynamic_cast<const Dynamic_Proxy_Function *>(&rhs);
 
@@ -292,11 +296,15 @@ bool Dynamic_Proxy_Function::call_match(
     return call_match_internal(vals, t_conversions).first;
 }
 
-bool Dynamic_Proxy_Function::has_guard() const { return bool(m_guard); }
+bool Dynamic_Proxy_Function::has_guard() const noexcept {
+    return bool(m_guard);
+}
 
-Proxy_Function Dynamic_Proxy_Function::get_guard() const { return m_guard; }
+Proxy_Function Dynamic_Proxy_Function::get_guard() const noexcept {
+    return m_guard;
+}
 
-bool Dynamic_Proxy_Function::has_parse_tree() const {
+bool Dynamic_Proxy_Function::has_parse_tree() const noexcept {
     return static_cast<bool>(m_parsenode);
 }
 
@@ -375,7 +383,7 @@ Bound_Function::Bound_Function(const Const_Proxy_Function &t_f,
            m_f->get_arity() == static_cast<int>(m_args.size()));
 }
 
-bool Bound_Function::operator==(const Proxy_Function_Base &t_f) const {
+bool Bound_Function::operator==(const Proxy_Function_Base &t_f) const noexcept {
     return &t_f == this;
 }
 
@@ -456,7 +464,7 @@ Proxy_Function_Impl_Base::Proxy_Function_Impl_Base(
 
 bool Proxy_Function_Impl_Base::call_match(
     const Function_Params &vals,
-    const Type_Conversions_State &t_conversions) const {
+    const Type_Conversions_State &t_conversions) const noexcept {
     return static_cast<int>(vals.size()) == get_arity() &&
            (compare_types(m_types, vals, t_conversions) &&
             compare_types_with_cast(vals, t_conversions));

@@ -56,7 +56,7 @@ private:
 
         template <typename T>
         static auto get(const std::shared_ptr<T> &obj, bool t_return_value) {
-            return std::make_shared<Data>(detail::Get_Type_Info<T>::get(),
+            return std::make_shared<Data>(Get_Type_Info<T>::get(),
                                           Carbon::detail::Any(obj), false,
                                           obj.get(), t_return_value);
         }
@@ -65,7 +65,7 @@ private:
         static auto get(std::shared_ptr<T> &&obj, bool t_return_value) {
             auto ptr = obj.get();
             return std::make_shared<Data>(
-                detail::Get_Type_Info<T>::get(),
+                Get_Type_Info<T>::get(),
                 Carbon::detail::Any(std::move(obj)), false, ptr,
                 t_return_value);
         }
@@ -84,7 +84,7 @@ private:
         static auto get(std::reference_wrapper<T> obj, bool t_return_value) {
             auto p = &obj.get();
             return std::make_shared<Data>(
-                detail::Get_Type_Info<T>::get(),
+                Get_Type_Info<T>::get(),
                 Carbon::detail::Any(std::move(obj)), true, p,
                 t_return_value);
         }
@@ -93,7 +93,7 @@ private:
         static auto get(std::unique_ptr<T> &&obj, bool t_return_value) {
             auto ptr = obj.get();
             return std::make_shared<Data>(
-                detail::Get_Type_Info<T>::get(),
+                Get_Type_Info<T>::get(),
                 Carbon::detail::Any(
                     std::make_shared<std::unique_ptr<T>>(std::move(obj))),
                 true, ptr, t_return_value);
@@ -103,7 +103,7 @@ private:
         static auto get(T t, bool t_return_value) {
             auto p = std::make_shared<T>(std::move(t));
             auto ptr = p.get();
-            return std::make_shared<Data>(detail::Get_Type_Info<T>::get(),
+            return std::make_shared<Data>(Get_Type_Info<T>::get(),
                                           Carbon::detail::Any(std::move(p)),
                                           false, ptr, t_return_value);
         }

@@ -254,7 +254,7 @@ inline uint32_t quickHash(const void* tmp, uint32_t size) {
     if (!tmp)
         return 0;
 
-    const char* str = (const char*)tmp;
+    const char* str = static_cast<const char*>(tmp);
     unsigned int h = 0;
     for (uint32_t i = 0; i < size; ++i, ++str) {
         h = 31 * h + *str;

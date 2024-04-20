@@ -15,14 +15,14 @@
 #include <stdexcept>
 #include <vector>
 
-#include "../defines.hpp"
-#include "../threading.hpp"
 #include "../command/boxed_cast_helper.hpp"
 #include "../command/boxed_value.hpp"
 #include "../command/dispatchkit.hpp"
 #include "../command/proxy_functions.hpp"
 #include "../command/register_function.hpp"
 #include "../command/type_conversions.hpp"
+#include "../defines.hpp"
+#include "../threading.hpp"
 #include "common.hpp"
 
 #if defined(__linux__) || defined(__unix__) || defined(__APPLE__) || \
@@ -76,247 +76,30 @@ class Carbon_Basic {
     /// Evaluates the given string in by parsing it and running the results
     /// through the evaluator
     Boxed_Value do_eval(const std::string &t_input,
-                        const std::string &t_filename = "__EVAL__",
-                        bool /* t_internal*/ = false) {
-        try {
-            const auto p = m_parser->parse(t_input, t_filename);
-            return p->eval(Carbon::detail::Dispatch_State(m_engine));
-        } catch (Carbon::eval::detail::Return_Value &rv) {
-            return rv.retval;
-        }
-    }
+                        const std::string &t_filename, bool /* t_internal*/);
 
     /// Evaluates the given file and looks in the 'use' paths
-    Boxed_Value internal_eval_file(const std::string &t_filename) {
-        for (const auto &path : m_use_paths) {
-            try {
-                const auto appendedpath = path + t_filename;
-                return do_eval(load_file(appendedpath), appendedpath, true);
-            } catch (const exception::file_not_found_error &) {
-                // failed to load, try the next path
-            } catch (const exception::eval_error &t_ee) {
-                throw Boxed_Value(t_ee);
-            }
-        }
-
-        // failed to load by any name
-        throw exception::file_not_found_error(t_filename);
-    }
+    Boxed_Value internal_eval_file(const std::string &t_filename);
 
     /// Evaluates the given string, used during eval() inside of a script
-    Boxed_Value internal_eval(const std::string &t_e) {
-        try {
-            return do_eval(t_e, "__EVAL__", true);
-        } catch (const exception::eval_error &t_ee) {
-            throw Boxed_Value(t_ee);
-        }
-    }
+    Boxed_Value internal_eval(const std::string &t_e);
 
     /// Returns the current evaluation m_engine
-    Carbon::detail::Dispatch_Engine &get_eval_engine() noexcept {
-        return m_engine;
-    }
+    Carbon::detail::Dispatch_Engine &get_eval_engine() noexcept;
 
     /// Builds all the requirements for ChaiScript, including its evaluator and
     /// a run of its prelude.
     void build_eval_system(const ModulePtr &t_lib,
-                           const std::vector<Options> &t_opts) {
-        if (t_lib) {
-            add(t_lib);
-        }
-
-        m_engine.add(fun([this]() { m_engine.dump_system(); }), "dump_system");
-        m_engine.add(fun([this](const Boxed_Value &t_bv) {
-                         m_engine.dump_object(t_bv);
-                     }),
-                     "dump_object");
-        m_engine.add(
-            fun([this](const Boxed_Value &t_bv, const std::string &t_type) {
-                return m_engine.is_type(t_bv, t_type);
-            }),
-            "is_type");
-        m_engine.add(fun([this](const Boxed_Value &t_bv) {
-                         return m_engine.type_name(t_bv);
-                     }),
-                     "type_name");
-        m_engine.add(fun([this](const std::string &t_f) {
-                         return m_engine.function_exists(t_f);
-                     }),
-                     "function_exists");
-        m_engine.add(fun([this]() { return m_engine.get_function_objects(); }),
-                     "get_functions");
-        m_engine.add(fun([this]() { return m_engine.get_scripting_objects(); }),
-                     "get_objects");
-
-        m_engine.add(dispatch::make_dynamic_proxy_function(
-                         [this](const Function_Params &t_params) {
-                             return m_engine.call_exists(t_params);
-                         }),
-                     "call_exists");
-
-        m_engine.add(
-            fun([this](
-                    const dispatch::Proxy_Function_Base &t_fun,
-                    const std::vector<Boxed_Value> &t_params) -> Boxed_Value {
-                Type_Conversions_State s(
-                    this->m_engine.conversions(),
-                    this->m_engine.conversions().conversion_saves());
-                return t_fun(Function_Params{t_params}, s);
-            }),
-            "call");
-
-        m_engine.add(fun([this](const Type_Info &t_ti) {
-                         return m_engine.get_type_name(t_ti);
-                     }),
-                     "name");
-
-        m_engine.add(fun([this](const std::string &t_type_name, bool t_throw) {
-                         return m_engine.get_type(t_type_name, t_throw);
-                     }),
-                     "type");
-        m_engine.add(fun([this](const std::string &t_type_name) {
-                         return m_engine.get_type(t_type_name, true);
-                     }),
-                     "type");
-
-        m_engine.add(
-            fun([this](const Type_Info &t_from, const Type_Info &t_to,
-                       const std::function<Boxed_Value(const Boxed_Value &)>
-                           &t_func) {
-                m_engine.add(Carbon::type_conversion(t_from, t_to, t_func));
-            }),
-            "add_type_conversion");
-
-        if (std::find(t_opts.begin(), t_opts.end(), Options::No_Load_Modules) ==
-                t_opts.end() &&
-            std::find(t_opts.begin(), t_opts.end(), Options::Load_Modules) !=
-                t_opts.end()) {
-            m_engine.add(fun([this](const std::string &t_module,
-                                    const std::string &t_file) {
-                             load_module(t_module, t_file);
-                         }),
-                         "load_module");
-            m_engine.add(fun([this](const std::string &t_module) {
-                             return load_module(t_module);
-                         }),
-                         "load_module");
-        }
-
-        if (std::find(t_opts.begin(), t_opts.end(),
-                      Options::No_External_Scripts) == t_opts.end() &&
-            std::find(t_opts.begin(), t_opts.end(),
-                      Options::External_Scripts) != t_opts.end()) {
-            m_engine.add(
-                fun([this](const std::string &t_file) { return use(t_file); }),
-                "use");
-            m_engine.add(fun([this](const std::string &t_file) {
-                             return internal_eval_file(t_file);
-                         }),
-                         "eval_file");
-        }
-
-        m_engine.add(fun([this](const std::string &t_str) {
-                         return internal_eval(t_str);
-                     }),
-                     "eval");
-        m_engine.add(fun([this](const AST_Node &t_ast) { return eval(t_ast); }),
-                     "eval");
-
-        m_engine.add(fun([this](const std::string &t_str, const bool t_dump) {
-                         return parse(t_str, t_dump);
-                     }),
-                     "parse");
-        m_engine.add(
-            fun([this](const std::string &t_str) { return parse(t_str); }),
-            "parse");
-
-        m_engine.add(
-            fun([this](const Boxed_Value &t_bv, const std::string &t_name) {
-                add_global_const(t_bv, t_name);
-            }),
-            "add_global_const");
-        m_engine.add(
-            fun([this](const Boxed_Value &t_bv, const std::string &t_name) {
-                add_global(t_bv, t_name);
-            }),
-            "add_global");
-        m_engine.add(
-            fun([this](const Boxed_Value &t_bv, const std::string &t_name) {
-                set_global(t_bv, t_name);
-            }),
-            "set_global");
-
-        // why this unused parameter to Namespace?
-        m_engine.add(fun([this](const std::string &t_namespace_name) {
-                         register_namespace(
-                             [](Namespace & /*space*/) noexcept {},
-                             t_namespace_name);
-                         import(t_namespace_name);
-                     }),
-                     "namespace");
-        m_engine.add(fun([this](const std::string &t_namespace_name) {
-                         import(t_namespace_name);
-                     }),
-                     "import");
-    }
+                           const std::vector<Options> &t_opts);
 
     /// Skip BOM at the beginning of file
-    static bool skip_bom(std::ifstream &infile) {
-        size_t bytes_needed = 3;
-        char buffer[3];
-
-        memset(buffer, '\0', bytes_needed);
-
-        infile.read(buffer, static_cast<std::streamsize>(bytes_needed));
-
-        if ((buffer[0] == '\xef') && (buffer[1] == '\xbb') &&
-            (buffer[2] == '\xbf')) {
-            infile.seekg(3);
-            return true;
-        }
-
-        infile.seekg(0);
-
-        return false;
-    }
+    static bool skip_bom(std::ifstream &infile);
 
     /// Helper function for loading a file
-    static std::string load_file(const std::string &t_filename) {
-        std::ifstream infile(t_filename.c_str(),
-                             std::ios::in | std::ios::ate | std::ios::binary);
-
-        if (!infile.is_open()) {
-            throw Carbon::exception::file_not_found_error(t_filename);
-        }
-
-        auto size = infile.tellg();
-        infile.seekg(0, std::ios::beg);
-
-        assert(size >= 0);
-
-        if (skip_bom(infile)) {
-            size -= 3;  // decrement the BOM size from file size, otherwise
-                        // we'll get parsing errors
-            assert(size >= 0);  // and check if there's more text
-        }
-
-        if (size == std::streampos(0)) {
-            return std::string();
-        } else {
-            std::vector<char> v(static_cast<size_t>(size));
-            infile.read(&v[0], static_cast<std::streamsize>(size));
-            return std::string(v.begin(), v.end());
-        }
-    }
+    static std::string load_file(const std::string &t_filename);
 
     std::vector<std::string> ensure_minimum_path_vec(
-        std::vector<std::string> paths) {
-        if (paths.empty()) {
-            return {""};
-        } else {
-            return paths;
-        }
-    }
+        std::vector<std::string> paths);
 
 public:
     /// \brief Virtual destructor for ChaiScript
@@ -328,51 +111,10 @@ public:
     /// load a binary module \param[in] t_usepaths Vector of paths to search
     /// when attempting to "use" an included ChaiScript file
     Carbon_Basic(const ModulePtr &t_lib,
-                     std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
-                     std::vector<std::string> t_module_paths = {},
-                     std::vector<std::string> t_use_paths = {},
-                     const std::vector<Carbon::Options> &t_opts =
-                         Carbon::default_options())
-        : m_module_paths(ensure_minimum_path_vec(std::move(t_module_paths))),
-          m_use_paths(ensure_minimum_path_vec(std::move(t_use_paths))),
-          m_parser(std::move(parser)),
-          m_engine(*m_parser) {
-#if !defined(CARBON_NO_DYNLOAD) && defined(_POSIX_VERSION) && \
-    !defined(__CYGWIN__)
-        // If on Unix, add the path of the current executable to the module
-        // search path as windows would do
-
-        union cast_union {
-            Boxed_Value (Carbon_Basic::*in_ptr)(const std::string &);
-            void *out_ptr;
-        };
-
-        Dl_info rInfo;
-        memset(&rInfo, 0, sizeof(rInfo));
-        cast_union u;
-        u.in_ptr = &Carbon_Basic::use;
-        if ((dladdr(static_cast<void *>(u.out_ptr), &rInfo) != 0) &&
-            (rInfo.dli_fname != nullptr)) {
-            std::string dllpath(rInfo.dli_fname);
-            const size_t lastslash = dllpath.rfind('/');
-            if (lastslash != std::string::npos) {
-                dllpath.erase(lastslash);
-            }
-
-            // Let's see if this is a link that we should expand
-            std::vector<char> buf(2048);
-            const auto pathlen =
-                readlink(dllpath.c_str(), &buf.front(), buf.size());
-            if (pathlen > 0 && static_cast<size_t>(pathlen) < buf.size()) {
-                dllpath =
-                    std::string(&buf.front(), static_cast<size_t>(pathlen));
-            }
-
-            m_module_paths.insert(m_module_paths.begin(), dllpath + "/");
-        }
-#endif
-        build_eval_system(t_lib, t_opts);
-    }
+                 std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
+                 std::vector<std::string> t_module_paths,
+                 std::vector<std::string> t_use_paths,
+                 const std::vector<Carbon::Options> &t_opts);
 
 #ifndef CARBON_NO_DYNLOAD
     /// \brief Constructor for ChaiScript.
@@ -383,64 +125,24 @@ public:
     /// \param[in] t_modulepaths Vector of paths to search when attempting to
     /// load a binary module \param[in] t_usepaths Vector of paths to search
     /// when attempting to "use" an included ChaiScript file
-    explicit Carbon_Basic(
-        std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
-        std::vector<std::string> t_module_paths = {},
-        std::vector<std::string> t_use_paths = {},
-        const std::vector<Carbon::Options> &t_opts =
-            Carbon::default_options())
-        : Carbon_Basic({}, std::move(parser), t_module_paths, t_use_paths,
-                           t_opts) {
-        try {
-            // attempt to load the stdlib
-            load_module("stdlib-" + Build_Info::version());
-        } catch (const exception::load_module_error &t_err) {
-            std::cout
-                << "An error occurred while trying to load the chaiscript "
-                   "standard library.\n"
-                   "\n"
-                   "You must either provide a standard library, or compile it "
-                   "in.\n"
-                   "For an example of compiling the standard library in,\n"
-                   "see: https://gist.github.com/lefticus/9456197\n"
-                   "Compiling the stdlib in is the recommended and MOST "
-                   "SUPPORTED method.\n"
-                   "\n\n"
-                << t_err.what();
-            throw;
-        }
-    }
+    explicit Carbon_Basic(std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
+                          std::vector<std::string> t_module_paths,
+                          std::vector<std::string> t_use_paths,
+                          const std::vector<Carbon::Options> &t_opts);
 #else  // CARBON_NO_DYNLOAD
-    explicit Carbon_Basic(
-        std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
-        std::vector<std::string> t_module_paths = {},
-        std::vector<std::string> t_use_paths = {},
-        const std::vector<Carbon::Options> &t_opts =
-            Carbon::default_options()) = delete;
+    explicit Carbon_Basic(std::unique_ptr<parser::Carbon_Parser_Base> &&parser,
+                          std::vector<std::string> t_module_paths,
+                          std::vector<std::string> t_use_paths,
+                          const std::vector<Carbon::Options> &t_opts) = delete;
 #endif
 
-    parser::Carbon_Parser_Base &get_parser() noexcept { return *m_parser; }
+    parser::Carbon_Parser_Base &get_parser() noexcept;
 
-    const Boxed_Value eval(const AST_Node &t_ast) {
-        try {
-            return t_ast.eval(Carbon::detail::Dispatch_State(m_engine));
-        } catch (const exception::eval_error &t_ee) {
-            throw Boxed_Value(t_ee);
-        }
-    }
+    const Boxed_Value eval(const AST_Node &t_ast);
 
-    AST_NodePtr parse(const std::string &t_input,
-                      const bool t_debug_print = false) {
-        auto ast = m_parser->parse(t_input, "PARSE");
-        if (t_debug_print) {
-            m_parser->debug_print(*ast);
-        }
-        return ast;
-    }
+    AST_NodePtr parse(const std::string &t_input, const bool t_debug_print = false);
 
-    std::string get_type_name(const Type_Info &ti) const {
-        return m_engine.get_type_name(ti);
-    }
+    std::string get_type_name(const Type_Info &ti) const;
 
     template <typename T>
     std::string get_type_name() const {
@@ -452,40 +154,7 @@ public:
     /// searched for the requested file.
     ///
     /// \param[in] t_filename Filename to load and evaluate
-    Boxed_Value use(const std::string &t_filename) {
-        for (const auto &path : m_use_paths) {
-            const auto appendedpath = path + t_filename;
-            try {
-                Carbon::detail::threading::unique_lock<
-                    Carbon::detail::threading::recursive_mutex>
-                    l(m_use_mutex);
-                Carbon::detail::threading::unique_lock<
-                    Carbon::detail::threading::shared_mutex>
-                    l2(m_mutex);
-
-                Boxed_Value retval;
-
-                if (m_used_files.count(appendedpath) == 0) {
-                    l2.unlock();
-                    retval = eval_file(appendedpath);
-                    l2.lock();
-                    m_used_files.insert(appendedpath);
-                }
-
-                return retval;  // return, we loaded it, or it was already
-                                // loaded
-            } catch (const exception::file_not_found_error &e) {
-                if (e.filename != appendedpath) {
-                    // a nested file include failed
-                    throw;
-                }
-                // failed to load, try the next path
-            }
-        }
-
-        // failed to load by any name
-        throw exception::file_not_found_error(t_filename);
-    }
+    Boxed_Value use(const std::string &t_filename);
 
     /// \brief Adds a constant object that is available in all contexts and to
     /// all threads \param[in] t_bv Boxed_Value to add as a global \param[in]
@@ -493,11 +162,7 @@ public:
     /// Carbon::exception::global_non_const If t_bv is not a constant object
     /// \sa Boxed_Value::is_const
     Carbon_Basic &add_global_const(const Boxed_Value &t_bv,
-                                       const std::string &t_name) {
-        Name_Validator::validate_object_name(t_name);
-        m_engine.add_global_const(t_bv, t_name);
-        return *this;
-    }
+                                   const std::string &t_name);
 
     /// \brief Adds a mutable object that is available in all contexts and to
     /// all threads \param[in] t_bv Boxed_Value to add as a global \param[in]
@@ -506,18 +171,10 @@ public:
     ///          ChaiScript is thread-safe but provides no threading locking
     ///          mechanism to the script
     Carbon_Basic &add_global(const Boxed_Value &t_bv,
-                                 const std::string &t_name) {
-        Name_Validator::validate_object_name(t_name);
-        m_engine.add_global(t_bv, t_name);
-        return *this;
-    }
+                             const std::string &t_name);
 
     Carbon_Basic &set_global(const Boxed_Value &t_bv,
-                                 const std::string &t_name) {
-        Name_Validator::validate_object_name(t_name);
-        m_engine.set_global(t_bv, t_name);
-        return *this;
-    }
+                             const std::string &t_name);
 
     /// \brief Represents the current state of the ChaiScript system. State and
     /// be saved and restored \warning State object does not contain the user
@@ -547,20 +204,7 @@ public:
     /// Carbon::ChaiScript chai;
     /// Carbon::ChaiScript::State s = chai.get_state(); // represents
     /// bootstrapped initial state \endcode
-    State get_state() const {
-        Carbon::detail::threading::lock_guard<
-            Carbon::detail::threading::recursive_mutex>
-            l(m_use_mutex);
-        Carbon::detail::threading::shared_lock<
-            Carbon::detail::threading::shared_mutex>
-            l2(m_mutex);
-
-        State s;
-        s.used_files = m_used_files;
-        s.engine_state = m_engine.get_state();
-        s.active_loaded_modules = m_active_loaded_modules;
-        return s;
-    }
+    State get_state() const;
 
     /// \brief Sets the state of the system
     ///
@@ -576,24 +220,11 @@ public:
     /// chai.add(Carbon::fun(&somefunction), "somefunction");
     /// chai.set_state(s); // restore initial state, which does not have the
     /// recently added "somefunction" \endcode
-    void set_state(const State &t_state) {
-        Carbon::detail::threading::lock_guard<
-            Carbon::detail::threading::recursive_mutex>
-            l(m_use_mutex);
-        Carbon::detail::threading::shared_lock<
-            Carbon::detail::threading::shared_mutex>
-            l2(m_mutex);
-
-        m_used_files = t_state.used_files;
-        m_active_loaded_modules = t_state.active_loaded_modules;
-        m_engine.set_state(t_state.engine_state);
-    }
+    void set_state(const State &t_state);
 
     /// \returns All values in the local thread state, added through the add()
     /// function
-    std::map<std::string, Boxed_Value> get_locals() const {
-        return m_engine.get_locals();
-    }
+    std::map<std::string, Boxed_Value> get_locals() const;
 
     /// \brief Sets all of the locals for the current thread state.
     ///
@@ -601,9 +232,7 @@ public:
     /// current state with
     ///
     /// Any existing locals are removed and the given set of variables is added
-    void set_locals(const std::map<std::string, Boxed_Value> &t_locals) {
-        m_engine.set_locals(t_locals);
-    }
+    void set_locals(const std::map<std::string, Boxed_Value> &t_locals);
 
     /// \brief Adds a type, function or object to ChaiScript. Objects are added
     /// to the local thread state. \param[in] t_t Item to add \param[in] t_name
@@ -635,18 +264,12 @@ public:
     /// Carbon::ChaiScript chai;
     /// chai.add(Carbon::base_class<std::runtime_error,
     /// Carbon::dispatch_error>()); \endcode
-    Carbon_Basic &add(const Type_Conversion &d) {
-        m_engine.add(d);
-        return *this;
-    }
+    Carbon_Basic &add(const Type_Conversion &d);
 
     /// \brief Adds all elements of a module to ChaiScript runtime
     /// \param[in] t_p The module to add.
     /// \sa Carbon::Module
-    Carbon_Basic &add(const ModulePtr &t_p) {
-        t_p->apply(*this, this->get_eval_engine());
-        return *this;
-    }
+    Carbon_Basic &add(const ModulePtr &t_p);
 
     /// \brief Load a binary module from a dynamic library. Works on platforms
     /// that support
@@ -664,45 +287,7 @@ public:
     ///
     /// \throw Carbon::exception::load_module_error In the event that no
     /// matching module can be found.
-    std::string load_module(const std::string &t_module_name) {
-#ifdef CARBON_NO_DYNLOAD
-        throw Carbon::exception::load_module_error(
-            "Loadable module support was disabled (CARBON_NO_DYNLOAD)");
-#else
-        std::vector<exception::load_module_error> errors;
-        std::string version_stripped_name = t_module_name;
-        size_t version_pos =
-            version_stripped_name.find("-" + Build_Info::version());
-        if (version_pos != std::string::npos) {
-            version_stripped_name.erase(version_pos);
-        }
-
-        std::vector<std::string> prefixes{"lib", "cyg", ""};
-
-        std::vector<std::string> postfixes{".dll", ".so", ".bundle", ""};
-
-        for (auto &elem : m_module_paths) {
-            for (auto &prefix : prefixes) {
-                for (auto &postfix : postfixes) {
-                    try {
-                        const auto name =
-                            elem + prefix + t_module_name + postfix;
-                        // std::cerr << "trying location: " << name << '\n';
-                        load_module(version_stripped_name, name);
-                        return name;
-                    } catch (
-                        const Carbon::exception::load_module_error &e) {
-                        // std::cerr << "error: " << e.what() << '\n';
-                        errors.push_back(e);
-                        // Try next set
-                    }
-                }
-            }
-        }
-
-        throw Carbon::exception::load_module_error(t_module_name, errors);
-#endif
-    }
+    std::string load_module(const std::string &t_module_name);
 
     /// \brief Load a binary module from a dynamic library. Works on platforms
     /// that support
@@ -714,22 +299,7 @@ public:
     ///
     /// \sa ChaiScript::load_module(const std::string &t_module_name)
     void load_module(const std::string &t_module_name,
-                     const std::string &t_filename) {
-        Carbon::detail::threading::lock_guard<
-            Carbon::detail::threading::recursive_mutex>
-            l(m_use_mutex);
-
-        if (m_loaded_modules.count(t_module_name) == 0) {
-            detail::Loadable_Module_Ptr lm(
-                new detail::Loadable_Module(t_module_name, t_filename));
-            m_loaded_modules[t_module_name] = lm;
-            m_active_loaded_modules.insert(t_module_name);
-            add(lm->m_moduleptr);
-        } else if (m_active_loaded_modules.count(t_module_name) == 0) {
-            m_active_loaded_modules.insert(t_module_name);
-            add(m_loaded_modules[t_module_name]->m_moduleptr);
-        }
-    }
+                     const std::string &t_filename);
 
     /// \brief Evaluates a string. Equivalent to ChaiScript::eval.
     ///
@@ -741,11 +311,8 @@ public:
     ///
     /// \throw Carbon::exception::eval_error In the case that evaluation
     /// fails.
-    Boxed_Value operator()(
-        const std::string &t_script,
-        const Exception_Handler &t_handler = Exception_Handler()) {
-        return eval(t_script, t_handler);
-    }
+    Boxed_Value operator()(const std::string &t_script,
+                           const Exception_Handler &t_handler);
 
     /// \brief Evaluates a string and returns a typesafe result.
     ///
@@ -790,16 +357,7 @@ public:
     /// \throw exception::eval_error In the case that evaluation fails.
     Boxed_Value eval(const std::string &t_input,
                      const Exception_Handler &t_handler = Exception_Handler(),
-                     const std::string &t_filename = "__EVAL__") {
-        try {
-            return do_eval(t_input, t_filename);
-        } catch (Boxed_Value &bv) {
-            if (t_handler) {
-                t_handler->handle(bv, m_engine);
-            }
-            throw;
-        }
-    }
+                     const std::string &t_filename = "__EVAL__");
 
     /// \brief Loads the file specified by filename, evaluates it, and returns
     /// the result. \param[in] t_filename File to load and parse. \param[in]
@@ -808,9 +366,7 @@ public:
     /// Carbon::exception::eval_error In the case that evaluation fails.
     Boxed_Value eval_file(
         const std::string &t_filename,
-        const Exception_Handler &t_handler = Exception_Handler()) {
-        return eval(load_file(t_filename), t_handler, t_filename);
-    }
+        const Exception_Handler &t_handler = Exception_Handler());
 
     /// \brief Loads the file specified by filename, evaluates it, and returns
     /// the type safe result. \tparam T Type to extract from the result value of
@@ -831,23 +387,7 @@ public:
     /// ChaiScript instance. \param[in] t_namespace_name Name of the namespace
     /// to import. \throw std::runtime_error In the case that the namespace name
     /// was never registered.
-    void import(const std::string &t_namespace_name) {
-        Carbon::detail::threading::unique_lock<
-            Carbon::detail::threading::recursive_mutex>
-            l(m_use_mutex);
-
-        if (m_engine.get_scripting_objects().count(t_namespace_name)) {
-            throw std::runtime_error("Namespace: " + t_namespace_name +
-                                     " was already defined");
-        } else if (m_namespace_generators.count(t_namespace_name)) {
-            m_engine.add_global(
-                var(std::ref(m_namespace_generators[t_namespace_name]())),
-                t_namespace_name);
-        } else {
-            throw std::runtime_error("No registered namespace: " +
-                                     t_namespace_name);
-        }
-    }
+    void import(const std::string &t_namespace_name);
 
     /// \brief Registers a namespace generator, which delays generation of the
     /// namespace until it is imported, saving memory if it is never used.
@@ -857,25 +397,7 @@ public:
     /// name was already registered.
     void register_namespace(
         const std::function<void(Namespace &)> &t_namespace_generator,
-        const std::string &t_namespace_name) {
-        Carbon::detail::threading::unique_lock<
-            Carbon::detail::threading::recursive_mutex>
-            l(m_use_mutex);
-
-        if (!m_namespace_generators.count(t_namespace_name)) {
-            // contain the namespace object memory within the
-            // m_namespace_generators map
-            m_namespace_generators.emplace(std::make_pair(
-                t_namespace_name,
-                [=, space = Namespace()]() mutable -> Namespace & {
-                    t_namespace_generator(space);
-                    return space;
-                }));
-        } else {
-            throw std::runtime_error("Namespace: " + t_namespace_name +
-                                     " was already registered.");
-        }
-    }
+        const std::string &t_namespace_name);
 };
 
 }  // namespace Carbon

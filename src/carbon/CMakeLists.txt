@@ -94,9 +94,9 @@ list(APPEND CPACK_SOURCE_IGNORE_FILES "\\\\.git")
 list(APPEND CPACK_SOURCE_IGNORE_FILES ".swp")
 list(APPEND CPACK_SOURCE_IGNORE_FILES ".*~")
 
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/license.txt")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/readme.md")
-set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/description.txt")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+#set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/description.txt")
 
 set(CPACK_PACKAGE_VERSION_MAJOR 7)
 set(CPACK_PACKAGE_VERSION_MINOR 0)
@@ -115,11 +115,11 @@ set(CPACK_RPM_PACKAGE_GROUP "Programming")
 
 set(CHAI_VERSION ${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH})
 
-configure_file(Doxyfile.in ${CMAKE_BINARY_DIR}/Doxyfile)
+# configure_file(Doxyfile.in ${CMAKE_BINARY_DIR}/Doxyfile)
 
 include(CTest)
 include(CPack)
-include(cmake/Catch.cmake)
+ #include(cmake/Catch.cmake)
 
 if(NOT MINGW)
   find_library(READLINE_LIBRARY NAMES readline PATH /usr/lib /usr/local/lib /opt/local/lib)
@@ -195,7 +195,7 @@ endif()
 include_directories(include)
 
 
-set(Chai_INCLUDES include/Carbon/Carbon.hpp include/Carbon/Carbon_threading.hpp include/Carbon/dispatchkit/bad_boxed_cast.hpp include/Carbon/dispatchkit/bind_first.hpp include/Carbon/dispatchkit/bootstrap.hpp include/Carbon/dispatchkit/bootstrap_stl.hpp include/Carbon/dispatchkit/boxed_cast.hpp include/Carbon/dispatchkit/boxed_cast_helper.hpp include/Carbon/dispatchkit/boxed_number.hpp include/Carbon/dispatchkit/boxed_value.hpp include/Carbon/dispatchkit/dispatchkit.hpp include/Carbon/dispatchkit/type_conversions.hpp include/Carbon/dispatchkit/dynamic_object.hpp include/Carbon/dispatchkit/exception_specification.hpp include/Carbon/dispatchkit/function_call.hpp include/Carbon/dispatchkit/function_call_detail.hpp include/Carbon/dispatchkit/handle_return.hpp include/Carbon/dispatchkit/operators.hpp include/Carbon/dispatchkit/proxy_constructors.hpp include/Carbon/dispatchkit/proxy_functions.hpp include/Carbon/dispatchkit/proxy_functions_detail.hpp include/Carbon/dispatchkit/register_function.hpp include/Carbon/dispatchkit/type_info.hpp include/Carbon/language/Carbon_algebraic.hpp include/Carbon/language/Carbon_common.hpp include/Carbon/language/Carbon_engine.hpp include/Carbon/language/Carbon_eval.hpp include/Carbon/language/Carbon_parser.hpp include/Carbon/language/Carbon_prelude.hpp include/Carbon/language/Carbon_prelude_docs.hpp include/Carbon/utility/utility.hpp include/Carbon/utility/json.hpp include/Carbon/utility/json_wrap.hpp)
+set(Chai_INCLUDES carbon.hpp threading.hpp command/bad_boxed_cast.hpp command/bind_first.hpp command/bootstrap.hpp command/bootstrap_stl.hpp command/boxed_cast.hpp command/boxed_cast_helper.hpp command/boxed_number.hpp command/boxed_value.hpp command/dispatchkit.hpp command/type_conversions.hpp command/dynamic_object.hpp command/exception_specification.hpp command/function_call.hpp command/function_call_detail.hpp command/handle_return.hpp command/operators.hpp command/proxy_constructors.hpp command/proxy_functions.hpp command/proxy_functions_detail.hpp command/register_function.hpp command/type_info.hpp language/algebraic.hpp language/common.hpp language/engine.hpp language/eval.hpp language/parser.hpp language/prelude.hpp language/prelude_docs.hpp utils/utility.hpp utils/json.hpp utils/json_wrap.hpp)
 
 set_source_files_properties(${Chai_INCLUDES} PROPERTIES HEADER_FILE_ONLY TRUE)
 
@@ -237,16 +237,28 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LINKER_FLAGS}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${LINKER_FLAGS}")
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${LINKER_FLAGS}")
 
-add_library(stdlib STATIC static_libs/Carbon_stdlib.cpp)
-add_library(parser STATIC static_libs/Carbon_parser.cpp)
+#add_library(stdlib STATIC static_libs/Carbon_stdlib.cpp)
+#add_library(parser STATIC static_libs/Carbon_parser.cpp)
 
-add_library(Carbon_stdlib-${CHAI_VERSION} MODULE src/Carbon_stdlib_module.cpp)
-target_link_libraries(Carbon_stdlib-${CHAI_VERSION} ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
+#add_library(Carbon_stdlib-${CHAI_VERSION} MODULE src/Carbon_stdlib_module.cpp)
+#target_link_libraries(Carbon_stdlib-${CHAI_VERSION} ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 set(Carbon_LIBS stdlib parser)
 
-add_executable(chai src/main.cpp ${Chai_INCLUDES})
-target_link_libraries(chai ${LIBS} ${Carbon_LIBS})
+set(Carbon_SRC
+  command/bad_boxed_cast.cpp
+  command/boxed_number.cpp
+  command/dispatchkit.cpp
+  command/dynamic_object_detail.cpp
+  command/dynamic_object.cpp
+  command/proxy_functions.cpp
+
+  language/engine.cpp
+)
+# We will build a static library for Carbon
+add_library(carbon STATIC ${Carbon_SRC})
+# add_executable(chai src/main.cpp ${Carbon_SRC} ${Chai_INCLUDES})
+# target_link_libraries(chai ${LIBS} ${Carbon_LIBS})
 
 add_library(Carbon INTERFACE)
 target_include_directories(Carbon INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -268,13 +280,13 @@ endif()
 
 
 if(BUILD_MODULES)
-  add_library(test_module MODULE src/test_module.cpp)
-  target_link_libraries(test_module ${LIBS})
+  #add_library(test_module MODULE src/test_module.cpp)
+  #target_link_libraries(test_module ${LIBS})
 
-  add_library(stl_extra MODULE src/stl_extra.cpp)
-  target_link_libraries(stl_extra ${LIBS})
+  #add_library(stl_extra MODULE src/stl_extra.cpp)
+  #target_link_libraries(stl_extra ${LIBS})
 
-  set(MODULES stl_extra)
+  #set(MODULES stl_extra)
 endif()
 
 
@@ -368,52 +380,7 @@ if(BUILD_TESTING)
     "CHAI_MODULE_PATH=${CMAKE_CURRENT_BINARY_DIR}/"
   )
 
-  if(NOT UNIT_TEST_LIGHT)
-    add_executable(compiled_tests unittests/compiled_tests.cpp)
-    target_link_libraries(compiled_tests ${LIBS} ${Carbon_LIBS})
-    catch_discover_tests(compiled_tests TEST_PREFIX "compiled.")
-
-    add_executable(static_Carbon_test unittests/static_Carbon.cpp)
-    target_link_libraries(static_Carbon_test ${LIBS})
-    add_test(NAME Static_Carbon_Test COMMAND static_Carbon_test)
-
-    add_executable(boxed_cast_test unittests/boxed_cast_test.cpp)
-    target_link_libraries(boxed_cast_test ${LIBS})
-    add_test(NAME Boxed_Cast_Test COMMAND boxed_cast_test)
-
-    add_executable(type_info_test unittests/type_info_test.cpp)
-    target_link_libraries(type_info_test ${LIBS})
-    add_test(NAME Type_Info_Test COMMAND type_info_test)
-
-    add_executable(c_linkage_test unittests/c_linkage_test.cpp)
-    target_link_libraries(c_linkage_test ${LIBS} ${Carbon_LIBS})
-    add_test(NAME C_Linkage_Test COMMAND c_linkage_test)
-
-    add_executable(integer_literal_test unittests/integer_literal_test.cpp)
-    target_link_libraries(integer_literal_test ${LIBS} ${Carbon_LIBS})
-    add_test(NAME Integer_Literal_Test COMMAND integer_literal_test)
-
-    if(MULTITHREAD_SUPPORT_ENABLED)
-      add_executable(multithreaded_test unittests/multithreaded_test.cpp)
-      target_link_libraries(multithreaded_test ${LIBS})
-      add_test(NAME Multithreaded_Test COMMAND multithreaded_test)
-      set_property(TEST Multithreaded_Test
-        PROPERTY ENVIRONMENT
-        "CHAI_USE_PATH=${CMAKE_CURRENT_SOURCE_DIR}/unittests/"
-        "CHAI_MODULE_PATH=${CMAKE_CURRENT_BINARY_DIR}/"
-      )
-    endif()
-
-    add_executable(multifile_test
-      unittests/multifile_test_main.cpp
-      unittests/multifile_test_chai.cpp
-      unittests/multifile_test_module.cpp
-    )
-    target_link_libraries(multifile_test ${LIBS})
-    add_test(NAME MultiFile_Test COMMAND multifile_test)
-
-    install(TARGETS test_module RUNTIME DESTINATION bin LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/Carbon")
-  endif()
+  
 endif()
 
 
@@ -424,7 +391,7 @@ if(BUILD_LIBFUZZ_TESTER)
 endif()
 
 
-install(TARGETS chai Carbon_stdlib-${CHAI_VERSION} ${MODULES} RUNTIME DESTINATION bin LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/Carbon")
+# install(TARGETS chai Carbon_stdlib-${CHAI_VERSION} ${MODULES} RUNTIME DESTINATION bin LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/Carbon")
 
 install(DIRECTORY include/Carbon DESTINATION include
   PATTERN "*.hpp"
@@ -443,8 +410,8 @@ install(DIRECTORY samples DESTINATION share/Carbon
   PATTERN "*/.git*" EXCLUDE
   PATTERN "*~" EXCLUDE)
 
-configure_file(contrib/pkgconfig/Carbon.pc.in lib/pkgconfig/Carbon.pc @ONLY)
-install(FILES "${Carbon_BINARY_DIR}/lib/pkgconfig/Carbon.pc"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+#configure_file(contrib/pkgconfig/Carbon.pc.in lib/pkgconfig/Carbon.pc @ONLY)
+#install(FILES "${Carbon_BINARY_DIR}/lib/pkgconfig/Carbon.pc"
+#        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
     

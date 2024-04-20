@@ -6,13 +6,15 @@ namespace dispatch {
 Dynamic_Object::Dynamic_Object(std::string t_type_name)
     : m_type_name(std::move(t_type_name)), m_option_explicit(false) {}
 
-bool Dynamic_Object::is_explicit() const { return m_option_explicit; }
+bool Dynamic_Object::is_explicit() const noexcept { return m_option_explicit; }
 
-void Dynamic_Object::set_explicit(const bool t_explicit) {
+void Dynamic_Object::set_explicit(const bool t_explicit) noexcept {
     m_option_explicit = t_explicit;
 }
 
-const std::string &Dynamic_Object::get_type_name() const { return m_type_name; }
+const std::string &Dynamic_Object::get_type_name() const noexcept {
+    return m_type_name;
+}
 
 const Boxed_Value &Dynamic_Object::operator[](
     const std::string &t_attr_name) const {

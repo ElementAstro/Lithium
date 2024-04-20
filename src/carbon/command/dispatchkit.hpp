@@ -358,7 +358,7 @@ public:
     void add(const Type_Info &ti, const std::string &name);
 
     /// Returns the type info for a named type
-    Type_Info get_type(std::string_view name, bool t_throw = true) const;
+    Type_Info get_type(std::string_view name, bool t_throw) const;
 
     /// Returns the registered name of a known type_info object
     /// compares the "bare_type_info" for the broadest possible

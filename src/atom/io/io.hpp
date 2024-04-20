@@ -17,6 +17,7 @@ Description: IO
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 namespace fs = std::filesystem;
@@ -34,6 +35,39 @@ namespace Atom::IO {
  * @return 如果操作成功，则返回true，否则返回false。
  */
 [[nodiscard]] bool createDirectory(const std::string &path);
+
+/**
+ * @brief Creates a directory with the specified path.
+*/
+struct CreateDirectoriesOptions {
+    bool verbose = true;
+    bool dryRun = false;
+    int delay = 0;
+    std::function<bool(const std::string&)> filter = [](const std::string&) {
+        return true;
+    };
+    std::function<void(const std::string&)> onCreate = [](const std::string&) {
+    };
+};
+
+/**
+ * @brief Creates a directory with the specified path.
+ *
+ * @param basePath The base path of the directory to create.
+ * @param subdirs The subdirectories to create.
+ * @param options The options for creating the directory.
+ * @return True if the operation was successful, false otherwise.
+ *
+ * 使用指定路径创建一个目录。
+ *
+ * @param basePath 要创建的目录的基本路径。
+ * @param subdirs 要创建的子目录。
+ * @param options 创建目录的选项。
+ * @return 如果操作成功，则返回true，否则返回false。
+ */
+bool createDirectoriesRecursive(const fs::path& basePath,
+                                const std::vector<std::string>& subdirs,
+                                const CreateDirectoriesOptions& options);
 
 /**
  * @brief Creates a directory with the specified path.

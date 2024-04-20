@@ -241,7 +241,7 @@ public:
     /// \b Examples:
     /// \code
     /// Carbon::ChaiScript chai;
-    /// chai.add(Carbon::user_type<MyClass>(), "MyClass"); // Add explicit
+    /// chai.add(user_type<MyClass>(), "MyClass"); // Add explicit
     /// type info (not strictly necessary)
     /// chai.add(Carbon::fun(&MyClass::function), "function"); // Add a
     /// class method MyClass obj; chai.add(Carbon::var(&obj), "obj"); // Add

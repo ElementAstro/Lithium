@@ -512,7 +512,7 @@ public:
         m.add(Carbon::base_class<std::exception,
                                      Carbon::exception::eval_error>());
 
-        m.add(Carbon::user_type<Carbon::exception::arithmetic_error>(),
+        m.add(user_type<Carbon::exception::arithmetic_error>(),
               "arithmetic_error");
         m.add(
             Carbon::base_class<std::runtime_error,

@@ -43,7 +43,7 @@ void add_class(ModuleType &t_module, const std::string &t_class_name,
                const std::vector<Carbon::Proxy_Function> &t_constructors,
                const std::vector<std::pair<Carbon::Proxy_Function, std::string>>
                    &t_funcs) {
-    t_module.add(Carbon::user_type<Class>(), t_class_name);
+    t_module.add(user_type<Class>(), t_class_name);
 
     for (const Carbon::Proxy_Function &ctor : t_constructors) {
         t_module.add(ctor, t_class_name);
@@ -59,7 +59,7 @@ typename std::enable_if<std::is_enum<Enum>::value, void>::type add_class(
     ModuleType &t_module, const std::string &t_class_name,
     const std::vector<std::pair<typename std::underlying_type<Enum>::type,
                                 std::string>> &t_constants) {
-    t_module.add(Carbon::user_type<Enum>(), t_class_name);
+    t_module.add(user_type<Enum>(), t_class_name);
 
     t_module.add(Carbon::constructor<Enum()>(), t_class_name);
     t_module.add(Carbon::constructor<Enum(const Enum &)>(), t_class_name);
@@ -84,7 +84,7 @@ template <typename EnumClass, typename ModuleType>
 typename std::enable_if<std::is_enum<EnumClass>::value, void>::type add_class(
     ModuleType &t_module, const std::string &t_class_name,
     const std::vector<std::pair<EnumClass, std::string>> &t_constants) {
-    t_module.add(Carbon::user_type<EnumClass>(), t_class_name);
+    t_module.add(user_type<EnumClass>(), t_class_name);
 
     t_module.add(Carbon::constructor<EnumClass()>(), t_class_name);
     t_module.add(Carbon::constructor<EnumClass(const EnumClass &)>(),

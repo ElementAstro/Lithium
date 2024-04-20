@@ -5,7 +5,7 @@ namespace dispatch {
 namespace detail {
 Dynamic_Object_Function::Dynamic_Object_Function(std::string t_type_name,
                                                  const Proxy_Function &t_func,
-                                                 bool t_is_attribute = false)
+                                                 bool t_is_attribute)
     : Proxy_Function_Base(t_func->get_param_types(), t_func->get_arity()),
       m_type_name(std::move(t_type_name)),
       m_func(t_func),
@@ -19,7 +19,7 @@ Dynamic_Object_Function::Dynamic_Object_Function(std::string t_type_name,
 Dynamic_Object_Function::Dynamic_Object_Function(std::string t_type_name,
                                                  const Proxy_Function &t_func,
                                                  const Type_Info &t_ti,
-                                                 bool t_is_attribute = false)
+                                                 bool t_is_attribute)
     : Proxy_Function_Base(build_param_types(t_func->get_param_types(), t_ti),
                           t_func->get_arity()),
       m_type_name(std::move(t_type_name)),

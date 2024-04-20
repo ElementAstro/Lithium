@@ -2,31 +2,31 @@
 #define CARBON_HPP
 
 /// @mainpage
-/// [ChaiScript](http://www.chaiscript.com") is a scripting language designed
+/// [CarbonScript](http://www.chaiscript.com") is a scripting language designed
 /// specifically for integration with C++. It provides seamless integration with
 /// C++ on all levels, including shared_ptr objects, functors and exceptions.
 ///
-/// The parts of the ChaiScript API that the average user will be concerned with
-/// are contained in the chaiscript namespace and the Carbon::ChaiScript
+/// The parts of the CarbonScript API that the average user will be concerned
+/// with are contained in the chaiscript namespace and the Carbon::CarbonScript
 /// class.
 ///
 /// The end user parts of the API are extremely simple both in size and ease of
 /// use.
 ///
-/// Currently, all source control and project management aspects of ChaiScript
-/// occur on [github](http://www.github.com/ChaiScript/ChaiScript").
+/// Currently, all source control and project management aspects of CarbonScript
+/// occur on [github](http://www.github.com/CarbonScript/CarbonScript").
 ///
 /// ------------------------------------------------------------
 ///
 /// @sa chaiscript
-/// @sa Carbon::ChaiScript
+/// @sa Carbon::CarbonScript
 /// @sa Carbon_Language for Built in Functions
 /// @sa @ref LangGettingStarted
 /// @sa @ref LangKeywordRef
 /// @sa @ref LangInPlaceRef
 /// @sa @ref LangObjectSystemRef
 /// @sa http://www.chaiscript.com
-/// @sa http://www.github.com/ChaiScript/ChaiScript
+/// @sa http://www.github.com/CarbonScript/CarbonScript
 ///
 /// -----------------------------------------------------------
 ///
@@ -60,7 +60,7 @@
 ///
 /// int main()
 /// {
-///   Carbon::ChaiScript chai;
+///   Carbon::CarbonScript chai;
 ///   chai.add(Carbon::fun(&function), "function");
 ///
 ///   double d = chai.eval<double>("function(3, 4.75);");
@@ -69,9 +69,9 @@
 ///
 /// ------------------------------------------------------
 ///
-/// @subsection compiling Compiling ChaiScript Applications
+/// @subsection compiling Compiling CarbonScript Applications
 ///
-/// ChaiScript is a header only library with only one dependency: The
+/// CarbonScript is a header only library with only one dependency: The
 /// operating system provided dynamic library loader, which has to be specified
 /// on some platforms.
 ///
@@ -99,15 +99,15 @@
 ///
 /// @subsubsection parenoperator () Operator
 ///
-/// operator() can be used as a handy shortcut for evaluating ChaiScript
+/// operator() can be used as a handy shortcut for evaluating CarbonScript
 /// snippets.
 ///
 /// ~~~~~~~~{.cpp}
-/// Carbon::ChaiScript chai;
+/// Carbon::CarbonScript chai;
 /// chai("print(@"hello world@")");
 /// ~~~~~~~~
 ///
-/// @sa Carbon::ChaiScript::operator()(const std::string &)
+/// @sa Carbon::CarbonScript::operator()(const std::string &)
 ///
 /// @subsubsection evalmethod Method 'eval'
 ///
@@ -115,32 +115,32 @@
 /// return values from the script.
 ///
 /// ~~~~~~~~{.cpp}
-/// Carbon::ChaiScript chai;
+/// Carbon::CarbonScript chai;
 /// chai.eval("callsomefunc()");
 /// int result = chai.eval<int>("1 + 3");
 /// // result now equals 4
 /// ~~~~~~~~
 ///
-/// @sa Carbon::ChaiScript::eval
+/// @sa Carbon::CarbonScript::eval
 ///
 /// @subsubsection evalfilemethod Method 'eval_file'
 ///
 /// The 'eval_file' method loads a file from disk and executes the script in it
 ///
 /// ~~~~~~~~{.cpp}
-/// Carbon::ChaiScript chai;
+/// Carbon::CarbonScript chai;
 /// chai.eval_file("myfile.chai");
 /// std::string result = chai.eval_file<std::string>("myfile.chai") // extract
 /// the last value returned from the file
 /// ~~~~~~~~
 ///
-/// @sa Carbon::ChaiScript::eval_file
+/// @sa Carbon::CarbonScript::eval_file
 ///
 /// --------------------------------------------------
 ///
-/// @subsection adding_items Adding Items to ChaiScript
+/// @subsection adding_items Adding Items to CarbonScript
 ///
-/// ChaiScript supports 4 basic things that can be added: objects, functions,
+/// CarbonScript supports 4 basic things that can be added: objects, functions,
 /// type infos and Modules
 ///
 /// @subsubsection adding_objects Adding Objects
@@ -152,7 +152,7 @@
 ///
 /// ~~~~~~~~~{.cpp}
 /// using namespace Carbon;
-/// ChaiScript chai;
+/// CarbonScript chai;
 /// int i = 5;
 /// chai.add(var(i), "i");
 /// chai("print(i)");
@@ -167,7 +167,7 @@
 ///
 /// Named variables can only be accessed from the context they are created in.
 /// If you want a global variable, it must be const, and created with the
-/// Carbon::ChaiScript::add_global_const function.
+/// Carbon::CarbonScript::add_global_const function.
 ///
 /// ~~~~~~~~~{.cpp}
 /// chai.add_global_const(const_var(i), "i");
@@ -192,7 +192,7 @@
 ///     void overloadedmethod(const std::string &);
 /// };
 ///
-/// ChaiScript chai;
+/// CarbonScript chai;
 /// chai.add(fun(&MyClass::memberdata), "memberdata");
 /// chai.add(fun(&MyClass::method), "method");
 /// chai.add(fun(&MyClass::staticmethod), "staticmethod");
@@ -220,12 +220,12 @@
 ///
 /// @subsubsection addingtypeinfo Adding Type Info
 ///
-/// ChaiScript will automatically support any type implicitly provided to it in
-/// the form of objects and function parameters / return types. However, it can
-/// be nice to let ChaiScript know more details about the types you are giving
-/// it. For instance, the "clone" functionality cannot work unless there is a
-/// copy constructor registered and the name of the type is known (so that
-/// ChaiScript can look up the copy constructor).
+/// CarbonScript will automatically support any type implicitly provided to it
+/// in the form of objects and function parameters / return types. However, it
+/// can be nice to let CarbonScript know more details about the types you are
+/// giving it. For instance, the "clone" functionality cannot work unless there
+/// is a copy constructor registered and the name of the type is known (so that
+/// CarbonScript can look up the copy constructor).
 ///
 /// Continuing with the example "MyClass" from above:
 ///
@@ -235,7 +235,7 @@
 ///
 /// @subsubsection adding_modules Adding Modules
 ///
-/// Modules are holders for collections of ChaiScript registrations.
+/// Modules are holders for collections of CarbonScript registrations.
 ///
 /// ~~~~~~~~{.cpp}
 /// ModulePtr module = get_sum_module();
@@ -248,7 +248,7 @@
 ///
 /// @subsection operatoroverloading Operator Overloading
 ///
-/// Operators are just like any other function in ChaiScript, to overload an
+/// Operators are just like any other function in CarbonScript, to overload an
 /// operator, simply register it.
 ///
 /// ~~~~~~~~{.cpp}
@@ -274,8 +274,8 @@
 ///
 /// @subsection add_class Class Helper Utility
 ///
-/// Much of the work of adding new classes to ChaiScript can be reduced with the
-/// help of the add_class helper utility.
+/// Much of the work of adding new classes to CarbonScript can be reduced with
+/// the help of the add_class helper utility.
 ///
 /// ~~~~~~~~{.cpp}
 /// class Test
@@ -306,7 +306,7 @@
 ///      );
 ///
 ///
-///   Carbon::ChaiScript chai;
+///   Carbon::CarbonScript chai;
 ///   chai.add(m);
 /// }
 /// ~~~~~~~~
@@ -317,7 +317,7 @@
 ///
 /// @subsection pointer_conversions Pointer / Object Conversions
 ///
-/// As much as possible, ChaiScript attempts to convert between &, *, const &,
+/// As much as possible, CarbonScript attempts to convert between &, *, const &,
 /// const *, std::shared_ptr<T>, std::shared_ptr<const T>,
 /// std::reference_wrapper<T>, std::reference_wrapper<const T> and value types
 /// automatically.
@@ -345,7 +345,7 @@
 /// int main()
 /// {
 ///   using namespace Carbon
-///   Carbon::ChaiScript chai;
+///   Carbon::CarbonScript chai;
 ///   chai.add(fun(fun1), "fun1");
 ///   chai.add(fun(fun2), "fun2");
 ///   chai.add(fun(fun3), "fun3");
@@ -378,9 +378,9 @@
 ///
 /// @subsection baseclasses Base Classes
 ///
-/// ChaiScript supports handling of passing a derived class object to a function
-/// expecting a base class object. For the process to work, the base/derived
-/// relationship must be registered with the engine.
+/// CarbonScript supports handling of passing a derived class object to a
+/// function expecting a base class object. For the process to work, the
+/// base/derived relationship must be registered with the engine.
 ///
 /// ~~~~~~~~{.cpp}
 /// class Base {};
@@ -389,7 +389,7 @@
 ///
 /// int main()
 /// {
-///   Carbon::ChaiScript chai;
+///   Carbon::CarbonScript chai;
 ///   chai.add(Carbon::base_class<Base, Derived>());
 ///   Derived d;
 ///   chai.add(Carbon::var(&d), "d");
@@ -403,8 +403,9 @@
 ///
 /// @subsection functionobjects Function Objects
 ///
-/// Functions are first class objects in ChaiScript and ChaiScript supports
-/// automatic conversion between ChaiScript functions and std::function objects.
+/// Functions are first class objects in CarbonScript and CarbonScript supports
+/// automatic conversion between CarbonScript functions and std::function
+/// objects.
 ///
 /// ~~~~~~~~{.cpp}
 /// void callafunc(const std::function<void (const std::string &)> &t_func)
@@ -414,7 +415,7 @@
 ///
 /// int main()
 /// {
-///   Carbon::ChaiScript chai;
+///   Carbon::CarbonScript chai;
 ///   chai.add(Carbon::fun(&callafunc), "callafunc");
 ///   chai("callafunc(fun(x) { print(x); })"); // pass a lambda function to the
 ///   registered function
@@ -422,7 +423,7 @@
 ///                                            std::function
 ///
 ///   std::function<void ()> f = chai.eval<std::function<void ()>
-///   >("dump_system"); f(); // call the ChaiScript function dump_system, from
+///   >("dump_system"); f(); // call the CarbonScript function dump_system, from
 ///   C++
 /// }
 /// ~~~~~~~~
@@ -432,9 +433,10 @@
 ///
 /// @subsection threading Threading
 ///
-/// Thread safety is automatically handled within the ChaiScript system. Objects
-/// can be added and scripts executed from multiple threads. For each thread
-/// that executes scripts, a new context is created and managed by the engine.
+/// Thread safety is automatically handled within the CarbonScript system.
+/// Objects can be added and scripts executed from multiple threads. For each
+/// thread that executes scripts, a new context is created and managed by the
+/// engine.
 ///
 /// Thread safety can be disabled by defining CARBON_NO_THREADS when using the
 /// library.
@@ -448,8 +450,8 @@
 ///
 /// @subsubsection exceptionsbasics Exception Handling Basics
 ///
-/// Exceptions can be thrown in ChaiScript and caught in C++ or thrown in C++
-/// and caught in ChaiScript.
+/// Exceptions can be thrown in CarbonScript and caught in C++ or thrown in C++
+/// and caught in CarbonScript.
 ///
 /// ~~~~~~~~{.cpp}
 /// void throwexception()
@@ -459,13 +461,13 @@
 ///
 /// int main()
 /// {
-///   // Throw in C++, catch in ChaiScript
-///   Carbon::ChaiScript chai;
+///   // Throw in C++, catch in CarbonScript
+///   Carbon::CarbonScript chai;
 ///   chai.add(Carbon::fun(&throwexception), "throwexception");
 ///   chai("try { throwexception(); } catch (e) { print(e.what()); }"); //
 ///   prints "err"
 ///
-///   // Throw in ChaiScript, catch in C++
+///   // Throw in CarbonScript, catch in C++
 ///   try {
 ///     chai("throw(1)");
 ///   } catch (Carbon::Boxed_Value bv) {
@@ -478,12 +480,12 @@
 /// @subsubsection exceptionsautomatic Exception Handling Automatic Unboxing
 ///
 /// As an alternative to the manual unboxing of exceptions shown above,
-/// exception specifications allow the user to tell ChaiScript what possible
+/// exception specifications allow the user to tell CarbonScript what possible
 /// exceptions are expected from the script being executed.
 ///
 /// Example:
 /// ~~~~~~~~{.cpp}
-/// Carbon::ChaiScript chai;
+/// Carbon::CarbonScript chai;
 ///
 /// try {
 ///   chai.eval("throw(runtime_error(@"error@"))",
@@ -502,11 +504,11 @@
 /// unboxing
 /// @sa Carbon::exception_specification
 
-/// @page LangObjectSystemRef ChaiScript Language Object Model Reference
+/// @page LangObjectSystemRef CarbonScript Language Object Model Reference
 ///
 ///
-/// ChaiScript has an object system built in, for types defined within the
-/// ChaiScript system.
+/// CarbonScript has an object system built in, for types defined within the
+/// CarbonScript system.
 ///
 /// ~~~~~~~~~
 /// attr Rectangle::height
@@ -519,7 +521,7 @@
 /// print(rect.area())
 /// ~~~~~~~~~
 ///
-/// Since ChaiScript 5.4.0 it has been possible to use the "class" keyword to
+/// Since CarbonScript 5.4.0 it has been possible to use the "class" keyword to
 /// simplify this code.
 ///
 /// ~~~~~~~~~
@@ -538,7 +540,7 @@
 /// @sa @ref keywordattr
 /// @sa @ref keyworddef
 
-/// @page LangInPlaceRef ChaiScript Language In-Place Creation Reference
+/// @page LangInPlaceRef CarbonScript Language In-Place Creation Reference
 /// @section inplacevector Vector
 ///
 /// ~~~~~~~~~
@@ -559,16 +561,16 @@
 /// In-place Map ::= "[" (string ":" expression)+ "]"
 /// ~~~~~~~~
 
-/// @page LangGettingStarted ChaiScript Language Getting Started
+/// @page LangGettingStarted CarbonScript Language Getting Started
 ///
-/// ChaiScript is a simple language that should feel familiar to anyone who
+/// CarbonScript is a simple language that should feel familiar to anyone who
 /// knows C++ or ECMAScript (JavaScript).
 ///
 /// -----------------------------------------------------------------------
 ///
 /// @section chaiscriptloops Loops
 ///
-/// Common looping constructs exist in ChaiScript
+/// Common looping constructs exist in CarbonScript
 ///
 /// ~~~~~~~~
 /// var i = 0;
@@ -640,7 +642,8 @@
 ///
 /// @section chaiscriptfunctionobjects Function Objects
 ///
-/// Functions are first class types in ChaiScript and can be used as variables.
+/// Functions are first class types in CarbonScript and can be used as
+/// variables.
 ///
 /// ~~~~~~~~
 /// eval> var p = print;
@@ -672,13 +675,13 @@
 /// @sa @ref LangKeywordRef
 /// @sa Carbon_Language for Built in Functions
 
-/// @page LangKeywordRef ChaiScript Language Keyword Reference
+/// @page LangKeywordRef CarbonScript Language Keyword Reference
 ///
 ///
 /// -----------------------------------------------------------------------
 ///
 /// @section keywordattr attr
-/// Defines a ChaiScript object attribute
+/// Defines a CarbonScript object attribute
 ///
 /// ~~~~~~~~
 /// Attribute Definition ::= "attr" class_name "::" attribute_name
@@ -735,7 +738,7 @@
 /// not a while or for loop).
 ///
 /// Method definitions for known types extend those types with new methods. This
-/// includes C++ and ChaiScript defined types. Method definitions for unknown
+/// includes C++ and CarbonScript defined types. Method definitions for unknown
 /// types implicitly define the named type.
 ///
 /// @sa @ref LangObjectSystemRef
@@ -773,7 +776,7 @@
 /// var f = fun(x) { x + 2; }
 /// ~~~~~~~~
 ///
-/// @sa @ref keyworddef for more details on ChaiScript functions
+/// @sa @ref keyworddef for more details on CarbonScript functions
 ///
 ///
 /// -----------------------------------------------------------------------
@@ -851,17 +854,16 @@
 #include "stdlib.hpp"
 
 namespace Carbon {
-class ChaiScript : public Carbon_Basic {
+class CarbonScript : public Carbon_Basic {
 public:
-    ChaiScript(std::vector<std::string> t_modulepaths = {},
-               std::vector<std::string> t_usepaths = {},
-               std::vector<Options> t_opts = Carbon::default_options())
-        : Carbon_Basic(
-              Carbon::Std_Lib::library(),
-              std::make_unique<parser::Carbon_Parser<
-                  eval::Noop_Tracer, optimizer::Optimizer_Default>>(),
-              std::move(t_modulepaths), std::move(t_usepaths),
-              std::move(t_opts)) {}
+    CarbonScript(std::vector<std::string> t_modulepaths = {},
+                 std::vector<std::string> t_usepaths = {},
+                 std::vector<Options> t_opts = Carbon::default_options())
+        : Carbon_Basic(Carbon::Std_Lib::library(),
+                       std::make_unique<parser::Carbon_Parser<
+                           eval::Noop_Tracer, optimizer::Optimizer_Default>>(),
+                       std::move(t_modulepaths), std::move(t_usepaths),
+                       std::move(t_opts)) {}
 };
 }  // namespace Carbon
 

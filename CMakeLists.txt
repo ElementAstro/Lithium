@@ -216,6 +216,8 @@ set(script_module
     ${lithium_src_dir}/script/custom/config.cpp
 
     ${lithium_src_dir}/script/sheller.cpp
+
+    ${lithium_src_dir}/script/carbon.cpp
 )
 
 set(task_module
@@ -246,6 +248,7 @@ target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
+target_link_libraries(lithium_server carbon)
 target_link_libraries(lithium_server-library fmt::fmt)
 
 target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)

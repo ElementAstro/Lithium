@@ -54,7 +54,7 @@
 
 #ifdef _WIN32
 #include <direct.h>
-
+#include <share.h>
 #define localtime_r(a, b) \
     localtime_s(b, a)  // No localtime_r with MSVC, but arguments are swapped
                        // for localtime_s
@@ -68,8 +68,6 @@
 #include <linux/limits.h>  // PATH_MAX
 #elif !defined(_WIN32)
 #include <limits.h>  // PATH_MAX
-#elif _WIN32
-#include <share.h>
 #endif
 
 #ifndef PATH_MAX
@@ -86,7 +84,7 @@
 #define LOGURU_PTHREADS 0
 #define LOGURU_WINTHREADS 1
 #ifndef LOGURU_STACKTRACES
-#define LOGURU_STACKTRACES 1
+#define LOGURU_STACKTRACES 0
 #endif
 #else
 #define LOGURU_PTHREADS 1
@@ -103,19 +101,10 @@
 #endif
 
 #if LOGURU_STACKTRACES
-#ifdef _WIN32
-#include <windows.h>
-#include <DbgHelp.h>
-#include <strsafe.h>
-#ifndef __MINGW64__
-#pragma comment(lib, "DbgHelp.lib")
-#endif
-#else
 #include <cxxabi.h>    // for __cxa_demangle
 #include <dlfcn.h>     // for dladdr
 #include <execinfo.h>  // for backtrace
-#endif
-#endif  // LOGURU_STACKTRACES
+#endif                 // LOGURU_STACKTRACES
 
 #if LOGURU_PTHREADS
 #include <pthread.h>
@@ -142,10 +131,7 @@
 #define _WIN32_WINNT 0x0502
 #endif
 #define WIN32_LEAN_AND_MEAN
-#ifndef NOMINMAX
 #define NOMINMAX
-#endif
-
 #include <windows.h>
 #endif
 
@@ -790,27 +776,13 @@ void suggest_log_path(const char* prefix, char* buff,
     }
 
 #ifdef _WIN32
-    size_t buff_len = strlen(buff);
-    size_t remaining_space = buff_size - buff_len - 1;
-    if (remaining_space > 0) {
-        size_t filename_len = s_argv0_filename.length();
-        size_t copy_len = std::min(filename_len, remaining_space);
-        strncat_s(buff + buff_len, remaining_space, s_argv0_filename.c_str(),
-                  copy_len);
-        remaining_space = buff_size - strlen(buff) - 1;
-        buff_len = strlen(buff);
-        if (remaining_space > 0) {
-            strncat_s(buff + buff_len, remaining_space, "/", 1);
-            remaining_space = buff_size - strlen(buff) - 1;
-            buff_len = strlen(buff);
-        }
-        write_date_time(buff + buff_len, remaining_space);
-        remaining_space = buff_size - strlen(buff) - 1;
-        buff_len = strlen(buff);
-        if (remaining_space > 0) {
-            strncat_s(buff + buff_len, remaining_space, ".log", 4);
-        }
-    }
+    strncat_s(buff, buff_size - strlen(buff) - 1, s_argv0_filename.c_str(),
+              buff_size - strlen(buff) - 1);
+    strncat_s(buff, buff_size - strlen(buff) - 1, "/",
+              buff_size - strlen(buff) - 1);
+    write_date_time(buff + strlen(buff), buff_size - strlen(buff));
+    strncat_s(buff, buff_size - strlen(buff) - 1, ".log",
+              buff_size - strlen(buff) - 1);
 #else
     strncat(buff, s_argv0_filename.c_str(), buff_size - strlen(buff) - 1);
     strncat(buff, "/", buff_size - strlen(buff) - 1);
@@ -1089,12 +1061,7 @@ void make_pthread_key_name() {
 #if LOGURU_WINTHREADS
 // Where we store the custom thread name set by `set_thread_name`
 char* thread_name_buffer() {
-#ifdef _WIN32
     thread_local static char thread_name[LOGURU_THREADNAME_WIDTH + 1] = {0};
-#else
-    __declspec(thread) static char thread_name[LOGURU_THREADNAME_WIDTH + 1] = {
-        0};
-#endif
     return &thread_name[0];
 }
 #endif  // LOGURU_WINTHREADS
@@ -1187,23 +1154,8 @@ void get_thread_name(char* buffer, unsigned long long length,
 #if LOGURU_STACKTRACES
 Text demangle(const char* name) {
     int status = -1;
-#ifdef _WIN32
-    DWORD length = 512;
-    char* demangled = (char*)malloc(length * sizeof(char));
-    if (demangled) {
-        if (UnDecorateSymbolName(name, demangled, length, UNDNAME_COMPLETE) !=
-            0) {
-            status = 0;
-        }
-    }
-#else
-    char* demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
-#endif
-
-    Text result{status == 0 && demangled ? demangled : STRDUP(name)};
-#ifdef _WIN32
-    free(demangled);
-#endif
+    char* demangled = abi::__cxa_demangle(name, 0, 0, &status);
+    Text result{status == 0 ? demangled : STRDUP(name)};
     return result;
 }
 
@@ -1265,39 +1217,8 @@ std::string stacktrace_as_stdstring(int skip) {
     // From https://gist.github.com/fmela/591333
     void* callstack[128];
     const auto max_frames = sizeof(callstack) / sizeof(callstack[0]);
-    int num_frames = 0;
-
-#ifdef _WIN32
-    num_frames = CaptureStackBackTrace(0, max_frames, callstack, nullptr);
-#else
-    num_frames = backtrace(callstack, max_frames);
-#endif
-
-    char** symbols = nullptr;
-
-#ifdef _WIN32
-    SYMBOL_INFO* symbol_info =
-        (SYMBOL_INFO*)malloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char));
-    symbol_info->MaxNameLen = 255;
-    symbol_info->SizeOfStruct = sizeof(SYMBOL_INFO);
-
-    symbols = (char**)malloc(num_frames * sizeof(char*));
-    for (int i = 0; i < num_frames; ++i) {
-        symbols[i] = (char*)malloc(256 * sizeof(char));
-        symbol_info->Name[0] = '\0';
-        symbol_info->Address = (DWORD64)callstack[i];
-        DWORD64 displacement = 0;
-        if (SymFromAddr(GetCurrentProcess(), (DWORD64)callstack[i],
-                        &displacement, symbol_info)) {
-            StringCchPrintfA(symbols[i], 256, "%s + 0x%I64X", symbol_info->Name,
-                             displacement);
-        } else {
-            StringCchPrintfA(symbols[i], 256, "0x%p", callstack[i]);
-        }
-    }
-#else
-    symbols = backtrace_symbols(callstack, num_frames);
-#endif
+    int num_frames = backtrace(callstack, max_frames);
+    char** symbols = backtrace_symbols(callstack, num_frames);
 
     std::string result;
     // Print stack traces so the most relevant ones are written last
@@ -1305,15 +1226,28 @@ std::string stacktrace_as_stdstring(int skip) {
     // http://yellerapp.com/posts/2015-01-22-upside-down-stacktraces.html
     for (int i = num_frames - 1; i >= skip; --i) {
         char buf[1024];
-#ifdef _WIN32
-        snprintf(buf, sizeof(buf), "%-3d %p %s\n", i - skip, callstack[i],
-                 symbols[i]);
-#else
-        snprintf(buf, sizeof(buf), "%-3d %*p %s\n", i - skip,
-                 int(2 + sizeof(void*) * 2), callstack[i], symbols[i]);
-#endif
+        Dl_info info;
+        if (dladdr(callstack[i], &info) && info.dli_sname) {
+            char* demangled = NULL;
+            int status = -1;
+            if (info.dli_sname[0] == '_') {
+                demangled = abi::__cxa_demangle(info.dli_sname, 0, 0, &status);
+            }
+            snprintf(buf, sizeof(buf), "%-3d %*p %s + %zd\n", i - skip,
+                     int(2 + sizeof(void*) * 2), callstack[i],
+                     status == 0           ? demangled
+                     : info.dli_sname == 0 ? symbols[i]
+                                           : info.dli_sname,
+                     static_cast<char*>(callstack[i]) -
+                         static_cast<char*>(info.dli_saddr));
+            free(demangled);
+        } else {
+            snprintf(buf, sizeof(buf), "%-3d %*p %s\n", i - skip,
+                     int(2 + sizeof(void*) * 2), callstack[i], symbols[i]);
+        }
         result += buf;
     }
+    free(symbols);
 
     if (num_frames == max_frames) {
         result = "[truncated]\n" + result;
@@ -1322,12 +1256,6 @@ std::string stacktrace_as_stdstring(int skip) {
     if (!result.empty() && result[result.size() - 1] == '\n') {
         result.resize(result.size() - 1);
     }
-
-#ifdef _WIN32
-    free(symbol_info);
-#else
-    free(symbols);
-#endif
 
     return prettify_stacktrace(result);
 }

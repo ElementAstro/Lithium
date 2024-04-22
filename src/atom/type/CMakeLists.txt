@@ -11,7 +11,6 @@ project(atom-type C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    args.cpp
     ini.cpp
     message.cpp
 )

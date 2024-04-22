@@ -239,6 +239,7 @@ set(Lithium_module
 # Main
 
 add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${script_module} ${Lithium_module})
+target_link_libraries(lithium_server-library loguru)
 add_executable(lithium_server ${lithium_src_dir}/app.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
@@ -249,7 +250,7 @@ target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
 target_link_libraries(lithium_server carbon)
-target_link_libraries(lithium_server-library fmt::fmt)
+target_link_libraries(lithium_server fmt::fmt)
 
 target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 

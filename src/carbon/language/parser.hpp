@@ -62,29 +62,24 @@ struct Char_Parser_Helper {
     static std::string u8str_from_ll(long long val) {
         using char_type = std::string::value_type;
 
-        char_type c[2];
-        c[1] = char_type(val);
-        c[0] = char_type(val >> 8);
-
-        if (c[0] == 0) {
-            return std::string(1, c[1]);  // size, character
+        if (val <= 0xFF) {
+            return std::string(1, static_cast<char_type>(val));
         }
 
-        return std::string(c, 2);  // char buffer, size
+        return std::string{static_cast<char_type>(val >> 8),
+                           static_cast<char_type>(val)};
     }
 
     static string_type str_from_ll(long long val) {
         using target_char_type = typename string_type::value_type;
 #if defined(CARBON_UTF16_UTF32)
-        // prepare converter
-        std::wstring_convert<std::codecvt_utf8<target_char_type>,
-                             target_char_type>
-            converter;
         // convert
-        return converter.from_bytes(u8str_from_ll(val));
+        return std::wstring_convert<std::codecvt_utf8<target_char_type>,
+                                    target_char_type>{}
+            .from_bytes(u8str_from_ll(val));
 #else
         // no conversion available, just put value as character
-        return string_type(1, target_char_type(val));  // size, character
+        return string_type(1, static_cast<target_char_type>(val));
 #endif
     }
 };
@@ -456,7 +451,7 @@ class Carbon_Parser final : public Carbon_Parser_Base {
 
 public:
     explicit Carbon_Parser(Tracer tracer = Tracer(),
-                               Optimizer optimizer = Optimizer())
+                           Optimizer optimizer = Optimizer())
         : m_tracer(std::move(tracer)), m_optimizer(std::move(optimizer)) {
         m_match_stack.reserve(2);
     }
@@ -527,10 +522,9 @@ public:
         /// \todo fix the fact that a successful match that captured no
         /// ast_nodes doesn't have any real start position
         m_match_stack.push_back(m_optimizer.optimize(
-            Carbon::make_unique<Carbon::eval::AST_Node_Impl<Tracer>,
-                                    NodeType>(std::move(t_text),
-                                              std::move(filepos),
-                                              std::move(new_children))));
+            Carbon::make_unique<Carbon::eval::AST_Node_Impl<Tracer>, NodeType>(
+                std::move(t_text), std::move(filepos),
+                std::move(new_children))));
     }
 
     /// Reads a symbol group from input if it matches the parameter, without
@@ -2128,7 +2122,7 @@ public:
                 (!is_if_init && num_children == 2)) {
                 m_match_stack.push_back(
                     Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                            eval::Noop_AST_Node<Tracer>>());
+                                        eval::Noop_AST_Node<Tracer>>());
             }
 
             if (!is_if_init) {
@@ -2241,7 +2235,7 @@ public:
             } else {
                 m_match_stack.push_back(
                     Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                            eval::Noop_AST_Node<Tracer>>());
+                                        eval::Noop_AST_Node<Tracer>>());
             }
         }
 
@@ -2251,7 +2245,7 @@ public:
             } else {
                 m_match_stack.push_back(
                     Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                            eval::Constant_AST_Node<Tracer>>(
+                                        eval::Constant_AST_Node<Tracer>>(
                         Boxed_Value(true)));
             }
         }
@@ -2259,7 +2253,7 @@ public:
         if (!Equation()) {
             m_match_stack.push_back(
                 Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                        eval::Noop_AST_Node<Tracer>>());
+                                    eval::Noop_AST_Node<Tracer>>());
         }
 
         return true;
@@ -2455,7 +2449,7 @@ public:
             if (m_match_stack.size() == prev_stack_top) {
                 m_match_stack.push_back(
                     Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                            eval::Noop_AST_Node<Tracer>>());
+                                        eval::Noop_AST_Node<Tracer>>());
             }
 
             build_match<eval::Block_AST_Node<Tracer>>(prev_stack_top);
@@ -2485,7 +2479,7 @@ public:
             if (m_match_stack.size() == prev_stack_top) {
                 m_match_stack.push_back(
                     Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                            eval::Noop_AST_Node<Tracer>>());
+                                        eval::Noop_AST_Node<Tracer>>());
             }
 
             build_match<eval::Block_AST_Node<Tracer>>(prev_stack_top);
@@ -3158,7 +3152,7 @@ public:
         } else {
             m_match_stack.push_back(
                 Carbon::make_unique<eval::AST_Node_Impl<Tracer>,
-                                        eval::Noop_AST_Node<Tracer>>());
+                                    eval::Noop_AST_Node<Tracer>>());
         }
 
         AST_NodePtr retval(std::move(m_match_stack.front()));

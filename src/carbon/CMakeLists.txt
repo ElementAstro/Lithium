@@ -253,7 +253,9 @@ set(Carbon_SRC
   command/dynamic_object.cpp
   command/proxy_functions.cpp
 
+  language/common.cpp
   language/engine.cpp
+  language/prelude.cpp
 )
 # We will build a static library for Carbon
 add_library(carbon STATIC ${Carbon_SRC})

@@ -182,17 +182,11 @@ struct File_Position {
 struct Parse_Location {
     Parse_Location(std::string t_fname = "", const int t_start_line = 0,
                    const int t_start_col = 0, const int t_end_line = 0,
-                   const int t_end_col = 0)
-        : start(t_start_line, t_start_col),
-          end(t_end_line, t_end_col),
-          filename(std::make_shared<std::string>(std::move(t_fname))) {}
+                   const int t_end_col = 0);
 
     Parse_Location(std::shared_ptr<std::string> t_fname,
                    const int t_start_line = 0, const int t_start_col = 0,
-                   const int t_end_line = 0, const int t_end_col = 0)
-        : start(t_start_line, t_start_col),
-          end(t_end_line, t_end_col),
-          filename(std::move(t_fname)) {}
+                   const int t_end_line = 0, const int t_end_col = 0);
 
     File_Position start;
     File_Position end;
@@ -206,23 +200,13 @@ public:
     const std::string text;
     Parse_Location location;
 
-    const std::string &filename() const noexcept { return *location.filename; }
+    const std::string &filename() const noexcept;
 
-    const File_Position &start() const noexcept { return location.start; }
+    const File_Position &start() const noexcept;
 
-    const File_Position &end() const noexcept { return location.end; }
+    const File_Position &end() const noexcept;
 
-    std::string pretty_print() const {
-        std::ostringstream oss;
-
-        oss << text;
-
-        for (auto &elem : get_children()) {
-            oss << elem.get().pretty_print() << ' ';
-        }
-
-        return oss.str();
-    }
+    std::string pretty_print() const;
 
     virtual std::vector<std::reference_wrapper<AST_Node>> get_children()
         const = 0;
@@ -230,20 +214,9 @@ public:
         const Carbon::detail::Dispatch_State &t_e) const = 0;
 
     /// Prints the contents of an AST node, including its children, recursively
-    std::string to_string(const std::string &t_prepend = "") const {
-        std::ostringstream oss;
+    std::string to_string(const std::string &t_prepend = "") const;
 
-        oss << t_prepend << "(" << ast_node_type_to_string(this->identifier)
-            << ") " << this->text << " : " << this->location.start.line << ", "
-            << this->location.start.column << '\n';
-
-        for (auto &elem : get_children()) {
-            oss << elem.get().to_string(t_prepend + "  ");
-        }
-        return oss.str();
-    }
-
-    static inline bool get_bool_condition(
+    static bool get_bool_condition(
         const Boxed_Value &t_bv, const Carbon::detail::Dispatch_State &t_ss);
 
     virtual ~AST_Node() noexcept = default;
@@ -254,10 +227,7 @@ public:
 
 protected:
     AST_Node(std::string t_ast_node_text, AST_Node_Type t_id,
-             Parse_Location t_loc)
-        : identifier(t_id),
-          text(std::move(t_ast_node_text)),
-          location(std::move(t_loc)) {}
+             Parse_Location t_loc);
 };
 
 /// \brief Typedef for pointers to AST_Node objects. Used in building of the
@@ -270,35 +240,17 @@ struct AST_Node_Trace {
     const std::string text;
     Parse_Location location;
 
-    const std::string &filename() const noexcept { return *location.filename; }
+    const std::string &filename() const noexcept;
 
-    const File_Position &start() const noexcept { return location.start; }
+    const File_Position &start() const noexcept;
 
-    const File_Position &end() const noexcept { return location.end; }
+    const File_Position &end() const noexcept;
 
-    std::string pretty_print() const {
-        std::ostringstream oss;
+    std::string pretty_print() const;
 
-        oss << text;
+    std::vector<AST_Node_Trace> get_children(const AST_Node &node);
 
-        for (const auto &elem : children) {
-            oss << elem.pretty_print() << ' ';
-        }
-
-        return oss.str();
-    }
-
-    std::vector<AST_Node_Trace> get_children(const AST_Node &node) {
-        const auto node_children = node.get_children();
-        return std::vector<AST_Node_Trace>(node_children.begin(),
-                                           node_children.end());
-    }
-
-    AST_Node_Trace(const AST_Node &node)
-        : identifier(node.identifier),
-          text(node.text),
-          location(node.location),
-          children(get_children(node)) {}
+    AST_Node_Trace(const AST_Node &node);
 
     std::vector<AST_Node_Trace> children;
 };
@@ -308,29 +260,17 @@ struct AST_Node_Trace {
 namespace exception {
 /// \brief Thrown if an error occurs while attempting to load a binary module
 struct load_module_error : std::runtime_error {
-    explicit load_module_error(const std::string &t_reason)
-        : std::runtime_error(t_reason) {}
+    explicit load_module_error(const std::string &t_reason);
 
     load_module_error(const std::string &t_name,
-                      const std::vector<load_module_error> &t_errors)
-        : std::runtime_error(format_error(t_name, t_errors)) {}
+                      const std::vector<load_module_error> &t_errors);
 
     load_module_error(const load_module_error &) = default;
     ~load_module_error() noexcept override = default;
 
     static std::string format_error(
         const std::string &t_name,
-        const std::vector<load_module_error> &t_errors) {
-        std::stringstream ss;
-        ss << "Error loading module '" << t_name << "'\n"
-           << "  The following locations were searched:\n";
-
-        for (const auto &err : t_errors) {
-            ss << "    " << err.what() << "\n";
-        }
-
-        return ss.str();
-    }
+        const std::vector<load_module_error> &t_errors);
 };
 
 /// Errors generated during parsing or evaluation
@@ -346,59 +286,22 @@ struct eval_error : std::runtime_error {
                const std::vector<Boxed_Value> &t_parameters,
                const std::vector<Carbon::Const_Proxy_Function> &t_functions,
                bool t_dot_notation,
-               const Carbon::detail::Dispatch_Engine &t_ss) noexcept
-        : std::runtime_error(format(t_why, t_where, t_fname, t_parameters,
-                                    t_dot_notation, t_ss)),
-          reason(t_why),
-          start_position(t_where),
-          filename(t_fname),
-          detail(format_detail(t_functions, t_dot_notation, t_ss)) {}
+               const Carbon::detail::Dispatch_Engine &t_ss) noexcept;
 
     eval_error(const std::string &t_why,
                const std::vector<Boxed_Value> &t_parameters,
                const std::vector<Carbon::Const_Proxy_Function> &t_functions,
                bool t_dot_notation,
-               const Carbon::detail::Dispatch_Engine &t_ss) noexcept
-        : std::runtime_error(format(t_why, t_parameters, t_dot_notation, t_ss)),
-          reason(t_why),
-          detail(format_detail(t_functions, t_dot_notation, t_ss)) {}
+               const Carbon::detail::Dispatch_Engine &t_ss) noexcept;
 
     eval_error(const std::string &t_why, const File_Position &t_where,
-               const std::string &t_fname) noexcept
-        : std::runtime_error(format(t_why, t_where, t_fname)),
-          reason(t_why),
-          start_position(t_where),
-          filename(t_fname) {}
+               const std::string &t_fname) noexcept;
 
-    explicit eval_error(const std::string &t_why) noexcept
-        : std::runtime_error("Error: \"" + t_why + "\" "), reason(t_why) {}
+    explicit eval_error(const std::string &t_why) noexcept;
 
     eval_error(const eval_error &) = default;
 
-    std::string pretty_print() const {
-        std::ostringstream ss;
-
-        ss << what();
-        if (!call_stack.empty()) {
-            ss << "during evaluation at (" << fname(call_stack[0]) << " "
-               << startpos(call_stack[0]) << ")\n";
-            ss << '\n' << detail << '\n';
-            ss << "  " << fname(call_stack[0]) << " ("
-               << startpos(call_stack[0]) << ") '" << pretty(call_stack[0])
-               << "'";
-            for (size_t j = 1; j < call_stack.size(); ++j) {
-                if (id(call_stack[j]) != Carbon::AST_Node_Type::Block &&
-                    id(call_stack[j]) != Carbon::AST_Node_Type::File) {
-                    ss << '\n';
-                    ss << "  from " << fname(call_stack[j]) << " ("
-                       << startpos(call_stack[j]) << ") '"
-                       << pretty(call_stack[j]) << "'";
-                }
-            }
-        }
-        ss << '\n';
-        return ss.str();
-    }
+    std::string pretty_print() const;
 
     ~eval_error() noexcept override = default;
 
@@ -425,73 +328,11 @@ private:
         return oss.str();
     }
 
-    static std::string format_why(const std::string &t_why) {
-        return "Error: \"" + t_why + "\"";
-    }
+    static std::string format_why(const std::string &t_why);
 
     static std::string format_types(
         const Const_Proxy_Function &t_func, bool t_dot_notation,
-        const Carbon::detail::Dispatch_Engine &t_ss) {
-        assert(t_func);
-        int arity = t_func->get_arity();
-        std::vector<Type_Info> types = t_func->get_param_types();
-
-        std::string retval;
-        if (arity == -1) {
-            retval = "(...)";
-            if (t_dot_notation) {
-                retval = "(Object)." + retval;
-            }
-        } else if (types.size() <= 1) {
-            retval = "()";
-        } else {
-            std::stringstream ss;
-            ss << "(";
-
-            std::string paramstr;
-
-            for (size_t index = 1; index != types.size(); ++index) {
-                paramstr += (types[index].is_const() ? "const " : "");
-                paramstr += t_ss.get_type_name(types[index]);
-
-                if (index == 1 && t_dot_notation) {
-                    paramstr += ").(";
-                    if (types.size() == 2) {
-                        paramstr += ", ";
-                    }
-                } else {
-                    paramstr += ", ";
-                }
-            }
-
-            ss << paramstr.substr(0, paramstr.size() - 2);
-
-            ss << ")";
-            retval = ss.str();
-        }
-
-        std::shared_ptr<const dispatch::Dynamic_Proxy_Function> dynfun =
-            std::dynamic_pointer_cast<const dispatch::Dynamic_Proxy_Function>(
-                t_func);
-
-        if (dynfun && dynfun->has_parse_tree()) {
-            Proxy_Function f = dynfun->get_guard();
-
-            if (f) {
-                auto dynfunguard = std::dynamic_pointer_cast<
-                    const dispatch::Dynamic_Proxy_Function>(f);
-                if (dynfunguard && dynfunguard->has_parse_tree()) {
-                    retval +=
-                        " : " + format_guard(dynfunguard->get_parse_tree());
-                }
-            }
-
-            retval += "\n          Defined at " +
-                      format_location(dynfun->get_parse_tree());
-        }
-
-        return retval;
-    }
+        const Carbon::detail::Dispatch_Engine &t_ss);
 
     template <typename T>
     static std::string format_guard(const T &t) {
@@ -508,134 +349,36 @@ private:
 
     static std::string format_detail(
         const std::vector<Carbon::Const_Proxy_Function> &t_functions,
-        bool t_dot_notation, const Carbon::detail::Dispatch_Engine &t_ss) {
-        std::stringstream ss;
-        if (t_functions.size() == 1) {
-            assert(t_functions[0]);
-            ss << "  Expected: "
-               << format_types(t_functions[0], t_dot_notation, t_ss) << '\n';
-        } else {
-            ss << "  " << t_functions.size() << " overloads available:\n";
-
-            for (const auto &t_function : t_functions) {
-                ss << "      "
-                   << format_types((t_function), t_dot_notation, t_ss) << '\n';
-            }
-        }
-
-        return ss.str();
-    }
+        bool t_dot_notation, const Carbon::detail::Dispatch_Engine &t_ss);
 
     static std::string format_parameters(
         const std::vector<Boxed_Value> &t_parameters, bool t_dot_notation,
-        const Carbon::detail::Dispatch_Engine &t_ss) {
-        std::stringstream ss;
-        ss << "(";
+        const Carbon::detail::Dispatch_Engine &t_ss);
 
-        if (!t_parameters.empty()) {
-            std::string paramstr;
+    static std::string format_filename(const std::string &t_fname);
 
-            for (auto itr = t_parameters.begin(); itr != t_parameters.end();
-                 ++itr) {
-                paramstr += (itr->is_const() ? "const " : "");
-                paramstr += t_ss.type_name(*itr);
-
-                if (itr == t_parameters.begin() && t_dot_notation) {
-                    paramstr += ").(";
-                    if (t_parameters.size() == 1) {
-                        paramstr += ", ";
-                    }
-                } else {
-                    paramstr += ", ";
-                }
-            }
-
-            ss << paramstr.substr(0, paramstr.size() - 2);
-        }
-        ss << ")";
-
-        return ss.str();
-    }
-
-    static std::string format_filename(const std::string &t_fname) {
-        std::stringstream ss;
-
-        if (t_fname != "__EVAL__") {
-            ss << "in '" << t_fname << "' ";
-        } else {
-            ss << "during evaluation ";
-        }
-
-        return ss.str();
-    }
-
-    static std::string format_location(const File_Position &t_where) {
-        std::stringstream ss;
-        ss << "at (" << t_where.line << ", " << t_where.column << ")";
-        return ss.str();
-    }
+    static std::string format_location(const File_Position &t_where);
 
     static std::string format(const std::string &t_why,
                               const File_Position &t_where,
                               const std::string &t_fname,
                               const std::vector<Boxed_Value> &t_parameters,
                               bool t_dot_notation,
-                              const Carbon::detail::Dispatch_Engine &t_ss) {
-        std::stringstream ss;
-
-        ss << format_why(t_why);
-        ss << " ";
-
-        ss << "With parameters: "
-           << format_parameters(t_parameters, t_dot_notation, t_ss);
-        ss << " ";
-
-        ss << format_filename(t_fname);
-        ss << " ";
-
-        ss << format_location(t_where);
-
-        return ss.str();
-    }
+                              const Carbon::detail::Dispatch_Engine &t_ss);
 
     static std::string format(const std::string &t_why,
                               const std::vector<Boxed_Value> &t_parameters,
                               bool t_dot_notation,
-                              const Carbon::detail::Dispatch_Engine &t_ss) {
-        std::stringstream ss;
-
-        ss << format_why(t_why);
-        ss << " ";
-
-        ss << "With parameters: "
-           << format_parameters(t_parameters, t_dot_notation, t_ss);
-        ss << " ";
-
-        return ss.str();
-    }
+                              const Carbon::detail::Dispatch_Engine &t_ss);
 
     static std::string format(const std::string &t_why,
                               const File_Position &t_where,
-                              const std::string &t_fname) {
-        std::stringstream ss;
-
-        ss << format_why(t_why);
-        ss << " ";
-
-        ss << format_filename(t_fname);
-        ss << " ";
-
-        ss << format_location(t_where);
-
-        return ss.str();
-    }
+                              const std::string &t_fname);
 };
 
 /// Errors generated when loading a file
 struct file_not_found_error : std::runtime_error {
-    explicit file_not_found_error(const std::string &t_filename)
-        : std::runtime_error("File Not Found: " + t_filename),
-          filename(t_filename) {}
+    explicit file_not_found_error(const std::string &t_filename);
 
     file_not_found_error(const file_not_found_error &) = default;
     ~file_not_found_error() noexcept override = default;
@@ -644,16 +387,6 @@ struct file_not_found_error : std::runtime_error {
 };
 
 }  // namespace exception
-
-// static
-bool AST_Node::get_bool_condition(const Boxed_Value &t_bv,
-                                  const Carbon::detail::Dispatch_State &t_ss) {
-    try {
-        return t_ss->boxed_cast<bool>(t_bv);
-    } catch (const exception::bad_boxed_cast &) {
-        throw exception::eval_error("Condition not boolean");
-    }
-}
 
 namespace parser {
 class Carbon_Parser_Base {
@@ -700,12 +433,9 @@ struct Scope_Push_Pop {
     Scope_Push_Pop(const Scope_Push_Pop &) = delete;
     Scope_Push_Pop &operator=(const Scope_Push_Pop &) = delete;
 
-    explicit Scope_Push_Pop(const Carbon::detail::Dispatch_State &t_ds)
-        : m_ds(t_ds) {
-        m_ds->new_scope(m_ds.stack_holder());
-    }
+    explicit Scope_Push_Pop(const Carbon::detail::Dispatch_State &t_ds);
 
-    ~Scope_Push_Pop() { m_ds->pop_scope(m_ds.stack_holder()); }
+    ~Scope_Push_Pop();
 
 private:
     const Carbon::detail::Dispatch_State &m_ds;
@@ -718,18 +448,11 @@ struct Function_Push_Pop {
     Function_Push_Pop(const Function_Push_Pop &) = delete;
     Function_Push_Pop &operator=(const Function_Push_Pop &) = delete;
 
-    explicit Function_Push_Pop(const Carbon::detail::Dispatch_State &t_ds)
-        : m_ds(t_ds) {
-        m_ds->new_function_call(m_ds.stack_holder(), m_ds.conversion_saves());
-    }
+    explicit Function_Push_Pop(const Carbon::detail::Dispatch_State &t_ds);
 
-    ~Function_Push_Pop() {
-        m_ds->pop_function_call(m_ds.stack_holder(), m_ds.conversion_saves());
-    }
+    ~Function_Push_Pop();
 
-    void save_params(const Function_Params &t_params) {
-        m_ds->save_function_params(t_params);
-    }
+    void save_params(const Function_Params &t_params);
 
 private:
     const Carbon::detail::Dispatch_State &m_ds;
@@ -742,12 +465,9 @@ struct Stack_Push_Pop {
     Stack_Push_Pop(const Stack_Push_Pop &) = delete;
     Stack_Push_Pop &operator=(const Stack_Push_Pop &) = delete;
 
-    explicit Stack_Push_Pop(const Carbon::detail::Dispatch_State &t_ds)
-        : m_ds(t_ds) {
-        m_ds->new_stack(m_ds.stack_holder());
-    }
+    explicit Stack_Push_Pop(const Carbon::detail::Dispatch_State &t_ds);
 
-    ~Stack_Push_Pop() { m_ds->pop_stack(m_ds.stack_holder()); }
+    ~Stack_Push_Pop();
 
 private:
     const Carbon::detail::Dispatch_State &m_ds;

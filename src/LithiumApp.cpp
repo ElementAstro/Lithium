@@ -84,7 +84,6 @@ namespace Lithium {
 std::shared_ptr<LithiumApp> MyApp = nullptr;
 
 LithiumApp::LithiumApp() {
-    DLOG_SCOPE_FUNCTION(INFO);
     DLOG_F(INFO, "LithiumApp Constructor");
     try {
         // Specialized Managers and Threads
@@ -112,10 +111,10 @@ LithiumApp::LithiumApp() {
         // message
         //       to the right type to process.
         //       All of the messages are based on the Message class.
-        DLOG_SCOPE_F(INFO, "Start Message Processing Thread");
+        DLOG_F(INFO, "Start Message Processing Thread");
         m_MessageBus.lock()->StartProcessingThread<Message>();
 
-        DLOG_SCOPE_F(INFO, "Register LithiumApp Member Functions");
+        DLOG_F(INFO, "Register LithiumApp Member Functions");
 
         LiRegisterMemberFunc("GetConfig", &LithiumApp::GetConfig);
         LiRegisterMemberFunc("SetConfig", &LithiumApp::SetConfig);
@@ -125,7 +124,7 @@ LithiumApp::LithiumApp() {
         LOG_F(ERROR, "Failed to load Lithium App , error : {}", e.what());
         throw std::runtime_error("Failed to load Lithium App");
     }
-    DLOG_SCOPE_F(INFO, "Lithium App Initialized");
+    DLOG_F(INFO, "Lithium App Initialized");
 }
 
 LithiumApp::~LithiumApp() {

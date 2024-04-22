@@ -15,7 +15,9 @@ Description: A simple implementation of any type.
 #ifndef ATOM_EXPERIMENT_ANY_HPP
 #define ATOM_EXPERIMENT_ANY_HPP
 
+#include <cstring>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <typeinfo>
@@ -27,21 +29,60 @@ template <typename T>
 concept Derived = std::is_base_of_v<std::remove_reference_t<T>, Any>;
 
 class Any {
+private:
+    static constexpr std::size_t BufferSize = 64;
+    static constexpr std::size_t BufferAlign = alignof(std::max_align_t);
+
+    using Storage = std::aligned_storage_t<BufferSize, BufferAlign>;
+
 public:
     constexpr Any() noexcept : ptr(nullptr) {}
 
     template <typename T>
-        requires(!Derived<T>)
+        requires(!Derived<T> &&
+                 !(sizeof(T) <= BufferSize && std::is_trivially_copyable_v<T>))
     constexpr Any(T &&value)
         : ptr(new holder<std::decay_t<T>>(std::forward<T>(value))) {}
 
+    template <typename T>
+        requires(!Derived<T> && sizeof(T) <= BufferSize &&
+                 std::is_trivially_copyable_v<T>)
+    constexpr Any(T &&value) {
+        new (&storage) holder<std::decay_t<T>>(std::forward<T>(value));
+        small = true;
+    }
+
     constexpr Any(const Any &other)
-        : ptr(other.ptr ? other.ptr->clone() : nullptr) {}
+        : ptr(other.small ? nullptr
+                          : (other.ptr ? other.ptr->clone() : nullptr)),
+          small(other.small) {
+        if (other.small) {
+            std::copy_n(reinterpret_cast<const char *>(&other.storage),
+                        sizeof(Storage), reinterpret_cast<char *>(&storage));
+        }
+    }
 
-    constexpr Any(Any &&other) noexcept
-        : ptr(std::exchange(other.ptr, nullptr)) {}
+    constexpr Any(Any &&other) noexcept : small(other.small) {
+        if (other.small) {
+            std::memcpy(&storage, &other.storage, sizeof(Storage));
+        } else {
+            ptr = std::exchange(other.ptr, nullptr);
+        }
+    }
 
-    ~Any() { delete ptr; }
+    ~Any() {
+        if (small) {
+            // If the stored object has a non-trivial destructor, it needs to be
+            // called manually
+            if (!std::is_trivially_destructible_v<decltype(storage)>) {
+                // Assuming 'holder' has a virtual destructor and a method to
+                // properly destroy the contained object...
+                reinterpret_cast<placeholder *>(&storage)->~placeholder();
+            }
+        } else {
+            delete ptr;
+        }
+    }
 
     constexpr Any &operator=(const Any &other) {
         if (this != &other) {
@@ -80,6 +121,7 @@ private:
         [[nodiscard]] virtual const std::type_info &type() const noexcept = 0;
         [[nodiscard]] virtual placeholder *clone() const = 0;
         virtual void swap(placeholder &other) = 0;
+        virtual void destroy() = 0;
     };
 
     template <typename T>
@@ -105,6 +147,12 @@ private:
 
         T held;
     };
+
+    union {
+        placeholder *ptr;
+        Storage storage;
+    };
+    bool small = false;
 
     placeholder *ptr;
 

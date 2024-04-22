@@ -20,8 +20,6 @@ Description: Some useful string functions
 #include <vector>
 
 namespace Atom::Utils {
-#include <string_view>
-
 /**
  * @brief Checks if the given string contains any uppercase characters.
  *

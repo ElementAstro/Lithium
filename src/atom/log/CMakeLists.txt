@@ -80,7 +80,6 @@ endif()
 # ----------------------------------------------------------
 
 set(LOGURU_USE_FMTLIB On)
-set(LOGURU_STACKTRACES On)
 
 if (WIN32)
   find_package(dlfcn-win32 REQUIRED)

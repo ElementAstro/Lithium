@@ -43,165 +43,13 @@ Description: Argument Container Library for C++
 #define REMOVE_ARGUMENT(container, name) container.remove(#name)
 
 /**
- * @brief 用于存储和获取参数的容器。
- * @brief A container for storing and retrieving arguments.
- */
-class ArgumentContainer {
-public:
-    /**
-     * @brief 设置参数值。
-     * @brief Set the value of a parameter.
-     * @tparam T 参数的类型。
-     * @tparam T The type of the parameter.
-     * @param name 参数的名称。
-     * @param name The name of the parameter.
-     * @param value 参数的值。
-     * @param value The value of the parameter.
-     * @note 若参数已存在，则会覆盖原有的值。
-     * @note If the parameter exists, it will overwrite the original value.
-     */
-    template <typename T>
-    void set(const std::string &name, const T &value);
-
-    /**
-     * @brief 获取参数值。
-     * @brief Get the value of a parameter.
-     * @tparam T 参数的类型。
-     * @tparam T The type of the parameter.
-     * @param name 参数的名称。
-     * @param name The name of the parameter.
-     * @return 参数的值（如果存在），否则返回std::nullopt。
-     * @return The value of the parameter (if it exists), otherwise return
-     * std::nullopt.
-     */
-    template <typename T>
-    std::optional<T> get(const std::string &name) const;
-
-    /**
-     * @brief 移除指定的参数。
-     * @brief Remove a specified parameter.
-     * @param name 要移除的参数的名称。
-     * @param name The name of the parameter to be removed.
-     * @return 如果成功移除参数，则返回true；否则返回false
-     * @return If the parameter is successfully removed, return true; otherwise
-     * return false。
-     */
-    bool remove(const std::string &name);
-
-    /**
-     * @brief 检查参数是否存在。
-     * @brief Check if a parameter exists.
-     * @param name 要检查的参数的名称。
-     * @param name The name of the parameter to be checked.
-     * @return 如果参数存在，则返回true；否则返回false。
-     * @return If the parameter exists, return true; otherwise return false.
-     */
-    bool contains(const std::string &name) const;
-
-    /**
-     * @brief 获取参数的数量。
-     * @brief Get the number of parameters.
-     * @return 参数的数量。
-     * @return The number of parameters.
-     */
-    std::size_t size() const;
-
-    /**
-     * @brief 获取所有参数的名称。
-     * @brief Get all parameter names.
-     * @return 包含所有参数名称的字符串向量。
-     * @return A vector containing all parameter names.
-     */
-    std::vector<std::string> getNames() const;
-
-    /**
-     * @brief 重载索引运算符[]以获取和设置参数值。
-     * @brief Overload the index operator [] to get and set the value of a
-     * parameter.
-     * @tparam T 参数的类型。
-     * @tparam T The type of the parameter.
-     * @param name 参数的名称。
-     * @param name The name of the parameter.
-     * @return 参数的引用。
-     * @return A reference to the parameter.
-     */
-    template <typename T>
-    T &operator[](const std::string &name) {
-        return std::any_cast<T &>(m_arguments[name]);
-    }
-
-    /**
-     * @brief 重载赋值运算符=以设置参数值。
-     * @brief Overload the assignment operator = to set the value of a
-     * parameter.
-     * @tparam T 参数的类型。
-     * @tparam T The type of the parameter.
-     * @param argument 要设置的参数（名称和值）。
-     * @param argument The parameter to be set (name and value).
-     */
-    template <typename T>
-    void operator=(const std::pair<std::string, T> &argument) {
-        set(argument.first, argument.second);
-    }
-
-    /**
-     * @brief 重载赋值运算符=以设置参数值。
-     * @brief Overload the assignment operator = to set the value of a
-     * parameter.
-     * @param container 要设置的参数容器。
-     * @param container The parameter container to be set.
-     */
-#if ENABLE_FASTHASH
-    void operator=(const emhash8::HashMap<std::string, std::any> &container)
-#else
-    void operator=(const std::unordered_map<std::string, std::any> &container)
-#endif
-    {
-        m_arguments = container;
-    }
-
-    std::string toJson() const;
-
-private:
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::any> m_arguments;  // 存储参数的容器
-#else
-    std::unordered_map<std::string, std::any> m_arguments;  // 存储参数的容器
-#endif
-};
-
-template <typename T>
-void ArgumentContainer::set(const std::string &name, const T &value) {
-    if (m_arguments.find(name) != m_arguments.end()) {
-        m_arguments.erase(name);
-    }
-    m_arguments[name] = value;
-}
-
-template <typename T>
-std::optional<T> ArgumentContainer::get(const std::string &name) const {
-    auto it = m_arguments.find(name);
-    if (it != m_arguments.end()) {
-        try {
-            return std::any_cast<T>(it->second);
-        } catch (const std::bad_any_cast &) {
-            return std::nullopt;
-        }
-    } else {
-        return std::nullopt;
-    }
-}
-
-using Args = ArgumentContainer;
-
-/**
  * @brief 通用容器,用于存储任意类型的键值对。
  * @brief A universal container for storing any type of key-value pairs.
  * @note 这是ArgumentContainer的弱化版,虽然功能少,但是性能更好。
  * @note This is a weak version of ArgumentContainer, although it has fewer
  * features, it has better performance.
  */
-class UniversalContainer {
+class Args {
 public:
     /**
      * @brief 设置键值对。
@@ -215,7 +63,7 @@ public:
      */
     template <typename T>
     void set(std::string_view key, T &&value) {
-        m_data.emplace(key, std::forward<T>(value));
+        m_data[key] = std::forward<T>(value);
     }
 
     /**
@@ -230,11 +78,43 @@ public:
      */
     template <typename T>
     T get(std::string_view key) const {
-        try {
-            return std::any_cast<T>(m_data.at(key));
-        } catch (const std::out_of_range &) {
-            throw std::runtime_error("Key not found");
+        return std::any_cast<T>(m_data.at(key));
+    }
+
+    /**
+     * @brief 获取键对应的值(如果键不存在,则返回默认值)。
+     * @brief Get the value corresponding to the key (if the key does not exist,
+     * return the default value).
+     * @param key 键。
+     * @param key Key.
+     * @param default_value 默认值。
+     * @param default_value Default value.
+     * @return 值。
+     * @return Value.
+     */
+    template <typename T>
+    T get_or(std::string_view key, T &&default_value) const {
+        if (auto it = m_data.find(key); it != m_data.end()) {
+            return std::any_cast<T>(it->second);
         }
+        return std::forward<T>(default_value);
+    }
+
+    /**
+     * @brief 获取键对应的值(如果键不存在,则返回 std::nullopt)。
+     * @brief Get the value corresponding to the key (if the key does not exist,
+     * return std::nullopt).
+     * @param key 键。
+     * @param key Key.
+     * @return 值。
+     * @return Value.
+     */
+    template <typename T>
+    std::optional<T> get_optional(std::string_view key) const {
+        if (auto it = m_data.find(key); it != m_data.end()) {
+            return std::any_cast<T>(it->second);
+        }
+        return std::nullopt;
     }
 
     /**
@@ -246,12 +126,106 @@ public:
      * @return If the key exists, return true; otherwise return false.
      */
     bool contains(std::string_view key) const noexcept {
-        return m_data.find(key) != m_data.end();
+        return m_data.contains(key);
+    }
+
+    /**
+     * @brief 移除键值对。
+     * @brief Remove key-value pairs.
+     * @param key 键。
+     * @param key Key.
+     */
+    void remove(std::string_view key) { m_data.erase(key); }
+
+    /**
+     * @brief 清空容器。
+     * @brief Clear the container.
+     */
+    void clear() noexcept { m_data.clear(); }
+    /**
+     * @brief 获取容器中键值对的数量。
+     * @brief Get the number of key-value pairs in the container.
+     * @return 键值对的数量。
+     * @return The number of key-value pairs.
+     */
+    size_t size() const noexcept { return m_data.size(); }
+
+    /**
+     * @brief 检查容器是否为空。
+     * @brief Check if the container is empty.
+     * @return 如果容器为空,则返回true；否则返回false。
+     * @return If the container is empty, return true; otherwise return false.
+     */
+    bool empty() const noexcept { return m_data.empty(); }
+
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::string_view, std::any> data()
+#else
+    std::unordered_map<std::string_view, std::any> data()
+#endif
+        const noexcept {
+        return m_data;
+    }
+
+    /**
+     * @brief 获取指定键对应的值。
+     * @brief Get the value corresponding to the specified key.
+     * @param key 键。
+     * @param key Key.
+     * @return 值。
+     * @return Value.
+     * @note 如果键不存在,则会插入一个新的键值对。
+     * @note If the key does not exist, a new key-value pair will be inserted.
+     */
+    template <typename T>
+    T &operator[](std::string_view key) {
+        return std::any_cast<T &>(m_data[key]);
+    }
+
+    /**
+     * @brief 获取指定键对应的值。
+     * @brief Get the value corresponding to the specified key.
+     * @param key 键。
+     * @param key Key.
+     * @return 值。
+     * @return Value.
+     * @note 如果键不存在,则会抛出异常。
+     * @note If the key does not exist, an exception will be thrown.
+     */
+    template <typename T>
+    const T &operator[](std::string_view key) const {
+        return std::any_cast<const T &>(m_data.at(key));
+    }
+
+    /**
+     * @brief 获取指定键对应的值。
+     * @brief Get the value corresponding to the specified key.
+     * @param key 键。
+     * @param key Key.
+     * @return 值。
+     * @return Value.
+     * @note 如果键不存在,则会插入一个新的键值对。
+     * @note If the key does not exist, a new key-value pair will be inserted.
+     */
+    std::any &operator[](std::string_view key) { return m_data[key]; }
+
+    /**
+     * @brief 获取指定键对应的值。
+     * @brief Get the value corresponding to the specified key.
+     * @param key 键。
+     * @param key Key.
+     * @return 值。
+     * @return Value.
+     * @note 如果键不存在,则会抛出异常。
+     * @note If the key does not exist, an exception will be thrown.
+     */
+    const std::any &operator[](std::string_view key) const {
+        return m_data.at(key);
     }
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<std::string_view, std::any> m_data;
+    emhash8::HashMap<std::string, std::any> m_data;
 #else
     std::unordered_map<std::string_view, std::any> m_data;
 #endif

@@ -1,6 +1,18 @@
+/*
+ * ifile.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-23
+
+Description: File Wrapper
+
+**************************************************/
+
 #include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>

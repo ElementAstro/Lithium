@@ -239,25 +239,22 @@ inline std::uint32_t jenkins_one_at_a_time_hash(const std::string& s) noexcept {
     return jenkins_one_at_a_time_hash(std::string_view{s});
 }
 
-inline uint32_t quickHash(const char* str) {
-    if (!str)
-        return 0;
-
-    unsigned int h = 0;
-    for (; *str; str++) {
-        h = 31 * h + *str;
+inline uint32_t quickHash(std::string_view str) {
+    uint32_t h = 0;
+    for (char c : str) {
+        h = 31 * h + static_cast<unsigned char>(c);
     }
     return h;
 }
 
-inline uint32_t quickHash(const void* tmp, uint32_t size) {
-    if (!tmp)
+inline uint32_t quickHash(const void* data, size_t size) {
+    if (data == nullptr || size == 0)
         return 0;
 
-    const char* str = static_cast<const char*>(tmp);
-    unsigned int h = 0;
-    for (uint32_t i = 0; i < size; ++i, ++str) {
-        h = 31 * h + *str;
+    const auto* str = static_cast<const unsigned char*>(data);
+    uint32_t h = 0;
+    for (size_t i = 0; i < size; ++i) {
+        h = 31 * h + str[i];
     }
     return h;
 }

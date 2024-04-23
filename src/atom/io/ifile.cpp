@@ -1,4 +1,21 @@
+/*
+ * ifile.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-23
+
+Description: File Wrapper
+
+**************************************************/
+
 #include "ifile.hpp"
+
+#include <fstream>
+#include <iostream>
 
 namespace Atom::IO {
 FileWrapper::FileWrapper(const fs::path& file_path) : file_path_(file_path) {}

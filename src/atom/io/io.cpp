@@ -102,11 +102,11 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
     DLOG_F(INFO, "Directory creation completed: {}", currentDir.string());
 }
 
-bool createDirectoriesRecursive(const fs::path& basePath,
-                                const std::vector<std::string>& subdirs,
-                                const CreateDirectoriesOptions& options = {}) {
+bool createDirectoriesRecursive(const fs::path &basePath,
+                                const std::vector<std::string> &subdirs,
+                                const CreateDirectoriesOptions &options = {}) {
     for (size_t i = 0; i < subdirs.size(); ++i) {
-        const std::string& subdir = subdirs[i];
+        const std::string &subdir = subdirs[i];
 
 #if __cplusplus >= 202002L
         std::string fullPath = std::format("{}/{}", basePath.string(), subdir);
@@ -378,6 +378,10 @@ bool isFileExists(const std::string &fileName) {
         return false;
     }
     return fs::exists(fileName) && fs::is_regular_file(fileName);
+}
+
+bool isFileExists(const fs::path &fileName) {
+    return isFileExists(fileName.string());
 }
 
 bool isFolderEmpty(const std::string &folderName) {

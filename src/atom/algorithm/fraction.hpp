@@ -49,7 +49,7 @@ public:
      * @param n The numerator (default is 0).
      * @param d The denominator (default is 1).
      */
-    Fraction(int n = 0, int d = 1);
+    explicit Fraction(int n = 0, int d = 1);
 
     /**
      * @brief Adds another fraction to this fraction.
@@ -130,30 +130,6 @@ public:
      * @return True if fractions are equal, false otherwise.
      */
     bool operator==(const Fraction& other) const;
-
-    /**
-     * @brief Pre-increments the fraction by 1.
-     * @return Reference to the modified fraction.
-     */
-    Fraction& operator++();
-
-    /**
-     * @brief Post-increments the fraction by 1.
-     * @return The fraction before incrementing.
-     */
-    Fraction operator++(int);
-
-    /**
-     * @brief Pre-decrements the fraction by 1.
-     * @return Reference to the modified fraction.
-     */
-    Fraction& operator--();
-
-    /**
-     * @brief Post-decrements the fraction by 1.
-     * @return The fraction before decrementing.
-     */
-    Fraction operator--(int);
 
     /**
      * @brief Negates the fraction.

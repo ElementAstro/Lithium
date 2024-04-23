@@ -320,6 +320,7 @@ void traverseDirectories(const std::filesystem::path &directory,
  * @return 如果文件存在，则返回true，否则返回false。
  */
 [[nodiscard]] bool isFileExists(const std::string &filePath);
+[[nodiscard]] bool isFileExists(const fs::path &filePath);
 
 /**
  * @brief Check if the folder is empty.

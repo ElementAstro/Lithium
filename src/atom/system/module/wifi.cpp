@@ -1,14 +1,32 @@
+/*
+ * wifi.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-2-21
+
+Description: System Information Module - Wifi Information
+
+**************************************************/
+
 #include "wifi.hpp"
 
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
 #include <iptypes.h>
 #include <iphlpapi.h>
 #include <wlanapi.h>
+#include <ws2tcpip.h>
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
 #pragma comment(lib, "wlanapi.lib")
+#endif
 #elif defined(__linux__)
 #include <fstream>
 #include <sstream>
@@ -219,5 +237,85 @@ bool isHotspotConnected() {
 #endif
 
     return isConnected;
+}
+
+std::vector<std::string> getHostIPs() {
+    std::vector<std::string> hostIPs;
+
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        LOG_F(ERROR, "Error: WSAStartup failed");
+        return hostIPs;
+    }
+
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) == SOCKET_ERROR) {
+        LOG_F(ERROR, "Error: gethostname failed");
+        WSACleanup();
+        return hostIPs;
+    }
+
+    addrinfo hints, *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
+        LOG_F(ERROR, "Error: getaddrinfo failed");
+        WSACleanup();
+        return hostIPs;
+    }
+
+    for (addrinfo* p = res; p != NULL; p = p->ai_next) {
+        void* addr;
+        char ipstr[INET6_ADDRSTRLEN];
+        if (p->ai_family == AF_INET) {
+            sockaddr_in* ipv4 = reinterpret_cast<sockaddr_in*>(p->ai_addr);
+            addr = &(ipv4->sin_addr);
+        } else {
+            sockaddr_in6* ipv6 = reinterpret_cast<sockaddr_in6*>(p->ai_addr);
+            addr = &(ipv6->sin6_addr);
+        }
+        inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
+        hostIPs.push_back(std::string(ipstr));
+    }
+
+    freeaddrinfo(res);
+    WSACleanup();
+#else
+    ifaddrs* ifaddr;
+    if (getifaddrs(&ifaddr) == -1) {
+        LOG_F(ERROR, "Error: getifaddrs failed");
+        return hostIPs;
+    }
+
+    for (ifaddrs* ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL)
+            continue;
+
+        if (ifa->ifa_addr->sa_family == AF_INET ||
+            ifa->ifa_addr->sa_family == AF_INET6) {
+            char ipstr[INET6_ADDRSTRLEN];
+            void* addr;
+            if (ifa->ifa_addr->sa_family == AF_INET) {
+                sockaddr_in* ipv4 =
+                    reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
+                addr = &(ipv4->sin_addr);
+            } else {
+                sockaddr_in6* ipv6 =
+                    reinterpret_cast<sockaddr_in6*>(ifa->ifa_addr);
+                addr = &(ipv6->sin6_addr);
+            }
+            inet_ntop(ifa->ifa_addr->sa_family, addr, ipstr, sizeof(ipstr));
+            hostIPs.push_back(std::string(ipstr));
+        }
+    }
+
+    freeifaddrs(ifaddr);
+#endif
+
+    return hostIPs;
 }
 }

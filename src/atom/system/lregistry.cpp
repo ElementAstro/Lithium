@@ -16,6 +16,7 @@ Description: A self-contained registry manager.
 
 #include <ctime>
 #include <fstream>
+#include <unordered_map>
 
 #include "atom/log/loguru.hpp"
 
@@ -23,10 +24,12 @@ namespace Atom::System {
 
 class Registry::RegistryImpl {
 public:
-    std::map<std::string, std::map<std::string, std::string>> registryData;
+    std::unordered_map<std::string,
+                       std::unordered_map<std::string, std::string>>
+        registryData;
 
     void saveRegistryToFile();
-    void notifyEvent(std::string eventType, std::string keyName);
+    void notifyEvent(const std::string& eventType, const std::string& keyName);
 };
 
 Registry::Registry() : pImpl(std::make_unique<RegistryImpl>()) {}
@@ -36,25 +39,26 @@ void Registry::loadRegistryFromFile() {
     pImpl->saveRegistryToFile();  // Delegate to implementation
 }
 
-void Registry::createKey(std::string keyName) {
+void Registry::createKey(const std::string& keyName) {
     pImpl->saveRegistryToFile();                // Delegate to implementation
     pImpl->notifyEvent("KeyCreated", keyName);  // Delegate to implementation
 }
 
-void Registry::deleteKey(std::string keyName) {
+void Registry::deleteKey(const std::string& keyName) {
     pImpl->saveRegistryToFile();                // Delegate to implementation
     pImpl->notifyEvent("KeyDeleted", keyName);  // Delegate to implementation
 }
 
-void Registry::setValue(std::string keyName, std::string valueName,
-                        std::string data) {
+void Registry::setValue(const std::string& keyName,
+                        const std::string& valueName, const std::string& data) {
     pImpl->registryData[keyName][valueName] =
         data;                                 // Access implementation directly
     pImpl->saveRegistryToFile();              // Delegate to implementation
     pImpl->notifyEvent("ValueSet", keyName);  // Delegate to implementation
 }
 
-std::string Registry::getValue(std::string keyName, std::string valueName) {
+std::string Registry::getValue(const std::string& keyName,
+                               const std::string& valueName) {
     if (pImpl->registryData.find(keyName) != pImpl->registryData.end() &&
         pImpl->registryData[keyName].find(valueName) !=
             pImpl->registryData[keyName].end()) {
@@ -66,7 +70,8 @@ std::string Registry::getValue(std::string keyName, std::string valueName) {
     }
 }
 
-void Registry::deleteValue(std::string keyName, std::string valueName) {
+void Registry::deleteValue(const std::string& keyName,
+                           const std::string& valueName) {
     if (pImpl->registryData.find(keyName) != pImpl->registryData.end()) {
         pImpl->registryData[keyName].erase(
             valueName);               // Access implementation directly
@@ -78,14 +83,14 @@ void Registry::deleteValue(std::string keyName, std::string valueName) {
 
 void Registry::backupRegistryData() {
     std::time_t currentTime = std::time(nullptr);
-    std::string backupFileName =
+    const std::string& backupFileName =
         "registry_backup_" + std::to_string(currentTime) + ".txt";
 
     std::ofstream backupFile(backupFileName);
     if (backupFile.is_open()) {
-        for (const auto &key : pImpl->registryData) {
+        for (const auto& key : pImpl->registryData) {
             backupFile << key.first << std::endl;
-            for (const auto &value : key.second) {
+            for (const auto& value : key.second) {
                 backupFile << value.first << "=" << value.second << std::endl;
             }
             backupFile << std::endl;
@@ -98,7 +103,7 @@ void Registry::backupRegistryData() {
     }
 }
 
-void Registry::restoreRegistryData(std::string backupFile) {
+void Registry::restoreRegistryData(const std::string& backupFile) {
     std::ifstream backup(backupFile);
     if (backup.is_open()) {
         pImpl->registryData.clear();  // Clear existing data before restoring
@@ -109,7 +114,7 @@ void Registry::restoreRegistryData(std::string backupFile) {
             if (!line.empty() && line.find('=') == std::string::npos) {
                 currentKey = line;
                 pImpl->registryData[currentKey] =
-                    std::map<std::string, std::string>();
+                    std::unordered_map<std::string, std::string>();
             } else if (line.find('=') != std::string::npos) {
                 size_t splitPos = line.find('=');
                 std::string valueName = line.substr(0, splitPos);
@@ -126,20 +131,22 @@ void Registry::restoreRegistryData(std::string backupFile) {
     }
 }
 
-bool Registry::keyExists(std::string keyName) const {
+bool Registry::keyExists(const std::string& keyName) const {
     return pImpl->registryData.find(keyName) != pImpl->registryData.end();
 }
 
-bool Registry::valueExists(std::string keyName, std::string valueName) const {
+bool Registry::valueExists(const std::string& keyName,
+                           const std::string& valueName) const {
     auto keyIter = pImpl->registryData.find(keyName);
     return keyIter != pImpl->registryData.end() &&
            keyIter->second.find(valueName) != keyIter->second.end();
 }
 
-std::vector<std::string> Registry::getValueNames(std::string keyName) const {
+std::vector<std::string> Registry::getValueNames(
+    const std::string& keyName) const {
     std::vector<std::string> valueNames;
     if (pImpl->registryData.find(keyName) != pImpl->registryData.end()) {
-        for (const auto &pair : pImpl->registryData.at(keyName)) {
+        for (const auto& pair : pImpl->registryData.at(keyName)) {
             valueNames.push_back(pair.first);
         }
     }
@@ -148,9 +155,9 @@ std::vector<std::string> Registry::getValueNames(std::string keyName) const {
 void Registry::RegistryImpl::saveRegistryToFile() {
     std::ofstream file("registry_data.txt");
     if (file.is_open()) {
-        for (auto const &key : registryData) {
+        for (auto const& key : registryData) {
             file << key.first << std::endl;
-            for (auto const &value : key.second) {
+            for (auto const& value : key.second) {
                 file << value.first << "=" << value.second << std::endl;
             }
             file << std::endl;
@@ -161,8 +168,8 @@ void Registry::RegistryImpl::saveRegistryToFile() {
     }
 }
 
-void Registry::RegistryImpl::notifyEvent(std::string eventType,
-                                         std::string keyName) {
+void Registry::RegistryImpl::notifyEvent(const std::string& eventType,
+                                         const std::string& keyName) {
     DLOG_F(INFO, "Event: {} occurred for key: {}", eventType, keyName);
 }
 

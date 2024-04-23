@@ -22,6 +22,7 @@ set(${PROJECT_NAME}_SOURCES
     command.cpp
     crash_quotes.cpp
     crash.cpp
+    lregistry.cpp
     pidwatcher.cpp
     process.cpp
     register.cpp

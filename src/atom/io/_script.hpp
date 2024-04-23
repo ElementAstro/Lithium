@@ -1,3 +1,17 @@
+/*
+ * _script.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-23
+
+Description: Carbon binding for Atom-IO
+
+**************************************************/
+
 #ifndef ATOM_IO_SCRIPT_HPP
 #define ATOM_IO_SCRIPT_HPP
 
@@ -6,6 +20,7 @@
 #include "compress.hpp"
 #include "file.hpp"
 #include "glob.hpp"
+#include "idirectory.hpp"
 #include "ifile.hpp"
 #include "io.hpp"
 
@@ -24,7 +39,7 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&extract_zip), "extract_zip");
 
     m->add(user_type<FileManager>(), "FileManager");
-    m->add(Carbon::constructor<FileManager(const fs::path&)>(), "FileManager");
+    //m->add(Carbon::constructor<FileManager(const fs::path&)>(), "FileManager");
     m->add(Carbon::fun(&FileManager::createFile), "createFile");
     m->add(Carbon::fun(&FileManager::openFile), "openFile");
     m->add(Carbon::fun(&FileManager::readFile), "readFile");
@@ -49,7 +64,7 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&glob::rlistdir), "rlistdir");
 
     m->add(user_type<FileWrapper>(), "FileWrapper");
-    m->add(Carbon::constructor<FileWrapper(const fs::path&)>(), "FileWrapper");
+    //m->add(Carbon::constructor<FileWrapper(const fs::path&)>(), "FileWrapper");
     m->add(Carbon::fun(
                static_cast<void (FileWrapper::*)(const std::vector<uint8_t>&)>(
                    &FileWrapper::write)),
@@ -72,6 +87,22 @@ Carbon::ModulePtr bootstrap(
                    &FileWrapper::append)),
            "append");
 
+    m->add(user_type<DirectoryWrapper>(), "DirectoryWrapper");
+    //m->add(Carbon::constructor<DirectoryWrapper(const fs::path&)>(),
+    //       "DirectoryWrapper");
+    //m->add(Carbon::constructor<DirectoryWrapper(const std::string&)>(),
+    //       "DirectoryWrapper");
+    m->add(Carbon::fun(&DirectoryWrapper::exists), "exists");
+    m->add(Carbon::fun(&DirectoryWrapper::get_path), "get_path");
+    m->add(Carbon::fun(&DirectoryWrapper::get_size), "get_size");
+    m->add(Carbon::fun(&DirectoryWrapper::get_size_string), "get_size_string");
+    m->add(Carbon::fun(&DirectoryWrapper::remove), "remove");
+    m->add(Carbon::fun(&DirectoryWrapper::create_directory),
+           "create_directory");
+    m->add(Carbon::fun(&DirectoryWrapper::list_files), "list_files");
+    m->add(Carbon::fun(&DirectoryWrapper::list_directories),
+           "list_directories");
+
     m->add(Carbon::fun(
                static_cast<bool (*)(const std::string&)>(&createDirectory)),
            "createDirectory");
@@ -93,7 +124,11 @@ Carbon::ModulePtr bootstrap(
         "isFolderExists");
     m->add(Carbon::fun(static_cast<bool (*)(const fs::path&)>(&isFolderExists)),
            "isFolderExists");
-    m->add(Carbon::fun(&isFileExists), "isFileExists");
+    m->add(
+        Carbon::fun(static_cast<bool (*)(const std::string&)>(&isFileExists)),
+        "isFileExists");
+    m->add(Carbon::fun(static_cast<bool (*)(const fs::path&)>(&isFileExists)),
+           "isFileExists");
     m->add(Carbon::fun(&isFolderNameValid), "isFolderNameValid");
     m->add(Carbon::fun(&isFileNameValid), "isFileNameValid");
     m->add(Carbon::fun(&isAbsolutePath), "isAbsolutePath");

@@ -9,13 +9,13 @@
 #include <typeinfo>
 #include <vector>
 
+#include "atom/experiment/type_info.hpp"
 #include "bootstrap.hpp"
 #include "boxed_value.hpp"
 #include "dispatchkit.hpp"
 #include "operators.hpp"
 #include "proxy_constructors.hpp"
 #include "register_function.hpp"
-#include "atom/experiment/type_info.hpp"
 
 namespace Carbon::bootstrap::standard_library {
 /// Bidir_Range, based on the D concept of ranges.
@@ -79,6 +79,16 @@ void insert_ref(T &t_target, const typename T::value_type &t_val) {
     t_target.insert(t_val);
 }
 
+template <typename T>
+void emplace(T &t_target, const typename T::value_type &t_val) {
+    t_target.emplace(t_val);
+}
+
+template <typename T>
+void emplace_hint(T &t_target, const typename T::value_type &t_val) {
+    t_target.emplace_hint(t_target.end(), t_val);
+}
+
 /// Add Bidir_Range support for the given ContainerType
 template <typename Bidir_Type>
 void input_range_type_impl(const std::string &type, Module &m) {
@@ -125,6 +135,13 @@ void erase_at(Type &container, int pos) {
 }
 }  // namespace detail
 
+/**
+ * Add Bidir_Range support for the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention empty, pop_front, front, pop_back, back
+ */
 template <typename ContainerType>
 void input_range_type(const std::string &type, Module &m) {
     detail::input_range_type_impl<
@@ -134,8 +151,13 @@ void input_range_type(const std::string &type, Module &m) {
         "Const_" + type, m);
 }
 
-/// Add random_access_container concept to the given ContainerType
-/// http://www.sgi.com/tech/stl/RandomAccessContainer.html
+/**
+ * Add random_access_container concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention [index] operator
+ */
 template <typename ContainerType>
 void random_access_container_type(const std::string & /*type*/, Module &m) {
     // In the interest of runtime safety for the m, we prefer the at() method
@@ -167,8 +189,13 @@ void assignable_type(const std::string &type, Module &m) {
     operators::assign<ContainerType>(m);
 }
 
-/// Add container resize concept to the given ContainerType
-/// http://www.cplusplus.com/reference/stl/
+/**
+ * Add resizable concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention resize
+ */
 template <typename ContainerType>
 void resizable_type(const std::string & /*type*/, Module &m) {
     m.add(fun([](ContainerType *a, typename ContainerType::size_type n,
@@ -182,8 +209,13 @@ void resizable_type(const std::string & /*type*/, Module &m) {
           "resize");
 }
 
-/// Add container reserve concept to the given ContainerType
-/// http://www.cplusplus.com/reference/stl/
+/**
+ * Add reservable concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention reserve, capacity
+ */
 template <typename ContainerType>
 void reservable_type(const std::string & /*type*/, Module &m) {
     m.add(fun([](ContainerType *a, typename ContainerType::size_type n) {
@@ -194,8 +226,13 @@ void reservable_type(const std::string & /*type*/, Module &m) {
           "capacity");
 }
 
-/// Add container concept to the given ContainerType
-/// http://www.sgi.com/tech/stl/Container.html
+/**
+ * Add container concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention size, empty, clear
+ */
 template <typename ContainerType>
 void container_type(const std::string & /*type*/, Module &m) {
     m.add(fun([](const ContainerType *a) { return a->size(); }), "size");
@@ -210,9 +247,23 @@ void default_constructible_type(const std::string &type, Module &m) {
     m.add(constructor<Type()>(), type);
 }
 
-/// Add sequence concept to the given ContainerType
-/// http://www.sgi.com/tech/stl/Sequence.html
-template <typename ContainerType>
+template <typename T>
+concept SequenceContainer = requires(T t) {
+    typename T::value_type;
+    {
+        t.insert(t.begin(), typename T::value_type{})
+    } -> std::same_as<typename T::iterator>;
+    { t.erase(t.begin()) } -> std::same_as<typename T::iterator>;
+};
+
+/**
+ * Add sequence concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention insert_at, erase_at
+ */
+template <SequenceContainer ContainerType>
 void sequence_type(const std::string & /*type*/, Module &m) {
     m.add(fun(&detail::insert_at<ContainerType>), []() -> std::string {
         if (typeid(typename ContainerType::value_type) == typeid(Boxed_Value)) {
@@ -225,9 +276,35 @@ void sequence_type(const std::string & /*type*/, Module &m) {
     m.add(fun(&detail::erase_at<ContainerType>), "erase_at");
 }
 
-/// Add back insertion sequence concept to the given ContainerType
-/// http://www.sgi.com/tech/stl/BackInsertionSequence.html
-template <typename ContainerType>
+template <typename T>
+concept SequenceContainerWithEmplace = requires(T t) {
+    typename T::value_type;
+    {
+        t.insert(t.begin(), typename T::value_type{})
+    } -> std::same_as<typename T::iterator>;
+    { t.erase(t.begin()) } -> std::same_as<typename T::iterator>;
+    {
+        t.emplace(typename T::value_type{})
+    } -> std::same_as<std::pair<typename T::iterator, bool>>;
+    {
+        t.emplace_hint(t.begin(), typename T::value_type{})
+    } -> std::same_as<typename T::iterator>;
+};
+
+template <typename T>
+concept BackInsertionSequence = requires(T t) {
+    typename T::value_type;
+    { t.push_back(typename T::value_type{}) } -> std::same_as<void>;
+    { t.pop_back() } -> std::same_as<void>;
+};
+/**
+ * Add back insertion sequence concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention back, push_back, pop_back
+ */
+template <BackInsertionSequence ContainerType>
 void back_insertion_sequence_type(const std::string &type, Module &m) {
     m.add(fun([](ContainerType &container) -> decltype(auto) {
               if (container.empty()) {
@@ -276,9 +353,20 @@ void back_insertion_sequence_type(const std::string &type, Module &m) {
     m.add(fun(&ContainerType::pop_back), "pop_back");
 }
 
-/// Front insertion sequence
-/// http://www.sgi.com/tech/stl/FrontInsertionSequence.html
-template <typename ContainerType>
+template <typename T>
+concept FrontInsertionSequence = requires(T t) {
+    typename T::value_type;
+    { t.push_front(typename T::value_type{}) } -> std::same_as<void>;
+    { t.pop_front() } -> std::same_as<void>;
+};
+/**
+ * Add front insertion sequence concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention front, push_front, pop_front
+ */
+template <FrontInsertionSequence ContainerType>
 void front_insertion_sequence_type(const std::string &type, Module &m) {
     using push_ptr =
         void (ContainerType::*)(typename ContainerType::const_reference);
@@ -329,9 +417,19 @@ void front_insertion_sequence_type(const std::string &type, Module &m) {
     m.add(fun(static_cast<pop_ptr>(&ContainerType::pop_front)), "pop_front");
 }
 
-/// bootstrap a given PairType
-/// http://www.sgi.com/tech/stl/pair.html
-template <typename PairType>
+template <typename T>
+concept Pair = requires() {
+    typename T::first_type;
+    typename T::second_type;
+};
+/**
+ * Add pair type to the given ContainerType
+ * @tparam PairType The pair type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention first, second
+ */
+template <Pair PairType>
 void pair_type(const std::string &type, Module &m) {
     m.add(user_type<PairType>(), type);
 
@@ -352,9 +450,24 @@ void pair_associative_container_type(const std::string &type, Module &m) {
     pair_type<typename ContainerType::value_type>(type + "_Pair", m);
 }
 
-/// Add unique associative container concept to the given ContainerType
-/// http://www.sgi.com/tech/stl/UniqueAssociativeContainer.html
-template <typename ContainerType>
+template <typename T>
+concept UniqueAssociativeContainer = requires(T t) {
+    typename T::key_type;
+    typename T::mapped_type;
+    { t.count(typename T::key_type{}) } -> std::same_as<size_t>;
+    { t.erase(typename T::key_type{}) } -> std::same_as<size_t>;
+    {
+        t.insert(typename T::value_type{})
+    } -> std::same_as<std::pair<typename T::iterator, bool>>;
+};
+/**
+ * Add unique associative container concept to the given ContainerType
+ * @tparam ContainerType The container type to add support for
+ * @param m The module to add the type to
+ * @note This function is a no-op if the type has already been added
+ * @attention count, erase, insert, insert_ref
+ */
+template <UniqueAssociativeContainer ContainerType>
 void unique_associative_container_type(const std::string & /*type*/,
                                        Module &m) {
     m.add(fun(detail::count<ContainerType>), "count");
@@ -492,6 +605,35 @@ void vector_type(const std::string &type, Module &m) {
                        }
                    } )");
     }
+}
+
+template <typename T>
+concept SetLike = requires(T t) {
+    std::is_default_constructible_v<T>;
+    requires std::same_as<decltype(t.insert(
+                              std::declval<typename T::value_type>())),
+                          std::pair<typename T::iterator, bool>>;
+    requires std::is_convertible_v<
+        decltype(t.find(std::declval<const typename T::value_type &>())),
+        typename T::const_iterator>;
+    requires std::is_convertible_v<
+        decltype(t.erase(std::declval<typename T::const_iterator>())),
+        typename T::iterator>;
+    requires std::is_convertible_v<decltype(t.begin()), typename T::iterator>;
+    requires std::is_convertible_v<decltype(t.end()), typename T::iterator>;
+};
+
+template <SetLike SetType>
+void set_type(const std::string &type, Module &m) {
+    m.add(user_type<SetType>(), type);
+
+    sequence_type<SetType>(type, m);
+    random_access_container_type<SetType>(type, m);
+    reservable_type<SetType>(type, m);
+    container_type<SetType>(type, m);
+    default_constructible_type<SetType>(type, m);
+    assignable_type<SetType>(type, m);
+    input_range_type<SetType>(type, m);
 }
 
 /// Add a String container

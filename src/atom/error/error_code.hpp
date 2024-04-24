@@ -18,7 +18,7 @@ Description: All of the error code
 enum class LIError {
     None,              // 无错误
     NotFound,          // 文件未找到
-    OepnError,         // 无法打开
+    OpenError,         // 无法打开
     AccessDenied,      // 访问被拒绝
     ReadError,         // 读取错误
     WriteError,        // 写入错误

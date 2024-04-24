@@ -24,6 +24,9 @@ Description: Carbon binding for Atom-Utils
 #include "stopwatcher.hpp"
 #include "string.hpp"
 #include "time.hpp"
+#include "utf.hpp"
+#include "uuid.hpp"
+#include "xml.hpp"
 
 using namespace Atom::Utils;
 
@@ -94,7 +97,7 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&StopWatcher::elapsedSeconds), "elapsed_s");
     m->add(Carbon::fun(&StopWatcher::elapsedFormatted), "elapsed_formatted");
     m->add(Carbon::fun(&StopWatcher::registerCallback), "register_callback");
-    
+
     m->add(Carbon::fun(&hasUppercase), "has_uppercase");
     m->add(Carbon::fun(&toCamelCase), "to_camel_case");
     m->add(Carbon::fun(&toUnderscore), "to_underscore");
@@ -109,6 +112,15 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&splitString), "split_string");
 
     m->add(user_type<std::tm>(), "tm");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_sec), "tm_sec");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_min), "tm_min");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_hour), "tm_hour");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_mday), "tm_mday");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_mon), "tm_mon");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_year), "tm_year");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_wday), "tm_wday");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_yday), "tm_yday");
+    m->add_global_const(Carbon::const_var(&std::tm::tm_isdst), "tm_isdst");
     m->add(Carbon::fun(&timeStampToString), "time_stamp_to_string");
     m->add(Carbon::fun(&getTimestampString), "get_timestamp_string");
     m->add(Carbon::fun(&getChinaTimestampString), "get_china_timestamp_string");
@@ -116,6 +128,44 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&timestampToTime), "timestamp_to_time");
     m->add(Carbon::fun(&toString), "to_string");
     m->add(Carbon::fun(&convertToChinaTime), "convert_to_china_time");
+
+    m->add(Carbon::fun(&toUTF8), "to_utf8");
+    m->add(Carbon::fun(&fromUTF8), "from_utf8");
+    m->add(Carbon::fun(&UTF8toUTF16), "utf8_to_utf16");
+    m->add(Carbon::fun(&UTF16toUTF8), "utf16_to_utf8");
+    m->add(Carbon::fun(&UTF8toUTF32), "utf8_to_utf32");
+    m->add(Carbon::fun(&UTF32toUTF8), "utf32_to_utf8");
+    m->add(Carbon::fun(&UTF16toUTF32), "utf16_to_utf32");
+    m->add(Carbon::fun(&UTF32toUTF16), "utf32_to_utf16");
+
+    m->add(user_type<UUIDGenerator>(), "UUIDGenerator");
+    m->add(Carbon::fun(&UUIDGenerator::generateUUID), "generate_uuid");
+    m->add(Carbon::fun(&UUIDGenerator::getRandomNumber), "get_random_number");
+    m->add(Carbon::fun(&UUIDGenerator::seed), "seed");
+    m->add(Carbon::fun(&generateSystemUUID), "generate_system_uuid");
+
+    m->add(user_type<XMLReader>(), "XMLReader");
+    m->add(Carbon::fun(&XMLReader::getChildElementText),
+           "get_child_element_text");
+    m->add(Carbon::fun(&XMLReader::getChildElementAttributeValue),
+           "get_child_element_attribute_value");
+    m->add(Carbon::fun(&XMLReader::getChildElementAttributeValueByPath),
+           "get_child_element_attribute_value_by_path");
+    m->add(Carbon::fun(&XMLReader::getChildElementTextByPath),
+           "get_child_element_text_by_path");
+    m->add(Carbon::fun(&XMLReader::getChildElementNames),
+           "get_child_element_names");
+    m->add(Carbon::fun(&XMLReader::getRootElementNames),
+           "get_root_element_names");
+    m->add(Carbon::fun(&XMLReader::getAttributeValue), "get_attribute_value");
+    m->add(Carbon::fun(&XMLReader::getAttributeValueByPath),
+           "get_attribute_value_by_path");
+    m->add(Carbon::fun(&XMLReader::getValueByPath), "get_value_by_path");
+    m->add(Carbon::fun(&XMLReader::hasChildElement), "has_child_element");
+    m->add(Carbon::fun(&XMLReader::hasChildElementByPath),
+           "has_child_element_by_path");
+    m->add(Carbon::fun(&XMLReader::saveToFile), "save_to_file");
+    m->add(Carbon::fun(&XMLReader::getElementText), "get_element_text");
 
     return m;
 }

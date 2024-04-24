@@ -2,11 +2,16 @@
 
 #include "carbon/carbon.hpp"
 #include "carbon/extra/math.hpp"
+#include "carbon/extra/stdlib.hpp"
 #include "carbon/extra/string.hpp"
 
+#include "atom/algorithm/_script.hpp"
+#include "atom/error/_script.hpp"
 #include "atom/io/_script.hpp"
 #include "atom/system/_script.hpp"
 #include "atom/type/_script.hpp"
+
+#include "config/_script.hpp"
 
 #include "atom/async/pool.hpp"
 #include "atom/experiment/noncopyable.hpp"
@@ -33,10 +38,15 @@ public:
     void InitSubModules() {
         m_carbon->add(Carbon::extras::math::bootstrap());
         m_carbon->add(Carbon::extras::string_methods::bootstrap());
+        m_carbon->add(Carbon::extras::stdlib::bootstrap());
 
+        m_carbon->add(Atom::_Script::Algorithm::bootstrap());
+        m_carbon->add(Atom::_Script::Error::bootstrap());
         m_carbon->add(Atom::_Script::IO::bootstrap());
         m_carbon->add(Atom::_Script::System::bootstrap());
         m_carbon->add(Atom::_Script::Type::bootstrap());
+
+        m_carbon->add(Lithium::_Script::Config::bootstrap());
 
         // Add additional sub-modules if needed
     }

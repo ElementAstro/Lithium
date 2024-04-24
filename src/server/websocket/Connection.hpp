@@ -69,7 +69,7 @@ private:
     /* Inject application components */
     OATPP_COMPONENT(std::shared_ptr<oatpp::async::Executor>, m_asyncExecutor);
     OATPP_COMPONENT(std::shared_ptr<oatpp::data::mapping::ObjectMapper>,
-                    m_objectMapper, Constants::COMPONENT_WS_API);
+                    m_objectMapper, Constants::COMPONENT_REST_API);
 
 private:
     CoroutineStarter handlePong(const oatpp::Object<MessageDto>& message);

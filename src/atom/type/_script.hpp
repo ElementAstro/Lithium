@@ -41,12 +41,12 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&Args::clear), "clear");
     m->add(Carbon::fun(&Args::data), "data");
 
-    Carbon::bootstrap::standard_library::vector_type<
-        SmallVector<Carbon::Boxed_Value>>("SmallVector", *m);
-    Carbon::bootstrap::standard_library::set_type<FlatSet<Carbon::Boxed_Value>>(
-        "FlatSet", *m);
-    Carbon::bootstrap::standard_library::set_type<
-        std::set<Carbon::Boxed_Value>>("Set", *m);
+    //Carbon::bootstrap::standard_library::vector_type<
+    //    SmallVector<Carbon::Boxed_Value>>("SmallVector", *m);
+    //Carbon::bootstrap::standard_library::set_type<FlatSet<Carbon::Boxed_Value>>(
+    //    "FlatSet", *m);
+    //Carbon::bootstrap::standard_library::set_type<
+    //    std::set<Carbon::Boxed_Value>>("Set", *m);
 
     m->add(user_type<INIFile>(), "INIFile");
     // m->add(Carbon::constructor<INIFile()>(), "INIFile");

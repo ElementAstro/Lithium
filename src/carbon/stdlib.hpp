@@ -44,8 +44,8 @@ public:
         bootstrap::standard_library::string_type<std::string>("string", *lib);
         bootstrap::standard_library::map_type<
             std::map<std::string, Boxed_Value>>("Map", *lib);
-        bootstrap::standard_library::map_type<
-            std::unordered_map<Boxed_Value, Boxed_Value>>("HashMap", *lib);
+        //bootstrap::standard_library::map_type<
+        //    std::unordered_map<Boxed_Value, Boxed_Value>>("HashMap", *lib);
         bootstrap::standard_library::pair_type<
             std::pair<Boxed_Value, Boxed_Value>>("Pair", *lib);
 

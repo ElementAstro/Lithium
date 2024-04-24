@@ -33,7 +33,7 @@ private:
 
 private:
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
-                    websocketConnectionHandler, Constants::COMPONENT_WS_API);
+                    websocketConnectionHandler, Constants::COMPONENT_REST_API);
 
 public:
     ClientController(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>,

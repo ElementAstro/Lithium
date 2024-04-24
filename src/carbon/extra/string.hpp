@@ -6,9 +6,7 @@
 #include <vector>
 #include "../carbon.hpp"
 
-namespace Carbon {
-namespace extras {
-namespace string_methods {
+namespace Carbon::extras::string_methods {
 
 /**
  * Replaces all occurances of a string within the given string.
@@ -158,8 +156,6 @@ ModulePtr bootstrap(ModulePtr m = std::make_shared<Module>()) {
 
     return m;
 }
-}  // namespace string_methods
-}  // namespace extras
-}  // namespace Carbon
+}  // namespace Carbon::extras::string_methods
 
 #endif /* CARBON_EXTRAS_STRING_METHODS_HPP_ */

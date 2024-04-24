@@ -6,9 +6,7 @@
 
 #include "../carbon.hpp"
 
-namespace Carbon {
-namespace extras {
-namespace math {
+namespace Carbon::extras::math {
 // TRIG FUNCTIONS
 template <typename Ret, typename Param>
 ModulePtr cos(ModulePtr m = std::make_shared<Module>()) {
@@ -798,8 +796,6 @@ ModulePtr bootstrap(ModulePtr m = std::make_shared<Module>()) {
 
     return m;
 }
-}  // namespace math
-}  // namespace extras
-}  // namespace Carbon
+}  // namespace Carbon::extras::math
 
 #endif /* CARBON_EXTRAS_MATH_HPP_ */

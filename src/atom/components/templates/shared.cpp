@@ -6,7 +6,7 @@
 #include "atom/type/message.hpp"
 #include "atom/utils/string.hpp"
 
-using namespace Atom::Error;
+using namespace atom::error;
 
 SharedComponent::SharedComponent(const std::string &name) : Component(name) {
     m_handleFunction = [shared_this =

@@ -15,17 +15,9 @@ Description: Trigger class for C++
 #ifndef ATOM_ASYNC_TRIGGER_IMPL_HPP
 #define ATOM_ASYNC_TRIGGER_IMPL_HPP
 
-#include <algorithm>
-#include <chrono>
-#include <exception>
-#include <functional>
-#include <future>
-#include <mutex>
-#include <thread>
-#include <unordered_map>
-#include <vector>
+#include "trigger.hpp"
 
-
+namespace atom::async {
 template <typename ParamType>
 void Trigger<ParamType>::registerCallback(const std::string &event,
                                           const Callback &callback,
@@ -118,5 +110,6 @@ void Trigger<ParamType>::cancelAllTriggers() {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_callbacks.clear();
 }
+}  // namespace atom::async
 
 #endif

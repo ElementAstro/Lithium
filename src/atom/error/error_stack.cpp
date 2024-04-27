@@ -20,7 +20,7 @@ Description: Error Stack
 #include "atom/log/loguru.hpp"
 #include "atom/utils/time.hpp"
 
-namespace Atom::Error {
+namespace atom::error {
 std::ostream &operator<<(std::ostream &os, const ErrorInfo &error) {
     os << "{"
        << "\"errorMessage\": \"" << error.errorMessage << "\","
@@ -154,4 +154,4 @@ void ErrorStack::sortCompressedErrorStack() {
               });
 }
 
-}  // namespace Atom::Error
+}  // namespace atom::error

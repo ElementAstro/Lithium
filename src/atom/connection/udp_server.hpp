@@ -41,7 +41,7 @@ using socklen_t = int;
 using SOCKET = int;
 #endif
 
-namespace Atom::Connection {
+namespace atom::connection {
 /**
  * @class UdpSocketHub
  * @brief A simple UDP socket server class that handles incoming messages and
@@ -157,6 +157,6 @@ private:
      */
     void handleMessages();
 };
-}  // namespace Atom::Connection
+}  // namespace atom::connection
 
 #endif

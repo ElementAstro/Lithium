@@ -28,8 +28,7 @@ Description: Python Binding of Atom-Algorithm
 
 namespace py = pybind11;
 
-using namespace Atom::Algorithm;
-using namespace Atom::Utils;
+using namespace atom::algorithm;
 
 PYBIND11_MODULE(atom_algorithm, m) {
     m.doc() = "Atom Algorithm Python Binding";
@@ -63,6 +62,15 @@ PYBIND11_MODULE(atom_algorithm, m) {
           py::arg("input"), py::arg("kernel"), py::arg("numThreads") = 1);
     m.def("deconvolve2D", &deconvolve2D,
           "Perform two-dimensional deconvolution");
+    m.def("DFT2D", &DFT2D, "Perform two-dimensional discrete Fourier transform",
+          py::arg("signal"), py::arg("numThreads") = 1);
+    m.def("IDFT2D", &IDFT2D,
+          "Perform two-dimensional inverse discrete Fourier transform",
+          py::arg("spectrum"), py::arg("numThreads") = 1);
+    m.def("generate_gaussian_kernel", &generateGaussianKernel,
+          "Generate a Gaussian kernel for convolution");
+    m.def("apply_gaussian_filter", &applyGaussianFilter,
+          "Apply a Gaussian filter to an image");
 
     py::class_<Fraction>(m, "Fraction")
         .def(py::init<int, int>())
@@ -112,6 +120,8 @@ PYBIND11_MODULE(atom_algorithm, m) {
 
     m.def("murmur3_hash", &murmur3Hash, "Murmur3 Hash");
     m.def("murmur3_hash64", &murmur3Hash64, "Murmur3 Hash64");
-    m.def("hexstring_from_data", py::overload_cast<const std::string &>(&hexstringFromData), "Hexstring from Data");
+    m.def("hexstring_from_data",
+          py::overload_cast<const std::string &>(&hexstringFromData),
+          "Hexstring from Data");
     m.def("data_from_hexstring", &dataFromHexstring, "Data from Hexstring");
 }

@@ -14,20 +14,22 @@ Description: Implementation of murmur3 hash and quick hash
 
 #include "mhash.hpp"
 
+#include <algorithm>
+#include <bit>
+#include <charconv>
+#include <cstdlib>
+#include <cstring>
+#include <iomanip>
+#include <span>
+#include <sstream>
+#include <stdexcept>
+
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
-#include <string.h>
-#include <algorithm>
-#include <bit>
-#include <cstdlib>
-#include <iomanip>
-#include <sstream>
-#include <stdexcept>
-#include <charconv>
 
-namespace Atom::Utils {
+namespace atom::algorithm {
 uint32_t fmix32(uint32_t h) noexcept {
     h ^= h >> 16;
     h *= 0x85ebca6b;
@@ -152,4 +154,4 @@ std::string dataFromHexstring(const std::string &hexstring) {
     return result;
 }
 
-}  // namespace Atom::Utils
+}  // namespace atom::algorithm

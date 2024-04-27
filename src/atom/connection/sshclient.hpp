@@ -26,7 +26,7 @@ Description: SSH客户端连接和文件操作类。
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
 
-namespace Atom::Connection {
+namespace atom::connection {
 /**
  * @class SSHClient
  * @brief A class for SSH client connection and file operations.
@@ -161,6 +161,6 @@ private:
     ssh_session m_ssh_session;
     sftp_session m_sftp_session;
 };
-}  // namespace Atom::Connection
+}  // namespace atom::connection
 
 #endif

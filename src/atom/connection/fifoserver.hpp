@@ -21,7 +21,7 @@ Description: FIFO Server
 #include <string>
 #include <thread>
 
-namespace Atom::Connection {
+namespace atom::connection {
 
 /**
  * @brief A class representing a server for handling FIFO messages.
@@ -62,6 +62,6 @@ private:
         message_cv_; /**< Condition variable for message synchronization. */
 };
 
-}  // namespace Atom::Connection
+}  // namespace atom::connection
 
 #endif  // ATOM_CONNECTION_FIFOSERVER_HPP

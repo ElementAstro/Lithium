@@ -17,7 +17,7 @@ Description: Extra Math Library
 #include <bit>
 #include <stdexcept>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 
 #if defined(__GNUC__) && defined(__SIZEOF_INT128__)
 uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
@@ -117,4 +117,4 @@ uint64_t safeDiv(uint64_t a, uint64_t b) {
     return a / b;
 }
 
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm

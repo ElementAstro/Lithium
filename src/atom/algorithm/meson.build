@@ -12,6 +12,7 @@ sources = [
 ]
 headers = [
     'algorithm.hpp',
+    'algorithm.inl'
     'base.hpp',
     'convolve.hpp',
     'fraction.hpp',
@@ -31,7 +32,7 @@ atom_algorithm_obj = library('atom_algorithm_obj',
 atom_algorithm_static = static_library('atom_algorithm_static', atom_algorithm_obj)
 
 # Set version properties
-version = '1.0.0' # You should define your version here
+version = '1.0.0'
 soversion = '1'
 
 atom_algorithm_static.version = version

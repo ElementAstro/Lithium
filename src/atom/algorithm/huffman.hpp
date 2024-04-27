@@ -29,7 +29,7 @@ Description: Simple implementation of Huffman encoding
 #include <string>
 #include <unordered_map>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 /**
  * @brief 哈夫曼树节点
  *
@@ -88,6 +88,6 @@ std::string compressText(
  */
 std::string decompressText(const std::string &compressedText,
                            HuffmanNode *root);
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm
 
 #endif

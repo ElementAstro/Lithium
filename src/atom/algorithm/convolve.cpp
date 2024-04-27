@@ -15,20 +15,27 @@ and deconvolution.
 
 #include "convolve.hpp"
 
-#include <complex>
+#include <algorithm>
+#include <cstddef>
 #include <thread>
 
-namespace Atom::Algorithm {
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#include "atom/error/exception.hpp"
+
+namespace atom::algorithm {
 std::vector<double> convolve(const std::vector<double> &input,
                              const std::vector<double> &kernel) {
-    int input_size = input.size();
-    int kernel_size = kernel.size();
-    int output_size = input_size + kernel_size - 1;
+    auto input_size = input.size();
+    auto kernel_size = kernel.size();
+    auto output_size = input_size + kernel_size - 1;
     std::vector<double> output(output_size, 0.0);
 
-    for (int i = 0; i < output_size; i++) {
-        for (int j = 0; j < kernel_size; j++) {
-            if (i - j >= 0 && i - j < input_size) {
+    for (std::size_t i = 0; i < output_size; ++i) {
+        for (std::size_t j = 0; j < kernel_size; ++j) {
+            if (i >= j && (i - j) < input_size) {
                 output[i] += input[i - j] * kernel[j];
             }
         }
@@ -39,13 +46,17 @@ std::vector<double> convolve(const std::vector<double> &input,
 
 std::vector<double> deconvolve(const std::vector<double> &input,
                                const std::vector<double> &kernel) {
-    int input_size = input.size();
-    int kernel_size = kernel.size();
-    int output_size = input_size - kernel_size + 1;
+    auto input_size = input.size();
+    auto kernel_size = kernel.size();
+    if (kernel_size > input_size) {
+        THROW_EXCEPTION("Kernel size cannot be larger than input size.");
+    }
+
+    auto output_size = input_size - kernel_size + 1;
     std::vector<double> output(output_size, 0.0);
 
-    for (int i = 0; i < output_size; i++) {
-        for (int j = 0; j < kernel_size; j++) {
+    for (std::size_t i = 0; i < output_size; ++i) {
+        for (std::size_t j = 0; j < kernel_size; ++j) {
             output[i] += input[i + j] * kernel[j];
         }
     }
@@ -55,40 +66,44 @@ std::vector<double> deconvolve(const std::vector<double> &input,
 
 std::vector<std::vector<double>> convolve2D(
     const std::vector<std::vector<double>> &input,
-    const std::vector<std::vector<double>> &kernel, int numThreads = 1) {
-    int inputRows = input.size();
-    int inputCols = input[0].size();
-    int kernelRows = kernel.size();
-    int kernelCols = kernel[0].size();
+    const std::vector<std::vector<double>> &kernel, int numThreads) {
+    auto inputRows = input.size();
+    auto inputCols = input[0].size();
+    auto kernelRows = kernel.size();
+    auto kernelCols = kernel[0].size();
 
-    // 将输入矩阵和卷积核矩阵扩展到相同的大小，使用0填充
+    // Extend input and kernel matrices with zeros
     std::vector<std::vector<double>> extendedInput(
         inputRows + kernelRows - 1,
-        std::vector<double>(inputCols + kernelCols - 1, 0));
+        std::vector<double>(inputCols + kernelCols - 1, 0.0));
     std::vector<std::vector<double>> extendedKernel(
         inputRows + kernelRows - 1,
-        std::vector<double>(inputCols + kernelCols - 1, 0));
+        std::vector<double>(inputCols + kernelCols - 1, 0.0));
 
-    for (int i = 0; i < inputRows; ++i) {
-        for (int j = 0; j < inputCols; ++j) {
+    // Center the input in the extended input matrix
+    for (std::size_t i = 0; i < inputRows; ++i) {
+        for (std::size_t j = 0; j < inputCols; ++j) {
             extendedInput[i + kernelRows / 2][j + kernelCols / 2] = input[i][j];
         }
     }
 
-    for (int i = 0; i < kernelRows; ++i) {
-        for (int j = 0; j < kernelCols; ++j) {
+    // Center the kernel in the extended kernel matrix
+    for (std::size_t i = 0; i < kernelRows; ++i) {
+        for (std::size_t j = 0; j < kernelCols; ++j) {
             extendedKernel[i][j] = kernel[i][j];
         }
     }
 
-    // 计算卷积结果
-    std::vector<std::vector<double>> output(inputRows,
-                                            std::vector<double>(inputCols, 0));
+    // Prepare output matrix
+    std::vector<std::vector<double>> output(
+        inputRows, std::vector<double>(inputCols, 0.0));
 
+    // Function to compute a block of the convolution
     auto computeBlock = [&](int blockStartRow, int blockEndRow) {
         for (int i = blockStartRow; i < blockEndRow; ++i) {
-            for (int j = kernelCols / 2; j < inputCols + kernelCols / 2; ++j) {
-                double sum = 0;
+            for (std::size_t j = kernelCols / 2; j < inputCols + kernelCols / 2;
+                 ++j) {
+                double sum = 0.0;
                 for (int k = -kernelRows / 2; k <= kernelRows / 2; ++k) {
                     for (int l = -kernelCols / 2; l <= kernelCols / 2; ++l) {
                         sum += extendedInput[i + k][j + l] *
@@ -101,103 +116,50 @@ std::vector<std::vector<double>> convolve2D(
         }
     };
 
-    if (numThreads == 1) {
-        computeBlock(kernelRows / 2, inputRows + kernelRows / 2);
-    } else {
-        std::vector<std::thread> threads(numThreads);
+    // Use multiple threads if requested
+    if (numThreads > 1) {
+        std::vector<std::thread> threads;
         int blockSize = (inputRows + numThreads - 1) / numThreads;
         int blockStartRow = kernelRows / 2;
+
         for (int i = 0; i < numThreads; ++i) {
-            int blockEndRow =
-                std::min(blockStartRow + blockSize, inputRows + kernelRows / 2);
-            threads[i] = std::thread(computeBlock, blockStartRow, blockEndRow);
+            int blockEndRow = std::min<unsigned long long>(
+                blockStartRow + blockSize, inputRows + kernelRows / 2);
+            threads.emplace_back(computeBlock, blockStartRow, blockEndRow);
             blockStartRow = blockEndRow;
         }
+
         for (auto &thread : threads) {
             thread.join();
         }
+    } else {
+        // Single-threaded execution
+        computeBlock(kernelRows / 2, inputRows + kernelRows / 2);
     }
 
     return output;
 }
 
-// 二维离散傅里叶变换（2D DFT）
-std::vector<std::vector<std::complex<double>>> DFT2D(
-    const std::vector<std::vector<double>> &signal) {
-    int M = signal.size();
-    int N = signal[0].size();
-    std::vector<std::vector<std::complex<double>>> X(
-        M, std::vector<std::complex<double>>(N, {0, 0}));
-
-    for (int u = 0; u < M; ++u) {
-        for (int v = 0; v < N; ++v) {
-            std::complex<double> sum(0, 0);
-            for (int m = 0; m < M; ++m) {
-                for (int n = 0; n < N; ++n) {
-                    double theta = 2 * M_PI *
-                                   (u * m / static_cast<double>(M) +
-                                    v * n / static_cast<double>(N));
-                    std::complex<double> w(cos(theta), -sin(theta));
-                    sum += signal[m][n] * w;
-                }
-            }
-            X[u][v] = sum;
-        }
-    }
-
-    return X;
-}
-
-// 二维离散傅里叶逆变换（2D IDFT）
-std::vector<std::vector<double>> IDFT2D(
-    const std::vector<std::vector<std::complex<double>>> &spectrum) {
-    int M = spectrum.size();
-    int N = spectrum[0].size();
-    std::vector<std::vector<double>> x(M, std::vector<double>(N, 0));
-
-    for (int m = 0; m < M; ++m) {
-        for (int n = 0; n < N; ++n) {
-            std::complex<double> sum(0, 0);
-            for (int u = 0; u < M; ++u) {
-                for (int v = 0; v < N; ++v) {
-                    double theta = 2 * M_PI *
-                                   (u * m / static_cast<double>(M) +
-                                    v * n / static_cast<double>(N));
-                    std::complex<double> w(cos(theta), sin(theta));
-                    sum += spectrum[u][v] * w;
-                }
-            }
-            x[m][n] = real(sum) / (M * N);
-        }
-    }
-
-    return x;
-}
-
-// 二维反卷积函数
 std::vector<std::vector<double>> deconvolve2D(
     const std::vector<std::vector<double>> &signal,
-    const std::vector<std::vector<double>> &kernel) {
-    // 获取信号和卷积核的维度
+    const std::vector<std::vector<double>> &kernel, int numThreads) {
     int M = signal.size();
     int N = signal[0].size();
     int K = kernel.size();
     int L = kernel[0].size();
 
-    // 将信号和卷积核扩展到相同的大小，使用0填充
+    // 扩展信号和卷积核到相同的大小
     std::vector<std::vector<double>> extendedSignal(
         M + K - 1, std::vector<double>(N + L - 1, 0));
     std::vector<std::vector<double>> extendedKernel(
         M + K - 1, std::vector<double>(N + L - 1, 0));
 
-    // 将信号复制到扩展后的信号数组中
+    // 复制原始信号和卷积核到扩展矩阵中
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
             extendedSignal[i][j] = signal[i][j];
         }
     }
-
-    // 将卷积核复制到扩展后的卷积核数组中
     for (int i = 0; i < K; ++i) {
         for (int j = 0; j < L; ++j) {
             extendedKernel[i][j] = kernel[i][j];
@@ -205,15 +167,20 @@ std::vector<std::vector<double>> deconvolve2D(
     }
 
     // 计算信号和卷积核的二维DFT
-    auto X = DFT2D(extendedSignal);
-    auto H = DFT2D(extendedKernel);
+    auto DFT2DWrapper = [&](const std::vector<std::vector<double>> &input) {
+        return DFT2D(input,
+                     numThreads);  // Assume DFT2D supports multithreading
+    };
+
+    auto X = DFT2DWrapper(extendedSignal);
+    auto H = DFT2DWrapper(extendedKernel);
 
     // 对卷积核的频谱进行修正
     std::vector<std::vector<std::complex<double>>> G(
-        M, std::vector<std::complex<double>>(N, {0, 0}));
+        M + K - 1, std::vector<std::complex<double>>(N + L - 1));
     double alpha = 0.1;  // 防止分母为0
-    for (int u = 0; u < M; ++u) {
-        for (int v = 0; v < N; ++v) {
+    for (int u = 0; u < M + K - 1; ++u) {
+        for (int v = 0; v < N + L - 1; ++v) {
             if (std::abs(H[u][v]) > alpha) {
                 G[u][v] = std::conj(H[u][v]) / (std::norm(H[u][v]) + alpha);
             } else {
@@ -224,15 +191,16 @@ std::vector<std::vector<double>> deconvolve2D(
 
     // 计算反卷积结果
     std::vector<std::vector<std::complex<double>>> Y(
-        M, std::vector<std::complex<double>>(N, {0, 0}));
-    for (int u = 0; u < M; ++u) {
-        for (int v = 0; v < N; ++v) {
+        M + K - 1, std::vector<std::complex<double>>(N + L - 1));
+    for (int u = 0; u < M + K - 1; ++u) {
+        for (int v = 0; v < N + L - 1; ++v) {
             Y[u][v] = G[u][v] * X[u][v];
         }
     }
-    auto y = IDFT2D(Y);
 
-    // 取出结果的前M行、前N列
+    auto y = IDFT2D(Y, numThreads);
+
+    // 提取有效结果
     std::vector<std::vector<double>> result(M, std::vector<double>(N, 0));
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
@@ -242,4 +210,152 @@ std::vector<std::vector<double>> deconvolve2D(
 
     return result;
 }
-}  // namespace Atom::Algorithm
+
+// 二维离散傅里叶变换（2D DFT）
+std::vector<std::vector<std::complex<double>>> DFT2D(
+    const std::vector<std::vector<double>> &signal, int numThreads) {
+    const int M = signal.size();
+    const int N = signal[0].size();
+    std::vector<std::vector<std::complex<double>>> X(
+        M, std::vector<std::complex<double>>(N, {0, 0}));
+
+    // Lambda function to compute the DFT for a block of rows
+    auto computeDFT = [&](int startRow, int endRow) {
+        for (int u = startRow; u < endRow; ++u) {
+            for (int v = 0; v < N; ++v) {
+                std::complex<double> sum(0, 0);
+                for (int m = 0; m < M; ++m) {
+                    for (int n = 0; n < N; ++n) {
+                        double theta = -2 * M_PI *
+                                       ((u * m / static_cast<double>(M)) +
+                                        (v * n / static_cast<double>(N)));
+                        std::complex<double> w(cos(theta), sin(theta));
+                        sum += signal[m][n] * w;
+                    }
+                }
+                X[u][v] = sum;
+            }
+        }
+    };
+
+    // Multithreading support
+    if (numThreads > 1) {
+        std::vector<std::thread> threads;
+        int rowsPerThread = M / numThreads;
+        for (int i = 0; i < numThreads; ++i) {
+            int startRow = i * rowsPerThread;
+            int endRow = (i == numThreads - 1) ? M : startRow + rowsPerThread;
+            threads.emplace_back(computeDFT, startRow, endRow);
+        }
+        for (auto &thread : threads) {
+            thread.join();
+        }
+    } else {
+        // Single-threaded execution
+        computeDFT(0, M);
+    }
+
+    return X;
+}
+
+// 二维离散傅里叶逆变换（2D IDFT）
+std::vector<std::vector<double>> IDFT2D(
+    const std::vector<std::vector<std::complex<double>>> &spectrum,
+    int numThreads) {
+    const int M = spectrum.size();
+    const int N = spectrum[0].size();
+    std::vector<std::vector<double>> x(M, std::vector<double>(N, 0.0));
+
+    // Lambda function to compute the IDFT for a block of rows
+    auto computeIDFT = [&](int startRow, int endRow) {
+        for (int m = startRow; m < endRow; ++m) {
+            for (int n = 0; n < N; ++n) {
+                std::complex<double> sum(0.0, 0.0);
+                for (int u = 0; u < M; ++u) {
+                    for (int v = 0; v < N; ++v) {
+                        double theta = 2 * M_PI *
+                                       ((u * m / static_cast<double>(M)) +
+                                        (v * n / static_cast<double>(N)));
+                        std::complex<double> w(cos(theta), sin(theta));
+                        sum += spectrum[u][v] * w;
+                    }
+                }
+                x[m][n] = real(sum) / (M * N);  // Normalize by dividing by M*N
+            }
+        }
+    };
+
+    // Multithreading support
+    if (numThreads > 1) {
+        std::vector<std::thread> threads;
+        int rowsPerThread = M / numThreads;
+        for (int i = 0; i < numThreads; ++i) {
+            int startRow = i * rowsPerThread;
+            int endRow = (i == numThreads - 1) ? M : startRow + rowsPerThread;
+            threads.emplace_back(computeIDFT, startRow, endRow);
+        }
+        for (auto &thread : threads) {
+            thread.join();
+        }
+    } else {
+        // Single-threaded execution
+        computeIDFT(0, M);
+    }
+
+    return x;
+}
+
+std::vector<std::vector<double>> generateGaussianKernel(int size,
+                                                        double sigma) {
+    std::vector<std::vector<double>> kernel(size, std::vector<double>(size));
+    double sum = 0.0;
+    int center = size / 2;
+
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            kernel[i][j] = exp(-0.5 * (pow((i - center) / sigma, 2.0) +
+                                       pow((j - center) / sigma, 2.0))) /
+                           (2 * M_PI * sigma * sigma);
+            sum += kernel[i][j];
+        }
+    }
+
+    // 归一化，确保权重和为1
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            kernel[i][j] /= sum;
+        }
+    }
+
+    return kernel;
+}
+
+std::vector<std::vector<double>> applyGaussianFilter(
+    const std::vector<std::vector<double>> &image,
+    const std::vector<std::vector<double>> &kernel) {
+    int imageHeight = image.size();
+    int imageWidth = image[0].size();
+    int kernelSize = kernel.size();
+    int kernelRadius = kernelSize / 2;
+    std::vector<std::vector<double>> filteredImage(
+        imageHeight, std::vector<double>(imageWidth, 0));
+
+    for (int i = 0; i < imageHeight; ++i) {
+        for (int j = 0; j < imageWidth; ++j) {
+            double sum = 0.0;
+            for (int k = -kernelRadius; k <= kernelRadius; ++k) {
+                for (int l = -kernelRadius; l <= kernelRadius; ++l) {
+                    int x = std::max(0, std::min(i + k, imageHeight - 1));
+                    int y = std::max(0, std::min(j + l, imageWidth - 1));
+                    sum += image[x][y] *
+                           kernel[kernelRadius + k][kernelRadius + l];
+                }
+            }
+            filteredImage[i][j] = sum;
+        }
+    }
+
+    return filteredImage;
+}
+
+}  // namespace atom::algorithm

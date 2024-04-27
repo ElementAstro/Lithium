@@ -1,7 +1,7 @@
 # CMakeLists.txt for Atom-Async
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Atom-Task
+# Project Name: Atom-Async
 # Description: Async Implementation of Lithium Server and Driver
 # Author: Max Qian
 # License: GPL3
@@ -18,14 +18,19 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
-    async_impl.hpp
+    async.inl
     lock.hpp
+    pool.hpp
     queue.hpp
     queue.inl
     thread_wrapper.hpp
     timer.hpp
     trigger.hpp
-    trigger_impl.hpp
+    trigger.inl
+)
+
+set(${PROJECT_NAME}_LIBS
+    loguru
 )
 
 # Build Object Library

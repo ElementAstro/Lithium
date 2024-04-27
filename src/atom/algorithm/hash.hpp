@@ -24,7 +24,7 @@ Description: A collection of hash algorithms
 #include <type_traits>
 #include <vector>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 /**
  * @brief Concept to check if a type is hashable.
  *
@@ -259,6 +259,6 @@ inline uint32_t quickHash(const void* data, size_t size) {
     return h;
 }
 
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm
 
 #endif

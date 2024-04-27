@@ -17,7 +17,7 @@
 #endif
 
 #include "atom/error/exception.hpp"
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 #include "atom/type/trackable.hpp"
 #include "atom/utils/cstring.hpp"
 

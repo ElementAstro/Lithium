@@ -1,5 +1,5 @@
 /*
- * async_impl.hpp
+ * async.inl
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -12,10 +12,12 @@ Description: A simple but useful async worker manager
 
 **************************************************/
 
-#ifndef ATOM_ASYNC_ASYNC_IMPL_HPP
-#define ATOM_ASYNC_ASYNC_IMPL_HPP
+#ifndef ATOM_ASYNC_ASYNC_INL
+#define ATOM_ASYNC_ASYNC_INL
 
-namespace Atom::Async {
+#include "async.hpp"
+
+namespace atom::async {
 template <typename ResultType>
 template <typename Func, typename... Args>
 void AsyncWorker<ResultType>::StartAsync(Func &&func, Args &&...args) {
@@ -137,13 +139,11 @@ void AsyncWorkerManager<ResultType>::Cancel(
 }
 
 template <typename Func, typename... Args>
-[[nodiscard]] std::future<
-    decltype(std::declval<Func>()(std::declval<Args>()...))>
-asyncRetry(Func &&func, int attemptsLeft, std::chrono::milliseconds delay,
-           Args &&...args) {
-    static_assert(std::is_void<decltype(std::declval<Func>()(
-                          std::declval<Args>()...))>::value == false,
-                  "Func must return a value");
+    requires std::invocable<Func, Args...>
+[[nodiscard]] auto asyncRetry(Func &&func, int attemptsLeft,
+                              std::chrono::milliseconds delay, Args &&...args) {
+    using ReturnType = std::invoke_result_t<Func, Args...>;
+    static_assert(!std::is_void_v<ReturnType>, "Func must return a value");
 
     if (attemptsLeft <= 1) {
         // 最后一次尝试，直接执行
@@ -157,11 +157,16 @@ asyncRetry(Func &&func, int attemptsLeft, std::chrono::milliseconds delay,
 
     try {
         // 立即获取结果，如果有异常会在这里抛出
-        auto result = attempt.get();
-        // 如果成功，则直接返回一个已经有结果的 future
-        return std::async(
-            std::launch::deferred,
-            [result]() -> decltype(func(args...)) { return result; });
+        if constexpr (std::is_same_v<ReturnType, void>) {
+            attempt.get();
+            return std::async(std::launch::deferred, []() {});
+        } else {
+            auto result = attempt.get();
+            return std::async(std::launch::deferred,
+                              [result = std::move(result)]() mutable {
+                                  return std::move(result);
+                              });
+        }
     } catch (...) {
         if (attemptsLeft <= 1) {
             // 所有尝试都失败，重新抛出最后一次的异常
@@ -175,9 +180,11 @@ asyncRetry(Func &&func, int attemptsLeft, std::chrono::milliseconds delay,
     }
 }
 
-template <typename ReturnType>
-ReturnType getWithTimeout(std::future<ReturnType> &future,
-                          std::chrono::milliseconds timeout) {
+template <typename T>
+[[nodiscard]] T getWithTimeout(std::future<T> &future,
+                               std::chrono::milliseconds timeout) {
+    static_assert(!std::is_void_v<T>, "T must not be void");
+
     if (future.wait_for(timeout) == std::future_status::ready) {
         return future.get();
     } else {
@@ -185,6 +192,19 @@ ReturnType getWithTimeout(std::future<ReturnType> &future,
             "Timeout occurred while waiting for future result");
     }
 }
-}  // namespace Atom::Async
+
+template <typename T, typename Rep, typename Period>
+[[nodiscard]] T getWithTimeout(std::future<T> &future,
+                               std::chrono::duration<Rep, Period> timeout) {
+    static_assert(!std::is_void_v<T>, "T must not be void");
+
+    if (future.wait_for(timeout) == std::future_status::ready) {
+        return future.get();
+    } else {
+        throw std::runtime_error(
+            "Timeout occurred while waiting for future result");
+    }
+}
+}  // namespace atom::async
 
 #endif

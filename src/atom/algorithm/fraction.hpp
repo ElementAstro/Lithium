@@ -19,7 +19,7 @@ Description: Implementation of fraction class
 #include <ostream>
 #include <string>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 /**
  * @brief Represents a fraction with numerator and denominator.
  */
@@ -178,6 +178,6 @@ public:
     friend std::istream& operator>>(std::istream& is, Fraction& f);
 };
 
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm
 
 #endif

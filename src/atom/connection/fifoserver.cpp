@@ -27,7 +27,7 @@ Description: FIFO Server
 #include <unistd.h>
 #endif
 
-namespace Atom::Connection {
+namespace atom::connection {
 
 FIFOServer::FIFOServer(const std::string& fifo_path) : fifo_path_(fifo_path) {
 // 创建 FIFO 文件
@@ -90,4 +90,4 @@ void FIFOServer::serverLoop() {
 #endif
     }
 }
-}  // namespace Atom::Connection
+}  // namespace atom::connection

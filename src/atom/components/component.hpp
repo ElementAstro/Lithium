@@ -26,7 +26,7 @@ Description: Basic Component Definition
 
 #include "configor.hpp"
 
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 #include "atom/experiment/type_info.hpp"
 
 class Component : public std::enable_shared_from_this<Component>, public NonCopyable {

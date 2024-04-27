@@ -29,7 +29,7 @@ Description: Global shared pointer manager
 #include <unordered_map>
 #endif
 
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 
 #define GetPtr GlobalSharedPtrManager::getInstance().getSharedPtr
 #define GetWeakPtr GlobalSharedPtrManager::getInstance().getWeakPtrFromSharedPtr

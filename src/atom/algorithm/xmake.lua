@@ -26,6 +26,7 @@ local sources = {
 -- Headers
 local headers = {
     "algorithm.hpp",
+    "algorithm.inl"
     "base.hpp",
     "convolve.hpp",
     "fraction.hpp",

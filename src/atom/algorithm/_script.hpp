@@ -1,3 +1,17 @@
+/*
+ * _script.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-4-13
+
+Description: Carbon Binding of Atom-Algorithm
+
+**************************************************/
+
 #include "carbon/carbon.hpp"
 
 #include "algorithm.hpp"
@@ -10,8 +24,7 @@
 #include "md5.hpp"
 #include "mhash.hpp"
 
-using namespace Atom::Algorithm;
-using namespace Atom::Utils;
+using namespace atom::algorithm;
 
 namespace Atom::_Script::Algorithm {
 /**
@@ -55,6 +68,10 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&deconvolve), "deconvolve");
     m->add(Carbon::fun(&convolve2D), "convolve2d");
     m->add(Carbon::fun(&deconvolve2D), "deconvolve2d");
+    m->add(Carbon::fun(&DFT2D), "dft2d");
+    m->add(Carbon::fun(&IDFT2D), "idft2d");
+    m->add(Carbon::fun(&generateGaussianKernel), "generate_gaussian_kernel");
+    m->add(Carbon::fun(&applyGaussianFilter), "apply_gaussian_filter");
 
     m->add(user_type<Fraction>(), "Fraction");
     m->add(Carbon::fun(&Fraction::operator+=), "+=");

@@ -36,7 +36,7 @@ std::string g_pidFilePath = "lithium-daemon";
 // 定义 g_isDaemon 变量
 bool g_isDaemon = false;
 
-namespace Atom::Async {
+namespace atom::async {
 std::string DaemonGuard::ToString() const {
     std::stringstream ss;
     ss << "[DaemonGuard parentId=" << m_parentId << " mainId=" << m_mainId
@@ -205,4 +205,4 @@ bool CheckPidFile() {
     return true;
 #endif
 }
-}  // namespace Atom::Async
+}  // namespace atom::async

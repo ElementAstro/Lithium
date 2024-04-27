@@ -29,7 +29,7 @@ Description: Variable Registry 类，用于注册、获取和观察变量值。
 #include <unordered_map>
 #endif
 
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 #include "atom/experiment/string.hpp"
 
 #include "atom/error/error_stack.hpp"

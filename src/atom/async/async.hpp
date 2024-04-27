@@ -27,7 +27,7 @@ Description: A simple but useful async worker manager
 
 #include "atom/error/exception.hpp"
 
-namespace Atom::Async {
+namespace atom::async {
 /**
  * @brief Class for performing asynchronous tasks.
  *
@@ -213,8 +213,8 @@ std::future<decltype(std::declval<Func>()(std::declval<Args>()...))> asyncRetry(
 template <typename ReturnType>
 ReturnType getWithTimeout(std::future<ReturnType> &future,
                           std::chrono::milliseconds timeout);
-}  // namespace Atom::Async
+}  // namespace atom::async
 
-#include "async_impl.hpp"
+#include "async.inl"
 
 #endif

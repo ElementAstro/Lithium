@@ -1,5 +1,5 @@
 /*
- * ini_impl.hpp
+ * ini.inl
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -12,8 +12,13 @@ Description: INI File Read/Write Library
 
 **************************************************/
 
-#ifndef ATOM_TYPE_INI_IMPL_HPP
-#define ATOM_TYPE_INI_IMPL_HPP
+#ifndef ATOM_TYPE_INI_INL
+#define ATOM_TYPE_INI_INL
+
+#include "ini.hpp"
+
+namespace atom::type
+{
 
 template <typename T>
 void INIFile::set(const std::string &section, const std::string &key,
@@ -38,6 +43,8 @@ std::optional<T> INIFile::get(const std::string &section,
         }
     }
     return std::nullopt;
+}
+
 }
 
 #endif

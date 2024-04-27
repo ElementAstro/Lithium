@@ -14,7 +14,7 @@ Description: Some useful spinlock implementations
 
 #include "lock.hpp"
 
-namespace Atom::Async {
+namespace atom::async {
 void Spinlock::lock() {
     while (flag_.test_and_set(std::memory_order_acquire)) {
         cpu_relax();
@@ -42,4 +42,4 @@ void UnfairSpinlock::lock() {
 }
 
 void UnfairSpinlock::unlock() { flag_.clear(std::memory_order_release); }
-}  // namespace Atom::Async
+}  // namespace atom::async

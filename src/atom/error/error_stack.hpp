@@ -18,10 +18,11 @@ Description: Error Stack
 #include <algorithm>
 #include <memory>
 #include <ostream>
+#include <vector>
 
-#include "atom/experiment/string.hpp"
+#include "atom//type/string.hpp"
 
-namespace Atom::Error {
+namespace atom::error {
 /**
  * @brief Error information structure.
  */
@@ -112,6 +113,6 @@ private:
     /// Sort the compressed error stack based on the timestamp of errors.
     void sortCompressedErrorStack();
 };
-}  // namespace Atom::Error
+}  // namespace atom::error
 
 #endif

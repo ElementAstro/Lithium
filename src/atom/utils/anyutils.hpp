@@ -218,19 +218,19 @@ template <typename T1, typename T2>
 template <typename T>
 [[nodiscard]] std::string toXml(const T &value, const std::string &tagName) {
     if constexpr (std::is_same_v<T, std::string> ||
-                  std::is_same_v<T, const char *> || std::is_same_v<T, char *>)
-        [[likely]] {
+                  std::is_same_v<T, const char *> ||
+                  std::is_same_v<T, char *>) {
         return "<" + tagName + ">" + value + "</" + tagName + ">";
-    } else if constexpr (std::is_arithmetic_v<T>) [[likely]] {
+    } else if constexpr (std::is_arithmetic_v<T>) {
         return "<" + tagName + ">" + std::to_string(value) + "</" + tagName +
                ">";
-    } else if constexpr (std::is_pointer_v<T>) [[unlikely]] {
+    } else if constexpr (std::is_pointer_v<T>) {
         if (value == nullptr) [[unlikely]] {
             return "<" + tagName + "null" + "/>";
         } else [[likely]] {
             return toXml(*value, tagName);
         }
-    } else [[unlikely]] {
+    } else {
         return "<" + tagName + "></" + tagName +
                ">";  // Default to empty element for unknown type
     }

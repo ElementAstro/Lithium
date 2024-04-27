@@ -18,14 +18,13 @@ Description: Python Binding of Atom-Async
 #include <pybind11/stl_bind.h>
 
 #include "async.hpp"
-#include "queue.hpp"
 #include "thread_wrapper.hpp"
 #include "timer.hpp"
 #include "trigger.hpp"
 
 namespace py = pybind11;
 
-using namespace Atom::Async;
+using namespace atom::async;
 
 template <typename Callable, typename... Args>
 void start_wrapper(Thread& thread, Callable&& func, Args&&... args) {
@@ -51,8 +50,6 @@ void bind_thread(py::module& m) {
              "Gets the underlying std::stop_source object.")
         .def("get_stop_token", &Thread::get_stop_token,
              "Gets the underlying std::stop_token object.")
-        //.def_property_readonly("thread", &Thread::get_thread,
-        //                       "Gets the underlying std::jthread object.")
         .def("__enter__", [](Thread& self) -> Thread& { return self; })
         .def("__exit__", [](Thread& self, py::object, py::object,
                             py::object) { self.join(); })
@@ -93,62 +90,6 @@ void bind_timer(py::module& m) {
              "Gets the number of scheduled tasks.");
 }
 
-/*
-// TODO: Fix this
-template <typename T>
-void bind_thread_safe_queue(py::module& m, const std::string& name) {
-    py::class_<ThreadSafeQueue<T>>(m, name.c_str())
-        .def(py::init<>())
-        .def("put", &ThreadSafeQueue<T>::put)
-        .def("take", &ThreadSafeQueue<T>::take)
-        .def("destroy", &ThreadSafeQueue<T>::destroy)
-        .def("size", &ThreadSafeQueue<T>::size)
-        .def("empty", &ThreadSafeQueue<T>::empty)
-        .def("clear", &ThreadSafeQueue<T>::clear)
-        .def("front", &ThreadSafeQueue<T>::front)
-        .def("back", &ThreadSafeQueue<T>::back)
-        .def("emplace", &ThreadSafeQueue<T>::template emplace<T>)
-        .def("waitFor", &ThreadSafeQueue<T>::template waitFor<T>)
-        .def("waitUntilEmpty", &ThreadSafeQueue<T>::waitUntilEmpty)
-        .def("extractIf", &ThreadSafeQueue<T>::template extractIf<T>)
-        .def("sort", &ThreadSafeQueue<T>::template sort<T>);
-}
-
-// Bind AsyncWorker class
-template <typename ResultType>
-void bind_async_worker(py::module& m, const std::string& name) {
-    py::class_<AsyncWorker<ResultType>>(m, name.c_str())
-        .def(py::init<>())
-        //.def("StartAsync",
-        //     &AsyncWorker<ResultType>::template StartAsync<py::function,
-        //                                                   py::args>)
-        .def("GetResult", &AsyncWorker<ResultType>::GetResult)
-        .def("Cancel", &AsyncWorker<ResultType>::Cancel)
-        .def("IsDone", &AsyncWorker<ResultType>::IsDone)
-        .def("IsActive", &AsyncWorker<ResultType>::IsActive)
-        .def("Validate", &AsyncWorker<ResultType>::Validate)
-        .def("SetCallback", &AsyncWorker<ResultType>::SetCallback)
-        .def("SetTimeout", &AsyncWorker<ResultType>::SetTimeout)
-        .def("WaitForCompletion", &AsyncWorker<ResultType>::WaitForCompletion);
-}
-
-// Bind AsyncWorkerManager class
-template <typename ResultType>
-void bind_async_worker_manager(py::module& m, const std::string& name) {
-    py::class_<AsyncWorkerManager<ResultType>>(m, name.c_str())
-        .def(py::init<>())
-        .def(
-            "CreateWorker",
-            &AsyncWorkerManager<ResultType>::template CreateWorker<py::function,
-                                                                   py::args>)
-        .def("CancelAll", &AsyncWorkerManager<ResultType>::CancelAll)
-        .def("AllDone", &AsyncWorkerManager<ResultType>::AllDone)
-        .def("WaitForAll", &AsyncWorkerManager<ResultType>::WaitForAll)
-        .def("IsDone", &AsyncWorkerManager<ResultType>::IsDone)
-        .def("Cancel", &AsyncWorkerManager<ResultType>::Cancel);
-}
-*/
-
 PYBIND11_MODULE(atom_async, m) {
     m.doc() = "Atom Async Python Binding";
 
@@ -163,23 +104,7 @@ PYBIND11_MODULE(atom_async, m) {
         .def("cancel_trigger", &Trigger<int>::cancelTrigger)
         .def("cancel_all_triggers", &Trigger<int>::cancelAllTriggers);
 
-    
-
     bind_thread(m);
     bind_timer_task(m);
     bind_timer(m);
-
-    /*
-    bind_thread_safe_queue<int>(m, "ThreadSafeQueueInt");
-    bind_thread_safe_queue<double>(m, "ThreadSafeQueueDouble");
-    bind_thread_safe_queue<std::string>(m, "ThreadSafeQueueString");
-
-    bind_async_worker<int>(m, "AsyncWorkerInt");
-    bind_async_worker<float>(m, "AsyncWorkerFloat");
-    bind_async_worker<std::string>(m, "AsyncWorkerString");
-
-    bind_async_worker_manager<int>(m, "AsyncWorkerManagerInt");
-    bind_async_worker_manager<float>(m, "AsyncWorkerManagerFloat");
-    bind_async_worker_manager<std::string>(m, "AsyncWorkerManagerString");
-    */
 }

@@ -62,7 +62,7 @@ private:
     size_t size;
     size_t used;
     std::unique_ptr<uint8_t, std::function<void(uint8_t *)>> memory;
-    Chunk(size_t s)
+    explicit Chunk(size_t s)
         : size(s), used(0), memory(static_cast<uint8_t *>(::operator new(s)),
                                    [](uint8_t *p) { ::operator delete(p); }) {}
   };

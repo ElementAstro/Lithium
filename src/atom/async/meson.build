@@ -1,49 +1,57 @@
-project('Atom-Async', 'cpp')
+project('atom-async', 'cpp')
 
-# Define sources and headers
-sources = [
+# Set sources
+sources = files(
     'lock.cpp',
-    'timer.cpp'
-]
-headers = [
+    'timer.cpp',
+)
+
+# Set headers
+headers = files(
     'async.hpp',
-    'async_impl.hpp',
+    'async.inl',
     'lock.hpp',
+    'pool.hpp',
     'queue.hpp',
     'queue.inl',
     'thread_wrapper.hpp',
     'timer.hpp',
     'trigger.hpp',
-    'trigger_impl.hpp'
-]
-
-# Create object library
-atom_async_obj = library('atom_async_obj', 
-    sources + headers,
-    cpp_std: c_std
+    'trigger.inl',
 )
 
-# Link with necessary libraries
-atom_async_obj_link_libs = ['loguru']
-atom_async_obj.link_with(atom_async_obj_link_libs)
+# Set libraries
+libs = [
+    'loguru',
+]
 
-# Create static library
-atom_async_static = static_library('atom_async_static', atom_async_obj)
+# Build Object Library
+atom_async_obj = static_library(
+    'atom_async_obj',
+    sources + headers,
+    include_directories: '.',
+    pic: true,
+    dependencies: libs,
+)
 
-# Set version properties
-version = '1.0.0' # You should define your version here
-soversion = '1'
-
-atom_async_static.version = version
-atom_async_static.soversion = soversion
-atom_async_static.basename = 'Atom-Async'
+# Build Static Library
+atom_async = static_library(
+    'atom_async',
+    sources: [],
+    dependencies: [atom_async_obj],
+    version: '1.0.0', # Replace with your version
+    soversion: '1', # Replace with your SO version
+)
 
 # Install target
-install_targets(atom_async_static)
+install_data(atom_async, install_dir: meson.install_root() / 'lib')
 
-# Check if Python support is enabled
-atom_build_python = get_option('atom_build_python')
-
-if atom_build_python
-    pybind11_module('atom_async_py' '_pybind.cpp' link_with : [atom_async_static])
+# Optional: Build Python bindings
+if get_option('atom_build_python')
+    pybind11_dep = dependency('pybind11')
+    pybind11_add_module(
+        'atom_async_py',
+        'pybind.cpp',
+        dependencies: [atom_async, pybind11_dep],
+    )
 endif

@@ -32,7 +32,7 @@ Description: Inter-process shared memory for local driver communication.
 #include <unistd.h>
 #endif
 
-namespace Atom::Connection {
+namespace atom::connection {
 /**
  * @brief 实现共享内存，可用于进程间通信
  */
@@ -260,6 +260,6 @@ template <typename T>
 bool SharedMemory<T>::isOccupied() const {
     return flag_->test_and_set();
 }
-}  // namespace Atom::Connection
+}  // namespace atom::connection
 
 #endif

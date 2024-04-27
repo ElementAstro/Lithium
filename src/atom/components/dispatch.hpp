@@ -23,7 +23,7 @@
 #include <variant>
 #include <vector>
 
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 #include "atom/type/pointer.hpp"
 
 #include "proxy.hpp"

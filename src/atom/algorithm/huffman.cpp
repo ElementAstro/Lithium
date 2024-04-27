@@ -27,7 +27,7 @@ Description: Simple implementation of Huffman encoding
 
 #include <queue>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 // 定义优先队列中的比较函数
 struct Compare {
     bool operator()(HuffmanNode *a, HuffmanNode *b) {
@@ -115,4 +115,4 @@ std::string decompressText(const std::string &compressedText,
 
     return decompressedText;
 }
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm

@@ -2,7 +2,7 @@
 
 #include <random>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 
 KMP::KMP(std::string_view pattern) : pattern_(pattern) {
     failure_ = ComputeFailureFunction(pattern_);
@@ -161,4 +161,4 @@ void BoyerMoore::ComputeGoodSuffixShift() {
     }
 }
 
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm

@@ -28,7 +28,7 @@ Description: Commander
 #endif
 
 #include "atom/experiment/decorate.hpp"
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 
 /**
  * @brief Generic command dispatcher class for handling and dispatching

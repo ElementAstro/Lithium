@@ -26,7 +26,7 @@ Description: Timer class for C++
 #include <thread>
 #include <vector>
 
-namespace Atom::Async {
+namespace atom::async {
 /**
  * @brief Represents a task to be scheduled and executed by the Timer.
  */
@@ -232,6 +232,6 @@ template <typename Function>
 void Timer::setCallback(Function &&func) {
     m_callback = std::forward<Function>(func);
 }
-}  // namespace Atom::Async
+}  // namespace atom::async
 
 #endif

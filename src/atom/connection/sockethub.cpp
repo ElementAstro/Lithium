@@ -25,7 +25,7 @@ Description: SocketHub类用于管理socket连接的类。
 typedef int SOCKET;
 #endif
 
-namespace Atom::Connection {
+namespace atom::connection {
 SocketHub::SocketHub() : running(false) {}
 
 SocketHub::~SocketHub() { stop(); }
@@ -213,4 +213,4 @@ void SocketHub::cleanupSocket() {
     clientThreads.clear();
 }
 
-}  // namespace Atom::Connection
+}  // namespace atom::connection

@@ -26,7 +26,7 @@ Description: FIFO CLient
 #include <unistd.h>
 #endif
 
-namespace Atom::Connection {
+namespace atom::connection {
 /**
  * @brief The FifoClient class provides functionality to connect to a FIFO
  *        (First In First Out) pipe, write data to the pipe, and read data from
@@ -69,6 +69,6 @@ private:
 #endif
     std::string m_fifoPath; /**< The path to the FIFO pipe. */
 };
-}  // namespace Atom::Connection
+}  // namespace atom::connection
 
 #endif  // FIFOSERVER_H

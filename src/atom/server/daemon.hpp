@@ -32,7 +32,7 @@ Description: Daemon process implementation
 #include <unistd.h>
 #endif
 
-namespace Atom::Async {
+namespace atom::async {
 // Class for managing process information
 class DaemonGuard {
 public:
@@ -118,6 +118,6 @@ void WritePidFile();
  */
 bool CheckPidFile();
 
-}  // namespace Atom::Async
+}  // namespace atom::async
 
 #endif

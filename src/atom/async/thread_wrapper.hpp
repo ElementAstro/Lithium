@@ -25,6 +25,7 @@ Description: A simple wrapper of std::jthread
 #include <type_traits>
 #include <utility>
 
+namespace atom::async {
 /**
  * @brief A wrapper class for managing a C++20 jthread.
  *
@@ -159,5 +160,6 @@ public:
 private:
     std::jthread thread_;  ///< The underlying jthread object.
 };
+}  // namespace atom::async
 
 #endif

@@ -17,7 +17,7 @@ Description: Extra Math Library
 
 #include <cstdint>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 /**
  * @brief Performs a 64-bit multiplication followed by division.
  *
@@ -116,6 +116,6 @@ uint64_t safeSub(uint64_t a, uint64_t b);
  * @return The result of a / b, or 0 if there is a division by zero.
  */
 uint64_t safeDiv(uint64_t a, uint64_t b);
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm
 
 #endif

@@ -132,12 +132,6 @@ public:
     bool operator==(const Fraction& other) const;
 
     /**
-     * @brief Negates the fraction.
-     * @return The negated fraction.
-     */
-    Fraction operator-() const;
-
-    /**
      * @brief Converts the fraction to a double value.
      * @return The fraction as a double.
      */

@@ -57,6 +57,13 @@ lithium_server_library_src = files([
     join_paths(lithium_src_dir, 'LithiumApp.cpp'),
 ])
 
+lithium_server_library = static_library(
+    'lithium_server-library',
+    lithium_server_library_src,
+    dependencies: lithium_deps,
+    include_directories: include_directories('.', 'libs', 'libs/oatpp', 'libs/oatpp-swagger', 'libs/oatpp-websocket'),
+)
+
 lithium_server = executable(
     'lithium_server',
     lithium_server_src,
@@ -66,38 +73,8 @@ lithium_server = executable(
     link_args: cpp.get_supported_link_arguments(),
 )
 
-lithium_server_library = static_library(
-    'lithium_server-library',
-    lithium_server_library_src,
-    dependencies: lithium_deps,
-    include_directories: include_directories('.', 'libs', 'libs/oatpp', 'libs/oatpp-swagger', 'libs/oatpp-websocket'),
-)
-
 configure_file(
     input: 'config.h.in',
     output: 'config.h',
 )
 
-# Additional targets
-cmake_additional_files = custom_target(
-    'CmakeAdditionalFiles',
-    input: join_paths(lithium_src_dir, '../cmake_modules/compiler_options.cmake'),
-)
-
-# clang-format
-if cpp.get_id() == 'clang'
-    format_code = get_option('FORMAT_CODE')
-    if format_code.get_value()
-        all_source_files = []
-        all_source_files += files(lithium_src_dir, recursive: true, exclude_files: ['*.h'])
-        clangformat_exe = find_program('clang-format-5.0')
-        if clangformat_exe.found()
-            run_target(
-                'clang-format',
-                command: [clangformat_exe, '-style=file', '-i'] + all_source_files,
-                input: all_source_files,
-                capture: true,
-            )
-        endif
-    endif
-endif

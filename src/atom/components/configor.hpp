@@ -12,8 +12,8 @@ Description: Configor
 
 **************************************************/
 
-#ifndef LITHIUM_CONFIG_CONFIGOR_HPP
-#define LITHIUM_CONFIG_CONFIGOR_HPP
+#ifndef ATOM_COMPONENT_CONFIG_HPP
+#define ATOM_COMPONENT_CONFIG_HPP
 
 #include <filesystem>
 #include <mutex>

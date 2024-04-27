@@ -80,10 +80,6 @@ bool Fraction::operator==(const Fraction &other) const {
     return (numerator == other.numerator) && (denominator == other.denominator);
 }
 
-Fraction Fraction::operator-() const {
-    return Fraction(-numerator, denominator);
-}
-
 Fraction::operator double() const { return to_double(); }
 
 Fraction::operator float() const { return static_cast<float>(to_double()); }

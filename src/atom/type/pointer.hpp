@@ -67,6 +67,27 @@ public:
     explicit PointerSentinel(T* p) : ptr(p) {}
 
     /**
+     * @brief Copy constructor.
+     *
+     * @param other The other Pointer Sentinel object to copy from.
+     */
+    PointerSentinel(const PointerSentinel& other)
+        : ptr(std::visit(
+              [](const auto& p)
+                  -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>, T*> {
+                  if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
+                                               std::shared_ptr<T>>) {
+                      return p;
+                  } else if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
+                                                      std::unique_ptr<T>>) {
+                      return std::make_unique<T>(*p);
+                  } else {
+                      return new T(*p);
+                  }
+              },
+              other.ptr)) {}
+
+    /**
      * @brief Get the raw pointer stored in the variant.
      *
      * @return T* The raw pointer.
@@ -76,9 +97,9 @@ public:
             [](auto&& arg) -> T* {
                 using U = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_pointer_v<U>) {
-                    return arg;  // Raw pointer
+                    return arg;  // 原始指针
                 } else {
-                    return arg.get();  // For smart pointers
+                    return arg.get();  // 智能指针
                 }
             },
             ptr);
@@ -97,8 +118,16 @@ public:
     [[nodiscard]] auto invoke(Func func, Args&&... args) {
         static_assert(std::is_member_function_pointer_v<Func>,
                       "Func must be a member function pointer");
-        T* p = get();
-        return (p->*func)(std::forward<Args>(args)...);
+        return std::visit(
+            [func, &args...](auto&& arg) -> decltype(auto) {
+                using U = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_pointer_v<U>) {
+                    return ((*arg).*func)(std::forward<Args>(args)...);
+                } else {
+                    return ((*arg.get()).*func)(std::forward<Args>(args)...);
+                }
+            },
+            ptr);
     }
 };
 

@@ -57,19 +57,12 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&deconvolve2D), "deconvolve2d");
 
     m->add(user_type<Fraction>(), "Fraction");
-    //m->add(Carbon::constructor<Fraction(int, int)>(), "Fraction");
     m->add(Carbon::fun(&Fraction::operator+=), "+=");
     m->add(Carbon::fun(&Fraction::operator-=), "-=");
     m->add(Carbon::fun(&Fraction::operator*=), "*=");
     m->add(Carbon::fun(&Fraction::operator/=), "/=");
     m->add(Carbon::fun(&Fraction::operator+), "+");
-    m->add(Carbon::fun<Fraction (Fraction::*)() const>(&Fraction::operator-),
-           "-");
-    m->add(Carbon::fun<Fraction (Fraction::*)() const>(&Fraction::operator-),
-           "-");
-    m->add(Carbon::fun<Fraction (Fraction::*)(const Fraction &) const>(
-               &Fraction::operator-),
-           "-");
+    m->add(Carbon::fun(&Fraction::operator-), "-");
     m->add(Carbon::fun(&Fraction::operator*), "*");
     m->add(Carbon::fun(&Fraction::operator/), "/");
     m->add(Carbon::fun(&Fraction::operator==), "==");
@@ -91,7 +84,6 @@ Carbon::ModulePtr bootstrap(
            "hash");
 
     m->add(user_type<HuffmanNode>(), "HuffmanNode");
-    //m->add(Carbon::constructor<HuffmanNode(char, int)>(), "HuffmanNode");
     m->add(Carbon::fun(&HuffmanNode::data), "data");
     m->add(Carbon::fun(&HuffmanNode::frequency), "frequency");
     m->add(Carbon::fun(&HuffmanNode::left), "left");
@@ -103,21 +95,20 @@ Carbon::ModulePtr bootstrap(
     m->add(Carbon::fun(&decompressText), "decompress_text");
 
     m->add(Carbon::fun(&mulDiv64), "mul_div_64");
+    m->add(Carbon::fun(&safeAdd), "safe_add");
+    m->add(Carbon::fun(&safeSub), "safe_sub");
+    m->add(Carbon::fun(&safeMul), "safe_mul");
+    m->add(Carbon::fun(&safeDiv), "safe_div");
+    m->add(Carbon::fun(&normalize), "normalize");
+    m->add(Carbon::fun(&rotl64), "rotl_64");
+    m->add(Carbon::fun(&rotr64), "rotr_64");
+    m->add(Carbon::fun(&clz64), "clz_64");
 
     m->add(Carbon::fun(&MD5::encrypt), "md5_encrypt");
 
-    m->add(
-        Carbon::fun<uint32_t (*)(const char *, const uint32_t &)>(&murmur3Hash),
-        "murmur3_hash");
-    m->add(Carbon::fun<uint64_t (*)(const char *, const uint32_t &,
-                                    const uint32_t &)>(&murmur3Hash64),
-           "murmur3_hash_64");
-    m->add(
-        Carbon::fun<std::string (*)(const std::string &)>(&dataFromHexstring),
-        "data_from_hexstring");
-    m->add(
-        Carbon::fun<std::string (*)(const char *, size_t)>(&dataFromHexstring),
-        "data_from_hexstring");
+    m->add(Carbon::fun(&murmur3Hash), "murmur3_hash");
+    m->add(Carbon::fun(&murmur3Hash64), "murmur3_hash_64");
+    m->add(Carbon::fun(&dataFromHexstring), "data_from_hexstring");
     m->add(
         Carbon::fun<std::string (*)(const std::string &)>(&hexstringFromData),
         "hexstring_from_data");

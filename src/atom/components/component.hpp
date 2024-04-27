@@ -12,45 +12,29 @@ Description: Basic Component Definition
 
 **************************************************/
 
-// Max: Obviously, directly use json.hpp is much simpler than self-implement
-// type
-
 #ifndef ATOM_COMPONENT_HPP
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
 #include <vector>
+#include <shared_mutex>
 
 #include "types.hpp"
 
-#include "atom/server/commander.hpp"
-#include "atom/server/variables.hpp"
+#include "dispatch.hpp"
+#include "var.hpp"
 
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
+#include "configor.hpp"
 
-#define SETVAR_STR(name, value)                              \
-    m_VariableRegistry->RegisterVariable<std::string>(name); \
-    m_VariableRegistry->SetVariable(name, value);
+#include "atom/experiment/noncopyable.hpp"
+#include "atom/experiment/type_info.hpp"
 
-#define SETVAR_INT(name, value)                      \
-    m_VariableRegistry->RegisterVariable<int>(name); \
-    m_VariableRegistry->SetVariable(name, value);
-
-#define SETVAR_BOOL(name, value)                      \
-    m_VariableRegistry->RegisterVariable<bool>(name); \
-    m_VariableRegistry->SetVariable(name, value);
-
-#define SETVAR_DOUBLE(name, value)                      \
-    m_VariableRegistry->RegisterVariable<double>(name); \
-    m_VariableRegistry->SetVariable(name, value);
-
-class Component : public std::enable_shared_from_this<Component> {
+class Component : public std::enable_shared_from_this<Component>, public NonCopyable {
 public:
     /**
      * @brief Constructs a new Component object.
      */
-    explicit Component(const std::string &name);
+    explicit Component(const std::string& name);
 
     /**
      * @brief Destroys the Component object.
@@ -81,164 +65,217 @@ public:
      */
     virtual bool destroy();
 
+    /**
+     * @brief Gets the name of the plugin.
+     *
+     * @return The name of the plugin.
+     */
     std::string getName() const;
 
     // -------------------------------------------------------------------
     // Component Configuration methods
     // -------------------------------------------------------------------
 
-    // Max: Should we use JSON here?
-    // 2024/02/13 Max: Obviously, directly use json.hpp is much simpler than
-    // self-implement type
+    [[nodiscard("config value should not be ignored!")]] std::optional<json>
+    getValue(const std::string& key_path) const;
 
     /**
-     * @brief Loads the component configuration from a file.
+     * @brief 添加或更新一个配置项
      *
-     * @param path The path to the component configuration file.
-     * @return True if the component configuration was loaded successfully,
-     * false otherwise.
-     * @note Usually, the component configuration file is stored in the plugin's
-     * directory.
+     * Add or update a configuration item.
+     *
+     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
+     * "database/username"
+     * @param value 配置项的值，使用 JSON 格式进行表示
+     * @return bool 成功返回 true，失败返回 false
      */
-    bool loadConfig(const std::string &path);
+    bool setValue(const std::string& key_path, const json& value);
 
-    bool saveConfig();
+    /**
+     * @brief 判断一个配置项是否存在
+     *
+     * Determine if a configuration item exists.
+     *
+     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
+     * "database/username"
+     * @return bool 存在返回 true，不存在返回 false
+     */
+    [[nodiscard("status of the value should not be ignored")]] bool hasValue(
+        const std::string& key_path) const;
 
-    json getValue(const std::string &key_path) const;
+        /**
+     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
+     *
+     * Load JSON configuration from the specified file and merge with the
+     * existing configuration.
+     *
+     * @param path 配置文件路径
+     */
+    bool loadFromFile(const fs::path& path);
+
+    /**
+     * @brief 将当前配置保存到指定文件
+     *
+     * Save the current configuration to the specified file.
+     *
+     * @param file_path 目标文件路径
+     */
+    bool saveToFile(const fs::path& file_path) const;
 
     // -------------------------------------------------------------------
     // Variable methods
     // -------------------------------------------------------------------
 
-    json _registerVariable(const json &params);
-
-    /**
-     * @brief Registers a member function with a specific name and handler.
-     *
-     * This function allows plugins to register member functions that can be
-     * called by other plugins.
-     *
-     * @tparam ClassType The type of the class that owns the handler function.
-     * @param name The name of the function.
-     * @param handler The handler function for the function.
-     * @param object The object instance that owns the handler function.
-     */
     template <typename T>
-    bool registerVariable(const std::string &name, const T &value,
-                          const std::string &description = "") {
-        return m_VariableRegistry->RegisterVariable<T>(name, value,
-                                                       description);
+    void addVariable(const std::string& name, T initialValue,
+                     const std::string& description = "",
+                     const std::string& alias = "",
+                     const std::string& group = "") {
+        m_VariableManager->addVariable(name, initialValue, description, alias,
+                                       group);
     }
 
-    bool registerVariableRanges(const std::string &name, const double &low, const double &high);
-
-    /**
-     * @brief Gets the value of the variable with the specified name.
-     *
-     * @tparam T The type of the variable.
-     * @param name The name of the variable.
-     * @return An optional containing the value of the variable, or empty if the
-     * variable does not exist.
-     */
     template <typename T>
-    bool setVariable(const std::string &name, const T &value) {
-        return m_VariableRegistry->SetVariable<T>(name, value);
+    void setRange(const std::string& name, T min, T max) {
+        m_VariableManager->setRange(name, min, max);
+    }
+
+    void setStringOptions(const std::string& name,
+                          std::vector<std::string> options) {
+        m_VariableManager->setStringOptions(name, options);
     }
 
     /**
-     * @brief Gets the value of the variable with the specified name.
-     *
-     * @tparam T The type of the variable.
+     * @brief Gets a variable by name.
      * @param name The name of the variable.
-     * @return An optional containing the value of the variable, or empty if the
-     * variable does not exist
-     * @note When you try to get a variable that does not exist, an exception
-     * will be thrown
-     * @note This function is thread-safe
-     * @note This function is for the server to get the value of a variable of
-     * the plugin.
+     * @return A shared pointer to the variable.
      */
     template <typename T>
-    [[nodiscard]] std::optional<T> getVariable(const std::string &name) const {
-        return m_VariableRegistry->GetVariable<T>(name);
+    std::shared_ptr<Trackable<T>> getVariable(const std::string& name) {
+        return m_VariableManager->getVariable<T>(name);
     }
 
     /**
-     * @brief Gets the information about the variable with the specified name.
-     *
+     * @brief Sets the value of a variable.
      * @param name The name of the variable.
-     * @return The information about the variable.
+     * @param newValue The new value of the variable.
+     * @note const char * is not equivalent to std::string, please use
+     * std::string
      */
-    std::string getVariableInfo(const std::string &name) const;
+    template <typename T>
+    void setValue(const std::string& name, T newValue) {
+        m_VariableManager->setValue(name, newValue);
+    }
 
     // -------------------------------------------------------------------
     // Function methods
     // -------------------------------------------------------------------
 
-    /**
-     * @brief Sets the value of the variable with the specified name.
-     *
-     * @tparam T The type of the variable.
-     * @param name The name of the variable.
-     * @param value The value to set.
-     * @return True if the variable was set successfully, false otherwise.
-     */
-    template <typename ClassType>
-    void registerFunc(const std::string &name,
-                      json (ClassType::*handler)(const json &),
-                      ClassType *object);
+    template <typename Ret, typename... Args>
+    void registerCommand(
+        const std::string& name, const std::string& group,
+        const std::string& description, std::function<Ret(Args...)> func,
+        std::optional<std::function<bool()>> precondition = std::nullopt,
+        std::optional<std::function<void()>> postcondition = std::nullopt)
+    {
+        m_CommandDispatcher->registerCommand(name, group, description, func,
+                                             precondition, postcondition);
+    }
 
-    /**
-     * @brief Gets the information about the function with the specified name.
-     *
-     * @param name The name of the function.
-     * @return The information about the function in JSON format.
-     */
-    json getFuncInfo(const std::string &name);
+    template <typename Callable>
+    void registerCommand(const std::string& name, Callable&& func,
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, group, description);
+    }
 
-    /**
-     * @brief Runs the function with the specified name and parameters.
-     *
-     * This function calls a registered member function with the specified name
-     * and parameters.
-     *
-     * @param name The name of the function.
-     * @param params The parameters for the function.
-     * @return True if the function was executed successfully, false otherwise.
-     */
-    bool runFunc(const std::string &name, const json &params);
+    template <typename Ret, typename... Args>
+    void registerCommand(const std::string& name, Ret (*func)(Args...),
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, group, description);
+    }
 
-    std::function<json(const json &)> getFunc(const std::string &name);
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+                         const PointerSentinel<Class>& instance,
+                         const std::string& group = "",
+                         const std::string& description = "")
 
-    json createSuccessResponse(const std::string &command, const json &value);
+    {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
+    }
 
-    json createErrorResponse(const std::string &command, const json &error,
-                             const std::string &message);
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name,
+                         Ret (Class::*func)(Args...) const,
+                         const PointerSentinel<Class>& instance,
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
+    }
 
-    json createWarningResponse(const std::string &command, const json &warning,
-                               const std::string &message);
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name,
+                         Ret (Class::*func)(Args...) noexcept,
+                         const PointerSentinel<Class>& instance,
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
+    }
+
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name, Ret (*func)(Args...),
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, group, description);
+    }
+
+    void addAlias(const std::string& name, const std::string& alias);
+
+    void addGroup(const std::string& name, const std::string& group);
+
+    void setTimeout(const std::string& name, std::chrono::milliseconds timeout);
+
+    template <typename... Args>
+    std::any dispatch(const std::string& name, Args&&... args)
+    {
+        return m_CommandDispatcher->dispatch(name, std::forward<Args>(args)...);
+    }
+
+    void clearCache();
+
+    void removeCommand(const std::string& name);
+
+    std::vector<std::string> getCommandsInGroup(const std::string& group) const;
+
+    std::string getCommandDescription(const std::string& name) const;
+
+#if ENABLE_FASTHASH
+    emhash::HashSet<std::string> getCommandAliases(
+        const std::string& name) const;
+#else
+    std::unordered_set<std::string> getCommandAliases(
+        const std::string& name) const;
+#endif
 
 private:
     std::string m_name;
-    std::string m_ConfigPath;
-    std::string m_InfoPath;
+    std::string m_configPath;
+    std::string m_infoPath;
+    Type_Info m_typeInfo;
 
-    std::unique_ptr<CommandDispatcher<json, json>>
-        m_CommandDispatcher;  ///< The command dispatcher for handling
-                              ///< functions.
-    std::unique_ptr<VariableRegistry>
-        m_VariableRegistry;  ///< The variable registry for managing variables.
-
-    json m_config;
+    std::unique_ptr<CommandDispatcher>
+        m_CommandDispatcher;  ///< The command dispatcher for managing commands.
+    std::unique_ptr<VariableManager>
+        m_VariableManager;  ///< The variable registry for managing variables.
+    std::unique_ptr<ConfigManager>
+        m_ConfigManager;
+    
     std::mutex m_mutex;
 };
-
-template <typename ClassType>
-void Component::registerFunc(const std::string &name,
-                             json (ClassType::*handler)(const json &),
-                             ClassType *object) {
-    if (!m_CommandDispatcher->hasHandler(name))
-        m_CommandDispatcher->registerMemberHandler(name, object, handler);
-}
 
 #endif

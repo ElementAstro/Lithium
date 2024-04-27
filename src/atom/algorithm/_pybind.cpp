@@ -24,10 +24,12 @@ Description: Python Binding of Atom-Algorithm
 #include "huffman.hpp"
 #include "math.hpp"
 #include "md5.hpp"
+#include "mhash.hpp"
 
 namespace py = pybind11;
 
 using namespace Atom::Algorithm;
+using namespace Atom::Utils;
 
 PYBIND11_MODULE(atom_algorithm, m) {
     m.doc() = "Atom Algorithm Python Binding";
@@ -63,99 +65,21 @@ PYBIND11_MODULE(atom_algorithm, m) {
           "Perform two-dimensional deconvolution");
 
     py::class_<Fraction>(m, "Fraction")
-        .def(py::init<int, int>(), py::arg("numerator") = 0,
-             py::arg("denominator") = 1)
-        .def("__add__", &Fraction::operator+, py::arg("other"))
-        //.def("__sub__", &Fraction::operator-, py::arg("other"))
-        .def("__mul__", &Fraction::operator*, py::arg("other"))
-        .def("__truediv__", &Fraction::operator/, py::arg("other"))
-        .def(py::self += py::self)
-        .def(py::self -= py::self)
-        .def(py::self *= py::self)
-        .def(py::self /= py::self)
-        .def("__eq__", &Fraction::operator==)
-        //.def("__lt__", &Fraction::operator<)
-        //.def("__neg__", &Fraction::operator-)
+        .def(py::init<int, int>())
+        .def_readwrite("numerator", &Fraction::numerator)
+        .def_readwrite("denominator", &Fraction::denominator)
+        .def("__add__", &Fraction::operator+, py::is_operator())
+        .def("__sub__", &Fraction::operator-, py::is_operator())
+        .def("__mul__", &Fraction::operator*, py::is_operator())
+        .def("__truediv__", &Fraction::operator/, py::is_operator())
+        .def("__eq__", &Fraction::operator==, py::is_operator())
+        .def("__neg__", &Fraction::operator-)
         .def("__str__", &Fraction::to_string)
         .def("__float__", &Fraction::to_double)
         .def("__int__", &Fraction::operator int)
-        .def("__float__", &Fraction::operator float)
-        .def("__double__", &Fraction::operator double)
-        .def("__repr__", &Fraction::to_string)
-        .def("__abs__",
-             [](const Fraction& f) {
-                 return Fraction(std::abs(f.numerator),
-                                 std::abs(f.denominator));
-             })
-        .def(
-            "__iadd__",
-            [](Fraction& self, const Fraction& other) {
-                self += other;
-                return self;
-            },
-            py::arg("other"))
-        .def(
-            "__isub__",
-            [](Fraction& self, const Fraction& other) {
-                self -= other;
-                return self;
-            },
-            py::arg("other"))
-        .def(
-            "__imul__",
-            [](Fraction& self, const Fraction& other) {
-                self *= other;
-                return self;
-            },
-            py::arg("other"))
-        .def(
-            "__idiv__",
-            [](Fraction& self, const Fraction& other) {
-                self /= other;
-                return self;
-            },
-            py::arg("other"))
-        .def("__pos__",
-             [](const Fraction& f) {
-                 return Fraction(f.numerator, f.denominator);
-             })
-        .def("__abs__",
-             [](const Fraction& f) {
-                 return Fraction(std::abs(f.numerator),
-                                 std::abs(f.denominator));
-             })
-        .def("__pos__",
-             [](const Fraction& f) {
-                 return Fraction(f.numerator, f.denominator);
-             })
-        .def("__neg__",
-             [](const Fraction& f) {
-                 return Fraction(-f.numerator, f.denominator);
-             })
-        .def("__hash__",
-             [](const Fraction& f) {
-                 return std::hash<double>()(f.to_double());
-             })
-        .def(
-            "__pow__",
-            [](const Fraction& f, int power) {
-                return Fraction(std::pow(f.to_double(), power));
-            },
-            py::arg("power"))
-        //.def(py::self < py::self)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def("__float__", [](const Fraction& f) { return f.to_double(); })
-        .def("__int__",
-             [](const Fraction& f) { return static_cast<int>(f.to_double()); });
+        .def("__repr__", [](const Fraction &f) { return f.to_string(); });
 
-    //m.def("compute_hash", &fnv1a_hash<std::string_view>,
-    //      "Compute FNV-1a hash for a string view");
-
-    //m.def("compute_hash", &jenkins_one_at_a_time_hash<std::string_view>,
-    //      "Compute Jenkins One-at-a-Time hash for a string view");
-
-     // Bindings for createHuffmanTree function
+    // Bindings for createHuffmanTree function
     m.def("create_huffman_tree", &createHuffmanTree,
           "Create a Huffman tree from character frequencies");
 
@@ -171,9 +95,23 @@ PYBIND11_MODULE(atom_algorithm, m) {
     m.def("decompress_text", &decompressText,
           "Decompress text using Huffman decoding");
 
-    m.def("mul_div_64", &mulDiv64, "Perform 64-bit multiplication and division");
+    m.def("mul_div_64", &mulDiv64,
+          "Perform 64-bit multiplication and division");
+    m.def("safe_add", &safeAdd, "Safe addition");
+    m.def("safe_sub", &safeSub, "Safe subtraction");
+    m.def("safe_mul", &safeMul, "Safe multiplication");
+    m.def("safe_div", &safeDiv, "Safe division");
+    m.def("normalize", &normalize, "Normalize a 64-bit number");
+    m.def("rotl64", &rotl64, "Rotate left");
+    m.def("rotr64", &rotr64, "Rotate right");
+    m.def("clz64", &clz64, "Count leading zeros");
 
     py::class_<MD5>(m, "MD5")
         .def(py::init<>())
         .def_static("encrypt", &MD5::encrypt);
+
+    m.def("murmur3_hash", &murmur3Hash, "Murmur3 Hash");
+    m.def("murmur3_hash64", &murmur3Hash64, "Murmur3 Hash64");
+    m.def("hexstring_from_data", py::overload_cast<const std::string &>(&hexstringFromData), "Hexstring from Data");
+    m.def("data_from_hexstring", &dataFromHexstring, "Data from Hexstring");
 }

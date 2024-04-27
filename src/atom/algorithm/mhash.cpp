@@ -22,208 +22,134 @@ Description: Implementation of murmur3 hash and quick hash
 #include <algorithm>
 #include <bit>
 #include <cstdlib>
+#include <iomanip>
 #include <sstream>
 #include <stdexcept>
-
-#define ROTL(x, r) ((x << r) | (x >> (32 - r)))
+#include <charconv>
 
 namespace Atom::Utils {
-static inline uint32_t fmix32(uint32_t h) {
+uint32_t fmix32(uint32_t h) noexcept {
     h ^= h >> 16;
     h *= 0x85ebca6b;
     h ^= h >> 13;
     h *= 0xc2b2ae35;
     h ^= h >> 16;
-
     return h;
 }
 
-uint32_t murmur3Hash(const char *str, const uint32_t &seed = 1060627423) {
-    if (!str)
-        return 0;
-
-    int len = strlen(str);
-    return murmur3Hash(str, len, seed);
+uint32_t ROTL(uint32_t x, int8_t r) noexcept {
+    return (x << r) | (x >> (32 - r));
 }
 
-uint32_t murmur3Hash(const void *data, const uint32_t &size,
-                     const uint32_t &seed = 1060627423) {
-    if (!data)
-        return 0;
+uint32_t murmur3Hash(std::string_view data, uint32_t seed) noexcept {
+    uint32_t hash = seed;
+    const uint32_t seed1 = 0xcc9e2d51;
+    const uint32_t seed2 = 0x1b873593;
 
-    const char *str = (const char *)data;
-    int len = size;
+    // Process 4-byte chunks
+    const uint32_t *blocks = reinterpret_cast<const uint32_t *>(data.data());
+    size_t nblocks = data.size() / 4;
+    for (size_t i = 0; i < nblocks; i++) {
+        uint32_t k = blocks[i];
+        k *= seed1;
+        k = ROTL(k, 15);
+        k *= seed2;
 
-    uint32_t s, h = seed, seed1 = 0xcc9e2d51, seed2 = 0x1b873593,
-                *ptr = (uint32_t *)str;
-
-    // handle begin blocks
-    int blk = len / 4;
-    for (int i = 0; i < blk; i++) {
-        s = ptr[i];
-        s *= seed1;
-        s = ROTL(s, 15);
-        s *= seed2;
-
-        h ^= s;
-        h = ROTL(h, 13);
-        h *= 5;
-        h += 0xe6546b64;
+        hash ^= k;
+        hash = ROTL(hash, 13);
+        hash = hash * 5 + 0xe6546b64;
     }
 
-    // handle tail
-    s = 0;
-    uint8_t *tail = (uint8_t *)(str + blk * 4);
-    switch (len & 3) {
+    // Handle the tail
+    const uint8_t *tail =
+        reinterpret_cast<const uint8_t *>(data.data() + nblocks * 4);
+    uint32_t tail_val = 0;
+    switch (data.size() & 3) {
         case 3:
-            s |= tail[2] << 16;
+            tail_val |= tail[2] << 16;
+            [[fallthrough]];
         case 2:
-            s |= tail[1] << 8;
+            tail_val |= tail[1] << 8;
+            [[fallthrough]];
         case 1:
-            s |= tail[0];
+            tail_val |= tail[0];
+            tail_val *= seed1;
+            tail_val = ROTL(tail_val, 15);
+            tail_val *= seed2;
+            hash ^= tail_val;
+    }
 
-            s *= seed1;
-            s = ROTL(s, 15);
-            s *= seed2;
-            h ^= s;
-    };
-
-    return fmix32(h ^ len);
+    return fmix32(hash ^ static_cast<uint32_t>(data.size()));
 }
 
-uint64_t murmur3Hash64(const void *str, const uint32_t &size,
-                       const uint32_t &seed = 1060627423,
-                       const uint32_t &seed2 = 1050126127) {
-    return (((uint64_t)murmur3Hash(str, size, seed)) << 32 |
-            murmur3Hash(str, size, seed2));
-}
-
-uint64_t murmur3Hash64(const char *str, const uint32_t &seed = 1060627423,
-                       const uint32_t &seed2 = 1050126127) {
-    return (((uint64_t)murmur3Hash(str, seed)) << 32 | murmur3Hash(str, seed2));
+uint64_t murmur3Hash64(std::string_view str, uint32_t seed, uint32_t seed2) {
+    return (static_cast<uint64_t>(murmur3Hash(str, seed)) << 32) |
+           murmur3Hash(str, seed2);
 }
 
 void hexstringFromData(const void *data, size_t len, char *output) {
-    const unsigned char *buf = (const unsigned char *)data;
-    size_t i, j;
-    for (i = j = 0; i < len; ++i) {
-        char c;
-        c = (buf[i] >> 4) & 0xf;
-        c = (c > 9) ? c + 'a' - 10 : c + '0';
-        output[j++] = c;
-        c = (buf[i] & 0xf);
-        c = (c > 9) ? c + 'a' - 10 : c + '0';
-        output[j++] = c;
-    }
-}
+    const unsigned char *buf = static_cast<const unsigned char *>(data);
+    std::span<const unsigned char> bytes(buf, len);
+    std::ostringstream stream;
 
-std::string hexstringFromData(const char *data, size_t len) {
-    if (len == 0) {
-        return std::string();
+    // Use iomanip to format output
+    stream << std::hex << std::setfill('0');
+    for (unsigned char byte : bytes) {
+        stream << std::setw(2) << static_cast<int>(byte);
     }
-    std::string result;
-    result.resize(len * 2);
-    hexstringFromData(data, len, &result[0]);
-    return result;
+
+    std::string hexstr = stream.str();
+    std::copy(hexstr.begin(), hexstr.end(), output);
+    output[hexstr.size()] = '\0';  // Null-terminate the output string
 }
 
 std::string hexstringFromData(const std::string &data) {
-    return hexstringFromData(data.c_str(), data.size());
-}
+    if (data.empty()) {
+        return {};
+    }
 
-void dataFromHexstring(const char *hexstring, size_t length, void *output) {
-    unsigned char *buf = (unsigned char *)output;
-    unsigned char byte;
-    if (length % 2 != 0) {
-        throw std::invalid_argument("dataFromHexstring length % 2 != 0");
-    }
-    for (size_t i = 0; i < length; ++i) {
-        switch (hexstring[i]) {
-            case 'a':
-            case 'b':
-            case 'c':
-            case 'd':
-            case 'e':
-            case 'f':
-                byte = (hexstring[i] - 'a' + 10) << 4;
-                break;
-            case 'A':
-            case 'B':
-            case 'C':
-            case 'D':
-            case 'E':
-            case 'F':
-                byte = (hexstring[i] - 'A' + 10) << 4;
-                break;
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                byte = (hexstring[i] - '0') << 4;
-                break;
-            default:
-                throw std::invalid_argument(
-                    "dataFromHexstring invalid hexstring");
-        }
-        ++i;
-        switch (hexstring[i]) {
-            case 'a':
-            case 'b':
-            case 'c':
-            case 'd':
-            case 'e':
-            case 'f':
-                byte |= hexstring[i] - 'a' + 10;
-                break;
-            case 'A':
-            case 'B':
-            case 'C':
-            case 'D':
-            case 'E':
-            case 'F':
-                byte |= hexstring[i] - 'A' + 10;
-                break;
-            case '0':
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                byte |= hexstring[i] - '0';
-                break;
-            default:
-                throw std::invalid_argument(
-                    "dataFromHexstring invalid hexstring");
-        }
-        *buf++ = byte;
-    }
-}
-
-std::string dataFromHexstring(const char *hexstring, size_t length) {
-    if (length % 2 != 0) {
-        throw std::invalid_argument("dataFromHexstring length % 2 != 0");
-    }
-    if (length == 0) {
-        return std::string();
-    }
     std::string result;
-    result.resize(length / 2);
-    dataFromHexstring(hexstring, length, &result[0]);
+    result.reserve(data.size() * 2);
+
+    for (unsigned char c : data) {
+        char buf[3];  // buffer for two hex chars and null terminator
+        std::to_chars_result conv_result =
+            std::to_chars(buf, buf + sizeof(buf), c, 16);
+
+        if (conv_result.ec == std::errc{}) {
+            if (buf[1] == '\0') {
+                result += '0';  // pad single digit hex numbers
+            }
+            result.append(buf, conv_result.ptr);
+        }
+    }
+
     return result;
 }
 
 std::string dataFromHexstring(const std::string &hexstring) {
-    return dataFromHexstring(hexstring.c_str(), hexstring.size());
+    if (hexstring.size() % 2 != 0) {
+        throw std::invalid_argument("Hex string length must be even");
+    }
+
+    std::string result;
+    result.resize(hexstring.size() / 2);
+
+    size_t output_index = 0;
+    for (size_t i = 0; i < hexstring.size(); i += 2) {
+        int byte = 0;
+        auto [ptr, ec] = std::from_chars(hexstring.data() + i,
+                                         hexstring.data() + i + 2, byte, 16);
+
+        if (ec == std::errc::invalid_argument ||
+            ptr != hexstring.data() + i + 2) {
+            throw std::invalid_argument("Invalid hex character");
+        }
+
+        result[output_index++] = static_cast<char>(byte);
+    }
+
+    return result;
 }
 
 }  // namespace Atom::Utils

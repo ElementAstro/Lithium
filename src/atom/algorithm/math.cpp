@@ -14,92 +14,107 @@ Description: Extra Math Library
 
 #include "math.hpp"
 
-#if defined(_MSC_VER)
-#include <intrin.h>
-#endif
+#include <bit>
+#include <stdexcept>
 
 namespace Atom::Algorithm {
 
-uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
-                        uint64_t divider) {
 #if defined(__GNUC__) && defined(__SIZEOF_INT128__)
+uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
+                  uint64_t divider) noexcept {
     __uint128_t a = operant;
     __uint128_t b = multiplier;
     __uint128_t c = divider;
 
-    return (uint64_t)(a * b / c);
+    return static_cast<uint64_t>((a * b) / c);
+}
 #elif defined(_MSC_VER)
-#if defined(_M_IX86)
-    // Your x86 specific code here
-#elif defined(_M_X64)
-#pragma warning(push)
-#pragma warning(disable : 4244)  // C4244: 'conversion' conversion from 'type1'
-                                 // to 'type2', possible loss of data
-    uint64_t a = operant;
-    uint64_t b = multiplier;
-    uint64_t c = divider;
+#include <intrin.h>  // For _umul128 and _BitScanReverse64
+#include <stdexcept>
 
-    //  Normalize divisor
-    unsigned long shift;
-    _BitScanReverse64(&shift, c);
-    shift = 63 - shift;
+uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
+                  uint64_t divider) noexcept {
+    uint64_t highProd;
+    uint64_t lowProd = _umul128(
+        operant, multiplier,
+        &highProd);  // Directly get the low and high parts of the product
 
-    c <<= shift;
-
-    // Multiply
-    a = _umul128(a, b, &b);
-    if (((b << shift) >> shift) != b) {
-        // Overflow
-        return 0xFFFFFFFFFFFFFFFF;
-    }
-    b = __shiftleft128(a, b, shift);
-    a <<= shift;
-
-    uint32_t div;
-    uint32_t q0, q1;
-    uint64_t t0, t1;
-
-    // 1st Reduction
-    div = (uint32_t)(c >> 32);
-    t0 = b / div;
-    if (t0 > 0xFFFFFFFF)
-        t0 = 0xFFFFFFFF;
-    q1 = (uint32_t)t0;
-    while (1) {
-        t0 = _umul128(c, (uint64_t)q1 << 32, &t1);
-        if (t1 < b || (t1 == b && t0 <= a))
-            break;
-        q1--;
-    }
-    b -= t1;
-    if (t0 > a)
-        b--;
-    a -= t0;
-
-    if (b > 0xFFFFFFFF) {
-        // Overflow
-        return 0xFFFFFFFFFFFFFFFF;
+    if (divider == 0) {
+        throw std::runtime_error("Division by zero");
     }
 
-    // 2nd reduction
-    t0 = ((b << 32) | (a >> 32)) / div;
-    if (t0 > 0xFFFFFFFF)
-        t0 = 0xFFFFFFFF;
-    q0 = (uint32_t)t0;
+    // Normalize divisor
+    unsigned long shift = 63 - std::bit_width(divider - 1);
+    uint64_t normDiv = divider << shift;
 
-    while (1) {
-        t0 = _umul128(c, q0, &t1);
-        if (t1 < b || (t1 == b && t0 <= a))
-            break;
-        q0--;
-    }
+    // Normalize high part
+    highProd = (highProd << shift) | (lowProd >> (64 - shift));
+    lowProd <<= shift;
 
-    return ((uint64_t)q1 << 32) | q0;
-#pragma warning(pop)
-#endif
+    // Division using high and low parts
+    uint64_t quotient, remainder;
+    _udiv128(highProd, lowProd, normDiv, &remainder);
+
+    return quotient;
+}
 #else
-#error MulDiv64 is no supported!
+#error "Platform not supported for mulDiv64 function!"
 #endif
+
+uint64_t safeAdd(uint64_t a, uint64_t b) {
+    uint64_t result;
+    if (__builtin_add_overflow(a, b, &result)) {
+        throw std::overflow_error("Overflow in addition");
+    }
+    return result;
+}
+
+uint64_t safeMul(uint64_t a, uint64_t b) {
+    uint64_t result;
+    if (__builtin_mul_overflow(a, b, &result)) {
+        throw std::overflow_error("Overflow in multiplication");
+    }
+    return result;
+}
+
+uint64_t rotl64(uint64_t n, unsigned int c) {
+    const unsigned int mask = 63;
+    c &= mask;
+    return (n << c) | (n >> (-c & mask));
+}
+
+uint64_t rotr64(uint64_t n, unsigned int c) {
+    const unsigned int mask = 63;
+    c &= mask;
+    return (n >> c) | (n << (-c & mask));
+}
+
+int clz64(uint64_t x) {
+    if (x == 0)
+        return 64;
+    return __builtin_clzll(x);  // GCC built-in
+}
+
+uint64_t normalize(uint64_t x) {
+    if (x == 0)
+        return 0;
+    int n = clz64(x);
+    return x << n;
+}
+
+uint64_t safeSub(uint64_t a, uint64_t b) {
+    uint64_t result;
+    if (__builtin_sub_overflow(a, b, &result)) {
+        throw std::underflow_error("Underflow in subtraction");
+    }
+    return result;
+}
+
+uint64_t safeDiv(uint64_t a, uint64_t b) {
+    if (b == 0) {
+        throw std::runtime_error("Division by zero");
+    }
+    return a / b;
 }
 
 }  // namespace Atom::Algorithm

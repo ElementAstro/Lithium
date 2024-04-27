@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
         .default_value("config.json");
     program.add_argument("-M", "--module-path")
         .help("path to the modules directory")
-        .default_value("modules");
+        .default_value("./modules");
     program.add_argument("-W", "--web-panel")
         .help("web panel")
         .default_value(true);
@@ -119,21 +119,10 @@ int main(int argc, char *argv[]) {
     Lithium::InitLithiumApp(argc, argv);
     // Create shared instance
     Lithium::MyApp = Lithium::LithiumApp::createShared();
-
-    auto cmd_port = program.get<int>("--port");
-    if (cmd_port != 8000) {
-        DLOG_F(INFO, "Command line server port : {}", cmd_port);
-
-        auto port =
-            Lithium::MyApp->GetConfig("config/server").value<int>("port", 8000);
-        if (port != cmd_port) {
-            Lithium::MyApp->SetConfig(
-                {{"key", "config/server/port"}, {"value", cmd_port}});
-            DLOG_F(INFO, "Set server port to {}", cmd_port);
-        }
-    }
+    // Parse arguments
     try {
         auto cmd_host = program.get<std::string>("--host");
+        auto cmd_port = program.get<int>("--port");
         auto cmd_config_path = program.get<std::string>("--config");
         auto cmd_module_path = program.get<std::string>("--module-path");
         auto cmd_web_panel = program.get<bool>("--web-panel");
@@ -143,6 +132,17 @@ int main(int argc, char *argv[]) {
             Lithium::MyApp->SetConfig(
                 {{"key", "config/server/host"}, {"value", cmd_host}});
             DLOG_F(INFO, "Set server host to {}", cmd_host);
+        }
+        if (cmd_port != 8000) {
+            DLOG_F(INFO, "Command line server port : {}", cmd_port);
+
+            auto port = Lithium::MyApp->GetConfig("config/server")
+                            .value<int>("port", 8000);
+            if (port != cmd_port) {
+                Lithium::MyApp->SetConfig(
+                    {{"key", "config/server/port"}, {"value", cmd_port}});
+                DLOG_F(INFO, "Set server port to {}", cmd_port);
+            }
         }
         if (!cmd_config_path.empty()) {
             Lithium::MyApp->SetConfig({{"key", "config/server/configpath"},
@@ -167,9 +167,6 @@ int main(int argc, char *argv[]) {
             if (!Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
                 Lithium::MyApp->SetConfig(
                     {{"key", "config/server/debug"}, {"value", true}});
-
-                ConsoleTerminal terminal;
-                terminal.run();
             }
         } else {
             Lithium::MyApp->SetConfig(
@@ -178,9 +175,17 @@ int main(int argc, char *argv[]) {
         }
     } catch (const std::bad_any_cast &e) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
+        Atom::System::saveCrashLog(e.what());
+        return 1;
     }
 
-    runServer();
+    // In debug mode run the terminal first and will not run the server
+    if (Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
+        ConsoleTerminal terminal;
+        terminal.run();
+    } else {
+        runServer();
+    }
 
     return 0;
 }

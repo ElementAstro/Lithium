@@ -145,12 +145,12 @@ public:
     void loadBuiltinTask();
 
 private:
-    std::shared_ptr<TaskContainer> m_TaskContainer;
-    std::shared_ptr<TaskGenerator> m_TaskGenerator;
-    std::shared_ptr<TaskList> m_TaskList;
-    std::shared_ptr<TaskLoader> m_TaskLoader;
-    std::shared_ptr<TaskPool> m_TaskPool;
-    std::shared_ptr<TickScheduler> m_TickScheduler;
+    std::weak_ptr<TaskContainer> m_TaskContainer;
+    std::weak_ptr<TaskGenerator> m_TaskGenerator;
+    std::weak_ptr<TaskList> m_TaskList;
+    std::weak_ptr<TaskLoader> m_TaskLoader;
+    std::weak_ptr<TaskPool> m_TaskPool;
+    std::weak_ptr<TickScheduler> m_TickScheduler;
 
     std::unique_ptr<Atom::Utils::StopWatcher> m_Timer;
 

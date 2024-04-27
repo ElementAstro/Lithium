@@ -15,10 +15,13 @@ Description: Daemon process implementation
 #ifndef ATOM_SERVER_DAEMON_HPP
 #define ATOM_SERVER_DAEMON_HPP
 
+#include <atomic>
 #include <cstring>
 #include <ctime>
 #include <functional>
+#include <mutex>
 #include <string>
+#include <thread>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -93,7 +96,7 @@ private:
 #endif
     time_t m_parentStartTime = 0; /**< The start time of the parent process. */
     time_t m_mainStartTime = 0;   /**< The start time of the child process. */
-    int m_restartCount = 0;       /**< The number of restarts. */
+    std::atomic<int> m_restartCount{0}; /**< The number of restarts. */
 };
 
 /**

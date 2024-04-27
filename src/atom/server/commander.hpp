@@ -244,6 +244,6 @@ private:
     size_t m_maxHistorySize = 100;
 };
 
-#include "commander_impl.hpp"
+#include "commander.inl"
 
 #endif

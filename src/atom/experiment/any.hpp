@@ -15,7 +15,9 @@ Description: A simple implementation of any type.
 #ifndef ATOM_EXPERIMENT_ANY_HPP
 #define ATOM_EXPERIMENT_ANY_HPP
 
+#include <cstring>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <typeinfo>
@@ -27,27 +29,69 @@ template <typename T>
 concept Derived = std::is_base_of_v<std::remove_reference_t<T>, Any>;
 
 class Any {
+private:
+    static constexpr std::size_t BufferSize = 64;
+    static constexpr std::size_t BufferAlign = alignof(std::max_align_t);
+
+    using Storage = std::aligned_storage_t<BufferSize, BufferAlign>;
+
 public:
-    Any() : ptr(nullptr) {}
+    constexpr Any() noexcept : ptr(nullptr) {}
 
     template <typename T>
-        requires(!Derived<T>)
-    Any(T &&value) : ptr(new holder<std::decay_t<T>>(std::forward<T>(value))) {}
+        requires(!Derived<T> &&
+                 !(sizeof(T) <= BufferSize && std::is_trivially_copyable_v<T>))
+    constexpr Any(T &&value)
+        : ptr(new holder<std::decay_t<T>>(std::forward<T>(value))) {}
 
-    Any(const Any &other) : ptr(other.ptr ? other.ptr->clone() : nullptr) {}
+    template <typename T>
+        requires(!Derived<T> && sizeof(T) <= BufferSize &&
+                 std::is_trivially_copyable_v<T>)
+    constexpr Any(T &&value) {
+        new (&storage) holder<std::decay_t<T>>(std::forward<T>(value));
+        small = true;
+    }
 
-    Any(Any &&other) noexcept : ptr(std::exchange(other.ptr, nullptr)) {}
+    constexpr Any(const Any &other)
+        : ptr(other.small ? nullptr
+                          : (other.ptr ? other.ptr->clone() : nullptr)),
+          small(other.small) {
+        if (other.small) {
+            std::copy_n(reinterpret_cast<const char *>(&other.storage),
+                        sizeof(Storage), reinterpret_cast<char *>(&storage));
+        }
+    }
 
-    ~Any() { delete ptr; }
+    constexpr Any(Any &&other) noexcept : small(other.small) {
+        if (other.small) {
+            std::memcpy(&storage, &other.storage, sizeof(Storage));
+        } else {
+            ptr = std::exchange(other.ptr, nullptr);
+        }
+    }
 
-    Any &operator=(const Any &other) {
+    ~Any() {
+        if (small) {
+            // If the stored object has a non-trivial destructor, it needs to be
+            // called manually
+            if (!std::is_trivially_destructible_v<decltype(storage)>) {
+                // Assuming 'holder' has a virtual destructor and a method to
+                // properly destroy the contained object...
+                reinterpret_cast<placeholder *>(&storage)->~placeholder();
+            }
+        } else {
+            delete ptr;
+        }
+    }
+
+    constexpr Any &operator=(const Any &other) {
         if (this != &other) {
             Any(other).swap(*this);
         }
         return *this;
     }
 
-    Any &operator=(Any &&other) noexcept {
+    constexpr Any &operator=(Any &&other) noexcept {
         if (this != &other) {
             Any(std::move(other)).swap(*this);
         }
@@ -56,14 +100,14 @@ public:
 
     template <typename T>
         requires(!Derived<T>)
-    Any &operator=(T &&value) {
+    constexpr Any &operator=(T &&value) {
         Any(std::forward<T>(value)).swap(*this);
         return *this;
     }
 
-    bool empty() const { return !ptr; }
+    [[nodiscard]] constexpr bool empty() const noexcept { return !ptr; }
 
-    const std::type_info &type() const {
+    [[nodiscard]] constexpr const std::type_info &type() const noexcept {
         return ptr ? ptr->type() : typeid(void);
     }
 
@@ -73,25 +117,30 @@ public:
 private:
     class placeholder {
     public:
-        virtual ~placeholder() {}
-        virtual const std::type_info &type() const = 0;
-        virtual placeholder *clone() const = 0;
+        virtual ~placeholder() = default;
+        [[nodiscard]] virtual const std::type_info &type() const noexcept = 0;
+        [[nodiscard]] virtual placeholder *clone() const = 0;
         virtual void swap(placeholder &other) = 0;
+        virtual void destroy() = 0;
     };
 
     template <typename T>
     class holder : public placeholder {
     public:
-        holder(T &&value) : held(std::move(value)) {}
+        constexpr holder(T &&value) : held(std::move(value)) {}
 
-        holder(const T &value) : held(value) {}
+        constexpr holder(const T &value) : held(value) {}
 
-        const std::type_info &type() const { return typeid(T); }
+        [[nodiscard]] const std::type_info &type() const noexcept override {
+            return typeid(T);
+        }
 
-        placeholder *clone() const { return new holder<T>(held); }
+        [[nodiscard]] placeholder *clone() const override {
+            return new holder<T>(held);
+        }
 
-        void swap(placeholder &other) {
-            if (holder *other_holder = dynamic_cast<holder *>(&other)) {
+        void swap(placeholder &other) override {
+            if (auto other_holder = dynamic_cast<holder *>(&other)) {
                 std::swap(held, other_holder->held);
             }
         }
@@ -99,9 +148,15 @@ private:
         T held;
     };
 
+    union {
+        placeholder *ptr;
+        Storage storage;
+    };
+    bool small = false;
+
     placeholder *ptr;
 
-    void swap(Any &other) { std::swap(ptr, other.ptr); }
+    constexpr void swap(Any &other) noexcept { std::swap(ptr, other.ptr); }
 };
 
 template <typename T>

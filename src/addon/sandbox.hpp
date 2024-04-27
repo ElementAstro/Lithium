@@ -12,32 +12,28 @@ Description: A sandbox for alone componnents, such as executables.
 
 **************************************************/
 
-#pragma once
+#ifndef LITHIUM_ADDON_SANDBOX_HPP
+#define LITHIUM_ADDON_SANDBOX_HPP
 
 #include <string>
 #include <vector>
 
 namespace Lithium {
 /**
- * @class Sandbox
- * @brief Represents a sandbox for running programs with specified time and
- * memory limits.
- * @details This class is used to run programs with specified time and memory
- * limits.
- * @note The implementation of this class on windows is not complete.
- * @note If we run this on windows, we can't create a sandbox properly.
+ * @brief Sandbox class for running programs with time and memory limits in a
+ * restricted environment.
  */
 class Sandbox {
 public:
     /**
-     * @brief Constructor for Sandbox class.
+     * @brief Default constructor for Sandbox class.
      */
-    Sandbox() {}
+    Sandbox() = default;
 
     /**
-     * @brief Destructor for Sandbox class.
+     * @brief Default destructor for Sandbox class.
      */
-    ~Sandbox() {}
+    ~Sandbox() = default;
 
     /**
      * @brief Sets the time limit for program execution.
@@ -54,61 +50,68 @@ public:
     bool setMemoryLimit(long memoryLimitKb);
 
     /**
-     * @brief Sets the root directory for program execution.
+     * @brief Sets the root directory for the sandbox environment.
      * @param rootDirectory The root directory path.
      * @return True if the root directory is set successfully, false otherwise.
      */
-    bool setRootDirectory(const std::string &rootDirectory);
+    bool setRootDirectory(const std::string& rootDirectory);
 
     /**
-     * @brief Sets the user ID for program execution.
+     * @brief Sets the user ID for running the program in the sandbox.
      * @param userId The user ID.
      * @return True if the user ID is set successfully, false otherwise.
      */
     bool setUserId(int userId);
 
     /**
-     * @brief Sets the program path for execution.
-     * @param programPath The program path.
+     * @brief Sets the path to the program to be executed in the sandbox.
+     * @param programPath The path to the program.
      * @return True if the program path is set successfully, false otherwise.
      */
-    bool setProgramPath(const std::string &programPath);
+    bool setProgramPath(const std::string& programPath);
 
     /**
-     * @brief Sets the program arguments for execution.
-     * @param programArgs The program arguments.
+     * @brief Sets the arguments for the program to be executed in the sandbox.
+     * @param programArgs The vector of program arguments.
      * @return True if the program arguments are set successfully, false
      * otherwise.
      */
-    bool setProgramArgs(const std::vector<std::string> &programArgs);
+    bool setProgramArgs(const std::vector<std::string>& programArgs);
 
     /**
-     * @brief Runs the program in the sandbox.
-     * @return True if the program runs successfully, false otherwise.
+     * @brief Runs the program in the sandbox environment.
+     * @return True if the program runs successfully within the time and memory
+     * limits, false otherwise.
      */
     bool run();
 
     /**
-     * @brief Gets the time used by the program during execution.
+     * @brief Retrieves the actual time used by the program during execution.
      * @return The time used in milliseconds.
      */
-    int getTimeUsed() const;
+    [[nodiscard]] int getTimeUsed() const { return m_timeUsed; }
 
     /**
-     * @brief Gets the memory used by the program during execution.
+     * @brief Retrieves the actual memory used by the program during execution.
      * @return The memory used in kilobytes.
      */
-    long getMemoryUsed() const;
+    [[nodiscard]] long getMemoryUsed() const { return m_memoryUsed; }
 
 private:
-    int m_timeLimit = 0;
-    long m_memoryLimit = 0;
-    std::string m_rootDirectory;
-    int m_userId = 0;
-    std::string m_programPath;
-    std::vector<std::string> m_programArgs;
-    int m_timeUsed = 0;
-    long m_memoryUsed = 0;
+    int m_timeLimit =
+        0; /**< Time limit for program execution in milliseconds. */
+    long m_memoryLimit =
+        0; /**< Memory limit for program execution in kilobytes. */
+    std::string
+        m_rootDirectory; /**< Root directory for the sandbox environment. */
+    int m_userId = 0;    /**< User ID for running the program in the sandbox. */
+    std::string m_programPath; /**< Path to the program to be executed. */
+    std::vector<std::string> m_programArgs; /**< Program arguments. */
+    int m_timeUsed =
+        0; /**< Actual time used by the program during execution. */
+    long m_memoryUsed =
+        0; /**< Actual memory used by the program during execution. */
 };
 
-}  // namespace Lithium
+#endif
+}

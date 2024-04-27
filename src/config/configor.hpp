@@ -12,38 +12,56 @@ Description: Configor
 
 **************************************************/
 
-#pragma once
+#ifndef LITHIUM_CONFIG_CONFIGOR_HPP
+#define LITHIUM_CONFIG_CONFIGOR_HPP
 
-#include <fstream>
+#include <filesystem>
 #include <mutex>
 #include <shared_mutex>
+namespace fs = std::filesystem;
 
 #include "error/error_code.hpp"
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-#define GetIntConfig(path) \
-    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<int>()
+#define GetIntConfig(path)                  \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<int>()
 
-#define GetFloatConfig(path) \
-    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<float>()
+#define GetFloatConfig(path)                \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<float>()
 
-#define GetBoolConfig(path) \
-    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<bool>()
+#define GetBoolConfig(path)                 \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<bool>()
 
-#define GetDoubleConfig(path) \
-    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<double>()
+#define GetDoubleConfig(path)               \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<double>()
 
-#define GetStringConfig(path) \
-    GetPtr<ConfigManager>("lithium.config")->getValue(path).get<std::string>()
+#define GetStringConfig(path)               \
+    GetPtr<ConfigManager>("lithium.config") \
+        .value()                            \
+        ->getValue(path)                    \
+        .value()                            \
+        .get<std::string>()
 
-namespace Lithium {
-/**
- * @brief 配置管理器
- *
- * Config manager.
- */
+class ConfigManagerImpl;
+
 class ConfigManager {
 public:
     /**
@@ -60,31 +78,22 @@ public:
      */
     ~ConfigManager();
 
+    // -------------------------------------------------------------------
+    // Common methods
+    // -------------------------------------------------------------------
+
     /**
-     * @brief 创建一个全局唯一的ConfigManager实例
+     * @brief 创建ConfigManager的共享指针，但是全局唯一
      *
-     * Create a globally unique ConfigManager instance.
+     * Create a shared pointer of ConfigManager. But global only
      */
     static std::shared_ptr<ConfigManager> createShared();
 
-    /**
-     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
-     *
-     * Load JSON configuration from the specified file and merge with the
-     * existing configuration.
-     *
-     * @param path 配置文件路径
-     */
-    bool loadFromFile(const std::string &path);
+    static std::unique_ptr<ConfigManager> createUnique();
 
-    /**
-     * @brief 加载指定目录下的所有JSON配置文件
-     *
-     * Load all JSON configuration files in the specified directory.
-     *
-     * @param dir_path 配置文件所在目录的路径
-     */
-    bool loadFromDir(const std::string &dir_path, bool recursive);
+    // -------------------------------------------------------------------
+    // Config methods
+    // -------------------------------------------------------------------
 
     /**
      * @brief 获取一个配置项的值
@@ -95,7 +104,8 @@ public:
      * "database/username"
      * @return json 配置项对应的值，如果键不存在则返回 nullptr
      */
-    json getValue(const std::string &key_path) const;
+    [[nodiscard("config value should not be ignored!")]] std::optional<json>
+    getValue(const std::string& key_path) const;
 
     /**
      * @brief 添加或更新一个配置项
@@ -107,8 +117,7 @@ public:
      * @param value 配置项的值，使用 JSON 格式进行表示
      * @return bool 成功返回 true，失败返回 false
      */
-    bool setValue(const std::string &key_path, const json &value);
-
+    bool setValue(const std::string& key_path, const json& value);
     /**
      * @brief 删除一个配置项
      *
@@ -117,7 +126,8 @@ public:
      * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
      * "database/username"
      */
-    bool deleteValue(const std::string &key_path);
+
+    bool deleteValue(const std::string& key_path);
 
     /**
      * @brief 判断一个配置项是否存在
@@ -128,7 +138,27 @@ public:
      * "database/username"
      * @return bool 存在返回 true，不存在返回 false
      */
-    bool hasValue(const std::string &key_path) const;
+    [[nodiscard("status of the value should not be ignored")]] bool hasValue(
+        const std::string& key_path) const;
+
+    /**
+     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
+     *
+     * Load JSON configuration from the specified file and merge with the
+     * existing configuration.
+     *
+     * @param path 配置文件路径
+     */
+    bool loadFromFile(const fs::path& path);
+
+    /**
+     * @brief 加载指定目录下的所有JSON配置文件
+     *
+     * Load all JSON configuration files in the specified directory.
+     *
+     * @param dir_path 配置文件所在目录的路径
+     */
+    bool loadFromDir(const fs::path& dir_path, bool recursive = false);
 
     /**
      * @brief 将当前配置保存到指定文件
@@ -137,7 +167,7 @@ public:
      *
      * @param file_path 目标文件路径
      */
-    bool saveToFile(const std::string &file_path) const;
+    bool saveToFile(const fs::path& file_path) const;
 
     /**
      * @brief 清理配置项
@@ -146,11 +176,15 @@ public:
      */
     void tidyConfig();
 
+    /**
+     * @brief 清除所有配置（测试用）
+     *
+     * Clear all of the configurations, only used for test
+     */
+    void clearConfig();
+
 private:
-    // JSON配置项
-    json config_;
-    std::mutex mutex_;
-    mutable std::shared_mutex rw_mutex_;
+    std::unique_ptr<ConfigManagerImpl> m_impl;
 
     /**
      * @brief 将 JSON 配置合并到当前配置中
@@ -159,6 +193,7 @@ private:
      *
      * @param j JSON 配置
      */
-    void mergeConfig(const json &j);
+    void mergeConfig(const json& j);
 };
-}  // namespace Lithium
+
+#endif

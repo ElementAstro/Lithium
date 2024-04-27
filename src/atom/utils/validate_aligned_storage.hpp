@@ -15,6 +15,7 @@ Description: Validate aligned storage
 #ifndef ATOM_UTILS_VALIDATE_ALIGNED_STORAGE_HPP
 #define ATOM_UTILS_VALIDATE_ALIGNED_STORAGE_HPP
 
+#include <cstdint>
 #include <type_traits>
 
 namespace Atom::Utils {

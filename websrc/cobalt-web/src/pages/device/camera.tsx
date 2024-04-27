@@ -288,10 +288,10 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
   }, []);
 
   return (
-    <Container>
+    <Container fluid>
       <Row>
         <Col xs={12} md={6}>
-          <Card>
+          <Card className="border-primary">
             <Card.Title className="m-3">主相机信息</Card.Title>
             <Card.Body>
               <h6>设备型号: {device_name}</h6>
@@ -300,32 +300,41 @@ const DeviceCameraGeneralControlPanel: React.FC = () => {
               <p>y像素数量: {camera_info.y_pixels}</p>
               <p>x像元大小: {camera_info.x_pixel_size.toFixed(2)} um</p>
               <p>y像元大小: {camera_info.y_pixel_size.toFixed(2)} um</p>
-              <div className="mt-4">
-                {exposure_status ? (
-                  <Button variant="outline-danger">
-                    <Hourglass />
-                    正在曝光
-                  </Button>
-                ) : (
-                  <Button variant="outline-primary">待机</Button>
-                )}
-              </div>
-              <div className="mt-2">
-                {cool_status ? (
-                  <Button variant="outline-danger">
-                    <Hourglass />
-                    制冷中
-                  </Button>
-                ) : (
-                  <Button variant="outline-primary">未开启制冷</Button>
-                )}
-              </div>
+              <Row>
+                <Col>
+                  <div className="mt-2 d-grid gap-2">
+                    {exposure_status ? (
+                      <Button variant="outline-danger" size="lg">
+                        <Hourglass />
+                        正在曝光
+                      </Button>
+                    ) : (
+                      <Button variant="outline-primary" size="lg">
+                        待机
+                      </Button>
+                    )}
+                  </div>
+                </Col>
+                <Col>
+                  <div className="mt-2 d-grid gap-2">
+                    {cool_status ? (
+                      <Button variant="outline-danger" size="lg">
+                        <Hourglass />
+                        制冷中
+                      </Button>
+                    ) : (
+                      <Button variant="outline-primary" size="lg">
+                        未开启制冷
+                      </Button>
+                    )}
+                  </div>
+                </Col>
+              </Row>
             </Card.Body>
           </Card>
         </Col>
         <Col xs={12} md={6}>
-          <Card>
-            <Card.Title className="m-3">设备控制</Card.Title>
+          <Card className="border-primary">
             <Card.Body>
               <Form.Group>
                 <Form.Label>开关冷冻</Form.Label>

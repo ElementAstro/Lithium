@@ -38,8 +38,8 @@ Description: Simple wrapper for executing commands.
 
 namespace Atom::System {
 std::string executeCommand(
-    const std::string &command, bool openTerminal = false,
-    std::function<void(const std::string &)> processLine = nullptr) {
+    const std::string &command, bool openTerminal,
+    std::function<void(const std::string &)> processLine) {
     if (command.empty()) {
         return "";
     }

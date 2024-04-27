@@ -1,7 +1,7 @@
 # CMakeLists.txt for Atom-Search
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Atom-Utils
+# Project Name: Atom-Search
 # Description: Search Engine for Element Astro Project
 # Author: Max Qian
 # License: GPL3

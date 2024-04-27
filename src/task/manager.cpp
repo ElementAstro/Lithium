@@ -20,12 +20,12 @@ Description: Task Manager
 namespace Lithium {
 TaskManager::TaskManager() : m_StopFlag(false) {
     // Load Task Component from Global Ptr Manager
-    m_TaskContainer = GetPtr<TaskContainer>("lithium.task.contianer");
-    m_TaskPool = GetPtr<TaskPool>("lithium.task.pool");
-    m_TaskList = GetPtr<TaskList>("lithium.task.list");
-    m_TaskGenerator = GetPtr<TaskGenerator>("lithium.task.generator");
-    m_TickScheduler = GetPtr<TickScheduler>("lithium.task.tick");
-    m_TaskLoader = GetPtr<TaskLoader>("ltihium.task.loader");
+    m_TaskContainer = GetWeakPtr<TaskContainer>("lithium.task.contianer");
+    m_TaskPool = GetWeakPtr<TaskPool>("lithium.task.pool");
+    m_TaskList = GetWeakPtr<TaskList>("lithium.task.list");
+    m_TaskGenerator = GetWeakPtr<TaskGenerator>("lithium.task.generator");
+    m_TickScheduler = GetWeakPtr<TickScheduler>("lithium.task.tick");
+    m_TaskLoader = GetWeakPtr<TaskLoader>("ltihium.task.loader");
 }
 
 TaskManager::~TaskManager() { saveTasksToJson(); }
@@ -36,13 +36,13 @@ std::shared_ptr<TaskManager> TaskManager::createShared() {
 
 bool TaskManager::addTask(const std::string name, const json &params) {
     // Task Check Needed
-    m_TaskList->addOrUpdateTask(name, params);
+    m_TaskList.lock()->addOrUpdateTask(name, params);
     return true;
 }
 
 bool TaskManager::insertTask(const int &position, const std::string &name,
                              const json &params) {
-    if (m_TaskList->insertTask(name, params, position)) {
+    if (m_TaskList.lock()->insertTask(name, params, position)) {
         DLOG_F(INFO, "Insert {} task to {}", name, position);
     } else {
     }
@@ -50,31 +50,31 @@ bool TaskManager::insertTask(const int &position, const std::string &name,
 }
 
 bool TaskManager::modifyTask(const std::string &name, const json &params) {
-    m_TaskList->addOrUpdateTask(name, params);
+    m_TaskList.lock()->addOrUpdateTask(name, params);
     return true;
 }
 
 bool TaskManager::deleteTask(const std::string &name) {
-    m_TaskList->removeTask(name);
+    m_TaskList.lock()->removeTask(name);
     return true;
 }
 
 bool TaskManager::executeAllTasks() {
-    for (const auto &[name, params] : m_TaskList->getTasks()) {
+    for (const auto &[name, params] : m_TaskList.lock()->getTasks()) {
         DLOG_F(INFO, "Run task {}", name);
         std::string task_type = params["type"].get<std::string>();
-        if (auto task = m_TaskContainer->getTask(task_type); task.has_value()) {
+        if (auto task = m_TaskContainer.lock()->getTask(task_type); task.has_value()) {
             json t_params = params["params"];
-            auto handle = m_TickScheduler->scheduleTask(
+            auto handle = m_TickScheduler.lock()->scheduleTask(
                 1, false, 1, std::chrono::milliseconds(0), std::nullopt,
                 std::nullopt, std::nullopt, task.value()->m_function, t_params);
 
             if (params.contains("callbacks")) {
                 std::vector<std::string> callbacks = params["callbacks"];
                 for (auto callback : callbacks) {
-                    auto c_task = m_TaskContainer->getTask(task_type);
+                    auto c_task = m_TaskContainer.lock()->getTask(task_type);
                     if (c_task.has_value()) {
-                        m_TickScheduler->setCompletionCallback(
+                        m_TickScheduler.lock()->setCompletionCallback(
                             handle,
                             [c_task]() { c_task.value()->m_function({}); });
                     }
@@ -89,9 +89,9 @@ bool TaskManager::executeAllTasks() {
                     } else {
                         std::string timer_name = timer["name"];
                         int tick = timer["delay"];
-                        if (auto tt_task = m_TaskContainer->getTask(name);
+                        if (auto tt_task = m_TaskContainer.lock()->getTask(name);
                             tt_task.has_value()) {
-                            m_TickScheduler->scheduleTask(
+                            m_TickScheduler.lock()->scheduleTask(
                                 tick, false, 1, std::chrono::milliseconds(0),
                                 std::nullopt, std::nullopt, std::nullopt,
                                 tt_task.value()->m_function, timer["params"]);

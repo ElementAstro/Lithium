@@ -1,4 +1,6 @@
-# C++ Naming Conventions
+# Style of Code
+
+## C++ Naming Conventions
 
 ## Variable Naming
 
@@ -109,7 +111,7 @@
 
 Good naming conventions improve code readability and maintainability, making it easier for others to understand and use your code.
 
-# C++命名规则
+## C++命名规则
 
 ## 变量命名
 

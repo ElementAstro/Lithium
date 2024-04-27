@@ -11,12 +11,18 @@ project(atom-async C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
+    lock.cpp
     timer.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
+    async_impl.hpp
+    lock.hpp
+    queue.hpp
+    queue.inl
+    thread_wrapper.hpp
     timer.hpp
     trigger.hpp
     trigger_impl.hpp
@@ -52,3 +58,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+if (ATOM_BUILD_PYTHON)
+pybind11_add_module(${PROJECT_NAME}-py _pybind.cpp)
+target_link_libraries(${PROJECT_NAME}-py PRIVATE ${PROJECT_NAME})
+endif()

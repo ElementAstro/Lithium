@@ -15,57 +15,51 @@ Description: FIFO Server
 #ifndef ATOM_CONNECTION_FIFOSERVER_HPP
 #define ATOM_CONNECTION_FIFOSERVER_HPP
 
+#include <condition_variable>
+#include <mutex>
+#include <queue>
 #include <string>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#endif
+#include <thread>
 
 namespace Atom::Connection {
+
 /**
- * @brief The FifoServer class provides functionality to start a server that
- * listens on a FIFO (First In First Out) pipe, receive messages from the pipe,
- * and stop the server.
+ * @brief A class representing a server for handling FIFO messages.
  */
-class FifoServer {
+class FIFOServer {
 public:
     /**
-     * @brief Constructor for FifoServer.
-     * @param fifoPath The path to the FIFO pipe.
+     * @brief Constructs a new FIFOServer object.
+     *
+     * @param fifo_path The path to the FIFO pipe.
      */
-    FifoServer(const std::string &fifoPath);
+    explicit FIFOServer(const std::string& fifo_path);
 
     /**
-     * @brief Starts the FIFO server to listen for incoming messages.
+     * @brief Destroys the FIFOServer object.
      */
-    void start();
+    ~FIFOServer();
 
     /**
-     * @brief Receives a message from the FIFO pipe.
-     * @return The received message as a string.
+     * @brief Sends a message through the FIFO pipe.
+     *
+     * @param message The message to be sent.
      */
-    std::string receiveMessage();
-
-    /**
-     * @brief Stops the FIFO server.
-     */
-    void stop();
+    void sendMessage(const std::string& message);
 
 private:
-    std::string fifoPath; /**< The path to the FIFO pipe. */
-    static const int bufferSize =
-        1024; /**< The size of the buffer for receiving messages. */
+    /**
+     * @brief The main server loop function.
+     */
+    void serverLoop();
 
-#ifdef _WIN32
-    HANDLE pipeHandle; /**< Handle to the pipe (Windows). */
-#else
-    int pipeFd; /**< File descriptor for the pipe (Unix/Linux). */
-#endif
+    std::string fifo_path_;                 /**< The path to the FIFO pipe. */
+    std::thread server_thread_;             /**< The server thread. */
+    std::atomic_bool stop_server_ = false;  /**< Flag to stop the server. */
+    std::queue<std::string> message_queue_; /**< Queue for storing messages. */
+    std::mutex queue_mutex_; /**< Mutex for message queue synchronization. */
+    std::condition_variable
+        message_cv_; /**< Condition variable for message synchronization. */
 };
 
 }  // namespace Atom::Connection

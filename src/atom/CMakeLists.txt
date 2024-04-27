@@ -19,6 +19,14 @@ set(ATOM_SOVERSION ${CMAKE_ATOM_VERSION_MAJOR})
 set(CMAKE_ATOM_VERSION_STRING "${CMAKE_ATOM_VERSION_MAJOR}.${CMAKE_ATOM_VERSION_MINOR}.${CMAKE_ATOM_VERSION_RELEASE}")
 set(ATOM_VERSION ${CMAKE_ATOM_VERSION_MAJOR}.${CMAKE_ATOM_VERSION_MINOR}.${CMAKE_ATOM_VERSION_RELEASE})
 
+option(ATOM_BUILD_PYTHON " Build Atom with Python support" OFF)
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+if(${PYTHON_FOUND})
+    message("-- Found Python ${PYTHON_VERSION_STRING}: ${PYTHON_EXECUTABLE}")
+    find_package(pybind11 REQUIRED)
+    set(ATOM_BUILD_PYTHON ON)
+endif()
+add_subdirectory(algorithm)
 add_subdirectory(async)
 add_subdirectory(components)
 add_subdirectory(connection)
@@ -41,6 +49,7 @@ endif()
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
     error/error_stack.cpp
+    error/exception.cpp
 
     log/logger.cpp
     log/global_logger.cpp
@@ -66,6 +75,8 @@ list(APPEND ${PROJECT_NAME}_LIBS
     loguru
     cpp_httplib
     libzippp
+    atom-algorithm
+    #atom-connection
     atom-async
     atom-task
     atom-io

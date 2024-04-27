@@ -51,7 +51,7 @@ declare interface IPlateSolve {
 
 declare interface ITelescopeInfo {
   name: string;
-  apeture: number;
+  aperture: number;
   focal_length: number;
   guider_aperture: number;
   guider_focal_length: number;
@@ -64,8 +64,8 @@ declare interface AnyCameraInfo {
 }
 
 declare interface ICameraGet {
-  camera: boolean;
-  guider_camera: boolean;
+  camera: boolean = false;
+  guider_camera: boolean = false;
 }
 
 declare interface IGlobalParameters {
@@ -107,6 +107,7 @@ declare interface IGPParameterExplain {
 
 declare interface IGPPorfileList {
   data: any;
+  success: boolean;
   current_profile: string;
   all_profiles: Array<string>;
 }
@@ -114,4 +115,8 @@ declare interface IGPPorfileList {
 declare interface IGPFilterSelection {
   label: string;
   value: number | string;
+}
+
+declare interface IGPManualHelpSetting {
+  show_three_point_help: boolean;
 }

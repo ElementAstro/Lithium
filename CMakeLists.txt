@@ -6,7 +6,7 @@
 # Author: Max Qian
 # License: GPL3
 
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.20)
 
 project(Lithium)
 enable_language(C CXX)
@@ -87,12 +87,25 @@ endif(APPLE)
 # Lithium includes
 
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
+include_directories(${CMAKE_SOURCE_DIR}/driverlibs/)
 include_directories(${lithium_src_dir})
 include_directories(${lithium_module_dir})
 include_directories(${lithium_src_dir})
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
+
+find_package(OpenSSL REQUIRED)
+if(OpenSSL_FOUND)
+    message("-- Found OpenSSL ${OPENSSL_VERSION}: ${OPENSSL_LIBRARIES}")
+else()
+    message("-- OpenSSL Not Found")
+endif()
+
+find_package(CFITSIO REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(SQLite3 REQUIRED)
+find_package(fmt REQUIRED)
 
 #################################################################################
 #
@@ -115,6 +128,10 @@ include_directories(modules)
 add_subdirectory(modules)
 
 add_subdirectory(driver)
+
+add_subdirectory(${lithium_src_dir}/carbon)
+add_subdirectory(${lithium_src_dir}/config)
+add_subdirectory(${lithium_src_dir}/server)
 
 #################################################################################
 #
@@ -179,41 +196,19 @@ set(component_module
 
     ${lithium_component_dir}/addons.cpp
     ${lithium_component_dir}/compiler.cpp
-    ${lithium_component_dir}/finder.cpp
     ${lithium_component_dir}/loader.cpp
     ${lithium_component_dir}/manager.cpp
     ${lithium_component_dir}/sandbox.cpp
+    ${lithium_component_dir}/sort.cpp
 )
 
 set(config_module
     ${lithium_src_dir}/config/configor.cpp
-    ${lithium_src_dir}/config/HubsConfig.cpp
 )
 
-if (ENABLE_DEBUG_FLAG)
 set(debug_module
     ${lithium_src_dir}/debug/terminal.cpp
 )
-else()
-set(debug_module
-    ${lithium_src_dir}/debug/terminal.cpp
-)
-endif()
-
-if (ENABLE_ASYNC_FLAG)
-set(server_module
-    ${lithium_src_dir}/websocket/Hub.cpp
-    ${lithium_src_dir}/websocket/Connection.cpp
-    ${lithium_src_dir}/websocket/Registry.cpp
-    ${lithium_src_dir}/websocket/Session.cpp
-)
-else()
-set(server_module
-    ${lithium_src_dir}/websocket/WsServer.cpp
-    ${lithium_src_dir}/websocket/WsHub.cpp
-    ${lithium_src_dir}/websocket/WsInstance.cpp
-)
-endif()
 
 set(script_module
     ${lithium_src_dir}/script/manager.cpp
@@ -221,6 +216,8 @@ set(script_module
     ${lithium_src_dir}/script/custom/config.cpp
 
     ${lithium_src_dir}/script/sheller.cpp
+
+    ${lithium_src_dir}/script/carbon.cpp
 )
 
 set(task_module
@@ -235,36 +232,25 @@ set(task_module
 )
 
 set(Lithium_module
-	${lithium_src_dir}/AppComponent.hpp
-	${lithium_src_dir}/ErrorHandler.cpp
     ${lithium_src_dir}/LithiumApp.cpp
 )
-
-find_package(OpenSSL REQUIRED)
-if(OpenSSL_FOUND)
-    message("-- Found OpenSSL ${OPENSSL_VERSION}: ${OPENSSL_LIBRARIES}")
-else()
-    message("-- OpenSSL Not Found")
-endif()
-
-find_package(CFITSIO REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(SQLite3 REQUIRED)
-find_package(fmt REQUIRED)
 
 #################################################################################
 # Main
 
-add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${server_module} ${script_module} ${Lithium_module})
-add_executable(lithium_server ${lithium_src_dir}/App.cpp)
+add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${script_module} ${Lithium_module})
+target_link_libraries(lithium_server-library loguru)
+add_executable(lithium_server ${lithium_src_dir}/app.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
 target_link_libraries(lithium_server lithium_server-library)
+target_link_libraries(lithium_server lithium_webserver)
 target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 target_link_libraries(lithium_server loguru)
 target_link_libraries(lithium_server libzippp)
 target_link_libraries(lithium_server atomstatic)
-target_link_libraries(lithium_server-library fmt::fmt)
+target_link_libraries(lithium_server carbon)
+target_link_libraries(lithium_server fmt::fmt)
 
 target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 
@@ -293,43 +279,3 @@ set_target_properties(
     PROPERTIES
     OUTPUT_NAME lithium_server
 )
-
-#################################################################################
-# Hello Element Astro Launcher
-
-add_library(heal-library STATIC
-    ${lithium_src_dir}/auth/AuthHandler.cpp
-    ${lithium_src_dir}/auth/AuthHandler.hpp
-    ${lithium_src_dir}/auth/JWT.cpp
-    ${lithium_src_dir}/auth/JWT.hpp
-    ${lithium_src_dir}/controller/StaticController.hpp
-    ${lithium_src_dir}/controller/StoryController.hpp
-    ${lithium_src_dir}/controller/AuthController.hpp
-    ${lithium_src_dir}/database/model/StoryModel.hpp
-    ${lithium_src_dir}/database/model/UserModel.hpp
-    ${lithium_src_dir}/database/StoryDb.hpp
-    ${lithium_src_dir}/database/UserDb.hpp
-    ${lithium_src_dir}/data/AuthDto.hpp
-    ${lithium_src_dir}/data/PageDto.hpp
-    ${lithium_src_dir}/data/SignInDto.hpp
-    ${lithium_src_dir}/data/SignUpDto.hpp
-    ${lithium_src_dir}/data/StatusDto.hpp
-    ${lithium_src_dir}/data/StoryDto.hpp
-    ${lithium_src_dir}/interceptor/AuthInterceptor.cpp
-    ${lithium_src_dir}/interceptor/AuthInterceptor.hpp
-    ${lithium_src_dir}/service/AuthService.cpp
-    ${lithium_src_dir}/service/AuthService.hpp
-    ${lithium_src_dir}/service/StoryService.cpp
-    ${lithium_src_dir}/service/StoryService.hpp
-    ${lithium_src_dir}/LauncherComponent.hpp
-    ${lithium_src_dir}/components/DatabaseComponent.hpp
-    ${lithium_src_dir}/components/SwaggerComponent.hpp
-    ${lithium_src_dir}/ErrorHandler.cpp
-    ${lithium_src_dir}/ErrorHandler.hpp
-)
-
-target_include_directories(heal-library PUBLIC ${lithium_src_dir})
-
-add_executable(heal ${lithium_src_dir}/Launcher.cpp)
-target_link_libraries(heal heal-library)
-target_link_libraries(heal oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp-sqlite oatpp)

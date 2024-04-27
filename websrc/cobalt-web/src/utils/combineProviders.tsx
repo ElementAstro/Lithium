@@ -39,15 +39,9 @@ type ProviderList = Array<AllowedProvider | FilteredOutProvider>;
 export const combineProviders = (
   list: ProviderList,
   children: React.ReactNode
-) => {
-  const filteredList = list.filter(Boolean) as Array<AllowedProvider>;
-
-  if (filteredList.length === 0) {
-    return <>{children}</>;
-  }
-
-  return filteredList.reduceRight(
-    (acc, Provider) => <Provider>{acc}</Provider>,
-    <>{children}</>
-  );
-};
+) =>
+  (
+    list
+      // filter out falsy items
+      .filter(Boolean) as Array<AllowedProvider>
+  ).reduceRight((acc, Provider) => <Provider>{acc}</Provider>, <>{children}</>);

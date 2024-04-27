@@ -204,37 +204,8 @@ void ScriptManager::LogError(const std::string &message) {
     logFile << "[" << buffer << "] " << message << std::endl;
     logFile.close();
 }
+
+#if ENABLE_PEGTL
+
+#endif
 }  // namespace Lithium
-
-/*
-int main()
-{
-    ScriptManager manager;
-
-    // 注册Shell脚本
-    manager.RegisterScript("hello", "echo \"Hello, World!\"");
-    manager.RegisterScript("sum", "a=$1\nb=$2\nsum=$((a+b))\necho \"Sum:
-$sum\"");
-
-    // 注册PowerShell脚本
-    manager.RegisterPowerShellScript("greet", R"(
-        $name = Read-Host -Prompt "Enter your name"
-        Write-Host "Hello, $name!"
-    )");
-
-    // 查看已注册的脚本
-    manager.ViewScripts();
-
-    // 运行脚本
-    manager.RunScript("hello");
-    manager.RunScript("sum", {"3", "5"});
-    manager.RunScript("greet");
-
-    // 查看脚本输出和状态
-    manager.ViewScriptOutput("hello");
-    manager.ViewScriptStatus("sum");
-
-    return 0;
-}
-
-*/

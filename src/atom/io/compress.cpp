@@ -86,16 +86,26 @@ bool compress_file(const std::string &file_name,
     }
 
     char buf[CHUNK];
-    while (in.read(buf, CHUNK)) {
+    while (in.read(buf, sizeof(buf))) {
         if (gzwrite(out, buf, static_cast<unsigned>(in.gcount())) == 0) {
             LOG_F(ERROR, "Failed to compress file {}", file_name);
-            in.close();
             gzclose(out);
             return false;
         }
     }
 
-    in.close();
+    if (in.eof()) {
+        if (gzwrite(out, buf, static_cast<unsigned>(in.gcount())) == 0) {
+            LOG_F(ERROR, "Failed to compress file {}", file_name);
+            gzclose(out);
+            return false;
+        }
+    } else if (in.bad()) {
+        LOG_F(ERROR, "Failed to read input file {}", file_name);
+        gzclose(out);
+        return false;
+    }
+
     gzclose(out);
     DLOG_F(INFO, "Compressed file {} -> {}", file_name, output_path.string());
     return true;
@@ -109,17 +119,25 @@ bool compress_file_(const fs::path &file, gzFile out) {
     }
 
     char buf[CHUNK];
-    while (in.read(buf, sizeof(buf)) || in.gcount()) {
+    while (in.read(buf, sizeof(buf))) {
         if (gzwrite(out, buf, static_cast<unsigned>(in.gcount())) !=
             static_cast<int>(in.gcount())) {
-            in.close();
-            gzclose(out);
-            DLOG_F(ERROR, "Failed to compress file {}", file.string());
+            LOG_F(ERROR, "Failed to compress file {}", file.string());
             return false;
         }
     }
 
-    in.close();
+    if (in.eof()) {
+        if (gzwrite(out, buf, static_cast<unsigned>(in.gcount())) !=
+            static_cast<int>(in.gcount())) {
+            LOG_F(ERROR, "Failed to compress file {}", file.string());
+            return false;
+        }
+    } else if (in.bad()) {
+        LOG_F(ERROR, "Failed to read file {}", file.string());
+        return false;
+    }
+
     return true;
 }
 
@@ -149,13 +167,20 @@ bool decompress_file(const std::string &file_name,
 
     char buf[CHUNK];
     int bytesRead;
-    while ((bytesRead = gzread(in, buf, CHUNK)) > 0) {
+    while ((bytesRead = gzread(in, buf, sizeof(buf))) > 0) {
         if (fwrite(buf, 1, bytesRead, out) != static_cast<size_t>(bytesRead)) {
             LOG_F(ERROR, "Failed to decompress file {}", file_name);
             fclose(out);
             gzclose(in);
             return false;
         }
+    }
+
+    if (bytesRead < 0) {
+        LOG_F(ERROR, "Failed to read compressed file {}", file_name);
+        fclose(out);
+        gzclose(in);
+        return false;
     }
 
     fclose(out);
@@ -174,36 +199,13 @@ bool compress_folder_(const fs::path &folder_name) {
 
     for (const auto &entry : fs::recursive_directory_iterator(folder_name)) {
         if (entry.is_directory()) {
-#ifdef _WIN32
-            std::string file_name =
-                fmt::format("{}\\{}", entry.path().string(), "*");
-#else
-            std::string file_name =
-                fmt::format("{}/{}", entry.path().string(), "*");
-#endif
-            for (const auto &sub_entry : fs::directory_iterator(file_name)) {
+            std::string file_pattern = entry.path().string() + "/*";
+            for (const auto &sub_entry : fs::directory_iterator(file_pattern)) {
                 if (sub_entry.is_regular_file()) {
-                    std::ifstream in(sub_entry.path(), std::ios::binary);
-                    if (!in) {
-                        LOG_F(ERROR, "Failed to open file {}",
-                              sub_entry.path().string());
-                        continue;
+                    if (!compress_file_(sub_entry.path(), out)) {
+                        gzclose(out);
+                        return false;
                     }
-
-                    char buf[CHUNK];
-                    while (in.read(buf, sizeof(buf)) || in.gcount()) {
-                        if (gzwrite(out, buf,
-                                    static_cast<unsigned>(in.gcount())) !=
-                            static_cast<int>(in.gcount())) {
-                            in.close();
-                            gzclose(out);
-                            LOG_F(ERROR, "Failed to compress file {}",
-                                  sub_entry.path().string());
-                            return false;
-                        }
-                    }
-
-                    in.close();
                 }
             }
         } else if (entry.is_regular_file()) {
@@ -213,6 +215,7 @@ bool compress_folder_(const fs::path &folder_name) {
             }
         }
     }
+
     gzclose(out);
     DLOG_F(INFO, "Compressed folder {} -> {}", folder_name.string(),
            outfile_name);

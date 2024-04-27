@@ -15,6 +15,8 @@ Description: A platform information collection.
 #ifndef ATOM_EXPERIMENT_PLATFORM_HPP
 #define ATOM_EXPERIMENT_PLATFORM_HPP
 
+#include <string>
+
 // 获取系统平台
 #if defined(_WIN32)
 const std::string platform = "Windows";

@@ -1,11 +1,4 @@
-import React, {
-  createContext,
-  FC,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { ReactNode, useContext, useEffect, useState } from "react";
 import { Websocket } from "./websocket";
 
 let ws_url = "";
@@ -16,20 +9,15 @@ if (process.env.NODE_ENV === "development") {
   ws_url += "/ws/indi_client/";
 }
 
-type EchoWebSocketContextType = [
-  addListener: (event: any, filter?: string) => void,
-  sendMessage: (event: any) => void,
-  removeListener: (fn: any) => void
+export type EchoWebSocketContextType = [
+  (event: any, filter?: string) => void,
+  (event: any) => void,
+  (fn: any) => void
 ];
-const EchoWebSocketContext = createContext<EchoWebSocketContextType>([
-  () => {},
-  () => {},
-  () => {},
-]);
+export const EchoWebSocketContext =
+  React.createContext<EchoWebSocketContextType>([() => {}, () => {}, () => {}]);
 
-interface IProps {}
-
-export const EchoWebSocketProvider: FC<IProps> = ({ children }) => {
+export const EchoWebSocketProvider: React.FC<IProps> = ({ children }) => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [listeners, setListeners] = useState<{
     [key: string]: ((event: any) => void)[];
@@ -48,7 +36,7 @@ export const EchoWebSocketProvider: FC<IProps> = ({ children }) => {
     setListeners((currentListeners) => {
       return {
         ...currentListeners,
-        any: currentListeners.any.filter((listener) => listener !== fn),
+        any: currentListeners["any"].filter((listener) => listener !== fn),
       };
     });
   };
@@ -69,22 +57,10 @@ export const EchoWebSocketProvider: FC<IProps> = ({ children }) => {
       listeners.any.forEach((listener) => listener(event));
     }
   };
-
-  const webSocketValue = useMemo(
-    () => [addListener, sendMessage, removeListener],
-    [addListener, sendMessage, removeListener]
-  );
-
-  useEffect(() => {
-    if (webSocket) {
-      return () => {
-        webSocket.close();
-      };
-    }
-  }, [webSocket]);
-
   return (
-    <EchoWebSocketContext.Provider value={webSocketValue}>
+    <EchoWebSocketContext.Provider
+      value={[addListener, sendMessage, removeListener]}
+    >
       <Websocket
         url={ws_url}
         onOpen={(_event, socket) => {
@@ -104,16 +80,10 @@ export const useEchoWebSocket = (
 ) => {
   const [addListener, sendMessage, removeListener] =
     useContext(EchoWebSocketContext);
-
   useEffect(() => {
     if (listener) {
       addListener(listener, filter);
     }
-    return () => {
-      if (listener) {
-        removeListener(listener);
-      }
-    };
   }, []);
 
   return { sendMessage, removeListener };

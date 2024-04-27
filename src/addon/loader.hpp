@@ -45,8 +45,8 @@ Description: C++ and Modules Loader
 #include <dlfcn.h>
 #include <unistd.h>
 #define MODULE_HANDLE void *
-#define LOAD_LIBRARY(p) dlopen(p, RTLD_NOW | RTLD_GLOBAL)
-#define LOAD_SHARED_LIBRARY(file, size) dlopen(nullptr, RTLD_NOW | RTLD_GLOBAL)
+#define LOAD_LIBRARY(p) dlopen(p, RTLD_LAZY | RTLD_GLOBAL)
+#define LOAD_SHARED_LIBRARY(file, size) dlopen(nullptr, RTLD_LAZY | RTLD_GLOBAL)
 #define UNLOAD_LIBRARY(p) dlclose(p)
 #define LOAD_ERROR() dlerror()
 #define LOAD_FUNCTION(handle, name) dlsym(handle, name)

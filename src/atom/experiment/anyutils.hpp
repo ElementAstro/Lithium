@@ -34,19 +34,35 @@ template <typename T>
 concept CanBeStringifiedToJson = requires(T t) {
     { toJson(t) } -> std::convertible_to<std::string>;
 };
+
+template <typename T>
+concept IsBuiltIn =
+    std::is_fundamental_v<T> || std::is_same_v<T, char> ||
+    std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view>;
+
+template <typename Container>
+concept ContainerLike = requires(const Container &c) {
+    { c.begin() } -> std::input_iterator;
+    { c.end() } -> std::input_iterator;
+};
+
 #endif
 
 template <typename T>
 [[nodiscard]] std::string toString(const T &value, bool prettyPrint = false);
 
-template <typename T>
-[[nodiscard]] std::string toString(const std::vector<T> &vec,
+template <ContainerLike Container>
+[[nodiscard]] std::string toString(const Container &container,
                                    bool prettyPrint = false) {
     std::string result = "[";
-    for (const auto &item : vec) {
-        result += toString(item, prettyPrint) + ", ";
+    for (const auto &item : container) {
+        if constexpr (IsBuiltIn<decltype(item)>) {
+            result += toString(item, prettyPrint) + ", ";
+        } else {
+            result += "\"" + toString(item, prettyPrint) + "\", ";
+        }
     }
-    if (!vec.empty()) {
+    if (!container.empty()) {
         result.erase(result.length() - 2, 2);
     }
     result += "]";
@@ -78,6 +94,7 @@ template <typename T1, typename T2>
 template <typename T>
 [[nodiscard]] std::string toString(const T &value, bool prettyPrint) {
     if constexpr (std::is_same_v<T, std::string> ||
+                  std::is_same_v<T, std::string_view> ||
                   std::is_same_v<T, const char *> ||
                   std::is_same_v<T, char *>) {
         return value;

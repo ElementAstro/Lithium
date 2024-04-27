@@ -1,5 +1,13 @@
 import React from "react";
-import { Container, Row, Col, Form, Button, Card } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Form,
+  Button,
+  Card,
+  ButtonGroup,
+} from "react-bootstrap";
 import {
   ArrowUp,
   ArrowDown,
@@ -33,7 +41,19 @@ const DeviceTelescopeGeneralControlPanel: React.FC = () => {
   const [fix_time_selection, set_fix_time_selection] = React.useState(true);
   const [slew_speed_selections, set_slew_speed_selections] = React.useState<
     Array<{ label: String; value: String }>
-  >([{ label: "1x", value: "1x" }]);
+  >([
+    { label: "1x", value: "1x" },
+    { label: "2x", value: "2x" },
+    { label: "4x", value: "4x" },
+    { label: "8x", value: "8x" },
+    { label: "16x", value: "16x" },
+    { label: "32x", value: "32x" },
+    { label: "64x", value: "64x" },
+    { label: "128x", value: "128x" },
+    { label: "256x", value: "256x" },
+    { label: "512x", value: "512x" },
+    { label: "1024x", value: "1024x" },
+  ]);
   const [selected_slew_speed, set_selected_slew_speed] =
     React.useState("0(0.25x)");
 
@@ -290,11 +310,10 @@ const DeviceTelescopeGeneralControlPanel: React.FC = () => {
   };
 
   return (
-    <Container>
+    <Container fluid>
       <Row>
         <Col xs={12} md={6}>
-          <Card>
-            <Card.Header as="h4">赤道仪信息</Card.Header>
+          <Card className="border-primary">
             <Card.Body>
               <Card.Title>设备记录经度: {geo_location.longitude} °</Card.Title>
               <Card.Text>设备记录纬度: {geo_location.latitude} °</Card.Text>
@@ -316,10 +335,116 @@ const DeviceTelescopeGeneralControlPanel: React.FC = () => {
               <Card.Text>ra: {heading_degree.ra} °</Card.Text>
               <Card.Text>dec: {heading_degree.dec} °</Card.Text>
             </Card.Body>
+            <Card.Footer>
+              <Row>
+                <Col>
+                  <div className="d-grid gap-2">
+                    {tracking_status ? (
+                      <Button variant="success" size="lg">
+                        <CheckCircle />
+                        跟踪中
+                      </Button>
+                    ) : (
+                      <Button variant="danger" size="lg">
+                        <XCircle />
+                        未跟踪
+                      </Button>
+                    )}
+                  </div>
+                </Col>
+                <Col>
+                  <div className="d-grid gap-2">
+                    <Button
+                      variant="outline-primary"
+                      size="lg"
+                      onClick={() => {
+                        if (tracking_status) {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "telescope",
+                              instruction: "stop_track",
+                              params: [],
+                            })
+                          );
+                        } else {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "telescope",
+                              instruction: "start_track",
+                              params: [],
+                            })
+                          );
+                        }
+                        set_device_working_status(true);
+                      }}
+                    >
+                      跟踪
+                    </Button>
+                  </div>
+                </Col>
+              </Row>
+
+              <Row className="mt-3">
+                <Col>
+                  <Button
+                    variant="outline-primary"
+                    size="lg"
+                    className="w-100"
+                    onClick={() => {
+                      sendMessage(
+                        JSON.stringify({
+                          device_name: "telescope",
+                          instruction: "park",
+                          params: [],
+                        })
+                      );
+                    }}
+                  >
+                    Park
+                  </Button>
+                </Col>
+                <Col>
+                  <Button
+                    variant="outline-primary"
+                    size="lg"
+                    className="w-100"
+                    onClick={() => {
+                      sendMessage(
+                        JSON.stringify({
+                          device_name: "telescope",
+                          instruction: "unpark",
+                          params: [],
+                        })
+                      );
+                    }}
+                  >
+                    UnPark
+                  </Button>
+                </Col>
+                <Col>
+                  <Button
+                    variant="outline-primary"
+                    size="lg"
+                    className="w-100"
+                    onClick={() => {
+                      sendMessage(
+                        JSON.stringify({
+                          device_name: "telescope",
+                          instruction: "go_home",
+                          params: [],
+                        })
+                      );
+                    }}
+                  >
+                    归零
+                  </Button>
+                </Col>
+              </Row>
+            </Card.Footer>
           </Card>
         </Col>
         <Col xs={12} md={6}>
-          <Card>
+          <Card className="border-primary">
             <Form.Group>
               <Form.Label>设置赤道仪移动速率</Form.Label>
               <Form.Control
@@ -339,7 +464,7 @@ const DeviceTelescopeGeneralControlPanel: React.FC = () => {
               </Form.Control>
             </Form.Group>
           </Card>
-          <Card>
+          <Card className="border-info">
             <Form.Group>
               <Form.Check
                 type="switch"
@@ -381,172 +506,98 @@ const DeviceTelescopeGeneralControlPanel: React.FC = () => {
                 <Row>
                   <Col xs={4}></Col>
                   <Col xs={4}>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onMouseDown={() => {
-                        arrow_action_func("up", "press");
-                      }}
-                      onMouseUp={() => {
-                        arrow_action_func("up", "release");
-                      }}
-                    >
-                      <ArrowUp />
-                    </Button>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("up", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("up", "release");
+                        }}
+                      >
+                        <ArrowUp />
+                      </Button>
+                    </div>
                   </Col>
                   <Col xs={4}></Col>
                 </Row>
-                <Row>
+                <Row className="mt-3">
                   <Col xs={4}>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onMouseDown={() => {
-                        arrow_action_func("left", "press");
-                      }}
-                      onMouseUp={() => {
-                        arrow_action_func("left", "release");
-                      }}
-                    >
-                      <ArrowLeft />
-                    </Button>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("left", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("left", "release");
+                        }}
+                      >
+                        <ArrowLeft />
+                      </Button>
+                    </div>
                   </Col>
                   <Col xs={4}>
-                    <Button
-                      variant="danger"
-                      size="lg"
-                      onClick={() => {
-                        sendMessage(
-                          JSON.stringify({
-                            device_name: "telescope",
-                            instruction: "abort",
-                            params: [],
-                          })
-                        );
-                      }}
-                    >
-                      <XCircle />
-                    </Button>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="danger"
+                        size="lg"
+                        onClick={() => {
+                          sendMessage(
+                            JSON.stringify({
+                              device_name: "telescope",
+                              instruction: "abort",
+                              params: [],
+                            })
+                          );
+                        }}
+                      >
+                        <XCircle />
+                      </Button>
+                    </div>
                   </Col>
                   <Col xs={4}>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onMouseDown={() => {
-                        arrow_action_func("right", "press");
-                      }}
-                      onMouseUp={() => {
-                        arrow_action_func("right", "release");
-                      }}
-                    >
-                      <ArrowRight />
-                    </Button>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("right", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("right", "release");
+                        }}
+                      >
+                        <ArrowRight />
+                      </Button>
+                    </div>
                   </Col>
                 </Row>
-                <Row>
+                <Row className="mt-3">
                   <Col xs={4}></Col>
                   <Col xs={4}>
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      onMouseDown={() => {
-                        arrow_action_func("down", "press");
-                      }}
-                      onMouseUp={() => {
-                        arrow_action_func("down", "release");
-                      }}
-                    >
-                      <ArrowDown />
-                    </Button>
+                    <div className="d-grid gap-2">
+                      <Button
+                        variant="outline-primary"
+                        size="lg"
+                        onMouseDown={() => {
+                          arrow_action_func("down", "press");
+                        }}
+                        onMouseUp={() => {
+                          arrow_action_func("down", "release");
+                        }}
+                      >
+                        <ArrowDown />
+                      </Button>
+                    </div>
                   </Col>
                   <Col xs={4}></Col>
                 </Row>
               </Container>
             </Form.Group>
-            <Card.Footer>
-              {tracking_status ? (
-                <Button variant="success" size="lg">
-                  <CheckCircle />
-                  跟踪中
-                </Button>
-              ) : (
-                <Button variant="danger" size="lg">
-                  <XCircle />
-                  未跟踪
-                </Button>
-              )}
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => {
-                  if (tracking_status) {
-                    sendMessage(
-                      JSON.stringify({
-                        device_name: "telescope",
-                        instruction: "stop_track",
-                        params: [],
-                      })
-                    );
-                  } else {
-                    sendMessage(
-                      JSON.stringify({
-                        device_name: "telescope",
-                        instruction: "start_track",
-                        params: [],
-                      })
-                    );
-                  }
-                  set_device_working_status(true);
-                }}
-              >
-                开始跟踪/停止跟踪
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => {
-                  sendMessage(
-                    JSON.stringify({
-                      device_name: "telescope",
-                      instruction: "park",
-                      params: [],
-                    })
-                  );
-                }}
-              >
-                Park
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => {
-                  sendMessage(
-                    JSON.stringify({
-                      device_name: "telescope",
-                      instruction: "unpark",
-                      params: [],
-                    })
-                  );
-                }}
-              >
-                UnPark
-              </Button>
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={() => {
-                  sendMessage(
-                    JSON.stringify({
-                      device_name: "telescope",
-                      instruction: "go_home",
-                      params: [],
-                    })
-                  );
-                }}
-              >
-                归零
-              </Button>
-            </Card.Footer>
           </Card>
         </Col>
       </Row>

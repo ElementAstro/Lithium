@@ -215,11 +215,11 @@ bool HydrogenManager::isRunning() {
 
 bool HydrogenManager::isInstalled() {
 #ifdef _WIN32
-    if (!Atom::System::CheckSoftwareInstalled("hydrogenserver.exe")) {
+    if (!Atom::System::checkSoftwareInstalled("hydrogenserver.exe")) {
         return false;
     }
 #else
-    if (!Atom::System::CheckSoftwareInstalled("hydrogenserver")) {
+    if (!Atom::System::checkSoftwareInstalled("hydrogenserver")) {
         return false;
     }
 #endif

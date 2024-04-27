@@ -11,19 +11,22 @@ project(atom-type C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    args.cpp
     ini.cpp
     message.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
+    abi.hpp
     args.hpp
-    autotype.hpp
+    enum_flag.hpp
+    enum_flag.inl
+    flatset.hpp
     ini_impl.hpp
     ini.hpp
     json.hpp
     message.hpp
+    pointer.hpp
     small_vector.hpp
 )
 

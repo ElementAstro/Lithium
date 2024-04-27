@@ -251,35 +251,21 @@ void addSysModule(VM *vm) {
                  DLOG_F(INFO,
                         "Check if the current process is running as "
                         "root");
-                 bool is_root = Atom::System::IsRoot();
+                 bool is_root = Atom::System::isRoot();
                  return py_var(vm, is_root);
-             });
-
-    vm->bind(mod, "get_current_username() -> str",
-             "get current username, and return a string value",
-             [](VM *vm, ArgsView args) {
-                 DLOG_F(INFO, "Get current username");
-                 std::string current_username =
-                     Atom::System::GetCurrentUsername();
-                 if (current_username.empty()) {
-                     LOG_F(ERROR, "Failed to get current username: {}",
-                           current_username);
-                 }
-                 DLOG_F(INFO, "Current username: {}", current_username);
-                 return py_var(vm, current_username);
              });
 
     vm->bind(mod, "shutdown() -> bool", "shutdown the system",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Shutdown the system");
-                 Atom::System::Shutdown();
+                 Atom::System::shutdown();
                  return py_var(vm, true);
              });
 
     vm->bind(mod, "reboot() -> bool", "reboot the system",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Reboot the system");
-                 Atom::System::Reboot();
+                 Atom::System::reboot();
                  return py_var(vm, true);
              });
 
@@ -290,7 +276,7 @@ void addSysModule(VM *vm) {
                  Str &name = py_cast<Str &>(vm, name_obj);
 
                  bool is_duplicate =
-                     Atom::System::CheckDuplicateProcess(name.c_str());
+                     Atom::System::checkDuplicateProcess(name.c_str());
                  if (is_duplicate) {
                      LOG_F(ERROR, "Failed to check duplicate process: {}",
                            is_duplicate);
@@ -318,7 +304,7 @@ void addSysModule(VM *vm) {
                  Str &name = py_cast<Str &>(vm, name_obj);
                  Atom::System::ProcessInfo info;
                  Dict d(vm);
-                 if (Atom::System::GetProcessInfoByName(name.c_str(), info)) {
+                 if (Atom::System::getProcessInfoByName(name.c_str(), info)) {
                      d.set(VAR("id"), VAR(info.processID));
                      d.set(VAR("parent_id"), VAR(info.parentProcessID));
                      d.set(VAR("priority"), VAR(info.basePriority));
@@ -335,7 +321,7 @@ void addSysModule(VM *vm) {
                  int id = py_cast<int>(vm, args[0]);
                  Atom::System::ProcessInfo info;
                  Dict d(vm);
-                 if (Atom::System::GetProcessInfoByID(id, info)) {
+                 if (Atom::System::getProcessInfoByID(id, info)) {
                      d.set(VAR("id"), VAR(info.processID));
                      d.set(VAR("parent_id"), VAR(info.parentProcessID));
                      d.set(VAR("priority"), VAR(info.basePriority));

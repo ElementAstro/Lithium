@@ -26,6 +26,16 @@ HydrogenCamera::HydrogenCamera(const std::string &name) : Camera(name) {
         Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
     m_text_switch = std::make_unique<
         Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
+
+    registerFunc("connect", &HydrogenCamera::connect, this);
+    registerFunc("disconnect", &HydrogenCamera::disconnect, this);
+    registerFunc("reconnect", &HydrogenCamera::reconnect, this);
+    registerFunc("isConnected", &HydrogenCamera::isConnected, this);
+    registerFunc("startExposure", &HydrogenCamera::startExposure, this);
+    registerFunc("abortExposure", &HydrogenCamera::abortExposure, this);
+    registerFunc("getExposureStatus", &HydrogenCamera::getExposureStatus, this);
+    registerFunc("getExposureResult", &HydrogenCamera::getExposureResult, this);
+
 }
 
 HydrogenCamera::~HydrogenCamera() {}

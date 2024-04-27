@@ -1,4 +1,4 @@
-## Lithium
+# Lithium
 
 <p align="center">
 <img src="https://img.shields.io/badge/dialect-C%2B%2B20-blue">
@@ -72,6 +72,10 @@ pacman -S mingw-w64-x86_64-libzip
 pacman -S mingw-w64-x86_64-zlib
 pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
+pacman -S mingw-w64-x86_64-gsl
+
+# for test
+pacman -S mingw-w64-x86_64-gtest
 ```
 
 #### On Ubuntu or other similar Linux platforms (No INDI needed)
@@ -79,7 +83,7 @@ pacman -S mingw-w64-x86_64-libnova
 ```shell
 sudo apt-get update && sudo apt-get upgrade -y
 sudo apt install gcc g++ cmake
-sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libudev-dev libuv1-dev
+sudo apt install libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libudev-dev
 ```
 
 Alternatively, you can directly run the provided script according to your platform:
@@ -96,10 +100,18 @@ Unfortunately, the newest GCC and CMake are not available on Github Codespace, s
 ```shell
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
 sudo apt-get update
-sudo apt-get install gcc-13 # GCC13 is the best choice
+sudo apt-get install gcc-13 g++-13 # GCC13 is the best choice, clang is alse OK
 
 wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
 tar -zxvf cmake-3.28.0-rc5.tar.gz
+./bootstrap && make && sudo make install
+
+#install newest clang-format
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+sudo nano /etc/apt/sources.list
+#deb http://apt.llvm.org/focal/ llvm-toolchain-focal-17 main
+#deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-17 main
+sudo apt install -y clang-format-17
 ```
 
 Build the code:
@@ -116,7 +128,7 @@ Everything is very simple. The entire process is straightforward.
 
 Here is a poem adapted from a quote :
 
-```
+```txt
 Learning requires not mere imagination,
 Nor can it be attained through mediocre dedication.
 It is through diligent accumulation,
@@ -196,6 +208,11 @@ pacman -S mingw-w64-x86_64-fmt
 pacman -S mingw-w64-x86_64-libnova
 # 如果想用make构建
 pacman -S make # 注意添加对应的目录，否则会当场爆炸
+
+pacman -S mingw-w64-x86_64-gsl
+
+# 测试用
+pacman -S mingw-w64-x86_64-gtest
 ```
 
 #### Ubuntu/Debian/Other Linux

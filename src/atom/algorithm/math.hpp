@@ -15,125 +15,107 @@ Description: Extra Math Library
 #ifndef ATOM_ALGORITHM_MATH_HPP
 #define ATOM_ALGORITHM_MATH_HPP
 
-#include <sstream>
-#include <vector>
-#include "exception.hpp"
+#include <cstdint>
 
 namespace Atom::Algorithm {
-class Fraction;
-// 运算符，友元函数声明
-Fraction operator+(const Fraction &f1, const Fraction &f2);
+/**
+ * @brief Performs a 64-bit multiplication followed by division.
+ *
+ * This function calculates the result of (operant * multiplier) / divider.
+ *
+ * @param operant The first operand for multiplication.
+ * @param multiplier The second operand for multiplication.
+ * @param divider The divisor for the division operation.
+ * @return The result of (operant * multiplier) / divider.
+ */
+uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
+                  uint64_t divider) noexcept;
 
-Fraction operator-(const Fraction &f1, const Fraction &f2);
+/**
+ * @brief Performs a safe addition operation.
+ *
+ * This function adds two unsigned 64-bit integers, handling potential overflow.
+ *
+ * @param a The first operand for addition.
+ * @param b The second operand for addition.
+ * @return The result of a + b, or 0 if there is an overflow.
+ */
+uint64_t safeAdd(uint64_t a, uint64_t b);
 
-Fraction operator*(const Fraction &f1, const Fraction &f2);
+/**
+ * @brief Performs a safe multiplication operation.
+ *
+ * This function multiplies two unsigned 64-bit integers, handling potential overflow.
+ *
+ * @param a The first operand for multiplication.
+ * @param b The second operand for multiplication.
+ * @return The result of a * b, or 0 if there is an overflow.
+ */
+uint64_t safeMul(uint64_t a, uint64_t b);
 
-Fraction operator/(const Fraction &f1, const Fraction &f2);
-// 接收两个运算算子的引用，返回一个Fraction对象
+/**
+ * @brief Rotates a 64-bit integer to the left.
+ *
+ * This function rotates a 64-bit integer to the left by a specified number of bits.
+ *
+ * @param n The 64-bit integer to rotate.
+ * @param c The number of bits to rotate.
+ * @return The rotated 64-bit integer.
+ */
+uint64_t rotl64(uint64_t n, unsigned int c);
 
-bool operator==(const Fraction &f1, const Fraction &f2);
+/**
+ * @brief Rotates a 64-bit integer to the right.
+ *
+ * This function rotates a 64-bit integer to the right by a specified number of bits.
+ *
+ * @param n The 64-bit integer to rotate.
+ * @param c The number of bits to rotate.
+ * @return The rotated 64-bit integer.
+ */
+uint64_t rotr64(uint64_t n, unsigned int c);
 
-bool operator!=(const Fraction &f1, const Fraction &f2);
+/**
+ * @brief Counts the leading zeros in a 64-bit integer.
+ *
+ * This function counts the number of leading zeros in a 64-bit integer.
+ *
+ * @param x The 64-bit integer to count leading zeros in.
+ * @return The number of leading zeros in the 64-bit integer.
+ */
+int clz64(uint64_t x);
 
-bool operator>(const Fraction &f1, const Fraction &f2);
-bool operator>=(const Fraction &f1, const Fraction &f2);
-bool operator<(const Fraction &f1, const Fraction &f2);
-bool operator<=(const Fraction &f1, const Fraction &f2);
+/**
+ * @brief Normalizes a 64-bit integer.
+ *
+ * This function normalizes a 64-bit integer by shifting it to the right until the most significant bit is set.
+ *
+ * @param x The 64-bit integer to normalize.
+ * @return The normalized 64-bit integer.
+ */
+uint64_t normalize(uint64_t x);
 
-std::istream &operator>>(std::istream &input, Fraction &f);
-std::ostream &operator<<(std::ostream &output, const Fraction &f);
-std::ostream &operator<<(std::ostream &output, const Fraction &&f);
+/**
+ * @brief Performs a safe subtraction operation.
+ *
+ * This function subtracts two unsigned 64-bit integers, handling potential underflow.
+ *
+ * @param a The first operand for subtraction.
+ * @param b The second operand for subtraction.
+ * @return The result of a - b, or 0 if there is an underflow.
+ */
+uint64_t safeSub(uint64_t a, uint64_t b);
 
-class Fraction {
-private:
-    int numerator;    // 分子
-    int denominator;  // 分母
-public:
-    static int Euclid(int a, int b) {
-        // 计算两个数的最大公因数(欧几里得算法)
-        // 声明为静态成员函数
-        int c;
-        while (a % b != 0) {
-            c = b;
-            b = a % b;
-            a = c;
-        }
-        return b;
-    };
-    // 保留隐式转换，减少编程工作
-    Fraction(int num_value, int den_value)
-        : numerator(num_value), denominator(den_value) {
-        if (this->denominator == 0) {
-            throw Exception::WrongArgument(
-                "Got 0 in the denominator of Math::Fraction object!");
-        }
-    };
-    Fraction(int num_value) : numerator(num_value), denominator(1){};
-    Fraction(const char *str) {
-        this->denominator = 1;
-        std::stringstream inistream;
-        inistream << str;
-        inistream >> (*this);
-    }
-    Fraction() : numerator(0), denominator(1){};
-    Fraction(const Fraction &f)
-        : numerator(f.getNumerator()), denominator(f.getDenominator()){};
-    Fraction(Fraction &&f)
-        : numerator(f.numerator), denominator(f.denominator){};
-
-    inline int getNumerator() const { return numerator; }
-    // 申明为不可修改数据的函数，const常函数
-    inline int getDenominator() const { return denominator; }
-
-    inline void alterValue(int num_value, int den_value) {
-        this->numerator = num_value;
-        this->denominator = den_value;
-    }
-
-    inline void alterValue(const Fraction &f) {
-        this->numerator = f.getNumerator();
-        this->denominator = f.getDenominator();
-    }
-
-    inline Fraction inverse() {
-        // 返回这个分数的倒数
-        return Fraction(this->getDenominator(), this->getNumerator());
-    }
-
-    friend Fraction operator+(const Fraction &f1, const Fraction &f2);
-
-    friend Fraction operator-(const Fraction &f1, const Fraction &f2);
-
-    friend Fraction operator*(const Fraction &f1, const Fraction &f2);
-
-    friend Fraction operator/(const Fraction &f1, const Fraction &f2);
-
-    // 负号运算符，将一个分数变成其相反数
-    inline Fraction operator-() {
-        return Fraction(-this->numerator, this->denominator);
-    }
-    Fraction &operator+=(const Fraction &f);
-
-    Fraction &operator-=(const Fraction &f);
-
-    Fraction &operator*=(const Fraction &f);
-
-    Fraction &operator/=(const Fraction &f);
-
-    Fraction &operator=(const Fraction &f);
-
-    Fraction &operator=(const Fraction &&f);
-
-    friend bool operator==(const Fraction &f1, const Fraction &f2);
-    friend bool operator!=(const Fraction &f1, const Fraction &f2);
-    friend bool operator>(const Fraction &f1, const Fraction &f2);
-    friend bool operator>=(const Fraction &f1, const Fraction &f2);
-    friend bool operator<(const Fraction &f1, const Fraction &f2);
-    friend bool operator<=(const Fraction &f1, const Fraction &f2);
-    friend std::istream &operator>>(std::istream &input, Fraction &f);
-    friend std::ostream &operator<<(std::ostream &output, const Fraction &f);
-    friend std::ostream &operator<<(std::ostream &output, const Fraction &&f);
-};
+/**
+ * @brief Performs a safe division operation.
+ *
+ * This function divides two unsigned 64-bit integers, handling potential division by zero.
+ *
+ * @param a The numerator for division.
+ * @param b The denominator for division.
+ * @return The result of a / b, or 0 if there is a division by zero.
+ */
+uint64_t safeDiv(uint64_t a, uint64_t b);
 }  // namespace Atom::Algorithm
 
-#endif  // ATOM_ALGORITHM_MATH_HPP
+#endif

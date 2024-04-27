@@ -80,7 +80,11 @@ endif()
 # ----------------------------------------------------------
 
 set(LOGURU_USE_FMTLIB On)
-set(LOGURU_STACKTRACES On)
+
+if (WIN32)
+  find_package(dlfcn-win32 REQUIRED)
+  set(CMAKE_DL_LIBS dlfcn-win32::dl)
+endif ()  
 
 if (LOGURU_STACKTRACES AND (NOT CMAKE_DL_LIBS))
   message(WARNING
@@ -107,11 +111,20 @@ target_include_directories(loguru
 target_compile_features(loguru PUBLIC cxx_std_11)
 
 find_package(Threads REQUIRED) # defines IMPORTED target Threads::Threads
+if(WIN32)
+target_link_libraries(loguru
+  PUBLIC
+    Threads::Threads    # pthreads (or equivalent)
+    dlfcn-win32::dl
+    dbghelp
+)
+else()
 target_link_libraries(loguru
   PUBLIC
     Threads::Threads    # pthreads (or equivalent)
     ${_lib_dl_linkflag} # dl (or equivalent)
 )
+endif()
 
 set_target_properties(loguru
   PROPERTIES

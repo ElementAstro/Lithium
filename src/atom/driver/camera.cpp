@@ -24,6 +24,22 @@ AtomCamera::~AtomCamera() {}
 
 bool AtomCamera::initialize() {
     AtomDriver::initialize();
+
+    // Primary CCD Exposure
+    registerVariable("CCD_EXPOSURE_VALUE", 1.0, "Duration (s)");
+    registerVariableRanges("CCD_EXPOSURE_VALUE", 0.01, 3600);
+    registerVariable("CCD_EXPOSURE_STATUS", false, "Status");
+
+    // Primary CCD Abort
+    registerVariable("CCD_ABORT_EXPOSURE", false, "Abort");
+
+    registerVariable("CCD_VIDEO_STATUS", false, "Status");
+
+    registerVariable("CCD_GAIN", 20, "gain");
+    registerVariableRanges("CCD_GAIN", 0, 256);
+    registerVariable("CCD_OFFSET", 0, "offset");
+    registerVariableRanges("CCD_OFFSET", 0, 256);
+
     // CCD Temperature
     registerVariable("CCD_TEMPERATURE_VALUE", 0.0, "Temperature (C)");
     registerVariableRanges("CCD_TEMPERATURE_VALUE", -50.0, 50.0);
@@ -41,7 +57,7 @@ bool AtomCamera::initialize() {
     // Primary CCD Region-Of-Interest (ROI)
     registerVariable("X", 0.0, "Left");
     registerVariable("Y", 0.0, "Top");
-    registerVariable("WIDTH", 0.0 ,"Width");
+    registerVariable("WIDTH", 0.0, "Width");
     registerVariable("HEIGHT", 0.0, "Height");
 
     // Primary CCD Frame Type
@@ -49,13 +65,6 @@ bool AtomCamera::initialize() {
     registerVariable("FRAME_BIAS", false, "Bias");
     registerVariable("FRAME_DARK", false, "Dark");
     registerVariable("FRAME_FLAT", false, "Flat");
-
-    // Primary CCD Exposure
-    registerVariable("CCD_EXPOSURE_VALUE", 1.0 ,"Duration (s)");
-    registerVariableRanges("CCD_EXPOSURE_VALUE", 0.01, 3600);
-
-    // Primary CCD Abort
-    registerVariable("CCD_ABORT_EXPOSURE", false, "Abort");
 
     // Primary CCD Binning
     registerVariable("HOR_BIN", 1, "X");
@@ -71,9 +80,9 @@ bool AtomCamera::initialize() {
     registerVariable("CCD_PIXEL_SIZE", 0, "Pixel size (um)");
     registerVariableRanges("CCD_PIXEL_SIZE", 1, 40);
 
-    registerVariable("CCD_PIXEL_SIZE_X", 0.0 ,"Pixel size X");
+    registerVariable("CCD_PIXEL_SIZE_X", 0.0, "Pixel size X");
     registerVariableRanges("CCD_PIXEL_SIZE_X", 0, 40);
-    registerVariable("CCD_PIXEL_SIZE_Y", 0.0 ,"Pixel size Y");
+    registerVariable("CCD_PIXEL_SIZE_Y", 0.0, "Pixel size Y");
     registerVariableRanges("CCD_PIXEL_SIZE_Y", 0, 40);
     registerVariable("CCD_BITSPERPIXEL", 0, "Bits per pixel");
     registerVariableRanges("CCD_BITSPERPIXEL", 8, 64);
@@ -127,6 +136,30 @@ bool AtomCamera::initialize() {
     registerFunc("getExposureStatus", &AtomCamera::_getExposureStatus, this);
     registerFunc("getExposureResult", &AtomCamera::_getExposureResult, this);
 
+    registerFunc("startVideo", &AtomCamera::_startVideo, this);
+    registerFunc("stopVideo", &AtomCamera::_stopVideo, this);
+    registerFunc("getVideoStatus", &AtomCamera::_getVideoStatus, this);
+    registerFunc("getVideoResult", &AtomCamera::_getVideoResult, this);
+
+    registerFunc("startCooling", &AtomCamera::_startCooling, this);
+    registerFunc("stopCooling", &AtomCamera::_stopCooling, this);
+    registerFunc("getCoolingStatus", &AtomCamera::_getCoolingStatus, this);
+    registerFunc("getCoolingPower", &AtomCamera::_getCoolingPower, this);
+    registerFunc("setCoolingPower", &AtomCamera::_setCoolingPower, this);
+    registerFunc("getTemperature", &AtomCamera::_getTemperature, this);
+    registerFunc("setTemperature", &AtomCamera::_setTemperature, this);
+
+    registerFunc("getGain", &AtomCamera::_getGain, this);
+    registerFunc("setGain", &AtomCamera::_setGain, this);
+    registerFunc("getOffset", &AtomCamera::_getOffset, this);
+    registerFunc("setOffset", &AtomCamera::_setOffset, this);
+    registerFunc("getISO", &AtomCamera::_getISO, this);
+    registerFunc("setISO", &AtomCamera::_setISO, this);
+    registerFunc("getBinning", &AtomCamera::_getBinning, this);
+    registerFunc("setBinning", &AtomCamera::_setBinning, this);
+
+    registerFunc("getFrame", &AtomCamera::_getFrame, this);
+    registerFunc("setFrame", &AtomCamera::_setFrame, this);
     return true;
 }
 
@@ -194,7 +227,8 @@ bool AtomCamera::isISOAvailable() { return true; }
 
 bool AtomCamera::getFrame() { return true; }
 
-bool AtomCamera::setFrame(const int &x, const int &y, const int &w, const int &h) {
+bool AtomCamera::setFrame(const int &x, const int &y, const int &w,
+                          const int &h) {
     return true;
 }
 
@@ -279,6 +313,10 @@ json AtomCamera::_setOffset(const json &params) { return {}; }
 json AtomCamera::_getISO(const json &params) { return {}; }
 
 json AtomCamera::_setISO(const json &params) { return {}; }
+
+json AtomCamera::_getBinning(const json &params) { return {}; }
+
+json AtomCamera::_setBinning(const json &params) { return {}; }
 
 json AtomCamera::_getFrame(const json &params) { return {}; }
 

@@ -21,19 +21,16 @@ Description: File Manager
 #include <sstream>
 
 #include "atom/log/loguru.hpp"
+#include "atom/utils/aes.hpp"
 
 #include <openssl/evp.h>
 
+namespace fs = std::filesystem;
+
 namespace Atom::IO {
 
-bool fileExists(const std::string &filename) {
-    return std::filesystem::exists(filename);
-}
-
-FileManager::FileManager() : m_file() {}
-
 bool FileManager::createFile(const std::string &filename) {
-    if (fileExists(filename)) {
+    if (fs::exists(filename)) {
         LOG_F(ERROR, "File \"{}\" already exists!", filename);
         return false;
     }
@@ -42,15 +39,12 @@ bool FileManager::createFile(const std::string &filename) {
         LOG_F(ERROR, "Error creating file \"{}\"!", filename);
         return false;
     }
-    outfile.close();
-    std::fclose(
-        std::fopen(filename.c_str(), "a"));  // create a link to the file
     DLOG_F(INFO, "Created file \"{}\"", filename);
     return true;
 }
 
 bool FileManager::openFile(const std::string &filename) {
-    if (!fileExists(filename)) {
+    if (!fs::exists(filename)) {
         LOG_F(ERROR, "File \"{}\" does not exist!", filename);
         return false;
     }
@@ -69,9 +63,8 @@ bool FileManager::readFile(std::string &contents) {
         LOG_F(ERROR, "No file is currently open!");
         return false;
     }
-    std::stringstream buffer;
-    buffer << m_file.rdbuf();
-    contents = buffer.str();
+    contents = std::string(std::istreambuf_iterator<char>(m_file),
+                           std::istreambuf_iterator<char>());
     DLOG_F(INFO, "Read contents of file \"{}\"", m_filename);
     return true;
 }
@@ -88,16 +81,17 @@ bool FileManager::writeFile(const std::string &contents) {
 
 bool FileManager::moveFile(const std::string &oldFilename,
                            const std::string &newFilename) {
-    if (!fileExists(oldFilename)) {
+    if (!fs::exists(oldFilename)) {
         LOG_F(ERROR, "File \"{}\" does not exist!", oldFilename);
         return false;
     }
-    if (fileExists(newFilename)) {
+    if (fs::exists(newFilename)) {
         LOG_F(ERROR, "File \"{}\" already exists!", newFilename);
         return false;
     }
-    int result = std::rename(oldFilename.c_str(), newFilename.c_str());
-    if (result != 0) {
+    std::error_code ec;
+    fs::rename(oldFilename, newFilename, ec);
+    if (ec) {
         LOG_F(ERROR, "Could not move file from \"{}\" to \"{}\"!", oldFilename,
               newFilename);
         return false;
@@ -107,11 +101,13 @@ bool FileManager::moveFile(const std::string &oldFilename,
 }
 
 bool FileManager::deleteFile(const std::string &filename) {
-    if (!fileExists(filename)) {
+    if (!fs::exists(filename)) {
         LOG_F(ERROR, "File \"{}\" does not exist!", filename);
         return false;
     }
-    if (std::remove(filename.c_str()) != 0) {
+    std::error_code ec;
+    fs::remove(filename, ec);
+    if (ec) {
         LOG_F(ERROR, "Could not delete file \"{}\"!", filename);
         return false;
     }
@@ -124,74 +120,24 @@ long FileManager::getFileSize() {
         LOG_F(ERROR, "No file is currently open!");
         return -1;
     }
-    m_file.seekg(0, m_file.end);
-    long fileSize = m_file.tellg();
-    m_file.seekg(0, m_file.beg);
-    if (fileSize == -1) {
+    auto fileSize = fs::file_size(m_filename);
+    if (fileSize == static_cast<uintmax_t>(-1)) {
         LOG_F(ERROR, "Could not get file size of \"{}\"!", m_filename);
     } else {
-        DLOG_F(INFO, "File size of \"{}\" is %ld bytes", m_filename, fileSize);
+        DLOG_F(INFO, "File size of \"{}\" is {} bytes", m_filename, fileSize);
     }
-    return fileSize;
-}
-
-std::string FileManager::calculateSHA256() {
-    if (!m_file.is_open()) {
-        LOG_F(ERROR, "No file is currently open!");
-        return "";
-    }
-
-    EVP_MD_CTX *mdContext = EVP_MD_CTX_new();
-    if (mdContext == nullptr) {
-        LOG_F(ERROR, "Failed to create EVP_MD_CTX");
-        return "";
-    }
-
-    if (EVP_DigestInit_ex(mdContext, EVP_sha256(), nullptr) != 1) {
-        LOG_F(ERROR, "Failed to initialize EVP_MD_CTX");
-        EVP_MD_CTX_free(mdContext);
-        return "";
-    }
-
-    char buffer[1024];
-    while (m_file.read(buffer, sizeof(buffer))) {
-        if (EVP_DigestUpdate(mdContext, buffer, sizeof(buffer)) != 1) {
-            LOG_F(ERROR, "Failed to update EVP_MD_CTX");
-            EVP_MD_CTX_free(mdContext);
-            return "";
-        }
-    }
-
-    unsigned char hash[EVP_MAX_MD_SIZE];
-    unsigned int hashLength = 0;
-    if (EVP_DigestFinal_ex(mdContext, hash, &hashLength) != 1) {
-        LOG_F(ERROR, "Failed to finalize EVP_MD_CTX");
-        EVP_MD_CTX_free(mdContext);
-        return "";
-    }
-
-    EVP_MD_CTX_free(mdContext);
-
-    std::stringstream sha256Stream;
-    sha256Stream << std::hex << std::setfill('0');
-    for (unsigned int i = 0; i < hashLength; ++i) {
-        sha256Stream << std::setw(2) << static_cast<int>(hash[i]);
-    }
-
-    DLOG_F(INFO, "SHA-256 value for file \"{}\" is {}", m_filename,
-           sha256Stream.str());
-    return sha256Stream.str();
+    return static_cast<long>(fileSize);
 }
 
 std::string FileManager::getFileDirectory(const std::string &filename) {
-    size_t pos = filename.find_last_of("/\\");
-    if (pos == std::string::npos) {
+    auto parentPath = fs::path(filename).parent_path();
+    if (parentPath.empty()) {
         LOG_F(ERROR, "Could not get directory of file \"{}\"", filename);
         return "";
     } else {
-        std::string directory = filename.substr(0, pos);
-        DLOG_F(INFO, "Directory of file \"{}\" is \"{}\"", filename, directory);
-        return directory;
+        DLOG_F(INFO, "Directory of file \"{}\" is \"{}\"", filename,
+               parentPath.string());
+        return parentPath.string();
     }
 }
 

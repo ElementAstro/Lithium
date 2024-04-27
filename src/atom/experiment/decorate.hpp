@@ -24,6 +24,22 @@ decorator.
 #include <utility>
 #include <vector>
 
+template <typename R, typename... Args>
+class Switchable {
+public:
+    Switchable(std::function<R(Args...)> f) : f(f) {}
+
+    template <typename F>
+    void switch_to(F new_f) {
+        f = new_f;
+    }
+
+    auto operator()(Args... args) const -> R { return f(args...); }
+
+private:
+    std::function<R(Args...)> f;
+};
+
 template <typename FuncType>
 struct decorator;
 
@@ -46,25 +62,26 @@ struct decorator<std::function<R(Args...)>> {
     template <typename Before, typename Callback = CallbackType,
               typename After = std::function<void(long long)>>
     decorator<FuncType> with_hooks(
-        Before b, Callback c = Callback(), After a = [](long long) {}) const {
-        decorator<FuncType> copy(func);
-        copy.before = b;
-        copy.callback = c;
-        copy.after = a;
+        Before &&b, Callback &&c = CallbackType(),
+        After &&a = [](long long) {}) const {
+        decorator<FuncType> copy(std::move(func));
+        copy.before = std::forward<Before>(b);
+        copy.callback = std::forward<Callback>(c);
+        copy.after = std::forward<After>(a);
         return copy;
     }
 
     template <typename... TArgs>
-    auto operator()(TArgs&&... args) const -> decltype(func(args...)) {
+    auto operator()(TArgs &&...args) const {
         if (before)
             before();
         auto start = std::chrono::high_resolution_clock::now();
-        if constexpr (std::is_void<R>::value) {
-            func(std::forward<TArgs>(args)...);
+        if constexpr (std::is_void_v<R>) {
+            std::invoke(func, std::forward<TArgs>(args)...);
             if (callback)
                 callback();
         } else {
-            auto result = func(std::forward<TArgs>(args)...);
+            auto result = std::invoke(func, std::forward<TArgs>(args)...);
             if (callback)
                 callback(result);
             auto end = std::chrono::high_resolution_clock::now();
@@ -82,11 +99,11 @@ struct decorator<std::function<R(Args...)>> {
     }
 
     template <typename T, typename... TArgs>
-    auto operator()(T& obj, TArgs&&... args) const {
+    auto operator()(T &obj, TArgs &&...args) const {
         if (before)
             before();
         auto start = std::chrono::high_resolution_clock::now();
-        if constexpr (std::is_void<R>::value) {
+        if constexpr (std::is_void_v<R>) {
             std::invoke(func, obj, std::forward<TArgs>(args)...);
             if (callback)
                 callback();
@@ -120,8 +137,8 @@ struct LoopDecorator : public decorator<FuncType> {
     using Base::Base;
 
     template <typename... TArgs>
-    auto operator()(int loopCount, TArgs&&... args) const
-        -> decltype(this->func(args...)) {
+    auto operator()(int loopCount,
+                    TArgs &&...args) const -> decltype(this->func(args...)) {
         decltype(this->func(args...)) result;
         for (int i = 0; i < loopCount; ++i) {
             result = Base::operator()(std::forward<TArgs>(args)...);
@@ -130,7 +147,7 @@ struct LoopDecorator : public decorator<FuncType> {
     }
 
     template <typename T, typename... TArgs>
-    auto operator()(T& obj, int loopCount, TArgs&&... args) const {
+    auto operator()(T &obj, int loopCount, TArgs &&...args) const {
         for (int i = 0; i < loopCount; ++i) {
             std::invoke(this->func, obj, std::forward<TArgs>(args)...);
         }
@@ -148,8 +165,8 @@ struct ConditionCheckDecorator : public decorator<FuncType> {
     using Base::Base;  // Inherit constructor
 
     template <typename ConditionFunc, typename... TArgs>
-    auto operator()(ConditionFunc condition, TArgs&&... args) const
-        -> decltype(this->func(args...)) {
+    auto operator()(ConditionFunc condition,
+                    TArgs &&...args) const -> decltype(this->func(args...)) {
         if (condition()) {
             return Base::operator()(std::forward<TArgs>(args)...);
         } else {
@@ -166,15 +183,15 @@ ConditionCheckDecorator<FuncType> make_condition_check_decorator(FuncType f) {
 
 struct DecoratorError : public std::exception {
     std::string message;
-    explicit DecoratorError(const std::string& msg) : message(msg) {}
-    const char* what() const noexcept override { return message.c_str(); }
+    explicit DecoratorError(const std::string &msg) : message(msg) {}
+    const char *what() const noexcept override { return message.c_str(); }
 };
 
 template <typename R, typename... Args>
 class BaseDecorator {
 public:
     using FuncType = std::function<R(Args...)>;
-    virtual R operator()(FuncType func, Args&&... args) = 0;
+    virtual R operator()(FuncType func, Args &&...args) = 0;
 };
 
 template <typename R, typename... Args>
@@ -190,7 +207,7 @@ public:
 
     // 添加装饰器
     template <typename Decorator, typename... DArgs>
-    void addDecorator(DArgs&&... args) {
+    void addDecorator(DArgs &&...args) {
         decorators.emplace_back(
             std::make_unique<Decorator>(std::forward<DArgs>(args)...));
     }
@@ -199,7 +216,7 @@ public:
         try {
             FuncType currentFunction = baseFunction;
 
-            for (auto& decorator : decorators) {
+            for (auto &decorator : decorators) {
                 currentFunction = [&,
                                    nextFunction = std::move(currentFunction)](
                                       Args... innerArgs) -> R {
@@ -209,7 +226,7 @@ public:
             }
 
             return currentFunction(std::forward<Args>(args)...);
-        } catch (const DecoratorError& e) {
+        } catch (const DecoratorError &e) {
             return R();  // 返回默认值
         }
     }

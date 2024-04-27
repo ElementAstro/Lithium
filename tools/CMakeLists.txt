@@ -24,3 +24,6 @@ target_link_libraries(csv2json loguru)
 
 add_executable(tcp_proxy tcp_proxy.cpp)
 target_link_libraries(tcp_proxy loguru)
+if(WIN32)
+target_link_libraries(tcp_proxy ws2_32)
+endif()

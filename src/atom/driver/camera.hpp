@@ -192,4 +192,8 @@ protected:
     json _getFrame(const json &params);
 
     json _setFrame(const json &params);
+
+    json _getBinning(const json &params);
+
+    json _setBinning(const json &params);
 };

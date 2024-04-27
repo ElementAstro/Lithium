@@ -18,7 +18,6 @@ Description: Tick Sheduler, just like Minecraft's
 #include "atom/server/global_ptr.hpp"
 #include "atom/utils/stopwatcher.hpp"
 
-
 namespace Lithium {
 TickScheduler::TickScheduler(size_t threads)
     : currentTick(0), stop(false), tickLength(100) {
@@ -27,7 +26,7 @@ TickScheduler::TickScheduler(size_t threads)
 #else
     schedulerThread = std::thread([this] { this->taskSchedulerLoop(); });
 #endif
-    pool = GetPtr<TaskPool>("lithium.task.pool");
+    pool = GetWeakPtr<TaskPool>("lithium.task.pool");
     stopwatch = std::make_unique<Atom::Utils::StopWatcher>();
 }
 
@@ -121,7 +120,7 @@ void TickScheduler::triggerTasks() {
     while (it != tasks.end()) {
         auto task = *it;
         if (task->tick <= currentTick.load() && allDependenciesMet(task)) {
-            pool->enqueue([task]() {
+            pool.lock()->enqueue([task]() {
                 task->func();
                 task->completed.store(true);
                 if (task->onCompletion) {
@@ -139,7 +138,7 @@ void TickScheduler::triggerTasks() {
 void TickScheduler::taskSchedulerLoop() {
     while (!stop.load()) {
         // 记录每个Tick需要的时间
-        DLOG_F(INFO, "Tick %llu", currentTick.load());
+        DLOG_F(INFO, "Tick {}", currentTick.load());
         stopwatch->start();
         if (manualMode.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(
@@ -163,7 +162,7 @@ void TickScheduler::taskSchedulerLoop() {
                 auto task = *it;
                 if (task->tick <= currentTick.load() &&
                     allDependenciesMet(task)) {
-                    pool->enqueue([this, task]() {
+                    pool.lock()->enqueue([this, task]() {
                         task->isRunning.store(true);
                         task->func();
                         task->completed.store(true);
@@ -184,7 +183,7 @@ void TickScheduler::taskSchedulerLoop() {
             std::chrono::milliseconds(tickLength.load()));  // Simulate a tick
         stopwatch->stop();
         stopwatch->reset();
-        DLOG_F(INFO, "Tick %llu took %f ms", currentTick.load(),
+        DLOG_F(INFO, "Tick {} took {} ms", currentTick.load(),
                stopwatch->elapsedMilliseconds());
         currentTick++;
     }

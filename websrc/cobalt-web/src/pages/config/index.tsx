@@ -10,20 +10,16 @@ import GlobalParameterAllFilterSettings from "./OneSettingSPFilterEntryComp";
 import { GlobalStore } from "../../store/globalStore";
 
 const GlobalParameterSettingPage = () => {
-  const parameter_explain = useRef<{
-    [key: string]: { name: string; tooltips: string; range?: number[] };
-  }>(parameter_explain_data);
+  const parameter_explain = useRef<IGPParameterExplain>(parameter_explain_data);
   const global_parameter = GlobalStore.useAppState(
     (state) => state.GlobalParameterStore
   );
   const get_all_global_parameters =
     GlobalStore.actions.GlobalParameterStore.get_all_paramters;
-
   useEffect(() => {
     console.log("test");
     get_all_global_parameters();
   }, []);
-
   const handleSettingChange = (
     setting_part_key: string,
     setting_key: string,
@@ -33,12 +29,14 @@ const GlobalParameterSettingPage = () => {
     let to_change_parameter =
       global_parameter.global_parameter[setting_part_key];
     to_change_parameter[setting_key] = set_value;
+    // part 1, dispatch store action, change data.
     GlobalStore.actions.GlobalParameterStore.set_parameter({
       parameter_name: setting_part_key,
       to_set_parameter: to_change_parameter,
     });
+    // part 2, retrive new store data. this step is in set parameter to make sure it is blocking.
+    // GlobalStore.actions.GlobalParameterStore.get_parameter(setting_part_key);
   };
-
   const handleSettingPartChange = (
     setting_part_key: string,
     setting_value: Partial<IGlobalParameters>

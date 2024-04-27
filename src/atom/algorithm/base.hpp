@@ -19,7 +19,6 @@ Description: A collection of algorithms for C++
 #include <string>
 #include <vector>
 
-
 namespace Atom::Algorithm {
 /**
  * @brief Encodes a vector of unsigned characters into a Base16 string.
@@ -33,7 +32,7 @@ namespace Atom::Algorithm {
  * @return The Base16 encoded string.
  */
 [[nodiscard("The result of base16Encode is not used.")]] std::string
-encodeBase16(const std::vector<unsigned char> &data);
+base16Encode(const std::vector<unsigned char> &data);
 
 /**
  * @brief Decodes a Base16 string into a vector of unsigned characters.
@@ -48,7 +47,7 @@ encodeBase16(const std::vector<unsigned char> &data);
  */
 [[nodiscard(
     "The result of base16Decode is not used.")]] std::vector<unsigned char>
-decodeBase16(const std::string &data);
+base16Decode(const std::string &data);
 
 /**
  * @brief Encodes a string to Base32
@@ -56,7 +55,7 @@ decodeBase16(const std::string &data);
  * @return The encoded string
  */
 [[nodiscard("The result of base32Encode is not used.")]] std::string
-encodeBase32(const std::string &data);
+base32Encode(const uint8_t *data, size_t length);
 
 /**
  * @brief Decodes a Base32 string
@@ -64,7 +63,7 @@ encodeBase32(const std::string &data);
  * @return The decoded string
  */
 [[nodiscard("The result of base32Decode is not used.")]] std::string
-decodeBase32(const std::string &data);
+base32Decode(std::string_view encoded);
 
 /**
  * @brief Base64编码函数
@@ -73,7 +72,7 @@ decodeBase32(const std::string &data);
  * @return std::string 编码后的字符串
  */
 [[nodiscard("The result of base64Encode is not used.")]] std::string
-base64Encode(const std::vector<unsigned char> &bytes_to_encode);
+base64Encode(std::string_view bytes_to_encode);
 
 /**
  * @brief Base64解码函数
@@ -81,28 +80,8 @@ base64Encode(const std::vector<unsigned char> &bytes_to_encode);
  * @param encoded_string 待解码字符串
  * @return std::vector<unsigned char> 解码后的数据
  */
-[[nodiscard(
-    "The result of base64Decode is not used.")]] std::vector<unsigned char>
-base64Decode(const std::string &encoded_string);
-
-/**
- * @brief Base64编码函数
- *
- * @param bytes_to_encode 待编码数据
- * @return std::string 编码后的字符串
- */
-[[nodiscard("The result of base64EncodeEnhance is not used.")]] std::string
-base64EncodeEnhance(const std::vector<uint8_t> &bytes_to_encode);
-
-/**
- * @brief Base64解码函数
- *
- * @param encoded_string 待解码字符串
- * @return std::vector<unsigned char> 解码后的数据
- */
-[[nodiscard(
-    "The result of base64DecodeEnhance is not used.")]] std::vector<uint8_t>
-base64DecodeEnhance(const std::string &encoded_string);
+[[nodiscard("The result of base64Decode is not used.")]] std::string
+base64Decode(std::string_view encoded_string);
 
 /**
  * @brief Encodes a vector of unsigned characters into a Base85 string.
@@ -115,7 +94,7 @@ base64DecodeEnhance(const std::string &encoded_string);
  * @return The Base85 encoded string.
  */
 [[nodiscard("The result of base85Encode is not used.")]] std::string
-encodeBase85(const std::vector<unsigned char> &data);
+base85Encode(const std::vector<unsigned char> &data);
 
 /**
  * @brief Decodes a Base85 string into a vector of unsigned characters.
@@ -129,7 +108,23 @@ encodeBase85(const std::vector<unsigned char> &data);
  */
 [[nodiscard(
     "The result of base85Decode is not used.")]] std::vector<unsigned char>
-decodeBase85(const std::string &data);
+base85Decode(const std::string &data);
+
+/**
+ * @brief Encodes a string to Base91
+ * @param data The string to encode
+ * @return The encoded string
+ */
+[[nodiscard("The result of base91Encode is not used.")]]
+std::string base91Encode(std::string_view data);
+
+/**
+ * @brief Decodes a Base91 string
+ * @param data The string to decode
+ * @return The decoded string
+ */
+[[nodiscard("The result of base91Decode is not used.")]] std::string
+base91Decode(std::string_view data);
 
 /**
  * @brief Encodes a vector of unsigned characters into a Base128 string.
@@ -141,8 +136,8 @@ decodeBase85(const std::string &data);
  * @param data The vector of unsigned characters to be encoded.
  * @return The Base128 encoded string.
  */
-[[nodiscard("The result of encodeBase128 is not used.")]] std::vector<uint8_t>
-encodeBase128(const std::span<const uint8_t> &data);
+[[nodiscard("The result of encodeBase128 is not used.")]] std::string
+base128Encode(const uint8_t *data, size_t length);
 
 /**
  * @brief Decodes a Base128 string into a vector of unsigned characters.
@@ -154,8 +149,14 @@ encodeBase128(const std::span<const uint8_t> &data);
  * @param data The Base128 encoded string to be decoded.
  * @return The decoded vector of unsigned characters.
  */
-[[nodiscard("The result of decodeBase128 is not used.")]] std::vector<uint8_t>
-decodeBase128(const std::span<const uint8_t> &data);
+[[nodiscard("The result of decodeBase128 is not used.")]] std::string
+base128Decode(std::string_view encoded);
+
+[[nodiscard("The result of xorEncrypt is not used.")]] std::string xorEncrypt(
+    std::string_view plaintext, uint8_t key);
+
+[[nodiscard("The result of xorDecrypt is not used.")]] std::string xorDecrypt(
+    std::string_view ciphertext, uint8_t key);
 }  // namespace Atom::Algorithm
 
 #endif

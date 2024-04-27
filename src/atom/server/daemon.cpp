@@ -9,7 +9,7 @@
 Date: 2023-11-11
 
 Description: Daemon process implementation for Linux and Windows. But there is
-still some problems on Windows, espacially the console.
+still some problems on Windows, especially the console.
 
 **************************************************/
 
@@ -42,7 +42,7 @@ std::string DaemonGuard::ToString() const {
     ss << "[DaemonGuard parentId=" << m_parentId << " mainId=" << m_mainId
        << " parentStartTime=" << Utils::timeStampToString(m_parentStartTime)
        << " mainStartTime=" << Utils::timeStampToString(m_mainStartTime)
-       << " restartCount=" << m_restartCount << "]";
+       << " restartCount=" << m_restartCount.load() << "]";
     return ss.str();
 }
 
@@ -82,7 +82,7 @@ int DaemonGuard::RealDaemon(int argc, char **argv,
         CloseHandle(DaemonGuard.hThread);
 
         // 等待一段时间后重新启动子进程
-        m_restartCount += 1;
+        m_restartCount++;
         Sleep(g_daemonRestartInterval * 1000);
     }
 #else
@@ -123,7 +123,7 @@ int DaemonGuard::RealDaemon(int argc, char **argv,
             }
 
             // 等待一段时间后重新启动子进程
-            m_restartCount += 1;
+            m_restartCount++;
             sleep(g_daemonRestartInterval);
         }
     }
@@ -206,54 +206,3 @@ bool CheckPidFile() {
 #endif
 }
 }  // namespace Atom::Async
-
-/*
-
-// 定义 MainCb 函数
-int MainCb(int argc, char **argv)
-{
-    // 实际任务的代码逻辑
-    for (int i = 0; i < 10; ++i)
-    {
-        std::cout << "hello world" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-
-    return 0;
-}
-
-// 主函数
-int main(int argc, char **argv)
-{
-    // 初始化日志库、配置文件等
-    // ...
-
-    // 检查 PID 文件是否存在，并检查文件中的 PID 是否有效
-    if (CheckPidFile())
-    {
-        // LOG_F(ERROR, "process already running with pid file {}",
-g_pidFilePath); exit(-1);
-    }
-
-    // 写入 PID 文件
-    WritePidFile();
-
-    // 注册退出信号处理函数
-    signal(SIGTERM, SignalHandler);
-    signal(SIGINT, SignalHandler);
-
-    // 创建 DaemonGuard 对象并启动进程，如果需要创建守护进程，则先创建守护进程
-    DaemonGuard DaemonGuard;
-    DaemonGuard.StartDaemon(argc, argv, std::bind(MainCb, argc, argv),
-g_isDaemon); DaemonGuard.RealDaemon(argc, argv, std::bind(MainCb, argc, argv));
-    if (g_isDaemon)
-    {
-        // LOG_F(INFO, "daemon process start pid={} argv={}", getpid(), argv)
-    }
-
-    std::cout << DaemonGuard.ToString() << std::endl;
-    // 删除 PID 文件并退出程序
-    remove(g_pidFilePath.c_str());
-    return 0;
-}
-*/

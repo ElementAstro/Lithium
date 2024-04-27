@@ -29,43 +29,46 @@ Description: FIFO CLient
 namespace Atom::Connection {
 /**
  * @brief The FifoClient class provides functionality to connect to a FIFO
- * (First In First Out) pipe, send messages through the pipe, and disconnect
- * from the pipe.
+ *        (First In First Out) pipe, write data to the pipe, and read data from
+ *        the pipe.
  */
 class FifoClient {
 public:
     /**
-     * @brief Constructor for FifoClient.
+     * @brief Constructs a FifoClient object with the specified FIFO path.
+     *
      * @param fifoPath The path to the FIFO pipe.
      */
-    explicit FifoClient(const std::string &fifoPath);
+    FifoClient(const std::string& fifoPath);
 
     /**
-     * @brief Connects to the FIFO pipe.
+     * @brief Destructor for the FifoClient object.
      */
-    void connect();
+    ~FifoClient();
 
     /**
-     * @brief Sends a message through the FIFO pipe.
-     * @param message The message to send.
+     * @brief Writes data to the FIFO pipe.
+     *
+     * @param data The data to be written to the pipe.
+     * @return True if the data was successfully written, false otherwise.
      */
-    void sendMessage(const std::string &message);
+    bool write(const std::string& data);
 
     /**
-     * @brief Disconnects from the FIFO pipe.
+     * @brief Reads data from the FIFO pipe.
+     *
+     * @return The data read from the pipe as a string.
      */
-    void disconnect();
+    std::string read();
 
 private:
-    std::string fifoPath; /**< The path to the FIFO pipe. */
-
 #ifdef _WIN32
-    HANDLE pipeHandle; /**< Handle to the pipe (Windows). */
+    HANDLE m_fifo; /**< Handle to the FIFO pipe (Windows). */
 #else
-    int pipeFd; /**< File descriptor for the pipe (Unix/Linux). */
+    int m_fifo; /**< File descriptor for the FIFO pipe (Unix/Linux). */
 #endif
+    std::string m_fifoPath; /**< The path to the FIFO pipe. */
 };
-
 }  // namespace Atom::Connection
 
 #endif  // FIFOSERVER_H

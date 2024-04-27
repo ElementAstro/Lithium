@@ -16,7 +16,6 @@ import {
   ProcessDataSaveModel,
   IProcessDataSaveModels,
 } from "./ProcessDataSave";
-import { DeepPartial } from "redux";
 
 interface GlobalStoreStateModel {
   visible: VisibleModel;

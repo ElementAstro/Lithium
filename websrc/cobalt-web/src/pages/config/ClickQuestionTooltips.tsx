@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import * as React from "react";
+import { QuestionCircle } from "react-bootstrap-icons";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Popover from "react-bootstrap/Popover";
-import { QuestionCircle } from "react-bootstrap-icons";
+import Tooltip from "react-bootstrap/Tooltip";
 
 interface RedDotProps {
   show_changing: boolean;
@@ -11,26 +11,18 @@ interface RedDotProps {
 }
 
 const GPRedDotComp: React.FC<RedDotProps> = (props) => {
-  const [open, setOpen] = useState(false);
-
-  const handleTooltipClose = () => {
-    setOpen(false);
-  };
-
-  const handleTooltipOpen = () => {
-    setOpen(true);
-  };
+  const renderTooltip = (tooltip: string) => (
+    <Tooltip id="button-tooltip">{tooltip}</Tooltip>
+  );
 
   if (props.show_changing) {
     return (
-      <Badge bg="danger">
+      <Badge className="danger" pill>
         <OverlayTrigger
-          trigger="click"
           placement="left"
-          overlay={<Popover id="popover-basic">{props.tooltip}</Popover>}
-          rootClose
+          overlay={renderTooltip(props.tooltip || "")}
         >
-          <Button variant="link" onClick={handleTooltipOpen}>
+          <Button variant="link">
             <QuestionCircle />
           </Button>
         </OverlayTrigger>
@@ -39,12 +31,10 @@ const GPRedDotComp: React.FC<RedDotProps> = (props) => {
   } else {
     return (
       <OverlayTrigger
-        trigger="click"
         placement="left"
-        overlay={<Popover id="popover-basic">{props.tooltip}</Popover>}
-        rootClose
+        overlay={renderTooltip(props.tooltip || "")}
       >
-        <Button variant="link" onClick={handleTooltipOpen}>
+        <Button variant="link">
           <QuestionCircle />
         </Button>
       </OverlayTrigger>

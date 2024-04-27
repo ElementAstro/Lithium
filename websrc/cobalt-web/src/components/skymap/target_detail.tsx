@@ -10,13 +10,14 @@ import { DateTime } from "luxon";
 
 import { GlobalStore } from "../../store/globalStore";
 import Spinner from "react-bootstrap/esm/Spinner";
+import { Tab } from "react-bootstrap";
 
 interface TargetSmallCardProps {
   open_dialog: number;
   target_info: IDSOObjectDetailedInfo;
   in_updating: boolean;
   on_choice_maken: (() => void) | null;
-  in_manage: boolean;
+  in_manage?: boolean;
 }
 
 const alt_fig_options_template: any = {
@@ -24,7 +25,7 @@ const alt_fig_options_template: any = {
     top: 10,
     bottom: 20,
     right: "1%",
-    left: "10%",
+    left: "32",
   },
   tooltip: {
     trigger: "axis",
@@ -89,8 +90,8 @@ const fig_line_data_template: any = [
 ];
 const polar_fig_options_template: any = {
   grid: {
-    top: 0,
-    bottom: 0,
+    top: 1,
+    bottom: 1,
     right: "0%",
     left: "0%",
   },
@@ -218,137 +219,147 @@ const TargetDetailCard: React.FC<TargetSmallCardProps> = (props) => {
   };
 
   return (
-    <>
-      <Card
-        style={{ width: "100%", cursor: "pointer" }}
-        onClick={() => set_open(true)}
-      >
-        <Card.Img variant="top" src={props.target_info.img_url} />
-        <Card.Body>
-          <h5>{props.target_info.name}</h5>
-          <Row className="mt-2">
-            <Col>
-              <h6>RA:</h6>
-              {props.in_updating ? (
-                <Spinner animation="border" role="status">
-                  <span className="sr-only">Loading...</span>
-                </Spinner>
-              ) : (
-                props.target_info.ra.toFixed(4)
-              )}
-            </Col>
-            <Col>
-              <h6>DEC:</h6>
-              {props.in_updating ? (
-                <Spinner animation="border" role="status">
-                  <span className="sr-only">Loading...</span>
-                </Spinner>
-              ) : (
-                props.target_info.dec.toFixed(4)
-              )}
-            </Col>
-          </Row>
-          {!props.in_manage && (
-            <Row className="mt-3">
-              <Col>
-                <Button
-                  variant={add_btn_color}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAddTarget();
-                  }}
-                >
-                  添加至我的目标
-                </Button>
-              </Col>
-              <Col>
-                <Button
-                  variant="outline-secondary"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleFocusTarget();
-                  }}
-                >
-                  查看详情
-                </Button>
-              </Col>
-            </Row>
-          )}
-        </Card.Body>
-      </Card>
-
-      <Modal show={open} onHide={handleClose} size="xl">
-        <Modal.Header closeButton>
-          <Modal.Title>{props.target_info.name}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Row className="mb-4">
-            <Col>
-              <Image src={props.target_info.img_url} fluid />
-            </Col>
-            <Col>
-              <h5 className="my-2">基本信息</h5>
-              <Row>
-                <Col>
-                  <h6>英文名:</h6>
-                  {props.target_info.aliases.en}
+    <Container fluid className="h-100">
+      <Tabs defaultActiveKey="observationData" className="mb-3">
+        <Tab eventKey="observationData" title="观测数据">
+          <Row className="h-100">
+            <Col xs={12} className="h-50">
+              <Row className="h-100">
+                <Col xs={6} className="h-100">
+                  <Card className="h-100 p-0">
+                    <Card.Img
+                      variant="top"
+                      src={target_icon_link}
+                      style={{ height: "calc((100vh - 54px) / 2 - 40px)" }}
+                    />
+                    <Card.Body className="m-0 p-0 mx-1">
+                      <Card.Title>{props.target_info.name}</Card.Title>
+                    </Card.Body>
+                  </Card>
                 </Col>
-                <Col>
-                  <h6>中文名:</h6>
-                  {props.target_info.aliases.zh}
-                </Col>
-              </Row>
-              <h6 className="mt-3">描述:</h6>
-              {props.target_info.description}
-              <Row className="mt-3">
-                <Col>
-                  <h6>RA:</h6>
+                <Col xs={6} className="h-100">
                   {props.in_updating ? (
-                    <Spinner animation="border" role="status">
-                      <span className="sr-only">Loading...</span>
-                    </Spinner>
+                    <div className="h-100 d-flex align-items-center justify-content-center">
+                      <Spinner animation="border" variant="primary" />
+                    </div>
                   ) : (
-                    props.target_info.ra.toFixed(4)
-                  )}
-                </Col>
-                <Col>
-                  <h6>DEC:</h6>
-                  {props.in_updating ? (
-                    <Spinner animation="border" role="status">
-                      <span className="sr-only">Loading...</span>
-                    </Spinner>
-                  ) : (
-                    props.target_info.dec.toFixed(4)
+                    <ReactECharts
+                      option={polar_fig_options}
+                      style={{ height: "100%", width: "100%", margin: 0 }}
+                    />
                   )}
                 </Col>
               </Row>
             </Col>
+            <Col xs={12} className="h-50">
+              {props.in_updating ? (
+                <div className="h-100 d-flex align-items-center justify-content-center">
+                  <Spinner animation="border" variant="primary" />
+                </div>
+              ) : (
+                <ReactECharts
+                  option={alt_fig_options}
+                  style={{ height: "100%", width: "100%", margin: 0 }}
+                />
+              )}
+            </Col>
           </Row>
+        </Tab>
+        <Tab eventKey="basicInfo" title="基础信息">
+          <Row className="h-100">
+            <Col xs={12} className="h-40">
+              <Card className="h-100 p-0 d-flex">
+                <Image
+                  src={target_icon_link}
+                  style={{
+                    height: "calc((100vh - 54px) / 2 - 8px)",
+                    width: "calc((100vh - 54px) / 2 - 8px)",
+                  }}
+                />
+                <Card.Body className="d-flex flex-column flex-grow-1">
+                  <Card.Title>{props.target_info.name}</Card.Title>
+                  <Row>
+                    <Col xs={6}>
+                      <p>Ra: {props.target_info.ra.toFixed(7)} °</p>
+                    </Col>
+                    <Col xs={6}>
+                      <p>Dec: {props.target_info.dec.toFixed(7)} °</p>
+                    </Col>
+                    <Col xs={6}>
+                      <p className="text-secondary">
+                        目标类型{" "}
+                        {TranslateTargetType(props.target_info.target_type)}
+                      </p>
+                    </Col>
+                    <Col xs={6}>
+                      <p className="text-secondary">
+                        目标视角大小 {props.target_info.size} ′
+                      </p>
+                    </Col>
+                  </Row>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col xs={12} className="h-60">
+              <Card className="h-100 p-0 d-flex">
+                <Row>
+                  <Col xs={6}>
+                    <p>当前高度: {current_alt.toFixed(0)}°</p>
+                  </Col>
+                  <Col xs={6}>
+                    <p>最高高度: {highest_alt.toFixed(0)}°</p>
+                  </Col>
+                  <Col xs={6}>
+                    <p>估计可拍摄时间: {available_time.toFixed(1)}h</p>
+                  </Col>
+                  <Col xs={6}>
+                    <p></p>
+                  </Col>
+                </Row>
+              </Card>
+            </Col>
+          </Row>
+        </Tab>
+        <Tab eventKey="wiki" title="小百科">
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              overflowX: "hidden",
+              overflowY: "auto",
+            }}
+          >
+            {/* 目标维基小百科 */}
+          </div>
+        </Tab>
+      </Tabs>
 
-          <hr />
-
-          <h5 className="my-2">高度角曲线</h5>
-          {props.in_updating ? (
-            <Spinner animation="border" role="status">
-              <span className="sr-only">Loading...</span>
-            </Spinner>
-          ) : (
-            <ReactECharts option={alt_fig_options} style={{ height: 300 }} />
-          )}
-
-          <hr />
-
-          <h5 className="my-2">方位角-高度角图像</h5>
-          {props.in_updating ? (
-            <Spinner animation="border" role="status">
-              <span className="sr-only">Loading...</span>
-            </Spinner>
-          ) : (
-            <ReactECharts option={polar_fig_options} style={{ height: 500 }} />
-          )}
-        </Modal.Body>
-      </Modal>
-    </>
+      <div className="d-flex justify-content-end mt-3">
+        {props.in_manage ? (
+          <></>
+        ) : (
+          <Button
+            variant={add_btn_color}
+            size="sm"
+            onClick={on_add_target_to_list_clicked}
+            className="mr-2"
+          >
+            加入目标列表
+          </Button>
+        )}
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={on_add_focused_target_clicked}
+          className="mr-2"
+        >
+          以该目标构图
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => set_open(false)}>
+          退出
+        </Button>
+      </div>
+    </Container>
   );
 };
 

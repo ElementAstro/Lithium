@@ -29,11 +29,7 @@ Description: Device Manager
 #include "atom/utils/random.hpp"
 #include "utils/utils.hpp"
 
-#ifdef __cpp_lib_format
-#include <format>
-#else
 #include <fmt/format.h>
-#endif
 #include <typeinfo>
 
 #include "config.h"

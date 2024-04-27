@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <compare>
+#include <numeric>
 
 namespace Atom::Algorithm {
 
@@ -75,53 +76,15 @@ Fraction Fraction::operator/(const Fraction &other) const {
     return result;
 }
 
-auto Fraction::operator<=>(const Fraction &other) const {
-    double diff = this->to_double() - other.to_double();
-    if (diff > 0)
-        return std::strong_ordering::greater;
-    else if (diff < 0)
-        return std::strong_ordering::less;
-    else
-        return std::strong_ordering::equal;
-}
-
 bool Fraction::operator==(const Fraction &other) const {
     return (numerator == other.numerator) && (denominator == other.denominator);
 }
 
-Fraction &Fraction::operator++() {
-    *this += 1;
-    return *this;
-}
+Fraction::operator double() const { return to_double(); }
 
-Fraction Fraction::operator++(int) {
-    Fraction temp = *this;
-    ++(*this);
-    return temp;
-}
+Fraction::operator float() const { return static_cast<float>(to_double()); }
 
-Fraction &Fraction::operator--() {
-    *this -= 1;
-    return *this;
-}
-
-Fraction Fraction::operator--(int) {
-    Fraction temp = *this;
-    --(*this);
-    return temp;
-}
-
-Fraction Fraction::operator-() const {
-    return Fraction(-numerator, denominator);
-}
-
-explicit Fraction::operator double() const { return to_double(); }
-
-explicit Fraction::operator float() const {
-    return static_cast<float>(to_double());
-}
-
-explicit Fraction::operator int() const { return numerator / denominator; }
+Fraction::operator int() const { return numerator / denominator; }
 
 std::string Fraction::to_string() const {
     if (denominator == 1) {
@@ -142,8 +105,10 @@ std::ostream &operator<<(std::ostream &os, const Fraction &f) {
 std::istream &operator>>(std::istream &is, Fraction &f) {
     int n, d;
     char slash;
-    is >> n >> slash >> d;
-    f = Fraction(n, d);
+    // TODO: Fix this
+    // is >> n >> slash >> d;
+    f = Fraction(n, d);  // Assuming Fraction has a constructor that takes
+                         // numerator and denominator
     return is;
 }
 

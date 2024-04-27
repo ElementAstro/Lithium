@@ -19,9 +19,14 @@ Description: IO
 #include <filesystem>
 #include <iostream>
 #include <regex>
+#include <thread>
 
 #include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
+
+#if __cplusplus >= 202002L
+#include <format>
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
@@ -77,7 +82,7 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
         return;
     }
 
-    std::vector<std::string> tokens = Atom::Utils::splitString(date, '/');
+    auto tokens = Atom::Utils::splitString(date, '/');
 
     // Create directories
     fs::path currentDir = rootDir;
@@ -86,8 +91,8 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
 
         if (!fs::is_directory(currentDir)) {
             if (!fs::create_directory(currentDir)) {
-                LOG_F(ERROR, "Error: Failed to create directory - {}"
-                          , currentDir.string());
+                LOG_F(ERROR, "Error: Failed to create directory - {}",
+                      currentDir.string());
                 return;
             }
         } else {
@@ -95,6 +100,58 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
         }
     }
     DLOG_F(INFO, "Directory creation completed: {}", currentDir.string());
+}
+
+bool createDirectoriesRecursive(const fs::path &basePath,
+                                const std::vector<std::string> &subdirs,
+                                const CreateDirectoriesOptions &options = {}) {
+    for (size_t i = 0; i < subdirs.size(); ++i) {
+        const std::string &subdir = subdirs[i];
+
+#if __cplusplus >= 202002L
+        std::string fullPath = std::format("{}/{}", basePath.string(), subdir);
+#else
+        std::string fullPath = basePath.string() + "/" + subdir;
+#endif
+
+        if (!options.filter(subdir)) {
+            if (options.verbose) {
+                LOG_F(INFO, "Skipping directory (filtered out): {}", fullPath);
+            }
+            continue;
+        }
+        if (fs::exists(fullPath)) {
+            if (!fs::is_directory(fullPath)) {
+                LOG_F(ERROR, "Path exists but is not a directory: {}",
+                      fullPath);
+                return false;
+            }
+            if (options.verbose) {
+                LOG_F(INFO, "Directory already exists: {}", fullPath);
+            }
+            continue;
+        }
+
+        if (!options.dryRun) {
+            std::error_code ec;
+            if (!fs::create_directories(fullPath, ec)) {
+                std::cerr << "Failed to create directory: " << fullPath
+                          << ", error: " << ec.message() << std::endl;
+                return false;
+            }
+        }
+
+        if (options.verbose) {
+            LOG_F(INFO, "Creating directory: {}", fullPath);
+        }
+        options.onCreate(fullPath);
+        if (options.delay > 0) {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(options.delay));
+        }
+    }
+
+    return true;
 }
 
 bool removeDirectory(const std::string &path) {
@@ -311,11 +368,20 @@ bool isFolderExists(const std::string &folderName) {
     return fs::exists(folderName) && fs::is_directory(folderName);
 }
 
+bool isFolderExists(const fs::path &folderName) {
+    return isFolderExists(folderName.string());
+}
+
 bool isFileExists(const std::string &fileName) {
     if (!isFileNameValid(fileName)) {
+        LOG_F(ERROR, "Invalid file name: {}", fileName);
         return false;
     }
     return fs::exists(fileName) && fs::is_regular_file(fileName);
+}
+
+bool isFileExists(const fs::path &fileName) {
+    return isFileExists(fileName.string());
 }
 
 bool isFolderEmpty(const std::string &folderName) {
@@ -459,5 +525,41 @@ std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath,
     }
 
     return files;
+}
+
+bool isExecutableFile(const std::string &fileName, const std::string &fileExt) {
+#ifdef _WIN32
+    fs::path filePath = fileName + fileExt;
+#else
+    fs::path filePath = fileName;
+#endif
+
+    DLOG_F(INFO, "Checking file '{}'.", filePath.string());
+
+    if (!fs::exists(filePath)) {
+        DLOG_F(WARNING, "The file '{}' does not exist.", filePath.string());
+        return false;
+    }
+
+#ifdef _WIN32
+    if (!fs::is_regular_file(filePath) ||
+        !(GetFileAttributesA(filePath.generic_string().c_str()) &
+          FILE_ATTRIBUTE_DIRECTORY)) {
+        DLOG_F(WARNING,
+               "The file '{}' is not a regular file or is not executable.",
+               filePath.string());
+        return false;
+    }
+#else
+    if (!fs::is_regular_file(filePath) || access(filePath.c_str(), X_OK) != 0) {
+        DLOG_F(WARNING,
+               "The file '{}' is not a regular file or is not executable.",
+               filePath.string());
+        return false;
+    }
+#endif
+
+    DLOG_F(INFO, "The file '{}' exists and is executable.", filePath.string());
+    return true;
 }
 }  // namespace Atom::IO

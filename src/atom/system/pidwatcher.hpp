@@ -24,59 +24,108 @@ Description: PID Watcher
 
 namespace Atom::System {
 
+/**
+ * @brief A class for monitoring processes by their PID.
+ *
+ * This class allows monitoring of processes by their PID. It provides
+ * functionality to set callbacks on process exit, set a monitor function to
+ * run at intervals, get PID by process name, start monitoring a specific
+ * process, stop monitoring, and switch the target process.
+ */
 class PidWatcher {
 public:
     using Callback = std::function<void()>;
 
+    /**
+     * @brief Constructs a PidWatcher object.
+     */
     PidWatcher();
 
+    /**
+     * @brief Destroys the PidWatcher object.
+     */
     ~PidWatcher();
 
-    // 设置进程退出后的回调函数
+    /**
+     * @brief Sets the callback function to be executed on process exit.
+     *
+     * @param callback The callback function to set.
+     */
     void SetExitCallback(Callback callback);
 
-    // 设置监视函数，每隔一段时间运行一次
+    /**
+     * @brief Sets the monitor function to be executed at specified intervals.
+     *
+     * @param callback The monitor function to set.
+     * @param interval The interval at which the monitor function should run.
+     */
     void SetMonitorFunction(Callback callback,
                             std::chrono::milliseconds interval);
 
-    // 根据进程名称获取PID
+    /**
+     * @brief Retrieves the PID of a process by its name.
+     *
+     * @param name The name of the process.
+     * @return The PID of the process.
+     */
     pid_t GetPidByName(const std::string &name) const;
 
-    // 开始监视指定进程
+    /**
+     * @brief Starts monitoring the specified process by name.
+     *
+     * @param name The name of the process to monitor.
+     * @return True if monitoring started successfully, false otherwise.
+     */
     bool Start(const std::string &name);
 
-    // 停止监视进程
+    /**
+     * @brief Stops monitoring the currently monitored process.
+     */
     void Stop();
 
-    // 切换目标进程
+    /**
+     * @brief Switches the target process to monitor.
+     *
+     * @param name The name of the process to switch to.
+     * @return True if the process was successfully switched, false otherwise.
+     */
     bool Switch(const std::string &name);
 
 private:
+    /**
+     * @brief The thread function for monitoring the process.
+     */
     void MonitorThread();
 
+    /**
+     * @brief The thread function for handling process exit.
+     */
     void ExitThread();
 
 private:
-    pid_t pid_;
-    bool running_;
-    bool monitoring_;
+    pid_t pid_;        ///< The PID of the currently monitored process.
+    bool running_;     ///< Flag indicating if the monitoring is running.
+    bool monitoring_;  ///< Flag indicating if a process is being monitored.
 
-    Callback exit_callback_;
-    Callback monitor_callback_;
-    std::chrono::milliseconds monitor_interval_;
+    Callback exit_callback_;  ///< Callback function to execute on process exit.
+    Callback monitor_callback_;  ///< Monitor function to execute at intervals.
+    std::chrono::milliseconds
+        monitor_interval_;  ///< Interval for monitor function execution.
 
 #if __cplusplus >= 202002L
-    std::jthread monitor_thread_;
-    std::jthread exit_thread_;
+    std::jthread monitor_thread_;  ///< Thread for monitoring the process.
+    std::jthread exit_thread_;     ///< Thread for handling process exit.
 #else
-    std::thread monitor_thread_;
-    std::thread exit_thread_;
+    std::thread monitor_thread_;  ///< Thread for monitoring the process.
+    std::thread exit_thread_;     ///< Thread for handling process exit.
 #endif
 
-    std::mutex mutex_;
-    std::condition_variable monitor_cv_;
-    std::condition_variable exit_cv_;
+    std::mutex mutex_;  ///< Mutex for thread synchronization.
+    std::condition_variable
+        monitor_cv_;                   ///< Condition variable for monitoring.
+    std::condition_variable exit_cv_;  ///< Condition variable for process exit.
 };
+
 }  // namespace Atom::System
 
 #endif

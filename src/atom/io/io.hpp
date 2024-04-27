@@ -17,6 +17,7 @@ Description: IO
 
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <string>
 #include <vector>
 namespace fs = std::filesystem;
@@ -34,6 +35,39 @@ namespace Atom::IO {
  * @return 如果操作成功，则返回true，否则返回false。
  */
 [[nodiscard]] bool createDirectory(const std::string &path);
+
+/**
+ * @brief Creates a directory with the specified path.
+*/
+struct CreateDirectoriesOptions {
+    bool verbose = true;
+    bool dryRun = false;
+    int delay = 0;
+    std::function<bool(const std::string&)> filter = [](const std::string&) {
+        return true;
+    };
+    std::function<void(const std::string&)> onCreate = [](const std::string&) {
+    };
+};
+
+/**
+ * @brief Creates a directory with the specified path.
+ *
+ * @param basePath The base path of the directory to create.
+ * @param subdirs The subdirectories to create.
+ * @param options The options for creating the directory.
+ * @return True if the operation was successful, false otherwise.
+ *
+ * 使用指定路径创建一个目录。
+ *
+ * @param basePath 要创建的目录的基本路径。
+ * @param subdirs 要创建的子目录。
+ * @param options 创建目录的选项。
+ * @return 如果操作成功，则返回true，否则返回false。
+ */
+bool createDirectoriesRecursive(const fs::path& basePath,
+                                const std::vector<std::string>& subdirs,
+                                const CreateDirectoriesOptions& options);
 
 /**
  * @brief Creates a directory with the specified path.
@@ -272,6 +306,7 @@ void traverseDirectories(const std::filesystem::path &directory,
  * @return 如果文件夹存在，则返回true，否则返回false。
  */
 [[nodiscard]] bool isFolderExists(const std::string &folderPath);
+[[nodiscard]] bool isFolderExists(const fs::path &folderPath);
 
 /**
  * @brief Check if the file exists.
@@ -285,6 +320,7 @@ void traverseDirectories(const std::filesystem::path &directory,
  * @return 如果文件存在，则返回true，否则返回false。
  */
 [[nodiscard]] bool isFileExists(const std::string &filePath);
+[[nodiscard]] bool isFileExists(const fs::path &filePath);
 
 /**
  * @brief Check if the folder is empty.
@@ -345,6 +381,19 @@ enum class FileOption { Path, Name };
 [[nodiscard]] std::vector<std::string> checkFileTypeInFolder(
     const std::string &folderPath, const std::string &fileType,
     FileOption fileOption);
+
+/**
+ * @brief Check whether the specified file exists.
+ * 检查指定文件是否存在
+ *
+ * @param fileName The name of the file. 文件名称
+ * @param fileExt The extension of the file. 文件扩展名
+ * @return true if the file exists.
+ *         如果文件存在，则返回 true
+ * @return false if the file does not exist or an error occurred.
+ *         如果文件不存在或发生错误，则返回 false
+ */
+bool isExecutableFile(const std::string &fileName, const std::string &fileExt);
 }  // namespace Atom::IO
 
 #endif

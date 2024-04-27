@@ -47,3 +47,5 @@ test
 
 *.log
 *.xml
+
+.xmake

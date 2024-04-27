@@ -1,5 +1,5 @@
 /*
- * math.cpp
+ * mathutils.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -14,246 +14,107 @@ Description: Extra Math Library
 
 #include "math.hpp"
 
-#include <complex>
-#include <thread>
+#include <bit>
+#include <stdexcept>
 
-namespace Atom::Utils {
-/*			"+",加法重载部分 */
-// 友元函数是可以通过成员访问运算符访问私有成员的
-Fraction operator+(const Fraction &f1, const Fraction &f2) {
-    //	如果声明中加了const，定义中没有加const，可能会出现无权访问私有成员的报错
-    // 加法友元重载函数定义
-    int retnum = f1.getNumerator() * f2.getDenominator() +
-                 f2.getNumerator() * f1.getDenominator();
-    int retden = f1.getDenominator() * f2.getDenominator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (retden < 0 && retnum >= 0) {
-        ratio *= -1;
+namespace Atom::Algorithm {
+
+#if defined(__GNUC__) && defined(__SIZEOF_INT128__)
+uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
+                  uint64_t divider) noexcept {
+    __uint128_t a = operant;
+    __uint128_t b = multiplier;
+    __uint128_t c = divider;
+
+    return static_cast<uint64_t>((a * b) / c);
+}
+#elif defined(_MSC_VER)
+#include <intrin.h>  // For _umul128 and _BitScanReverse64
+#include <stdexcept>
+
+uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
+                  uint64_t divider) noexcept {
+    uint64_t highProd;
+    uint64_t lowProd = _umul128(
+        operant, multiplier,
+        &highProd);  // Directly get the low and high parts of the product
+
+    if (divider == 0) {
+        throw std::runtime_error("Division by zero");
     }
-    return Fraction(
-        retnum / ratio,
-        retden / ratio);  // 在使用的时候编译器会自动调用构造函数Fraction(const
-                          // Fraction&),用来处理作用域问题（深复制了）
-}
 
-/*			"-",减法重载部分 */
-Fraction operator-(const Fraction &f1, const Fraction &f2) {
-    // 减法友元重载函数定义
-    int retnum = f1.getNumerator() * f2.getDenominator() -
-                 f2.getNumerator() * f1.getDenominator();
-    int retden = f1.getDenominator() * f2.getDenominator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (retden < 0 && retnum >= 0) {
-        ratio *= -1;
-    }
-    return Fraction(
-        retnum / ratio,
-        retden /
-            ratio);  // 在使用的时候编译器会自动调用Fraction默认构造函数,用来处理作用域问题（深复制了）
-}
+    // Normalize divisor
+    unsigned long shift = 63 - std::bit_width(divider - 1);
+    uint64_t normDiv = divider << shift;
 
-/*			"*",乘法重载部分 */
-Fraction operator*(const Fraction &f1, const Fraction &f2) {
-    // 加法友元重载函数定义
-    int retnum = f1.getNumerator() * f2.getNumerator();
-    int retden = f1.getDenominator() * f2.getDenominator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (retden < 0 && retnum >= 0) {
-        ratio *= -1;
-    }
-    return Fraction(retnum / ratio, retden / ratio);
-}
+    // Normalize high part
+    highProd = (highProd << shift) | (lowProd >> (64 - shift));
+    lowProd <<= shift;
 
-/*          '/'乘法重载                 */
-Fraction operator/(const Fraction &f1, const Fraction &f2) {
-    // 减法友元重载函数定义
-    int retnum = f1.getNumerator() * f2.getDenominator();
-    int retden = f1.getDenominator() * f2.getNumerator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (retden < 0 && retnum >= 0) {
-        ratio *= -1;
-    }
-    return Fraction(retnum / ratio, retden / ratio);
-}
+    // Division using high and low parts
+    uint64_t quotient, remainder;
+    _udiv128(highProd, lowProd, normDiv, &remainder);
 
-// "+="运算符作为成员函数进行重载
-Fraction &Fraction::operator+=(const Fraction &f) {
-    int retnum = this->numerator * f.getDenominator() +
-                 this->denominator * f.getNumerator();
-    int retden = this->denominator * f.getDenominator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    // 保证分母永远大于0
-    if (this->denominator < 0 && this->numerator >= 0) {
-        ratio *= -1;
-    }
-    this->numerator = retnum / ratio;
-    this->denominator = retden / ratio;
-    return (*this);
+    return quotient;
 }
+#else
+#error "Platform not supported for mulDiv64 function!"
+#endif
 
-// "-="运算符作为成员函数进行重载
-
-Fraction &Fraction::operator-=(const Fraction &f) {
-    int retnum = this->numerator * f.getDenominator() -
-                 this->denominator * f.getNumerator();
-    int retden = this->denominator * f.getDenominator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (this->denominator < 0 && this->numerator >= 0) {
-        ratio *= -1;
-    }
-    this->numerator = retnum / ratio;
-    this->denominator = retden / ratio;
-    return (*this);
-}
-
-// "*="运算符作为成员函数进行重载
-Fraction &Fraction::operator*=(const Fraction &f) {
-    int retnum = this->numerator * f.getNumerator();
-    int retden = this->denominator * f.getDenominator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (this->denominator < 0 && this->numerator >= 0) {
-        ratio *= -1;
-    }
-    this->numerator = retnum / ratio;
-    this->denominator = retden / ratio;
-    return *this;
-}
-Fraction &Fraction::operator/=(const Fraction &f) {
-    int retnum = this->numerator * f.getDenominator();
-    int retden = this->denominator * f.getNumerator();
-    int ratio = Fraction::Euclid(retnum, retden);
-    if (this->denominator < 0 && this->numerator >= 0) {
-        ratio *= -1;
-    }
-    this->numerator = retnum / ratio;
-    this->denominator = retden / ratio;
-
-    return *this;
-}
-Fraction &Fraction::operator=(const Fraction &f) {
-    this->numerator = f.getNumerator();
-    this->denominator = f.getDenominator();
-    return *this;
-}
-
-Fraction &Fraction::operator=(const Fraction &&f) {
-    this->numerator = f.getNumerator();
-    this->denominator = f.getDenominator();
-    return *this;
-}
-
-bool operator==(const Fraction &f1, const Fraction &f2) {
-    int f1_num = f1.getNumerator();
-    int f1_den = f1.getDenominator();
-    int f2_num = f2.getNumerator();
-    int f2_den = f2.getDenominator();
-    int res_num = f1_num * f2_den;
-    int res_den = f1_den * f2_num;
-    bool result = false;
-    if (res_num == res_den) {
-        result = true;
+uint64_t safeAdd(uint64_t a, uint64_t b) {
+    uint64_t result;
+    if (__builtin_add_overflow(a, b, &result)) {
+        throw std::overflow_error("Overflow in addition");
     }
     return result;
 }
 
-bool operator!=(const Fraction &f1, const Fraction &f2) {
-    int f1_num = f1.getNumerator();
-    int f1_den = f1.getDenominator();
-    int f2_num = f2.getNumerator();
-    int f2_den = f2.getDenominator();
-    int res_num = f1_num * f2_den;
-    int res_den = f1_den * f2_num;
-    bool result = false;
-    if (res_num != res_den) {
-        result = true;
+uint64_t safeMul(uint64_t a, uint64_t b) {
+    uint64_t result;
+    if (__builtin_mul_overflow(a, b, &result)) {
+        throw std::overflow_error("Overflow in multiplication");
     }
     return result;
 }
 
-bool operator>(const Fraction &f1, const Fraction &f2) {
-    int f1_num = f1.getNumerator();
-    int f1_den = f1.getDenominator();
-    int f2_num = f2.getNumerator();
-    int f2_den = f2.getDenominator();
-    int res_num = f1_num * f2_den;
-    int res_den = f1_den * f2_num;
-    bool result = false;
-    if (res_num > res_den) {
-        result = true;
+uint64_t rotl64(uint64_t n, unsigned int c) {
+    const unsigned int mask = 63;
+    c &= mask;
+    return (n << c) | (n >> (-c & mask));
+}
+
+uint64_t rotr64(uint64_t n, unsigned int c) {
+    const unsigned int mask = 63;
+    c &= mask;
+    return (n >> c) | (n << (-c & mask));
+}
+
+int clz64(uint64_t x) {
+    if (x == 0)
+        return 64;
+    return __builtin_clzll(x);  // GCC built-in
+}
+
+uint64_t normalize(uint64_t x) {
+    if (x == 0)
+        return 0;
+    int n = clz64(x);
+    return x << n;
+}
+
+uint64_t safeSub(uint64_t a, uint64_t b) {
+    uint64_t result;
+    if (__builtin_sub_overflow(a, b, &result)) {
+        throw std::underflow_error("Underflow in subtraction");
     }
     return result;
 }
 
-bool operator>=(const Fraction &f1, const Fraction &f2) {
-    int f1_num = f1.getNumerator();
-    int f1_den = f1.getDenominator();
-    int f2_num = f2.getNumerator();
-    int f2_den = f2.getDenominator();
-    int res_num = f1_num * f2_den;
-    int res_den = f1_den * f2_num;
-    bool result = false;
-    if (res_num >= res_den) {
-        result = true;
+uint64_t safeDiv(uint64_t a, uint64_t b) {
+    if (b == 0) {
+        throw std::runtime_error("Division by zero");
     }
-    return result;
+    return a / b;
 }
 
-bool operator<(const Fraction &f1, const Fraction &f2) {
-    int f1_num = f1.getNumerator();
-    int f1_den = f1.getDenominator();
-    int f2_num = f2.getNumerator();
-    int f2_den = f2.getDenominator();
-    int res_num = f1_num * f2_den;
-    int res_den = f1_den * f2_num;
-    bool result = false;
-    if (res_num < res_den) {
-        result = true;
-    }
-    return result;
-}
-
-bool operator<=(const Fraction &f1, const Fraction &f2) {
-    int f1_num = f1.getNumerator();
-    int f1_den = f1.getDenominator();
-    int f2_num = f2.getNumerator();
-    int f2_den = f2.getDenominator();
-    int res_num = f1_num * f2_den;
-    int res_den = f1_den * f2_num;
-    bool result = false;
-    if (res_num <= res_den) {
-        result = true;
-    }
-    return result;
-}
-
-std::istream &operator>>(std::istream &input, Fraction &f) {
-    input >> f.numerator;
-    char split_c = input.peek();
-
-    if (split_c > '9' || split_c < '0') {
-        if (split_c == '/') {
-            input >> split_c;
-            input >> f.denominator;
-            if (f.denominator == 0) {
-                throw Exception::WrongArgument(
-                    "Got 0 in the denominator of Math::Fraction object!");
-            }
-            if (f.denominator < 0) {
-                f.denominator *= -1;
-                f.numerator *= -1;
-            }
-            return input;
-        }
-    }
-    f.denominator = 1;
-    return input;
-}
-std::ostream &operator<<(std::ostream &output, const Fraction &f) {
-    output << f.getNumerator() << "/" << f.getDenominator();
-    return output;
-}
-std::ostream &operator<<(std::ostream &output, const Fraction &&f) {
-    output << f.getNumerator() << "/" << f.getDenominator();
-    return output;
-}
-}  // namespace Atom::Utils
+}  // namespace Atom::Algorithm

@@ -21,10 +21,12 @@ set(${PROJECT_NAME}_SOURCES
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    commander_impl.hpp
+    commander.inl
     commander.hpp
     daemon.hpp
     deserialize.hpp
+    eventstack.hpp
+    eventstack.inl
     global_ptr.hpp
     json_checker.hpp
     message_bus.hpp

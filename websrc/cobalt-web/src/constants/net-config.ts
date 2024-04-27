@@ -1,6 +1,6 @@
 export default {
     //  axios 基础url地址
-    baseURL: process.env.NODE_ENV === 'development' ? 'http://localhost:5173/api' : '',
+    baseURL: process.env.NODE_ENV === 'development' ? 'http://localhost:3000/' : '',
     // 操作正常返回的code,根据后端第一
     successCode: [200, 0],
     // 超时时间

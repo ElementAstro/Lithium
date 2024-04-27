@@ -1,13 +1,13 @@
-interface ICThreePointTarget {
+declare interface ICThreePointTarget {
   ra: number;
   dec: number;
 }
 // hfr星点数据
-interface ICHFRDataPointList {
+declare interface ICHFRDataPointList {
   star_count: Array<number>;
   average_hfr: Array<number>;
 }
-interface ICSingleHFRPointData {
+declare interface ICSingleHFRPointData {
   star_count: number;
   average_hfr: number;
   max_star: number;
@@ -16,7 +16,7 @@ interface ICSingleHFRPointData {
 }
 
 // phd2导星数据记录
-interface ICPHD2GuideDataPointList {
+declare interface ICPHD2GuideDataPointList {
   dx: Array<number>;
   dy: Array<number>;
   RaDistance: Array<number>;
@@ -25,7 +25,7 @@ interface ICPHD2GuideDataPointList {
   DecControl: Array<number>;
 }
 
-interface ICPHD2InterfaceGuideStep {
+declare interface ICPHD2InterfaceGuideStep {
   Frame: number;
   Time: number;
   Mount: string;
@@ -43,26 +43,37 @@ interface ICPHD2InterfaceGuideStep {
   SNR: number;
   HFD: number;
   AvgDist: number;
-  RALimited: boolean;
-  DecLimited: boolean;
+  RALimited: bool;
+  DecLimited: bool;
   ErrorCode: number;
 }
 
+declare interface ICPHD2InterfaceCalibrationResult {
+  calibrated: boolean;
+  xAngle: number;
+  xRate: number;
+  xParity: "+" | "-";
+  yAngle: number;
+  yRate: number;
+  yParity: "+" | "-";
+  declination: number;
+}
+
 // general interface
-interface IResponseFlagGeneral {
+declare interface IResponseFlagGeneral {
   success: boolean;
   data: {
     flag: boolean;
   };
 }
 
-interface IResponseDataAny {
+declare interface IResponseDataAny {
   success: boolean;
   data: any;
 }
 
 // phd2 related http interface
-interface IPHD2ResponseStatus {
+declare interface IPHD2ResponseStatus {
   success: boolean;
   data: {
     flag:

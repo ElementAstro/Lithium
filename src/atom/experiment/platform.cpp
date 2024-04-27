@@ -41,7 +41,7 @@ std::string getWindowsVersion() {
     } else if (osvi.dwMajorVersion == 5 && osvi.dwMinorVersion == 1)
         [[unlikely]] {
         return "Windows XP";
-    } else [[unlikely]] {
+    } else {
         return "Unknown Windows version";
     }
 }

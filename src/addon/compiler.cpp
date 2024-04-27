@@ -14,403 +14,160 @@ Description: Compiler
 
 #include "compiler.hpp"
 
-#include <atomic>
-#include <filesystem>
+#include "utils/constant.hpp"
+
 #include <fstream>
 #include <sstream>
-#include <thread>
 
+#include <fmt/format.h>
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
-#ifdef _WIN32
-#include <windows.h>
-#define COMPILER "cl.exe"
-#define CMD_PREFIX ""
-#define CMD_SUFFIX ".dll"
-#elif __APPLE__
-#include <cstdio>
-#define COMPILER "clang++"
-#define CMD_PREFIX "lib"
-#define CMD_SUFFIX ".dylib"
-#else
-#include <cstdio>
-#define COMPILER "g++"
-#define CMD_PREFIX "lib"
-#define CMD_SUFFIX ".so"
-#endif
-
 namespace Lithium {
-bool Compiler::CompileToSharedLibraryAllinOne(const std::string &code,
-                                              const std::string &moduleName,
-                                              const std::string &functionName) {
-    DLOG_F(INFO, "Compiling module {}::{}...", moduleName, functionName);
+bool Compiler::compileToSharedLibrary(std::string_view code,
+                                      std::string_view moduleName,
+                                      std::string_view functionName,
+                                      std::string_view optionsFile) {
+    LOG_F(INFO, "Compiling module {}::{}...", moduleName, functionName);
 
-    // 参数校验
     if (code.empty() || moduleName.empty() || functionName.empty()) {
         LOG_F(ERROR, "Invalid parameters.");
         return false;
     }
 
-    // Check if the module is already compiled and cached
-    auto cachedResult = cache_.find(moduleName + "::" + functionName);
-    if (cachedResult != cache_.end()) {
-        DLOG_F(WARNING,
-               "Module {}::{} is already compiled, returning cached result.",
-               moduleName, functionName);
-        return true;
-    }
-
-    // Create output directory if it does not exist
-    const std::string outputDir = "atom/global/";
-    if (!fs::exists(outputDir)) {
-        DLOG_F(WARNING, "Output directory does not exist, creating it: {}",
-               outputDir);
-        try {
-            fs::create_directories(outputDir);
-        } catch (const std::exception &e) {
-            LOG_F(ERROR, "Failed to create output directory: {}", e.what());
-            return false;
-        }
-    }
-
-    // Read compile options from JSON file
-    std::string compileOptions = "-shared -fPIC -x c++ ";
-    std::ifstream compileOptionFile("compile_options.json");
-    if (compileOptionFile.is_open()) {
-        json compileOptionsJson;
-        try {
-            compileOptionFile >> compileOptionsJson;
-            if (compileOptionsJson.contains("optimization_level") &&
-                compileOptionsJson.contains("cplus_version") &&
-                compileOptionsJson.contains("warnings")) {
-                compileOptions =
-                    compileOptionsJson["optimization_level"]
-                        .get<std::string>() +
-                    " " +
-                    compileOptionsJson["cplus_version"].get<std::string>() +
-                    " " + compileOptionsJson["warnings"].get<std::string>() +
-                    " ";
-            } else {
-                LOG_F(ERROR, "Invalid format in compile_options.json.");
-                return false;
-            }
-        } catch (const std::exception &e) {
-            LOG_F(ERROR, "Error reading compile_options.json: {}", e.what());
-            return false;
-        }
-    }
-
-    // Specify output file path
-    std::string output = outputDir + moduleName + CMD_SUFFIX;
-
-    // Syntax and semantic checking
-    std::stringstream syntaxCheckCmd;
-    syntaxCheckCmd << COMPILER << " -fsyntax-only -x c++ -";
-    std::string syntaxCheckOutput;
-    if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0) {
-        LOG_F(ERROR, "Syntax error in C++ code: {}", syntaxCheckOutput);
-        return false;
-    }
-
-    // Compile code
-    std::string compilationOutput;
-    std::string cmd =
-        std::string(COMPILER) + " " + compileOptions + " - " + " -o " + output;
-    DLOG_F(INFO, "{}", cmd);
-
-    int exitCode = RunShellCommand(cmd, code, compilationOutput);
-    if (exitCode != 0) {
-        LOG_F(ERROR, "Failed to compile C++ code: {}", compilationOutput);
-        return false;
-    }
-
-    // Cache compiled module
-    cache_[moduleName + "::" + functionName] = output;
-
-    /*
-    // Load the compiled module
-    if(m_App.GetModuleLoader()->LoadModule(output, moduleName)) {
-        LOG_S(INFO) << "Module " << moduleName << "::" << functionName << "
-    compiled successfully."; return true; } else { LOG_F(ERROR, "Failed to load
-    the compiled module: {}", output); return false;
-    }
-    */
-    return false;
-}
-
-// 编译为共享库
-bool Compiler::CompileToSharedLibrary(const std::string &code,
-                                      const std::string &moduleName,
-                                      const std::string &functionName,
-                                      const std::string &optionsFile) {
-    LOG_F(INFO, "Compiling module {}::{}...", moduleName, functionName);
-
-    // 参数校验
-    if (!CheckParameters(code, moduleName, functionName)) {
-        return false;
-    }
-
-    // 检查是否已经编译并缓存
-    if (IsModuleCached(moduleName, functionName, cache_)) {
+    // 检查模块是否已编译并缓存
+    auto cachedModule =
+        cache_.find(fmt::format("{}::{}", moduleName, functionName));
+    if (cachedModule != cache_.end()) {
+        LOG_F(WARNING,
+              "Module {}::{} is already compiled, using cached result.",
+              moduleName, functionName);
         return true;
     }
 
     // 创建输出目录
-    const std::string outputDir = "atom/global/";
-    if (!CreateOutputDirectory(outputDir)) {
+    const fs::path outputDir = "atom/global";
+    createOutputDirectory(outputDir);
+
+    const auto availableCompilers = findAvailableCompilers();
+    if (availableCompilers.empty()) {
+        LOG_F(ERROR, "No available compilers found.");
         return false;
     }
+    LOG_F(INFO, "Available compilers: {}", fmt::join(availableCompilers, ", "));
 
     // 读取编译选项
-    std::string compileOptions = ReadCompileOptions(optionsFile);
-    if (compileOptions.empty()) {
+    std::ifstream optionsStream(optionsFile.data());
+    const auto compileOptions = [&optionsStream] {
+        if (!optionsStream) {
+            LOG_F(
+                WARNING,
+                "Failed to open compile options file, using default options.");
+            return std::string{"-O2 -std=c++20 -Wall -shared -fPIC"};
+        }
+
+        try {
+            json optionsJson;
+            optionsStream >> optionsJson;
+            return fmt::format(
+                "{} {} {}",
+                optionsJson["optimization_level"].get<std::string>(),
+                optionsJson["cplus_version"].get<std::string>(),
+                optionsJson["warnings"].get<std::string>());
+        } catch (const std::exception& e) {
+            LOG_F(ERROR, "Failed to parse compile options file: {}", e.what());
+            return std::string{"-O2 -std=c++20 -Wall -shared -fPIC"};
+        }
+    }();
+
+    // 语法检查
+    if (!syntaxCheck(code, constants::COMPILER)) {
         return false;
     }
-
-    // 检查语法
-    if (!SyntaxCheck(code, COMPILER)) {
-        return false;
-    }
-
-    // 指定输出文件路径
-    std::string output = outputDir + moduleName + CMD_SUFFIX;
 
     // 编译代码
-    if (!CompileCode(code, COMPILER, compileOptions, output)) {
+    const auto outputPath =
+        outputDir / fmt::format("{}{}{}", constants::LIB_EXTENSION, moduleName,
+                                constants::LIB_EXTENSION);
+    if (!compileCode(code, constants::COMPILER, compileOptions, outputPath)) {
         return false;
     }
 
-    // 缓存已编译的模块
-    CacheCompiledModule(moduleName, functionName, output, cache_);
-
+    // 缓存编译结果
+    cache_[fmt::format("{}::{}", moduleName, functionName)] = outputPath;
     return true;
 }
 
-// 检查参数是否有效
-bool Compiler::CheckParameters(const std::string &code,
-                               const std::string &moduleName,
-                               const std::string &functionName) {
-    if (code.empty() || moduleName.empty() || functionName.empty()) {
-        LOG_F(ERROR, "Invalid parameters.");
-        return false;
-    }
-    return true;
-}
-
-// 检查模块是否已经编译并缓存
-bool Compiler::IsModuleCached(
-    const std::string &moduleName, const std::string &functionName,
-    std::unordered_map<std::string, std::string> &cache_) {
-    std::string key = moduleName + "::" + functionName;
-    auto cachedResult = cache_.find(key);
-    if (cachedResult != cache_.end()) {
-        LOG_F(WARNING, "Module {}::{} is already compiled.", moduleName,
-              functionName);
-        return true;
-    }
-    return false;
-}
-
-// 创建输出目录
-bool Compiler::CreateOutputDirectory(const std::string &outputDir) {
+void Compiler::createOutputDirectory(const fs::path& outputDir) {
     if (!fs::exists(outputDir)) {
-        LOG_F(WARNING, "Output directory does not exist.");
-        try {
-            fs::create_directories(outputDir);
-        } catch (const std::exception &e) {
-            LOG_F(ERROR, "Failed to create output directory. {}", e.what());
-            return false;
-        }
+        LOG_F(WARNING, "Output directory {} does not exist, creating it.",
+              outputDir.string());
+        fs::create_directories(outputDir);
     }
-    return true;
 }
 
-// 从 JSON 文件中读取编译选项
-std::string Compiler::ReadCompileOptions(const std::string &optionsFile) {
-    std::ifstream compileOptionFile(optionsFile);
-    if (compileOptionFile.is_open()) {
-        json compileOptionsJson;
-        try {
-            compileOptionFile >> compileOptionsJson;
-            if (compileOptionsJson.contains("optimization_level") &&
-                compileOptionsJson.contains("cplus_version") &&
-                compileOptionsJson.contains("warnings")) {
-                std::string compileOptions =
-                    compileOptionsJson["optimization_level"]
-                        .get<std::string>() +
-                    " " +
-                    compileOptionsJson["cplus_version"].get<std::string>() +
-                    " " + compileOptionsJson["warnings"].get<std::string>();
-                return compileOptions;
-            } else {
-                LOG_F(ERROR, "Invalid format in compile_options.json.");
-                return "";
-            }
-        } catch (const std::exception &e) {
-            LOG_F(ERROR, "Error reading compile_options.json: {}", e.what());
-            return "";
-        }
-    }
-    return "";
-}
-
-// 语法检查
-bool Compiler::SyntaxCheck(const std::string &code,
-                           const std::string &compiler) {
-    std::stringstream syntaxCheckCmd;
-    syntaxCheckCmd << compiler << " -fsyntax-only -x c++ -";
-    std::string syntaxCheckOutput;
-    if (RunShellCommand(syntaxCheckCmd.str(), code, syntaxCheckOutput) != 0) {
-        LOG_F(ERROR, "Syntax error in C++ code: {}", syntaxCheckOutput);
-        return false;
-    }
-    return true;
-}
-
-// 编译代码
-bool Compiler::CompileCode(const std::string &code, const std::string &compiler,
-                           const std::string &compileOptions,
-                           const std::string &output) {
-    std::string cmd = compiler + " " + compileOptions + " - " + " -o " + output;
-    DLOG_F(INFO, "{}", cmd);
-
-    std::string compilationOutput;
-    int exitCode = RunShellCommand(cmd, code, compilationOutput);
+bool Compiler::syntaxCheck(std::string_view code, std::string_view compiler) {
+    const auto command = fmt::format("{} -fsyntax-only -xc++ -", compiler);
+    std::string output;
+    const auto exitCode = runCommand(command, code, output);
     if (exitCode != 0) {
-        LOG_F(ERROR, "Failed to compile C++ code: {}", compilationOutput);
+        LOG_F(ERROR, "Syntax check failed:\n{}", output);
         return false;
     }
     return true;
 }
 
-// 缓存已编译的模块
-void Compiler::CacheCompiledModule(
-    const std::string &moduleName, const std::string &functionName,
-    const std::string &output,
-    std::unordered_map<std::string, std::string> &cache_) {
-    std::string key = moduleName + "::" + functionName;
-    cache_[key] = output;
-}
-
-bool Compiler::CopyFile_(const std::string &source,
-                         const std::string &destination) {
-    try {
-        std::ifstream src(source, std::ios::binary);
-        if (!src) {
-            LOG_F(ERROR, "Failed to open file for copy: {}", source);
-            return false;
-        }
-
-        std::ofstream dst(destination, std::ios::binary);
-        if (!dst) {
-            LOG_F(ERROR, "Failed to create file for copy: {}", destination);
-            return false;
-        }
-
-        dst << src.rdbuf();
-
-        if (!dst.good()) {
-            LOG_F(ERROR, "Error occurred while writing to destination file: {}",
-                  destination);
-            return false;
-        }
-
-        return true;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Exception occurred during file copy: {}", e.what());
+bool Compiler::compileCode(std::string_view code, std::string_view compiler,
+                           std::string_view compileOptions,
+                           const fs::path& output) {
+    const auto command = fmt::format("{} {} -xc++ - -o {}", compiler,
+                                     compileOptions, output.string());
+    std::string compilationOutput;
+    const auto exitCode = runCommand(command, code, compilationOutput);
+    if (exitCode != 0) {
+        LOG_F(ERROR, "Compilation failed:\n{}", compilationOutput);
         return false;
     }
+    return true;
 }
 
-int Compiler::RunShellCommand(const std::string &command,
-                              const std::string &input, std::string &output) {
-    int exitCode = -1;
-#ifdef _WIN32
-    HANDLE hStdoutRead = NULL;
+int Compiler::runCommand(std::string_view command, std::string_view input,
+                         std::string& output) {
+    std::array<char, 128> buffer;
+    output.clear();
 
-    STARTUPINFO si = {sizeof(si)};
-    PROCESS_INFORMATION pi;
-    HANDLE hStdinRead = NULL, hStdoutWrite = NULL;
-    SECURITY_ATTRIBUTES sa;
-    sa.nLength = sizeof(sa);
-    sa.lpSecurityDescriptor = NULL;
-    sa.bInheritHandle = TRUE;
-    if (!CreatePipe(&hStdinRead, &hStdoutWrite, &sa, 0)) {
-        LOG_F(ERROR, "Failed to create input pipe for shell command: {}",
-              command);
-        return exitCode;
-    }
-    if (!SetHandleInformation(hStdoutWrite, HANDLE_FLAG_INHERIT, 0)) {
-        LOG_F(ERROR,
-              "Failed to set input handle information for shell command: {}",
-              command);
-        CloseHandle(hStdinRead);
-        return exitCode;
-    }
-    if (!CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0)) {
-        LOG_F(ERROR, "Failed to create output pipe for shell command: {}",
-              command);
-        CloseHandle(hStdinRead);
-        CloseHandle(hStdoutWrite);
-        return exitCode;
-    }
-
-    si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-    si.hStdInput = hStdinRead;
-    si.hStdOutput = hStdoutWrite;
-    si.hStdError = GetStdHandle(STD_ERROR_HANDLE);
-
-    std::vector<char> commandBuffer(command.begin(), command.end());
-    commandBuffer.push_back('\0');
-
-    if (!CreateProcess(NULL, &commandBuffer[0], NULL, NULL, TRUE, 0, NULL, NULL,
-                       &si, &pi)) {
-        LOG_F(ERROR, "Failed to launch shell command: {}", command);
-        CloseHandle(hStdinRead);
-        CloseHandle(hStdoutWrite);
-        CloseHandle(hStdoutRead);
-        return exitCode;
-    }
-    CloseHandle(hStdinRead);
-    CloseHandle(hStdoutWrite);
-
-    // Read the command output
-    char buffer[4096];
-    DWORD bytesRead;
-    while (ReadFile(hStdoutRead, buffer, sizeof(buffer), &bytesRead, NULL)) {
-        if (bytesRead > 0) {
-            output.append(buffer, bytesRead);
-        } else {
-            break;
-        }
-    }
-
-    // Wait for the command to finish
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    GetExitCodeProcess(pi.hProcess, (LPDWORD)&exitCode);
-
-    // Clean up
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-    CloseHandle(hStdoutRead);
-#else
-    FILE *pipe = popen(command.c_str(), "w");
+    auto pipe = popen(command.data(), "r+");
     if (!pipe) {
-        LOG_F(ERROR, "Failed to popen shell command: {}", command);
-        return exitCode;
+        LOG_F(ERROR, "Failed to run command: {}", command);
+        return -1;
     }
 
-    fwrite(input.c_str(), 1, input.size(), pipe);
+    fwrite(input.data(), sizeof(char), input.size(), pipe);
     fclose(pipe);
 
-    exitCode = WEXITSTATUS(pclose(pipe));
-#endif
-
-    return exitCode;
+    pipe = popen(command.data(), "r");
+    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+        output += buffer.data();
+    }
+    return pclose(pipe);
 }
 
+std::vector<std::string> Compiler::findAvailableCompilers() {
+    std::vector<std::string> availableCompilers;
+
+    for (const auto& path : constants::COMPILER_PATHS) {
+        for (const auto& compiler : constants::COMMON_COMPILERS) {
+            std::filesystem::path compilerPath =
+                std::filesystem::path(path) / compiler;
+            if (std::filesystem::exists(compilerPath)) {
+                availableCompilers.push_back(compilerPath.string());
+            }
+        }
+    }
+
+    return availableCompilers;
+}
 }  // namespace Lithium

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 export interface WebsocketProps {
   url: string;
-  onMessage: (data:any) => void;
+  onMessage: (data: any) => void;
   onOpen: (event: Event, websocket: WebSocket) => void;
   keepAliveInterval?: number;
   onClose?: (event: Event, websocket: WebSocket) => void;
@@ -12,8 +12,8 @@ const keepAlive = (websocket: WebSocket, interval: number) => {
   setTimeout(() => {
     websocket.send(
       JSON.stringify({
-        method: 'ping',
-      }),
+        method: "ping",
+      })
     );
     keepAlive(websocket, interval);
   }, interval);

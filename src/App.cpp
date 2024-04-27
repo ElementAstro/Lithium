@@ -1,49 +1,20 @@
 /*
- * App.cpp
+ * app.cpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
 /*************************************************
 
-Date: 2023-7-13
+Date: 2024-14
 
-Description: Main
+Description: Main Entry
 
 **************************************************/
 
-#ifdef ENABLE_WEB_SERVER
-// This is for debug only, please remove it in production
-// Oatpp server is still experimental, it may be improved in the future
-#include "AppComponent.hpp"
+#include "lithiumapp.hpp"
 
-#ifdef ENABLE_ASYNC
-#include "controller/AsyncConfigController.hpp"
-#include "controller/AsyncDeviceController.hpp"
-#include "controller/AsyncIOController.hpp"
-#include "controller/AsyncProcessController.hpp"
-#include "controller/AsyncStaticController.hpp"
-#include "controller/AsyncSystemController.hpp"
-#include "controller/AsyncUploadController.hpp"
-// #include "controller/AsyncWebSocketController.hpp"
-#include "controller/AsyncClientController.hpp"
-#include "oatpp-swagger/AsyncController.hpp"
-#else
-#include "oatpp-swagger/Controller.hpp"
-#endif
-
-#include "oatpp/network/Server.hpp"
-
-#define ADD_CONTROLLER(controller, docEndpoints, router, logMessage) \
-    auto controller##_ptr = controller::createShared();              \
-    docEndpoints.append(controller##_ptr->getEndpoints());           \
-    router->addController(controller##_ptr);                         \
-    DLOG_F(INFO, logMessage " loaded");
-
-#endif
-#include <argparse/argparse.hpp>
-
-#include "LithiumApp.hpp"
+#include "preload.hpp"
 
 #include "atom/log/loguru.hpp"
 #include "atom/server/global_ptr.hpp"
@@ -57,6 +28,8 @@ Description: Main
 using namespace Lithium::Terminal;
 #endif
 
+#include "server/App.hpp"
+
 #include <chrono>
 #include <ctime>
 #include <filesystem>
@@ -66,97 +39,7 @@ using namespace Lithium::Terminal;
 #include <signal.h>
 #endif
 
-void BusLoggerFunction(void *user_data, const loguru::Message &message) {
-    Lithium::MyApp->sendJsonMessage("log", {{"message", message.message},
-                                            {"level", message.verbosity},
-                                            {"file", message.filename},
-                                            {"line", message.line},
-                                            {"timestamp", message.preamble}});
-}
-
-#ifdef ENABLE_WEB_SERVER
-void runServer() {
-    DLOG_F(INFO, "Loading App component ...");
-#if ENABLE_IPV6
-    AppComponent components(
-        Lithium::MyApp->GetConfig("config/server").value("host", "::"),
-        Lithium::MyApp->GetConfig("config/server")
-            .value("port", 8000));  // Create scope Environment components
-#else
-    DLOG_F(INFO, "Server host:", Lithium::MyApp->GetConfig({"key", "config/server"})
-                                   .value("host", "0.0.0.0"));
-    DLOG_F(INFO, "Server port:", Lithium::MyApp->GetConfig({"key", "config/server"})
-                                   .value("port", 8000));
-    AppComponent components(
-        Lithium::MyApp->GetConfig({"key", "config/server"})
-            .value("host", "0.0.0.0"),
-        Lithium::MyApp->GetConfig({"key", "config/server"})
-            .value("port", 8000));  // Create scope Environment components
-#endif
-    DLOG_F(INFO, "App component loaded");
-
-    /* Get router component */
-    OATPP_COMPONENT(std::shared_ptr<oatpp::web::server::HttpRouter>, router);
-    oatpp::web::server::api::Endpoints docEndpoints;
-    /* Add routes & documents */
-
-    ADD_CONTROLLER(ConfigController, docEndpoints, router,
-                   "AsyncConfigController");
-
-    ADD_CONTROLLER(StaticController, docEndpoints, router,
-                   "AsyncStaticController");
-
-    ADD_CONTROLLER(SystemController, docEndpoints, router,
-                   "AsyncSystemController");
-
-    // ADD_CONTROLLER(WebSocketController, docEndpoints, router,
-    //            "AsyncWebSocketController");
-
-    ADD_CONTROLLER(IOController, docEndpoints, router, "AsyncIOController");
-
-    ADD_CONTROLLER(ProcessController, docEndpoints, router,
-                   "AsyncProcessController");
-
-    ADD_CONTROLLER(ClientController, docEndpoints, router,
-                   "AsyncClientController");
-
-    DLOG_F(INFO, "Starting to load API doc controller");
-#if ENABLE_ASYNC
-    router->addController(
-        oatpp::swagger::AsyncController::createShared(docEndpoints));
-#else
-    router->addController(
-        oatpp::swagger::Controller::createShared(docEndpoints));
-#endif
-    DLOG_F(INFO, "API doc controller loaded");
-
-    /* Load websocket route */
-    // router->addController(WebSocketController::createShared());
-
-    /* Get connection handler component */
-    OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>,
-                    connectionHandler, "http");
-
-    /* Get connection provider component */
-    OATPP_COMPONENT(std::shared_ptr<oatpp::network::ServerConnectionProvider>,
-                    connectionProvider);
-
-    DLOG_F(INFO, "Loaded server components ... Prepare for starting ...");
-    /* create server */
-    oatpp::network::Server server(connectionProvider, connectionHandler);
-
-    DLOG_F(INFO, "Server running on port {}...",
-           connectionProvider->getProperty("port").toString()->c_str());
-
-    /* This is a block function that will be called when the server is started
-     */
-    server.run();
-}
-#endif
-
-
-// TODO: add network logger, not implemented yet
-// struct MyNetworkLogger {};
+#include "argparse/argparse.hpp"
 
 /**
  * @brief setup log file
@@ -176,16 +59,9 @@ void setupLogFile() {
     loguru::add_file(logFilePath.string().c_str(), loguru::Append,
                      loguru::Verbosity_MAX);
 
-    // MyNetworkLogger network_logger;
-    // TODO loguru::add_callback("network_logger", BusLoggerFunction,
-    // &network_logger, loguru::Verbosity_INFO);
-
     loguru::set_fatal_handler([](const loguru::Message &message) {
         Atom::System::saveCrashLog(std::string(message.prefix) +
                                    message.message);
-#if ENABLE_WEB_SERVER
-        oatpp::base::Environment::destroy();
-#endif
     });
 }
 
@@ -196,6 +72,8 @@ void setupLogFile() {
  * @return 0 on success
  */
 int main(int argc, char *argv[]) {
+    // NOTE: gettext is not supported yet, it will cause compilation error on
+    // Mingw64
     /* Add gettext */
 #if ENABLE_GETTEXT
     bindtextdomain("lithium", "locale");
@@ -203,15 +81,16 @@ int main(int argc, char *argv[]) {
     setlocale(LC_ALL, "");
     textdomain("lithium");
 #endif
+    // Set log file
+    setupLogFile();
 
     // Init loguru log system
     loguru::init(argc, argv);
-    // Set log file
-    setupLogFile();
 
     /* Parse arguments */
     argparse::ArgumentParser program("Lithium Server");
 
+    // NOTE: The command arguments' priority is higher than the config file
     program.add_argument("-P", "--port")
         .help("port the server running on")
         .default_value(8000);
@@ -223,10 +102,13 @@ int main(int argc, char *argv[]) {
         .default_value("config.json");
     program.add_argument("-M", "--module-path")
         .help("path to the modules directory")
-        .default_value("modules");
+        .default_value("./modules");
     program.add_argument("-W", "--web-panel")
         .help("web panel")
         .default_value(true);
+    program.add_argument("-D", "--debug")
+        .help("debug mode")
+        .default_value(false);
     program.add_argument("-L", "--log-file").help("path to log file");
 
     program.add_description("Lithium Command Line Interface:");
@@ -235,31 +117,32 @@ int main(int argc, char *argv[]) {
     program.parse_args(argc, argv);
 
     Lithium::InitLithiumApp(argc, argv);
-    // Run oatpp server
+    // Create shared instance
     Lithium::MyApp = Lithium::LithiumApp::createShared();
-
-    auto cmd_port = program.get<int>("--port");
-    if (cmd_port != 8000) {
-        DLOG_F(INFO, "Command line server port : {}", cmd_port);
-
-        auto port =
-            Lithium::MyApp->GetConfig("config/server").value<int>("port", 8000);
-        if (port != cmd_port) {
-            Lithium::MyApp->SetConfig(
-                {{"key", "config/server/port"}, {"value", cmd_port}});
-            DLOG_F(INFO, "Set server port to {}", cmd_port);
-        }
-    }
+    // Parse arguments
     try {
         auto cmd_host = program.get<std::string>("--host");
+        auto cmd_port = program.get<int>("--port");
         auto cmd_config_path = program.get<std::string>("--config");
         auto cmd_module_path = program.get<std::string>("--module-path");
         auto cmd_web_panel = program.get<bool>("--web-panel");
+        auto cmd_debug = program.get<bool>("--debug");
 
         if (!cmd_host.empty()) {
             Lithium::MyApp->SetConfig(
                 {{"key", "config/server/host"}, {"value", cmd_host}});
             DLOG_F(INFO, "Set server host to {}", cmd_host);
+        }
+        if (cmd_port != 8000) {
+            DLOG_F(INFO, "Command line server port : {}", cmd_port);
+
+            auto port = Lithium::MyApp->GetConfig("config/server")
+                            .value<int>("port", 8000);
+            if (port != cmd_port) {
+                Lithium::MyApp->SetConfig(
+                    {{"key", "config/server/port"}, {"value", cmd_port}});
+                DLOG_F(INFO, "Set server port to {}", cmd_port);
+            }
         }
         if (!cmd_config_path.empty()) {
             Lithium::MyApp->SetConfig({{"key", "config/server/configpath"},
@@ -279,49 +162,30 @@ int main(int argc, char *argv[]) {
                 DLOG_F(INFO, "Disable web panel");
             }
         }
+
+        if (cmd_debug) {
+            if (!Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
+                Lithium::MyApp->SetConfig(
+                    {{"key", "config/server/debug"}, {"value", true}});
+            }
+        } else {
+            Lithium::MyApp->SetConfig(
+                {{"key", "config/server/debug"}, {"value", false}});
+            DLOG_F(INFO, "Disable debug mode");
+        }
     } catch (const std::bad_any_cast &e) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
+        Atom::System::saveCrashLog(e.what());
+        return 1;
     }
 
-#if ENABLE_TERMINAL
-    Lithium::MyApp->SetConfig(
-        {{"key", "config/terminal/enabled"}, {"value", true}});
-
-    CommandManager manager;
-
-    // 注册指令函数
-    manager.registerCommand("ls", lsCommand);
-    manager.registerCommand("pwd", pwdCommand);
-    manager.registerCommand("mkdir", mkdirCommand);
-    manager.registerCommand("cp", cpCommand);
-    manager.registerCommand("system", systemCommand);
-
-    clearTerminal();
-
-    // 打印终端头部信息
-    printHeader();
-
-    while (true)
-    {
-        // 获取终端输入
-        std::string input = getTerminalInput(manager);
-
-        // 运行指令函数
-        std::string result = manager.runCommand(input, "");
-
-        // 在终端上显示执行结果
-        std::cout << result << std::endl;
+    // In debug mode run the terminal first and will not run the server
+    if (Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
+        ConsoleTerminal terminal;
+        terminal.run();
+    } else {
+        runServer();
     }
-
-#endif
-
-#if ENABLE_WEB_SERVER
-    oatpp::base::Environment::init();
-    // Run the main server
-    runServer();
-    // Clean up all
-    oatpp::base::Environment::destroy();
-#endif
 
     return 0;
 }

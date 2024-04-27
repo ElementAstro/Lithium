@@ -48,8 +48,9 @@ struct ProcessHandle {
  * execute.
  */
 [[nodiscard]] std::string executeCommand(
-    const std::string &command, bool openTerminal,
-    std::function<void(const std::string &)> processLine);
+    const std::string &command, bool openTerminal = false,
+    std::function<void(const std::string &)> processLine =
+        [](const std::string &) {});
 
 /**
  * @brief Execute a list of commands.

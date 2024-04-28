@@ -19,7 +19,7 @@ Description: Some useful string functions
 #include <string_view>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief Checks if the given string contains any uppercase characters.
  *
@@ -127,6 +127,6 @@ replaceStrings(std::string_view text,
                const std::vector<std::pair<std::string_view, std::string_view>>&
                    replacements);
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

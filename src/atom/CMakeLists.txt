@@ -31,8 +31,6 @@ add_subdirectory(async)
 add_subdirectory(components)
 add_subdirectory(connection)
 add_subdirectory(driver)
-add_subdirectory(event)
-add_subdirectory(experiment)
 add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(server)
@@ -81,8 +79,6 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-task
     atom-io
     atom-driver
-    atom-event
-    atom-experiment
     atom-component
     atom-type
     atom-utils

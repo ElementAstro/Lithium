@@ -24,8 +24,8 @@ using namespace std;
 Message::Message(Type t, const string &name, const string &target,
                  const string &origin)
     : type_(t), name_(name), target_(target), origin_(origin) {
-    timestamp_ = Atom::Utils::getChinaTimestampString();
-    Atom::Utils::UUIDGenerator generator;
+    timestamp_ = atom::utils::getChinaTimestampString();
+    atom::utils::UUIDGenerator generator;
     uuid_ = generator.generateUUID();
 }
 
@@ -65,9 +65,10 @@ double Message::api_version() const { return api_version_; }
 
 // Void Message
 VoidMessage::VoidMessage(const string &name, const string &target,
-                         const string &origin)
-    : Message(Type::kVoid, name, target, origin) {}
+                         const string &origin, bool has_return)
+    : Message(Type::kVoid, name, target, origin), has_return(has_return) {}
 
+bool VoidMessage::hasReturn() const { return has_return; }
 // TextMessage
 TextMessage::TextMessage(const string &name, const string &text,
                          const string &target, const string &origin)

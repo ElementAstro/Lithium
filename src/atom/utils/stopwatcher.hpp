@@ -20,7 +20,7 @@ Description: Simple implementation of a stopwatch
 #include <string>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief 用于计时的类。
  *
@@ -127,6 +127,6 @@ private:
         const std::chrono::time_point<std::chrono::high_resolution_clock>
             &currentTime);
 };
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

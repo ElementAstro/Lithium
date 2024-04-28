@@ -152,7 +152,7 @@ private:
     std::weak_ptr<TaskPool> m_TaskPool;
     std::weak_ptr<TickScheduler> m_TickScheduler;
 
-    std::unique_ptr<Atom::Utils::StopWatcher> m_Timer;
+    std::unique_ptr<atom::utils::StopWatcher> m_Timer;
 
     std::atomic_bool m_StopFlag;
 };

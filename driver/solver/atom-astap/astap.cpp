@@ -73,7 +73,7 @@ bool AstapSolver::solveImage(const std::string &image, const int &timeout,
 
         auto ret = Atom::Async::asyncRetry(
             [](const std::string &cmd) -> std::string {
-                return Atom::Utils::executeCommand(cmd, false);
+                return atom::utils::executeCommand(cmd, false);
             },
             3, std::chrono::seconds(5), cmd);
 

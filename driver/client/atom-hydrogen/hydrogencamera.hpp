@@ -381,11 +381,11 @@ private:
 
     std::atomic<double> polling_period;
 
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>
+    std::unique_ptr<atom::utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>
         m_number_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>
+    std::unique_ptr<atom::utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>
         m_switch_switch;
-    std::unique_ptr<Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>
+    std::unique_ptr<atom::utils::StringSwitch<HYDROGEN::PropertyViewText *>>
         m_text_switch;
 
 private:

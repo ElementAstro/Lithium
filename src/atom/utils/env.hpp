@@ -21,7 +21,7 @@ Description: Environment variable management
 #include <vector>
 #include <memory>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief 环境变量类，用于获取和设置程序的环境变量、命令行参数等信息。
  */
@@ -144,6 +144,6 @@ private:
     mutable std::mutex m_mutex;  ///< 互斥锁，用于保护成员变量。
 };
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

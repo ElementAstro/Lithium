@@ -175,7 +175,7 @@ void InitLithiumApp(int argc, char **argv) {
 
     AddPtr("lithium.cmd.global", CommandDispatcher<json, json>::createShared());
 
-    AddPtr("lithium.utils.env", Atom::Utils::Env::createShared(argc, argv));
+    AddPtr("lithium.utils.env", atom::utils::Env::createShared(argc, argv));
 
     // TODO: Addons path need to be configurable
     AddPtr("lithium.addon.loader", ModuleLoader::createShared("./modules"));

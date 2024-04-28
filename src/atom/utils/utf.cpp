@@ -21,7 +21,7 @@ Description: Some useful functions about utf string
 #include <locale>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::utils {
 std::string toUTF8(std::wstring_view wstr) {
 #if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__)
     std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
@@ -134,4 +134,4 @@ std::u16string UTF32toUTF16(std::u32string_view str) {
 
     return result;
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

@@ -46,7 +46,7 @@ void walk(const fs::path &root) {
 
 std::string jwalk(const std::string &root) {
     DLOG_F(INFO, "Walking: {}", root.generic_string());
-    if (!Atom::IO::isFolderExists(root))
+    if (!atom::io::isFolderExists(root))
     {
         LOG_F(ERROR, "Directory not exists: {}", root);
         return "";

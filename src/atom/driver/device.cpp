@@ -32,7 +32,7 @@ AtomDriver::~AtomDriver() {}
 
 bool AtomDriver::initialize() {
     SharedComponent::initialize();
-    Atom::Utils::UUIDGenerator generator;
+    atom::utils::UUIDGenerator generator;
     m_uuid = generator.generateUUID();
 
     registerVariable("DEVICE_NAME", m_name);

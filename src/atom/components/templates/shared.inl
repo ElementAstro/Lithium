@@ -1,3 +1,6 @@
+#ifndef ATOM_COMPONENT_SHARED_INL
+#define ATOM_COMPONENT_SHARED_INL
+
 #include "shared.hpp"
 
 #include "atom/error/exception.hpp"
@@ -8,7 +11,8 @@
 
 using namespace atom::error;
 
-SharedComponent::SharedComponent(const std::string &name) : Component(name) {
+template <typename Delivery>
+SharedComponent<Delivery>::SharedComponent(const std::string &name) : Component(name) {
     m_handleFunction = [shared_this =
                             shared_from_this()](const std::any &message) {
         LOG_F(INFO, "SharedComponent::handleFunction");
@@ -54,19 +58,23 @@ SharedComponent::SharedComponent(const std::string &name) : Component(name) {
     registerCommand("handleVoid", handleVoidMessage);
 }
 
-SharedComponent::~SharedComponent() {}
+template <typename Delivery>
+SharedComponent<Delivery>::~SharedComponent() {}
 
-bool SharedComponent::initialize() { return true; }
+template <typename Delivery>
+bool SharedComponent<Delivery>::initialize() { return true; }
 
-bool SharedComponent::destroy() { return true; }
+template <typename Delivery>
+bool SharedComponent<Delivery>::destroy() { return true; }
 
-void SharedComponent::handleVoidMessage(
+template <typename Delivery>
+void SharedComponent<Delivery>::handleVoidMessage(
     const std::shared_ptr<VoidMessage> &message) {
     LOG_F(INFO, "SharedComponent::handleVoid");
     auto name = message->name();
     try
     {
-        
+        dispatch(name);
     }
     catch(const std::exception& e)
     {
@@ -75,17 +83,22 @@ void SharedComponent::handleVoidMessage(
     
 }
 
-void SharedComponent::handleTextMessage(
+template <typename Delivery>
+void SharedComponent<Delivery>::handleTextMessage(
     const std::shared_ptr<TextMessage> &message) {
     LOG_F(INFO, "SharedComponent::handleText");
 }
 
-void SharedComponent::handleBooleanMessage(
+template <typename Delivery>
+void SharedComponent<Delivery>::handleBooleanMessage(
     const std::shared_ptr<BooleanMessage> &message) {
     LOG_F(INFO, "SharedComponent::handleBoolean");
 }
 
-void SharedComponent::handleNumberMessage(
+template <typename Delivery>
+void SharedComponent<Delivery>::handleNumberMessage(
     const std::shared_ptr<NumberMessage> &message) {
     LOG_F(INFO, "SharedComponent::handleNumber");
 }
+
+#endif

@@ -20,7 +20,7 @@ Description: UUID Generator
 #include <uuid/uuid.h>
 #endif
 
-namespace Atom::Utils {
+namespace atom::utils {
 UUIDGenerator::UUIDGenerator() : gen_(rd_()), dis_(0, 0xFFFFFFFF) {}
 
 void UUIDGenerator::seed(unsigned int seed_value) const {
@@ -95,4 +95,4 @@ std::string generateSystemUUID() {
 
     return uuid;
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

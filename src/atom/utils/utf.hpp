@@ -17,7 +17,7 @@ Description: Some useful functions about utf string
 
 #include <string>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief 将宽字符字符串转换为 UTF-8 字符串
  *
@@ -81,6 +81,6 @@ std::string UTF32toUTF8(std::u32string_view str);
  * @return std::u16string 转换后的 UTF-16 字符串
  */
 std::u16string UTF32toUTF16(std::u32string_view str);
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

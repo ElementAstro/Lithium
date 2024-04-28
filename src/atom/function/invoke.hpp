@@ -38,6 +38,20 @@ auto delay_invoke(F &&f, Args &&...args) {
     };
 }
 
+template <typename R, typename T, typename... Args>
+auto delay_mem_invoke(R (T::*f)(Args...), T *obj) {
+    return [f, obj](Args... args) {
+        return (obj->*f)(std::forward<Args>(args)...);
+    };
+}
+
+template <typename R, typename T, typename... Args>
+auto delay_cmem_invoke(R (T::*f)(Args...) const, const T *obj) {
+    return [f, obj](Args... args) {
+        return (obj->*f)(std::forward<Args>(args)...);
+    };
+}
+
 template <typename Func, typename... Args>
     requires Invocable<Func, Args...>
 auto safe_call(Func &&func, Args &&...args) {

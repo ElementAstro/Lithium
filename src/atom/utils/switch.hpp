@@ -29,7 +29,7 @@ Description: Smart Switch just like javascript
 #include "atom/error/exception.hpp"
 #include "atom/type/noncopyable.hpp"
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief A class for implementing a switch statement with string cases,
  * enhanced with C++17/20 features.
@@ -112,6 +112,6 @@ private:
     DefaultFunc defaultFunc_;
 };
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

@@ -5,7 +5,8 @@
 
 #include "atom/type/message.hpp"
 
-class SharedComponent : public Component {
+template <typename Delivery>
+class SharedComponent : public Component<Delivery> {
     explicit SharedComponent(const std::string &name);
     virtual ~SharedComponent() override;
 

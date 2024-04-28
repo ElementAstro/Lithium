@@ -57,7 +57,7 @@ namespace fs = std::filesystem;
         return "";                                                 \
     }
 
-namespace Atom::IO {
+namespace atom::io {
 
 bool createDirectory(const std::string &path) {
     ATOM_IO_CHECK_ARGUMENT(path);
@@ -82,7 +82,7 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
         return;
     }
 
-    auto tokens = Atom::Utils::splitString(date, '/');
+    auto tokens = atom::utils::splitString(date, '/');
 
     // Create directories
     fs::path currentDir = rootDir;
@@ -562,4 +562,4 @@ bool isExecutableFile(const std::string &fileName, const std::string &fileExt) {
     DLOG_F(INFO, "The file '{}' exists and is executable.", filePath.string());
     return true;
 }
-}  // namespace Atom::IO
+}  // namespace atom::io

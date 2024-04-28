@@ -22,11 +22,11 @@ HydrogenFocuser::HydrogenFocuser(const std::string &name) : Focuser(name) {
     DLOG_F(INFO, "Hydrogen Focuser {} init successfully", name);
 
     m_number_switch = std::make_unique<
-        Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
+        atom::utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
     m_switch_switch = std::make_unique<
-        Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
+        atom::utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
     m_text_switch = std::make_unique<
-        Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
+        atom::utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
 
     m_switch_switch->registerCase(
         "CONNECTION", [this](HYDROGEN::PropertyViewSwitch *svp) {

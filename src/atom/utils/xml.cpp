@@ -16,7 +16,7 @@ Description: A XML reader class using tinyxml2.
 
 #include <stdexcept>
 
-namespace Atom::Utils {
+namespace atom::utils {
 XMLReader::XMLReader(const std::string &filePath) {
     if (doc_.LoadFile(filePath.c_str()) != tinyxml2::XML_SUCCESS) {
         throw std::runtime_error("Failed to load XML file");
@@ -183,4 +183,4 @@ tinyxml2::XMLElement *XMLReader::getElementByPath(
     }
     return element;
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

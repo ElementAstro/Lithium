@@ -39,7 +39,7 @@ json ExecutableComponent::RunSystemCommand(const json &params)
     DLOG_F(INFO, "Running command: {}", command);
     if (m_ProcessManager)
     {
-        if (!m_ProcessManager->createProcess(command, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
+        if (!m_ProcessManager->createProcess(command, identifier.empty() ? atom::utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Failed to run executable plugin : {}", command);
             return createErrorResponse(__func__, json(), std::format("Failed to run executable plugin : {}", command));
@@ -63,7 +63,7 @@ json ExecutableComponent::RunSystemCommandOutput(const json &params)
     if (m_ProcessManager)
     {
         DLOG_F(INFO, "Running command: {}", command);
-        if (m_ProcessManager->createProcess(command, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
+        if (m_ProcessManager->createProcess(command, identifier.empty() ? atom::utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Started {} successfully", command);
             return createSuccessResponse(__func__, json());
@@ -87,7 +87,7 @@ json ExecutableComponent::RunScript(const json &params)
     if (m_ProcessManager)
     {
         DLOG_F(INFO, "Running script: {}", script);
-        if (m_ProcessManager->createProcess(script, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
+        if (m_ProcessManager->createProcess(script, identifier.empty() ? atom::utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Started {} successfully", script);
             return createSuccessResponse(__func__, json());
@@ -111,7 +111,7 @@ json ExecutableComponent::RunScriptOutput(const json &params)
     if (m_ProcessManager)
     {
         DLOG_F(INFO, "Running script: {}", script);
-        if (m_ProcessManager->createProcess(script, identifier.empty() ? Atom::Utils::generateRandomString(10) : identifier))
+        if (m_ProcessManager->createProcess(script, identifier.empty() ? atom::utils::generateRandomString(10) : identifier))
         {
             LOG_F(ERROR, "Started {} successfully", script);
             return createSuccessResponse(__func__, json());

@@ -19,7 +19,7 @@ Description: UUID Generator
 #include <sstream>
 #include <string>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief 生成UUID的类
  *
@@ -85,6 +85,6 @@ private:
  * UUID的格式为xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx，其中x为16进制数字，且大写或小写均可
  */
 [[maybe_unused]] [[nodiscard]] std::string generateSystemUUID();
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

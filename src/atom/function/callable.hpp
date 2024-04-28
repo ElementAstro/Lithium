@@ -12,8 +12,8 @@ Description: make a callabel object
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_CALLABLE_HPP
-#define ATOM_EXPERIMENT_CALLABLE_HPP
+#ifndef ATOM_FUNCTION_CALLABLE_HPP
+#define ATOM_FUNCTION_CALLABLE_HPP
 
 #include <memory>
 #include <tuple>
@@ -23,7 +23,7 @@ Description: make a callabel object
 template <typename Class, typename... Param>
 struct Constructor {
     template <typename... Inner>
-    auto operator()(Inner &&...inner) const -> std::shared_ptr<Class> {
+    auto operator()(Inner&&... inner) const -> std::shared_ptr<Class> {
         return std::make_shared<Class>(std::forward<Inner>(inner)...);
     }
 };
@@ -35,7 +35,7 @@ struct Const_Caller {
         : m_func(t_func) {}
 
     template <typename... Inner>
-    constexpr auto operator()(const Class &o, Inner &&...inner) const
+    constexpr auto operator()(const Class& o, Inner&&... inner) const
         noexcept(noexcept((o.*m_func)(std::forward<Inner>(inner)...))) -> Ret {
         return (o.*m_func)(std::forward<Inner>(inner)...);
     }
@@ -49,7 +49,7 @@ struct Fun_Caller {
         : m_func(t_func) {}
 
     template <typename... Inner>
-    constexpr auto operator()(Inner &&...inner) const
+    constexpr auto operator()(Inner&&... inner) const
         noexcept(noexcept(m_func(std::forward<Inner>(inner)...))) -> Ret {
         return m_func(std::forward<Inner>(inner)...);
     }
@@ -63,7 +63,7 @@ struct Caller {
         : m_func(t_func) {}
 
     template <typename... Inner>
-    constexpr auto operator()(Class &o, Inner &&...inner) const
+    constexpr auto operator()(Class& o, Inner&&... inner) const
         noexcept(noexcept((o.*m_func)(std::forward<Inner>(inner)...))) -> Ret {
         return (o.*m_func)(std::forward<Inner>(inner)...);
     }
@@ -72,8 +72,8 @@ struct Caller {
 };
 
 template <typename T>
-struct Arity : std::integral_constant<std::size_t,
-                                      std::tuple_size<std::tuple<T>>::value> {};
+struct Arity
+    : std::integral_constant<std::size_t, std::tuple_size_v<std::tuple<T>>> {};
 
 template <typename T>
 struct Function_Signature;
@@ -98,4 +98,43 @@ struct Callable_Traits {
         decltype(&std::remove_reference_t<T>::operator())>::Return_Type;
 };
 
-#endif  // ATOM_EXPERIMENT_CALLABLE_HPP
+template <typename Ret, typename... Param>
+struct Fun_Caller_Noexcept {
+    explicit constexpr Fun_Caller_Noexcept(Ret (*t_func)(Param...) noexcept)
+        : m_func(t_func) {}
+
+    template <typename... Inner>
+    constexpr auto operator()(Inner&&... inner) const noexcept -> Ret {
+        return m_func(std::forward<Inner>(inner)...);
+    }
+    Ret (*m_func)(Param...) noexcept;
+};
+
+template <typename Ret, typename Class, typename... Param>
+struct Caller_Noexcept {
+    explicit constexpr Caller_Noexcept(Ret (Class::*t_func)(Param...) noexcept)
+        : m_func(t_func) {}
+
+    template <typename... Inner>
+    constexpr auto operator()(Class& o,
+                              Inner&&... inner) const noexcept -> Ret {
+        return (o.*m_func)(std::forward<Inner>(inner)...);
+    }
+
+    Ret (Class::*m_func)(Param...) noexcept;
+};
+
+template <typename T>
+struct Is_Noexcept_Callable : std::false_type {};
+
+template <typename Ret, typename... Param>
+struct Is_Noexcept_Callable<Ret (*)(Param...) noexcept> : std::true_type {};
+
+template <typename Ret, typename Class, typename... Param>
+struct Is_Noexcept_Callable<Ret (Class::*)(Param...) noexcept>
+    : std::true_type {};
+
+template <typename T>
+constexpr bool Is_Noexcept_Callable_v = Is_Noexcept_Callable<T>::value;
+
+#endif  // ATOM_FUNCTION_CALLABLE_HPP

@@ -18,7 +18,7 @@ Description: Some useful functions about time
 #include <ctime>
 #include <string>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief 获取当前时间的字符串时间戳
  *
@@ -73,6 +73,6 @@ namespace Atom::Utils {
  * @return std::tm tm结构体
  */
 [[nodiscard]] std::tm timestampToTime(long long timestamp);
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

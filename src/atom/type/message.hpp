@@ -67,7 +67,12 @@ private:
 class VoidMessage : public Message {
 public:
     explicit VoidMessage(const std::string &name, const std::string &target,
-                         const std::string &origin);
+                         const std::string &origin, bool has_return);
+
+    bool hasReturn() const;
+
+private:
+    bool has_return;
 };
 
 // TextMessage class

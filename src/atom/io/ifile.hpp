@@ -21,7 +21,7 @@ Description: File Wrapper
 
 namespace fs = std::filesystem;
 
-namespace Atom::IO {
+namespace atom::io {
 
 class FileWrapper {
 public:
@@ -247,4 +247,4 @@ private:
         return T(std::istreambuf_iterator<char>(file), {});
     }
 };
-}  // namespace Atom::IO
+}  // namespace atom::io

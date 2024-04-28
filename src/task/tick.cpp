@@ -27,7 +27,7 @@ TickScheduler::TickScheduler(size_t threads)
     schedulerThread = std::thread([this] { this->taskSchedulerLoop(); });
 #endif
     pool = GetWeakPtr<TaskPool>("lithium.task.pool");
-    stopwatch = std::make_unique<Atom::Utils::StopWatcher>();
+    stopwatch = std::make_unique<atom::utils::StopWatcher>();
 }
 
 TickScheduler::~TickScheduler() { stopScheduler(); }

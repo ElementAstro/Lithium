@@ -18,7 +18,7 @@ Description: Simple random number generator
 #include <random>
 #include <string>
 
-namespace Atom::Utils {
+namespace atom::utils {
 template <class Engine = std::default_random_engine,
           class Distribution = std::uniform_int_distribution<>>
 class random : public Distribution {
@@ -46,6 +46,6 @@ public:
 };
 
 [[nodiscard]] std::string generateRandomString(int length);
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

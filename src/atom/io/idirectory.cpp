@@ -17,7 +17,7 @@ Description: Directory Wrapper
 #include <iostream>
 #include <stdexcept>
 
-namespace Atom::IO {
+namespace atom::io {
 DirectoryWrapper::DirectoryWrapper(const fs::path& dir_path)
     : dir_path_(dir_path) {}
 
@@ -82,4 +82,4 @@ std::vector<fs::path> DirectoryWrapper::list_directories() const {
 void DirectoryWrapper::create_directory(const std::string& name) const {
     fs::create_directory(dir_path_ / name);
 }
-}  // namespace Atom::IO
+}  // namespace atom::io

@@ -31,7 +31,8 @@ template <typename T>
 concept PointerType =
     std::is_pointer_v<T> ||
     std::is_same_v<T, std::shared_ptr<typename std::remove_pointer<T>::type>> ||
-    std::is_same_v<T, std::unique_ptr<typename std::remove_pointer<T>::type>>;
+    std::is_same_v<T, std::unique_ptr<typename std::remove_pointer<T>::type>> ||
+    std::is_same_v<T, std::weak_ptr<typename std::remove_pointer<T>::type>>;
 
 /**
  * @brief A class template to hold different types of pointers using
@@ -43,7 +44,7 @@ template <typename T>
 class PointerSentinel {
 public:
     // Using std::variant to store different types of pointers
-    std::variant<std::shared_ptr<T>, std::unique_ptr<T>, T*> ptr;
+    std::variant<std::shared_ptr<T>, std::unique_ptr<T>, std::weak_ptr<T>, T*> ptr;
 
     /**
      * @brief Construct a new Pointer Sentinel object from a shared pointer.
@@ -60,6 +61,13 @@ public:
     explicit PointerSentinel(std::unique_ptr<T>&& p) : ptr(std::move(p)) {}
 
     /**
+     * @brief Construct a new Pointer Sentinel object from a weak pointer.
+     *
+     * @param p The weak pointer.
+     */
+    explicit PointerSentinel(std::weak_ptr<T> p) : ptr(p) {}
+
+    /**
      * @brief Construct a new Pointer Sentinel object from a raw pointer.
      *
      * @param p The raw pointer.
@@ -74,13 +82,17 @@ public:
     PointerSentinel(const PointerSentinel& other)
         : ptr(std::visit(
               [](const auto& p)
-                  -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>, T*> {
+                  -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>,
+                                  std::weak_ptr<T>, T*> {
                   if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
                                                std::shared_ptr<T>>) {
                       return p;
                   } else if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
                                                       std::unique_ptr<T>>) {
                       return std::make_unique<T>(*p);
+                  } else if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
+                                                      std::weak_ptr<T>>) {
+                      return p;
                   } else {
                       return new T(*p);
                   }
@@ -97,9 +109,12 @@ public:
             [](auto&& arg) -> T* {
                 using U = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_pointer_v<U>) {
-                    return arg;  // 原始指针
+                    return arg;
+                } else if constexpr (std::is_same_v<U, std::weak_ptr<T>>) {
+                    auto spt = arg.lock();  // Try to lock the weak_ptr
+                    return spt ? spt.get() : nullptr;
                 } else {
-                    return arg.get();  // 智能指针
+                    return arg.get();
                 }
             },
             ptr);
@@ -123,6 +138,15 @@ public:
                 using U = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_pointer_v<U>) {
                     return ((*arg).*func)(std::forward<Args>(args)...);
+                } else if constexpr (std::is_same_v<U, std::weak_ptr<T>>) {
+                    auto spt = arg.lock();
+                    if (spt) {
+                        return ((*spt.get()).*
+                                func)(std::forward<Args>(args)...);
+                    } else {
+                        // Handle the case where weak_ptr is expired
+                        throw std::runtime_error("weak_ptr is expired");
+                    }
                 } else {
                     return ((*arg.get()).*func)(std::forward<Args>(args)...);
                 }

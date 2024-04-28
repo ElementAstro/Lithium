@@ -4,7 +4,7 @@
 #include "dispatch.hpp"
 
 #include "atom/error/exception.hpp"
-#include "atom/type/abi.hpp"
+#include "atom/function/abi.hpp"
 
 template <typename Ret, typename... Args>
 void CommandDispatcher::registerCommand(

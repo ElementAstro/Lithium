@@ -3,11 +3,11 @@
 
 TEST(MD5Test, EncryptTest)
 {
-    Atom::Utils::MD5 md5;
+    atom::utils::MD5 md5;
     std::string input = "Hello, World!";
     std::string expectedOutput = "5eb63bbbe01eeed093cb22bb8f5acdc3";
 
-    std::string actualOutput = Atom::Utils::MD5::encrypt(input);
+    std::string actualOutput = atom::utils::MD5::encrypt(input);
 
     EXPECT_EQ(actualOutput, expectedOutput);
 }

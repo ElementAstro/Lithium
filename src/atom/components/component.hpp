@@ -16,8 +16,8 @@ Description: Basic Component Definition
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
-#include <vector>
 #include <shared_mutex>
+#include <vector>
 
 #include "types.hpp"
 
@@ -26,10 +26,12 @@ Description: Basic Component Definition
 
 #include "configor.hpp"
 
+#include "atom/function/type_info.hpp"
 #include "atom/type/noncopyable.hpp"
-#include "atom/experiment/type_info.hpp"
 
-class Component : public std::enable_shared_from_this<Component>, public NonCopyable {
+template <typename Delivery>
+class Component : public std::enable_shared_from_this<Delivery>,
+                  public NonCopyable {
 public:
     /**
      * @brief Constructs a new Component object.
@@ -65,12 +67,18 @@ public:
      */
     virtual bool destroy();
 
+    std::unordered_map<std::string, bool> getComponentAbilities() const;
+
+    bool hasAbility(const std::string& ability) const;
+
     /**
      * @brief Gets the name of the plugin.
      *
      * @return The name of the plugin.
      */
     std::string getName() const;
+
+    Type_Info getTypeInfo() const;
 
     // -------------------------------------------------------------------
     // Component Configuration methods
@@ -103,7 +111,7 @@ public:
     [[nodiscard("status of the value should not be ignored")]] bool hasValue(
         const std::string& key_path) const;
 
-        /**
+    /**
      * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
      *
      * Load JSON configuration from the specified file and merge with the
@@ -176,8 +184,7 @@ public:
         const std::string& name, const std::string& group,
         const std::string& description, std::function<Ret(Args...)> func,
         std::optional<std::function<bool()>> precondition = std::nullopt,
-        std::optional<std::function<void()>> postcondition = std::nullopt)
-    {
+        std::optional<std::function<void()>> postcondition = std::nullopt) {
         m_CommandDispatcher->registerCommand(name, group, description, func,
                                              precondition, postcondition);
     }
@@ -241,8 +248,7 @@ public:
     void setTimeout(const std::string& name, std::chrono::milliseconds timeout);
 
     template <typename... Args>
-    std::any dispatch(const std::string& name, Args&&... args)
-    {
+    std::any dispatch(const std::string& name, Args&&... args) {
         return m_CommandDispatcher->dispatch(name, std::forward<Args>(args)...);
     }
 
@@ -262,6 +268,28 @@ public:
         const std::string& name) const;
 #endif
 
+    // -------------------------------------------------------------------
+    // Other Components methods
+    // -------------------------------------------------------------------
+    /**
+     * @note This method is not thread-safe. And we must make sure the pointer
+     * is valid. The PointerSentinel will help you to avoid this problem. We
+     * will directly get the std::weak_ptr from the pointer.
+     */
+
+    /**
+     * @return The names of the components that are needed by this component.
+     * @note This will be called when the component is initialized.
+    */
+    std::vector<std::string> getNeededComponents() const;
+
+    void addOtherComponent(const std::string& name,
+                           const PointerSentinel<Component>& component);
+
+    void removeOtherComponent(const std::string& name);
+
+    void clearOtherComponents();
+
 private:
     std::string m_name;
     std::string m_configPath;
@@ -272,9 +300,10 @@ private:
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.
     std::unique_ptr<VariableManager>
         m_VariableManager;  ///< The variable registry for managing variables.
-    std::unique_ptr<ConfigManager>
-        m_ConfigManager;
-    
+    std::unique_ptr<ConfigManager> m_ConfigManager;
+
+    std::unordered_map<std::string, PointerSentinel<Component>> m_OtherComponents;
+
     std::mutex m_mutex;
 };
 

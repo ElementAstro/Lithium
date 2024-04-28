@@ -36,7 +36,7 @@ Description: Tick Sheduler, just like Minecraft's
 
 #include "pool.hpp"
 
-namespace Atom::Utils {
+namespace atom::utils {
 class StopWatcher;
 }
 
@@ -307,7 +307,7 @@ private:
 #endif
     std::atomic_bool manualMode{false};      // 手动模式
     std::atomic<std::size_t> nextTaskId{0};  // 用于生成任务的唯一标识符
-    std::unique_ptr<Atom::Utils::StopWatcher> stopwatch;
+    std::unique_ptr<atom::utils::StopWatcher> stopwatch;
     std::atomic<std::size_t> concurrentTasks{0};  // 当前正在运行的任务数
     std::size_t maxTasks{0};  // 最大同时运行的任务数，0 表示没有限制
 

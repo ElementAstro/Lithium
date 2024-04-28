@@ -60,7 +60,7 @@ public:
     }
 };
 
-namespace Atom::IO {
+namespace atom::io {
 bool compress_file(const std::string &file_name,
                    const std::string &output_folder) {
     fs::path input_path(file_name);
@@ -307,4 +307,4 @@ bool create_zip(const std::string &source_folder, const std::string &zip_file) {
         return false;
     }
 }
-}  // namespace Atom::IO
+}  // namespace atom::io

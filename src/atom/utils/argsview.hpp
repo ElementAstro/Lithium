@@ -24,7 +24,7 @@ Description: ArgsView Class for C++
 #include <unordered_map>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief Represents a view of command-line arguments.
  */
@@ -108,6 +108,6 @@ private:
         m_rules;
 };
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

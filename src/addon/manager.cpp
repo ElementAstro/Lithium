@@ -47,7 +47,7 @@ ComponentManager::ComponentManager() : m_Sandbox(nullptr), m_Compiler(nullptr) {
         GetWeakPtr<Lithium::ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
     CHECK_WEAK_PTR_EXPIRED(m_ModuleLoader,
                            "load module loader from gpm: lithium.addon.loader");
-    m_Env = GetWeakPtr<Atom::Utils::Env>(constants::LITHIUM_UTILS_ENV);
+    m_Env = GetWeakPtr<atom::utils::Env>(constants::LITHIUM_UTILS_ENV);
     CHECK_WEAK_PTR_EXPIRED(m_Env, "load env from gpm: lithium.utils.env");
     m_AddonManager =
         GetWeakPtr<Lithium::AddonManager>(constants::LITHIUM_ADDON_MANAGER);
@@ -140,10 +140,10 @@ bool ComponentManager::Initialize() {
 #ifdef _WIN32
             // This is to pass file name check
             auto module_path_str =
-                Atom::Utils::replaceString(module_path.string(), "/", "\\");
+                atom::utils::replaceString(module_path.string(), "/", "\\");
 #else
             auto module_path_str =
-                Atom::Utils::replaceString(module_path.string(), "\\", "/");
+                atom::utils::replaceString(module_path.string(), "\\", "/");
 #endif
 
             // This step is to load the dynamic library

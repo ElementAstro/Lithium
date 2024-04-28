@@ -272,7 +272,7 @@ private:
 
 private:
     std::weak_ptr<ModuleLoader> m_ModuleLoader;
-    std::weak_ptr<Atom::Utils::Env> m_Env;
+    std::weak_ptr<atom::utils::Env> m_Env;
 
     // The finder used to find the components
     // std::unique_ptr<AddonFinder> m_ComponentFinder;

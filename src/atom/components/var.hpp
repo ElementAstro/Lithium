@@ -21,74 +21,27 @@
 #include "atom/type/trackable.hpp"
 #include "atom/utils/cstring.hpp"
 
-class VariableManager : public NonCopyable {
+class VariableManager {
 public:
     template <typename T>
     void addVariable(const std::string& name, T initialValue,
                      const std::string& description = "",
                      const std::string& alias = "",
-                     const std::string& group = "") {
-        auto variable = std::make_shared<Trackable<T>>(std::move(initialValue));
-        variables_[name] = {std::move(variable), description, alias, group};
-    }
+                     const std::string& group = "");
 
     template <typename T>
-    void setRange(const std::string& name, T min, T max) {
-        if (auto variable = getVariable<T>(name)) {
-            ranges_[name] = std::make_pair(std::move(min), std::move(max));
-        }
-    }
+    void setRange(const std::string& name, T min, T max);
 
     void setStringOptions(const std::string& name,
-                          std::vector<std::string> options) {
-        if (auto variable = getVariable<std::string>(name)) {
-            stringOptions_[name] = std::move(options);
-        }
-    }
+                          std::vector<std::string> options);
 
     template <typename T>
-    std::shared_ptr<Trackable<T>> getVariable(const std::string& name) {
-        auto it = variables_.find(name);
-        if (it != variables_.end()) {
-            try {
-                return std::any_cast<std::shared_ptr<Trackable<T>>>(
-                    it->second.variable);
-            } catch (const std::bad_any_cast& e) {
-                THROW_EXCEPTION(concat("Type mismatch: ", name));
-            }
-        }
-        return nullptr;
-    }
+    std::shared_ptr<Trackable<T>> getVariable(const std::string& name);
 
-    void setValue(const std::string& name, const char* newValue) {
-        setValue(name, std::string(newValue));
-    }
+    void setValue(const std::string& name, const char* newValue);
 
     template <typename T>
-    void setValue(const std::string& name, T newValue) {
-        if (auto variable = getVariable<T>(name)) {
-            if constexpr (std::is_arithmetic_v<T>) {
-                if (ranges_.count(name)) {
-                    auto [min, max] =
-                        std::any_cast<std::pair<T, T>>(ranges_[name]);
-                    if (newValue < min || newValue > max) {
-                        THROW_EXCEPTION("Value out of range");
-                    }
-                }
-            } else if constexpr (std::is_same_v<T, std::string>) {
-                if (stringOptions_.count(name)) {
-                    auto& options = stringOptions_[name];
-                    if (std::find(options.begin(), options.end(), newValue) ==
-                        options.end()) {
-                        THROW_EXCEPTION("Invalid string option");
-                    }
-                }
-            }
-            *variable = std::move(newValue);
-        } else {
-            THROW_EXCEPTION("Variable not found");
-        }
-    }
+    void setValue(const std::string& name, T newValue);
 
 private:
     struct VariableInfo {

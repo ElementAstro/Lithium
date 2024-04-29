@@ -240,7 +240,7 @@ set(Lithium_module
 
 add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${script_module} ${Lithium_module})
 target_link_libraries(lithium_server-library loguru)
-add_executable(lithium_server ${lithium_src_dir}/app.cpp)
+add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
 target_link_libraries(lithium_server lithium_server-library)

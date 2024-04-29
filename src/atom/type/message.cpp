@@ -111,7 +111,7 @@ Args ParamsMessage::value() const { return params_; }
 shared_ptr<VoidMessage> MessageHelper::MakeVoidMessage(const string &name,
                                                        const string &target,
                                                        const string &origin) {
-    return make_shared<VoidMessage>(name, target, origin);
+    return make_shared<VoidMessage>(name, target, origin, true);
 }
 
 // MessageHelper

@@ -28,7 +28,7 @@
 
 #include "proxy.hpp"
 
-class CommandDispatcher : public NonCopyable {
+class CommandDispatcher {
 public:
     template <typename Ret, typename... Args>
     void registerCommand(

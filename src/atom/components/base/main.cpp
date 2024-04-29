@@ -2,7 +2,9 @@
 
 #include <iostream>
 
-class MySharedComponent : public SharedComponent<MySharedComponent> {
+#include "atom/log/loguru.hpp"
+
+class MySharedComponent : public Component<MySharedComponent> {
 public:
     explicit MySharedComponent(const std::string &name);
     virtual ~MySharedComponent();
@@ -15,24 +17,21 @@ protected:
 };
 
 MySharedComponent::MySharedComponent(const std::string &name)
-    : SharedComponent(name) {
+    : Component<MySharedComponent>(name) {
     LOG_F(INFO, "Load {}", name);
 
     initialize();
 
-    registerCommand("helloWorld",
-                    [this](const json &params) { return helloWorld(params); });
+    registerCommand("helloWorld", &MySharedComponent::helloWorld, PointerSentinel(shared_from_this()));
 }
 
 MySharedComponent::~MySharedComponent() {}
 
 bool MySharedComponent::initialize() {
-    SharedComponent::initialize();
     return true;
 }
 
 bool MySharedComponent::destroy() {
-    Component::destroy();
     return true;
 }
 

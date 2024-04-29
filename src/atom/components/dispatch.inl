@@ -10,11 +10,12 @@ template <typename Ret, typename... Args>
 void CommandDispatcher::registerCommand(
     const std::string& name, const std::string& group,
     const std::string& description, std::function<Ret(Args...)> func,
-    std::optional<std::function<bool()>> precondition = std::nullopt,
-    std::optional<std::function<void()>> postcondition = std::nullopt) {
+    std::optional<std::function<bool()>> precondition,
+    std::optional<std::function<void()>> postcondition) {
     auto it = commands.find(name);
     if (it == commands.end()) {
         Command cmd{{ProxyFunction(std::move(func))},
+                    {},
                     description,
                     {},
                     std::move(precondition),
@@ -29,8 +30,8 @@ void CommandDispatcher::registerCommand(
 template <typename Callable>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Callable&& func,
-                                        const std::string& group = "",
-                                        const std::string& description = "") {
+                                        const std::string& group,
+                                        const std::string& description) {
     registerCommand(name, group, description,
                     std::function(std::forward<Callable>(func)));
 }
@@ -38,8 +39,8 @@ void CommandDispatcher::registerCommand(const std::string& name,
 template <typename Ret, typename... Args>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Ret (*func)(Args...),
-                                        const std::string& group = "",
-                                        const std::string& description = "") {
+                                        const std::string& group,
+                                        const std::string& description) {
     registerCommand(name, group, description,
                     std::function<Ret(Args...)>([func](Args... args) {
                         return func(std::forward<Args>(args)...);
@@ -50,8 +51,8 @@ template <typename Ret, typename Class, typename... Args>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Ret (Class::*func)(Args...),
                                         const PointerSentinel<Class>& instance,
-                                        const std::string& group = "",
-                                        const std::string& description = "") {
+                                        const std::string& group,
+                                        const std::string& description) {
     registerCommand(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
@@ -63,8 +64,8 @@ template <typename Ret, typename Class, typename... Args>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Ret (Class::*func)(Args...) const,
                                         const PointerSentinel<Class>& instance,
-                                        const std::string& group = "",
-                                        const std::string& description = "") {
+                                        const std::string& group,
+                                        const std::string& description) {
     registerCommand(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
@@ -76,8 +77,8 @@ template <typename Ret, typename Class, typename... Args>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Ret (Class::*func)(Args...) noexcept,
                                         const PointerSentinel<Class>& instance,
-                                        const std::string& group = "",
-                                        const std::string& description = "") {
+                                        const std::string& group,
+                                        const std::string& description) {
     registerCommand(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
@@ -88,8 +89,8 @@ void CommandDispatcher::registerCommand(const std::string& name,
 template <typename Ret, typename Class, typename... Args>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Ret (*func)(Args...),
-                                        const std::string& group = "",
-                                        const std::string& description = "") {
+                                        const std::string& group,
+                                        const std::string& description) {
     registerCommand(name, group, description,
                     std::function<Ret(Args...)>([func](Args... args) {
                         return func(std::forward<Args>(args)...);

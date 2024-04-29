@@ -5,9 +5,9 @@
 
 template <typename T>
 void VariableManager::addVariable(const std::string& name, T initialValue,
-                                  const std::string& description = "",
-                                  const std::string& alias = "",
-                                  const std::string& group = "") {
+                                  const std::string& description,
+                                  const std::string& alias,
+                                  const std::string& group) {
     auto variable = std::make_shared<Trackable<T>>(std::move(initialValue));
     variables_[name] = {std::move(variable), description, alias, group};
 }
@@ -35,7 +35,7 @@ std::shared_ptr<Trackable<T>> VariableManager::getVariable(
             return std::any_cast<std::shared_ptr<Trackable<T>>>(
                 it->second.variable);
         } catch (const std::bad_any_cast& e) {
-            THROW_EXCEPTION(concat("Type mismatch: ", name));
+            //THROW_EXCEPTION(concat("Type mismatch: ", name));
         }
     }
     return nullptr;

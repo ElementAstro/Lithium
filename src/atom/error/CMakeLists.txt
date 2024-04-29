@@ -1,28 +1,37 @@
-cmake_minimum_required(VERSION 3.20)
-project(atom-component C CXX)
+# CMakeLists.txt for Atom-Error
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Atom-Error
+# Description: Atom Error Library
+# Author: Max Qian
+# License: GPL3
 
+cmake_minimum_required(VERSION 3.20)
+project(atom-error C CXX)
 
 list(APPEND ${PROJECT_NAME}_SOURCES
-    configor.cpp
-    dispatch.cpp
-    types.cpp
+    error_stack.cpp
+    exception.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
+    error_code.hpp
+    error_stack.hpp
 )
 
 list(APPEND ${PROJECT_NAME}_LIBS
     loguru
-    atom-error
-    atom-type
-    atom-utils
-    atom-server
     )
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
 set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
+
+if(LINUX)
+target_link_libraries(${PROJECT_NAME}_OBJECT dl)
+endif()
+target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC
@@ -36,20 +45,8 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(${PROJECT_NAME} atom-utils)
-target_link_libraries(${PROJECT_NAME} atom-type)
 target_include_directories(${PROJECT_NAME} PUBLIC .)
-
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-    SOVERSION ${HYDROGEN_SOVERSION}
-    OUTPUT_NAME ${PROJECT_NAME}
-)
 
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-add_executable(shared_component_test base/main.cpp)
-target_link_libraries(shared_component_test atom-component)

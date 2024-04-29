@@ -23,14 +23,18 @@ option(ATOM_BUILD_PYTHON " Build Atom with Python support" OFF)
 find_package(Python COMPONENTS Interpreter Development REQUIRED)
 if(${PYTHON_FOUND})
     message("-- Found Python ${PYTHON_VERSION_STRING}: ${PYTHON_EXECUTABLE}")
-    find_package(pybind11 REQUIRED)
-    set(ATOM_BUILD_PYTHON ON)
+    find_package(pybind11)
+    if (pybind11_FOUND)
+        message(STATUS "Found pybind11: ${pybind11_INCLUDE_DIRS}")
+        set(ATOM_BUILD_PYTHON ON)
+    endif()
 endif()
 add_subdirectory(algorithm)
 add_subdirectory(async)
 add_subdirectory(components)
 add_subdirectory(connection)
 add_subdirectory(driver)
+add_subdirectory(error)
 add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(server)
@@ -46,9 +50,6 @@ if(NOT HAS_STD_FORMAT)
 endif()
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
-    error/error_stack.cpp
-    error/exception.cpp
-
     log/logger.cpp
     log/global_logger.cpp
     log/syslog.cpp
@@ -56,9 +57,6 @@ list(APPEND ${PROJECT_NAME}_SOURCES
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    error/error_code.hpp
-    error/error_stack.hpp
-
     log/logger.hpp
     log/global_logger.hpp
     log/syslog.hpp

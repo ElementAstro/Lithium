@@ -7,6 +7,7 @@
 
 template <typename Delivery>
 class SharedComponent : public Component<Delivery> {
+public:
     explicit SharedComponent(const std::string &name);
     virtual ~SharedComponent() override;
 

@@ -30,8 +30,7 @@ Description: Basic Component Definition
 #include "atom/type/noncopyable.hpp"
 
 template <typename Delivery>
-class Component : public std::enable_shared_from_this<Delivery>,
-                  public NonCopyable {
+class Component : public std::enable_shared_from_this<Delivery> {
 public:
     /**
      * @brief Constructs a new Component object.
@@ -296,15 +295,15 @@ private:
     std::string m_infoPath;
     Type_Info m_typeInfo;
 
-    std::unique_ptr<CommandDispatcher>
+    std::shared_ptr<CommandDispatcher>
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.
-    std::unique_ptr<VariableManager>
+    std::shared_ptr<VariableManager>
         m_VariableManager;  ///< The variable registry for managing variables.
-    std::unique_ptr<ConfigManager> m_ConfigManager;
+    std::shared_ptr<ConfigManager> m_ConfigManager;
 
     std::unordered_map<std::string, PointerSentinel<Component>> m_OtherComponents;
-
-    std::mutex m_mutex;
 };
+
+#include "component.inl"
 
 #endif

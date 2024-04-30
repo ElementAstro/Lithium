@@ -50,6 +50,32 @@ void CommandDispatcher::registerCommand(const std::string& name,
 template <typename Ret, typename Class, typename... Args>
 void CommandDispatcher::registerCommand(const std::string& name,
                                         Ret (Class::*func)(Args...),
+                                        std::shared_ptr<Class> instance,
+                                        const std::string& group,
+                                        const std::string& description) {
+    registerCommand(name, group, description,
+                    std::function<Ret(Args...)>([instance, func](Args... args) {
+                        return std::invoke(func, instance.get(),
+                                           std::forward<Args>(args)...);
+                    }));
+}
+
+template <typename Ret, typename Class, typename... Args>
+void CommandDispatcher::registerCommand(const std::string& name,
+                                        Ret (Class::*func)(Args...) const,
+                                        std::shared_ptr<Class> instance,
+                                        const std::string& group,
+                                        const std::string& description) {
+    registerCommand(name, group, description,
+                    std::function<Ret(Args...)>([instance, func](Args... args) {
+                        return std::invoke(func, instance.get(),
+                                           std::forward<Args>(args)...);
+                    }));
+}
+
+template <typename Ret, typename Class, typename... Args>
+void CommandDispatcher::registerCommand(const std::string& name,
+                                        Ret (Class::*func)(Args...),
                                         const PointerSentinel<Class>& instance,
                                         const std::string& group,
                                         const std::string& description) {

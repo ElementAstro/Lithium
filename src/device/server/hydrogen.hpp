@@ -28,9 +28,8 @@ Description: Hydrogen Device Manager
 #include <unordered_map>
 #endif
 #include "hydrogen_driver.hpp"
-#include "atom/experiment/decorate.hpp"
 
-namespace Lithium {
+namespace lithium {
 
 class HydrogenManager : public BasicManager {
 public:
@@ -58,8 +57,6 @@ public:
                                              int prt = 7624, const std::string &cfg = "",
                                              const std::string &dta = "/usr/share/hydrogen",
                                              const std::string &fif = "/tmp/hydrogenFIFO");
-
-    std::vector<decorator<std::function<json(const json &)>>> getFunctions();
 
     /**
      * @brief 启动Hydrogen服务器
@@ -165,6 +162,6 @@ private:
         running_drivers;  ///< 正在运行的驱动程序列表
 #endif
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

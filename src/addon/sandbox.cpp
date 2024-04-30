@@ -27,7 +27,7 @@ Description: A sandbox for alone componnents, such as executables.
 #include <unistd.h>
 #endif
 
-namespace Lithium {
+namespace lithium {
 bool Sandbox::setTimeLimit(int timeLimitMs) {
     m_timeLimit = timeLimitMs;
 #ifndef _WIN32
@@ -151,4 +151,4 @@ bool Sandbox::run() {
     }
 #endif
 }
-}  // namespace Lithium
+}  // namespace lithium

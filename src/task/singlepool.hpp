@@ -21,7 +21,7 @@ Description: Single thread pool for executing temporary tasks asynchronously.
 #include <thread>
 
 
-namespace Lithium {
+namespace lithium {
 class SingleThreadPoolPrivate;
 
 class SingleThreadPool {
@@ -45,6 +45,6 @@ public:
 private:
     std::shared_ptr<SingleThreadPoolPrivate> d_ptr;
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

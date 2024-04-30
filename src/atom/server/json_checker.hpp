@@ -25,7 +25,7 @@ Description: Json Checker interface implementation
 
 using json = nlohmann::json;
 
-namespace Atom::Server
+namespace atom::server
 {
 /**
  * @brief Json Checker class.

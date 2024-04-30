@@ -185,15 +185,6 @@ elseif(LINUX)
 endif()
 
 set(component_module
-    ${lithium_src_dir}/device/server/ascom.cpp
-    ${lithium_src_dir}/device/server/hydrogen.cpp
-    ${lithium_src_dir}/device/server/hydrogen_driver.cpp
-    ${lithium_src_dir}/device/server/connector.cpp
-
-    ${lithium_src_dir}/device/manager.cpp
-    
-    ${lithium_src_dir}/device/utils/utils.cpp
-
     ${lithium_component_dir}/addons.cpp
     ${lithium_component_dir}/compiler.cpp
     ${lithium_component_dir}/loader.cpp

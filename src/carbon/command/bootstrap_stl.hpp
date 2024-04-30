@@ -9,7 +9,7 @@
 #include <typeinfo>
 #include <vector>
 
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 #include "bootstrap.hpp"
 #include "boxed_value.hpp"
 #include "dispatchkit.hpp"

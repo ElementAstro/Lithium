@@ -44,7 +44,7 @@ namespace fs = std::filesystem;
 #define SET_CONFIG_VALUE(key) \
     config[dir.path().string()][#key] = module_config.value(#key, "");
 
-namespace Lithium {
+namespace lithium {
 ModuleLoader::ModuleLoader(const std::string &dir_name = "modules") {
     DLOG_F(INFO, "C++ module manager loaded successfully.");
 }
@@ -78,7 +78,7 @@ bool ModuleLoader::LoadModule(const std::string &path,
             LOG_F(ERROR, "Module {} already loaded", name);
             return false;
         }
-        if (!Atom::IO::isFileExists(path)) {
+        if (!atom::io::isFileExists(path)) {
             LOG_F(ERROR, "Module {} does not exist", name);
             return false;
         }
@@ -454,4 +454,4 @@ bool ModuleLoader::HasFunction(const std::string &name,
     return (LOAD_FUNCTION(handle_it->second->handle, function_name.c_str()) !=
             nullptr);
 }
-}  // namespace Lithium
+}  // namespace lithium

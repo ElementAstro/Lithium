@@ -55,4 +55,13 @@ install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+add_executable(${PROJECT_NAME}_TEST _test.cpp)
+target_link_libraries(${PROJECT_NAME}_TEST ${PROJECT_NAME})
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(${PROJECT_NAME}_TEST PRIVATE _DEBUG)
+endif()
+set_target_properties(${PROJECT_NAME}_TEST PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
 

@@ -14,7 +14,7 @@ Description: Task Stack (just log the task)
 
 #include "task_stack.hpp"
 
-namespace Lithium::Task {
+namespace lithium::Task {
 void TaskStack::AddTask(std::shared_ptr<Atom::Task::SimpleTask> task) {
     tasks_.push_back(task);
     task_status_.push_back(TaskStatus::Pending);
@@ -80,7 +80,7 @@ bool TaskStack::IsTaskInStack(const std::string &taskName) const {
     return std::find(task_names_.begin(), task_names_.end(), taskName) !=
            task_names_.end();
 }
-}  // namespace Lithium::Task
+}  // namespace lithium::Task
 
 /*
 int main()

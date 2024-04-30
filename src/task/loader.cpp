@@ -21,7 +21,7 @@ Description: Json file manager
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 std::shared_ptr<TaskLoader> TaskLoader::createShared() {
     return std::make_shared<TaskLoader>();
 }
@@ -192,7 +192,7 @@ void TaskLoader::batchProcessDirectory(
     std::function<void()> onComplete) {
     batchProcessDirectory(fs::path(directoryPath), process, onComplete);
 }
-}  // namespace Lithium
+}  // namespace lithium
 
 /*
 int main()

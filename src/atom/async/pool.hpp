@@ -36,11 +36,11 @@ public:
      *
      * @param n_threads 线程池大小
      */
-    explicit ThreadPool(std::size_t n_threads) : stop(false) {
+    explicit ThreadPool(std::size_t n_threads) {
         for (std::size_t i = 0; i < n_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
-                    std::unique_lock<std::mutex> lock(queue_mutex);
+                    std::unique_lock lock(queue_mutex);
                     condition.wait(lock,
                                    [this] { return stop || !tasks.empty(); });
                     if (stop && tasks.empty()) {
@@ -62,7 +62,7 @@ public:
      */
     ~ThreadPool() {
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::unique_lock lock(queue_mutex);
             stop = true;
         }
         condition.notify_all();
@@ -89,11 +89,11 @@ public:
         using return_type = std::invoke_result_t<F, Args...>;
 
         auto task = std::make_shared<std::packaged_task<return_type()>>(
-            std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+            std::bind_front(std::forward<F>(f), std::forward<Args>(args)...));
 
         auto res = task->get_future();
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::unique_lock lock(queue_mutex);
 
             if (stop) {
                 throw std::runtime_error("enqueue on stopped ThreadPool");
@@ -111,7 +111,7 @@ public:
      * 该函数会等待任务队列中的所有任务完成，然后返回。
      */
     void wait() {
-        std::unique_lock<std::mutex> lock(queue_mutex);
+        std::unique_lock lock(queue_mutex);
         condition.wait(lock, [this] { return tasks.empty(); });
     }
 
@@ -128,17 +128,17 @@ public:
      * @return 任务队列中待执行的任务数量
      */
     std::size_t taskCount() const {
-        std::unique_lock<std::mutex> lock(queue_mutex);
+        std::unique_lock lock(queue_mutex);
         return tasks.size();
     }
 
 private:
-    std::vector<std::thread> threads;         ///< 线程池中的线程列表
+    std::vector<std::jthread> threads;         ///< 线程池中的线程列表
     std::queue<std::function<void()>> tasks;  ///< 任务队列
 
     mutable std::mutex queue_mutex;     ///< 任务队列的互斥锁
     std::condition_variable condition;  ///< 任务队列的条件变量
-    bool stop;                          ///< 停止标志位
+    bool stop{false};                   ///< 停止标志位
 };
 }  // namespace atom::async
 

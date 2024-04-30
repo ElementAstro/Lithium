@@ -14,7 +14,7 @@ Description: Specialized task pool
 
 #include "pool.hpp"
 
-namespace Lithium {
+namespace lithium {
 // Initialize static thread_local variables
 thread_local WorkerQueue *TaskPool::t_localQueue = nullptr;
 thread_local size_t TaskPool::t_index = 0;
@@ -126,4 +126,4 @@ void TaskPool::stop() {
         }
     }
 }
-}  // namespace Lithium
+}  // namespace lithium

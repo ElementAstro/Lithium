@@ -19,10 +19,6 @@ and deconvolution.
 #include <cstddef>
 #include <thread>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
 #include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
@@ -118,7 +114,7 @@ std::vector<std::vector<double>> convolve2D(
 
     // Use multiple threads if requested
     if (numThreads > 1) {
-        std::vector<std::thread> threads;
+        std::vector<std::jthread> threads;
         int blockSize = (inputRows + numThreads - 1) / numThreads;
         int blockStartRow = kernelRows / 2;
 
@@ -214,19 +210,19 @@ std::vector<std::vector<double>> deconvolve2D(
 // 二维离散傅里叶变换（2D DFT）
 std::vector<std::vector<std::complex<double>>> DFT2D(
     const std::vector<std::vector<double>> &signal, int numThreads) {
-    const int M = signal.size();
-    const int N = signal[0].size();
+    const auto M = signal.size();
+    const auto N = signal[0].size();
     std::vector<std::vector<std::complex<double>>> X(
         M, std::vector<std::complex<double>>(N, {0, 0}));
 
     // Lambda function to compute the DFT for a block of rows
-    auto computeDFT = [&](int startRow, int endRow) {
+    auto computeDFT = [&M, &N, &signal, &X](int startRow, int endRow) {
         for (int u = startRow; u < endRow; ++u) {
             for (int v = 0; v < N; ++v) {
                 std::complex<double> sum(0, 0);
                 for (int m = 0; m < M; ++m) {
                     for (int n = 0; n < N; ++n) {
-                        double theta = -2 * M_PI *
+                        double theta = -2 * std::numbers::pi *
                                        ((u * m / static_cast<double>(M)) +
                                         (v * n / static_cast<double>(N)));
                         std::complex<double> w(cos(theta), sin(theta));
@@ -240,11 +236,11 @@ std::vector<std::vector<std::complex<double>>> DFT2D(
 
     // Multithreading support
     if (numThreads > 1) {
-        std::vector<std::thread> threads;
-        int rowsPerThread = M / numThreads;
+        std::vector<std::jthread> threads;
+        auto rowsPerThread = M / numThreads;
         for (int i = 0; i < numThreads; ++i) {
-            int startRow = i * rowsPerThread;
-            int endRow = (i == numThreads - 1) ? M : startRow + rowsPerThread;
+            auto startRow = i * rowsPerThread;
+            auto endRow = (i == numThreads - 1) ? M : startRow + rowsPerThread;
             threads.emplace_back(computeDFT, startRow, endRow);
         }
         for (auto &thread : threads) {
@@ -262,18 +258,18 @@ std::vector<std::vector<std::complex<double>>> DFT2D(
 std::vector<std::vector<double>> IDFT2D(
     const std::vector<std::vector<std::complex<double>>> &spectrum,
     int numThreads) {
-    const int M = spectrum.size();
-    const int N = spectrum[0].size();
+    const auto M = spectrum.size();
+    const auto N = spectrum[0].size();
     std::vector<std::vector<double>> x(M, std::vector<double>(N, 0.0));
 
     // Lambda function to compute the IDFT for a block of rows
-    auto computeIDFT = [&](int startRow, int endRow) {
+    auto computeIDFT = [&M, &N, &spectrum, &x](int startRow, int endRow) {
         for (int m = startRow; m < endRow; ++m) {
             for (int n = 0; n < N; ++n) {
                 std::complex<double> sum(0.0, 0.0);
                 for (int u = 0; u < M; ++u) {
                     for (int v = 0; v < N; ++v) {
-                        double theta = 2 * M_PI *
+                        double theta = 2 * std::numbers::pi *
                                        ((u * m / static_cast<double>(M)) +
                                         (v * n / static_cast<double>(N)));
                         std::complex<double> w(cos(theta), sin(theta));
@@ -287,11 +283,11 @@ std::vector<std::vector<double>> IDFT2D(
 
     // Multithreading support
     if (numThreads > 1) {
-        std::vector<std::thread> threads;
-        int rowsPerThread = M / numThreads;
+        std::vector<std::jthread> threads;
+        auto rowsPerThread = M / numThreads;
         for (int i = 0; i < numThreads; ++i) {
-            int startRow = i * rowsPerThread;
-            int endRow = (i == numThreads - 1) ? M : startRow + rowsPerThread;
+            auto startRow = i * rowsPerThread;
+            auto endRow = (i == numThreads - 1) ? M : startRow + rowsPerThread;
             threads.emplace_back(computeIDFT, startRow, endRow);
         }
         for (auto &thread : threads) {
@@ -315,7 +311,7 @@ std::vector<std::vector<double>> generateGaussianKernel(int size,
         for (int j = 0; j < size; ++j) {
             kernel[i][j] = exp(-0.5 * (pow((i - center) / sigma, 2.0) +
                                        pow((j - center) / sigma, 2.0))) /
-                           (2 * M_PI * sigma * sigma);
+                           (2 * std::numbers::pi * sigma * sigma);
             sum += kernel[i][j];
         }
     }
@@ -333,20 +329,22 @@ std::vector<std::vector<double>> generateGaussianKernel(int size,
 std::vector<std::vector<double>> applyGaussianFilter(
     const std::vector<std::vector<double>> &image,
     const std::vector<std::vector<double>> &kernel) {
-    int imageHeight = image.size();
-    int imageWidth = image[0].size();
-    int kernelSize = kernel.size();
-    int kernelRadius = kernelSize / 2;
+    auto imageHeight = image.size();
+    auto imageWidth = image[0].size();
+    auto kernelSize = kernel.size();
+    auto kernelRadius = kernelSize / 2;
     std::vector<std::vector<double>> filteredImage(
         imageHeight, std::vector<double>(imageWidth, 0));
 
-    for (int i = 0; i < imageHeight; ++i) {
-        for (int j = 0; j < imageWidth; ++j) {
+    for (auto i = 0; i < imageHeight; ++i) {
+        for (auto j = 0; j < imageWidth; ++j) {
             double sum = 0.0;
-            for (int k = -kernelRadius; k <= kernelRadius; ++k) {
-                for (int l = -kernelRadius; l <= kernelRadius; ++l) {
-                    int x = std::max(0, std::min(i + k, imageHeight - 1));
-                    int y = std::max(0, std::min(j + l, imageWidth - 1));
+            for (auto k = -kernelRadius; k <= kernelRadius; ++k) {
+                for (auto l = -kernelRadius; l <= kernelRadius; ++l) {
+                    auto x = std::clamp(static_cast<int>(i + k), 0,
+                                        static_cast<int>(imageHeight) - 1);
+                    auto y = std::clamp(static_cast<int>(j + l), 0,
+                                        static_cast<int>(imageWidth) - 1);
                     sum += image[x][y] *
                            kernel[kernelRadius + k][kernelRadius + l];
                 }

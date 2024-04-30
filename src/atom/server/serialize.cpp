@@ -123,7 +123,7 @@ std::string IniSerializationEngine::serialize(const std::any &data,
     return oss.str();
 }
 
-namespace Atom::Server {
+namespace atom::server {
 SerializationEngine::SerializationEngine() {
     // 添加默认的渲染引擎
     auto jsonSerializationEngine = std::make_shared<JsonSerializationEngine>();
@@ -165,7 +165,7 @@ bool SerializationEngine::setCurrentSerializationEngine(
           name);
     return false;
 }
-}  // namespace Atom::Server
+}  // namespace atom::server
 
 /*
 

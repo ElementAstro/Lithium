@@ -1,5 +1,5 @@
 /*
- * base.hpp
+ * algorithm.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -93,7 +93,7 @@ public:
      */
     double estimate_similarity(
         const std::vector<unsigned long long>& signature1,
-        const std::vector<unsigned long long>& signature2);
+        const std::vector<unsigned long long>& signature2) const;
 
 private:
     /**

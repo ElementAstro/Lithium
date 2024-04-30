@@ -3,7 +3,7 @@ project(atom-component C CXX)
 
 
 list(APPEND ${PROJECT_NAME}_SOURCES
-    configor.cpp
+    component.cpp
     dispatch.cpp
     types.cpp
 )

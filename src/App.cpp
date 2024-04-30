@@ -25,7 +25,7 @@ Description: Main Entry
 #define ENABLE_TERMINAL 1
 #if ENABLE_TERMINAL
 #include "debug/terminal.hpp"
-using namespace Lithium::Terminal;
+using namespace lithium::Terminal;
 #endif
 
 #include "server/App.hpp"
@@ -116,9 +116,9 @@ int main(int argc, char *argv[]) {
 
     program.parse_args(argc, argv);
 
-    Lithium::InitLithiumApp(argc, argv);
+    lithium::InitLithiumApp(argc, argv);
     // Create shared instance
-    Lithium::MyApp = Lithium::LithiumApp::createShared();
+    lithium::MyApp = lithium::LithiumApp::createShared();
     // Parse arguments
     try {
         auto cmd_host = program.get<std::string>("--host");
@@ -128,64 +128,66 @@ int main(int argc, char *argv[]) {
         auto cmd_web_panel = program.get<bool>("--web-panel");
         auto cmd_debug = program.get<bool>("--debug");
 
+        // TODO: We need a new way to handle command line arguments.
+        // Maybe we will generate a json object or a map and then given to the
+        // lithiumapp for initialization.
+        /*
         if (!cmd_host.empty()) {
-            Lithium::MyApp->SetConfig(
+            lithium::MyApp->SetConfig(
                 {{"key", "config/server/host"}, {"value", cmd_host}});
             DLOG_F(INFO, "Set server host to {}", cmd_host);
         }
         if (cmd_port != 8000) {
             DLOG_F(INFO, "Command line server port : {}", cmd_port);
 
-            auto port = Lithium::MyApp->GetConfig("config/server")
+            auto port = lithium::MyApp->GetConfig("config/server")
                             .value<int>("port", 8000);
             if (port != cmd_port) {
-                Lithium::MyApp->SetConfig(
+                lithium::MyApp->SetConfig(
                     {{"key", "config/server/port"}, {"value", cmd_port}});
                 DLOG_F(INFO, "Set server port to {}", cmd_port);
             }
         }
         if (!cmd_config_path.empty()) {
-            Lithium::MyApp->SetConfig({{"key", "config/server/configpath"},
+            lithium::MyApp->SetConfig({{"key", "config/server/configpath"},
                                        {"value", cmd_config_path}});
             DLOG_F(INFO, "Set server config path to {}", cmd_config_path);
         }
         if (!cmd_module_path.empty()) {
-            Lithium::MyApp->SetConfig({{"key", "config/server/modulepath"},
+            lithium::MyApp->SetConfig({{"key", "config/server/modulepath"},
                                        {"value", cmd_module_path}});
             DLOG_F(INFO, "Set server module path to {}", cmd_module_path);
         }
 
         if (!cmd_web_panel) {
-            if (Lithium::MyApp->GetConfig("config/server/web").get<bool>()) {
-                Lithium::MyApp->SetConfig(
+            if (lithium::MyApp->GetConfig("config/server/web").get<bool>()) {
+                lithium::MyApp->SetConfig(
                     {{"key", "config/server/web"}, {"value", false}});
                 DLOG_F(INFO, "Disable web panel");
             }
         }
 
         if (cmd_debug) {
-            if (!Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
-                Lithium::MyApp->SetConfig(
+            if (!lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
+                lithium::MyApp->SetConfig(
                     {{"key", "config/server/debug"}, {"value", true}});
             }
         } else {
-            Lithium::MyApp->SetConfig(
+            lithium::MyApp->SetConfig(
                 {{"key", "config/server/debug"}, {"value", false}});
             DLOG_F(INFO, "Disable debug mode");
         }
+        */
+
     } catch (const std::bad_any_cast &e) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
         Atom::System::saveCrashLog(e.what());
         return 1;
     }
 
-    // In debug mode run the terminal first and will not run the server
-    if (Lithium::MyApp->GetConfig("config/server/debug").get<bool>()) {
-        ConsoleTerminal terminal;
-        terminal.run();
-    } else {
-        runServer();
-    }
+    ConsoleTerminal terminal;
+    terminal.run();
+    runServer();
 
     return 0;
 }

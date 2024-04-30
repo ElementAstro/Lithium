@@ -40,7 +40,7 @@ namespace atom::utils {
 class StopWatcher;
 }
 
-namespace Lithium {
+namespace lithium {
 /**
  * @brief 任务结构体，表示一个待执行的任务
  */
@@ -328,6 +328,6 @@ private:
      */
     void stopScheduler();
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

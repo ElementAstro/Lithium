@@ -16,7 +16,7 @@ Description: Device Utilities
 
 #include <string>
 
-namespace Lithium
+namespace lithium
 {
     /**
      * @brief Execute a command and return the output.

@@ -6,7 +6,7 @@
 #include <vector>
 
 
-namespace Lithium {
+namespace lithium {
 class CarbonScriptImpl;
 
 class CarbonScript {
@@ -29,4 +29,4 @@ private:
     std::unique_ptr<CarbonScriptImpl> impl_;
 };
 
-}  // namespace Lithium
+}  // namespace lithium

@@ -34,7 +34,7 @@ using ScriptMap = emhash8::HashMap<std::string, Script>;
 using ScriptMap = std::unordered_map<std::string, Script>;
 #endif
 
-namespace Lithium {
+namespace lithium {
 /**
  * @brief Manages the registration, execution, and monitoring of scripts.
  */
@@ -123,4 +123,4 @@ private:
 private:
     std::shared_mutex m_sharedMutex;
 };
-}  // namespace Lithium
+}  // namespace lithium

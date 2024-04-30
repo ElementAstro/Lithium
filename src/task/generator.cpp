@@ -22,9 +22,8 @@ Description: Task Generator
 #include <fstream>
 #include <future>
 
-namespace Lithium {
+namespace lithium {
 TaskGenerator::TaskGenerator() {
-    m_DeviceManager = GetWeakPtr<DeviceManager>("lithium.device");
 }
 
 std::shared_ptr<TaskGenerator> TaskGenerator::createShared() {
@@ -33,7 +32,7 @@ std::shared_ptr<TaskGenerator> TaskGenerator::createShared() {
 
 bool TaskGenerator::loadMacros(const std::string &macroFileName) {
     try {
-        if (!Atom::IO::isFileExists(macroFileName)) {
+        if (!atom::io::isFileExists(macroFileName)) {
             LOG_F(ERROR, "Macro file not found: {}", macroFileName);
             return false;
         }
@@ -55,7 +54,7 @@ bool TaskGenerator::loadMacros(const std::string &macroFileName) {
 }
 
 bool TaskGenerator::loadMacrosFromFolder(const std::string &folderPath) {
-    if (!Atom::IO::isFolderExists(folderPath)) {
+    if (!atom::io::isFolderExists(folderPath)) {
         LOG_F(ERROR, "Invalid folder path: {}", folderPath);
         return false;
     }
@@ -99,7 +98,7 @@ std::optional<std::string> TaskGenerator::getMacroContent(
 }
 
 void TaskGenerator::processMacroFile(const std::string &sfilePath) {
-    if (!Atom::IO::isFileExists(sfilePath)) {
+    if (!atom::io::isFileExists(sfilePath)) {
         LOG_F(ERROR, "Macro file not found: {}", sfilePath);
         return;
     }
@@ -175,4 +174,4 @@ void TaskGenerator::saveTasksToJson(const std::string &jsonFileName,
         return;
     }
 }
-}  // namespace Lithium
+}  // namespace lithium

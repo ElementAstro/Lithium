@@ -30,11 +30,11 @@ Description: Async Config Controller
 
 class ConfigController : public oatpp::web::server::api::ApiController {
 public:
-    static std::weak_ptr<Lithium::ConfigManager> m_configManager;
+    static std::weak_ptr<lithium::ConfigManager> m_configManager;
 
     ConfigController(const std::shared_ptr<ObjectMapper>& objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper) {
-            m_configManager = GetWeakPtr<Lithium::ConfigManager>("lithium.config");
+            m_configManager = GetWeakPtr<lithium::ConfigManager>("lithium.config");
         }
 
     // ----------------------------------------------------------------
@@ -268,7 +268,7 @@ public:
     };
 };
 
-std::weak_ptr<Lithium::ConfigManager> ConfigController::m_configManager = {};
+std::weak_ptr<lithium::ConfigManager> ConfigController::m_configManager = {};
 
 #include OATPP_CODEGEN_END(ApiController)  //<- End Codegen
 

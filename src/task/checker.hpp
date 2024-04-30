@@ -30,7 +30,7 @@ Description: Task Stack
 
 enum class TaskStatus { Pending, Executing, Completed, Failed, Cancelled };
 
-namespace Lithium::Task {
+namespace lithium::Task {
 /**
  * @brief Represents a stack of tasks.
  */
@@ -96,4 +96,4 @@ private:
     bool IsTaskInStack(const std::string &taskName) const;
 };
 
-}  // namespace Lithium::Task
+}  // namespace lithium::Task

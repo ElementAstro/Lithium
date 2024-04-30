@@ -29,7 +29,7 @@ DownloadManager::DownloadManager(const std::string &task_file)
         std::ifstream infile(task_file_);
         if (!infile) {
             LOG_F(ERROR, "Failed to open task file {}", task_file_);
-            throw Error::FileNotWritable("Failed to open task file.");
+            THROW_EXCEPTION("Failed to open task file.");
         }
         while (infile >> std::ws && !infile.eof()) {
             std::string url, filepath;
@@ -41,7 +41,7 @@ DownloadManager::DownloadManager(const std::string &task_file)
         infile.close();
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Error: {}", e.what());
-        throw Error::FileUnknown(fmt::format("Error: {}", e.what()).c_str());
+        THROW_EXCEPTION(fmt::format("Error: {}", e.what()).c_str());
     }
 }
 
@@ -53,13 +53,13 @@ void DownloadManager::add_task(const std::string &url,
         std::ofstream outfile(task_file_, std::ios_base::app);
         if (!outfile) {
             LOG_F(ERROR, "Failed to open task file {}", task_file_);
-            throw Error::FileNotWritable("Failed to open task file.");
+            THROW_EXCEPTION("Failed to open task file.");
         }
         outfile << url << " " << filepath << std::endl;
         outfile.close();
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Error: {}", e.what());
-        throw Error::FileUnknown(fmt::format("Error: {}", e.what()).c_str());
+        THROW_EXCEPTION(fmt::format("Error: {}", e.what()).c_str());
     }
     tasks_.push_back({url, filepath, false, false, 0, priority});
 }
@@ -247,7 +247,7 @@ void DownloadManager::save_task_list_to_file() {
         outfile.close();
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Error: {}", e.what());
-        throw Error::FileUnknown(fmt::format("Error: {}", e.what()).c_str());
+        THROW_EXCEPTION("Error: ", e.what());
     }
 }
 }  // namespace Atom::Web

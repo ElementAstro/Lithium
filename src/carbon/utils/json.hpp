@@ -15,7 +15,7 @@
 #include <variant>
 #include <vector>
 #include "../defines.hpp"
-#include "atom/experiment/flatmap.hpp"
+#include "atom/type/flatmap.hpp"
 
 namespace Carbon::json {
 using std::enable_if;

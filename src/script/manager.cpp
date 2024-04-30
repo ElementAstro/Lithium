@@ -23,7 +23,7 @@ using namespace pkpy;
 
 #include "atom/io/io.hpp"
 
-namespace Lithium {
+namespace lithium {
 class PyManagerImpl {
 public:
     PyManagerImpl() : vm(new VM()) {}
@@ -36,4 +36,4 @@ PyScriptManager::PyScriptManager(/* args */)
 
 PyScriptManager::~PyScriptManager() {  }
 
-}  // namespace Lithium
+}  // namespace lithium

@@ -1,6 +1,7 @@
 #ifndef ATOM_COMPONENTS_ABILITIES_HPP
 #define ATOM_COMPONENTS_ABILITIES_HPP
 
+#include <string>
 #include <type_traits>
 
 template <typename T>
@@ -19,8 +20,7 @@ template <typename T>
 struct has_setValue {
     template <typename U>
     static constexpr auto check(int) -> decltype(std::declval<U>().setValue(
-                                                     std::declval<std::string>(),
-                                                     std::declval<json>()),
+                                                     std::declval<std::string>()),
                                                  std::true_type{});
 
     template <typename>

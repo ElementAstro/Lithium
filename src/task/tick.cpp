@@ -18,7 +18,7 @@ Description: Tick Sheduler, just like Minecraft's
 #include "atom/server/global_ptr.hpp"
 #include "atom/utils/stopwatcher.hpp"
 
-namespace Lithium {
+namespace lithium {
 TickScheduler::TickScheduler(size_t threads)
     : currentTick(0), stop(false), tickLength(100) {
 #if __cplusplus >= 202002L
@@ -205,4 +205,4 @@ void TickScheduler::stopScheduler() {
         schedulerThread.join();
     }
 }
-}  // namespace Lithium
+}  // namespace lithium

@@ -42,7 +42,7 @@ class Solver;
 
 using json = nlohmann::json;
 
-namespace Lithium {
+namespace lithium {
 /**
  * @class DeviceManager
  * @brief 设备管理器类，用于管理各种设备对象。
@@ -54,7 +54,7 @@ public:
      * @param messageBus 消息总线对象的共享指针。
      * @param configManager 配置管理器对象的共享指针。
      */
-    explicit DeviceManager(std::shared_ptr<Atom::Server::MessageBus> messageBus,
+    explicit DeviceManager(std::shared_ptr<atom::server::MessageBus> messageBus,
                   std::shared_ptr<ConfigManager> configManager);
 
     /**
@@ -73,11 +73,11 @@ public:
      * @return 返回一个指向设备管理器对象的共享指针。
      */
     static std::shared_ptr<DeviceManager> createShared(
-        std::shared_ptr<Atom::Server::MessageBus> messageBus,
+        std::shared_ptr<atom::server::MessageBus> messageBus,
         std::shared_ptr<ConfigManager> configManager);
 
     static std::unique_ptr<DeviceManager> createUnique(
-        std::shared_ptr<Atom::Server::MessageBus> messageBus,
+        std::shared_ptr<atom::server::MessageBus> messageBus,
         std::shared_ptr<ConfigManager> configManager);
 
     // -------------------------------------------------------------------
@@ -224,7 +224,7 @@ private:
 
     std::shared_ptr<ModuleLoader>
         m_ModuleLoader;  ///< 模块加载器对象的共享指针。
-    std::shared_ptr<Atom::Server::MessageBus>
+    std::shared_ptr<atom::server::MessageBus>
         m_MessageBus;  ///< 消息总线对象的共享指针。
     std::shared_ptr<ConfigManager>
         m_ConfigManager;  ///< 配置管理器对象的共享指针。
@@ -257,4 +257,4 @@ private:
 #endif
 };
 
-}  // namespace Lithium
+}  // namespace lithium

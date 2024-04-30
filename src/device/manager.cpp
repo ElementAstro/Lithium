@@ -37,11 +37,11 @@ Description: Device Manager
 #include "atom/log/loguru.hpp"
 #include "magic_enum/magic_enum.hpp"
 
-namespace Lithium {
+namespace lithium {
 
 // Constructor
 DeviceManager::DeviceManager(
-    std::shared_ptr<Atom::Server::MessageBus> messageBus,
+    std::shared_ptr<atom::server::MessageBus> messageBus,
     std::shared_ptr<ConfigManager> configManager) {
     m_ModuleLoader = ModuleLoader::createShared("drivers");
     m_ConfigManager = configManager;
@@ -64,13 +64,13 @@ DeviceManager::~DeviceManager() {
 }
 
 std::shared_ptr<DeviceManager> DeviceManager::createShared(
-    std::shared_ptr<Atom::Server::MessageBus> messageBus,
+    std::shared_ptr<atom::server::MessageBus> messageBus,
     std::shared_ptr<ConfigManager> configManager) {
     return std::make_shared<DeviceManager>(messageBus, configManager);
 }
 
 std::unique_ptr<DeviceManager> DeviceManager::createUnique(
-    std::shared_ptr<Atom::Server::MessageBus> messageBus,
+    std::shared_ptr<atom::server::MessageBus> messageBus,
     std::shared_ptr<ConfigManager> configManager) {
     return std::make_unique<DeviceManager>(messageBus, configManager);
 }
@@ -602,4 +602,4 @@ bool DeviceManager::stopHydrogenDriver(const json &m_params) {
 #endif
     return true;
 }
-}  // namespace Lithium
+}  // namespace lithium

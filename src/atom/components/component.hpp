@@ -24,13 +24,10 @@ Description: Basic Component Definition
 #include "dispatch.hpp"
 #include "var.hpp"
 
-#include "configor.hpp"
-
 #include "atom/function/type_info.hpp"
 #include "atom/type/noncopyable.hpp"
 
-template <typename Delivery>
-class Component : public std::enable_shared_from_this<Delivery> {
+class Component : public std::enable_shared_from_this<Component> {
 public:
     /**
      * @brief Constructs a new Component object.
@@ -41,6 +38,12 @@ public:
      * @brief Destroys the Component object.
      */
     virtual ~Component();
+
+    // -------------------------------------------------------------------
+    // Inject methods
+    // -------------------------------------------------------------------
+
+    std::weak_ptr<const Component> getInstance() const;
 
     // -------------------------------------------------------------------
     // Common methods
@@ -78,56 +81,6 @@ public:
     std::string getName() const;
 
     Type_Info getTypeInfo() const;
-
-    // -------------------------------------------------------------------
-    // Component Configuration methods
-    // -------------------------------------------------------------------
-
-    [[nodiscard("config value should not be ignored!")]] std::optional<json>
-    getValue(const std::string& key_path) const;
-
-    /**
-     * @brief 添加或更新一个配置项
-     *
-     * Add or update a configuration item.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @param value 配置项的值，使用 JSON 格式进行表示
-     * @return bool 成功返回 true，失败返回 false
-     */
-    bool setValue(const std::string& key_path, const json& value);
-
-    /**
-     * @brief 判断一个配置项是否存在
-     *
-     * Determine if a configuration item exists.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @return bool 存在返回 true，不存在返回 false
-     */
-    [[nodiscard("status of the value should not be ignored")]] bool hasValue(
-        const std::string& key_path) const;
-
-    /**
-     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
-     *
-     * Load JSON configuration from the specified file and merge with the
-     * existing configuration.
-     *
-     * @param path 配置文件路径
-     */
-    bool loadFromFile(const fs::path& path);
-
-    /**
-     * @brief 将当前配置保存到指定文件
-     *
-     * Save the current configuration to the specified file.
-     *
-     * @param file_path 目标文件路径
-     */
-    bool saveToFile(const fs::path& file_path) const;
 
     // -------------------------------------------------------------------
     // Variable methods
@@ -200,6 +153,27 @@ public:
                          const std::string& group = "",
                          const std::string& description = "") {
         m_CommandDispatcher->registerCommand(name, func, group, description);
+    }
+
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+                         std::shared_ptr<Class> instance,
+                         const std::string& group = "",
+                         const std::string& description = "")
+
+    {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
+    }
+
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name,
+                         Ret (Class::*func)(Args...) const,
+                         std::shared_ptr<Class> instance,
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
     }
 
     template <typename Ret, typename Class, typename... Args>
@@ -279,15 +253,18 @@ public:
     /**
      * @return The names of the components that are needed by this component.
      * @note This will be called when the component is initialized.
-    */
+     */
     std::vector<std::string> getNeededComponents() const;
 
     void addOtherComponent(const std::string& name,
-                           const PointerSentinel<Component>& component);
+                           const std::weak_ptr<Component>& component);
 
     void removeOtherComponent(const std::string& name);
 
     void clearOtherComponents();
+
+    std::weak_ptr<Component> getOtherComponent(
+        const std::string& name);
 
 private:
     std::string m_name;
@@ -299,11 +276,9 @@ private:
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.
     std::shared_ptr<VariableManager>
         m_VariableManager;  ///< The variable registry for managing variables.
-    std::shared_ptr<ConfigManager> m_ConfigManager;
 
-    std::unordered_map<std::string, PointerSentinel<Component>> m_OtherComponents;
+    std::unordered_map<std::string, std::weak_ptr<Component>>
+        m_OtherComponents;
 };
-
-#include "component.inl"
 
 #endif

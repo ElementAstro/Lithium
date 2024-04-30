@@ -69,7 +69,7 @@ void QuoteManager::loadQuotesFromFile(const std::string &filename) {
             file.close();
         }
     } catch (const std::exception &e) {
-        throw Error::FileUnknown(e.what());
+        THROW_EXCEPTION("QuoteManager::loadQuotesFromFile", e.what());
     }
 }
 

@@ -20,7 +20,7 @@ Description: Module Information
 #include <vector>
 
 
-namespace Lithium {
+namespace lithium {
 struct FunctionInfo {
     std::string name;
     void *address;
@@ -52,4 +52,4 @@ public:
     // Module handle pointer
     void *handle;
 };
-}  // namespace Lithium
+}  // namespace lithium

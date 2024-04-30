@@ -27,7 +27,7 @@ Description: Commander
 #include <unordered_map>
 #endif
 
-#include "atom/experiment/decorate.hpp"
+#include "atom/function/decorate.hpp"
 #include "atom/type/noncopyable.hpp"
 
 /**

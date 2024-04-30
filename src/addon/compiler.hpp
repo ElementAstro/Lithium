@@ -21,7 +21,7 @@ Description: Compiler
 #include <unordered_map>
 #include <vector>
 
-namespace Lithium {
+namespace lithium {
 class Compiler {
 public:
     /**
@@ -84,5 +84,5 @@ private:
 
     std::unordered_map<std::string, std::filesystem::path> cache_;
 };
-}  // namespace Lithium
+}  // namespace lithium
 #endif

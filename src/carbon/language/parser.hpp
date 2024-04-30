@@ -14,7 +14,7 @@
 
 #include "../command/boxed_value.hpp"
 #include "atom/algorithm/hash.hpp"
-#include "atom/experiment/sstring.hpp"
+#include "atom/type/static_string.hpp"
 #include "common.hpp"
 #include "optimizer.hpp"
 #include "tracer.hpp"
@@ -1001,7 +1001,7 @@ public:
         const auto start = m_position;
         if (Id_()) {
             auto text = Position::str(start, m_position);
-            const auto text_hash = Atom::Algorithm::fnv1a_hash(text);
+            const auto text_hash = atom::algorithm::fnv1a_hash(text);
 
             if (validate) {
                 validate_object_name(text);
@@ -1013,43 +1013,43 @@ public:
 #endif
 
             switch (text_hash) {
-                case Atom::Algorithm::fnv1a_hash("true"): {
+                case atom::algorithm::fnv1a_hash("true"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col, const_var(true)));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("false"): {
+                case atom::algorithm::fnv1a_hash("false"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col, const_var(false)));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("Infinity"): {
+                case atom::algorithm::fnv1a_hash("Infinity"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(
                                 std::numeric_limits<double>::infinity())));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("NaN"): {
+                case atom::algorithm::fnv1a_hash("NaN"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(
                                 std::numeric_limits<double>::quiet_NaN())));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("__LINE__"): {
+                case atom::algorithm::fnv1a_hash("__LINE__"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(start.line)));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("__FILE__"): {
+                case atom::algorithm::fnv1a_hash("__FILE__"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col,
                             const_var(m_filename)));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("__FUNC__"): {
+                case atom::algorithm::fnv1a_hash("__FUNC__"): {
                     std::string fun_name = "NOT_IN_FUNCTION";
                     for (size_t idx = m_match_stack.empty()
                                           ? 0
@@ -1067,7 +1067,7 @@ public:
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             text, start.line, start.col, const_var(fun_name)));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("__CLASS__"): {
+                case atom::algorithm::fnv1a_hash("__CLASS__"): {
                     std::string fun_name = "NOT_IN_CLASS";
                     for (size_t idx = m_match_stack.empty()
                                           ? 0
@@ -1088,7 +1088,7 @@ public:
                             std::move(text), start.line, start.col,
                             const_var(fun_name)));
                 } break;
-                case Atom::Algorithm::fnv1a_hash("_"): {
+                case atom::algorithm::fnv1a_hash("_"): {
                     m_match_stack.push_back(
                         make_node<eval::Constant_AST_Node<Tracer>>(
                             std::move(text), start.line, start.col,

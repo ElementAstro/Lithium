@@ -38,7 +38,7 @@ Description: Module Route
 
 class ModuleController : public oatpp::web::server::api::ApiController {
 public:
-    static std::shared_ptr<Lithium::ModuleLoader> m_moduleLoader;
+    static std::shared_ptr<lithium::ModuleLoader> m_moduleLoader;
 
     ModuleController(const std::shared_ptr<ObjectMapper>& objectMapper)
         : oatpp::web::server::api::ApiController(objectMapper) {}
@@ -106,7 +106,7 @@ Action returnResponse(const oatpp::Object<UnloadPluginDto>& body) {
     OATPP_ASSERT_HTTP(body->plugin_name.getValue("") != "", Status::CODE_400,
                       "Invalid Parameters");
     auto plugin_name = body->plugin_name.getValue("");
-    if (!Lithium::MyApp->unloadModule(plugin_name)) {
+    if (!lithium::MyApp->unloadModule(plugin_name)) {
         res->error = "ModuleError";
         res->message = fmt::format("Failed to unload module: {}", plugin_name);
     }
@@ -135,7 +135,7 @@ Action returnResponse(const oatpp::Object<GetModuleListDto>& body) {
     OATPP_ASSERT_HTTP(body->plugin_path.getValue("") != "", Status::CODE_400,
                       "Invalid Parameters");
     auto plugin_path = body->plugin_path.getValue("");
-    auto module_list = Lithium::MyApp->getModuleList();
+    auto module_list = lithium::MyApp->getModuleList();
     for (auto module : module_list) {
         res->module_list->push_back(module);
         OATPP_LOGD("ModuleController", "Module: %s", module.c_str());
@@ -187,7 +187,7 @@ Action returnResponse(const oatpp::Object<GetEnableModuleDto>& body) {
     OATPP_ASSERT_HTTP(body->plugin_name.getValue("") != "", Status::CODE_400,
                       "Invalid Parameters");
     auto plugin_name = body->plugin_name.getValue("");
-    if (!Lithium::MyApp->enableModule(plugin_name)) {
+    if (!lithium::MyApp->enableModule(plugin_name)) {
         res->error = "ModuleError";
         res->message = fmt::format("Failed to enable module: {}", plugin_name);
     }
@@ -216,7 +216,7 @@ Action returnResponse(const oatpp::Object<GetDisableModuleDto>& body) {
     OATPP_ASSERT_HTTP(body->plugin_name.getValue("") != "", Status::CODE_400,
                       "Invalid Parameters");
     auto plugin_name = body->plugin_name.getValue("");
-    if (!Lithium::MyApp->disableModule(plugin_name)) {
+    if (!lithium::MyApp->disableModule(plugin_name)) {
         res->error = "ModuleError";
         res->message = fmt::format("Failed to disable module: {}", plugin_name);
     }
@@ -245,7 +245,7 @@ Action returnResponse(const oatpp::Object<GetModuleStatusDto>& body) {
     OATPP_ASSERT_HTTP(body->module_name.getValue("") != "", Status::CODE_400,
                       "Invalid Parameters");
     auto module_name = body->module_name.getValue("");
-    auto module_status = Lithium::MyApp->getModuleStatus(module_name);
+    auto module_status = lithium::MyApp->getModuleStatus(module_name);
     if (module_status) {
         res->module_status = module_status;
     } else {
@@ -278,7 +278,7 @@ Action returnResponse(const oatpp::Object<GetModuleConfigDto>& body) {
     OATPP_ASSERT_HTTP(body->module_name.getValue("") != "", Status::CODE_400,
                       "Invalid Parameters");
     auto module_name = body->module_name.getValue("");
-    auto module_config = Lithium::MyApp->getModuleConfig(module_name);
+    auto module_config = lithium::MyApp->getModuleConfig(module_name);
     if (!module_config.empty()) {
         res->module_config = module_config.dump(4);
     } else {
@@ -319,11 +319,11 @@ Action returnResponse(const oatpp::Object<GetInstanceDto>& body) {
     CHECK_VARIABLE(get_func, "Invalid Parameters")
     if (instance_type == "plugin" || instance_type == "module") {
         AddPtr(instance_name,
-               GetPtr<Lithium::ModuleLoader>("ModuleLoader")
+               GetPtr<lithium::ModuleLoader>("ModuleLoader")
                    ->GetInstance<Plugin>(module_name, {}, instance_type));
     } else if (instance_type == "device") {
         AddPtr(instance_name,
-               GetPtr<Lithium::ModuleLoader>("ModuleLoader")
+               GetPtr<lithium::ModuleLoader>("ModuleLoader")
                    ->GetInstance<Device>(module_name, {}, instance_type));
     } else {
         res->error = "ModuleError";

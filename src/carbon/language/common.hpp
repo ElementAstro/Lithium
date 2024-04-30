@@ -15,7 +15,7 @@
 #include "../command/dispatchkit.hpp"
 #include "../command/proxy_functions.hpp"
 #include "../defines.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 
 namespace Carbon {
 struct AST_Node;
@@ -30,32 +30,32 @@ struct Name_Validator {
     template <typename T>
     static bool is_reserved_word(const T &s) noexcept {
         const static std::unordered_set<std::uint32_t> words{
-            Atom::Algorithm::fnv1a_hash("def"),
-            Atom::Algorithm::fnv1a_hash("fun"),
-            Atom::Algorithm::fnv1a_hash("while"),
-            Atom::Algorithm::fnv1a_hash("for"),
-            Atom::Algorithm::fnv1a_hash("if"),
-            Atom::Algorithm::fnv1a_hash("else"),
-            Atom::Algorithm::fnv1a_hash("&&"),
-            Atom::Algorithm::fnv1a_hash("||"),
-            Atom::Algorithm::fnv1a_hash(","),
-            Atom::Algorithm::fnv1a_hash("auto"),
-            Atom::Algorithm::fnv1a_hash("return"),
-            Atom::Algorithm::fnv1a_hash("break"),
-            Atom::Algorithm::fnv1a_hash("true"),
-            Atom::Algorithm::fnv1a_hash("false"),
-            Atom::Algorithm::fnv1a_hash("class"),
-            Atom::Algorithm::fnv1a_hash("attr"),
-            Atom::Algorithm::fnv1a_hash("var"),
-            Atom::Algorithm::fnv1a_hash("global"),
-            Atom::Algorithm::fnv1a_hash("GLOBAL"),
-            Atom::Algorithm::fnv1a_hash("_"),
-            Atom::Algorithm::fnv1a_hash("__LINE__"),
-            Atom::Algorithm::fnv1a_hash("__FILE__"),
-            Atom::Algorithm::fnv1a_hash("__FUNC__"),
-            Atom::Algorithm::fnv1a_hash("__CLASS__")};
+            atom::algorithm::fnv1a_hash("def"),
+            atom::algorithm::fnv1a_hash("fun"),
+            atom::algorithm::fnv1a_hash("while"),
+            atom::algorithm::fnv1a_hash("for"),
+            atom::algorithm::fnv1a_hash("if"),
+            atom::algorithm::fnv1a_hash("else"),
+            atom::algorithm::fnv1a_hash("&&"),
+            atom::algorithm::fnv1a_hash("||"),
+            atom::algorithm::fnv1a_hash(","),
+            atom::algorithm::fnv1a_hash("auto"),
+            atom::algorithm::fnv1a_hash("return"),
+            atom::algorithm::fnv1a_hash("break"),
+            atom::algorithm::fnv1a_hash("true"),
+            atom::algorithm::fnv1a_hash("false"),
+            atom::algorithm::fnv1a_hash("class"),
+            atom::algorithm::fnv1a_hash("attr"),
+            atom::algorithm::fnv1a_hash("var"),
+            atom::algorithm::fnv1a_hash("global"),
+            atom::algorithm::fnv1a_hash("GLOBAL"),
+            atom::algorithm::fnv1a_hash("_"),
+            atom::algorithm::fnv1a_hash("__LINE__"),
+            atom::algorithm::fnv1a_hash("__FILE__"),
+            atom::algorithm::fnv1a_hash("__FUNC__"),
+            atom::algorithm::fnv1a_hash("__CLASS__")};
 
-        return words.count(Atom::Algorithm::fnv1a_hash(s)) == 1;
+        return words.count(atom::algorithm::fnv1a_hash(s)) == 1;
     }
 
     template <typename T>

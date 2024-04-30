@@ -10,7 +10,7 @@
 
 using json = nlohmann::json;
 
-namespace Lithium {
+namespace lithium {
 std::vector<std::string> removeDuplicates(
     const std::vector<std::string>& input) {
     std::unordered_set<std::string> seen;
@@ -124,4 +124,4 @@ std::vector<std::string> resolveDependencies(
     return removeDuplicates(sorted_packages);
 }
 
-}  // namespace Lithium
+}  // namespace lithium

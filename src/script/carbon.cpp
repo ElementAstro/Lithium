@@ -14,17 +14,17 @@
 #include "config/_script.hpp"
 
 #include "atom/async/pool.hpp"
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 // Pimpl implementation
 class CarbonScriptImpl : public NonCopyable {
 public:
     explicit CarbonScriptImpl(const fs::path &script_dir = "./script",
                               int cache_expiry_seconds = 60)
         : m_carbon(std::make_unique<Carbon::CarbonScript>()) {
-        if (!Atom::IO::isFolderExists(script_dir)) {
+        if (!atom::io::isFolderExists(script_dir)) {
             throw std::runtime_error("Script directory does not exist: " +
                                      script_dir_.string());
         }
@@ -46,7 +46,7 @@ public:
         m_carbon->add(Atom::_Script::System::bootstrap());
         m_carbon->add(Atom::_Script::Type::bootstrap());
 
-        m_carbon->add(Lithium::_Script::Config::bootstrap());
+        m_carbon->add(lithium::_Script::Config::bootstrap());
 
         // Add additional sub-modules if needed
     }
@@ -108,7 +108,7 @@ public:
     void cacheScript(const std::string &script_name) {
         auto script_path = script_dir_ / (script_name + ".li");
 
-        if (!Atom::IO::isFileExists(script_path)) {
+        if (!atom::io::isFileExists(script_path)) {
             LOG_F(ERROR, "Script not found: {}", script_name);
             return;
         }
@@ -180,4 +180,4 @@ bool CarbonScript::RunScript(const std::string &filename) {
     return impl_->RunScript(filename);
 }
 
-}  // namespace Lithium
+}  // namespace lithium

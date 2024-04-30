@@ -13,7 +13,7 @@
 
 bool checkResources() {
     for (auto &[key, value] : resource::LITHIUM_RESOURCES) {
-        if (!Atom::IO::isFileExists(key.data())) {
+        if (!atom::io::isFileExists(key.data())) {
             LOG_F(ERROR, "Resource file '{}' is missing.", key);
             return false;
         }

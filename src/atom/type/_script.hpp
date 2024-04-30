@@ -22,6 +22,8 @@ Description: Carbon binding for Atom-Type
 #include "ini.hpp"
 #include "small_vector.hpp"
 
+using namespace atom::type;
+
 namespace Atom::_Script::Type {
 /**
  * Adds the String Methods to the given Carbon module.

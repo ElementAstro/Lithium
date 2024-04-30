@@ -18,9 +18,9 @@
 
 #include "../defines.hpp"
 #include "../threading.hpp"
-#include "atom/experiment/flatmap.hpp"
-#include "atom/experiment/short_alloc.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/type/flatmap.hpp"
+#include "atom/memory/short_alloc.hpp"
+#include "atom/function/type_info.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"

@@ -37,7 +37,7 @@ std::optional<std::any> JsonDeserializer::deserialize(
     }
 }
 
-namespace Atom::Server {
+namespace atom::server {
 void DeserializationEngine::addDeserializeEngine(
     const std::string &name,
     const std::shared_ptr<DeserializeEngine> &DeserializeEngine) {
@@ -77,4 +77,4 @@ bool DeserializationEngine::setCurrentDeserializeEngine(
           name);
     return false;
 }
-}  // namespace Atom::Server
+}  // namespace atom::server

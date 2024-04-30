@@ -19,6 +19,7 @@ set(${PROJECT_NAME}_SOURCES
     math.cpp
     md5.cpp
     mhash.cpp
+    pid.cpp
 )
 
 # Headers
@@ -33,6 +34,7 @@ set(${PROJECT_NAME}_HEADERS
     math.hpp
     md5.hpp
     mhash.hpp
+    pid.hpp
 )
 
 # Build Object Library

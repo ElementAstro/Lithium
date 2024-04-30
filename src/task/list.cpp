@@ -19,7 +19,7 @@ Description: Thread safe task list
 #include <thread>
 
 
-namespace Lithium {
+namespace lithium {
 std::shared_ptr<TaskList> TaskList::createShared() {
     return std::make_shared<TaskList>();
 }
@@ -74,4 +74,4 @@ void TaskList::listTasks() const {
 }
 
 std::unordered_map<std::string, json> TaskList::getTasks() { return tasks; }
-}  // namespace Lithium
+}  // namespace lithium

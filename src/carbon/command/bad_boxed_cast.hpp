@@ -7,8 +7,8 @@
 #include <typeinfo>
 
 #include "../defines.hpp"
-#include "atom/experiment/sstring.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/type/static_string.hpp"
+#include "atom/function/type_info.hpp"
 
 namespace Carbon {
 namespace exception {

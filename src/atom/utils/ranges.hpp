@@ -244,4 +244,63 @@ auto accumulate(Range&& range, T init, BinaryOp&& op) {
                            std::forward<BinaryOp>(op));
 }
 
+/**
+ * @brief Slices a range into a new range.
+ *
+ * @tparam Iterator The type of the iterator.
+ * @param begin The beginning of the range.
+ * @param end The end of the range.
+ * @param start The starting index of the slice.
+ * @param length The length of the slice.
+ * @return A new range containing the sliced elements.
+ *
+ * @usage
+ * auto sliced_numbers = Slice(numbers.begin(), numbers.end(), 2, 4);
+ * for (auto x : sliced_numbers) {
+ *     std::cout << x << " ";
+ * }
+ * std::cout << std::endl;
+ */
+template <typename Iterator>
+std::vector<typename Iterator::value_type> Slice(Iterator begin, Iterator end,
+                                                 size_t start, size_t length) {
+    std::vector<typename Iterator::value_type> result;
+    if (start >= std::distance(begin, end)) {
+        return result;
+    }
+    std::advance(begin, start);
+    auto it = begin;
+    for (size_t i = 0; i < length && it != end; ++i, ++it) {
+        result.push_back(*it);
+    }
+    return result;
+}
+
+/**
+ * @brief Slices a container into a new container.
+ *
+ * @tparam Container The type of the container.
+ * @tparam Index The type of the index.
+ * @param c The input container.
+ * @param start The starting index of the slice.
+ * @param end The ending index of the slice.
+ * @return A new container containing the sliced elements.
+ *
+ * @usage
+ * auto sliced_numbers = slice(numbers, 2, 4);
+ * for (auto x : sliced_numbers) {
+ *     std::cout << x << " ";
+ * }
+ * std::cout << std::endl;
+ */
+template <typename Container, typename Index>
+auto slice(Container& c, Index start, Index end) {
+    auto first = std::begin(c) + start;
+    auto last = (end == std::numeric_limits<Index>::max())
+                    ? std::end(c)
+                    : std::begin(c) + end;
+
+    return std::vector<typename Container::value_type>(first, last);
+}
+
 #endif

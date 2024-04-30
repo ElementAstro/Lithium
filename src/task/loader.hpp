@@ -26,7 +26,7 @@ Description: Json file manager
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
-namespace Lithium {
+namespace lithium {
 /**
  * @brief JSON文件管理器
  * @details
@@ -186,6 +186,6 @@ public:
         std::function<void(std::optional<json>)> process,
         std::function<void()> onComplete);
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

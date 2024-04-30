@@ -22,7 +22,7 @@ Description: Carbon Binding of ConfigManager
 #include "atom/log/loguru.hpp"
 #include "atom/server/global_ptr.hpp"
 
-namespace Lithium::_Script::Config {
+namespace lithium::_Script::Config {
 /**
  * Adds the String Methods to the given Carbon m.
  */
@@ -185,6 +185,6 @@ Carbon::ModulePtr bootstrap(
         return nullptr;
     }
 }
-}  // namespace Lithium::_Script::Config
+}  // namespace lithium::_Script::Config
 
 #endif

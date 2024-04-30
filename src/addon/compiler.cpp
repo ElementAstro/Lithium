@@ -26,7 +26,7 @@ Description: Compiler
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
-namespace Lithium {
+namespace lithium {
 bool Compiler::compileToSharedLibrary(std::string_view code,
                                       std::string_view moduleName,
                                       std::string_view functionName,
@@ -170,4 +170,4 @@ std::vector<std::string> Compiler::findAvailableCompilers() {
 
     return availableCompilers;
 }
-}  // namespace Lithium
+}  // namespace lithium

@@ -19,7 +19,7 @@ Description: Terminal
 
 namespace fs = std::filesystem;
 
-namespace Lithium::Terminal {
+namespace lithium::Terminal {
 
 ConsoleTerminal::ConsoleTerminal() {
 #ifdef _WIN32
@@ -188,4 +188,4 @@ void ConsoleTerminal::clearConsole() {
 #endif
 }
 
-}  // namespace Lithium::Terminal
+}  // namespace lithium::Terminal

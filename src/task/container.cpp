@@ -16,7 +16,7 @@ Description: Task container class.
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 std::shared_ptr<TaskContainer> TaskContainer::createShared() {
     return std::make_shared<TaskContainer>();
 }
@@ -115,4 +115,4 @@ void TaskContainer::batchModifyTasks(
         modifyFunc(task);
     }
 }
-}  // namespace Lithium
+}  // namespace lithium

@@ -21,11 +21,11 @@ Description: Hydorgen Camera
 HydrogenCamera::HydrogenCamera(const std::string &name) : Camera(name) {
     DLOG_F(INFO, "Hydorgen camera {} init successfully", name);
     m_number_switch = std::make_unique<
-        Atom::Utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
+        atom::utils::StringSwitch<HYDROGEN::PropertyViewNumber *>>();
     m_switch_switch = std::make_unique<
-        Atom::Utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
+        atom::utils::StringSwitch<HYDROGEN::PropertyViewSwitch *>>();
     m_text_switch = std::make_unique<
-        Atom::Utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
+        atom::utils::StringSwitch<HYDROGEN::PropertyViewText *>>();
 
     registerFunc("connect", &HydrogenCamera::connect, this);
     registerFunc("disconnect", &HydrogenCamera::disconnect, this);

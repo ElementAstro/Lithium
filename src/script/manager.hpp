@@ -19,7 +19,7 @@ Description: Lithium Python scripting engine
 
 #include "config/configor.hpp"
 
-namespace Lithium {
+namespace lithium {
 
 class PyManagerImpl;
 
@@ -32,6 +32,6 @@ private:
     std::unique_ptr<PyManagerImpl> m_impl;
 };
 
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

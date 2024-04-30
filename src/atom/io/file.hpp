@@ -18,7 +18,7 @@ Description: File Manager
 #include <fstream>
 #include <string>
 
-namespace Atom::IO {
+namespace atom::io {
 /**
  * @class FileManager
  * @brief 文件管理器类，提供文件的创建、打开、读取、写入、移动、删除等功能。
@@ -87,6 +87,6 @@ private:
     std::string m_filename;  ///< 当前打开的文件名
 };
 
-}  // namespace Atom::IO
+}  // namespace atom::io
 
 #endif

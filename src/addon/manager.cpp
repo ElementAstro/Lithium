@@ -29,6 +29,8 @@ Description: Component Manager (the core of the plugin system)
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"
 
+#include <fstream>
+
 #define IS_ARGUMENT_EMPTY() \
     if (params.is_null()) { \
         return false;       \
@@ -41,16 +43,16 @@ Description: Component Manager (the core of the plugin system)
     }                                                               \
     type name = params[#name].get<type>();
 
-namespace Lithium {
+namespace lithium {
 ComponentManager::ComponentManager() : m_Sandbox(nullptr), m_Compiler(nullptr) {
     m_ModuleLoader =
-        GetWeakPtr<Lithium::ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
+        GetWeakPtr<lithium::ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
     CHECK_WEAK_PTR_EXPIRED(m_ModuleLoader,
                            "load module loader from gpm: lithium.addon.loader");
-    m_Env = GetWeakPtr<Atom::Utils::Env>(constants::LITHIUM_UTILS_ENV);
+    m_Env = GetWeakPtr<atom::utils::Env>(constants::LITHIUM_UTILS_ENV);
     CHECK_WEAK_PTR_EXPIRED(m_Env, "load env from gpm: lithium.utils.env");
     m_AddonManager =
-        GetWeakPtr<Lithium::AddonManager>(constants::LITHIUM_ADDON_MANAGER);
+        GetWeakPtr<lithium::AddonManager>(constants::LITHIUM_ADDON_MANAGER);
     CHECK_WEAK_PTR_EXPIRED(m_AddonManager,
                            "load addon manager from gpm: lithium.addon.addon");
 
@@ -140,10 +142,10 @@ bool ComponentManager::Initialize() {
 #ifdef _WIN32
             // This is to pass file name check
             auto module_path_str =
-                Atom::Utils::replaceString(module_path.string(), "/", "\\");
+                atom::utils::replaceString(module_path.string(), "/", "\\");
 #else
             auto module_path_str =
-                Atom::Utils::replaceString(module_path.string(), "\\", "/");
+                atom::utils::replaceString(module_path.string(), "\\", "/");
 #endif
 
             // This step is to load the dynamic library
@@ -162,16 +164,14 @@ bool ComponentManager::Initialize() {
             }
             auto component_identifier =
                 addon_name + module_name + component_entry;
-            if (auto component =
-                    m_ModuleLoader.lock()->GetInstance<SharedComponent>(
-                        module_name, {}, component_entry);
+            if (auto component = m_ModuleLoader.lock()->GetInstance<Component>(
+                    module_name, {}, component_entry);
                 component) {
                 LOG_F(INFO, "Loaded shared component: {}",
                       component_identifier);
                 try {
                     if (component->initialize()) {
-                        m_SharedComponents[addon_name + module_name] =
-                            component;
+                        m_Components[addon_name + module_name] = component;
                         LOG_F(INFO, "Loaded shared component: {}",
                               component_identifier);
                     } else {
@@ -289,21 +289,21 @@ bool ComponentManager::checkComponent(const std::string &module_name,
     }
     // If not, load the module
     // Check component path
-    if (!Atom::IO::isFolderExists(module_path)) {
+    if (!atom::io::isFolderExists(module_path)) {
         LOG_F(ERROR, "Component path {} does not exist", module_path);
         return false;
     }
     // Check component package.json file, this is for the first time loading
     // And we need to know how to load component's ptr from this file
-    if (!Atom::IO::isFileExists(module_path + constants::PATH_SEPARATOR +
+    if (!atom::io::isFileExists(module_path + constants::PATH_SEPARATOR +
                                 constants::PACKAGE_NAME)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
     }
     // Check component library files
-    std::vector<std::string> files = Atom::IO::checkFileTypeInFolder(
-        module_path, constants::LIB_EXTENSION, Atom::IO::FileOption::Name);
+    std::vector<std::string> files = atom::io::checkFileTypeInFolder(
+        module_path, constants::LIB_EXTENSION, atom::io::FileOption::Name);
 
     if (files.empty()) {
         LOG_F(ERROR, "Component path {} does not contain dll or so file",
@@ -335,7 +335,7 @@ bool ComponentManager::loadComponentInfo(const std::string &module_path) {
     // Max: We will only load the root package.json
     std::string file_path =
         module_path + constants::PATH_SEPARATOR + constants::PACKAGE_NAME;
-    if (!Atom::IO::isFileExists(file_path)) {
+    if (!atom::io::isFileExists(file_path)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
@@ -419,7 +419,7 @@ bool ComponentManager::loadSharedComponent(const std::string &component_name) {
         LOG_F(ERROR, "Component name is empty");
         return false;
     }
-    if (m_SharedComponents.find(component_name) != m_SharedComponents.end()) {
+    if (m_Components.find(component_name) != m_Components.end()) {
         LOG_F(ERROR, "Component {} has been loaded", component_name);
         return false;
     }
@@ -431,8 +431,8 @@ bool ComponentManager::loadSharedComponent(const std::string &component_name) {
     }
     // There we need some json parameters support for better get the component
     // instance
-    if (std::shared_ptr<SharedComponent> component =
-            m_ModuleLoader.lock()->GetInstance<SharedComponent>(
+    if (std::shared_ptr<Component> component =
+            m_ModuleLoader.lock()->GetInstance<Component>(
                 it->second->m_name, {}, it->second->m_func_name);
         component) {
         try {
@@ -442,7 +442,7 @@ bool ComponentManager::loadSharedComponent(const std::string &component_name) {
             LOG_F(ERROR, "Failed to initialize component: {}", e.what());
             return false;
         }
-        m_SharedComponents[component_name] = component;
+        m_Components[component_name] = component;
     } else {
         LOG_F(ERROR, "Failed to load module: {}'s library", component_name);
         return false;
@@ -466,14 +466,4 @@ bool ComponentManager::reloadSharedComponent(const json &params) {
     return true;
 }
 
-bool ComponentManager::loadScriptComponent(const json &params) { return true; }
-
-bool ComponentManager::unloadScriptComponent(const json &params) {
-    return true;
-}
-
-bool ComponentManager::reloadScriptComponent(const json &params) {
-    return true;
-}
-
-}  // namespace Lithium
+}  // namespace lithium

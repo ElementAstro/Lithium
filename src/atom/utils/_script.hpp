@@ -28,7 +28,7 @@ Description: Carbon binding for Atom-Utils
 #include "uuid.hpp"
 #include "xml.hpp"
 
-using namespace Atom::Utils;
+using namespace atom::utils;
 
 namespace Atom::_Script::Utils {
 /**

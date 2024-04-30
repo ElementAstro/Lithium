@@ -29,6 +29,8 @@ Description: Configor
 
 namespace fs = std::filesystem;
 
+namespace lithium {
+
 class ConfigManagerImpl {
 public:
     mutable std::shared_mutex rw_mutex_;
@@ -69,11 +71,11 @@ bool ConfigManager::loadFromFile(const fs::path& path) {
         mergeConfig(j);
         return true;
     } catch (const json::exception& e) {
-        LOG_F(ERROR, "Failed to parse file: {}, error message: {}", path.string(),
-              e.what());
+        LOG_F(ERROR, "Failed to parse file: {}, error message: {}",
+              path.string(), e.what());
     } catch (const std::exception& e) {
-        LOG_F(ERROR, "Failed to load config file: {}, error message: {}", path.string(),
-              e.what());
+        LOG_F(ERROR, "Failed to load config file: {}, error message: {}",
+              path.string(), e.what());
     }
     return false;
 }
@@ -207,3 +209,4 @@ void ConfigManager::mergeConfig(const json& src) {
 
 void ConfigManager::clearConfig() { m_impl->config_.clear(); }
 
+}  // namespace lithium

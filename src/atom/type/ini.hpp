@@ -26,6 +26,8 @@ Description: INI File Read/Write Library
 #include <unordered_map>
 #endif
 
+namespace atom::type
+{
 class INIFile {
 public:
     /**
@@ -86,10 +88,17 @@ public:
      * @param section 部分名
      * @return 部分内容
      */
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::string, std::any> operator[](
+        const std::string &section) {
+        return data[section];
+    }
+#else
     std::unordered_map<std::string, std::any> operator[](
         const std::string &section) {
         return data[section];
     }
+#endif
 
     /**
      * @brief 将INI文件中的数据转换为JSON字符串
@@ -126,7 +135,9 @@ private:
      */
     std::string trim(const std::string &str);
 };
+}
 
-#include "ini_impl.hpp"
+
+#include "ini.inl"
 
 #endif

@@ -17,7 +17,7 @@ Description: Component Entry, which is used to describe the component.
 #include <string>
 #include <vector>
 
-namespace Lithium {
+namespace lithium {
 class ComponentEntry {
 public:
     std::string m_name;
@@ -37,4 +37,4 @@ public:
           m_project_name(project_name) {}
 };
 
-}  // namespace Lithium
+}  // namespace lithium

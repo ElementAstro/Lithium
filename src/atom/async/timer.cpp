@@ -14,7 +14,7 @@ Description: Timer class for C++
 
 #include "timer.hpp"
 
-namespace Atom::Async {
+namespace atom::async {
 TimerTask::TimerTask(std::function<void()> func, unsigned int delay,
                      int repeatCount, int priority)
     : m_func(func),
@@ -122,4 +122,4 @@ int Timer::getTaskCount() const {
     std::unique_lock<std::mutex> lock(m_mutex);
     return m_taskQueue.size();
 }
-}  // namespace Atom::Async
+}  // namespace atom::async

@@ -6,7 +6,7 @@
         LOG_F(ERROR, "{}: {}", __func__, msg);                     \
         res["error"] = magic_enum::enum_name(code);                \
         res["message"] = msg;                                      \
-        res["timestamp"] = Atom::Utils::getChinaTimestampString(); \
+        res["timestamp"] = atom::utils::getChinaTimestampString(); \
         sendMessage(res.dump());                                   \
         return;                                                    \
     } while (0)
@@ -17,7 +17,7 @@
         LOG_F(ERROR, "{}: {}", __func__, msg);                     \
         res["error"] = magic_enum::enum_name(code);                \
         res["message"] = msg;                                      \
-        res["timestamp"] = Atom::Utils::getChinaTimestampString(); \
+        res["timestamp"] = atom::utils::getChinaTimestampString(); \
         sendMessage(res.dump());                                   \
         return nullptr;                                            \
     } while (0)
@@ -39,7 +39,7 @@
         LOG_F(ERROR, "{}: {}", __func__, msg);                     \
         res["error"] = magic_enum::enum_name(code);                \
         res["message"] = msg;                                      \
-        res["timestamp"] = Atom::Utils::getChinaTimestampString(); \
+        res["timestamp"] = atom::utils::getChinaTimestampString(); \
         sendMessage(res.dump());                                   \
         return nullptr;                                            \
     } while (0)

@@ -25,7 +25,7 @@ Description: Addon manager to solve the dependency problem.
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-namespace Lithium {
+namespace lithium {
 /**
  * @brief This is the class which contains the dependencies relationships of the
  * modules.
@@ -129,4 +129,4 @@ private:
     bool checkMissingDependencies(const std::string &modName,
                                   std::vector<std::string> &missingDeps);
 };
-}  // namespace Lithium
+}  // namespace lithium

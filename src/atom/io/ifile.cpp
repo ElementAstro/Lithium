@@ -17,7 +17,7 @@ Description: File Wrapper
 #include <fstream>
 #include <iostream>
 
-namespace Atom::IO {
+namespace atom::io {
 FileWrapper::FileWrapper(const fs::path& file_path) : file_path_(file_path) {}
 
 void FileWrapper::write(const std::string& content) { write_file(content); }
@@ -203,4 +203,4 @@ fs::perms FileWrapper::permissions() const {
     return fs::status(file_path_).permissions();
 }
 
-}  // namespace Atom::IO
+}  // namespace atom::io

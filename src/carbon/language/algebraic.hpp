@@ -61,93 +61,93 @@ struct Operators {
 #pragma warning(disable : 4307)
 #endif
 
-        const auto op_hash = Atom::Algorithm::fnv1a_hash(t_str);
+        const auto op_hash = atom::algorithm::fnv1a_hash(t_str);
         switch (op_hash) {
-            case Atom::Algorithm::fnv1a_hash("=="): {
+            case atom::algorithm::fnv1a_hash("=="): {
                 return Opers::equals;
             }
-            case Atom::Algorithm::fnv1a_hash("<"): {
+            case atom::algorithm::fnv1a_hash("<"): {
                 return Opers::less_than;
             }
-            case Atom::Algorithm::fnv1a_hash(">"): {
+            case atom::algorithm::fnv1a_hash(">"): {
                 return Opers::greater_than;
             }
-            case Atom::Algorithm::fnv1a_hash("<="): {
+            case atom::algorithm::fnv1a_hash("<="): {
                 return Opers::less_than_equal;
             }
-            case Atom::Algorithm::fnv1a_hash(">="): {
+            case atom::algorithm::fnv1a_hash(">="): {
                 return Opers::greater_than_equal;
             }
-            case Atom::Algorithm::fnv1a_hash("!="): {
+            case atom::algorithm::fnv1a_hash("!="): {
                 return Opers::not_equal;
             }
-            case Atom::Algorithm::fnv1a_hash("="): {
+            case atom::algorithm::fnv1a_hash("="): {
                 return Opers::assign;
             }
-            case Atom::Algorithm::fnv1a_hash("++"): {
+            case atom::algorithm::fnv1a_hash("++"): {
                 return Opers::pre_increment;
             }
-            case Atom::Algorithm::fnv1a_hash("--"): {
+            case atom::algorithm::fnv1a_hash("--"): {
                 return Opers::pre_decrement;
             }
-            case Atom::Algorithm::fnv1a_hash("*="): {
+            case atom::algorithm::fnv1a_hash("*="): {
                 return Opers::assign_product;
             }
-            case Atom::Algorithm::fnv1a_hash("+="): {
+            case atom::algorithm::fnv1a_hash("+="): {
                 return Opers::assign_sum;
             }
-            case Atom::Algorithm::fnv1a_hash("-="): {
+            case atom::algorithm::fnv1a_hash("-="): {
                 return Opers::assign_difference;
             }
-            case Atom::Algorithm::fnv1a_hash("&="): {
+            case atom::algorithm::fnv1a_hash("&="): {
                 return Opers::assign_bitwise_and;
             }
-            case Atom::Algorithm::fnv1a_hash("|="): {
+            case atom::algorithm::fnv1a_hash("|="): {
                 return Opers::assign_bitwise_or;
             }
-            case Atom::Algorithm::fnv1a_hash("<<="): {
+            case atom::algorithm::fnv1a_hash("<<="): {
                 return Opers::assign_shift_left;
             }
-            case Atom::Algorithm::fnv1a_hash(">>="): {
+            case atom::algorithm::fnv1a_hash(">>="): {
                 return Opers::assign_shift_right;
             }
-            case Atom::Algorithm::fnv1a_hash("%="): {
+            case atom::algorithm::fnv1a_hash("%="): {
                 return Opers::assign_remainder;
             }
-            case Atom::Algorithm::fnv1a_hash("^="): {
+            case atom::algorithm::fnv1a_hash("^="): {
                 return Opers::assign_bitwise_xor;
             }
-            case Atom::Algorithm::fnv1a_hash("<<"): {
+            case atom::algorithm::fnv1a_hash("<<"): {
                 return Opers::shift_left;
             }
-            case Atom::Algorithm::fnv1a_hash(">>"): {
+            case atom::algorithm::fnv1a_hash(">>"): {
                 return Opers::shift_right;
             }
-            case Atom::Algorithm::fnv1a_hash("%"): {
+            case atom::algorithm::fnv1a_hash("%"): {
                 return Opers::remainder;
             }
-            case Atom::Algorithm::fnv1a_hash("&"): {
+            case atom::algorithm::fnv1a_hash("&"): {
                 return Opers::bitwise_and;
             }
-            case Atom::Algorithm::fnv1a_hash("|"): {
+            case atom::algorithm::fnv1a_hash("|"): {
                 return Opers::bitwise_or;
             }
-            case Atom::Algorithm::fnv1a_hash("^"): {
+            case atom::algorithm::fnv1a_hash("^"): {
                 return Opers::bitwise_xor;
             }
-            case Atom::Algorithm::fnv1a_hash("~"): {
+            case atom::algorithm::fnv1a_hash("~"): {
                 return Opers::bitwise_complement;
             }
-            case Atom::Algorithm::fnv1a_hash("+"): {
+            case atom::algorithm::fnv1a_hash("+"): {
                 return t_is_unary ? Opers::unary_plus : Opers::sum;
             }
-            case Atom::Algorithm::fnv1a_hash("-"): {
+            case atom::algorithm::fnv1a_hash("-"): {
                 return t_is_unary ? Opers::unary_minus : Opers::difference;
             }
-            case Atom::Algorithm::fnv1a_hash("/"): {
+            case atom::algorithm::fnv1a_hash("/"): {
                 return Opers::quotient;
             }
-            case Atom::Algorithm::fnv1a_hash("*"): {
+            case atom::algorithm::fnv1a_hash("*"): {
                 return Opers::product;
             }
             default: {

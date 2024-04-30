@@ -20,7 +20,7 @@ Description: Addon manager to solve the dependency problem.
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 bool AddonManager::addModule(const std::filesystem::path &path,
                              const std::string &name) {
     if (m_modules.find(name) != m_modules.end()) {
@@ -143,4 +143,4 @@ bool AddonManager::checkCircularDependencies(
     recursionStack[modName] = false;
     return false;
 }
-}  // namespace Lithium
+}  // namespace lithium

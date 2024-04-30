@@ -24,11 +24,10 @@ Description: Task Generator
 #include <optional>
 
 #include "atom/task/task.hpp"
-#include "device/manager.hpp"
 
 using json = nlohmann::json;
 
-namespace Lithium {
+namespace lithium {
 class TaskGenerator {
 public:
     explicit TaskGenerator();
@@ -79,9 +78,7 @@ private:
 #endif
 
     std::mutex m_Mutex;
-
-    std::weak_ptr<DeviceManager> m_DeviceManager;
 };
 
-}  // namespace Lithium
+}  // namespace lithium
 #endif

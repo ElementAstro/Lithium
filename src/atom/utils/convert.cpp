@@ -19,7 +19,7 @@ Description: Convert Utils for Windows
 #include <stdexcept>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::utils {
 LPWSTR CharToLPWSTR(std::string_view charString) {
     const int size =
         MultiByteToWideChar(CP_ACP, 0, charString.data(),
@@ -64,6 +64,6 @@ std::wstring LPWSTRToWString(LPWSTR lpwstr) { return std::wstring(lpwstr); }
 
 std::wstring LPCWSTRToWString(LPCWSTR lpcwstr) { return std::wstring(lpcwstr); }
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

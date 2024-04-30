@@ -19,7 +19,7 @@ Description: A collection of algorithms for C++
 #include <string>
 #include <vector>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 /**
  * @brief Encodes a vector of unsigned characters into a Base16 string.
  *
@@ -157,6 +157,6 @@ base128Decode(std::string_view encoded);
 
 [[nodiscard("The result of xorDecrypt is not used.")]] std::string xorDecrypt(
     std::string_view ciphertext, uint8_t key);
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm
 
 #endif

@@ -21,7 +21,7 @@
 #include "boxed_value.hpp"
 #include "dynamic_object.hpp"
 #include "proxy_functions.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 
 namespace Carbon {
 class Type_Conversions;

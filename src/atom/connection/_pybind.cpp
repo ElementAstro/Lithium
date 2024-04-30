@@ -25,7 +25,7 @@ Description: Python Binding of Atom-Connection
 #endif
 namespace py = pybind11;
 
-using namespace Atom::Connection;
+using namespace atom::connection;
 
 template <typename T>
 void bind_shared_memory(py::module &m, const std::string &type_name) {

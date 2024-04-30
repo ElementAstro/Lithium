@@ -19,7 +19,7 @@ Description: A XML reader class using tinyxml2.
 #include <string>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief A class for reading and manipulating data from an XML file.
  */
@@ -183,6 +183,6 @@ private:
      */
     tinyxml2::XMLElement *getElementByPath(const std::string &path) const;
 };
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

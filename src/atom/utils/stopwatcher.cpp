@@ -20,7 +20,7 @@ Description: Simple implementation of a stopwatch
 #include <thread>
 
 
-namespace Atom::Utils {
+namespace atom::utils {
 StopWatcher::StopWatcher() : m_running(false), m_paused(false) {}
 
 void StopWatcher::start() {
@@ -110,4 +110,4 @@ void StopWatcher::checkCallbacks(
         }
     }
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

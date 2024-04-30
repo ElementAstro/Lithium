@@ -19,15 +19,14 @@ Description: A very simple thread pool for preload
 #include <cstdint>
 #include <functional>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <queue>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 
-namespace Atom::Async {
-/**
- * @brief 线程池
- */
+namespace atom::async {
 class ThreadPool {
 public:
     /**
@@ -37,21 +36,19 @@ public:
      *
      * @param n_threads 线程池大小
      */
-    ThreadPool(std::size_t n_threads) : stop(false) {
+    explicit ThreadPool(std::size_t n_threads) {
         for (std::size_t i = 0; i < n_threads; ++i) {
             threads.emplace_back([this] {
-                for (;;) {
-                    std::function<void()> task;
-                    {
-                        std::unique_lock<std::mutex> lock(queue_mutex);
-                        condition.wait(
-                            lock, [this] { return stop || !tasks.empty(); });
-                        if (stop && tasks.empty()) {
-                            return;
-                        }
-                        task = std::move(tasks.front());
-                        tasks.pop();
+                while (true) {
+                    std::unique_lock lock(queue_mutex);
+                    condition.wait(lock,
+                                   [this] { return stop || !tasks.empty(); });
+                    if (stop && tasks.empty()) {
+                        return;
                     }
+                    auto task = std::move(tasks.front());
+                    tasks.pop();
+                    lock.unlock();
                     task();
                 }
             });
@@ -65,11 +62,11 @@ public:
      */
     ~ThreadPool() {
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::unique_lock lock(queue_mutex);
             stop = true;
         }
         condition.notify_all();
-        for (std::thread &thread : threads) {
+        for (auto &thread : threads) {
             thread.join();
         }
     }
@@ -88,35 +85,61 @@ public:
      * @return 返回一个 std::future 对象，用于查询任务完成情况
      */
     template <typename F, typename... Args>
-    auto enqueue(F &&f, Args &&...args)
-        -> std::future<typename std::result_of<F(Args...)>::type> {
-        using return_type = typename std::result_of<F(Args...)>::type;
+    auto enqueue(F &&f, Args &&...args) {
+        using return_type = std::invoke_result_t<F, Args...>;
 
         auto task = std::make_shared<std::packaged_task<return_type()>>(
-            std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+            std::bind_front(std::forward<F>(f), std::forward<Args>(args)...));
 
-        std::future<return_type> res = task->get_future();
+        auto res = task->get_future();
         {
-            std::unique_lock<std::mutex> lock(queue_mutex);
+            std::unique_lock lock(queue_mutex);
 
             if (stop) {
                 throw std::runtime_error("enqueue on stopped ThreadPool");
             }
 
-            tasks.emplace([task] { (*task)(); });
+            tasks.emplace([task = std::move(task)]() { (*task)(); });
         }
         condition.notify_one();
         return res;
     }
 
+    /**
+     * @brief 等待所有任务完成。
+     *
+     * 该函数会等待任务队列中的所有任务完成，然后返回。
+     */
+    void wait() {
+        std::unique_lock lock(queue_mutex);
+        condition.wait(lock, [this] { return tasks.empty(); });
+    }
+
+    /**
+     * @brief 返回线程池中的线程数量。
+     *
+     * @return 线程池中的线程数量
+     */
+    std::size_t size() const { return threads.size(); }
+
+    /**
+     * @brief 返回任务队列中待执行的任务数量。
+     *
+     * @return 任务队列中待执行的任务数量
+     */
+    std::size_t taskCount() const {
+        std::unique_lock lock(queue_mutex);
+        return tasks.size();
+    }
+
 private:
-    std::vector<std::thread> threads;         ///< 线程池中的线程列表
+    std::vector<std::jthread> threads;         ///< 线程池中的线程列表
     std::queue<std::function<void()>> tasks;  ///< 任务队列
 
-    std::mutex queue_mutex;             ///< 任务队列的互斥锁
+    mutable std::mutex queue_mutex;     ///< 任务队列的互斥锁
     std::condition_variable condition;  ///< 任务队列的条件变量
-    bool stop;                          ///< 停止标志位
+    bool stop{false};                   ///< 停止标志位
 };
-}  // namespace Atom::Async
+}  // namespace atom::async
 
 #endif

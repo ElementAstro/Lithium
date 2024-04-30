@@ -24,7 +24,7 @@ Description: Carbon binding for Atom-IO
 #include "ifile.hpp"
 #include "io.hpp"
 
-using namespace Atom::IO;
+using namespace atom::io;
 
 namespace Atom::_Script::IO {
 /**

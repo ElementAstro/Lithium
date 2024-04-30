@@ -16,7 +16,7 @@ Description: A simple UDP server.
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::Connection {
+namespace atom::connection {
 UdpSocketHub::UdpSocketHub()
     : m_running(false), m_serverSocket(INVALID_SOCKET) {}
 
@@ -139,4 +139,4 @@ void UdpSocketHub::handleMessages() {
     }
 }
 
-}  // namespace Atom::Connection
+}  // namespace atom::connection

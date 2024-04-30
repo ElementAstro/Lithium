@@ -85,7 +85,7 @@ public:
                           bool format = false) const override;
 };
 
-namespace Atom::Server {
+namespace atom::server {
 /**
  * @brief 序列化引擎类
  *
@@ -177,6 +177,6 @@ std::optional<std::string> SerializationEngine::serialize(const T &data,
     return std::nullopt;
 }
 
-}  // namespace Atom::Server
+}  // namespace atom::server
 
 #endif

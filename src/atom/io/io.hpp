@@ -22,7 +22,7 @@ Description: IO
 #include <vector>
 namespace fs = std::filesystem;
 
-namespace Atom::IO {
+namespace atom::io {
 /**
  * @brief Creates a directory with the specified path.
  *
@@ -394,6 +394,6 @@ enum class FileOption { Path, Name };
  *         如果文件不存在或发生错误，则返回 false
  */
 bool isExecutableFile(const std::string &fileName, const std::string &fileExt);
-}  // namespace Atom::IO
+}  // namespace atom::io
 
 #endif

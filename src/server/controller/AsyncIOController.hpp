@@ -71,12 +71,12 @@ public:
             res->command = "createDirectory";
             auto path = body->path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
-            if (isAbsolute && !Atom::IO::isAbsolutePath(path)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(path)) {
                 res->status = "error";
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::createDirectory(path)) {
+                if (!atom::io::createDirectory(path)) {
                     res->status = "error";
                     res->error = "IO Failed";
                     res->code = 500;
@@ -116,13 +116,13 @@ public:
             auto path = body->path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if (isAbsolute && !Atom::IO::isAbsolutePath(path)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(path)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::removeDirectory(path)) {
+                if (!atom::io::removeDirectory(path)) {
                     res->status = "error";
                     res->code = 500;
                     res->error = "IO Failed";
@@ -166,19 +166,19 @@ public:
             auto isAbsolute = body->isAbsolute.getValue(false);
             auto name = body->name.getValue("");
 
-            if (!Atom::IO::isFolderNameValid(name)) {
+            if (!atom::io::isFolderNameValid(name)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "New folder name must be valid";
             }
-            if (isAbsolute && !Atom::IO::isAbsolutePath(path)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(path)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::renameDirectory(path, name)) {
+                if (!atom::io::renameDirectory(path, name)) {
                     res->status = "error";
                     res->code = 500;
                     res->error = "IO Failed";
@@ -219,14 +219,14 @@ public:
             res->command = "moveDirectory";
             auto old_path = body->path.getValue("");
             auto new_path = body->new_path.getValue("");
-            if ((!Atom::IO::isAbsolutePath(old_path) ||
-                 !Atom::IO::isAbsolutePath(new_path))) {
+            if ((!atom::io::isAbsolutePath(old_path) ||
+                 !atom::io::isAbsolutePath(new_path))) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::moveDirectory(old_path, new_path)) {
+                if (!atom::io::moveDirectory(old_path, new_path)) {
                     res->status = "error";
                     res->code = 500;
                     res->error = "IO Failed";
@@ -269,14 +269,14 @@ public:
             auto new_path = body->new_path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if (isAbsolute && !Atom::IO::isAbsolutePath(old_path) ||
-                !Atom::IO::isAbsolutePath(new_path)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(old_path) ||
+                !atom::io::isAbsolutePath(new_path)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::copyFile(old_path, new_path)) {
+                if (!atom::io::copyFile(old_path, new_path)) {
                     res->status = "error";
                     res->code = 500;
                     res->error = "IO Failed";
@@ -320,14 +320,14 @@ public:
             auto new_path = body->new_path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if (isAbsolute && !Atom::IO::isAbsolutePath(old_path) ||
-                !Atom::IO::isAbsolutePath(new_path)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(old_path) ||
+                !atom::io::isAbsolutePath(new_path)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::copyFile(old_path, new_path)) {
+                if (!atom::io::copyFile(old_path, new_path)) {
                     res->status = "error";
                     res->code = 500;
                     res->error = "IO Failed";
@@ -371,13 +371,13 @@ public:
             auto new_name = body->new_name.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if (isAbsolute && !Atom::IO::isAbsolutePath(old_name)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(old_name)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             } else {
-                if (!Atom::IO::renameFile(old_name, new_name)) {
+                if (!atom::io::renameFile(old_name, new_name)) {
                     res->status = "error";
                     res->code = 500;
                     res->error = "IO Failed";
@@ -418,13 +418,13 @@ public:
             auto name = body->path.getValue("");
             auto isAbsolute = body->isAbsolute.getValue(false);
 
-            if (isAbsolute && !Atom::IO::isAbsolutePath(name)) {
+            if (isAbsolute && !atom::io::isAbsolutePath(name)) {
                 res->status = "error";
                 res->code = 500;
                 res->error = "Invalid Parameters";
                 res->message = "Directory path must be a absolute path";
             }
-            if (!Atom::IO::removeFile(name)) {
+            if (!atom::io::removeFile(name)) {
                 res->error = "IO Failed";
                 res->message = "Failed to remove file";
             }

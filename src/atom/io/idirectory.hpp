@@ -21,7 +21,7 @@ Description: Directory Wrapper
 
 namespace fs = std::filesystem;
 
-namespace Atom::IO {
+namespace atom::io {
 /**
  * @brief A wrapper class for interacting with directories.
  */
@@ -92,6 +92,6 @@ private:
     fs::path dir_path_;  ///< The path to the directory.
 };
 
-}  // namespace Atom::IO
+}  // namespace atom::io
 
 #endif

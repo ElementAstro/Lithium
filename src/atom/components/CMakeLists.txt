@@ -4,33 +4,17 @@ project(atom-component C CXX)
 
 list(APPEND ${PROJECT_NAME}_SOURCES
     component.cpp
-
+    dispatch.cpp
     types.cpp
-
-    templates/alone_component.cpp
-    templates/exe_component.cpp
-    templates/script_component.cpp
-    templates/shared_component.cpp
-    templates/task_component.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
-    component.hpp
-    macro.hpp
-    
-    types.hpp
-
-    templates/alone_component.hpp
-    templates/exe_component.hpp
-    templates/script_component.hpp
-    templates/shared_component.hpp
-    templates/task_component.hpp
 )
 
 list(APPEND ${PROJECT_NAME}_LIBS
     loguru
-    atom-experiment
+    atom-error
     atom-type
     atom-utils
     atom-server

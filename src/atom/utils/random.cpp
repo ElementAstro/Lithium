@@ -14,7 +14,7 @@ Description: Simple random number generator
 
 #include "random.hpp"
 
-namespace Atom::Utils {
+namespace atom::utils {
 std::mt19937 createRandomGenerator() {
     std::random_device rd;
     std::seed_seq seed{rd(), rd(), rd(), rd()};
@@ -37,4 +37,4 @@ std::string generateRandomString(int length) {
 
     return randomString;
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

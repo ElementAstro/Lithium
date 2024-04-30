@@ -21,7 +21,7 @@ Description: Convert Utils for Windows
 #include <string>
 #include <string_view>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief Converts a string_view containing char characters to LPWSTR (wide
  * character string).
@@ -75,7 +75,7 @@ namespace Atom::Utils {
  */
 [[nodiscard]] std::wstring LPCWSTRToWString(LPCWSTR lpcwstr);
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif
 

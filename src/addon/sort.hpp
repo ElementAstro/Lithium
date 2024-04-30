@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace Lithium {
+namespace lithium {
 [[nodiscard("result is discarded")]] std::vector<std::string>
 resolveDependencies(const std::vector<std::string>& directories);
 }

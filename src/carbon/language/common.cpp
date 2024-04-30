@@ -12,7 +12,7 @@
 #include "../command/dispatchkit.hpp"
 #include "../command/proxy_functions.hpp"
 #include "../defines.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 
 namespace Carbon {
 Parse_Location::Parse_Location(std::string t_fname, const int t_start_line,

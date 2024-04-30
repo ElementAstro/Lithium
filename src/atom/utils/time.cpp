@@ -18,7 +18,7 @@ Description: Some useful functions about time
 #include <iomanip>
 #include <sstream>
 
-namespace Atom::Utils {
+namespace atom::utils {
 std::string getTimestampString() {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
@@ -101,4 +101,4 @@ std::tm timestampToTime(long long timestamp) {
     std::time_t time = static_cast<std::time_t>(timestamp / 1000);
     return *std::localtime(&time);
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

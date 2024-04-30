@@ -104,6 +104,7 @@ sudo apt-get install gcc-13 g++-13 # GCC13 is the best choice, clang is alse OK
 
 wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
 tar -zxvf cmake-3.28.0-rc5.tar.gz
+cd cmake-3.28.0-rc5
 ./bootstrap && make && sudo make install
 
 #install newest clang-format

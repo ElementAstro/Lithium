@@ -17,7 +17,7 @@ Description: Compressor using ZLib
 
 #include <string>
 
-namespace Atom::IO {
+namespace atom::io {
 /**
  * @brief 对单个文件进行压缩
  * @param file_name 待压缩的文件名（包含路径）
@@ -99,6 +99,6 @@ bool create_zip(const std::string &source_folder, const std::string &zip_file);
  */
 bool extract_zip(const std::string &zip_file,
                  const std::string &destination_folder);
-}  // namespace Atom::IO
+}  // namespace atom::io
 
 #endif

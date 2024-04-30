@@ -14,7 +14,7 @@ Description: ArgsView Class for C++
 
 #include "argsview.hpp"
 
-namespace Atom::Utils {
+namespace atom::utils {
 ArgsView::ArgsView(int argc, char** argv) : m_argc(argc), m_argv(argv) {
     for (int i = 1; i < m_argc; ++i) {
         std::string_view arg(m_argv[i]);
@@ -67,4 +67,4 @@ void ArgsView::addRule(std::string_view prefix,
     m_rules.emplace_back(prefix, handler);
 }
 
-}  // namespace Atom::Utils
+}  // namespace atom::utils

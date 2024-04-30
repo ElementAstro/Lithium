@@ -27,10 +27,10 @@ Description: Simple implementation of AES encryption
 
 const int AES_BLOCK_SIZE = 16;
 
-namespace Atom::Utils {
+namespace atom::utils {
 std::string encryptAES(std::string_view plaintext, std::string_view key) {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr,
+    EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr,
                        reinterpret_cast<const unsigned char *>(key.data()),
                        nullptr);
 
@@ -56,7 +56,7 @@ std::string encryptAES(std::string_view plaintext, std::string_view key) {
 
 std::string decryptAES(std::string_view ciphertext, std::string_view key) {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr,
+    EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr,
                        reinterpret_cast<const unsigned char *>(key.data()),
                        nullptr);
 
@@ -142,7 +142,7 @@ std::string decompress(std::string_view data) {
 }
 
 std::string calculateSha256(std::string_view filename) {
-    if (!Atom::IO::isFileExists(std::string(filename))) {
+    if (!atom::io::isFileExists(std::string(filename))) {
         LOG_F(ERROR, "File not exist: {}", filename);
         return "";
     }
@@ -178,4 +178,4 @@ std::string calculateSha256(std::string_view filename) {
 
     return sha256_val;
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

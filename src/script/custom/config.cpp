@@ -23,11 +23,11 @@ using namespace pkpy;
 
 using json = nlohmann::json;
 
-namespace Lithium {
+namespace lithium {
 template <typename T>
 pkpy::PyObject *get_config(pkpy::VM *vm, pkpy::Str &key,
                            const std::string &log_type) {
-    json value = GetPtr<Lithium::ConfigManager>("lithium.config")
+    json value = GetPtr<lithium::ConfigManager>("lithium.config")
                      .value()
                      ->getValue(key.str())
                      .value();
@@ -41,7 +41,7 @@ pkpy::PyObject *get_config(pkpy::VM *vm, pkpy::Str &key,
 
 template <typename T>
 pkpy::PyObject *set_config(pkpy::VM *vm, pkpy::Str &key, T value) {
-    return pkpy::py_var(vm, GetPtr<Lithium::ConfigManager>("lithium.config")
+    return pkpy::py_var(vm, GetPtr<lithium::ConfigManager>("lithium.config")
                                 .value()
                                 ->setValue(key.str(), value));
 }
@@ -132,7 +132,7 @@ void addConfigModule(VM *vm) {
                  pkpy::PyObject *key_obj = args[0];
                  pkpy::Str &key = pkpy::py_cast<pkpy::Str &>(vm, key_obj);
                  return pkpy::py_var(
-                     vm, GetPtr<Lithium::ConfigManager>("lithium.config")
+                     vm, GetPtr<lithium::ConfigManager>("lithium.config")
                              .value()
                              ->deleteValue(key.str()));
              });
@@ -143,7 +143,7 @@ void addConfigModule(VM *vm) {
             pkpy::PyObject *path_obj = args[0];
             pkpy::Str &path = pkpy::py_cast<pkpy::Str &>(vm, path_obj);
             return pkpy::py_var(
-                vm, GetPtr<Lithium::ConfigManager>("lithium.config")
+                vm, GetPtr<lithium::ConfigManager>("lithium.config")
                         .value()
                         ->saveToFile(path.str().empty() ? "config/config.json"
                                                         : path.str()));
@@ -156,10 +156,10 @@ void addConfigModule(VM *vm) {
             pkpy::PyObject *path_obj = args[0];
             pkpy::Str &path = pkpy::py_cast<pkpy::Str &>(vm, path_obj);
             return pkpy::py_var(
-                vm, GetPtr<Lithium::ConfigManager>("lithium.config")
+                vm, GetPtr<lithium::ConfigManager>("lithium.config")
                         .value()
                         ->loadFromFile(path.str().empty() ? "config/config.json"
                                                           : path.str()));
         });
 }
-}  // namespace Lithium
+}  // namespace lithium

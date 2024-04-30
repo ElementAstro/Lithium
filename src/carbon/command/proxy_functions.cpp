@@ -12,7 +12,7 @@
 #include "proxy_functions.hpp"
 
 #include "../defines.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_value.hpp"
 #include "dynamic_object.hpp"

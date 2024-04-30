@@ -27,7 +27,7 @@ Description: A collection of algorithms for C++
 #include <arpa/inet.h>
 #endif
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 std::string base16Encode(const std::vector<unsigned char> &data) {
     std::stringstream ss;
     ss << std::hex << std::uppercase << std::setfill('0');
@@ -380,4 +380,4 @@ std::string xorEncrypt(std::string_view plaintext, uint8_t key) {
 std::string xorDecrypt(std::string_view ciphertext, uint8_t key) {
     return xorEncrypt(ciphertext, key);
 }
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm

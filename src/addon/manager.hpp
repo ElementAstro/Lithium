@@ -15,18 +15,18 @@ Description: Component Manager (the core of the plugin system)
 #pragma once
 
 #include "atom/components/component.hpp"
-#include "atom/components/templates/alone_component.hpp"
-#include "atom/components/templates/exe_component.hpp"
-#include "atom/components/templates/shared_component.hpp"
 #include "atom/components/types.hpp"
 
 #include "atom/type/args.hpp"
 #include "atom/utils/env.hpp"
 
-namespace Lithium {
-    class AddonManager;
-    class Compiler;
-    class ModuleLoader;
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
+
+namespace lithium {
+class AddonManager;
+class Compiler;
+class ModuleLoader;
 class Sandbox;
 
 class ComponentEntry {
@@ -238,41 +238,24 @@ public:
     bool unloadSharedComponent(const json& params);
     bool reloadSharedComponent(const json& params);
 
-    // -------------------------------------------------------------------
-    // Components methods (for alone components)
-    // -------------------------------------------------------------------
-
-    bool loadAloneComponent(const json& params);
-    bool unloadAloneComponent(const json& params);
-    bool reloadAloneComponent(const json& params);
-
-    // -------------------------------------------------------------------
-    // Components methods (for script components)
-    // -------------------------------------------------------------------
-
-    bool loadScriptComponent(const json& params);
-    bool unloadScriptComponent(const json& params);
-    bool reloadScriptComponent(const json& params);
-
 private:
-
     /**
      * @brief Get all files in a directory
      * @param path The path of the directory
      * @return The files in the directory
      */
-    std::vector<std::string> getFilesInDir(const std::string &path);
+    std::vector<std::string> getFilesInDir(const std::string& path);
 
     /**
      * @brief Get all sub directories in a directory
      * @param path The path of the directory
      * @return The sub directories in the directory
      */
-    std::vector<std::string> getQualifiedSubDirs(const std::string &path);
+    std::vector<std::string> getQualifiedSubDirs(const std::string& path);
 
 private:
     std::weak_ptr<ModuleLoader> m_ModuleLoader;
-    std::weak_ptr<Atom::Utils::Env> m_Env;
+    std::weak_ptr<atom::utils::Env> m_Env;
 
     // The finder used to find the components
     // std::unique_ptr<AddonFinder> m_ComponentFinder;
@@ -295,11 +278,6 @@ private:
     // Max: Why not just use a single map of std::shared_ptr<Component>?
     //      Maybe it is because the dynamic_cast will be slow
     //      And we are surely about what the component is
-    std::unordered_map<std::string, std::shared_ptr<SharedComponent>>
-        m_SharedComponents;
-    std::unordered_map<std::string, std::shared_ptr<AloneComponent>>
-        m_AloneComponents;
-    std::unordered_map<std::string, std::shared_ptr<ExecutableComponent>>
-        m_ExecutableComponents;
+    std::unordered_map<std::string, std::shared_ptr<Component>> m_Components;
 };
-}  // namespace Lithium
+}  // namespace lithium

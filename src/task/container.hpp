@@ -25,7 +25,7 @@ Description: Task container class.
 
 #include "atom/task/task.hpp"
 
-namespace Lithium {
+namespace lithium {
 
 /**
  * @brief Task management container class.
@@ -173,6 +173,6 @@ private:
         tasks;         ///< The container holding tasks.
     std::mutex mutex;  ///< Mutex for thread-safe operations on the container.
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

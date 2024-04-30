@@ -28,7 +28,7 @@ Description: Hydrogen Device Manager
 #include "atom/log/loguru.hpp"
 #include "atom/system/system.hpp"
 
-namespace Lithium {
+namespace lithium {
 HydrogenManager::HydrogenManager(const std::string &hst, int prt,
                                  const std::string &cfg, const std::string &dta,
                                  const std::string &fif) {
@@ -51,16 +51,6 @@ std::unique_ptr<HydrogenManager> HydrogenManager::createUnique(
     const std::string &hst, int prt, const std::string &cfg,
     const std::string &dta, const std::string &fif) {
     return std::make_unique<HydrogenManager>(hst, prt, cfg, dta, fif);
-}
-
-std::vector<decorator<std::function<json(const json &)>>> HydrogenManager::getFunctions()
-{
-    std::vector<decorator<std::function<json(const json &)>>> functions;
-    //auto startServer = make_decorator(std::function<json(HydrogenManager*,json)>(
-    //    &HydrogenManager::_startServer
-    //));
-    //functions.push_back(startServer);
-    return functions;
 }
 
 json HydrogenManager::_startServer(const json &params)
@@ -96,7 +86,7 @@ bool HydrogenManager::startServer() {
         stopServer();
     }
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    if (!Atom::IO::removeFile(fifo_path)) {
+    if (!atom::io::removeFile(fifo_path)) {
         LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
         return false;
     }
@@ -130,7 +120,7 @@ bool HydrogenManager::startServer() {
     }
     // Clear old fifo pipe and create new one
     DLOG_F(INFO, "Deleting fifo pipe at: {}", fifo_path);
-    if (!Atom::IO::removeFile(fifo_path)) {
+    if (!atom::io::removeFile(fifo_path)) {
         LOG_F(ERROR, "Failed to delete fifo pipe at: {}", fifo_path);
         return false;
     }
@@ -386,4 +376,4 @@ HydrogenManager::getDevices()
     }
     return devices;
 }
-}  // namespace Lithium
+}  // namespace lithium

@@ -60,8 +60,8 @@ using json = nlohmann::json;
         .value()                            \
         .get<std::string>()
 
+namespace lithium {
 class ConfigManagerImpl;
-
 class ConfigManager {
 public:
     /**
@@ -195,5 +195,6 @@ private:
      */
     void mergeConfig(const json& j);
 };
+}  // namespace lithium
 
 #endif

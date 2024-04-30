@@ -38,7 +38,7 @@ Description: Main Message Bus
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::Server {
+namespace atom::server {
 class MessageBus {
 public:
     MessageBus() {}
@@ -345,6 +345,6 @@ private:
     GlobalSubscriberList globalSubscribers_;
     std::shared_mutex globalSubscribersLock_;
 };
-}  // namespace Atom::Server
+}  // namespace atom::server
 
 #endif

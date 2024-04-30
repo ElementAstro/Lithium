@@ -21,7 +21,7 @@ Description: Carbon binding for Atom-ERROR
 #include "error_stack.hpp"
 #include "exception.hpp"
 
-using namespace Atom::Error;
+using namespace atom::error;
 
 namespace Atom::_Script::Error {
 /**

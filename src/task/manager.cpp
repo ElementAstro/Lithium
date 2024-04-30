@@ -17,7 +17,7 @@ Description: Task Manager
 #include "atom/log/loguru.hpp"
 #include "atom/server/global_ptr.hpp"
 
-namespace Lithium {
+namespace lithium {
 TaskManager::TaskManager() : m_StopFlag(false) {
     // Load Task Component from Global Ptr Manager
     m_TaskContainer = GetWeakPtr<TaskContainer>("lithium.task.contianer");
@@ -126,4 +126,4 @@ void TaskManager::stopTask() { m_StopFlag.store(true); }
 bool TaskManager::executeTaskByName(const std::string &name) { return false; }
 
 bool TaskManager::saveTasksToJson() const { return true; }
-}  // namespace Lithium
+}  // namespace lithium

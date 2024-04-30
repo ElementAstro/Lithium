@@ -22,19 +22,19 @@ Description: Better Exception Library
 #include <memory>
 #include <vector>
 
-
 #ifdef _WIN32
 #include <windows.h>
 #include <dbghelp.h>
+#if !defined(__MINGW32__) && !defined(__MINGW64__)
 #pragma comment(lib, "dbghelp.lib")
+#endif
 #elif defined(__APPLE__) || defined(__linux__)
 #include <cxxabi.h>
 #include <execinfo.h>
 #include <unistd.h>
 #endif
 
-namespace Atom::Error
-{
+namespace atom::error {
 const char* Exception::what() const noexcept {
     if (full_message_.empty()) {
         std::ostringstream oss;
@@ -133,4 +133,4 @@ std::string Exception::getStackTrace() const {
 
     return oss.str();
 }
-}
+}  // namespace atom::error

@@ -16,20 +16,18 @@ Description: Basic Component Definition
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
-#include <vector>
 #include <shared_mutex>
+#include <vector>
 
 #include "types.hpp"
 
 #include "dispatch.hpp"
 #include "var.hpp"
 
-#include "configor.hpp"
+#include "atom/function/type_info.hpp"
+#include "atom/type/noncopyable.hpp"
 
-#include "atom/experiment/noncopyable.hpp"
-#include "atom/experiment/type_info.hpp"
-
-class Component : public std::enable_shared_from_this<Component>, public NonCopyable {
+class Component : public std::enable_shared_from_this<Component> {
 public:
     /**
      * @brief Constructs a new Component object.
@@ -40,6 +38,12 @@ public:
      * @brief Destroys the Component object.
      */
     virtual ~Component();
+
+    // -------------------------------------------------------------------
+    // Inject methods
+    // -------------------------------------------------------------------
+
+    std::weak_ptr<const Component> getInstance() const;
 
     // -------------------------------------------------------------------
     // Common methods
@@ -65,6 +69,10 @@ public:
      */
     virtual bool destroy();
 
+    std::unordered_map<std::string, bool> getComponentAbilities() const;
+
+    bool hasAbility(const std::string& ability) const;
+
     /**
      * @brief Gets the name of the plugin.
      *
@@ -72,55 +80,7 @@ public:
      */
     std::string getName() const;
 
-    // -------------------------------------------------------------------
-    // Component Configuration methods
-    // -------------------------------------------------------------------
-
-    [[nodiscard("config value should not be ignored!")]] std::optional<json>
-    getValue(const std::string& key_path) const;
-
-    /**
-     * @brief 添加或更新一个配置项
-     *
-     * Add or update a configuration item.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @param value 配置项的值，使用 JSON 格式进行表示
-     * @return bool 成功返回 true，失败返回 false
-     */
-    bool setValue(const std::string& key_path, const json& value);
-
-    /**
-     * @brief 判断一个配置项是否存在
-     *
-     * Determine if a configuration item exists.
-     *
-     * @param key_path 配置项的键路径，使用斜杠 / 进行分隔，如
-     * "database/username"
-     * @return bool 存在返回 true，不存在返回 false
-     */
-    [[nodiscard("status of the value should not be ignored")]] bool hasValue(
-        const std::string& key_path) const;
-
-        /**
-     * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
-     *
-     * Load JSON configuration from the specified file and merge with the
-     * existing configuration.
-     *
-     * @param path 配置文件路径
-     */
-    bool loadFromFile(const fs::path& path);
-
-    /**
-     * @brief 将当前配置保存到指定文件
-     *
-     * Save the current configuration to the specified file.
-     *
-     * @param file_path 目标文件路径
-     */
-    bool saveToFile(const fs::path& file_path) const;
+    Type_Info getTypeInfo() const;
 
     // -------------------------------------------------------------------
     // Variable methods
@@ -176,8 +136,7 @@ public:
         const std::string& name, const std::string& group,
         const std::string& description, std::function<Ret(Args...)> func,
         std::optional<std::function<bool()>> precondition = std::nullopt,
-        std::optional<std::function<void()>> postcondition = std::nullopt)
-    {
+        std::optional<std::function<void()>> postcondition = std::nullopt) {
         m_CommandDispatcher->registerCommand(name, group, description, func,
                                              precondition, postcondition);
     }
@@ -194,6 +153,27 @@ public:
                          const std::string& group = "",
                          const std::string& description = "") {
         m_CommandDispatcher->registerCommand(name, func, group, description);
+    }
+
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+                         std::shared_ptr<Class> instance,
+                         const std::string& group = "",
+                         const std::string& description = "")
+
+    {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
+    }
+
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name,
+                         Ret (Class::*func)(Args...) const,
+                         std::shared_ptr<Class> instance,
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->registerCommand(name, func, instance, group,
+                                             description);
     }
 
     template <typename Ret, typename Class, typename... Args>
@@ -241,8 +221,7 @@ public:
     void setTimeout(const std::string& name, std::chrono::milliseconds timeout);
 
     template <typename... Args>
-    std::any dispatch(const std::string& name, Args&&... args)
-    {
+    std::any dispatch(const std::string& name, Args&&... args) {
         return m_CommandDispatcher->dispatch(name, std::forward<Args>(args)...);
     }
 
@@ -262,20 +241,44 @@ public:
         const std::string& name) const;
 #endif
 
+    // -------------------------------------------------------------------
+    // Other Components methods
+    // -------------------------------------------------------------------
+    /**
+     * @note This method is not thread-safe. And we must make sure the pointer
+     * is valid. The PointerSentinel will help you to avoid this problem. We
+     * will directly get the std::weak_ptr from the pointer.
+     */
+
+    /**
+     * @return The names of the components that are needed by this component.
+     * @note This will be called when the component is initialized.
+     */
+    std::vector<std::string> getNeededComponents() const;
+
+    void addOtherComponent(const std::string& name,
+                           const std::weak_ptr<Component>& component);
+
+    void removeOtherComponent(const std::string& name);
+
+    void clearOtherComponents();
+
+    std::weak_ptr<Component> getOtherComponent(
+        const std::string& name);
+
 private:
     std::string m_name;
     std::string m_configPath;
     std::string m_infoPath;
     Type_Info m_typeInfo;
 
-    std::unique_ptr<CommandDispatcher>
+    std::shared_ptr<CommandDispatcher>
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.
-    std::unique_ptr<VariableManager>
+    std::shared_ptr<VariableManager>
         m_VariableManager;  ///< The variable registry for managing variables.
-    std::unique_ptr<ConfigManager>
-        m_ConfigManager;
-    
-    std::mutex m_mutex;
+
+    std::unordered_map<std::string, std::weak_ptr<Component>>
+        m_OtherComponents;
 };
 
 #endif

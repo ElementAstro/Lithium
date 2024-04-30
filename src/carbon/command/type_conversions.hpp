@@ -12,8 +12,8 @@
 #include <typeinfo>
 
 #include "../threading.hpp"
-#include "atom/experiment/sstring.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/type/static_string.hpp"
+#include "atom/function/type_info.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
 #include "boxed_value.hpp"

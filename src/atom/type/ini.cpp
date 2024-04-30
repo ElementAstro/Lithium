@@ -19,6 +19,7 @@ Description: INI File Read/Write Library
 
 #include "atom/error/exception.hpp"
 
+namespace atom::type {
 bool INIFile::has(const std::string &section, const std::string &key) const {
     std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
     auto it = data.find(section);
@@ -42,7 +43,7 @@ void INIFile::load(const std::string &filename) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     std::ifstream file(filename);
     if (!file.is_open()) {
-        throw Atom::Error::FileNotReadable("Failed to open file: " + filename);
+        THROW_EXCEPTION("Failed to open file: " + filename);
     }
 
     std::string line;
@@ -58,7 +59,7 @@ void INIFile::save(const std::string &filename) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     std::ofstream file(filename);
     if (!file.is_open()) {
-        throw Atom::Error::FileNotWritable("Failed to create file: " +
+        throw atom::error::FileNotWritable("Failed to create file: " +
                                            filename);
     }
 
@@ -84,7 +85,7 @@ void INIFile::save(const std::string &filename) {
                 file << entry.first << "=" << std::any_cast<bool>(entry.second)
                      << "\n";
             } else {
-                throw Atom::Error::InvalidArgument("Unsupported type");
+                throw atom::error::InvalidArgument("Unsupported type");
             }
         }
         file << "\n";
@@ -150,7 +151,7 @@ std::string INIFile::toJson() const {
                         << "\": " << std::any_cast<bool>(entry.second) << ", ";
                 }
             } catch (const std::bad_any_cast &e) {
-                throw Atom::Error::InvalidArgument("Unsupported type");
+                throw atom::error::InvalidArgument("Unsupported type");
             }
         }
     }
@@ -194,7 +195,7 @@ std::string INIFile::toXml() const {
                         << std::any_cast<bool>(entry.second) << "</entry>\n";
                 }
             } catch (const std::bad_any_cast &e) {
-                throw Atom::Error::InvalidArgument("Unsupported type");
+                throw atom::error::InvalidArgument("Unsupported type");
             }
         }
         oss << "  </section>\n";
@@ -202,42 +203,4 @@ std::string INIFile::toXml() const {
     oss << "</config>\n";
     return oss.str();
 }
-
-/*
-int main()
-{
-    INIFile ini;
-    try
-    {
-        ini.load("config.ini");
-
-        // 获取配置项
-        std::optional<std::string> usernameOpt = ini.get<std::string>("User",
-"Username"); std::optional<std::string> passwordOpt =
-ini.get<std::string>("User", "Password");
-
-        if (usernameOpt.has_value() && passwordOpt.has_value())
-        {
-            std::cout << "Username: " << usernameOpt.value() << std::endl;
-            std::cout << "Password: " << passwordOpt.value() << std::endl;
-        }
-        else
-        {
-            std::cout << "Username or Password not found" << std::endl;
-        }
-
-        // 修改配置项
-        ini.set("User", "Password", std::string("new_pas"));
-
-        // 存储到文件
-        ini.save("config_modified.ini");
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
-    return 0;
-}
-
-*/
+}  // namespace atom::type

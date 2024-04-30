@@ -14,7 +14,7 @@ Description: SSH客户端连接和文件操作类。
 
 #include "sshclient.hpp"
 
-namespace Atom::Connection {
+namespace atom::connection {
 SSHClient::SSHClient(const std::string &host, int port = 22)
     : m_host(host),
       m_port(port),
@@ -289,4 +289,4 @@ void SSHClient::UploadFile(const std::string &local_path,
     fclose(fp);
     sftp_close(file);
 }
-}  // namespace Atom::Connection
+}  // namespace atom::connection

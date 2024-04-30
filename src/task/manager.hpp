@@ -41,7 +41,7 @@ Description: Task Manager
 
 #include "atom/utils/stopwatcher.hpp"
 
-namespace Lithium {
+namespace lithium {
 /**
  * @brief 任务管理器类，用于管理任务列表和相关操作。
  */
@@ -152,11 +152,11 @@ private:
     std::weak_ptr<TaskPool> m_TaskPool;
     std::weak_ptr<TickScheduler> m_TickScheduler;
 
-    std::unique_ptr<Atom::Utils::StopWatcher> m_Timer;
+    std::unique_ptr<atom::utils::StopWatcher> m_Timer;
 
     std::atomic_bool m_StopFlag;
 };
 
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

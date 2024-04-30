@@ -23,6 +23,7 @@ Description: A FlatSet
 #include <utility>
 #include <vector>
 
+namespace atom::type {
 template <typename T, typename Compare = std::less<T>>
 class FlatSet {
 public:
@@ -265,5 +266,6 @@ void swap(FlatSet<T, Compare>& lhs,
           FlatSet<T, Compare>& rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
+}  // namespace atom::type
 
 #endif  // ATOM_TYPE_FLAT_SET_HPP

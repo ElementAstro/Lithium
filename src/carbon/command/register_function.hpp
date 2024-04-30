@@ -4,7 +4,7 @@
 
 #include <type_traits>
 
-#include "atom/experiment/bind_first.hpp"
+#include "atom/function/bind_first.hpp"
 #include "function_signature.hpp"
 #include "proxy_functions.hpp"
 

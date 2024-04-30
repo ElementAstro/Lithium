@@ -1,5 +1,5 @@
 /*
- * hash_util.hpp
+ * mhash.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -12,16 +12,15 @@ Description: Implementation of murmur3 hash and quick hash
 
 **************************************************/
 
-#ifndef ATOM_UTILS_HASH_UTIL_HPP
-#define ATOM_UTILS_HASH_UTIL_HPP
+#ifndef ATOM_ALGORITHM_MHASH_HPP
+#define ATOM_ALGORITHM_MHASH_HPP
 
 #include <stdint.h>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <vector>
 
-namespace Atom::Utils {
+namespace atom::algorithm {
 /**
  * @brief Calculates the MurmurHash3 hash value for a given string.
  *
@@ -71,6 +70,6 @@ void hexstringFromData(const void *data, size_t len, char *output);
  * hexadecimal string.
  */
 [[nodiscard]] std::string dataFromHexstring(const std::string &data);
-}  // namespace Atom::Utils
+}  // namespace atom::algorithm
 
 #endif

@@ -130,7 +130,7 @@ private:
             try {
                 observer(oldVal, newVal);
             } catch (const std::exception& e) {
-                THROW_EXCEPTION(concat("Exception in observer.", e.what()));
+                //THROW_EXCEPTION(concat("Exception in observer.", e.what()));
             } catch (...) {
                 THROW_EXCEPTION("Unknown exception in observer.");
             }

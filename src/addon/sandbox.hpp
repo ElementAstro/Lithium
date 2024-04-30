@@ -18,7 +18,7 @@ Description: A sandbox for alone componnents, such as executables.
 #include <string>
 #include <vector>
 
-namespace Lithium {
+namespace lithium {
 /**
  * @brief Sandbox class for running programs with time and memory limits in a
  * restricted environment.

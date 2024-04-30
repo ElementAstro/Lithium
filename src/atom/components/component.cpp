@@ -1,17 +1,4 @@
-/*
- * component.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2023-8-6
-
-Description: Basic Component Definition
-
-**************************************************/
-
+#include "abilities.hpp"
 #include "component.hpp"
 
 #include <filesystem>
@@ -30,7 +17,6 @@ namespace fs = std::filesystem;
 
 Component::Component(const std::string& name)
     : m_name(name),
-      m_ConfigManager(std::make_unique<ConfigManager>()),
       m_CommandDispatcher(std::make_unique<CommandDispatcher>()),
       m_VariableManager(std::make_unique<VariableManager>()),
       m_typeInfo(user_type<Component>()) {
@@ -41,30 +27,31 @@ Component::~Component() {
     // Empty
 }
 
-bool Component::initialize() { return true; }
+std::weak_ptr<const Component> Component::getInstance() const {
+    return shared_from_this();
+}
 
-bool Component::destroy() { return true; }
+bool Component::initialize() {
+    LOG_F(INFO, "Initializing component: {}", m_name);
+    return true;
+}
+
+bool Component::destroy() {
+    LOG_F(INFO, "Destroying component: {}", m_name);
+    return true;
+}
 
 std::string Component::getName() const { return m_name; }
 
-std::optional<json> Component::getValue(const std::string& key_path) const {
-    return m_ConfigManager->getValue(key_path);
+Type_Info Component::getTypeInfo() const { return m_typeInfo; }
+
+std::unordered_map<std::string, bool> Component::getComponentAbilities() const {
+    std::unordered_map<std::string, bool> abilities;
+    return abilities;
 }
 
-bool Component::setValue(const std::string& key_path, const json& value) {
-    return m_ConfigManager->setValue(key_path, value);
-}
-
-bool Component::hasValue(const std::string& key_path) const {
-    return getValue(key_path).has_value();
-}
-
-bool Component::loadFromFile(const fs::path& path) {
-    return m_ConfigManager->loadFromFile(path);
-}
-
-bool Component::saveToFile(const fs::path& file_path) const {
-    return m_ConfigManager->saveToFile(file_path);
+bool Component::hasAbility(const std::string& ability) const {
+    return getComponentAbilities().contains(ability);
 }
 
 void Component::addAlias(const std::string& name, const std::string& alias) {
@@ -91,9 +78,7 @@ std::vector<std::string> Component::getCommandsInGroup(
     return m_CommandDispatcher->getCommandsInGroup(group);
 }
 
-std::string Component::getCommandDescription(const std::string& name) const
-
-{
+std::string Component::getCommandDescription(const std::string& name) const {
     return m_CommandDispatcher->getCommandDescription(name);
 }
 
@@ -104,7 +89,36 @@ emhash::HashSet<std::string> Component::getCommandAliases(
 std::unordered_set<std::string> Component::getCommandAliases(
     const std::string& name) const
 #endif
-
 {
     return m_CommandDispatcher->getCommandAliases(name);
+}
+
+std::vector<std::string> Component::getNeededComponents() const { return {}; }
+
+void Component::addOtherComponent(const std::string& name,
+                                  const std::weak_ptr<Component>& component) {
+    if (m_OtherComponents.contains(name)) {
+        THROW_EXCEPTION(
+#if __cplusplus >= 202002L
+            std::format("Other component with name {} already exists",
+#else
+            fmt::format("Other component with name {} already exists",
+#endif
+                        name));
+    }
+    m_OtherComponents[name] = std::move(component);
+}
+
+void Component::removeOtherComponent(const std::string& name) {
+    m_OtherComponents.erase(name);
+}
+
+void Component::clearOtherComponents() { m_OtherComponents.clear(); }
+
+std::weak_ptr<Component> Component::getOtherComponent(
+    const std::string& name) {
+    if (m_OtherComponents.contains(name)) {
+        return m_OtherComponents[name];
+    }
+    return {};
 }

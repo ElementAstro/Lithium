@@ -7,7 +7,7 @@
 #include <type_traits>
 
 #include "boxed_value.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 
 namespace Carbon {
 class Type_Conversions_State;

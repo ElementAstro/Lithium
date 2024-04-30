@@ -122,6 +122,7 @@ else()
 target_link_libraries(loguru
   PUBLIC
     Threads::Threads    # pthreads (or equivalent)
+    dl
     ${_lib_dl_linkflag} # dl (or equivalent)
 )
 endif()

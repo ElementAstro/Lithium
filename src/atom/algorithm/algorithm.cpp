@@ -2,7 +2,7 @@
 
 #include <random>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 
 KMP::KMP(std::string_view pattern) : pattern_(pattern) {
     failure_ = ComputeFailureFunction(pattern_);
@@ -10,9 +10,10 @@ KMP::KMP(std::string_view pattern) : pattern_(pattern) {
 
 std::vector<int> KMP::Search(std::string_view text) {
     std::vector<int> occurrences;
-    int n = static_cast<int>(text.length());
-    int m = static_cast<int>(pattern_.length());
-    int i = 0, j = 0;
+    auto n = static_cast<int>(text.length());
+    auto m = static_cast<int>(pattern_.length());
+    int i = 0;
+    int j = 0;
     while (i < n) {
         if (text[i] == pattern_[j]) {
             ++i;
@@ -36,9 +37,10 @@ void KMP::SetPattern(std::string_view pattern) {
 }
 
 std::vector<int> KMP::ComputeFailureFunction(std::string_view pattern) {
-    int m = static_cast<int>(pattern.length());
+    auto m = static_cast<int>(pattern.length());
     std::vector<int> failure(m, 0);
-    int i = 1, j = 0;
+    int i = 1;
+    int j = 0;
     while (i < m) {
         if (pattern[i] == pattern[j]) {
             failure[i] = j + 1;
@@ -83,7 +85,7 @@ std::vector<unsigned long long> MinHash::compute_signature(
 
 double MinHash::estimate_similarity(
     const std::vector<unsigned long long>& signature1,
-    const std::vector<unsigned long long>& signature2) {
+    const std::vector<unsigned long long>& signature2) const {
     int num_matches = 0;
     for (int i = 0; i < m_num_hash_functions; ++i) {
         if (signature1[i] == signature2[i]) {
@@ -110,8 +112,8 @@ BoyerMoore::BoyerMoore(std::string_view pattern) : pattern_(pattern) {
 
 std::vector<int> BoyerMoore::Search(std::string_view text) {
     std::vector<int> occurrences;
-    int n = static_cast<int>(text.length());
-    int m = static_cast<int>(pattern_.length());
+    auto n = static_cast<int>(text.length());
+    auto m = static_cast<int>(pattern_.length());
     int i = 0;
     while (i <= n - m) {
         int j = m - 1;
@@ -144,7 +146,7 @@ void BoyerMoore::ComputeBadCharacterShift() {
 }
 
 void BoyerMoore::ComputeGoodSuffixShift() {
-    int m = static_cast<int>(pattern_.length());
+    auto m = static_cast<int>(pattern_.length());
     good_suffix_shift_.resize(m, m);
     std::vector<int> suffix(m, 0);
     int j = 0;
@@ -161,4 +163,4 @@ void BoyerMoore::ComputeGoodSuffixShift() {
     }
 }
 
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm

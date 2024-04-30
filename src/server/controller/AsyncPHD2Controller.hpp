@@ -66,7 +66,7 @@ returnResponse(const oatpp::Object<StartPHD2DTO> &body) {
     if (params != "") {
         try {
             nlohmann::json params_ = nlohmann::json::parse(params);
-            if (!Lithium::MyApp->createProcess("phd2", "phd2")) {
+            if (!lithium::MyApp->createProcess("phd2", "phd2")) {
                 res->error = "Process Failed";
                 res->message = "Failed to start PHD2";
             }
@@ -93,7 +93,7 @@ ENDPOINT_ASYNC("GET", "/api/phd2/stop", getUIStopPHD2ParamAPI){
 
         Action act() override{auto res = StatusDto::createShared();
 res->command = "StopPHD2";
-if (!Lithium::MyApp->terminateProcessByName("phd2")) {
+if (!lithium::MyApp->terminateProcessByName("phd2")) {
     res->error = "Process Failed";
     res->message = "Failed to stop PHD2";
 }
@@ -127,7 +127,7 @@ Action returnResponse(const oatpp::Object<ModifyPHD2ParamDTO> &body) {
     // OATPP_ASSERT_HTTP(param_name && param_value, Status::CODE_400, "parameter
     // name and id should not be null");
     bool phd2_running = false;
-    for (auto process : Lithium::MyApp->getRunningProcesses()) {
+    for (auto process : lithium::MyApp->getRunningProcesses()) {
         if (process.name == "phd2") {
             phd2_running = true;
         }

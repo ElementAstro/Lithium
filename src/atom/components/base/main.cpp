@@ -1,8 +1,10 @@
-#include "atom/components/templates/shared_component.hpp"
+#include "atom/components/component.hpp"
 
 #include <iostream>
 
-class MySharedComponent : public SharedComponent {
+#include "atom/log/loguru.hpp"
+
+class MySharedComponent : public Component {
 public:
     explicit MySharedComponent(const std::string &name);
     virtual ~MySharedComponent();
@@ -11,50 +13,95 @@ public:
     virtual bool destroy() override;
 
 protected:
-    json helloWorld(const json &params);
+    void helloWorld(const std::string &params);
+
+    void calc(int a, int b);
+
+    int process(const std::vector<int> &params);
 };
 
 MySharedComponent::MySharedComponent(const std::string &name)
-    : SharedComponent(name) {
+    : Component(name) {
     LOG_F(INFO, "Load {}", name);
 
     initialize();
 
-    registerFunc("helloWorld", &MySharedComponent::helloWorld, this);
-
-    registerVariable("var_x", 0, "a test var");
+    registerCommand("helloWorld", &MySharedComponent::helloWorld,
+                    PointerSentinel(this));
+    registerCommand("calc", &MySharedComponent::calc, PointerSentinel(this));
+    registerCommand("process", &MySharedComponent::process,
+                    PointerSentinel(this));
 }
 
-MySharedComponent::~MySharedComponent() {}
-
-bool MySharedComponent::initialize() {
-    SharedComponent::initialize();
-    return true;
+MySharedComponent::~MySharedComponent() {
+    LOG_F(INFO, "Unload {}", getName());
 }
 
-bool MySharedComponent::destroy() {
-    Component::destroy();
-    return true;
+bool MySharedComponent::initialize() { return true; }
+
+bool MySharedComponent::destroy() { return true; }
+
+void MySharedComponent::helloWorld(const std::string &params) {
+    std::cout << "Hello " << params << std::endl;
 }
 
-json MySharedComponent::helloWorld(const json &params) {
-    LOG_F(INFO, "helloWorld with {}", params.dump());
-    return {};
+void MySharedComponent::calc(int a, int b) { std::cout << a + b << std::endl; }
+
+int MySharedComponent::process(const std::vector<int> &params) {
+    int sum = 0;
+    for (auto &param : params) {
+        sum += param;
+    }
+    return sum;
 }
+
+class MyOtherSharedComponent : public Component {
+public:
+    explicit MyOtherSharedComponent(const std::string &name) : Component(name)
+    {
+        LOG_F(INFO, "Load {}", name);
+        registerCommand("helloWorld", &MyOtherSharedComponent::helloWorld,
+                        PointerSentinel(this));
+    }
+    virtual ~MyOtherSharedComponent()
+    {
+        LOG_F(INFO, "Unload {}", getName());
+    }
+
+    virtual bool initialize() override { return true; }
+    virtual bool destroy() override { return true; }
+
+protected:
+    void helloWorld(const std::string &params) {
+        std::cout << "Hello " << params << std::endl;
+    }
+};
 
 int main() {
     std::shared_ptr<MySharedComponent> mycomponent =
         std::make_shared<MySharedComponent>("mycomponent");
-    mycomponent->runFunc("helloWorld", {{"aaa", "aaaa"}});
-    auto myvar = mycomponent->getVariable<int>("var_x");
-    std::cout << (myvar.has_value() ? myvar.value() : -1) << std::endl;
-    mycomponent->setVariable("var_x", 1);
-    myvar = mycomponent->getVariable<int>("var_x");
-    std::cout << (myvar.has_value() ? myvar.value() : -1) << std::endl;
+    mycomponent->dispatch("helloWorld", std::string("aaa"));
+    mycomponent->dispatch("calc", 1, 2);
+    auto result =
+        mycomponent->dispatch("process", std::vector<int>{1, 2, 3, 4, 5});
+    std::cout << std::any_cast<int>(result) << std::endl;
 
-    mycomponent->runFunc(
-        "registerVariable",
-        {{"name", "status"}, {"value", "ok"}, {"description", "a test value"}});
-    std::cout << mycomponent->getVariableInfo("status") << std::endl;
+
+    std::shared_ptr<MyOtherSharedComponent> myothercomponent =
+        std::make_shared<MyOtherSharedComponent>("myothercomponent");
+
+    mycomponent->addOtherComponent("other", myothercomponent);
+    mycomponent->getOtherComponent("other").lock()->dispatch("helloWorld",
+                                                     std::string("bbb"));
+
+    try
+    {
+        mycomponent->addOtherComponent("other", myothercomponent);
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+
     return 0;
 }

@@ -31,7 +31,7 @@ Description: SocketHub类用于管理socket连接的类。
 #include <unistd.h>
 #endif
 
-namespace Atom::Connection {
+namespace atom::connection {
 /**
  * @class SocketHub
  * @brief 用于管理socket连接的类。
@@ -175,6 +175,6 @@ private:
      */
     void cleanupSocket();
 };
-}  // namespace Atom::Connection
+}  // namespace atom::connection
 
 #endif

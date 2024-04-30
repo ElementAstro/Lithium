@@ -21,7 +21,7 @@ Description: Some useful string functions
 #include <charconv>
 #include "atom/error/exception.hpp"
 
-namespace Atom::Utils {
+namespace atom::utils {
 bool hasUppercase(std::string_view str) {
     return std::any_of(str.begin(), str.end(),
                        [](unsigned char ch) { return std::isupper(ch); });
@@ -179,4 +179,4 @@ std::string replaceStrings(
     }
     return result;
 }
-}  // namespace Atom::Utils
+}  // namespace atom::utils

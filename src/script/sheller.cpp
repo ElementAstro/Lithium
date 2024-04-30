@@ -26,7 +26,7 @@ const std::string SHELL_COMMAND = "sh -c";
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 void ScriptManager::RegisterScript(const std::string &name,
                                    const Script &script) {
     if (scripts.find(name) != scripts.end()) {
@@ -208,4 +208,4 @@ void ScriptManager::LogError(const std::string &message) {
 #if ENABLE_PEGTL
 
 #endif
-}  // namespace Lithium
+}  // namespace lithium

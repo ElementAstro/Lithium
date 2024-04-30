@@ -5,7 +5,7 @@
 
 #include <unordered_map>
 
-namespace Atom::Async {
+namespace atom::async {
 template <typename T>
 void ThreadSafeQueue<T>::put(T element) {
     {
@@ -201,6 +201,6 @@ std::vector<ThreadSafeQueue<T>> ThreadSafeQueue<T>::groupBy(
 }
 */
 
-}  // namespace Atom::Async
+}  // namespace atom::async
 
 #endif

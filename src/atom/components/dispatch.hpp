@@ -23,12 +23,12 @@
 #include <variant>
 #include <vector>
 
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 #include "atom/type/pointer.hpp"
 
-#include "proxy.hpp"
+#include "atom/function/proxy.hpp"
 
-class CommandDispatcher : public NonCopyable {
+class CommandDispatcher {
 public:
     template <typename Ret, typename... Args>
     void registerCommand(
@@ -44,6 +44,19 @@ public:
 
     template <typename Ret, typename... Args>
     void registerCommand(const std::string& name, Ret (*func)(Args...),
+                         const std::string& group = "",
+                         const std::string& description = "");
+    
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+                         std::shared_ptr<Class> instance,
+                         const std::string& group = "",
+                         const std::string& description = "");
+    
+    template <typename Ret, typename Class, typename... Args>
+    void registerCommand(const std::string& name,
+                         Ret (Class::*func)(Args...) const,
+                         std::shared_ptr<Class> instance,
                          const std::string& group = "",
                          const std::string& description = "");
 

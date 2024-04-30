@@ -19,7 +19,7 @@ Description: FIFO CLient
 #include <stdexcept>
 #include <vector>
 
-namespace Atom::Connection {
+namespace atom::connection {
 FifoClient::FifoClient(const std::string& fifoPath) : m_fifoPath(fifoPath) {
 #ifdef _WIN32
     m_fifo = CreateFile(m_fifoPath.c_str(), GENERIC_READ | GENERIC_WRITE, 0,
@@ -76,4 +76,4 @@ std::string FifoClient::read() {
     return data;
 }
 
-}  // namespace Atom::Connection
+}  // namespace atom::connection

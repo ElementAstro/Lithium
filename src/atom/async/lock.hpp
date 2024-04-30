@@ -18,7 +18,7 @@ Description: Some useful spinlock implementations
 #include <atomic>
 #include <thread>
 
-namespace Atom::Async {
+namespace atom::async {
 
 // Pause instruction to prevent excess processor bus usage
 #if defined(_MSC_VER)
@@ -219,6 +219,6 @@ public:
     ScopedUnfairLock &operator=(const ScopedUnfairLock &) = delete;
 };
 
-}  // namespace Atom::Async
+}  // namespace atom::async
 
 #endif

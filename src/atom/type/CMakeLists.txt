@@ -17,12 +17,11 @@ set(${PROJECT_NAME}_SOURCES
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    abi.hpp
     args.hpp
     enum_flag.hpp
     enum_flag.inl
     flatset.hpp
-    ini_impl.hpp
+    ini.inl
     ini.hpp
     json.hpp
     message.hpp

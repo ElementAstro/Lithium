@@ -24,9 +24,9 @@ Description: A simple thread safe queue
 #include <stdexcept>
 #include <vector>
 
-#include "atom/experiment/noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 
-namespace Atom::Async {
+namespace atom::async {
 /**
  * @brief A thread-safe queue data structure that supports concurrent access
  * from multiple threads.
@@ -151,7 +151,7 @@ private:
                  ///< nullptr on take() when empty.
 };
 
-}  // namespace Atom::Async
+}  // namespace atom::async
 
 #include "queue.inl"
 

@@ -34,7 +34,7 @@ directories and taking action upon changes.
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 /**
  * @class LicenseProtectorImpl
  * @brief 实现文件或目录监控的具体逻辑。
@@ -306,4 +306,4 @@ void LicenseProtector::startMonitoring() { pImpl->startMonitoring(); }
 
 void LicenseProtector::stopMonitoring() { pImpl->stopMonitoring(); }
 
-}  // namespace Lithium
+}  // namespace lithium

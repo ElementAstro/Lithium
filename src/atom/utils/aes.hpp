@@ -17,7 +17,7 @@ Description: Simple implementation of AES encryption
 
 #include <string>
 
-namespace Atom::Utils {
+namespace atom::utils {
 /**
  * @brief 使用AES算法对输入的明文进行加密。
  *
@@ -61,6 +61,6 @@ namespace Atom::Utils {
  * @return 文件的SHA-256哈希值
  */
 [[nodiscard]] std::string calculateSha256(std::string_view filename);
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 #endif

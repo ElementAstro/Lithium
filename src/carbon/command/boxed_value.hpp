@@ -7,7 +7,7 @@
 
 #include "../defines.hpp"
 #include "any.hpp"
-#include "atom/experiment/type_info.hpp"
+#include "atom/function/type_info.hpp"
 #include "atom/type/pointer.hpp"
 
 namespace Carbon {

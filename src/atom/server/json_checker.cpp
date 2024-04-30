@@ -14,7 +14,7 @@ Description: Json Checker interface implementation
 
 #include "json_checker.hpp"
 
-namespace Atom::Server {
+namespace atom::server {
 JsonChecker::JsonChecker() {
     // 初始化默认规则
     addDefaultRule<std::string>(
@@ -42,4 +42,4 @@ void JsonChecker::setFailureCallback(
     failureCallback_ = std::move(callback);
 }
 
-}  // namespace Atom::Server
+}  // namespace atom::server

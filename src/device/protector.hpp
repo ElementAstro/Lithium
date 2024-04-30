@@ -17,7 +17,7 @@ directories and taking action upon changes.
 #include <string>
 
 
-namespace Lithium {
+namespace lithium {
 class LicenseProtectorImpl;  // 前向声明实现类 Forward declaration of the
                              // implementation class
 
@@ -74,4 +74,4 @@ private:
         pImpl;  ///< 指向具体实现的指针。Pointer to the implementation.
 };
 
-}  // namespace Lithium
+}  // namespace lithium

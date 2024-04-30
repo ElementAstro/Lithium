@@ -4,16 +4,16 @@
 #include "var.hpp"
 
 template <typename T>
-void VariableManager::addVariable(const std::string& name, T initialValue,
-                                  const std::string& description = "",
-                                  const std::string& alias = "",
-                                  const std::string& group = "") {
+inline void VariableManager::addVariable(const std::string& name, T initialValue,
+                                  const std::string& description,
+                                  const std::string& alias,
+                                  const std::string& group) {
     auto variable = std::make_shared<Trackable<T>>(std::move(initialValue));
     variables_[name] = {std::move(variable), description, alias, group};
 }
 
 template <typename T>
-void VariableManager::setRange(const std::string& name, T min, T max) {
+inline void VariableManager::setRange(const std::string& name, T min, T max) {
     if (auto variable = getVariable<T>(name)) {
         ranges_[name] = std::make_pair(std::move(min), std::move(max));
     }
@@ -27,7 +27,7 @@ inline void VariableManager::setStringOptions(
 }
 
 template <typename T>
-std::shared_ptr<Trackable<T>> VariableManager::getVariable(
+inline std::shared_ptr<Trackable<T>> VariableManager::getVariable(
     const std::string& name) {
     auto it = variables_.find(name);
     if (it != variables_.end()) {
@@ -35,18 +35,18 @@ std::shared_ptr<Trackable<T>> VariableManager::getVariable(
             return std::any_cast<std::shared_ptr<Trackable<T>>>(
                 it->second.variable);
         } catch (const std::bad_any_cast& e) {
-            THROW_EXCEPTION(concat("Type mismatch: ", name));
+            //THROW_EXCEPTION(concat("Type mismatch: ", name));
         }
     }
     return nullptr;
 }
 
-void VariableManager::setValue(const std::string& name, const char* newValue) {
+inline void VariableManager::setValue(const std::string& name, const char* newValue) {
     setValue(name, std::string(newValue));
 }
 
 template <typename T>
-void VariableManager::setValue(const std::string& name, T newValue) {
+inline void VariableManager::setValue(const std::string& name, T newValue) {
     if (auto variable = getVariable<T>(name)) {
         if constexpr (std::is_arithmetic_v<T>) {
             if (ranges_.count(name)) {

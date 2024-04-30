@@ -19,7 +19,7 @@ Description: Custom Logger Manager
 #include <string>
 #include <vector>
 
-namespace Lithium {
+namespace lithium {
 struct LogEntry {
     std::string fileName;
     int lineNumber;
@@ -103,6 +103,6 @@ private:
     std::vector<LogEntry> logEntries;  // 存储日志条目的向量
 };
 
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

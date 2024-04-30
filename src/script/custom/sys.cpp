@@ -26,7 +26,7 @@ using namespace pkpy;
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium {
+namespace lithium {
 /*
 struct Wrapped_Process
 {
@@ -332,4 +332,4 @@ void addSysModule(VM *vm) {
                  return py_var(vm, std::move(d));
              });
 }
-}  // namespace Lithium
+}  // namespace lithium

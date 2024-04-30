@@ -39,7 +39,7 @@ public:
     std::optional<std::any> deserialize(const std::string &data) const override;
 };
 
-namespace Atom::Server {
+namespace atom::server {
 /**
  * @class DeserializationEngine
  * @brief A class responsible for deserializing data using different
@@ -116,6 +116,6 @@ std::optional<T> DeserializationEngine::deserialize(
 
     return std::nullopt;
 }
-}  // namespace Atom::Server
+}  // namespace atom::server
 
 #endif

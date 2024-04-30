@@ -18,7 +18,7 @@
 #include <unistd.h>
 #endif
 
-namespace Lithium::Terminal {
+namespace lithium::Terminal {
 class ConsoleTerminal {
 public:
     using CommandFunction =
@@ -78,6 +78,6 @@ private:
 
     void clearConsole();
 };
-}  // namespace Lithium::Terminal
+}  // namespace lithium::Terminal
 
 #endif

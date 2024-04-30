@@ -24,7 +24,7 @@ Description: Environment variable management
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::Utils {
+namespace atom::utils {
 Env::Env(int argc, char **argv) {
     std::filesystem::path exe_path;
 
@@ -207,7 +207,7 @@ std::string Env::getAbsoluteWorkPath(const std::string &path) const {
 }
 
 std::string Env::getConfigPath() { return getAbsolutePath(get("c", "config")); }
-}  // namespace Atom::Utils
+}  // namespace atom::utils
 
 /*
 int main(int argc, char **argv)

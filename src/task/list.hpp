@@ -28,7 +28,7 @@ Description: Thread safe task list
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-namespace Lithium {
+namespace lithium {
 class TaskList {
 public:
     static std::shared_ptr<TaskList> createShared();
@@ -54,6 +54,6 @@ private:
     std::unordered_map<std::string, json> tasks;
 #endif
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

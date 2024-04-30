@@ -32,7 +32,7 @@ Description: Device Utilities
 
 #include "atom/log/loguru.hpp"
 
-namespace Lithium
+namespace lithium
 {
 
 #ifdef _WIN32

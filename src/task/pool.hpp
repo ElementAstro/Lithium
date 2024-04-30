@@ -32,7 +32,7 @@ Description: Specialized task pool
 #include <vector>
 
 
-namespace Lithium {
+namespace lithium {
 /**
  * @struct Task
  * @brief Represents a task that can be executed by the thread pool.
@@ -221,6 +221,6 @@ private:
      */
     void stop();
 };
-}  // namespace Lithium
+}  // namespace lithium
 
 #endif

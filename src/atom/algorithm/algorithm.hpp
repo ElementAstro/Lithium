@@ -1,5 +1,5 @@
 /*
- * base.hpp
+ * algorithm.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -22,7 +22,7 @@ Description: A collection of algorithms for C++
 #include <unordered_set>
 #include <vector>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 /**
  * @brief The KMP class implements the Knuth-Morris-Pratt string searching
  * algorithm.
@@ -93,7 +93,7 @@ public:
      */
     double estimate_similarity(
         const std::vector<unsigned long long>& signature1,
-        const std::vector<unsigned long long>& signature2);
+        const std::vector<unsigned long long>& signature2) const;
 
 private:
     /**
@@ -126,34 +126,20 @@ public:
      * @param num_hash_functions The number of hash functions to use for the
      * Bloom filter.
      */
-    explicit BloomFilter(std::size_t num_hash_functions)
-        : m_num_hash_functions(num_hash_functions) {}
+    explicit BloomFilter(std::size_t num_hash_functions);
 
     /**
      * @brief Inserts an element into the Bloom filter.
      * @param element The element to insert.
      */
-    void insert(std::string_view element) {
-        for (std::size_t i = 0; i < m_num_hash_functions; ++i) {
-            std::size_t hash_value = hash(element, i);
-            m_bits.set(hash_value % N);
-        }
-    }
+    void insert(std::string_view element);
 
     /**
      * @brief Checks if an element might be present in the Bloom filter.
      * @param element The element to check.
      * @return True if the element might be present, false otherwise.
      */
-    bool contains(std::string_view element) const {
-        for (std::size_t i = 0; i < m_num_hash_functions; ++i) {
-            std::size_t hash_value = hash(element, i);
-            if (!m_bits.test(hash_value % N)) {
-                return false;
-            }
-        }
-        return true;
-    }
+    bool contains(std::string_view element) const;
 
 private:
     std::bitset<N> m_bits; /**< The bitset representing the Bloom filter. */
@@ -165,13 +151,7 @@ private:
      * @param seed The seed value for the hash function.
      * @return The hash value of the element.
      */
-    std::size_t hash(std::string_view element, std::size_t seed) const {
-        std::size_t hash_value = seed;
-        for (char c : element) {
-            hash_value = hash_value * 31 + static_cast<std::size_t>(c);
-        }
-        return hash_value;
-    }
+    std::size_t hash(std::string_view element, std::size_t seed) const;
 };
 
 /**
@@ -216,6 +196,6 @@ private:
         bad_char_shift_;                 /**< The bad character shift table. */
     std::vector<int> good_suffix_shift_; /**< The good suffix shift table. */
 };
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm
 
 #endif

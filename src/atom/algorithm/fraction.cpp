@@ -4,7 +4,7 @@
 #include <compare>
 #include <numeric>
 
-namespace Atom::Algorithm {
+namespace atom::algorithm {
 
 int Fraction::gcd(int a, int b) { return std::gcd(a, b); }
 
@@ -112,4 +112,4 @@ std::istream &operator>>(std::istream &is, Fraction &f) {
     return is;
 }
 
-}  // namespace Atom::Algorithm
+}  // namespace atom::algorithm

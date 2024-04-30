@@ -27,7 +27,7 @@ Description: Custom Logger Manager
 #include "atom/log/loguru.hpp"
 #include "cpp_httplib/httplib.h"
 
-namespace Lithium {
+namespace lithium {
 void LoggerManager::scanLogsFolder(const std::string &folderPath) {
     for (const auto &entry : std::filesystem::directory_iterator(folderPath)) {
         DLOG_F(INFO, "Scanning log file: {}", entry.path().generic_string());
@@ -169,4 +169,4 @@ std::string LoggerManager::getMostCommonErrorMessage(
     }
     return mostCommonErrorMessage;
 }
-}  // namespace Lithium
+}  // namespace lithium

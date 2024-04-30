@@ -30,6 +30,7 @@ Description: Trigger class for C++
 #include <unordered_map>
 #endif
 
+namespace atom::async {
 /**
  * @brief The Trigger class provides a mechanism to register callbacks for
  * specific events and trigger those callbacks when the events occur.
@@ -127,7 +128,8 @@ private:
         m_callbacks; /**< Hash map to store registered callbacks for events. */
 #endif
 };
+}  // namespace atom::async
 
-#include "trigger_impl.hpp"
+#include "trigger.inl"
 
 #endif

@@ -22,7 +22,7 @@ Description: Better Exception Library
 #include <string>
 #include <thread>
 
-namespace Atom::Error {
+namespace atom::error {
 
 /**
  * @brief Custom exception class with detailed information about the error.
@@ -107,7 +107,7 @@ private:
 };
 
 #define THROW_EXCEPTION(...) \
-    throw Exception(__FILE__, __LINE__, __func__, __VA_ARGS__)
+    throw atom::error::Exception(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
 class ObjectAlreadyExist : public std::logic_error {
 public:
@@ -245,6 +245,6 @@ public:
     explicit FailToCallStaticFunction(const std::string &msg)
         : std::runtime_error(msg) {};
 };
-}  // namespace Atom::Error
+}  // namespace atom::error
 
 #endif

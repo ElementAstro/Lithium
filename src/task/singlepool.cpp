@@ -17,7 +17,7 @@ Description: Single thread pool for executing temporary tasks asynchronously.
 #include <condition_variable>
 #include <memory>
 
-namespace Lithium {
+namespace lithium {
 
 class SingleThreadPoolPrivate {
 public:
@@ -153,4 +153,4 @@ void SingleThreadPool::tryStartDetach(
 }
 
 void SingleThreadPool::quit() { start(nullptr); }
-}  // namespace Lithium
+}  // namespace lithium

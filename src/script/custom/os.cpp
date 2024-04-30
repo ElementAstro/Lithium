@@ -22,7 +22,7 @@ Description: OS module for PocketPy(builtin)
 
 using namespace pkpy;
 
-namespace Lithium {
+namespace lithium {
 void addOSModule(VM* vm) {
     PyObject* mod = vm->new_module("li_os");
     vm->setattr(mod, "version", VAR("1.0.0"));
@@ -34,7 +34,7 @@ void addOSModule(VM* vm) {
         } else {
             sv = CAST(Str&, args[0]).sv();
         }
-        if (!Atom::IO::isFolderExists(std::string(sv))) {
+        if (!atom::io::isFolderExists(std::string(sv))) {
             LOG_F(ERROR, "Folder is not existing: {}", sv);
             return vm->None;
         }
@@ -49,4 +49,4 @@ void addOSModule(VM* vm) {
         return vm->py_json(args[0]);
     });
 }
-}  // namespace Lithium
+}  // namespace lithium

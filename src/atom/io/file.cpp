@@ -27,7 +27,7 @@ Description: File Manager
 
 namespace fs = std::filesystem;
 
-namespace Atom::IO {
+namespace atom::io {
 
 bool FileManager::createFile(const std::string &filename) {
     if (fs::exists(filename)) {
@@ -141,4 +141,4 @@ std::string FileManager::getFileDirectory(const std::string &filename) {
     }
 }
 
-}  // namespace Atom::IO
+}  // namespace atom::io

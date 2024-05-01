@@ -15,8 +15,8 @@ Description: Some useful system functions from Python.
 #include "os.hpp"
 
 #include <sys/stat.h>
-#include <functional>
-#include <unordered_map>
+#include <fstream>
+#include <string>
 #ifdef _WIN32
 #include <Windows.h>
 #include <io.h>
@@ -32,7 +32,7 @@ Description: Some useful system functions from Python.
 
 using json = nlohmann::json;
 
-namespace Atom::System {
+namespace atom::system {
 void walk(const fs::path &root) {
     for (const auto &entry : fs::directory_iterator(root)) {
         if (fs::is_directory(entry)) {
@@ -44,21 +44,44 @@ void walk(const fs::path &root) {
     }
 }
 
+json walk(const fs::path &path, bool recursive) {
+    DLOG_F(INFO, "Walking: {}", path.generic_string());
+    if (!fs::exists(path)) {
+        LOG_F(ERROR, "Path does not exist: {}", path.generic_string());
+        return json();
+    }
+
+    json folder = {{"path", path.generic_string()},
+                   {"directories", json::array()},
+                   {"files", json::array()}};
+
+    for (const auto &entry : fs::directory_iterator(path)) {
+        if (fs::is_directory(entry)) {
+            DLOG_F(INFO, "Directory: {}", entry.path().generic_string());
+            folder["directories"].push_back(walk(entry.path(), true));
+        } else {
+            DLOG_F(INFO, "File: {}", entry.path().generic_string());
+            folder["files"].push_back(entry.path().generic_string());
+        }
+    }
+
+    return folder;
+}
+
 std::string jwalk(const std::string &root) {
-    DLOG_F(INFO, "Walking: {}", root.generic_string());
-    if (!atom::io::isFolderExists(root))
-    {
+    DLOG_F(INFO, "Walking: {}", root);
+    if (!fs::exists(root)) {
         LOG_F(ERROR, "Directory not exists: {}", root);
         return "";
     }
-    json folder = {{"path", root.generic_string()},
+    json folder = {{"path", root},
                    {"directories", json::array()},
                    {"files", json::array()}};
 
     for (const auto &entry : fs::directory_iterator(root)) {
         if (fs::is_directory(entry)) {
             DLOG_F(INFO, "Directory: {}", entry.path().generic_string());
-            folder["directories"].push_back(walk(entry));
+            folder["directories"].push_back(walk(entry, true));
         } else {
             DLOG_F(INFO, "File: {}", entry.path().generic_string());
             folder["files"].push_back(entry.path().generic_string());
@@ -228,4 +251,4 @@ Utsname uname() {
 
     return info;
 }
-}  // namespace Atom::System
+}  // namespace atom::system

@@ -49,7 +49,7 @@ Description: System Information Module - Disk
 #include <sys/param.h>
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 std::vector<std::pair<std::string, float>> getDiskUsage() {
     std::vector<std::pair<std::string, float>> disk_usage;
 
@@ -249,4 +249,4 @@ double calculateDiskUsagePercentage(unsigned long totalSpace,
             totalSpace) *
            100.0;
 }
-}  // namespace Atom::System
+}  // namespace atom::system

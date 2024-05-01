@@ -32,14 +32,14 @@ struct Wrapped_Process
 {
     PY_CLASS(Wrapped_Process, mod, Process)
 
-    Atom::System::ProcessInfo value;
+    atom::system::ProcessInfo value;
 
-    Atom::System::ProcessInfo *_() { return &value; }
+    atom::system::ProcessInfo *_() { return &value; }
 
     Wrapped_Process() = default;
     Wrapped_Process(const Wrapped_Process &) = default;
 
-    Wrapped_Process(Atom::System::ProcessInfo value)
+    Wrapped_Process(atom::system::ProcessInfo value)
         : value(value)
     {
     }
@@ -80,7 +80,7 @@ void addSysModule(VM *vm) {
              "get CPU usage, and return a float value",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get CPU usage");
-                 float cpu_usage = Atom::System::getCurrentCpuUsage();
+                 float cpu_usage = atom::system::getCurrentCpuUsage();
                  if (cpu_usage < 0.0f) {
                      LOG_F(ERROR, "Failed to get cpu usage: {}", cpu_usage);
                  }
@@ -93,7 +93,7 @@ void addSysModule(VM *vm) {
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get CPU temperature");
                  float cpu_temperature =
-                     Atom::System::getCurrentCpuTemperature();
+                     atom::system::getCurrentCpuTemperature();
                  if (cpu_temperature < 0.0f) {
                      LOG_F(ERROR, "Failed to get cpu temperature: {}",
                            cpu_temperature);
@@ -105,11 +105,11 @@ void addSysModule(VM *vm) {
     vm->bind(mod, "get_cpu_info() -> dict", "get CPU infomation in dict format",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get CPU infomation");
-                 auto cpu_model = Atom::System::getCPUModel();
-                 auto cpu_freq = Atom::System::getProcessorFrequency();
-                 auto cpu_id = Atom::System::getProcessorIdentifier();
-                 auto cpu_package = Atom::System::getNumberOfPhysicalPackages();
-                 auto cpu_core = Atom::System::getNumberOfPhysicalCPUs();
+                 auto cpu_model = atom::system::getCPUModel();
+                 auto cpu_freq = atom::system::getProcessorFrequency();
+                 auto cpu_id = atom::system::getProcessorIdentifier();
+                 auto cpu_package = atom::system::getNumberOfPhysicalPackages();
+                 auto cpu_core = atom::system::getNumberOfPhysicalCPUs();
 
                  Dict d(vm);
                  d.set(py_var(vm, "model"), py_var(vm, cpu_model));
@@ -124,7 +124,7 @@ void addSysModule(VM *vm) {
              "get CPU model, and return a string value",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get CPU model");
-                 std::string cpu_model = Atom::System::getCPUModel();
+                 std::string cpu_model = atom::system::getCPUModel();
                  if (cpu_model.empty()) {
                      LOG_F(ERROR, "Failed to get cpu model: {}", cpu_model);
                  }
@@ -136,7 +136,7 @@ void addSysModule(VM *vm) {
              "get memory usage, and return a float value",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get memory usage");
-                 float memory_usage = Atom::System::getMemoryUsage();
+                 float memory_usage = atom::system::getMemoryUsage();
                  if (memory_usage < 0.0f) {
                      LOG_F(ERROR, "Failed to get memory usage: {}",
                            memory_usage);
@@ -149,7 +149,7 @@ void addSysModule(VM *vm) {
              "get total memory size, and return a float value",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get memory total");
-                 float memory_total = Atom::System::getTotalMemorySize();
+                 float memory_total = atom::system::getTotalMemorySize();
                  if (memory_total < 0.0f) {
                      LOG_F(ERROR, "Failed to get memory total: {}",
                            memory_total);
@@ -163,7 +163,7 @@ void addSysModule(VM *vm) {
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get available memory");
                  float available_memory =
-                     Atom::System::getAvailableMemorySize();
+                     atom::system::getAvailableMemorySize();
                  if (available_memory < 0.0f) {
                      LOG_F(ERROR, "Failed to get available memory: {}",
                            available_memory);
@@ -176,12 +176,12 @@ void addSysModule(VM *vm) {
         mod, "get_memory_info() -> dict",
         "get memory usage, and return a dict value", [](VM *vm, ArgsView args) {
             DLOG_F(INFO, "Get memory info");
-            auto total_memory = Atom::System::getTotalMemorySize();
-            auto available_memory = Atom::System::getAvailableMemorySize();
-            auto virtual_memory_max = Atom::System::getVirtualMemoryMax();
-            auto virtual_memory_used = Atom::System::getVirtualMemoryUsed();
-            auto swap_memory_total = Atom::System::getSwapMemoryTotal();
-            auto swap_memory_used = Atom::System::getSwapMemoryUsed();
+            auto total_memory = atom::system::getTotalMemorySize();
+            auto available_memory = atom::system::getAvailableMemorySize();
+            auto virtual_memory_max = atom::system::getVirtualMemoryMax();
+            auto virtual_memory_used = atom::system::getVirtualMemoryUsed();
+            auto swap_memory_total = atom::system::getSwapMemoryTotal();
+            auto swap_memory_used = atom::system::getSwapMemoryUsed();
             Dict d(vm);
             d.set(py_var(vm, "total"), py_var(vm, total_memory));
             d.set(py_var(vm, "available"), py_var(vm, available_memory));
@@ -197,7 +197,7 @@ void addSysModule(VM *vm) {
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get disk usage");
                  std::vector<std::pair<std::string, float>> disk_usage =
-                     Atom::System::getDiskUsage();
+                     atom::system::getDiskUsage();
                  if (disk_usage.empty()) {
                      // LOG_F(ERROR, "Failed to get disk usage: {}",
                      // disk_usage);
@@ -218,7 +218,7 @@ void addSysModule(VM *vm) {
                  Str &name = py_cast<Str &>(vm, name_obj);
 
                  std::string driver_model =
-                     Atom::System::getDriveModel(name.c_str());
+                     atom::system::getDriveModel(name.c_str());
                  if (driver_model.empty()) {
                      LOG_F(ERROR, "Failed to get disk model: {}", driver_model);
                  }
@@ -231,7 +231,7 @@ void addSysModule(VM *vm) {
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Get disk models");
                  std::vector<std::pair<std::string, std::string>> disk_models =
-                     Atom::System::getStorageDeviceModels();
+                     atom::system::getStorageDeviceModels();
                  if (disk_models.empty()) {
                      // LOG_F(ERROR, "Failed to get disk models: {}",
                      // disk_models);
@@ -251,21 +251,21 @@ void addSysModule(VM *vm) {
                  DLOG_F(INFO,
                         "Check if the current process is running as "
                         "root");
-                 bool is_root = Atom::System::isRoot();
+                 bool is_root = atom::system::isRoot();
                  return py_var(vm, is_root);
              });
 
     vm->bind(mod, "shutdown() -> bool", "shutdown the system",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Shutdown the system");
-                 Atom::System::shutdown();
+                 atom::system::shutdown();
                  return py_var(vm, true);
              });
 
     vm->bind(mod, "reboot() -> bool", "reboot the system",
              [](VM *vm, ArgsView args) {
                  DLOG_F(INFO, "Reboot the system");
-                 Atom::System::reboot();
+                 atom::system::reboot();
                  return py_var(vm, true);
              });
 
@@ -276,7 +276,7 @@ void addSysModule(VM *vm) {
                  Str &name = py_cast<Str &>(vm, name_obj);
 
                  bool is_duplicate =
-                     Atom::System::checkDuplicateProcess(name.c_str());
+                     atom::system::checkDuplicateProcess(name.c_str());
                  if (is_duplicate) {
                      LOG_F(ERROR, "Failed to check duplicate process: {}",
                            is_duplicate);
@@ -291,7 +291,7 @@ void addSysModule(VM *vm) {
                  PyObject *name_obj = args[0];
                  Str &name = py_cast<Str &>(vm, name_obj);
 
-                 bool is_running = Atom::System::isProcessRunning(name.c_str());
+                 bool is_running = atom::system::isProcessRunning(name.c_str());
                  DLOG_F(INFO, "Process running: {}",
                         is_running ? "true" : "false");
                  return py_var(vm, is_running);
@@ -302,9 +302,9 @@ void addSysModule(VM *vm) {
              [](VM *vm, ArgsView args) {
                  PyObject *name_obj = args[0];
                  Str &name = py_cast<Str &>(vm, name_obj);
-                 Atom::System::ProcessInfo info;
+                 atom::system::ProcessInfo info;
                  Dict d(vm);
-                 if (Atom::System::getProcessInfoByName(name.c_str(), info)) {
+                 if (atom::system::getProcessInfoByName(name.c_str(), info)) {
                      d.set(VAR("id"), VAR(info.processID));
                      d.set(VAR("parent_id"), VAR(info.parentProcessID));
                      d.set(VAR("priority"), VAR(info.basePriority));
@@ -319,9 +319,9 @@ void addSysModule(VM *vm) {
              "get process info by id, and return a dict value",
              [](VM *vm, ArgsView args) {
                  int id = py_cast<int>(vm, args[0]);
-                 Atom::System::ProcessInfo info;
+                 atom::system::ProcessInfo info;
                  Dict d(vm);
-                 if (Atom::System::getProcessInfoByID(id, info)) {
+                 if (atom::system::getProcessInfoByID(id, info)) {
                      d.set(VAR("id"), VAR(info.processID));
                      d.set(VAR("parent_id"), VAR(info.parentProcessID));
                      d.set(VAR("priority"), VAR(info.basePriority));

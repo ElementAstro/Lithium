@@ -64,7 +64,7 @@ public:
         Action act() override {
             auto res = BaseReturnSystemDto::createShared();
             res->command = "getUICpuUsage";
-            if (float cpu_usage = Atom::System::getCurrentCpuUsage();
+            if (float cpu_usage = atom::system::getCurrentCpuUsage();
                 cpu_usage <= 0.0f) {
                 res->status = "error";
                 res->message = "Failed to get current CPU usage";
@@ -91,7 +91,7 @@ public:
         Action act() override {
             auto res = BaseReturnSystemDto::createShared();
             res->command = "getUICpuTemperature";
-            if (float cpu_temp = Atom::System::getCurrentCpuTemperature();
+            if (float cpu_temp = atom::system::getCurrentCpuTemperature();
                 cpu_temp <= 0.0f) {
                 res->code = 500;
                 res->status = "error";
@@ -119,11 +119,11 @@ public:
             auto res = ReturnCpuInfoDto::createShared();
             res->command = "getUICpuInfo";
 
-            auto cpu_model = Atom::System::getCPUModel();
-            auto cpu_freq = Atom::System::getProcessorFrequency();
-            auto cpu_id = Atom::System::getProcessorIdentifier();
-            auto cpu_package = Atom::System::getNumberOfPhysicalPackages();
-            auto cpu_core = Atom::System::getNumberOfPhysicalCPUs();
+            auto cpu_model = atom::system::getCPUModel();
+            auto cpu_freq = atom::system::getProcessorFrequency();
+            auto cpu_id = atom::system::getProcessorIdentifier();
+            auto cpu_package = atom::system::getNumberOfPhysicalPackages();
+            auto cpu_core = atom::system::getNumberOfPhysicalCPUs();
 
             if (cpu_model.empty() || cpu_freq <= 0.0f || cpu_id.empty() ||
                 cpu_package <= 0 || cpu_core <= 0) [[unlikely]] {
@@ -176,7 +176,7 @@ public:
             auto res = BaseReturnSystemDto::createShared();
             res->command = "getUIMemoryUsage";
 
-            auto memory_usage = Atom::System::getMemoryUsage();
+            auto memory_usage = atom::system::getMemoryUsage();
             if (memory_usage <= 0.0f) {
                 res->code = 500;
                 res->status = "error";
@@ -205,14 +205,14 @@ public:
             auto res = ReturnMemoryInfoDto::createShared();
             res->command = "getUIMemoryInfo";
 
-            auto total_memory = Atom::System::getTotalMemorySize();
-            auto available_memory = Atom::System::getAvailableMemorySize();
-            auto virtual_memory_max = Atom::System::getVirtualMemoryMax();
-            auto virtual_memory_used = Atom::System::getVirtualMemoryUsed();
-            auto swap_memory_total = Atom::System::getSwapMemoryTotal();
-            auto swap_memory_used = Atom::System::getSwapMemoryUsed();
+            auto total_memory = atom::system::getTotalMemorySize();
+            auto available_memory = atom::system::getAvailableMemorySize();
+            auto virtual_memory_max = atom::system::getVirtualMemoryMax();
+            auto virtual_memory_used = atom::system::getVirtualMemoryUsed();
+            auto swap_memory_total = atom::system::getSwapMemoryTotal();
+            auto swap_memory_used = atom::system::getSwapMemoryUsed();
 
-            auto physical_memory = Atom::System::getPhysicalMemoryInfo();
+            auto physical_memory = atom::system::getPhysicalMemoryInfo();
 
             if (total_memory <= 0 || available_memory <= 0 ||
                 virtual_memory_max <= 0 || virtual_memory_used <= 0 ||
@@ -260,7 +260,7 @@ public:
             auto res = ReturnDiskUsageDto::createShared();
             res->command = "getUIDiskUsage";
 
-            auto tmp = Atom::System::getDiskUsage();
+            auto tmp = atom::system::getDiskUsage();
             if (tmp.empty()) {
                 res->code = 500;
                 res->status = "error";
@@ -291,7 +291,7 @@ public:
             auto res = ReturnAvailableDrivesDto::createShared();
             res->command = "getUIAvailableDrives";
 
-            auto tmp = Atom::System::getAvailableDrives();
+            auto tmp = atom::system::getAvailableDrives();
 
             if (tmp.empty()) {
                 res->code = 500;
@@ -327,7 +327,7 @@ public:
             auto res = ReturnBatteryInfoDto::createShared();
             res->command = "getUIBatteryInfo";
 
-            const auto tmp = Atom::System::getBatteryInfo();
+            const auto tmp = atom::system::getBatteryInfo();
 
             res->isBatteryPresent = tmp.isBatteryPresent;
             res->isCharging = tmp.isCharging;
@@ -367,9 +367,9 @@ public:
             res->command = "getUINetworkInfo";
 
             try {
-                auto isHotspotConnected = Atom::System::isHotspotConnected();
-                auto wifi = Atom::System::getCurrentWifi();
-                auto wired = Atom::System::getCurrentWiredNetwork();
+                auto isHotspotConnected = atom::system::isHotspotConnected();
+                auto wifi = atom::system::getCurrentWifi();
+                auto wired = atom::system::getCurrentWiredNetwork();
 
                 res->hotspot = isHotspotConnected;
                 res->wifi = wifi;
@@ -404,7 +404,7 @@ public:
             auto res = ReturnOSInfoDto::createShared();
             res->command = "getUIOSInfo";
 
-            auto tmp = Atom::System::getOperatingSystemInfo();
+            auto tmp = atom::system::getOperatingSystemInfo();
 
             if (tmp.osName.empty() || tmp.osVersion.empty() ||
                 tmp.kernelVersion.empty()) {
@@ -443,7 +443,7 @@ public:
         ENDPOINT_ASYNC_INIT(getUIProcesses);
         Action act() override {
             nlohmann::json res;
-            for (const auto &process : Atom::System::getProcessInfo()) {
+            for (const auto &process : atom::system::getProcessInfo()) {
                 OATPP_LOGD("System", "Process Name: %s File Address: %s",
                            process.first.c_str(), process.second.c_str());
                 res["value"][process.first] = process.second;
@@ -463,7 +463,7 @@ public:
     ENDPOINT_ASYNC("GET", "/api/system/shutdown", getUIShutdown) {
         ENDPOINT_ASYNC_INIT(getUIShutdown);
         Action act() override {
-            Atom::System::shutdown();
+            atom::system::shutdown();
             return _return(controller->createResponse(
                 Status::CODE_200, "Wtf, how can you do that?"));
         }
@@ -473,7 +473,7 @@ public:
     ENDPOINT_ASYNC("GET", "/api/system/reboot", getUIReboot) {
         ENDPOINT_ASYNC_INIT(getUIReboot);
         Action act() override {
-            Atom::System::reboot();
+            atom::system::reboot();
             return _return(controller->createResponse(
                 Status::CODE_200, "Wtf, how can you do that?"));
         }

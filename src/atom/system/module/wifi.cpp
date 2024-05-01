@@ -37,7 +37,7 @@ Description: System Information Module - Wifi Information
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System
+namespace atom::system
 {
 // 获取当前连接的WIFI
 std::string getCurrentWifi() {

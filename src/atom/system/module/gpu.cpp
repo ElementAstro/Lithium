@@ -15,15 +15,14 @@ Description: System Information Module - GPU
 #include "gpu.hpp"
 
 #ifdef _WIN32
+#include <windows.h>
 #include <VersionHelpers.h>
 #include <setupapi.h>
-#include <windows.h>
-
 #elif defined(__linux__)
 #include <fstream>
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 std::string getGPUInfo() {
     std::string gpuInfo;
 
@@ -76,4 +75,4 @@ std::string getGPUInfo() {
 
     return gpuInfo;
 }
-}  // namespace Atom::System
+}  // namespace atom::system

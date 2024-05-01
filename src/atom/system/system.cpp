@@ -53,7 +53,7 @@ namespace fs = std::filesystem;
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 bool checkSoftwareInstalled(const std::string &software_name) {
     bool is_installed = false;
 #ifdef _WIN32
@@ -589,4 +589,4 @@ bool getProcessInfoByName(const std::string &processName,
     return false;
 }
 #endif
-}  // namespace Atom::System
+}  // namespace atom::system

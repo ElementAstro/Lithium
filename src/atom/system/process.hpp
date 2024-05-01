@@ -34,7 +34,7 @@ Description: Process Manager
 #include <unistd.h>
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 struct Process {
     pid_t pid;
     std::string name;
@@ -152,6 +152,6 @@ std::vector<std::pair<int, std::string>> GetAllProcesses();
  */
 Process GetSelfProcessInfo();
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

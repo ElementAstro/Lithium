@@ -17,7 +17,7 @@ Description: System Information Module - CPU
 
 #include <string>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Get the CPU usage percentage.
  * 获取 CPU 使用率百分比
@@ -81,6 +81,6 @@ int getNumberOfPhysicalPackages();
  */
 int getNumberOfPhysicalCPUs();
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

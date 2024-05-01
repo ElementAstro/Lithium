@@ -14,11 +14,6 @@ Description: Terminal
 
 #include "terminal.hpp"
 
-#include <filesystem>
-#include <iostream>
-
-namespace fs = std::filesystem;
-
 namespace lithium::Terminal {
 
 ConsoleTerminal::ConsoleTerminal() {
@@ -27,44 +22,49 @@ ConsoleTerminal::ConsoleTerminal() {
 #else
     tcgetattr(STDIN_FILENO, &orig_termios);
 #endif
-    registerMemberCommand("help", this, helpCommand);
-    registerMemberCommand("pwd", this, pwdCommand);
-    registerMemberCommand("help", this, helpCommand);
-    registerMemberCommand("echo", this, echoCommand);
-    registerMemberCommand("create", this, createFile);
-    registerMemberCommand("delete", this, deleteFile);
+    registerMemberCommand("help", this, &ConsoleTerminal::helpCommand);
+    registerMemberCommand("pwd", this, &ConsoleTerminal::pwdCommand);
+    registerMemberCommand("echo", this, &ConsoleTerminal::echoCommand);
+    registerMemberCommand("create", this, &ConsoleTerminal::createFile);
+    registerMemberCommand("delete", this, &ConsoleTerminal::deleteFile);
+    registerMemberCommand("cd", this, &ConsoleTerminal::cdCommand);
+    registerMemberCommand("ls", this, &ConsoleTerminal::listDirectory);
+    registerMemberCommand("mkdir", this, &ConsoleTerminal::createDirectory);
+    registerMemberCommand("rmdir", this, &ConsoleTerminal::deleteDirectory);
+    registerMemberCommand("mv", this, &ConsoleTerminal::moveFile);
+    registerMemberCommand("cp", this, &ConsoleTerminal::copyFile);
+    registerMemberCommand("date", this, &ConsoleTerminal::showDateTime);
+    registerMemberCommand("setdate", this, &ConsoleTerminal::setDateTime);
 }
 
 ConsoleTerminal::~ConsoleTerminal() {
-#ifdef _WIN32
-    // Windows-specific cleanup can be added here if needed
-#else
+#ifndef _WIN32
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
 #endif
 }
 
-void ConsoleTerminal::registerCommand(const std::string& name,
+void ConsoleTerminal::registerCommand(std::string_view name,
                                       CommandFunction func) {
     commandMap.emplace(name, std::move(func));
 }
 
 std::vector<std::string> ConsoleTerminal::getRegisteredCommands() const {
     std::vector<std::string> commands;
+    commands.reserve(commandMap.size());
     for (const auto& [name, _] : commandMap) {
-        commands.push_back(name);
+        commands.emplace_back(name);
     }
     return commands;
 }
 
-void ConsoleTerminal::callCommand(const std::string& name,
+void ConsoleTerminal::callCommand(std::string_view name,
                                   const std::vector<std::string>& args) {
-    if (auto it = commandMap.find(name); it != commandMap.end()) {
+    if (auto it = commandMap.find(name.data()); it != commandMap.end()) {
         try {
             it->second(args);
         } catch (const std::exception& e) {
             std::cout << "Error: " << e.what() << '\n';
         }
-
     } else {
         std::cout << "Command '" << name << "' not found.\n";
     }
@@ -73,7 +73,6 @@ void ConsoleTerminal::callCommand(const std::string& name,
 void ConsoleTerminal::run() {
     std::string input;
     std::deque<std::string> history;
-    int historyIndex = 0;
 
     printHeader();
 
@@ -85,7 +84,6 @@ void ConsoleTerminal::run() {
         if (history.size() > MAX_HISTORY_SIZE) {
             history.pop_back();
         }
-        historyIndex = 0;
 
         std::istringstream iss(input);
         std::string command;
@@ -106,11 +104,9 @@ void ConsoleTerminal::run() {
 
 void ConsoleTerminal::helpCommand(const std::vector<std::string>& args) {
     std::cout << "Available commands:\n";
-    std::cout << "  print [args...] - Print arguments to console\n";
-    std::cout << "  ls [dir]        - List files in directory\n";
-    std::cout << "  rm <file>       - Delete file\n";
-    std::cout << "  help            - Show available commands\n";
-    std::cout << "  exit            - Exit the terminal\n";
+    for (const auto& cmd : getRegisteredCommands()) {
+        std::cout << "  " << cmd << "\n";
+    }
 }
 
 void ConsoleTerminal::echoCommand(const std::vector<std::string>& args) {
@@ -161,6 +157,65 @@ void ConsoleTerminal::deleteFile(const std::vector<std::string>& args) {
     }
     fs::remove(args[0]);
     std::cout << "File deleted: " << args[0] << '\n';
+}
+
+void ConsoleTerminal::createDirectory(const std::vector<std::string>& args) {
+    if (args.empty()) {
+        std::cout << "No directory name provided.\n";
+        return;
+    }
+    fs::create_directory(args[0]);
+    std::cout << "Directory created: " << args[0] << '\n';
+}
+
+void ConsoleTerminal::deleteDirectory(const std::vector<std::string>& args) {
+    if (args.empty()) {
+        std::cout << "No directory name provided.\n";
+        return;
+    }
+    fs::remove_all(args[0]);
+    std::cout << "Directory deleted: " << args[0] << '\n';
+}
+
+void ConsoleTerminal::moveFile(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cout << "Usage: mv <source> <destination>\n";
+        return;
+    }
+    fs::rename(args[0], args[1]);
+    std::cout << "File moved: " << args[0] << " -> " << args[1] << '\n';
+}
+
+void ConsoleTerminal::copyFile(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cout << "Usage: cp <source> <destination>\n";
+        return;
+    }
+    fs::copy(args[0], args[1]);
+    std::cout << "File copied: " << args[0] << " -> " << args[1] << '\n';
+}
+
+void ConsoleTerminal::showDateTime(const std::vector<std::string>& args) {
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    std::cout << "Current date and time: "
+              << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S")
+              << '\n';
+}
+
+void ConsoleTerminal::setDateTime(const std::vector<std::string>& args) {
+    if (args.size() < 2) {
+        std::cout << "Usage: setdate <YYYY-MM-DD> <HH:MM:SS>\n";
+        return;
+    }
+    std::tm tm = {};
+    std::istringstream ss(args[0] + " " + args[1]);
+    ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+    auto time = std::mktime(&tm);
+    std::chrono::system_clock::time_point tp =
+        std::chrono::system_clock::from_time_t(time);
+    std::chrono::system_clock::now() = tp;
+    std::cout << "Date and time set to: " << args[0] << " " << args[1] << '\n';
 }
 
 void ConsoleTerminal::printHeader() {

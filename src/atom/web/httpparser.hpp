@@ -21,7 +21,7 @@ Description: Http Header Parser
 #include <vector>
 
 
-namespace Atom::Web {
+namespace atom::web {
 class HttpHeaderParserImpl;
 
 /**
@@ -34,11 +34,6 @@ public:
      * @brief Constructs a new HttpHeaderParser object.
      */
     HttpHeaderParser();
-
-    /**
-     * @brief Destroys the HttpHeaderParser object.
-     */
-    ~HttpHeaderParser();
 
     /**
      * @brief Parses the raw HTTP headers and stores them internally.
@@ -99,6 +94,6 @@ public:
 private:
     std::unique_ptr<HttpHeaderParserImpl> m_pImpl;  // Pointer to implementation
 };
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 #endif  // ATOM_WEB_HTTP_PARSER_HPP

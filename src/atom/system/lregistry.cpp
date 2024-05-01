@@ -20,7 +20,7 @@ Description: A self-contained registry manager.
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 
 class Registry::RegistryImpl {
 public:
@@ -173,4 +173,4 @@ void Registry::RegistryImpl::notifyEvent(const std::string& eventType,
     DLOG_F(INFO, "Event: {} occurred for key: {}", eventType, keyName);
 }
 
-}  // namespace Atom::System
+}  // namespace atom::system

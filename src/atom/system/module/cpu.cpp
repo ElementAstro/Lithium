@@ -51,7 +51,7 @@ namespace fs = std::filesystem;
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 float getCurrentCpuUsage() {
     float cpu_usage = 0.0;
 
@@ -416,4 +416,4 @@ int getNumberOfPhysicalCPUs() {
     return numberOfCPUs;
 }
 
-}  // namespace Atom::System
+}  // namespace atom::system

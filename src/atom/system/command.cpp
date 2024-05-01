@@ -36,7 +36,7 @@ Description: Simple wrapper for executing commands.
 #define UNSETENV(name) unsetenv(name)
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 std::string executeCommand(
     const std::string &command, bool openTerminal,
     std::function<void(const std::string &)> processLine) {
@@ -280,4 +280,4 @@ std::pair<std::string, int> executeCommandWithStatus(
 
     return {output.str(), status};
 }
-}  // namespace Atom::System
+}  // namespace atom::system

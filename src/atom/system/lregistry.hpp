@@ -19,7 +19,7 @@ Description: A self-contained registry manager.
 #include <string>
 #include <vector>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief The Registry class handles registry operations.
  */
@@ -117,6 +117,6 @@ private:
     std::unique_ptr<RegistryImpl> pImpl;  // Pointer to the implementation class
 };
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

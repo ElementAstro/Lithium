@@ -19,7 +19,7 @@ Description: Simple Http Client
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::Web {
+namespace atom::web {
 
 HttpClient::HttpClient() : socketfd(0) {}
 
@@ -231,4 +231,4 @@ std::string HttpRequestBuilder::buildRequestString(const std::string &host,
 
     return request;
 }
-}  // namespace Atom::Web
+}  // namespace atom::web

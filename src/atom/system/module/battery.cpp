@@ -32,7 +32,7 @@ Description: System Information Module - Battery
 
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 BatteryInfo getBatteryInfo() {
     BatteryInfo info;
 
@@ -142,4 +142,4 @@ BatteryInfo getBatteryInfo() {
 #endif
     return info;
 }
-}  // namespace Atom::System
+}  // namespace atom::system

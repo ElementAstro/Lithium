@@ -22,7 +22,7 @@ Description: System
 #include <windows.h>
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Process information.
  * 进程信息
@@ -155,6 +155,6 @@ bool getProcessInfoByID(int processID, ProcessInfo &processInfo);
  */
 bool getProcessInfoByName(const std::string &processName,
                           ProcessInfo &processInfo);
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

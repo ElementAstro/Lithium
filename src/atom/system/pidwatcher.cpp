@@ -33,7 +33,7 @@ namespace fs = std::filesystem;
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 PidWatcher::PidWatcher() : running_(false), monitoring_(false) {}
 
 PidWatcher::~PidWatcher() { Stop(); }
@@ -246,4 +246,4 @@ void PidWatcher::ExitThread() {
     }
 }
 
-}  // namespace Atom::System
+}  // namespace atom::system

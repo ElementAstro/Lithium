@@ -50,7 +50,7 @@ Description: System Information Module - Memory
 
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 float getMemoryUsage() {
     float memory_usage = 0.0;
 
@@ -339,4 +339,4 @@ unsigned long long getSwapMemoryUsed() {
     return swapMemoryUsed;
 }
 
-}  // namespace Atom::System
+}  // namespace atom::system

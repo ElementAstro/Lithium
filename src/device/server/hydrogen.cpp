@@ -187,29 +187,29 @@ bool HydrogenManager::isRunning() {
 #if ENABLE_INDI
 #ifdef _WIN32
     std::string processName = "indiserver.exe";
-    return Atom::System::isProcessRunning(processName);
+    return atom::system::isProcessRunning(processName);
 #else
     std::string processName = "indiserver";
-    return Atom::System::isProcessRunning(processName);
+    return atom::system::isProcessRunning(processName);
 #endif
 #else
 #ifdef _WIN32
     std::string processName = "hydrogenserver.exe";
-    return Atom::System::isProcessRunning(processName);
+    return atom::system::isProcessRunning(processName);
 #else
     std::string processName = "hydrogenserver";
-    return Atom::System::isProcessRunning(processName);
+    return atom::system::isProcessRunning(processName);
 #endif
 #endif
 }
 
 bool HydrogenManager::isInstalled() {
 #ifdef _WIN32
-    if (!Atom::System::checkSoftwareInstalled("hydrogenserver.exe")) {
+    if (!atom::system::checkSoftwareInstalled("hydrogenserver.exe")) {
         return false;
     }
 #else
-    if (!Atom::System::checkSoftwareInstalled("hydrogenserver")) {
+    if (!atom::system::checkSoftwareInstalled("hydrogenserver")) {
         return false;
     }
 #endif

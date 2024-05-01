@@ -63,6 +63,7 @@ Carbon::ModulePtr bootstrap(
                 case LIError::UnLoadError:
                     return "UnLoadError";
             }
+            return "Unknown";
         }));
     m->add(Carbon::type_conversion<std::string, LIError>(
         [](const std::string &str) {

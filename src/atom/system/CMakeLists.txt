@@ -23,7 +23,9 @@ set(${PROJECT_NAME}_SOURCES
     crash_quotes.cpp
     crash.cpp
     lregistry.cpp
+    os.cpp
     pidwatcher.cpp
+    platform.cpp
     process.cpp
     register.cpp
     storage.cpp
@@ -32,6 +34,7 @@ set(${PROJECT_NAME}_SOURCES
 
     module/cpu.cpp
     module/disk.cpp
+    module/gpu.cpp
     module/memory.cpp
     module/battery.cpp
     module/wifi.cpp
@@ -43,7 +46,9 @@ set(${PROJECT_NAME}_HEADERS
     command.hpp
     crash_quotes.hpp
     crash.hpp
+    os.hpp
     pidwatcher.hpp
+    platform.hpp
     process.hpp
     register.hpp
     storage.hpp
@@ -52,8 +57,11 @@ set(${PROJECT_NAME}_HEADERS
 
     module/cpu.hpp
     module/disk.hpp
+    module/gpu.hpp
     module/memory.hpp
     module/battery.hpp
+    module/wifi.hpp
+    module/os.hpp
 )
 
 # Private Headers

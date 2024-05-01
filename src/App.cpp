@@ -60,7 +60,7 @@ void setupLogFile() {
                      loguru::Verbosity_MAX);
 
     loguru::set_fatal_handler([](const loguru::Message &message) {
-        Atom::System::saveCrashLog(std::string(message.prefix) +
+        atom::system::saveCrashLog(std::string(message.prefix) +
                                    message.message);
     });
 }
@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
 
     } catch (const std::bad_any_cast &e) {
         LOG_F(ERROR, "Invalid args format! Error: {}", e.what());
-        Atom::System::saveCrashLog(e.what());
+        atom::system::saveCrashLog(e.what());
         return 1;
     }
 

@@ -17,7 +17,7 @@ Description: System Information Module - OS Information
 
 #include <string>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Represents information about the operating system.
  */
@@ -40,6 +40,6 @@ struct OperatingSystemInfo {
  */
 OperatingSystemInfo getOperatingSystemInfo();
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

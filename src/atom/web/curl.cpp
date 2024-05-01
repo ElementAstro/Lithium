@@ -20,7 +20,7 @@ Description: Simple HTTP client using libcurl.
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::Web {
+namespace atom::web {
 CurlWrapper::CurlWrapper() {
     curl_global_init(CURL_GLOBAL_ALL);
     handle = curl_easy_init();
@@ -175,4 +175,4 @@ size_t CurlWrapper::writeCallback(void *contents, size_t size, size_t nmemb,
     str->append(static_cast<char *>(contents), realsize);
     return realsize;
 }
-}  // namespace Atom::Web
+}  // namespace atom::web

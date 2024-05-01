@@ -18,7 +18,7 @@ Description: System Information Module - Wifi Information
 #include <string>
 #include <vector>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Get current wifi name
  * @return Current wifi name
@@ -42,6 +42,6 @@ namespace Atom::System {
  * @return Vector of host IP addresses
  */
 std::vector<std::string> getHostIPs();
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

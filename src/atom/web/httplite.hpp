@@ -34,7 +34,7 @@ Description: Simple Http Client
 #define SOCKET int
 #endif
 
-namespace Atom::Web {
+namespace atom::web {
 
 enum class HttpMethod { GET, POST, PUT, DELETE };
 
@@ -170,6 +170,6 @@ private:
     std::chrono::seconds timeout;               /**< 超时时间 */
     std::map<std::string, std::string> headers; /**< 请求头映射 */
 };
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 #endif

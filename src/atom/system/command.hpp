@@ -25,7 +25,7 @@ Description: Simple wrapper for executing commands.
 #include <sys/types.h>
 #endif
 
-namespace Atom::System {
+namespace atom::system {
 #ifdef _WIN32
 struct ProcessHandle {
     HANDLE handle;
@@ -111,6 +111,6 @@ void killProcess(const ProcessHandle &handle);
  */
 [[nodiscard]] std::pair<std::string, int> executeCommandWithStatus(
     const std::string &command);
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

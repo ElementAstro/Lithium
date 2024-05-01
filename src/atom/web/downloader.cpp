@@ -22,7 +22,7 @@ Description: Downloader
 #include "atom/log/loguru.hpp"
 #include "cpp_httplib/httplib.h"
 
-namespace Atom::Web {
+namespace atom::web {
 DownloadManager::DownloadManager(const std::string &task_file)
     : task_file_(task_file) {
     try {
@@ -250,4 +250,4 @@ void DownloadManager::save_task_list_to_file() {
         THROW_EXCEPTION("Error: ", e.what());
     }
 }
-}  // namespace Atom::Web
+}  // namespace atom::web

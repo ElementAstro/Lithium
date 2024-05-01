@@ -52,7 +52,7 @@ void downloadResources() {
         // 添加下载任务到线程池
         tasks.emplace_back(pool.enqueue([url] {
             try {
-                auto client = Atom::Web::HttpClient(
+                auto client = atom::web::HttpClient(
                     resource::LITHIUM_RESOURCE_SERVER, 443, true);
                 json res_body;
                 std::string err;

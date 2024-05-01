@@ -10,10 +10,10 @@ class MemorySlotClass;
 }
 
 /* Declare ObjectWrapper for your type */
-/* Mapping-Enabled Atom::System::MemoryInfo::MemorySlot */
-typedef oatpp::data::mapping::type::Primitive<Atom::System::MemoryInfo::MemorySlot,
+/* Mapping-Enabled atom::system::MemoryInfo::MemorySlot */
+typedef oatpp::data::mapping::type::Primitive<atom::system::MemoryInfo::MemorySlot,
                                               __class::MemorySlot>
-    Atom::System::MemoryInfo::MemorySlot;
+    atom::system::MemoryInfo::MemorySlot;
 
 namespace __class {
 
@@ -27,18 +27,18 @@ private:
      */
     class Inter
         : public oatpp::Type::Interpretation<
-              Atom::System::MemoryInfo::MemorySlot, oatpp::UnorderedFields<oatpp::String>> {
+              atom::system::MemoryInfo::MemorySlot, oatpp::UnorderedFields<oatpp::String>> {
     public:
         oatpp::UnorderedFields<oatpp::String> interpret(
-            const Atom::System::MemoryInfo::MemorySlot& value) const override {
+            const atom::system::MemoryInfo::MemorySlot& value) const override {
             return {{"capacity", value.capacity},
                     {"clockSpeed", value.clockSpeed},
                     {"type", value.type}};
         }
 
-        Atom::System::MemoryInfo::MemorySlot reproduce(
+        atom::system::MemoryInfo::MemorySlot reproduce(
             const oatpp::UnorderedFields<oatpp::String> map) const override {
-            return Atom::System::MemoryInfo::MemorySlot(
+            return atom::system::MemoryInfo::MemorySlot(
                 {map["capacity"], map["clockSpeed"], map["type"]});
         }
     };
@@ -55,7 +55,7 @@ public:
 };
 
 const oatpp::ClassId MemorySlotClass::CLASS_ID(
-    "system::memory::Atom::System::MemoryInfo::MemorySlot");
+    "system::memory::atom::system::MemoryInfo::MemorySlot");
 
 }  // namespace __class
 

@@ -26,7 +26,7 @@ Description: System Information Module - OS Information
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 std::string OperatingSystemInfo::toJson() const {
     std::stringstream ss;
     ss << "{\n";
@@ -119,4 +119,4 @@ OperatingSystemInfo getOperatingSystemInfo() {
 
     return osInfo;
 }
-}  // namespace Atom::System
+}  // namespace atom::system

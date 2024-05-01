@@ -41,7 +41,7 @@ void replaceAll(std::string &str, auto &from, auto &to) {
 
 class ProcessController : public oatpp::web::server::api::ApiController {
 private:
-    static std::shared_ptr<Atom::System::ProcessManager> m_processManager;
+    static std::shared_ptr<atom::system::ProcessManager> m_processManager;
 
 public:
     ProcessController(const std::shared_ptr<ObjectMapper> &objectMapper)
@@ -235,8 +235,8 @@ public:
     };
 };
 
-std::shared_ptr<Atom::System::ProcessManager> ProcessController::m_processManager =
-    GetPtr<Atom::System::ProcessManager>("lithium.system.process");
+std::shared_ptr<atom::system::ProcessManager> ProcessController::m_processManager =
+    GetPtr<atom::system::ProcessManager>("lithium.system.process");
 
 #include OATPP_CODEGEN_END(ApiController)  //<- End Codegen
 

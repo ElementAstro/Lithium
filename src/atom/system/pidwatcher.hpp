@@ -22,7 +22,7 @@ Description: PID Watcher
 
 #include <sys/types.h>
 
-namespace Atom::System {
+namespace atom::system {
 
 /**
  * @brief A class for monitoring processes by their PID.
@@ -126,6 +126,6 @@ private:
     std::condition_variable exit_cv_;  ///< Condition variable for process exit.
 };
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

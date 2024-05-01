@@ -18,7 +18,7 @@ Description: System Information Module - Memory
 #include <string>
 #include <vector>
 
-namespace Atom::System {
+namespace atom::system {
 struct MemoryInfo {
     struct MemorySlot {
         std::string capacity;
@@ -108,6 +108,6 @@ unsigned long long getSwapMemoryTotal();
  *         交换内存已用值
  */
 unsigned long long getSwapMemoryUsed();
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

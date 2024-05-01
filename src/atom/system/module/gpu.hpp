@@ -17,12 +17,12 @@ Description: System Information Module - GPU
 
 #include <string>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Get GPU information
  * @return std::string GPU information
  */
 [[nodiscard]] std::string getGPUInfo();
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

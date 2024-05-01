@@ -18,7 +18,7 @@ Description: System Information Module - Disk
 #include <string>
 #include <vector>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Get the disk usage for all disks.
  * 获取所有磁盘的使用情况
@@ -67,5 +67,5 @@ namespace Atom::System {
 [[nodiscard]] double calculateDiskUsagePercentage(unsigned long totalSpace,
                                     unsigned long freeSpace);
 
-}  // namespace Atom::System
+}  // namespace atom::system
 #endif

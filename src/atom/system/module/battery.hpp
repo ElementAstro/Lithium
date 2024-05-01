@@ -15,7 +15,7 @@ Description: System Information Module - Battery
 #ifndef ATOM_SYSTEM_MODULE_BATTERY_HPP
 #define ATOM_SYSTEM_MODULE_BATTERY_HPP
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Battery information.
  * 电池信息
@@ -34,5 +34,5 @@ struct BatteryInfo {
 };
 
 BatteryInfo getBatteryInfo();
-}  // namespace Atom::System
+}  // namespace atom::system
 #endif

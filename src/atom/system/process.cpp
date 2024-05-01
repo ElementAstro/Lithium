@@ -34,7 +34,7 @@ Description: Process Manager
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 ProcessManager::ProcessManager() { m_maxProcesses = 10; }
 
 ProcessManager::ProcessManager(int maxProcess) : m_maxProcesses(maxProcess) {}
@@ -405,4 +405,4 @@ Process GetSelfProcessInfo() {
     return info;
 }
 
-}  // namespace Atom::System
+}  // namespace atom::system

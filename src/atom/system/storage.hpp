@@ -21,7 +21,7 @@ Description: Storage Monitor
 #include <unordered_map>
 #include <vector>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief 监控存储空间变化的类。
  *
@@ -99,6 +99,6 @@ private:
 static void monitorUdisk(StorageMonitor &monitor);
 #endif
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

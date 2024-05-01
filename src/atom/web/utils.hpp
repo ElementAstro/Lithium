@@ -18,7 +18,7 @@ Description: Network Utils
 #include <string>
 #include <vector>
 
-namespace Atom::Web {
+namespace atom::web {
 /**
  * @brief Check whether the device is connected to the internet.
  * 检查设备是否连接到互联网
@@ -71,6 +71,6 @@ bool checkAndKillProgramOnPort(int port);
  * 如果字符串为IPv4格式，则返回true；否则返回false。
  */
 [[nodiscard]] bool isIPv4Format(const std::string &str);
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 #endif

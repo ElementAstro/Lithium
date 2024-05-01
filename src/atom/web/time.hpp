@@ -8,7 +8,7 @@
 
 Date: 2023-3-31
 
-Description: Time related functions. Not same as Atom::System::Time class.
+Description: Time related functions. Not same as atom::system::Time class.
 
 **************************************************/
 
@@ -18,7 +18,7 @@ Description: Time related functions. Not same as Atom::System::Time class.
 #include <ctime>
 #include <string>
 
-namespace Atom::Web {
+namespace atom::web {
 
 /**
  * @brief Gets the current system time in seconds since January 1, 1970 (Unix
@@ -65,6 +65,6 @@ bool setSystemTimezone(const std::string &timezone);
  */
 bool syncTimeFromRTC();
 
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 #endif  // TIME_HPP

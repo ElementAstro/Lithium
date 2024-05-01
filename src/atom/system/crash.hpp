@@ -17,7 +17,7 @@ Description: Crash Report
 
 #include <string>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief 保存崩溃日志
  * @param error_msg 崩溃日志详细信息
@@ -36,6 +36,6 @@ namespace Atom::System {
  * otherwise calling this function will have no effect.
  */
 void saveCrashLog(const std::string &error_msg);
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

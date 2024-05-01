@@ -234,7 +234,11 @@ public:
      * @warning This method will alse load the component if it is still in use
      * @warning Also, will cause Segmentation fault
      */
-    bool loadSharedComponent(const std::string& component_name);
+    bool loadSharedComponent(const std::string& component_name,
+                            const std::string& addon_name,
+                             const std::string& module_path,
+                             const std::string& entry,
+                             const std::vector<std::string>& dependencies);
     bool unloadSharedComponent(const json& params);
     bool reloadSharedComponent(const json& params);
 
@@ -278,6 +282,12 @@ private:
     // Max: Why not just use a single map of std::shared_ptr<Component>?
     //      Maybe it is because the dynamic_cast will be slow
     //      And we are surely about what the component is
-    std::unordered_map<std::string, std::shared_ptr<Component>> m_Components;
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::string, std::weak_ptr<Component>> m_Components;
+#else
+    std::unordered_map<std::string, std::weak_ptr<Component>> m_Components;
+#endif
+
+    std::string m_module_path;
 };
 }  // namespace lithium

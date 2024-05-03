@@ -16,6 +16,7 @@ Description: Func Traits for C++20
 #define ATOM_EXPERIMENT_FUNC_TRAITS_HPP
 
 #include <tuple>
+#include <type_traits>
 
 template <typename Func>
 struct FunctionTraits;
@@ -28,19 +29,18 @@ struct FunctionTraits<Return(Args...)> {
     static constexpr std::size_t arity = sizeof...(Args);
 
     template <std::size_t N>
-    struct argument {
-        static_assert(N < arity, "Invalid argument index.");
-        using type = typename std::tuple_element<N, argument_types>::type;
-    };
-
-    template <std::size_t N>
-    using argument_t = typename argument<N>::type;
+    using argument_t = std::tuple_element_t<N, argument_types>;
 
     static constexpr bool is_member_function = false;
     static constexpr bool is_const_member_function = false;
     static constexpr bool is_volatile_member_function = false;
     static constexpr bool is_noexcept = false;
+    static constexpr bool is_variadic = false;
 };
+
+template <typename Return, typename... Args>
+struct FunctionTraits<std::function<Return(Args...)>>
+    : FunctionTraits<Return(Args...)> {};
 
 template <typename Return, typename... Args>
 struct FunctionTraits<Return (*)(Args...)> : FunctionTraits<Return(Args...)> {};
@@ -83,7 +83,30 @@ struct FunctionTraits<Return(Args...) noexcept>
     static constexpr bool is_noexcept = true;
 };
 
+template <typename Return, typename... Args>
+struct FunctionTraits<Return(Args..., ...)> : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_variadic = true;
+};
+
 template <typename Func>
-struct FunctionTraits : FunctionTraits<decltype(&Func::operator())> {};
+struct FunctionTraits : FunctionTraits<std::remove_cvref_t<Func>> {};
+
+template <typename Func>
+inline constexpr bool is_member_function_v =
+    FunctionTraits<Func>::is_member_function;
+
+template <typename Func>
+inline constexpr bool is_const_member_function_v =
+    FunctionTraits<Func>::is_const_member_function;
+
+template <typename Func>
+inline constexpr bool is_volatile_member_function_v =
+    FunctionTraits<Func>::is_volatile_member_function;
+
+template <typename Func>
+inline constexpr bool is_noexcept_v = FunctionTraits<Func>::is_noexcept;
+
+template <typename Func>
+inline constexpr bool is_variadic_v = FunctionTraits<Func>::is_variadic;
 
 #endif

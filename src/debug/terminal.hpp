@@ -1,21 +1,21 @@
 #ifndef LITHIUM_DEBUG_TERMINAL_HPP
 #define LITHIUM_DEBUG_TERMINAL_HPP
 
+#include <algorithm>
+#include <chrono>
+#include <ctime>
 #include <deque>
+#include <filesystem>
 #include <fstream>
 #include <functional>
+#include <iomanip>
+#include <iostream>
 #include <iterator>
 #include <optional>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <filesystem>
-#include <iostream>
-#include <algorithm>
-#include <chrono>
-#include <ctime>
-#include <iomanip>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -24,12 +24,34 @@
 #include <unistd.h>
 #endif
 
+namespace lithium {
+class ComponentManager;
+}
+
 namespace lithium::Terminal {
 namespace fs = std::filesystem;
 
+class SuggestionEngine {
+public:
+    SuggestionEngine(const std::vector<std::string>& dataset,
+                     int maxSuggestions = 5);
+
+    std::vector<std::string> suggest(const std::string& input);
+
+private:
+    void buildIndex();
+
+    int calculateScore(const std::string& input, const std::string& item);
+
+    std::unordered_map<std::string, std::string> index_;
+    std::vector<std::string> dataset_;
+    int maxSuggestions_;
+};
+
 class ConsoleTerminal {
 public:
-    using CommandFunction = std::function<void(const std::vector<std::string>&)>;
+    using CommandFunction =
+        std::function<void(const std::vector<std::string>&)>;
 
     ConsoleTerminal();
     ~ConsoleTerminal();
@@ -37,14 +59,18 @@ public:
     void registerCommand(std::string_view name, CommandFunction func);
 
     template <typename Class>
-    void registerMemberCommand(std::string_view name, Class* instance, void (Class::*memFunc)(const std::vector<std::string>&)) {
-        registerCommand(name, [instance, memFunc](const std::vector<std::string>& args) {
-            (instance->*memFunc)(args);
-        });
+    void registerMemberCommand(
+        std::string_view name, Class* instance,
+        void (Class::*memFunc)(const std::vector<std::string>&)) {
+        registerCommand(
+            name, [instance, memFunc](const std::vector<std::string>& args) {
+                (instance->*memFunc)(args);
+            });
     }
 
     [[nodiscard]] std::vector<std::string> getRegisteredCommands() const;
-    void callCommand(std::string_view name, const std::vector<std::string>& args);
+    void callCommand(std::string_view name,
+                     const std::vector<std::string>& args);
     void run();
 
 protected:
@@ -62,12 +88,23 @@ protected:
     void showDateTime(const std::vector<std::string>& args);
     void setDateTime(const std::vector<std::string>& args);
 
+    void loadComponent(const std::vector<std::string>& args);
+    void unloadComponent(const std::vector<std::string>& args);
+    void reloadComponent(const std::vector<std::string>& args);
+    void reloadAllComponents(const std::vector<std::string>& args);
+    void listComponents(const std::vector<std::string>& args);
+    void getComponentInfo(const std::vector<std::string>& args);
+
 private:
     void printHeader();
     void clearConsole();
 
     std::unordered_map<std::string, CommandFunction> commandMap;
     static constexpr int MAX_HISTORY_SIZE = 100;
+
+    std::weak_ptr<lithium::ComponentManager> componentManager;
+
+    std::unique_ptr<SuggestionEngine> suggestionEngine;
 
 #ifdef _WIN32
     HANDLE hConsole;
@@ -76,7 +113,6 @@ private:
 #endif
 };
 
-} // namespace lithium::Terminal
+}  // namespace lithium::Terminal
 
-#endif // LITHIUM_DEBUG_TERMINAL_HPP
-
+#endif  // LITHIUM_DEBUG_TERMINAL_HPP

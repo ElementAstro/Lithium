@@ -38,16 +38,18 @@ namespace atom::io {
 
 /**
  * @brief Creates a directory with the specified path.
-*/
+ */
 struct CreateDirectoriesOptions {
     bool verbose = true;
     bool dryRun = false;
     int delay = 0;
-    std::function<bool(const std::string&)> filter = [](const std::string&) {
+    std::function<bool(const std::string &)> filter = [](const std::string &) {
         return true;
     };
-    std::function<void(const std::string&)> onCreate = [](const std::string&) {
-    };
+    std::function<void(const std::string &)> onCreate =
+        [](const std::string &) {};
+    std::function<void(const std::string &)> onDelete =
+        [](const std::string &) {};
 };
 
 /**
@@ -65,9 +67,9 @@ struct CreateDirectoriesOptions {
  * @param options 创建目录的选项。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-bool createDirectoriesRecursive(const fs::path& basePath,
-                                const std::vector<std::string>& subdirs,
-                                const CreateDirectoriesOptions& options);
+bool createDirectoriesRecursive(const fs::path &basePath,
+                                const std::vector<std::string> &subdirs,
+                                const CreateDirectoriesOptions &options);
 
 /**
  * @brief Creates a directory with the specified path.
@@ -96,6 +98,25 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @return 如果操作成功，则返回true，否则返回false。
  */
 [[nodiscard]] bool removeDirectory(const std::string &path);
+
+/**
+ * @brief Removes a directory with the specified path.
+ *
+ * @param basePath The base path of the directory to remove.
+ * @param subdirs The subdirectories to remove.
+ * @param options The options for removing the directory.
+ * @return True if the operation was successful, false otherwise.
+ *
+ * 删除具有指定路径的目录。
+ *
+ * @param basePath 要删除的目录的基本路径。
+ * @param subdirs 要删除的子目录。
+ * @param options 删除目录的选项。
+ * @return 如果操作成功，则返回true，否则返回false。
+ */
+[[nodiscard]] bool removeDirectoriesRecursive(
+    const fs::path &basePath, const std::vector<std::string> &subdirs,
+    const CreateDirectoriesOptions &options = {});
 
 /**
  * @brief Renames a directory with the specified old and new paths.

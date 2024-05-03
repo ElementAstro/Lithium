@@ -26,10 +26,10 @@ MySharedComponent::MySharedComponent(const std::string &name)
 
     initialize();
 
-    registerCommand("helloWorld", &MySharedComponent::helloWorld,
+    def("helloWorld", &MySharedComponent::helloWorld,
                     PointerSentinel(this));
-    registerCommand("calc", &MySharedComponent::calc, PointerSentinel(this));
-    registerCommand("process", &MySharedComponent::process,
+    def("calc", &MySharedComponent::calc, PointerSentinel(this));
+    def("process", &MySharedComponent::process,
                     PointerSentinel(this));
 }
 
@@ -60,7 +60,7 @@ public:
     explicit MyOtherSharedComponent(const std::string &name) : Component(name)
     {
         LOG_F(INFO, "Load {}", name);
-        registerCommand("helloWorld", &MyOtherSharedComponent::helloWorld,
+        def("helloWorld", &MyOtherSharedComponent::helloWorld,
                         PointerSentinel(this));
     }
     virtual ~MyOtherSharedComponent()

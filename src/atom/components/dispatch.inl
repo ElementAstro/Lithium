@@ -5,9 +5,10 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/function/abi.hpp"
+#include "atom/function/func_traits.hpp"
 
 template <typename Ret, typename... Args>
-void CommandDispatcher::registerCommand(
+void CommandDispatcher::def(
     const std::string& name, const std::string& group,
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
@@ -28,96 +29,126 @@ void CommandDispatcher::registerCommand(
 }
 
 template <typename Callable>
-void CommandDispatcher::registerCommand(const std::string& name,
+void CommandDispatcher::def(const std::string& name,
                                         Callable&& func,
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function(std::forward<Callable>(func)));
 }
 
-template <typename Ret, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename Ret>
+void def(const std::string& name, Ret (*func)(),
+                     const std::string& group = "",
+                     const std::string& description = "") {
+    def(name, group, description, std::function<Ret()>(func));
+}
+
+template <typename... Args, typename Ret>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (*func)(Args...),
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([func](Args... args) {
                         return func(std::forward<Args>(args)...);
                     }));
 }
 
-template <typename Ret, typename Class, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
+                                        Ret (Class::*func)(),
+                                        std::shared_ptr<Class> instance,
+                                        const std::string& group,
+                                        const std::string& description) {
+    def(name, group, description,
+                    std::function<Ret()>([instance, func]() {
+                        return std::invoke(func, instance.get());
+                    }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (Class::*func)(Args...),
                                         std::shared_ptr<Class> instance,
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
                                            std::forward<Args>(args)...);
                     }));
 }
 
-template <typename Ret, typename Class, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename... Args, typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (Class::*func)(Args...) const,
                                         std::shared_ptr<Class> instance,
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
                                            std::forward<Args>(args)...);
                     }));
 }
 
-template <typename Ret, typename Class, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename Ret, typename Class>
+void def(const std::string& name, Ret (Class::*func)(),
+                     const PointerSentinel<Class>& instance,
+                     const std::string& group = "",
+                     const std::string& description = "") {
+    def(name, group, description,
+                    std::function<Ret()>([instance, func]() {
+                        return std::invoke(func, instance.get());
+                    }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (Class::*func)(Args...),
                                         const PointerSentinel<Class>& instance,
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
                                            std::forward<Args>(args)...);
                     }));
 }
 
-template <typename Ret, typename Class, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename... Args, typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (Class::*func)(Args...) const,
                                         const PointerSentinel<Class>& instance,
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
                                            std::forward<Args>(args)...);
                     }));
 }
 
-template <typename Ret, typename Class, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename... Args, typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (Class::*func)(Args...) noexcept,
                                         const PointerSentinel<Class>& instance,
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([instance, func](Args... args) {
                         return std::invoke(func, instance.get(),
                                            std::forward<Args>(args)...);
                     }));
 }
 
-template <typename Ret, typename Class, typename... Args>
-void CommandDispatcher::registerCommand(const std::string& name,
+template <typename... Args, typename Ret, typename Class>
+void CommandDispatcher::def(const std::string& name,
                                         Ret (*func)(Args...),
                                         const std::string& group,
                                         const std::string& description) {
-    registerCommand(name, group, description,
+    def(name, group, description,
                     std::function<Ret(Args...)>([func](Args... args) {
                         return func(std::forward<Args>(args)...);
                     }));

@@ -31,57 +31,80 @@
 class CommandDispatcher {
 public:
     template <typename Ret, typename... Args>
-    void registerCommand(
+    void def(
         const std::string& name, const std::string& group,
         const std::string& description, std::function<Ret(Args...)> func,
         std::optional<std::function<bool()>> precondition = std::nullopt,
         std::optional<std::function<void()>> postcondition = std::nullopt);
 
+    template <typename Ret>
+    void def(const std::string& name, Ret (*func)(),
+                         const std::string& group = "",
+                         const std::string& description = "");
+
+    template <typename... Args, typename Ret>
+    void def(const std::string& name, Ret (*func)(Args...),
+                         const std::string& group = "",
+                         const std::string& description = "");
+
     template <typename Callable>
-    void registerCommand(const std::string& name, Callable&& func,
+    void def(const std::string& name, Callable&& func,
                          const std::string& group = "",
                          const std::string& description = "");
 
-    template <typename Ret, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
+                         const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "");
-    
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
                          std::shared_ptr<Class> instance,
                          const std::string& group = "",
                          const std::string& description = "");
-    
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+                         std::shared_ptr<Class> instance,
+                         const std::string& group = "",
+                         const std::string& description = "");
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name,
                          Ret (Class::*func)(Args...) const,
                          std::shared_ptr<Class> instance,
                          const std::string& group = "",
                          const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
                          const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+                         const PointerSentinel<Class>& instance,
+                         const std::string& group = "",
+                         const std::string& description = "");
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name,
                          Ret (Class::*func)(Args...) const,
                          const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name,
                          Ret (Class::*func)(Args...) noexcept,
                          const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (*func)(Args...),
                          const std::string& group = "",
                          const std::string& description = "");
 

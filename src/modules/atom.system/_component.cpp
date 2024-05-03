@@ -38,64 +38,64 @@ using namespace atom::system;
 
 SystemComponent::SystemComponent(const std::string &name) : Component(name) {
     DLOG_F(INFO, "SystemComponent::SystemComponent");
-    registerCommand("cpu_usage", &getCurrentCpuUsage, "cpu",
+    def("cpu_usage", &getCurrentCpuUsage, "cpu",
                     "Get current CPU usage percentage");
-    registerCommand("cpu_temperature", &getCurrentCpuTemperature, "cpu",
+    def("cpu_temperature", &getCurrentCpuTemperature, "cpu",
                     "Get current CPU temperature");
-    registerCommand("memory_usage", &getMemoryUsage, "memory",
+    def("memory_usage", &getMemoryUsage, "memory",
                     "Get current memory usage percentage");
-    registerCommand("is_charging", &isBatteryCharging, PointerSentinel(this),
+    def("is_charging", &isBatteryCharging, PointerSentinel(this),
                     "battery", "Check if the battery is charging");
-    registerCommand("battery_level", &getCurrentBatteryLevel,
+    def("battery_level", &getCurrentBatteryLevel,
                     PointerSentinel(this), "battery",
                     "Get current battery level");
-    registerCommand("disk_usage", &getDiskUsage, "disk",
+    def("disk_usage", &getDiskUsage, "disk",
                     "Get current disk usage percentage");
-    registerCommand("is_hotspot_connected", &isHotspotConnected, "wifi",
+    def("is_hotspot_connected", &isHotspotConnected, "wifi",
                     "Check if the hotspot is connected");
-    registerCommand("wired_network", &getCurrentWiredNetwork, "wifi",
+    def("wired_network", &getCurrentWiredNetwork, "wifi",
                     "Get current wired network");
-    registerCommand("wifi_name", &getCurrentWifi, "wifi",
+    def("wifi_name", &getCurrentWifi, "wifi",
                     "Get current wifi name");
-    registerCommand("current_ip", &getHostIPs, "network",
+    def("current_ip", &getHostIPs, "network",
                     "Get current IP address");
-    registerCommand("gpu_info", &getGPUInfo, "gpu", "Get GPU info");
-    registerCommand("os_name", &getOSName, PointerSentinel(this), "os",
+    def("gpu_info", &getGPUInfo, "gpu", "Get GPU info");
+    def("os_name", &getOSName, PointerSentinel(this), "os",
                     "Get OS name");
-    registerCommand("os_version", &getOSVersion, PointerSentinel(this), "os",
+    def("os_version", &getOSVersion, PointerSentinel(this), "os",
                     "Get OS version");
-    registerCommand("run_commands", &executeCommands, "os",
+    def("run_commands", &executeCommands, "os",
                     "Run a list of system commands");
-    registerCommand("run_command_env", &executeCommandWithEnv, "os",
+    def("run_command_env", &executeCommandWithEnv, "os",
                     "Run a system command with environment variables");
-    registerCommand("run_command_status", &executeCommandWithStatus, "os",
+    def("run_command_status", &executeCommandWithStatus, "os",
                     "Run a system command and get its status");
-    registerCommand("kill_process", &killProcess, "os",
+    def("kill_process", &killProcess, "os",
                     "Kill a process by its PID");
 
-    registerCommand("walk", &walk, "os", "Walk a directory");
-    registerCommand("fwalk", &fwalk, "os", "Walk a directory");
-    registerCommand("uname", &uname, "os", "Get uname information");
-    registerCommand("ctermid", &ctermid, "os", "Get current terminal ID");
-    registerCommand("jwalk", &jwalk, "os", "Walk a directory");
-    registerCommand("getpriority", &getpriority, "os",
+    def("walk", &walk, "os", "Walk a directory");
+    def("fwalk", &fwalk, "os", "Walk a directory");
+    def("uname", &uname, "os", "Get uname information");
+    def("ctermid", &ctermid, "os", "Get current terminal ID");
+    def("jwalk", &jwalk, "os", "Walk a directory");
+    def("getpriority", &getpriority, "os",
                     "Get current process priority");
-    registerCommand("getlogin", &getlogin, "os", "Get current user name");
-    registerCommand("Environ", &Environ, "os", "Get environment variables");
+    def("getlogin", &getlogin, "os", "Get current user name");
+    def("Environ", &Environ, "os", "Get environment variables");
 
-    registerCommand("user_group", &getUserGroups, "user",
+    def("user_group", &getUserGroups, "user",
                     "Get current user groups");
-    registerCommand("user_id", &getUserId, "user", "Get current user ID");
-    registerCommand("user_host", &getHostname, "user",
+    def("user_id", &getUserId, "user", "Get current user ID");
+    def("user_host", &getHostname, "user",
                     "Get current user hostname");
-    registerCommand("user_name", &getUsername, "user", "Get current user name");
-    registerCommand("user_home", &getHomeDirectory, "user",
+    def("user_name", &getUsername, "user", "Get current user name");
+    def("user_home", &getHomeDirectory, "user",
                     "Get current user home directory");
 
-    registerCommand("user_shell", &getLoginShell, "user",
+    def("user_shell", &getLoginShell, "user",
                     "Get current user login shell");
 
-    registerCommand("user_groups", &getUserGroups, "user",
+    def("user_groups", &getUserGroups, "user",
                     "Get current user groups");
 
     addVariable("platform", platform, "Platform", "os_name", "os");
@@ -103,46 +103,46 @@ SystemComponent::SystemComponent(const std::string &name) : Component(name) {
     addVariable("os_version", os_version, "OS Version", "kernel_version", "os");
     addVariable("compiler", compiler, "Compiler", "builder", "os");
 
-    registerCommand("make_pidwatcher", &makePidWatcher, PointerSentinel(this),
+    def("make_pidwatcher", &makePidWatcher, PointerSentinel(this),
                     "os", "Make a PID watcher");
-    registerCommand("start_watcher", &startPidWatcher, PointerSentinel(this),
+    def("start_watcher", &startPidWatcher, PointerSentinel(this),
                     "os", "Start a PID watcher");
-    registerCommand("stop_watcher", &stopPidWatcher, PointerSentinel(this),
+    def("stop_watcher", &stopPidWatcher, PointerSentinel(this),
                     "os", "Stop a PID watcher");
-    registerCommand("switch_watcher", &switchPidWatcher, PointerSentinel(this),
+    def("switch_watcher", &switchPidWatcher, PointerSentinel(this),
                     "os", "Switch a PID watcher");
-    registerCommand("set_watcher_exit", &setPidWatcherExitCallback,
+    def("set_watcher_exit", &setPidWatcherExitCallback,
                     PointerSentinel(this), "os",
                     "Set a PID watcher exit callback");
-    registerCommand("set_watcher_monitor", &setPidWatcherMonitorFunction,
+    def("set_watcher_monitor", &setPidWatcherMonitorFunction,
                     PointerSentinel(this), "os",
                     "Set a PID watcher monitor callback");
 
 #if ENABLE_REGISTRY_SUPPORT
-    registerCommand("get_registry_subkeys", &getRegistrySubKeys, "os",
+    def("get_registry_subkeys", &getRegistrySubKeys, "os",
                     "Get registry subkeys");
-    registerCommand("get_registry_values", &getRegistryValues, "os",
+    def("get_registry_values", &getRegistryValues, "os",
                     "Get registry values");
-    registerCommand("delete_registry_subkey", &deleteRegistrySubKey, "os",
+    def("delete_registry_subkey", &deleteRegistrySubKey, "os",
                     "Delete registry subkey");
-    registerCommand("modify_registry_value", &modifyRegistryValue, "os",
+    def("modify_registry_value", &modifyRegistryValue, "os",
                     "Modify registry value");
-    registerCommand("recursively_enumerate_registry_subkeys",
+    def("recursively_enumerate_registry_subkeys",
                     &recursivelyEnumerateRegistrySubKeys, "os",
                     "Recursively enumerate registry subkeys");
-    registerCommand("find_registry_key", &findRegistryKey, "os",
+    def("find_registry_key", &findRegistryKey, "os",
                     "Find registry key");
-    registerCommand("find_registry_value", &findRegistryValue, "os",
+    def("find_registry_value", &findRegistryValue, "os",
                     "Find registry value");
-    registerCommand("backup_registry", &backupRegistry, "os",
+    def("backup_registry", &backupRegistry, "os",
                     "Backup registry");
-    registerCommand("export_registry", &exportRegistry, "os",
+    def("export_registry", &exportRegistry, "os",
                     "Export registry");
-    registerCommand("delete_registry_value", &deleteRegistryValue, "os",
+    def("delete_registry_value", &deleteRegistryValue, "os",
                     "Delete registry value");
 #endif
 
-    registerCommand("save_crashreport", &saveCrashLog, "os",
+    def("save_crashreport", &saveCrashLog, "os",
                     "Save crash report");
 }
 

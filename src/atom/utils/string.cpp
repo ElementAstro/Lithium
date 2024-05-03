@@ -179,4 +179,10 @@ std::string replaceStrings(
     }
     return result;
 }
+
+std::vector<std::string> SVVtoSV(const std::vector<std::string_view> &svv)
+{
+    return std::vector<std::string>(svv.begin(), svv.end());
+}
+
 }  // namespace atom::utils

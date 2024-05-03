@@ -127,6 +127,14 @@ replaceStrings(std::string_view text,
                const std::vector<std::pair<std::string_view, std::string_view>>&
                    replacements);
 
+/**
+ * @brief Converts a vector of string_view to a vector of string.
+ *
+ * @param svv The vector of string_view to convert.
+ * @return The converted vector of string.
+ */
+[[nodiscard("the result of SVVtoSV is not used")]]
+std::vector<std::string> SVVtoSV(const std::vector<std::string_view>& svv);
 }  // namespace atom::utils
 
 #endif

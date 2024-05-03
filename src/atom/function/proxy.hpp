@@ -27,17 +27,22 @@ Description: Proxy Function Implementation
 #include <vector>
 
 #include "atom/error/exception.hpp"
+#include "atom/function/func_traits.hpp"
 
-template <typename Ret, typename... Args>
+template <typename Func>
 struct ProxyFunction {
-    std::function<Ret(Args...)> func;
-    static constexpr std::size_t N = sizeof...(Args);
+    Func func;
 
-    ProxyFunction(std::function<Ret(Args...)> func) : func(std::move(func)) {}
+    using Traits = FunctionTraits<Func>;
+    static constexpr std::size_t N = Traits::arity;
+
+    ProxyFunction(Func func) : func(std::move(func)) {}
 
     std::any operator()(const std::vector<std::any>& args) {
-        if (args.size() != N)
-            THROW_EXCEPTION("Number of arguments does not match");
+        if (args.size() != N) {
+            throw std::runtime_error("Incorrect number of arguments");
+        }
+
         return call(args, std::make_index_sequence<N>());
     }
 
@@ -45,13 +50,14 @@ private:
     template <std::size_t... Is>
     std::any call(const std::vector<std::any>& args,
                   std::index_sequence<Is...>) {
-        if constexpr (std::is_void_v<Ret>) {
-            std::invoke(func,
-                        std::any_cast<std::remove_cvref_t<Args>>(args[Is])...);
+        if constexpr (std::is_void_v<typename Traits::return_type>) {
+            std::invoke(func, std::any_cast<typename Traits::argument_t<Is>>(
+                                  args[Is])...);
             return {};
         } else {
-            return std::make_any<Ret>(std::invoke(
-                func, std::any_cast<std::remove_cvref_t<Args>>(args[Is])...));
+            return std::make_any<typename Traits::return_type>(std::invoke(
+                func,
+                std::any_cast<typename Traits::argument_t<Is>>(args[Is])...));
         }
     }
 };

@@ -132,86 +132,111 @@ public:
     // -------------------------------------------------------------------
 
     template <typename Ret, typename... Args>
-    void registerCommand(
+    void def(
         const std::string& name, const std::string& group,
         const std::string& description, std::function<Ret(Args...)> func,
         std::optional<std::function<bool()>> precondition = std::nullopt,
         std::optional<std::function<void()>> postcondition = std::nullopt) {
-        m_CommandDispatcher->registerCommand(name, group, description, func,
+        m_CommandDispatcher->def(name, group, description, func,
                                              precondition, postcondition);
     }
 
     template <typename Callable>
-    void registerCommand(const std::string& name, Callable&& func,
+    void def(const std::string& name, Callable&& func,
                          const std::string& group = "",
                          const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, group, description);
+        m_CommandDispatcher->def(name, func, group, description);
     }
 
-    template <typename Ret, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
+    template <typename Ret>
+    void def(const std::string& name, Ret (*func)(),
                          const std::string& group = "",
                          const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, group, description);
+        m_CommandDispatcher->def(name, func, group, description);
     }
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+    template <typename... Args, typename Ret>
+    void def(const std::string& name, Ret (*func)(Args...),
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->def(name, func, group, description);
+    }
+
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
+                         std::shared_ptr<Class> instance,
+                         const std::string& group,
+                         const std::string& description) {
+        m_CommandDispatcher->def(name, func, instance, group,
+                                             description);
+    }
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
                          std::shared_ptr<Class> instance,
                          const std::string& group = "",
                          const std::string& description = "")
 
     {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
+        m_CommandDispatcher->def(name, func, instance, group,
                                              description);
     }
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name,
                          Ret (Class::*func)(Args...) const,
                          std::shared_ptr<Class> instance,
                          const std::string& group = "",
                          const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
+        m_CommandDispatcher->def(name, func, instance, group,
                                              description);
     }
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
+                         const PointerSentinel<Class>& instance,
+                         const std::string& group = "",
+                         const std::string& description = "") {
+        m_CommandDispatcher->def(name, func, instance, group,
+                                             description);
+    }
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
                          const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "")
 
     {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
+        m_CommandDispatcher->def(name, func, instance, group,
                                              description);
     }
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name,
                          Ret (Class::*func)(Args...) const,
                          const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
+        m_CommandDispatcher->def(name, func, instance, group,
                                              description);
     }
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name,
                          Ret (Class::*func)(Args...) noexcept,
                          const PointerSentinel<Class>& instance,
                          const std::string& group = "",
                          const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
+        m_CommandDispatcher->def(name, func, instance, group,
                                              description);
     }
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (*func)(Args...),
                          const std::string& group = "",
                          const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, group, description);
+        m_CommandDispatcher->def(name, func, group, description);
     }
 
     void addAlias(const std::string& name, const std::string& alias);
@@ -263,8 +288,7 @@ public:
 
     void clearOtherComponents();
 
-    std::weak_ptr<Component> getOtherComponent(
-        const std::string& name);
+    std::weak_ptr<Component> getOtherComponent(const std::string& name);
 
 private:
     std::string m_name;
@@ -277,8 +301,7 @@ private:
     std::shared_ptr<VariableManager>
         m_VariableManager;  ///< The variable registry for managing variables.
 
-    std::unordered_map<std::string, std::weak_ptr<Component>>
-        m_OtherComponents;
+    std::unordered_map<std::string, std::weak_ptr<Component>> m_OtherComponents;
 };
 
 #endif

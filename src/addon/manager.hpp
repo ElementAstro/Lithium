@@ -150,19 +150,6 @@ public:
      */
     bool reloadAllComponents();
 
-    /**
-     * @brief Reload all components
-     * @param args The arguments to pass to the components
-     * @return true if the components were reloaded successfully, false
-     * otherwise
-     * @note The components will be reloaded in the main thread
-     * @note This method is not supposed to be called in release mode
-     * @warning This method will alse reload the components if they are still in
-     * use
-     * @warning Also, will cause Segmentation fault
-     */
-    bool reloadAllComponents(const json& params);
-
     // -------------------------------------------------------------------
     // Components methods (getters)
     // -------------------------------------------------------------------
@@ -173,17 +160,12 @@ public:
      * @param component_name The name of the component to get
      * @return The component if it exists, nullptr otherwise
      */
-    std::shared_ptr<Component> getComponent(
-        ComponentType component_type, const std::string& component_name) const;
+    std::optional<std::weak_ptr<Component>> getComponent(
+        const std::string& component_name);
 
-    /**
-     * @brief Get a component
-     * @param component_type The type of the component to get
-     * @param args The arguments to pass to the component
-     * @return The component if it exists, nullptr otherwise
-     */
-    std::shared_ptr<Component> getComponent(ComponentType component_type,
-                                            const json& params) const;
+    std::optional<json> getComponentInfo(const std::string& component_name);
+
+    std::vector<std::string> getComponentList();
 
     // -------------------------------------------------------------------
     // Load Components Steppers methods
@@ -208,7 +190,8 @@ public:
      *       Just to check if the component info was loaded, if not we will load
      * it
      */
-    bool loadComponentInfo(const std::string& module_path);
+    bool loadComponentInfo(const std::string& module_path,
+                           const std::string& name);
 
     /**
      * @brief Check if a component info is loaded
@@ -235,12 +218,12 @@ public:
      * @warning Also, will cause Segmentation fault
      */
     bool loadSharedComponent(const std::string& component_name,
-                            const std::string& addon_name,
+                             const std::string& addon_name,
                              const std::string& module_path,
                              const std::string& entry,
                              const std::vector<std::string>& dependencies);
-    bool unloadSharedComponent(const json& params);
-    bool reloadSharedComponent(const json& params);
+    bool unloadSharedComponent(const std::string& component_name, bool forced);
+    bool reloadSharedComponent(const std::string& component_name);
 
 private:
     /**

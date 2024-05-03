@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
-
 using json = nlohmann::json;
 
 namespace lithium {
@@ -29,19 +29,18 @@ std::pair<std::string, std::vector<std::string>> parsePackageJson(
     const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open " + path);
+        THROW_EXCEPTION("Failed to open " + path);
     }
 
     json package_json;
     try {
         file >> package_json;
     } catch (const json::exception& e) {
-        throw std::runtime_error("Error parsing JSON in " + path + ": " +
-                                 e.what());
+        THROW_EXCEPTION("Error parsing JSON in " + path + ": " + e.what());
     }
 
     if (!package_json.contains("name")) {
-        throw std::runtime_error("Missing package name in " + path);
+        THROW_EXCEPTION("Missing package name in " + path);
     }
 
     std::string package_name = package_json["name"];

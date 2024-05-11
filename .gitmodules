@@ -1,9 +1,6 @@
 [submodule "libs"]
 	path = libs
 	url = https://github.com/ElementAstro/LithiumLibrary.git
-[submodule "modules"]
-	path = modules
-	url = https://github.com/ElementAstro/LithiumModules.git
 [submodule "driverlibs"]
 	path = driverlibs
 	url = https://github.com/ElementAstro/LithiumDriverLibs

@@ -12,10 +12,8 @@ Description: Main Message Bus
 
 **************************************************/
 
-#ifndef ATOM_SERVER_MESSAGE_BUS_HPP
-#define ATOM_SERVER_MESSAGE_BUS_HPP
-
-#define HAS_MESSAGE_BUS
+#ifndef ATOM_ASYNC_MESSAGE_BUS_HPP
+#define ATOM_ASYNC_MESSAGE_BUS_HPP
 
 #include <algorithm>
 #include <any>
@@ -38,7 +36,7 @@ Description: Main Message Bus
 
 #include "atom/log/loguru.hpp"
 
-namespace atom::server {
+namespace atom::async {
 class MessageBus {
 public:
     MessageBus() {}
@@ -345,6 +343,6 @@ private:
     GlobalSubscriberList globalSubscribers_;
     std::shared_mutex globalSubscribersLock_;
 };
-}  // namespace atom::server
+}  // namespace atom::async
 
 #endif

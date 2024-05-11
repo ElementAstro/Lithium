@@ -69,10 +69,6 @@ public:
      */
     virtual bool destroy();
 
-    std::unordered_map<std::string, bool> getComponentAbilities() const;
-
-    bool hasAbility(const std::string& ability) const;
-
     /**
      * @brief Gets the name of the plugin.
      *
@@ -80,6 +76,11 @@ public:
      */
     std::string getName() const;
 
+    /**
+     * @brief Gets the type information of the plugin.
+     *
+     * @return The type information of the plugin.
+     */
     Type_Info getTypeInfo() const;
 
     // -------------------------------------------------------------------

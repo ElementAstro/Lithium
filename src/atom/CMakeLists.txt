@@ -36,7 +36,6 @@ add_subdirectory(connection)
 add_subdirectory(error)
 add_subdirectory(io)
 add_subdirectory(log)
-add_subdirectory(server)
 add_subdirectory(search)
 add_subdirectory(system)
 add_subdirectory(task)
@@ -81,7 +80,6 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-search
     atom-web
     atom-system
-    atom-server
     )
 
 # Build Object Library

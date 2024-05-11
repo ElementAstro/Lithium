@@ -1,3 +1,11 @@
+# CMakeLists.txt for Atom-Component
+# This project is licensed under the terms of the GPL3 license.
+#
+# Project Name: Atom-Component
+# Description: The core component library of Atom
+# Author: Max Qian
+# License: GPL3
+
 cmake_minimum_required(VERSION 3.20)
 project(atom-component C CXX)
 
@@ -5,11 +13,16 @@ project(atom-component C CXX)
 list(APPEND ${PROJECT_NAME}_SOURCES
     component.cpp
     dispatch.cpp
-    types.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
+    component.hpp
+    dispatch.hpp
+    dispatch.inl
+    types.hpp
+    var.hpp
+    var.inl
 )
 
 list(APPEND ${PROJECT_NAME}_LIBS
@@ -17,7 +30,6 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-error
     atom-type
     atom-utils
-    atom-server
     )
 
 # Build Object Library
@@ -50,6 +62,3 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-add_executable(shared_component_test base/main.cpp)
-target_link_libraries(shared_component_test atom-component)

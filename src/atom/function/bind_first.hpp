@@ -12,8 +12,8 @@ Description: An easy way to bind a function to a object
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_BIND_FIRST_HPP
-#define ATOM_EXPERIMENT_BIND_FIRST_HPP
+#ifndef ATOM_FUNCTION_BIND_FIRST_HPP
+#define ATOM_FUNCTION_BIND_FIRST_HPP
 
 #include <concepts>
 #include <functional>
@@ -29,17 +29,25 @@ T *get_pointer(const std::reference_wrapper<T> &t) noexcept {
     return &t.get();
 }
 
+template <typename T>
+constexpr const T *get_pointer(const T &t) noexcept {
+    return &t;
+}
+
+template <typename T>
+constexpr T *remove_const_pointer(const T *t) noexcept {
+    return const_cast<T *>(t);
+}
+
 template <typename F, typename... Args>
 concept invocable = std::is_invocable_v<F, Args...>;
 
 template <typename F, typename... Args>
 concept nothrow_invocable = std::is_nothrow_invocable_v<F, Args...>;
 
-// 判断函数对象是否可以用给定的参数调用
 template <typename F, typename... Args>
 constexpr bool is_invocable_v = invocable<F, Args...>;
 
-// 判断函数对象是否可以用给定的参数调用,且不抛出异常
 template <typename F, typename... Args>
 constexpr bool is_nothrow_invocable_v = std::is_nothrow_invocable_v<F, Args...>;
 
@@ -57,7 +65,8 @@ constexpr auto bind_first(Ret (Class::*f)(Param...), O &&o)
     requires invocable<Ret (Class::*)(Param...), O, Param...>
 {
     return [f, o = std::forward<O>(o)](Param... param) -> Ret {
-        return (get_pointer(o)->*f)(std::forward<Param>(param)...);
+        return (remove_const_pointer(get_pointer(o))->*f)(
+            std::forward<Param>(param)...);
     };
 }
 
@@ -66,11 +75,7 @@ constexpr auto bind_first(Ret (Class::*f)(Param...) const, O &&o)
     requires invocable<Ret (Class::*)(Param...) const, O, Param...>
 {
     return [f, o = std::forward<O>(o)](Param... param) -> Ret {
-        if constexpr (std::is_pointer_v<std::decay_t<O>>) {
-            return (o->*f)(std::forward<Param>(param)...);
-        } else {
-            return (o.*f)(std::forward<Param>(param)...);
-        }
+        return (get_pointer(o)->*f)(std::forward<Param>(param)...);
     };
 }
 
@@ -111,4 +116,4 @@ constexpr auto bind_first(F &&f, O &&o)
     };
 }
 
-#endif  // ATOM_EXPERIMENT_BIND_FIRST_HPP
+#endif  // ATOM_FUNCTION_BIND_FIRST_HPP

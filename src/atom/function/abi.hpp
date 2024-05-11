@@ -1,5 +1,5 @@
 /*
- * abi.cpp
+ * abi.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -16,6 +16,8 @@ Description: A simple C++ ABI wrapper
 #define ATOM_TYPE_ABI_HPP
 
 #include <memory>
+#include <optional>
+#include <source_location>
 #include <string>
 #include <string_view>
 #include <typeinfo>
@@ -24,7 +26,7 @@ Description: A simple C++ ABI wrapper
 #ifdef _WIN32
 #include <windows.h>
 #include <dbghelp.h>
-#if !defined(__MINGW32__) && !defined(__MINGW64__)
+#ifdef _MSC_VER
 #pragma comment(lib, "dbghelp.lib")
 #endif
 #else
@@ -35,16 +37,34 @@ class DemangleHelper {
 public:
     template <typename T>
     static std::string DemangleType() {
-        return Demangle(typeid(T).name());
+        return DemangleInternal(typeid(T).name());
     }
 
     template <typename T>
     static std::string DemangleType(const T& instance) {
-        return Demangle(typeid(instance).name());
+        return DemangleInternal(typeid(instance).name());
+    }
+
+    static std::string Demangle(
+        std::string_view mangled_name,
+        const std::optional<std::source_location>& location = std::nullopt) {
+        std::string demangled = DemangleInternal(mangled_name);
+
+        // If source location information is provided, append it to the
+        // demangled name.
+        if (location.has_value()) {
+            demangled += " (";
+            demangled += location->file_name();
+            demangled += ":";
+            demangled += std::to_string(location->line());
+            demangled += ")";
+        }
+
+        return demangled;
     }
 
 private:
-    static std::string Demangle(std::string_view mangled_name) {
+    static std::string DemangleInternal(std::string_view mangled_name) {
 #ifdef _WIN32
         char buffer[1024];
         DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer,

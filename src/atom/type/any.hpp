@@ -15,6 +15,7 @@ Description: A simple implementation of any type.
 #ifndef ATOM_EXPERIMENT_ANY_HPP
 #define ATOM_EXPERIMENT_ANY_HPP
 
+#include <algorithm>
 #include <cstring>
 #include <memory>
 #include <new>
@@ -23,6 +24,7 @@ Description: A simple implementation of any type.
 #include <typeinfo>
 #include <utility>
 
+namespace atom::type {
 class Any;
 
 template <typename T>
@@ -174,5 +176,6 @@ T any_cast(Any &&operand) {
     }
     return static_cast<Any::holder<T> *>(std::move(operand.ptr))->held;
 }
+}  // namespace atom::type
 
 #endif

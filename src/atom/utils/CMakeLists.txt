@@ -12,7 +12,6 @@ project(atom-utils C CXX)
 # Sources
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
-    env.cpp
     random.cpp
     string.cpp
     stopwatcher.cpp
@@ -24,7 +23,6 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     aes.hpp
-    env.hpp
     random.hpp
     refl.hpp
     string.hpp

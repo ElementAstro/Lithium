@@ -1,4 +1,17 @@
-#include "abilities.hpp"
+/*
+ * component.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-12-26
+
+Description: Basic Component Definition
+
+**************************************************/
+
 #include "component.hpp"
 
 #include <filesystem>
@@ -44,15 +57,6 @@ bool Component::destroy() {
 std::string Component::getName() const { return m_name; }
 
 Type_Info Component::getTypeInfo() const { return m_typeInfo; }
-
-std::unordered_map<std::string, bool> Component::getComponentAbilities() const {
-    std::unordered_map<std::string, bool> abilities;
-    return abilities;
-}
-
-bool Component::hasAbility(const std::string& ability) const {
-    return getComponentAbilities().contains(ability);
-}
 
 void Component::addAlias(const std::string& name, const std::string& alias) {
     m_CommandDispatcher->addAlias(name, alias);

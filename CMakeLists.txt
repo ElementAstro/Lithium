@@ -132,7 +132,6 @@ add_subdirectory(driver)
 add_subdirectory(${lithium_src_dir}/carbon)
 add_subdirectory(${lithium_src_dir}/config)
 add_subdirectory(${lithium_src_dir}/server)
-add_subdirectory(${lithium_src_dir}/modules)
 
 #################################################################################
 #

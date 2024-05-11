@@ -109,142 +109,198 @@ private:
 #define THROW_EXCEPTION(...) \
     throw atom::error::Exception(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
-class ObjectAlreadyExist : public std::logic_error {
+// Special Exception
+
+// -------------------------------------------------------------------
+// Common
+// -------------------------------------------------------------------
+
+class UnlawfulOperation : public Exception {
 public:
-    explicit ObjectAlreadyExist(const std::string &msg)
-        : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class ObjectNotExist : public std::logic_error {
+#define THROW_UNLAWFUL_OPERATION(...)                                  \
+    throw atom::error::UnlawfulOperation(__FILE__, __LINE__, __func__, \
+                                         __VA_ARGS__)
+
+class Unkown : public Exception {
 public:
-    explicit ObjectNotExist(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class ObjectUninitialized : public std::logic_error {
+// -------------------------------------------------------------------
+// Object
+// -------------------------------------------------------------------
+
+class ObjectAlreadyExist : public Exception {
 public:
-    explicit ObjectUninitialized(const std::string &msg)
-        : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class Uninitialization : public std::logic_error {
+#define THROW_OBJ_ALREADY_EXIST(...)                                    \
+    throw atom::error::ObjectAlreadyExist(__FILE__, __LINE__, __func__, \
+                                          __VA_ARGS__)
+
+class ObjectAlreadyInitialized : public Exception {
 public:
-    explicit Uninitialization(const std::string &msg)
-        : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class WrongArgument : public std::logic_error {
+#define THROW_OBJ_ALREADY_INITIALIZED(...)                                    \
+    throw atom::error::ObjectAlreadyInitialized(__FILE__, __LINE__, __func__, \
+                                                __VA_ARGS__)
+
+class ObjectNotExist : public Exception {
 public:
-    explicit WrongArgument(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class InvalidArgument : public std::logic_error {
+#define THROW_OBJ_NOT_EXIST(...) \
+    throw atom::error::ObjectNotExist(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class ObjectUninitialized : public Exception {
 public:
-    explicit InvalidArgument(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class MissingArgument : public std::logic_error {
+#define THROW_UNKOWN(...) \
+    throw atom::error::Unkown(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class SystemCollapse : public Exception {
 public:
-    explicit MissingArgument(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class UnlawfulOperation : public std::logic_error {
+#define THROW_SYSTEM_COLLAPSE(...) \
+    throw atom::error::SystemCollapse(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class NullPointer : public Exception {
 public:
-    explicit UnlawfulOperation(const std::string &msg)
-        : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class Unkown : public std::logic_error {
+#define THROW_NULL_POINTER(...) \
+    throw atom::error::NullPointer(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class NotFound : public Exception {
 public:
-    explicit Unkown(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class SystemCollapse : public std::runtime_error {
+#define THROW_NOT_FOUND(...) \
+    throw atom::error::NotFound(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+// -------------------------------------------------------------------
+// Argument
+// -------------------------------------------------------------------
+
+#define THROW_OBJ_UNINITIALIZED(...)                                     \
+    throw atom::error::ObjectUninitialized(__FILE__, __LINE__, __func__, \
+                                           __VA_ARGS__)
+
+class WrongArgument : public Exception {
 public:
-    explicit SystemCollapse(const std::string &msg)
-        : std::runtime_error(msg) {};
+    using Exception::Exception;
 };
 
-class NullPointer : public std::logic_error {
+#define THROW_WRONG_ARGUMENT(...) \
+    throw atom::error::WrongArgument(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class InvalidArgument : public Exception {
 public:
-    explicit NullPointer(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class NotFound : public std::logic_error {
+#define THROW_INVALID_ARGUMENT(...)                                  \
+    throw atom::error::InvalidArgument(__FILE__, __LINE__, __func__, \
+                                       __VA_ARGS__)
+
+class MissingArgument : public Exception {
 public:
-    explicit NotFound(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class FileNotFound : public std::logic_error {
+#define THROW_MISSING_ARGUMENT(...)                                  \
+    throw atom::error::MissingArgument(__FILE__, __LINE__, __func__, \
+                                       __VA_ARGS__)
+
+// -------------------------------------------------------------------
+// File
+// -------------------------------------------------------------------
+
+class FileNotFound : public Exception {
 public:
-    explicit FileNotFound(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class FileNotReadable : public std::logic_error {
+#define THROW_FILE_NOT_FOUND(...) \
+    throw atom::error::FileNotFound(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class FileNotReadable : public Exception {
 public:
-    explicit FileNotReadable(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class FileNotWritable : public std::logic_error {
+#define THROW_FILE_NOT_READABLE(...)                                 \
+    throw atom::error::FileNotReadable(__FILE__, __LINE__, __func__, \
+                                       __VA_ARGS__)
+
+class FileNotWritable : public Exception {
 public:
-    explicit FileNotWritable(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class FileUnknown : public std::logic_error {
+#define THROW_FILE_NOT_WRITABLE(...)                                 \
+    throw atom::error::FileNotWritable(__FILE__, __LINE__, __func__, \
+                                       __VA_ARGS__)
+
+class FailToOpenFile : public Exception {
 public:
-    explicit FileUnknown(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class Conflict : public std::logic_error {
+#define THROW_FAIL_TO_OPEN_FILE(...) \
+    throw atom::error::FailToOpenFile(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class FailToCloseFile : public Exception {
 public:
-    explicit Conflict(const std::string &msg) : std::logic_error(msg) {};
+    using Exception::Exception;
 };
 
-class FailToLoadDll : public std::runtime_error {
+#define THROW_FAIL_TO_CLOSE_FILE(...)                                \
+    throw atom::error::FailToCloseFile(__FILE__, __LINE__, __func__, \
+                                       __VA_ARGS__)
+
+class FailToLoadDll : public Exception {
 public:
-    explicit FailToLoadDll(const std::string &msg) : std::runtime_error(msg) {};
+    using Exception::Exception;
 };
 
-class FailToUnloadDll : public std::runtime_error {
+// -------------------------------------------------------------------
+// Dynamic Library
+// -------------------------------------------------------------------
+
+#define THROW_FAIL_TO_LOAD_DLL(...) \
+    throw atom::error::FailToLoadDll(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
+class FailToUnloadDll : public Exception {
 public:
-    explicit FailToUnloadDll(const std::string &msg)
-        : std::runtime_error(msg) {};
+    using Exception::Exception;
 };
 
-class FailToGetFunction : public std::runtime_error {
+#define THROW_FAIL_TO_UNLOAD_DLL(...)                                \
+    throw atom::error::FailToUnloadDll(__FILE__, __LINE__, __func__, \
+                                       __VA_ARGS__)
+
+class FailToLoadSymbol : public Exception {
 public:
-    explicit FailToGetFunction(const std::string &msg)
-        : std::runtime_error(msg) {};
+    using Exception::Exception;
 };
 
-class FailToCreateObject : public std::runtime_error {
-public:
-    explicit FailToCreateObject(const std::string &msg)
-        : std::runtime_error(msg) {};
-};
-
-class FailToDestroyObject : public std::runtime_error {
-public:
-    explicit FailToDestroyObject(const std::string &msg)
-        : std::runtime_error(msg) {};
-};
-
-class FailToCallFunction : public std::runtime_error {
-public:
-    explicit FailToCallFunction(const std::string &msg)
-        : std::runtime_error(msg) {};
-};
-
-class FailToCallMemberFunction : public std::runtime_error {
-public:
-    explicit FailToCallMemberFunction(const std::string &msg)
-        : std::runtime_error(msg) {};
-};
-
-class FailToCallStaticFunction : public std::runtime_error {
-public:
-    explicit FailToCallStaticFunction(const std::string &msg)
-        : std::runtime_error(msg) {};
-};
+#define THROW_FAIL_TO_LOAD_SYMBOL(...)                                \
+    throw atom::error::FailToLoadSymbol(__FILE__, __LINE__, __func__, \
+                                        __VA_ARGS__)
 }  // namespace atom::error
 
 #endif

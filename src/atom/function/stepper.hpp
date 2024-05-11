@@ -1,78 +1,78 @@
-#ifndef ATOM_FUNCTION_STEPPER_HPP
-#define ATOM_FUNCTION_STEPPER_HPP
+/*
+ * stepper.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
 
-#include "proxy.hpp"
+/*************************************************
+
+Date: 2024-3-1
+
+Description: Proxy Function Sequence
+
+**************************************************/
+
+#ifndef ATOM_FUNCTION_SEQUENCE_HPP
+#define ATOM_FUNCTION_SEQUENCE_HPP
 
 #include "atom/error/exception.hpp"
+#include "proxy.hpp"
 
-template <typename Ret, typename... Args>
-class FunctionChain {
+class FunctionSequence {
 public:
-    void register_function(std::function<Ret(Args...)> func) {
+    using FunctionType = std::function<std::any(const std::vector<std::any>&)>;
+
+    // Register a function to be part of the sequence
+    void register_function(FunctionType func) {
         functions.emplace_back(std::move(func));
     }
 
-    std::any run(const std::vector<std::any>& args) {
-        try {
-            std::any result;
-            for (const auto& func : functions) {
-                result = ProxyFunction<Ret, Args...>(func)(args);
-            }
-            return result;
-        } catch (const std::exception& e) {
-            THROW_EXCEPTION("Exception caught");
-        }
-    }
-
-    std::vector<std::any> run_all(const std::vector<std::any>& args) {
+    // Run the last function with each set of arguments provided
+    std::vector<std::any> run(
+        const std::vector<std::vector<std::any>>& args_batch) {
         std::vector<std::any> results;
+        if (functions.empty()) {
+            THROW_EXCEPTION("No functions registered in the sequence");
+            return results;
+        }
+
         try {
-            for (const auto& func : functions) {
-                results.emplace_back(ProxyFunction<Ret, Args...>(func)(args));
+            auto& func = functions.back();
+            for (const auto& args : args_batch) {
+                results.emplace_back(func(args));
             }
         } catch (const std::exception& e) {
-            THROW_EXCEPTION("Exception caught");
+            THROW_EXCEPTION(std::string("Exception caught: ") + e.what());
         }
         return results;
     }
 
-private:
-    std::vector<std::function<Ret(Args...)>> functions;
-};
-
-template <typename Ret, typename... Args>
-class FunctionStepper {
-public:
-    void register_function(std::function<Ret(Args...)> func) {
-        functions.emplace_back(std::move(func));
-    }
-
-    std::any run(const std::vector<std::any>& args) {
-        try {
-            std::any result;
-            for (const auto& func : functions) {
-                result = ProxyFunction<Ret, Args...>(func)(args);
-            }
-            return result;
-        } catch (const std::exception& e) {
-            THROW_EXCEPTION("Exception caught");
+    // Run all functions with each set of arguments provided and return the
+    // results of each function
+    std::vector<std::vector<std::any>> run_all(
+        const std::vector<std::vector<std::any>>& args_batch) {
+        std::vector<std::vector<std::any>> results_batch;
+        if (functions.empty()) {
+            THROW_EXCEPTION("No functions registered in the sequence");
+            return results_batch;
         }
-    }
 
-    std::vector<std::any> run_all(const std::vector<std::any>& args) {
-        std::vector<std::any> results;
         try {
-            for (const auto& func : functions) {
-                results.emplace_back(ProxyFunction<Ret, Args...>(func)(args));
+            for (const auto& args : args_batch) {
+                std::vector<std::any> results;
+                for (const auto& func : functions) {
+                    results.emplace_back(func(args));
+                }
+                results_batch.emplace_back(std::move(results));
             }
         } catch (const std::exception& e) {
-            THROW_EXCEPTION("Exception caught");
+            THROW_EXCEPTION(std::string("Exception caught: ") + e.what());
         }
-        return results;
+        return results_batch;
     }
 
 private:
-    std::vector<std::function<Ret(Args...)>> functions;
+    std::vector<FunctionType> functions;
 };
 
-#endif
+#endif  // ATOM_FUNCTION_SEQUENCE_HPP

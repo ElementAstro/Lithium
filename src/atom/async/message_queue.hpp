@@ -32,7 +32,7 @@ Description: A simple message queue (just learn something)
 #include <unordered_map>
 #endif
 
-namespace atom::server {
+namespace atom::async {
 /**
  * @brief A message queue that allows subscribers to receive messages of type T.
  *
@@ -248,6 +248,6 @@ size_t MessageQueue<T>::getSubscriberCount() const {
     return m_subscribers.size();
 }
 
-}  // namespace atom::server
+}  // namespace atom::async
 
 #endif

@@ -9,5 +9,19 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium.builtin C CXX)
 
-add_subdirectory(atom.io)
-add_subdirectory(atom.system)
+# Function to automatically add subdirectories that contain a CMakeLists.txt file
+function(add_subdirectories_recursively start_dir)
+  # Get all entries in the directory
+  file(GLOB entries "${start_dir}/*")
+
+  foreach(entry ${entries})
+    # Check if the entry is a directory and that it contains a CMakeLists.txt file
+    if(IS_DIRECTORY ${entry} AND EXISTS "${entry}/CMakeLists.txt" AND EXISTS "${entry}/package.json")
+      message(STATUS "Adding module subdirectory: ${entry}")
+      add_subdirectory(${entry})
+    endif()
+  endforeach()
+endfunction()
+
+# Use the function to add subdirectories
+add_subdirectories_recursively(${CMAKE_CURRENT_SOURCE_DIR})

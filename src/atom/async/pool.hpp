@@ -19,127 +19,168 @@ Description: A very simple thread pool for preload
 #include <cstdint>
 #include <functional>
 #include <future>
-#include <memory>
+#include <latch>
 #include <mutex>
 #include <queue>
+#include <semaphore>
 #include <stdexcept>
 #include <thread>
 #include <vector>
+
+#include "atom/error/exception.hpp"
 
 namespace atom::async {
 class ThreadPool {
 public:
     /**
-     * @brief 构造函数，初始化线程池大小和停止标志位。
+     * @brief Construct a new Thread Pool object
      *
-     * 构造函数会创建 n_threads 个线程，并等待来自任务队列的任务分配。
-     *
-     * @param n_threads 线程池大小
+     * @param n_threads The number of threads in the pool
      */
-    explicit ThreadPool(std::size_t n_threads) {
-        for (std::size_t i = 0; i < n_threads; ++i) {
-            threads.emplace_back([this] {
-                while (true) {
-                    std::unique_lock lock(queue_mutex);
-                    condition.wait(lock,
-                                   [this] { return stop || !tasks.empty(); });
-                    if (stop && tasks.empty()) {
-                        return;
-                    }
-                    auto task = std::move(tasks.front());
-                    tasks.pop();
-                    lock.unlock();
-                    task();
-                }
-            });
-        }
+    explicit ThreadPool(std::size_t n_threads)
+        : threads(n_threads), stop(false), active_count(0) {
+        startThreads(n_threads);
     }
 
     /**
-     * @brief 析构函数，销毁所有线程并退出。
-     *
-     * 析构函数会向任务队列中插入空任务，并等待所有线程完成该任务并退出。
+     * @brief Destroy the Thread Pool object
      */
-    ~ThreadPool() {
-        {
-            std::unique_lock lock(queue_mutex);
-            stop = true;
-        }
-        condition.notify_all();
-        for (auto &thread : threads) {
-            thread.join();
-        }
-    }
+    ~ThreadPool() { stopPool(); }
 
     /**
-     * @brief 将指定任务添加到任务队列中，并返回该任务的 future 对象。
+     * @brief Enqueue a task to the pool
      *
-     * 该函数用于将函数 f 和其参数 args 添加到任务队列中等待执行，并返回一
-     * 个 std::future 对象，以便查询任务完成情况。当任务队列已满或线程池被
-     * 停止时，将会抛出 std::runtime_error 异常。
-     *
-     * @tparam F 函数类型
-     * @tparam Args 参数类型
-     * @param f 要执行的函数对象
-     * @param args 函数参数
-     * @return 返回一个 std::future 对象，用于查询任务完成情况
+     * @tparam F The type of the function
+     * @tparam Args The type of the arguments
+     * @param f The function
+     * @param args The arguments
+     * @return std::future<std::invoke_result_t<F, Args...>> The future of the
+     * task
      */
     template <typename F, typename... Args>
-    auto enqueue(F &&f, Args &&...args) {
+    auto enqueue(F&& f, Args&&... args) {
         using return_type = std::invoke_result_t<F, Args...>;
 
         auto task = std::make_shared<std::packaged_task<return_type()>>(
-            std::bind_front(std::forward<F>(f), std::forward<Args>(args)...));
+            std::bind(std::forward<F>(f), std::forward<Args>(args)...));
 
         auto res = task->get_future();
         {
             std::unique_lock lock(queue_mutex);
-
             if (stop) {
-                throw std::runtime_error("enqueue on stopped ThreadPool");
+                THROW_UNLAWFUL_OPERATION("enqueue on stopped ThreadPool");
             }
-
-            tasks.emplace([task = std::move(task)]() { (*task)(); });
+            tasks.emplace([task]() { (*task)(); });
         }
         condition.notify_one();
         return res;
     }
 
     /**
-     * @brief 等待所有任务完成。
-     *
-     * 该函数会等待任务队列中的所有任务完成，然后返回。
+     * @brief Wait for all tasks to finish
      */
     void wait() {
         std::unique_lock lock(queue_mutex);
-        condition.wait(lock, [this] { return tasks.empty(); });
+        condition.wait(lock,
+                       [this] { return tasks.empty() && active_count == 0; });
     }
 
     /**
-     * @brief 返回线程池中的线程数量。
+     * @brief Get the number of threads in the pool
      *
-     * @return 线程池中的线程数量
+     * @return std::size_t The number of threads in the pool
      */
     std::size_t size() const { return threads.size(); }
 
     /**
-     * @brief 返回任务队列中待执行的任务数量。
+     * @brief Get the number of tasks in the pool
      *
-     * @return 任务队列中待执行的任务数量
+     * @return std::size_t The number of tasks in the pool
      */
     std::size_t taskCount() const {
         std::unique_lock lock(queue_mutex);
         return tasks.size();
     }
 
-private:
-    std::vector<std::jthread> threads;         ///< 线程池中的线程列表
-    std::queue<std::function<void()>> tasks;  ///< 任务队列
+    /**
+     * @brief Resize the number of threads in the pool
+     *
+     * @param n_threads The number of threads in the pool
+     */
+    void resize(std::size_t n_threads) {
+        std::unique_lock lock(queue_mutex);
+        stop = true;
+        condition.notify_all();
+        lock.unlock();
 
-    mutable std::mutex queue_mutex;     ///< 任务队列的互斥锁
-    std::condition_variable condition;  ///< 任务队列的条件变量
-    bool stop{false};                   ///< 停止标志位
+        for (auto& thread : threads) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
+
+        threads.clear();
+        stop = false;
+        startThreads(n_threads);
+    }
+
+private:
+    std::vector<std::jthread> threads;
+    std::queue<std::function<void()>> tasks;
+
+    mutable std::mutex queue_mutex;
+    std::condition_variable condition;
+    std::atomic<bool> stop;
+    std::atomic<int> active_count;
+
+    /**
+     * @brief Start the threads in the pool
+     *
+     * @param n_threads The number of threads in the pool
+     */
+    void startThreads(std::size_t n_threads) {
+        for (std::size_t i = 0; i < n_threads; ++i) {
+            threads.emplace_back([this] {
+                while (true) {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock lock(queue_mutex);
+                        condition.wait(
+                            lock, [this] { return stop || !tasks.empty(); });
+
+                        if (stop && tasks.empty()) {
+                            return;
+                        }
+
+                        task = std::move(tasks.front());
+                        tasks.pop();
+                        ++active_count;
+                    }
+
+                    task();
+                    --active_count;
+                }
+            });
+        }
+    }
+
+    /**
+     * @brief Stop the pool
+     */
+    void stopPool() {
+        {
+            std::unique_lock lock(queue_mutex);
+            stop = true;
+        }
+        condition.notify_all();
+        for (auto& thread : threads) {
+            if (thread.joinable()) {
+                thread.join();
+            }
+        }
+    }
 };
+
 }  // namespace atom::async
 
-#endif
+#endif  // ATOM_ASYNC_POOL_HPP

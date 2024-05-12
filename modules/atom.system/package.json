@@ -19,7 +19,8 @@
     },
     "keywords": [
         "lithium",
-        "config"
+        "atom",
+        "system"
     ],
     "scripts": {
         "build": "cmake --build-type=Release -- -j 4",

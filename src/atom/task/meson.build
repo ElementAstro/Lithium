@@ -1,35 +1,50 @@
-project('atom-task', 'cpp')
+project('atom-task', 'c', 'cpp',
+  version: '1.0.0',
+  license: 'GPL3',
+  default_options: ['cpp_std=c++17']
+)
 
-# Sources
+# 源文件和头文件
 atom_task_sources = [
-    'loop_task.cpp',
-    'conditional_task.cpp',
-    'task.cpp',
+  'loop_task.cpp',
+  'conditional_task.cpp',
+  'task.cpp'
 ]
 
-# Headers
 atom_task_headers = [
-    'loop_task.hpp',
-    'conditional_task.hpp',
-    'task.hpp',
+  'loop_task.hpp',
+  'conditional_task.hpp',
+  'task.hpp'
 ]
 
-# Build Object Library
-atom_task_object = library(
-    'atom-task-object',
-    atom_task_sources,
-    include_directories: include_directories('.')
+# 依赖
+thread_dep = dependency('threads')
+
+atom_task_deps = [thread_dep]
+
+# 对象库
+atom_task_object = static_library('atom_task_object',
+  sources: atom_task_sources,
+  dependencies: atom_task_deps,
+  include_directories: include_directories('.'),
+  install: false
 )
 
-# Build Static Library
-atom_task_static = library(
-    'atom-task',
-    atom_task_sources,
-    include_directories: include_directories('.'),
-    dependencies: atom_task_object,
-    version: '1.0',
-    soversion: '1'
+# 静态库
+atom_task_lib = static_library('atom-task',
+  sources: atom_task_object.extract_all_objects(),
+  dependencies: atom_task_deps,
+  include_directories: include_directories('.'),
+  install: true
 )
 
-# Install
-install_targets(atom_task_static)
+# 安装头文件
+install_headers(atom_task_headers, subdir: 'atom-task')
+
+# 设置目标属性
+atom_hydrogen_version_string = '1.0.0'
+atom_hydrogen_soversion = '1'
+
+atom_task_lib.set_version(atom_hydrogen_version_string)
+atom_task_lib.set_soversion(atom_hydrogen_soversion)
+atom_task_lib.set_output_name('atom-task')

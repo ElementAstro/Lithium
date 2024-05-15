@@ -1,57 +1,63 @@
-project('atom-async', 'cpp')
-
-# Set sources
-sources = files(
-    'lock.cpp',
-    'timer.cpp',
+project('atom-async', 'c', 'cpp',
+  version: '1.0.0',
+  license: 'GPL3',
+  default_options: ['cpp_std=c++20']
 )
 
-# Set headers
-headers = files(
-    'async.hpp',
-    'async.inl',
-    'lock.hpp',
-    'pool.hpp',
-    'queue.hpp',
-    'queue.inl',
-    'thread_wrapper.hpp',
-    'timer.hpp',
-    'trigger.hpp',
-    'trigger.inl',
-)
-
-# Set libraries
-libs = [
-    'loguru',
+# 源文件和头文件
+atom_async_sources = [
+  'lock.cpp',
+  'timer.cpp'
 ]
 
-# Build Object Library
-atom_async_obj = static_library(
-    'atom_async_obj',
-    sources + headers,
-    include_directories: '.',
-    pic: true,
-    dependencies: libs,
+atom_async_headers = [
+  'async.hpp',
+  'async.inl',
+  'lock.hpp',
+  'pool.hpp',
+  'queue.hpp',
+  'queue.inl',
+  'thread_wrapper.hpp',
+  'timer.hpp',
+  'trigger.hpp',
+  'trigger.inl'
+]
+
+# 依赖
+loguru_dep = dependency('loguru')
+
+# 对象库
+atom_async_object = static_library('atom_async_object',
+  sources: atom_async_sources,
+  dependencies: [loguru_dep],
+  include_directories: include_directories('.'),
+  install: false
 )
 
-# Build Static Library
-atom_async = static_library(
-    'atom_async',
-    sources: [],
-    dependencies: [atom_async_obj],
-    version: '1.0.0', # Replace with your version
-    soversion: '1', # Replace with your SO version
+# 静态库
+atom_async_lib = static_library('atom-async',
+  sources: atom_async_object.extract_all_objects(),
+  dependencies: [loguru_dep],
+  include_directories: include_directories('.'),
+  install: true
 )
 
-# Install target
-install_data(atom_async, install_dir: meson.install_root() / 'lib')
+# 安装头文件
+install_headers(atom_async_headers, subdir: 'atom-async')
 
-# Optional: Build Python bindings
-if get_option('atom_build_python')
-    pybind11_dep = dependency('pybind11')
-    pybind11_add_module(
-        'atom_async_py',
-        'pybind.cpp',
-        dependencies: [atom_async, pybind11_dep],
-    )
+# Python 绑定（如果需要）
+pybind_enabled = get_option('build_python_binding')
+
+if pybind_enabled
+  pybind11_dep = dependency('pybind11', required: true)
+  python_binding = import('python')
+  atom_async_py = python_binding.extension_module('atom-async-py',
+    sources: '_pybind.cpp',
+    dependencies: [pybind11_dep],
+    include_directories: include_directories('.')
+  )
+  atom_async_py.link_with(atom_async_lib)
 endif
+
+# 选项：是否构建 Python 绑定
+option('build_python_binding', type: 'boolean', value: false, description: 'Build Python bindings using pybind11')

@@ -204,28 +204,24 @@ public:
     std::string debug_string() const {
         std::ostringstream oss;
         oss << "BoxedValue<" << m_data->m_type_info.name() << ">: ";
-        try {
-            if (m_data->m_obj.type() == typeid(int))
-                oss << std::any_cast<int>(m_data->m_obj);
-            else if (m_data->m_obj.type() == typeid(double))
-                oss << std::any_cast<double>(m_data->m_obj);
-            else if (m_data->m_obj.type() == typeid(std::string))
-                oss << std::any_cast<std::string>(m_data->m_obj);
-            else if (m_data->m_obj.type() == typeid(bool))
-                oss << std::any_cast<bool>(m_data->m_obj);
-            else if (m_data->m_obj.type() == typeid(std::vector<int>))
-                oss << "vector<int>";
-            else if (m_data->m_obj.type() == typeid(std::vector<double>))
-                oss << "vector<double>";
-            else if (m_data->m_obj.type() == typeid(std::vector<std::string>))
-                oss << "vector<string>";
-            else if (m_data->m_obj.type() == typeid(std::vector<bool>))
-                oss << "vector<bool>";
-            else
-                oss << "unknown type";
-        } catch (const std::bad_any_cast&) {
-            oss << "failed to cast";
-        }
+        if (m_data->m_obj.type() == typeid(int))
+            oss << std::any_cast<int>(m_data->m_obj);
+        else if (m_data->m_obj.type() == typeid(double))
+            oss << std::any_cast<double>(m_data->m_obj);
+        else if (m_data->m_obj.type() == typeid(std::string))
+            oss << std::any_cast<std::string>(m_data->m_obj);
+        else if (m_data->m_obj.type() == typeid(bool))
+            oss << std::any_cast<bool>(m_data->m_obj);
+        else if (m_data->m_obj.type() == typeid(std::vector<int>))
+            oss << "vector<int>";
+        else if (m_data->m_obj.type() == typeid(std::vector<double>))
+            oss << "vector<double>";
+        else if (m_data->m_obj.type() == typeid(std::vector<std::string>))
+            oss << "vector<string>";
+        else if (m_data->m_obj.type() == typeid(std::vector<bool>))
+            oss << "vector<bool>";
+        else
+            oss << "unknown type";
         return oss.str();
     }
 

@@ -1,39 +1,46 @@
-# Auto detect text files and perform LF normalization
-* text=auto eol=lf
+# 设置默认行为，防止 Git 自动转换换行符
+* text=auto
 
-# Images are binary
+# 确保 C++ 源代码总是使用 LF 结尾
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+
+# 处理 Windows 系统上常见的文件类型
+*.bat text eol=crlf
+
+# 忽略对构建生成的文件的 diffs
+*.obj binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.bin binary
+
+# 确保 TypeScript 文件使用 LF
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# 配置样式表和 JSON 文件
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+*.json text eol=lf
+
+# 处理 JavaScript 文件（可能由 TypeScript 编译产生）
+*.js text eol=lf
+*.jsx text eol=lf
+
+# 图片和二进制文件
+*.png binary
 *.jpg binary
 *.jpeg binary
-*.png binary
 *.gif binary
+*.webp binary
 
-# Audio is binary
-*.mp3 binary
-*.wav binary
-
-# Video is binary
-*.mp4 binary
-
-# Fonts are binary
-*.ttf binary
-*.otf binary
-
-# C++ files
-*.cpp text
-*.hpp text
-*.h text
-*.cc text
-*.hh text
-
-# C files
-*.c text
-
-# Script files
-*.py text
-*.sh text
-*.bat text
-*.cmd text
-
-# Documentation files
-*.txt text
-*.md  text
+# 防止 Git 处理压缩文件和文档
+*.zip binary
+*.tar binary
+*.gz binary
+*.pdf binary
+*.docx binary

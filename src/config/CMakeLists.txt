@@ -10,20 +10,16 @@ project(lithium-config C CXX)
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
-    _main.cpp
-    _component.cpp
     configor.cpp
 )
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    _component.hpp
     configor.hpp
 )
 
 set(${PROJECT_NAME}_LIBS
     loguru
-    atom-component
 )
 
 # Build Object Library
@@ -37,9 +33,7 @@ target_sources(${PROJECT_NAME}_OBJECT
     ${${PROJECT_NAME}_SOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-
-add_library(${PROJECT_NAME} SHARED)
+add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
@@ -53,15 +47,6 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-add_executable(${PROJECT_NAME}_TEST _test.cpp)
-target_link_libraries(${PROJECT_NAME}_TEST ${PROJECT_NAME})
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions(${PROJECT_NAME}_TEST PRIVATE _DEBUG)
-endif()
-set_target_properties(${PROJECT_NAME}_TEST PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
 

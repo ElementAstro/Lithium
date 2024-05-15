@@ -16,12 +16,16 @@ Description: Task container class.
 #define LITHIUM_TASK_CONTAINER_HPP
 
 #include <functional>
-#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <vector>
 
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
 
 #include "atom/task/task.hpp"
 
@@ -169,8 +173,13 @@ public:
         const std::function<void(std::shared_ptr<SimpleTask> &)> &modifyFunc);
 
 private:
-    std::map<std::string, std::shared_ptr<SimpleTask>>
-        tasks;         ///< The container holding tasks.
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::string, std::shared_ptr<SimpleTask>>
+        tasks;  ///< The container holding tasks.
+#else
+    std::unordered_map<std::string, std::shared_ptr<SimpleTask>>
+        tasks;  ///< The container holding tasks.
+#endif
     std::mutex mutex;  ///< Mutex for thread-safe operations on the container.
 };
 }  // namespace lithium

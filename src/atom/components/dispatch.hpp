@@ -108,6 +108,8 @@ public:
                          const std::string& group = "",
                          const std::string& description = "");
 
+    [[nodiscard]] bool has(const std::string& name) const;
+
     void addAlias(const std::string& name, const std::string& alias);
 
     void addGroup(const std::string& name, const std::string& group);

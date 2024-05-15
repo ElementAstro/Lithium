@@ -17,8 +17,8 @@ Description: A super enhanced string class.
 
 #include <algorithm>
 #include <cstdarg>
-#include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /**
@@ -29,13 +29,19 @@ public:
     /**
      * @brief Constructor.
      */
-    String();
+    String() = default;
 
     /**
      * @brief Constructor.
      * @param str - C-style string.
      */
     String(const char *str);
+
+    /**
+     * @brief Constructor.
+     * @param str - std::string_view.
+     */
+    String(std::string_view str);
 
     /**
      * @brief Constructor.
@@ -47,141 +53,139 @@ public:
      * @brief Copy constructor.
      * @param other - other String.
      */
-    String(const String &other);
+    String(const String &other) = default;
+
+    /**
+     * @brief Move constructor.
+     * @param other - other String.
+     */
+    String(String &&other) noexcept = default;
 
     /**
      * @brief Copy assignment.
      * @param other - other String.
      */
-    String &operator=(const String &other) {
-        if (this != &other) {
-            m_data = other.m_data;
-        }
-        return *this;
-    }
+    String &operator=(const String &other) = default;
+
+    /**
+     * @brief Move assignment.
+     * @param other - other String.
+     */
+    String &operator=(String &&other) noexcept = default;
 
     /**
      * @brief Equality.
      * @param other - other String.
      */
-    bool operator==(const String &other) const {
-        return m_data == other.m_data;
-    }
+    bool operator==(const String &other) const;
 
     /**
      * @brief Inequality.
      * @param other - other String.
      */
-    bool operator!=(const String &other) const {
-        return m_data != other.m_data;
-    }
+    bool operator!=(const String &other) const;
 
     /**
-     * @brief Check if the String is empth
+     * @brief Check if the String is empty.
      */
-    operator bool() const { return !m_data.empty(); }
+    [[nodiscard]] bool empty() const;
 
     /**
      * @brief Less than.
      * @param other - other String.
      */
-    bool operator<(const String &other) const { return m_data < other.m_data; }
+    bool operator<(const String &other) const;
 
     /**
      * @brief Greater than.
      * @param other - other String.
      */
-    bool operator>(const String &other) const { return m_data > other.m_data; }
+    bool operator>(const String &other) const;
 
     /**
      * @brief Less than or equal.
      * @param other - other String.
      */
-    bool operator<=(const String &other) const {
-        return m_data <= other.m_data;
-    }
+    bool operator<=(const String &other) const;
 
     /**
      * @brief Greater than or equal.
      * @param other - other String.
      */
-    bool operator>=(const String &other) const {
-        return m_data >= other.m_data;
-    }
+    bool operator>=(const String &other) const;
 
     /**
      * @brief Concatenation.
      * @param other - other String.
      */
-    String &operator+=(const String &other) {
-        m_data += other.m_data;
-        return *this;
-    }
+    String &operator+=(const String &other);
 
     /**
      * @brief Concatenation.
      * @param str - C-style string.
      */
-    String &operator+=(const char *str) {
-        m_data += str;
-        return *this;
-    }
+    String &operator+=(const char *str);
 
     /**
      * @brief Concatenation.
      * @param c - char.
      */
-    String &operator+=(char c) {
-        m_data += c;
-        return *this;
-    }
+    String &operator+=(char c);
 
     /**
      * @brief Get C-style string.
      */
-    const char *toCharArray() const;
+    [[nodiscard]] const char *c_str() const;
 
     /**
      * @brief Get length.
      */
-    size_t length() const;
+    [[nodiscard]] size_t length() const;
 
     /**
      * @brief Get substring.
      * @param pos - start position.
-     * @param len - length.
+     * @param count - length.
      */
-    String substring(size_t pos, size_t len) const;
+    [[nodiscard]] String substr(size_t pos,
+                                size_t count = std::string::npos) const;
 
     /**
      * @brief Find.
      * @param str - string to find.
      * @param pos - start position.
      */
-    size_t find(const String &str, size_t pos) const;
+    [[nodiscard]] size_t find(const String &str, size_t pos = 0) const;
 
     /**
      * @brief Replace.
      * @param oldStr - old string.
      * @param newStr - new string.
      */
-    size_t replace(const String &oldStr, const String &newStr);
+    bool replace(const String &oldStr, const String &newStr);
+
+    /**
+     * @brief Replace all.
+     * @param oldStr - old string.
+     * @param newStr - new string.
+     */
+    size_t replace_all(const String &oldStr, const String &newStr);
 
     /**
      * @brief To uppercase.
      */
-    String toUpperCase() const;
+    [[nodiscard]] String to_upper() const;
 
     /**
      * @brief To lowercase.
      */
-    String toLowerCase() const;
+    [[nodiscard]] String to_lower() const;
 
     /**
      * @brief Split.
      * @param delimiter - delimiter.
      */
-    std::vector<String> split(const String &delimiter) const;
+    [[nodiscard]] std::vector<String> split(const String &delimiter) const;
 
     /**
      * @brief Join.
@@ -192,42 +196,40 @@ public:
                        const String &separator);
 
     /**
-     * @brief Replace all.
-     * @param oldStr - old string.
-     * @param newStr - new string.
-     */
-    size_t replaceAll(const String &oldStr, const String &newStr);
-
-    /**
      * @brief Insert char.
      * @param pos - position.
      * @param c - char.
      */
-    void insertChar(size_t pos, char c);
+    void insert(size_t pos, char c);
 
     /**
-     * @brief Delete char.
+     * @brief Erase char.
      * @param pos - position.
-     */
-    void deleteChar(size_t pos);
+     * */
+    void erase(size_t pos = 0, size_t count = std::string::npos);
 
     /**
      * @brief Reverse.
      */
-    String reverse() const;
+    [[nodiscard]] String reverse() const;
 
     /**
-     * @brief Equals.
+     * @brief Equals ignore case.
      * @param other - other String.
      */
-    bool equalsIgnoreCase(const String &other) const;
+    [[nodiscard]] bool equals_ignore_case(const String &other) const;
 
     /**
-     * @brief Index of.
-     * @param subStr - sub string.
-     * @param startPos - start position.
+     * @brief Starts with.
+     * @param prefix - prefix.
      */
-    size_t indexOf(const String &subStr, size_t startPos) const;
+    [[nodiscard]] bool starts_with(const String &prefix) const;
+
+    /**
+     * @brief Ends with.
+     * @param suffix - suffix.
+     */
+    [[nodiscard]] bool ends_with(const String &suffix) const;
 
     /**
      * @brief Trim.
@@ -235,54 +237,35 @@ public:
     void trim();
 
     /**
-     * @brief Start with.
-     * @param prefix - prefix.
+     * @brief Left trim.
      */
-    bool startsWith(const String &prefix) const;
+    void ltrim();
 
     /**
-     * @brief End with.
-     * @param suffix - suffix.
+     * @brief Right trim.
      */
-    bool endsWith(const String &suffix) const;
-
-    /**
-     * @brief Escape.
-     */
-    String escape() const;
-
-    /**
-     * @brief Unescape.
-     */
-    String unescape() const;
-
-    /**
-     * @brief To int.
-     */
-    int toInt() const;
-
-    /**
-     * @brief To float.
-     */
-    float toFloat() const;
+    void rtrim();
 
     /**
      * @brief Format.
-     * @param format - format.
+     * @param format - format string.
      * @param ... - arguments.
      */
-    static String format(const char *format, ...) {
-        char buffer[1024];
-
-        va_list args;
-        va_start(args, format);
-        vsnprintf(buffer, sizeof(buffer), format, args);
-        va_end(args);
-
-        return String(buffer);
+    template <typename... Args>
+    static String format(const char *format, Args &&...args) {
+        int size =
+            std::snprintf(nullptr, 0, format, std::forward<Args>(args)...);
+        String result;
+        result.m_data.resize(size + 1);
+        std::snprintf(result.m_data.data(), size + 1, format,
+                      std::forward<Args>(args)...);
+        result.m_data.pop_back();
+        return result;
     }
 
-    static const size_t npos;
+    static constexpr size_t npos = std::string::npos;
+
+    [[nodiscard]] std::string data() const;
 
 private:
     std::string m_data;
@@ -294,6 +277,35 @@ private:
  * @param rhs - right operand.
  * @return - result.
  */
-String operator+(const String &lhs, const String &rhs);
+String operator+(const String &lhs, const String &rhs) {
+    String result(lhs);
+    result += rhs;
+    return result;
+}
+
+/**
+ * @brief Output stream operator.
+ * @param os - output stream.
+ * @param str - string.
+ * @return - output stream.
+ */
+std::ostream &operator<<(std::ostream &os, const String &str);
+
+/**
+ * @brief Less than operator.
+ * @param lhs - left operand.
+ * @param rhs - right operand.
+ * @return - result.
+ */
+bool operator<(const String &lhs, const String &rhs);
+
+namespace std {
+template <>
+struct hash<String> {
+    size_t operator()(const String &str) const {
+        return std::hash<std::string>()(str.data());
+    }
+};
+}  // namespace std
 
 #endif

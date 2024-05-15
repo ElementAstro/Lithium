@@ -14,142 +14,149 @@ Description: Single thread pool for executing temporary tasks asynchronously.
 
 #include "singlepool.hpp"
 
+#include <cassert>
 #include <condition_variable>
-#include <memory>
+#include <deque>
+#include <future>
+#include <mutex>
+#include <optional>
+#include <thread>
+#include <vector>
 
 namespace lithium {
-
 class SingleThreadPoolPrivate {
 public:
     SingleThreadPoolPrivate();
-    virtual ~SingleThreadPoolPrivate();
+    ~SingleThreadPoolPrivate();
 
-    std::function<void(const std::atomic_bool &isAboutToClose)> pendingFunction;
-    std::function<void(const std::atomic_bool &isAboutToClose)> runningFunction;
-    std::atomic_bool isThreadAboutToQuit{false};
-    std::atomic_bool isFunctionAboutToQuit{true};
-
-    std::condition_variable_any acquire;
-    std::condition_variable_any released;
+    std::atomic<bool> isThreadAboutToQuit{false};
+    std::atomic<bool> isFunctionAboutToQuit{true};
+    std::function<void(const std::atomic_bool&)> pendingFunction;
+    std::function<void(const std::atomic_bool&)> runningFunction;
     std::mutex runLock;
-    std::vector<std::thread> threads;
+    std::condition_variable acquireCondition;
+    std::condition_variable releasedCondition;
+    std::thread workerThread;
+
+    void workerFunction();
 };
 
 SingleThreadPoolPrivate::SingleThreadPoolPrivate() {
-    threads.emplace_back([this] {
-        std::unique_lock<std::mutex> lock(runLock);
-        for (;;) {
-            acquire.wait(lock, [this] {
-                return pendingFunction != nullptr || isThreadAboutToQuit;
-            });
-
-            if (isThreadAboutToQuit)
-                break;
-
-            isFunctionAboutToQuit = false;
-            std::swap(runningFunction, pendingFunction);
-            released.notify_all();
-
-            lock.unlock();
-            runningFunction(isFunctionAboutToQuit);
-            lock.lock();
-
-            runningFunction = nullptr;
-        }
-    });
+    // Launch a worker thread to manage tasks
+    workerThread = std::thread(&SingleThreadPoolPrivate::workerFunction, this);
 }
 
 SingleThreadPoolPrivate::~SingleThreadPoolPrivate() {
-    {
-        isFunctionAboutToQuit = true;
-        isThreadAboutToQuit = true;
-        std::unique_lock<std::mutex> lock(runLock);
-        acquire.notify_all();
+    isThreadAboutToQuit = true;
+    acquireCondition.notify_one();
+    if (workerThread.joinable()) {
+        workerThread.join();
     }
+}
 
-    for (auto &thread : threads) {
-        if (thread.joinable())
-            thread.join();
+void SingleThreadPoolPrivate::workerFunction() {
+    std::unique_lock lock(runLock);
+    while (!isThreadAboutToQuit) {
+        acquireCondition.wait(lock, [this] {
+            return pendingFunction != nullptr || isThreadAboutToQuit;
+        });
+
+        if (isThreadAboutToQuit)
+            break;
+
+        isFunctionAboutToQuit = false;
+        runningFunction = std::move(pendingFunction);
+        releasedCondition.notify_all();
+
+        lock.unlock();
+        if (runningFunction) {
+            runningFunction(isFunctionAboutToQuit);
+        }
+        lock.lock();
+
+        runningFunction = nullptr;
     }
 }
 
 SingleThreadPool::SingleThreadPool()
     : d_ptr(std::make_shared<SingleThreadPoolPrivate>()) {}
 
-SingleThreadPool::~SingleThreadPool() {}
+SingleThreadPool::~SingleThreadPool() = default;
 
 bool SingleThreadPool::start(
-    const std::function<void(const std::atomic_bool &isAboutToClose)>
-        &functionToRun) {
+    const std::function<void(const std::atomic_bool&)>& functionToRun) {
     if (!functionToRun)
         return false;
 
     auto d = d_ptr;
-    std::unique_lock<std::mutex> lock(d->runLock);
+    std::unique_lock lock(d->runLock);
     if (d->runningFunction != nullptr)
         return false;
 
     d->pendingFunction = functionToRun;
     d->isFunctionAboutToQuit = true;
-    d->acquire.notify_one();
+    d->acquireCondition.notify_one();
 
-    if (std::this_thread::get_id() != d->threads[0].get_id())
-        d->released.wait(lock, [d] { return d->pendingFunction == nullptr; });
+    // Wait until the function starts running (when not on the worker thread)
+    if (std::this_thread::get_id() != d->workerThread.get_id()) {
+        d->releasedCondition.wait(
+            lock, [d] { return d->pendingFunction == nullptr; });
+    }
 
     return true;
 }
 
 void SingleThreadPool::startDetach(
-    const std::function<void(const std::atomic_bool &isAboutToClose)>
-        &functionToRun) {
+    const std::function<void(const std::atomic_bool&)>& functionToRun) {
     if (!functionToRun)
         return;
 
     auto d = d_ptr;
-    std::unique_lock<std::mutex> lock(d->runLock);
+    std::unique_lock lock(d->runLock);
     if (d->runningFunction != nullptr)
         return;
 
     d->pendingFunction = functionToRun;
     d->isFunctionAboutToQuit = true;
-    d->acquire.notify_one();
+    d->acquireCondition.notify_one();
 }
 
 bool SingleThreadPool::tryStart(
-    const std::function<void(const std::atomic_bool &isAboutToClose)>
-        &functionToRun) {
+    const std::function<void(const std::atomic_bool&)>& functionToRun) {
     if (!functionToRun)
         return false;
 
     auto d = d_ptr;
-    std::unique_lock<std::mutex> lock(d->runLock);
-    if (d->runningFunction != nullptr)
+    std::unique_lock lock(d->runLock, std::try_to_lock);
+    if (!lock.owns_lock() || d->runningFunction != nullptr)
         return false;
 
-    d->isFunctionAboutToQuit = true;
     d->pendingFunction = functionToRun;
-    d->acquire.notify_one();
+    d->isFunctionAboutToQuit = true;
+    d->acquireCondition.notify_one();
 
-    if (std::this_thread::get_id() != d->threads[0].get_id())
-        d->released.wait(lock, [d] { return d->pendingFunction == nullptr; });
+    // Wait until the function starts running (when not on the worker thread)
+    if (std::this_thread::get_id() != d->workerThread.get_id()) {
+        d->releasedCondition.wait(
+            lock, [d] { return d->pendingFunction == nullptr; });
+    }
 
     return true;
 }
 
 void SingleThreadPool::tryStartDetach(
-    const std::function<void(const std::atomic_bool &isAboutToClose)>
-        &functionToRun) {
+    const std::function<void(const std::atomic_bool&)>& functionToRun) {
     if (!functionToRun)
         return;
 
     auto d = d_ptr;
-    std::unique_lock<std::mutex> lock(d->runLock);
-    if (d->runningFunction != nullptr)
+    std::unique_lock lock(d->runLock, std::try_to_lock);
+    if (!lock.owns_lock() || d->runningFunction != nullptr)
         return;
 
-    d->isFunctionAboutToQuit = true;
     d->pendingFunction = functionToRun;
-    d->acquire.notify_one();
+    d->isFunctionAboutToQuit = true;
+    d->acquireCondition.notify_one();
 }
 
 void SingleThreadPool::quit() { start(nullptr); }

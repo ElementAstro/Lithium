@@ -7,6 +7,22 @@
 #include "atom/function/abi.hpp"
 #include "atom/function/func_traits.hpp"
 
+class DispatchException : public atom::error::Exception {
+public:
+    using atom::error::Exception::Exception;
+};
+
+#define THROW_DISPATCH_EXCEPTION(...) \
+    throw DispatchException(__FILE__, __LINE__, __func__, __VA_ARGS__);
+
+class DispatchTimeout : public atom::error::Exception {
+public:
+    using atom::error::Exception::Exception;
+};
+
+#define THROW_DISPATCH_TIMEOUT(...) \
+    throw DispatchTimeout(__FILE__, __LINE__, __func__, __VA_ARGS__);
+
 template <typename Ret, typename... Args>
 void CommandDispatcher::def(
     const std::string& name, const std::string& group,
@@ -170,12 +186,12 @@ std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
                 }
             }
         }
-        throw std::runtime_error("Unknown command: " + name);
+        THROW_INVALID_ARGUMENT("Unknown command: " + name);
     }
 
     const auto& cmd = it->second;
     if (cmd.precondition.has_value() && !cmd.precondition.value()()) {
-        throw std::runtime_error("Precondition failed for command: " + name);
+        THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
     }
 
     auto argsTuple = std::make_tuple(std::forward<Args>(args)...);
@@ -206,7 +222,7 @@ std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
             return std::any{};
         });
         if (future.wait_for(timeoutIt->second) == std::future_status::timeout) {
-            throw std::runtime_error("Command timed out: " + name);
+            THROW_DISPATCH_TIMEOUT("Command timed out: " + name);
         }
         auto result = future.get();
         cacheMap[name] = result;
@@ -225,7 +241,7 @@ std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
                 // 参数类型不匹配,尝试下一个重载函数
             }
         }
-        throw std::runtime_error("No matching overload found for command: " +
+        THROW_INVALID_ARGUMENT("No matching overload found for command: " +
                                  name);
     }
 }

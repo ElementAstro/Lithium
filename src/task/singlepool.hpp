@@ -18,8 +18,6 @@ Description: Single thread pool for executing temporary tasks asynchronously.
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <thread>
-
 
 namespace lithium {
 class SingleThreadPoolPrivate;
@@ -29,17 +27,14 @@ public:
     SingleThreadPool();
     ~SingleThreadPool();
 
-    bool start(const std::function<void(const std::atomic_bool &isAboutToClose)>
-                   &functionToRun);
+    bool start(
+        const std::function<void(const std::atomic_bool&)>& functionToRun);
     void startDetach(
-        const std::function<void(const std::atomic_bool &isAboutToClose)>
-            &functionToRun);
+        const std::function<void(const std::atomic_bool&)>& functionToRun);
     bool tryStart(
-        const std::function<void(const std::atomic_bool &isAboutToClose)>
-            &functionToRun);
+        const std::function<void(const std::atomic_bool&)>& functionToRun);
     void tryStartDetach(
-        const std::function<void(const std::atomic_bool &isAboutToClose)>
-            &functionToRun);
+        const std::function<void(const std::atomic_bool&)>& functionToRun);
     void quit();
 
 private:

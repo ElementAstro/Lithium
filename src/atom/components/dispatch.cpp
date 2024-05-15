@@ -1,5 +1,15 @@
 #include "dispatch.hpp"
 
+bool CommandDispatcher::has(const std::string& name) const {
+    if (commands.find(name) != commands.end())
+        return true;
+    for (const auto& command : commands) {
+        if (command.second.aliases.find(name) != command.second.aliases.end())
+            return true;
+    }
+    return false;
+}
+
 void CommandDispatcher::addAlias(const std::string& name,
                                  const std::string& alias) {
     auto it = commands.find(name);

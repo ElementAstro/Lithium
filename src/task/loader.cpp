@@ -18,7 +18,6 @@ Description: Json file manager
 #include <fstream>
 #include <thread>
 
-
 #include "atom/log/loguru.hpp"
 
 namespace lithium {
@@ -26,111 +25,116 @@ std::shared_ptr<TaskLoader> TaskLoader::createShared() {
     return std::make_shared<TaskLoader>();
 }
 
-std::optional<json> TaskLoader::readJsonFile(const fs::path &filePath) {
-    if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
-        LOG_F(ERROR, "File not found: {}", filePath.string());
-        return std::nullopt;
-    }
-
-    std::ifstream inputFile(filePath);
-    json j;
+std::optional<json> TaskLoader::readJsonFile(const fs::path& filePath) {
     try {
-        inputFile >> j;
-    } catch (const json::parse_error &e) {
-        LOG_F(ERROR, "Parse error in {}: {}", filePath.string(), e.what());
-        return std::nullopt;
-    } catch (const json::type_error &e) {
-        LOG_F(ERROR, "Type error in {}: {}", filePath.string(), e.what());
-        return std::nullopt;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Exception in {}: {}", filePath.string(), e.what());
-        return std::nullopt;
+        if (!fs::exists(filePath) || !fs::is_regular_file(filePath)) {
+            LOG_F(ERROR, "File not found: {}", filePath.string());
+            return std::nullopt;
+        }
+
+        std::ifstream inputFile(filePath);
+        json j = json::parse(inputFile, nullptr, false);
+
+        if (j.is_discarded()) {
+            LOG_F(ERROR, "Parse error in file: {}", filePath.string());
+            return std::nullopt;
+        }
+
+        return j;
+    } catch (const json::exception& e) {
+        LOG_F(ERROR, "JSON exception in file {}: {}", filePath.string(),
+              e.what());
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Standard exception in file {}: {}", filePath.string(),
+              e.what());
     }
-    inputFile.close();
-    return j;
+    return std::nullopt;
 }
 
-std::optional<json> TaskLoader::readJsonFile(const std::string &filePath) {
+std::optional<json> TaskLoader::readJsonFile(const std::string& filePath) {
     return readJsonFile(fs::path(filePath));
 }
 
-bool TaskLoader::writeJsonFile(const fs::path &filePath, const json &j) {
-    std::ofstream outputFile(filePath);
-    if (!outputFile.is_open()) {
-        LOG_F(ERROR, "Failed to open: {}", filePath.string());
+bool TaskLoader::writeJsonFile(const fs::path& filePath, const json& j) {
+    try {
+        std::ofstream outputFile(filePath);
+        outputFile << j.dump(4);
+        return true;
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to write JSON to {}: {}", filePath.string(),
+              e.what());
         return false;
     }
-    outputFile << j.dump(4);
-    outputFile.close();
-    return true;
 }
 
-bool TaskLoader::writeJsonFile(const std::string &filePath, const json &j) {
+bool TaskLoader::writeJsonFile(const std::string& filePath, const json& j) {
     return writeJsonFile(fs::path(filePath), j);
 }
 
 void TaskLoader::asyncReadJsonFile(
-    const fs::path &filePath,
+    const fs::path& filePath,
     std::function<void(std::optional<json>)> callback) {
     std::jthread([filePath, callback = std::move(callback)]() {
-        auto j = readJsonFile(filePath);
-        callback(j);
+        auto result = readJsonFile(filePath);
+        callback(result);
     });
 }
 
 void TaskLoader::asyncReadJsonFile(
-    const std::string &filePath,
+    const std::string& filePath,
     std::function<void(std::optional<json>)> callback) {
     asyncReadJsonFile(fs::path(filePath), callback);
 }
 
-void TaskLoader::asyncWriteJsonFile(const fs::path &filePath, const json &j,
+void TaskLoader::asyncWriteJsonFile(const fs::path& filePath, const json& j,
                                     std::function<void(bool)> callback) {
-    std::jthread([filePath, j, callback = std::move(callback)]() mutable {
+    std::jthread([filePath, j, callback = std::move(callback)]() {
         bool success = writeJsonFile(filePath, j);
         callback(success);
     });
 }
 
-void TaskLoader::asyncWriteJsonFile(const std::string &filePath, const json &j,
+void TaskLoader::asyncWriteJsonFile(const std::string& filePath, const json& j,
                                     std::function<void(bool)> callback) {
     asyncWriteJsonFile(fs::path(filePath), j, callback);
 }
 
-void TaskLoader::mergeJsonObjects(json &base, const json &toMerge) {
-    for (auto &[key, value] : toMerge.items()) {
+void TaskLoader::mergeJsonObjects(json& base, const json& toMerge) {
+    for (auto& [key, value] : toMerge.items()) {
         base[key] = value;
     }
 }
 
 void TaskLoader::batchAsyncProcess(
-    const std::vector<fs::path> &filePaths,
+    const std::vector<fs::path>& filePaths,
     std::function<void(std::optional<json>)> process,
     std::function<void()> onComplete) {
     std::atomic<int> filesProcessed = 0;
-    for (const auto &path : filePaths) {
-        asyncReadJsonFile(path, [&filesProcessed, &filePaths, process,
+    int totalFiles = filePaths.size();
+
+    for (const auto& path : filePaths) {
+        asyncReadJsonFile(path, [&filesProcessed, &totalFiles, process,
                                  onComplete](std::optional<json> j) {
-            if (j)
-                process(j);
-            if (++filesProcessed == filePaths.size())
+            process(j);
+            if (++filesProcessed == totalFiles) {
                 onComplete();
+            }
         });
     }
 }
 
 void TaskLoader::batchAsyncProcess(
-    const std::vector<std::string> &filePaths,
+    const std::vector<std::string>& filePaths,
     std::function<void(std::optional<json>)> process,
     std::function<void()> onComplete) {
     std::vector<fs::path> paths;
-    for (const auto &path : filePaths) {
+    for (const auto& path : filePaths) {
         paths.push_back(fs::path(path));
     }
     batchAsyncProcess(paths, process, onComplete);
 }
 
-void TaskLoader::asyncDeleteJsonFile(const fs::path &filePath,
+void TaskLoader::asyncDeleteJsonFile(const fs::path& filePath,
                                      std::function<void(bool)> callback) {
     std::jthread([filePath, callback = std::move(callback)]() {
         bool success = fs::remove(filePath);
@@ -138,13 +142,13 @@ void TaskLoader::asyncDeleteJsonFile(const fs::path &filePath,
     });
 }
 
-void TaskLoader::asyncDeleteJsonFile(const std::string &filePath,
+void TaskLoader::asyncDeleteJsonFile(const std::string& filePath,
                                      std::function<void(bool)> callback) {
     asyncDeleteJsonFile(fs::path(filePath), callback);
 }
 
 void TaskLoader::asyncQueryJsonValue(
-    const fs::path &filePath, const std::string &key,
+    const fs::path& filePath, const std::string& key,
     std::function<void(std::optional<json>)> callback) {
     asyncReadJsonFile(filePath, [key, callback = std::move(callback)](
                                     std::optional<json> jOpt) {
@@ -152,7 +156,7 @@ void TaskLoader::asyncQueryJsonValue(
             callback(std::nullopt);
             return;
         }
-        const json &j = jOpt.value();
+        const json& j = jOpt.value();
         if (j.contains(key)) {
             callback(j[key]);
         } else {
@@ -162,13 +166,13 @@ void TaskLoader::asyncQueryJsonValue(
 }
 
 void TaskLoader::asyncQueryJsonValue(
-    const std::string &filePath, const std::string &key,
+    const std::string& filePath, const std::string& key,
     std::function<void(std::optional<json>)> callback) {
     asyncQueryJsonValue(fs::path(filePath), key, callback);
 }
 
 void TaskLoader::batchProcessDirectory(
-    const fs::path &directoryPath,
+    const fs::path& directoryPath,
     std::function<void(std::optional<json>)> process,
     std::function<void()> onComplete) {
     if (!fs::exists(directoryPath) || !fs::is_directory(directoryPath)) {
@@ -177,7 +181,7 @@ void TaskLoader::batchProcessDirectory(
     }
 
     std::vector<fs::path> filePaths;
-    for (const auto &entry : fs::directory_iterator(directoryPath)) {
+    for (const auto& entry : fs::directory_iterator(directoryPath)) {
         if (entry.path().extension() == ".json") {
             filePaths.push_back(entry.path());
         }
@@ -187,70 +191,9 @@ void TaskLoader::batchProcessDirectory(
 }
 
 void TaskLoader::batchProcessDirectory(
-    const std::string &directoryPath,
+    const std::string& directoryPath,
     std::function<void(std::optional<json>)> process,
     std::function<void()> onComplete) {
     batchProcessDirectory(fs::path(directoryPath), process, onComplete);
 }
 }  // namespace lithium
-
-/*
-int main()
-{
-    // 设置要操作的文件路径
-    std::filesystem::path filePath1 = "file1.json";
-    std::filesystem::path filePath2 = "file2.json";
-
-    // 异步读取、修改、保存第一个JSON文件
-    TaskLoader::asyncReadJsonFile(filePath1, [filePath1](std::optional<json>
-jOpt)
-                                       {
-        if (!jOpt) {
-            std::cerr << "Failed to read file: " << filePath1 << std::endl;
-            return;
-        }
-
-        auto& j = jOpt.value();
-        std::cout << "Original content of file1.json:\n" << j.dump(4) <<
-std::endl;
-
-        // 修改操作
-        j["newKey"] = "newValue";
-
-        // 异步保存修改
-        TaskLoader::asyncWriteJsonFile(filePath1, j, [](bool success) {
-            if (success) {
-                std::cout << "file1.json saved successfully." << std::endl;
-            } else {
-                std::cerr << "Failed to save file1.json." << std::endl;
-            }
-        }); });
-
-    // 批量异步处理多个JSON文件
-    std::vector<std::filesystem::path> files = {filePath1, filePath2};
-    TaskLoader::batchAsyncProcess(
-        files,
-        [](std::optional<json> jOpt)
-        {
-            if (!jOpt)
-            {
-                std::cerr << "Failed to read a file." << std::endl;
-                return;
-            }
-
-            const auto &j = jOpt.value();
-            std::cout << "Processing a JSON file:\n"
-                      << j.dump(4) << std::endl;
-            // 这里可以添加更多处理逻辑
-        },
-        []()
-        {
-            std::cout << "All files processed." << std::endl;
-        });
-
-    // 主线程等待，因为std::jthread会在析构时自动join
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    return 0;
-}
-*/

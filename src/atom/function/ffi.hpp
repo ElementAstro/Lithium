@@ -22,23 +22,25 @@ Description: FFI Function
 #endif
 #include <ffi.h>
 #include <memory>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include "atom/error/exception.hpp"
 #include "atom/type/noncopyable.hpp"
 
-class FFIException : public std::exception {
+class FFIException : atom::error::Exception {
 public:
-    explicit FFIException(const std::string &message) : message_(message) {}
-    const char *what() const noexcept override { return message_.c_str(); }
-
-private:
-    std::string message_;
+    using atom::error::Exception::Exception;
 };
+
+#define THROW_FFI_EXCEPTION(...) \
+    throw FFIException(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
 template <typename T>
 constexpr ffi_type *getFFIType() {
@@ -50,7 +52,11 @@ constexpr ffi_type *getFFIType() {
         return &ffi_type_double;
     } else if constexpr (std::is_same_v<T, const char *>) {
         return &ffi_type_pointer;
+    } else if constexpr (std::is_same_v<T, std::string>) {
+        return &ffi_type_pointer;
     } else {
+        static_assert(std::is_pointer_v<T>,
+                      "Unsupported type passed to getFFIType.");
         return &ffi_type_pointer;
     }
 }
@@ -64,15 +70,15 @@ public:
 
         if (ffi_prep_cif(&cif_, FFI_DEFAULT_ABI, sizeof...(Args), returnType_,
                          argTypes_.data()) != FFI_OK) {
-            throw FFIException("Failed to prepare FFI call interface.");
+            THROW_FFI_EXCEPTION("Failed to prepare FFI call interface.");
         }
     }
 
     ReturnType call(void *funcPtr, Args... args) {
-        void *argsArray[] = {&args...};
+        std::vector<void *> argsArray = {reinterpret_cast<void *>(&args)...};
         ReturnType result;
 
-        ffi_call(&cif_, FFI_FN(funcPtr), &result, argsArray);
+        ffi_call(&cif_, FFI_FN(funcPtr), &result, argsArray.data());
         return result;
     }
 
@@ -84,14 +90,14 @@ private:
 
 class DynamicLibrary : public NonCopyable {
 public:
-    explicit DynamicLibrary(const std::string &libraryPath) : handle_(nullptr) {
+    explicit DynamicLibrary(std::string_view libraryPath) : handle_(nullptr) {
 #ifdef _MSC_VER
-        handle_ = LoadLibrary(libraryPath.c_str());
+        handle_ = LoadLibraryA(libraryPath.data());
 #else
-        handle_ = dlopen(libraryPath.c_str(), RTLD_LAZY);
+        handle_ = dlopen(libraryPath.data(), RTLD_LAZY);
 #endif
         if (!handle_) {
-            throw FFIException("Failed to load dynamic library.");
+            THROW_FFI_EXCEPTION("Failed to load dynamic library.");
         }
     }
 
@@ -106,24 +112,25 @@ public:
     }
 
     template <typename FuncType>
-    void addFunction(const std::string &functionName) {
+    void addFunction(std::string_view functionName) {
 #ifdef _MSC_VER
         void *funcPtr =
-            (void *)GetProcAddress((HMODULE)handle_, functionName.c_str());
+            (void *)GetProcAddress((HMODULE)handle_, functionName.data());
 #else
-        void *funcPtr = dlsym(handle_, functionName.c_str());
+        void *funcPtr = dlsym(handle_, functionName.data());
 #endif
         if (!funcPtr) {
-            throw FFIException("Failed to find symbol.");
+            THROW_FFI_EXCEPTION("Failed to find symbol.");
         }
-        functionMap_[functionName] = funcPtr;
+        functionMap_[std::string(functionName)] = funcPtr;
     }
 
     template <typename ReturnType, typename... Args>
-    ReturnType callFunction(const std::string &functionName, Args... args) {
-        auto it = functionMap_.find(functionName);
+    std::optional<ReturnType> callFunction(std::string_view functionName,
+                                           Args... args) {
+        auto it = functionMap_.find(std::string(functionName));
         if (it == functionMap_.end()) {
-            throw FFIException("Function not found in the library.");
+            return std::nullopt;
         }
 
         void *funcPtr = it->second;

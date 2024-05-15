@@ -22,6 +22,8 @@ Description: Better Exception Library
 #include <string>
 #include <thread>
 
+#include "stacktrace.hpp"
+
 namespace atom::error {
 
 /**
@@ -90,12 +92,6 @@ private:
      */
     std::string getCurrentTime() const;
 
-    /**
-     * @brief Gets the stack trace when the exception occurred.
-     * @return The stack trace when the exception occurred.
-     */
-    std::string getStackTrace() const;
-
     std::string file_; /**< The file where the exception occurred. */
     int line_; /**< The line number in the file where the exception occurred. */
     std::string func_;    /**< The function where the exception occurred. */
@@ -104,6 +100,7 @@ private:
         full_message_; /**< The full message including additional context. */
     std::thread::id
         thread_id_; /**< The ID of the thread where the exception occurred. */
+    StackTrace stack_trace_;
 };
 
 #define THROW_EXCEPTION(...) \

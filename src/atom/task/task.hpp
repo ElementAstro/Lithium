@@ -234,6 +234,12 @@ public:
      */
     virtual json execute();
 
+    int getPriority() const { return priority; }
+    bool getStatus() const { return status; }
+
+    void setPriority(int pri) { priority = pri; }
+    void setStatus(bool sta) { status = sta; }
+
     std::function<json(const json &)> m_function;
     json m_paramsTemplate;
     json m_params;
@@ -246,6 +252,8 @@ public:
     std::string m_name;
     std::string m_description;
     bool m_canExecute;
+    int priority;
+    bool status;
 };
 
 #endif

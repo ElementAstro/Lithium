@@ -24,6 +24,7 @@ set(${PROJECT_NAME}_SOURCES
 
     src/debayer.cpp
     src/fitsio.cpp
+    src/fitskeyword.cpp
     src/hfr.cpp
     src/hist.cpp
     src/stack.cpp
@@ -35,6 +36,7 @@ set(${PROJECT_NAME}_SOURCES
 set(${PROJECT_NAME}_HEADERS
     include/debayer.hpp
     include/fitsio.hpp
+    include/fitskeyword.hpp
     include/hfr.hpp
     include/hist.hpp
     include/stack.hpp

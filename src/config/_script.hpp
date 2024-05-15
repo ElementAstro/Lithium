@@ -20,7 +20,7 @@ Description: Carbon Binding of ConfigManager
 #include "configor.hpp"
 
 #include "atom/log/loguru.hpp"
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
 
 namespace lithium::_Script::Config {
 /**

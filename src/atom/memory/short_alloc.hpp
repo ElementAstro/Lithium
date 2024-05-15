@@ -12,237 +12,239 @@ Description: Short Alloc from Howard Hinnant
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_SHORT_ALLOC_HPP
-#define ATOM_EXPERIMENT_SHORT_ALLOC_HPP
+#ifndef ATOM_MEMORY_SHORT_ALLOC_HPP
+#define ATOM_MEMORY_SHORT_ALLOC_HPP
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <iostream>
+#include <memory>
+#include <type_traits>
 
 /**
- * @brief A fixed-size memory arena for allocating memory with aligned
- * addresses.
+ * @brief A fixed-size memory arena for allocating objects with a specific
+ * alignment.
  *
- * @tparam N The size of the arena buffer.
- * @tparam alignment The alignment requirement for memory allocation.
+ * This class provides a fixed-size memory arena for allocating objects of
+ * arbitrary types with a specific alignment. Memory is allocated from a
+ * pre-allocated buffer of size N. Allocations are aligned to the specified
+ * alignment. This class does not support dynamic resizing of the underlying
+ * buffer.
+ *
+ * @tparam N The size of the fixed-size memory arena in bytes.
+ * @tparam alignment The alignment requirement for memory allocations. Defaults
+ * to alignof(std::max_align_t).
  */
 template <std::size_t N, std::size_t alignment = alignof(std::max_align_t)>
 class arena {
-    alignas(alignment) char buf_[N]; /**< The buffer for memory allocation. */
-    char *ptr_; /**< Pointer to the next available memory location. */
+    alignas(alignment) char buf_[N];
+    char* ptr_;
 
 public:
-    ~arena() { ptr_ = nullptr; }     /**< Destructor. */
-    arena() noexcept : ptr_(buf_) {} /**< Default constructor. */
-    arena(const arena &) = delete;   /**< Copy constructor (deleted). */
-    arena &operator=(const arena &) =
-        delete; /**< Copy assignment operator (deleted). */
+    ~arena() { ptr_ = nullptr; }
+    arena() noexcept : ptr_(buf_) {}
+    arena(const arena&) = delete;
+    arena& operator=(const arena&) = delete;
 
     /**
-     * @brief Allocates memory from the arena with the specified alignment.
+     * @brief Allocates memory for an object with the specified size and
+     * alignment.
      *
-     * @tparam ReqAlign The required alignment for the allocated memory.
-     * @param n The number of bytes to allocate.
-     * @return Pointer to the allocated memory.
+     * @param n The size of the object to allocate.
+     * @return A pointer to the allocated memory, or nullptr if the allocation
+     * fails.
+     * @throws std::bad_alloc if the allocation fails due to insufficient space
+     * in the arena.
      */
-    template <std::size_t ReqAlign>
-    char *allocate(std::size_t n);
+    void* allocate(std::size_t n) {
+        std::size_t space = N - used();
+        void* result = ptr_;
+        if (!std::align(alignment, n, result, space)) {
+            throw std::bad_alloc();
+        }
+        ptr_ = static_cast<char*>(result) + n;
+        return result;
+    }
 
     /**
-     * @brief Deallocates memory previously allocated from the arena.
+     * @brief Deallocates memory previously allocated with allocate().
      *
-     * @param p Pointer to the memory block to deallocate.
-     * @param n The number of bytes to deallocate.
+     * @param p A pointer to the memory to deallocate.
+     * @param n The size of the object that was deallocated.
      */
-    void deallocate(char *p, std::size_t n) noexcept;
+    void deallocate(void* p, std::size_t n) noexcept {
+        // Only assert if the deallocation is exactly at the top of the stack
+        if (static_cast<char*>(p) + n == ptr_) {
+            ptr_ = static_cast<char*>(p);
+        }
+    }
 
     /**
-     * @brief Gets the total size of the arena buffer.
+     * @brief Returns the total size of the arena.
      *
-     * @return The size of the arena buffer.
+     * @return The total size of the arena in bytes.
      */
     static constexpr std::size_t size() noexcept { return N; }
 
     /**
-     * @brief Gets the amount of memory used in the arena.
+     * @brief Returns the amount of memory used in the arena.
      *
-     * @return The number of bytes used in the arena.
+     * @return The amount of memory used in the arena in bytes.
      */
     std::size_t used() const noexcept {
         return static_cast<std::size_t>(ptr_ - buf_);
     }
 
     /**
-     * @brief Resets the arena, making all allocated memory available for reuse.
+     * @brief Resets the arena to its initial state, deallocating all memory.
      */
     void reset() noexcept { ptr_ = buf_; }
 
 private:
     /**
-     * @brief Rounds up the size to the nearest multiple of the alignment.
+     * @brief Checks if a pointer is within the buffer of the arena.
      *
-     * @param n The size to round up.
-     * @return The rounded-up size.
+     * @param p The pointer to check.
+     * @return true if the pointer is within the arena's buffer, false
+     * otherwise.
      */
-    static constexpr std::size_t align_up(std::size_t n) noexcept {
-        return (n + (alignment - 1)) & ~(alignment - 1);
-    }
-
-    /**
-     * @brief Checks if a pointer is within the arena buffer.
-     *
-     * @param p Pointer to check.
-     * @return True if the pointer is within the arena buffer, otherwise false.
-     */
-    bool pointer_in_buffer(char *p) noexcept {
+    bool pointer_in_buffer(char* p) noexcept {
         return buf_ <= p && p <= buf_ + N;
     }
 };
 
 /**
- * @brief A memory allocator adapter for using the arena as a memory pool.
+ * @brief A simple allocator that uses a fixed-size memory arena for
+ * allocations.
+ *
+ * This allocator provides a way to use a fixed-size memory arena for dynamic
+ * allocations, eliminating the need for dynamic memory allocation from the
+ * heap. It is useful in scenarios where memory allocation performance or
+ * fragmentation is a concern.
  *
  * @tparam T The type of objects to allocate.
- * @tparam N The size of the arena buffer.
- * @tparam Align The alignment requirement for memory allocation.
+ * @tparam N The size of the fixed-size memory arena in bytes.
+ * @tparam Align The alignment requirement for memory allocations. Defaults to
+ * alignof(std::max_align_t).
  */
 template <class T, std::size_t N, std::size_t Align = alignof(std::max_align_t)>
 class short_alloc {
 public:
-    using value_type = T; /**< The type of objects to allocate. */
-    static auto constexpr alignment =
-        Align; /**< The alignment requirement for memory allocation. */
-    static auto constexpr size = N; /**< The size of the arena buffer. */
-    using arena_type =
-        arena<size, alignment>; /**< The type of the underlying arena. */
+    using value_type = T;
+    static constexpr auto alignment = Align;
+    static constexpr auto size = N;
+    using arena_type = arena<N, Align>;
 
 private:
-    arena_type &a_; /**< Reference to the underlying arena. */
+    arena_type& a_;
 
 public:
-    short_alloc(const short_alloc &) =
-        default; /**< Copy constructor (defaulted). */
-    short_alloc &operator=(const short_alloc &) =
-        delete; /**< Copy assignment operator (deleted). */
-
     /**
-     * @brief Constructs the short_alloc with the specified arena.
+     * @brief Constructs a short_alloc object using the specified arena.
      *
-     * @param a Reference to the arena to use for allocation.
+     * @param a The arena to use for allocations.
      */
-    explicit short_alloc(arena_type &a) noexcept : a_(a) {
-        static_assert(size % alignment == 0,
-                      "size N needs to be a multiple of alignment Align");
-    }
+    short_alloc(arena_type& a) noexcept : a_(a) {}
 
     /**
-     * @brief Constructs the short_alloc with the specified arena of a different
-     * type.
+     * @brief Constructs a short_alloc object by copying another short_alloc
+     * object.
      *
-     * @tparam U The type of objects allocated by the other short_alloc.
-     * @param a Reference to the other short_alloc's arena.
+     * @tparam U The type of objects allocated by the other allocator.
+     * @param a The other short_alloc object to copy from.
      */
     template <class U>
-    explicit short_alloc(const short_alloc<U, N, alignment> &a) noexcept
-        : a_(a.a_) {}
+    short_alloc(const short_alloc<U, N, alignment>& a) noexcept : a_(a.a_) {}
 
     /**
      * @brief Allocates memory for an object of type T.
      *
-     * @param n Number of objects to allocate memory for.
-     * @return Pointer to the allocated memory.
+     * @param n The number of objects to allocate.
+     * @return A pointer to the allocated memory.
      */
-    T *allocate(std::size_t n) {
-        return reinterpret_cast<T *>(
-            a_.template allocate<alignof(T)>(n * sizeof(T)));
+    T* allocate(std::size_t n) {
+        return static_cast<T*>(a_.allocate(n * sizeof(T)));
     }
 
     /**
-     * @brief Deallocates memory previously allocated for objects of type T.
+     * @brief Deallocates memory previously allocated with allocate().
      *
-     * @param p Pointer to the memory block to deallocate.
-     * @param n Number of objects to deallocate memory for.
+     * @param p A pointer to the memory to deallocate.
+     * @param n The number of objects that were deallocated.
      */
-    void deallocate(T *p, std::size_t n) noexcept {
-        a_.deallocate(reinterpret_cast<char *>(p), n * sizeof(T));
+    void deallocate(T* p, std::size_t n) noexcept {
+        a_.deallocate(p, n * sizeof(T));
     }
 
     /**
-     * @brief Nested type alias for rebind.
+     * @brief Defines an alternative allocator for a different type.
      *
-     * @tparam _Up The new type to rebind to.
+     * @tparam U The type of objects to allocate with the rebinded allocator.
      */
-    template <class _Up>
+    template <class U>
     struct rebind {
-        using other = short_alloc<_Up, N, alignment>;
+        using other = short_alloc<U, N, Align>;
     };
 
-    /**
-     * @brief Equality comparison operator.
-     *
-     * @tparam T1 The type of objects allocated by the left short_alloc.
-     * @tparam N1 The size of the arena buffer for the left short_alloc.
-     * @tparam A1 The alignment requirement for the left short_alloc.
-     * @tparam U The type of objects allocated by the right short_alloc.
-     * @tparam M The size of the arena buffer for the right short_alloc.
-     * @tparam A2 The alignment requirement for the right short_alloc.
-     * @param x The left short_alloc.
-     * @param y The right short_alloc.
-     * @return True if the short_allocs are equal, otherwise false.
-     */
+    // Friendship declarations
     template <class T1, std::size_t N1, std::size_t A1, class U, std::size_t M,
               std::size_t A2>
-    friend bool operator==(const short_alloc<T1, N1, A1> &x,
-                           const short_alloc<U, M, A2> &y) noexcept;
+    friend bool operator==(const short_alloc<T1, N1, A1>& x,
+                           const short_alloc<U, M, A2>& y) noexcept;
 
-    /**
-     * @brief Friendship declaration for the rebind struct.
-     *
-     * @tparam U The type of objects allocated by the other short_alloc.
-     * @tparam M The size of the arena buffer for the other short_alloc.
-     * @tparam A2 The alignment requirement for the other short_alloc.
-     */
     template <class U, std::size_t M, std::size_t A2>
     friend class short_alloc;
 };
 
 /**
- * @brief Equality comparison operator for short_alloc.
+ * @brief Checks if two short_alloc objects are equal.
  *
- * @tparam T The type of objects allocated by the left short_alloc.
- * @tparam N The size of the arena buffer for the left short_alloc.
- * @tparam A1 The alignment requirement for the left short_alloc.
- * @tparam U The type of objects allocated by the right short_alloc.
- * @tparam M The size of the arena buffer for the right short_alloc.
- * @tparam A2 The alignment requirement for the right short_alloc.
- * @param x The left short_alloc.
- * @param y The right short_alloc.
- * @return True if the short_allocs are equal, otherwise false.
+ * Two short_alloc objects are considered equal if they have the same size,
+ * alignment, and are using the same underlying arena.
+ *
+ * @tparam T The type of objects allocated by the first allocator.
+ * @tparam N The size of the fixed-size memory arena for the first allocator.
+ * @tparam A1 The alignment requirement for memory allocations by the first
+ * allocator.
+ * @tparam U The type of objects allocated by the second allocator.
+ * @tparam M The size of the fixed-size memory arena for the second allocator.
+ * @tparam A2 The alignment requirement for memory allocations by the second
+ * allocator.
+ * @param x The first short_alloc object.
+ * @param y The second short_alloc object.
+ * @return true if the two short_alloc objects are equal, false otherwise.
  */
 template <class T, std::size_t N, std::size_t A1, class U, std::size_t M,
           std::size_t A2>
-inline bool operator==(const short_alloc<T, N, A1> &x,
-                       const short_alloc<U, M, A2> &y) noexcept {
+inline bool operator==(const short_alloc<T, N, A1>& x,
+                       const short_alloc<U, M, A2>& y) noexcept {
     return N == M && A1 == A2 && &x.a_ == &y.a_;
 }
 
 /**
- * @brief Inequality comparison operator for short_alloc.
+ * @brief Checks if two short_alloc objects are not equal.
  *
- * @tparam T The type of objects allocated by the left short_alloc.
- * @tparam N The size of the arena buffer for the left short_alloc.
- * @tparam A1 The alignment requirement for the left short_alloc.
- * @tparam U The type of objects allocated by the right short_alloc.
- * @tparam M The size of the arena buffer for the right short_alloc.
- * @tparam A2 The alignment requirement for the right short_alloc.
- * @param x The left short_alloc.
- * @param y The right short_alloc.
- * @return True if the short_allocs are not equal, otherwise false.
+ * Two short_alloc objects are considered not equal if they have different
+ * sizes, alignments, or are using different underlying arenas.
+ *
+ * @tparam T The type of objects allocated by the first allocator.
+ * @tparam N The size of the fixed-size memory arena for the first allocator.
+ * @tparam A1 The alignment requirement for memory allocations by the first
+ * allocator.
+ * @tparam U The type of objects allocated by the second allocator.
+ * @tparam M The size of the fixed-size memory arena for the second allocator.
+ * @tparam A2 The alignment requirement for memory allocations by the second
+ * allocator.
+ * @param x The first short_alloc object.
+ * @param y The second short_alloc object.
+ * @return true if the two short_alloc objects are not equal, false otherwise.
  */
 template <class T, std::size_t N, std::size_t A1, class U, std::size_t M,
           std::size_t A2>
-inline bool operator!=(const short_alloc<T, N, A1> &x,
-                       const short_alloc<U, M, A2> &y) noexcept {
+inline bool operator!=(const short_alloc<T, N, A1>& x,
+                       const short_alloc<U, M, A2>& y) noexcept {
     return !(x == y);
 }
 
-#endif  // ATOM_EXPERIMENT_SHORT_ALLOC_HPP
+#endif  // ATOM_MEMORY_SHORT_ALLOC_HPP

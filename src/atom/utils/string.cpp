@@ -125,21 +125,19 @@ bool endsWith(std::string_view str, std::string_view suffix) {
 
 std::vector<std::string_view> splitString(const std::string &str,
                                           char delimiter) {
-    std::vector<std::string_view> result;
-    std::string_view view(str);
-    size_t pos = 0;
+    std::vector<std::string_view> tokens;
+    auto start = str.begin();
+    auto end = str.end();
 
-    while (true) {
-        size_t next_pos = view.find(delimiter, pos);
-        if (next_pos == std::string_view::npos) {
-            result.emplace_back(view.substr(pos));
+    while (start != end) {
+        auto next = std::find(start, end, delimiter);
+        tokens.emplace_back(str.substr(start - str.begin(), next - start));
+        if (next == end)
             break;
-        }
-        result.emplace_back(view.substr(pos, next_pos - pos));
-        pos = next_pos + 1;
+        start = next + 1;
     }
 
-    return result;
+    return tokens;
 }
 
 std::string joinStrings(const std::vector<std::string_view> &strings,
@@ -180,8 +178,7 @@ std::string replaceStrings(
     return result;
 }
 
-std::vector<std::string> SVVtoSV(const std::vector<std::string_view> &svv)
-{
+std::vector<std::string> SVVtoSV(const std::vector<std::string_view> &svv) {
     return std::vector<std::string>(svv.begin(), svv.end());
 }
 

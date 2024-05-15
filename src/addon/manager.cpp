@@ -24,7 +24,7 @@ Description: Component Manager (the core of the plugin system)
 #include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/utils/ranges.hpp"
 #include "atom/utils/string.hpp"
 

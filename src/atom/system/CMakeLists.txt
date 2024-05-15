@@ -22,6 +22,7 @@ set(${PROJECT_NAME}_SOURCES
     command.cpp
     crash_quotes.cpp
     crash.cpp
+    env.cpp
     lregistry.cpp
     os.cpp
     pidwatcher.cpp
@@ -46,6 +47,7 @@ set(${PROJECT_NAME}_HEADERS
     command.hpp
     crash_quotes.hpp
     crash.hpp
+    env.hpp
     os.hpp
     pidwatcher.hpp
     platform.hpp

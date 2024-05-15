@@ -15,7 +15,7 @@ Description: Tick Sheduler, just like Minecraft's
 #include "tick.hpp"
 
 #include "atom/log/loguru.hpp"
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/utils/stopwatcher.hpp"
 
 namespace lithium {

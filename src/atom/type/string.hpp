@@ -277,11 +277,7 @@ private:
  * @param rhs - right operand.
  * @return - result.
  */
-String operator+(const String &lhs, const String &rhs) {
-    String result(lhs);
-    result += rhs;
-    return result;
-}
+String operator+(const String &lhs, const String &rhs);
 
 /**
  * @brief Output stream operator.

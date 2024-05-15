@@ -67,3 +67,24 @@ std::unordered_set<std::string> CommandDispatcher::getCommandAliases(
     }
     return {};
 }
+
+std::any CommandDispatcher::dispatch(const std::string& name,
+                                     const std::vector<std::any>& args) {
+    return dispatchHelper(name, args);
+}
+
+std::vector<std::string> CommandDispatcher::getAllCommands() const {
+    std::vector<std::string> result;
+    for (const auto& pair : commands) {
+        result.push_back(pair.first);
+    }
+    // Max: Add aliases to the result vector
+    for (const auto& command : commands) {
+        for (const auto& alias : command.second.aliases) {
+            result.push_back(alias);
+        }
+    }
+    auto it = std::unique(result.begin(), result.end());
+    result.erase(it, result.end());
+    return result;
+}

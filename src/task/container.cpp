@@ -69,7 +69,6 @@ std::vector<std::shared_ptr<SimpleTask>> TaskContainer::findTasks(int priority,
                                                                   bool status) {
     std::lock_guard lock(mutex);
     std::vector<std::shared_ptr<SimpleTask>> result;
-    std::vector<std::shared_ptr<SimpleTask>> result;
     for (const auto &[key, task] : tasks) {
         if (task->getPriority() == priority && task->getStatus() == status) {
             result.push_back(task);

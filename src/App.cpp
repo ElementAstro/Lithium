@@ -17,7 +17,7 @@ Description: Main Entry
 #include "preload.hpp"
 
 #include "atom/log/loguru.hpp"
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
 
@@ -25,7 +25,7 @@ Description: Main Entry
 #define ENABLE_TERMINAL 1
 #if ENABLE_TERMINAL
 #include "debug/terminal.hpp"
-using namespace lithium::Terminal;
+using namespace lithium::debug;
 #endif
 
 #include "server/App.hpp"

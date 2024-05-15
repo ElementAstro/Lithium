@@ -30,11 +30,14 @@ public:
     scoped_ptr& operator=(const scoped_ptr&) = delete;
 
     // Move constructor
-    scoped_ptr(scoped_ptr&& other) noexcept : ptr_(other.release()) {}
+    scoped_ptr(scoped_ptr&& other) noexcept
+        : ptr_(std::exchange(other.ptr_, nullptr)) {}
 
     // Move assignment operator
     scoped_ptr& operator=(scoped_ptr&& other) noexcept {
-        reset(other.release());
+        if (this != &other) {
+            reset(std::exchange(other.ptr_, nullptr));
+        }
         return *this;
     }
 
@@ -44,27 +47,41 @@ public:
     // Reset the managed object
     void reset(T* ptr = nullptr) noexcept {
         if (ptr_ != ptr) {
-            D()(ptr_);
-            ptr_ = ptr;
+            D()(std::exchange(ptr_, ptr));
         }
     }
 
     // Release ownership of the managed object
-    T* release() noexcept { return std::exchange(ptr_, nullptr); }
+    [[nodiscard]] T* release() noexcept { return std::exchange(ptr_, nullptr); }
 
     // Get the managed object
-    T* get() const noexcept { return ptr_; }
+    [[nodiscard]] T* get() const noexcept { return ptr_; }
 
     // Dereference operators
-    T& operator*() const noexcept { return *ptr_; }
-
-    T* operator->() const noexcept { return ptr_; }
+    [[nodiscard]] T& operator*() const noexcept { return *ptr_; }
+    [[nodiscard]] T* operator->() const noexcept { return ptr_; }
 
     // Conversion to bool for checking if non-null
-    explicit operator bool() const noexcept { return ptr_ != nullptr; }
+    [[nodiscard]] explicit operator bool() const noexcept {
+        return ptr_ != nullptr;
+    }
+
+    // Swap two scoped_ptr objects
+    void swap(scoped_ptr& other) noexcept { std::swap(ptr_, other.ptr_); }
+
+    // Make a new scoped_ptr from the given pointer
+    [[nodiscard]] static scoped_ptr make_scoped(T* ptr) {
+        return scoped_ptr(ptr);
+    }
 
 private:
     T* ptr_ = nullptr;
 };
+
+// Non-member swap function
+template <typename T, typename D>
+void swap(scoped_ptr<T, D>& lhs, scoped_ptr<T, D>& rhs) noexcept {
+    lhs.swap(rhs);
+}
 
 #endif

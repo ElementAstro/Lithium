@@ -1,18 +1,17 @@
+/**
+ * @file terminal.hpp
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ * @date 2024-5-15
+ * @brief Command Terminal
+ */
+
 #ifndef LITHIUM_DEBUG_TERMINAL_HPP
 #define LITHIUM_DEBUG_TERMINAL_HPP
 
-#include <algorithm>
-#include <chrono>
-#include <ctime>
-#include <deque>
-#include <filesystem>
-#include <fstream>
+#include <any>
 #include <functional>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <optional>
-#include <sstream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -24,85 +23,54 @@
 #include <unistd.h>
 #endif
 
-namespace lithium {
-class ComponentManager;
-}
+#include "atom/components/dispatch.hpp"
 
-namespace lithium::Terminal {
-namespace fs = std::filesystem;
-
-class SuggestionEngine {
-public:
-    SuggestionEngine(const std::vector<std::string>& dataset,
-                     int maxSuggestions = 5);
-
-    std::vector<std::string> suggest(const std::string& input);
-
-private:
-    void buildIndex();
-
-    int calculateScore(const std::string& input, const std::string& item);
-
-    std::unordered_map<std::string, std::string> index_;
-    std::vector<std::string> dataset_;
-    int maxSuggestions_;
-};
-
+namespace lithium::debug {
+class SuggestionEngine;  // Forwards declaration
 class ConsoleTerminal {
 public:
-    using CommandFunction =
-        std::function<void(const std::vector<std::string>&)>;
-
     ConsoleTerminal();
     ~ConsoleTerminal();
 
-    void registerCommand(std::string_view name, CommandFunction func);
+    template <typename Ret>
+    void def(const std::string& name, Ret (*func)(),
+             const std::string& group = "",
+             const std::string& description = "") {
+        commandDispatcher.lock()->def(name, func, group, description);
+    }
 
-    template <typename Class>
-    void registerMemberCommand(
-        std::string_view name, Class* instance,
-        void (Class::*memFunc)(const std::vector<std::string>&)) {
-        registerCommand(
-            name, [instance, memFunc](const std::vector<std::string>& args) {
-                (instance->*memFunc)(args);
-            });
+    template <typename... Args, typename Ret>
+    void def(const std::string& name, Ret (*func)(Args...),
+             const std::string& group = "",
+             const std::string& description = "") {
+        commandDispatcher.lock()->def(name, func, group, description);
+    }
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "") {
+        commandDispatcher.lock()->def(name, func, instance, group, description);
     }
 
     [[nodiscard]] std::vector<std::string> getRegisteredCommands() const;
     void callCommand(std::string_view name,
-                     const std::vector<std::string>& args);
+                                      const std::vector<std::any>& args);
     void run();
 
 protected:
     void helpCommand(const std::vector<std::string>& args);
-    void echoCommand(const std::vector<std::string>& args);
-    void pwdCommand(const std::vector<std::string>& args);
-    void cdCommand(const std::vector<std::string>& args);
-    void listDirectory(const std::vector<std::string>& args);
-    void createFile(const std::vector<std::string>& args);
-    void deleteFile(const std::vector<std::string>& args);
-    void createDirectory(const std::vector<std::string>& args);
-    void deleteDirectory(const std::vector<std::string>& args);
-    void moveFile(const std::vector<std::string>& args);
-    void copyFile(const std::vector<std::string>& args);
-    void showDateTime(const std::vector<std::string>& args);
-    void setDateTime(const std::vector<std::string>& args);
-
-    void loadComponent(const std::vector<std::string>& args);
-    void unloadComponent(const std::vector<std::string>& args);
-    void reloadComponent(const std::vector<std::string>& args);
-    void reloadAllComponents(const std::vector<std::string>& args);
-    void listComponents(const std::vector<std::string>& args);
-    void getComponentInfo(const std::vector<std::string>& args);
 
 private:
     void printHeader();
     void clearConsole();
 
-    std::unordered_map<std::string, CommandFunction> commandMap;
+    std::vector<std::any> parseArguments(const std::string& input);
+
     static constexpr int MAX_HISTORY_SIZE = 100;
 
-    std::weak_ptr<lithium::ComponentManager> componentManager;
+    std::weak_ptr<CommandDispatcher> commandDispatcher;
 
     std::unique_ptr<SuggestionEngine> suggestionEngine;
 
@@ -113,6 +81,6 @@ private:
 #endif
 };
 
-}  // namespace lithium::Terminal
+}  // namespace lithium::debug
 
 #endif  // LITHIUM_DEBUG_TERMINAL_HPP

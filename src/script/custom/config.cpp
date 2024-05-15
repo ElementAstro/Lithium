@@ -16,7 +16,7 @@ Description: Config module for PocketPy(builtin)
 using namespace pkpy;
 
 #include "atom/log/loguru.hpp"
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/system/system.hpp"
 #include "atom/type/json.hpp"
 #include "config/configor.hpp"

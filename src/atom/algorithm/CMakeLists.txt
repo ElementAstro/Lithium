@@ -14,6 +14,8 @@ set(${PROJECT_NAME}_SOURCES
     algorithm.cpp
     base.cpp
     convolve.cpp
+    fbase.cpp
+    fnmatch.cpp
     fraction.cpp
     huffman.cpp
     math.cpp
@@ -27,7 +29,10 @@ set(${PROJECT_NAME}_HEADERS
     algorithm.hpp
     algorithm.inl
     base.hpp
+    calculator.hpp
     convolve.hpp
+    fbase.hpp
+    fnmatch.hpp
     fraction.hpp
     hash.hpp
     huffman.hpp

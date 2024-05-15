@@ -13,6 +13,7 @@ project(atom-type C CXX)
 set(${PROJECT_NAME}_SOURCES
     ini.cpp
     message.cpp
+    string.cpp
 )
 
 # Headers
@@ -27,6 +28,7 @@ set(${PROJECT_NAME}_HEADERS
     message.hpp
     pointer.hpp
     small_vector.hpp
+    string.hpp
 )
 
 # Build Object Library

@@ -71,7 +71,7 @@ public:
 };
 
 // Helper function to call methods dynamically
-BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
+inline BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
                        std::vector<BoxedValue> args) {
     auto metadata =
         TypeRegistry::instance().get_metadata(obj.get_type_info().name());
@@ -86,7 +86,7 @@ BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
 }
 
 // Helper function to get/set properties dynamically
-BoxedValue get_property(BoxedValue& obj, const std::string& property_name) {
+inline BoxedValue get_property(BoxedValue& obj, const std::string& property_name) {
     auto metadata =
         TypeRegistry::instance().get_metadata(obj.get_type_info().name());
     if (metadata) {
@@ -98,7 +98,7 @@ BoxedValue get_property(BoxedValue& obj, const std::string& property_name) {
     THROW_NOT_FOUND("Property not found");
 }
 
-void set_property(BoxedValue& obj, const std::string& property_name,
+inline void set_property(BoxedValue& obj, const std::string& property_name,
                   const BoxedValue& value) {
     auto metadata =
         TypeRegistry::instance().get_metadata(obj.get_type_info().name());

@@ -14,21 +14,11 @@ Description: A super enhanced string class.
 
 #include "string.hpp"
 
-const size_t String::npos = -1;
-
 String::String(const char *str) : m_data(str) {}
 
 String::String(std::string_view str) : m_data(str) {}
 
 String::String(const std::string &str) : m_data(str) {}
-
-String::String(const String &other) = default;
-
-String::String(String &&other) noexcept = default;
-
-String &String::operator=(const String &other) = default;
-
-String &String::operator=(String &&other) noexcept = default;
 
 bool String::operator==(const String &other) const {
     return m_data == other.m_data;
@@ -75,11 +65,11 @@ const char *String::c_str() const { return m_data.c_str(); }
 
 size_t String::length() const { return m_data.length(); }
 
-String String::substr(size_t pos, size_t count = std::string::npos) const {
+String String::substr(size_t pos, size_t count) const {
     return m_data.substr(pos, count);
 }
 
-size_t String::find(const String &str, size_t pos = 0) const {
+size_t String::find(const String &str, size_t pos) const {
     return m_data.find(str.m_data, pos);
 }
 
@@ -151,7 +141,7 @@ String String::join(const std::vector<String> &strings,
 
 void String::insert(size_t pos, char c) { m_data.insert(pos, 1, c); }
 
-void String::erase(size_t pos = 0, size_t count = std::string::npos) {
+void String::erase(size_t pos, size_t count) {
     m_data.erase(pos, count);
 }
 

@@ -73,7 +73,7 @@ public:
 
 private:
     std::weak_ptr<TaskPool> m_TaskPool;
-    std::weak_ptr<atom::server::MessageBus> m_MessageBus;
+    std::weak_ptr<atom::async::MessageBus> m_MessageBus;
     std::weak_ptr<atom::error::ErrorStack> m_ErrorStack;
     std::weak_ptr<ComponentManager> m_ComponentManager;
     std::weak_ptr<TaskManager> m_TaskManager;

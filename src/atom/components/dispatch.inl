@@ -45,133 +45,134 @@ void CommandDispatcher::def(
 }
 
 template <typename Callable>
-void CommandDispatcher::def(const std::string& name,
-                                        Callable&& func,
-                                        const std::string& group,
-                                        const std::string& description) {
-    def(name, group, description,
-                    std::function(std::forward<Callable>(func)));
+void CommandDispatcher::def(const std::string& name, Callable&& func,
+                            const std::string& group,
+                            const std::string& description) {
+    def(name, group, description, std::function(std::forward<Callable>(func)));
 }
 
 template <typename Ret>
-void def(const std::string& name, Ret (*func)(),
-                     const std::string& group = "",
-                     const std::string& description = "") {
+void CommandDispatcher::def(const std::string& name, Ret (*func)(),
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description, std::function<Ret()>(func));
 }
 
 template <typename... Args, typename Ret>
-void CommandDispatcher::def(const std::string& name,
-                                        Ret (*func)(Args...),
-                                        const std::string& group,
-                                        const std::string& description) {
+void CommandDispatcher::def(const std::string& name, Ret (*func)(Args...),
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description,
-                    std::function<Ret(Args...)>([func](Args... args) {
-                        return func(std::forward<Args>(args)...);
-                    }));
+        std::function<Ret(Args...)>([func](Args... args) {
+            return func(std::forward<Args>(args)...);
+        }));
 }
 
 template <typename Ret, typename Class>
-void CommandDispatcher::def(const std::string& name,
-                                        Ret (Class::*func)(),
-                                        std::shared_ptr<Class> instance,
-                                        const std::string& group,
-                                        const std::string& description) {
-    def(name, group, description,
-                    std::function<Ret()>([instance, func]() {
-                        return std::invoke(func, instance.get());
-                    }));
+void CommandDispatcher::def(const std::string& name, Ret (Class::*func)(),
+                            std::shared_ptr<Class> instance,
+                            const std::string& group,
+                            const std::string& description) {
+    def(name, group, description, std::function<Ret()>([instance, func]() {
+            return std::invoke(func, instance.get());
+        }));
 }
 
 template <typename... Args, typename Ret, typename Class>
 void CommandDispatcher::def(const std::string& name,
-                                        Ret (Class::*func)(Args...),
-                                        std::shared_ptr<Class> instance,
-                                        const std::string& group,
-                                        const std::string& description) {
+                            Ret (Class::*func)(Args...),
+                            std::shared_ptr<Class> instance,
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description,
-                    std::function<Ret(Args...)>([instance, func](Args... args) {
-                        return std::invoke(func, instance.get(),
-                                           std::forward<Args>(args)...);
-                    }));
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
 }
 
 template <typename... Args, typename Ret, typename Class>
 void CommandDispatcher::def(const std::string& name,
-                                        Ret (Class::*func)(Args...) const,
-                                        std::shared_ptr<Class> instance,
-                                        const std::string& group,
-                                        const std::string& description) {
+                            Ret (Class::*func)(Args...) const,
+                            std::shared_ptr<Class> instance,
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description,
-                    std::function<Ret(Args...)>([instance, func](Args... args) {
-                        return std::invoke(func, instance.get(),
-                                           std::forward<Args>(args)...);
-                    }));
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
 }
 
 template <typename Ret, typename Class>
-void def(const std::string& name, Ret (Class::*func)(),
-                     const PointerSentinel<Class>& instance,
-                     const std::string& group = "",
-                     const std::string& description = "") {
-    def(name, group, description,
-                    std::function<Ret()>([instance, func]() {
-                        return std::invoke(func, instance.get());
-                    }));
+void CommandDispatcher::def(const std::string& name, Ret (Class::*func)(),
+                            const PointerSentinel<Class>& instance,
+                            const std::string& group,
+                            const std::string& description) {
+    def(name, group, description, std::function<Ret()>([instance, func]() {
+            return std::invoke(func, instance.get());
+        }));
 }
 
 template <typename... Args, typename Ret, typename Class>
 void CommandDispatcher::def(const std::string& name,
-                                        Ret (Class::*func)(Args...),
-                                        const PointerSentinel<Class>& instance,
-                                        const std::string& group,
-                                        const std::string& description) {
+                            Ret (Class::*func)(Args...) const,
+                            const PointerSentinel<Class>& instance,
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description,
-                    std::function<Ret(Args...)>([instance, func](Args... args) {
-                        return std::invoke(func, instance.get(),
-                                           std::forward<Args>(args)...);
-                    }));
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
 }
 
 template <typename... Args, typename Ret, typename Class>
 void CommandDispatcher::def(const std::string& name,
-                                        Ret (Class::*func)(Args...) const,
-                                        const PointerSentinel<Class>& instance,
-                                        const std::string& group,
-                                        const std::string& description) {
+                            Ret (Class::*func)(Args...) noexcept,
+                            const PointerSentinel<Class>& instance,
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description,
-                    std::function<Ret(Args...)>([instance, func](Args... args) {
-                        return std::invoke(func, instance.get(),
-                                           std::forward<Args>(args)...);
-                    }));
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
 }
 
 template <typename... Args, typename Ret, typename Class>
-void CommandDispatcher::def(const std::string& name,
-                                        Ret (Class::*func)(Args...) noexcept,
-                                        const PointerSentinel<Class>& instance,
-                                        const std::string& group,
-                                        const std::string& description) {
+void CommandDispatcher::def(const std::string& name, Ret (*func)(Args...),
+                            const std::string& group,
+                            const std::string& description) {
     def(name, group, description,
-                    std::function<Ret(Args...)>([instance, func](Args... args) {
-                        return std::invoke(func, instance.get(),
-                                           std::forward<Args>(args)...);
-                    }));
-}
-
-template <typename... Args, typename Ret, typename Class>
-void CommandDispatcher::def(const std::string& name,
-                                        Ret (*func)(Args...),
-                                        const std::string& group,
-                                        const std::string& description) {
-    def(name, group, description,
-                    std::function<Ret(Args...)>([func](Args... args) {
-                        return func(std::forward<Args>(args)...);
-                    }));
+        std::function<Ret(Args...)>([func](Args... args) {
+            return func(std::forward<Args>(args)...);
+        }));
 }
 
 template <typename... Args>
 std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
+    auto argsTuple = std::make_tuple(std::forward<Args>(args)...);
+    auto argsVec = convertToArgsVector(std::move(argsTuple));
+    return dispatchHelper(name, argsVec);
+}
+
+template <typename... Args>
+std::vector<std::any> CommandDispatcher::convertToArgsVector(
+    std::tuple<Args...>&& tuple) {
+    std::vector<std::any> argsVec;
+    argsVec.reserve(sizeof...(Args));
+    std::apply(
+        [&argsVec](auto&&... args) {
+            ((argsVec.emplace_back(std::forward<decltype(args)>(args))), ...);
+        },
+        std::move(tuple));
+    return argsVec;
+}
+
+template <typename ArgsType>
+std::any CommandDispatcher::dispatchHelper(const std::string& name,
+                                           const ArgsType& args) {
     auto it = commands.find(name);
     if (it == commands.end()) {
         for (const auto& cmd : commands) {
@@ -183,25 +184,21 @@ std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
                               << "'?\n";
 #endif
                     it = commands.find(cmd.first);
+                    break;
                 }
             }
+            if (it != commands.end())
+                break;
         }
-        THROW_INVALID_ARGUMENT("Unknown command: " + name);
+        if (it == commands.end()) {
+            THROW_INVALID_ARGUMENT("Unknown command: " + name);
+        }
     }
 
     const auto& cmd = it->second;
     if (cmd.precondition.has_value() && !cmd.precondition.value()()) {
         THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
     }
-
-    auto argsTuple = std::make_tuple(std::forward<Args>(args)...);
-    std::vector<std::any> argsVec;
-    argsVec.reserve(sizeof...(Args));
-    std::apply(
-        [&argsVec](auto&&... args) {
-            ((argsVec.emplace_back(std::forward<decltype(args)>(args))), ...);
-        },
-        argsTuple);
 
     auto cacheIt = cacheMap.find(name);
     if (cacheIt != cacheMap.end()) {
@@ -213,10 +210,9 @@ std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
         auto future = std::async(std::launch::async, [&]() {
             for (const auto& func : cmd.funcs) {
                 try {
-                    // Max: 匹配找到的第一个，但是理论上来说不会有重复
-                    return func(argsVec);
+                    return func(args);
                 } catch (const std::bad_any_cast&) {
-                    // 参数类型不匹配,尝试下一个重载函数
+                    // 参数类型不匹配, 尝试下一个重载函数
                 }
             }
             return std::any{};
@@ -232,17 +228,17 @@ std::any CommandDispatcher::dispatch(const std::string& name, Args&&... args) {
     } else {
         for (const auto& func : cmd.funcs) {
             try {
-                auto result = func(argsVec);
+                auto result = func(args);
                 cacheMap[name] = result;
                 if (cmd.postcondition.has_value())
                     cmd.postcondition.value()();
                 return result;
             } catch (const std::bad_any_cast&) {
-                // 参数类型不匹配,尝试下一个重载函数
+                // 参数类型不匹配, 尝试下一个重载函数
             }
         }
         THROW_INVALID_ARGUMENT("No matching overload found for command: " +
-                                 name);
+                               name);
     }
 }
 

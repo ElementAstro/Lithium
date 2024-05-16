@@ -103,18 +103,18 @@ SystemComponent::SystemComponent(const std::string &name) : Component(name) {
     addVariable("os_version", os_version, "OS Version", "kernel_version", "os");
     addVariable("compiler", compiler, "Compiler", "builder", "os");
 
-    def("make_pidwatcher", &makePidWatcher, PointerSentinel(this),
+    def("make_pidwatcher", &SystemComponent::makePidWatcher, PointerSentinel(this),
                     "os", "Make a PID watcher");
-    def("start_watcher", &startPidWatcher, PointerSentinel(this),
+    def("start_watcher", &SystemComponent::startPidWatcher, PointerSentinel(this),
                     "os", "Start a PID watcher");
-    def("stop_watcher", &stopPidWatcher, PointerSentinel(this),
+    def("stop_watcher", &SystemComponent::stopPidWatcher, PointerSentinel(this),
                     "os", "Stop a PID watcher");
-    def("switch_watcher", &switchPidWatcher, PointerSentinel(this),
+    def("switch_watcher", &SystemComponent::switchPidWatcher, PointerSentinel(this),
                     "os", "Switch a PID watcher");
-    def("set_watcher_exit", &setPidWatcherExitCallback,
+    def("set_watcher_exit", &SystemComponent::setPidWatcherExitCallback,
                     PointerSentinel(this), "os",
                     "Set a PID watcher exit callback");
-    def("set_watcher_monitor", &setPidWatcherMonitorFunction,
+    def("set_watcher_monitor", &SystemComponent::setPidWatcherMonitorFunction,
                     PointerSentinel(this), "os",
                     "Set a PID watcher monitor callback");
 

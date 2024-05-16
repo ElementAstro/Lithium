@@ -132,113 +132,59 @@ public:
     // Function methods
     // -------------------------------------------------------------------
 
-    template <typename Ret, typename... Args>
-    void def(
-        const std::string& name, const std::string& group,
-        const std::string& description, std::function<Ret(Args...)> func,
-        std::optional<std::function<bool()>> precondition = std::nullopt,
-        std::optional<std::function<void()>> postcondition = std::nullopt) {
-        m_CommandDispatcher->def(name, group, description, func,
-                                             precondition, postcondition);
-    }
-
     template <typename Callable>
     void def(const std::string& name, Callable&& func,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, group, description);
-    }
+             const std::string& group = "",
+             const std::string& description = "");
 
     template <typename Ret>
     void def(const std::string& name, Ret (*func)(),
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, group, description);
-    }
+             const std::string& group = "",
+             const std::string& description = "");
 
     template <typename... Args, typename Ret>
     void def(const std::string& name, Ret (*func)(Args...),
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, group, description);
-    }
+             const std::string& group = "",
+             const std::string& description = "");
 
     template <typename Ret, typename Class>
     void def(const std::string& name, Ret (Class::*func)(),
-                         std::shared_ptr<Class> instance,
-                         const std::string& group,
-                         const std::string& description) {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-                         std::shared_ptr<Class> instance,
-                         const std::string& group = "",
-                         const std::string& description = "")
-
-    {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name,
-                         Ret (Class::*func)(Args...) const,
-                         std::shared_ptr<Class> instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
 
     template <typename Ret, typename Class>
     void def(const std::string& name, Ret (Class::*func)(),
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
 
     template <typename... Args, typename Ret, typename Class>
     void def(const std::string& name, Ret (Class::*func)(Args...),
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "")
-
-    {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
 
     template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name,
-                         Ret (Class::*func)(Args...) const,
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
+    void def(const std::string& name, Ret (Class::*func)(Args...) const,
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
 
     template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name,
-                         Ret (Class::*func)(Args...) noexcept,
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, instance, group,
-                                             description);
-    }
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
 
     template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (*func)(Args...),
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->def(name, func, group, description);
-    }
+    void def(const std::string& name, Ret (Class::*func)(Args...) const,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...) noexcept,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -250,6 +196,13 @@ public:
     std::any dispatch(const std::string& name, Args&&... args) {
         return m_CommandDispatcher->dispatch(name, std::forward<Args>(args)...);
     }
+
+    std::any dispatch(const std::string& name,
+                      const std::vector<std::any>& args) {
+        return m_CommandDispatcher->dispatch(name, args);
+    }
+
+    [[nodiscard]] bool has(const std::string& name) const;
 
     void clearCache();
 
@@ -266,6 +219,8 @@ public:
     std::unordered_set<std::string> getCommandAliases(
         const std::string& name) const;
 #endif
+
+    std::vector<std::string> getAllCommands() const;
 
     // -------------------------------------------------------------------
     // Other Components methods
@@ -304,5 +259,7 @@ private:
 
     std::unordered_map<std::string, std::weak_ptr<Component>> m_OtherComponents;
 };
+
+#include "component.inl"
 
 #endif

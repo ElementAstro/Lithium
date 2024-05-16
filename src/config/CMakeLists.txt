@@ -35,7 +35,7 @@ target_sources(${PROJECT_NAME}_OBJECT
 
 add_library(${PROJECT_NAME} STATIC)
 
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT)
 target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 

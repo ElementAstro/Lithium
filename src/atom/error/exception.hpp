@@ -112,6 +112,14 @@ private:
 // Common
 // -------------------------------------------------------------------
 
+class RuntimeError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_RUNTIME_ERROR(...) \
+    throw atom::error::RuntimeError(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
 class UnlawfulOperation : public Exception {
 public:
     using Exception::Exception;

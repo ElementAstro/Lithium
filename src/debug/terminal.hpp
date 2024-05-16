@@ -23,7 +23,7 @@
 #include <unistd.h>
 #endif
 
-#include "atom/components/dispatch.hpp"
+#include "atom/components/component.hpp"
 
 namespace lithium::debug {
 class SuggestionEngine;  // Forwards declaration
@@ -31,28 +31,6 @@ class ConsoleTerminal {
 public:
     ConsoleTerminal();
     ~ConsoleTerminal();
-
-    template <typename Ret>
-    void def(const std::string& name, Ret (*func)(),
-             const std::string& group = "",
-             const std::string& description = "") {
-        commandDispatcher.lock()->def(name, func, group, description);
-    }
-
-    template <typename... Args, typename Ret>
-    void def(const std::string& name, Ret (*func)(Args...),
-             const std::string& group = "",
-             const std::string& description = "") {
-        commandDispatcher.lock()->def(name, func, group, description);
-    }
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "") {
-        commandDispatcher.lock()->def(name, func, instance, group, description);
-    }
 
     [[nodiscard]] std::vector<std::string> getRegisteredCommands() const;
     void callCommand(std::string_view name,
@@ -70,9 +48,9 @@ private:
 
     static constexpr int MAX_HISTORY_SIZE = 100;
 
-    std::weak_ptr<CommandDispatcher> commandDispatcher;
+    std::shared_ptr<SuggestionEngine> suggestionEngine;
 
-    std::unique_ptr<SuggestionEngine> suggestionEngine;
+    std::shared_ptr<Component> component;
 
 #ifdef _WIN32
     HANDLE hConsole;

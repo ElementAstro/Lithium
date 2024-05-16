@@ -37,65 +37,6 @@ public:
              std::optional<std::function<bool()>> precondition = std::nullopt,
              std::optional<std::function<void()>> postcondition = std::nullopt);
 
-    template <typename Callable>
-    void def(const std::string& name, Callable&& func,
-                         const std::string& group = "",
-                         const std::string& description = "");
-
-    template <typename Ret>
-    void def(const std::string& name, Ret (*func)(),
-                         const std::string& group = "",
-                         const std::string& description = "");
-
-    template <typename... Args, typename Ret>
-    void def(const std::string& name, Ret (*func)(Args...),
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(),
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(),
-             std::shared_ptr<Class> instance, const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-             std::shared_ptr<Class> instance, const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...) const,
-             std::shared_ptr<Class> instance, const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...),
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...) const,
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (Class::*func)(Args...) noexcept,
-             const PointerSentinel<Class>& instance,
-             const std::string& group = "",
-             const std::string& description = "");
-
-    template <typename... Args, typename Ret, typename Class>
-    void def(const std::string& name, Ret (*func)(Args...),
-             const std::string& group = "",
-             const std::string& description = "");
-
     [[nodiscard]] bool has(const std::string& name) const;
 
     void addAlias(const std::string& name, const std::string& alias);

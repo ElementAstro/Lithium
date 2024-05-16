@@ -36,6 +36,8 @@ Description: Simple wrapper for executing commands.
 #define UNSETENV(name) unsetenv(name)
 #endif
 
+#include "atom/error/exception.hpp"
+
 namespace atom::system {
 std::string executeCommand(
     const std::string &command, bool openTerminal,
@@ -63,8 +65,8 @@ std::string executeCommand(
             CloseHandle(processInfo.hThread);
             return "";  // 因为终端界面会在新进程中执行，无法获得输出，所以这里返回空字符串。
         } else {
-            throw std::runtime_error("Error: failed to run command '" +
-                                     command + "'.");
+            THROW_RUNTIME_ERROR("Error: failed to run command '" + command +
+                                "'.");
         }
     } else {
         // 不打开终端界面时，使用_popen执行命令
@@ -75,8 +77,7 @@ std::string executeCommand(
 #endif
 
     if (!pipe) {
-        throw std::runtime_error("Error: failed to run command '" + command +
-                                 "'.");
+        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
     }
 
     std::array<char, 4096> buffer{};
@@ -137,7 +138,7 @@ void executeCommands(const std::vector<std::string> &commands) {
 #else  // 非Windows平台
             int status = system(command.c_str());
             if (!WIFEXITED(status) || !(WEXITSTATUS(status) == 0)) {
-                throw std::runtime_error("Error executing command: " + command);
+                THROW_RUNTIME_ERROR("Error executing command: " + command);
             }
 #endif
         });
@@ -158,14 +159,13 @@ ProcessHandle executeCommand(const std::string &command) {
         CloseHandle(processInfo.hThread);
         handle.handle = processInfo.hProcess;
     } else {
-        throw std::runtime_error("Error: failed to run command '" + command +
-                                 "'.");
+        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
     }
 #else  // 非Windows平台
     pid_t pid = fork();
     if (pid == -1) {
-        throw std::runtime_error("Error: failed to fork process for command '" +
-                                 command + "'.");
+        THROW_RUNTIME_ERROR("Error: failed to fork process for command '" +
+                            command + "'.");
     } else if (pid == 0) {
         // 子进程
         execl("/bin/sh", "sh", "-c", command.c_str(), NULL);
@@ -193,8 +193,8 @@ void killProcess(const ProcessHandle &handle) {
 #else
     int status;
     if (kill(handle.pid, SIGKILL) == -1) {
-        throw std::runtime_error("Error: failed to kill process with PID " +
-                                 std::to_string(handle.pid) + ".");
+        THROW_RUNTIME_ERROR("Error: failed to kill process with PID " +
+                            std::to_string(handle.pid) + ".");
     } else {
         waitpid(handle.pid, &status, 0);
     }
@@ -257,8 +257,7 @@ std::pair<std::string, int> executeCommandWithStatus(
 #endif
 
     if (!pipe) {
-        throw std::runtime_error("Error: failed to run command '" + command +
-                                 "'.");
+        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
     }
 
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {

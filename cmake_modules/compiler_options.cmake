@@ -32,6 +32,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(STATUS "Using clang version ${CLANG_VERSION}")
 endif()
 
+# check and set MSVC compiler flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.28)
+        message(FATAL_ERROR "Minimum required version of MSVC is 19.28 (Visual Studio 2019 version 16.10)")
+    endif()
+    message(STATUS "Using MSVC version ${CMAKE_CXX_COMPILER_VERSION}")
+endif()
+
 # check and set C++ compiler flags
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag(-std=c++20 HAS_CXX20_FLAG)

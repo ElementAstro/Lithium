@@ -18,7 +18,6 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "atom/components/dispatch.hpp"
 #include "atom/async/message_bus.hpp"
 #include "atom/type/message.hpp"
 #include "atom/type/json.hpp"

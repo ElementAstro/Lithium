@@ -27,23 +27,22 @@ ConsoleTerminal::ConsoleTerminal() {
 #else
     tcgetattr(STDIN_FILENO, &orig_termios);
 #endif
-    def("help", &ConsoleTerminal::helpCommand,
-        PointerSentinel<ConsoleTerminal>(this), "basic", "Show help");
-    def("list_component", &getComponentList, "component",
-        "Show all components");
-    def("show_component_info", &getComponentInfo, "component",
-        "Show component info");
-
     std::vector<std::string> keywords;
     for (const auto& name : getRegisteredCommands()) {
         keywords.emplace_back(name);
     }
-    suggestionEngine = std::make_unique<SuggestionEngine>(std::move(keywords));
-    commandDispatcher =
-        GetWeakPtr<CommandDispatcher>(constants::LITHIUM_COMMAND);
-    if (commandDispatcher.expired()) {
-        LOG_F(ERROR, "Command dispatcher not found");
-    }
+    suggestionEngine = std::make_shared<SuggestionEngine>(std::move(keywords));
+    component = std::make_shared<Component>("lithium.terminal");
+
+    component->def("help", &ConsoleTerminal::helpCommand,
+                   PointerSentinel(this), "basic",
+                   "Show help");
+    component->def("list_component", &getComponentList, "component",
+                   "Show all components");
+    component->def("show_component_info", &getComponentInfo, "component",
+                   "Show component info");
+
+    
 }
 
 ConsoleTerminal::~ConsoleTerminal() {
@@ -54,7 +53,7 @@ ConsoleTerminal::~ConsoleTerminal() {
 
 std::vector<std::string> ConsoleTerminal::getRegisteredCommands() const {
     std::vector<std::string> commands;
-    for (const auto& name : commandDispatcher.lock()->getAllCommands()) {
+    for (const auto& name : component->getAllCommands()) {
         commands.emplace_back(name);
     }
     return commands;
@@ -62,13 +61,9 @@ std::vector<std::string> ConsoleTerminal::getRegisteredCommands() const {
 
 void ConsoleTerminal::callCommand(std::string_view name,
                                   const std::vector<std::any>& args) {
-    if (commandDispatcher.expired()) {
-        LOG_F(ERROR, "Command dispatcher not found");
-        return;
-    }
-    if (commandDispatcher.lock()->has(name.data())) {
+    if (component->has(name.data())) {
         try {
-            commandDispatcher.lock()->dispatch(name.data(), args);
+            component->dispatch(name.data(), args);
         } catch (const std::exception& e) {
             std::cout << "Error: " << e.what() << '\n';
         }

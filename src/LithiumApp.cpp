@@ -120,8 +120,6 @@ std::shared_ptr<LithiumApp> LithiumApp::createShared() {
 
 void InitLithiumApp(int argc, char **argv) {
     LOG_F(INFO, "Init Lithium App");
-    // Command Dispatcher
-    AddPtr("lithium.command", std::make_shared<CommandDispatcher>());
     // Message Bus
     AddPtr("lithium.bus", atom::async::MessageBus::createShared());
     // AddPtr("ModuleLoader", ModuleLoader::createShared());

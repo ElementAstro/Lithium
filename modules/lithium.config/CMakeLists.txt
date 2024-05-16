@@ -8,6 +8,8 @@
 cmake_minimum_required(VERSION 3.20)
 project(lithium.config C CXX)
 
+add_library(${PROJECT_NAME} SHARED)
+
 # Sources
 set(${PROJECT_NAME}_SOURCES
     _main.cpp
@@ -20,9 +22,10 @@ set(${PROJECT_NAME}_HEADERS
 )
 
 set(${PROJECT_NAME}_LIBS
-    loguru
     atom-component
     lithium-config
+    loguru
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Build Object Library
@@ -36,17 +39,11 @@ target_sources(${PROJECT_NAME}_OBJECT
     ${${PROJECT_NAME}_SOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-
-add_library(${PROJECT_NAME} SHARED)
-
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LIBS})
 target_include_directories(${PROJECT_NAME} PUBLIC .)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-    SOVERSION ${HYDROGEN_SOVERSION}
     OUTPUT_NAME ${PROJECT_NAME}
 )
 

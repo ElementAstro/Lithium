@@ -54,15 +54,13 @@ set(CMAKE_CXX_STANDARD {cpp_standard})
 # Add source files
 set(SOURCE_FILES
     {all_sources_list}
-)
 
-# Add header files
-set(HEADER_FILES
-    {all_headers_list}
+    _component.cpp
+    _main.cpp
 )
 
 # Create the module library
-add_library({module_name} ${{SOURCE_FILES}} ${{HEADER_FILES}})
+add_library({module_name} SHARED ${{SOURCE_FILES}})
 
 # Include directories
 target_include_directories({module_name} PUBLIC ${{CMAKE_CURRENT_SOURCE_DIR}}/include)
@@ -256,7 +254,7 @@ std::shared_ptr<Component> getInstance([[maybe_unused]] const json &params) {{
         return std::make_shared<{component_name}>(
             params["name"].get<std::string>());
     }}
-    return std::make_shared<ImageComponent>("{module_name}");
+    return std::make_shared<{component_name}>("{module_name}");
 }}
 }}
     """

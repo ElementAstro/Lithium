@@ -208,5 +208,4 @@ void ConfigManager::mergeConfig(const json& src) {
 }
 
 void ConfigManager::clearConfig() { m_impl->config_.clear(); }
-
 }  // namespace lithium

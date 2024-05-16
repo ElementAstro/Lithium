@@ -119,10 +119,17 @@ void Component::removeOtherComponent(const std::string& name) {
 
 void Component::clearOtherComponents() { m_OtherComponents.clear(); }
 
-std::weak_ptr<Component> Component::getOtherComponent(
-    const std::string& name) {
+std::weak_ptr<Component> Component::getOtherComponent(const std::string& name) {
     if (m_OtherComponents.contains(name)) {
         return m_OtherComponents[name];
     }
     return {};
+}
+
+bool Component::has(const std::string& name) const {
+    return m_CommandDispatcher->has(name);
+}
+
+std::vector<std::string> Component::getAllCommands() const {
+    return m_CommandDispatcher->getAllCommands();
 }

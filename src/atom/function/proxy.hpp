@@ -79,6 +79,8 @@ struct ProxyFunction {
         }
     }
 
+    FunctionInfo getFunctionInfo() { return info; }
+
 private:
     void collectFunctionInfo() {
         // Collect return type information

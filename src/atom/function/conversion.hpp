@@ -35,9 +35,38 @@ Description: C++ Type Conversion
 
 #include "conversion_stl.hpp"
 
+#include "atom/error/exception.hpp"
+
+class bad_conversion : public std::bad_cast {
+public:
+    bad_conversion(const Type_Info& from_type, const Type_Info& to_type)
+        : message("Failed to convert from " + std::string(from_type.name()) +
+                  " to " + std::string(to_type.name())) {}
+
+    const char* what() const noexcept override { return message.c_str(); }
+
+private:
+    std::string message;
+};
+
+class ConversionError : atom::error::Exception {
+public:
+    using atom::error::Exception::Exception;
+};
+
+#define THROW_CONVERSION_ERROR(...) \
+    throw ConversionError(__FILE__, __LINE__, __func__, __VA_ARGS__)
+
 class Type_Conversion_Base {
 public:
     virtual std::any convert(const std::any& from) const = 0;
+    virtual std::any convert_down(const std::any& to) const = 0;
+
+    const Type_Info& to() const noexcept { return to_type; }
+    const Type_Info& from() const noexcept { return from_type; }
+
+    virtual bool bidir() const noexcept { return true; }
+
     virtual ~Type_Conversion_Base() = default;
 
     Type_Info to_type;
@@ -73,6 +102,26 @@ public:
             throw bad_conversion(from_type, to_type);
         }
     }
+
+    std::any convert_down(const std::any& to) const override {
+        // Pointer types static conversion (downcasting)
+        if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
+            auto toPtr = std::any_cast<To>(to);
+            return std::any(static_cast<From>(toPtr));
+        }
+        // Reference types static conversion (downcasting)
+        else if constexpr (std::is_reference_v<From> &&
+                           std::is_reference_v<To>) {
+            try {
+                auto& toRef = std::any_cast<To&>(to);
+                return std::any(static_cast<From&>(toRef));
+            } catch (const std::bad_cast&) {
+                throw bad_conversion(to_type, from_type);
+            }
+        } else {
+            throw bad_conversion(to_type, from_type);
+        }
+    }
 };
 
 template <typename From, typename To>
@@ -101,6 +150,29 @@ public:
             }
         } else {
             throw bad_conversion(from_type, to_type);
+        }
+    }
+
+    std::any convert_down(const std::any& to) const override {
+        // Pointer types dynamic conversion
+        if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
+            auto toPtr = std::any_cast<To>(to);
+            auto convertedPtr = dynamic_cast<From>(toPtr);
+            if (!convertedPtr && toPtr != nullptr)
+                throw std::bad_cast();
+            return std::any(convertedPtr);
+        }
+        // Reference types dynamic conversion
+        else if constexpr (std::is_reference_v<From> &&
+                           std::is_reference_v<To>) {
+            try {
+                auto& toRef = std::any_cast<To&>(to);
+                return std::any(dynamic_cast<From&>(toRef));
+            } catch (const std::bad_cast&) {
+                throw bad_conversion(to_type, from_type);
+            }
+        } else {
+            throw bad_conversion(to_type, from_type);
         }
     }
 };
@@ -198,8 +270,8 @@ public:
 private:
 #if ENABLE_FASTHASH
     emhash8::HashMap<Type_Info,
-                       std::vector<std::shared_ptr<Type_Conversion_Base>>,
-                       std::hash<Type_Info>>
+                     std::vector<std::shared_ptr<Type_Conversion_Base>>,
+                     std::hash<Type_Info>>
         conversions;
 #else
     std::unordered_map<Type_Info,

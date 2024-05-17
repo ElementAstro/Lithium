@@ -382,7 +382,7 @@ if(BUILD_TESTING)
     "CHAI_MODULE_PATH=${CMAKE_CURRENT_BINARY_DIR}/"
   )
 
-  
+
 endif()
 
 
@@ -415,5 +415,3 @@ install(DIRECTORY samples DESTINATION share/Carbon
 #configure_file(contrib/pkgconfig/Carbon.pc.in lib/pkgconfig/Carbon.pc @ONLY)
 #install(FILES "${Carbon_BINARY_DIR}/lib/pkgconfig/Carbon.pc"
 #        DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-
-    

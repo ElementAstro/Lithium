@@ -17,7 +17,7 @@ const QuickControlComp: React.FC = () => {
       drawerVisible: true,
       selec_console_drawer_open: false,
     });
-    window.location.hash = 'console'; 
+    window.location.hash = 'console';
   }
 
   return (
@@ -48,4 +48,4 @@ const QuickControlComp: React.FC = () => {
   )
 }
 
-export default QuickControlComp; 
+export default QuickControlComp;

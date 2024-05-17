@@ -63,7 +63,7 @@ int main() {
     }
     std::cout << std::endl;
     */
-    
+
 
     // 使用 sort
     ThreadSafeQueue<int> sortQueue;

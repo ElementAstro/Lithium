@@ -34,7 +34,7 @@ const DeviceFilterGeneralControlPanel: React.FC = () => {
   const handleCreateOpen = () => {
     set_dialog(true);
   };
-  
+
   const handleCreateClose = () => {
     set_dialog(false);
   };
@@ -60,7 +60,7 @@ const DeviceFilterGeneralControlPanel: React.FC = () => {
       filter_name: event.target.value,
     });
   };
-  
+
   // ws数据传递
   const process_ws_message = (msg: any): void => {
     let response_data = msg;
@@ -99,9 +99,9 @@ const DeviceFilterGeneralControlPanel: React.FC = () => {
       }
     }
   }
-  
+
   const {sendMessage, removeListener} = useEchoWebSocket(process_ws_message);
-  
+
   // 更新
   const updateFiltersInfo = (filtersInfo: FilterInfo[]) => {
     const updatedFilterNames = filtersInfo.map((filterInfo) => ({
@@ -170,7 +170,7 @@ const DeviceFilterGeneralControlPanel: React.FC = () => {
     // set_current_filter(slot_index);
   };
 
-  
+
   const MINUTE_MS = 1000;
   React.useEffect(() => {
     // This will fire only on mount.

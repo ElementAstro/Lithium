@@ -18,4 +18,3 @@ cv::Mat stackImages(const std::vector<cv::Mat>& images, StackMode mode,
                     float sigma = 2.0) ;
 
 #endif
-

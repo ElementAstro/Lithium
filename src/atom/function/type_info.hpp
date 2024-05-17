@@ -149,7 +149,7 @@ public:
     constexpr bool is_pointer() const noexcept {
         return (m_flags & (1 << is_pointer_flag)) != 0;
     }
-    
+
     constexpr bool is_undef() const noexcept {
         return (m_flags & (1 << is_undef_flag)) != 0;
     }

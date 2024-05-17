@@ -41,12 +41,12 @@ class switch(object):
     def __init__(self, value):
         self.value = value
         self.fall = False
- 
+
     def __iter__(self):
         """Return the match method once, then stop"""
         yield self.match
         raise StopIteration
-    
+
     def match(self, *args):
         """Indicate whether or not to enter a case suite"""
         if self.fall  or not args:
@@ -782,7 +782,7 @@ class lightguiderClientWorker(object):
             /overlay/slit/center.y	1	290
             /overlay/slit/height	1	100
             /overlay/slit/width	1	8
-            /rotator/LastMenuChoice	1	
+            /rotator/LastMenuChoice	1
             /scope/GuideAlgorithm/X/Hysteresis/aggression	1	0.7
             /scope/GuideAlgorithm/X/Hysteresis/hysteresis	1	0.1
             /scope/GuideAlgorithm/X/Hysteresis/minMove	1	0.16
@@ -799,7 +799,7 @@ class lightguiderClientWorker(object):
             /scope/DecBacklashPulse	1	20
             /scope/DecGuideMode	1	1
             /scope/HiResEncoders	1	0
-            /scope/LastAuxMenuChoice	1	
+            /scope/LastAuxMenuChoice	1
             /scope/LastMenuChoice	1	On-camera
             /scope/MaxDecDuration	1	2500
             /scope/MaxRaDuration	1	2500
@@ -807,7 +807,7 @@ class lightguiderClientWorker(object):
             /scope/UseDecComp	1	1
             /scope/XGuideAlgorithm	1	1
             /scope/YGuideAlgorithm	1	4
-            /stepguider/LastMenuChoice	1	
+            /stepguider/LastMenuChoice	1
             /AutoLoadCalibration	1	0
             /DitherMode	1	0
             /DitherRaOnly	1	0
@@ -1758,9 +1758,9 @@ class lightguiderClientWorker(object):
             resp["message"] = "Send command failed"
             resp["error"] = e
             return resp
-        
+
         print(res)
-        
+
         if "error" in res:
             resp["message"] = "Failed to get the dark library path"
             resp["error"] = res.get("error")

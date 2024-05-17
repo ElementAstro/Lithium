@@ -42,7 +42,7 @@ ConsoleTerminal::ConsoleTerminal() {
     component->def("show_component_info", &getComponentInfo, "component",
                    "Show component info");
 
-    
+
 }
 
 ConsoleTerminal::~ConsoleTerminal() {

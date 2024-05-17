@@ -36,7 +36,7 @@ def camel_to_snake(name):
                 snake_case.append(char.lower())
         else:
             snake_case.append(char)
-    
+
     return ''.join(snake_case)
 
 def parse_namespace(cursor) -> dict:

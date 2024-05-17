@@ -7,7 +7,7 @@
 - Use meaningful variable names that clearly express the purpose of the variable.
 - Follow the camelCase convention for all code.
   - camelCase: Start with a lowercase letter, and capitalize the first letter of subsequent words.
-  
+
     ```cpp
     int studentCount;
     ```

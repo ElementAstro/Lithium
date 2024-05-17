@@ -98,10 +98,10 @@ lithium_server_lib = static_library('lithium_server-library', [
 ], include_directories: inc_dirs, dependencies: [loguru_lib])
 
 # Executable
-lithium_server = executable('lithium_server', src_dir / 'App.cpp', 
+lithium_server = executable('lithium_server', src_dir / 'App.cpp',
   include_directories: inc_dirs,
   link_with: [
-    lithium_server_lib, 
+    lithium_server_lib,
     # Add other libraries here
   ],
   dependencies: [

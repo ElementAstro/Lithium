@@ -27,13 +27,13 @@ class JSONTCPClient:
         if self.writer is None:
             if not await self.connect():
                 return
-        
+
         try:
             request = json.dumps(message) + '\n'
             print(f'Sending: {request.strip()}')
             self.writer.write(request.encode())
             await self.writer.drain()
-            
+
             response = await self.reader.readline()
             print(f'Received: {response.decode().strip()}')
         except Exception as e:
@@ -49,13 +49,13 @@ class JSONTCPClient:
 
 async def main():
     client = JSONTCPClient(host='127.0.0.1', port=8888)
-    
+
     commands = [
         {"command": "echo", "message": "Hello, Server!"},
         {"command": "run", "cmd": "echo 'Running command!'"},
         {"command": "run", "cmd": "ls -l"}
     ]
-    
+
     for cmd in commands:
         await client.send_message(cmd)
         await asyncio.sleep(1)

@@ -25,7 +25,7 @@ def confirm_details(details):
     print("\nPlease confirm the entered details:")
     for key, value in details.items():
         print(f"{key}: {value}")
-    
+
     confirm = input("\nIs this information correct? (yes/no/edit): ").strip().lower()
     if confirm == 'edit':
         return False, True
@@ -219,10 +219,10 @@ def get_current_date():
 def convert_to_upper_snake_case(s: str) -> str:
     """
     Convert a dot-separated string to UPPERCASE_SNAKE_CASE.
-    
+
     Args:
         s (str): The input string.
-        
+
     Returns:
         str: The converted string in UPPERCASE_SNAKE_CASE format.
     """
@@ -376,7 +376,7 @@ def main():
     component_cpp_path = os.path.join(module_dir, f"_component.cpp")
     with open(component_cpp_path, "w") as f:
         f.write(create_component_cpp(author,description, module_name, component_name))
-    
+
     # Create _component.hpp
     component_hpp_path = os.path.join(module_dir, f"_component.hpp")
     with open(component_hpp_path, "w") as f:

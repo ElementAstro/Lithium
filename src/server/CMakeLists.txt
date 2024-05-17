@@ -35,4 +35,3 @@ target_link_directories(${PROJECT_NAME} PUBLIC ${CMAKE_BINARY_DIR}/libs)
 target_link_libraries(${PROJECT_NAME} PRIVATE oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE loguru fmt::fmt)
 target_link_libraries(${PROJECT_NAME} PRIVATE atomstatic)
-

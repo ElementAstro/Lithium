@@ -170,14 +170,14 @@ public:
         return mapper;
     }());
     */
-   
+
     /**
      *  Create games sessions Registry component.
      */
     OATPP_CREATE_COMPONENT(std::shared_ptr<Registry>, gamesSessionsRegistry)
     ([] { return std::make_shared<Registry>(); }());
 
-    
+
 
     /**
      *  Create websocket connection handler

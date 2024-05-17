@@ -67,4 +67,3 @@ If you would like to contribute code to the project, you can follow these steps:
 * If you experience any inappropriate behavior or conflicts, report it immediately to the project maintainers.
 
 Thank you for your contribution and support! We look forward to your code, issues, and suggestions to make the project even better.
-

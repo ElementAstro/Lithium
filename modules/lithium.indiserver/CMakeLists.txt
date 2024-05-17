@@ -20,7 +20,7 @@ set(SOURCE_FILES
     _main.cpp
 )
 
-set(LIBS 
+set(LIBS
     loguru
     atom-system
     atom-io

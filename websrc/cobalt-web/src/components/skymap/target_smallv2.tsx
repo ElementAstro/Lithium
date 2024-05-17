@@ -112,7 +112,7 @@ const TargetSmallCardHori: React.FC<TargetSmallCardProps> = (props) => {
     new_options.series[0].markLine.data = new_mark_line;
     set_echarts_options(new_options);
   }, [])
-  // 
+  //
   // React.useEffect( () => {
   //   if (props.on_card_clicked != null){
   //     props.on_card_clicked(props.card_index, this_checked);

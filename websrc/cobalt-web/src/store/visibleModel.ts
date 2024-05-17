@@ -11,9 +11,3 @@ export const getVisibleModel =():VisibleModel =>({
         state = Object.assign(state,payload)
     })
 })
-
-
-
-
-
-

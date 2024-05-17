@@ -88,7 +88,7 @@ public:
     static constexpr const char* LITHIUM_TASK_POOL = "lithium.task.pool";
     static constexpr const char* LITHIUM_TASK_LIST = "lithium.task.list";
     static constexpr const char* LITHIUM_TASK_GENERATOR = "lithium.task.generator";
-    
+
     static constexpr const char* LITHIUM_COMMAND = "lithium.command";
 };
 

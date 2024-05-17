@@ -59,5 +59,3 @@ endif()
 set_target_properties(${PROJECT_NAME}_TEST PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
-
-

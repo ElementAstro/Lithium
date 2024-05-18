@@ -26,4 +26,3 @@ std::shared_ptr<Component> getInstance([[maybe_unused]] const json &params) {
     return std::make_shared<SysInfoComponent>("atom.sysinfo");
 }
 }
-    

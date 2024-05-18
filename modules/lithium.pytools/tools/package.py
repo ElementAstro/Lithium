@@ -147,7 +147,7 @@ def main():
         None
     """
     package_name = input("Enter the package name: ").strip()
-    
+
     if is_package_installed(package_name):
         installed_version = get_installed_version(package_name)
         print(f"Package '{package_name}' is already installed, version: {installed_version}")
@@ -168,7 +168,7 @@ def main():
             print(f"Could not fetch versions for '{package_name}'.")
     else:
         print(f"Package '{package_name}' is not installed.")
-    
+
         action = input(
             "Choose an action:\n"
             "1. Install or Upgrade to the latest version\n"
@@ -176,13 +176,13 @@ def main():
             "3. List available versions\n"
             "Enter your choice (1/2/3): "
         ).strip()
-        
+
         if action == '1':
             if is_package_installed(package_name):
                 upgrade_package(package_name)
             else:
                 install_package(package_name)
-        
+
         elif action == '2':
             available_versions = list_available_versions(package_name)
             if available_versions:
@@ -196,7 +196,7 @@ def main():
                     print("Invalid version. Please choose a valid version from the list.")
             else:
                 print(f"No versions found for package '{package_name}'.")
-        
+
         elif action == '3':
             available_versions = list_available_versions(package_name)
             if available_versions:
@@ -205,7 +205,7 @@ def main():
                     print(v)
             else:
                 print(f"No versions found for package '{package_name}'.")
-        
+
         else:
             print("Invalid choice.")
 

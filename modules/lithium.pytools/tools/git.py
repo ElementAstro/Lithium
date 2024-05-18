@@ -191,7 +191,7 @@ def view_log(repo_dir):
 def add_remote(repo_dir, remote_name, remote_url):
     """
     Add a remote repository.
-    
+
     Args:
         repo_dir (str): Path to the local repository directory。
         remote_name (str): Name of the remote repository。

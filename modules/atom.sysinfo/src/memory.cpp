@@ -20,14 +20,13 @@ Description: System Information Module - Memory
 #include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <Psapi.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <pdh.h>
 #include <tlhelp32.h>
 #include <wincon.h>
-
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
@@ -38,7 +37,6 @@ Description: System Information Module - Memory
 #include <unistd.h>
 #include <csignal>
 #include <iterator>
-
 #elif __APPLE__
 #include <mach/mach_init.h>
 #include <mach/task_info.h>
@@ -47,7 +45,6 @@ Description: System Information Module - Memory
 #include <netinet/udp.h>
 #include <sys/mount.h>
 #include <sys/param.h>
-
 #endif
 
 namespace atom::system {

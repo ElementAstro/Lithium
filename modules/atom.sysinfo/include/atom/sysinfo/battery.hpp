@@ -33,6 +33,12 @@ struct BatteryInfo {
     float currentNow = 0.0;           // 电池当前电流(安培)
 };
 
-BatteryInfo getBatteryInfo();
+/**
+ * @brief Get battery information.
+ * 获取电池信息
+ * @return BatteryInfo
+ */
+[[nodiscard("Result of getBatteryInfo is not used")]] BatteryInfo
+getBatteryInfo();
 }  // namespace atom::system
 #endif

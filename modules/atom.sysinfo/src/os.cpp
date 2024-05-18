@@ -12,7 +12,7 @@ Description: System Information Module - OS Information
 
 **************************************************/
 
-#include "os.hpp"
+#include "atom/sysinfo/os.hpp"
 
 #include <sstream>
 

@@ -40,15 +40,6 @@ protected:
     // -------------------------------------------------------------------
     // Protected methods
     // -------------------------------------------------------------------
-
-    double getCurrentBatteryLevel();
-    bool isBatteryCharging();
-
-    std::string getOSName();
-    std::string getOSVersion();
-    std::string getKernelVersion();
-    std::string getArchitecture();
-
     void makePidWatcher(const std::string &name);
     bool startPidWatcher(const std::string &name, const std::string &pid);
     void stopPidWatcher(const std::string &name);

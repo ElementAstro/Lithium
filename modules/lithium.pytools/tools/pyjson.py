@@ -2,14 +2,26 @@ import json
 import argparse
 import sys
 from json.decoder import JSONDecodeError
+
 try:
     import yaml
 except ImportError:
-    # If PyYAML is not installed, we handle this case to maintain usability for other features.
+    # If PyYAML is not installed, handle this case to maintain usability for other features.
     yaml = None
 
-def load_json(file_path):
-    """Load the JSON data from a file."""
+def load_json(file_path: str) -> dict:
+    """
+    Load JSON data from a file and return it as a dictionary.
+
+    Args:
+        file_path (str): Path to the JSON file.
+
+    Returns:
+        dict: The parsed JSON data as a Python dictionary.
+
+    Raises:
+        SystemExit: If the file is not found, cannot be read, or contains invalid JSON.
+    """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             return json.load(file)
@@ -23,23 +35,57 @@ def load_json(file_path):
         print(f"Error reading file: {e}")
         sys.exit(1)
 
-def print_json(obj, minify=False, indent=4):
-    """Print the JSON object as a string."""
+def print_json(obj: dict, minify: bool = False, indent: int = 4):
+    """
+    Print a JSON object as a formatted or minified string.
+
+    Args:
+        obj (dict): The JSON object to print.
+        minify (bool, optional): Whether to print the JSON in minified form. Defaults to False.
+        indent (int, optional): Indentation level for pretty-printing. Defaults to 4.
+
+    Returns:
+        None
+    """
     if minify:
         print(json.dumps(obj, separators=(',', ':')))
     else:
         print(json.dumps(obj, indent=indent))
 
-def save_json_to_yaml(json_obj, output_file):
-    """Save JSON object to a YAML file."""
+def save_json_to_yaml(json_obj: dict, output_file: str):
+    """
+    Save a JSON object to a YAML file.
+
+    Args:
+        json_obj (dict): The JSON object to convert to YAML.
+        output_file (str): Path to the output YAML file.
+
+    Returns:
+        None
+
+    Raises:
+        ImportError: If PyYAML is not installed.
+    """
     if yaml is None:
         print("YAML support is not available. Install PyYAML to enable this feature.")
         return
     with open(output_file, 'w', encoding='utf-8') as file:
         yaml.dump(json_obj, file, allow_unicode=True, default_flow_style=False)
 
-def query_json(json_obj, query_path):
-    """Query the JSON object using a simple path notation."""
+def query_json(json_obj: dict, query_path: str):
+    """
+    Query a JSON object using a simple dot notation path.
+
+    Args:
+        json_obj (dict): The JSON object to query.
+        query_path (str): Dot notation path to the desired data (e.g., 'a.b.0.c').
+
+    Returns:
+        None
+
+    Raises:
+        KeyError, IndexError, TypeError: If the query path is invalid or the data cannot be accessed.
+    """
     try:
         parts = query_path.strip().split('.')
         result = json_obj

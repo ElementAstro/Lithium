@@ -2,13 +2,41 @@
 # -*- coding: utf-8 -*-
 """
 Git Utility Functions
+
+This module provides a set of utility functions to interact with Git repositories.
+
+Features:
+- Clone, pull, and push changes
+- Create, switch, and merge branches
+- Add and commit changes
+- Create and delete tags
+- Add, remove, and set remotes
+- View repository status and log
+
+Usage:
+    import git_utils
+
+Author:
+    Max Qian <lightapt.com>
+
+License:
+    GPL-3.0-or-later
 """
+
 import subprocess
 import os
 import argparse
 
 def run_git_command(command):
-    """Run a Git command and print its output."""
+    """
+    Run a Git command and print its output.
+
+    Args:
+        command (List[str]): The Git command and its arguments.
+
+    Returns:
+        int: The return code of the command.
+    """
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"Error: {result.stderr.strip()}")
@@ -17,7 +45,13 @@ def run_git_command(command):
     return result.returncode
 
 def clone_repository(repo_url, clone_dir):
-    """Clone a Git repository."""
+    """
+    Clone a Git repository.
+
+    Args:
+        repo_url (str): URL of the repository to clone.
+        clone_dir (str): Directory to clone the repository into.
+    """
     if os.path.exists(clone_dir):
         print(f"Directory {clone_dir} already exists.")
         return
@@ -25,7 +59,12 @@ def clone_repository(repo_url, clone_dir):
     run_git_command(command)
 
 def pull_latest_changes(repo_dir):
-    """Pull the latest changes from the remote repository."""
+    """
+    Pull the latest changes from the remote repository.
+
+    Args:
+        repo_dir (str): Path to the local repository directory.
+    """
     if not os.path.exists(repo_dir):
         print(f"Directory {repo_dir} does not exist.")
         return
@@ -34,7 +73,12 @@ def pull_latest_changes(repo_dir):
     run_git_command(command)
 
 def add_changes(repo_dir):
-    """Add all changes to the staging area."""
+    """
+    Add all changes to the staging area.
+
+    Args:
+        repo_dir (str): Path to the local repository directory.
+    """
     if not os.path.exists(repo_dir):
         print(f"Directory {repo_dir} does not exist.")
         return
@@ -43,7 +87,13 @@ def add_changes(repo_dir):
     run_git_command(command)
 
 def commit_changes(repo_dir, message):
-    """Commit the staged changes with a message."""
+    """
+    Commit the staged changes with a message.
+
+    Args:
+        repo_dir (str): Path to the local repository directory.
+        message (str): Commit message.
+    """
     if not os.path.exists(repo_dir):
         print(f"Directory {repo_dir} does not exist.")
         return
@@ -52,16 +102,27 @@ def commit_changes(repo_dir, message):
     run_git_command(command)
 
 def push_changes(repo_dir):
-    """Push the committed changes to the remote repository."""
+    """
+    Push the committed changes to the remote repository.
+
+    Args:
+        repo_dir (str): Path to the local repository directory.
+    """
     if not os.path.exists(repo_dir):
-        print(f"Directory {repo_dir} does not exist.")
+        print(f"Directory {repo_dir} does not exist。")
         return
     os.chdir(repo_dir)
     command = ["git", "push"]
     run_git_command(command)
 
 def create_branch(repo_dir, branch_name):
-    """Create a new branch."""
+    """
+    Create a new branch.
+
+    Args:
+        repo_dir (str): Path to the local repository directory.
+        branch_name (str): Name of the new branch.
+    """
     if not os.path.exists(repo_dir):
         print(f"Directory {repo_dir} does not exist.")
         return
@@ -70,34 +131,56 @@ def create_branch(repo_dir, branch_name):
     run_git_command(command)
 
 def switch_branch(repo_dir, branch_name):
-    """Switch to an existing branch."""
+    """
+    Switch to an existing branch.
+
+    Args:
+        repo_dir (str): Path to the local repository directory。
+        branch_name (str): Name of the branch to switch to.
+    """
     if not os.path.exists(repo_dir):
-        print(f"Directory {repo_dir} does not exist.")
+        print(f"Directory {repo_dir} does not exist。")
         return
     os.chdir(repo_dir)
     command = ["git", "checkout", branch_name]
     run_git_command(command)
 
 def merge_branch(repo_dir, branch_name):
-    """Merge a branch into the current branch."""
+    """
+    Merge a branch into the current branch.
+
+    Args:
+        repo_dir (str): Path to the local repository directory。
+        branch_name (str): Name of the branch to merge.
+    """
     if not os.path.exists(repo_dir):
-        print(f"Directory {repo_dir} does not exist.")
+        print(f"Directory {repo_dir} does not exist。")
         return
     os.chdir(repo_dir)
     command = ["git", "merge", branch_name]
     run_git_command(command)
 
 def view_status(repo_dir):
-    """View the current status of the repository."""
+    """
+    View the current status of the repository.
+
+    Args:
+        repo_dir (str): Path to the local repository directory。
+    """
     if not os.path.exists(repo_dir):
-        print(f"Directory {repo_dir} does not exist.")
+        print(f"Directory {repo_dir} does not exist。")
         return
     os.chdir(repo_dir)
     command = ["git", "status"]
     run_git_command(command)
 
 def view_log(repo_dir):
-    """View the commit log."""
+    """
+    View the commit log。
+
+    Args:
+        repo_dir (str): Path to the local repository directory。
+    """
     if not os.path.exists(repo_dir):
         print(f"Directory {repo_dir} does not exist.")
         return
@@ -106,7 +189,14 @@ def view_log(repo_dir):
     run_git_command(command)
 
 def add_remote(repo_dir, remote_name, remote_url):
-    """Add a new remote repository."""
+    """
+    Add a remote repository.
+    
+    Args:
+        repo_dir (str): Path to the local repository directory。
+        remote_name (str): Name of the remote repository。
+        remote_url (str): URL of the remote repository。
+    """
     if not os.path.exists(repo_dir):
         print(f"Directory {repo_dir} does not exist.")
         return

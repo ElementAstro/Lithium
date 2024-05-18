@@ -28,8 +28,6 @@ std::string getGPUInfo() {
 
 #ifdef _WIN32
     if (IsWindows10OrGreater()) {
-        // Windows 10 或更高版本
-        // 使用 Windows API 获取 GPU 信息
         HDEVINFO deviceInfoSet =
             SetupDiGetClassDevsA(nullptr, "DISPLAY", nullptr, DIGCF_PRESENT);
         if (deviceInfoSet == INVALID_HANDLE_VALUE) {
@@ -55,8 +53,6 @@ std::string getGPUInfo() {
             "Windows version is not supported for GPU information retrieval.";
     }
 #elif defined(__linux__)
-    // Linux 平台
-    // 读取 GPU 相关文件获取信息
     std::ifstream file("/proc/driver/nvidia/gpus/0/information");
     if (file) {
         std::string line;
@@ -69,7 +65,6 @@ std::string getGPUInfo() {
         gpuInfo = "Failed to open GPU information file.";
     }
 #else
-    // 其他操作系统
     gpuInfo = "GPU information retrieval is not supported on this platform.";
 #endif
 

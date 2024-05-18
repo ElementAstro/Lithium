@@ -25,6 +25,15 @@ INDIServerComponent::INDIServerComponent(const std::string& name)
     def("start", &INDIManager::startServer, m_manager, "indi",
         "start indiserver");
     def("stop", &INDIManager::stopServer, m_manager, "indi", "stop indiserver");
+    def("is_running", &INDIManager::isRunning, m_manager, "indi",
+        "check if indiserver is running");
+    def("is_installed", &INDIManager::isInstalled, m_manager, "indi",
+        "check if indiserver is installed");
+    def("set_prop", &INDIManager::setProp, m_manager, "indi", "set prop");
+    def("get_prop", &INDIManager::getProp, m_manager, "indi", "get prop");
+    def("get_state", &INDIManager::getState, m_manager, "indi", "get state");
+
+    addVariable("indi.manager", m_manager, "indi manager");
 }
 
 INDIServerComponent::~INDIServerComponent() {

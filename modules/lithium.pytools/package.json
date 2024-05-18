@@ -1,0 +1,40 @@
+{
+    "name": "lithium.pytools",
+    "version": "1.0.0",
+    "type": "pyscript",
+    "description": "Lithium Python Tools Module",
+    "license": "GPL-3.0-or-later",
+    "author": "Max Qian",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "bugs": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium/issues"
+    },
+    "homepage": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "keywords": [
+        "lithium",
+        "atom",
+        "utils"
+    ],
+    "scripts": {
+        "lint": "python -m flake8 src/",
+        "test": "python -m unittest discover tests",
+        "clean": "rm -rf build output.o",
+        "install": "python setup.py install",
+        "build-docs": "sphinx-build docs/source docs/build",
+        "check-quality": "python -m pylint src/"
+    },
+    "dependencies": {
+        "requests": "^2.25.0",
+        "packaging": "^20.0",
+        "flake8": "^3.9.0",
+        "pylint": "^2.7.0",
+        "sphinx": "^3.5.0"
+    }
+}

@@ -16,14 +16,6 @@ Description: Component of Atom-System
 
 #include "atom/log/loguru.hpp"
 
-#include "module/battery.hpp"
-#include "module/cpu.hpp"
-#include "module/disk.hpp"
-#include "module/gpu.hpp"
-#include "module/memory.hpp"
-#include "module/os.hpp"
-#include "module/wifi.hpp"
-
 #include "command.hpp"
 #include "crash.hpp"
 #include "os.hpp"
@@ -38,32 +30,6 @@ using namespace atom::system;
 
 SystemComponent::SystemComponent(const std::string &name) : Component(name) {
     DLOG_F(INFO, "SystemComponent::SystemComponent");
-    def("cpu_usage", &getCurrentCpuUsage, "cpu",
-                    "Get current CPU usage percentage");
-    def("cpu_temperature", &getCurrentCpuTemperature, "cpu",
-                    "Get current CPU temperature");
-    def("memory_usage", &getMemoryUsage, "memory",
-                    "Get current memory usage percentage");
-    def("is_charging", &isBatteryCharging, PointerSentinel(this),
-                    "battery", "Check if the battery is charging");
-    def("battery_level", &getCurrentBatteryLevel,
-                    PointerSentinel(this), "battery",
-                    "Get current battery level");
-    def("disk_usage", &getDiskUsage, "disk",
-                    "Get current disk usage percentage");
-    def("is_hotspot_connected", &isHotspotConnected, "wifi",
-                    "Check if the hotspot is connected");
-    def("wired_network", &getCurrentWiredNetwork, "wifi",
-                    "Get current wired network");
-    def("wifi_name", &getCurrentWifi, "wifi",
-                    "Get current wifi name");
-    def("current_ip", &getHostIPs, "network",
-                    "Get current IP address");
-    def("gpu_info", &getGPUInfo, "gpu", "Get GPU info");
-    def("os_name", &getOSName, PointerSentinel(this), "os",
-                    "Get OS name");
-    def("os_version", &getOSVersion, PointerSentinel(this), "os",
-                    "Get OS version");
     def("run_commands", &executeCommands, "os",
                     "Run a list of system commands");
     def("run_command_env", &executeCommandWithEnv, "os",
@@ -154,29 +120,7 @@ bool SystemComponent::initialize() { return true; }
 
 bool SystemComponent::destroy() { return true; }
 
-double SystemComponent::getCurrentBatteryLevel() {
-    return atom::system::getBatteryInfo().currentNow;
-}
 
-bool SystemComponent::isBatteryCharging() {
-    return atom::system::getBatteryInfo().isCharging;
-}
-
-std::string SystemComponent::getOSName() {
-    return atom::system::getOperatingSystemInfo().osName;
-}
-
-std::string SystemComponent::getOSVersion() {
-    return atom::system::getOperatingSystemInfo().osVersion;
-}
-
-std::string SystemComponent::getKernelVersion() {
-    return atom::system::getOperatingSystemInfo().kernelVersion;
-}
-
-std::string SystemComponent::getArchitecture() {
-    return atom::system::getOperatingSystemInfo().architecture;
-}
 
 void SystemComponent::makePidWatcher(const std::string &name) {
     if (m_pidWatchers.find(name) != m_pidWatchers.end()) {

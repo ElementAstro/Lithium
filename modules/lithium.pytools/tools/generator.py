@@ -16,13 +16,20 @@ Dependencies:
     - pybind11
 """
 
+import json
 import os
 import sys
 import clang.cindex
 from clang.cindex import CursorKind
-import json
 
 def camel_to_snake(name):
+    """
+    Convert a camelCase string to snake_case.
+    Args:
+        name (str): The camelCase string to convert.
+    Returns:
+        str: The snake_case string.
+    """
     if not isinstance(name, str) or not name:
         return ""
     snake_case = []
@@ -69,7 +76,7 @@ def parse_class(cursor):
     class_info = {
         "type": "class",
         "name": cursor.spelling,
-        "base_classes": [c.spelling for c in cursor.get_children() if c.kind == CursorKind.CXX_BASE_SPECIFIER],
+        "base_classes": [c.spelling for c in cursor.get_children() if c.kind == CursorKind.CXX_BASE_SPECIFIER], # type: ignore
         "constructors": [],
         "destructor": None,
         "member_variables": [],
@@ -77,11 +84,11 @@ def parse_class(cursor):
     }
 
     for child in cursor.get_children():
-        if child.kind == CursorKind.CONSTRUCTOR:
+        if child.kind == CursorKind.CONSTRUCTOR: # type: ignore
             class_info["constructors"].append(parse_function(child))
-        elif child.kind == CursorKind.DESTRUCTOR:
+        elif child.kind == CursorKind.DESTRUCTOR: # type: ignore
             class_info["destructor"] = parse_function(child)
-        elif child.kind == CursorKind.FIELD_DECL:
+        elif child.kind == CursorKind.FIELD_DECL: # type: ignore
             class_info["member_variables"].append(parse_variable(child))
         else:
             child_info = parse_cursor(child)
@@ -97,7 +104,7 @@ def parse_struct(cursor):
         "children": []
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.FIELD_DECL:
+        if child.kind == CursorKind.FIELD_DECL: # type: ignore
             struct_info["member_variables"].append(parse_variable(child))
         else:
             child_info = parse_cursor(child)
@@ -113,7 +120,7 @@ def parse_function(cursor):
         "parameters": []
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.PARM_DECL:
+        if child.kind == CursorKind.PARM_DECL: # type: ignore
             function_info["parameters"].append({
                 "name": child.spelling,
                 "type": child.type.spelling
@@ -127,7 +134,7 @@ def parse_enum(cursor):
         "constants": []
     }
     for child in cursor.get_children():
-        if child.kind == CursorKind.ENUM_CONSTANT_DECL:
+        if child.kind == CursorKind.ENUM_CONSTANT_DECL: # type: ignore
             enum_info["constants"].append({
                 "name": child.spelling,
                 "value": child.enum_value
@@ -185,26 +192,132 @@ def parse_cursor(cursor):
     Returns:
         dict: A dictionary containing the cursor information.
     '''
-    if cursor.kind == CursorKind.NAMESPACE:
+    if cursor.kind == CursorKind.NAMESPACE: # type: ignore
         return parse_namespace(cursor)
-    elif cursor.kind == CursorKind.CLASS_DECL or cursor.kind == CursorKind.STRUCT_DECL:
-        if cursor.kind == CursorKind.CLASS_DECL:
+    if cursor.kind == CursorKind.CLASS_DECL or cursor.kind == CursorKind.STRUCT_DECL: # type: ignore
+        if cursor.kind == CursorKind.CLASS_DECL: # type: ignore
             return parse_class(cursor)
-        else:
-            return parse_struct(cursor)
-    elif cursor.kind == CursorKind.CXX_METHOD or cursor.kind == CursorKind.FUNCTION_DECL:
+        return parse_struct(cursor)
+    if cursor.kind == CursorKind.CXX_METHOD or cursor.kind == CursorKind.FUNCTION_DECL: # type: ignore
         return parse_function(cursor)
-    elif cursor.kind == CursorKind.ENUM_DECL:
+    if cursor.kind == CursorKind.ENUM_DECL: # type: ignore
         return parse_enum(cursor)
-    elif cursor.kind == CursorKind.MACRO_DEFINITION:
+    if cursor.kind == CursorKind.MACRO_DEFINITION: # type: ignore
         return parse_macro(cursor)
-    elif cursor.kind == CursorKind.VAR_DECL:
+    if cursor.kind == CursorKind.VAR_DECL: # type: ignore
         return parse_variable(cursor)
-    elif cursor.kind == CursorKind.TYPEDEF_DECL:
+    if cursor.kind == CursorKind.TYPEDEF_DECL: # type: ignore
         return parse_typedef(cursor)
-    elif cursor.kind == CursorKind.UNION_DECL:
+    if cursor.kind == CursorKind.UNION_DECL: # type: ignore
         return parse_union(cursor)
     return None
+
+class ParentVisitor:
+    def __init__(self):
+        self.parent_map = {}
+
+    def visit(self, cursor, parent=None):
+        """
+        Visit all children of the given cursor and record parent-child relationships.
+
+        Args:
+            cursor (clang.cindex.Cursor): The cursor to visit.
+            parent (clang.cindex.Cursor): The parent cursor, or None if this is the root.
+        """
+        # Record parent-child relationship
+        self.parent_map[cursor] = parent
+        # Visit children
+        for child in cursor.get_children():
+            self.visit(child, cursor)
+
+    def get_parent(self, cursor):
+        """
+        Get the parent cursor of the given cursor.
+
+        Args:
+            cursor (clang.cindex.Cursor): The cursor whose parent is to be found.
+
+        Returns:
+            clang.cindex.Cursor: The parent cursor, or None if there is no parent.
+        """
+        return self.parent_map.get(cursor)
+
+    def get_path(self, cursor):
+        """
+        Get the path from the root to the given cursor.
+
+        Args:
+            cursor (clang.cindex.Cursor): The cursor whose path is to be found.
+
+        Returns:
+            List[clang.cindex.Cursor]: The path from the root to the given cursor.
+        """
+        path = []
+        while cursor:
+            path.append(cursor)
+            cursor = self.get_parent(cursor)
+        path.reverse()
+        return path
+
+    def print_path(self, cursor):
+        """
+        Print the path from the root to the given cursor.
+
+        Args:
+            cursor (clang.cindex.Cursor): The cursor whose path is to be printed.
+        """
+        path = self.get_path(cursor)
+        for node in path:
+            print(f"{node.spelling or node.kind} ({node.kind})")
+
+def find_cursor_by_spelling(cursor, spelling):
+    """
+    Find a cursor by its spelling.
+
+    Args:
+        cursor (clang.cindex.Cursor): The root cursor to start searching from.
+        spelling (str): The spelling of the cursor to find.
+
+    Returns:
+        clang.cindex.Cursor: The found cursor, or None if not found.
+    """
+    if cursor.spelling == spelling:
+        return cursor
+    for child in cursor.get_children():
+        found = find_cursor_by_spelling(child, spelling)
+        if found:
+            return found
+    return None
+
+def find_cursor_by_kind(cursor, kind):
+    """
+    Find a cursor by its kind.
+
+    Args:
+        cursor (clang.cindex.Cursor): The root cursor to start searching from.
+        kind (clang.cindex.CursorKind): The kind of the cursor to find.
+
+    Returns:
+        List[clang.cindex.Cursor]: List of cursors that match the given kind.
+    """
+    result = []
+    if cursor.kind == kind:
+        result.append(cursor)
+    for child in cursor.get_children():
+        result.extend(find_cursor_by_kind(child, kind))
+    return result
+
+def print_ast(cursor, level=0):
+    """
+    Print the AST starting from the given cursor.
+
+    Args:
+        cursor (clang.cindex.Cursor): The root cursor to start printing from.
+        level (int): The current indentation level.
+    """
+    print(f"{'  ' * level}{cursor.spelling or cursor.kind} ({cursor.kind})")
+    for child in cursor.get_children():
+        print_ast(child, level + 1)
 
 def parse_cpp_file(file_path):
     """
@@ -262,7 +375,7 @@ def generate_ast_json(directory, output_file):
     ast_info_list = parse_hpp_files(directory)
     json_output = json.dumps(ast_info_list, indent=2)
 
-    with open(output_file, 'w') as file:
+    with open(output_file, 'w', encoding='utf-8') as file:
         file.write(json_output)
 
     print(f"AST information written to file: {output_file}")
@@ -300,7 +413,7 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
 
         # Add destructor if available
         if class_info["destructor"]:
-            bindings.append('        .def("__del__", &{}::{})'.format(class_name, class_info["destructor"]["name"]))
+            bindings.append(f'        .def("__del__", &{class_name}::{class_info["destructor"]["name"]})')
 
         # Add member variables
         for member_variable in class_info["member_variables"]:
@@ -359,7 +472,7 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
                 generate_namespace_binding(child)
 
     bindings.append('}')
-    with open(bindings_file, 'w') as file:
+    with open(bindings_file, 'w', encoding='utf-8') as file:
         file.write('\n'.join(bindings))
     print(f"pybind11 bindings written to file: {bindings_file}")
 

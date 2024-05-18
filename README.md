@@ -146,6 +146,10 @@ Let us nurture a heart that yearns for wisdom and grace,
 And never lose sight of this noble race.
 ```
 
+## Technical Support
+
+[![SonarCloud](https://sonarcloud.io/images/project_badges/sonarcloud-orange.svg)](https://sonarcloud.io/summary/new_code?id=ElementAstro_Lithium)
+
 ## 锂
 
 ## 简介

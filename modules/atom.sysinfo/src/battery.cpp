@@ -20,16 +20,14 @@ Description: System Information Module - Battery
 #include <string>
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <conio.h>
 #elif defined(__APPLE__)
 #include <IOKit/ps/IOPSKeys.h>
 #include <IOKit/ps/IOPowerSources.h>
-
 #elif defined(__linux__)
 #include <csignal>
 #include <cstdio>
-
 #endif
 
 namespace atom::system {

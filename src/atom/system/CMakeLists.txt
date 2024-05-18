@@ -32,14 +32,6 @@ set(${PROJECT_NAME}_SOURCES
     storage.cpp
     system.cpp
     user.cpp
-
-    module/cpu.cpp
-    module/disk.cpp
-    module/gpu.cpp
-    module/memory.cpp
-    module/battery.cpp
-    module/wifi.cpp
-    module/os.cpp
 )
 
 # Headers
@@ -56,14 +48,6 @@ set(${PROJECT_NAME}_HEADERS
     storage.hpp
     system.hpp
     user.hpp
-
-    module/cpu.hpp
-    module/disk.hpp
-    module/gpu.hpp
-    module/memory.hpp
-    module/battery.hpp
-    module/wifi.hpp
-    module/os.hpp
 )
 
 # Private Headers

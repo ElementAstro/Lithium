@@ -8,9 +8,7 @@
 
 #include <opencv2/core.hpp>
 
-namespace lithium {
 std::tuple<cv::Mat, bool, std::map<std::string, std::string>> Debayer(
     const std::filesystem::path& filepath);
-}
 
 #endif

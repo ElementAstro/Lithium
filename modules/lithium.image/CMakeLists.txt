@@ -18,12 +18,20 @@ set(CMAKE_LITHIUM_IMAGE_BUILTIN_VERSION_STRING "${CMAKE_LITHIUM_IMAGE_BUILTIN_VE
 set(LITHIUM_IMAGE_BUILTIN_VERSION ${CMAKE_LITHIUM_IMAGE_BUILTIN_VERSION_MAJOR}.${CMAKE_LITHIUM_IMAGE_BUILTIN_VERSION_MINOR}.${CMAKE_LITHIUM_IMAGE_BUILTIN_VERSION_RELEASE})
 
 find_package(OpenCV 4 REQUIRED)
+find_package(CFITSIO REQUIRED)
+
+# To ignore deprecated enum-enum conversion warnings since c++20
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion")
+endif()
 
 # Sources
 set(${PROJECT_NAME}_SOURCES
     _main.cpp
     _component.cpp
 
+    src/base64.cpp
+    src/convolve.cpp
     src/debayer.cpp
     src/fitsio.cpp
     src/fitskeyword.cpp
@@ -31,7 +39,7 @@ set(${PROJECT_NAME}_SOURCES
     src/hist.cpp
     src/stack.cpp
     src/stretch.cpp
-    src/utils.cpp
+    src/imgutils.cpp
 )
 
 # Headers
@@ -43,7 +51,7 @@ set(${PROJECT_NAME}_HEADERS
     include/hist.hpp
     include/stack.hpp
     include/stretch.hpp
-    include/utils.hpp
+    include/imgutils.hpp
 )
 
 # Private Headers
@@ -52,11 +60,12 @@ set(${PROJECT_NAME}_PRIVATE_HEADERS
 )
 
 set(${PROJECT_NAME}_LIBS
-    loguru
     atom-component
     atom-error
     ${CMAKE_THREAD_LIBS_INIT}
     ${OpenCV_LIBS}
+    ${CFITSIO_LIBRARIES}
+    loguru
 )
 
 # Build Object Library

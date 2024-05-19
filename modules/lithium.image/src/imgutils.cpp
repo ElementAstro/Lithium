@@ -1,4 +1,4 @@
-#include "utils.hpp"
+#include "imgutils.hpp"
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -9,6 +9,18 @@
 #include <numeric>
 #include <vector>
 
+#include "atom/log/loguru.hpp"
+
+cv::Mat loadImage(const std::string& filename, bool isGrayscale = false) {
+    int flags = isGrayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR;
+    cv::Mat image = cv::imread(filename, flags);
+    if (image.empty()) {
+        LOG_F(ERROR, "Failed to load image: {}", filename);
+        return cv::Mat();
+    }
+    return image;
+}
+
 // 从文件夹中读取所有图像
 std::vector<cv::Mat> loadImages(const std::string& folder,
                                 const std::vector<std::string>& filenames) {
@@ -18,7 +30,7 @@ std::vector<cv::Mat> loadImages(const std::string& folder,
         if (!img.empty()) {
             images.push_back(img);
         } else {
-            std::cerr << "Error: Unable to load " << filename << std::endl;
+            LOG_F(ERROR, "Failed to load image: {}", filename);
         }
     }
     return images;

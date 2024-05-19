@@ -1,5 +1,5 @@
 #include "hfr.hpp"
-#include "utils.hpp"
+#include "imgutils.hpp"
 
 #include <vector>
 #include <cmath>
@@ -159,9 +159,9 @@ tuple<Mat, int, double, json> StarDetectAndHfr(const Mat& img, bool if_removehot
 
             Mat rect_expand = rgb_img(starRegion);
 
-            if (caldim(rect_expand)) {
-                continue;
-            }
+            //if (caldim(rect_expand)) {
+            //    continue;
+            //}
 
             double hfr = calcHfr(grayimg(starRegion), radius);
             if (hfr < 0.05) {

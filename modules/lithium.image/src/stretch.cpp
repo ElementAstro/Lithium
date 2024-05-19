@@ -1,13 +1,13 @@
 
 #include "stretch.hpp"
-#include "utils.hpp"
+#include "imgutils.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <numeric>
 #include <opencv2/imgproc.hpp>
 #include <vector>
-
 
 cv::Mat Stretch_WhiteBalance(const std::vector<cv::Mat>& hists,
                              const std::vector<cv::Mat>& bgr_planes) {
@@ -32,8 +32,10 @@ cv::Mat Stretch_WhiteBalance(const std::vector<cv::Mat>& hists,
         plane.convertTo(plane, CV_16U);
 
         planes.push_back(plane);
-        double high = (cv::minMaxLoc(hists[i]).maxVal - min_val) /
-                      (max_val - min_val) * 65535;
+        // TODO: Use cv::minMaxLoc
+        //double high = (cv::minMaxLoc(hists[i]).maxVal - min_val) /
+        //              (max_val - min_val) * 65535;
+        double high = 0;
         highs.push_back(high);
     }
 
@@ -117,7 +119,7 @@ cv::Mat GrayStretch(const cv::Mat& img) {
     cv::normalize(img, norm_img, 0, 1, cv::NORM_MINMAX);
 
     // double median = cv::median(norm_img);
-    double median = cv::mean(norm_img);
+    double median = cv::mean(norm_img).val[0];
     double avgbias = Cal_Avgdev(median, norm_img);
     double c0 = std::min(std::max(median + (black_clip * avgbias), 0.0), 1.0);
 
@@ -131,7 +133,7 @@ cv::Mat GrayStretch(const cv::Mat& img) {
                 norm_img.at<double>(i, j) = 0;
             } else {
                 value = (value - c0) / (1 - c0);
-                norm_img.at<double>(i, j) = MTF(m, value);
+                norm_img.at<double>(i, j) = value;
             }
         }
     }

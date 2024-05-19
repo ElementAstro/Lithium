@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <numeric>
+#include <opencv2/imgproc.hpp>
 
 std::pair<cv::Mat, cv::Mat> computeMeanAndStdDev(
     const std::vector<cv::Mat>& images) {

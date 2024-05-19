@@ -102,7 +102,6 @@ else()
     message("-- OpenSSL Not Found")
 endif()
 
-find_package(CFITSIO REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(fmt REQUIRED)
@@ -249,7 +248,6 @@ target_link_libraries(lithium_server fmt::fmt)
 
 target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
 
-target_link_libraries(lithium_server ${CFITSIO_LIBRARIES})
 target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
 target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
 target_link_libraries(lithium_server sqlite3)

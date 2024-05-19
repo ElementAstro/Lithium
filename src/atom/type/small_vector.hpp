@@ -15,307 +15,386 @@ Description: A Small Vector Implementation
 #ifndef ATOM_TYPE_SMALL_VECTOR_HPP
 #define ATOM_TYPE_SMALL_VECTOR_HPP
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
-#include <cstring>
-#include <iostream>
-#include <memory>
-#include <new>
-#include <utility>
+#include <initializer_list>
+#include <numeric>
+#include <stdexcept>
+#include <type_traits>
 
-// 内部存储的最大容量
-constexpr std::size_t InternalBufferSize = 16;
-
-template <typename T, std::size_t N = InternalBufferSize>
+template <typename T, std::size_t N>
 class SmallVector {
 public:
-    SmallVector() noexcept : m_size(0), m_isExternal(false) {}
+    using value_type = T;
+    using size_type = std::size_t;
+    using difference_type = std::ptrdiff_t;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using pointer = value_type*;
+    using const_pointer = const value_type*;
+    using iterator = pointer;
+    using const_iterator = const_pointer;
+    using reverse_iterator = std::reverse_iterator<iterator>;
+    using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    SmallVector(std::initializer_list<T> ilist) : SmallVector() {
-        reserve(ilist.size());
-        std::uninitialized_copy(ilist.begin(), ilist.end(),
-                                m_isExternal ? m_external : m_internal);
-        m_size = ilist.size();
+    SmallVector() = default;
+
+    template <typename InputIt,
+              typename = std::enable_if_t<!std::is_integral_v<InputIt>>>
+    SmallVector(InputIt first, InputIt last) {
+        assign(first, last);
     }
 
-    SmallVector(const SmallVector& other) : SmallVector() {
-        reserve(other.m_size);
-        std::uninitialized_copy(other.begin(), other.end(),
-                                m_isExternal ? m_external : m_internal);
-        m_size = other.m_size;
+    explicit SmallVector(size_type count, const T& value = T()) {
+        assign(count, value);
     }
 
-    SmallVector(SmallVector&& other) noexcept : SmallVector() {
-        moveAssign(std::move(other));
+    template <typename InputIt>
+    SmallVector(InputIt first, InputIt last) {
+        assign(first, last);
     }
 
-    ~SmallVector() { clear(); }
+    SmallVector(std::initializer_list<T> init) { assign(init); }
+
+    SmallVector(const SmallVector& other) {
+        assign(other.begin(), other.end());
+    }
+
+    SmallVector(SmallVector&& other) noexcept { move(std::move(other)); }
+
+    ~SmallVector() {
+        clear();
+        deallocate();
+    }
 
     SmallVector& operator=(const SmallVector& other) {
         if (this != &other) {
-            clear();
-            reserve(other.m_size);
-            std::uninitialized_copy(other.begin(), other.end(),
-                                    m_isExternal ? m_external : m_internal);
-            m_size = other.m_size;
+            assign(other.begin(), other.end());
         }
         return *this;
     }
 
     SmallVector& operator=(SmallVector&& other) noexcept {
         if (this != &other) {
-            moveAssign(std::move(other));
+            clear();
+            deallocate();
+            move(std::move(other));
         }
         return *this;
     }
 
-    T& operator[](std::size_t index) {
-        return const_cast<T&>(static_cast<const SmallVector&>(*this)[index]);
+    SmallVector& operator=(std::initializer_list<T> init) {
+        assign(init);
+        return *this;
     }
 
-    const T& operator[](std::size_t index) const {
-        return m_isExternal ? m_external[index] : m_internal[index];
-    }
-
-    bool operator==(const SmallVector& other) const {
-        if (m_size != other.m_size) {
-            return false;
+    void assign(size_type count, const T& value) {
+        clear();
+        if (count > capacity()) {
+            deallocate();
+            allocate(count);
         }
-        for (std::size_t i = 0; i < m_size; ++i) {
-            if ((*this)[i] != other[i]) {
-                return false;
-            }
+        std::fill_n(begin(), count, value);
+        size_ = count;
+    }
+
+    template <typename InputIt>
+    void assign(InputIt first, InputIt last) {
+        clear();
+        size_type count = std::distance(first, last);
+        if (count > capacity()) {
+            deallocate();
+            allocate(count);
         }
-        return true;
+        std::copy(first, last, begin());
+        size_ = count;
     }
 
-    bool operator!=(const SmallVector& other) const {
-        return !(*this == other);
+    void assign(std::initializer_list<T> init) {
+        assign(init.begin(), init.end());
     }
 
-    T* data() noexcept { return m_isExternal ? m_external : m_internal; }
-
-    const T* data() const noexcept {
-        return m_isExternal ? m_external : m_internal;
-    }
-
-    std::size_t size() const noexcept { return m_size; }
-
-    std::size_t capacity() const noexcept {
-        return m_isExternal ? m_externalCapacity : N;
-    }
-
-    bool empty() const noexcept { return m_size == 0; }
-
-    void clear() noexcept {
-        if (m_isExternal) {
-            std::destroy(m_external, m_external + m_size);
-            ::operator delete(m_external, m_externalCapacity * sizeof(T));
-            m_external = nullptr;
-            m_externalCapacity = 0;
-        } else {
-            std::destroy(m_internal, m_internal + m_size);
+    reference at(size_type pos) {
+        if (pos >= size()) {
+            throw std::out_of_range("SmallVector::at");
         }
-        m_size = 0;
-        m_isExternal = false;
+        return (*this)[pos];
     }
 
-    void reserve(std::size_t newCapacity) {
-        if (newCapacity <= capacity()) {
-            return;
+    const_reference at(size_type pos) const {
+        if (pos >= size()) {
+            throw std::out_of_range("SmallVector::at");
         }
-
-        if (newCapacity > N) {
-            if (m_isExternal) {
-                m_external =
-                    static_cast<T*>(::operator new(newCapacity * sizeof(T)));
-                std::uninitialized_copy(
-                    std::make_move_iterator(m_external),
-                    std::make_move_iterator(m_external + m_size), m_external);
-                std::destroy(m_external, m_external + m_size);
-                ::operator delete(m_external, m_externalCapacity * sizeof(T));
-                m_externalCapacity = newCapacity;
-            } else {
-                T* newBuffer =
-                    static_cast<T*>(::operator new(newCapacity * sizeof(T)));
-                std::uninitialized_copy(
-                    std::make_move_iterator(m_internal),
-                    std::make_move_iterator(m_internal + m_size), newBuffer);
-                std::destroy(m_internal, m_internal + m_size);
-                m_external = newBuffer;
-                m_externalCapacity = newCapacity;
-                m_isExternal = true;
-            }
-        }
+        return (*this)[pos];
     }
 
-    void resize(std::size_t newSize) {
-        reserve(newSize);
-        if (newSize > m_size) {
-            std::uninitialized_fill(
-                m_isExternal ? m_external + m_size : m_internal + m_size,
-                m_isExternal ? m_external + newSize : m_internal + newSize,
-                T());
-        } else {
-            std::destroy(
-                m_isExternal ? m_external + newSize : m_internal + newSize,
-                m_isExternal ? m_external + m_size : m_internal + m_size);
-        }
-        m_size = newSize;
+    reference operator[](size_type pos) { return *(begin() + pos); }
+
+    const_reference operator[](size_type pos) const { return *(begin() + pos); }
+
+    reference front() { return *begin(); }
+
+    const_reference front() const { return *begin(); }
+
+    reference back() { return *(end() - 1); }
+
+    const_reference back() const { return *(end() - 1); }
+
+    T* data() noexcept { return begin(); }
+
+    const T* data() const noexcept { return begin(); }
+
+    iterator begin() noexcept {
+        return capacity() > N ? data_ : static_buffer_.data();
     }
 
-    void push_back(const T& value) {
-        reserve(m_size + 1);
-        ::new (m_isExternal ? m_external + m_size : m_internal + m_size)
-            T(value);
-        ++m_size;
+    const_iterator begin() const noexcept {
+        return capacity() > N ? data_ : static_buffer_.data();
     }
-
-    void push_back(T&& value) {
-        reserve(m_size + 1);
-        ::new (m_isExternal ? m_external + m_size : m_internal + m_size)
-            T(std::move(value));
-        ++m_size;
-    }
-
-    template <typename... Args>
-    T& emplace_back(Args&&... args) {
-        reserve(m_size + 1);
-        T* newElement =
-            m_isExternal ? m_external + m_size : m_internal + m_size;
-        ::new (newElement) T(std::forward<Args>(args)...);
-        ++m_size;
-        return *newElement;
-    }
-
-    void pop_back() {
-        --m_size;
-        std::destroy_at(m_isExternal ? m_external + m_size
-                                     : m_internal + m_size);
-    }
-
-public:
-    // 迭代器类型别名
-    using iterator = T*;
-    using const_iterator = const T*;
-
-    // 迭代器方法
-    iterator begin() noexcept { return data(); }
-
-    const_iterator begin() const noexcept { return data(); }
-
-    iterator end() noexcept { return data() + m_size; }
-
-    const_iterator end() const noexcept { return data() + m_size; }
 
     const_iterator cbegin() const noexcept { return begin(); }
 
+    iterator end() noexcept { return begin() + size(); }
+
+    const_iterator end() const noexcept { return begin() + size(); }
+
     const_iterator cend() const noexcept { return end(); }
 
-    // 反向迭代器方法
-    std::reverse_iterator<iterator> rbegin() noexcept {
-        return std::reverse_iterator<iterator>(end());
+    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+
+    const_reverse_iterator rbegin() const noexcept {
+        return const_reverse_iterator(end());
     }
 
-    std::reverse_iterator<const_iterator> rbegin() const noexcept {
-        return std::reverse_iterator<const_iterator>(end());
+    const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+
+    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+
+    const_reverse_iterator rend() const noexcept {
+        return const_reverse_iterator(begin());
     }
 
-    std::reverse_iterator<iterator> rend() noexcept {
-        return std::reverse_iterator<iterator>(begin());
+    const_reverse_iterator crend() const noexcept { return rend(); }
+
+    [[nodiscard]] bool empty() const noexcept { return size() == 0; }
+
+    size_type size() const noexcept { return size_; }
+
+    size_type max_size() const noexcept {
+        return std::numeric_limits<difference_type>::max();
     }
 
-    std::reverse_iterator<const_iterator> rend() const noexcept {
-        return std::reverse_iterator<const_iterator>(begin());
-    }
-
-    std::reverse_iterator<const_iterator> crbegin() const noexcept {
-        return rbegin();
-    }
-
-    std::reverse_iterator<const_iterator> crend() const noexcept {
-        return rend();
-    }
-
-public:
-    // 三路比较运算符
-public:
-    /*
-    // 三路比较运算符
-        auto operator<=>(const SmallVector& other) const {
-            if constexpr (std::is_arithmetic_v<T>) {
-                // 对于内置算术类型,使用 std::is_eq 和 std::is_neq
-                for (std::size_t i = 0; i < std::min(m_size, other.m_size); ++i)
-    { if (std::is_neq((*this)[i], other[i])) { return (*this)[i] < other[i] ?
-    std::partial_ordering::less : (*this)[i] > other[i] ?
-    std::partial_ordering::greater : std::partial_ordering::unordered;
-                    }
-                }
-
-                return m_size < other.m_size   ? std::partial_ordering::less
-                       : m_size > other.m_size ? std::partial_ordering::greater
-                                               :
-    std::partial_ordering::equivalent; } else {
-                // 对于自定义类型,使用 operator<=>
-                using BuiltinThreeWay =
-                    std::partial_ordering (*)(const T&, const T&);
-                BuiltinThreeWay cmp = &T::operator<=>;
-
-                for (std::size_t i = 0; i < std::min(m_size, other.m_size); ++i)
-    { auto result = cmp((*this)[i], other[i]); if (result !=
-    std::partial_ordering::equivalent) { return result;
-                    }
-                }
-
-                return m_size < other.m_size   ? std::partial_ordering::less
-                       : m_size > other.m_size ? std::partial_ordering::greater
-                                               :
-    std::partial_ordering::equivalent;
-            }
+    void reserve(size_type new_cap) {
+        if (new_cap > capacity()) {
+            T* new_data = allocate(new_cap);
+            std::move(begin(), end(), new_data);
+            deallocate();
+            data_ = new_data;
+            capacity_ = new_cap;
         }
-    */
+    }
 
-public:
-    static std::string partialOrderingToString(std::partial_ordering order) {
-        switch (order) {
-            case std::partial_ordering::less:
-                return "less";
-            case std::partial_ordering::equivalent:
-                return "equivalent";
-            case std::partial_ordering::greater:
-                return "greater";
-            case std::partial_ordering::unordered:
-                return "unordered";
-            default:
-                return "unknown";
+    size_type capacity() const noexcept {
+        return capacity_ > N ? capacity_ : N;
+    }
+
+    void clear() noexcept { size_ = 0; }
+
+    iterator insert(const_iterator pos, const T& value) {
+        return insert(pos, 1, value);
+    }
+
+    iterator insert(const_iterator pos, T&& value) {
+        return emplace(pos, std::move(value));
+    }
+
+    iterator insert(const_iterator pos, size_type count, const T& value) {
+        size_type index = pos - begin();
+        if (size() + count > capacity()) {
+            size_type new_cap = std::max(size() + count, capacity() * 2);
+            T* new_data = allocate(new_cap);
+            std::move(begin(), begin() + index, new_data);
+            std::fill_n(new_data + index, count, value);
+            std::move(begin() + index, end(), new_data + index + count);
+            deallocate();
+            data_ = new_data;
+            capacity_ = new_cap;
+        } else {
+            std::move_backward(begin() + index, end(), end() + count);
+            std::fill_n(begin() + index, count, value);
         }
+        size_ += count;
+        return begin() + index;
+    }
+
+    template <typename InputIt>
+    iterator insert(const_iterator pos, InputIt first, InputIt last) {
+        size_type index = pos - begin();
+        size_type count = std::distance(first, last);
+        if (size() + count > capacity()) {
+            size_type new_cap = std::max(size() + count, capacity() * 2);
+            T* new_data = allocate(new_cap);
+            std::move(begin(), begin() + index, new_data);
+            std::copy(first, last, new_data + index);
+            std::move(begin() + index, end(), new_data + index + count);
+            deallocate();
+            data_ = new_data;
+            capacity_ = new_cap;
+        } else {
+            std::move_backward(begin() + index, end(), end() + count);
+            std::copy(first, last, begin() + index);
+        }
+        size_ += count;
+        return begin() + index;
+    }
+
+    iterator insert(const_iterator pos, std::initializer_list<T> init) {
+        return insert(pos, init.begin(), init.end());
+    }
+
+    template <typename... Args>
+    iterator emplace(const_iterator pos, Args&&... args) {
+        size_type index = pos - begin();
+        if (size() == capacity()) {
+            size_type new_cap = capacity() == 0 ? 1 : capacity() * 2;
+            T* new_data = allocate(new_cap);
+            std::move(begin(), begin() + index, new_data);
+            new (new_data + index) T(std::forward<Args>(args)...);
+            std::move(begin() + index, end(), new_data + index + 1);
+            deallocate();
+            data_ = new_data;
+            capacity_ = new_cap;
+        } else {
+            std::move_backward(begin() + index, end(), end() + 1);
+            *(begin() + index) = T(std::forward<Args>(args)...);
+        }
+        ++size_;
+        return begin() + index;
+    }
+
+    iterator erase(const_iterator pos) { return erase(pos, pos + 1); }
+
+    iterator erase(const_iterator first, const_iterator last) {
+        size_type index = first - begin();
+        size_type count = last - first;
+        std::move(begin() + index + count, end(), begin() + index);
+        size_ -= count;
+        return begin() + index;
+    }
+
+    void push_back(const T& value) { emplace_back(value); }
+
+    void push_back(T&& value) { emplace_back(std::move(value)); }
+
+    template <typename... Args>
+    reference emplace_back(Args&&... args) {
+        if (size() == capacity()) {
+            reserve(capacity() == 0 ? 1 : capacity() * 2);
+        }
+        new (end()) T(std::forward<Args>(args)...);
+        ++size_;
+        return back();
+    }
+
+    void pop_back() { --size_; }
+
+    void resize(size_type count, const T& value = T()) {
+        if (count < size()) {
+            erase(begin() + count, end());
+        } else if (count > size()) {
+            insert(end(), count - size(), value);
+        }
+    }
+
+    void swap(SmallVector& other) noexcept {
+        using std::swap;
+        if (capacity() > N && other.capacity() > N) {
+            swap(data_, other.data_);
+        } else if (capacity() > N) {
+            T* temp_data = data_;
+            data_ = other.allocate(capacity());
+            std::move(other.begin(), other.end(), data_);
+            other.deallocate();
+            other.data_ = temp_data;
+        } else if (other.capacity() > N) {
+            T* temp_data = other.data_;
+            other.data_ = allocate(other.capacity());
+            std::move(begin(), end(), other.data_);
+            deallocate();
+            data_ = temp_data;
+        } else {
+            swap(static_buffer_, other.static_buffer_);
+        }
+        swap(size_, other.size_);
+        swap(capacity_, other.capacity_);
     }
 
 private:
-    void moveAssign(SmallVector&& other) noexcept {
-        clear();
-        if (other.m_isExternal) {
-            m_external = other.m_external;
-            m_externalCapacity = other.m_externalCapacity;
-            other.m_external = nullptr;
-            other.m_externalCapacity = 0;
-        } else {
-            std::uninitialized_copy(
-                std::make_move_iterator(other.m_internal),
-                std::make_move_iterator(other.m_internal + other.m_size),
-                m_internal);
-        }
-        m_size = other.m_size;
-        m_isExternal = other.m_isExternal;
-        other.m_size = 0;
-        other.m_isExternal = false;
+    T* allocate(size_type n) {
+        return static_cast<T*>(::operator new(n * sizeof(T)));
     }
 
-    alignas(T) std::byte m_internalBuffer[N * sizeof(T)];
-    T* m_internal = reinterpret_cast<T*>(m_internalBuffer);
-    T* m_external = nullptr;
-    std::size_t m_externalCapacity = 0;
-    std::size_t m_size = 0;
-    bool m_isExternal = false;
+    void deallocate() {
+        if (capacity() > N) {
+            ::operator delete(data_);
+        }
+    }
+
+    void move(SmallVector&& other) {
+        if (other.capacity() > N) {
+            data_ = other.data_;
+            other.data_ = nullptr;
+        } else {
+            std::move(other.begin(), other.end(), begin());
+        }
+        size_ = other.size_;
+        capacity_ = other.capacity_;
+        other.size_ = 0;
+        other.capacity_ = N;
+    }
+
+    size_type size_ = 0;
+    size_type capacity_ = N;
+    std::array<T, N> static_buffer_;
+    T* data_ = nullptr;
 };
+
+template <typename T, std::size_t N>
+bool operator==(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+    return lhs.size() == rhs.size() &&
+           std::equal(lhs.begin(), lhs.end(), rhs.begin());
+}
+
+template <typename T, std::size_t N>
+bool operator!=(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+    return !(lhs == rhs);
+}
+
+template <typename T, std::size_t N>
+bool operator<(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+    return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                        rhs.end());
+}
+
+template <typename T, std::size_t N>
+bool operator<=(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+    return !(rhs < lhs);
+}
+
+template <typename T, std::size_t N>
+bool operator>(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+    return rhs < lhs;
+}
+
+template <typename T, std::size_t N>
+bool operator>=(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+    return !(lhs < rhs);
+}
+
+template <typename T, std::size_t N>
+void swap(SmallVector<T, N>& lhs, SmallVector<T, N>& rhs) noexcept {
+    lhs.swap(rhs);
+}
 
 #endif

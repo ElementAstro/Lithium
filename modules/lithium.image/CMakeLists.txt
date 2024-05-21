@@ -34,7 +34,7 @@ set(${PROJECT_NAME}_SOURCES
     src/convolve.cpp
     src/debayer.cpp
     src/fitsio.cpp
-    src/fitskeyword.cpp
+    #src/fitskeyword.cpp
     src/hfr.cpp
     src/hist.cpp
     src/stack.cpp
@@ -46,7 +46,7 @@ set(${PROJECT_NAME}_SOURCES
 set(${PROJECT_NAME}_HEADERS
     include/debayer.hpp
     include/fitsio.hpp
-    include/fitskeyword.hpp
+    #include/fitskeyword.hpp
     include/hfr.hpp
     include/hist.hpp
     include/stack.hpp
@@ -86,7 +86,8 @@ target_include_directories(${PROJECT_NAME}_OBJECT PUBLIC .)
 target_include_directories(${PROJECT_NAME}_OBJECT PUBLIC include)
 target_include_directories(${PROJECT_NAME}_OBJECT PUBLIC ${OpenCV_INCLUDE_DIRS})
 
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_HYDROGEN_VERSION_STRING}

@@ -37,6 +37,12 @@ public:
              std::optional<std::function<bool()>> precondition = std::nullopt,
              std::optional<std::function<void()>> postcondition = std::nullopt);
 
+    template <typename Ret, typename... Args>
+    void def_t(const std::string& name, const std::string& group,
+             const std::string& description, std::function<Ret(Args...)> func,
+             std::optional<std::function<bool()>> precondition = std::nullopt,
+             std::optional<std::function<void()>> postcondition = std::nullopt);
+
     [[nodiscard]] bool has(const std::string& name) const;
 
     void addAlias(const std::string& name, const std::string& alias);

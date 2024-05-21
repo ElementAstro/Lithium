@@ -29,14 +29,17 @@ Description: Proxy Function Implementation
 #include <iostream>
 #endif
 
+#include "atom/algorithm/hash.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/function/abi.hpp"
 #include "atom/function/func_traits.hpp"
+#include "atom/function/proxy_params.hpp"
 
 struct FunctionInfo {
     std::string returnType;
     std::vector<std::string> argumentTypes;
     std::vector<std::string> argumentNames;
+    std::string hash;
 
     FunctionInfo() = default;
 
@@ -55,6 +58,44 @@ struct FunctionInfo {
     }
 };
 
+template <typename T>
+T &&any_cast_ref(std::any &operand) {
+    return *std::any_cast<std::decay_t<T> *>(operand);
+}
+
+template <typename T>
+T &&any_cast_ref(const std::any &operand) {
+    return *std::any_cast<std::decay_t<T> *>(operand);
+}
+
+template <typename T>
+T any_cast_val(std::any &operand) {
+    return std::any_cast<T>(operand);
+}
+
+template <typename T>
+T any_cast_val(const std::any &operand) {
+    return std::any_cast<T>(operand);
+}
+
+template <typename T>
+decltype(auto) any_cast_helper(std::any &operand) {
+    if constexpr (std::is_reference_v<T>) {
+        return any_cast_ref<T>(operand);
+    } else {
+        return any_cast_val<T>(operand);
+    }
+}
+
+template <typename T>
+decltype(auto) any_cast_helper(const std::any &operand) {
+    if constexpr (std::is_reference_v<T>) {
+        return any_cast_ref<T>(operand);
+    } else {
+        return any_cast_val<T>(operand);
+    }
+}
+
 template <typename Func>
 struct ProxyFunction {
     std::decay_t<Func> func;
@@ -62,7 +103,10 @@ struct ProxyFunction {
     using Traits = FunctionTraits<Func>;
     static constexpr std::size_t N = Traits::arity;
 
-    ProxyFunction(Func func) : func(func) { collectFunctionInfo(); }
+    ProxyFunction(Func func) : func(func) {
+        collectFunctionInfo();
+        calcFuncInfoHash();
+    }
 
     std::any operator()(const std::vector<std::any> &args) {
         logArgumentTypes();
@@ -98,6 +142,13 @@ private:
          ...);
     }
 
+    void calcFuncInfoHash() {
+        // 仅根据参数类型进行区分，返回值不支持，具体是因为在dispatch时不知道返回值的类型
+        if (info.argumentTypes.size() != 0) {
+            info.hash = atom::algorithm::computeHash(info.argumentTypes);
+        }
+    }
+
     FunctionInfo info;
 
     void logArgumentTypes() {
@@ -107,6 +158,7 @@ private:
 #endif
     }
 
+    /*
     template <std::size_t... Is>
     std::any callFunction(const std::vector<std::any> &args,
                           std::index_sequence<Is...>) {
@@ -118,6 +170,20 @@ private:
             return std::make_any<typename Traits::return_type>(std::invoke(
                 func,
                 std::any_cast<typename Traits::argument_t<Is>>(args[Is])...));
+        }
+    }
+    */
+    template <std::size_t... Is>
+    std::any callFunction(const std::vector<std::any> &args,
+                          std::index_sequence<Is...>) {
+        if constexpr (std::is_void_v<typename Traits::return_type>) {
+            std::invoke(func, any_cast_helper<typename Traits::argument_t<Is>>(
+                                  args[Is])...);
+            return {};
+        } else {
+            return std::make_any<typename Traits::return_type>(std::invoke(
+                func,
+                any_cast_helper<typename Traits::argument_t<Is>>(args[Is])...));
         }
     }
 

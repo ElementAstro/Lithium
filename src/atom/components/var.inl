@@ -55,7 +55,8 @@ inline void VariableManager::setValue(const std::string& name, T newValue) {
                     THROW_EXCEPTION("Value out of range");
                 }
             }
-        } else if constexpr (std::is_same_v<T, std::string>) {
+        } else if constexpr (std::is_same_v<T, std::string> ||
+                             std::is_same_v<T, std::string_view>) {
             if (stringOptions_.count(name)) {
                 auto& options = stringOptions_[name];
                 if (std::find(options.begin(), options.end(), newValue) ==

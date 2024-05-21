@@ -24,6 +24,7 @@ Description: Basic Component Definition
 #include "dispatch.hpp"
 #include "var.hpp"
 
+#include "atom/function/constructor.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/type/noncopyable.hpp"
 
@@ -185,6 +186,66 @@ public:
              const PointerSentinel<Class>& instance,
              const std::string& group = "",
              const std::string& description = "");
+
+    // Register a member variable using a raw pointer sentinel
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, MemberType Class::*var,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a member variable using a shared pointer
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, MemberType Class::*var,
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a static member variable
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, MemberType* var,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a const & static member variable
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, const MemberType* var,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a const member variable
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, const MemberType Class::*var,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, const MemberType Class::*var,
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename MemberType, typename ClassType>
+    void def_member_variable(const std::string& name,
+                             MemberType ClassType::*member_var,
+                             std::shared_ptr<ClassType> instance,
+                             const std::string& group = "",
+                             const std::string& description = "");
+
+    template <typename MemberType, typename ClassType>
+    void def_static_member_variable(const std::string& name,
+                                    MemberType* member_var,
+                                    const std::string& group = "",
+                                    const std::string& description = "");
+
+    template <typename Class>
+    void register_default_constructor(const std::string& name,
+                                      const std::string& group = "",
+                                      const std::string& description = "");
+
+    template <typename Class, typename... Args>
+    void register_constructor(const std::string& name,
+                              const std::string& group = "",
+                              const std::string& description = "");
 
     void addAlias(const std::string& name, const std::string& alias);
 

@@ -18,7 +18,6 @@ Description: Lithium Image Component for Atom Addon
 #include "convolve.hpp"
 #include "debayer.hpp"
 #include "fitsio.hpp"
-#include "fitskeyword.hpp"
 #include "hfr.hpp"
 #include "hist.hpp"
 #include "imgutils.hpp"
@@ -35,10 +34,10 @@ ImageComponent::ImageComponent(const std::string& name) : Component(name) {
         "Decode a string from base64");
 
     def("cv_convolve", &convolve, "utils", "Convolve a cv::Mat with a kernel");
-    def("cv_dft_convolve", &dftConvolve, "utils",
-        "Convolve a cv::Mat with a kernel using DFT");
-    def("cv_deconvolve", &deconvolve, "utils",
-        "Deconvolve a cv::Mat with a kernel");
+    // def("cv_dft_convolve", &dftConvolve, "utils",
+    //     "Convolve a cv::Mat with a kernel using DFT");
+    // def("cv_deconvolve", &deconvolve, "utils",
+    //     "Deconvolve a cv::Mat with a kernel");
 
     def("cv_debayer", &Debayer, "utils", "Debayer a cv::Mat");
 

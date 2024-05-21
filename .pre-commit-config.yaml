@@ -1,13 +1,18 @@
+fail_fast: false
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1  # Use the latest version
+    rev: v4.6.0
     hooks:
       - id: trailing-whitespace
       - id: check-yaml
+      - id: check-json
       - id: end-of-file-fixer
       - id: check-added-large-files
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-merge-conflict
 
   - repo: https://github.com/pocc/pre-commit-hooks
-    rev: v1.3.5  # Use the latest version
+    rev: master
     hooks:
       - id: cpplint

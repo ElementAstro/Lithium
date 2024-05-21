@@ -68,6 +68,13 @@ ProxyFunction<Class(Params...)> build_plain_constructor_(Class (*)(Params...)) {
     return ProxyFunction<Class(Params...)>(call);
 }
 
+template <typename Class, typename... Args>
+auto build_constructor_() {
+    return [](Args... args) -> std::shared_ptr<Class> {
+        return std::make_shared<Class>(std::forward<Args>(args)...);
+    };
+}
+
 template <typename Class>
 ProxyFunction<Class()> build_default_constructor_() {
     auto call = []() { return Class(); };
@@ -84,6 +91,11 @@ auto constructor() {
     } else {
         return build_copy_constructor_(f);
     }
+}
+
+template <typename Class, typename... Args>
+auto constructor() {
+    return build_constructor_<Class, Args...>();
 }
 
 template <typename Class>

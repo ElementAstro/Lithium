@@ -21,7 +21,7 @@ Description: FITS Keyword
 
 class FITSRecord {
 public:
-    enum Type {
+    enum class Type {
         VOID,
         COMMENT,
         STRING = TSTRING,
@@ -55,7 +55,7 @@ private:
     };
     std::string val_str;
     std::string m_key;
-    Type m_type = VOID;
+    Type m_type = Type::VOID;
     std::string m_comment;
     int m_decimal = 6;
 };

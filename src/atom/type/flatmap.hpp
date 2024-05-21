@@ -12,77 +12,69 @@ Description: QuickFlatMap for C++20
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_FLATMAP_HPP
-#define ATOM_EXPERIMENT_FLATMAP_HPP
+#ifndef ATOM_TYPE_FLATMAP_HPP
+#define ATOM_TYPE_FLATMAP_HPP
 
 #include <algorithm>
+#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 template <typename Key, typename Value, typename Comparator = std::equal_to<>>
-struct QuickFlatMap {
-    Comparator comparator;
+class QuickFlatMap {
+public:
+    using value_type = std::pair<Key, Value>;
+    using iterator = typename std::vector<value_type>::iterator;
+    using const_iterator = typename std::vector<value_type>::const_iterator;
+
+    QuickFlatMap() = default;
 
     template <typename Lookup>
-    auto find(const Lookup &s) noexcept {
+    iterator find(const Lookup &s) noexcept {
         return std::find_if(
-            std::begin(data), std::end(data),
+            data.begin(), data.end(),
             [&s, this](const auto &d) { return comparator(d.first, s); });
     }
 
     template <typename Lookup>
-    auto find(const Lookup &s) const noexcept {
+    const_iterator find(const Lookup &s) const noexcept {
         return std::find_if(
-            std::cbegin(data), std::cend(data),
+            data.cbegin(), data.cend(),
             [&s, this](const auto &d) { return comparator(d.first, s); });
     }
 
     template <typename Lookup>
-    auto find(const Lookup &s, const std::size_t t_hint) const noexcept {
+    const_iterator find(const Lookup &s, std::size_t t_hint) const noexcept {
         if constexpr (std::is_invocable_v<decltype(comparator), const Key &,
                                           const Lookup &>) {
             if (data.size() > t_hint && comparator(data[t_hint].first, s)) {
-                const auto begin = std::cbegin(data);
-                return std::next(
-                    begin, static_cast<typename std::iterator_traits<
-                               std::decay_t<decltype(begin)>>::difference_type>(
-                               t_hint));
+                return data.cbegin() + t_hint;
             } else {
                 return find(s);
             }
         } else {
-            // Fallback to the original implementation if Comparator is not
-            // invocable with const Key & and const Lookup &
             if (data.size() > t_hint && comparator(s, data[t_hint].first)) {
-                const auto begin = std::cbegin(data);
-                return std::next(
-                    begin, static_cast<typename std::iterator_traits<
-                               std::decay_t<decltype(begin)>>::difference_type>(
-                               t_hint));
+                return data.cbegin() + t_hint;
             } else {
                 return find(s);
             }
         }
     }
 
-    auto size() const noexcept { return data.size(); }
+    std::size_t size() const noexcept { return data.size(); }
 
-    auto begin() const noexcept { return data.begin(); }
+    bool empty() const noexcept { return data.empty(); }
 
-    auto end() const noexcept { return data.end(); }
-
-    auto begin() noexcept { return data.begin(); }
-
-    auto end() noexcept { return data.end(); }
-
-    auto &back() noexcept { return data.back(); }
-
-    const auto &back() const noexcept { return data.back(); }
+    iterator begin() noexcept { return data.begin(); }
+    const_iterator begin() const noexcept { return data.begin(); }
+    iterator end() noexcept { return data.end(); }
+    const_iterator end() const noexcept { return data.end(); }
 
     Value &operator[](const Key &s) {
-        const auto itr = find(s);
+        auto itr = find(s);
         if (itr != data.end()) {
             return itr->second;
         } else {
@@ -91,55 +83,22 @@ struct QuickFlatMap {
         }
     }
 
-    Value &at_index(const std::size_t idx) noexcept { return data[idx].second; }
-
-    const Value &at_index(const std::size_t idx) const noexcept {
+    Value &at_index(std::size_t idx) noexcept { return data[idx].second; }
+    const Value &at_index(std::size_t idx) const noexcept {
         return data[idx].second;
     }
 
-    bool empty() const noexcept { return data.empty(); }
-
-    template <typename Itr>
-    void assign(Itr begin, Itr end) {
-        data.assign(begin, end);
-    }
-
     Value &at(const Key &s) {
-        const auto itr = find(s);
+        auto itr = find(s);
         if (itr != data.end()) {
             return itr->second;
         } else {
             throw std::out_of_range("Unknown key: " + s);
-        }
-    }
-
-    template <typename M>
-    auto insert_or_assign(Key &&key, M &&m) {
-        if (auto itr = find(key); itr != data.end()) {
-            itr->second = std::forward<M>(m);
-            return std::pair{itr, false};
-        } else {
-            grow();
-            return std::pair{
-                data.emplace(data.end(), std::move(key), std::forward<M>(m)),
-                true};
-        }
-    }
-
-    template <typename M>
-    auto insert_or_assign(const Key &key, M &&m) {
-        if (auto itr = find(key); itr != data.end()) {
-            itr->second = std::forward<M>(m);
-            return std::pair{itr, false};
-        } else {
-            grow();
-            return std::pair{data.emplace(data.end(), key, std::forward<M>(m)),
-                             true};
         }
     }
 
     const Value &at(const Key &s) const {
-        const auto itr = find(s);
+        auto itr = find(s);
         if (itr != data.end()) {
             return itr->second;
         } else {
@@ -147,31 +106,40 @@ struct QuickFlatMap {
         }
     }
 
-    template <typename Lookup>
-    size_t count(const Lookup &s) const noexcept {
-        return (find(s) != data.end()) ? 1 : 0;
-    }
-
-    std::vector<std::pair<Key, Value>> data;
-
-    using value_type = std::pair<Key, Value>;
-    using iterator = typename decltype(data)::iterator;
-    using const_iterator = typename decltype(data)::const_iterator;
-
-    std::pair<iterator, bool> insert(value_type &&value) {
-        if (const auto itr = find(value.first); itr != data.end()) {
-            return std::pair{itr, false};
+    template <typename M>
+    std::pair<iterator, bool> insert_or_assign(const Key &key, M &&m) {
+        if (auto itr = find(key); itr != data.end()) {
+            itr->second = std::forward<M>(m);
+            return {itr, false};
         } else {
             grow();
-            return std::pair{data.insert(data.end(), std::move(value)), true};
+            return {data.emplace(data.end(), key, std::forward<M>(m)), true};
         }
+    }
+
+    std::pair<iterator, bool> insert(value_type value) {
+        if (auto itr = find(value.first); itr != data.end()) {
+            return {itr, false};
+        } else {
+            grow();
+            return {data.insert(data.end(), std::move(value)), true};
+        }
+    }
+
+    template <typename Itr>
+    void assign(Itr first, Itr last) {
+        data.assign(first, last);
     }
 
     void grow() {
-        if ((data.capacity() - data.size()) == 0) {
+        if (data.capacity() == data.size()) {
             data.reserve(data.size() + 2);
         }
     }
+
+private:
+    std::vector<value_type> data;
+    Comparator comparator;
 };
 
-#endif
+#endif  // ATOM_TYPE_FLATMAP_HPP

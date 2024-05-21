@@ -1,7 +1,23 @@
+/*
+ * short_string.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-5-21
+
+Description: ShortString for Atom
+
+**************************************************/
+
 #include "short_string.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
+namespace atom::type {
 ShortString::ShortString(const std::string& s) {
     if (s.length() > MAX_LENGTH) {
         throw std::invalid_argument("String too long for ShortString");
@@ -16,16 +32,7 @@ ShortString::ShortString(std::string_view s) {
     str = s;
 }
 
-ShortString::ShortString(const char* s) : ShortString(std::string(s)) {}
-
-ShortString::ShortString(const ShortString& other) : str(other.str) {}
-
-ShortString& ShortString::operator=(const ShortString& other) {
-    if (this != &other) {
-        str = other.str;
-    }
-    return *this;
-}
+ShortString::ShortString(const char* s) : ShortString(std::string_view(s)) {}
 
 ShortString& ShortString::operator=(const std::string& s) {
     if (s.length() > MAX_LENGTH) {
@@ -36,7 +43,7 @@ ShortString& ShortString::operator=(const std::string& s) {
 }
 
 ShortString& ShortString::operator=(const char* s) {
-    *this = ShortString(s);
+    *this = std::string_view(s);
     return *this;
 }
 
@@ -106,8 +113,7 @@ const char& ShortString::operator[](size_t index) const noexcept {
 
 size_t ShortString::length() const noexcept { return str.length(); }
 
-ShortString ShortString::substr(size_t pos = 0,
-                                size_t count = std::string::npos) const {
+ShortString ShortString::substr(size_t pos, size_t count) const {
     if (pos > str.length()) {
         throw std::out_of_range("Starting position out of range");
     }
@@ -117,3 +123,5 @@ ShortString ShortString::substr(size_t pos = 0,
 void ShortString::clear() noexcept { str.clear(); }
 
 void ShortString::swap(ShortString& other) noexcept { str.swap(other.str); }
+
+}  // namespace atom::type

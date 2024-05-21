@@ -23,7 +23,7 @@ Description: Pointer Sentinel for Atom
 
 /**
  * @brief Concept to check if a type is a pointer type, including raw pointers,
- * std::shared_ptr, and std::unique_ptr.
+ * std::shared_ptr, std::unique_ptr, and std::weak_ptr.
  *
  * @tparam T The type to check.
  */
@@ -44,14 +44,15 @@ template <typename T>
 class PointerSentinel {
 public:
     // Using std::variant to store different types of pointers
-    std::variant<std::shared_ptr<T>, std::unique_ptr<T>, std::weak_ptr<T>, T*> ptr;
+    std::variant<std::shared_ptr<T>, std::unique_ptr<T>, std::weak_ptr<T>, T*>
+        ptr;
 
     /**
      * @brief Construct a new Pointer Sentinel object from a shared pointer.
      *
      * @param p The shared pointer.
      */
-    explicit PointerSentinel(std::shared_ptr<T> p) : ptr(p) {}
+    explicit PointerSentinel(std::shared_ptr<T> p) : ptr(std::move(p)) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a unique pointer.
@@ -65,7 +66,7 @@ public:
      *
      * @param p The weak pointer.
      */
-    explicit PointerSentinel(std::weak_ptr<T> p) : ptr(p) {}
+    explicit PointerSentinel(std::weak_ptr<T> p) : ptr(std::move(p)) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a raw pointer.
@@ -98,6 +99,53 @@ public:
                   }
               },
               other.ptr)) {}
+
+    /**
+     * @brief Move constructor.
+     *
+     * @param other The other Pointer Sentinel object to move from.
+     */
+    PointerSentinel(PointerSentinel&& other) noexcept = default;
+
+    /**
+     * @brief Copy assignment operator.
+     *
+     * @param other The other Pointer Sentinel object to copy from.
+     * @return A reference to this Pointer Sentinel object.
+     */
+    PointerSentinel& operator=(const PointerSentinel& other) {
+        if (this != &other) {
+            ptr = std::visit(
+                [](const auto& p)
+                    -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>,
+                                    std::weak_ptr<T>, T*> {
+                    if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
+                                                 std::shared_ptr<T>>) {
+                        return p;
+                    } else if constexpr (std::is_same_v<
+                                             std::decay_t<decltype(p)>,
+                                             std::unique_ptr<T>>) {
+                        return std::make_unique<T>(*p);
+                    } else if constexpr (std::is_same_v<
+                                             std::decay_t<decltype(p)>,
+                                             std::weak_ptr<T>>) {
+                        return p;
+                    } else {
+                        return new T(*p);
+                    }
+                },
+                other.ptr);
+        }
+        return *this;
+    }
+
+    /**
+     * @brief Move assignment operator.
+     *
+     * @param other The other Pointer Sentinel object to move from.
+     * @return A reference to this Pointer Sentinel object.
+     */
+    PointerSentinel& operator=(PointerSentinel&& other) noexcept = default;
 
     /**
      * @brief Get the raw pointer stored in the variant.
@@ -153,6 +201,68 @@ public:
             },
             ptr);
     }
+
+    /**
+     * @brief Helper method to invoke a callable object on the pointed-to
+     * object.
+     *
+     * @tparam Callable The type of the callable object.
+     * @param callable The callable object.
+     * @return auto The return type of the callable object.
+     */
+    template <typename Callable>
+    [[nodiscard]] auto apply(Callable&& callable) {
+        return std::visit(
+            [&callable](auto&& arg) -> decltype(auto) {
+                using U = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_pointer_v<U>) {
+                    return std::invoke(std::forward<Callable>(callable), arg);
+                } else if constexpr (std::is_same_v<U, std::weak_ptr<T>>) {
+                    auto spt = arg.lock();
+                    if (spt) {
+                        return std::invoke(std::forward<Callable>(callable),
+                                           spt.get());
+                    } else {
+                        throw std::runtime_error("weak_ptr is expired");
+                    }
+                } else {
+                    return std::invoke(std::forward<Callable>(callable),
+                                       arg.get());
+                }
+            },
+            ptr);
+    }
+
+    /**
+     * @brief Helper function to apply a function to the pointed-to object,
+     * with the function returning a void.
+     *
+     * @tparam Func The type of the function to apply.
+     * @tparam Args The types of the arguments to the function.
+     * @param func The function to apply.
+     * @param args The arguments to the function.
+     */
+    template <typename Func, typename... Args>
+    void apply_void(Func func, Args&&... args) {
+        std::visit(
+            [&func, &args...](auto&& arg) {
+                if constexpr (std::is_pointer_v<std::decay_t<decltype(arg)>>) {
+                    func(*arg, std::forward<Args>(args)...);
+                } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>,
+                                                    std::weak_ptr<T>>) {
+                    auto spt = arg.lock();
+                    if (spt) {
+                        func(*spt.get(), std::forward<Args>(args)...);
+                    } else {
+                        // Handle the case where weak_ptr is expired
+                        throw std::runtime_error("weak_ptr is expired");
+                    }
+                } else {
+                    func(*arg.get(), std::forward<Args>(args)...);
+                }
+            },
+            ptr);
+    }
 };
 
-#endif
+#endif  // ATOM_TYPE_POINTER_HPP

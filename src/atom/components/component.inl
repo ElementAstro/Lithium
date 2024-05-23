@@ -1,3 +1,17 @@
+/*
+ * component.inl
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-12-26
+
+Description: Basic Component Definition
+
+**************************************************/
+
 #ifndef ATOM_COMPONENT_COMPONENT_INL
 #define ATOM_COMPONENT_COMPONENT_INL
 
@@ -172,11 +186,39 @@ void Component::def(const std::string& name, const MemberType* member_var,
 }
 
 template <typename MemberType, typename ClassType>
-void Component::def_member_variable(const std::string& name,
-                                    MemberType ClassType::*member_var,
-                                    std::shared_ptr<ClassType> instance,
-                                    const std::string& group,
-                                    const std::string& description) {
+void Component::def_m(const std::string& name, MemberType ClassType::*member_var,
+                    std::shared_ptr<ClassType> instance,
+                    const std::string& group, const std::string& description) {
+    define_accessors(name, member_var, instance, group, description);
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def_m(const std::string& name, MemberType ClassType::*member_var,
+                    PointerSentinel<ClassType> instance,
+                    const std::string& group, const std::string& description) {
+    define_accessors(name, member_var, instance, group, description);
+}
+
+template <typename Class>
+void Component::def(const std::string& name, const std::string& group,
+                    const std::string& description) {
+    auto constructor = default_constructor<Class>();
+    def(name, constructor, group, description);
+}
+
+template <typename Class, typename... Args>
+void Component::def(const std::string& name, const std::string& group,
+                    const std::string& description) {
+    auto constructor_ = constructor<Class, Args...>();
+    def(name, constructor_, group, description);
+}
+
+template <typename MemberType, typename ClassType, typename InstanceType>
+void Component::define_accessors(const std::string& name,
+                                 MemberType ClassType::*member_var,
+                                 InstanceType instance,
+                                 const std::string& group,
+                                 const std::string& description) {
     auto getter = [instance, member_var]() -> MemberType& {
         return instance->*member_var;
     };
@@ -185,43 +227,10 @@ void Component::def_member_variable(const std::string& name,
         instance->*member_var = value;
     };
 
-    m_CommandDispatcher->def(name + "_get", group, description,
+    m_CommandDispatcher->def("get_" + name, group, description,
                              std::function<MemberType&()>(getter));
-    m_CommandDispatcher->def(name + "_set", group, description,
+    m_CommandDispatcher->def("set_" + name, group, description,
                              std::function<void(const MemberType&)>(setter));
-}
-
-template <typename MemberType, typename ClassType>
-void Component::def_static_member_variable(const std::string& name,
-                                           MemberType* member_var,
-                                           const std::string& group,
-                                           const std::string& description) {
-    auto getter = [member_var]() -> MemberType& { return *member_var; };
-
-    auto setter = [member_var](const MemberType& value) {
-        *member_var = value;
-    };
-
-    m_CommandDispatcher->def(name + "_get", group, description,
-                             std::function<MemberType&()>(getter));
-    m_CommandDispatcher->def(name + "_set", group, description,
-                             std::function<void(const MemberType&)>(setter));
-}
-
-template <typename Class>
-void Component::register_default_constructor(const std::string& name,
-                                             const std::string& group,
-                                             const std::string& description) {
-    auto constructor = default_constructor<Class>();
-    def(name, constructor, group, description);
-}
-
-template <typename Class, typename... Args>
-void Component::register_constructor(const std::string& name,
-                                     const std::string& group,
-                                     const std::string& description) {
-    auto constructor_ = constructor<Class, Args...>();
-    def(name, constructor_, group, description);
 }
 
 #endif

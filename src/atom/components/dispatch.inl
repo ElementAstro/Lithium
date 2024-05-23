@@ -29,9 +29,12 @@ void CommandDispatcher::def(
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
     std::optional<std::function<void()>> postcondition) {
+    auto _func = ProxyFunction(std::move(func));
     auto it = commands.find(name);
     if (it == commands.end()) {
-        Command cmd{{ProxyFunction(std::move(func))},
+        Command cmd{{std::move(_func)},
+                    {},
+                    {},
                     {},
                     description,
                     {},
@@ -40,8 +43,11 @@ void CommandDispatcher::def(
         commands[name] = std::move(cmd);
         groupMap[name] = group;
     } else {
-        it->second.funcs.emplace_back(ProxyFunction(std::move(func)));
+        it->second.funcs.emplace_back(std::move(_func));
     }
+    auto info = _func.getFunctionInfo();
+    it->second.arg_names.emplace_back(info.argumentNames);
+    it->second.arg_types.emplace_back(info.argumentTypes);
 }
 
 template <typename Ret, typename... Args>
@@ -50,9 +56,12 @@ void CommandDispatcher::def_t(
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
     std::optional<std::function<void()>> postcondition) {
+    auto _func = TimerProxyFunction(std::move(func));
     auto it = commands.find(name);
     if (it == commands.end()) {
-        Command cmd{{TimerProxyFunction(std::move(func))},
+        Command cmd{{std::move(_func)},
+                    {},
+                    {},
                     {},
                     description,
                     {},
@@ -61,8 +70,11 @@ void CommandDispatcher::def_t(
         commands[name] = std::move(cmd);
         groupMap[name] = group;
     } else {
-        it->second.funcs.emplace_back(TimerProxyFunction(std::move(func)));
+        it->second.funcs.emplace_back(std::move(_func));
     }
+    auto info = _func.getFunctionInfo();
+    it->second.arg_names.emplace_back(info.argumentNames);
+    it->second.arg_types.emplace_back(info.argumentTypes);
 }
 
 template <typename... Args>

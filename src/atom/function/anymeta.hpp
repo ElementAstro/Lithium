@@ -1,9 +1,23 @@
+/*
+ * anymeta.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-12-28
+
+Description: Type Metadata for Any
+
+**************************************************/
+
 #ifndef ATOM_FUNCTION_ANYMETA_HPP
 #define ATOM_FUNCTION_ANYMETA_HPP
 
 #include "any.hpp"
-#include "type_info.hpp"
 #include "atom/error/exception.hpp"
+#include "type_info.hpp"
 
 class TypeMetadata {
 public:
@@ -31,16 +45,14 @@ public:
     }
 
     std::optional<MethodFunction> get_method(const std::string& name) const {
-        auto it = m_methods.find(name);
-        if (it != m_methods.end()) {
+        if (auto it = m_methods.find(name); it != m_methods.end()) {
             return it->second;
         }
         return std::nullopt;
     }
 
     std::optional<Property> get_property(const std::string& name) const {
-        auto it = m_properties.find(name);
-        if (it != m_properties.end()) {
+        if (auto it = m_properties.find(name); it != m_properties.end()) {
             return it->second;
         }
         return std::nullopt;
@@ -72,7 +84,7 @@ public:
 
 // Helper function to call methods dynamically
 inline BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
-                       std::vector<BoxedValue> args) {
+                              std::vector<BoxedValue> args) {
     auto metadata =
         TypeRegistry::instance().get_metadata(obj.get_type_info().name());
     if (metadata) {
@@ -86,7 +98,8 @@ inline BoxedValue call_method(BoxedValue& obj, const std::string& method_name,
 }
 
 // Helper function to get/set properties dynamically
-inline BoxedValue get_property(BoxedValue& obj, const std::string& property_name) {
+inline BoxedValue get_property(BoxedValue& obj,
+                               const std::string& property_name) {
     auto metadata =
         TypeRegistry::instance().get_metadata(obj.get_type_info().name());
     if (metadata) {
@@ -99,7 +112,7 @@ inline BoxedValue get_property(BoxedValue& obj, const std::string& property_name
 }
 
 inline void set_property(BoxedValue& obj, const std::string& property_name,
-                  const BoxedValue& value) {
+                         const BoxedValue& value) {
     auto metadata =
         TypeRegistry::instance().get_metadata(obj.get_type_info().name());
     if (metadata) {

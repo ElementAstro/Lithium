@@ -87,6 +87,8 @@ private:
         std::vector<std::function<std::any(const std::vector<std::any>&)>>
             funcs;
         std::vector<std::string> funcs_info;
+        std::vector<std::vector<std::string>> arg_types;
+        std::vector<std::vector<std::string>> arg_names;
         std::string description;
 #if ENABLE_FASTHASH
         emhash::HashSet<std::string> aliases;

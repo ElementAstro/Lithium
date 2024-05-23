@@ -22,17 +22,19 @@ INDIServerComponent::INDIServerComponent(const std::string& name)
     : Component(name), m_manager(std::make_shared<INDIManager>()) {
     LOG_F(INFO, "INDIServerComponent Constructed");
 
-    def("start", &INDIManager::startServer, m_manager, "indi",
+    def("start", &INDIManager::startServer, m_manager, "astro",
         "start indiserver");
-    def("stop", &INDIManager::stopServer, m_manager, "indi", "stop indiserver");
-    def("is_running", &INDIManager::isRunning, m_manager, "indi",
+    def("stop", &INDIManager::stopServer, m_manager, "astro", "stop indiserver");
+    def("is_running", &INDIManager::isRunning, m_manager, "astro",
         "check if indiserver is running");
-    def("is_installed", &INDIManager::isInstalled, m_manager, "indi",
+    def("is_installed", &INDIManager::isInstalled, m_manager, "astro",
         "check if indiserver is installed");
-    def("set_prop", &INDIManager::setProp, m_manager, "indi", "set prop");
-    def("get_prop", &INDIManager::getProp, m_manager, "indi", "get prop");
-    def("get_state", &INDIManager::getState, m_manager, "indi", "get state");
-
+    def("set_prop", &INDIManager::setProp, m_manager, "astro", "set prop");
+    def("get_prop", &INDIManager::getProp, m_manager, "astro", "get prop");
+    def("get_state", &INDIManager::getState, m_manager, "astro", "get state");
+    def("get_available_device", &INDIManager::getRunningDrivers, m_manager, "astro",
+        "get available device");
+        
     addVariable("indi.manager", m_manager, "indi manager");
 }
 

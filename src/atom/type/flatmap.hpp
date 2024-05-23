@@ -142,4 +142,119 @@ private:
     Comparator comparator;
 };
 
+template <typename Key, typename Value, typename Comparator = std::equal_to<>>
+class QuickFlatMultiMap {
+public:
+    using value_type = std::pair<Key, Value>;
+    using iterator = typename std::vector<value_type>::iterator;
+    using const_iterator = typename std::vector<value_type>::const_iterator;
+
+    QuickFlatMultiMap() = default;
+
+    template <typename Lookup>
+    iterator find(const Lookup &s) noexcept {
+        return std::find_if(
+            data.begin(), data.end(),
+            [&s, this](const auto &d) { return comparator(d.first, s); });
+    }
+
+    template <typename Lookup>
+    const_iterator find(const Lookup &s) const noexcept {
+        return std::find_if(
+            data.cbegin(), data.cend(),
+            [&s, this](const auto &d) { return comparator(d.first, s); });
+    }
+
+    template <typename Lookup>
+    std::pair<iterator, iterator> equal_range(const Lookup &s) noexcept {
+        auto lower = std::find_if(
+            data.begin(), data.end(),
+            [&s, this](const auto &d) { return comparator(d.first, s); });
+        if (lower == data.end())
+            return {lower, lower};
+
+        auto upper = std::find_if_not(
+            lower, data.end(),
+            [&s, this](const auto &d) { return comparator(d.first, s); });
+        return {lower, upper};
+    }
+
+    template <typename Lookup>
+    std::pair<const_iterator, const_iterator> equal_range(
+        const Lookup &s) const noexcept {
+        auto lower = std::find_if(
+            data.cbegin(), data.cend(),
+            [&s, this](const auto &d) { return comparator(d.first, s); });
+        if (lower == data.cend())
+            return {lower, lower};
+
+        auto upper = std::find_if_not(
+            lower, data.cend(),
+            [&s, this](const auto &d) { return comparator(d.first, s); });
+        return {lower, upper};
+    }
+
+    std::size_t size() const noexcept { return data.size(); }
+
+    bool empty() const noexcept { return data.empty(); }
+
+    iterator begin() noexcept { return data.begin(); }
+    const_iterator begin() const noexcept { return data.begin(); }
+    iterator end() noexcept { return data.end(); }
+    const_iterator end() const noexcept { return data.end(); }
+
+    Value &operator[](const Key &s) {
+        auto itr = find(s);
+        if (itr != data.end()) {
+            return itr->second;
+        } else {
+            grow();
+            return data.emplace_back(s, Value()).second;
+        }
+    }
+
+    Value &at_index(std::size_t idx) noexcept { return data[idx].second; }
+    const Value &at_index(std::size_t idx) const noexcept {
+        return data[idx].second;
+    }
+
+    Value &at(const Key &s) {
+        auto itr = find(s);
+        if (itr != data.end()) {
+            return itr->second;
+        } else {
+            throw std::out_of_range("Unknown key: " + s);
+        }
+    }
+
+    const Value &at(const Key &s) const {
+        auto itr = find(s);
+        if (itr != data.end()) {
+            return itr->second;
+        } else {
+            throw std::out_of_range("Unknown key: " + s);
+        }
+    }
+
+    std::pair<iterator, bool> insert(value_type value) {
+        grow();
+        return {data.insert(data.end(), std::move(value)), true};
+    }
+
+    template <typename Itr>
+    void assign(Itr first, Itr last) {
+        data.assign(first, last);
+    }
+
+    void grow() {
+        if (data.capacity() == data.size()) {
+            data.reserve(data.size() + 2);
+        }
+    }
+
+private:
+    std::vector<value_type> data;
+    Comparator comparator;
+};
+
 #endif  // ATOM_TYPE_FLATMAP_HPP

@@ -17,6 +17,7 @@ Dependencies:
 """
 
 import json
+import logging
 import os
 import sys
 import clang.cindex
@@ -45,6 +46,25 @@ def camel_to_snake(name):
             snake_case.append(char)
 
     return ''.join(snake_case)
+
+class FunctionRegistry:
+    def __init__(self):
+        self.functions = []
+        self.total_function_count = 0
+
+    def add_function(self, function_info):
+        self.functions.append(function_info)
+        self.total_function_count += 1
+
+    def print_function_details(self):
+        for function in self.functions:
+            print(f"Function Name: {function['name']}")
+            for param in function['parameters']:
+                print(f"    Param: {param['name']} - {param['type']}")
+        print(f"Total functions: {self.total_function_count}")
+
+# 创建全局变量
+function_registry = FunctionRegistry()
 
 def parse_namespace(cursor) -> dict:
     '''
@@ -113,11 +133,13 @@ def parse_struct(cursor):
     return struct_info
 
 def parse_function(cursor):
+    attributes = [attr.spelling for attr in cursor.get_children() if attr.kind == CursorKind.ANNOTATE_ATTR] # type: ignore
     function_info = {
         "type": "function",
         "name": cursor.spelling,
         "return_type": cursor.result_type.spelling,
-        "parameters": []
+        "parameters": [],
+        "attributes": attributes  # 新增属性标签字段
     }
     for child in cursor.get_children():
         if child.kind == CursorKind.PARM_DECL: # type: ignore
@@ -126,6 +148,22 @@ def parse_function(cursor):
                 "type": child.type.spelling
             })
     return function_info
+
+def parse_template(cursor):
+    template_info = {
+        "type": "template",
+        "name": cursor.spelling,
+        "template_parameters": [],
+        "children": []
+    }
+    for child in cursor.get_children():
+        if child.kind == CursorKind.TEMPLATE_TYPE_PARAMETER: # type: ignore
+            template_info["template_parameters"].append(child.spelling)
+        else:
+            child_info = parse_cursor(child)
+            if child_info:
+                template_info["children"].append(child_info)
+    return template_info
 
 def parse_enum(cursor):
     enum_info = {
@@ -184,33 +222,76 @@ def parse_union(cursor):
             union_info["children"].append(child_info)
     return union_info
 
+def parse_documentation(cursor):
+    docstring = ""
+    for token in cursor.get_tokens():
+        if token.kind == clang.cindex.TokenKind.COMMENT: # type: ignore
+            docstring += token.spelling.strip('/**/ \t\n') + "\n"
+    return docstring.strip()
+
+def parse_namespace_alias(cursor):
+    return {
+        "type": "namespace_alias",
+        "name": cursor.spelling,
+        "aliased_namespace": cursor.referenced.spelling  # 获取别名指向的命名空间
+    }
+
+def parse_using_declaration(cursor):
+    return {
+        "type": "using_declaration",
+        "name": cursor.spelling,
+        "used_name": cursor.referenced.spelling  # 获取using声明使用的名称
+    }
+
+def parse_template_type_parameter(cursor):
+    return {
+        "type": "template_type_parameter",
+        "name": cursor.spelling,
+        "default_type": cursor.default_type.spelling if cursor.default_type else None # 获取模板类型参数的默认类型
+    }
+
 def parse_cursor(cursor):
-    '''
+    """
     Parse a Cursor and return its information as a dictionary.
     Args:
-        cursor (Cursor): The Cursor to parse.
+        cursor (clang.cindex.Cursor): The Cursor to parse.
     Returns:
         dict: A dictionary containing the cursor information.
-    '''
-    if cursor.kind == CursorKind.NAMESPACE: # type: ignore
-        return parse_namespace(cursor)
-    if cursor.kind == CursorKind.CLASS_DECL or cursor.kind == CursorKind.STRUCT_DECL: # type: ignore
-        if cursor.kind == CursorKind.CLASS_DECL: # type: ignore
+    """
+    try:
+        if cursor.kind == CursorKind.NAMESPACE:
+            return parse_namespace(cursor)
+        elif cursor.kind in [CursorKind.CLASS_DECL, CursorKind.CLASS_TEMPLATE]:
             return parse_class(cursor)
-        return parse_struct(cursor)
-    if cursor.kind == CursorKind.CXX_METHOD or cursor.kind == CursorKind.FUNCTION_DECL: # type: ignore
-        return parse_function(cursor)
-    if cursor.kind == CursorKind.ENUM_DECL: # type: ignore
-        return parse_enum(cursor)
-    if cursor.kind == CursorKind.MACRO_DEFINITION: # type: ignore
-        return parse_macro(cursor)
-    if cursor.kind == CursorKind.VAR_DECL: # type: ignore
-        return parse_variable(cursor)
-    if cursor.kind == CursorKind.TYPEDEF_DECL: # type: ignore
-        return parse_typedef(cursor)
-    if cursor.kind == CursorKind.UNION_DECL: # type: ignore
-        return parse_union(cursor)
-    return None
+        elif cursor.kind == CursorKind.STRUCT_DECL:
+            return parse_struct(cursor)
+        elif cursor.kind in [CursorKind.CXX_METHOD, CursorKind.FUNCTION_DECL, CursorKind.FUNCTION_TEMPLATE]:
+            return parse_function(cursor)
+        elif cursor.kind == CursorKind.ENUM_DECL:
+            return parse_enum(cursor)
+        elif cursor.kind == CursorKind.MACRO_DEFINITION:
+            return parse_macro(cursor)
+        elif cursor.kind == CursorKind.VAR_DECL:
+            return parse_variable(cursor)
+        elif cursor.kind == CursorKind.TYPEDEF_DECL:
+            return parse_typedef(cursor)
+        elif cursor.kind == CursorKind.UNION_DECL:
+            return parse_union(cursor)
+        elif cursor.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
+            return parse_template(cursor)
+        # 添加对注释的处理，可以用于文档生成
+        elif cursor.kind == CursorKind.ANNOTATE_ATTR:
+            return {"type": "annotation", "annotation": cursor.spelling}
+        elif cursor.kind == CursorKind.NAMESPACE_ALIAS:
+            return parse_namespace_alias(cursor)
+        elif cursor.kind == CursorKind.USING_DECLARATION:
+            return parse_using_declaration(cursor)
+        elif cursor.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
+            return parse_template_type_parameter(cursor)
+        return None
+    except Exception as e:
+        logging.error(f"Failed to parse cursor at {cursor.location}: {str(e)}")
+        return None
 
 class ParentVisitor:
     def __init__(self):
@@ -476,15 +557,15 @@ def generate_pybind11_bindings(ast_info_list, bindings_file):
         file.write('\n'.join(bindings))
     print(f"pybind11 bindings written to file: {bindings_file}")
 
+import argparse
+
+parser = argparse.ArgumentParser(description="Generate AST and pybind11 bindings for C++ header files.")
+parser.add_argument('directory', help='Directory containing C++ header files')
+parser.add_argument('output_file', help='Output JSON file for AST')
+parser.add_argument('bindings_file', help='Output file for pybind11 bindings')
+args = parser.parse_args()
+
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: python generator.py <directory> <output_file> <bindings_file>")
-        sys.exit(1)
-
-    directory = sys.argv[1]
-    output_file = sys.argv[2]
-    bindings_file = sys.argv[3]
-
-    ast_info_list = parse_hpp_files(directory)
-    generate_ast_json(directory, output_file)
-    generate_pybind11_bindings(ast_info_list, bindings_file)
+    ast_info_list = parse_hpp_files(args.directory)
+    generate_ast_json(args.directory, args.output_file)
+    generate_pybind11_bindings(ast_info_list, args.bindings_file)

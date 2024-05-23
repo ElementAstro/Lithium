@@ -225,27 +225,29 @@ public:
              const std::string& description = "");
 
     template <typename MemberType, typename ClassType>
-    void def_member_variable(const std::string& name,
-                             MemberType ClassType::*member_var,
-                             std::shared_ptr<ClassType> instance,
-                             const std::string& group = "",
-                             const std::string& description = "");
+    void def_m(const std::string& name, MemberType ClassType::*member_var,
+               std::shared_ptr<ClassType> instance,
+               const std::string& group = "",
+               const std::string& description = "");
 
     template <typename MemberType, typename ClassType>
-    void def_static_member_variable(const std::string& name,
-                                    MemberType* member_var,
-                                    const std::string& group = "",
-                                    const std::string& description = "");
+    void def_m(const std::string& name, MemberType ClassType::*member_var,
+               PointerSentinel<ClassType> instance,
+               const std::string& group = "",
+               const std::string& description = "");
+
+    // template <typename MemberType, typename ClassType>
+    // void def_m(const std::string& name, MemberType* member_var,
+    //         const std::string& group = "",
+    //         const std::string& description = "");
 
     template <typename Class>
-    void register_default_constructor(const std::string& name,
-                                      const std::string& group = "",
-                                      const std::string& description = "");
+    void def(const std::string& name, const std::string& group = "",
+             const std::string& description = "");
 
     template <typename Class, typename... Args>
-    void register_constructor(const std::string& name,
-                              const std::string& group = "",
-                              const std::string& description = "");
+    void def(const std::string& name, const std::string& group = "",
+             const std::string& description = "");
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -306,6 +308,13 @@ public:
     void clearOtherComponents();
 
     std::weak_ptr<Component> getOtherComponent(const std::string& name);
+
+private:
+    template <typename MemberType, typename ClassType, typename InstanceType>
+    void define_accessors(const std::string& name,
+                          MemberType ClassType::*member_var,
+                          InstanceType instance, const std::string& group = "",
+                          const std::string& description = "");
 
 private:
     std::string m_name;

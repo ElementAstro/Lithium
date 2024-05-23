@@ -1,3 +1,17 @@
+/*
+ * any.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-12-28
+
+Description: BoxedValue
+
+**************************************************/
+
 #ifndef ATOM_FUNCTION_ANY_HPP
 #define ATOM_FUNCTION_ANY_HPP
 

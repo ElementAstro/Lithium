@@ -1,3 +1,17 @@
+/*
+ * var.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-3-1
+
+Description: Variable Manager
+
+**************************************************/
+
 #ifndef ATOM_COMPONENT_VAR_HPP
 #define ATOM_COMPONENT_VAR_HPP
 

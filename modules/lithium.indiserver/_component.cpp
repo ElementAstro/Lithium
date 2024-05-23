@@ -34,7 +34,7 @@ INDIServerComponent::INDIServerComponent(const std::string& name)
     def("get_state", &INDIManager::getState, m_manager, "astro", "get state");
     def("get_available_device", &INDIManager::getRunningDrivers, m_manager, "astro",
         "get available device");
-        
+
     addVariable("indi.manager", m_manager, "indi manager");
 }
 

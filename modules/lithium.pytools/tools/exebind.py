@@ -25,20 +25,20 @@ def get_executable_info(executable_path: str) -> list:
     except subprocess.CalledProcessError as e:
         logging.error(f"运行可执行文件时出错: {e}")
         sys.exit(1)
-    
+
     lines = help_output.splitlines()
     command_info = []
 
     # 使用正则表达式匹配命令选项和描述
     option_regex = re.compile(r'^\s*(-\w|--\w[\w-]*)(?:\s+<[^>]+>)?\s+(.*)$')
-    
+
     for line in lines:
         match = option_regex.match(line)
         if match:
             option = match.group(1).strip()
             description = match.group(2).strip()
             command_info.append((option, description))
-    
+
     return command_info
 
 def generate_pybind11_code(executable_name: str, command_info: list) -> str:
@@ -89,7 +89,7 @@ public:
     for option, description in command_info:
         function_name = f'get_{option.lstrip("-").replace("-", "_")}'
         bindings_code += f'    std::string {function_name}(const std::string& args = "") {{ return run_command("{option} " + args); }} // {description}\n'
-    
+
     bindings_code += f"""
 }};
 
@@ -100,12 +100,12 @@ PYBIND11_MODULE({executable_name}_bindings, m) {{
         .def(py::init<>())
         .def("run", &{executable_name}_Wrapper::run)
 """
-    
+
     # 为每个命令选项添加函数绑定
     for option, description in command_info:
         function_name = f'get_{option.lstrip("-").replace("-", "_")}'
         bindings_code += f'        .def("{function_name}", &{executable_name}_Wrapper::{function_name}, "{description}")\n'
-    
+
     bindings_code += "    ;\n}\n"
     return bindings_code
 
@@ -148,25 +148,25 @@ def main():
     if len(sys.argv) != 2:
         logging.error(f"使用方法: {sys.argv[0]} <可执行文件路径>")
         sys.exit(1)
-    
+
     executable_path = sys.argv[1]
     executable_name = os.path.basename(executable_path)
 
     check_pybind11_installed()
-    
+
     command_info = get_executable_info(executable_path)
-    
+
     bindings_code = generate_pybind11_code(executable_name, command_info)
     cmake_content = generate_cmake_file(executable_name)
-    
+
     os.makedirs('bindings', exist_ok=True)
-    
+
     with open('bindings/bindings.cpp', 'w') as f:
         f.write(bindings_code)
-    
+
     with open('bindings/CMakeLists.txt', 'w') as f:
         f.write(cmake_content)
-    
+
     logging.info("绑定代码和 CMakeLists.txt 文件已生成到 'bindings' 目录中。")
 
 if __name__ == "__main__":

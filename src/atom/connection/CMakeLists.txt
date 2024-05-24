@@ -9,36 +9,48 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom-connnection C CXX)
 
-if (ENABLE_SSH)
-find_package(LibSSH REQUIRED)
-include_directories(${LIBSSH_INCLUDE_DIRS})
-link_directories(${LIBSSH_LIBRARY_DIRS})
-endif()
-
 # Sources
 list(APPEND ${PROJECT_NAME}_SOURCES
     fifoclient.cpp
     fifoserver.cpp
     sockethub.cpp
+    tcpclient.cpp
     udp_server.cpp
+    udpclient.cpp
 )
 
 # Headers
 list(APPEND ${PROJECT_NAME}_HEADERS
     fifoclient.hpp
     fifoserver.hpp
-    shared_memory.hpp
     sockethub.hpp
+    tcpclient.hpp
     udp_server.hpp
+    udpclient.hpp
 )
 
 if (ENABLE_LIBSSH)
 list(APPEND ${PROJECT_NAME}_SOURCES
     sshclient.cpp
+    sshserver.cpp
 )
 list(APPEND ${PROJECT_NAME}_HEADERS
     sshclient.hpp
+    sshserver.hpp
 )
+endif()
+
+set(${PROJECT_NAME}_LIBS
+    loguru
+    ${CMAKE_THREAD_LIBS_INIT}
+)
+
+if (ENABLE_SSH)
+find_package(LibSSH REQUIRED)
+list(APPEND ${PROJECT_NAME}_LIBS
+    ${LIBSSH_LIBRARIES}
+)
+link_directories(${LIBSSH_LIBRARY_DIRS})
 endif()
 
 # Build Object Library
@@ -57,14 +69,14 @@ target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 add_library(${PROJECT_NAME} STATIC)
 
 target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(${PROJECT_NAME} loguru)
 target_include_directories(${PROJECT_NAME} PUBLIC .)
+
+
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
     SOVERSION ${HYDROGEN_SOVERSION}
-    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
+    OUTPUT_NAME ${PROJECT_NAME}
 )
 
 install(TARGETS ${PROJECT_NAME}

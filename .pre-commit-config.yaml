@@ -11,4 +11,3 @@ repos:
       - id: check-ast
       - id: check-docstring-first
       - id: check-merge-conflict
-      

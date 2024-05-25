@@ -16,12 +16,12 @@ Description: Basic Component Definition
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
-#include <shared_mutex>
 #include <vector>
 
-#include "types.hpp"
-
 #include "dispatch.hpp"
+#include "macro.hpp"
+#include "registry.hpp"
+#include "types.hpp"
 #include "var.hpp"
 
 #include "atom/function/constructor.hpp"
@@ -249,6 +249,8 @@ public:
     void def(const std::string& name, const std::string& group = "",
              const std::string& description = "");
 
+    void def(const Type_Info &ti, const std::string& group = "", const std::string& description = "");
+
     void addAlias(const std::string& name, const std::string& alias);
 
     void addGroup(const std::string& name, const std::string& group);
@@ -309,6 +311,9 @@ public:
 
     std::weak_ptr<Component> getOtherComponent(const std::string& name);
 
+    std::any runCommand(const std::string& name,
+                        const std::vector<std::any>& args);
+
 private:
     template <typename MemberType, typename ClassType, typename InstanceType>
     void define_accessors(const std::string& name,
@@ -321,6 +326,7 @@ private:
     std::string m_configPath;
     std::string m_infoPath;
     Type_Info m_typeInfo;
+    std::vector<Type_Info> m_classes;
 
     std::shared_ptr<CommandDispatcher>
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.

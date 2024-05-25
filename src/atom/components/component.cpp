@@ -133,3 +133,36 @@ bool Component::has(const std::string& name) const {
 std::vector<std::string> Component::getAllCommands() const {
     return m_CommandDispatcher->getAllCommands();
 }
+
+std::any Component::runCommand(const std::string& name,
+                               const std::vector<std::any>& args) {
+    auto _cmd = getAllCommands();
+    auto it = std::find(_cmd.begin(), _cmd.end(), name);
+
+    if (it != _cmd.end()) {
+        return m_CommandDispatcher->dispatch(name, args);
+    } else {
+        for (auto& [key, value] : m_OtherComponents) {
+            if (!value.expired()) {
+                if (value.lock()->has(name)) {
+                    return value.lock()->dispatch(name, args);
+                }
+            } else {
+                LOG_F(ERROR, "Component {} has expired", key);
+                m_OtherComponents.erase(key);
+            }
+        }
+    }
+    THROW_EXCEPTION(
+#if __cplusplus >= 202002L
+        std::format("Command with name {} not found",
+#else
+        fmt::format("Command with name {} not found",
+#endif
+                    name));
+}
+
+void Component::def(const Type_Info &ti, const std::string& group , const std::string& description )
+{
+    m_classes.push_back(ti);
+}

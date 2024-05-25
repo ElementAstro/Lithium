@@ -55,7 +55,7 @@ class CMakeBuilder:
         build_dir: Path,
         generator: Literal["Ninja", "Unix Makefiles"] = "Ninja",
         build_type: Literal["Debug", "Release"] = "Debug",
-        install_prefix: Path = None,
+        install_prefix: Path = None, # type: ignore
         cmake_options: Optional[List[str]] = None,
     ):
         self.source_dir = source_dir
@@ -153,7 +153,7 @@ class MesonBuilder:
         source_dir: Path,
         build_dir: Path,
         build_type: Literal["debug", "release"] = "debug",
-        install_prefix: Path = None,
+        install_prefix: Path = None, # type: ignore
         meson_options: Optional[List[str]] = None,
     ):
         self.source_dir = source_dir

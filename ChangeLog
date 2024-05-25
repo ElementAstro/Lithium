@@ -2,30 +2,30 @@
 
 ## OpenAPT Update Log
 
-23w01a
+### 23w01a
 
 update most of the codes , and there is still a long way to go!
 
-23w01b
+### 23w01b
 
 - Add Dear Imgui as the GUI library
 - Trying to create modules and improve the loader
 - Add crash report and some basic tools
 - Improve task manager
 
-23w01c
+### 23w01c
 
 - Improve TaskManager and ModuleLoader
 - Tried to fix the bug of ThreadManager but still failed
 - Add more test
 
-23w02a
+### 23w02a
 
 - Cleaned up all files using clang-tidy to improve code quality and readability.
 - Implemented an achievement system for players to track and earn in-game accomplishments.
 - Added client web pages and prepared for future online features.
 
-23w02b
+### 23w02b
 
 - Reorganized file directory.
 - Added a feature to dynamically compile and load code. Currently does not support clang.
@@ -49,3 +49,36 @@ big server update and blackened update
 ### 24w01a
 
 - Add Lithium Web Client
+
+### 24m05a 模块与割裂更新
+
+#### 更新周期
+
+2024-05-01 -> 2024-05-31
+
+#### 更新概要
+
+本次更新主要是细化了框架布局，将部分模块分离、优化了部分功能。
+
+#### 分离模块
+
+C++：
+
+- lithium.webserver Web服务器主体，基于Oatpp，统一http和websocket接口
+- lithium.config 配置模块，基于json文件，为内置依赖项
+- lithium.image 图像处理模块，基于OpenCV和Cimg，分为内置接口和可执行文件版本
+- lithium.indiserver INDI服务器，模仿INDIWeb接口
+- atom.algorithm 算法模块，基于boost，为内置依赖项
+- atom.io I/O模块
+- atom.sysinfo 系统信息模块，跨平台支持
+- atom.system 系统功能封装
+- atom.utils 工具模块
+
+Python：
+
+- lithium.pyastro 天文组件，对LightAPT功能的重写与优化
+- lithium.pytools 基于Python的各种工具，包括脚手架之类的
+
+#### 说明
+
+模块更新顾名思义，主要是将一些功能分离出来，方便后续开发。而割裂更新主要是针对一些功能，比如图像处理模块，将C++版本分离出来，同时本体框架将作为通用框架，而不是专门为天文设计的。

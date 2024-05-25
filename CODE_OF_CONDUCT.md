@@ -116,7 +116,7 @@ the community.
 
 This Code of Conduct is adapted from the [Contributor Covenant][homepage],
 version 2.0, available at
-https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
+<https://www.contributor-covenant.org/version/2/0/code_of_conduct.html>.
 
 Community Impact Guidelines were inspired by [Mozilla's code of conduct
 enforcement ladder](https://github.com/mozilla/diversity).
@@ -124,8 +124,8 @@ enforcement ladder](https://github.com/mozilla/diversity).
 [homepage]: https://www.contributor-covenant.org
 
 For answers to common questions about this code of conduct, see the FAQ at
-https://www.contributor-covenant.org/faq. Translations are available at
-https://www.contributor-covenant.org/translations.
+<https://www.contributor-covenant.org/faq>. Translations are available at
+<https://www.contributor-covenant.org/translations>.
 
 # 贡献者公约行为准则
 
@@ -201,10 +201,10 @@ https://www.contributor-covenant.org/translations.
 
 ## 归属
 
-本行为准则改编自[贡献者公约][主页]2.0版，可在https://www.contributor-covenant.org/version/2/0/code_of_conduct.html查看。
+本行为准则改编自[贡献者公约][主页]2.0版，可在<https://www.contributor-covenant.org/version/2/0/code_of_conduct.html查看。>
 
 行为准则执行指南的灵感来自[Mozilla的行为准则执行策略](https://github.com/mozilla/diversity)。
 
 [主页]: https://www.contributor-covenant.org
 
-有关此行为准则常见问题的答案，请参阅https://www.contributor-covenant.org/faq。可以在https://www.contributor-covenant.org/translations找到翻译版本。
+有关此行为准则常见问题的答案，请参阅<https://www.contributor-covenant.org/faq。可以在https://www.contributor-covenant.org/translations找到翻译版本。>

@@ -1,25 +1,21 @@
-/*
- * field_count.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file field_count.hpp
+ * \brief Field Count
+ * \author Max Qian <lightapt.com>
+ * \date 2024-05-25
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
+#ifndef ATOM_META_FILED_COUNT_HPP
+#define ATOM_META_FILED_COUNT_HPP
 
-Date: 2024-5-25
-
-Description: Field Count
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_FILED_COUNT_HPP
-#define ATOM_FUNCTION_FILED_COUNT_HPP
-
-#define ATOM_FUNCTION_C_ARRAY_SUPPORT 1
+#define ATOM_META_C_ARRAY_SUPPORT 1
 
 #include <array>
 #include <type_traits>
 #include <utility>
+
+namespace atom::meta {
 
 struct Any;
 
@@ -60,7 +56,7 @@ consteval std::size_t total_count_of_fields() {
     }
 }
 
-#if ATOM_FUNCTION_C_ARRAY_SUPPORT
+#if ATOM_META_C_ARRAY_SUPPORT
 template <typename T, std::size_t N1, std::size_t N2, std::size_t N3>
 consteval std::size_t try_initialize_with_three_parts() {
     return []<std::size_t... I1, std::size_t... I2, std::size_t... I3>(
@@ -162,12 +158,13 @@ consteval auto field_count_of() {
     if constexpr (requires { type_info<T>::count; }) {
         return type_info<T>::count;
     } else {
-#if ATOM_FUNCTION_C_ARRAY_SUPPORT
+#if ATOM_META_C_ARRAY_SUPPORT
         return details::true_count_of_fields<T>();
 #else
         return details::total_count_of_fields<T>();
 #endif
     }
 }
+}  // namespace atom::meta
 
-#endif  // ATOM_FUNCTION_FILED_COUNT_HPP
+#endif  // ATOM_META_FILED_COUNT_HPP

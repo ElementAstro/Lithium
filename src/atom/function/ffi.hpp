@@ -1,19 +1,13 @@
-/*
- * ffi.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file ffi.hpp
+ * \brief FFI Function Interface
+ * \author Max Qian <lightapt.com>
+ * \date 2023-03-29
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-3-29
-
-Description: FFI Function
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_FFI_HPP
-#define ATOM_FUNCTION_FFI_HPP
+#ifndef ATOM_META_FFI_HPP
+#define ATOM_META_FFI_HPP
 
 #ifdef _MSC_VER
 #include <windows.h>
@@ -27,9 +21,14 @@ Description: FFI Function
 #include <string_view>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
 #include <variant>
 #include <vector>
+
+#if ENABLE_FASTHASH
+#include "emhash/hash_table8.hpp"
+#else
+#include <unordered_map>
+#endif
 
 #include "atom/error/exception.hpp"
 #include "atom/type/noncopyable.hpp"
@@ -109,6 +108,7 @@ public:
             dlclose(handle_);
 #endif
         }
+        functionMap_.clear();
     }
 
     template <typename FuncType>
@@ -141,7 +141,11 @@ public:
 
 private:
     void *handle_;
+#if ENABLE_FASTHASH
+    emhash8::HashMap<std::string, void *> functionMap_;
+#else
     std::unordered_map<std::string, void *> functionMap_;
+#endif
 };
 
 #endif

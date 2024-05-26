@@ -1,19 +1,13 @@
-/*
- * type_info.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file type_info.hpp
+ * \brief Enhance type_info for better type handling
+ * \author Max Qian <lightapt.com>
+ * \date 2023-04-05
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-4-5
-
-Description: Enhance type_info for better type handling
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_TYPE_INFO_HPP
-#define ATOM_FUNCTION_TYPE_INFO_HPP
+#ifndef ATOM_META_TYPE_INFO_HPP
+#define ATOM_META_TYPE_INFO_HPP
 
 #include <cstdlib>
 #include <functional>  // For std::hash
@@ -22,15 +16,9 @@ Description: Enhance type_info for better type handling
 #include <type_traits>
 #include <typeinfo>
 
-// For ABI compatibility
-#if defined(__GNUC__) || defined(__clang__)
-#include <cxxabi.h>
-#elif defined(_MSC_VER)
-#include <DbgHelp.h>
-#include <windows.h>
-#pragma comment(lib, "Dbghelp.lib")
-#endif
+#include "abi.hpp"
 
+namespace atom::meta {
 // Helper to remove cv-qualifiers, references, and pointers
 template <typename T>
 using Bare_Type =
@@ -66,6 +54,24 @@ public:
               (static_cast<unsigned int>(t_is_pod) << is_pod_flag)) {}
 
     constexpr Type_Info() noexcept = default;
+
+    template <typename T>
+    static Type_Info from_type() noexcept {
+        using BareT = Bare_Type<T>;
+        return Type_Info(std::is_const_v<std::remove_reference_t<T>>,
+                         std::is_reference_v<T>, std::is_pointer_v<T>,
+                         std::is_void_v<T>, std::is_arithmetic_v<T>,
+                         std::is_array_v<T>, std::is_enum_v<T>,
+                         std::is_class_v<T>, std::is_function_v<T>,
+                         std::is_trivial_v<T>, std::is_standard_layout_v<T>,
+                         std::is_standard_layout_v<T> && std::is_trivial_v<T>,
+                         &typeid(T), &typeid(BareT));
+    }
+
+    template <typename T>
+    static Type_Info from_instance(const T &) noexcept {
+        return from_type<T>();
+    }
 
     bool operator<(const Type_Info &ti) const noexcept {
         return m_type_info->before(*ti.m_type_info);
@@ -156,7 +162,7 @@ public:
 
     std::string name() const noexcept {
         if (!is_undef()) {
-            return demangle(m_type_info->name());
+            return DemangleHelper::Demangle(m_type_info->name());
         } else {
             return "undefined";
         }
@@ -164,7 +170,7 @@ public:
 
     std::string bare_name() const noexcept {
         if (!is_undef()) {
-            return demangle(m_bare_type_info->name());
+            return DemangleHelper::Demangle(m_bare_type_info->name());
         } else {
             return "undefined";
         }
@@ -193,48 +199,12 @@ public:
     inline static constexpr unsigned int is_pod_flag = 12;
     unsigned int m_flags = (1 << is_undef_flag);
     unsigned int m_type_properties = 0;
-
-private:
-    static std::string demangle(const char *name) {
-        if (!name)
-            return "null";
-
-#if defined(__GNUC__) || defined(__clang__)
-        int status = -1;
-        std::unique_ptr<char, void (*)(void *)> res{
-            abi::__cxa_demangle(name, nullptr, nullptr, &status), std::free};
-        return (status == 0) ? res.get() : std::string(name);
-#elif defined(_MSC_VER)
-        char undecorated_name[4096];  // A buffer to hold the undecorated name.
-        // UnDecorateSymbolName: Demangles the name if it is a user-defined type
-        // or function.
-        if (UnDecorateSymbolName(
-                name, undecorated_name, sizeof(undecorated_name),
-                UNDNAME_COMPLETE | UNDNAME_32_BIT_DECODE | UNDNAME_TYPE_ONLY)) {
-            return undecorated_name;
-        } else {
-            // If UnDecorateSymbolName fails, return the original name.
-            return name;
-        }
-#else
-        return name;  // Fallback for other compilers
-#endif
-    }
 };
 
-// Helper used to create a Type_Info object
 template <typename T>
 struct Get_Type_Info {
     constexpr static Type_Info get() noexcept {
-        using BareT = Bare_Type<T>;
-        return Type_Info(std::is_const_v<std::remove_reference_t<T>>,
-                         std::is_reference_v<T>, std::is_pointer_v<T>,
-                         std::is_void_v<T>, std::is_arithmetic_v<T>,
-                         std::is_array_v<T>, std::is_enum_v<T>,
-                         std::is_class_v<T>, std::is_function_v<T>,
-                         std::is_trivial_v<T>, std::is_standard_layout_v<T>,
-                         std::is_standard_layout_v<T> && std::is_trivial_v<T>,
-                         &typeid(T), &typeid(BareT));
+        return Type_Info::from_type<T>();
     }
 };
 
@@ -314,11 +284,45 @@ constexpr Type_Info user_type() noexcept {
     return Get_Type_Info<T>::get();
 }
 
+namespace detail {
+inline std::unordered_map<std::string, Type_Info> &get_type_registry() {
+    static std::unordered_map<std::string, Type_Info> type_registry;
+    return type_registry;
+}
+
+template <typename T>
+struct Type_Registrar {
+    Type_Registrar(const std::string &type_name) {
+        detail::get_type_registry()[type_name] = user_type<T>();
+    }
+};
+}  // namespace detail
+
+inline void register_type(const std::string &type_name, Type_Info type_info) {
+    detail::get_type_registry()[type_name] = type_info;
+}
+
+template <typename T>
+inline void register_type(const std::string &type_name) {
+    detail::get_type_registry()[type_name] = user_type<T>();
+}
+
+inline std::optional<Type_Info> get_type_info(const std::string &type_name) {
+    auto &registry = detail::get_type_registry();
+    auto it = registry.find(type_name);
+    if (it != registry.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+}  // namespace atom::meta
+
 namespace std {
 
 template <>
-struct hash<Type_Info> {
-    std::size_t operator()(const Type_Info &type_info) const noexcept {
+struct hash<atom::meta::Type_Info> {
+    std::size_t operator()(
+        const atom::meta::Type_Info &type_info) const noexcept {
         if (type_info.is_undef()) {
             return 0;
         }

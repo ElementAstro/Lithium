@@ -1,24 +1,19 @@
-/*
- * anymeta.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file anymeta.hpp
+ * \brief Type Metadata for Any
+ * \author Max Qian <lightapt.com>
+ * \date 2023-12-28
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-12-28
-
-Description: Type Metadata for Any
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_ANYMETA_HPP
-#define ATOM_FUNCTION_ANYMETA_HPP
+#ifndef ATOM_META_ANYMETA_HPP
+#define ATOM_META_ANYMETA_HPP
 
 #include "any.hpp"
 #include "atom/error/exception.hpp"
 #include "type_info.hpp"
 
+namespace atom::meta {
 class TypeMetadata {
 public:
     using MethodFunction = std::function<BoxedValue(std::vector<BoxedValue>)>;
@@ -124,5 +119,6 @@ inline void set_property(BoxedValue& obj, const std::string& property_name,
     }
     THROW_NOT_FOUND("Property not found");
 }
+}  // namespace atom::meta
 
 #endif

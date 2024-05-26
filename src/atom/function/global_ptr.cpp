@@ -1,21 +1,17 @@
-/*
- * global_ptr.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file global_ptr.cpp
+ * \brief Global shared pointer manager
+ * \author Max Qian <lightapt.com>
+ * \date 2023-06-17
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
-
-/*************************************************
-
-Date: 2023-6-17
-
-Description: Global shared pointer manager
-
-**************************************************/
 
 #include "global_ptr.hpp"
 
+#if ENABLE_DEBUG
 #include <iostream>
 #include <sstream>
+#endif
 
 GlobalSharedPtrManager &GlobalSharedPtrManager::getInstance() {
     static GlobalSharedPtrManager instance;
@@ -55,8 +51,10 @@ size_t GlobalSharedPtrManager::size() const {
 
 void GlobalSharedPtrManager::printSharedPtrMap() const {
     std::shared_lock lock(mtx);
+#if ENABLE_DEBUG
     std::cout << "GlobalSharedPtrManager:\n";
     for (const auto &pair : sharedPtrMap) {
         std::cout << "  " << pair.first << "\n";
     }
+#endif
 }

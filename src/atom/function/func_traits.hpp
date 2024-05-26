@@ -1,23 +1,19 @@
-/*
- * func_traits.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file func_traits.hpp
+ * \brief Func Traits for C++20
+ * \author Max Qian <lightapt.com>
+ * \date 2024-04-02
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-4-2
-
-Description: Func Traits for C++20
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_FUNC_TRAITS_HPP
-#define ATOM_FUNCTION_FUNC_TRAITS_HPP
+#ifndef ATOM_META_FUNC_TRAITS_HPP
+#define ATOM_META_FUNC_TRAITS_HPP
 
 #include <functional>
 #include <tuple>
 #include <type_traits>
+
+namespace atom::meta {
 
 template <typename Func>
 struct FunctionTraits;
@@ -109,5 +105,6 @@ inline constexpr bool is_noexcept_v = FunctionTraits<Func>::is_noexcept;
 
 template <typename Func>
 inline constexpr bool is_variadic_v = FunctionTraits<Func>::is_variadic;
+}  // namespace atom::meta
 
 #endif

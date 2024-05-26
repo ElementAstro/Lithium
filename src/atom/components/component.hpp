@@ -25,6 +25,9 @@ Description: Basic Component Definition
 #include "var.hpp"
 
 #include "atom/function/constructor.hpp"
+#include "atom/function/conversion.hpp"
+#include "atom/function/conversion_stl.hpp"
+#include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/type/noncopyable.hpp"
 
@@ -82,7 +85,7 @@ public:
      *
      * @return The type information of the plugin.
      */
-    Type_Info getTypeInfo() const;
+    atom::meta::Type_Info getTypeInfo() const;
 
     // -------------------------------------------------------------------
     // Variable methods
@@ -236,11 +239,6 @@ public:
                const std::string& group = "",
                const std::string& description = "");
 
-    // template <typename MemberType, typename ClassType>
-    // void def_m(const std::string& name, MemberType* member_var,
-    //         const std::string& group = "",
-    //         const std::string& description = "");
-
     template <typename Class>
     void def(const std::string& name, const std::string& group = "",
              const std::string& description = "");
@@ -249,7 +247,8 @@ public:
     void def(const std::string& name, const std::string& group = "",
              const std::string& description = "");
 
-    void def(const Type_Info &ti, const std::string& group = "", const std::string& description = "");
+    void def(const atom::meta::Type_Info& ti, const std::string& group = "",
+             const std::string& description = "");
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -325,8 +324,8 @@ private:
     std::string m_name;
     std::string m_configPath;
     std::string m_infoPath;
-    Type_Info m_typeInfo;
-    std::vector<Type_Info> m_classes;
+    atom::meta::Type_Info m_typeInfo;
+    std::vector<atom::meta::Type_Info> m_classes;
 
     std::shared_ptr<CommandDispatcher>
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.
@@ -334,6 +333,9 @@ private:
         m_VariableManager;  ///< The variable registry for managing variables.
 
     std::unordered_map<std::string, std::weak_ptr<Component>> m_OtherComponents;
+
+    std::shared_ptr<atom::meta::TypeCaster> m_TypeCaster;
+    std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter;
 };
 
 #include "component.inl"

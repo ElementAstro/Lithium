@@ -1,19 +1,17 @@
-/*
- * concept.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file concept.hpp
+ * \brief C++ Concepts
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
+#ifndef ATOM_META_CONCEPT_HPP
+#define ATOM_META_CONCEPT_HPP
 
-Date: 2024-3-1
-
-Description: C++ Concepts
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_CONCEPT_HPP
-#define ATOM_FUNCTION_CONCEPT_HPP
+#if __cplusplus < 202002L
+#error "C++20 is required for this library"
+#endif
 
 #include <concepts>
 #include <functional>
@@ -194,8 +192,6 @@ concept Enum = std::is_enum_v<T>;
 // Checks if a type is a pointer
 template <typename T>
 concept Pointer = std::is_pointer_v<T>;
-
-#include <memory>
 
 // Checks if a type is a std::unique_ptr of any type
 template <typename T>

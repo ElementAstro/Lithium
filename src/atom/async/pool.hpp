@@ -37,8 +37,7 @@ public:
      *
      * @param n_threads The number of threads in the pool
      */
-    explicit ThreadPool(std::size_t n_threads)
-        : threads(n_threads), stop(false), active_count(0) {
+    explicit ThreadPool(std::size_t n_threads) : stop(false), active_count(0) {
         startThreads(n_threads);
     }
 
@@ -66,11 +65,11 @@ public:
 
         auto res = task->get_future();
         {
-            std::unique_lock lock(queue_mutex);
+            std::scoped_lock lock(queue_mutex);
             if (stop) {
                 THROW_UNLAWFUL_OPERATION("enqueue on stopped ThreadPool");
             }
-            tasks.emplace([task]() { (*task)(); });
+            tasks.emplace([task = std::move(task)]() { (*task)(); });
         }
         condition.notify_one();
         return res;
@@ -98,7 +97,7 @@ public:
      * @return std::size_t The number of tasks in the pool
      */
     std::size_t taskCount() const {
-        std::unique_lock lock(queue_mutex);
+        std::scoped_lock lock(queue_mutex);
         return tasks.size();
     }
 
@@ -108,19 +107,21 @@ public:
      * @param n_threads The number of threads in the pool
      */
     void resize(std::size_t n_threads) {
-        std::unique_lock lock(queue_mutex);
-        stop = true;
+        {
+            std::scoped_lock lock(queue_mutex);
+            stop = true;
+        }
         condition.notify_all();
-        lock.unlock();
 
         for (auto& thread : threads) {
-            if (thread.joinable()) {
-                thread.join();
-            }
+            thread.join();
         }
 
         threads.clear();
-        stop = false;
+        {
+            std::scoped_lock lock(queue_mutex);
+            stop = false;
+        }
         startThreads(n_threads);
     }
 
@@ -139,6 +140,7 @@ private:
      * @param n_threads The number of threads in the pool
      */
     void startThreads(std::size_t n_threads) {
+        threads.reserve(n_threads);
         for (std::size_t i = 0; i < n_threads; ++i) {
             threads.emplace_back([this] {
                 while (true) {
@@ -159,6 +161,7 @@ private:
 
                     task();
                     --active_count;
+                    condition.notify_one();
                 }
             });
         }
@@ -169,14 +172,12 @@ private:
      */
     void stopPool() {
         {
-            std::unique_lock lock(queue_mutex);
+            std::scoped_lock lock(queue_mutex);
             stop = true;
         }
         condition.notify_all();
         for (auto& thread : threads) {
-            if (thread.joinable()) {
-                thread.join();
-            }
+            thread.join();
         }
     }
 };

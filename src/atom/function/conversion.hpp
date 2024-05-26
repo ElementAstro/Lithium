@@ -1,19 +1,13 @@
-/*
- * conversion.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file conversion.hpp
+ * \brief C++ Type Conversion
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: C++ Type Conversion
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_CONVERSION_HPP
-#define ATOM_FUNCTION_CONVERSION_HPP
+#ifndef ATOM_META_CONVERSION_HPP
+#define ATOM_META_CONVERSION_HPP
 
 #include <any>
 #include <list>
@@ -31,12 +25,11 @@ Description: C++ Type Conversion
 #include <unordered_map>
 #endif
 
+#include "atom/error/exception.hpp"
+#include "conversion_stl.hpp"
 #include "type_info.hpp"
 
-#include "conversion_stl.hpp"
-
-#include "atom/error/exception.hpp"
-
+namespace atom::meta {
 class bad_conversion : public std::bad_cast {
 public:
     bad_conversion(const Type_Info& from_type, const Type_Info& to_type)
@@ -187,9 +180,13 @@ std::shared_ptr<Type_Conversion_Base> base_class() {
     }
 }
 
-class Type_Conversions {
+class TypeConversions {
 public:
-    Type_Conversions() = default;
+    TypeConversions() = default;
+
+    static std::shared_ptr<TypeConversions> createShared() {
+        return std::make_shared<TypeConversions>();
+    }
 
     void add_conversion(
         const std::shared_ptr<Type_Conversion_Base>& conversion) {
@@ -237,7 +234,7 @@ public:
         }
     }
 
-    // In Type_Conversions class
+    // In TypeConversions class
     template <template <typename...> class MapType, typename K1, typename V1,
               typename K2, typename V2>
     void add_map_conversion() {
@@ -245,7 +242,7 @@ public:
             std::make_shared<Map_Conversion<MapType, K1, V1, K2, V2>>());
     }
 
-    // In Type_Conversions class
+    // In TypeConversions class
     template <typename From, typename To>
     void add_vector_conversion() {
         add_conversion(
@@ -280,5 +277,7 @@ private:
         conversions;
 #endif
 };
+
+}  // namespace atom::meta
 
 #endif

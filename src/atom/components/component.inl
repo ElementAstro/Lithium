@@ -202,14 +202,14 @@ void Component::def_m(const std::string& name, MemberType ClassType::*member_var
 template <typename Class>
 void Component::def(const std::string& name, const std::string& group,
                     const std::string& description) {
-    auto constructor = default_constructor<Class>();
+    auto constructor = atom::meta::default_constructor<Class>();
     def(name, constructor, group, description);
 }
 
 template <typename Class, typename... Args>
 void Component::def(const std::string& name, const std::string& group,
                     const std::string& description) {
-    auto constructor_ = constructor<Class, Args...>();
+    auto constructor_ = atom::meta::constructor<Class, Args...>();
     def(name, constructor_, group, description);
 }
 

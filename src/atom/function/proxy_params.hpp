@@ -1,19 +1,13 @@
-/*
- * proxy_params.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file proxy_params.hpp
+ * \brief Proxy Function Params
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: Proxy Function Implementation
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_PROXY_PARAMS_HPP
-#define ATOM_FUNCTION_PROXY_PARAMS_HPP
+#ifndef ATOM_META_PROXY_PARAMS_HPP
+#define ATOM_META_PROXY_PARAMS_HPP
 
 #if __cplusplus >= 202002L
 

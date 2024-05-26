@@ -1,19 +1,13 @@
-/*
- * abi.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file abi.hpp
+ * \brief A simple C++ ABI wrapper
+ * \author Max Qian <lightapt.com>
+ * \date 2024-5-25
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-12-28
-
-Description: A simple C++ ABI wrapper
-
-**************************************************/
-
-#ifndef ATOM_TYPE_ABI_HPP
-#define ATOM_TYPE_ABI_HPP
+#ifndef ATOM_META_ABI_HPP
+#define ATOM_META_ABI_HPP
 
 #include <memory>
 #include <optional>
@@ -33,6 +27,7 @@ Description: A simple C++ ABI wrapper
 #include <cxxabi.h>
 #endif
 
+namespace atom::meta {
 class DemangleHelper {
 public:
     template <typename T>
@@ -63,6 +58,19 @@ public:
         return demangled;
     }
 
+    static std::vector<std::string> DemangleMany(
+        const std::vector<std::string_view>& mangled_names,
+        const std::optional<std::source_location>& location = std::nullopt) {
+        std::vector<std::string> demangled_names;
+        demangled_names.reserve(mangled_names.size());
+
+        for (const auto& name : mangled_names) {
+            demangled_names.push_back(Demangle(name, location));
+        }
+
+        return demangled_names;
+    }
+
 private:
     static std::string DemangleInternal(std::string_view mangled_name) {
 #ifdef _WIN32
@@ -90,5 +98,6 @@ private:
 #endif
     }
 };
+}  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_ABI_HPP

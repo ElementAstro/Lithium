@@ -29,7 +29,7 @@ void CommandDispatcher::def(
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
     std::optional<std::function<void()>> postcondition) {
-    auto _func = ProxyFunction(std::move(func));
+    auto _func = atom::meta::ProxyFunction(std::move(func));
     auto it = commands.find(name);
     if (it == commands.end()) {
         Command cmd{{std::move(_func)},
@@ -56,7 +56,7 @@ void CommandDispatcher::def_t(
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
     std::optional<std::function<void()>> postcondition) {
-    auto _func = TimerProxyFunction(std::move(func));
+    auto _func = atom::meta::TimerProxyFunction(std::move(func));
     auto it = commands.find(name);
     if (it == commands.end()) {
         Command cmd{{std::move(_func)},

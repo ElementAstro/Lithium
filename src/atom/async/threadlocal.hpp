@@ -40,12 +40,15 @@ public:
     ThreadLocal& operator=(ThreadLocal&&) = default;
 
     T& get() {
-        auto& value_ptr = values_[std::this_thread::get_id()];
-        if (!value_ptr) {
-            value_ptr =
-                std::make_unique<T>(initializer_ ? initializer_() : T());
+        auto tid = std::this_thread::get_id();
+        std::unique_lock<std::mutex> lock(mutex_);
+        auto [it, inserted] = values_.try_emplace(tid);
+        if (inserted) {
+            it->second = initializer_ ? std::make_optional(initializer_())
+                                      : std::nullopt;
         }
-        return *value_ptr;
+        lock.unlock();
+        return it->second.value();
     }
 
     T* operator->() { return &get(); }
@@ -54,46 +57,56 @@ public:
     T& operator*() { return get(); }
     const T& operator*() const { return get(); }
 
-    // 重置当前线程的值
     void reset(T value = T()) {
-        values_[std::this_thread::get_id()] =
-            std::make_unique<T>(std::move(value));
+        auto tid = std::this_thread::get_id();
+        std::lock_guard lock(mutex_);
+        values_[tid] = std::make_optional(std::move(value));
     }
 
-    // 判断当前线程是否有值
     bool has_value() const {
-        return values_.count(std::this_thread::get_id()) > 0;
+        auto tid = std::this_thread::get_id();
+        std::lock_guard lock(mutex_);
+        auto it = values_.find(tid);
+        return it != values_.end() && it->second.has_value();
     }
 
-    // 获取当前线程的值,如果没有值则返回nullptr
     T* get_pointer() {
-        auto it = values_.find(std::this_thread::get_id());
-        return it != values_.end() ? it->second.get() : nullptr;
+        auto tid = std::this_thread::get_id();
+        std::lock_guard lock(mutex_);
+        auto it = values_.find(tid);
+        return it != values_.end() && it->second.has_value()
+                   ? &it->second.value()
+                   : nullptr;
     }
 
     const T* get_pointer() const {
-        auto it = values_.find(std::this_thread::get_id());
-        return it != values_.end() ? it->second.get() : nullptr;
+        auto tid = std::this_thread::get_id();
+        std::lock_guard lock(mutex_);
+        auto it = values_.find(tid);
+        return it != values_.end() && it->second.has_value()
+                   ? &it->second.value()
+                   : nullptr;
     }
 
-    // 遍历所有线程的值并执行指定操作
     template <typename Func>
     void for_each(Func&& func) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& [tid, value_ptr] : values_) {
-            func(*value_ptr);
+        std::lock_guard lock(mutex_);
+        for (auto& [tid, value_opt] : values_) {
+            if (value_opt.has_value()) {
+                func(value_opt.value());
+            }
         }
     }
 
     void clear() {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         values_.clear();
     }
 
 private:
     InitializerFn initializer_;
     mutable std::mutex mutex_;
-    std::unordered_map<std::thread::id, std::unique_ptr<T>> values_;
+    std::unordered_map<std::thread::id, std::optional<T>> values_;
 };
 
 #endif

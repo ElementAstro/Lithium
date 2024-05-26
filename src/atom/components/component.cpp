@@ -32,7 +32,9 @@ Component::Component(const std::string& name)
     : m_name(name),
       m_CommandDispatcher(std::make_unique<CommandDispatcher>()),
       m_VariableManager(std::make_unique<VariableManager>()),
-      m_typeInfo(user_type<Component>()) {
+      m_typeInfo(atom::meta::user_type<Component>()),
+      m_TypeCaster(atom::meta::TypeCaster::createShared()),
+      m_TypeConverter(atom::meta::TypeConversions::createShared()) {
     // Empty
 }
 
@@ -56,7 +58,7 @@ bool Component::destroy() {
 
 std::string Component::getName() const { return m_name; }
 
-Type_Info Component::getTypeInfo() const { return m_typeInfo; }
+atom::meta::Type_Info Component::getTypeInfo() const { return m_typeInfo; }
 
 void Component::addAlias(const std::string& name, const std::string& alias) {
     m_CommandDispatcher->addAlias(name, alias);
@@ -162,7 +164,7 @@ std::any Component::runCommand(const std::string& name,
                     name));
 }
 
-void Component::def(const Type_Info &ti, const std::string& group , const std::string& description )
-{
+void Component::def(const atom::meta::Type_Info& ti, const std::string& group,
+                    const std::string& description) {
     m_classes.push_back(ti);
 }

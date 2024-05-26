@@ -1,23 +1,18 @@
-/*
- * stepper.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file stepper.hpp
+ * \brief Proxy Function Sequence
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: Proxy Function Sequence
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_SEQUENCE_HPP
-#define ATOM_FUNCTION_SEQUENCE_HPP
+#ifndef ATOM_META_SEQUENCE_HPP
+#define ATOM_META_SEQUENCE_HPP
 
 #include "atom/error/exception.hpp"
 #include "proxy.hpp"
 
+namespace atom::meta {
 class FunctionSequence {
 public:
     using FunctionType = std::function<std::any(const std::vector<std::any>&)>;
@@ -74,5 +69,6 @@ public:
 private:
     std::vector<FunctionType> functions;
 };
+}  // namespace atom::meta
 
-#endif  // ATOM_FUNCTION_SEQUENCE_HPP
+#endif  // ATOM_META_SEQUENCE_HPP

@@ -1,24 +1,19 @@
-/*
- * constructors.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file constructors.hpp
+ * \brief C++ Function Constructors
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: C++ Function Constructors
-
-**************************************************/
-
-#ifndef ATOM_FUNTION_CONSTRUCTORS_HPP
-#define ATOM_FUNTION_CONSTRUCTORS_HPP
+#ifndef ATOM_META_CONSTRUCTOR_HPP
+#define ATOM_META_CONSTRUCTOR_HPP
 
 #include "proxy.hpp"
 
 #include "atom/error/exception.hpp"
 
+namespace atom::meta {
 template <typename MemberFunc, typename ClassType>
 ProxyFunction<MemberFunc> bind_member_function(
     MemberFunc ClassType::*member_func) {
@@ -106,5 +101,5 @@ auto default_constructor() {
         THROW_EXCEPTION("Class is not default constructible");
     }
 }
-
-#endif  // ATOM_FUNTION_CONSTRUCTORS_HPP
+}  // namespace atom::meta
+#endif  // ATOM_META_CONSTRUCTOR_HPP

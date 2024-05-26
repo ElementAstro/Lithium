@@ -1,19 +1,13 @@
-/*
- * conversion_stl.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file conversion_stl.hpp
+ * \brief C++ Type Conversion For STL Types
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: C++ Type Conversion For STL Types
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_CONVERSION_STL_HPP
-#define ATOM_FUNCTION_CONVERSION_STL_HPP
+#ifndef ATOM_META_CONVERSION_STL_HPP
+#define ATOM_META_CONVERSION_STL_HPP
 
 #include "conversion.hpp"
 

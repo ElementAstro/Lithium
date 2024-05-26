@@ -1,24 +1,19 @@
-/*
- * bind_first.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file bind_first.hpp
+ * \brief An easy way to bind a function to an object
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: An easy way to bind a function to a object
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_BIND_FIRST_HPP
-#define ATOM_FUNCTION_BIND_FIRST_HPP
+#ifndef ATOM_META_BIND_FIRST_HPP
+#define ATOM_META_BIND_FIRST_HPP
 
 #include <concepts>
 #include <functional>
 #include <type_traits>
 
+namespace atom::meta {
 template <typename T>
 constexpr T *get_pointer(T *t) noexcept {
     return t;
@@ -115,5 +110,6 @@ constexpr auto bind_first(F &&f, O &&o)
         return std::invoke(f, o, std::forward<decltype(param)>(param)...);
     };
 }
+}  // namespace atom::meta
 
-#endif  // ATOM_FUNCTION_BIND_FIRST_HPP
+#endif  // ATOM_META_BIND_FIRST_HPP

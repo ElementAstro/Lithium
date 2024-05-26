@@ -1,25 +1,20 @@
-/*
- * invoke.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file invoke.hpp
+ * \brief An implementation of invoke function. Supports C++11 and C++17.
+ * \author Max Qian <lightapt.com>
+ * \date 2023-03-29
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
+#ifndef ATOM_META_INVOKE_HPP
+#define ATOM_META_INVOKE_HPP
 
-Date: 2023-3-29
-
-Description: An implementation of invoke function. Support C++11 and C++17.
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_INVOKE_HPP
-#define ATOM_FUNCTION_INVOKE_HPP
-
-#include <exception>
 #include <functional>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
+
+#include "atom/error/exception.hpp"
 
 #if __cplusplus >= 201703L
 
@@ -77,7 +72,7 @@ auto safe_call(Func &&func, Args &&...args) {
         if constexpr (std::is_default_constructible_v<ReturnType>) {
             return ReturnType{};
         } else {
-            throw std::runtime_error("An exception occurred in safe_call");
+            THROW_RUNTIME_ERROR("An exception occurred in safe_call");
         }
     }
 }
@@ -237,4 +232,4 @@ auto safe_try_catch_with_custom_handler(
 
 #endif  // __cplusplus
 
-#endif  // ATOM_FUNCTION_INVOKE_HPP
+#endif  // ATOM_META_INVOKE_HPP

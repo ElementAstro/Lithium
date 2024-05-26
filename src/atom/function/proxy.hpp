@@ -1,19 +1,13 @@
-/*
- * proxy.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file proxy.hpp
+ * \brief Proxy Function Implementation
+ * \author Max Qian <lightapt.com>
+ * \date 2024-03-01
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-3-1
-
-Description: Proxy Function Implementation
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_PROXY_HPP
-#define ATOM_FUNCTION_PROXY_HPP
+#ifndef ATOM_META_PROXY_HPP
+#define ATOM_META_PROXY_HPP
 
 #include <any>
 #include <chrono>
@@ -35,6 +29,7 @@ Description: Proxy Function Implementation
 #include "atom/function/func_traits.hpp"
 #include "atom/function/proxy_params.hpp"
 
+namespace atom::meta {
 struct FunctionInfo {
     std::string returnType;
     std::vector<std::string> argumentTypes;
@@ -158,21 +153,6 @@ private:
 #endif
     }
 
-    /*
-    template <std::size_t... Is>
-    std::any callFunction(const std::vector<std::any> &args,
-                          std::index_sequence<Is...>) {
-        if constexpr (std::is_void_v<typename Traits::return_type>) {
-            std::invoke(func, std::any_cast<typename Traits::argument_t<Is>>(
-                                  args[Is])...);
-            return {};
-        } else {
-            return std::make_any<typename Traits::return_type>(std::invoke(
-                func,
-                std::any_cast<typename Traits::argument_t<Is>>(args[Is])...));
-        }
-    }
-    */
     template <std::size_t... Is>
     std::any callFunction(const std::vector<std::any> &args,
                           std::index_sequence<Is...>) {
@@ -184,6 +164,16 @@ private:
             return std::make_any<typename Traits::return_type>(std::invoke(
                 func,
                 any_cast_helper<typename Traits::argument_t<Is>>(args[Is])...));
+        }
+    }
+
+    std::any callFunction(const FunctionParams &params) {
+        if constexpr (std::is_void_v<typename Traits::return_type>) {
+            std::invoke(func, params.to_vector());
+            return {};
+        } else {
+            return std::make_any<typename Traits::return_type>(
+                std::invoke(func, params.to_vector()));
         }
     }
 
@@ -332,8 +322,11 @@ private:
                                 std::chrono::milliseconds timeout) {
         std::packaged_task<std::any()> packaged_task(std::move(task));
         std::future<std::any> future = packaged_task.get_future();
+#if __cplusplus >= 201703L
+        std::jthread task_thread(std::move(packaged_task));
+#else
         std::thread task_thread(std::move(packaged_task));
-
+#endif
         if (future.wait_for(timeout) == std::future_status::timeout) {
             task_thread.detach();  // Detach the thread on timeout
             THROW_EXCEPTION("Function execution timed out");
@@ -343,5 +336,6 @@ private:
         return future.get();
     }
 };
+}  // namespace atom::meta
 
 #endif

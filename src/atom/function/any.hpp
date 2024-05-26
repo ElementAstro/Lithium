@@ -1,19 +1,13 @@
-/*
- * any.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file any.hpp
+ * \brief BoxedValue
+ * \author Max Qian <lightapt.com>
+ * \date 2023-12-28
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-12-28
-
-Description: BoxedValue
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_ANY_HPP
-#define ATOM_FUNCTION_ANY_HPP
+#ifndef ATOM_META_ANY_HPP
+#define ATOM_META_ANY_HPP
 
 #include <any>
 #include <functional>
@@ -31,6 +25,7 @@ Description: BoxedValue
 
 #include "type_info.hpp"
 
+namespace atom::meta {
 class BoxedValue {
 public:
     struct Void_Type {};
@@ -258,7 +253,8 @@ BoxedValue const_var(const T& t) {
     return BoxedValue(std::cref(t), false, true);
 }
 
-// Helper function to create一个void BoxedValue
+// Helper function to create a void BoxedValue
 inline BoxedValue void_var() { return BoxedValue(BoxedValue::Void_Type{}); }
+}  // namespace atom::meta
 
-#endif  // ATOM_FUNCTION_ANY_HPP
+#endif  // ATOM_META_ANY_HPP

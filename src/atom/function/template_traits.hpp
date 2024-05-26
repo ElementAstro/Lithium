@@ -1,23 +1,18 @@
-/*
- * template_traits.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file template_traits.hpp
+ * \brief Template Traits
+ * \author Max Qian <lightapt.com>
+ * \date 2024-05-25
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-5-25
-
-Description: Template Traits
-
-**************************************************/
-
-#ifndef ATOM_FUNCTION_TEMPLATE_TRAITS
-#define ATOM_FUNCTION_TEMPLATE_TRAITS
+#ifndef ATOM_META_TEMPLATE_TRAITS
+#define ATOM_META_TEMPLATE_TRAITS
 
 #include <tuple>
 #include <type_traits>
 
+namespace atom::meta {
 // Identity template
 template <typename T, T... Value>
 struct identity {
@@ -95,5 +90,6 @@ struct is_partial_specialization_of<Template<Arg, Args...>, Template>
 template <typename T, template <typename, typename...> class Template>
 inline constexpr bool is_partial_specialization_of_v =
     is_partial_specialization_of<T, Template>::value;
+}  // namespace atom::meta
 
-#endif  // ATOM_FUNCTION_TEMPLATE_TRAITS
+#endif  // ATOM_META_TEMPLATE_TRAITS

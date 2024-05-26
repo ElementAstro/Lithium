@@ -1,19 +1,13 @@
-/*
- * global_ptr.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file global_ptr.hpp
+ * \brief Global shared pointer manager
+ * \author Max Qian <lightapt.com>
+ * \date 2023-06-17
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-6-17
-
-Description: Global shared pointer manager
-
-**************************************************/
-
-#ifndef ATOM_SERVER_GLOBAL_PTR_HPP
-#define ATOM_SERVER_GLOBAL_PTR_HPP
+#ifndef ATOM_META_GLOBAL_PTR_HPP
+#define ATOM_META_GLOBAL_PTR_HPP
 
 #include <any>
 #include <functional>
@@ -334,4 +328,4 @@ void GlobalSharedPtrManager::deleteObject(const std::string &key, T *ptr) {
     }
 }
 
-#endif  // ATOM_SERVER_GLOBAL_PTR_HPP
+#endif  // ATOM_META_GLOBAL_PTR_HPP

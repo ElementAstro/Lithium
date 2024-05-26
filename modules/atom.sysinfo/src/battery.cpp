@@ -12,7 +12,7 @@ Description: System Information Module - Battery
 
 **************************************************/
 
-#include "battery.hpp"
+#include "atom/sysinfo/battery.hpp"
 
 #include <fstream>
 #include <functional>

@@ -252,6 +252,11 @@ public:
         }
     }
 
+    size_t count(const Key &s) const {
+        auto [lower, upper] = equal_range(s);
+        return std::distance(lower, upper);
+    }
+
 private:
     std::vector<value_type> data;
     Comparator comparator;

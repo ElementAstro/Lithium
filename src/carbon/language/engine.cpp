@@ -84,7 +84,7 @@ void Carbon_Basic::build_eval_system(const ModulePtr &t_lib,
         }),
         "call");
 
-    m_engine.add(fun([this](const Type_Info &t_ti) {
+    m_engine.add(fun([this](const atom::meta::Type_Info &t_ti) {
                      return m_engine.get_type_name(t_ti);
                  }),
                  "name");
@@ -100,7 +100,7 @@ void Carbon_Basic::build_eval_system(const ModulePtr &t_lib,
 
     m_engine.add(
         fun([this](
-                const Type_Info &t_from, const Type_Info &t_to,
+                const atom::meta::Type_Info &t_from, const atom::meta::Type_Info &t_to,
                 const std::function<Boxed_Value(const Boxed_Value &)> &t_func) {
             m_engine.add(Carbon::type_conversion(t_from, t_to, t_func));
         }),
@@ -333,7 +333,7 @@ AST_NodePtr Carbon_Basic::parse(const std::string &t_input,
     return ast;
 }
 
-std::string Carbon_Basic::get_type_name(const Type_Info &ti) const {
+std::string Carbon_Basic::get_type_name(const atom::meta::Type_Info &ti) const {
     return m_engine.get_type_name(ti);
 }
 

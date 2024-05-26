@@ -9,10 +9,10 @@
 
 #include "../language/algebraic.hpp"
 #include "any.hpp"
+#include "atom/function/type_info.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
 #include "boxed_value.hpp"
-#include "atom/function/type_info.hpp"
 
 namespace Carbon {
 class Type_Conversions;
@@ -88,112 +88,55 @@ private:
                : (t_size == 8 && t_signed) ? (Common_Types::t_int64)
                                            : (Common_Types::t_uint64);
     }
-
-    /*
-    const Type_Info &inp_ = t_bv.get_type_info();
-
-    // 一个泛型lambda函数，用于检查类型并返回相应的Common_Types
-    auto check_type = [&inp_]<typename T>(Common_Types type_if_match) -> Common_Types {
-        if (inp_ == user_type<T>()) {
-            return type_if_match;
-        }
-        throw std::invalid_argument("Type not supported");
-    };
-
-    try {
-        // 使用lambda函数替代if-else链
-        return std::visit([&](auto&& arg) -> Common_Types {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, int>) {
-                return check_type.template operator()<int>(Common_Types::t_int);
-            } else if constexpr (std::is_same_v<T, double>) {
-                return Common_Types::t_double;
-            } else if constexpr (std::is_same_v<T, long double>) {
-                return Common_Types::t_long_double;
-            } else if constexpr (std::is_same_v<T, float>) {
-                return Common_Types::t_float;
-            } else if constexpr (std::is_same_v<T, char>) {
-                return check_type.template operator()<char>(Common_Types::t_int8);
-            } else if constexpr (std::is_same_v<T, unsigned char>) {
-                return check_type.template operator()<unsigned char>(Common_Types::t_uint8);
-            } else if constexpr (std::is_same_v<T, unsigned int>) {
-                return check_type.template operator()<unsigned int>(Common_Types::t_uint32);
-            } else if constexpr (std::is_same_v<T, long>) {
-                return check_type.template operator()<long>(Common_Types::t_int64);
-            } else if constexpr (std::is_same_v<T, long long>) {
-                return check_type.template operator()<long long>(Common_Types::t_int64);
-            } else if constexpr (std::is_same_v<T, unsigned long>) {
-                return check_type.template operator()<unsigned long>(Common_Types::t_uint64);
-            } else if constexpr (std::is_same_v<T, unsigned long long>) {
-                return check_type.template operator()<unsigned long long>(Common_Types::t_uint64);
-            } else if constexpr (std::is_same_v<T, std::int8_t>) {
-                return Common_Types::t_int8;
-            } else if constexpr (std::is_same_v<T, std::int16_t>) {
-                return Common_Types::t_int16;
-            } else if constexpr (std::is_same_v<T, std::int32_t>) {
-                return Common_Types::t_int32;
-            } else if constexpr (std::is_same_v<T, std::int64_t>) {
-                return Common_Types::t_int64;
-            } else if constexpr (std::is_same_v<T, std::uint8_t>) {
-                return Common_Types::t_uint8;
-            } else if constexpr (std::is_same_v<T, std::uint16_t>) {
-                return Common_Types::t_uint16;
-            } else if constexpr (std::is_same_v<T, std::uint32_t>) {
-                return Common_Types::t_uint32;
-            } else if constexpr (std::is_same_v<T, std::uint64_t>) {
-                return Common_Types::t_uint64;
-            } else if constexpr (std::is_same_v<T, wchar_t>) {
-                return check_type.template operator()<wchar_t>(Common_Types::
-    */
-
+    
     static Common_Types get_common_type(const Boxed_Value &t_bv) {
-        const Type_Info &inp_ = t_bv.get_type_info();
+        const atom::meta::Type_Info &inp_ = t_bv.get_type_info();
 
-        if (inp_ == user_type<int>()) {
+        if (inp_ == atom::meta::user_type<int>()) {
             return get_common_type(sizeof(int), true);
-        } else if (inp_ == user_type<double>()) {
+        } else if (inp_ == atom::meta::user_type<double>()) {
             return Common_Types::t_double;
-        } else if (inp_ == user_type<long double>()) {
+        } else if (inp_ == atom::meta::user_type<long double>()) {
             return Common_Types::t_long_double;
-        } else if (inp_ == user_type<float>()) {
+        } else if (inp_ == atom::meta::user_type<float>()) {
             return Common_Types::t_float;
-        } else if (inp_ == user_type<char>()) {
+        } else if (inp_ == atom::meta::user_type<char>()) {
             return get_common_type(sizeof(char), std::is_signed<char>::value);
-        } else if (inp_ == user_type<unsigned char>()) {
+        } else if (inp_ == atom::meta::user_type<unsigned char>()) {
             return get_common_type(sizeof(unsigned char), false);
-        } else if (inp_ == user_type<unsigned int>()) {
+        } else if (inp_ == atom::meta::user_type<unsigned int>()) {
             return get_common_type(sizeof(unsigned int), false);
-        } else if (inp_ == user_type<long>()) {
+        } else if (inp_ == atom::meta::user_type<long>()) {
             return get_common_type(sizeof(long), true);
-        } else if (inp_ == user_type<long long>()) {
+        } else if (inp_ == atom::meta::user_type<long long>()) {
             return get_common_type(sizeof(long long), true);
-        } else if (inp_ == user_type<unsigned long>()) {
+        } else if (inp_ == atom::meta::user_type<unsigned long>()) {
             return get_common_type(sizeof(unsigned long), false);
-        } else if (inp_ == user_type<unsigned long long>()) {
+        } else if (inp_ == atom::meta::user_type<unsigned long long>()) {
             return get_common_type(sizeof(unsigned long long), false);
-        } else if (inp_ == user_type<std::int8_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::int8_t>()) {
             return Common_Types::t_int8;
-        } else if (inp_ == user_type<std::int16_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::int16_t>()) {
             return Common_Types::t_int16;
-        } else if (inp_ == user_type<std::int32_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::int32_t>()) {
             return Common_Types::t_int32;
-        } else if (inp_ == user_type<std::int64_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::int64_t>()) {
             return Common_Types::t_int64;
-        } else if (inp_ == user_type<std::uint8_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::uint8_t>()) {
             return Common_Types::t_uint8;
-        } else if (inp_ == user_type<std::uint16_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::uint16_t>()) {
             return Common_Types::t_uint16;
-        } else if (inp_ == user_type<std::uint32_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::uint32_t>()) {
             return Common_Types::t_uint32;
-        } else if (inp_ == user_type<std::uint64_t>()) {
+        } else if (inp_ == atom::meta::user_type<std::uint64_t>()) {
             return Common_Types::t_uint64;
-        } else if (inp_ == user_type<wchar_t>()) {
+        } else if (inp_ == atom::meta::user_type<wchar_t>()) {
             return get_common_type(sizeof(wchar_t),
                                    std::is_signed<wchar_t>::value);
-        } else if (inp_ == user_type<char16_t>()) {
+        } else if (inp_ == atom::meta::user_type<char16_t>()) {
             return get_common_type(sizeof(char16_t),
                                    std::is_signed<char16_t>::value);
-        } else if (inp_ == user_type<char32_t>()) {
+        } else if (inp_ == atom::meta::user_type<char32_t>()) {
             return get_common_type(sizeof(char32_t),
                                    std::is_signed<char32_t>::value);
         } else {
@@ -441,63 +384,64 @@ public:
     }
 
     static bool is_floating_point(const Boxed_Value &t_bv) {
-        const Type_Info &inp_ = t_bv.get_type_info();
+        const atom::meta::Type_Info &inp_ = t_bv.get_type_info();
 
-        if (inp_ == user_type<double>()) {
+        if (inp_ == atom::meta::user_type<double>()) {
             return true;
-        } else if (inp_ == user_type<long double>()) {
+        } else if (inp_ == atom::meta::user_type<long double>()) {
             return true;
-        } else if (inp_ == user_type<float>()) {
+        } else if (inp_ == atom::meta::user_type<float>()) {
             return true;
         } else {
             return false;
         }
     }
 
-    Boxed_Number get_as(const Type_Info &inp_) const {
-        if (inp_.bare_equal(user_type<int>())) {
+    Boxed_Number get_as(const atom::meta::Type_Info &inp_) const {
+        if (inp_.bare_equal(atom::meta::user_type<int>())) {
             return Boxed_Number(get_as<int>());
-        } else if (inp_.bare_equal(user_type<double>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<double>())) {
             return Boxed_Number(get_as<double>());
-        } else if (inp_.bare_equal(user_type<float>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<float>())) {
             return Boxed_Number(get_as<float>());
-        } else if (inp_.bare_equal(user_type<long double>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<long double>())) {
             return Boxed_Number(get_as<long double>());
-        } else if (inp_.bare_equal(user_type<char>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<char>())) {
             return Boxed_Number(get_as<char>());
-        } else if (inp_.bare_equal(user_type<unsigned char>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<unsigned char>())) {
             return Boxed_Number(get_as<unsigned char>());
-        } else if (inp_.bare_equal(user_type<wchar_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<wchar_t>())) {
             return Boxed_Number(get_as<wchar_t>());
-        } else if (inp_.bare_equal(user_type<char16_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<char16_t>())) {
             return Boxed_Number(get_as<char16_t>());
-        } else if (inp_.bare_equal(user_type<char32_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<char32_t>())) {
             return Boxed_Number(get_as<char32_t>());
-        } else if (inp_.bare_equal(user_type<unsigned int>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<unsigned int>())) {
             return Boxed_Number(get_as<unsigned int>());
-        } else if (inp_.bare_equal(user_type<long>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<long>())) {
             return Boxed_Number(get_as<long>());
-        } else if (inp_.bare_equal(user_type<long long>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<long long>())) {
             return Boxed_Number(get_as<long long>());
-        } else if (inp_.bare_equal(user_type<unsigned long>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<unsigned long>())) {
             return Boxed_Number(get_as<unsigned long>());
-        } else if (inp_.bare_equal(user_type<unsigned long long>())) {
+        } else if (inp_.bare_equal(
+                       atom::meta::user_type<unsigned long long>())) {
             return Boxed_Number(get_as<unsigned long long>());
-        } else if (inp_.bare_equal(user_type<int8_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<int8_t>())) {
             return Boxed_Number(get_as<int8_t>());
-        } else if (inp_.bare_equal(user_type<int16_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<int16_t>())) {
             return Boxed_Number(get_as<int16_t>());
-        } else if (inp_.bare_equal(user_type<int32_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<int32_t>())) {
             return Boxed_Number(get_as<int32_t>());
-        } else if (inp_.bare_equal(user_type<int64_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<int64_t>())) {
             return Boxed_Number(get_as<int64_t>());
-        } else if (inp_.bare_equal(user_type<uint8_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<uint8_t>())) {
             return Boxed_Number(get_as<uint8_t>());
-        } else if (inp_.bare_equal(user_type<uint16_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<uint16_t>())) {
             return Boxed_Number(get_as<uint16_t>());
-        } else if (inp_.bare_equal(user_type<uint32_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<uint32_t>())) {
             return Boxed_Number(get_as<uint32_t>());
-        } else if (inp_.bare_equal(user_type<uint64_t>())) {
+        } else if (inp_.bare_equal(atom::meta::user_type<uint64_t>())) {
             return Boxed_Number(get_as<uint64_t>());
         } else {
             throw Carbon::detail::exception::bad_any_cast();
@@ -623,8 +567,8 @@ public:
     }
 
     static void validate_boxed_number(const Boxed_Value &v) {
-        const Type_Info &inp_ = v.get_type_info();
-        if (inp_ == user_type<bool>()) {
+        const atom::meta::Type_Info &inp_ = v.get_type_info();
+        if (inp_ == atom::meta::user_type<bool>()) {
             throw Carbon::detail::exception::bad_any_cast();
         }
 

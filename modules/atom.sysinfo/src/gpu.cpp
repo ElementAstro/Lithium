@@ -12,7 +12,7 @@ Description: System Information Module - GPU
 
 **************************************************/
 
-#include "gpu.hpp"
+#include "atom/sysinfo/gpu.hpp"
 
 #ifdef _WIN32
 #include <windows.h>

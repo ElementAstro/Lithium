@@ -12,7 +12,7 @@ Description: System Information Module - Wifi Information
 
 **************************************************/
 
-#include "wifi.hpp"
+#include "atom/sysinfo/wifi.hpp"
 
 #include <string>
 #include <vector>

@@ -12,7 +12,7 @@ Description: System Information Module - CPU
 
 **************************************************/
 
-#include "cpu.hpp"
+#include "atom/sysinfo/cpu.hpp"
 
 #include <cstdlib>
 #include <filesystem>

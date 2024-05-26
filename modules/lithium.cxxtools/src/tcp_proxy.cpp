@@ -12,22 +12,22 @@ Description: Tcp proxy server
 
 *************************************************/
 
-#include <string>
-#include <cstring>
-#include <cstdlib>
+#include <getopt.h>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <mutex>
+#include <string>
 #include <thread>
 #include <vector>
-#include <mutex>
-#include <getopt.h>
 
 #ifdef _WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
 #else
-#include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #endif
 
 #include "atom/log/loguru.hpp"
@@ -37,31 +37,25 @@ const int BUFFER_SIZE = 4096;
 std::mutex mutex;
 
 // 处理数据传输
-void forwardData(int srcSockfd, int dstSockfd)
-{
+void forwardData(int srcSockfd, int dstSockfd) {
     char buffer[BUFFER_SIZE];
     int numBytes;
 
-    try
-    {
-        while ((numBytes = recv(srcSockfd, buffer, BUFFER_SIZE, 0)) > 0)
-        {
+    try {
+        while ((numBytes = recv(srcSockfd, buffer, BUFFER_SIZE, 0)) > 0) {
             send(dstSockfd, buffer, numBytes, 0);
         }
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception &e) {
         LOG_F(ERROR, "Failed to forward data: {}", e.what());
     }
 }
 
 // 启动代理服务器
-void startProxyServer(const std::string &srcIp, int srcPort, const std::string &dstIp, int dstPort)
-{
+void startProxyServer(const std::string &srcIp, int srcPort,
+                      const std::string &dstIp, int dstPort) {
 #ifdef _WIN32
     WSADATA wsData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0)
-    {
+    if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0) {
         LOG_F(ERROR, "Failed to initialize Winsock.");
         return;
     }
@@ -73,8 +67,7 @@ void startProxyServer(const std::string &srcIp, int srcPort, const std::string &
     int dstSockfd = socket(AF_INET, SOCK_STREAM, 0);
 #endif
 
-    if (srcSockfd == -1 || dstSockfd == -1)
-    {
+    if (srcSockfd == -1 || dstSockfd == -1) {
         LOG_F(ERROR, "Failed to create socket.");
 #ifdef _WIN32
         WSACleanup();
@@ -88,8 +81,8 @@ void startProxyServer(const std::string &srcIp, int srcPort, const std::string &
     srcAddr.sin_addr.s_addr = inet_addr(srcIp.c_str());
     srcAddr.sin_port = htons(srcPort);
 
-    if (bind(srcSockfd, reinterpret_cast<sockaddr *>(&srcAddr), sizeof(srcAddr)) == -1)
-    {
+    if (bind(srcSockfd, reinterpret_cast<sockaddr *>(&srcAddr),
+             sizeof(srcAddr)) == -1) {
         LOG_F(ERROR, "Failed to bind source address.");
 #ifdef _WIN32
         closesocket(srcSockfd);
@@ -106,8 +99,8 @@ void startProxyServer(const std::string &srcIp, int srcPort, const std::string &
     dstAddr.sin_addr.s_addr = inet_addr(dstIp.c_str());
     dstAddr.sin_port = htons(dstPort);
 
-    if (connect(dstSockfd, reinterpret_cast<sockaddr *>(&dstAddr), sizeof(dstAddr)) == -1)
-    {
+    if (connect(dstSockfd, reinterpret_cast<sockaddr *>(&dstAddr),
+                sizeof(dstAddr)) == -1) {
         LOG_F(ERROR, "Failed to connect to destination address.");
 #ifdef _WIN32
         closesocket(srcSockfd);
@@ -133,43 +126,42 @@ void startProxyServer(const std::string &srcIp, int srcPort, const std::string &
 #endif
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 #ifdef _WIN32
     WSADATA wsData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0)
-    {
+    if (WSAStartup(MAKEWORD(2, 2), &wsData) != 0) {
         LOG_F(ERROR, "Failed to initialize Winsock.");
         return -1;
     }
 #endif
 
-    std::string srcIp = "127.0.0.1"; // 源IP地址
-    int srcPort = 12345;             // 源端口
+    std::string srcIp = "127.0.0.1";  // 源IP地址
+    int srcPort = 12345;              // 源端口
 
-    std::string dstIp = "127.0.0.1"; // 目标IP地址
-    int dstPort = 54321;             // 目标端口
+    std::string dstIp = "127.0.0.1";  // 目标IP地址
+    int dstPort = 54321;              // 目标端口
 
     int option;
-    while ((option = getopt(argc, argv, "s:p:d:o:")) != -1)
-    {
-        switch (option)
-        {
-        case 's':
-            srcIp = optarg;
-            break;
-        case 'p':
-            srcPort = std::stoi(optarg);
-            break;
-        case 'd':
-            dstIp = optarg;
-            break;
-        case 'o':
-            dstPort = std::stoi(optarg);
-            break;
-        default:
-            LOG_F(ERROR, "Usage: {} -s <src_ip> -p <src_port> -d <dst_ip> -o <dst_port>", argv[0]);
-            return 1;
+    while ((option = getopt(argc, argv, "s:p:d:o:")) != -1) {
+        switch (option) {
+            case 's':
+                srcIp = optarg;
+                break;
+            case 'p':
+                srcPort = std::stoi(optarg);
+                break;
+            case 'd':
+                dstIp = optarg;
+                break;
+            case 'o':
+                dstPort = std::stoi(optarg);
+                break;
+            default:
+                LOG_F(ERROR,
+                      "Usage: {} -s <src_ip> -p <src_port> -d <dst_ip> -o "
+                      "<dst_port>",
+                      argv[0]);
+                return 1;
         }
     }
 #if __cplusplus >= 202002L
@@ -179,14 +171,12 @@ int main(int argc, char *argv[])
 #endif
 
     // 启动多个线程处理并发连接
-    for (int i = 0; i < 5; ++i)
-    {
+    for (int i = 0; i < 5; ++i) {
         threads.emplace_back(startProxyServer, srcIp, srcPort, dstIp, dstPort);
     }
 
     // 等待所有线程结束
-    for (auto &thread : threads)
-    {
+    for (auto &thread : threads) {
         thread.join();
     }
 

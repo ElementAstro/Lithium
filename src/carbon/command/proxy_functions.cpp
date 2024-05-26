@@ -25,12 +25,14 @@ namespace dispatch {
 
 Param_Types::Param_Types() : m_has_types(false) {}
 
-Param_Types::Param_Types(std::vector<std::pair<std::string, Type_Info>> t_types)
+Param_Types::Param_Types(
+    std::vector<std::pair<std::string, atom::meta::Type_Info>> t_types)
     : m_types(std::move(t_types)), m_has_types(false) {
     update_has_types();
 }
 
-void Param_Types::push_front(const std::string &t_name, Type_Info t_ti) {
+void Param_Types::push_front(const std::string &t_name,
+                             atom::meta::Type_Info t_ti) {
     m_types.emplace(m_types.begin(), std::move(t_name), t_ti);
     update_has_types();
 }
@@ -43,7 +45,7 @@ std::vector<Boxed_Value> Param_Types::convert(
     Function_Params t_params,
     const Type_Conversions_State &t_conversions) const {
     auto vals = t_params.to_vector();
-    const auto dynamic_object_type_info = user_type<Dynamic_Object>();
+    const auto dynamic_object_type_info = atom::meta::user_type<Dynamic_Object>();
     for (size_t i = 0; i < vals.size(); ++i) {
         const auto &name = m_types[i].first;
         if (!name.empty()) {
@@ -92,7 +94,8 @@ std::vector<Boxed_Value> Param_Types::convert(
 std::pair<bool, bool> Param_Types::match(
     const Function_Params &vals,
     const Type_Conversions_State &t_conversions) const noexcept {
-    const auto dynamic_object_type_info = user_type<Dynamic_Object>();
+    const auto dynamic_object_type_info =
+        atom::meta::user_type<Dynamic_Object>();
     bool needs_conversion = false;
 
     if (!m_has_types) {
@@ -138,8 +141,8 @@ std::pair<bool, bool> Param_Types::match(
     return std::make_pair(true, needs_conversion);
 }
 
-const std::vector<std::pair<std::string, Type_Info>> &Param_Types::types()
-    const noexcept {
+const std::vector<std::pair<std::string, atom::meta::Type_Info>> &
+Param_Types::types() const noexcept {
     return m_types;
 }
 
@@ -166,9 +169,10 @@ Boxed_Value Proxy_Function_Base::operator()(
 
 /// Returns a vector containing all of the types of the parameters the
 /// function returns/takes if the function is variadic or takes no arguments
-/// (arity of 0 or -1), the returned value contains exactly 1 Type_Info
-/// object: the return type \returns the types of all parameters.
-const std::vector<Type_Info> &Proxy_Function_Base::get_param_types()
+/// (arity of 0 or -1), the returned value contains exactly 1
+/// atom::meta::Type_Info object: the return type \returns the types of all
+/// parameters.
+const std::vector<atom::meta::Type_Info> &Proxy_Function_Base::get_param_types()
     const noexcept {
     return m_types;
 }
@@ -209,12 +213,12 @@ bool Proxy_Function_Base::filter(
 int Proxy_Function_Base::get_arity() const noexcept { return m_arity; }
 
 bool Proxy_Function_Base::compare_type_to_param(
-    const Type_Info &ti, const Boxed_Value &bv,
+    const atom::meta::Type_Info &ti, const Boxed_Value &bv,
     const Type_Conversions_State &t_conversions) noexcept {
-    const auto boxed_value_ti = user_type<Boxed_Value>();
-    const auto boxed_number_ti = user_type<Boxed_Number>();
+    const auto boxed_value_ti = atom::meta::user_type<Boxed_Value>();
+    const auto boxed_number_ti = atom::meta::user_type<Boxed_Number>();
     const auto function_ti =
-        user_type<std::shared_ptr<const Proxy_Function_Base>>();
+        atom::meta::user_type<std::shared_ptr<const Proxy_Function_Base>>();
 
     if (ti.is_undef() || ti.bare_equal(boxed_value_ti) ||
         (!bv.get_type_info().is_undef() &&
@@ -236,8 +240,8 @@ bool Proxy_Function_Base::compare_first_type(
     return compare_type_to_param(m_types[1], bv, t_conversions);
 }
 
-Proxy_Function_Base::Proxy_Function_Base(std::vector<Type_Info> t_types,
-                                         int t_arity)
+Proxy_Function_Base::Proxy_Function_Base(
+    std::vector<atom::meta::Type_Info> t_types, int t_arity)
     : m_types(std::move(t_types)),
       m_arity(t_arity),
       m_has_arithmetic_param(false) {
@@ -250,7 +254,7 @@ Proxy_Function_Base::Proxy_Function_Base(std::vector<Type_Info> t_types,
 }
 
 bool Proxy_Function_Base::compare_types(
-    const std::vector<Type_Info> &tis, const Function_Params &bvs,
+    const std::vector<atom::meta::Type_Info> &tis, const Function_Params &bvs,
     const Type_Conversions_State &t_conversions) noexcept {
     if (tis.size() - 1 != bvs.size()) {
         return false;
@@ -353,14 +357,15 @@ std::pair<bool, bool> Dynamic_Proxy_Function::call_match_internal(
         comparison_result.second);
 }
 
-std::vector<Type_Info> Dynamic_Proxy_Function::build_param_type_list(
-    const Param_Types &t_types) {
+std::vector<atom::meta::Type_Info>
+Dynamic_Proxy_Function::build_param_type_list(const Param_Types &t_types) {
     // For the return type
-    std::vector<Type_Info> types{Get_Type_Info<Boxed_Value>::get()};
+    std::vector<atom::meta::Type_Info> types{
+        atom::meta::Get_Type_Info<Boxed_Value>::get()};
 
     for (const auto &t : t_types.types()) {
         if (t.second.is_undef()) {
-            types.push_back(Get_Type_Info<Boxed_Value>::get());
+            types.push_back(atom::meta::Get_Type_Info<Boxed_Value>::get());
         } else {
             types.push_back(t.second);
         }
@@ -409,7 +414,7 @@ std::vector<Boxed_Value> Bound_Function::build_param_list(
     while (!(parg == params.end() && barg == m_args.end())) {
         while (barg != m_args.end() &&
                !(barg->get_type_info() ==
-                 Get_Type_Info<Placeholder_Object>::get())) {
+                 atom::meta::Get_Type_Info<Placeholder_Object>::get())) {
             args.push_back(*barg);
             ++barg;
         }
@@ -420,20 +425,21 @@ std::vector<Boxed_Value> Bound_Function::build_param_list(
         }
 
         if (barg != m_args.end() &&
-            barg->get_type_info() == Get_Type_Info<Placeholder_Object>::get()) {
+            barg->get_type_info() ==
+                atom::meta::Get_Type_Info<Placeholder_Object>::get()) {
             ++barg;
         }
     }
     return args;
 }
 
-std::vector<Type_Info> Bound_Function::build_param_type_info(
+std::vector<atom::meta::Type_Info> Bound_Function::build_param_type_info(
     const Const_Proxy_Function &t_f, const std::vector<Boxed_Value> &t_args) {
     assert(t_f->get_arity() < 0 ||
            t_f->get_arity() == static_cast<int>(t_args.size()));
 
     if (t_f->get_arity() < 0) {
-        return std::vector<Type_Info>();
+        return std::vector<atom::meta::Type_Info>();
     }
 
     const auto types = t_f->get_param_types();
@@ -441,11 +447,11 @@ std::vector<Type_Info> Bound_Function::build_param_type_info(
 
     // this analysis warning is invalid in MSVC12 and doesn't exist in
     // MSVC14
-    std::vector<Type_Info> retval{types[0]};
+    std::vector<atom::meta::Type_Info> retval{types[0]};
 
     for (size_t i = 0; i < types.size() - 1; ++i) {
         if (t_args[i].get_type_info() ==
-            Get_Type_Info<Placeholder_Object>::get()) {
+            atom::meta::Get_Type_Info<Placeholder_Object>::get()) {
             retval.push_back(types[i + 1]);
         }
     }
@@ -459,7 +465,7 @@ Boxed_Value Bound_Function::do_call(
     return (*m_f)(Function_Params{build_param_list(params)}, t_conversions);
 }
 Proxy_Function_Impl_Base::Proxy_Function_Impl_Base(
-    const std::vector<Type_Info> &t_types)
+    const std::vector<atom::meta::Type_Info> &t_types)
     : Proxy_Function_Base(t_types, static_cast<int>(t_types.size()) - 1) {}
 
 bool Proxy_Function_Impl_Base::call_match(

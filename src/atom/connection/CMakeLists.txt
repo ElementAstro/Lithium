@@ -15,7 +15,7 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     fifoserver.cpp
     sockethub.cpp
     tcpclient.cpp
-    udp_server.cpp
+    #udp_server.cpp
     udpclient.cpp
 )
 
@@ -25,7 +25,7 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     fifoserver.hpp
     sockethub.hpp
     tcpclient.hpp
-    udp_server.hpp
+    #udp_server.hpp
     udpclient.hpp
 )
 

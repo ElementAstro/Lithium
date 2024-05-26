@@ -114,10 +114,6 @@ find_package(fmt REQUIRED)
 # 构建所有需要的依赖库
 add_subdirectory(libs/)
 
-# Build all tools
-# 所有的工具组件
-add_subdirectory(tools)
-
 # Build Atom core library
 # 构建Atom核心库
 add_subdirectory(${lithium_module_dir})

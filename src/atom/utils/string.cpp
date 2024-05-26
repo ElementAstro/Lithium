@@ -182,4 +182,35 @@ std::vector<std::string> SVVtoSV(const std::vector<std::string_view> &svv) {
     return std::vector<std::string>(svv.begin(), svv.end());
 }
 
+std::vector<std::string> explode(std::string_view text, char symbol) {
+    std::vector<std::string> lines;
+    auto start = text.begin();
+    auto end = text.end();
+
+    while (start != end) {
+        auto pos = std::find(start, end, symbol);
+        lines.emplace_back(start, pos);
+        if (pos == end)
+            break;
+        start = std::next(pos);
+    }
+
+    return lines;
+}
+
+std::string trim(std::string_view line, std::string_view symbols) {
+    auto first = std::find_if(line.begin(), line.end(), [&symbols](char c) {
+        return symbols.find(c) == std::string_view::npos;
+    });
+
+    if (first == line.end())
+        return "";
+
+    auto last = std::find_if(line.rbegin(), line.rend(), [&symbols](char c) {
+                    return symbols.find(c) == std::string_view::npos;
+                }).base();
+
+    return std::string(first, last);
+}
+
 }  // namespace atom::utils

@@ -12,7 +12,7 @@ Description: System Information Module - Memory
 
 **************************************************/
 
-#include "memory.hpp"
+#include "atom/sysinfo/memory.hpp"
 
 #include <fstream>
 #include <sstream>

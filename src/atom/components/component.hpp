@@ -26,7 +26,6 @@ Description: Basic Component Definition
 
 #include "atom/function/constructor.hpp"
 #include "atom/function/conversion.hpp"
-#include "atom/function/conversion_stl.hpp"
 #include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/type/noncopyable.hpp"

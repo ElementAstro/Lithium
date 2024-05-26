@@ -1,7 +1,7 @@
 #include "boxed_value.hpp"
 
 namespace Carbon {
-Boxed_Value::Data::Data(const Type_Info &ti, Carbon::detail::Any to,
+Boxed_Value::Data::Data(const atom::meta::Type_Info &ti, Carbon::detail::Any to,
                         bool is_ref, const void *t_void_ptr,
                         bool t_return_value)
     : m_type_info(ti),
@@ -40,7 +40,7 @@ Boxed_Value Boxed_Value::assign(const Boxed_Value &rhs) noexcept {
     return *this;
 }
 
-const Type_Info &Boxed_Value::get_type_info() const noexcept {
+const atom::meta::Type_Info &Boxed_Value::get_type_info() const noexcept {
     return m_data->m_type_info;
 }
 
@@ -53,7 +53,7 @@ bool Boxed_Value::is_const() const noexcept {
     return m_data->m_type_info.is_const();
 }
 
-bool Boxed_Value::is_type(const Type_Info &ti) const noexcept {
+bool Boxed_Value::is_type(const atom::meta::Type_Info &ti) const noexcept {
     return m_data->m_type_info.bare_equal(ti);
 }
 

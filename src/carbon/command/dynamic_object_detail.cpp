@@ -9,23 +9,22 @@ Dynamic_Object_Function::Dynamic_Object_Function(std::string t_type_name,
     : Proxy_Function_Base(t_func->get_param_types(), t_func->get_arity()),
       m_type_name(std::move(t_type_name)),
       m_func(t_func),
-      m_doti(user_type<Dynamic_Object>()),
+      m_doti(atom::meta::user_type<Dynamic_Object>()),
       m_is_attribute(t_is_attribute) {
     assert((t_func->get_arity() > 0 || t_func->get_arity() < 0) &&
            "Programming error, Dynamic_Object_Function must have at least "
            "one parameter (this)");
 }
 
-Dynamic_Object_Function::Dynamic_Object_Function(std::string t_type_name,
-                                                 const Proxy_Function &t_func,
-                                                 const Type_Info &t_ti,
-                                                 bool t_is_attribute)
+Dynamic_Object_Function::Dynamic_Object_Function(
+    std::string t_type_name, const Proxy_Function &t_func,
+    const atom::meta::Type_Info &t_ti, bool t_is_attribute)
     : Proxy_Function_Base(build_param_types(t_func->get_param_types(), t_ti),
                           t_func->get_arity()),
       m_type_name(std::move(t_type_name)),
       m_func(t_func),
-      m_ti(t_ti.is_undef() ? nullptr : new Type_Info(t_ti)),
-      m_doti(user_type<Dynamic_Object>()),
+      m_ti(t_ti.is_undef() ? nullptr : new atom::meta::Type_Info(t_ti)),
+      m_doti(atom::meta::user_type<Dynamic_Object>()),
       m_is_attribute(t_is_attribute) {
     assert((t_func->get_arity() > 0 || t_func->get_arity() < 0) &&
            "Programming error, Dynamic_Object_Function must have at least "
@@ -77,19 +76,20 @@ bool Dynamic_Object_Function::compare_first_type(
     return dynamic_object_typename_match(bv, m_type_name, m_ti, t_conversions);
 }
 
-std::vector<Type_Info> Dynamic_Object_Function::build_param_types(
-    const std::vector<Type_Info> &t_inner_types, const Type_Info &t_objectti) {
-    std::vector<Type_Info> types(t_inner_types);
+std::vector<atom::meta::Type_Info> Dynamic_Object_Function::build_param_types(
+    const std::vector<atom::meta::Type_Info> &t_inner_types,
+    const atom::meta::Type_Info &t_objectti) {
+    std::vector<atom::meta::Type_Info> types(t_inner_types);
 
     assert(types.size() > 1);
-    // assert(types[1].bare_equal(user_type<Boxed_Value>()));
+    // assert(types[1].bare_equal(atom::meta::user_type<Boxed_Value>()));
     types[1] = t_objectti;
     return types;
 }
 
 bool Dynamic_Object_Function::dynamic_object_typename_match(
     const Boxed_Value &bv, const std::string &name,
-    const std::unique_ptr<Type_Info> &ti,
+    const std::unique_ptr<atom::meta::Type_Info> &ti,
     const Type_Conversions_State &t_conversions) const noexcept {
     if (bv.get_type_info().bare_equal(m_doti)) {
         try {
@@ -110,7 +110,7 @@ bool Dynamic_Object_Function::dynamic_object_typename_match(
 
 bool Dynamic_Object_Function::dynamic_object_typename_match(
     const Carbon::Function_Params &bvs, const std::string &name,
-    const std::unique_ptr<Type_Info> &ti,
+    const std::unique_ptr<atom::meta::Type_Info> &ti,
     const Type_Conversions_State &t_conversions) const noexcept {
     if (!bvs.empty()) {
         return dynamic_object_typename_match(bvs[0], name, ti, t_conversions);
@@ -130,8 +130,8 @@ Dynamic_Object_Constructor::Dynamic_Object_Constructor(
            "one parameter (this)");
 }
 
-std::vector<Type_Info> Dynamic_Object_Constructor::build_type_list(
-    const std::vector<Type_Info> &tl) {
+std::vector<atom::meta::Type_Info> Dynamic_Object_Constructor::build_type_list(
+    const std::vector<atom::meta::Type_Info> &tl) {
     auto begin = tl.begin();
     auto end = tl.end();
 
@@ -139,7 +139,7 @@ std::vector<Type_Info> Dynamic_Object_Constructor::build_type_list(
         ++begin;
     }
 
-    return std::vector<Type_Info>(begin, end);
+    return std::vector<atom::meta::Type_Info>(begin, end);
 }
 
 bool Dynamic_Object_Constructor::operator==(

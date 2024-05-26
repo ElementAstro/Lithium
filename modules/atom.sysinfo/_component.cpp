@@ -24,36 +24,33 @@ Description: A collector for system information, not the same as atom.system
 
 #include "atom/log/loguru.hpp"
 
-SysInfoComponent::SysInfoComponent(const std::string& name)
-    : Component(name) {
+SysInfoComponent::SysInfoComponent(const std::string& name) : Component(name) {
     LOG_F(INFO, "SysInfoComponent Constructed");
 
-    def("cpu_usage", &getCurrentCpuUsage, "cpu",
-                    "Get current CPU usage percentage");
-    def("cpu_temperature", &getCurrentCpuTemperature, "cpu",
-                    "Get current CPU temperature");
-    def("memory_usage", &getMemoryUsage, "memory",
-                    "Get current memory usage percentage");
-    def("is_charging", &isBatteryCharging, PointerSentinel(this),
-                    "battery", "Check if the battery is charging");
-    def("battery_level", &getCurrentBatteryLevel,
-                    PointerSentinel(this), "battery",
-                    "Get current battery level");
-    def("disk_usage", &getDiskUsage, "disk",
-                    "Get current disk usage percentage");
-    def("is_hotspot_connected", &isHotspotConnected, "wifi",
-                    "Check if the hotspot is connected");
-    def("wired_network", &getCurrentWiredNetwork, "wifi",
-                    "Get current wired network");
-    def("wifi_name", &getCurrentWifi, "wifi",
-                    "Get current wifi name");
-    def("current_ip", &getHostIPs, "network",
-                    "Get current IP address");
-    def("gpu_info", &getGPUInfo, "gpu", "Get GPU info");
-    def("os_name", &getOSName, PointerSentinel(this), "os",
-                    "Get OS name");
+    def("cpu_usage", &atom::system::getCurrentCpuUsage, "cpu",
+        "Get current CPU usage percentage");
+    def("cpu_temperature", &atom::system::getCurrentCpuTemperature, "cpu",
+        "Get current CPU temperature");
+    def("memory_usage", &atom::system::getMemoryUsage, "memory",
+        "Get current memory usage percentage");
+    def("is_charging", &isBatteryCharging, PointerSentinel(this), "battery",
+        "Check if the battery is charging");
+    def("battery_level", &getCurrentBatteryLevel, PointerSentinel(this),
+        "battery", "Get current battery level");
+    def("disk_usage", &atom::system::getDiskUsage, "disk",
+        "Get current disk usage percentage");
+    def("is_hotspot_connected", &atom::system::isHotspotConnected, "wifi",
+        "Check if the hotspot is connected");
+    def("wired_network", &atom::system::getCurrentWiredNetwork, "wifi",
+        "Get current wired network");
+    def("wifi_name", &atom::system::getCurrentWifi, "wifi",
+        "Get current wifi name");
+    def("current_ip", &atom::system::getHostIPs, "network",
+        "Get current IP address");
+    def("gpu_info", &atom::system::getGPUInfo, "gpu", "Get GPU info");
+    def("os_name", &getOSName, PointerSentinel(this), "os", "Get OS name");
     def("os_version", &getOSVersion, PointerSentinel(this), "os",
-                    "Get OS version");
+        "Get OS version");
 }
 
 SysInfoComponent::~SysInfoComponent() {

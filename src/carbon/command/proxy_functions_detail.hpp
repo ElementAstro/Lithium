@@ -50,10 +50,10 @@ namespace detail {
  * it contains.
  */
 template <typename Ret, typename... Params>
-std::vector<Type_Info> build_param_type_list(Ret (*)(Params...)) {
+std::vector<atom::meta::Type_Info> build_param_type_list(Ret (*)(Params...)) {
     /// \note somehow this is responsible for a large part of the code
     /// generation
-    return {user_type<Ret>(), user_type<Params>()...};
+    return {atom::meta::user_type<Ret>(), atom::meta::user_type<Params>()...};
 }
 
 /**

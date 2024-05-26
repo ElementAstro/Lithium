@@ -12,21 +12,18 @@ Description: System Information Module - Disk
 
 **************************************************/
 
-#include "disk.hpp"
+#include "atom/sysinfo/disk.hpp"
 
 #include "atom/log/loguru.hpp"
 
+#include <array>
 #include <fstream>
+#include <ranges>
+#include <span>
 #include <sstream>
 
 #ifdef _WIN32
-#include <Windows.h>
-#include <Psapi.h>
-#include <intrin.h>
-#include <iphlpapi.h>
-#include <pdh.h>
-#include <tlhelp32.h>
-#include <wincon.h>
+#include <windows.h>
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
@@ -40,13 +37,7 @@ Description: System Information Module - Disk
 #elif __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #include <DiskArbitration/DiskArbitration.h>
-#include <mach/mach_init.h>
-#include <mach/task_info.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <netinet/udp.h>
-#include <sys/mount.h>
-#include <sys/param.h>
+#include <mntent.h>
 #endif
 
 namespace atom::system {
@@ -105,32 +96,30 @@ std::vector<std::pair<std::string, float>> getDiskUsage() {
     return disk_usage;
 }
 
-std::string getDriveModel(const std::string &drivePath) {
+std::string getDriveModel(const std::string& drivePath) {
     std::string model;
 
 #ifdef _WIN32
     HANDLE hDevice =
         CreateFileA(drivePath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                    NULL, OPEN_EXISTING, 0, NULL);
+                    nullptr, OPEN_EXISTING, 0, nullptr);
     if (hDevice != INVALID_HANDLE_VALUE) {
-        STORAGE_PROPERTY_QUERY query;
-        char buffer[1024];
-        ZeroMemory(&query, sizeof(query));
-        ZeroMemory(buffer, sizeof(buffer));
+        STORAGE_PROPERTY_QUERY query = {};
+        std::array<char, 1024> buffer = {};
         query.PropertyId = StorageDeviceProperty;
         query.QueryType = PropertyStandardQuery;
         DWORD bytesReturned = 0;
         if (DeviceIoControl(hDevice, IOCTL_STORAGE_QUERY_PROPERTY, &query,
-                            sizeof(query), buffer, sizeof(buffer),
-                            &bytesReturned, NULL)) {
-            STORAGE_DEVICE_DESCRIPTOR *desc =
-                (STORAGE_DEVICE_DESCRIPTOR *)buffer;
-            char *vendorId = (char *)(buffer + desc->VendorIdOffset);
-            char *productId = (char *)(buffer + desc->ProductIdOffset);
-            char *productRevision =
-                (char *)(buffer + desc->ProductRevisionOffset);
-            model = vendorId + std::string(" ") + productId + std::string(" ") +
-                    productRevision;
+                            sizeof(query), buffer.data(), buffer.size(),
+                            &bytesReturned, nullptr)) {
+            auto desc =
+                reinterpret_cast<STORAGE_DEVICE_DESCRIPTOR*>(buffer.data());
+            std::string_view vendorId(buffer.data() + desc->VendorIdOffset);
+            std::string_view productId(buffer.data() + desc->ProductIdOffset);
+            std::string_view productRevision(buffer.data() +
+                                             desc->ProductRevisionOffset);
+            model = std::string(vendorId) + " " + std::string(productId) + " " +
+                    std::string(productRevision);
         }
         CloseHandle(hDevice);
     }
@@ -149,8 +138,9 @@ std::string getDriveModel(const std::string &drivePath) {
             if (disk != nullptr) {
                 CFDictionaryRef desc = DADiskCopyDescription(disk);
                 if (desc != nullptr) {
-                    CFStringRef modelRef = (CFStringRef)CFDictionaryGetValue(
-                        desc, kDADiskDescriptionDeviceModelKey);
+                    CFStringRef modelRef =
+                        static_cast<CFStringRef>(CFDictionaryGetValue(
+                            desc, kDADiskDescriptionDeviceModelKey));
                     if (modelRef != nullptr) {
                         char buffer[256];
                         CFStringGetCString(modelRef, buffer, 256,
@@ -169,7 +159,6 @@ std::string getDriveModel(const std::string &drivePath) {
     std::ifstream inFile("/sys/block/" + drivePath + "/device/model");
     if (inFile.is_open()) {
         std::getline(inFile, model);
-        inFile.close();
     }
 #endif
 
@@ -178,42 +167,45 @@ std::string getDriveModel(const std::string &drivePath) {
 
 std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
     std::vector<std::pair<std::string, std::string>> storage_device_models;
+
 #ifdef _WIN32
-    char driveStrings[1024];
-    DWORD length = GetLogicalDriveStringsA(sizeof(driveStrings), driveStrings);
-    if (length > 0 && length <= sizeof(driveStrings)) {
-        char *drive = driveStrings;
-        while (*drive) {
-            UINT driveType = GetDriveTypeA(drive);
+    std::array<char, 1024> driveStrings = {};
+    DWORD length =
+        GetLogicalDriveStringsA(driveStrings.size(), driveStrings.data());
+    if (length > 0 && length <= driveStrings.size()) {
+        std::span driveSpan(driveStrings.data(), length);
+        for (const auto& drive :
+             std::ranges::views::split(driveSpan, '\0') |
+                 std::views::filter(
+                     [](const std::span<char>& s) { return !s.empty(); })) {
+            std::string drivePath(drive.data(), drive.size());
+            UINT driveType = GetDriveTypeA(drivePath.c_str());
             if (driveType == DRIVE_FIXED) {
-                std::string drivePath = drive;
                 std::string model = getDriveModel(drivePath);
                 if (!model.empty()) {
-                    storage_device_models.push_back(
-                        std::make_pair(drivePath, model));
+                    storage_device_models.emplace_back(drivePath,
+                                                       std::move(model));
                 }
             }
-            drive += strlen(drive) + 1;
         }
     }
 #else
-    DIR *dir = opendir("/sys/block/");
-    if (dir != NULL) {
-        struct dirent *ent;
-        while ((ent = readdir(dir)) != NULL) {
-            std::string deviceName = ent->d_name;
-            if (deviceName != "." && deviceName != "..") {
-                std::string devicePath = deviceName;
+    fs::path sysBlockDir("/sys/block/");
+    if (fs::exists(sysBlockDir) && fs::is_directory(sysBlockDir)) {
+        for (const auto& entry : fs::directory_iterator(sysBlockDir)) {
+            if (entry.is_directory() && entry.path().filename() != "." &&
+                entry.path().filename() != "..") {
+                std::string devicePath = entry.path().filename().string();
                 std::string model = getDriveModel(devicePath);
                 if (!model.empty()) {
-                    storage_device_models.push_back(
-                        std::make_pair(devicePath, model));
+                    storage_device_models.emplace_back(devicePath,
+                                                       std::move(model));
                 }
             }
         }
-        closedir(dir);
     }
 #endif
+
     return storage_device_models;
 }
 
@@ -230,10 +222,9 @@ std::vector<std::string> getAvailableDrives() {
         drivesBitMask >>= 1;
     }
 #elif __linux__
-    // Linux 下不需要获取可用驱动器列表
     drives.push_back("/");
 #elif __APPLE__
-    struct statfs *mounts;
+    struct statfs* mounts;
     int numMounts = getmntinfo(&mounts, MNT_NOWAIT);
     for (int i = 0; i < numMounts; ++i) {
         drives.push_back(mounts[i].f_mntonname);

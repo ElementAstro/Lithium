@@ -142,11 +142,11 @@ public:
 
     AST_NodePtr parse(const std::string &t_input, const bool t_debug_print = false);
 
-    std::string get_type_name(const Type_Info &ti) const;
+    std::string get_type_name(const atom::meta::Type_Info &ti) const;
 
     template <typename T>
     std::string get_type_name() const {
-        return get_type_name(user_type<T>());
+        return get_type_name(atom::meta::user_type<T>());
     }
 
     /// \brief Loads and parses a file. If the file is already open, it is not

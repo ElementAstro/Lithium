@@ -33,7 +33,8 @@ namespace atom::connection {
 
 class FIFOServer::Impl {
 public:
-    explicit Impl(std::string fifo_path) : fifo_path_(std::move(fifo_path)) {
+    explicit Impl(std::string_view fifo_path)
+        : fifo_path_(std::move(fifo_path)) {
         // 创建 FIFO 文件
 #ifdef _WIN32
         CreateNamedPipeA(fifo_path_.c_str(), PIPE_ACCESS_DUPLEX,

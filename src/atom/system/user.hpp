@@ -18,7 +18,7 @@ Description: Some system functions to get user information.
 #include <string>
 #include <vector>
 
-namespace Atom::System {
+namespace atom::system {
 /**
  * @brief Get user groups.
  * @return User groups.
@@ -60,6 +60,6 @@ namespace Atom::System {
  * @return Login shell.
  */
 [[nodiscard]] std::string getLoginShell();
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

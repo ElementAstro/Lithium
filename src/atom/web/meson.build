@@ -1,47 +1,66 @@
-project('Atom-Web', 'cpp')
-
-# Define sources and headers
-sources = [
-    'address.cpp',
-    'downloader.cpp',
-    'httpclient.cpp',
-    'httplite.cpp',
-    'utils.cpp',
-    'time.cpp'
-]
-headers = [
-    'address.hpp',
-    'downloader.hpp',
-    'httpclient.hpp',
-    'httplite.hpp',
-    'utils.hpp',
-    'time.hpp'
-]
-
-# Create object library
-atom_web_obj = library('atom_web', 
-    sources + headers,
-    cpp_std: c_std
+project('atom-web', 'c', 'cpp',
+  version: '1.0.0',
+  license: 'GPL3',
+  default_options: ['cpp_std=c++17']
 )
 
-# Link to other libraries if necessary
-atom_web_obj_link_libs = []
-foreach lib : ['loguru', 'cpp_httplib']
-    atom_web_obj_link_libs += dependency(lib)
-endforeach
+# 源文件和头文件
+atom_web_sources = [
+  'address.cpp',
+  'downloader.cpp',
+  'httpclient.cpp',
+  'httplite.cpp',
+  'httpparser.cpp',
+  'utils.cpp',
+  'time.cpp'
+]
 
-atom_web_obj.link_with(atom_web_obj_link_libs)
+atom_web_headers = [
+  'address.hpp',
+  'downloader.hpp',
+  'httpclient.hpp',
+  'httplite.hpp',
+  'httpparser.hpp',
+  'utils.hpp',
+  'time.hpp'
+]
 
-# Create static library
-atom_web_static = static_library('atom_web_static', atom_web_obj)
+# 依赖
+loguru_dep = dependency('loguru')
+cpp_httplib_dep = dependency('cpp-httplib')
+thread_dep = dependency('threads')
 
-# Set version properties
-version = '1.0.0'
-soversion = '1'
+atom_web_deps = [loguru_dep, cpp_httplib_dep, thread_dep]
 
-atom_web_static.version = version
-atom_web_static.soversion = soversion
-atom_web_static.basename = 'Atom-Web'
+# Windows 特定库
+win32_deps = []
+if host_machine.system() == 'windows'
+  win32_deps = ['wsock32', 'ws2_32']
+endif
 
-# Install target
-install_targets(atom_web_static)
+# 对象库
+atom_web_object = static_library('atom_web_object',
+  sources: atom_web_sources,
+  dependencies: atom_web_deps + win32_deps,
+  include_directories: include_directories('.'),
+  install: false
+)
+
+# 静态库
+atom_web_lib = static_library('atom-web',
+  sources: atom_web_object.extract_all_objects(),
+  dependencies: atom_web_deps + win32_deps,
+  include_directories: include_directories('.'),
+  install: true
+)
+
+# 安装头文件
+install_headers(atom_web_headers, subdir: 'atom-web')
+
+# 设置目标属性
+atom_hydrogen_version_string = '1.0.0'
+atom_hydrogen_soversion = '1'
+
+atom_web_lib.set_version(atom_hydrogen_version_string)
+atom_web_lib.set_soversion(atom_hydrogen_soversion)
+atom_web_lib.set_output_name('atom-web')

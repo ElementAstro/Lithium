@@ -53,7 +53,7 @@ Description: Network Utils
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
 
-namespace Atom::Web {
+namespace atom::web {
 bool isConnectedToInternet() {
     bool connected = false;
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -199,7 +199,7 @@ bool checkAndKillProgramOnPort(int port) {
 #endif
 
             std::string pid_str =
-                System::executeCommand(cmd, false, [](const std::string &line) {
+                system::executeCommand(cmd, false, [](const std::string &line) {
                     return line.find("LISTENING") != std::string::npos;
                 });
             if (pid_str.empty()) {
@@ -225,7 +225,7 @@ bool checkAndKillProgramOnPort(int port) {
                         pid_str);
 #endif
 
-                    if (!System::executeCommand(
+                    if (!system::executeCommand(
                              kill_cmd, false,
                              [pid_str](const std::string &line) {
                                  return line.find(pid_str) != std::string::npos;
@@ -267,4 +267,4 @@ bool isIPv6Format(const std::string &str) {
     std::regex ipv6Regex("^(([0-9A-Fa-f]{1,4}):){7}([0-9A-Fa-f]{1,4})$");
     return std::regex_match(str, ipv6Regex);
 }
-}  // namespace Atom::Web
+}  // namespace atom::web

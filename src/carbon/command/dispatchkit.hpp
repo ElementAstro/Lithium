@@ -125,7 +125,7 @@ public:
 ///        Used to implement loadable module support.
 class Module {
 public:
-    Module &add(Type_Info ti, std::string name);
+    Module &add(atom::meta::Type_Info ti, std::string name);
 
     Module &add(Type_Conversion d);
 
@@ -149,7 +149,7 @@ public:
                       std::string_view name) noexcept;
 
 private:
-    std::vector<std::pair<Type_Info, std::string>> m_typeinfos;
+    std::vector<std::pair<atom::meta::Type_Info, std::string>> m_typeinfos;
     std::vector<std::pair<Proxy_Function, std::string>> m_funcs;
     std::vector<std::pair<Boxed_Value, std::string>> m_globals;
     std::vector<std::string> m_evals;
@@ -223,7 +223,7 @@ protected:
 private:
     std::vector<Proxy_Function> m_funcs;
 
-    static std::vector<Type_Info> build_type_infos(
+    static std::vector<atom::meta::Type_Info> build_type_infos(
         const std::vector<Proxy_Function> &t_funcs);
 };
 }  // namespace detail
@@ -266,7 +266,7 @@ struct Stack_Holder {
 /// of the object stack, functions and registered types.
 class Dispatch_Engine {
 public:
-    using Type_Name_Map = std::map<std::string, Type_Info, str_less>;
+    using Type_Name_Map = std::map<std::string, atom::meta::Type_Info, str_less>;
     using Scope = QuickFlatMap<std::string, Boxed_Value, str_equal>;
     using StackData = Stack_Holder::StackData;
 
@@ -355,18 +355,18 @@ public:
                            Stack_Holder &t_holder) const;
 
     /// Registers a new named type
-    void add(const Type_Info &ti, const std::string &name);
+    void add(const atom::meta::Type_Info &ti, const std::string &name);
 
     /// Returns the type info for a named type
-    Type_Info get_type(std::string_view name, bool t_throw) const;
+    atom::meta::Type_Info get_type(std::string_view name, bool t_throw) const;
 
     /// Returns the registered name of a known type_info object
     /// compares the "bare_type_info" for the broadest possible
     /// match
-    std::string get_type_name(const Type_Info &ti) const;
+    std::string get_type_name(const atom::meta::Type_Info &ti) const;
 
     /// Return all registered types
-    std::vector<std::pair<std::string, Type_Info>> get_types() const;
+    std::vector<std::pair<std::string, atom::meta::Type_Info>> get_types() const;
 
     std::shared_ptr<std::vector<Proxy_Function>> get_method_missing_functions()
         const;
@@ -450,7 +450,7 @@ public:
     void dump_object(const Boxed_Value &o) const;
 
     /// Dump type info to stdout
-    void dump_type(const Type_Info &type) const;
+    void dump_type(const atom::meta::Type_Info &type) const;
 
     /// Dump function to stdout
     void dump_function(

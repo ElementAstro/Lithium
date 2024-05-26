@@ -36,7 +36,6 @@ add_subdirectory(connection)
 add_subdirectory(error)
 add_subdirectory(io)
 add_subdirectory(log)
-add_subdirectory(server)
 add_subdirectory(search)
 add_subdirectory(system)
 add_subdirectory(task)
@@ -52,6 +51,8 @@ list(APPEND ${PROJECT_NAME}_SOURCES
     log/logger.cpp
     log/global_logger.cpp
     log/syslog.cpp
+
+    function/global_ptr.cpp
 )
 
 # Headers
@@ -59,6 +60,8 @@ list(APPEND ${PROJECT_NAME}_HEADERS
     log/logger.hpp
     log/global_logger.hpp
     log/syslog.hpp
+
+    function/global_ptr.hpp
 )
 
 # Private Headers
@@ -81,7 +84,6 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-search
     atom-web
     atom-system
-    atom-server
     )
 
 # Build Object Library

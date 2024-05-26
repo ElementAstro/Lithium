@@ -1,4 +1,17 @@
-#include "abilities.hpp"
+/*
+ * component.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2023-12-26
+
+Description: Basic Component Definition
+
+**************************************************/
+
 #include "component.hpp"
 
 #include <filesystem>
@@ -19,7 +32,9 @@ Component::Component(const std::string& name)
     : m_name(name),
       m_CommandDispatcher(std::make_unique<CommandDispatcher>()),
       m_VariableManager(std::make_unique<VariableManager>()),
-      m_typeInfo(user_type<Component>()) {
+      m_typeInfo(atom::meta::user_type<Component>()),
+      m_TypeCaster(atom::meta::TypeCaster::createShared()),
+      m_TypeConverter(atom::meta::TypeConversions::createShared()) {
     // Empty
 }
 
@@ -43,16 +58,7 @@ bool Component::destroy() {
 
 std::string Component::getName() const { return m_name; }
 
-Type_Info Component::getTypeInfo() const { return m_typeInfo; }
-
-std::unordered_map<std::string, bool> Component::getComponentAbilities() const {
-    std::unordered_map<std::string, bool> abilities;
-    return abilities;
-}
-
-bool Component::hasAbility(const std::string& ability) const {
-    return getComponentAbilities().contains(ability);
-}
+atom::meta::Type_Info Component::getTypeInfo() const { return m_typeInfo; }
 
 void Component::addAlias(const std::string& name, const std::string& alias) {
     m_CommandDispatcher->addAlias(name, alias);
@@ -115,10 +121,50 @@ void Component::removeOtherComponent(const std::string& name) {
 
 void Component::clearOtherComponents() { m_OtherComponents.clear(); }
 
-std::weak_ptr<Component> Component::getOtherComponent(
-    const std::string& name) {
+std::weak_ptr<Component> Component::getOtherComponent(const std::string& name) {
     if (m_OtherComponents.contains(name)) {
         return m_OtherComponents[name];
     }
     return {};
+}
+
+bool Component::has(const std::string& name) const {
+    return m_CommandDispatcher->has(name);
+}
+
+std::vector<std::string> Component::getAllCommands() const {
+    return m_CommandDispatcher->getAllCommands();
+}
+
+std::any Component::runCommand(const std::string& name,
+                               const std::vector<std::any>& args) {
+    auto _cmd = getAllCommands();
+    auto it = std::find(_cmd.begin(), _cmd.end(), name);
+
+    if (it != _cmd.end()) {
+        return m_CommandDispatcher->dispatch(name, args);
+    } else {
+        for (auto& [key, value] : m_OtherComponents) {
+            if (!value.expired()) {
+                if (value.lock()->has(name)) {
+                    return value.lock()->dispatch(name, args);
+                }
+            } else {
+                LOG_F(ERROR, "Component {} has expired", key);
+                m_OtherComponents.erase(key);
+            }
+        }
+    }
+    THROW_EXCEPTION(
+#if __cplusplus >= 202002L
+        std::format("Command with name {} not found",
+#else
+        fmt::format("Command with name {} not found",
+#endif
+                    name));
+}
+
+void Component::def(const atom::meta::Type_Info& ti, const std::string& group,
+                    const std::string& description) {
+    m_classes.push_back(ti);
 }

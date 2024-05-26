@@ -232,7 +232,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                   value={target_temperature}
                   onChange={(e) => set_target_temperature(e.target.value)}
                 />
-                
+
                   <Button
                     variant="outline-secondary"
                     disabled={control_cool_down || !setting_show.has_cool}
@@ -257,7 +257,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                       </>
                     )}
                   </Button>
-                
+
               </InputGroup> */}
             </div>
             {/* <div className="d-flex align-items-center mb-3">
@@ -424,7 +424,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                     placeholder="输入值"
                     disabled={!setting_show.has_high_fullwell}
                   />
-                  
+
                     <Button
                       variant="outline-secondary"
                       disabled={control_cool_down || !setting_show.has_high_fullwell}
@@ -444,7 +444,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                         </>
                       )}
                     </Button>
-                  
+
                 </InputGroup>
               </div>
               <div className="form-group my-3">
@@ -456,7 +456,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                     placeholder="输入值"
                     disabled={!setting_show.has_low_noise}
                   />
-                  
+
                     <Button
                       variant="outline-secondary"
                       disabled={control_cool_down || !setting_show.has_low_noise}
@@ -476,7 +476,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                         </>
                       )}
                     </Button>
-                  
+
                 </InputGroup>
               </div>
               <div className="form-group my-3">
@@ -488,7 +488,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                     placeholder="输入值"
                     disabled={!setting_show.has_conversion_gain}
                   />
-                  
+
                     <Button
                       variant="outline-secondary"
                       disabled={control_cool_down || !setting_show.has_conversion_gain}
@@ -508,7 +508,7 @@ const DeviceGuiderGeneralControlPanel = () => {
                         </>
                       )}
                     </Button>
-                  
+
                 </InputGroup>
               </div> */}
               <div className="form-group my-3">

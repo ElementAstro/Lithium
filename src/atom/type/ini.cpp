@@ -18,6 +18,7 @@ Description: INI File Read/Write Library
 #include <sstream>
 
 #include "atom/error/exception.hpp"
+#include "atom/utils/string.hpp"
 
 namespace atom::type {
 bool INIFile::has(const std::string &section, const std::string &key) const {
@@ -59,8 +60,7 @@ void INIFile::save(const std::string &filename) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
     std::ofstream file(filename);
     if (!file.is_open()) {
-        throw atom::error::FileNotWritable("Failed to create file: " +
-                                           filename);
+        THROW_FILE_NOT_WRITABLE("Failed to create file: ", filename);
     }
 
     for (const auto &section : data) {
@@ -85,7 +85,7 @@ void INIFile::save(const std::string &filename) {
                 file << entry.first << "=" << std::any_cast<bool>(entry.second)
                      << "\n";
             } else {
-                throw atom::error::InvalidArgument("Unsupported type");
+                THROW_INVALID_ARGUMENT("Unsupported type");
             }
         }
         file << "\n";
@@ -151,7 +151,7 @@ std::string INIFile::toJson() const {
                         << "\": " << std::any_cast<bool>(entry.second) << ", ";
                 }
             } catch (const std::bad_any_cast &e) {
-                throw atom::error::InvalidArgument("Unsupported type");
+                THROW_INVALID_ARGUMENT("Unsupported type");
             }
         }
     }
@@ -195,7 +195,7 @@ std::string INIFile::toXml() const {
                         << std::any_cast<bool>(entry.second) << "</entry>\n";
                 }
             } catch (const std::bad_any_cast &e) {
-                throw atom::error::InvalidArgument("Unsupported type");
+                THROW_INVALID_ARGUMENT("Unsupported type");
             }
         }
         oss << "  </section>\n";

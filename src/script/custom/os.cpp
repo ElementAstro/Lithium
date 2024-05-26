@@ -38,7 +38,7 @@ void addOSModule(VM* vm) {
             LOG_F(ERROR, "Folder is not existing: {}", sv);
             return vm->None;
         }
-        auto result = Atom::System::jwalk(std::string(sv));
+        auto result = atom::system::jwalk(std::string(sv));
         if (result.empty()) {
             return vm->None;
         }

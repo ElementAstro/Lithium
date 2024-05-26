@@ -14,36 +14,75 @@ Description: A super enhanced string class.
 
 #include "string.hpp"
 
-const size_t String::npos = -1;
-
-String::String() {}
-
-// 根据C风格字符串构造
 String::String(const char *str) : m_data(str) {}
 
-// 根据std::string构造
+String::String(std::string_view str) : m_data(str) {}
+
 String::String(const std::string &str) : m_data(str) {}
 
-// 拷贝构造函数
-String::String(const String &other) : m_data(other.m_data) {}
-
-// 获取字符数组
-const char *String::toCharArray() const { return m_data.c_str(); }
-
-// 获取字符串长度
-size_t String::length() const { return m_data.length(); }
-
-// 子字符串提取
-String String::substring(size_t pos, size_t len = std::string::npos) const {
-    return m_data.substr(pos, len);
+bool String::operator==(const String &other) const {
+    return m_data == other.m_data;
 }
 
-// 查找和替换
-size_t String::find(const String &str, size_t pos = 0) const {
+bool String::operator!=(const String &other) const {
+    return m_data != other.m_data;
+}
+
+bool String::empty() const { return m_data.empty(); }
+
+bool String::operator<(const String &other) const {
+    return m_data < other.m_data;
+}
+
+bool String::operator>(const String &other) const {
+    return m_data > other.m_data;
+}
+
+bool String::operator<=(const String &other) const {
+    return m_data <= other.m_data;
+}
+
+bool String::operator>=(const String &other) const {
+    return m_data >= other.m_data;
+}
+
+String &String::operator+=(const String &other) {
+    m_data += other.m_data;
+    return *this;
+}
+
+String &String::operator+=(const char *str) {
+    m_data += str;
+    return *this;
+}
+
+String &String::operator+=(char c) {
+    m_data += c;
+    return *this;
+}
+
+const char *String::c_str() const { return m_data.c_str(); }
+
+size_t String::length() const { return m_data.length(); }
+
+String String::substr(size_t pos, size_t count) const {
+    return m_data.substr(pos, count);
+}
+
+size_t String::find(const String &str, size_t pos) const {
     return m_data.find(str.m_data, pos);
 }
 
-size_t String::replace(const String &oldStr, const String &newStr) {
+bool String::replace(const String &oldStr, const String &newStr) {
+    size_t pos = m_data.find(oldStr.m_data);
+    if (pos != std::string::npos) {
+        m_data.replace(pos, oldStr.length(), newStr.m_data);
+        return true;
+    }
+    return false;
+}
+
+size_t String::replace_all(const String &oldStr, const String &newStr) {
     size_t count = 0;
     size_t pos = 0;
 
@@ -56,41 +95,34 @@ size_t String::replace(const String &oldStr, const String &newStr) {
     return count;
 }
 
-// 大小写转换
-String String::toUpperCase() const {
-    String result(*this);
-
-    for (size_t i = 0; i < result.length(); ++i) {
-        result.m_data[i] = toupper(result.m_data[i]);
-    }
-
+String String::to_upper() const {
+    String result;
+    std::transform(m_data.begin(), m_data.end(),
+                   std::back_inserter(result.m_data),
+                   [](unsigned char c) { return std::toupper(c); });
     return result;
 }
 
-String String::toLowerCase() const {
-    String result(*this);
-
-    for (size_t i = 0; i < result.length(); ++i) {
-        result.m_data[i] = tolower(result.m_data[i]);
-    }
-
+String String::to_lower() const {
+    String result;
+    std::transform(m_data.begin(), m_data.end(),
+                   std::back_inserter(result.m_data),
+                   [](unsigned char c) { return std::tolower(c); });
     return result;
 }
 
-// 字符串拆分和连接
 std::vector<String> String::split(const String &delimiter) const {
     std::vector<String> tokens;
-
     size_t start = 0;
     size_t end = m_data.find(delimiter.m_data);
 
     while (end != std::string::npos) {
-        tokens.push_back(substring(start, end - start));
+        tokens.emplace_back(substr(start, end - start));
         start = end + delimiter.length();
         end = m_data.find(delimiter.m_data, start);
     }
 
-    tokens.push_back(substring(start));
+    tokens.emplace_back(substr(start));
 
     return tokens;
 }
@@ -98,139 +130,80 @@ std::vector<String> String::split(const String &delimiter) const {
 String String::join(const std::vector<String> &strings,
                     const String &separator) {
     String result;
-
     for (size_t i = 0; i < strings.size(); ++i) {
         if (i > 0) {
             result += separator;
         }
-
         result += strings[i];
     }
-
     return result;
 }
 
-size_t String::replaceAll(const String &oldStr, const String &newStr) {
-    size_t count = 0;
-    size_t pos = 0;
+void String::insert(size_t pos, char c) { m_data.insert(pos, 1, c); }
 
-    while ((pos = m_data.find(oldStr.m_data, pos)) != std::string::npos) {
-        m_data.replace(pos, oldStr.length(), newStr.m_data);
-        pos += newStr.length();
-        ++count;
-    }
-
-    return count;
-}
-
-void String::insertChar(size_t pos, char c) {
-    if (pos <= m_data.length()) {
-        m_data.insert(pos, 1, c);
-    }
-}
-
-void String::deleteChar(size_t pos) {
-    if (pos < m_data.length()) {
-        m_data.erase(pos, 1);
-    }
+void String::erase(size_t pos, size_t count) {
+    m_data.erase(pos, count);
 }
 
 String String::reverse() const {
-    String result(*this);
+    String result(m_data);
     std::reverse(result.m_data.begin(), result.m_data.end());
     return result;
 }
 
-bool String::equalsIgnoreCase(const String &other) const {
+bool String::equals_ignore_case(const String &other) const {
     return std::equal(
         m_data.begin(), m_data.end(), other.m_data.begin(), other.m_data.end(),
         [](char a, char b) { return std::tolower(a) == std::tolower(b); });
 }
 
-size_t String::indexOf(const String &subStr, size_t startPos = 0) const {
-    return m_data.find(subStr.m_data, startPos);
+bool String::starts_with(const String &prefix) const {
+    return m_data.find(prefix.m_data) == 0;
 }
 
-// 去除首尾空格
-void String::trim() {
-    size_t startPos = m_data.find_first_not_of(" \t\r\n");
-    size_t endPos = m_data.find_last_not_of(" \t\r\n");
-
-    if (startPos == std::string::npos || endPos == std::string::npos) {
-        m_data.clear();
-    } else {
-        m_data = m_data.substr(startPos, endPos - startPos + 1);
-    }
-}
-
-bool String::startsWith(const String &prefix) const {
-    if (prefix.length() > m_data.length()) {
-        return false;
-    }
-
-    return std::equal(prefix.m_data.begin(), prefix.m_data.end(),
-                      m_data.begin());
-}
-
-bool String::endsWith(const String &suffix) const {
+bool String::ends_with(const String &suffix) const {
     if (suffix.length() > m_data.length()) {
         return false;
     }
-
     return std::equal(suffix.m_data.rbegin(), suffix.m_data.rend(),
                       m_data.rbegin());
 }
 
-String String::escape() const {
-    String result;
-    for (char c : m_data) {
-        if (c == '\\' || c == '\"' || c == '\'') {
-            result += '\\';
-        }
-        result += c;
-    }
-    return result;
+void String::trim() {
+    auto start =
+        std::find_if_not(m_data.begin(), m_data.end(),
+                         [](unsigned char c) { return std::isspace(c); });
+    auto end =
+        std::find_if_not(m_data.rbegin(), m_data.rend(), [](unsigned char c) {
+            return std::isspace(c);
+        }).base();
+    m_data = std::string(start, end);
 }
 
-String String::unescape() const {
-    String result;
-    bool escaped = false;
-
-    for (char c : m_data) {
-        if (escaped) {
-            if (c == '\\' || c == '\"' || c == '\'') {
-                result += c;
-            } else {
-                result += '\\';
-                result += c;
-            }
-            escaped = false;
-        } else if (c == '\\') {
-            escaped = true;
-        } else {
-            result += c;
-        }
-    }
-
-    return result;
+void String::ltrim() {
+    auto start =
+        std::find_if_not(m_data.begin(), m_data.end(),
+                         [](unsigned char c) { return std::isspace(c); });
+    m_data.erase(m_data.begin(), start);
 }
 
-int String::toInt() const {
-    std::istringstream iss(m_data);
-    int value = 0;
-    iss >> value;
-    return value;
+void String::rtrim() {
+    auto end =
+        std::find_if_not(m_data.rbegin(), m_data.rend(), [](unsigned char c) {
+            return std::isspace(c);
+        }).base();
+    m_data.erase(end, m_data.end());
 }
 
-float String::toFloat() const {
-    std::istringstream iss(m_data);
-    float value = 0;
-    iss >> value;
-    return value;
-}
+std::string String::data() const { return m_data; }
 
 String operator+(const String &lhs, const String &rhs) {
     String result(lhs);
     result += rhs;
     return result;
+}
+
+std::ostream &operator<<(std::ostream &os, const String &str) {
+    os << str.data();
+    return os;
 }

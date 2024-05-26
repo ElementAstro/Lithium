@@ -1,3 +1,17 @@
+/*
+ * var.inl
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
+/*************************************************
+
+Date: 2024-3-1
+
+Description: Variable Manager
+
+**************************************************/
+
 #ifndef ATOM_COMPONENT_VAR_INL
 #define ATOM_COMPONENT_VAR_INL
 
@@ -55,7 +69,8 @@ inline void VariableManager::setValue(const std::string& name, T newValue) {
                     THROW_EXCEPTION("Value out of range");
                 }
             }
-        } else if constexpr (std::is_same_v<T, std::string>) {
+        } else if constexpr (std::is_same_v<T, std::string> ||
+                             std::is_same_v<T, std::string_view>) {
             if (stringOptions_.count(name)) {
                 auto& options = stringOptions_[name];
                 if (std::find(options.begin(), options.end(), newValue) ==

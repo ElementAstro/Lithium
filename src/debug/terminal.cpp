@@ -1,79 +1,87 @@
-/*
- * terminal.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/**
+ * @file terminal.cpp
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ * @date 2024-5-15
+ * @brief Command Terminal
  */
 
-/*************************************************
-
-Date: 2023-6-30
-
-Description: Terminal
-
-**************************************************/
-
 #include "terminal.hpp"
+#include "command.hpp"
+#include "suggestion.hpp"
 
-#include <filesystem>
-#include <iostream>
+#include "addon/manager.hpp"
 
-namespace fs = std::filesystem;
+#include "utils/constant.hpp"
 
-namespace lithium::Terminal {
+#include <queue>
 
+#include "atom/function/global_ptr.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
+
+namespace lithium::debug {
 ConsoleTerminal::ConsoleTerminal() {
 #ifdef _WIN32
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 #else
     tcgetattr(STDIN_FILENO, &orig_termios);
 #endif
-    registerMemberCommand("help", this, helpCommand);
-    registerMemberCommand("pwd", this, pwdCommand);
-    registerMemberCommand("help", this, helpCommand);
-    registerMemberCommand("echo", this, echoCommand);
-    registerMemberCommand("create", this, createFile);
-    registerMemberCommand("delete", this, deleteFile);
+    std::vector<std::string> keywords;
+    for (const auto& name : getRegisteredCommands()) {
+        keywords.emplace_back(name);
+    }
+    suggestionEngine = std::make_shared<SuggestionEngine>(std::move(keywords));
+    component = std::make_shared<Component>("lithium.terminal");
+
+    component->def("help", &ConsoleTerminal::helpCommand,
+                   PointerSentinel(this), "basic",
+                   "Show help");
+    component->def("list_component", &getComponentList, "component",
+                   "Show all components");
+    component->def("show_component_info", &getComponentInfo, "component",
+                   "Show component info");
+
+
 }
 
 ConsoleTerminal::~ConsoleTerminal() {
-#ifdef _WIN32
-    // Windows-specific cleanup can be added here if needed
-#else
+#ifndef _WIN32
     tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
 #endif
 }
 
-void ConsoleTerminal::registerCommand(const std::string& name,
-                                      CommandFunction func) {
-    commandMap.emplace(name, std::move(func));
-}
-
 std::vector<std::string> ConsoleTerminal::getRegisteredCommands() const {
     std::vector<std::string> commands;
-    for (const auto& [name, _] : commandMap) {
-        commands.push_back(name);
+    for (const auto& name : component->getAllCommands()) {
+        commands.emplace_back(name);
     }
     return commands;
 }
 
-void ConsoleTerminal::callCommand(const std::string& name,
-                                  const std::vector<std::string>& args) {
-    if (auto it = commandMap.find(name); it != commandMap.end()) {
+void ConsoleTerminal::callCommand(std::string_view name,
+                                  const std::vector<std::any>& args) {
+    if (component->has(name.data())) {
         try {
-            it->second(args);
+            component->dispatch(name.data(), args);
         } catch (const std::exception& e) {
             std::cout << "Error: " << e.what() << '\n';
         }
-
     } else {
         std::cout << "Command '" << name << "' not found.\n";
+        auto possible_command = suggestionEngine->suggest(std::string(name));
+        if (!possible_command.empty()) {
+            std::cout << "Did you mean: ";
+            for (const auto& cmd : possible_command) {
+                std::cout << "- " << cmd << std::endl;
+            }
+        }
     }
 }
 
 void ConsoleTerminal::run() {
     std::string input;
     std::deque<std::string> history;
-    int historyIndex = 0;
 
     printHeader();
 
@@ -85,13 +93,10 @@ void ConsoleTerminal::run() {
         if (history.size() > MAX_HISTORY_SIZE) {
             history.pop_back();
         }
-        historyIndex = 0;
 
         std::istringstream iss(input);
         std::string command;
         iss >> command;
-        std::vector<std::string> args(std::istream_iterator<std::string>{iss},
-                                      std::istream_iterator<std::string>{});
 
         if (command == "exit") {
             break;
@@ -100,67 +105,57 @@ void ConsoleTerminal::run() {
             continue;
         }
 
+        std::string args_str((std::istreambuf_iterator<char>(iss)),
+                             std::istreambuf_iterator<char>());
+        auto args = parseArguments(args_str);
         callCommand(command, args);
     }
 }
 
+std::vector<std::any> ConsoleTerminal::parseArguments(
+    const std::string& input) {
+    std::vector<std::any> args;
+    std::istringstream iss(input);
+    std::string token;
+
+    while (iss >> token) {
+        if (token.front() == '"' && token.back() == '"') {
+            args.push_back(token.substr(1, token.size() - 2));  // 去掉引号
+        } else if (token == "true" || token == "false") {
+            args.push_back(token == "true");
+        } else {
+            try {
+                size_t pos;
+                int int_val = std::stoi(token, &pos);
+                if (pos == token.size()) {
+                    args.push_back(int_val);
+                    continue;
+                }
+            } catch (...) {
+            }
+
+            try {
+                size_t pos;
+                double double_val = std::stod(token, &pos);
+                if (pos == token.size()) {
+                    args.push_back(double_val);
+                    continue;
+                }
+            } catch (...) {
+            }
+
+            args.push_back(token);  // 默认是字符串
+        }
+    }
+
+    return args;
+}
+
 void ConsoleTerminal::helpCommand(const std::vector<std::string>& args) {
     std::cout << "Available commands:\n";
-    std::cout << "  print [args...] - Print arguments to console\n";
-    std::cout << "  ls [dir]        - List files in directory\n";
-    std::cout << "  rm <file>       - Delete file\n";
-    std::cout << "  help            - Show available commands\n";
-    std::cout << "  exit            - Exit the terminal\n";
-}
-
-void ConsoleTerminal::echoCommand(const std::vector<std::string>& args) {
-    for (const auto& arg : args) {
-        std::cout << arg << ' ';
+    for (const auto& cmd : getRegisteredCommands()) {
+        std::cout << "  " << cmd << "\n";
     }
-    std::cout << '\n';
-}
-
-void ConsoleTerminal::pwdCommand(const std::vector<std::string>& args) {
-    std::cout << "Current directory: " << fs::current_path() << '\n';
-}
-
-void ConsoleTerminal::cdCommand(const std::vector<std::string>& args) {
-    if (args.empty()) {
-        std::cout << "Usage: cd <directory>\n";
-        return;
-    }
-    fs::current_path(args[0]);
-}
-
-void ConsoleTerminal::listDirectory(const std::vector<std::string>& args) {
-    std::string path = ".";
-    if (!args.empty())
-        path = args[0];
-    for (const auto& entry : fs::directory_iterator(path))
-        std::cout << entry.path() << '\n';
-}
-
-void ConsoleTerminal::createFile(const std::vector<std::string>& args) {
-    if (args.empty()) {
-        std::cout << "No file name provided.\n";
-        return;
-    }
-    std::ofstream file(args[0]);
-    if (file.is_open()) {
-        std::cout << "File created: " << args[0] << '\n';
-        file.close();
-    } else {
-        std::cout << "Failed to create file: " << args[0] << '\n';
-    }
-}
-
-void ConsoleTerminal::deleteFile(const std::vector<std::string>& args) {
-    if (args.empty()) {
-        std::cout << "No file name provided.\n";
-        return;
-    }
-    fs::remove(args[0]);
-    std::cout << "File deleted: " << args[0] << '\n';
 }
 
 void ConsoleTerminal::printHeader() {
@@ -187,5 +182,4 @@ void ConsoleTerminal::clearConsole() {
     std::cout << "\x1B[2J\x1B[H";
 #endif
 }
-
-}  // namespace lithium::Terminal
+}  // namespace lithium::debug

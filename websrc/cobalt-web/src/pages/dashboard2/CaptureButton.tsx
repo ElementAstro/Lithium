@@ -23,7 +23,7 @@ export const CaptureButton = styled(Button)`
   }
 
   animation: pulse 2s infinite;
-  
+
   @keyframes pulse {
     0% {
       transform: scale(1);
@@ -44,4 +44,3 @@ export const SCaptureButton = ({ onCapture, Icon }) => {
     </CaptureButton>
   );
 };
-

@@ -8,7 +8,7 @@
 
 Date: 2023-6-1
 
-Description: SSH客户端连接和文件操作类。
+Description: SSH Client
 
 *************************************************/
 
@@ -21,7 +21,6 @@ Description: SSH客户端连接和文件操作类。
 #include <stdexcept>
 #include <string>
 #include <vector>
-
 
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>

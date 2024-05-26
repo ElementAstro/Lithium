@@ -17,7 +17,7 @@ Description: Task Generator
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
 
 #include <fstream>
 #include <future>

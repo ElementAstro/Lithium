@@ -164,30 +164,6 @@ public:
             task->timeout = timeout.value();
             task->timeoutPromise.set_value(true);
         }
-
-        /*
-                std::future<bool> timeoutFuture =
-           task->timeoutPromise.get_future(); int currentTickLength =
-           tickLength.load();
-                // 将任务函数包装为一个可调用对象
-                std::function<void()> taskWrapper = [currentTickLength, timeout,
-           timeoutFuture, taskFunc, args...]()
-                {
-                    // 在任务函数执行之前等待指定的时间，检查任务是否超时
-                    if (timeout.has_value())
-                    {
-                        if
-           (timeoutFuture.wait_for(std::chrono::milliseconds(timeout.value() *
-           currentTickLength)) == std::future_status::ready)
-                        {
-                            return; // 任务已经超时，不执行任务函数
-                        }
-                    }
-                    taskFunc(args...);
-                };
-                task->func = taskWrapper;
-        */
-
         {
             std::lock_guard<std::mutex> lock(tasksMutex);
             if (afterTaskId.has_value()) {

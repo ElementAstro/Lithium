@@ -16,15 +16,17 @@ Description: A calculator implementation under C++20
 #define ATOM_ALGORITHM_CALCULATOR_HPP
 
 #include <cctype>
+#include <cmath>
 #include <cstddef>
+#include <functional>
 #include <sstream>
 #include <stack>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace atom::algorithm {
-
 class error : public std::runtime_error {
 public:
     error(std::string_view expr, std::string_view message)
@@ -46,7 +48,7 @@ public:
             result = parseExpr();
             if (!isEnd())
                 unexpected();
-        } catch (const calculator::error&) {
+        } catch (const error &) {
             stack_ = {};
             throw;
         }
@@ -55,7 +57,16 @@ public:
 
     T eval(char c) { return eval(std::string_view(&c, 1)); }
 
+    void set(const std::string &name, T value) { variables_[name] = value; }
+
+    void set(const std::string &name, std::function<T(T)> func) {
+        functions_[name] = func;
+    }
+
 private:
+    std::unordered_map<std::string, T> variables_;
+    std::unordered_map<std::string, std::function<T(T)>> functions_;
+
     enum {
         OPERATOR_NULL,
         OPERATOR_BITWISE_OR,      /// |
@@ -83,7 +94,7 @@ private:
     struct OperatorValue {
         Operator op;
         T value;
-        constexpr OperatorValue(const Operator& opr, T val) noexcept
+        constexpr OperatorValue(const Operator &opr, T val) noexcept
             : op(opr), value(val) {}
         constexpr int getPrecedence() const noexcept { return op.precedence; }
         constexpr bool isNull() const noexcept {
@@ -95,14 +106,12 @@ private:
         T res = 1;
 
         while (n > 0) {
-            if (n % 2 != 0) {
+            if (n & 1) {
                 res *= x;
-                n -= 1;
             }
-            n /= 2;
 
-            if (n > 0)
-                x *= x;
+            x *= x;
+            n >>= 1;
         }
 
         return res;
@@ -117,40 +126,59 @@ private:
             if (division != std::string_view::npos)
                 msg << " (error token is \""
                     << expr_.substr(division, expr_.size() - division) << "\")";
-            throw calculator::error(expr_, msg.str());
+            throw error(expr_, msg.str());
         }
         return value;
     }
 
     [[nodiscard]] constexpr T calculate(T v1, T v2,
-                                        const Operator& op) const noexcept {
-        switch (op.op) {
-            case OPERATOR_BITWISE_OR:
-                return v1 | v2;
-            case OPERATOR_BITWISE_XOR:
-                return v1 ^ v2;
-            case OPERATOR_BITWISE_AND:
-                return v1 & v2;
-            case OPERATOR_BITWISE_SHL:
-                return v1 << v2;
-            case OPERATOR_BITWISE_SHR:
-                return v1 >> v2;
-            case OPERATOR_ADDITION:
-                return v1 + v2;
-            case OPERATOR_SUBTRACTION:
-                return v1 - v2;
-            case OPERATOR_MULTIPLICATION:
-                return v1 * v2;
-            case OPERATOR_DIVISION:
-                return v1 / checkZero(v2);
-            case OPERATOR_MODULO:
-                return v1 % checkZero(v2);
-            case OPERATOR_POWER:
-                return pow(v1, v2);
-            case OPERATOR_EXPONENT:
-                return v1 * pow(10, v2);
-            default:
-                return 0;
+                                        const Operator &op) const noexcept {
+        if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+            switch (op.op) {
+                case OPERATOR_ADDITION:
+                    return v1 + v2;
+                case OPERATOR_SUBTRACTION:
+                    return v1 - v2;
+                case OPERATOR_MULTIPLICATION:
+                    return v1 * v2;
+                case OPERATOR_DIVISION:
+                    return v1 / checkZero(v2);
+                case OPERATOR_POWER:
+                    return std::pow(v1, v2);
+                case OPERATOR_EXPONENT:
+                    return v1 * std::pow(10, v2);
+                default:
+                    return 0;
+            }
+        } else {
+            switch (op.op) {
+                case OPERATOR_BITWISE_OR:
+                    return v1 | v2;
+                case OPERATOR_BITWISE_XOR:
+                    return v1 ^ v2;
+                case OPERATOR_BITWISE_AND:
+                    return v1 & v2;
+                case OPERATOR_BITWISE_SHL:
+                    return v1 << v2;
+                case OPERATOR_BITWISE_SHR:
+                    return v1 >> v2;
+                case OPERATOR_ADDITION:
+                    return v1 + v2;
+                case OPERATOR_SUBTRACTION:
+                    return v1 - v2;
+                case OPERATOR_MULTIPLICATION:
+                    return v1 * v2;
+                case OPERATOR_DIVISION:
+                    return v1 / checkZero(v2);
+                case OPERATOR_MODULO:
+                    return v1 % checkZero(v2);
+                case OPERATOR_POWER:
+                    return pow(v1, v2);
+                case OPERATOR_EXPONENT:
+                    return v1 * pow(10, v2);
+                default:
+                    return 0;
+            }
         }
     }
 
@@ -174,7 +202,7 @@ private:
         std::ostringstream msg;
         msg << "Syntax error: unexpected token \"" << expr_.substr(index_)
             << "\" at index " << index_;
-        throw calculator::error(expr_, msg.str());
+        throw error(expr_, msg.str());
     }
 
     constexpr void eatSpaces() noexcept {
@@ -184,7 +212,7 @@ private:
 
     [[nodiscard]] Operator parseOp() {
         eatSpaces();
-        switch (getCharacter()) {
+        switch (std::tolower(getCharacter())) {
             case '|':
                 index_++;
                 return Operator(OPERATOR_BITWISE_OR, 4, 'L');
@@ -221,9 +249,6 @@ private:
             case 'e':
                 index_++;
                 return Operator(OPERATOR_EXPONENT, 40, 'R');
-            case 'E':
-                index_++;
-                return Operator(OPERATOR_EXPONENT, 40, 'R');
             default:
                 return Operator(OPERATOR_NULL, 0, 'L');
         }
@@ -245,16 +270,57 @@ private:
 
     [[nodiscard]] T parseDecimal() {
         T value = 0;
-        for (T d; (d = getInteger()) <= 9; index_++)
-            value = value * 10 + d;
-        return value;
+        T fraction = 1;
+        bool decimal_point = false;
+        std::size_t length = 0;
+        std::size_t max_length = std::numeric_limits<T>::digits10 + 1;
+
+        while (index_ < expr_.size()) {
+            char c = expr_[index_];
+            if (std::isdigit(c)) {
+                if (length >= max_length) {
+                    throw error(expr_, "Number too large");
+                }
+                value = value * 10 + (c - '0');
+                if (decimal_point)
+                    fraction *= 10;
+                length++;
+            } else if (c == '.' && !decimal_point) {
+                if (std::is_integral<T>::value) {
+                    throw error(
+                        expr_,
+                        "Decimal numbers are not allowed in integer mode");
+                }
+                decimal_point = true;
+            } else if (c == '.' && decimal_point) {
+                throw error(expr_, "Multiple decimal points in number");
+            } else {
+                break;
+            }
+            index_++;
+        }
+        return decimal_point ? value / fraction : value;
     }
 
     [[nodiscard]] T parseHex() {
         index_ += 2;
         T value = 0;
-        for (T h; (h = getInteger()) <= 0xf; index_++)
-            value = value * 0x10 + h;
+        std::size_t length = 0;
+        std::size_t max_length = std::numeric_limits<T>::digits / 4;
+
+        while (index_ < expr_.size()) {
+            T h = getInteger();
+            if (h <= 0xf) {
+                if (length >= max_length) {
+                    throw error(expr_, "Number too large");
+                }
+                value = value * 0x10 + h;
+                length++;
+                index_++;
+            } else {
+                break;
+            }
+        }
         return value;
     }
 
@@ -270,55 +336,88 @@ private:
     [[nodiscard]] T parseValue() {
         T val = 0;
         eatSpaces();
-        switch (getCharacter()) {
-            case '0':
-                if (isHex())
-                    val = parseHex();
-                else
-                    val = parseDecimal();
-                break;
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-            case '6':
-            case '7':
-            case '8':
-            case '9':
-                val = parseDecimal();
-                break;
-            case '(':
+        if (std::isalpha(getCharacter())) {
+            std::string name;
+            while (std::isalnum(getCharacter()) || getCharacter() == '_') {
+                name += getCharacter();
                 index_++;
-                val = parseExpr();
+            }
+            if (functions_.count(name) > 0) {
                 eatSpaces();
-                if (getCharacter() != ')') {
-                    if (!isEnd())
-                        unexpected();
-                    throw calculator::error(
-                        expr_,
-                        "Syntax error: `)' expected at end of expression");
+                if (getCharacter() != '(') {
+                    throw error(expr_, "Expected '(' after function name");
                 }
                 index_++;
-                break;
-            case '~':
+                T arg = parseExpr();
+                if (getCharacter() != ')') {
+                    throw error(expr_, "Expected ')' after function argument");
+                }
                 index_++;
-                val = ~parseValue();
-                break;
-            case '+':
-                index_++;
-                val = parseValue();
-                break;
-            case '-':
-                index_++;
-                val = -parseValue();
-                break;
-            default:
-                if (!isEnd())
-                    unexpected();
-                throw calculator::error(
-                    expr_, "Syntax error: value expected at end of expression");
+                val = functions_[name](arg);
+            } else if (variables_.count(name) > 0) {
+                val = variables_[name];
+            } else {
+                throw error(expr_, "Undefined function or variable: " + name);
+            }
+        } else {
+            switch (getCharacter()) {
+                case '0':
+                    if (isHex())
+                        val = parseHex();
+                    else
+                        val = parseDecimal();
+                    break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    val = parseDecimal();
+                    break;
+                case '(':
+                    index_++;
+                    val = parseExpr();
+                    eatSpaces();
+                    if (getCharacter() != ')') {
+                        if (!isEnd())
+                            unexpected();
+                        throw error(
+                            expr_,
+                            "Syntax error: `)' expected at end of expression");
+                    }
+                    index_++;
+                    break;
+                case '~':
+                    if constexpr (std::is_same_v<T, int>) {
+                        index_++;
+                        val = ~parseValue();
+                    } else {
+                        throw error(expr_,
+                                    "Syntax error: `~' not supported for "
+                                    "non-int types");
+                    }
+                    break;
+                case '+':
+                    index_++;
+                    val = parseValue();
+                    break;
+                case '-':
+                    index_++;
+                    val = -parseValue();
+                    break;
+                default:
+                    if (!isEnd())
+                        unexpected();
+                    throw error(
+                        expr_,
+                        "Syntax error: value expected at end of expression");
+            }
         }
+
         return val;
     }
 
@@ -356,7 +455,9 @@ inline T eval(std::string_view expression) {
     return parser.eval(expression);
 }
 
-inline int eval(const std::string& expression) { return eval<int>(expression); }
+inline double eval(const std::string &expression) {
+    return eval<double>(expression);
+}
 
 }  // namespace atom::algorithm
 

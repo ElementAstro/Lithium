@@ -26,9 +26,11 @@ Description: Lithium App Enter
 
 #include "script/manager.hpp"
 
+#include "atom/error/exception.hpp"
 #include "atom/error/error_stack.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/server/global_ptr.hpp"
+#include "atom/function/global_ptr.hpp"
+#include "atom/components/dispatch.hpp"
 #include "atom/system/process.hpp"
 #include "atom/utils/time.hpp"
 #include "utils/marco.hpp"
@@ -83,7 +85,7 @@ std::shared_ptr<LithiumApp> MyApp = nullptr;
 LithiumApp::LithiumApp() {
     DLOG_F(INFO, "LithiumApp Constructor");
     try {
-        m_MessageBus = GetWeakPtr<atom::server::MessageBus>("lithium.bus");
+        m_MessageBus = GetWeakPtr<atom::async::MessageBus>("lithium.bus");
         CHECK_WEAK_PTR_EXPIRED(m_MessageBus,
                                "load message bus from gpm: lithium.bus");
 
@@ -97,12 +99,12 @@ LithiumApp::LithiumApp() {
         //       to the right type to process.
         //       All of the messages are based on the Message class.
         DLOG_F(INFO, "Start Message Processing Thread");
-        m_MessageBus.lock()->StartProcessingThread<Message>();
+        // m_MessageBus.lock()->StartProcessingThread<Message>();
 
         DLOG_F(INFO, "Register LithiumApp Member Functions");
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Failed to load Lithium App , error : {}", e.what());
-        throw std::runtime_error("Failed to load Lithium App");
+        THROW_OBJ_UNINITIALIZED("Failed to load Lithium App");
     }
     DLOG_F(INFO, "Lithium App Initialized");
 }
@@ -119,7 +121,7 @@ std::shared_ptr<LithiumApp> LithiumApp::createShared() {
 void InitLithiumApp(int argc, char **argv) {
     LOG_F(INFO, "Init Lithium App");
     // Message Bus
-    AddPtr("lithium.bus", atom::server::MessageBus::createShared());
+    AddPtr("lithium.bus", atom::async::MessageBus::createShared());
     // AddPtr("ModuleLoader", ModuleLoader::createShared());
     // AddPtr("lithium.async.thread",
     // Atom::Async::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));

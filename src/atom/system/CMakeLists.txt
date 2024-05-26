@@ -22,20 +22,16 @@ set(${PROJECT_NAME}_SOURCES
     command.cpp
     crash_quotes.cpp
     crash.cpp
+    env.cpp
     lregistry.cpp
+    os.cpp
     pidwatcher.cpp
+    platform.cpp
     process.cpp
     register.cpp
     storage.cpp
     system.cpp
     user.cpp
-
-    module/cpu.cpp
-    module/disk.cpp
-    module/memory.cpp
-    module/battery.cpp
-    module/wifi.cpp
-    module/os.cpp
 )
 
 # Headers
@@ -43,17 +39,15 @@ set(${PROJECT_NAME}_HEADERS
     command.hpp
     crash_quotes.hpp
     crash.hpp
+    env.hpp
+    os.hpp
     pidwatcher.hpp
+    platform.hpp
     process.hpp
     register.hpp
     storage.hpp
     system.hpp
     user.hpp
-
-    module/cpu.hpp
-    module/disk.hpp
-    module/memory.hpp
-    module/battery.hpp
 )
 
 # Private Headers

@@ -23,7 +23,7 @@ private:
     /// \todo Get rid of Any and merge it with this, reducing an allocation in
     /// the process
     struct Data {
-        Data(const Type_Info &ti, Carbon::detail::Any to, bool is_ref,
+        Data(const atom::meta::Type_Info &ti, Carbon::detail::Any to, bool is_ref,
              const void *t_void_ptr, bool t_return_value);
 
         Data &operator=(const Data &rhs);
@@ -33,7 +33,7 @@ private:
         Data(Data &&) = default;
         Data &operator=(Data &&rhs) = default;
 
-        Type_Info m_type_info;
+        atom::meta::Type_Info m_type_info;
         Carbon::detail::Any m_obj;
         void *m_data_ptr;
         const void *m_const_data_ptr;
@@ -44,7 +44,7 @@ private:
 
     struct Object_Data {
         static auto get(Boxed_Value::Void_Type, bool t_return_value) {
-            return std::make_shared<Data>(Get_Type_Info<void>::get(),
+            return std::make_shared<Data>(atom::meta::Get_Type_Info<void>::get(),
                                           Carbon::detail::Any(), false,
                                           nullptr, t_return_value);
         }
@@ -56,7 +56,7 @@ private:
 
         template <typename T>
         static auto get(const std::shared_ptr<T> &obj, bool t_return_value) {
-            return std::make_shared<Data>(Get_Type_Info<T>::get(),
+            return std::make_shared<Data>(atom::meta::Get_Type_Info<T>::get(),
                                           Carbon::detail::Any(obj), false,
                                           obj.get(), t_return_value);
         }
@@ -65,7 +65,7 @@ private:
         static auto get(std::shared_ptr<T> &&obj, bool t_return_value) {
             auto ptr = obj.get();
             return std::make_shared<Data>(
-                Get_Type_Info<T>::get(),
+                atom::meta::Get_Type_Info<T>::get(),
                 Carbon::detail::Any(std::move(obj)), false, ptr,
                 t_return_value);
         }
@@ -84,7 +84,7 @@ private:
         static auto get(std::reference_wrapper<T> obj, bool t_return_value) {
             auto p = &obj.get();
             return std::make_shared<Data>(
-                Get_Type_Info<T>::get(),
+                atom::meta::Get_Type_Info<T>::get(),
                 Carbon::detail::Any(std::move(obj)), true, p,
                 t_return_value);
         }
@@ -93,7 +93,7 @@ private:
         static auto get(std::unique_ptr<T> &&obj, bool t_return_value) {
             auto ptr = obj.get();
             return std::make_shared<Data>(
-                Get_Type_Info<T>::get(),
+                atom::meta::Get_Type_Info<T>::get(),
                 Carbon::detail::Any(
                     std::make_shared<std::unique_ptr<T>>(std::move(obj))),
                 true, ptr, t_return_value);
@@ -103,14 +103,14 @@ private:
         static auto get(T t, bool t_return_value) {
             auto p = std::make_shared<T>(std::move(t));
             auto ptr = p.get();
-            return std::make_shared<Data>(Get_Type_Info<T>::get(),
+            return std::make_shared<Data>(atom::meta::Get_Type_Info<T>::get(),
                                           Carbon::detail::Any(std::move(p)),
                                           false, ptr, t_return_value);
         }
 
         static std::shared_ptr<Data> get() {
             return std::make_shared<Data>(
-                Type_Info(), Carbon::detail::Any(), false, nullptr, false);
+                atom::meta::Type_Info(), Carbon::detail::Any(), false, nullptr, false);
         }
     };
 
@@ -135,14 +135,14 @@ public:
     /// m_data pointers are not shared in this case
     Boxed_Value assign(const Boxed_Value &rhs) noexcept;
 
-    const Type_Info &get_type_info() const noexcept;
+    const atom::meta::Type_Info &get_type_info() const noexcept;
 
     /// return true if the object is uninitialized
     bool is_undef() const noexcept;
 
     bool is_const() const noexcept;
 
-    bool is_type(const Type_Info &ti) const noexcept;
+    bool is_type(const atom::meta::Type_Info &ti) const noexcept;
 
     template <typename T>
     auto pointer_sentinel(std::shared_ptr<T> &ptr) const noexcept {

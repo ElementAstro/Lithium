@@ -73,7 +73,7 @@ const PHD2GuideResultGraph: React.FC = () => {
         }
       }]
     }
-    
+
   );
 
   React.useEffect(() => {

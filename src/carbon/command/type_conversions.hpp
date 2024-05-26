@@ -12,8 +12,8 @@
 #include <typeinfo>
 
 #include "../threading.hpp"
-#include "atom/type/static_string.hpp"
 #include "atom/function/type_info.hpp"
+#include "atom/type/static_string.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
 #include "boxed_value.hpp"
@@ -23,21 +23,23 @@ namespace exception {
 /// \brief Error thrown when there's a problem with type conversion
 class conversion_error : public bad_boxed_cast {
 public:
-    conversion_error(const Type_Info t_to, const Type_Info t_from,
+    conversion_error(const atom::meta::Type_Info t_to,
+                     const atom::meta::Type_Info t_from,
                      const Static_String what) noexcept
         : bad_boxed_cast(t_from, (*t_to.bare_type_info()), what),
           type_to(t_to) {}
 
-    Type_Info type_to;
+    atom::meta::Type_Info type_to;
 };
 
 class bad_boxed_dynamic_cast : public bad_boxed_cast {
 public:
-    bad_boxed_dynamic_cast(const Type_Info &t_from, const std::type_info &t_to,
+    bad_boxed_dynamic_cast(const atom::meta::Type_Info &t_from,
+                           const std::type_info &t_to,
                            const Static_String &t_what) noexcept
         : bad_boxed_cast(t_from, t_to, t_what) {}
 
-    bad_boxed_dynamic_cast(const Type_Info &t_from,
+    bad_boxed_dynamic_cast(const atom::meta::Type_Info &t_from,
                            const std::type_info &t_to) noexcept
         : bad_boxed_cast(t_from, t_to) {}
 
@@ -51,11 +53,12 @@ public:
 
 class bad_boxed_type_cast : public bad_boxed_cast {
 public:
-    bad_boxed_type_cast(const Type_Info &t_from, const std::type_info &t_to,
+    bad_boxed_type_cast(const atom::meta::Type_Info &t_from,
+                        const std::type_info &t_to,
                         const Static_String &t_what) noexcept
         : bad_boxed_cast(t_from, t_to, t_what) {}
 
-    bad_boxed_type_cast(const Type_Info &t_from,
+    bad_boxed_type_cast(const atom::meta::Type_Info &t_from,
                         const std::type_info &t_to) noexcept
         : bad_boxed_cast(t_from, t_to) {}
 
@@ -74,27 +77,28 @@ public:
     virtual Boxed_Value convert(const Boxed_Value &from) const = 0;
     virtual Boxed_Value convert_down(const Boxed_Value &to) const = 0;
 
-    const Type_Info &to() const noexcept { return m_to; }
-    const Type_Info &from() const noexcept { return m_from; }
+    const atom::meta::Type_Info &to() const noexcept { return m_to; }
+    const atom::meta::Type_Info &from() const noexcept { return m_from; }
 
     virtual bool bidir() const noexcept { return true; }
 
     virtual ~Type_Conversion_Base() = default;
 
 protected:
-    Type_Conversion_Base(Type_Info t_to, Type_Info t_from)
+    Type_Conversion_Base(atom::meta::Type_Info t_to,
+                         atom::meta::Type_Info t_from)
         : m_to(std::move(t_to)), m_from(std::move(t_from)) {}
 
 private:
-    const Type_Info m_to;
-    const Type_Info m_from;
+    const atom::meta::Type_Info m_to;
+    const atom::meta::Type_Info m_from;
 };
 
 template <typename From, typename To>
 class Static_Caster {
 public:
     static Boxed_Value cast(const Boxed_Value &t_from) {
-        if (t_from.get_type_info().bare_equal(user_type<From>())) {
+        if (t_from.get_type_info().bare_equal(atom::meta::user_type<From>())) {
             if (t_from.is_pointer()) {
                 // Dynamic cast out the contained boxed value, which we know is
                 // the type we want
@@ -147,7 +151,7 @@ template <typename From, typename To>
 class Dynamic_Caster {
 public:
     static Boxed_Value cast(const Boxed_Value &t_from) {
-        if (t_from.get_type_info().bare_equal(user_type<From>())) {
+        if (t_from.get_type_info().bare_equal(atom::meta::user_type<From>())) {
             if (t_from.is_pointer()) {
                 // Dynamic cast out the contained boxed value, which we know is
                 // the type we want
@@ -216,7 +220,8 @@ template <typename Base, typename Derived>
 class Dynamic_Conversion_Impl : public Type_Conversion_Base {
 public:
     Dynamic_Conversion_Impl()
-        : Type_Conversion_Base(user_type<Base>(), user_type<Derived>()) {}
+        : Type_Conversion_Base(atom::meta::user_type<Base>(),
+                               atom::meta::user_type<Derived>()) {}
 
     Boxed_Value convert_down(const Boxed_Value &t_base) const override {
         return Dynamic_Caster<Base, Derived>::cast(t_base);
@@ -231,7 +236,8 @@ template <typename Base, typename Derived>
 class Static_Conversion_Impl : public Type_Conversion_Base {
 public:
     Static_Conversion_Impl()
-        : Type_Conversion_Base(user_type<Base>(), user_type<Derived>()) {}
+        : Type_Conversion_Base(atom::meta::user_type<Base>(),
+                               atom::meta::user_type<Derived>()) {}
 
     Boxed_Value convert_down(const Boxed_Value &t_base) const override {
         throw Carbon::exception::bad_boxed_dynamic_cast(
@@ -250,7 +256,8 @@ public:
 template <typename Callable>
 class Type_Conversion_Impl : public Type_Conversion_Base {
 public:
-    Type_Conversion_Impl(Type_Info t_from, Type_Info t_to, Callable t_func)
+    Type_Conversion_Impl(atom::meta::Type_Info t_from,
+                         atom::meta::Type_Info t_to, Callable t_func)
         : Type_Conversion_Base(t_to, t_from), m_func(std::move(t_func)) {}
 
     Boxed_Value convert_down(const Boxed_Value &) const override {
@@ -323,16 +330,18 @@ public:
 
     template <typename T>
     bool convertable_type() const noexcept {
-        const auto type = user_type<T>().bare_type_info();
+        const auto type = atom::meta::user_type<T>().bare_type_info();
         return thread_cache().count(type) != 0;
     }
 
     template <typename To, typename From>
     bool converts() const noexcept {
-        return converts(user_type<To>(), user_type<From>());
+        return converts(atom::meta::user_type<To>(),
+                        atom::meta::user_type<From>());
     }
 
-    bool converts(const Type_Info &to, const Type_Info &from) const noexcept {
+    bool converts(const atom::meta::Type_Info &to,
+                  const atom::meta::Type_Info &from) const noexcept {
         const auto &types = thread_cache();
         if (types.count(to.bare_type_info()) != 0 &&
             types.count(from.bare_type_info()) != 0) {
@@ -345,16 +354,18 @@ public:
     template <typename To>
     Boxed_Value boxed_type_conversion(Conversion_Saves &t_saves,
                                       const Boxed_Value &from) const {
-        return boxed_type_conversion(user_type<To>(), t_saves, from);
+        return boxed_type_conversion(atom::meta::user_type<To>(), t_saves,
+                                     from);
     }
 
     template <typename From>
     Boxed_Value boxed_type_down_conversion(Conversion_Saves &t_saves,
                                            const Boxed_Value &to) const {
-        return boxed_type_down_conversion(user_type<From>(), t_saves, to);
+        return boxed_type_down_conversion(atom::meta::user_type<From>(),
+                                          t_saves, to);
     }
 
-    Boxed_Value boxed_type_conversion(const Type_Info &to,
+    Boxed_Value boxed_type_conversion(const atom::meta::Type_Info &to,
                                       Conversion_Saves &t_saves,
                                       const Boxed_Value &from) const {
         try {
@@ -375,7 +386,7 @@ public:
         }
     }
 
-    Boxed_Value boxed_type_down_conversion(const Type_Info &from,
+    Boxed_Value boxed_type_down_conversion(const atom::meta::Type_Info &from,
                                            Conversion_Saves &t_saves,
                                            const Boxed_Value &to) const {
         try {
@@ -406,7 +417,8 @@ public:
         return ret;
     }
 
-    bool has_conversion(const Type_Info &to, const Type_Info &from) const {
+    bool has_conversion(const atom::meta::Type_Info &to,
+                        const atom::meta::Type_Info &from) const {
         Carbon::detail::threading::shared_lock<
             Carbon::detail::threading::shared_mutex>
             l(m_mutex);
@@ -414,7 +426,8 @@ public:
     }
 
     std::shared_ptr<detail::Type_Conversion_Base> get_conversion(
-        const Type_Info &to, const Type_Info &from) const {
+        const atom::meta::Type_Info &to,
+        const atom::meta::Type_Info &from) const {
         Carbon::detail::threading::shared_lock<
             Carbon::detail::threading::shared_mutex>
             l(m_mutex);
@@ -436,7 +449,8 @@ public:
 
 private:
     std::set<std::shared_ptr<detail::Type_Conversion_Base>>::const_iterator
-    find_bidir(const Type_Info &to, const Type_Info &from) const {
+    find_bidir(const atom::meta::Type_Info &to,
+               const atom::meta::Type_Info &from) const {
         return std::find_if(
             m_conversions.begin(), m_conversions.end(),
             [&to, &from](
@@ -451,7 +465,8 @@ private:
     }
 
     std::set<std::shared_ptr<detail::Type_Conversion_Base>>::const_iterator
-    find(const Type_Info &to, const Type_Info &from) const {
+    find(const atom::meta::Type_Info &to,
+         const atom::meta::Type_Info &from) const {
         return std::find_if(
             m_conversions.begin(), m_conversions.end(),
             [&to, &from](const std::shared_ptr<detail::Type_Conversion_Base>
@@ -551,7 +566,8 @@ Type_Conversion base_class() {
 }
 
 template <typename Callable>
-Type_Conversion type_conversion(const Type_Info &t_from, const Type_Info &t_to,
+Type_Conversion type_conversion(const atom::meta::Type_Info &t_from,
+                                const atom::meta::Type_Info &t_to,
                                 const Callable &t_func) {
     return Carbon::make_shared<detail::Type_Conversion_Base,
                                detail::Type_Conversion_Impl<Callable>>(
@@ -569,7 +585,7 @@ Type_Conversion type_conversion(const Callable &t_function) {
 
     return Carbon::make_shared<detail::Type_Conversion_Base,
                                detail::Type_Conversion_Impl<decltype(func)>>(
-        user_type<From>(), user_type<To>(), func);
+        atom::meta::user_type<From>(), atom::meta::user_type<To>(), func);
 }
 
 template <typename From, typename To>
@@ -585,7 +601,7 @@ Type_Conversion type_conversion() {
 
     return Carbon::make_shared<detail::Type_Conversion_Base,
                                detail::Type_Conversion_Impl<decltype(func)>>(
-        user_type<From>(), user_type<To>(), func);
+        atom::meta::user_type<From>(), atom::meta::user_type<To>(), func);
 }
 
 template <typename To>
@@ -607,7 +623,8 @@ Type_Conversion vector_conversion() {
 
     return Carbon::make_shared<detail::Type_Conversion_Base,
                                detail::Type_Conversion_Impl<decltype(func)>>(
-        user_type<std::vector<Boxed_Value>>(), user_type<To>(), func);
+        atom::meta::user_type<std::vector<Boxed_Value>>(),
+        atom::meta::user_type<To>(), func);
 }
 
 template <typename To>
@@ -630,7 +647,8 @@ Type_Conversion map_conversion() {
 
     return Carbon::make_shared<detail::Type_Conversion_Base,
                                detail::Type_Conversion_Impl<decltype(func)>>(
-        user_type<std::map<std::string, Boxed_Value>>(), user_type<To>(), func);
+        atom::meta::user_type<std::map<std::string, Boxed_Value>>(),
+        atom::meta::user_type<To>(), func);
 }
 }  // namespace Carbon
 

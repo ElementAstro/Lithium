@@ -23,7 +23,7 @@ Description: Simple HTTP client using libcurl.
 #include <vector>
 
 
-namespace Atom::Web {
+namespace atom::web {
 /**
  * @brief A wrapper class for performing HTTP requests using libcurl.
  *
@@ -158,6 +158,6 @@ private:
                                 void *userp);
 };
 
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 #endif

@@ -8,14 +8,17 @@
 
 Date: 2023-6-1
 
-Description: FIFO CLient
+Description: FIFO Client
 
 *************************************************/
 
 #ifndef ATOM_CONNECTION_FIFOCLIENT_HPP
 #define ATOM_CONNECTION_FIFOCLIENT_HPP
 
+#include <chrono>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -39,7 +42,7 @@ public:
      *
      * @param fifoPath The path to the FIFO pipe.
      */
-    FifoClient(const std::string& fifoPath);
+    explicit FifoClient(std::string_view fifoPath);
 
     /**
      * @brief Destructor for the FifoClient object.
@@ -50,25 +53,42 @@ public:
      * @brief Writes data to the FIFO pipe.
      *
      * @param data The data to be written to the pipe.
+     * @param timeout Optional timeout duration for the write operation.
      * @return True if the data was successfully written, false otherwise.
      */
-    bool write(const std::string& data);
+    bool write(std::string_view data,
+               std::optional<std::chrono::milliseconds> timeout = std::nullopt);
 
     /**
      * @brief Reads data from the FIFO pipe.
      *
-     * @return The data read from the pipe as a string.
+     * @param timeout Optional timeout duration for the read operation.
+     * @return The data read from the pipe as a string, or an empty optional if
+     * the read operation timed out.
      */
-    std::string read();
+    std::optional<std::string> read(
+        std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+
+    /**
+     * @brief Checks if the FIFO pipe is open and ready for communication.
+     *
+     * @return True if the FIFO pipe is open, false otherwise.
+     */
+    [[nodiscard]] bool isOpen() const;
+
+    /**
+     * @brief Closes the FIFO pipe.
+     */
+    void close();
 
 private:
 #ifdef _WIN32
-    HANDLE m_fifo; /**< Handle to the FIFO pipe (Windows). */
+    HANDLE m_fifo{nullptr}; /**< Handle to the FIFO pipe (Windows). */
 #else
-    int m_fifo; /**< File descriptor for the FIFO pipe (Unix/Linux). */
+    int m_fifo{-1}; /**< File descriptor for the FIFO pipe (Unix/Linux). */
 #endif
     std::string m_fifoPath; /**< The path to the FIFO pipe. */
 };
 }  // namespace atom::connection
 
-#endif  // FIFOSERVER_H
+#endif  // ATOM_CONNECTION_FIFOCLIENT_HPP

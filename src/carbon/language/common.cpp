@@ -191,7 +191,7 @@ std::string eval_error::format_types(
     const Carbon::detail::Dispatch_Engine &t_ss) {
     assert(t_func);
     int arity = t_func->get_arity();
-    std::vector<Type_Info> types = t_func->get_param_types();
+    std::vector<atom::meta::Type_Info> types = t_func->get_param_types();
 
     std::string retval;
     if (arity == -1) {

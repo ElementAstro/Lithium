@@ -1,34 +1,42 @@
 -- xmake.lua for Atom-IO
+-- This project is licensed under the terms of the GPL3 license.
+--
+-- Project Name: Atom-IO
+-- Description: IO Components for Element Astro Project
+-- Author: Max Qian
+-- License: GPL3
 
--- Project Information
-set_project("Atom-IO")
-set_version("1.0.0")
-set_description("IO Components for Element Astro Project")
-set_licenses("GPL-3.0")
+set_project("atom-io")
+set_version("1.0.0") -- Adjust version accordingly
 
--- Specify the C++ Languages
-set_languages("c++17")
+-- Set minimum xmake version
+set_xmakever("2.5.1")
 
--- Add Source Files
-add_files("*.cpp")
-add_files("*.hpp")
-
--- Add Private Header Files
-add_headerfiles("*.hpp", {prefixdir = "$(projectdir)"})
-
--- Add Target
-target("Atom-IO")
+-- Define target
+target("atom-io")
     set_kind("static")
-    add_packages("loguru", "libzippp")
-    add_links("pthread")
+    set_languages("c99", "cxx20")
+
+    -- Add include directories
     add_includedirs(".")
 
--- Install Rules
-after_install("install_headers")
-after_install("install_libraries")
+    -- Add source files
+    add_files("compress.cpp", "file.cpp", "io.cpp")
 
--- Install Headers
-install_headers("*.hpp", "$(projectdir)/include/$(projectname)")
+    -- Add header files
+    add_headerfiles("compress.hpp", "file.hpp", "glob.hpp", "io.hpp")
 
--- Install Libraries
-install_libraries("$(targetdir)/*.a", "$(projectdir)/lib")
+    -- Add dependencies
+    add_packages("loguru", "libzippp", {public = true})
+
+    -- Set position independent code
+    set_values("xmake.build.cc.flags", "-fPIC")
+
+    -- Set version and soversion
+    set_configvar("VERSION", "$(CMAKE_HYDROGEN_VERSION_STRING)")
+    set_configvar("SOVERSION", "$(HYDROGEN_SOVERSION)")
+
+    -- Add installation directory
+    on_install(function (target)
+        os.cp(target:targetfile(), path.join(target:installdir(), "lib"))
+    end)

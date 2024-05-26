@@ -17,145 +17,82 @@ Description: A simple UDP server.
 
 #include <atomic>
 #include <functional>
-#include <iostream>
+#include <memory>
 #include <string>
-#include <thread>
 #include <vector>
-
-
-// 区分平台
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#pragma comment(lib, "Ws2_32.lib")
-using socklen_t = int;
-#else
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
-
-#define INVALID_SOCKET -1
-#define SOCKET_ERROR -1
-#define closesocket close
-using SOCKET = int;
-#endif
 
 namespace atom::connection {
 /**
  * @class UdpSocketHub
- * @brief A simple UDP socket server class that handles incoming messages and
- * allows sending messages to specified addresses.
- *
- * 一个简单的UDP套接字服务器类，用于处理接收到的消息，并允许向指定地址发送消息。
+ * @brief Represents a hub for managing UDP sockets and message handling.
  */
 class UdpSocketHub {
 public:
     /**
-     * @brief Constructor for UdpSocketHub. Initializes the server state.
-     *
-     * UdpSocketHub的构造函数。初始化服务器状态。
+     * @brief Type definition for message handler function.
+     * @param message The message received.
+     * @param ip The IP address of the sender.
+     * @param port The port of the sender.
+     */
+    using MessageHandler =
+        std::function<void(const std::string&, const std::string&, int)>;
+
+    /**
+     * @brief Constructor.
      */
     UdpSocketHub();
 
     /**
-     * @brief Destructor for UdpSocketHub. Ensures proper resource cleanup.
-     *
-     * UdpSocketHub的析构函数。确保适当的资源清理。
+     * @brief Destructor.
      */
     ~UdpSocketHub();
 
+    UdpSocketHub(const UdpSocketHub&) =
+        delete; /**< Deleted copy constructor to prevent copying. */
+    UdpSocketHub& operator=(const UdpSocketHub&) =
+        delete; /**< Deleted copy assignment operator to prevent copying. */
+
     /**
-     * @brief Starts the UDP server on the specified port.
-     *
-     * 在指定端口上启动UDP服务器。
-     *
-     * @param port The port number on which the server will listen for incoming
+     * @brief Starts the UDP socket hub and binds it to the specified port.
+     * @param port The port on which the UDP socket hub will listen for incoming
      * messages.
-     *
-     * @param port 服务器监听传入消息的端口号。
      */
     void start(int port);
 
     /**
-     * @brief Stops the server and cleans up resources.
-     *
-     * 停止服务器并清理资源。
+     * @brief Stops the UDP socket hub.
      */
     void stop();
 
     /**
-     * @brief Adds a message handler function that will be called whenever a new
-     * message is received.
-     *
-     * 添加一个消息处理函数，每当接收到新消息时都会调用此函数。
-     *
-     * @param handler A function to handle incoming messages. It takes a string
-     * as input.
-     *
-     * @param handler 一个处理传入消息的函数。它接受一个字符串作为输入。
+     * @brief Checks if the UDP socket hub is currently running.
+     * @return True if the UDP socket hub is running, false otherwise.
      */
-    void addHandler(std::function<void(std::string)> handler);
+    bool isRunning() const;
+
+    /**
+     * @brief Adds a message handler function to the UDP socket hub.
+     * @param handler The message handler function to add.
+     */
+    void addMessageHandler(MessageHandler handler);
+
+    /**
+     * @brief Removes a message handler function from the UDP socket hub.
+     * @param handler The message handler function to remove.
+     */
+    void removeMessageHandler(MessageHandler handler);
 
     /**
      * @brief Sends a message to the specified IP address and port.
-     *
-     * 向指定的IP地址和端口发送消息。
-     *
-     * @param message The message to be sent.
-     * @param ip The target IP address.
-     * @param port The target port number.
-     *
-     * @param message 要发送的消息。
-     * @param ip 目标IP地址。
-     * @param port 目标端口号。
+     * @param message The message to send.
+     * @param ip The IP address of the recipient.
+     * @param port The port of the recipient.
      */
-    void sendTo(const std::string &message, const std::string &ip, int port);
+    void sendTo(const std::string& message, const std::string& ip, int port);
 
 private:
-    std::atomic<bool> m_running;  ///< Indicates whether the server is running
-                                  ///< or not. 指示服务器是否正在运行。
-    SOCKET m_serverSocket;  ///< The socket descriptor for the server.
-                            ///< 服务器的套接字描述符。
-#if __cplusplus >= 202002L
-    std::unique_ptr<std::jthread>
-        m_acceptThread;  ///< The thread for handling incoming messages.
-                         ///< 用于处理传入消息的线程。
-#else
-    std::unique_ptr<std::thread>
-        m_acceptThread;  ///< The thread for handling incoming messages (for C++
-                         ///< standards before C++20).
-                         ///< 用于处理传入消息的线程（针对C++20之前的C++标准）。
-#endif
-
-    std::function<void(std::string)>
-        m_handler;  ///< The function to handle incoming messages.
-                    ///< 处理传入消息的函数。
-
-    /**
-     * @brief Initializes networking. Required for Windows.
-     *
-     * 初始化网络。Windows系统需要。
-     *
-     * @return true if successful, false otherwise.
-     *
-     * @return 如果成功，则为true；否则为false。
-     */
-    bool initNetworking();
-
-    /**
-     * @brief Cleans up networking resources. Required for Windows.
-     *
-     * 清理网络资源。Windows系统需要。
-     */
-    void cleanupNetworking();
-
-    /**
-     * @brief The main loop for receiving messages. Runs in a separate thread.
-     *
-     * 接收消息的主循环。在单独的线程中运行。
-     */
-    void handleMessages();
+    class Impl; /**< Forward declaration of the implementation class. */
+    std::unique_ptr<Impl> impl_; /**< Pointer to the implementation object. */
 };
 }  // namespace atom::connection
 

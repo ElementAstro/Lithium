@@ -3,7 +3,7 @@
 
 namespace Carbon {
 
-Module &Module::add(Type_Info ti, std::string name) {
+Module &Module::add(atom::meta::Type_Info ti, std::string name) {
     m_typeinfos.emplace_back(ti, std::move(name));
     return *this;
 }
@@ -95,20 +95,22 @@ Boxed_Value Dispatch_Function::do_call(
     return dispatch::dispatch(m_funcs, params, t_conversions);
 }
 
-std::vector<Type_Info> Dispatch_Function::build_type_infos(
+std::vector<atom::meta::Type_Info> Dispatch_Function::build_type_infos(
     const std::vector<Proxy_Function> &t_funcs) {
     auto begin = t_funcs.cbegin();
     const auto &end = t_funcs.cend();
 
     if (begin != end) {
-        std::vector<Type_Info> type_infos = (*begin)->get_param_types();
+        std::vector<atom::meta::Type_Info> type_infos =
+            (*begin)->get_param_types();
 
         ++begin;
 
         bool size_mismatch = false;
 
         while (begin != end) {
-            std::vector<Type_Info> param_types = (*begin)->get_param_types();
+            std::vector<atom::meta::Type_Info> param_types =
+                (*begin)->get_param_types();
 
             if (param_types.size() != type_infos.size()) {
                 size_mismatch = true;
@@ -117,7 +119,8 @@ std::vector<Type_Info> Dispatch_Function::build_type_infos(
             for (size_t i = 0; i < type_infos.size() && i < param_types.size();
                  ++i) {
                 if (!(type_infos[i] == param_types[i])) {
-                    type_infos[i] = Get_Type_Info<Boxed_Value>::get();
+                    type_infos[i] =
+                        atom::meta::Get_Type_Info<Boxed_Value>::get();
                 }
             }
 
@@ -135,7 +138,7 @@ std::vector<Type_Info> Dispatch_Function::build_type_infos(
         return type_infos;
     }
 
-    return std::vector<Type_Info>();
+    return std::vector<atom::meta::Type_Info>();
 }
 }  // namespace detail
 
@@ -336,7 +339,8 @@ Boxed_Value Dispatch_Engine::get_object(std::string_view name,
     return obj.second;
 }
 
-void Dispatch_Engine::add(const Type_Info &ti, const std::string &name) {
+void Dispatch_Engine::add(const atom::meta::Type_Info &ti,
+                          const std::string &name) {
     add_global_const(const_var(ti), name + "_type");
 
     Carbon::detail::threading::unique_lock<
@@ -346,8 +350,8 @@ void Dispatch_Engine::add(const Type_Info &ti, const std::string &name) {
     m_state.m_types.insert(std::make_pair(name, ti));
 }
 
-Type_Info Dispatch_Engine::get_type(std::string_view name,
-                                    bool t_throw = true) const {
+atom::meta::Type_Info Dispatch_Engine::get_type(std::string_view name,
+                                                bool t_throw = true) const {
     Carbon::detail::threading::shared_lock<
         Carbon::detail::threading::shared_mutex>
         l(m_mutex);
@@ -361,11 +365,12 @@ Type_Info Dispatch_Engine::get_type(std::string_view name,
     if (t_throw) {
         throw std::range_error("Type Not Known: " + std::string(name));
     } else {
-        return Type_Info();
+        return atom::meta::Type_Info();
     }
 }
 
-std::string Dispatch_Engine::get_type_name(const Type_Info &ti) const {
+std::string Dispatch_Engine::get_type_name(
+    const atom::meta::Type_Info &ti) const {
     Carbon::detail::threading::shared_lock<
         Carbon::detail::threading::shared_mutex>
         l(m_mutex);
@@ -379,13 +384,13 @@ std::string Dispatch_Engine::get_type_name(const Type_Info &ti) const {
     return ti.bare_name();
 }
 
-std::vector<std::pair<std::string, Type_Info>> Dispatch_Engine::get_types()
-    const {
+std::vector<std::pair<std::string, atom::meta::Type_Info>>
+Dispatch_Engine::get_types() const {
     Carbon::detail::threading::shared_lock<
         Carbon::detail::threading::shared_mutex>
         l(m_mutex);
 
-    return std::vector<std::pair<std::string, Type_Info>>(
+    return std::vector<std::pair<std::string, atom::meta::Type_Info>>(
         m_state.m_types.begin(), m_state.m_types.end());
 }
 
@@ -443,7 +448,8 @@ bool Dispatch_Engine::function_exists(std::string_view name) const {
         Carbon::detail::threading::shared_mutex>
         l(m_mutex);
 
-    return get_functions_int().count(name) > 0;
+    // TODO: return get_functions_int().count(name) > 0;
+    return true;
 }
 
 std::map<std::string, Boxed_Value> Dispatch_Engine::get_parent_locals() const {
@@ -577,7 +583,7 @@ Boxed_Value Dispatch_Engine::call_member(
         Boxed_Value bv = dispatch::dispatch(l_funs, attr_params, l_conversions);
         if (l_num_params < int(l_params.size()) ||
             bv.get_type_info().bare_equal(
-                user_type<dispatch::Proxy_Function_Base>())) {
+                atom::meta::user_type<dispatch::Proxy_Function_Base>())) {
             struct This_Foist {
                 This_Foist(Dispatch_Engine &e, const Boxed_Value &t_bv)
                     : m_e(e) {
@@ -715,7 +721,7 @@ void Dispatch_Engine::dump_object(const Boxed_Value &o) const {
 }
 
 /// Dump type info to stdout
-void Dispatch_Engine::dump_type(const Type_Info &type) const {
+void Dispatch_Engine::dump_type(const atom::meta::Type_Info &type) const {
     std::cout << (type.is_const() ? "const " : "") << get_type_name(type);
 }
 
@@ -916,12 +922,12 @@ bool Dispatch_Engine::function_less_than(const Proxy_Function &lhs,
     const auto lhssize = lhsparamtypes.size();
     const auto rhssize = rhsparamtypes.size();
 
-    const auto boxed_type = user_type<Boxed_Value>();
-    const auto boxed_pod_type = user_type<Boxed_Number>();
+    const auto boxed_type = atom::meta::user_type<Boxed_Value>();
+    const auto boxed_pod_type = atom::meta::user_type<Boxed_Number>();
 
     for (size_t i = 1; i < lhssize && i < rhssize; ++i) {
-        const Type_Info &lt = lhsparamtypes[i];
-        const Type_Info &rt = rhsparamtypes[i];
+        const atom::meta::Type_Info &lt = lhsparamtypes[i];
+        const atom::meta::Type_Info &rt = rhsparamtypes[i];
 
         if (lt.bare_equal(rt) && lt.is_const() == rt.is_const()) {
             continue;  // The first two types are essentially the same, next

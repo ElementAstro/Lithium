@@ -1,7 +1,7 @@
 # Hash Utility
 
-**Author:** Max Qian  
-**Date:** March 28, 2024  
+**Author:** Max Qian
+**Date:** March 28, 2024
 **Version:** 1.0
 
 ---

@@ -48,7 +48,7 @@ Description: Crash Report
 #include "atom/error/exception.hpp"
 #include "atom/utils/string.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 // 获取系统信息
 std::string getSystemInfo() {
     std::stringstream ss;
@@ -588,4 +588,4 @@ void saveCrashLog(const std::string &error_msg) {
         LOG_F(ERROR, "Failed to write crash report: {}", e.what());
     }
 }
-}  // namespace Atom::System
+}  // namespace atom::system

@@ -1,5 +1,15 @@
 #include "dispatch.hpp"
 
+bool CommandDispatcher::has(const std::string& name) const {
+    if (commands.find(name) != commands.end())
+        return true;
+    for (const auto& command : commands) {
+        if (command.second.aliases.find(name) != command.second.aliases.end())
+            return true;
+    }
+    return false;
+}
+
 void CommandDispatcher::addAlias(const std::string& name,
                                  const std::string& alias) {
     auto it = commands.find(name);
@@ -56,4 +66,25 @@ std::unordered_set<std::string> CommandDispatcher::getCommandAliases(
         return it->second.aliases;
     }
     return {};
+}
+
+std::any CommandDispatcher::dispatch(const std::string& name,
+                                     const std::vector<std::any>& args) {
+    return dispatchHelper(name, args);
+}
+
+std::vector<std::string> CommandDispatcher::getAllCommands() const {
+    std::vector<std::string> result;
+    for (const auto& pair : commands) {
+        result.push_back(pair.first);
+    }
+    // Max: Add aliases to the result vector
+    for (const auto& command : commands) {
+        for (const auto& alias : command.second.aliases) {
+            result.push_back(alias);
+        }
+    }
+    auto it = std::unique(result.begin(), result.end());
+    result.erase(it, result.end());
+    return result;
 }

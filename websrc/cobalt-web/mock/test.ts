@@ -2,7 +2,7 @@
 
 // 数据1：brand相关，用户进到页面的时候自动向后端请求brand列表数据并渲染
 // 同时，为了保证数据一致性，后续的数据post也按照这个格式
-const brandList = 
+const brandList =
     {
         "camera": [
             {

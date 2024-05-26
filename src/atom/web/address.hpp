@@ -32,7 +32,7 @@ Description: Address class for IPv4, IPv6, and Unix domain sockets.
 #include <string>
 #include <vector>
 
-namespace Atom::Web {
+namespace atom::web {
 
 template <class T>
 static T CreateMask(uint32_t bits) {
@@ -519,4 +519,4 @@ private:
  * @return std::vector<std::string>
  */
 [[nodiscard]] std::vector<std::string> getIPv6Addresses();
-}  // namespace Atom::Web
+}  // namespace atom::web

@@ -27,63 +27,23 @@
 #include "atom/type/pointer.hpp"
 
 #include "atom/function/proxy.hpp"
+#include "atom/function/type_info.hpp"
 
 class CommandDispatcher {
 public:
     template <typename Ret, typename... Args>
-    void registerCommand(
-        const std::string& name, const std::string& group,
-        const std::string& description, std::function<Ret(Args...)> func,
-        std::optional<std::function<bool()>> precondition = std::nullopt,
-        std::optional<std::function<void()>> postcondition = std::nullopt);
-
-    template <typename Callable>
-    void registerCommand(const std::string& name, Callable&& func,
-                         const std::string& group = "",
-                         const std::string& description = "");
+    void def(const std::string& name, const std::string& group,
+             const std::string& description, std::function<Ret(Args...)> func,
+             std::optional<std::function<bool()>> precondition = std::nullopt,
+             std::optional<std::function<void()>> postcondition = std::nullopt);
 
     template <typename Ret, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
-                         const std::string& group = "",
-                         const std::string& description = "");
-    
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
-                         std::shared_ptr<Class> instance,
-                         const std::string& group = "",
-                         const std::string& description = "");
-    
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
-                         Ret (Class::*func)(Args...) const,
-                         std::shared_ptr<Class> instance,
-                         const std::string& group = "",
-                         const std::string& description = "");
+    void def_t(const std::string& name, const std::string& group,
+             const std::string& description, std::function<Ret(Args...)> func,
+             std::optional<std::function<bool()>> precondition = std::nullopt,
+             std::optional<std::function<void()>> postcondition = std::nullopt);
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "");
-
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
-                         Ret (Class::*func)(Args...) const,
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "");
-
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
-                         Ret (Class::*func)(Args...) noexcept,
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "");
-
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
-                         const std::string& group = "",
-                         const std::string& description = "");
+    [[nodiscard]] bool has(const std::string& name) const;
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -93,6 +53,16 @@ public:
 
     template <typename... Args>
     std::any dispatch(const std::string& name, Args&&... args);
+
+    std::any dispatch(const std::string& name,
+                      const std::vector<std::any>& args);
+
+    template <typename ArgsType>
+    std::any dispatchHelper(const std::string& name,
+                                               const ArgsType& args);
+
+    template <typename... Args>
+    std::vector<std::any> convertToArgsVector(std::tuple<Args...>&& tuple);
 
     void clearCache();
 
@@ -110,11 +80,15 @@ public:
         const std::string& name) const;
 #endif
 
+    std::vector<std::string> getAllCommands() const;
+
 private:
     struct Command {
         std::vector<std::function<std::any(const std::vector<std::any>&)>>
             funcs;
         std::vector<std::string> funcs_info;
+        std::vector<std::vector<std::string>> arg_types;
+        std::vector<std::vector<std::string>> arg_names;
         std::string description;
 #if ENABLE_FASTHASH
         emhash::HashSet<std::string> aliases;

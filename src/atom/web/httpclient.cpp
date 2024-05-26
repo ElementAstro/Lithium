@@ -24,7 +24,7 @@ Description: Http Client
 
 using namespace httplib;
 
-namespace Atom::Web {
+namespace atom::web {
 class HttpClient::HttpClientImpl {
 public:
     explicit HttpClientImpl(const std::string &host, int port,
@@ -210,4 +210,4 @@ bool HttpClient::scanPort(int start_port, int end_port,
 bool HttpClient::checkServerStatus(std::string &status) {
     return m_impl->checkServerStatus(status);
 }
-}  // namespace Atom::Web
+}  // namespace atom::web

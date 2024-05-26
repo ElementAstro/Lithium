@@ -17,14 +17,13 @@ Description: Http Header Parser
 #include <iostream>
 #include <sstream>
 
+namespace atom::web {
 class HttpHeaderParserImpl {
 public:
     std::map<std::string, std::vector<std::string>> headers_;
 };
 
-HttpHeaderParser::HttpHeaderParser() : m_pImpl(new HttpHeaderParserImpl()) {}
-
-HttpHeaderParser::~HttpHeaderParser() { delete m_pImpl; }
+HttpHeaderParser::HttpHeaderParser() : m_pImpl(std::make_unique<HttpHeaderParserImpl>()) {}
 
 void HttpHeaderParser::parseHeaders(const std::string &rawHeaders) {
     m_pImpl->headers_.clear();
@@ -89,3 +88,5 @@ bool HttpHeaderParser::hasHeader(const std::string &key) const {
 }
 
 void HttpHeaderParser::clearHeaders() { m_pImpl->headers_.clear(); }
+
+}  // namespace atom::web

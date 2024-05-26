@@ -125,21 +125,19 @@ bool endsWith(std::string_view str, std::string_view suffix) {
 
 std::vector<std::string_view> splitString(const std::string &str,
                                           char delimiter) {
-    std::vector<std::string_view> result;
-    std::string_view view(str);
-    size_t pos = 0;
+    std::vector<std::string_view> tokens;
+    auto start = str.begin();
+    auto end = str.end();
 
-    while (true) {
-        size_t next_pos = view.find(delimiter, pos);
-        if (next_pos == std::string_view::npos) {
-            result.emplace_back(view.substr(pos));
+    while (start != end) {
+        auto next = std::find(start, end, delimiter);
+        tokens.emplace_back(str.substr(start - str.begin(), next - start));
+        if (next == end)
             break;
-        }
-        result.emplace_back(view.substr(pos, next_pos - pos));
-        pos = next_pos + 1;
+        start = next + 1;
     }
 
-    return result;
+    return tokens;
 }
 
 std::string joinStrings(const std::vector<std::string_view> &strings,
@@ -179,4 +177,40 @@ std::string replaceStrings(
     }
     return result;
 }
+
+std::vector<std::string> SVVtoSV(const std::vector<std::string_view> &svv) {
+    return std::vector<std::string>(svv.begin(), svv.end());
+}
+
+std::vector<std::string> explode(std::string_view text, char symbol) {
+    std::vector<std::string> lines;
+    auto start = text.begin();
+    auto end = text.end();
+
+    while (start != end) {
+        auto pos = std::find(start, end, symbol);
+        lines.emplace_back(start, pos);
+        if (pos == end)
+            break;
+        start = std::next(pos);
+    }
+
+    return lines;
+}
+
+std::string trim(std::string_view line, std::string_view symbols) {
+    auto first = std::find_if(line.begin(), line.end(), [&symbols](char c) {
+        return symbols.find(c) == std::string_view::npos;
+    });
+
+    if (first == line.end())
+        return "";
+
+    auto last = std::find_if(line.rbegin(), line.rend(), [&symbols](char c) {
+                    return symbols.find(c) == std::string_view::npos;
+                }).base();
+
+    return std::string(first, last);
+}
+
 }  // namespace atom::utils

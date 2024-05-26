@@ -25,7 +25,7 @@ using json = nlohmann::json;
 
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 
-namespace Atom::Web {
+namespace atom::web {
 /**
  * @brief Class for making HTTP requests using HttpClientImpl.
  */
@@ -141,6 +141,6 @@ private:
     std::unique_ptr<HttpClientImpl> m_impl;
 };
 
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 #endif

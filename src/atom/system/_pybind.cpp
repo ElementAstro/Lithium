@@ -30,7 +30,7 @@ Description: Python Binding of Atom-System Module
 
 namespace py = pybind11;
 
-using namespace Atom::System;
+using namespace atom::system;
 
 PYBIND11_MODULE(atom_system, m) {
     pybind11::class_<BatteryInfo>(m, "BatteryInfo")
@@ -145,9 +145,9 @@ PYBIND11_MODULE(atom_system, m) {
     m.def("jwalk", &jwalk);
     m.def("fwalk", &fwalk);
     m.def("Environ", &Environ);
-    m.def("ctermid", &Atom::System::ctermid);
+    m.def("ctermid", &atom::system::ctermid);
     m.def("getpriority", &getpriority);
-    m.def("getlogin", &Atom::System::getlogin);
+    m.def("getlogin", &atom::system::getlogin);
     m.def("uname", &uname);
 
     py::class_<PidWatcher>(m, "PidWatcher")

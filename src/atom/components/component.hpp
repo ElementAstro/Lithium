@@ -16,14 +16,17 @@ Description: Basic Component Definition
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
-#include <shared_mutex>
 #include <vector>
 
-#include "types.hpp"
-
 #include "dispatch.hpp"
+#include "macro.hpp"
+#include "registry.hpp"
+#include "types.hpp"
 #include "var.hpp"
 
+#include "atom/function/constructor.hpp"
+#include "atom/function/conversion.hpp"
+#include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
 #include "atom/type/noncopyable.hpp"
 
@@ -69,10 +72,6 @@ public:
      */
     virtual bool destroy();
 
-    std::unordered_map<std::string, bool> getComponentAbilities() const;
-
-    bool hasAbility(const std::string& ability) const;
-
     /**
      * @brief Gets the name of the plugin.
      *
@@ -80,7 +79,12 @@ public:
      */
     std::string getName() const;
 
-    Type_Info getTypeInfo() const;
+    /**
+     * @brief Gets the type information of the plugin.
+     *
+     * @return The type information of the plugin.
+     */
+    atom::meta::Type_Info getTypeInfo() const;
 
     // -------------------------------------------------------------------
     // Variable methods
@@ -131,88 +135,119 @@ public:
     // Function methods
     // -------------------------------------------------------------------
 
-    template <typename Ret, typename... Args>
-    void registerCommand(
-        const std::string& name, const std::string& group,
-        const std::string& description, std::function<Ret(Args...)> func,
-        std::optional<std::function<bool()>> precondition = std::nullopt,
-        std::optional<std::function<void()>> postcondition = std::nullopt) {
-        m_CommandDispatcher->registerCommand(name, group, description, func,
-                                             precondition, postcondition);
-    }
-
     template <typename Callable>
-    void registerCommand(const std::string& name, Callable&& func,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, group, description);
-    }
+    void def(const std::string& name, Callable&& func,
+             const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, group, description);
-    }
+    template <typename Ret>
+    void def(const std::string& name, Ret (*func)(),
+             const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
-                         std::shared_ptr<Class> instance,
-                         const std::string& group = "",
-                         const std::string& description = "")
+    template <typename... Args, typename Ret>
+    void def(const std::string& name, Ret (*func)(Args...),
+             const std::string& group = "",
+             const std::string& description = "");
 
-    {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
-                                             description);
-    }
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
-                         Ret (Class::*func)(Args...) const,
-                         std::shared_ptr<Class> instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
-                                             description);
-    }
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(),
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (Class::*func)(Args...),
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "")
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
 
-    {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
-                                             description);
-    }
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...) const,
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
-                         Ret (Class::*func)(Args...) const,
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
-                                             description);
-    }
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name,
-                         Ret (Class::*func)(Args...) noexcept,
-                         const PointerSentinel<Class>& instance,
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, instance, group,
-                                             description);
-    }
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...) const,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
 
-    template <typename Ret, typename Class, typename... Args>
-    void registerCommand(const std::string& name, Ret (*func)(Args...),
-                         const std::string& group = "",
-                         const std::string& description = "") {
-        m_CommandDispatcher->registerCommand(name, func, group, description);
-    }
+    template <typename... Args, typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*func)(Args...) noexcept,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a member variable using a raw pointer sentinel
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, MemberType Class::*var,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a member variable using a shared pointer
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, MemberType Class::*var,
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a static member variable
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, MemberType* var,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a const & static member variable
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, const MemberType* var,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    // Register a const member variable
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, const MemberType Class::*var,
+             const PointerSentinel<Class>& instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename MemberType, typename Class>
+    void def(const std::string& name, const MemberType Class::*var,
+             std::shared_ptr<Class> instance, const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename MemberType, typename ClassType>
+    void def_m(const std::string& name, MemberType ClassType::*member_var,
+               std::shared_ptr<ClassType> instance,
+               const std::string& group = "",
+               const std::string& description = "");
+
+    template <typename MemberType, typename ClassType>
+    void def_m(const std::string& name, MemberType ClassType::*member_var,
+               PointerSentinel<ClassType> instance,
+               const std::string& group = "",
+               const std::string& description = "");
+
+    template <typename Class>
+    void def(const std::string& name, const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename Class, typename... Args>
+    void def(const std::string& name, const std::string& group = "",
+             const std::string& description = "");
+
+    void def(const atom::meta::Type_Info& ti, const std::string& group = "",
+             const std::string& description = "");
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -224,6 +259,13 @@ public:
     std::any dispatch(const std::string& name, Args&&... args) {
         return m_CommandDispatcher->dispatch(name, std::forward<Args>(args)...);
     }
+
+    std::any dispatch(const std::string& name,
+                      const std::vector<std::any>& args) {
+        return m_CommandDispatcher->dispatch(name, args);
+    }
+
+    [[nodiscard]] bool has(const std::string& name) const;
 
     void clearCache();
 
@@ -240,6 +282,8 @@ public:
     std::unordered_set<std::string> getCommandAliases(
         const std::string& name) const;
 #endif
+
+    std::vector<std::string> getAllCommands() const;
 
     // -------------------------------------------------------------------
     // Other Components methods
@@ -263,22 +307,36 @@ public:
 
     void clearOtherComponents();
 
-    std::weak_ptr<Component> getOtherComponent(
-        const std::string& name);
+    std::weak_ptr<Component> getOtherComponent(const std::string& name);
+
+    std::any runCommand(const std::string& name,
+                        const std::vector<std::any>& args);
+
+private:
+    template <typename MemberType, typename ClassType, typename InstanceType>
+    void define_accessors(const std::string& name,
+                          MemberType ClassType::*member_var,
+                          InstanceType instance, const std::string& group = "",
+                          const std::string& description = "");
 
 private:
     std::string m_name;
     std::string m_configPath;
     std::string m_infoPath;
-    Type_Info m_typeInfo;
+    atom::meta::Type_Info m_typeInfo;
+    std::vector<atom::meta::Type_Info> m_classes;
 
     std::shared_ptr<CommandDispatcher>
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.
     std::shared_ptr<VariableManager>
         m_VariableManager;  ///< The variable registry for managing variables.
 
-    std::unordered_map<std::string, std::weak_ptr<Component>>
-        m_OtherComponents;
+    std::unordered_map<std::string, std::weak_ptr<Component>> m_OtherComponents;
+
+    std::shared_ptr<atom::meta::TypeCaster> m_TypeCaster;
+    std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter;
 };
+
+#include "component.inl"
 
 #endif

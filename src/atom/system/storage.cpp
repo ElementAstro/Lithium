@@ -32,7 +32,7 @@ Description: Storage Monitor
 
 namespace fs = std::filesystem;
 
-namespace Atom::System {
+namespace atom::system {
 void StorageMonitor::registerCallback(
     std::function<void(const std::string &)> callback) {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -123,7 +123,7 @@ void StorageMonitor::listFiles(const std::string &path) {
     std::cout << std::endl;
 }
 #endif
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #ifdef _WIN32
 void monitorUdisk() {
@@ -182,7 +182,7 @@ void monitorUdisk() {
     UnregisterDeviceNotification(hDevNotify);
 }
 #else
-static void monitorUdisk(Atom::System::StorageMonitor &monitor) {
+static void monitorUdisk(atom::system::StorageMonitor &monitor) {
     struct udev *udev = udev_new();
     if (!udev) {
         LOG_F(ERROR, "Failed to initialize udev");

@@ -9,4 +9,4 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom-client C CXX)
 
-add_subdirectory(atom-hydrogen)
+# add_subdirectory(atom-hydrogen)

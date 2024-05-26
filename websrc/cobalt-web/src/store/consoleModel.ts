@@ -13,9 +13,3 @@ export const getConsoleModel =():ConsoleModel =>({
         state = Object.assign(state,payload)
     })
 })
-
-
-
-
-
-

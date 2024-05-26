@@ -43,7 +43,7 @@ public:
                             bool t_is_attribute = false);
 
     Dynamic_Object_Function(std::string t_type_name,
-                            const Proxy_Function &t_func, const Type_Info &t_ti,
+                            const Proxy_Function &t_func, const atom::meta::Type_Info &t_ti,
                             bool t_is_attribute = false);
 
     Dynamic_Object_Function &operator=(const Dynamic_Object_Function) = delete;
@@ -69,24 +69,24 @@ protected:
         const Type_Conversions_State &t_conversions) const noexcept override;
 
 private:
-    static std::vector<Type_Info> build_param_types(
-        const std::vector<Type_Info> &t_inner_types,
-        const Type_Info &t_objectti);
+    static std::vector<atom::meta::Type_Info> build_param_types(
+        const std::vector<atom::meta::Type_Info> &t_inner_types,
+        const atom::meta::Type_Info &t_objectti);
 
     bool dynamic_object_typename_match(
         const Boxed_Value &bv, const std::string &name,
-        const std::unique_ptr<Type_Info> &ti,
+        const std::unique_ptr<atom::meta::Type_Info> &ti,
         const Type_Conversions_State &t_conversions) const noexcept;
 
     bool dynamic_object_typename_match(
         const Carbon::Function_Params &bvs, const std::string &name,
-        const std::unique_ptr<Type_Info> &ti,
+        const std::unique_ptr<atom::meta::Type_Info> &ti,
         const Type_Conversions_State &t_conversions) const noexcept;
 
     std::string m_type_name;
     Proxy_Function m_func;
-    std::unique_ptr<Type_Info> m_ti;
-    const Type_Info m_doti;
+    std::unique_ptr<atom::meta::Type_Info> m_ti;
+    const atom::meta::Type_Info m_doti;
     const bool m_is_attribute;
 };
 
@@ -101,8 +101,8 @@ public:
     Dynamic_Object_Constructor(std::string t_type_name,
                                const Proxy_Function &t_func);
 
-    static std::vector<Type_Info> build_type_list(
-        const std::vector<Type_Info> &tl);
+    static std::vector<atom::meta::Type_Info> build_type_list(
+        const std::vector<atom::meta::Type_Info> &tl);
 
     bool operator==(const Proxy_Function_Base &f) const noexcept override;
 

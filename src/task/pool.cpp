@@ -20,7 +20,7 @@ thread_local WorkerQueue *TaskPool::t_localQueue = nullptr;
 thread_local size_t TaskPool::t_index = 0;
 
 bool WorkerQueue::tryPop(std::shared_ptr<Task> &task) {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     if (queue.empty()) {
         return false;
     }
@@ -30,7 +30,7 @@ bool WorkerQueue::tryPop(std::shared_ptr<Task> &task) {
 }
 
 bool WorkerQueue::trySteal(std::shared_ptr<Task> &task) {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     if (queue.empty()) {
         return false;
     }
@@ -40,32 +40,11 @@ bool WorkerQueue::trySteal(std::shared_ptr<Task> &task) {
 }
 
 void WorkerQueue::push(std::shared_ptr<Task> task) {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     queue.push_front(std::move(task));
 }
 
-std::optional<std::shared_ptr<Task>> WorkerQueue::tryPop() {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (queue.empty()) {
-        return {};
-    }
-    auto task = std::move(queue.front());
-    queue.pop_front();
-    return task;
-}
-
-std::optional<std::shared_ptr<Task>> WorkerQueue::trySteal() {
-    std::lock_guard<std::mutex> lock(mutex);
-    if (queue.empty()) {
-        return {};
-    }
-    auto task = std::move(queue.back());
-    queue.pop_back();
-    return task;
-}
-
-TaskPool::TaskPool(size_t threads = std::thread::hardware_concurrency())
-    : m_defaultThreadCount(threads) {
+TaskPool::TaskPool(size_t threads) : m_defaultThreadCount(threads) {
     for (size_t i = 0; i < m_defaultThreadCount; ++i) {
         m_queues.emplace_back(std::make_unique<WorkerQueue>());
     }
@@ -89,14 +68,13 @@ void TaskPool::workerThread(size_t index) {
                 break;
             }
         }
-        if (!task && !tryStealing(task)) {
-            std::unique_lock<std::mutex> lock(m_conditionMutex);
-            m_condition.wait(
-                lock, [this, &task] { return m_stop || tryStealing(task); });
-            if (task) {
-                task->func();
-            }
-        } else if (task) {
+        if (!task) {
+            std::unique_lock lock(m_conditionMutex);
+            m_condition.wait_for(
+                lock, std::chrono::milliseconds(1),
+                [this, &task] { return m_stop || tryStealing(task); });
+        }
+        if (task) {
             task->func();
         }
     }

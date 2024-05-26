@@ -25,9 +25,9 @@ ModulePtr optional(ModulePtr m = std::make_shared<Module>(),
     //{fun(&std::optional<T>::emplace), "emplace"},
     //{fun(&std::optional<T>::operator=), "operator="},
 #if __cplusplus >= 202110L
-            {fun(&std::optional<T>::and_then), "and_then"},
-            {fun(&std::optional<T>::or_else), "or_else"},
-            {fun(&std::optional<T>::transform), "transform"},
+            //{fun(&std::optional<T>::and_then), "and_then"},
+            //{fun(&std::optional<T>::or_else), "or_else"},
+            //{fun(&std::optional<T>::transform), "transform"},
 #endif
             //{fun(&std::make_optional<T>), std::string("make_Optional") + type}
         });

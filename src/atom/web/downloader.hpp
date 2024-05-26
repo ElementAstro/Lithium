@@ -24,7 +24,7 @@ Description: Downloader
 #include <thread>
 #include <vector>
 
-namespace Atom::Web {
+namespace atom::web {
 
 struct DownloadTask {
     std::string url;
@@ -138,7 +138,7 @@ private:
     std::atomic<bool> running_{false};  ///< 是否正在下载中
     std::chrono::system_clock::time_point start_time_;
 };
-}  // namespace Atom::Web
+}  // namespace atom::web
 
 /*
 #include <iostream>

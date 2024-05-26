@@ -24,7 +24,7 @@ This class is responsible for serializing data into JSON format.
 std::string jsonData = engine.serialize(myData);
 ```
 
-**Expected Output:**  
+**Expected Output:**
 A JSON-formatted string representing the serialized data.
 
 ## XmlSerializationEngine
@@ -36,7 +36,7 @@ This class is responsible for serializing data into XML format.
 std::string xmlData = engine.serialize(myData);
 ```
 
-**Expected Output:**  
+**Expected Output:**
 An XML-formatted string representing the serialized data.
 
 ## YamlSerializationEngine
@@ -48,7 +48,7 @@ This class is responsible for serializing data into YAML format.
 std::string yamlData = engine.serialize(myData);
 ```
 
-**Expected Output:**  
+**Expected Output:**
 A YAML-formatted string representing the serialized data.
 
 ## IniSerializationEngine
@@ -60,7 +60,7 @@ This class is responsible for serializing data into INI format.
 std::string iniData = engine.serialize(myData);
 ```
 
-**Expected Output:**  
+**Expected Output:**
 An INI-formatted string representing the serialized data.
 
 ## SerializationEngine Class
@@ -83,7 +83,7 @@ if (serializedData.has_value()) {
 }
 ```
 
-**Expected Output:**  
+**Expected Output:**
 If serialization is successful, it prints the serialized data; otherwise, it outputs a serialization failure message.
 
 ## Notes

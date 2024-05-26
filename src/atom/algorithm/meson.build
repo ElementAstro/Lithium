@@ -1,50 +1,66 @@
-project('Atom-Algorithm', 'cpp')
-
-# Define sources and headers
-sources = [
-    'algorithm.cpp',
-    'base.cpp',
-    'convolve.cpp',
-    'fraction.cpp',
-    'huffman.cpp',
-    'math.cpp',
-    'md5.cpp'
-]
-headers = [
-    'algorithm.hpp',
-    'algorithm.inl'
-    'base.hpp',
-    'convolve.hpp',
-    'fraction.hpp',
-    'hash.hpp',
-    'huffman.hpp',
-    'math.hpp',
-    'md5.hpp'
-]
-
-# Create object library
-atom_algorithm_obj = library('atom_algorithm_obj', 
-    sources + headers,
-    cpp_std: c_std
+project('atom-algorithm', 'c', 'cpp',
+  version: '1.0.0',
+  license: 'GPL3',
+  default_options: ['cpp_std=c++20']
 )
 
-# Create static library
-atom_algorithm_static = static_library('atom_algorithm_static', atom_algorithm_obj)
+# 源文件和头文件
+atom_algorithm_sources = [
+  'algorithm.cpp',
+  'base.cpp',
+  'convolve.cpp',
+  'fraction.cpp',
+  'huffman.cpp',
+  'math.cpp',
+  'md5.cpp',
+  'mhash.cpp',
+  'pid.cpp'
+]
 
-# Set version properties
-version = '1.0.0'
-soversion = '1'
+atom_algorithm_headers = [
+  'algorithm.hpp',
+  'algorithm.inl',
+  'base.hpp',
+  'convolve.hpp',
+  'fraction.hpp',
+  'hash.hpp',
+  'huffman.hpp',
+  'math.hpp',
+  'md5.hpp',
+  'mhash.hpp',
+  'pid.hpp'
+]
 
-atom_algorithm_static.version = version
-atom_algorithm_static.soversion = soversion
-atom_algorithm_static.basename = 'Atom-Algorithm'
+# 对象库
+atom_algorithm_object = static_library('atom_algorithm_object',
+  sources: atom_algorithm_sources,
+  include_directories: include_directories('.'),
+  install: false
+)
 
-# Install target
-install_targets(atom_algorithm_static)
+# 静态库
+atom_algorithm_lib = static_library('atom-algorithm',
+  sources: atom_algorithm_object.extract_all_objects(),
+  include_directories: include_directories('.'),
+  install: true
+)
 
-# Check if Python support is enabled
-atom_build_python = get_option('atom_build_python')
+# 安装头文件
+install_headers(atom_algorithm_headers, subdir: 'atom-algorithm')
 
-if atom_build_python
-    pybind11_module('atom_algorithm_py' 'pybind.cpp' link_with : [atom_algorithm_static])
+# Python 绑定（如果需要）
+pybind_enabled = get_option('build_python_binding')
+
+if pybind_enabled
+  pybind11_dep = dependency('pybind11', required: true)
+  python_binding = import('python')
+  atom_algorithm_py = python_binding.extension_module('atom-algorithm-py',
+    sources: '_pybind.cpp',
+    dependencies: [pybind11_dep],
+    include_directories: include_directories('.')
+  )
+  atom_algorithm_py.link_with(atom_algorithm_lib)
 endif
+
+# 选项：是否构建 Python 绑定
+option('build_python_binding', type: 'boolean', value: false, description: 'Build Python bindings using pybind11')

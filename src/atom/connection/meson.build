@@ -1,59 +1,90 @@
-project('Atom-Connection', 'cpp')
-
-# Define sources and headers
-sources = [
-    'fifoclient.cpp',
-    'fifoserver.cpp',
-    'sockethub.cpp',
-    'udp_server.cpp'
-]
-headers = [
-    'fifoclient.hpp',
-    'fifoserver.hpp',
-    'shared_memory.hpp',
-    'sockethub.hpp',
-    'udp_server.hpp'
-]
-
-# Check if LibSSH is enabled
-enable_ssh = get_option('ENABLE_SSH')
-enable_libssh = get_option('ENABLE_LIBSSH')
-
-if enable_ssh and enable_libssh
-    sources += 'sshclient.cpp'
-    headers += 'sshclient.hpp'
-endif
-
-# Create object library
-atom_connection_obj = library('atom_connection_obj', 
-    sources + headers,
-    cpp_std: c_std
+project('atom-connection', 'c', 'cpp',
+  version : '1.0.0',
+  license : 'GPL3'
 )
 
-# Link with necessary libraries
-atom_connection_obj_link_libs = ['loguru']
-atom_connection_obj.link_with(atom_connection_obj_link_libs)
+# C++ standard
+cpp_std = 'c++11'
 
-# Create static library
-atom_connection_static = static_library('atom_connection_static', atom_connection_obj)
+# Sources
+sources = [
+  'fifoclient.cpp',
+  'fifoserver.cpp',
+  'sockethub.cpp',
+  'tcpclient.cpp',
+  'udp_server.cpp',
+  'udpclient.cpp'
+]
+
+# Headers
+headers = [
+  'fifoclient.hpp',
+  'fifoserver.hpp',
+  'sockethub.hpp',
+  'tcpclient.hpp',
+  'udp_server.hpp',
+  'udpclient.hpp'
+]
+
+if get_option('enable_libssh')
+  sources += [
+    'sshclient.cpp',
+    'sshserver.cpp'
+  ]
+  headers += [
+    'sshclient.hpp',
+    'sshserver.hpp'
+  ]
+endif
+
+# Dependencies
+loguru_dep = dependency('loguru')
+threads_dep = dependency('threads')
+
+libs = [
+  loguru_dep,
+  threads_dep
+]
+
+if get_option('enable_ssh')
+  libssh_dep = dependency('libssh')
+  libs += [libssh_dep]
+endif
+
+# Build Object Library
+atom_connection_obj = static_library('atom-connection-object',
+  sources,
+  cpp_args : ['-fPIC'],
+  dependencies : libs
+)
+
+# Build Static Library
+atom_connection = static_library('atom-connection',
+  [],
+  link_with : atom_connection_obj,
+  dependencies : libs,
+  include_directories : include_directories('.')
+)
 
 # Set version properties
-version = '1.0.0' # You should define your version here
-soversion = '1'
+atom_connection.soversion = '1'
+atom_connection.version = '0.1'
 
-atom_connection_static.version = version
-atom_connection_static.soversion = soversion
-atom_connection_static.basename = 'Atom-Connection'
+# Install
+install_headers(headers, subdir : 'atom-connection')
+install_library(atom_connection, subdir : get_option('libdir'))
 
-# Install target
-install_targets(atom_connection_static)
+# Python binding
+if get_option('atom_build_python')
+  pybind11_dep = dependency('pybind11')
+  py_module = import('python')
+  pybind_module = py_module.extension_module('atom-connection-py',
+    'pybind.cpp',
+    link_with : atom_connection,
+    dependencies : [pybind11_dep]
+  )
 
-# Check if Python support is enabled
-atom_build_python = get_option('ATOM_BUILD_PYTHON')
-
-if atom_build_python
-    pybind11_module('atom_connection_py' 'pybind.cpp' link_with : [atom_connection_static])
-    if meson.get_build_option('WIN32')
-        pybind11_module_link_with('atom_connection_py', ['ws2_32'])
-    endif
+  if host_machine.system() == 'windows'
+    pybind_module.link_with : 'ws2_32'
+  endif
 endif

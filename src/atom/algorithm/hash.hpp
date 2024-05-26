@@ -261,4 +261,30 @@ inline uint32_t quickHash(const void* data, size_t size) {
 
 }  // namespace atom::algorithm
 
+/**
+ * @brief Computes the hash value of a string during compile time.
+ *
+ * This function computes the hash value of a string using the FNV-1a algorithm.
+ *
+ * @param str The string.
+ * @return The hash value of the string.
+ */
+constexpr unsigned int hash(const char* str, unsigned int basis = 2166136261u) {
+    return *str ? hash(str + 1,
+                       (basis ^ static_cast<unsigned int>(*str)) * 16777619u)
+                : basis;
+}
+
+/**
+ * @brief Computes the hash value of a string during compile time.
+ *
+ * This function computes the hash value of a string using the FNV-1a algorithm.
+ *
+ * @param str The string.
+ * @return The hash value of the string.
+ */
+constexpr unsigned int operator""_hash(const char* str, std::size_t) {
+    return hash(str);
+}
+
 #endif

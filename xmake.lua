@@ -27,7 +27,7 @@ end
 
 target("lithium_server-library")
     set_kind("static")
-    add_files("src/device/server/*.cpp", "src/device/manager.cpp", "src/device/utils/utils.cpp", "src/addon/*.cpp", "src/config/configor.cpp", 
+    add_files("src/device/server/*.cpp", "src/device/manager.cpp", "src/device/utils/utils.cpp", "src/addon/*.cpp", "src/config/configor.cpp",
               "src/debug/terminal.cpp", "src/script/*.cpp", "src/script/custom/*.cpp", "src/task/*.cpp", "src/LithiumApp.cpp")
     add_packages("openssl", "cfitsio", "zlib", "sqlite3", "fmt")
     add_deps("atomstatic", "loguru", "libzippp", "oatpp", "oatpp-websocket", "oatpp-swagger", "oatpp-openssl", "oatpp-zlib", "cpp_httplib", "backward", "tinyxml2", "pocketpy")

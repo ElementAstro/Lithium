@@ -16,11 +16,13 @@ Description: Some useful system functions from Python.
 #define ATOM_SYSTEM_OS_HPP
 
 #include <filesystem>
+#include <functional>
 #include <string>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
-namespace Atom::System {
+namespace atom::system {
 struct Utsname {
     std::string sysname;   // 操作系统名称
     std::string nodename;  // 网络中的主机名
@@ -113,6 +115,6 @@ std::string getlogin();
  */
 Utsname uname();
 
-}  // namespace Atom::System
+}  // namespace atom::system
 
 #endif

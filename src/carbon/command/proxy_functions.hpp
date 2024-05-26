@@ -55,7 +55,7 @@ public:
      * information.
      */
     explicit Param_Types(
-        std::vector<std::pair<std::string, Type_Info>> t_types);
+        std::vector<std::pair<std::string, atom::meta::Type_Info>> t_types);
 
     /**
      * @brief Pushes a new parameter type to the front of the list.
@@ -63,7 +63,7 @@ public:
      * @param t_name The name of the parameter.
      * @param t_ti The type information of the parameter.
      */
-    void push_front(const std::string &t_name, Type_Info t_ti);
+    void push_front(const std::string &t_name, atom::meta::Type_Info t_ti);
 
     /**
      * @brief Checks if two Param_Types objects are equal.
@@ -103,7 +103,7 @@ public:
      * @return A vector of pairs containing parameter names and type
      * information.
      */
-    const std::vector<std::pair<std::string, Type_Info>> &types()
+    const std::vector<std::pair<std::string, atom::meta::Type_Info>> &types()
         const noexcept;
 
 private:
@@ -113,7 +113,7 @@ private:
      */
     void update_has_types();
 
-    std::vector<std::pair<std::string, Type_Info>>
+    std::vector<std::pair<std::string, atom::meta::Type_Info>>
         m_types;       ///< Vector of parameter names and type information.
     bool m_has_types;  ///< Flag indicating whether the Param_Types object has
                        ///< types.
@@ -149,12 +149,13 @@ public:
      * @brief Returns the types of all parameters.
      *
      * If the function is variadic or takes no arguments (arity of 0 or -1),
-     * the returned value contains exactly 1 Type_Info object: the return type.
+     * the returned value contains exactly 1 atom::meta::Type_Info object: the
+     * return type.
      *
      * @return A vector containing all of the types of the parameters the
      * function returns/takes.
      */
-    const std::vector<Type_Info> &get_param_types() const noexcept;
+    const std::vector<atom::meta::Type_Info> &get_param_types() const noexcept;
 
     /**
      * @brief Checks if two Proxy_Function_Base objects are equal.
@@ -225,7 +226,7 @@ public:
      * @return True if the type matches the first parameter, false otherwise.
      */
     static bool compare_type_to_param(
-        const Type_Info &ti, const Boxed_Value &bv,
+        const atom::meta::Type_Info &ti, const Boxed_Value &bv,
         const Type_Conversions_State &t_conversions) noexcept;
 
     virtual bool compare_first_type(
@@ -250,7 +251,8 @@ protected:
      * @param t_types The types of the parameters.
      * @param t_arity The arity of the function.
      */
-    Proxy_Function_Base(std::vector<Type_Info> t_types, int t_arity);
+    Proxy_Function_Base(std::vector<atom::meta::Type_Info> t_types,
+                        int t_arity);
 
     /**
      * @brief Compares types to parameters.
@@ -261,13 +263,14 @@ protected:
      * @return True if the types match the parameters, false otherwise.
      */
     static bool compare_types(
-        const std::vector<Type_Info> &tis, const Function_Params &bvs,
+        const std::vector<atom::meta::Type_Info> &tis,
+        const Function_Params &bvs,
         const Type_Conversions_State &t_conversions) noexcept;
 
-    std::vector<Type_Info> m_types;  ///< Vector of parameter types.
-    int m_arity;                     ///< The arity of the function.
-    bool m_has_arithmetic_param;     ///< Flag indicating if the function has an
-                                     ///< arithmetic parameter.
+    std::vector<atom::meta::Type_Info> m_types;  ///< Vector of parameter types.
+    int m_arity;                                 ///< The arity of the function.
+    bool m_has_arithmetic_param;  ///< Flag indicating if the function has an
+                                  ///< arithmetic parameter.
 };
 }  // namespace dispatch
 
@@ -391,7 +394,7 @@ private:
      * @param t_types The parameter types.
      * @return A vector containing the parameter types.
      */
-    static std::vector<Type_Info> build_param_type_list(
+    static std::vector<atom::meta::Type_Info> build_param_type_list(
         const Param_Types &t_types);
 
 protected:
@@ -500,7 +503,7 @@ protected:
      * @param t_args The arguments.
      * @return A vector containing the parameter type information.
      */
-    static std::vector<Type_Info> build_param_type_info(
+    static std::vector<atom::meta::Type_Info> build_param_type_info(
         const Const_Proxy_Function &t_f,
         const std::vector<Boxed_Value> &t_args);
 
@@ -530,7 +533,8 @@ public:
      *
      * @param t_types The types of the parameters.
      */
-    explicit Proxy_Function_Impl_Base(const std::vector<Type_Info> &t_types);
+    explicit Proxy_Function_Impl_Base(
+        const std::vector<atom::meta::Type_Info> &t_types);
 
     /**
      * @brief Checks if the function matches the given parameters.
@@ -561,7 +565,8 @@ class Proxy_Function_Callable_Impl final : public Proxy_Function_Impl_Base {
 public:
     explicit Proxy_Function_Callable_Impl(Callable f)
         : Proxy_Function_Impl_Base(
-              detail::build_param_type_list(static_cast<Func *>(nullptr))),
+              Carbon::dispatch::detail::build_param_type_list(
+                  static_cast<Func *>(nullptr))),
           m_f(std::move(f)) {}
 
     bool compare_types_with_cast(
@@ -591,7 +596,8 @@ private:
 
 class Assignable_Proxy_Function : public Proxy_Function_Impl_Base {
 public:
-    explicit Assignable_Proxy_Function(const std::vector<Type_Info> &t_types)
+    explicit Assignable_Proxy_Function(
+        const std::vector<atom::meta::Type_Info> &t_types)
         : Proxy_Function_Impl_Base(t_types) {}
 
     virtual void assign(
@@ -605,7 +611,8 @@ public:
         std::reference_wrapper<std::function<Func>> t_f,
         std::shared_ptr<std::function<Func>> t_ptr)
         : Assignable_Proxy_Function(
-              detail::build_param_type_list(static_cast<Func *>(nullptr))),
+              Carbon::dispatch::detail::build_param_type_list(
+                  static_cast<Func *>(nullptr))),
           m_f(std::move(t_f)),
           m_shared_ptr_holder(std::move(t_ptr)) {
         assert(!m_shared_ptr_holder || m_shared_ptr_holder.get() == &m_f.get());
@@ -668,7 +675,7 @@ public:
         if (vals.size() != 1) {
             return false;
         }
-        const auto class_type_info = user_type<Class>();
+        const auto class_type_info = atom::meta::user_type<Class>();
         return vals[0].get_type_info().bare_equal(class_type_info);
     }
 
@@ -707,11 +714,12 @@ private:
         }
     }
 
-    static std::vector<Type_Info> param_types() {
-        return {user_type<T>(), user_type<Class>()};
+    static std::vector<atom::meta::Type_Info> param_types() {
+        return {atom::meta::user_type<T>(), atom::meta::user_type<Class>()};
     }
 
-    std::vector<Type_Info> m_param_types{user_type<T>(), user_type<Class>()};
+    std::vector<atom::meta::Type_Info> m_param_types{
+        atom::meta::user_type<T>(), atom::meta::user_type<Class>()};
     T Class::*m_attr;
 };
 }  // namespace dispatch
@@ -751,7 +759,7 @@ template <typename FuncType>
 bool types_match_except_for_arithmetic(
     const FuncType &t_func, const Carbon::Function_Params &plist,
     const Type_Conversions_State &t_conversions) noexcept {
-    const std::vector<Type_Info> &types = t_func->get_param_types();
+    const std::vector<atom::meta::Type_Info> &types = t_func->get_param_types();
 
     if (t_func->get_arity() == -1) {
         return false;
@@ -759,13 +767,14 @@ bool types_match_except_for_arithmetic(
 
     assert(plist.size() == types.size() - 1);
 
-    return std::mismatch(plist.begin(), plist.end(), types.begin() + 1,
-                         [&](const Boxed_Value &bv, const Type_Info &ti) {
-                             return Proxy_Function_Base::compare_type_to_param(
-                                        ti, bv, t_conversions) ||
-                                    (bv.get_type_info().is_arithmetic() &&
-                                     ti.is_arithmetic());
-                         }) == std::make_pair(plist.end(), types.end());
+    return std::mismatch(
+               plist.begin(), plist.end(), types.begin() + 1,
+               [&](const Boxed_Value &bv, const atom::meta::Type_Info &ti) {
+                   return Proxy_Function_Base::compare_type_to_param(
+                              ti, bv, t_conversions) ||
+                          (bv.get_type_info().is_arithmetic() &&
+                           ti.is_arithmetic());
+               }) == std::make_pair(plist.end(), types.end());
 }
 
 template <typename InItr, typename Funcs>
@@ -818,11 +827,12 @@ Boxed_Value dispatch_with_conversions(
     std::vector<Boxed_Value> newplist;
     newplist.reserve(plist.size());
 
-    const std::vector<Type_Info> &tis =
+    const std::vector<atom::meta::Type_Info> &tis =
         matching_func->second->get_param_types();
     std::transform(
         tis.begin() + 1, tis.end(), plist.begin(), std::back_inserter(newplist),
-        [](const Type_Info &ti, const Boxed_Value &param) -> Boxed_Value {
+        [](const atom::meta::Type_Info &ti,
+           const Boxed_Value &param) -> Boxed_Value {
             if (ti.is_arithmetic() && param.get_type_info().is_arithmetic() &&
                 param.get_type_info() != ti) {
                 return Boxed_Number(param).get_as(ti).bv;

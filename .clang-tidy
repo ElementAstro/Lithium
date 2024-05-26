@@ -1,0 +1,70 @@
+---
+Checks: "*, -android-*, -fuchsia-*, -zircon-*, -llvm-*, -google-*, -hicpp-no-assembler, -cppcoreguidelines-*, -llvmlibc-*"
+WarningsAsErrors: ""
+HeaderFilterRegex: ""
+FormatStyle: none
+User: ""
+
+CheckOptions:
+  - key: modernize-use-nullptr.NullMacros
+    value: "NULL"
+  - key: readability-identifier-naming.NamespaceCase
+    value: "aN"
+  - key: readability-identifier-naming.ClassCase
+    value: "CamelCase"
+  - key: readability-identifier-naming.StructCase
+    value: "CamelCase"
+  - key: readability-identifier-naming.FunctionCase
+    value: "camelBack"
+  - key: readability-identifier-naming.VariableCase
+    value: "camelBack"
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: "_"
+  - key: readability-identifier-naming.PublicMemberCase
+    value: "camelBack"
+  - key: readability-identifier-naming.ConstantCase
+    value: "UPPER_CASE"
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: "UPPER_CASE"
+  - key: readability-braces-around-statements.ShortStatementLines
+    value: "1"
+  - key: readability-function-size.LineThreshold
+    value: "100"
+  - key: readability-function-size.StatementThreshold
+    value: "1000"
+  - key: readability-magic-numbers.IgnoredIntegerValues
+    value: "1;2;3;4"
+  - key: readability-magic-numbers.IgnoredFloatingPointValues
+    value: "1.0;2.0;0.5;0.25"
+  - key: modernize-loop-convert.MaxCopySize
+    value: "16"
+  - key: modernize-make-shared.IncludeStyle
+    value: '"<memory>"'
+  - key: modernize-make-unique.IncludeStyle
+    value: '"<memory>"'
+  - key: modernize-pass-by-value.IncludeStyle
+    value: '"<utility>"'
+  - key: modernize-replace-auto-ptr.IncludeStyle
+    value: '"<memory>"'
+  - key: modernize-use-auto.MinTypeNameLength
+    value: "5"
+  - key: modernize-use-bool-literals.BoolMacros
+    value: "TRUE;FALSE"
+  - key: modernize-use-emplace.ContainersWithPushBack
+    value: "::std::vector;::std::list;::std::deque"
+  - key: modernize-use-emplace.SmartPointers
+    value: "::std::shared_ptr;::std::unique_ptr;::std::auto_ptr"
+  - key: modernize-use-emplace.TupleMakeFunctions
+    value: "::std::make_pair;::std::make_tuple"
+  - key: modernize-use-noexcept.ReplacementString
+    value: "noexcept"
+  - key: modernize-use-override.IgnoreDestructors
+    value: "1"
+  - key: modernize-use-using.IgnoreMacros
+    value: "1"
+  - key: performance-for-range-copy.WarnOnAllAutoCopies
+    value: "1"
+  - key: performance-unnecessary-copy-initialization.AllowedTypes
+    value: "::std::string;::std::vector"
+  - key: performance-unnecessary-value-param.AllowedTypes
+    value: "::std::string;::std::vector"

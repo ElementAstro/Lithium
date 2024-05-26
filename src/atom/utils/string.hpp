@@ -127,6 +127,34 @@ replaceStrings(std::string_view text,
                const std::vector<std::pair<std::string_view, std::string_view>>&
                    replacements);
 
+/**
+ * @brief Converts a vector of string_view to a vector of string.
+ *
+ * @param svv The vector of string_view to convert.
+ * @return The converted vector of string.
+ */
+[[nodiscard("the result of SVVtoSV is not used")]]
+std::vector<std::string> SVVtoSV(const std::vector<std::string_view>& svv);
+
+/**
+ * @brief Explodes a string_view into a vector of string_view.
+ *
+ * @param text The string_view to explode.
+ * @param symbol The symbol to use for exploding.
+ * @return The exploded vector of string_view.
+ */
+[[nodiscard("the result of explode is not used")]]
+std::vector<std::string> explode(std::string_view text, char symbol);
+
+/**
+ * @brief Trims a string_view.
+ *
+ * @param line The string_view to trim.
+ * @param symbols The symbols to trim.
+ * @return The trimmed string_view.
+ */
+[[nodiscard("the result of trim is not used")]]
+std::string trim(std::string_view line, std::string_view symbols = " \n\r\t");
 }  // namespace atom::utils
 
 #endif

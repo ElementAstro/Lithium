@@ -25,7 +25,7 @@ Description: PID Watcher
 #include <dirent.h>
 #include <signal.h>
 #include <unistd.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/wait.h>
 #endif
 
@@ -33,7 +33,7 @@ namespace fs = std::filesystem;
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 PidWatcher::PidWatcher() : running_(false), monitoring_(false) {}
 
 PidWatcher::~PidWatcher() { Stop(); }
@@ -246,4 +246,4 @@ void PidWatcher::ExitThread() {
     }
 }
 
-}  // namespace Atom::System
+}  // namespace atom::system

@@ -21,128 +21,155 @@ Description: No Offset Pointer
 #include <cstdint>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
+/**
+ * @brief A lightweight pointer-like class that manages an object of type T
+ * without dynamic memory allocation.
+ *
+ * @tparam T The type of the object to manage.
+ */
 template <typename T>
 class UnshiftedPtr {
 public:
-    UnshiftedPtr() { new (&storage) T; }
+    /**
+     * @brief Default constructor. Constructs the managed object using T's
+     * default constructor.
+     *
+     * @note This constructor is noexcept if T's default constructor is
+     * noexcept.
+     */
+    UnshiftedPtr() noexcept(std::is_nothrow_default_constructible_v<T>) {
+        new (&storage) T;
+    }
 
-    UnshiftedPtr(const T& value) { new (&storage) T(value); }
+    /**
+     * @brief Copy constructor. Constructs the managed object by copying the
+     * given value.
+     *
+     * @param value The value to copy.
+     *
+     * @note This constructor is noexcept if T's copy constructor is noexcept.
+     */
+    UnshiftedPtr(const T& value) noexcept(
+        std::is_nothrow_copy_constructible_v<T>) {
+        new (&storage) T(value);
+    }
 
-    UnshiftedPtr(const UnshiftedPtr& other) { new (&storage) T(get()); }
+    /**
+     * @brief Copy constructor. Constructs the managed object by copying from
+     * another UnshiftedPtr.
+     *
+     * @param other The other UnshiftedPtr to copy from.
+     *
+     * @note This constructor is noexcept if T's copy constructor is noexcept.
+     */
+    UnshiftedPtr(const UnshiftedPtr& other) noexcept(
+        std::is_nothrow_copy_constructible_v<T>) {
+        new (&storage) T(other.get());
+    }
 
-    UnshiftedPtr(UnshiftedPtr&& other) { new (&storage) T(std::move(get())); }
+    /**
+     * @brief Move constructor. Constructs the managed object by moving from
+     * another UnshiftedPtr.
+     *
+     * @param other The other UnshiftedPtr to move from.
+     *
+     * @note This constructor is noexcept if T's move constructor is noexcept.
+     */
+    UnshiftedPtr(UnshiftedPtr&& other) noexcept(
+        std::is_nothrow_move_constructible_v<T>) {
+        new (&storage) T(std::move(other.get()));
+    }
 
+    /**
+     * @brief Destructor. Destroys the managed object.
+     */
     ~UnshiftedPtr() { get().~T(); }
 
-    UnshiftedPtr& operator=(const UnshiftedPtr& other) {
+    /**
+     * @brief Copy assignment operator. Copies the value from another
+     * UnshiftedPtr.
+     *
+     * @param other The other UnshiftedPtr to copy from.
+     * @return A reference to this UnshiftedPtr.
+     *
+     * @note This operator is noexcept if T's copy assignment operator is
+     * noexcept.
+     */
+    UnshiftedPtr& operator=(const UnshiftedPtr& other) noexcept(
+        std::is_nothrow_copy_assignable_v<T>) {
         if (this != &other) {
             get() = other.get();
         }
         return *this;
     }
 
-    UnshiftedPtr& operator=(UnshiftedPtr&& other) {
+    /**
+     * @brief Move assignment operator. Moves the value from another
+     * UnshiftedPtr.
+     *
+     * @param other The other UnshiftedPtr to move from.
+     * @return A reference to this UnshiftedPtr.
+     *
+     * @note This operator is noexcept if T's move assignment operator is
+     * noexcept.
+     */
+    UnshiftedPtr& operator=(UnshiftedPtr&& other) noexcept(
+        std::is_nothrow_move_assignable_v<T>) {
         if (this != &other) {
             get() = std::move(other.get());
         }
         return *this;
     }
 
-    T* operator->() { return &get(); }
+    /**
+     * @brief Provides pointer-like access to the managed object.
+     *
+     * @return A pointer to the managed object.
+     */
+    T* operator->() noexcept { return &get(); }
 
-    const T* operator->() const { return &get(); }
+    /**
+     * @brief Provides const pointer-like access to the managed object.
+     *
+     * @return A const pointer to the managed object.
+     */
+    const T* operator->() const noexcept { return &get(); }
 
-    T& operator*() { return get(); }
+    /**
+     * @brief Dereferences the managed object.
+     *
+     * @return A reference to the managed object.
+     */
+    T& operator*() noexcept { return get(); }
 
-    const T& operator*() const { return get(); }
+    /**
+     * @brief Dereferences the managed object.
+     *
+     * @return A const reference to the managed object.
+     */
+    const T& operator*() const noexcept { return get(); }
 
 private:
-    T& get() { return reinterpret_cast<T&>(storage); }
+    /**
+     * @brief Retrieves a reference to the managed object.
+     *
+     * @return A reference to the managed object.
+     */
+    T& get() noexcept { return reinterpret_cast<T&>(storage); }
 
-    const T& get() const { return reinterpret_cast<const T&>(storage); }
+    /**
+     * @brief Retrieves a const reference to the managed object.
+     *
+     * @return A const reference to the managed object.
+     */
+    const T& get() const noexcept {
+        return reinterpret_cast<const T&>(storage);
+    }
 
+    /// Storage for the managed object, aligned to T's alignment requirements.
     std::aligned_storage_t<sizeof(T), alignof(T)> storage;
 };
-
-template <typename T>
-class NoOffsetPtr {
-public:
-    constexpr NoOffsetPtr() noexcept = default;
-    constexpr NoOffsetPtr(std::nullptr_t) noexcept {}
-
-    constexpr explicit NoOffsetPtr(T* ptr) noexcept : ptr_(ptr) {}
-
-    constexpr NoOffsetPtr(const NoOffsetPtr&) noexcept = default;
-    constexpr NoOffsetPtr& operator=(const NoOffsetPtr&) noexcept = default;
-
-    constexpr NoOffsetPtr(NoOffsetPtr&&) noexcept = default;
-    constexpr NoOffsetPtr& operator=(NoOffsetPtr&&) noexcept = default;
-
-    constexpr T& operator*() const noexcept { return *ptr_; }
-    constexpr T* operator->() const noexcept { return ptr_; }
-
-    constexpr explicit operator bool() const noexcept {
-        return ptr_ != nullptr;
-    }
-
-    constexpr T* get() const noexcept { return ptr_; }
-
-    constexpr void reset(T* ptr = nullptr) noexcept { ptr_ = ptr; }
-
-    constexpr void swap(NoOffsetPtr& other) noexcept {
-        std::swap(ptr_, other.ptr_);
-    }
-
-    NoOffsetPtr& operator++() = delete;
-    NoOffsetPtr& operator--() = delete;
-    NoOffsetPtr operator++(int) = delete;
-    NoOffsetPtr operator--(int) = delete;
-    NoOffsetPtr& operator+=(std::ptrdiff_t) = delete;
-    NoOffsetPtr& operator-=(std::ptrdiff_t) = delete;
-    NoOffsetPtr operator+(std::ptrdiff_t) const = delete;
-    NoOffsetPtr operator-(std::ptrdiff_t) const = delete;
-    std::ptrdiff_t operator-(const NoOffsetPtr&) const = delete;
-
-private:
-    T* ptr_ = nullptr;
-};
-
-template <typename T, typename U>
-constexpr bool operator==(const NoOffsetPtr<T>& lhs,
-                          const NoOffsetPtr<U>& rhs) noexcept {
-    return lhs.get() == rhs.get();
-}
-
-template <typename T>
-constexpr bool operator==(const NoOffsetPtr<T>& lhs, std::nullptr_t) noexcept {
-    return lhs.get() == nullptr;
-}
-
-template <typename T>
-constexpr bool operator==(std::nullptr_t, const NoOffsetPtr<T>& rhs) noexcept {
-    return nullptr == rhs.get();
-}
-
-template <typename T, typename U>
-constexpr bool operator!=(const NoOffsetPtr<T>& lhs,
-                          const NoOffsetPtr<U>& rhs) noexcept {
-    return !(lhs == rhs);
-}
-
-template <typename T>
-constexpr bool operator!=(const NoOffsetPtr<T>& lhs, std::nullptr_t) noexcept {
-    return !(lhs == nullptr);
-}
-
-template <typename T>
-constexpr bool operator!=(std::nullptr_t, const NoOffsetPtr<T>& rhs) noexcept {
-    return !(nullptr == rhs);
-}
-
-template <typename T>
-constexpr void swap(NoOffsetPtr<T>& lhs, NoOffsetPtr<T>& rhs) noexcept {
-    lhs.swap(rhs);
-}
 
 #endif

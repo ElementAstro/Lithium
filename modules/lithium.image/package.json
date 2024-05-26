@@ -1,0 +1,38 @@
+{
+    "name": "lithium.image",
+    "version": "1.0.0",
+    "type": "shared",
+    "description": "Lithium Image Module",
+    "license": "GPL-3.0-or-later",
+    "author": "Max Qian",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "bugs": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium/issues"
+    },
+    "homepage": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "keywords": [
+        "lithium",
+        "atom",
+        "utils"
+    ],
+    "scripts": {
+        "build": "cmake --build-type=Release -- -j 4",
+        "lint": "clang-format -i src/*.cpp src/*.h"
+    },
+    "dependencies": {
+        "opencv": "^4.2.0"
+    },
+    "modules": [
+        {
+            "name": "utils",
+            "entry": "getInstance"
+        }
+    ]
+}

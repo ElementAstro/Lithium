@@ -19,7 +19,7 @@ Description: Address class for IPv4, IPv6, and Unix domain sockets.
 #include <netdb.h>
 #endif
 
-namespace Atom::Web {
+namespace atom::web {
 Address::ptr Address::Create(const std::string &address, uint16_t port) {
     addrinfo hints, *result = nullptr;
     memset(&hints, 0, sizeof(addrinfo));
@@ -490,4 +490,4 @@ std::vector<std::string> getIPv6Addresses() {
     return addresses;
 }
 #endif
-}  // namespace Atom::Web
+}  // namespace atom::web

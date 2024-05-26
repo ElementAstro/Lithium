@@ -1,7 +1,13 @@
 fail_fast: false
 repos:
-  - repo: https://github.com/pocc/pre-commit-hooks
-    rev: master
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
     hooks:
-      - id: clang-format
-      - id: cppcheck
+      - id: trailing-whitespace
+      - id: check-yaml
+      - id: check-json
+      - id: end-of-file-fixer
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-merge-conflict

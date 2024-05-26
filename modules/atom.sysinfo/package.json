@@ -1,0 +1,31 @@
+{
+    "name": "atom.sysinfo",
+    "version": "1.0.0",
+    "type": "shared",
+    "description": "A collector for system information, not the same as atom.system",
+    "license": "GPL-3.0-or-later",
+    "author": "Max Qian",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "bugs": {
+        "url": "https://github.com/ElementAstro/Lithium/issues"
+    },
+    "homepage": "https://github.com/ElementAstro/Lithium",
+    "keywords": [
+        "lithium",
+        "atom",
+        "sysinfo"
+    ],
+    "scripts": {
+        "build": "cmake --build . --config Release -- -j 4",
+        "lint": "clang-format -i src/*.cpp include/*.h"
+    },
+    "modules": [
+        {
+            "name": "sysinfo",
+            "entry": "getInstance"
+        }
+    ]
+}

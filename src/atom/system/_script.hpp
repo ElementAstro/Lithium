@@ -37,7 +37,7 @@ Description: Carbon binding for Atom-System
 #include "system.hpp"
 #include "user.hpp"
 
-using namespace Atom::System;
+using namespace atom::system;
 
 namespace Atom::_Script::System {
 /**
@@ -277,4 +277,3 @@ Carbon::ModulePtr bootstrap(
 
 
 #endif
-

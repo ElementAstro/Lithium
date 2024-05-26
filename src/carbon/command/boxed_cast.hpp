@@ -67,7 +67,7 @@ template <typename Type>
 decltype(auto) boxed_cast(
     const Boxed_Value &bv,
     const Type_Conversions_State *t_conversions = nullptr) {
-    if (!t_conversions || bv.get_type_info().bare_equal(user_type<Type>()) ||
+    if (!t_conversions || bv.get_type_info().bare_equal(atom::meta::user_type<Type>()) ||
         (t_conversions && !(*t_conversions)->convertable_type<Type>())) {
         try {
             return detail::Cast_Helper<Type>::cast(bv, t_conversions);

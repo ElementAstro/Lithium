@@ -17,7 +17,6 @@ Description: IO
 #include <algorithm>
 #include <ctime>
 #include <filesystem>
-#include <iostream>
 #include <regex>
 #include <thread>
 
@@ -135,8 +134,8 @@ bool createDirectoriesRecursive(const fs::path &basePath,
         if (!options.dryRun) {
             std::error_code ec;
             if (!fs::create_directories(fullPath, ec)) {
-                std::cerr << "Failed to create directory: " << fullPath
-                          << ", error: " << ec.message() << std::endl;
+                LOG_F(ERROR, "Failed to create directory {}: {}", fullPath,
+                      ec.message());
                 return false;
             }
         }
@@ -164,6 +163,47 @@ bool removeDirectory(const std::string &path) {
         LOG_F(ERROR, "Failed to remove directory {}: {}", path, e.what());
     }
     return false;
+}
+
+bool removeDirectoriesRecursive(const fs::path &basePath,
+                                const std::vector<std::string> &subdirs,
+                                const CreateDirectoriesOptions &options) {
+    for (const auto &subdir : subdirs) {
+        auto fullPath = (basePath / subdir).string();
+
+        if (!options.filter(subdir)) {
+            if (options.verbose) {
+                LOG_F(INFO, "Skipping directory (filtered out): {}", fullPath);
+            }
+            continue;
+        }
+
+        if (!fs::exists(fullPath)) {
+            if (options.verbose) {
+                LOG_F(INFO, "Directory does not exist: {}", fullPath);
+            }
+            continue;
+        }
+
+        try {
+            fs::remove_all(fullPath);
+            if (options.verbose) {
+                LOG_F(INFO, "Deleted directory: {}", fullPath);
+            }
+        } catch (const fs::filesystem_error &ex) {
+            LOG_F(ERROR, "Failed to delete directory: {}, error {}", fullPath,
+                  ex.what());
+            return false;
+        }
+
+        options.onDelete(fullPath);
+        if (options.delay > 0) {
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(options.delay));
+        }
+    }
+
+    return true;
 }
 
 bool renameDirectory(const std::string &old_path, const std::string &new_path) {

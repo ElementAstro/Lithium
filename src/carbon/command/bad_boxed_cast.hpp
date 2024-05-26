@@ -31,7 +31,7 @@ public:
      * @param t_what A Static_String providing additional description of the
      * error.
      */
-    bad_boxed_cast(Type_Info t_from, const std::type_info &t_to,
+    bad_boxed_cast(atom::meta::Type_Info t_from, const std::type_info &t_to,
                    Static_String t_what) noexcept;
 
     /**
@@ -41,7 +41,7 @@ public:
      * Boxed_Value.
      * @param t_to The std::type_info of the desired (but failed) result type.
      */
-    bad_boxed_cast(Type_Info t_from, const std::type_info &t_to) noexcept;
+    bad_boxed_cast(atom::meta::Type_Info t_from, const std::type_info &t_to) noexcept;
 
     /**
      * @brief Constructs a bad_boxed_cast object with a custom error message.
@@ -63,7 +63,7 @@ public:
      */
     const char *what() const noexcept override;
 
-    Type_Info from;  ///< Type_Info contained in the Boxed_Value
+    atom::meta::Type_Info from;  ///< Type_Info contained in the Boxed_Value
     const std::type_info *to =
         nullptr;  ///< std::type_info of the desired (but failed) result type
 

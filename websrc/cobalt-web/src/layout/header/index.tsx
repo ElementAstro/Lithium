@@ -24,7 +24,7 @@ const Header = ()=>{
         <div className='app-drawer-btn'>
             <IconButton variant="outlined" size='sm' color="primary" onClick={toggleNavigation} sx={{zIndex: 100}}>
                 <FormatListBulletedIcon />
-            </IconButton>  
+            </IconButton>
             <img className='app-drawer-btn-logo' alt="logo" id="logo" src={horivisison_logo}></img>
             {/* <span className='app-drawer-btn-title'>HORIVISION</span> */}
             <QuickControlComp />

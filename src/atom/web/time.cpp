@@ -44,7 +44,7 @@ Description: Time
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::Web {
+namespace atom::web {
 std::time_t getSystemTime() {
     return std::chrono::system_clock::to_time_t(
         std::chrono::system_clock::now());
@@ -197,7 +197,7 @@ bool syncTimeFromRTC() {
     FILETIME ft;
     ft.dwLowDateTime = (DWORD)new_timestamp;
     ft.dwHighDateTime = (DWORD)(new_timestamp >> 32);
-    if (!System::isRoot()) {
+    if (!system::isRoot()) {
         LOG_F(ERROR,
               "Permission denied. Need root privilege to set system time.");
         return false;
@@ -414,4 +414,4 @@ time_t getNtpTime(const char *hostname) {
 
     return (time_t)timestamp;
 }
-}  // namespace Atom::Web
+}  // namespace atom::web

@@ -20,7 +20,7 @@ Description: Quote manager for crash report.
 
 #include "atom/error/exception.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 
 Quote::Quote(const std::string &text, const std::string &author)
     : text(text), author(author) {}
@@ -111,7 +111,7 @@ std::string QuoteManager::getRandomQuote() const {
     std::uniform_int_distribution<> dis(0, quotes.size() - 1);
     return quotes[dis(gen)].getText() + " - " + quotes[dis(gen)].getAuthor();
 }
-}  // namespace Atom::System
+}  // namespace atom::system
 
 /*
 int main()

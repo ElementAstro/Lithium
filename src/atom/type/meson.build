@@ -1,54 +1,54 @@
-project('Atom-Type', 'cpp')
-
-# Define sources and headers
-sources = [
-    'args.cpp',
-    'ini.cpp',
-    'message.cpp'
-]
-headers = [
-    'abi.hpp',
-    'args.hpp',
-    'enum_flag.hpp',
-    'enum_flag.inl',
-    'flatset.hpp',
-    'ini_impl.hpp',
-    'ini.hpp',
-    'json.hpp',
-    'message.hpp',
-    'pointer.hpp',
-    'small_vector.hpp'
-]
-
-# Create object library
-atom_type_obj = library('atom_type', 
-    sources + headers,
-    cpp_std: c_std
+project('atom-type', 'c', 'cpp',
+  version: '1.0.0',
+  license: 'GPL3',
+  default_options: ['cpp_std=c++17']
 )
 
-# Create static library
-atom_type_static = static_library('atom_type_static', atom_type_obj)
+# 源文件和头文件
+atom_type_sources = [
+  'ini.cpp',
+  'message.cpp'
+]
 
-# Set version properties
-version = '1.0.0' # You should define your version here
-soversion = '1'
+atom_type_headers = [
+  'args.hpp',
+  'enum_flag.hpp',
+  'enum_flag.inl',
+  'flatset.hpp',
+  'ini.inl',
+  'ini.hpp',
+  'json.hpp',
+  'message.hpp',
+  'pointer.hpp',
+  'small_vector.hpp'
+]
 
-atom_type_static.version = version
-atom_type_static.soversion = soversion
-atom_type_static.basename = 'Atom-Type'
+# 依赖
+atom_utils_dep = dependency('atom-utils')
 
-# Link to other libraries if necessary
-atom_type_static_link_libs = []
-foreach lib : ['atom-utils']
-    atom_type_static_link_libs += dependency(lib)
-endforeach
+# 对象库
+atom_type_object = static_library('atom_type_object',
+  sources: atom_type_sources,
+  dependencies: [atom_utils_dep],
+  include_directories: include_directories('.'),
+  install: false
+)
 
-atom_type_static_link_libs = []
-foreach lib : ['atom-utils']
-    atom_type_static_link_libs += dependency(lib)
-endforeach
+# 静态库
+atom_type_lib = static_library('atom-type',
+  sources: atom_type_object.extract_all_objects(),
+  dependencies: [atom_utils_dep],
+  include_directories: include_directories('.'),
+  install: true
+)
 
-atom_type_static.link_with(atom_type_static_link_libs)
+# 安装头文件
+install_headers(atom_type_headers, subdir: 'atom-type')
 
-# Install target
-install_targets(atom_type_static)
+# 设置目标属性
+atom_hydrogen_version_string = '1.0.0'
+atom_hydrogen_soversion = '1'
+
+atom_type_lib.set_version(atom_hydrogen_version_string)
+atom_type_lib.set_soversion(atom_hydrogen_soversion)
+atom_type_lib.set_output_name('atom-type')

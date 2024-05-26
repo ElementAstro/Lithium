@@ -1,20 +1,13 @@
-/*
- * decorate.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file decorate.hpp
+ * \brief An implementation of decorate function. Just like Python's decorator.
+ * \author Max Qian <lightapt.com>
+ * \date 2023-03-29
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-3-29
-
-Description: An implementation of decorate function. Just like Python's
-decorator.
-
-**************************************************/
-
-#ifndef ATOM_EXPERIMENT_DECORATE_HPP
-#define ATOM_EXPERIMENT_DECORATE_HPP
+#ifndef ATOM_META_DECORATE_HPP
+#define ATOM_META_DECORATE_HPP
 
 #include <chrono>
 #include <exception>
@@ -24,6 +17,7 @@ decorator.
 #include <utility>
 #include <vector>
 
+namespace atom::meta {
 template <typename R, typename... Args>
 class Switchable {
 public:
@@ -43,11 +37,9 @@ private:
 template <typename FuncType>
 struct decorator;
 
-// 特化decorator模板以适应std::function
 template <typename R, typename... Args>
 struct decorator<std::function<R(Args...)>> {
     using FuncType = std::function<R(Args...)>;
-    // 使用std::conditional和std::is_void来确定回调类型
     using CallbackType =
         typename std::conditional<std::is_void<R>::value, std::function<void()>,
                                   std::function<void(R)>>::type;
@@ -171,7 +163,7 @@ struct ConditionCheckDecorator : public decorator<FuncType> {
             return Base::operator()(std::forward<TArgs>(args)...);
         } else {
             // 处理不满足条件时的逻辑
-            return decltype(this->func(args...))();  // 返回默认值
+            return decltype(this->func(args...))();
         }
     }
 };
@@ -199,13 +191,12 @@ class DecorateStepper {
     using FuncType = std::function<R(Args...)>;
     using DecoratorPtr = std::unique_ptr<BaseDecorator<R, Args...>>;
 
-    std::vector<DecoratorPtr> decorators;  // 装饰器链
-    FuncType baseFunction;                 // 基础函数
+    std::vector<DecoratorPtr> decorators;
+    FuncType baseFunction;
 
 public:
     explicit DecorateStepper(FuncType func) : baseFunction(std::move(func)) {}
 
-    // 添加装饰器
     template <typename Decorator, typename... DArgs>
     void addDecorator(DArgs &&...args) {
         decorators.emplace_back(
@@ -227,9 +218,10 @@ public:
 
             return currentFunction(std::forward<Args>(args)...);
         } catch (const DecoratorError &e) {
-            return R();  // 返回默认值
+            return R();
         }
     }
 };
+}  // namespace atom::meta
 
 #endif

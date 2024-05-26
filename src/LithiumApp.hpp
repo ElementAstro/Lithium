@@ -18,8 +18,7 @@ Description: Lithium App Enter
 
 #include <memory>
 
-#include "atom/components/dispatch.hpp"
-#include "atom/server/message_bus.hpp"
+#include "atom/async/message_bus.hpp"
 #include "atom/type/message.hpp"
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
@@ -73,7 +72,7 @@ public:
 
 private:
     std::weak_ptr<TaskPool> m_TaskPool;
-    std::weak_ptr<atom::server::MessageBus> m_MessageBus;
+    std::weak_ptr<atom::async::MessageBus> m_MessageBus;
     std::weak_ptr<atom::error::ErrorStack> m_ErrorStack;
     std::weak_ptr<ComponentManager> m_ComponentManager;
     std::weak_ptr<TaskManager> m_TaskManager;

@@ -1,12 +1,17 @@
+/**
+ * @file terminal.hpp
+ * @author Max Qian <lightapt.com>
+ * @copyright Copyright (C) 2023-2024 Max Qian
+ * @date 2024-5-15
+ * @brief Command Terminal
+ */
+
 #ifndef LITHIUM_DEBUG_TERMINAL_HPP
 #define LITHIUM_DEBUG_TERMINAL_HPP
 
-#include <deque>
-#include <fstream>
+#include <any>
 #include <functional>
-#include <iterator>
-#include <optional>
-#include <sstream>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -18,66 +23,42 @@
 #include <unistd.h>
 #endif
 
-namespace lithium::Terminal {
+#include "atom/components/component.hpp"
+
+namespace lithium::debug {
+class SuggestionEngine;  // Forwards declaration
 class ConsoleTerminal {
 public:
-    using CommandFunction =
-        std::function<void(const std::vector<std::string>&)>;
-
     ConsoleTerminal();
-
     ~ConsoleTerminal();
 
-    void registerCommand(const std::string& name, CommandFunction func);
-
-    template <typename Class>
-    void registerMemberCommand(
-        const std::string& name, Class* instance,
-        void (Class::*memFunc)(const std::vector<std::string>&)) {
-        CommandFunction func = [instance,
-                                memFunc](const std::vector<std::string>& args) {
-            (instance->*memFunc)(args);
-        };
-        registerCommand(name, func);
-    }
-
-    std::vector<std::string> getRegisteredCommands() const;
-
-    void callCommand(const std::string& name,
-                     const std::vector<std::string>& args);
-
+    [[nodiscard]] std::vector<std::string> getRegisteredCommands() const;
+    void callCommand(std::string_view name,
+                                      const std::vector<std::any>& args);
     void run();
 
 protected:
     void helpCommand(const std::vector<std::string>& args);
 
-    void echoCommand(const std::vector<std::string>& args);
-
-    void pwdCommand(const std::vector<std::string>& args);
-
-    void cdCommand(const std::vector<std::string>& args);
-
-    void listDirectory(const std::vector<std::string>& args);
-
-    void createFile(const std::vector<std::string>& args);
-
-    void deleteFile(const std::vector<std::string>& args);
-
 private:
     void printHeader();
+    void clearConsole();
 
-private:
-    std::unordered_map<std::string, CommandFunction> commandMap;
-    static const int MAX_HISTORY_SIZE = 100;
+    std::vector<std::any> parseArguments(const std::string& input);
+
+    static constexpr int MAX_HISTORY_SIZE = 100;
+
+    std::shared_ptr<SuggestionEngine> suggestionEngine;
+
+    std::shared_ptr<Component> component;
 
 #ifdef _WIN32
     HANDLE hConsole;
 #else
     struct termios orig_termios;
 #endif
-
-    void clearConsole();
 };
-}  // namespace lithium::Terminal
 
-#endif
+}  // namespace lithium::debug
+
+#endif  // LITHIUM_DEBUG_TERMINAL_HPP

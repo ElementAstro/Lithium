@@ -12,7 +12,7 @@ FIND_PATH(JPEG_INCLUDE_DIR jpeglib.h)
 SET(JPEG_NAMES ${JPEG_NAMES} jpeg)
 FIND_LIBRARY(JPEG_LIBRARY NAMES ${JPEG_NAMES} )
 
-# handle the QUIETLY and REQUIRED arguments and set JPEG_FOUND to TRUE if 
+# handle the QUIETLY and REQUIRED arguments and set JPEG_FOUND to TRUE if
 # all listed variables are TRUE
 INCLUDE(FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(JPEG DEFAULT_MSG JPEG_LIBRARY JPEG_INCLUDE_DIR)

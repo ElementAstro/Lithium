@@ -15,6 +15,7 @@ set(${PROJECT_NAME}_SOURCES
     downloader.cpp
     httpclient.cpp
     httplite.cpp
+    httpparser.cpp
     utils.cpp
     time.cpp
 )
@@ -25,6 +26,7 @@ set(${PROJECT_NAME}_HEADERS
     downloader.hpp
     httpclient.hpp
     httplite.hpp
+    httpparser.hpp
     utils.hpp
     time.hpp
 )

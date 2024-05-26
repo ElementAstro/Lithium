@@ -104,7 +104,7 @@ const WS_LISTENER_COMP: React.FC = () => {
   // 这个listener只添加一次，不能删除
   return <></>;
 };
-/* 
+/*
 现在的问题是，我需要有在全局有且仅有一次注册一个websocket的listener，去对一些特殊信号进行处理。
 同时，有一部分信号要去ws接口里去send message。
 然后这个listener获取的数据，都要在一个store里面更新。

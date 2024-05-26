@@ -30,7 +30,7 @@ Description: Some system functions to get user information.
 
 #include "atom/log/loguru.hpp"
 
-namespace Atom::System {
+namespace atom::system {
 std::vector<std::wstring> getUserGroups() {
     std::vector<std::wstring> groups;
 
@@ -255,4 +255,4 @@ std::string getLoginShell() {
 #endif
     return loginShell;
 }
-}  // namespace Atom::System
+}  // namespace atom::system

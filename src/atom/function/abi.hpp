@@ -1,21 +1,17 @@
-/*
- * abi.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+/*!
+ * \file abi.hpp
+ * \brief A simple C++ ABI wrapper
+ * \author Max Qian <lightapt.com>
+ * \date 2024-5-25
+ * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-12-28
-
-Description: A simple C++ ABI wrapper
-
-**************************************************/
-
-#ifndef ATOM_TYPE_ABI_HPP
-#define ATOM_TYPE_ABI_HPP
+#ifndef ATOM_META_ABI_HPP
+#define ATOM_META_ABI_HPP
 
 #include <memory>
+#include <optional>
+#include <source_location>
 #include <string>
 #include <string_view>
 #include <typeinfo>
@@ -24,27 +20,59 @@ Description: A simple C++ ABI wrapper
 #ifdef _WIN32
 #include <windows.h>
 #include <dbghelp.h>
-#if !defined(__MINGW32__) && !defined(__MINGW64__)
+#ifdef _MSC_VER
 #pragma comment(lib, "dbghelp.lib")
 #endif
 #else
 #include <cxxabi.h>
 #endif
 
+namespace atom::meta {
 class DemangleHelper {
 public:
     template <typename T>
     static std::string DemangleType() {
-        return Demangle(typeid(T).name());
+        return DemangleInternal(typeid(T).name());
     }
 
     template <typename T>
     static std::string DemangleType(const T& instance) {
-        return Demangle(typeid(instance).name());
+        return DemangleInternal(typeid(instance).name());
+    }
+
+    static std::string Demangle(
+        std::string_view mangled_name,
+        const std::optional<std::source_location>& location = std::nullopt) {
+        std::string demangled = DemangleInternal(mangled_name);
+
+        // If source location information is provided, append it to the
+        // demangled name.
+        if (location.has_value()) {
+            demangled += " (";
+            demangled += location->file_name();
+            demangled += ":";
+            demangled += std::to_string(location->line());
+            demangled += ")";
+        }
+
+        return demangled;
+    }
+
+    static std::vector<std::string> DemangleMany(
+        const std::vector<std::string_view>& mangled_names,
+        const std::optional<std::source_location>& location = std::nullopt) {
+        std::vector<std::string> demangled_names;
+        demangled_names.reserve(mangled_names.size());
+
+        for (const auto& name : mangled_names) {
+            demangled_names.push_back(Demangle(name, location));
+        }
+
+        return demangled_names;
     }
 
 private:
-    static std::string Demangle(std::string_view mangled_name) {
+    static std::string DemangleInternal(std::string_view mangled_name) {
 #ifdef _WIN32
         char buffer[1024];
         DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer,
@@ -70,5 +98,6 @@ private:
 #endif
     }
 };
+}  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_ABI_HPP

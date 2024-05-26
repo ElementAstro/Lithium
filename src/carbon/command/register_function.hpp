@@ -121,7 +121,7 @@ Proxy_Function fun(T &&t) {
 /// \sa \ref adding_functions
 template <typename T, typename Q>
 Proxy_Function fun(T &&t, const Q &q) {
-    return fun(bind_first(std::forward<T>(t), q));
+    return fun(atom::meta::bind_first(std::forward<T>(t), q));
 }
 
 }  // namespace Carbon

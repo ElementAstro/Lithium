@@ -25,7 +25,7 @@ set(SOURCE_FILES
     src/json2ini.cpp
     src/json2xml.cpp
     src/xml2json.cpp
-    
+
     _component.cpp
     _main.cpp
 )

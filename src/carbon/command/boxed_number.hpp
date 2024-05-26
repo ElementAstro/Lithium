@@ -88,7 +88,7 @@ private:
                : (t_size == 8 && t_signed) ? (Common_Types::t_int64)
                                            : (Common_Types::t_uint64);
     }
-    
+
     static Common_Types get_common_type(const Boxed_Value &t_bv) {
         const atom::meta::Type_Info &inp_ = t_bv.get_type_info();
 

@@ -12,6 +12,7 @@
 #include <functional>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 namespace atom::meta {
 
@@ -74,10 +75,40 @@ struct FunctionTraits<Return (Class::*)(Args...) const volatile>
     using class_type = Class;
 };
 
-template <typename Return, typename... Args>
-struct FunctionTraits<Return(Args...) noexcept>
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) noexcept>
     : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
     static constexpr bool is_noexcept = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const noexcept>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_noexcept = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) volatile noexcept>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_noexcept = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const volatile noexcept>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_noexcept = true;
+    using class_type = Class;
 };
 
 template <typename Return, typename... Args>
@@ -85,9 +116,26 @@ struct FunctionTraits<Return(Args..., ...)> : FunctionTraits<Return(Args...)> {
     static constexpr bool is_variadic = true;
 };
 
-template <typename Func>
-struct FunctionTraits : FunctionTraits<std::remove_cvref_t<Func>> {};
+template <typename Return, typename... Args>
+struct FunctionTraits<Return(Args..., ...) noexcept>
+    : FunctionTraits<Return(Args..., ...)> {
+    static constexpr bool is_noexcept = true;
+    static constexpr bool is_variadic = true;
+};
 
+// Lambda and function object support
+template <typename Func>
+struct FunctionTraits
+    : FunctionTraits<decltype(&std::remove_cvref_t<Func>::operator())> {};
+
+// Support for function references
+template <typename Func>
+struct FunctionTraits<Func&> : FunctionTraits<Func> {};
+
+template <typename Func>
+struct FunctionTraits<Func&&> : FunctionTraits<Func> {};
+
+// Utility variable templates
 template <typename Func>
 inline constexpr bool is_member_function_v =
     FunctionTraits<Func>::is_member_function;
@@ -105,6 +153,7 @@ inline constexpr bool is_noexcept_v = FunctionTraits<Func>::is_noexcept;
 
 template <typename Func>
 inline constexpr bool is_variadic_v = FunctionTraits<Func>::is_variadic;
+
 }  // namespace atom::meta
 
 #endif

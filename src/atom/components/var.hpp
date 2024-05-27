@@ -57,6 +57,12 @@ public:
     template <typename T>
     void setValue(const std::string& name, T newValue);
 
+    std::string getDescription(const std::string& name) const;
+
+    std::string getAlias(const std::string& name) const;
+    
+    std::string getGroup(const std::string& name) const;
+
 private:
     struct VariableInfo {
         std::any variable;

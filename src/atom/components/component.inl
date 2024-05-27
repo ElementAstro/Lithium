@@ -125,11 +125,11 @@ template <typename MemberType, typename ClassType>
 void Component::def(const std::string& name, MemberType ClassType::*member_var,
                     std::shared_ptr<ClassType> instance,
                     const std::string& group, const std::string& description) {
-    auto callable = bind_member_variable(member_var);
+    auto callable = atom::meta::bind_member_variable(member_var);
     m_CommandDispatcher->def(
         name, group, description,
         std::function<MemberType&(ClassType&)>(
-            [instance, callable]() { return callable(*instance); }));
+            [instance, callable]() { return callable(*instance.get()); }));
 }
 
 template <typename MemberType, typename ClassType>

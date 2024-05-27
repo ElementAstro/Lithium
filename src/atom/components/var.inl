@@ -18,10 +18,11 @@ Description: Variable Manager
 #include "var.hpp"
 
 template <typename T>
-inline void VariableManager::addVariable(const std::string& name, T initialValue,
-                                  const std::string& description,
-                                  const std::string& alias,
-                                  const std::string& group) {
+inline void VariableManager::addVariable(const std::string& name,
+                                         T initialValue,
+                                         const std::string& description,
+                                         const std::string& alias,
+                                         const std::string& group) {
     auto variable = std::make_shared<Trackable<T>>(std::move(initialValue));
     variables_[name] = {std::move(variable), description, alias, group};
 }
@@ -49,13 +50,14 @@ inline std::shared_ptr<Trackable<T>> VariableManager::getVariable(
             return std::any_cast<std::shared_ptr<Trackable<T>>>(
                 it->second.variable);
         } catch (const std::bad_any_cast& e) {
-            //THROW_EXCEPTION(concat("Type mismatch: ", name));
+            // THROW_EXCEPTION(concat("Type mismatch: ", name));
         }
     }
     return nullptr;
 }
 
-inline void VariableManager::setValue(const std::string& name, const char* newValue) {
+inline void VariableManager::setValue(const std::string& name,
+                                      const char* newValue) {
     setValue(name, std::string(newValue));
 }
 
@@ -83,6 +85,43 @@ inline void VariableManager::setValue(const std::string& name, T newValue) {
     } else {
         THROW_EXCEPTION("Variable not found");
     }
+}
+
+inline std::string VariableManager::getDescription(
+    const std::string& name) const {
+    if (auto it = variables_.find(name); it != variables_.end()) {
+        return it->second.description;
+    }
+    for (const auto& [key, value] : variables_) {
+        if (value.alias == name) {
+            return value.description;
+        }
+    }
+    return "";
+}
+
+inline std::string VariableManager::getAlias(const std::string& name) const {
+    if (auto it = variables_.find(name); it != variables_.end()) {
+        return it->second.alias;
+    }
+    for (const auto& [key, value] : variables_) {
+        if (value.alias == name) {
+            return key;
+        }
+    }
+    return "";
+}
+
+inline std::string VariableManager::getGroup(const std::string& name) const {
+    if (auto it = variables_.find(name); it != variables_.end()) {
+        return it->second.group;
+    }
+    for (const auto& [key, value] : variables_) {
+        if (value.alias == name) {
+            return value.group;
+        }
+    }
+    return "";
 }
 
 #endif

@@ -131,6 +131,12 @@ public:
         m_VariableManager->setValue(name, newValue);
     }
 
+    std::string getVariableDescription(const std::string& name) const;
+
+    std::string getVariableAlias(const std::string& name) const;
+
+    std::string getVariableGroup(const std::string& name) const;
+
     // -------------------------------------------------------------------
     // Function methods
     // -------------------------------------------------------------------

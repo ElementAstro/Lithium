@@ -30,12 +30,17 @@ void CommandDispatcher::def(
     std::optional<std::function<bool()>> precondition,
     std::optional<std::function<void()>> postcondition) {
     auto _func = atom::meta::ProxyFunction(std::move(func));
+    auto info = _func.getFunctionInfo();
+    if (info.argumentNames.size() != info.argumentTypes.size()) {
+        THROW_DISPATCH_EXCEPTION(
+            "Argument names and types must be the same size");
+    }
     auto it = commands.find(name);
     if (it == commands.end()) {
         Command cmd{{std::move(_func)},
                     {},
-                    {},
-                    {},
+                    {info.argumentNames},
+                    {info.argumentTypes},
                     description,
                     {},
                     std::move(precondition),
@@ -45,9 +50,6 @@ void CommandDispatcher::def(
     } else {
         it->second.funcs.emplace_back(std::move(_func));
     }
-    auto info = _func.getFunctionInfo();
-    it->second.arg_names.emplace_back(info.argumentNames);
-    it->second.arg_types.emplace_back(info.argumentTypes);
 }
 
 template <typename Ret, typename... Args>

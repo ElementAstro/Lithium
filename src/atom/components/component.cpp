@@ -168,3 +168,15 @@ void Component::def(const atom::meta::Type_Info& ti, const std::string& group,
                     const std::string& description) {
     m_classes.push_back(ti);
 }
+
+std::string Component::getVariableDescription(const std::string& name) const {
+    return m_VariableManager->getDescription(name);
+}
+
+std::string Component::getVariableAlias(const std::string& name) const {
+    return m_VariableManager->getAlias(name);
+}
+
+std::string Component::getVariableGroup(const std::string& name) const {
+    return m_VariableManager->getGroup(name);
+}

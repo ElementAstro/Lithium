@@ -6,8 +6,8 @@
  * \copyright Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-#ifndef ATOM_META_FILED_COUNT_HPP
-#define ATOM_META_FILED_COUNT_HPP
+#ifndef ATOM_META_FIELD_COUNT_HPP
+#define ATOM_META_FIELD_COUNT_HPP
 
 #define ATOM_META_C_ARRAY_SUPPORT 1
 
@@ -16,9 +16,6 @@
 #include <utility>
 
 namespace atom::meta {
-
-struct Any;
-
 struct Any {
     constexpr Any(int) {}
 
@@ -40,7 +37,7 @@ struct Any {
 };
 
 template <typename T, std::size_t N>
-consteval std::size_t try_initialize_with_n() {
+consteval bool try_initialize_with_n() {
     return []<std::size_t... Is>(std::index_sequence<Is...>) {
         return requires { T{Any(Is)...}; };
     }(std::make_index_sequence<N>{});
@@ -58,7 +55,7 @@ consteval std::size_t total_count_of_fields() {
 
 #if ATOM_META_C_ARRAY_SUPPORT
 template <typename T, std::size_t N1, std::size_t N2, std::size_t N3>
-consteval std::size_t try_initialize_with_three_parts() {
+consteval bool try_initialize_with_three_parts() {
     return []<std::size_t... I1, std::size_t... I2, std::size_t... I3>(
                std::index_sequence<I1...>, std::index_sequence<I2...>,
                std::index_sequence<I3...>) {
@@ -67,48 +64,48 @@ consteval std::size_t try_initialize_with_three_parts() {
            std::make_index_sequence<N3>{});
 }
 
-template <typename T, std::size_t position, std::size_t N>
-constexpr bool try_place_n_in_pos() {
+template <typename T, std::size_t Position, std::size_t N>
+consteval bool try_place_n_in_pos() {
     constexpr auto Total = total_count_of_fields<T>();
     if constexpr (N == 0) {
         return true;
-    } else if constexpr (position + N <= Total) {
-        return try_initialize_with_three_parts<T, position, N,
-                                               Total - position - N>();
+    } else if constexpr (Position + N <= Total) {
+        return try_initialize_with_three_parts<T, Position, N,
+                                               Total - Position - N>();
     } else {
         return false;
     }
 }
 
-template <typename T, std::size_t pos, std::size_t N = 0, std::size_t Max = 10>
-constexpr bool has_extra_elements() {
+template <typename T, std::size_t Pos, std::size_t N = 0, std::size_t Max = 10>
+consteval bool has_extra_elements() {
     constexpr auto Total = total_count_of_fields<T>();
-    if constexpr (try_initialize_with_three_parts<T, pos, N,
-                                                  Total - pos - 1>()) {
+    if constexpr (try_initialize_with_three_parts<T, Pos, N,
+                                                  Total - Pos - 1>()) {
         return false;
     } else if constexpr (N + 1 <= Max) {
-        return has_extra_elements<T, pos, N + 1>();
+        return has_extra_elements<T, Pos, N + 1>();
     } else {
         return true;
     }
 }
 
-template <typename T, std::size_t pos>
-constexpr std::size_t search_max_in_pos() {
+template <typename T, std::size_t Pos>
+consteval std::size_t search_max_in_pos() {
     constexpr auto Total = total_count_of_fields<T>();
-    if constexpr (!has_extra_elements<T, pos>()) {
+    if constexpr (!has_extra_elements<T, Pos>()) {
         return 1;
     } else {
         std::size_t result = 0;
         [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-            ((try_place_n_in_pos<T, pos, Is>() ? result = Is : 0), ...);
+            ((try_place_n_in_pos<T, Pos, Is>() ? result = Is : 0), ...);
         }(std::make_index_sequence<Total + 1>());
         return result;
     }
 }
 
 template <typename T, std::size_t N = 0>
-constexpr auto search_all_extra_index(auto&& array) {
+consteval auto search_all_extra_index(auto&& array) {
     constexpr auto total = total_count_of_fields<T>();
     constexpr auto value = std::max<std::size_t>(search_max_in_pos<T, N>(), 1);
     array[N] = value;
@@ -118,7 +115,7 @@ constexpr auto search_all_extra_index(auto&& array) {
 }
 
 template <typename T>
-constexpr auto true_count_of_fields() {
+consteval auto true_count_of_fields() {
     constexpr auto max = total_count_of_fields<T>();
     if constexpr (max == 0) {
         return 0;
@@ -142,15 +139,6 @@ struct type_info;
 
 /**
  *  @brief Retrieve the count of fields of a struct
- *  @warning cannot get the count of fields of a struct which has reference
- * type member in gcc 13 because the internal error occurs in below occasion
- *  @code
- *  struct Number { operator int&(); };
- *  int& x = { Number{} };
- *
- *  internal compiler error: in reference_binding, at cp/call.cc:2020
- *  @endcode
- *
  */
 template <typename T>
     requires std::is_aggregate_v<T>
@@ -159,12 +147,12 @@ consteval auto field_count_of() {
         return type_info<T>::count;
     } else {
 #if ATOM_META_C_ARRAY_SUPPORT
-        return details::true_count_of_fields<T>();
+        return true_count_of_fields<T>();
 #else
-        return details::total_count_of_fields<T>();
+        return total_count_of_fields<T>();
 #endif
     }
 }
 }  // namespace atom::meta
 
-#endif  // ATOM_META_FILED_COUNT_HPP
+#endif  // ATOM_META_FIELD_COUNT_HPP

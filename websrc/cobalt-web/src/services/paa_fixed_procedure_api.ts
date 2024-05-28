@@ -1,4 +1,4 @@
-import request from "../services/request";
+import request from "@/services/request";
 import { AxiosResponse } from "axios";
 
 export const get_paa_status = (): Promise<IPAAFixedStatus> =>
@@ -61,6 +61,33 @@ export const start_fixed_PolarAlignment = (
     data: {
       script_name: "PolarAlignment",
       params: polar_align_setting,
+    },
+  });
+
+export const start_fixed_autofocus = (
+  autofocus_setting: IPAAFixedAutofocusRequest
+): Promise<IPAAFixedStartResponse> =>
+  request({
+    url: "/PAA/start_fixed_script/",
+    method: "post",
+    data: {
+      script_name: "AutoFocus",
+      params: {
+        filter_index: autofocus_setting.filter_index,
+        start_side: autofocus_setting.start_side,
+      },
+    },
+  });
+
+export const start_solve_sync = (
+  solve_sync_setting: IPAASolveSyncRequest
+): Promise<IPAAFixedStartResponse> =>
+  request({
+    url: "/PAA/start_fixed_script/",
+    method: "post",
+    data: {
+      script_name: "SolveSync",
+      params: solve_sync_setting,
     },
   });
 

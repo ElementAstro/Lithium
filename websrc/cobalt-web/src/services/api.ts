@@ -1,5 +1,4 @@
-import request from "../services/request";
-
+import request from "@/services/request";
 export const getResouceList = () =>
   request({
     url: "/getResouceList",
@@ -9,13 +8,13 @@ export const getResouceList = () =>
 // ---------------设备连接相关的接口
 // 具体说明见后端的接口文档
 export const getDeviceBrand = () =>
-  request<string[]>({
+  request<IConnectBrandList>({
     url: "/driver_connect/device_brand/",
     method: "get",
   });
 
 export const getDeviceList = () =>
-  request({
+  request<Array<ConnectionDeviceInfo>>({
     url: "/driver_connect/device_list/",
     method: "get",
   });
@@ -60,7 +59,9 @@ export const ConnectDevice = (
 
 // ---------------
 
-export const GetCurrentDeviceProfile = (): Promise<IndiConnectProfile> =>
+export const GetCurrentDeviceProfile = (): Promise<{
+  data: IndiConnectProfile;
+}> =>
   request({
     url: "/driver_connect/current_profile/",
     method: "get",

@@ -49,6 +49,8 @@ void CommandDispatcher::def(
         groupMap[name] = group;
     } else {
         it->second.funcs.emplace_back(std::move(_func));
+        it->second.arg_types.emplace_back(info.argumentTypes);
+        it->second.arg_names.emplace_back(info.argumentNames);
     }
 }
 

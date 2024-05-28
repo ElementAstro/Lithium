@@ -1,6 +1,32 @@
 import { createStore, action, thunk, computed } from "easy-peasy";
 import { Thunk, Action, Computed } from "easy-peasy";
-import * as AXIOSPAAF from "../services/paa_fixed_procedure_api";
+import * as AXIOSPAAF from "@/services/paa_fixed_procedure_api";
+
+function rmsValue(arr: Array<number>, n: number) {
+  var square = 0;
+  var mean = 0;
+  var root = 0;
+
+  if (n < arr.length) {
+    for (let i = 0; i < n; i++) {
+      let this_value = arr.at(-(i + 1));
+      if (this_value) square += Math.pow(this_value, 2);
+    }
+  } else {
+    // Calculate square.
+    for (let i = 0; i < arr.length; i++) {
+      square += Math.pow(arr[i], 2);
+    }
+  }
+
+  // Calculate Mean.
+  mean = square / n;
+
+  // Calculate Root.
+  root = Math.sqrt(mean);
+
+  return root;
+}
 
 export interface IProcessDataSaveModels {
   camera_jpg_updated: number;
@@ -12,7 +38,7 @@ export interface IProcessDataSaveModels {
   newest_HFR_info: ICSingleHFRPointData;
   PHD2_guide_data_list: ICPHD2GuideDataPointList;
   PHD2_calibration_result: ICPHD2InterfaceCalibrationResult;
-  PHD2_calibrated: boolean;
+  // PHD2_calibrated: boolean;  // not used and updated
   send_ws_message_handler: ((message: any) => void) | null;
   registered: Computed<IProcessDataSaveModels, boolean>;
   //
@@ -32,6 +58,12 @@ export interface IProcessDataSaveModels {
     IProcessDataSaveModels,
     ICPHD2InterfaceGuideStep
   >;
+  clear_PHD2_guide_data: Action<IProcessDataSaveModels>;
+  PHD2_RMS_value: Computed<IProcessDataSaveModels, [number, number]>;
+  PHD2_Calibrated_graph: Computed<
+    IProcessDataSaveModels,
+    [number, number, number, number]
+  >;
   // update_jpg_data: Action<IProcessDataSaveModels, {device: string, data: Blob}>;
   // process_ws_blob: Thunk<IProcessDataSaveModels, Blob>;
   update_jpg_data: Action<
@@ -40,6 +72,11 @@ export interface IProcessDataSaveModels {
   >;
   get_newest_jpg: Thunk<IProcessDataSaveModels, string>;
   switch_camera_display: Action<IProcessDataSaveModels, number>;
+  // for label show
+  current_filter: number | null;
+  current_camera_temerpature: number | null;
+  used_space: number | null;
+  all_space: number | null;
 }
 
 export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
@@ -79,7 +116,7 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     yParity: "+",
     declination: 0,
   },
-  PHD2_calibrated: false,
+  // PHD2_calibrated: false,
   send_ws_message_handler: null,
   registered: computed((state) => {
     if (state.send_ws_message_handler != null) {
@@ -124,7 +161,7 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     } else {
       state.PHD2_guide_data_list.DecControl.push(-payload.DECDistanceGuide);
     }
-    if (state.PHD2_guide_data_list.dx.length > 300) {
+    if (state.PHD2_guide_data_list.dx.length > 100) {
       state.PHD2_guide_data_list.dx.shift();
       state.PHD2_guide_data_list.dy.shift();
       state.PHD2_guide_data_list.RaDistance.shift();
@@ -132,6 +169,29 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
       state.PHD2_guide_data_list.RaControl.shift();
       state.PHD2_guide_data_list.DecControl.shift();
     }
+  }),
+  clear_PHD2_guide_data: action((state) => {
+    state.PHD2_guide_data_list = {
+      dx: [],
+      dy: [],
+      RaDistance: [],
+      DecDistance: [],
+      RaControl: [],
+      DecControl: [],
+    };
+  }),
+  PHD2_RMS_value: computed((state) => {
+    let ra_rms = rmsValue(state.PHD2_guide_data_list.RaDistance, 100);
+    let dec_rms = rmsValue(state.PHD2_guide_data_list.DecDistance, 100);
+    return [ra_rms, dec_rms];
+  }),
+  PHD2_Calibrated_graph: computed((state) => {
+    return [
+      state.PHD2_calibration_result.xRate,
+      state.PHD2_calibration_result.xAngle,
+      state.PHD2_calibration_result.yRate,
+      state.PHD2_calibration_result.yAngle,
+    ];
   }),
   // update_jpg_data: action((state, payload) => {
   //   if (payload.device.includes('camera')){
@@ -150,12 +210,22 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
   get_newest_jpg: thunk(async (actions, payload) => {
     if (payload == "camera") {
       try {
-        let newest_url = "/PAA/newest_camera_jpg/?" + new Date().getTime();
+        let newest_url = "";
+        if (process.env.NODE_ENV !== "production") {
+          newest_url = "/api/PAA/newest_camera_jpg/?" + new Date().getTime();
+        } else {
+          newest_url = "/PAA/newest_camera_jpg/?" + new Date().getTime();
+        }
         actions.update_jpg_data({ device: "camera", data: newest_url });
       } catch (e) {}
     } else if (payload == "guider") {
       try {
-        let newest_url = "/PAA/newest_guider_jpg/?" + new Date().getTime();
+        let newest_url = "";
+        if (process.env.NODE_ENV !== "production") {
+          newest_url = "/api/PAA/newest_guider_jpg/?" + new Date().getTime();
+        } else {
+          newest_url = "/PAA/newest_guider_jpg/?" + new Date().getTime();
+        }
         actions.update_jpg_data({ device: "guider", data: newest_url });
       } catch (e) {}
     }
@@ -187,4 +257,8 @@ export const ProcessDataSaveModel = (): IProcessDataSaveModels => ({
     }
     state.show_camera = payload;
   }),
+  current_filter: null,
+  current_camera_temerpature: null,
+  used_space: null,
+  all_space: null,
 });

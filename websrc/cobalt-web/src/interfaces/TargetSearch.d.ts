@@ -9,6 +9,7 @@ declare interface IDSOFramingObjectInfo {
   ra: float;
   dec: float;
   rotation: float;
+  altitude?: Array<[string, float, float]>;
   flag: string; // flag is user editable, any string is ok
   tag: string; // tag is system set filters.
   target_type: string;
@@ -43,6 +44,7 @@ declare interface IDSOObjectSimpleInfo {
   current: number;
   highest: number;
   available_shoot_time: number;
+  az: number;
 }
 
 declare interface ILightStarInfo {

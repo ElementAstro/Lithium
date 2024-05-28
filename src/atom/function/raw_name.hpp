@@ -36,7 +36,7 @@ constexpr std::string_view extract_raw_name(std::string_view name) {
 
 template <typename T>
 constexpr auto raw_name_of() {
-    return extract_raw_name(MAGIC_CPP_FUNCTION_NAME);
+    return extract_raw_name(ATOM_META_FUNCTION_NAME);
 }
 
 template <typename T>
@@ -47,12 +47,12 @@ constexpr auto raw_name_of_template() {
 
 template <auto Value>
 constexpr auto raw_name_of() {
-    return extract_raw_name(MAGIC_CPP_FUNCTION_NAME);
+    return extract_raw_name(ATOM_META_FUNCTION_NAME);
 }
 
 template <auto Value>
 constexpr auto raw_name_of_enum() {
-    std::string_view name = extract_raw_name(MAGIC_CPP_FUNCTION_NAME);
+    std::string_view name = extract_raw_name(ATOM_META_FUNCTION_NAME);
     std::size_t start = name.rfind("::");
     return start == std::string_view::npos
                ? name
@@ -60,7 +60,7 @@ constexpr auto raw_name_of_enum() {
                                   name.size() - start - 2};
 }
 
-#ifdef MAGIC_CPP_20_SUPPORT
+#ifdef ATOM_META_CPP_20_SUPPORT
 template <typename T>
 struct Wrapper {
     T a;
@@ -69,7 +69,7 @@ struct Wrapper {
 
 template <Wrapper T>
 constexpr auto raw_name_of_member() {
-    std::string_view name = MAGIC_CPP_FUNCTION_NAME;
+    std::string_view name = ATOM_META_FUNCTION_NAME;
 #if __GNUC__ && (!__clang__) && (!_MSC_VER)
     std::size_t start = name.rfind("::") + 2;
     std::size_t end = name.rfind(')');
@@ -86,7 +86,7 @@ constexpr auto raw_name_of_member() {
 #error "Unsupported compiler"
 #endif
 }
-#endif  // MAGIC_CPP_20_SUPPORT
+#endif  // ATOM_META_CPP_20_SUPPORT
 
 template <typename T>
 using args_type_of = args_type_of<T>;

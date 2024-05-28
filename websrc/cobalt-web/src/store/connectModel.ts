@@ -11,19 +11,19 @@ import {
   postDeviceStatus,
   postStartDeviceServer,
   postStartPhd2,
-} from "../services/api";
+} from "@/services/api";
 import {
   postGlobalLoadProfile,
   postGLobalParameterOnStart,
   postGLobalParameterProfileDelete,
-} from "../services/global_parameter_api";
+} from "@/services/global_parameter_api";
 
-interface DeviceSelection {
-  device_name: string;
-  device_driver_name: string;
-  device_driver_exec: string;
+interface DeviceInfo {
+  [key: string]: Array<ConnectionDeviceInfo>;
 }
-
+interface DeviceSelection {
+  [key: string]: ConnectionDeviceInfo;
+}
 interface Phd2Config {
   name: string;
   camera: string;
@@ -36,6 +36,13 @@ interface Phd2Config {
   calibration_duration: number;
   calibration_distance: number;
 }
+interface BrandConnection {
+  [key: string]: number;
+}
+interface profileInfo {
+  userConfigList: Array<string>;
+  configName: string;
+}
 
 type AllowedDeviceTypes =
   | "telescope"
@@ -43,6 +50,12 @@ type AllowedDeviceTypes =
   | "focus"
   | "filter"
   | "guider";
+type AllowedDeviceTypesCN =
+  | "赤道仪"
+  | "相机"
+  | "导星相机"
+  | "电调焦"
+  | "滤镜轮";
 let deviceType: AllowedDeviceTypes = "telescope";
 
 export interface ConnectModel {
@@ -52,13 +65,13 @@ export interface ConnectModel {
   allDrivers: { driver: string }[];
 
   // 所有的brand
-  brand_list: any | null;
+  brand_list: IConnectBrandList;
   // 所有的device
-  device_list: any | null;
+  device_list: DeviceInfo;
   // 所有的brand类别
   brand_type_en: Array<AllowedDeviceTypes>;
-  brand_type_cn: any;
-  brand_connection: any;
+  brand_type_cn: Array<AllowedDeviceTypesCN>;
+  brand_connection: BrandConnection;
   // 所有的用户配置
   user_config_list: Array<string>;
   // panel选择
@@ -82,45 +95,53 @@ export interface ConnectModel {
 
   // 用户选择的brand
   brand_selections: IConnectSelectedBrandList;
-  device_selections: any | null;
+  device_selections: DeviceSelection;
 
   setState: Action<ConnectModel, Partial<ConnectModel>>;
   setSelectBrand: Action<
     ConnectModel,
-    { type: AllowedDeviceTypes; brand_name: IConnectBrandSelection }
+    { type: AllowedDeviceTypes; brand_info: IConnectBrandSelection }
   >;
-  setSelectDevice: Action<ConnectModel, { type: string; device_infor: any }>;
+  setSelectDevice: Action<
+    ConnectModel,
+    { type: string; device_infor: ConnectionDeviceInfo }
+  >;
   resetDeviceSelections: Action<ConnectModel>;
 
   // url请求
   getBrandList: Thunk<ConnectModel>;
-  setBrandList: Action<ConnectModel, any[]>;
+  setBrandList: Action<ConnectModel, IConnectBrandList>;
   getDeviceList: Thunk<ConnectModel>;
-  setDeviceList: Action<ConnectModel, [DeviceSelection]>;
+  setDeviceList: Action<ConnectModel, Array<ConnectionDeviceInfo>>;
   getProfileList: Thunk<ConnectModel>;
-  setProfileList: Action<ConnectModel, any>;
+  setProfileList: Action<ConnectModel, profileInfo>;
   getProfileDevice: Thunk<ConnectModel>;
 
   // 新建和加载合用
   setProfile: Thunk<ConnectModel, string>;
   deleteProfile: Thunk<ConnectModel, string>;
 
-  checkPhd2Profile: Thunk<ConnectModel, any>;
+  checkPhd2Profile: Thunk<ConnectModel>;
+  checkPhd2Device: Thunk<ConnectModel>;
   startPhd2: Thunk<ConnectModel>;
 
   connectDeviceServer: Thunk<ConnectModel>;
   closeDeviceServer: Thunk<ConnectModel>;
   connectDevice: Thunk<ConnectModel>;
-  checkDevicesConnection: Thunk<ConnectModel>;
-  checkPhd2Status: Thunk<ConnectModel>;
-
+  checkDeviceConnection: Thunk<ConnectModel, { device: string }>;
   // 用于一口气刷新所有device的connect状态的
   refreshDeviceConnectionStatus: Thunk<ConnectModel>;
   setBrandInLoading: Action<ConnectModel, { device: string; flag: boolean }>;
 }
 
 export const getConnectModel = (): ConnectModel => ({
-  brand_list: null,
+  brand_list: {
+    camera: [],
+    telescope: [],
+    guider: [],
+    focus: [],
+    filter: [],
+  },
   brand_selections: {
     camera: { zh: "", en: "", driver: "" },
     telescope: { zh: "", en: "", driver: "" },
@@ -129,13 +150,23 @@ export const getConnectModel = (): ConnectModel => ({
     filter: { zh: "", en: "", driver: "" },
   },
   allDrivers: [],
-  device_list: null,
+  device_list: {
+    camera: [],
+    telescope: [],
+    guider: [],
+    focus: [],
+    filter: [],
+  },
   device_selections: {
-    camera: "",
-    telescope: "",
-    guider: "",
-    focus: "",
-    filter: "",
+    camera: { device_name: "", device_driver_name: "", device_driver_exec: "" },
+    telescope: {
+      device_name: "",
+      device_driver_name: "",
+      device_driver_exec: "",
+    },
+    guider: { device_name: "", device_driver_name: "", device_driver_exec: "" },
+    focus: { device_name: "", device_driver_name: "", device_driver_exec: "" },
+    filter: { device_name: "", device_driver_name: "", device_driver_exec: "" },
   },
   all_profiles: [],
   user_config_list: [],
@@ -151,7 +182,7 @@ export const getConnectModel = (): ConnectModel => ({
   phd2_config: {
     name: "",
     camera: "",
-    camera_ccd: "1",
+    camera_ccd: "0",
     pixel_size: 0,
     telescope: "",
     focal_length: 0,
@@ -177,35 +208,49 @@ export const getConnectModel = (): ConnectModel => ({
   }),
 
   setSelectBrand: action((state, payload) => {
-    const { type, brand_name } = payload;
+    const { type, brand_info } = payload;
     if (state.brand_selections !== null) {
-      state.brand_selections[type] = brand_name;
+      state.brand_selections[type] = brand_info;
     }
   }),
 
-  setSelectDevice: action((state, payload) => {
-    const { type, device_infor } = payload;
-    if (state.device_selections !== null) {
-      if (device_infor == null) {
-        state.device_selections[type] = "";
-      } else {
-        const deviceNames: string[] = state.device_list.map(
-          (device: { device_name: string }) => device.device_name
-        );
-        if (device_infor in state.device_list) {
-          state.device_selections[type] = device_infor;
+  setSelectDevice: action(
+    (
+      state,
+      payload: { type: AllowedDeviceTypes; device_infor: ConnectionDeviceInfo }
+    ) => {
+      const { type, device_infor } = payload;
+      if (state.device_selections !== null) {
+        if (device_infor == null) {
+          state.device_selections[type] = {
+            device_name: "",
+            device_driver_name: "",
+            device_driver_exec: "",
+          };
         } else {
-          state.device_selections[type] = "";
-        }
-        if (type === "guider") {
-          state.phd2_config["camera"] = device_infor.device_driver_exec;
-        }
-        if (type === "telescope") {
-          state.phd2_config[type] = device_infor.device_driver_exec;
+          const deviceList = JSON.parse(JSON.stringify(state.device_list));
+          const deviceName = Object.keys(deviceList[type]).map(
+            (deviceName) => deviceList[type][deviceName].device_name
+          );
+          if (deviceName.indexOf(device_infor.device_name) !== -1) {
+            state.device_selections[type] = device_infor;
+          } else {
+            state.device_selections[type] = {
+              device_name: "",
+              device_driver_name: "",
+              device_driver_exec: "",
+            };
+          }
+          if (type === "guider") {
+            state.phd2_config["camera"] = device_infor.device_driver_exec;
+          }
+          if (type === "telescope") {
+            state.phd2_config[type] = device_infor.device_driver_exec;
+          }
         }
       }
     }
-  }),
+  ),
 
   getProfileList: thunk(async (actions) => {
     const res = await postGLobalParameterOnStart();
@@ -250,7 +295,7 @@ export const getConnectModel = (): ConnectModel => ({
             !res.data[deviceType].device_name ||
             res.data[deviceType].device_name == "undefined"
           ) {
-            device_name = null;
+            device_name = "";
           }
           state.setSelectDevice({
             type: deviceType,
@@ -260,6 +305,14 @@ export const getConnectModel = (): ConnectModel => ({
               device_driver_exec: "",
             },
           });
+          for (const brandInfo of res.data["all_drivers"]) {
+            if (brandInfo.en === device_name) {
+              state.setSelectBrand({
+                type: deviceType,
+                brand_info: brandInfo,
+              });
+            }
+          }
         }
       }
     }
@@ -306,13 +359,11 @@ export const getConnectModel = (): ConnectModel => ({
   }),
 
   getBrandList: thunk(async (state, payload, { getState }) => {
-    if (getState().brand_list === null) {
-      const res = await getDeviceBrand();
-      state.setBrandList(res.data);
-    }
+    const res = await getDeviceBrand();
+    state.setBrandList(res.data);
   }),
 
-  setBrandList: action((state, payload: any) => {
+  setBrandList: action((state, payload: IConnectBrandList) => {
     payload["guider"] = payload["camera"];
     state.brand_list = payload;
   }),
@@ -336,15 +387,15 @@ export const getConnectModel = (): ConnectModel => ({
         return true;
       }
     } catch (error) {
-      // Handle any errors that may occur during the API call
+      // Handle errors that may occur during the API call
       console.error("Error fetching device list:", error);
       return false;
     }
   }),
 
-  setDeviceList: action((state, payload: [DeviceSelection]) => {
+  setDeviceList: action((state, payload: Array<ConnectionDeviceInfo>) => {
     // 初始化一个空的对象，用于存储分类后的设备列表
-    const categorizedDevices: Record<string, DeviceSelection[]> = {
+    const categorizedDevices: Record<string, Array<ConnectionDeviceInfo>> = {
       camera: [],
       telescope: [],
       focus: [],
@@ -354,7 +405,7 @@ export const getConnectModel = (): ConnectModel => ({
 
     // 遍历传入的 payload 数组
     let SUPPORTED_DEVICE = JSON.parse(JSON.stringify(state.brand_list));
-    payload.forEach((device: DeviceSelection) => {
+    payload.forEach((device: ConnectionDeviceInfo) => {
       const driverName = device.device_driver_exec;
       let flag = true;
       // 遍历 SUPPORTED_DEVICE 中的每个设备类型
@@ -387,11 +438,31 @@ export const getConnectModel = (): ConnectModel => ({
 
   resetDeviceSelections: action((state) => {
     state.device_selections = {
-      camera: "",
-      telescope: "",
-      guider: "",
-      focus: "",
-      filter: "",
+      camera: {
+        device_name: "",
+        device_driver_name: "",
+        device_driver_exec: "",
+      },
+      telescope: {
+        device_name: "",
+        device_driver_name: "",
+        device_driver_exec: "",
+      },
+      guider: {
+        device_name: "",
+        device_driver_name: "",
+        device_driver_exec: "",
+      },
+      focus: {
+        device_name: "",
+        device_driver_name: "",
+        device_driver_exec: "",
+      },
+      filter: {
+        device_name: "",
+        device_driver_name: "",
+        device_driver_exec: "",
+      },
     };
     state.brand_connection = {
       telescope: 0,
@@ -405,10 +476,7 @@ export const getConnectModel = (): ConnectModel => ({
 
   checkPhd2Profile: thunk(async (state, payload, { getState }) => {
     try {
-      let props = {
-        camera: payload.camera,
-        telescope: payload.telescope,
-      };
+      let props = getState().phd2_config;
       const res = await postCheckPhd2(props);
       return res.data;
     } catch (error) {
@@ -459,15 +527,21 @@ export const getConnectModel = (): ConnectModel => ({
       });
       // 创建一个 Promise 数组，用于存放每个设备连接操作的 Promise
       const connectPromises = Object.entries(
-        getState().device_selections as Record<string, DeviceSelection>
+        getState().device_selections as Record<string, ConnectionDeviceInfo>
       ).map(async ([device, values]) => {
         if (values.device_name && values.device_name !== "") {
           // 等待设备连接完毕
+          state.setState({
+            brand_connection: { ...getState().brand_connection, [device]: -1 },
+          });
           await ConnectDevice(
             "start",
             device as AllowedDeviceTypes,
             values.device_name
           );
+          state.checkDeviceConnection({
+            device: device,
+          });
         } else {
           state.setState({
             brand_connection: { ...getState().brand_connection, [device]: 1 },
@@ -481,62 +555,47 @@ export const getConnectModel = (): ConnectModel => ({
       state.setState({
         is_connect: false,
       });
+
+      // 自动填入phd2并检查
+      state.checkPhd2Device();
     }
-    await state.checkDevicesConnection();
-    // 检查是否可以启动phd2
-    state.checkPhd2Status();
   }),
 
-  checkDevicesConnection: thunk(async (state, payload, { getState }) => {
+  checkDeviceConnection: thunk(async (state, payload, { getState }) => {
     let check_connect = false;
-    const connectPromises = Object.entries(
-      getState().device_selections as Record<string, DeviceSelection>
-    ).map(async ([device, values]) => {
-      try {
-        const res = await postDeviceStatus({
-          device: device,
-        });
+    try {
+      const res = await postDeviceStatus({
+        device: payload.device,
+      });
 
-        if (res && res.data === "Connected") {
-          check_connect = true;
-          state.setState({
-            brand_connection: { ...getState().brand_connection, [device]: 2 },
-          });
-        } else {
-          state.setState({
-            brand_connection: { ...getState().brand_connection, [device]: 1 },
-          });
-        }
-      } catch (error) {
+      if (res && res.data === "Connected") {
+        check_connect = true;
         state.setState({
-          brand_connection: { ...getState().brand_connection, [device]: 1 },
+          brand_connection: {
+            ...getState().brand_connection,
+            [payload.device]: 2,
+          },
+        });
+      } else {
+        state.setState({
+          brand_connection: {
+            ...getState().brand_connection,
+            [payload.device]: 1,
+          },
         });
       }
-    });
-
-    // 等待所有设备连接操作的 Promise 完成
-    await Promise.all(connectPromises);
+    } catch (error) {
+      state.setState({
+        brand_connection: {
+          ...getState().brand_connection,
+          [payload.device]: 1,
+        },
+      });
+    }
     // 如果存在一个连接了, 说明已经有连接过
     state.setState({
       already_connect: check_connect,
     });
-  }),
-
-  checkPhd2Status: thunk(async (state, payload, { getState }) => {
-    const guiderDeviceName =
-      getState().device_selections["guider"].device_name || "";
-    const telescopeDeviceName =
-      getState().device_selections["telescope"].device_name || "";
-
-    const phd2_check_ok = await postCheckPhd2({
-      camera: guiderDeviceName,
-      telescope: telescopeDeviceName,
-    });
-    if (phd2_check_ok) {
-      state.setState({
-        phd2_connect_ready: true,
-      });
-    }
   }),
 
   startPhd2: thunk(async (state) => {
@@ -586,11 +645,27 @@ export const getConnectModel = (): ConnectModel => ({
       }
     });
   }),
+
   setBrandInLoading: action((state, payload) => {
     if (payload.flag) {
       state.brand_connection[payload.device] = -1;
     } else {
       state.brand_connection[payload.device] = 0;
+    }
+  }),
+
+  checkPhd2Device: thunk(async (state, payload, { getState }) => {
+    const guiderDeviceName =
+      getState().device_selections["guider"].device_name || "";
+    const telescopeDeviceName =
+      getState().device_selections["telescope"].device_name || "";
+
+    const phd2_check_res = await postCheckPhd2({
+      camera: guiderDeviceName,
+      telescope: telescopeDeviceName,
+    });
+    if (phd2_check_res && !phd2_check_res.data.flag) {
+      alert("注意与上次配置不一致");
     }
   }),
 });

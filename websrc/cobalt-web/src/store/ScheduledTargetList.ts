@@ -1,7 +1,7 @@
 import { createStore, action, thunk, computed } from "easy-peasy";
 import { Thunk, Action, Computed } from "easy-peasy";
 import { DateTime } from "luxon";
-import * as AXIOSOF from "../services/object_finding_api";
+import * as AXIOSOF from "@/services/object_finding_api";
 
 interface update_string {
   index: number;
@@ -30,8 +30,17 @@ export interface ISTargetListModels {
   need_focus: boolean;
   all_tags: Array<string>;
   all_saved_targets: Array<IDSOFramingObjectInfo>;
+  all_searched_targets: Array<IDSOObjectDetailedInfo>;
   twilight_data: ITwilightData;
   //--------------------------------
+  change_searched_target_info: Action<
+    ISTargetListModels,
+    { index: number; newValue: IDSOObjectDetailedInfo }
+  >;
+  change_saved_target_info: Action<
+    ISTargetListModels,
+    { index: number; newValue: IDSOObjectDetailedInfo }
+  >;
   add_target_and_focus: Action<ISTargetListModels, IDSOFramingObjectInfo>;
   change_focus_target: Action<ISTargetListModels, IDSOFramingObjectInfo>;
   change_saved_focus_target: Action<ISTargetListModels, number>;
@@ -53,6 +62,11 @@ export interface ISTargetListModels {
   // load_user_local_data
   save_all_targets: Action<ISTargetListModels>;
   load_all_targets: Action<ISTargetListModels>;
+
+  now_load_target_index: number;
+  search_word: string;
+
+  setState: Action<ISTargetListModels, Partial<ISTargetListModels>>;
 }
 
 // todo, load user local saved data.
@@ -71,7 +85,10 @@ export const ScheduledTargetListStore = (): ISTargetListModels => ({
   current_focus_index: null,
   need_focus: false,
   all_saved_targets: [],
+  all_searched_targets: [],
   all_tags: all_available_tags,
+  now_load_target_index: 0,
+  search_word: "NGC6888",
   twilight_data: {
     evening: {
       sun_set_time: new Date(2023, 1, 1, 18, 0, 0),
@@ -86,6 +103,14 @@ export const ScheduledTargetListStore = (): ISTargetListModels => ({
       morning_astro_time: new Date(2023, 1, 1, 18, 0, 0),
     },
   },
+  change_searched_target_info: action((state, payload) => {
+    const { index, newValue } = payload;
+    state.all_searched_targets[index] = newValue;
+  }),
+  change_saved_target_info: action((state, payload) => {
+    const { index, newValue } = payload;
+    state.all_saved_targets[index].altitude = newValue.altitude;
+  }),
   add_target_and_focus: action((state, payload) => {
     state.all_saved_targets.push(payload);
     state.current_focus_target = payload;
@@ -249,5 +274,9 @@ export const ScheduledTargetListStore = (): ISTargetListModels => ({
       // console.log('loaded list', list_data);
       state.all_saved_targets = list_data;
     }
+  }),
+
+  setState: action((state, payload) => {
+    state = Object.assign(state, payload);
   }),
 });

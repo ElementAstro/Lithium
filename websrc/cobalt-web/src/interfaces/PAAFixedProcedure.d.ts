@@ -36,8 +36,13 @@ declare interface IPAAFixedPolarAlignmentRequest {
 }
 
 declare interface IPAAFixedAutofocusRequest {
-  filter_index: "current" | number;
+  filter_index: "Current" | number;
   start_side: boolean;
+}
+
+declare interface IPAASolveSyncRequest {
+  search_radius: number;
+  solve_retry: number;
 }
 
 // PPA scripts

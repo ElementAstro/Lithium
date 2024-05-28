@@ -1,4 +1,4 @@
-import request from "../services/request";
+import request from "@/services/request";
 import { AxiosResponse } from "axios";
 
 export const getGlobalAllParameters = (): Promise<IGPResponse> =>
@@ -54,7 +54,7 @@ export const postGLobalParameterOnStart = (): Promise<IGPPorfileList> =>
   });
 
 export const postGLobalParameterProfileDelete = (
-  payload: string
+  payload: string | null
 ): Promise<IGPPorfileList> =>
   request({
     url: "/GlobalParameter/",

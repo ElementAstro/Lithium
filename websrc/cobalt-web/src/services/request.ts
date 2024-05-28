@@ -1,5 +1,9 @@
+/**
+ * @description axios请求封装
+ */
+
 import axios from "axios";
-import config from "../constants/net-config";
+import config from "@/constants/net-config";
 
 let tokenLose = true;
 
@@ -14,74 +18,39 @@ const instance = axios.create({
   },
 });
 
-// 请求拦截器
+// request interceptor
 instance.interceptors.request.use(
   (configItem) => configItem,
-  (error) => Promise.reject(error)
+  (error) =>
+    // do something with request error
+    Promise.reject(error)
 );
 
-// 响应拦截器
+// response interceptor
 instance.interceptors.response.use(
+  /**
+   * If you want to get http information such as headers or status
+   * Please return  response => response
+   */
   (response) => {
     const res = response.data;
-    // 处理错误情况
-    if (res.code === invalidCode && tokenLose) {
-      tokenLose = false;
-      // 根据你的业务需求进行相应处理
-    }
+    // 请求出错处理
+    // -1 超时、token过期或者没有获得授权
+    // if (res.code === invalidCode && tokenLose) {
+    //   tokenLose = false;
+    //   // 根据自己业务需求调整代码
+    // }
 
-    if (successCode.indexOf(res.code) === -1) {
-      console.error(res.msg);
-      return Promise.reject(res);
-    }
-
+    // if (successCode.indexOf(res.code) === -1) {
+    //   console.error(res.msg);
+    //   return Promise.reject(res);
+    // }
     return res;
   },
   (error) => {
-    console.error("请求出错了！");
+    console.error("请求出错啦！");
     return Promise.reject(error);
   }
 );
-
-export const request = {
-  /**
-   * 发起get请求
-   * @param {string} url 请求的url
-   * @param {object} params 请求参数
-   * @returns {Promise}
-   */
-  get(url, params) {
-    return instance.get(url, { params });
-  },
-
-  /**
-   * 发起post请求
-   * @param {string} url 请求的url
-   * @param {object} data 请求数据
-   * @returns {Promise}
-   */
-  post(url, data) {
-    return instance.post(url, data);
-  },
-
-  /**
-   * 发起put请求
-   * @param {string} url 请求的url
-   * @param {object} data 请求数据
-   * @returns {Promise}
-   */
-  put(url, data) {
-    return instance.put(url, data);
-  },
-
-  /**
-   * 发起delete请求
-   * @param {string} url 请求的url
-   * @returns {Promise}
-   */
-  delete(url) {
-    return instance.delete(url);
-  },
-};
 
 export default instance;

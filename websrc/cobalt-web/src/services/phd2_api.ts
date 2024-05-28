@@ -1,9 +1,15 @@
-import request from "../services/request";
+import request from "@/services/request";
 import { AxiosResponse } from "axios";
 
 export const getPHD2connection = (): Promise<IResponseFlagGeneral> =>
   request({
     url: "/phd2/connection/",
+    method: "get",
+  });
+
+export const getPHD2Process = (): Promise<IResponseFlagGeneral> =>
+  request({
+    url: "/phd2/process/",
     method: "get",
   });
 

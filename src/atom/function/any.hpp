@@ -71,7 +71,7 @@ public:
 
     BoxedValue& operator=(const BoxedValue& other) {
         if (this != &other) {
-            std::lock_guard<std::mutex> lock(m_mutex);
+            std::lock_guard lock(m_mutex);
             m_data = other.m_data;
         }
         return *this;
@@ -79,7 +79,7 @@ public:
 
     BoxedValue& operator=(BoxedValue&& other) noexcept {
         if (this != &other) {
-            std::lock_guard<std::mutex> lock(m_mutex);
+            std::lock_guard lock(m_mutex);
             m_data = std::move(other.m_data);
         }
         return *this;
@@ -116,7 +116,7 @@ public:
     }
 
     BoxedValue& set_attr(const std::string& name, const BoxedValue& value) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard lock(m_mutex);
         if (!m_data->m_attrs) {
             m_data->m_attrs = std::make_shared<
                 std::map<std::string, std::shared_ptr<Data>>>();
@@ -126,7 +126,7 @@ public:
     }
 
     BoxedValue get_attr(const std::string& name) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard lock(m_mutex);
         if (m_data->m_attrs) {
             auto it = m_data->m_attrs->find(name);
             if (it != m_data->m_attrs->end()) {
@@ -137,20 +137,20 @@ public:
     }
 
     bool has_attr(const std::string& name) const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard lock(m_mutex);
         return m_data->m_attrs &&
                (m_data->m_attrs->find(name) != m_data->m_attrs->end());
     }
 
     void remove_attr(const std::string& name) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard lock(m_mutex);
         if (m_data->m_attrs) {
             m_data->m_attrs->erase(name);
         }
     }
 
     std::vector<std::string> list_attrs() const {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard lock(m_mutex);
         std::vector<std::string> attrs;
         if (m_data->m_attrs) {
             for (const auto& entry : *m_data->m_attrs) {

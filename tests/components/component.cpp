@@ -13,44 +13,34 @@ protected:
 };
 
 TEST_F(ComponentTest, Initialize) {
-    // Arrange
-
-    // Act
     bool result = component->initialize();
-
-    // Assert
     EXPECT_TRUE(result);
 }
 
 TEST_F(ComponentTest, GetName) {
-    // Arrange
-
-    // Act
     std::string name = component->getName();
-
-    // Assert
     EXPECT_EQ(name, "TestComponent");
 }
 
 TEST_F(ComponentTest, GetTypeInfo) {
-    // Arrange
-
-    // Act
     atom::meta::Type_Info typeInfo = component->getTypeInfo();
+    EXPECT_EQ(typeInfo, atom::meta::user_type<Component>());
+}
 
-    // Assert
-    // Add assertions for the type info properties
+TEST_F(ComponentTest, SetTypeInfo) {
+    component->setTypeInfo(atom::meta::user_type<ComponentTest>());
+    EXPECT_EQ(component->getTypeInfo(), atom::meta::user_type<ComponentTest>());
+    std::cout << component->getTypeInfo().name() << std::endl;
+    std::cout << component->getTypeInfo().bare_name() << std::endl;
 }
 
 TEST_F(ComponentTest, AddVariable) {
-    // Arrange
     std::string name = "testVariable";
     int initialValue = 42;
     std::string description = "Test variable";
     std::string alias = "tv";
     std::string group = "TestGroup";
 
-    // Act
     component->addVariable<int>(name, initialValue, description, alias, group);
 
     auto variable = component->getVariable<int>(name);
@@ -63,18 +53,14 @@ TEST_F(ComponentTest, AddVariable) {
 }
 
 TEST_F(ComponentTest, SetVariableValue) {
-    // Arrange
     std::string name = "Variable";
     int initialValue = 42;
     int newValue = 84;
 
-    // Add variable
     component->addVariable<int>(name, initialValue);
 
-    // Act
     component->setValue(name, newValue);
 
-    // Assert
     auto variable = component->getVariable<int>(name);
     EXPECT_EQ(variable->get(), newValue);
     EXPECT_EQ(variable->getTypeName(),
@@ -82,12 +68,10 @@ TEST_F(ComponentTest, SetVariableValue) {
 }
 
 TEST_F(ComponentTest, DefFunction) {
-    // Arrange
     auto counter = 0;
     std::string functionName = "incrementCounter";
     component->def(functionName, [this, &counter]() mutable { ++counter; });
 
-    // Act
     component->dispatch(functionName, {});
 
     // Assert
@@ -95,25 +79,75 @@ TEST_F(ComponentTest, DefFunction) {
 }
 
 TEST_F(ComponentTest, DefVariableMember) {
-    // Arrange
     class TestClass {
     public:
         int testVar = 0;
+
+        int var_getter() const {
+            std::cout << "getter called" << std::endl;
+            return testVar;
+        }
+        void var_setter(int value) {
+            std::cout << "setter called" << std::endl;
+            std::cout << "value: " << value << std::endl;
+            testVar = value;
+        }
     };
 
     std::shared_ptr<TestClass> testInstance = std::make_shared<TestClass>();
 
-    // Act
-    // component->def("testVar", &TestClass::testVar, testInstance);
-    // EXPECT_TRUE(component->has("testVar"));
+    component->def("var_getter", &TestClass::var_getter, testInstance);
+    component->def("var_setter", &TestClass::var_setter, testInstance);
+    EXPECT_TRUE(component->has("var_getter"));
+    EXPECT_TRUE(component->has("var_setter"));
+    EXPECT_EQ(std::any_cast<int>(component->dispatch("var_getter", {})), 0);
+    component->dispatch("var_setter", {42});
+    int value = std::any_cast<int>(component->dispatch("var_getter", {}));
+    std::cout << "value: " << value << std::endl;
+    EXPECT_EQ(value, 42);
+
+    component->def("testVar", &TestClass::testVar, testInstance);
+    EXPECT_TRUE(component->has("get_testVar"));
+
+    component->def("getter", &TestClass::var_getter, &TestClass::var_setter,
+                   testInstance);
+
+    component->dispatch("var_setter", {114514});
+    value = std::any_cast<int>(component->dispatch("var_getter", {}));
+    std::cout << "value: " << value << std::endl;
+    EXPECT_EQ(value, 114514);
+
+    component->def_v("test.var", &TestClass::testVar);
+    EXPECT_TRUE(component->has("test.var"));
+    value = std::any_cast<int>(
+        component->dispatch("test.var", {testInstance.get()}));
+    std::cout << "value: " << value << std::endl;
+    EXPECT_EQ(value, 114514);
+}
+
+TEST_F(ComponentTest, DefType) {
+    class TestClass {
+    public:
+        int testVar = 0;
+    };
+    component->def_type<TestClass>("TestClass",
+                                   atom::meta::user_type<TestClass>());
+    EXPECT_TRUE(component->has_type("TestClass"));
+}
+
+TEST_F(ComponentTest, DefConstructor) {
+    class MyClass {
+    public:
+        MyClass(int a, std::string b) {}
+        MyClass() {}
+    };
+    component->def_constructor<MyClass, int, std::string>(
+        "create_my_class", "MyGroup", "Create MyClass");
+    component->def_default_constructor<MyClass>(
+        "create_default_my_class", "MyGroup", "Create default MyClass");
 }
 
 TEST_F(ComponentTest, Destroy) {
-    // Arrange
-
-    // Act
     bool result = component->destroy();
-
-    // Assert
     EXPECT_TRUE(result);
 }

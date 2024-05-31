@@ -86,6 +86,8 @@ public:
      */
     atom::meta::Type_Info getTypeInfo() const;
 
+    void setTypeInfo(atom::meta::Type_Info typeInfo);
+
     // -------------------------------------------------------------------
     // Variable methods
     // -------------------------------------------------------------------
@@ -156,6 +158,21 @@ public:
              const std::string& group = "",
              const std::string& description = "");
 
+    template <typename Class, typename Ret, typename... Args>
+    void def(const std::string& name, Ret (Class::*func)(Args...),
+             const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename Class, typename Ret, typename... Args>
+    void def(const std::string& name, Ret (Class::*func)(Args...) const,
+             const std::string& group = "",
+             const std::string& description = "");
+
+    template <typename Class, typename VarType>
+    void def_v(const std::string& name, VarType Class::*var,
+               const std::string& group = "",
+               const std::string& description = "");
+
     template <typename Ret, typename Class>
     void def(const std::string& name, Ret (Class::*func)(),
              const PointerSentinel<Class>& instance,
@@ -208,6 +225,12 @@ public:
              std::shared_ptr<Class> instance, const std::string& group = "",
              const std::string& description = "");
 
+    template <typename Ret, typename Class>
+    void def(const std::string& name, Ret (Class::*getter)() const,
+             void (Class::*setter)(Ret), std::shared_ptr<Class> instance,
+             const std::string& group = "",
+             const std::string& description = "");
+
     // Register a static member variable
     template <typename MemberType, typename Class>
     void def(const std::string& name, MemberType* var,
@@ -252,8 +275,28 @@ public:
     void def(const std::string& name, const std::string& group = "",
              const std::string& description = "");
 
-    void def(const atom::meta::Type_Info& ti, const std::string& group = "",
-             const std::string& description = "");
+    template <typename Class, typename... Args>
+    void def_constructor(const std::string& name, const std::string& group = "",
+                         const std::string& description = "");
+
+    template <typename Class>
+    void def_default_constructor(const std::string& name,
+                                 const std::string& group = "",
+                                 const std::string& description = "");
+
+    template <typename T>
+    void def_type(std::string_view name, const atom::meta::Type_Info& ti,
+                  const std::string& group = "",
+                  const std::string& description = "");
+
+    template <typename SourceType, typename DestinationType>
+    void def_conversion(std::function<std::any(const std::any&)> func);
+
+    template <typename Base, typename Derived>
+    void def_base_class();
+
+    void def_class_conversion(
+        const std::shared_ptr<atom::meta::Type_Conversion_Base>& conversion);
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -273,7 +316,10 @@ public:
 
     [[nodiscard]] bool has(const std::string& name) const;
 
-    void clearCache();
+    [[nodiscard]] bool has_type(std::string_view name) const;
+
+    template <typename SourceType, typename DestinationType>
+    [[nodiscard]] bool has_conversion() const;
 
     void removeCommand(const std::string& name);
 
@@ -290,6 +336,8 @@ public:
 #endif
 
     std::vector<std::string> getAllCommands() const;
+
+    std::vector<std::string> getRegisteredTypes() const;
 
     // -------------------------------------------------------------------
     // Other Components methods
@@ -330,7 +378,7 @@ private:
     std::string m_configPath;
     std::string m_infoPath;
     atom::meta::Type_Info m_typeInfo;
-    std::vector<atom::meta::Type_Info> m_classes;
+    std::unordered_map<std::string_view, atom::meta::Type_Info> m_classes;
 
     std::shared_ptr<CommandDispatcher>
         m_CommandDispatcher;  ///< The command dispatcher for managing commands.

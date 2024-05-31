@@ -17,28 +17,45 @@
 #include <utility>
 #include <vector>
 
+#include "func_traits.hpp"
+
 namespace atom::meta {
-template <typename R, typename... Args>
+template <typename Func>
 class Switchable {
 public:
-    Switchable(std::function<R(Args...)> f) : f(f) {}
+    using Traits = FunctionTraits<Func>;
+    using R = typename Traits::return_type;
+    using Args = typename Traits::argument_types;
+
+    Switchable(Func f) : f(f) {}
 
     template <typename F>
     void switch_to(F new_f) {
         f = new_f;
     }
 
-    auto operator()(Args... args) const -> R { return f(args...); }
+    template <std::size_t... Is>
+    auto call_impl(std::tuple<Args...> &args,
+                   std::index_sequence<Is...>) const -> R {
+        return std::apply(
+            f, std::tuple_cat(args, std::make_index_sequence<sizeof...(Is)>{}));
+    }
+
+    auto operator()(Args... args) const -> R {
+        auto tuple_args = std::make_tuple(std::forward<Args>(args)...);
+        return call_impl(tuple_args,
+                         std::make_index_sequence<sizeof...(args)>{});
+    }
 
 private:
-    std::function<R(Args...)> f;
+    Func f;
 };
 
 template <typename FuncType>
 struct decorator;
 
 template <typename R, typename... Args>
-struct decorator<std::function<R(Args...)>> {
+struct decorator<R(Args...)> {
     using FuncType = std::function<R(Args...)>;
     using CallbackType =
         typename std::conditional<std::is_void<R>::value, std::function<void()>,
@@ -63,17 +80,18 @@ struct decorator<std::function<R(Args...)>> {
         return copy;
     }
 
-    template <typename... TArgs>
-    auto operator()(TArgs &&...args) const {
+    template <std::size_t... Is>
+    auto call_impl(std::tuple<Args...> &args,
+                   std::index_sequence<Is...>) const {
         if (before)
             before();
         auto start = std::chrono::high_resolution_clock::now();
         if constexpr (std::is_void_v<R>) {
-            std::invoke(func, std::forward<TArgs>(args)...);
+            std::apply(func, args);
             if (callback)
                 callback();
         } else {
-            auto result = std::invoke(func, std::forward<TArgs>(args)...);
+            auto result = std::apply(func, args);
             if (callback)
                 callback(result);
             auto end = std::chrono::high_resolution_clock::now();
@@ -90,31 +108,10 @@ struct decorator<std::function<R(Args...)>> {
                       .count());
     }
 
-    template <typename T, typename... TArgs>
-    auto operator()(T &obj, TArgs &&...args) const {
-        if (before)
-            before();
-        auto start = std::chrono::high_resolution_clock::now();
-        if constexpr (std::is_void_v<R>) {
-            std::invoke(func, obj, std::forward<TArgs>(args)...);
-            if (callback)
-                callback();
-        } else {
-            auto result = std::invoke(func, obj, std::forward<TArgs>(args)...);
-            if (callback)
-                callback(result);
-            auto end = std::chrono::high_resolution_clock::now();
-            if (after)
-                after(std::chrono::duration_cast<std::chrono::microseconds>(
-                          end - start)
-                          .count());
-            return result;
-        }
-        auto end = std::chrono::high_resolution_clock::now();
-        if (after)
-            after(std::chrono::duration_cast<std::chrono::microseconds>(end -
-                                                                        start)
-                      .count());
+    auto operator()(Args... args) const {
+        auto tuple_args = std::make_tuple(std::forward<Args>(args)...);
+        return call_impl(tuple_args,
+                         std::make_index_sequence<sizeof...(args)>{});
     }
 };
 

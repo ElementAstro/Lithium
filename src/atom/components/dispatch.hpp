@@ -38,10 +38,11 @@ public:
              std::optional<std::function<void()>> postcondition = std::nullopt);
 
     template <typename Ret, typename... Args>
-    void def_t(const std::string& name, const std::string& group,
-             const std::string& description, std::function<Ret(Args...)> func,
-             std::optional<std::function<bool()>> precondition = std::nullopt,
-             std::optional<std::function<void()>> postcondition = std::nullopt);
+    void def_t(
+        const std::string& name, const std::string& group,
+        const std::string& description, std::function<Ret(Args...)> func,
+        std::optional<std::function<bool()>> precondition = std::nullopt,
+        std::optional<std::function<void()>> postcondition = std::nullopt);
 
     [[nodiscard]] bool has(const std::string& name) const;
 
@@ -57,14 +58,7 @@ public:
     std::any dispatch(const std::string& name,
                       const std::vector<std::any>& args);
 
-    template <typename ArgsType>
-    std::any dispatchHelper(const std::string& name,
-                                               const ArgsType& args);
-
-    template <typename... Args>
-    std::vector<std::any> convertToArgsVector(std::tuple<Args...>&& tuple);
-
-    void clearCache();
+    std::any dispatch(const std::string& name, const FunctionParams& params);
 
     void removeCommand(const std::string& name);
 
@@ -83,12 +77,19 @@ public:
     std::vector<std::string> getAllCommands() const;
 
 private:
+    template <typename ArgsType>
+    std::any dispatchHelper(const std::string& name, const ArgsType& args);
+
+    template <typename... Args>
+    std::vector<std::any> convertToArgsVector(std::tuple<Args...>&& tuple);
+
+private:
     struct Command {
         std::vector<std::function<std::any(const std::vector<std::any>&)>>
             funcs;
-        std::vector<std::string> funcs_info;
+        std::vector<std::string> return_type;
         std::vector<std::vector<std::string>> arg_types;
-        std::vector<std::vector<std::string>> arg_names;
+        std::vector<std::string> hash;
         std::string description;
 #if ENABLE_FASTHASH
         emhash::HashSet<std::string> aliases;
@@ -103,12 +104,10 @@ private:
     emhash8::HashMap<std::string, Command> commands;
     emhash8::HashMap<std::string, std::string> groupMap;
     emhash8::HashMap<std::string, std::chrono::milliseconds> timeoutMap;
-    emhash8::HashMap<std::string, std::any> cacheMap;
 #else
     std::unordered_map<std::string, Command> commands;
     std::unordered_map<std::string, std::string> groupMap;
     std::unordered_map<std::string, std::chrono::milliseconds> timeoutMap;
-    std::unordered_map<std::string, std::any> cacheMap;
 #endif
 };
 

@@ -32,6 +32,8 @@ struct FunctionTraits<Return(Args...)> {
     static constexpr bool is_member_function = false;
     static constexpr bool is_const_member_function = false;
     static constexpr bool is_volatile_member_function = false;
+    static constexpr bool is_lvalue_reference_member_function = false;
+    static constexpr bool is_rvalue_reference_member_function = false;
     static constexpr bool is_noexcept = false;
     static constexpr bool is_variadic = false;
 };
@@ -72,6 +74,78 @@ struct FunctionTraits<Return (Class::*)(Args...) const volatile>
     static constexpr bool is_member_function = true;
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_volatile_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) &>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_lvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const &>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_lvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) volatile &>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_lvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const volatile &>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_lvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) &&>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_rvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const &&>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_rvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) volatile &&>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_rvalue_reference_member_function = true;
+    using class_type = Class;
+};
+
+template <typename Return, typename Class, typename... Args>
+struct FunctionTraits<Return (Class::*)(Args...) const volatile &&>
+    : FunctionTraits<Return(Args...)> {
+    static constexpr bool is_member_function = true;
+    static constexpr bool is_const_member_function = true;
+    static constexpr bool is_volatile_member_function = true;
+    static constexpr bool is_rvalue_reference_member_function = true;
     using class_type = Class;
 };
 
@@ -130,10 +204,10 @@ struct FunctionTraits
 
 // Support for function references
 template <typename Func>
-struct FunctionTraits<Func&> : FunctionTraits<Func> {};
+struct FunctionTraits<Func &> : FunctionTraits<Func> {};
 
 template <typename Func>
-struct FunctionTraits<Func&&> : FunctionTraits<Func> {};
+struct FunctionTraits<Func &&> : FunctionTraits<Func> {};
 
 // Utility variable templates
 template <typename Func>
@@ -147,6 +221,14 @@ inline constexpr bool is_const_member_function_v =
 template <typename Func>
 inline constexpr bool is_volatile_member_function_v =
     FunctionTraits<Func>::is_volatile_member_function;
+
+template <typename Func>
+inline constexpr bool is_lvalue_reference_member_function_v =
+    FunctionTraits<Func>::is_lvalue_reference_member_function;
+
+template <typename Func>
+inline constexpr bool is_rvalue_reference_member_function_v =
+    FunctionTraits<Func>::is_rvalue_reference_member_function;
 
 template <typename Func>
 inline constexpr bool is_noexcept_v = FunctionTraits<Func>::is_noexcept;

@@ -197,6 +197,7 @@ set(debug_module
     ${lithium_src_dir}/debug/terminal.cpp
     ${lithium_src_dir}/debug/suggestion.cpp
     ${lithium_src_dir}/debug/command.cpp
+    ${lithium_src_dir}/debug/console.cpp
 )
 
 set(script_module

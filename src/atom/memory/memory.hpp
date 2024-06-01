@@ -27,7 +27,7 @@ Description: A simple implementation of memory pool
 #include <new>
 #include <vector>
 
-#include "noncopyable.hpp"
+#include "atom/type/noncopyable.hpp"
 
 template <typename T, size_t BlockSize = 4096>
 class MemoryPool : public std::pmr::memory_resource, NonCopyable {

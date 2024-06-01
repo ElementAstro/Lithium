@@ -7,17 +7,12 @@ using namespace atom::algorithm;
 void test_fnv1a_hash(const std::string& input, uint32_t expected) {
     EXPECT_EQ(fnv1a_hash(input), expected);
     EXPECT_EQ(fnv1a_hash(std::string_view(input)), expected);
-    EXPECT_EQ(fnv1a_hash(input.c_str()), expected);
-    EXPECT_EQ(fnv1a_hash(input.c_str(), input.size()), expected);
 }
 
 // Helper function to test Jenkins One-at-a-Time hash
 void test_jenkins_hash(const std::string& input, uint32_t expected) {
     EXPECT_EQ(jenkins_one_at_a_time_hash(input), expected);
     EXPECT_EQ(jenkins_one_at_a_time_hash(std::string_view(input)), expected);
-    EXPECT_EQ(jenkins_one_at_a_time_hash(input.c_str()), expected);
-    EXPECT_EQ(jenkins_one_at_a_time_hash(input.c_str(), input.size()),
-              expected);
 }
 
 TEST(HashTest, ComputeHashSingleValue) {

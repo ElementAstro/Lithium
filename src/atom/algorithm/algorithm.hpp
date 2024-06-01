@@ -198,4 +198,6 @@ private:
 };
 }  // namespace atom::algorithm
 
+#include "algorithm.inl"
+
 #endif

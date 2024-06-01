@@ -121,6 +121,8 @@ public:
         return m_VariableManager->getVariable<T>(name);
     }
 
+    [[nodiscard]] bool hasVariable(const std::string& name) const;
+
     /**
      * @brief Sets the value of a variable.
      * @param name The name of the variable.
@@ -132,6 +134,8 @@ public:
     void setValue(const std::string& name, T newValue) {
         m_VariableManager->setValue(name, newValue);
     }
+
+    std::vector<std::string> getVariableNames() const;
 
     std::string getVariableDescription(const std::string& name) const;
 

@@ -85,13 +85,12 @@ private:
         }
 #else
         int status = -1;
-        std::size_t length = 0;
         std::unique_ptr<char, void (*)(void*)> demangled_name(
-            abi::__cxa_demangle(mangled_name.data(), nullptr, &length, &status),
+            abi::__cxa_demangle(mangled_name.data(), nullptr, nullptr, &status),
             std::free);
 
         if (status == 0) {
-            return std::string(demangled_name.get(), length);
+            return std::string(demangled_name.get());
         } else {
             return std::string(mangled_name);
         }

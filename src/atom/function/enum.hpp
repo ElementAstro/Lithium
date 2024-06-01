@@ -112,9 +112,9 @@ constexpr void split_initialize(auto&& f) {
 
 template <typename T>
 constexpr auto enum_names_of_impl() {
-    if constexpr (!magic::is_bit_field_enum<T>()) {
-        constexpr auto start = magic::enum_start<T>();
-        constexpr auto max = magic::enum_max<T>();
+    if constexpr (!is_bit_field_enum<T>()) {
+        constexpr auto start = enum_start<T>();
+        constexpr auto max = enum_max<T>();
         constexpr auto length = max - start + 1;
         std::array<std::string_view, length> names{};
         split_initialize<T, length>([&]<std::size_t I>() {
@@ -163,7 +163,7 @@ struct Field {
 template <typename T>
     requires std::is_enum_v<T>
 constexpr void foreach (auto&& f) {
-    if constexpr (!magic::is_bit_field_enum<T>()) {
+    if constexpr (!is_bit_field_enum<T>()) {
         constexpr auto start = search_possible_enum_start<T>();
         constexpr auto max = search_possible_continuous_enum_max<T>();
         constexpr auto length = max - start + 1;

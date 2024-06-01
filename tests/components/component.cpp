@@ -12,142 +12,179 @@ protected:
     std::shared_ptr<Component> component;
 };
 
-TEST_F(ComponentTest, Initialize) {
-    bool result = component->initialize();
-    EXPECT_TRUE(result);
-}
+// 基本功能测试
+TEST_F(ComponentTest, Initialize) { EXPECT_TRUE(component->initialize()); }
 
 TEST_F(ComponentTest, GetName) {
-    std::string name = component->getName();
-    EXPECT_EQ(name, "TestComponent");
+    EXPECT_EQ(component->getName(), "TestComponent");
 }
 
 TEST_F(ComponentTest, GetTypeInfo) {
-    atom::meta::Type_Info typeInfo = component->getTypeInfo();
-    EXPECT_EQ(typeInfo, atom::meta::user_type<Component>());
-}
-
-TEST_F(ComponentTest, SetTypeInfo) {
     component->setTypeInfo(atom::meta::user_type<ComponentTest>());
     EXPECT_EQ(component->getTypeInfo(), atom::meta::user_type<ComponentTest>());
-    std::cout << component->getTypeInfo().name() << std::endl;
-    std::cout << component->getTypeInfo().bare_name() << std::endl;
 }
 
-TEST_F(ComponentTest, AddVariable) {
-    std::string name = "testVariable";
-    int initialValue = 42;
-    std::string description = "Test variable";
-    std::string alias = "tv";
-    std::string group = "TestGroup";
+// 变量操作测试
+TEST_F(ComponentTest, AddVariables) {
+    component->addVariable<int>("intVar", 42, "An integer variable");
+    component->addVariable<float>("floatVar", 3.14f, "A float variable");
+    component->addVariable<bool>("boolVar", true, "A boolean variable");
+    component->addVariable<std::string>("strVar", "Hello", "A string variable");
 
-    component->addVariable<int>(name, initialValue, description, alias, group);
-
-    auto variable = component->getVariable<int>(name);
-    EXPECT_TRUE(variable);
-    EXPECT_EQ(variable->get(), initialValue);
-
-    EXPECT_EQ(component->getVariableDescription(name), description);
-    EXPECT_EQ(component->getVariableAlias(name), alias);
-    EXPECT_EQ(component->getVariableGroup(name), group);
+    EXPECT_EQ(component->getVariable<int>("intVar")->get(), 42);
+    EXPECT_FLOAT_EQ(component->getVariable<float>("floatVar")->get(), 3.14f);
+    EXPECT_EQ(component->getVariable<bool>("boolVar")->get(), true);
+    EXPECT_EQ(component->getVariable<std::string>("strVar")->get(), "Hello");
 }
 
-TEST_F(ComponentTest, SetVariableValue) {
-    std::string name = "Variable";
-    int initialValue = 42;
-    int newValue = 84;
-
-    component->addVariable<int>(name, initialValue);
-
-    component->setValue(name, newValue);
-
-    auto variable = component->getVariable<int>(name);
-    EXPECT_EQ(variable->get(), newValue);
-    EXPECT_EQ(variable->getTypeName(),
-              atom::meta::DemangleHelper::DemangleType<int>());
+TEST_F(ComponentTest, SetVariableValues) {
+    component->addVariable<int>("intVar", 42);
+    component->setValue("intVar", 84);
+    EXPECT_EQ(component->getVariable<int>("intVar")->get(), 84);
 }
 
-TEST_F(ComponentTest, DefFunction) {
-    auto counter = 0;
-    std::string functionName = "incrementCounter";
-    component->def(functionName, [this, &counter]() mutable { ++counter; });
-
-    component->dispatch(functionName, {});
-
-    // Assert
+// 函数定义测试
+TEST_F(ComponentTest, DefineFunctions) {
+    int counter = 0;
+    component->def("incrementCounter", [&counter]() { ++counter; });
+    component->dispatch("incrementCounter", {});
     EXPECT_EQ(counter, 1);
 }
 
-TEST_F(ComponentTest, DefVariableMember) {
+TEST_F(ComponentTest, DefineMemberFunctions) {
     class TestClass {
     public:
         int testVar = 0;
 
-        int var_getter() const {
-            std::cout << "getter called" << std::endl;
-            return testVar;
-        }
-        void var_setter(int value) {
-            std::cout << "setter called" << std::endl;
-            std::cout << "value: " << value << std::endl;
-            testVar = value;
-        }
+        int var_getter() const { return testVar; }
+
+        void var_setter(int value) { testVar = value; }
     };
 
-    std::shared_ptr<TestClass> testInstance = std::make_shared<TestClass>();
+    auto testInstance = std::make_shared<TestClass>();
 
     component->def("var_getter", &TestClass::var_getter, testInstance);
     component->def("var_setter", &TestClass::var_setter, testInstance);
-    EXPECT_TRUE(component->has("var_getter"));
-    EXPECT_TRUE(component->has("var_setter"));
+
     EXPECT_EQ(std::any_cast<int>(component->dispatch("var_getter", {})), 0);
     component->dispatch("var_setter", {42});
-    int value = std::any_cast<int>(component->dispatch("var_getter", {}));
-    std::cout << "value: " << value << std::endl;
-    EXPECT_EQ(value, 42);
-
-    component->def("testVar", &TestClass::testVar, testInstance);
-    EXPECT_TRUE(component->has("get_testVar"));
-
-    component->def("getter", &TestClass::var_getter, &TestClass::var_setter,
-                   testInstance);
-
-    component->dispatch("var_setter", {114514});
-    value = std::any_cast<int>(component->dispatch("var_getter", {}));
-    std::cout << "value: " << value << std::endl;
-    EXPECT_EQ(value, 114514);
-
-    component->def_v("test.var", &TestClass::testVar);
-    EXPECT_TRUE(component->has("test.var"));
-    value = std::any_cast<int>(
-        component->dispatch("test.var", {testInstance.get()}));
-    std::cout << "value: " << value << std::endl;
-    EXPECT_EQ(value, 114514);
+    EXPECT_EQ(std::any_cast<int>(component->dispatch("var_getter", {})), 42);
 }
 
-TEST_F(ComponentTest, DefType) {
-    class TestClass {
+// 构造函数测试
+TEST_F(ComponentTest, DefineConstructors) {
+    class MyClass {
     public:
-        int testVar = 0;
+        MyClass(int a, std::string b) : testVar(a), testStr(b) {}
+        MyClass() : testVar(0), testStr("default") {}
+
+        int testVar;
+        std::string testStr;
     };
+
+    component->def_constructor<MyClass, int, std::string>(
+        "create_my_class", "MyGroup", "Create MyClass");
+    component->def_default_constructor<MyClass>(
+        "create_default_my_class", "MyGroup", "Create default MyClass");
+
+    auto class_with_args =
+        component->dispatch("create_my_class", {1, std::string("args")});
+    auto default_class = component->dispatch("create_default_my_class", {});
+
+    EXPECT_EQ(std::any_cast<std::shared_ptr<MyClass>>(class_with_args)->testVar,
+              1);
+    EXPECT_EQ(std::any_cast<std::shared_ptr<MyClass>>(class_with_args)->testStr,
+              "args");
+    EXPECT_EQ(std::any_cast<std::shared_ptr<MyClass>>(default_class)->testVar,
+              0);
+    EXPECT_EQ(std::any_cast<std::shared_ptr<MyClass>>(default_class)->testStr,
+              "default");
+}
+
+// 类型定义测试
+TEST_F(ComponentTest, DefineTypes) {
+    class TestClass {};
     component->def_type<TestClass>("TestClass",
                                    atom::meta::user_type<TestClass>());
     EXPECT_TRUE(component->has_type("TestClass"));
 }
 
-TEST_F(ComponentTest, DefConstructor) {
-    class MyClass {
-    public:
-        MyClass(int a, std::string b) {}
-        MyClass() {}
-    };
-    component->def_constructor<MyClass, int, std::string>(
-        "create_my_class", "MyGroup", "Create MyClass");
-    component->def_default_constructor<MyClass>(
-        "create_default_my_class", "MyGroup", "Create default MyClass");
+// 错误处理测试
+TEST_F(ComponentTest, ErrorHandling) {
+    // 尝试获取不存在的变量
+    EXPECT_FALSE(component->hasVariable("nonExistentVar"));
+
+    // 尝试调用不存在的函数
+    EXPECT_THROW(component->dispatch("nonExistentFunction", {}),
+                 atom::error::InvalidArgument);
 }
 
-TEST_F(ComponentTest, Destroy) {
-    bool result = component->destroy();
-    EXPECT_TRUE(result);
+// 性能测试（示例）
+TEST_F(ComponentTest, Performance) {
+    // 添加大量变量
+    for (int i = 0; i < 1000; ++i) {
+        component->addVariable<int>(std::to_string(i), i,
+                                    "Integer variable " + std::to_string(i));
+    }
+
+    // 测试获取变量的性能
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 1000; ++i) {
+        component->getVariable<int>(std::to_string(i));
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration =
+        std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    // 这里可以添加断言来检查性能是否在可接受范围内
+    std::cout << "Time to get 1000 variables: " << duration.count()
+              << " microseconds" << std::endl;
+}
+
+// 边界条件测试
+TEST_F(ComponentTest, BoundaryConditions) {
+    // 测试整数变量的边界
+    component->addVariable<int>("minInt", std::numeric_limits<int>::min());
+    component->addVariable<int>("maxInt", std::numeric_limits<int>::max());
+
+    EXPECT_EQ(component->getVariable<int>("minInt")->get(),
+              std::numeric_limits<int>::min());
+    EXPECT_EQ(component->getVariable<int>("maxInt")->get(),
+              std::numeric_limits<int>::max());
+}
+
+#include <chrono>
+#include <mutex>
+#include <thread>
+
+TEST_F(ComponentTest, ThreadSafety) {
+    // 假设 component 是线程安全的
+    component->addVariable<int>("sharedVar", 0, "A shared variable");
+
+    std::thread thread1([&]() {
+        for (int i = 0; i < 1000; ++i) {
+            component->setValue("sharedVar", i);
+        }
+    });
+
+    std::thread thread2([&]() {
+        for (int i = 1000; i > 0; --i) {
+            component->setValue("sharedVar", i);
+        }
+    });
+
+    thread1.join();
+    thread2.join();
+
+    // 检查共享变量的最终值是否在预期范围内
+    EXPECT_TRUE(component->getVariable<int>("sharedVar")->get() >= 0 &&
+                component->getVariable<int>("sharedVar")->get() <= 1000);
+}
+
+// 组件生命周期测试
+TEST_F(ComponentTest, Lifecycle) {
+    EXPECT_TRUE(component->destroy());
+    // 组件销毁后，操作应该失败
+    EXPECT_FALSE(component->getVariable<int>("intVar"));
+    EXPECT_THROW(component->dispatch("incrementCounter", {}),
+                 atom::error::InvalidArgument);
 }

@@ -56,6 +56,10 @@ inline std::shared_ptr<Trackable<T>> VariableManager::getVariable(
     return nullptr;
 }
 
+inline bool VariableManager::has(const std::string& name) const {
+    return variables_.find(name) != variables_.end();
+}
+
 inline void VariableManager::setValue(const std::string& name,
                                       const char* newValue) {
     setValue(name, std::string(newValue));

@@ -180,9 +180,12 @@ public:
     std::optional<T> try_cast() const noexcept {
         try {
             if constexpr (std::is_reference_v<T>) {
-                if (m_data->m_obj.type() == typeid(std::reference_wrapper<T>)) {
-                    auto& ref =
-                        std::any_cast<std::reference_wrapper<T>>(m_data->m_obj);
+                if (m_data->m_obj.type() ==
+                    typeid(
+                        std::reference_wrapper<std::remove_reference_t<T>>)) {
+                    auto& ref = std::any_cast<
+                        std::reference_wrapper<std::remove_reference_t<T>>>(
+                        m_data->m_obj);
                     return ref.get();
                 }
             }
@@ -207,6 +210,7 @@ public:
         } catch (const std::bad_any_cast&) {
             return false;
         }
+        return false;
     }
 
     /// Debug string representation of the contained object

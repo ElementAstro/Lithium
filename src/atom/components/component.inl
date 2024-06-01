@@ -213,6 +213,10 @@ void Component::def_base_class() {
     m_TypeConverter->add_base_class<Base, Derived>();
 }
 
+inline bool Component::hasVariable(const std::string& name) const {
+    return m_VariableManager->has(name);
+}
+
 inline std::string Component::getVariableDescription(
     const std::string& name) const {
     return m_VariableManager->getDescription(name);

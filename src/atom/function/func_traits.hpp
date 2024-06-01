@@ -20,7 +20,7 @@ template <typename Func>
 struct FunctionTraits;
 
 template <typename Return, typename... Args>
-struct FunctionTraits<Return(Args...)> {
+struct FunctionTraitsBase {
     using return_type = Return;
     using argument_types = std::tuple<Args...>;
 
@@ -39,154 +39,129 @@ struct FunctionTraits<Return(Args...)> {
 };
 
 template <typename Return, typename... Args>
-struct FunctionTraits<std::function<Return(Args...)>>
-    : FunctionTraits<Return(Args...)> {};
+struct FunctionTraits<Return(Args...)> : FunctionTraitsBase<Return, Args...> {};
 
 template <typename Return, typename... Args>
-struct FunctionTraits<Return (*)(Args...)> : FunctionTraits<Return(Args...)> {};
+struct FunctionTraits<std::function<Return(Args...)>>
+    : FunctionTraitsBase<Return, Args...> {};
+
+template <typename Return, typename... Args>
+struct FunctionTraits<Return (*)(Args...)>
+    : FunctionTraitsBase<Return, Args...> {};
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...)>
-    : FunctionTraits<Return(Args...)> {
+    : FunctionTraitsBase<Return, Args...> {
     static constexpr bool is_member_function = true;
     using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) volatile>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_volatile_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const volatile>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_volatile_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) &>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_lvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const &>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_lvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) volatile &>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_volatile_member_function = true;
     static constexpr bool is_lvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const volatile &>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_volatile_member_function = true;
     static constexpr bool is_lvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) &&>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_rvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const &&>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_rvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) volatile &&>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_volatile_member_function = true;
     static constexpr bool is_rvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const volatile &&>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_volatile_member_function = true;
     static constexpr bool is_rvalue_reference_member_function = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) noexcept>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_noexcept = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const noexcept>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_noexcept = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) volatile noexcept>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_volatile_member_function = true;
     static constexpr bool is_noexcept = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename Class, typename... Args>
 struct FunctionTraits<Return (Class::*)(Args...) const volatile noexcept>
-    : FunctionTraits<Return(Args...)> {
-    static constexpr bool is_member_function = true;
+    : FunctionTraits<Return (Class::*)(Args...)> {
     static constexpr bool is_const_member_function = true;
     static constexpr bool is_volatile_member_function = true;
     static constexpr bool is_noexcept = true;
-    using class_type = Class;
 };
 
 template <typename Return, typename... Args>
-struct FunctionTraits<Return(Args..., ...)> : FunctionTraits<Return(Args...)> {
+struct FunctionTraits<Return(Args..., ...)>
+    : FunctionTraitsBase<Return, Args...> {
     static constexpr bool is_variadic = true;
 };
 

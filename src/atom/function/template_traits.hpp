@@ -9,14 +9,12 @@
 #ifndef ATOM_META_TEMPLATE_TRAITS_HPP
 #define ATOM_META_TEMPLATE_TRAITS_HPP
 
-#include <cstdint>
 #include <limits>
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
 #include "abi.hpp"
-#include "macro.hpp"
 
 namespace atom::meta {
 
@@ -44,89 +42,25 @@ struct is_template<Template<Args...>> : std::true_type {};
 template <typename T>
 inline constexpr bool is_template_v = is_template<T>::value;
 
-namespace details {
-template <template <typename...> class U>
-constexpr auto template_full_name() {
-    return ATOM_META_FUNCTION_NAME;  // Placeholder for function name retrieval
-}
-
+// Extract template parameters and full name
 template <typename T>
-struct template_traits_1 : std::false_type {};
+struct template_traits;
 
-template <template <typename, auto...> typename Template, typename T1,
-          auto... Ts>
-struct template_traits_1<Template<T1, Ts...>> : std::true_type {
-    using args_type = std::tuple<identity<T1>, identity<decltype(Ts), Ts>...>;
-    static constexpr auto full_name = template_full_name<Template>();
+template <template <typename...> typename Template, typename... Args>
+struct template_traits<Template<Args...>> {
+    using args_type = std::tuple<Args...>;
+    static const std::string full_name;
 };
 
-template <typename T>
-struct template_traits_2 : std::false_type {};
-
-template <template <auto, typename...> typename Template, auto T1,
-          typename... Ts>
-struct template_traits_2<Template<T1, Ts...>> : std::true_type {
-    using args_type = std::tuple<identity<decltype(T1), T1>, identity<Ts>...>;
-    static constexpr auto full_name = template_full_name<Template>();
-};
-
-template <typename T>
-struct template_traits_3 : std::false_type {};
-
-template <template <typename, typename, auto...> typename Template, typename T1,
-          typename T2, auto... Ts>
-struct template_traits_3<Template<T1, T2, Ts...>> : std::true_type {
-    using args_type =
-        std::tuple<identity<T1>, identity<T2>, identity<decltype(Ts), Ts>...>;
-    static constexpr auto full_name = template_full_name<Template>();
-};
-
-template <template <typename, auto, typename...> typename Template, typename T1,
-          auto T2, typename... Ts>
-struct template_traits_3<Template<T1, T2, Ts...>> : std::true_type {
-    using args_type =
-        std::tuple<identity<T1>, identity<decltype(T2), T2>, identity<Ts>...>;
-    static constexpr auto full_name = template_full_name<Template>();
-};
-
-template <typename T>
-constexpr bool is_template() {
-    return template_traits_1<T>::value || template_traits_2<T>::value ||
-           template_traits_3<T>::value;
-}
-
-template <typename T>
-constexpr auto template_traits_impl() {
-    if constexpr (template_traits_1<T>::value) {
-        return template_traits_1<T>();
-    } else if constexpr (template_traits_2<T>::value) {
-        return template_traits_2<T>();
-    } else if constexpr (template_traits_3<T>::value) {
-        return template_traits_3<T>();
-    } else {
-        static_assert(is_template<T>(), "not supported");
-    }
-}
-
-template <typename T>
-using template_traits = decltype(template_traits_impl<T>());
-
-template <typename T, typename U>
-struct args_type_of_impl;
-
-template <typename T>
-struct args_type_of_impl<
-    T, std::void_t<std::enable_if_t<is_template<T>(), void>>> {
-    using type = typename template_traits<T>::args_type;
-};
-}  // namespace details
-
-template <typename T>
-constexpr static bool is_template_class_v = details::is_template<T>();
+template <template <typename...> typename Template, typename... Args>
+const std::string template_traits<Template<Args...>>::full_name = [] {
+    std::string name = typeid(Template<Args...>).name();
+    return DemangleHelper::Demangle(name);
+}();
 
 // Helper alias templates
 template <typename T>
-using args_type_of = typename details::args_type_of_impl<T, void>::type;
+using args_type_of = typename template_traits<T>::args_type;
 
 template <typename T>
 inline constexpr std::size_t template_arity_v =
@@ -179,8 +113,7 @@ struct is_class_template<Template<Args...>> : std::true_type {};
 template <typename T>
 inline constexpr bool is_class_template_v = is_class_template<T>::value;
 
-// Check if a type is a function template (Note: this is a placeholder, C++ does
-// not support detecting function templates directly)
+// Check if a type is a function template
 template <typename T>
 struct is_function_template : std::false_type {};
 
@@ -270,7 +203,6 @@ struct find_first_index<T> {
         std::numeric_limits<std::size_t>::max();
 };
 
-// Find the index of the first occurrence of a type in a parameter pack
 template <typename T, typename... Args>
 inline constexpr std::size_t find_first_index_v =
     find_first_index<T, Args...>::value;
@@ -295,6 +227,71 @@ struct find_last_index<T> {
 template <typename T, typename... Args>
 inline constexpr std::size_t find_last_index_v =
     find_last_index<T, Args...>::value;
+
+template <typename T>
+struct extract_reference_wrapper_type {
+    using type = T;
+};
+
+template <typename U>
+struct extract_reference_wrapper_type<std::reference_wrapper<U>> {
+    using type = U;
+};
+
+template <typename T>
+using extract_reference_wrapper_type_t =
+    typename extract_reference_wrapper_type<T>::type;
+
+template <typename T>
+struct extract_pointer_type {
+    using type = T;
+};
+
+template <typename U>
+struct extract_pointer_type<U*> {
+    using type = U;
+};
+
+template <typename T>
+using extract_pointer_type_t = typename extract_pointer_type<T>::type;
+
+template <typename T>
+struct extract_function_return_type;
+
+template <typename R, typename... Args>
+struct extract_function_return_type<R(Args...)> {
+    using type = R;
+};
+
+template <typename T>
+using extract_function_return_type_t =
+    typename extract_function_return_type<T>::type;
+
+template <typename T>
+struct extract_function_parameters;
+
+template <typename R, typename... Args>
+struct extract_function_parameters<R(Args...)> {
+    using type = std::tuple<Args...>;
+};
+
+template <typename T>
+using extract_function_parameters_t =
+    typename extract_function_parameters<T>::type;
+
+template <typename T>
+struct extract_array_element_type {
+    using type = T;
+};
+
+template <typename U, std::size_t N>
+struct extract_array_element_type<U[N]> {
+    using type = U;
+};
+
+template <typename T>
+using extract_array_element_type_t =
+    typename extract_array_element_type<T>::type;
 
 }  // namespace atom::meta
 

@@ -49,7 +49,9 @@ void test_demangle_many_with_location(
 TEST(DemangleHelperTest, DemangleTypeTest) {
     test_demangle_type<int>("int");
     test_demangle_type<double>("double");
-    test_demangle_type<std::string>("std::string");
+    test_demangle_type<std::string>(
+        "std::__cxx11::basic_string<char, std::char_traits<char>, "
+        "std::allocator<char> >");
 }
 
 TEST(DemangleHelperTest, DemangleInstanceTest) {
@@ -59,27 +61,36 @@ TEST(DemangleHelperTest, DemangleInstanceTest) {
 
     test_demangle_instance(int_instance, "int");
     test_demangle_instance(double_instance, "double");
-    test_demangle_instance(string_instance, "std::string");
+    test_demangle_instance(string_instance,
+                           "std::__cxx11::basic_string<char, "
+                           "std::char_traits<char>, std::allocator<char> >");
 }
 
 TEST(DemangleHelperTest, DemangleTest) {
     test_demangle(typeid(int).name(), "int");
     test_demangle(typeid(double).name(), "double");
-    test_demangle(typeid(std::string).name(), "std::string");
+    test_demangle(typeid(std::string).name(),
+                  "std::__cxx11::basic_string<char, std::char_traits<char>, "
+                  "std::allocator<char> >");
 }
 
 TEST(DemangleHelperTest, DemangleWithLocationTest) {
     auto location = std::source_location::current();
     test_demangle_with_location(typeid(int).name(), "int", location);
     test_demangle_with_location(typeid(double).name(), "double", location);
-    test_demangle_with_location(typeid(std::string).name(), "std::string",
+    test_demangle_with_location(typeid(std::string).name(),
+                                "std::__cxx11::basic_string<char, "
+                                "std::char_traits<char>, std::allocator<char> >",
                                 location);
 }
 
 TEST(DemangleHelperTest, DemangleManyTest) {
     std::vector<std::string_view> mangled_names = {
         typeid(int).name(), typeid(double).name(), typeid(std::string).name()};
-    std::vector<std::string> expected = {"int", "double", "std::string"};
+    std::vector<std::string> expected = {
+        "int", "double",
+        "std::__cxx11::basic_string<char, std::char_traits<char>, "
+        "std::allocator<char> >"};
     test_demangle_many(mangled_names, expected);
 }
 
@@ -87,6 +98,9 @@ TEST(DemangleHelperTest, DemangleManyWithLocationTest) {
     auto location = std::source_location::current();
     std::vector<std::string_view> mangled_names = {
         typeid(int).name(), typeid(double).name(), typeid(std::string).name()};
-    std::vector<std::string> expected = {"int", "double", "std::string"};
+    std::vector<std::string> expected = {
+        "int", "double",
+        "std::__cxx11::basic_string<char, std::char_traits<char>, "
+        "std::allocator<char> >"};
     test_demangle_many_with_location(mangled_names, expected, location);
 }

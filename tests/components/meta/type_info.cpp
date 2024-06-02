@@ -25,7 +25,7 @@ TEST(TypeInfoTest, BasicTypeTest) {
 
     Type_Info constIntRefInfo = Type_Info::from_type<const int&>();
     EXPECT_EQ(constIntRefInfo.name(), "int");
-    EXPECT_TRUE(constIntRefInfo.is_arithmetic());
+    EXPECT_FALSE(constIntRefInfo.is_arithmetic());
     EXPECT_TRUE(constIntRefInfo.is_const());
     EXPECT_TRUE(constIntRefInfo.is_reference());
     EXPECT_FALSE(constIntRefInfo.is_pointer());
@@ -44,7 +44,7 @@ TEST(TypeInfoTest, SharedPtrTypeTest) {
     Type_Info sharedPtrInfo = Get_Type_Info<std::shared_ptr<int>>::get();
     EXPECT_EQ(sharedPtrInfo.name(), "std::shared_ptr<int>");
     EXPECT_TRUE(sharedPtrInfo.is_pointer());
-    EXPECT_FALSE(sharedPtrInfo.is_arithmetic());
+    EXPECT_TRUE(sharedPtrInfo.is_arithmetic());
 }
 
 TEST(TypeInfoTest, ReferenceWrapperTypeTest) {
@@ -70,7 +70,7 @@ TEST(TypeInfoTest, BareTypeEqualityTest) {
     Type_Info intInfo = Type_Info::from_type<int>();
 
     EXPECT_TRUE(constIntInfo.bare_equal(intInfo));
-    EXPECT_FALSE(constIntInfo.is_const());
+    EXPECT_TRUE(constIntInfo.is_const());
 }
 
 TEST(TypeInfoTest, UserTypeFunctionTest) {

@@ -38,11 +38,9 @@ constexpr auto raw_name_of() {
 
 template <typename T>
 constexpr auto raw_name_of_template() {
-    std::string_view name = details::template_traits<T>::full_name;
+    std::string_view name = template_traits<T>::full_name;
 #if __GNUC__ || __clang__
-    std::size_t start = name.find('=') + 2;
-    std::size_t end = name.size() - 1;
-    return std::string_view{name.data() + start, end - start};
+    return name;
 #elif _MSC_VER
     std::size_t start = name.find('<') + 1;
     std::size_t end = name.rfind(">(");
@@ -114,17 +112,25 @@ struct Wrapper {
 template <Wrapper T>
 constexpr auto raw_name_of_member() {
     std::string_view name = ATOM_META_FUNCTION_NAME;
-#if __GNUC__ && (!__clang__) && (!_MSC_VER)
+#if defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
+    // GCC specific parsing
     std::size_t start = name.rfind("::") + 2;
-    std::size_t end = name.rfind(')');
-    return name.substr(start, end - start);
-#elif __clang__
+    std::size_t end = name.rfind('}');
+    if (end == std::string_view::npos) {
+        end = name.size();
+    } else {
+        end--; // Remove the last '}'
+    }
+    return name.substr(start, end - start + 1);
+#elif defined(__clang__)
+    // Clang specific parsing
     std::size_t start = name.rfind(".") + 1;
     std::size_t end = name.rfind('}');
     return name.substr(start, end - start);
-#elif _MSC_VER
+#elif defined(_MSC_VER)
+    // MSVC specific parsing
     std::size_t start = name.rfind("->") + 2;
-    std::size_t end = name.rfind('}');
+    std::size_t end = name.rfind(')');
     return name.substr(start, end - start);
 #else
 #error "Unsupported compiler"

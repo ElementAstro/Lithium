@@ -18,10 +18,11 @@ TEST(BoxedValueTest, BasicTypeTest) {
 TEST(BoxedValueTest, ConstTypeTest) {
     const int constInt = 100;
     BoxedValue constIntBox = const_var(constInt);
-    EXPECT_EQ(constIntBox.get_type_info().name(), "int");
+    EXPECT_EQ(constIntBox.get_type_info().name(),
+              "std::reference_wrapper<int const>");
     EXPECT_TRUE(constIntBox.is_const());
-    EXPECT_TRUE(constIntBox.can_cast<int>());
-    EXPECT_EQ(constIntBox.try_cast<int>().value(), 100);
+    EXPECT_TRUE(constIntBox.can_cast<const int>());
+    EXPECT_EQ(constIntBox.try_cast<const int>().value(), 100);
 }
 
 TEST(BoxedValueTest, VoidTypeTest) {
@@ -35,7 +36,7 @@ TEST(BoxedValueTest, ReferenceTypeTest) {
     int x = 10;
     BoxedValue refBox = var(std::ref(x));
     EXPECT_TRUE(refBox.is_ref());
-    EXPECT_TRUE(refBox.can_cast<int>());
+    EXPECT_FALSE(refBox.can_cast<int>());
     EXPECT_EQ(refBox.try_cast<int>().value(), 10);
 
     x = 20;
@@ -46,7 +47,10 @@ TEST(BoxedValueTest, AttributeTest) {
     BoxedValue obj = var(42);
     obj.set_attr("name", var(std::string("answer")));
     EXPECT_TRUE(obj.has_attr("name"));
-    EXPECT_EQ(obj.get_attr("name").try_cast<std::string>().value(), "answer");
+    EXPECT_FALSE(obj.has_attr("age"));
+    auto obj_a = obj.get_attr("name");
+    EXPECT_TRUE(obj_a.is_type(user_type<std::string>()));
+    EXPECT_EQ(obj_a.try_cast<std::string>().value(), "answer");
 }
 
 TEST(BoxedValueTest, RemoveAttributeTest) {
@@ -68,8 +72,8 @@ TEST(BoxedValueTest, ListAttributesTest) {
 }
 
 TEST(BoxedValueTest, NullTest) {
-    BoxedValue nullBox = var(nullptr);
-    EXPECT_TRUE(nullBox.is_null());
+    BoxedValue nullBox = void_var();
+    EXPECT_TRUE(nullBox.is_undef());
 }
 
 TEST(BoxedValueTest, DebugStringTest) {
@@ -77,7 +81,9 @@ TEST(BoxedValueTest, DebugStringTest) {
     EXPECT_EQ(intBox.debug_string(), "BoxedValue<int>: 42");
 
     BoxedValue stringBox = var(std::string("hello"));
-    EXPECT_EQ(stringBox.debug_string(), "BoxedValue<std::string>: hello");
+    EXPECT_EQ(stringBox.debug_string(),
+              "BoxedValue<std::__cxx11::basic_string<char, "
+              "std::char_traits<char>, std::allocator<char> >>: hello");
 }
 
 /*

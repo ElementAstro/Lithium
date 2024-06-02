@@ -15,29 +15,18 @@ struct ValueWrapper {};
 
 // Tests for is_template
 TEST(TemplateTraitsTest, IsTemplateTest) {
-    static_assert(is_template_class_v<Wrapper<int>>);
-    static_assert(!is_template_class_v<int>);
+    static_assert(is_template_v<Wrapper<int>>);
+    static_assert(!is_template_v<int>);
 }
 
 // Tests for template_traits
 TEST(TemplateTraitsTest, TemplateTraitsTest) {
-    using WrapperTraits = atom::meta::details::template_traits<Wrapper<int>>;
-    static_assert(std::is_same_v<typename WrapperTraits::args_type,
-                                 std::tuple<atom::meta::identity<int>>>);
+    using Traits = template_traits<Wrapper<int>>;
+    static_assert(std::is_same_v<Traits::args_type, std::tuple<int>>);
 
-    using PairTraits = atom::meta::details::template_traits<Pair<int, double>>;
-    static_assert(std::is_same_v<typename PairTraits::args_type,
-                                 std::tuple<atom::meta::identity<int>,
-                                            atom::meta::identity<double>>>);
-}
-
-TEST(TemplateTraitsTest, TemplateArgTest) {
+    using PairTraits = template_traits<Pair<int, double>>;
     static_assert(
-        std::is_same_v<atom::meta::template_arg_t<0, Pair<int, double>>,
-                       atom::meta::identity<int>>);
-    static_assert(
-        std::is_same_v<atom::meta::template_arg_t<1, Pair<int, double>>,
-                       atom::meta::identity<double>>);
+        std::is_same_v<PairTraits::args_type, std::tuple<int, double>>);
 }
 
 // Tests for template_arity_v
@@ -50,6 +39,12 @@ TEST(TemplateTraitsTest, TemplateArityTest) {
 TEST(TemplateTraitsTest, IsSpecializationOfTest) {
     static_assert(is_specialization_of_v<Wrapper, Wrapper<int>>);
     static_assert(!is_specialization_of_v<Wrapper, int>);
+}
+
+// Tests for template_arg_t
+TEST(TemplateTraitsTest, TemplateArgTest) {
+    static_assert(std::is_same_v<template_arg_t<0, Pair<int, double>>, int>);
+    static_assert(std::is_same_v<template_arg_t<1, Pair<int, double>>, double>);
 }
 
 // Tests for is_derived_from_all

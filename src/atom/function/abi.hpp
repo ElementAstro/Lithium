@@ -9,6 +9,7 @@
 #ifndef ATOM_META_ABI_HPP
 #define ATOM_META_ABI_HPP
 
+#include <cctype>
 #include <memory>
 #include <optional>
 #include <source_location>
@@ -17,14 +18,19 @@
 #include <typeinfo>
 #include <vector>
 
-#ifdef _WIN32
+#ifdef _MSC_VER
+// clang-format off
 #include <windows.h>
 #include <dbghelp.h>
-#ifdef _MSC_VER
 #pragma comment(lib, "dbghelp.lib")
-#endif
+// clang-format on
 #else
 #include <cxxabi.h>
+#endif
+
+#if ENABLE_DEBUG
+#include <iostream>
+#include <regex>
 #endif
 
 namespace atom::meta {
@@ -45,9 +51,7 @@ public:
         const std::optional<std::source_location>& location = std::nullopt) {
         std::string demangled = DemangleInternal(mangled_name);
 
-        // If source location information is provided, append it to the
-        // demangled name.
-        if (location.has_value()) {
+        if (location) {
             demangled += " (";
             demangled += location->file_name();
             demangled += ":";
@@ -71,31 +75,141 @@ public:
         return demangled_names;
     }
 
+#if ENABLE_DEBUG
+    static std::string Visualize(const std::string& demangled_name) {
+        return VisualizeType(demangled_name);
+    }
+#endif
+
 private:
     static std::string DemangleInternal(std::string_view mangled_name) {
-#ifdef _WIN32
+#ifdef _MSC_VER
         char buffer[1024];
         DWORD length = UnDecorateSymbolName(mangled_name.data(), buffer,
                                             sizeof(buffer), UNDNAME_COMPLETE);
 
-        if (length > 0) {
-            return std::string(buffer, length);
-        } else {
-            return std::string(mangled_name);
-        }
+        return (length > 0) ? std::string(buffer, length)
+                            : std::string(mangled_name);
 #else
         int status = -1;
         std::unique_ptr<char, void (*)(void*)> demangled_name(
             abi::__cxa_demangle(mangled_name.data(), nullptr, nullptr, &status),
             std::free);
 
-        if (status == 0) {
-            return std::string(demangled_name.get());
-        } else {
-            return std::string(mangled_name);
-        }
+        return (status == 0) ? std::string(demangled_name.get())
+                             : std::string(mangled_name);
 #endif
     }
+
+#if ENABLE_DEBUG
+    static std::string VisualizeType(const std::string& type_name,
+                                     int indent_level = 0) {
+        std::string indent(indent_level * 4, ' ');  // 4 spaces per indent level
+        std::string result;
+
+        // Regular expressions for parsing
+        std::regex template_regex(R"((\w+)<(.*)>)");
+        std::regex function_regex(R"(\((.*)\)\s*->\s*(.*))");
+        std::regex ptr_regex(R"((.+)\s*\*\s*)");
+        std::regex array_regex(R"((.+)\s*\[(\d+)\])");
+        std::smatch match;
+
+        if (std::regex_match(type_name, match, template_regex)) {
+            // Template type
+            result += indent + "`-- " + match[1].str() + " [template]\n";
+            std::string params = match[2].str();
+            result += VisualizeTemplateParams(params, indent_level + 1);
+        } else if (std::regex_match(type_name, match, function_regex)) {
+            // Function type
+            result += indent + "`-- function\n";
+            std::string params = match[1].str();
+            std::string return_type = match[2].str();
+            result += VisualizeFunctionParams(params, indent_level + 1);
+            result += indent + "    `-- R: " +
+                      VisualizeType(return_type, indent_level + 1)
+                          .substr(indent.size() + 4);
+        } else if (std::regex_match(type_name, match, ptr_regex)) {
+            // Pointer type
+            result += indent + "`-- ptr\n";
+            result += VisualizeType(match[1].str(), indent_level + 1);
+        } else if (std::regex_match(type_name, match, array_regex)) {
+            // Array type
+            result += indent + "`-- array [N = " + match[2].str() + "]\n";
+            result += VisualizeType(match[1].str(), indent_level + 1);
+        } else {
+            // Simple type
+            result += indent + "`-- " + type_name + "\n";
+        }
+
+        return result;
+    }
+
+    static std::string VisualizeTemplateParams(const std::string& params,
+                                               int indent_level) {
+        std::string indent(indent_level * 4, ' ');
+        std::string result;
+        int param_index = 0;
+
+        size_t start = 0;
+        size_t end = 0;
+        int angle_brackets = 0;
+
+        for (size_t i = 0; i < params.size(); ++i) {
+            if (params[i] == '<') {
+                ++angle_brackets;
+            } else if (params[i] == '>') {
+                --angle_brackets;
+            } else if (params[i] == ',' && angle_brackets == 0) {
+                end = i;
+                result += indent + "|-- " + std::to_string(param_index++) +
+                          ": " +
+                          VisualizeType(params.substr(start, end - start),
+                                        indent_level + 1)
+                              .substr(indent.size() + 4);
+                start = i + 1;
+            }
+        }
+
+        result += indent + "|-- " + std::to_string(param_index++) + ": " +
+                  VisualizeType(params.substr(start), indent_level + 1)
+                      .substr(indent.size() + 4);
+
+        return result;
+    }
+
+    static std::string VisualizeFunctionParams(const std::string& params,
+                                               int indent_level) {
+        std::string indent(indent_level * 4, ' ');
+        std::string result;
+        int param_index = 0;
+
+        size_t start = 0;
+        size_t end = 0;
+        int angle_brackets = 0;
+
+        for (size_t i = 0; i < params.size(); ++i) {
+            if (params[i] == '<') {
+                ++angle_brackets;
+            } else if (params[i] == '>') {
+                --angle_brackets;
+            } else if (params[i] == ',' && angle_brackets == 0) {
+                end = i;
+                result += indent + "|-- " + std::to_string(param_index++) +
+                          ": " +
+                          VisualizeType(params.substr(start, end - start),
+                                        indent_level + 1)
+                              .substr(indent.size() + 4);
+                start = i + 1;
+            }
+        }
+
+        result += indent + "|-- " + std::to_string(param_index++) + ": " +
+                  VisualizeType(params.substr(start), indent_level + 1)
+                      .substr(indent.size() + 4);
+
+        return result;
+    }
+#endif
 };
 }  // namespace atom::meta
 

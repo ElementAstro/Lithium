@@ -21,8 +21,8 @@ Description: Basic Component Definition
 
 inline Component::Component(const std::string& name)
     : m_name(name),
-      m_CommandDispatcher(std::make_unique<CommandDispatcher>()),
-      m_VariableManager(std::make_unique<VariableManager>()),
+      m_CommandDispatcher(std::make_shared<CommandDispatcher>()),
+      m_VariableManager(std::make_shared<VariableManager>()),
       m_typeInfo(atom::meta::user_type<Component>()),
       m_TypeCaster(atom::meta::TypeCaster::createShared()),
       m_TypeConverter(atom::meta::TypeConversions::createShared()) {
@@ -104,13 +104,7 @@ inline std::vector<std::string> Component::getNeededComponents() const {
 inline void Component::addOtherComponent(
     const std::string& name, const std::weak_ptr<Component>& component) {
     if (m_OtherComponents.contains(name)) {
-        THROW_EXCEPTION(
-#if __cplusplus >= 202002L
-            std::format("Other component with name {} already exists",
-#else
-            fmt::format("Other component with name {} already exists",
-#endif
-                        name));
+        THROW_OBJ_ALREADY_EXIST(name);
     }
     m_OtherComponents[name] = std::move(component);
 }
@@ -177,19 +171,13 @@ inline std::any Component::runCommand(const std::string& name,
             }
         }
     }
-    THROW_EXCEPTION(
-#if __cplusplus >= 202002L
-        std::format("Command with name {} not found",
-#else
-        fmt::format("Command with name {} not found",
-#endif
-                    name));
+    THROW_EXCEPTION("Coomponent ", name, " not found");
 }
 
 template <typename T>
 void Component::def_type(std::string_view name, const atom::meta::Type_Info& ti,
-                         const std::string& group,
-                         const std::string& description) {
+                         [[maybe_unused]] const std::string& group,
+                         [[maybe_unused]] const std::string& description) {
     m_classes[name] = ti;
     m_TypeCaster->register_type<T>(std::string(name));
 }
@@ -305,8 +293,8 @@ void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
     auto bound_func = atom::meta::bind_member_function(func);
     m_CommandDispatcher->def(
         name, group, description,
-        std::function<Ret(const Class&, Args...)>(
-            [bound_func](const Class& instance, Args... args) {
+        std::function<Ret(Class&, Args...)>(
+            [bound_func](Class& instance, Args... args) -> Ret {
                 return bound_func(instance, std::forward<Args>(args)...);
             }));
 }

@@ -165,7 +165,7 @@ std::any CommandDispatcher::dispatchHelper(const std::string& name,
             } catch (const std::bad_any_cast&) {
                 // 这里不需要重载函数，因此重新抛出异常
                 THROW_DISPATCH_EXCEPTION(
-                    "No matching overload found for command: " + name);
+                    "Bad command invoke: " + name);
             }
         } else if (cmd.funcs.size() > 1) {
             if constexpr (std::is_same_v<ArgsType, std::vector<std::any>>) {

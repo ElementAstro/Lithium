@@ -58,6 +58,7 @@ add_custom_target(CmakeAdditionalFiles
 	${lithium_src_dir}/../cmake_modules/compiler_options.cmake)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include(cmake_modules/compiler_options.cmake)
 
 # Include directories
 include_directories(${CMAKE_CURRENT_BINARY_DIR})

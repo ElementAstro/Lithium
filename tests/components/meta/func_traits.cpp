@@ -37,6 +37,8 @@ TEST(FunctionTraitsTest, FreeFunction) {
     static_assert(std::is_same_v<Traits::argument_t<1>, double>);
     static_assert(Traits::arity == 2);
     static_assert(!Traits::is_member_function);
+
+    EXPECT_EQ(Traits::full_name, "int (int, double)");
 }
 
 TEST(FunctionTraitsTest, StdFunction) {
@@ -48,6 +50,8 @@ TEST(FunctionTraitsTest, StdFunction) {
     static_assert(std::is_same_v<Traits::argument_t<1>, double>);
     static_assert(Traits::arity == 2);
     static_assert(!Traits::is_member_function);
+
+    EXPECT_EQ(Traits::full_name, "int (int, double)");
 }
 
 TEST(FunctionTraitsTest, MemberFunction) {
@@ -59,6 +63,9 @@ TEST(FunctionTraitsTest, MemberFunction) {
     static_assert(Traits::arity == 2);
     static_assert(Traits::is_member_function);
     static_assert(!Traits::is_const_member_function);
+
+    EXPECT_EQ(Traits::full_name, "int (int, double)");
+    EXPECT_EQ(DemangleHelper::DemangleType<Traits::class_type>(), "TestClass");
 }
 
 TEST(FunctionTraitsTest, ConstMemberFunction) {
@@ -99,12 +106,6 @@ TEST(FunctionTraitsTest, NoexceptMemberFunction) {
     using Traits = FunctionTraits<decltype(&TestClass::noexceptMemberFunction)>;
 
     static_assert(Traits::is_noexcept);
-}
-
-TEST(FunctionTraitsTest, VariadicMemberFunction) {
-    using Traits = FunctionTraits<decltype(&TestClass::variadicMemberFunction)>;
-
-    // static_assert(Traits::is_variadic);
 }
 
 TEST(FunctionTraitsTest, LambdaFunction) {

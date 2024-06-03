@@ -71,6 +71,31 @@ TEST_F(ComponentTest, DefineMemberFunctions) {
     EXPECT_EQ(std::any_cast<int>(component->dispatch("var_getter", {})), 42);
 }
 
+TEST_F(ComponentTest, DefineMemberFunctionsWithoutInstance) {
+    class TestClass {
+    public:
+        int testVar = 0;
+
+        int var_getter() const { return testVar; }
+
+        void var_setter(int value) { testVar = value; }
+    };
+
+    TestClass testInstance;
+
+    component->def("var_getter_without_instance", &TestClass::var_getter);
+    component->def("var_setter_without_instance", &TestClass::var_setter);
+    EXPECT_TRUE(component->has("var_getter_without_instance"));
+    EXPECT_TRUE(component->has("var_setter_without_instance"));
+    EXPECT_EQ(std::any_cast<int>(component->dispatch(
+                  "var_getter_without_instance", {&testInstance})),
+              0);
+    component->dispatch("var_setter_without_instance", {&testInstance, 42});
+    EXPECT_EQ(std::any_cast<int>(component->dispatch(
+                  "var_getter_without_instance", {&testInstance})),
+              42);
+}
+
 // 构造函数测试
 TEST_F(ComponentTest, DefineConstructors) {
     class MyClass {

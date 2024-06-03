@@ -7,18 +7,45 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
+project(Lithium VERSION 1.0.0 LANGUAGES C CXX)
 
-project(Lithium)
-enable_language(C CXX)
+# Set project options
+option(ENABLE_ASYNC "Enable Async Server Mode" ON)
+option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
+option(ENABLE_DEBUG "Enable Debug Mode" OFF)
+option(ENABLE_FASHHASH "Enable Using emhash8 as fast hash map" OFF)
+option(ENABLE_WEB_SERVER "Enable Web Server" ON)
+option(ENABLE_WEB_CLIENT "Enable Web Client" ON)
 
-if(COMMAND cmake_policy)
-		cmake_policy(SET CMP0003 NEW)
-		if(POLICY CMP0043)
-			cmake_policy(SET CMP0043 NEW)
-		endif()
+# Set compile definitions based on options
+if(ENABLE_ASYNC)
+    add_compile_definitions(ENABLE_ASYNC_FLAG=1)
+endif()
+if(ENABLE_DEBUG)
+    add_compile_definitions(ENABLE_DEBUG_FLAG=1)
+endif()
+if(ENABLE_NATIVE_SERVER)
+    add_compile_definitions(ENABLE_NATIVE_SERVER_FLAG=1)
+endif()
+if(ENABLE_FASHHASH)
+    add_compile_definitions(ENABLE_FASHHASH_FLAG=1)
+endif()
+if(ENABLE_WEB_SERVER)
+    add_compile_definitions(ENABLE_WEB_SERVER_FLAG=1)
+endif()
+if(ENABLE_WEB_CLIENT)
+    add_compile_definitions(ENABLE_WEB_CLIENT_FLAG=1)
 endif()
 
-# root directory of the project
+# Set policies
+if(POLICY CMP0003)
+    cmake_policy(SET CMP0003 NEW)
+endif()
+if(POLICY CMP0043)
+    cmake_policy(SET CMP0043 NEW)
+endif()
+
+# Set project directories
 set(Lithium_PROJECT_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(lithium_src_dir ${Lithium_PROJECT_ROOT_DIR}/src)
 set(lithium_module_dir ${lithium_src_dir}/atom)
@@ -29,157 +56,38 @@ set(lithium_task_dir ${lithium_src_dir}/task)
 add_custom_target(CmakeAdditionalFiles
 	SOURCES
 	${lithium_src_dir}/../cmake_modules/compiler_options.cmake)
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 
-# compiler options
-include(cmake_modules/compiler_options.cmake)
-
-include(GNUInstallDirs)
-include(FeatureSummary)
-include(CheckSymbolExists)
-include(CheckIncludeFileCXX)
-
-# Clang Format support
-if(UNIX OR APPLE)
-    set(FORMAT_CODE OFF CACHE BOOL "Enable Clang Format")
-
-    if(FORMAT_CODE MATCHES ON)
-        FILE(GLOB_RECURSE ALL_SOURCE_FILES *.c *.cpp *.h)
-
-        FOREACH(SOURCE_FILE ${ALL_SOURCE_FILES})
-            STRING(FIND ${SOURCE_FILE} ${CMAKE_SOURCE_DIR} DIR_FOUND)
-
-            if(NOT ${DIR_FOUND} EQUAL 0)
-                LIST(REMOVE_ITEM ALL_SOURCE_FILES ${SOURCE_FILE})
-            endif()
-        ENDFOREACH()
-
-        FIND_PROGRAM(CLANGFORMAT_EXE NAMES clang-format-5.0)
-
-        if(CLANGFORMAT_EXE)
-            ADD_CUSTOM_TARGET(clang-format COMMAND ${CLANGFORMAT_EXE} -style=file -i ${ALL_SOURCE_FILES})
-        endif()
-    endif()
-endif()
-
-#################################################################################
-#
-# Lithium version
-
-set(CMAKE_LITHIUM_VERSION_MAJOR 1)
-set(CMAKE_LITHIUM_VERSION_MINOR 0)
-set(CMAKE_LITHIUM_VERSION_RELEASE 0)
-
-set(LITHIUM_SOVERSION ${CMAKE_LITHIUM_VERSION_MAJOR})
-set(CMAKE_LITHIUM_VERSION_STRING "${CMAKE_LITHIUM_VERSION_MAJOR}.${CMAKE_LITHIUM_VERSION_MINOR}.${CMAKE_LITHIUM_VERSION_RELEASE}")
-set(LITHIUM_VERSION ${CMAKE_LITHIUM_VERSION_MAJOR}.${CMAKE_LITHIUM_VERSION_MINOR}.${CMAKE_LITHIUM_VERSION_RELEASE})
-
-if(APPLE)
-    set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
-endif(APPLE)
-
-#################################################################################
-#
-# Lithium includes
-
+# Include directories
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/libs/)
 include_directories(${CMAKE_SOURCE_DIR}/driverlibs/)
 include_directories(${lithium_src_dir})
 include_directories(${lithium_module_dir})
-include_directories(${lithium_src_dir})
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-swagger)
 include_directories(${CMAKE_SOURCE_DIR}/libs/oatpp-websocket)
 
+# Find packages
 find_package(OpenSSL REQUIRED)
-if(OpenSSL_FOUND)
-    message("-- Found OpenSSL ${OPENSSL_VERSION}: ${OPENSSL_LIBRARIES}")
-else()
-    message("-- OpenSSL Not Found")
-endif()
-
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(fmt REQUIRED)
 
-#################################################################################
-#
-# Subdirectories of Lithium
+# Configure config.h
+configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-# Build all dependencies
-# 构建所有需要的依赖库
-add_subdirectory(libs/)
-
-# Build Atom core library
-# 构建Atom核心库
+# Add subdirectories
+add_subdirectory(libs)
 add_subdirectory(${lithium_module_dir})
-
-# 内置的模组
-include_directories(modules)
 add_subdirectory(modules)
-
 add_subdirectory(driver)
-
 add_subdirectory(${lithium_src_dir}/carbon)
 add_subdirectory(${lithium_src_dir}/config)
-
 add_subdirectory(tests)
 
-#################################################################################
-#
-# General defines for compatibility across different platforms
-if(UNIX AND NOT APPLE)
-	if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-		set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Lithium install path" FORCE)
-	endif()
-endif()
-
-set(USE_FOLDERS TRUE)
-
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-
-option(ENABLE_ASYNC "Enable Async Server Mode" ON)
-option(ENABLE_NATIVE_SERVER "Enable to use INDI native server" OFF)
-option(ENABLE_DEBUG "Enable Debug Mode" OFF)
-
-option(ENABLE_FASHHASH "Enable Using emhash8 as fast hash map" OFF)
-option(ENABLE_WEB_SERVER "Enable Web Server" ON)
-option(ENABLE_WEB_CLIENT "Enable Web Client" ON)
-
-if(ENABLE_ASYNC)
-    set(ENABLE_ASYNC_FLAG "1")
-endif()
-if(ENABLE_DEBUG)
-    set(ENABLE_DEBUG_FLAG "1")
-endif()
-if(ENABLE_NATIVE_SERVER)
-    set(ENABLE_NATIVE_SERVER_FLAG "1")
-endif()
-if(ENABLE_FASHHASH)
-    set(ENABLE_FASHHASH_FLAG "1")
-endif()
-if(ENABLE_WEB_SERVER)
-    set(ENABLE_WEB_SERVER_FLAG "1")
-endif()
-if(ENABLE_WEB_CLIENT)
-    set(ENABLE_WEB_CLIENT_FLAG "1")
-endif()
-
-configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-#################################################################################
-
-if(WIN32)
-    set(CMAKE_INSTALL_PREFIX "C:/Program Files/LithiumServer")
-elseif(LINUX)
-    set(CMAKE_INSTALL_PREFIX "/usr/lithium")
-endif()
-
+# Set source files
 set(component_module
     ${lithium_component_dir}/addons.cpp
     ${lithium_component_dir}/compiler.cpp
@@ -204,9 +112,7 @@ set(script_module
     ${lithium_src_dir}/script/manager.cpp
     ${lithium_src_dir}/script/custom/sys.cpp
     ${lithium_src_dir}/script/custom/config.cpp
-
     ${lithium_src_dir}/script/sheller.cpp
-
     ${lithium_src_dir}/script/carbon.cpp
 )
 
@@ -218,56 +124,91 @@ set(task_module
     ${lithium_task_dir}/loader.cpp
     ${lithium_task_dir}/list.cpp
     ${lithium_task_dir}/pool.cpp
-    # ${lithium_task_dir}/chekcer.cpp
 )
 
 set(Lithium_module
     ${lithium_src_dir}/LithiumApp.cpp
-
     ${lithium_src_dir}/utils/constant.cpp
 )
 
-#################################################################################
-# Main
+# Build lithium_server-library
+add_library(lithium_server-library STATIC
+    ${component_module}
+    ${config_module}
+    ${debug_module}
+    ${script_module}
+    ${task_module}
+    ${Lithium_module}
+)
 
-add_library(lithium_server-library STATIC ${component_module} ${config_module} ${debug_module} ${module_module} ${device_module} ${task_module} ${script_module} ${Lithium_module})
-target_link_libraries(lithium_server-library loguru)
-target_link_libraries(lithium_server-library atom-component)
+target_link_libraries(lithium_server-library
+    PUBLIC
+        loguru
+        atom-component
+)
+
+# Build lithium_server executable
 add_executable(lithium_server ${lithium_src_dir}/App.cpp)
-target_link_directories(lithium_server PUBLIC ${CMAKE_BINARY_DIR}/libs)
 
-target_link_libraries(lithium_server lithium_server-library)
-target_link_libraries(lithium_server lithium_webserver)
-target_link_libraries(lithium_server oatpp-websocket oatpp-swagger oatpp-openssl oatpp-zlib oatpp)
-target_link_libraries(lithium_server loguru)
-target_link_libraries(lithium_server libzippp)
-target_link_libraries(lithium_server atomstatic)
-target_link_libraries(lithium_server carbon)
-target_link_libraries(lithium_server fmt::fmt)
-
-target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
-
-target_link_libraries(lithium_server OpenSSL::SSL OpenSSL::Crypto)
-target_link_libraries(lithium_server ${ZLIB_LIBRARIES})
-target_link_libraries(lithium_server sqlite3)
-target_link_libraries(lithium_server cpp_httplib)
-target_link_libraries(lithium_server backward)
-target_link_libraries(lithium_server tinyxml2)
-target_link_libraries(lithium_server pocketpy)
+target_link_libraries(lithium_server
+    PRIVATE
+        lithium_server-library
+        lithium_webserver
+        oatpp-websocket
+        oatpp-swagger
+        oatpp-openssl
+        oatpp-zlib
+        oatpp
+        loguru
+        libzippp
+        atomstatic
+        carbon
+        fmt::fmt
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        ${ZLIB_LIBRARIES}
+        sqlite3
+        cpp_httplib
+        backward
+        tinyxml2
+        pocketpy
+)
 
 if(WIN32)
-    target_link_libraries(lithium_server pdh iphlpapi winmm crypt32 wsock32 ws2_32)
     find_package(dlfcn-win32 REQUIRED)
-    target_link_libraries(lithium_server dlfcn-win32::dl)
+    target_link_libraries(lithium_server
+        PRIVATE
+            pdh
+            iphlpapi
+            winmm
+            crypt32
+            wsock32
+            ws2_32
+            dlfcn-win32::dl
+    )
 elseif(UNIX OR LINUX OR APPLE)
-    target_link_libraries(lithium_server dl)
+    target_link_libraries(lithium_server PRIVATE dl)
 else()
     message(FATAL_ERROR "Unsupported platform")
 endif()
 
+target_compile_definitions(lithium_server PRIVATE LOGURU_DEBUG_LOGGING)
+
 # Set output name for Lithium executable
-set_target_properties(
-    lithium_server
-    PROPERTIES
-    OUTPUT_NAME lithium_server
-)
+set_target_properties(lithium_server PROPERTIES OUTPUT_NAME lithium_server)
+
+# Set install paths
+if(UNIX AND NOT APPLE)
+    if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+        set(CMAKE_INSTALL_PREFIX /usr CACHE PATH "Lithium install path" FORCE)
+    endif()
+endif()
+
+if(WIN32)
+    set(CMAKE_INSTALL_PREFIX "C:/Program Files/LithiumServer")
+elseif(LINUX)
+    set(CMAKE_INSTALL_PREFIX "/usr/lithium")
+endif()
+
+# Enable folder grouping in IDEs
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)

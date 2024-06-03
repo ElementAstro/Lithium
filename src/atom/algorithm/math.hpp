@@ -28,8 +28,7 @@ namespace atom::algorithm {
  * @param divider The divisor for the division operation.
  * @return The result of (operant * multiplier) / divider.
  */
-uint64_t mulDiv64(uint64_t operant, uint64_t multiplier,
-                  uint64_t divider) noexcept;
+uint64_t mulDiv64(uint64_t operant, uint64_t multiplier, uint64_t divider);
 
 /**
  * @brief Performs a safe addition operation.
@@ -45,7 +44,8 @@ uint64_t safeAdd(uint64_t a, uint64_t b);
 /**
  * @brief Performs a safe multiplication operation.
  *
- * This function multiplies two unsigned 64-bit integers, handling potential overflow.
+ * This function multiplies two unsigned 64-bit integers, handling potential
+ * overflow.
  *
  * @param a The first operand for multiplication.
  * @param b The second operand for multiplication.
@@ -56,7 +56,8 @@ uint64_t safeMul(uint64_t a, uint64_t b);
 /**
  * @brief Rotates a 64-bit integer to the left.
  *
- * This function rotates a 64-bit integer to the left by a specified number of bits.
+ * This function rotates a 64-bit integer to the left by a specified number of
+ * bits.
  *
  * @param n The 64-bit integer to rotate.
  * @param c The number of bits to rotate.
@@ -67,7 +68,8 @@ uint64_t rotl64(uint64_t n, unsigned int c);
 /**
  * @brief Rotates a 64-bit integer to the right.
  *
- * This function rotates a 64-bit integer to the right by a specified number of bits.
+ * This function rotates a 64-bit integer to the right by a specified number of
+ * bits.
  *
  * @param n The 64-bit integer to rotate.
  * @param c The number of bits to rotate.
@@ -88,7 +90,8 @@ int clz64(uint64_t x);
 /**
  * @brief Normalizes a 64-bit integer.
  *
- * This function normalizes a 64-bit integer by shifting it to the right until the most significant bit is set.
+ * This function normalizes a 64-bit integer by shifting it to the right until
+ * the most significant bit is set.
  *
  * @param x The 64-bit integer to normalize.
  * @return The normalized 64-bit integer.
@@ -98,7 +101,8 @@ uint64_t normalize(uint64_t x);
 /**
  * @brief Performs a safe subtraction operation.
  *
- * This function subtracts two unsigned 64-bit integers, handling potential underflow.
+ * This function subtracts two unsigned 64-bit integers, handling potential
+ * underflow.
  *
  * @param a The first operand for subtraction.
  * @param b The second operand for subtraction.
@@ -109,13 +113,79 @@ uint64_t safeSub(uint64_t a, uint64_t b);
 /**
  * @brief Performs a safe division operation.
  *
- * This function divides two unsigned 64-bit integers, handling potential division by zero.
+ * This function divides two unsigned 64-bit integers, handling potential
+ * division by zero.
  *
  * @param a The numerator for division.
  * @param b The denominator for division.
  * @return The result of a / b, or 0 if there is a division by zero.
  */
 uint64_t safeDiv(uint64_t a, uint64_t b);
+
+/**
+ * @brief Calculates the bitwise reverse of a 64-bit integer.
+ *
+ * This function calculates the bitwise reverse of a 64-bit integer.
+ *
+ * @param n The 64-bit integer to reverse.
+ * @return The bitwise reverse of the 64-bit integer.
+ */
+uint64_t bitReverse64(uint64_t n);
+
+/**
+ * @brief Approximates the square root of a 64-bit integer.
+ *
+ * This function approximates the square root of a 64-bit integer using a fast
+ * algorithm.
+ *
+ * @param n The 64-bit integer for which to approximate the square root.
+ * @return The approximate square root of the 64-bit integer.
+ */
+uint64_t approximateSqrt(uint64_t n);
+
+/**
+ * @brief Calculates the greatest common divisor (GCD) of two 64-bit integers.
+ *
+ * This function calculates the greatest common divisor (GCD) of two 64-bit
+ * integers.
+ *
+ * @param a The first 64-bit integer.
+ * @param b The second 64-bit integer.
+ * @return The greatest common divisor of the two 64-bit integers.
+ */
+uint64_t gcd64(uint64_t a, uint64_t b);
+
+/**
+ * @brief Calculates the least common multiple (LCM) of two 64-bit integers.
+ *
+ * This function calculates the least common multiple (LCM) of two 64-bit
+ * integers.
+ *
+ * @param a The first 64-bit integer.
+ * @param b The second 64-bit integer.
+ * @return The least common multiple of the two 64-bit integers.
+ */
+uint64_t lcm64(uint64_t a, uint64_t b);
+
+/**
+ * @brief Checks if a 64-bit integer is a power of two.
+ *
+ * This function checks if a 64-bit integer is a power of two.
+ *
+ * @param n The 64-bit integer to check.
+ * @return True if the 64-bit integer is a power of two, false otherwise.
+ */
+bool isPowerOfTwo(uint64_t n);
+
+/**
+ * @brief Calculates the next power of two for a 64-bit integer.
+ *
+ * This function calculates the next power of two for a 64-bit integer.
+ *
+ * @param n The 64-bit integer for which to calculate the next power of two.
+ * @return The next power of two for the 64-bit integer.
+ */
+uint64_t nextPowerOfTwo(uint64_t n);
 }  // namespace atom::algorithm
 
 #endif

@@ -1,28 +1,40 @@
 # - Find JPEG
 # Find the native JPEG includes and library
-# This module defines
-#  JPEG_INCLUDE_DIR, where to find jpeglib.h, etc.
-#  JPEG_LIBRARIES, the libraries needed to use JPEG.
-#  JPEG_FOUND, If false, do not try to use JPEG.
-# also defined, but not for general use are
-#  JPEG_LIBRARY, where to find the JPEG library.
+#
+# This module defines the following variables:
+#  JPEG_FOUND - True if JPEG was found
+#  JPEG_INCLUDE_DIRS - The directory containing jpeglib.h
+#  JPEG_LIBRARIES - The libraries needed to use JPEG
 
-FIND_PATH(JPEG_INCLUDE_DIR jpeglib.h)
+find_path(JPEG_INCLUDE_DIR
+    NAMES jpeglib.h
+    PATHS ${JPEG_ROOT_DIR}/include
+    DOC "Path to the JPEG include directory"
+)
 
-SET(JPEG_NAMES ${JPEG_NAMES} jpeg)
-FIND_LIBRARY(JPEG_LIBRARY NAMES ${JPEG_NAMES} )
+find_library(JPEG_LIBRARY
+    NAMES ${JPEG_NAMES} jpeg
+    PATHS ${JPEG_ROOT_DIR}/lib
+    DOC "Path to the JPEG library"
+)
 
-# handle the QUIETLY and REQUIRED arguments and set JPEG_FOUND to TRUE if
-# all listed variables are TRUE
-INCLUDE(FindPackageHandleStandardArgs)
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(JPEG DEFAULT_MSG JPEG_LIBRARY JPEG_INCLUDE_DIR)
+# Handle the QUIETLY and REQUIRED arguments and set JPEG_FOUND
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(JPEG
+    REQUIRED_VARS JPEG_LIBRARY JPEG_INCLUDE_DIR
+)
 
-IF(JPEG_FOUND)
-  SET(JPEG_LIBRARIES ${JPEG_LIBRARY})
-ENDIF(JPEG_FOUND)
+if(JPEG_FOUND)
+    set(JPEG_INCLUDE_DIRS ${JPEG_INCLUDE_DIR})
+    set(JPEG_LIBRARIES ${JPEG_LIBRARY})
+    # Set additional compile definitions if needed
+    if(UNIX AND NOT APPLE)
+        add_definitions(-DJPEG_STATIC)
+    endif()
+endif()
 
-# Deprecated declarations.
-SET (NATIVE_JPEG_INCLUDE_PATH ${JPEG_INCLUDE_DIR} )
-GET_FILENAME_COMPONENT (NATIVE_JPEG_LIB_PATH ${JPEG_LIBRARY} PATH)
+# Deprecated declarations (for backward compatibility)
+set(NATIVE_JPEG_INCLUDE_PATH ${JPEG_INCLUDE_DIR})
+get_filename_component(NATIVE_JPEG_LIB_PATH ${JPEG_LIBRARY} PATH)
 
-MARK_AS_ADVANCED(JPEG_LIBRARY JPEG_INCLUDE_DIR )
+mark_as_advanced(JPEG_LIBRARY JPEG_INCLUDE_DIR)

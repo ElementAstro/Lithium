@@ -174,6 +174,8 @@ inline std::any Component::runCommand(const std::string& name,
     THROW_EXCEPTION("Coomponent ", name, " not found");
 }
 
+inline void Component::doc(const std::string& description) { m_doc = description; }
+
 template <typename T>
 void Component::def_type(std::string_view name, const atom::meta::Type_Info& ti,
                          [[maybe_unused]] const std::string& group,

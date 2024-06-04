@@ -134,6 +134,34 @@ TEST_F(ComponentTest, DefineTypes) {
     EXPECT_TRUE(component->has_type("TestClass"));
 }
 
+TEST_F(ComponentTest, DefineClass) {
+    class TestClass {
+    public:
+        int testVar = 0;
+
+        TestClass() : testVar(0) {}
+
+        TestClass(int value) : testVar(value) {}
+
+        int var_getter() const { return testVar; }
+
+        void var_setter(int value) { testVar = value; }
+    };
+
+    component->doc("This is a test class");
+    component->def_type<TestClass>("TestClass",
+                                   atom::meta::user_type<TestClass>(),
+                                   "MyGroup", "Test class");
+    component->def_constructor<TestClass, int>("create_test_class", "MyGroup",
+                                               "Create TestClass");
+    component->def_default_constructor<TestClass>(
+        "create_default_test_class", "MyGroup", "Create default TestClass");
+    component->def("var_getter", &TestClass::var_getter, "MyGroup",
+                   "Get testVar");
+    component->def("var_setter", &TestClass::var_setter, "MyGroup",
+                   "Set testVar");
+}
+
 // 错误处理测试
 TEST_F(ComponentTest, ErrorHandling) {
     // 尝试获取不存在的变量

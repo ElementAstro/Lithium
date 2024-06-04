@@ -29,20 +29,38 @@
 #include "atom/function/proxy.hpp"
 #include "atom/function/type_info.hpp"
 
+class Arg {
+public:
+    Arg(const std::string& name) : name(name) {}
+    Arg(const std::string& name, std::any default_value)
+        : name(name), default_value(default_value) {}
+
+    const std::string& getName() const { return name; }
+    const std::optional<std::any>& getDefaultValue() const {
+        return default_value;
+    }
+
+private:
+    std::string name;
+    std::optional<std::any> default_value;
+};
+
 class CommandDispatcher {
 public:
     template <typename Ret, typename... Args>
     void def(const std::string& name, const std::string& group,
              const std::string& description, std::function<Ret(Args...)> func,
              std::optional<std::function<bool()>> precondition = std::nullopt,
-             std::optional<std::function<void()>> postcondition = std::nullopt);
+             std::optional<std::function<void()>> postcondition = std::nullopt,
+             std::vector<Arg> arg_info = {});
 
     template <typename Ret, typename... Args>
     void def_t(
         const std::string& name, const std::string& group,
         const std::string& description, std::function<Ret(Args...)> func,
         std::optional<std::function<bool()>> precondition = std::nullopt,
-        std::optional<std::function<void()>> postcondition = std::nullopt);
+        std::optional<std::function<void()>> postcondition = std::nullopt,
+        std::vector<Arg> arg_info = {});
 
     [[nodiscard]] bool has(const std::string& name) const;
 
@@ -98,6 +116,7 @@ private:
 #endif
         std::optional<std::function<bool()>> precondition;
         std::optional<std::function<void()>> postcondition;
+        std::vector<Arg> arg_info;
     };
 
 #if ENABLE_FASTHASH

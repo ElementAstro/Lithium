@@ -44,12 +44,12 @@ private:
         template <typename T>
         Data(T&& obj, bool is_ref, bool return_value, bool readonly)
             : m_obj(std::forward<T>(obj)),
-              m_type_info(user_type<T>()),
+              m_type_info(user_type<std::decay_t<T>>()),
               m_attrs(nullptr),
               m_is_ref(is_ref),
               m_return_value(return_value),
               m_readonly(readonly),
-              m_const_data_ptr((const void*)&obj) {}
+              m_const_data_ptr((const void*)std::addressof(obj)) {}
     };
 
     std::shared_ptr<Data> m_data;
@@ -67,14 +67,20 @@ public:
     BoxedValue()
         : m_data(std::make_shared<Data>(Void_Type{}, false, false, false)) {}
 
-    BoxedValue(const BoxedValue& other) : m_data(other.m_data) {}
-    BoxedValue(BoxedValue&& other) noexcept : m_data(std::move(other.m_data)) {}
+    BoxedValue(const BoxedValue& other) {
+        std::shared_lock lock(other.m_mutex);
+        m_data = other.m_data;
+    }
 
-    BoxedValue(std::shared_ptr<Data> data) : m_data(std::move(data)) {}
+    BoxedValue(BoxedValue&& other) noexcept {
+        std::unique_lock lock(other.m_mutex);
+        m_data = std::move(other.m_data);
+    }
 
     BoxedValue& operator=(const BoxedValue& other) {
         if (this != &other) {
             std::unique_lock lock(m_mutex);
+            std::shared_lock other_lock(other.m_mutex);
             m_data = other.m_data;
         }
         return *this;
@@ -83,14 +89,19 @@ public:
     BoxedValue& operator=(BoxedValue&& other) noexcept {
         if (this != &other) {
             std::unique_lock lock(m_mutex);
+            std::unique_lock other_lock(other.m_mutex);
             m_data = std::move(other.m_data);
         }
         return *this;
     }
 
     void swap(BoxedValue& rhs) noexcept {
-        std::unique_lock lock(m_mutex);
-        std::swap(m_data, rhs.m_data);
+        if (this != &rhs) {
+            std::unique_lock lock1(m_mutex, std::defer_lock);
+            std::unique_lock lock2(rhs.m_mutex, std::defer_lock);
+            std::lock(lock1, lock2);
+            std::swap(m_data, rhs.m_data);
+        }
     }
 
     bool is_undef() const noexcept {
@@ -270,7 +281,8 @@ public:
 
     /// Visitor pattern implementation
     template <typename Visitor>
-    auto visit(Visitor&& visitor) -> decltype(auto) {
+    auto visit(Visitor&& visitor) {
+        std::shared_lock lock(m_mutex);
         return std::visit(std::forward<Visitor>(visitor), m_data->m_obj);
     }
 };
@@ -297,6 +309,17 @@ BoxedValue const_var(const T& t) {
 
 // Helper function to create a void BoxedValue
 inline BoxedValue void_var() { return BoxedValue(); }
+
+// Factory functions
+template <typename T>
+BoxedValue make_boxed_value(T&& t, bool is_return_value = false,
+                            bool readonly = false) {
+    if constexpr (std::is_reference_v<T>) {
+        return BoxedValue(std::ref(t), is_return_value, readonly);
+    } else {
+        return BoxedValue(std::forward<T>(t), is_return_value, readonly);
+    }
+}
 }  // namespace atom::meta
 
 #endif  // ATOM_META_ANY_HPP

@@ -84,7 +84,6 @@ add_subdirectory(libs)
 add_subdirectory(${lithium_module_dir})
 add_subdirectory(modules)
 add_subdirectory(driver)
-add_subdirectory(${lithium_src_dir}/carbon)
 add_subdirectory(${lithium_src_dir}/config)
 add_subdirectory(tests)
 
@@ -114,7 +113,6 @@ set(script_module
     ${lithium_src_dir}/script/custom/sys.cpp
     ${lithium_src_dir}/script/custom/config.cpp
     ${lithium_src_dir}/script/sheller.cpp
-    ${lithium_src_dir}/script/carbon.cpp
 )
 
 set(task_module

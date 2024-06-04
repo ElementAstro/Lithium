@@ -147,6 +147,8 @@ public:
     // Function methods
     // -------------------------------------------------------------------
 
+    void doc(const std::string& description);
+
     template <typename Callable>
     void def(const std::string& name, Callable&& func,
              const std::string& group = "",
@@ -379,6 +381,7 @@ private:
 
 private:
     std::string m_name;
+    std::string m_doc;
     std::string m_configPath;
     std::string m_infoPath;
     atom::meta::Type_Info m_typeInfo;

@@ -26,11 +26,12 @@ public:
     throw DispatchTimeout(__FILE__, __LINE__, __func__, __VA_ARGS__);
 
 template <typename Ret, typename... Args>
-void CommandDispatcher::def(
-    const std::string& name, const std::string& group,
-    const std::string& description, std::function<Ret(Args...)> func,
-    std::optional<std::function<bool()>> precondition,
-    std::optional<std::function<void()>> postcondition) {
+void CommandDispatcher::def(const std::string& name, const std::string& group,
+                            const std::string& description,
+                            std::function<Ret(Args...)> func,
+                            std::optional<std::function<bool()>> precondition,
+                            std::optional<std::function<void()>> postcondition,
+                            std::vector<Arg> arg_info) {
     auto _func = atom::meta::ProxyFunction(std::move(func));
     auto info = _func.getFunctionInfo();
     auto it = commands.find(name);
@@ -42,7 +43,8 @@ void CommandDispatcher::def(
                     description,
                     {},
                     std::move(precondition),
-                    std::move(postcondition)};
+                    std::move(postcondition),
+                    std::move(arg_info)};
         commands[name] = std::move(cmd);
         groupMap[name] = group;
     } else {
@@ -50,6 +52,7 @@ void CommandDispatcher::def(
         it->second.return_type.emplace_back(info.returnType);
         it->second.arg_types.emplace_back(info.argumentTypes);
         it->second.hash.emplace_back(info.hash);
+        it->second.arg_info = std::move(arg_info);
     }
 }
 
@@ -58,7 +61,8 @@ void CommandDispatcher::def_t(
     const std::string& name, const std::string& group,
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
-    std::optional<std::function<void()>> postcondition) {
+    std::optional<std::function<void()>> postcondition,
+    std::vector<Arg> arg_info) {
     auto _func = atom::meta::TimerProxyFunction(std::move(func));
     auto info = _func.getFunctionInfo();
     auto it = commands.find(name);
@@ -70,7 +74,8 @@ void CommandDispatcher::def_t(
                     description,
                     {},
                     std::move(precondition),
-                    std::move(postcondition)};
+                    std::move(postcondition),
+                    std::move(arg_info)};
         commands[name] = std::move(cmd);
         groupMap[name] = group;
     } else {
@@ -78,6 +83,7 @@ void CommandDispatcher::def_t(
         it->second.return_type.emplace_back(info.returnType);
         it->second.arg_types.emplace_back(info.argumentTypes);
         it->second.hash.emplace_back(info.hash);
+        it->second.arg_info = std::move(arg_info);
     }
 }
 
@@ -127,6 +133,20 @@ std::any CommandDispatcher::dispatchHelper(const std::string& name,
     }
 
     const auto& cmd = it->second;
+
+    if (args.size() < cmd.arg_info.size()) {
+        std::vector<std::any> full_args = args;
+        for (size_t i = args.size(); i < cmd.arg_info.size(); ++i) {
+            if (cmd.arg_info[i].getDefaultValue().has_value()) {
+                full_args.push_back(cmd.arg_info[i].getDefaultValue().value());
+            } else {
+                THROW_INVALID_ARGUMENT("Missing argument: " +
+                                       cmd.arg_info[i].getName());
+            }
+        }
+        return dispatchHelper(name, full_args);
+    }
+
     if (cmd.precondition.has_value() && !cmd.precondition.value()()) {
         THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
     }
@@ -164,8 +184,7 @@ std::any CommandDispatcher::dispatchHelper(const std::string& name,
                 return result;
             } catch (const std::bad_any_cast&) {
                 // 这里不需要重载函数，因此重新抛出异常
-                THROW_DISPATCH_EXCEPTION(
-                    "Bad command invoke: " + name);
+                THROW_DISPATCH_EXCEPTION("Bad command invoke: " + name);
             }
         } else if (cmd.funcs.size() > 1) {
             if constexpr (std::is_same_v<ArgsType, std::vector<std::any>>) {

@@ -90,14 +90,13 @@ declare interface IndiSingleDeviceProfile {
 }
 
 declare interface IndiConnectProfile {
-  data: any;
-  all_drivers: [];
+  all_drivers: Array<IConnectBrandSelection>;
   telescope: IndiSingleDeviceProfile;
   camera: IndiSingleDeviceProfile;
-  focuser: IndiSingleDeviceProfile;
+  focus: IndiSingleDeviceProfile;
   filter: IndiSingleDeviceProfile;
-  guide_camera: IndiSingleDeviceProfile;
-  polar: IndiSingleDeviceProfile;
+  guider: IndiSingleDeviceProfile;
+  polar?: IndiSingleDeviceProfile;
 }
 
 interface HelperHandle {

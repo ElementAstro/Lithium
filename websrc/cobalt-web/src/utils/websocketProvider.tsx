@@ -12,13 +12,20 @@ if (process.env.NODE_ENV === "development") {
 export type EchoWebSocketContextType = [
   (event: any, filter?: string) => void,
   (event: any) => void,
-  (fn: any) => void
+  (fn: any) => void,
+  boolean
 ];
 export const EchoWebSocketContext =
-  React.createContext<EchoWebSocketContextType>([() => {}, () => {}, () => {}]);
+  React.createContext<EchoWebSocketContextType>([
+    () => {},
+    () => {},
+    () => {},
+    false,
+  ]);
 
 export const EchoWebSocketProvider: React.FC<IProps> = ({ children }) => {
   const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
+  const [webSocketIsOpen, setWebSocketIsOpen] = useState(false); // 新的状态
   const [listeners, setListeners] = useState<{
     [key: string]: ((event: any) => void)[];
   }>({});
@@ -59,13 +66,18 @@ export const EchoWebSocketProvider: React.FC<IProps> = ({ children }) => {
   };
   return (
     <EchoWebSocketContext.Provider
-      value={[addListener, sendMessage, removeListener]}
+      value={[addListener, sendMessage, removeListener, webSocketIsOpen]}
     >
       <Websocket
         url={ws_url}
         onOpen={(_event, socket) => {
           setWebSocket(socket);
+          setWebSocketIsOpen(true);
           console.log("Connected to websocket");
+        }}
+        onClose={() => {
+          setWebSocketIsOpen(false); // 这里设置WebSocket连接关闭
+          console.log("Disconnected from websocket");
         }}
         onMessage={onMessage}
       />
@@ -78,7 +90,7 @@ export const useEchoWebSocket = (
   listener?: (event: any) => void,
   filter = "any"
 ) => {
-  const [addListener, sendMessage, removeListener] =
+  const [addListener, sendMessage, removeListener, webSocketIsOpen] =
     useContext(EchoWebSocketContext);
   useEffect(() => {
     if (listener) {
@@ -86,5 +98,5 @@ export const useEchoWebSocket = (
     }
   }, []);
 
-  return { sendMessage, removeListener };
+  return { sendMessage, removeListener, webSocketIsOpen };
 };

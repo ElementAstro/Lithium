@@ -3,10 +3,11 @@ interface WebSocketConnection {
   send: (data: any) => void;
 }
 
-interface DeviceControlResponseMessage {  // which is the response of data.
-  type: 'data' | 'error' | 'signal' | 'message',
-  message: string,
-  data: object,
+interface DeviceControlResponseMessage {
+  // which is the response of data.
+  type: "data" | "error" | "signal" | "message";
+  message: string;
+  data: object;
 }
 
 const createWebSocketConnection = (url: string): WebSocketConnection => {
@@ -26,6 +27,6 @@ const createWebSocketConnection = (url: string): WebSocketConnection => {
   return connection;
 };
 
-const DeviceControlWebSocket = createWebSocketConnection('');
+const DeviceControlWebSocket = createWebSocketConnection("");
 
 export default DeviceControlWebSocket;

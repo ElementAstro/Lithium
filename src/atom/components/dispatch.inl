@@ -7,6 +7,8 @@
 #include "atom/function/abi.hpp"
 #include "atom/function/func_traits.hpp"
 
+#include "atom/utils/to_string.hpp"
+
 class DispatchException : public atom::error::Exception {
 public:
     using atom::error::Exception::Exception;
@@ -24,30 +26,34 @@ public:
     throw DispatchTimeout(__FILE__, __LINE__, __func__, __VA_ARGS__);
 
 template <typename Ret, typename... Args>
-void CommandDispatcher::def(
-    const std::string& name, const std::string& group,
-    const std::string& description, std::function<Ret(Args...)> func,
-    std::optional<std::function<bool()>> precondition,
-    std::optional<std::function<void()>> postcondition) {
+void CommandDispatcher::def(const std::string& name, const std::string& group,
+                            const std::string& description,
+                            std::function<Ret(Args...)> func,
+                            std::optional<std::function<bool()>> precondition,
+                            std::optional<std::function<void()>> postcondition,
+                            std::vector<Arg> arg_info) {
     auto _func = atom::meta::ProxyFunction(std::move(func));
+    auto info = _func.getFunctionInfo();
     auto it = commands.find(name);
     if (it == commands.end()) {
         Command cmd{{std::move(_func)},
-                    {},
-                    {},
-                    {},
+                    {info.returnType},
+                    {info.argumentTypes},
+                    {info.hash},
                     description,
                     {},
                     std::move(precondition),
-                    std::move(postcondition)};
+                    std::move(postcondition),
+                    std::move(arg_info)};
         commands[name] = std::move(cmd);
         groupMap[name] = group;
     } else {
         it->second.funcs.emplace_back(std::move(_func));
+        it->second.return_type.emplace_back(info.returnType);
+        it->second.arg_types.emplace_back(info.argumentTypes);
+        it->second.hash.emplace_back(info.hash);
+        it->second.arg_info = std::move(arg_info);
     }
-    auto info = _func.getFunctionInfo();
-    it->second.arg_names.emplace_back(info.argumentNames);
-    it->second.arg_types.emplace_back(info.argumentTypes);
 }
 
 template <typename Ret, typename... Args>
@@ -55,26 +61,30 @@ void CommandDispatcher::def_t(
     const std::string& name, const std::string& group,
     const std::string& description, std::function<Ret(Args...)> func,
     std::optional<std::function<bool()>> precondition,
-    std::optional<std::function<void()>> postcondition) {
+    std::optional<std::function<void()>> postcondition,
+    std::vector<Arg> arg_info) {
     auto _func = atom::meta::TimerProxyFunction(std::move(func));
+    auto info = _func.getFunctionInfo();
     auto it = commands.find(name);
     if (it == commands.end()) {
         Command cmd{{std::move(_func)},
-                    {},
-                    {},
-                    {},
+                    {info.returnType},
+                    {info.argumentTypes},
+                    {info.hash},
                     description,
                     {},
                     std::move(precondition),
-                    std::move(postcondition)};
+                    std::move(postcondition),
+                    std::move(arg_info)};
         commands[name] = std::move(cmd);
         groupMap[name] = group;
     } else {
         it->second.funcs.emplace_back(std::move(_func));
+        it->second.return_type.emplace_back(info.returnType);
+        it->second.arg_types.emplace_back(info.argumentTypes);
+        it->second.hash.emplace_back(info.hash);
+        it->second.arg_info = std::move(arg_info);
     }
-    auto info = _func.getFunctionInfo();
-    it->second.arg_names.emplace_back(info.argumentNames);
-    it->second.arg_types.emplace_back(info.argumentTypes);
 }
 
 template <typename... Args>
@@ -123,13 +133,22 @@ std::any CommandDispatcher::dispatchHelper(const std::string& name,
     }
 
     const auto& cmd = it->second;
-    if (cmd.precondition.has_value() && !cmd.precondition.value()()) {
-        THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
+
+    if (args.size() < cmd.arg_info.size()) {
+        std::vector<std::any> full_args = args;
+        for (size_t i = args.size(); i < cmd.arg_info.size(); ++i) {
+            if (cmd.arg_info[i].getDefaultValue().has_value()) {
+                full_args.push_back(cmd.arg_info[i].getDefaultValue().value());
+            } else {
+                THROW_INVALID_ARGUMENT("Missing argument: " +
+                                       cmd.arg_info[i].getName());
+            }
+        }
+        return dispatchHelper(name, full_args);
     }
 
-    auto cacheIt = cacheMap.find(name);
-    if (cacheIt != cacheMap.end()) {
-        return cacheIt->second;
+    if (cmd.precondition.has_value() && !cmd.precondition.value()()) {
+        THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
     }
 
     auto timeoutIt = timeoutMap.find(name);
@@ -152,7 +171,6 @@ std::any CommandDispatcher::dispatchHelper(const std::string& name,
             THROW_DISPATCH_TIMEOUT("Command timed out: " + name);
         }
         auto result = future.get();
-        cacheMap[name] = result;
         if (cmd.postcondition.has_value())
             cmd.postcondition.value()();
         return result;
@@ -161,42 +179,137 @@ std::any CommandDispatcher::dispatchHelper(const std::string& name,
         if (cmd.funcs.size() == 1) {
             try {
                 auto result = cmd.funcs[0](args);
-                cacheMap[name] = result;
                 if (cmd.postcondition.has_value())
                     cmd.postcondition.value()();
                 return result;
             } catch (const std::bad_any_cast&) {
                 // 这里不需要重载函数，因此重新抛出异常
-                THROW_DISPATCH_EXCEPTION(
-                    "No matching overload found for command: " + name)
+                THROW_DISPATCH_EXCEPTION("Bad command invoke: " + name);
             }
         } else if (cmd.funcs.size() > 1) {
-            // std::string func_hash;
-            //  Max: 仅支持 std::vector<std::any>
-            // if constexpr (std::is_same_v<ArgsType, std::vector<std::any>>) {
-            // func_hash = atom::algorithm::computeHash(args);
-            //  TODO
-            for (const auto& func : cmd.funcs) {
-                try {
-                    // Max: 这里用函数的hash来匹配，是根据注册时计算得到
-                    auto result = func(args);
-                    cacheMap[name] = result;
-                    if (cmd.postcondition.has_value())
-                        cmd.postcondition.value()();
-                    return result;
-                } catch (const std::bad_any_cast&) {
-                    // 参数类型不匹配, 尝试下一个重载函数
+            if constexpr (std::is_same_v<ArgsType, std::vector<std::any>>) {
+                std::string func_hash;
+                std::vector<std::string> arg_types;
+                for (const auto& arg : args) {
+                    arg_types.emplace_back(atom::meta::DemangleHelper::Demangle(
+                        arg.type().name()));
                 }
-                //}
-                //}
-                // THROW_INVALID_ARGUMENT("Variadic arguments are not support
-                // yet");
+                func_hash = atom::algorithm::computeHash(arg_types);
+                int i = 0;
+                for (const auto& func : cmd.funcs) {
+                    if (cmd.hash[i] == func_hash) {
+                        try {
+                            // Max: 这里用函数的hash来匹配，是根据注册时计算得到
+                            auto result = func(args);
+                            if (cmd.postcondition.has_value())
+                                cmd.postcondition.value()();
+                            return result;
+                        } catch (const std::bad_any_cast&) {
+                            // Max: 这里应该是不会出现异常的
+                            THROW_DISPATCH_EXCEPTION(
+                                "Failed to call function ", name,
+                                "with function hash ", func_hash);
+                        }
+                    }
+                }
             }
-            // 这个其实不太可能发生，但还是要抛出异常
+
             THROW_INVALID_ARGUMENT("No matching overload found for command: " +
                                    name);
         }
         THROW_INVALID_ARGUMENT("No overload found for command: " + name);
     }
 }
+
+inline bool CommandDispatcher::has(const std::string& name) const {
+    if (commands.find(name) != commands.end())
+        return true;
+    for (const auto& command : commands) {
+        if (command.second.aliases.find(name) != command.second.aliases.end())
+            return true;
+    }
+    return false;
+}
+
+inline void CommandDispatcher::addAlias(const std::string& name,
+                                        const std::string& alias) {
+    auto it = commands.find(name);
+    if (it != commands.end()) {
+        it->second.aliases.insert(alias);
+        commands[alias] = it->second;
+        groupMap[alias] = groupMap[name];
+    }
+}
+
+inline void CommandDispatcher::addGroup(const std::string& name,
+                                        const std::string& group) {
+    groupMap[name] = group;
+}
+
+inline void CommandDispatcher::setTimeout(const std::string& name,
+                                          std::chrono::milliseconds timeout) {
+    timeoutMap[name] = timeout;
+}
+
+inline void CommandDispatcher::removeCommand(const std::string& name) {
+    commands.erase(name);
+    groupMap.erase(name);
+    timeoutMap.erase(name);
+}
+
+inline std::vector<std::string> CommandDispatcher::getCommandsInGroup(
+    const std::string& group) const {
+    std::vector<std::string> result;
+    for (const auto& pair : groupMap) {
+        if (pair.second == group) {
+            result.push_back(pair.first);
+        }
+    }
+    return result;
+}
+
+inline std::string CommandDispatcher::getCommandDescription(
+    const std::string& name) const {
+    auto it = commands.find(name);
+    if (it != commands.end()) {
+        return it->second.description;
+    }
+    return "";
+}
+
+inline std::unordered_set<std::string> CommandDispatcher::getCommandAliases(
+    const std::string& name) const {
+    auto it = commands.find(name);
+    if (it != commands.end()) {
+        return it->second.aliases;
+    }
+    return {};
+}
+
+inline std::any CommandDispatcher::dispatch(const std::string& name,
+                                            const std::vector<std::any>& args) {
+    return dispatchHelper(name, args);
+}
+
+inline std::any CommandDispatcher::dispatch(const std::string& name,
+                                            const FunctionParams& params) {
+    return dispatchHelper(name, params.to_vector());
+}
+
+inline std::vector<std::string> CommandDispatcher::getAllCommands() const {
+    std::vector<std::string> result;
+    for (const auto& pair : commands) {
+        result.push_back(pair.first);
+    }
+    // Max: Add aliases to the result vector
+    for (const auto& command : commands) {
+        for (const auto& alias : command.second.aliases) {
+            result.push_back(alias);
+        }
+    }
+    auto it = std::unique(result.begin(), result.end());
+    result.erase(it, result.end());
+    return result;
+}
+
 #endif

@@ -15,7 +15,9 @@
 #include "template_traits.hpp"
 
 namespace atom::meta {
-constexpr std::string_view extract_raw_name(std::string_view name) {
+template <typename T>
+constexpr auto raw_name_of() {
+    std::string_view name = ATOM_META_FUNCTION_NAME;
 #if __GNUC__ || __clang__
     std::size_t start = name.find('=') + 2;
     std::size_t end = name.size() - 1;
@@ -35,32 +37,72 @@ constexpr std::string_view extract_raw_name(std::string_view name) {
 }
 
 template <typename T>
-constexpr auto raw_name_of() {
-    return extract_raw_name(MAGIC_CPP_FUNCTION_NAME);
-}
-
-template <typename T>
 constexpr auto raw_name_of_template() {
     std::string_view name = template_traits<T>::full_name;
-    return extract_raw_name(name);
+#if __GNUC__ || __clang__
+    return name;
+#elif _MSC_VER
+    std::size_t start = name.find('<') + 1;
+    std::size_t end = name.rfind(">(");
+    name = std::string_view{name.data() + start, end - start};
+    start = name.find(' ');
+    return start == std::string_view::npos
+               ? name
+               : std::string_view{name.data() + start + 1,
+                                  name.size() - start - 1};
+#else
+    static_assert(false, "Unsupported compiler");
+#endif
 }
 
 template <auto Value>
 constexpr auto raw_name_of() {
-    return extract_raw_name(MAGIC_CPP_FUNCTION_NAME);
+    std::string_view name = ATOM_META_FUNCTION_NAME;
+#if __GNUC__ || __clang__
+    std::size_t start = name.find('=') + 2;
+    std::size_t end = name.size() - 1;
+    return std::string_view{name.data() + start, end - start};
+#elif _MSC_VER
+    std::size_t start = name.find('<') + 1;
+    std::size_t end = name.rfind(">(");
+    name = std::string_view{name.data() + start, end - start};
+    start = name.find(' ');
+    return start == std::string_view::npos
+               ? name
+               : std::string_view{name.data() + start + 1,
+                                  name.size() - start - 1};
+#else
+    static_assert(false, "Unsupported compiler");
+#endif
 }
 
 template <auto Value>
 constexpr auto raw_name_of_enum() {
-    std::string_view name = extract_raw_name(MAGIC_CPP_FUNCTION_NAME);
-    std::size_t start = name.rfind("::");
+    std::string_view name = ATOM_META_FUNCTION_NAME;
+#if __GNUC__ || __clang__
+    std::size_t start = name.find('=') + 2;
+    std::size_t end = name.size() - 1;
+    name = std::string_view{name.data() + start, end - start};
+    start = name.rfind("::");
     return start == std::string_view::npos
                ? name
                : std::string_view{name.data() + start + 2,
                                   name.size() - start - 2};
+#elif _MSC_VER
+    std::size_t start = name.find('<') + 1;
+    std::size_t end = name.rfind(">(");
+    name = std::string_view{name.data() + start, end - start};
+    start = name.rfind("::");
+    return start == std::string_view::npos
+               ? name
+               : std::string_view{name.data() + start + 2,
+                                  name.size() - start - 2};
+#else
+    static_assert(false, "Unsupported compiler");
+#endif
 }
 
-#ifdef MAGIC_CPP_20_SUPPORT
+#ifdef ATOM_META_CPP_20_SUPPORT
 template <typename T>
 struct Wrapper {
     T a;
@@ -69,34 +111,35 @@ struct Wrapper {
 
 template <Wrapper T>
 constexpr auto raw_name_of_member() {
-    std::string_view name = MAGIC_CPP_FUNCTION_NAME;
-#if __GNUC__ && (!__clang__) && (!_MSC_VER)
+    std::string_view name = ATOM_META_FUNCTION_NAME;
+#if defined(__GNUC__) && !defined(__clang__) && !defined(_MSC_VER)
+    // GCC specific parsing
     std::size_t start = name.rfind("::") + 2;
-    std::size_t end = name.rfind(')');
-    return name.substr(start, end - start);
-#elif __clang__
+    std::size_t end = name.rfind('}');
+    if (end == std::string_view::npos) {
+        end = name.size();
+    } else {
+        end--; // Remove the last '}'
+    }
+    return name.substr(start, end - start + 1);
+#elif defined(__clang__)
+    // Clang specific parsing
     std::size_t start = name.rfind(".") + 1;
     std::size_t end = name.rfind('}');
     return name.substr(start, end - start);
-#elif _MSC_VER
+#elif defined(_MSC_VER)
+    // MSVC specific parsing
     std::size_t start = name.rfind("->") + 2;
-    std::size_t end = name.rfind('}');
+    std::size_t end = name.rfind(')');
     return name.substr(start, end - start);
 #else
 #error "Unsupported compiler"
 #endif
 }
-#endif  // MAGIC_CPP_20_SUPPORT
+#endif  // ATOM_META_CPP_20_SUPPORT
 
 template <typename T>
 using args_type_of = args_type_of<T>;
-
-template <typename Derived, typename... Bases>
-constexpr bool is_derived_from_all_v = is_derived_from_all_v<Derived, Bases...>;
-
-template <typename T, template <typename, typename...> class Template>
-constexpr bool is_partial_specialization_of_v =
-    is_partial_specialization_of_v<T, Template>;
 }  // namespace atom::meta
 
 #endif  // ATOM_META_RAW_NAME_HPP

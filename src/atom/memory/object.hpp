@@ -43,7 +43,11 @@ public:
     }
 
     std::shared_ptr<T> acquire() {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
+
+        if (available_ == 0) {
+            throw std::runtime_error("ObjectPool is full.");
+        }
         cv_.wait(lock, [this] { return !pool_.empty() || available_ > 0; });
 
         if (!pool_.empty()) {
@@ -58,7 +62,7 @@ public:
     }
 
     void release(std::shared_ptr<T> obj) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         if (pool_.size() < max_size_) {
             obj->reset();
             pool_.push_back(std::move(obj));
@@ -69,17 +73,17 @@ public:
     }
 
     size_t available() const {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         return available_ + pool_.size();
     }
 
     size_t size() const {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard lock(mutex_);
         return max_size_ - available_ + pool_.size();
     }
 
     void prefill(size_t count) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         for (size_t i = pool_.size(); i < count && i < max_size_; ++i) {
             pool_.push_back(creator_());
         }

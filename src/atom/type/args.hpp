@@ -126,7 +126,10 @@ public:
      * @return If the key exists, return true; otherwise return false.
      */
     bool contains(std::string_view key) const noexcept {
-        return m_data.contains(key);
+        if (auto it = m_data.find(key); it != m_data.end()) {
+            return true;
+        }
+        return false;
     }
 
     /**

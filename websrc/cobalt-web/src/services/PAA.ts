@@ -1,4 +1,4 @@
-import request from "./request";
+import request from "@/services/request";
 
 // ---------------PAA相关的HTTP接口
 // 具体说明见后端的接口文档
@@ -17,7 +17,7 @@ export const getPAAUpdateStatus = (): Promise<IPAAFixedUpdateRunningStatus> =>
     method: "get",
   });
 
-export const getCurrentScript = (): Promise<IRequestResponse<any>> =>
+export const getCurrentScript = (): Promise<IPAAScripteResponse> =>
   request({
     url: "/PAA/get_current_script/",
     method: "get",
@@ -29,13 +29,13 @@ export const getSavedScripts = (): Promise<IRequestResponse<any>> =>
     method: "get",
   });
 
-export const postPAAStart = () =>
+export const postPAAStart = (): Promise<IRequestResponse<any>> =>
   request({
     url: "/PAA/start/",
     method: "post",
   });
 
-export const postPAAStop = () =>
+export const postPAAStop = (): Promise<IRequestResponse<any>> =>
   request({
     url: "/PAA/stop/",
     method: "post",
@@ -51,7 +51,7 @@ export const postPAAUpdate = (body: any): Promise<IRequestResponse<any>> =>
 export const postPAAGenerate = (body: {
   script_type: any;
   script_setting: any;
-}) =>
+}): Promise<IPAAScripteResponse> =>
   request({
     url: "/PAA/generate_script/",
     method: "post",
@@ -60,7 +60,7 @@ export const postPAAGenerate = (body: {
 
 export const postPAALoadSavedScript = (body: {
   script_name: any;
-}): Promise<IRequestResponse<any>> =>
+}): Promise<IPAAScripteResponse> =>
   request({
     url: "/PAA/load_saved_script/",
     method: "post",
@@ -69,7 +69,7 @@ export const postPAALoadSavedScript = (body: {
 
 export const postPAASaveScript = (body: {
   script_name: any;
-}): Promise<IRequestResponse<any>> =>
+}): Promise<IPAAScripteResponse> =>
   request({
     url: "/PAA/save_script/",
     method: "post",

@@ -1,10 +1,11 @@
 import { createStore, action, thunk, computed } from "easy-peasy";
-import * as AXIOSGP from "../services/global_parameter_api";
+import * as AXIOSGP from "@/services/global_parameter_api";
 import { assignDeep } from "./persistence";
 import { Thunk, Action, Computed } from "easy-peasy";
 
 export interface IGLobalParametersModels {
   global_parameter: IGlobalParameters;
+  tab_value: number;
   // global_changed: IGPChanged;
   update_one_paramter: Action<
     IGLobalParametersModels,
@@ -22,6 +23,7 @@ export interface IGLobalParametersModels {
     IGLobalParametersModels,
     IGPFilterSelection[]
   >;
+  set_tab_value: Action<IGLobalParametersModels, number>;
 
   // for phone side local storage
   ui_setting: IGPManualHelpSetting;
@@ -32,6 +34,8 @@ export interface IGLobalParametersModels {
     IGLobalParametersModels,
     Partial<IGPManualHelpSetting>
   >;
+
+  guide_pixel_multi: Computed<IGLobalParametersModels, number>;
 }
 
 export const GlobalParameterStore = (): IGLobalParametersModels => ({
@@ -48,6 +52,10 @@ export const GlobalParameterStore = (): IGLobalParametersModels => ({
     camera_info: null,
     guider_camera_info: null,
   },
+  tab_value: 1,
+  set_tab_value: action((state, payload) => {
+    state.tab_value = payload;
+  }),
   // global_changed: {
   //   geo_location: false,
   //   meridian_flip: false,
@@ -173,5 +181,19 @@ export const GlobalParameterStore = (): IGLobalParametersModels => ({
   set_ui_setting: action((state, payload) => {
     state.ui_setting = Object.assign({}, state.ui_setting, { ...payload });
     localStorage.setItem("UISetting", JSON.stringify(state.ui_setting));
+  }),
+  guide_pixel_multi: computed((state) => {
+    if (
+      state.global_parameter.telescope_info?.guider_focal_length &&
+      state.global_parameter.guider_camera_info?.CCD_PIXEL_SIZE
+    ) {
+      return (
+        (state.global_parameter.guider_camera_info?.CCD_PIXEL_SIZE /
+          state.global_parameter.telescope_info?.guider_focal_length) *
+        206.265
+      );
+    } else {
+      return 1;
+    }
   }),
 });

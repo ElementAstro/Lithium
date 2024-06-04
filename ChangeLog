@@ -1,60 +1,60 @@
-# ChangeLog
+# 更新日志
 
-## OpenAPT Update Log
+## OpenAPT 更新日志
 
 ### 23w01a
 
-update most of the codes , and there is still a long way to go!
+- 更新了大部分代码，但仍有很长的路要走！
 
 ### 23w01b
 
-- Add Dear Imgui as the GUI library
-- Trying to create modules and improve the loader
-- Add crash report and some basic tools
-- Improve task manager
+- 添加了 Dear Imgui 作为图形用户界面库
+- 尝试创建模块并改进加载器
+- 添加崩溃报告和一些基本工具
+- 改进任务管理器
 
 ### 23w01c
 
-- Improve TaskManager and ModuleLoader
-- Tried to fix the bug of ThreadManager but still failed
-- Add more test
+- 改进了任务管理器和模块加载器
+- 尝试修复线程管理器的错误但未成功
+- 添加更多测试
 
 ### 23w02a
 
-- Cleaned up all files using clang-tidy to improve code quality and readability.
-- Implemented an achievement system for players to track and earn in-game accomplishments.
-- Added client web pages and prepared for future online features.
+- 使用 clang-tidy 清理了所有文件，以提高代码质量和可读性。
+- 实现了一个成就系统，用于玩家跟踪和获得游戏内的成就。
+- 添加了客户端网页，并为未来的在线功能做准备。
 
 ### 23w02b
 
-- Reorganized file directory.
-- Added a feature to dynamically compile and load code. Currently does not support clang.
-- Added default achievements.
-- Added certificates to prevent copyright issues.
+- 重新组织了文件目录。
+- 添加了动态编译和加载代码的功能。目前不支持 clang。
+- 添加了默认成就。
+- 添加了证书以防止版权问题。
 
 ### 23w03a
 
-big update but not finished
+- 大更新但未完成
 
 ### 23w03b
 
-big update but not finished
+- 大更新但未完成
 
 ### 23w04a
 
-big server update and blackened update
+- 大型服务器更新和黑化更新
 
-## Lithium Update Log
+## Lithium 更新日志
 
 ### 24w01a
 
-- Add Lithium Web Client
+- 添加 Lithium Web 客户端
 
 ### 24m05a 模块与割裂更新
 
 #### 更新周期
 
-2024-05-01 -> 2024-05-31
+2024-05-01 至 2024-05-31
 
 #### 更新概要
 
@@ -64,21 +64,21 @@ big server update and blackened update
 
 C++：
 
-- lithium.webserver Web服务器主体，基于Oatpp，统一http和websocket接口
-- lithium.config 配置模块，基于json文件，为内置依赖项
-- lithium.image 图像处理模块，基于OpenCV和Cimg，分为内置接口和可执行文件版本
-- lithium.indiserver INDI服务器，模仿INDIWeb接口
-- atom.algorithm 算法模块，基于boost，为内置依赖项
-- atom.io I/O模块
-- atom.sysinfo 系统信息模块，跨平台支持
-- atom.system 系统功能封装
-- atom.utils 工具模块
+- lithium.webserver：Web 服务器主体，基于 Oatpp，统一 HTTP 和 WebSocket 接口
+- lithium.config：配置模块，基于 JSON 文件，为内置依赖项
+- lithium.image：图像处理模块，基于 OpenCV 和 Cimg，分为内置接口和可执行文件版本
+- lithium.indiserver：INDI 服务器，模仿 INDIWeb 接口
+- atom.algorithm：算法模块，为内置依赖项
+- atom.io：I/O 模块
+- atom.sysinfo：系统信息模块，跨平台支持
+- atom.system：系统功能封装
+- atom.utils：工具模块
 
 Python：
 
-- lithium.pyastro 天文组件，对LightAPT功能的重写与优化
-- lithium.pytools 基于Python的各种工具，包括脚手架之类的
+- lithium.pyastro：天文组件，对 LightAPT 功能的重写与优化
+- lithium.pytools：基于 Python 的各种工具，包括脚手架之类的
 
 #### 说明
 
-模块更新顾名思义，主要是将一些功能分离出来，方便后续开发。而割裂更新主要是针对一些功能，比如图像处理模块，将C++版本分离出来，同时本体框架将作为通用框架，而不是专门为天文设计的。
+模块更新主要是将一些功能分离出来，方便后续开发。而割裂更新主要是针对一些功能，例如图像处理模块，将 C++ 版本分离出来，同时本体框架将作为通用框架，而不是专门为天文设计的。

@@ -10,7 +10,7 @@ import {
   postPAASaveScript,
   postPAAUpdate,
   getPAAUpdateStatus,
-} from "../services/PAA";
+} from "@/services/PAA";
 import { Action, action, thunk, Thunk } from "easy-peasy";
 
 // TODO very big one
@@ -79,6 +79,8 @@ export interface PAAModel {
 
   // 如果有相机在单独拍摄，但是没有paa在运行，can start paa也会是false。也就是说，即使没有paa在运行，也存在可能没法启动paa。
   check_PAA_start_status: Thunk<PAAModel>; // 这个函数就是用来专门刷新上面两个边练改的。
+  turn_on_PAA_in_progress: Action<PAAModel>;
+  turn_off_PAA_in_progress: Action<PAAModel>;
   change_paa_loop_step: Action<PAAModel, any>;
   change_paa_step_async: Thunk<PAAModel, PAAlog_info>;
   // about paa step change
@@ -119,11 +121,13 @@ export const getPAAModel = (): PAAModel => ({
   post_stop_PAA: thunk(async (state, payload, { getState }) => {
     const res = await postPAAStop();
     if (res.success) {
-      alert("PAA停止成功");
+      console.log("PAA stop successfully");
       state.setState({
         current_step_index: -1,
         current_step: null,
         all_logs_info: [],
+        can_start_paa: true,
+        paa_in_progress: false,
       });
     }
   }),
@@ -146,7 +150,7 @@ export const getPAAModel = (): PAAModel => ({
     // todo, 需要修改成当前脚本就是刚刚生成的
     // 记得后续修改回原来的版本, all_step_data = res.data.script
     state.setState({
-      all_step_data: res.data,
+      all_step_data: res.data.script,
       this_script_type: res.data.type,
       this_script_setting: res.data.setting,
     });
@@ -198,7 +202,7 @@ export const getPAAModel = (): PAAModel => ({
       state.setState({
         current_script_info: payload,
         setting_mode: 1,
-        all_step_data: res.data,
+        all_step_data: res.data.script,
         this_script_type: res.data.type,
         this_script_setting: res.data.setting,
       });
@@ -230,11 +234,18 @@ export const getPAAModel = (): PAAModel => ({
   }),
 
   get_PAA_status: thunk(async (state, payload, { getState }) => {
+    state.setState({
+      can_start_paa: false,
+    });
     const res = await getPAAStatus();
     if (res.data.flag) {
-      alert("当前PAA处于运行状态");
+      state.setState({
+        can_start_paa: true,
+      });
     } else {
-      alert("当前PAA处于关闭状态");
+      state.setState({
+        can_start_paa: false,
+      });
     }
   }),
 
@@ -332,6 +343,10 @@ export const getPAAModel = (): PAAModel => ({
   can_start_paa: true,
   paa_in_progress: false,
   check_PAA_start_status: thunk(async (state, payload, { getState }) => {
+    state.setState({
+      paa_in_progress: true,
+      can_start_paa: false,
+    });
     const res = await getPAAUpdateStatus();
     // true meas in running
     state.setState({
@@ -339,6 +354,14 @@ export const getPAAModel = (): PAAModel => ({
       can_start_paa: !res.data,
     });
     // todo, extra check camera status
+  }),
+  turn_on_PAA_in_progress: action((state) => {
+    state.can_start_paa = false;
+    state.paa_in_progress = true;
+  }),
+  turn_off_PAA_in_progress: action((state) => {
+    state.can_start_paa = true;
+    state.paa_in_progress = false;
   }),
   current_step_id: "",
   paa_new_step_info_in: action((state, payload) => {

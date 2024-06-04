@@ -33,7 +33,6 @@ namespace atom::meta {
 struct FunctionInfo {
     std::string returnType;
     std::vector<std::string> argumentTypes;
-    std::vector<std::string> argumentNames;
     std::string hash;
 
     FunctionInfo() = default;
@@ -42,12 +41,8 @@ struct FunctionInfo {
 #if ENABLE_DEBUG
         std::cout << "Function return type: " << returnType << "\n";
         for (size_t i = 0; i < argumentTypes.size(); ++i) {
-            std::cout << "Argument " << i + 1
-                      << ": Type = " << argumentTypes[i];
-            if (i < argumentNames.size()) {
-                std::cout << ", Name = " << argumentNames[i];
-            }
-            std::cout << "\n";
+            std::cout << "Argument " << i + 1 << ": Type = " << argumentTypes[i]
+                      << std::endl;
         }
 #endif
     }
@@ -118,6 +113,21 @@ struct ProxyFunction {
         }
     }
 
+    std::any operator()(const FunctionParams &params) {
+        logArgumentTypes();
+        if constexpr (Traits::is_member_function) {
+            if (params.size() != N + 1) {
+                THROW_EXCEPTION("Incorrect number of arguments");
+            }
+            return callMemberFunction(params.to_vector());
+        } else {
+            if (params.size() != N) {
+                THROW_EXCEPTION("Incorrect number of arguments");
+            }
+            return callFunction(params.to_vector());
+        }
+    }
+
     FunctionInfo getFunctionInfo() { return info; }
 
 private:
@@ -138,7 +148,7 @@ private:
     }
 
     void calcFuncInfoHash() {
-        // 仅根据参数类型进行区分，返回值不支持，具体是因为在dispatch时不知道返回值的类型
+        // 仅根据参数类型进行区分,返回值不支持,具体是因为在dispatch时不知道返回值的类型
         if (info.argumentTypes.size() != 0) {
             info.hash = atom::algorithm::computeHash(info.argumentTypes);
         }
@@ -180,6 +190,26 @@ private:
     template <std::size_t... Is>
     std::any callMemberFunction(const std::vector<std::any> &args,
                                 std::index_sequence<Is...>) {
+        auto invokeFunc = [this](auto &obj, auto &&...args) {
+            if constexpr (Traits::is_const_member_function) {
+                if constexpr (std::is_void_v<typename Traits::return_type>) {
+                    (obj.*func)(std::forward<decltype(args)>(args)...);
+                    return std::any{};
+                } else {
+                    return std::make_any<typename Traits::return_type>(
+                        (obj.*func)(std::forward<decltype(args)>(args)...));
+                }
+            } else {
+                if constexpr (std::is_void_v<typename Traits::return_type>) {
+                    (obj.*func)(std::forward<decltype(args)>(args)...);
+                    return std::any{};
+                } else {
+                    return std::make_any<typename Traits::return_type>(
+                        (obj.*func)(std::forward<decltype(args)>(args)...));
+                }
+            }
+        };
+
         if (args[0].type() ==
             typeid(std::reference_wrapper<typename Traits::class_type>)) {
             auto &obj =
@@ -187,31 +217,15 @@ private:
                     std::reference_wrapper<typename Traits::class_type>>(
                     args[0])
                     .get();
-            auto bound_func = bind_first(func, obj);
-            if constexpr (std::is_void_v<typename Traits::return_type>) {
-                std::invoke(bound_func,
-                            std::any_cast<typename Traits::argument_t<Is>>(
-                                args[Is + 1])...);
-                return {};
-            } else {
-                return std::make_any<typename Traits::return_type>(std::invoke(
-                    bound_func, std::any_cast<typename Traits::argument_t<Is>>(
-                                    args[Is + 1])...));
-            }
+            return invokeFunc(obj,
+                              any_cast_helper<typename Traits::argument_t<Is>>(
+                                  args[Is + 1])...);
         } else {
             auto &obj = const_cast<typename Traits::class_type &>(
                 std::any_cast<const typename Traits::class_type &>(args[0]));
-            auto bound_func = bind_first(func, obj);
-            if constexpr (std::is_void_v<typename Traits::return_type>) {
-                std::invoke(bound_func,
-                            std::any_cast<typename Traits::argument_t<Is>>(
-                                args[Is + 1])...);
-                return {};
-            } else {
-                return std::make_any<typename Traits::return_type>(std::invoke(
-                    bound_func, std::any_cast<typename Traits::argument_t<Is>>(
-                                    args[Is + 1])...));
-            }
+            return invokeFunc(obj,
+                              any_cast_helper<typename Traits::argument_t<Is>>(
+                                  args[Is + 1])...);
         }
     }
 };

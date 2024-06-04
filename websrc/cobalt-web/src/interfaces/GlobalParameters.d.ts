@@ -44,9 +44,10 @@ declare interface IAutofocus {
 declare interface IPlateSolve {
   use: "astap" | "astronomy";
   exposure_time: number;
-  use_filter: number | "current";
+  use_filter: number | "Current";
   downsample: number;
   tolerance: number;
+  search_radius: number;
 }
 
 declare interface ITelescopeInfo {

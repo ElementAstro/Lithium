@@ -2,17 +2,6 @@
  * huffman.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
 /*************************************************
@@ -26,68 +15,94 @@ Description: Simple implementation of Huffman encoding
 #ifndef ATOM_ALGORITHM_HUFFMAN_HPP
 #define ATOM_ALGORITHM_HUFFMAN_HPP
 
+#include <memory>
 #include <string>
 #include <unordered_map>
 
 namespace atom::algorithm {
 /**
- * @brief 哈夫曼树节点
+ * @brief Represents a node in the Huffman tree.
  *
+ * This structure is used to construct the Huffman tree for encoding and
+ * decoding text based on character frequencies.
  */
 struct HuffmanNode {
-    char data;           ///< 节点存储的字符
-    int frequency;       ///< 节点的频率
-    HuffmanNode *left;   ///< 左子节点指针
-    HuffmanNode *right;  ///< 右子节点指针
+    char data;  ///< Character stored in this node (used only in leaf nodes).
+    int frequency;  ///< Frequency of the character or sum of frequencies for
+                    ///< internal nodes.
+    std::shared_ptr<HuffmanNode> left;   ///< Pointer to the left child node.
+    std::shared_ptr<HuffmanNode> right;  ///< Pointer to the right child node.
 
     /**
-     * @brief 构造函数
+     * @brief Constructs a new Huffman Node.
      *
-     * @param data 节点存储的字符
-     * @param frequency 节点的频率
+     * @param data Character to store in the node.
+     * @param frequency Frequency of the character or combined frequency for a
+     * parent node.
      */
-    HuffmanNode(char data, int frequency)
-        : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
+    explicit HuffmanNode(char data, int frequency);
 };
 
 /**
- * @brief 创建哈夫曼树
+ * @brief Creates a Huffman tree based on the frequency of characters.
  *
- * @param frequencies 字符频率表
- * @return HuffmanNode* 哈夫曼树的根节点指针
+ * This function builds a Huffman tree using the frequencies of characters in
+ * the input text. It employs a priority queue to build the tree from the bottom
+ * up by merging the two least frequent nodes until only one node remains, which
+ * becomes the root.
+ *
+ * @param frequencies A map of characters and their corresponding frequencies.
+ * @return A shared pointer to the root of the Huffman tree.
  */
-HuffmanNode *createHuffmanTree(std::unordered_map<char, int> &frequencies);
+[[nodiscard]] std::shared_ptr<HuffmanNode> createHuffmanTree(
+    const std::unordered_map<char, int>& frequencies);
 
 /**
- * @brief 递归生成哈夫曼编码
+ * @brief Generates Huffman codes for each character from the Huffman tree.
  *
- * @param root 当前节点指针
- * @param code 当前节点编码
- * @param huffmanCodes 哈夫曼编码表
+ * This function recursively traverses the Huffman tree and assigns a binary
+ * code to each character. These codes are derived from the path taken to reach
+ * the character: left child gives '0' and right child gives '1'.
+ *
+ * @param root Pointer to the root node of the Huffman tree.
+ * @param code Current Huffman code generated during the traversal.
+ * @param huffmanCodes A reference to a map where the character and its
+ * corresponding Huffman code will be stored.
  */
-void generateHuffmanCodes(HuffmanNode *root, std::string code,
-                          std::unordered_map<char, std::string> &huffmanCodes);
+void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
+                          std::unordered_map<char, std::string>& huffmanCodes);
 
 /**
- * @brief 使用哈夫曼编码压缩文本
+ * @brief Compresses text using Huffman codes.
  *
- * @param text 待压缩文本
- * @param huffmanCodes 哈夫曼编码表
- * @return std::string 压缩后的文本
+ * This function converts a string of text into a string of binary codes based
+ * on the Huffman codes provided. Each character in the input text is replaced
+ * by its corresponding Huffman code.
+ *
+ * @param text The original text to compress.
+ * @param huffmanCodes The map of characters to their corresponding Huffman
+ * codes.
+ * @return A string representing the compressed text.
  */
-std::string compressText(
-    const std::string &text,
-    const std::unordered_map<char, std::string> &huffmanCodes);
+[[nodiscard]] std::string compressText(
+    const std::string_view text,
+    const std::unordered_map<char, std::string>& huffmanCodes);
 
 /**
- * @brief 使用哈夫曼编码解压缩文本
+ * @brief Decompresses Huffman encoded text back to its original form.
  *
- * @param compressedText 压缩后的文本
- * @param root 哈夫曼树的根节点指针
- * @return std::string 解压缩后的文本
+ * This function decodes a string of binary codes back into the original text
+ * using the provided Huffman tree. It traverses the Huffman tree from the root
+ * to the leaf nodes based on the binary string, reconstructing the original
+ * text.
+ *
+ * @param compressedText The Huffman encoded text.
+ * @param root Pointer to the root of the Huffman tree.
+ * @return The original decompressed text.
  */
-std::string decompressText(const std::string &compressedText,
-                           HuffmanNode *root);
+[[nodiscard]] std::string decompressText(const std::string_view compressedText,
+                                         const HuffmanNode* root);
+
 }  // namespace atom::algorithm
 
 #endif

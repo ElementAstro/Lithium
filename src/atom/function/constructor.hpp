@@ -9,58 +9,56 @@
 #ifndef ATOM_META_CONSTRUCTOR_HPP
 #define ATOM_META_CONSTRUCTOR_HPP
 
-#include "proxy.hpp"
+#include <utility>
 
 #include "atom/error/exception.hpp"
 
 namespace atom::meta {
 template <typename MemberFunc, typename ClassType>
-ProxyFunction<MemberFunc> bind_member_function(
-    MemberFunc ClassType::*member_func) {
-    auto call = [member_func](ClassType &obj, auto &&...params) {
-        return (obj.*member_func)(std::forward<decltype(params)>(params)...);
+auto bind_member_function(MemberFunc ClassType::*member_func) {
+    return [member_func](ClassType &obj, auto &&...params) {
+        if constexpr (FunctionTraits<MemberFunc>::is_const_member_function) {
+            return (std::as_const(obj).*
+                    member_func)(std::forward<decltype(params)>(params)...);
+        } else {
+            return (obj.*
+                    member_func)(std::forward<decltype(params)>(params)...);
+        }
     };
-    return ProxyFunction<MemberFunc>(call);
 }
 
 template <typename Func>
-ProxyFunction<Func> bind_static_function(Func func) {
-    return ProxyFunction<Func>(func);
+auto bind_static_function(Func func) {
+    return func;
 }
 
 template <typename MemberType, typename ClassType>
-ProxyFunction<MemberType &(ClassType &)> bind_member_variable(
-    MemberType ClassType::*member_var) {
-    auto call = [member_var](ClassType &obj) -> MemberType & {
-        return obj.*member_var;
+auto bind_member_variable(MemberType ClassType::*member_var) {
+    return [member_var](ClassType &instance) -> MemberType & {
+        return instance.*member_var;
     };
-    return ProxyFunction<MemberType &(ClassType &)>(call);
 }
 
 template <typename Class, typename... Params>
-ProxyFunction<std::shared_ptr<Class>(Params...)> build_shared_constructor_(
-    Class (*)(Params...)) {
-    auto call = [](auto &&...params) {
+auto build_shared_constructor_(Class (*)(Params...)) {
+    return [](auto &&...params) {
         return std::make_shared<Class>(
             std::forward<decltype(params)>(params)...);
     };
-    return ProxyFunction<std::shared_ptr<Class>(Params...)>(call);
 }
 
 template <typename Class, typename... Params>
-ProxyFunction<Class(Params...)> build_copy_constructor_(Class (*)(Params...)) {
-    auto call = [](auto &&...params) {
+auto build_copy_constructor_(Class (*)(Params...)) {
+    return [](auto &&...params) {
         return Class(std::forward<decltype(params)>(params)...);
     };
-    return ProxyFunction<Class(Params...)>(call);
 }
 
 template <typename Class, typename... Params>
-ProxyFunction<Class(Params...)> build_plain_constructor_(Class (*)(Params...)) {
-    auto call = [](auto &&...params) {
+auto build_plain_constructor_(Class (*)(Params...)) {
+    return [](auto &&...params) {
         return Class(std::forward<decltype(params)>(params)...);
     };
-    return ProxyFunction<Class(Params...)>(call);
 }
 
 template <typename Class, typename... Args>
@@ -71,9 +69,8 @@ auto build_constructor_() {
 }
 
 template <typename Class>
-ProxyFunction<Class()> build_default_constructor_() {
-    auto call = []() { return Class(); };
-    return ProxyFunction<Class()>(call);
+auto build_default_constructor_() {
+    return []() { return Class(); };
 }
 
 template <typename T>

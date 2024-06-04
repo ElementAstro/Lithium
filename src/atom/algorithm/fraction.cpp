@@ -3,6 +3,7 @@
 #include <cmath>
 #include <compare>
 #include <numeric>
+#include <sstream>
 
 namespace atom::algorithm {
 
@@ -12,6 +13,10 @@ void Fraction::reduce() {
     int g = gcd(numerator, denominator);
     numerator /= g;
     denominator /= g;
+    if (denominator < 0) {
+        numerator = -numerator;
+        denominator = -denominator;
+    }
 }
 
 Fraction::Fraction(int n, int d) : numerator(n), denominator(d) {
@@ -103,12 +108,33 @@ std::ostream &operator<<(std::ostream &os, const Fraction &f) {
 }
 
 std::istream &operator>>(std::istream &is, Fraction &f) {
-    int n, d;
-    char slash;
-    // TODO: Fix this
-    // is >> n >> slash >> d;
-    f = Fraction(n, d);  // Assuming Fraction has a constructor that takes
-                         // numerator and denominator
+    std::string input;
+    is >> input;
+    std::istringstream iss(input);
+
+    if (input.find('/') != std::string::npos) {
+        int n, d;
+        char slash;
+        if (iss >> n >> slash >> d && slash == '/') {
+            if (d == 0) {
+                is.setstate(std::ios::failbit);
+            } else {
+                f = Fraction(n, d);
+            }
+        } else {
+            is.setstate(std::ios::failbit);
+        }
+    } else {
+        double value;
+        if (iss >> value) {
+            int n = static_cast<int>(value * 10000);
+            int d = 10000;
+            f = Fraction(n, d);
+        } else {
+            is.setstate(std::ios::failbit);
+        }
+    }
+
     return is;
 }
 

@@ -19,7 +19,7 @@ Description: Simple implementation of Huffman encoding
 namespace atom::algorithm {
 HuffmanNode::HuffmanNode(char data, int frequency)
     : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
-    
+
 std::shared_ptr<HuffmanNode> createHuffmanTree(
     const std::unordered_map<char, int>& frequencies) {
     auto compare = [](const std::shared_ptr<HuffmanNode>& a,

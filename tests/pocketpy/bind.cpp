@@ -36,7 +36,7 @@ public:
     Point(Point&& p) noexcept : x(p.x), y(p.y) {
         move_constructor_calls++;
         constructor_calls++;
-        
+
     }
 
     Point& operator= (const Point& p) {

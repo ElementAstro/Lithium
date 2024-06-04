@@ -153,7 +153,7 @@ def pytest_write_summary(results):
             "test_details": test_details
         }
         summary["details"].append(details)
-    
+
     return summary
 
 @pytest.fixture(scope="session")

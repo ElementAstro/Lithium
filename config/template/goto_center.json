@@ -2,185 +2,266 @@
     "name": "GotoCenter",
     "version": "1.0",
     "author": "Max Qian",
-    "type": "group",
-    "error": "yes",
-    "warning": "yes",
-    "tasks": [
-        [
-            {
-                "name": "Goto",
-                "type": "action",
-                "action": "goto_target",
-                "next_step": "CheckCrood",
-                "priority": 1,
-                "async": false,
-                "retry": 1,
-                "target_type": "device.telescope",
-                "target": "Telescope Simulator",
-                "params": {
-                    "target": "target_name",
-                    "ra": "xx.xx.xx",
-                    "dec": "xx.xx.xx",
-                    "az": "xx.xx.xx",
-                    "alt": "xx.xx.xx"
+    "functions": [
+        {
+            "name": "Goto",
+            "type": "action",
+            "action": "goto_target",
+            "target_type": "device.telescope",
+            "target": "Telescope Simulator",
+            "params": {
+                "target": {
+                    "type": "string",
+                    "required": true
+                },
+                "ra": {
+                    "type": "string",
+                    "required": true,
+                    "format": "xx.xx.xx"
+                },
+                "dec": {
+                    "type": "string",
+                    "required": true,
+                    "format": "xx.xx.xx"
+                },
+                "az": {
+                    "type": "string",
+                    "required": true,
+                    "format": "xx.xx.xx"
+                },
+                "alt": {
+                    "type": "string",
+                    "required": true,
+                    "format": "xx.xx.xx"
                 }
             }
-        ],
-        [
-            {
-                "name": "CheckCrood",
-                "type": "loop",
-                "loop_iterations": 3,
-                "error": "yes",
-                "warning": "yes",
-                "loop_steps": [
-                    {
-                        "name": "CheckCrood.Exposure",
-                        "type": "action",
-                        "action": "start_exposure",
-                        "next_step": "CheckCrood.Platesolve",
-                        "priority": 1,
-                        "async": false,
-                        "retry": 1,
-                        "target_type": "device.camera",
-                        "target": "CCD Simulator",
-                        "params": {
-                            "exposure": "xx.xx",
-                            "is_save": true,
-                            "filename": "solve_tmp.fits"
-                        }
-                    },
-                    {
-                        "name": "CheckCrood.Platesolve",
-                        "type": "condition",
-                        "action": "palte_solve",
-                        "next_step": "StartTrack",
-                        "priority": 1,
-                        "async": false,
-                        "retry": 3,
-                        "result": true,
-                        "result_name": "solve_result",
-                        "result_type": "memory",
-                        "result_template": {
-                            "ra": {
-                                "type": "string"
-                            },
-                            "dec": {
-                                "type": "string"
-                            },
-                            "ra_error": {
-                                "type": "string"
-                            },
-                            "dec_error": {
-                                "type": "string"
-                            },
-                            "radius": {
-                                "type": "string"
-                            }
+        },
+        {
+            "name": "CheckCrood",
+            "type": "loop",
+            "loop_iterations": 3,
+            "steps": [
+                {
+                    "name": "Exposure",
+                    "type": "action",
+                    "action": "start_exposure",
+                    "target_type": "device.camera",
+                    "target": "CCD Simulator",
+                    "params": {
+                        "exposure": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx"
                         },
-                        "target_type": "device.solver",
-                        "target": "Astrometry.net OffLine",
-                        "params": {
-                            "ra": "xx.xx.xx",
-                            "dec": "xx.xx.xx",
-                            "radius": "xx.xx",
-                            "height": "xx.xx",
-                            "width": "xx.xx",
-                            "downsample": 1,
-                            "timeout": 100,
-                            "depth": [
+                        "is_save": {
+                            "type": "boolean",
+                            "required": true
+                        },
+                        "filename": {
+                            "type": "string",
+                            "required": true,
+                            "default": "solve_tmp.fits"
+                        }
+                    }
+                },
+                {
+                    "name": "Platesolve",
+                    "type": "condition",
+                    "action": "palte_solve",
+                    "target_type": "device.solver",
+                    "target": "Astrometry.net OffLine",
+                    "params": {
+                        "ra": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx.xx"
+                        },
+                        "dec": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx.xx"
+                        },
+                        "radius": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx"
+                        },
+                        "height": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx"
+                        },
+                        "width": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx"
+                        },
+                        "downsample": {
+                            "type": "integer",
+                            "required": true,
+                            "default": 1,
+                            "range": [
+                                1,
+                                10
+                            ]
+                        },
+                        "timeout": {
+                            "type": "integer",
+                            "required": true,
+                            "default": 100,
+                            "range": [
+                                10,
+                                600
+                            ]
+                        },
+                        "depth": {
+                            "type": "array",
+                            "required": true,
+                            "default": [
                                 1,
                                 1
                             ],
-                            "filename": "solve_tmp.fits"
+                            "items": {
+                                "type": "integer",
+                                "range": [
+                                    1,
+                                    10
+                                ]
+                            }
                         },
-                        "condition": {
-                            "ra": "xx.xx.xx",
-                            "dec": "xx.xx.xx",
-                            "az": "xx.xx.xx",
-                            "alt": "xx.xx.xx",
-                            "radius": "xx.xx"
+                        "filename": {
+                            "type": "string",
+                            "required": true,
+                            "default": "solve_tmp.fits"
+                        }
+                    },
+                    "condition": {
+                        "ra": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx.xx"
                         },
-                        "false": [
-                            {
-                                "name": "CheckCrood.Calculate",
-                                "type": "action",
-                                "action": "calculate_crood",
-                                "next_step": "CheckCrood.Exposure",
-                                "priority": 1,
-                                "async": false,
-                                "retry": 1,
-                                "target_type": "lithium.device",
-                                "target": "",
-                                "result": true,
-                                "result_name": "proceed_result",
-                                "result_type": "memory",
-                                "result_template": {
-                                    "ra": {
-                                        "type": "string"
-                                    },
-                                    "dec": {
-                                        "type": "string"
-                                    },
-                                    "radius": {
-                                        "type": "string"
-                                    }
+                        "dec": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx.xx"
+                        },
+                        "az": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx.xx"
+                        },
+                        "alt": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx.xx"
+                        },
+                        "radius": {
+                            "type": "string",
+                            "required": true,
+                            "format": "xx.xx"
+                        }
+                    },
+                    "true": {
+                        "type": "break"
+                    },
+                    "false": [
+                        {
+                            "name": "Calculate",
+                            "type": "action",
+                            "action": "calculate_crood",
+                            "target_type": "lithium.device",
+                            "params": {
+                                "ra": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "solve_result.ra"
                                 },
-                                "import_params": "solve_result",
-                                "params": {
-                                    "ra": "solve_result.ra",
-                                    "dec": "solve_result.dec",
-                                    "radius": "xx.xx"
-                                }
-                            },
-                            {
-                                "name": "Goto",
-                                "type": "action",
-                                "action": "goto_target",
-                                "next_step": "CheckCrood",
-                                "priority": 1,
-                                "async": false,
-                                "retry": 1,
-                                "target_type": "device.telescope",
-                                "target": "Telescope Simulator",
-                                "result": false,
-                                "import_params": "proceed_result",
-                                "params": {
-                                    "target": "target_name",
-                                    "ra": "proceed_result.ra",
-                                    "dec": "proceed_result.dec",
-                                    "az": "proceed_result.az",
-                                    "alt": "proceed_result.alt",
-                                    "radius": "proceed_result.radius"
+                                "dec": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "solve_result.dec"
+                                },
+                                "radius": {
+                                    "type": "string",
+                                    "required": true,
+                                    "format": "xx.xx"
                                 }
                             }
-                        ]
-                    }
-                ],
-                "loop_error": [
-                    {
-                        "name": "GotoCenterError",
-                        "error": "Failed to goto target center"
-                    }
-                ]
-            }
-        ],
-        [
-            {
-                "name": "StartTrack",
-                "type": "action",
-                "action": "start_track",
-                "next_step": "StartTrack",
-                "priority": 2,
-                "async": true,
-                "retry": 1,
-                "result": false,
-                "target_type": "device.telescope",
-                "target": "Telescope Simulator",
-                "params": {
-                    "speed": "star"
+                        },
+                        {
+                            "name": "Goto",
+                            "type": "call",
+                            "function": "Goto",
+                            "params": {
+                                "ra": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "proceed_result.ra"
+                                },
+                                "dec": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "proceed_result.dec"
+                                },
+                                "az": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "proceed_result.az"
+                                },
+                                "alt": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "proceed_result.alt"
+                                },
+                                "radius": {
+                                    "type": "string",
+                                    "required": true,
+                                    "source": "proceed_result.radius"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ],
+            "error": "Failed to goto target center"
+        },
+        {
+            "name": "StartTrack",
+            "type": "action",
+            "action": "start_track",
+            "target_type": "device.telescope",
+            "target": "Telescope Simulator",
+            "params": {
+                "speed": {
+                    "type": "string",
+                    "required": true,
+                    "default": "star",
+                    "enum": [
+                        "star",
+                        "lunar",
+                        "solar"
+                    ]
                 }
             }
-        ]
+        }
+    ],
+    "steps": [
+        {
+            "name": "Goto",
+            "type": "call",
+            "function": "Goto"
+        },
+        {
+            "name": "CheckCrood",
+            "type": "call",
+            "function": "CheckCrood"
+        },
+        {
+            "name": "StartTrack",
+            "type": "call",
+            "function": "StartTrack",
+            "async": true
+        }
     ]
 }

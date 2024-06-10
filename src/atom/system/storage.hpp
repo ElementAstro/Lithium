@@ -34,6 +34,8 @@ public:
      */
     StorageMonitor() = default;
 
+    ~StorageMonitor();
+
     /**
      * @brief 注册回调函数。
      *
@@ -69,7 +71,6 @@ private:
      */
     [[nodiscard]] bool isNewMediaInserted(const std::string &path);
 
-#if ENABLE_DEBUG
     /**
      * @brief 列举所有已挂载的存储空间。
      */
@@ -81,10 +82,11 @@ private:
      * @param path 存储空间路径。
      */
     void listFiles(const std::string &path);
-#endif
 
 private:
     std::vector<std::string> m_storagePaths;  ///< 所有已挂载的存储空间路径。
+    std::unordered_map<std::string, std::pair<uintmax_t, uintmax_t>>
+        m_storageStats;
     std::unordered_map<std::string, uintmax_t>
         m_lastCapacity;  ///< 上一次记录的存储空间容量。
     std::unordered_map<std::string, uintmax_t>
@@ -95,7 +97,9 @@ private:
     bool m_isRunning = false;  ///< 标记是否正在运行监控。
 };
 
-#ifdef __linux__
+#ifdef _WIN32
+static void monitorUdisk();
+#else
 static void monitorUdisk(StorageMonitor &monitor);
 #endif
 

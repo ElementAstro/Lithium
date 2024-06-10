@@ -15,31 +15,21 @@ Description: Process Manager
 #ifndef ATOM_SYSTEM_PROCESS_HPP
 #define ATOM_SYSTEM_PROCESS_HPP
 
-#include <algorithm>
-#include <chrono>
 #include <condition_variable>
-#include <fstream>
-#include <iostream>
-#include <mutex>
-#include <sstream>
+#include <filesystem>
+#include <memory>
+#include <shared_mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#endif
+namespace fs = std::filesystem;
 
 namespace atom::system {
 struct Process {
-    pid_t pid;
+    int pid;
     std::string name;
     std::string output;
-    std::string path;
+    fs::path path;
     std::string status;
 };
 
@@ -47,14 +37,9 @@ class ProcessManager {
 public:
     /**
      * 创建一个进程管理器。
-     */
-    ProcessManager();
-
-    /**
-     * 创建一个进程管理器。
      * @param maxProcess 最大进程数。
      */
-    ProcessManager(int maxProcess);
+    explicit ProcessManager(int maxProcess = 10);
 
     // -------------------------------------------------------------------
     // Common methods
@@ -62,14 +47,9 @@ public:
 
     /**
      * 创建一个进程管理器。
-     */
-    static std::shared_ptr<ProcessManager> createShared();
-
-    /**
-     * 创建一个进程管理器。
      * @param maxProcess 最大进程数。
      */
-    static std::shared_ptr<ProcessManager> createShared(int maxProcess);
+    static std::shared_ptr<ProcessManager> createShared(int maxProcess = 10);
 
     // -------------------------------------------------------------------
     // Process methods
@@ -88,14 +68,15 @@ public:
      * @param pid 要终止的进程的PID。
      * @param signal 终止信号，默认为SIGTERM。
      */
-    bool terminateProcess(pid_t pid, int signal = SIGTERM);
+    bool terminateProcess(int pid, int signal = 15 /*SIGTERM*/);
 
     /**
      * 终止一个进程。
      * @param name 要终止的进程的名称。
      * @param signal 终止信号，默认为SIGTERM。
      */
-    bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
+    bool terminateProcessByName(const std::string &name,
+                                int signal = 15 /*SIGTERM*/);
 
     /**
      * 检查是否存在指定进程。
@@ -104,7 +85,7 @@ public:
      */
     bool hasProcess(const std::string &identifier);
 
-    [[nodiscard]] std::vector<Process> getRunningProcesses();
+    [[nodiscard]] std::vector<Process> getRunningProcesses() const;
 
     /**
      * 获取指定进程的输出信息。
@@ -137,20 +118,66 @@ private:
              ///< wait for process completion.
     std::vector<Process> processes;  ///< 存储当前运行的进程列表。 // Stores the
                                      ///< list of currently running processes.
-    std::mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
-                     ///< manipulating the process list.
+    std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
+                            ///< manipulating the process list.
 };
 
 /**
  * 获取所有进程信息。
  * @return 所有进程信息。
  */
-std::vector<std::pair<int, std::string>> GetAllProcesses();
+std::vector<std::pair<int, std::string>> getAllProcesses();
 
 /*
  * 获取当前进程信息。
  */
-Process GetSelfProcessInfo();
+[[nodiscard("The process info is not used")]] Process getSelfProcessInfo();
+
+/**
+ * @brief Returns the name of the controlling terminal.
+ *
+ * This function returns the name of the controlling terminal associated with
+ * the current process.
+ *
+ * @return The name of the controlling terminal.
+ */
+[[nodiscard]] std::string ctermid();
+
+/**
+ * @brief Returns the priority of the current process.
+ *
+ * This function returns the priority of the current process.
+ *
+ * @return The priority of the current process.
+ */
+std::optional<int> getProcessPriorityByPid(int pid);
+
+/**
+ * @brief Returns the priority of the current process.
+ *
+ * This function returns the priority of the current process.
+ *
+ * @return The priority of the current process.
+ */
+std::optional<int> getProcessPriorityByName(const std::string &name);
+
+/**
+ * @brief Returns the priority of the current process.
+ *
+ * This function returns the priority of the current process.
+ *
+ * @return The priority of the current process.
+ */
+bool isProcessRunning(const std::string &processName);
+
+/**
+ * @brief Returns the priority of the current process.
+ *
+ * This function returns the priority of the current process.
+ *
+ * @return The priority of the current process.
+ */
+int getParentProcessId(int processId);
 
 }  // namespace atom::system
 

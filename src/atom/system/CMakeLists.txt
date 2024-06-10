@@ -9,16 +9,16 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom-system C CXX)
 
-set(CMAKE_ATOM_SYSTEM_VERSION_MAJOR 1)
-set(CMAKE_ATOM_SYSTEM_VERSION_MINOR 0)
-set(CMAKE_ATOM_SYSTEM_VERSION_RELEASE 0)
+# Version Management
+set(ATOM_SYSTEM_VERSION_MAJOR 1)
+set(ATOM_SYSTEM_VERSION_MINOR 0)
+set(ATOM_SYSTEM_VERSION_PATCH 0)
 
-set(ATOM_SYSTEM_SOVERSION ${CMAKE_ATOM_SYSTEM_VERSION_MAJOR})
-set(CMAKE_ATOM_SYSTEM_VERSION_STRING "${CMAKE_ATOM_SYSTEM_VERSION_MAJOR}.${CMAKE_ATOM_SYSTEM_VERSION_MINOR}.${CMAKE_ATOM_SYSTEM_VERSION_RELEASE}")
-set(ATOM_SYSTEM_VERSION ${CMAKE_ATOM_SYSTEM_VERSION_MAJOR}.${CMAKE_ATOM_SYSTEM_VERSION_MINOR}.${CMAKE_ATOM_SYSTEM_VERSION_RELEASE})
+set(ATOM_SYSTEM_SOVERSION ${ATOM_SYSTEM_VERSION_MAJOR})
+set(ATOM_SYSTEM_VERSION_STRING "${ATOM_SYSTEM_VERSION_MAJOR}.${ATOM_SYSTEM_VERSION_MINOR}.${ATOM_SYSTEM_VERSION_PATCH}")
 
-# Sources
-set(${PROJECT_NAME}_SOURCES
+# Sources and Headers
+set(ATOM_SYSTEM_SOURCES
     command.cpp
     crash_quotes.cpp
     crash.cpp
@@ -34,8 +34,7 @@ set(${PROJECT_NAME}_SOURCES
     user.cpp
 )
 
-# Headers
-set(${PROJECT_NAME}_HEADERS
+set(ATOM_SYSTEM_HEADERS
     command.hpp
     crash_quotes.hpp
     crash.hpp
@@ -50,42 +49,42 @@ set(${PROJECT_NAME}_HEADERS
     user.hpp
 )
 
-# Private Headers
-set(${PROJECT_NAME}_PRIVATE_HEADERS
+set(ATOM_SYSTEM_LIBS
+    loguru
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Build Object Library
-add_library(${PROJECT_NAME}_OBJECT OBJECT)
-set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
+add_library(atom-system-object OBJECT)
+set_property(TARGET atom-system-object PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-target_link_libraries(${PROJECT_NAME}_OBJECT loguru)
-
-target_sources(${PROJECT_NAME}_OBJECT
+target_sources(atom-system-object
     PUBLIC
-    ${${PROJECT_NAME}_HEADERS}
+    ${ATOM_SYSTEM_HEADERS}
     PRIVATE
-    ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
+    ${ATOM_SYSTEM_SOURCES}
 )
 
-target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+add_library(atom-system STATIC)
 
-add_library(${PROJECT_NAME} STATIC)
-
+# Platform-specific libraries
 if(WIN32)
-target_link_libraries(${PROJECT_NAME} pdh wlanapi)
+    target_link_libraries(atom-system pdh wlanapi)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-target_include_directories(${PROJECT_NAME} PUBLIC .)
+target_link_libraries(atom-system atom-system-object ${ATOM_SYSTEM_LIBS})
+target_include_directories(atom-system PUBLIC .)
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-    SOVERSION ${HYDROGEN_SOVERSION}
+# Set library properties
+set_target_properties(atom-system PROPERTIES
+    VERSION ${ATOM_SYSTEM_VERSION_STRING}
+    SOVERSION ${ATOM_SYSTEM_SOVERSION}
     OUTPUT_NAME ${PROJECT_NAME}
 )
 
-install(TARGETS ${PROJECT_NAME}
+# Installation
+install(TARGETS atom-system
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION include/atom-system
 )

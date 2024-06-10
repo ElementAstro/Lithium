@@ -25,7 +25,11 @@ Description: Simple wrapper for executing commands.
 #ifdef _WIN32
 #define SETENV(name, value) SetEnvironmentVariableA(name, value)
 #define UNSETENV(name) SetEnvironmentVariableA(name, NULL)
+// clang-format off
+#include <windows.h>
 #include <conio.h>
+#include <tlhelp32.h>
+// clang-format on
 #else
 #include <sys/wait.h>
 #include <unistd.h>
@@ -37,12 +41,15 @@ Description: Simple wrapper for executing commands.
 #endif
 
 #include "atom/error/exception.hpp"
+#include "atom/utils/string.hpp"
+#include "atom/utils/to_string.hpp"
 
 namespace atom::system {
-std::string executeCommand(
+std::string executeCommandInternal(
     const std::string &command, bool openTerminal,
-    std::function<void(const std::string &)> processLine) {
+    std::function<void(const std::string &)> processLine, int &status) {
     if (command.empty()) {
+        status = -1;
         return "";
     }
 
@@ -55,21 +62,23 @@ std::string executeCommand(
 
 #ifdef _WIN32
     if (openTerminal) {
-        // 在Windows下打开终端界面
         STARTUPINFO startupInfo{};
         PROCESS_INFORMATION processInfo{};
-        if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL,
-                          FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
+        if (CreateProcess(NULL,
+                          const_cast<wchar_t *>(
+                              atom::utils::stringToWString(command).c_str()),
+                          NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo,
+                          &processInfo)) {
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);
+            status = 0;
             return "";  // 因为终端界面会在新进程中执行，无法获得输出，所以这里返回空字符串。
         } else {
             THROW_RUNTIME_ERROR("Error: failed to run command '" + command +
                                 "'.");
         }
     } else {
-        // 不打开终端界面时，使用_popen执行命令
         pipe.reset(_popen(command.c_str(), "r"));
     }
 #else  // 非Windows平台
@@ -83,20 +92,16 @@ std::string executeCommand(
     std::array<char, 4096> buffer{};
     std::ostringstream output;
 
-    bool interrupted = false;  // 标记是否收到中断信号
-
-    auto start = std::chrono::steady_clock::now();  // 记录开始时间
+    bool interrupted = false;
 
 #ifdef _WIN32
-    // Windows下无法捕获中断信号，因此只能在循环中检查键盘输入来模拟中断
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr &&
            !interrupted) {
         output << buffer.data();
 
         if (_kbhit()) {
             int key = _getch();
-            if (key == 3)  // 检查Ctrl+C中断信号
-            {
+            if (key == 3) {
                 interrupted = true;
             }
         }
@@ -105,8 +110,7 @@ std::string executeCommand(
             processLine(buffer.data());
         }
     }
-#else  // 非Windows平台
-
+#else
     while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr &&
            !interrupted) {
         std::string line = buffer.data();
@@ -117,120 +121,78 @@ std::string executeCommand(
     }
 #endif
 
+#ifdef _WIN32
+    status = 0;
+#else
+    status = WEXITSTATUS(pclose(pipe.get()));
+#endif
+
     return output.str();
+}
+
+std::string executeCommand(
+    const std::string &command, bool openTerminal,
+    std::function<void(const std::string &)> processLine) {
+    int status = 0;
+    return executeCommandInternal(command, openTerminal, processLine, status);
+}
+
+std::pair<std::string, int> executeCommandWithStatus(
+    const std::string &command) {
+    int status = 0;
+    std::string output =
+        executeCommandInternal(command, false, nullptr, status);
+    return {output, status};
 }
 
 void executeCommands(const std::vector<std::string> &commands) {
     std::vector<std::thread> threads;
+    std::vector<std::string> errors;
 
     for (const auto &command : commands) {
-        threads.emplace_back([command]() {
-#ifdef _WIN32
-            STARTUPINFO startupInfo{};
-            PROCESS_INFORMATION processInfo{};
-            if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL,
-                              NULL, FALSE, 0, NULL, NULL, &startupInfo,
-                              &processInfo)) {
-                WaitForSingleObject(processInfo.hProcess, INFINITE);
-                CloseHandle(processInfo.hProcess);
-                CloseHandle(processInfo.hThread);
+        threads.emplace_back([&command, &errors]() {
+            try {
+                int status = 0;
+                std::string output = executeCommand(command, false, nullptr);
+                if (status != 0) {
+                    THROW_RUNTIME_ERROR("Error executing command: " + command);
+                }
+            } catch (const std::runtime_error &e) {
+                errors.push_back(e.what());
             }
-#else  // 非Windows平台
-            int status = system(command.c_str());
-            if (!WIFEXITED(status) || !(WEXITSTATUS(status) == 0)) {
-                THROW_RUNTIME_ERROR("Error executing command: " + command);
-            }
-#endif
         });
     }
+
     for (auto &thread : threads) {
         thread.join();
     }
-}
 
-ProcessHandle executeCommand(const std::string &command) {
-    ProcessHandle handle;
-
-#ifdef _WIN32
-    STARTUPINFO startupInfo{};
-    PROCESS_INFORMATION processInfo{};
-    if (CreateProcess(NULL, const_cast<char *>(command.c_str()), NULL, NULL,
-                      FALSE, 0, NULL, NULL, &startupInfo, &processInfo)) {
-        CloseHandle(processInfo.hThread);
-        handle.handle = processInfo.hProcess;
-    } else {
-        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
+    if (!errors.empty()) {
+        THROW_RUNTIME_ERROR("One or more commands failed." + toString(errors));
     }
-#else  // 非Windows平台
-    pid_t pid = fork();
-    if (pid == -1) {
-        THROW_RUNTIME_ERROR("Error: failed to fork process for command '" +
-                            command + "'.");
-    } else if (pid == 0) {
-        // 子进程
-        execl("/bin/sh", "sh", "-c", command.c_str(), NULL);
-        _exit(EXIT_FAILURE);
-    } else {
-        handle.pid = pid;
-    }
-#endif
-
-    return handle;
-}
-
-void killProcess(const ProcessHandle &handle) {
-#ifdef _WIN32
-    if (!handle.handle)
-#else
-    if (!handle.pid)
-#endif
-    {
-        return;
-    }
-#ifdef _WIN32
-    TerminateProcess(handle.handle, 0);
-    CloseHandle(handle.handle);
-#else
-    int status;
-    if (kill(handle.pid, SIGKILL) == -1) {
-        THROW_RUNTIME_ERROR("Error: failed to kill process with PID " +
-                            std::to_string(handle.pid) + ".");
-    } else {
-        waitpid(handle.pid, &status, 0);
-    }
-#endif
 }
 
 std::string executeCommandWithEnv(
     const std::string &command,
-    const std::map<std::string, std::string> &envVars) {
+    const std::unordered_map<std::string, std::string> &envVars) {
     if (command.empty()) {
         return "";
     }
-    // 保存当前环境变量的状态
-    std::map<std::string, std::string> oldEnvVars;
+    std::unordered_map<std::string, std::string> oldEnvVars;
     for (const auto &var : envVars) {
         char *oldValue = std::getenv(var.first.c_str());
         if (oldValue) {
             oldEnvVars[var.first] = oldValue;
         }
-#if defined(_WIN32) || defined(_WIN64)
         SETENV(var.first.c_str(), var.second.c_str());
-#else
-        SETENV(var.first.c_str(), var.second.c_str());
-#endif
     }
 
-    // 执行命令
     auto result = executeCommand(command, false);
 
-    // 清理：恢复环境变量到之前的状态
     for (const auto &var : envVars) {
         if (oldEnvVars.find(var.first) != oldEnvVars.end()) {
-            // 恢复旧值
             SETENV(var.first.c_str(), oldEnvVars[var.first].c_str());
         } else {
-            // 如果之前不存在，则删除
             UNSETENV(var.first.c_str());
         }
     }
@@ -238,45 +200,64 @@ std::string executeCommandWithEnv(
     return result;
 }
 
-std::pair<std::string, int> executeCommandWithStatus(
-    const std::string &command) {
-    if (command.empty()) {
-        return {"", -1};
-    }
-    std::array<char, 4096> buffer{};
-    std::ostringstream output;
-
+void killProcessByName(const std::string &processName, int signal) {
 #ifdef _WIN32
-    // Windows implementation using _popen and _pclose
-    std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(command.c_str(), "r"),
-                                                   _pclose);
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) {
+        THROW_SYSTEM_COLLAPSE("Error: unable to create toolhelp snapshot.");
+    }
+
+    PROCESSENTRY32 entry;
+    entry.dwSize = sizeof(PROCESSENTRY32);
+
+    if (!Process32First(snap, &entry)) {
+        CloseHandle(snap);
+        THROW_SYSTEM_COLLAPSE("Error: unable to get the first process.");
+    }
+
+    do {
+        if (strcmp(atom::utils::wstringToString(entry.szExeFile).c_str(),
+                   processName.c_str()) == 0) {
+            HANDLE hProcess =
+                OpenProcess(PROCESS_TERMINATE, 0, entry.th32ProcessID);
+            if (hProcess != NULL) {
+                TerminateProcess(hProcess, 0);
+                CloseHandle(hProcess);
+            }
+        }
+    } while (Process32Next(snap, &entry));
+
+    CloseHandle(snap);
 #else
-    // Linux implementation using popen and pclose
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"),
-                                                  pclose);
-#endif
-
-    if (!pipe) {
-        THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
-    }
-
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-        output << buffer.data();
-    }
-
-    int status = -1;
-#ifdef _WIN32
-    // Windows exit code retrieval
-    if (pipe) {
-        status = 0;
-    }
-#else
-    // Linux exit code retrieval
-    if (pipe) {
-        status = WEXITSTATUS(pclose(pipe.get()));
+    std::string command =
+        "pkill -" + std::to_string(signal) + " -f " + processName;
+    int result = system(command.c_str());
+    if (result != 0) {
+        THROW_SYSTEM_COLLAPSE("Error: failed to kill process with name " +
+                              processName);
     }
 #endif
-
-    return {output.str(), status};
 }
+
+void killProcessByPID(int pid, int signal) {
+#ifdef _WIN32
+    HANDLE hProcess =
+        OpenProcess(PROCESS_TERMINATE, 0, static_cast<DWORD>(pid));
+    if (hProcess == NULL) {
+        THROW_SYSTEM_COLLAPSE("Error: unable to open process with PID " +
+                              std::to_string(pid));
+    }
+    TerminateProcess(hProcess, 0);
+    CloseHandle(hProcess);
+#else
+    if (kill(pid, signal) == -1) {
+        THROW_SYSTEM_COLLAPSE("Error: failed to kill process with PID " +
+                              std::to_string(pid));
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+    }
+#endif
+}
+
 }  // namespace atom::system

@@ -60,6 +60,27 @@ namespace atom::system {
  * @return Login shell.
  */
 [[nodiscard]] std::string getLoginShell();
+
+/**
+ * @brief Retrieves the login name of the user.
+ *
+ * This function retrieves the login name of the user associated with the
+ * current process.
+ *
+ * @return The login name of the user.
+ */
+std::string getLogin();
+
+/**
+ * @brief Check whether the current user has root/administrator privileges.
+ * 检查当前用户是否具有根/管理员权限
+ *
+ * @return true if the current user has root/administrator privileges.
+ *         如果当前用户具有根/管理员权限，则返回 true
+ * @return false if the current user does not have root/administrator
+ * privileges. 如果当前用户没有根/管理员权限，则返回 false
+ */
+bool isRoot();
 }  // namespace atom::system
 
 #endif

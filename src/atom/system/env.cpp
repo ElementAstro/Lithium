@@ -29,7 +29,7 @@ Env::Env(int argc, char **argv) {
     std::filesystem::path exe_path;
 
 #ifdef _WIN32
-    char buf[MAX_PATH];
+    wchar_t buf[MAX_PATH];
     GetModuleFileName(NULL, buf, MAX_PATH);
     exe_path = buf;
 #else
@@ -73,13 +73,11 @@ Env::Env(int argc, char **argv) {
     }
 }
 
-std::shared_ptr<Env> Env::createShared(int argc, char **argv)
-{
+std::shared_ptr<Env> Env::createShared(int argc, char **argv) {
     return std::make_shared<Env>(argc, argv);
 }
 
-std::unique_ptr<Env> Env::createUnique(int argc, char **argv)
-{
+std::unique_ptr<Env> Env::createUnique(int argc, char **argv) {
     return std::make_unique<Env>(argc, argv);
 }
 
@@ -207,23 +205,43 @@ std::string Env::getAbsoluteWorkPath(const std::string &path) const {
 }
 
 std::string Env::getConfigPath() { return getAbsolutePath(get("c", "config")); }
-}  // namespace atom::utils
 
-/*
-int main(int argc, char **argv)
-{
-    johnsonli::Env env(argc, argv);
-    env.addHelp("h", "Print help message");
-    env.addHelp("c", "Set config file");
+std::unordered_map<std::string, std::string> Env::Environ() {
+    std::unordered_map<std::string, std::string> env;
 
-    if (env.has("h"))
-    {
-        env.printHelp();
-        return 0;
+#ifdef _WIN32
+    LPWCH variables = GetEnvironmentStringsW();
+    if (variables != nullptr) {
+        LPWSTR currentVariable = variables;
+        while (*currentVariable != L'\0') {
+            std::wstring wideString(currentVariable);
+            std::string variable(wideString.begin(), wideString.end());
+            size_t delimiterPos = variable.find('=');
+            if (delimiterPos != std::string::npos) {
+                std::string key = variable.substr(0, delimiterPos);
+                std::string value = variable.substr(delimiterPos + 1);
+                env[key] = value;
+            }
+            currentVariable += wideString.size() + 1;
+        }
+
+        FreeEnvironmentStringsW(variables);
     }
+#else
+    extern char **environ;
+    char **currentVariable = environ;
+    while (*currentVariable != nullptr) {
+        std::string variable(*currentVariable);
+        size_t delimiterPos = variable.find('=');
+        if (delimiterPos != std::string::npos) {
+            std::string key = variable.substr(0, delimiterPos);
+            std::string value = variable.substr(delimiterPos + 1);
+            env[key] = value;
+        }
+        ++currentVariable;
+    }
+#endif
 
-    std::cout << "Config Path: " << env.getConfigPath() << std::endl;
-
-    return 0;
+    return env;
 }
-*/
+}  // namespace atom::utils

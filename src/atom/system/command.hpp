@@ -16,25 +16,10 @@ Description: Simple wrapper for executing commands.
 #define ATOM_SYSTEM_COMMAND_HPP
 
 #include <functional>
-#include <map>
+#include <unordered_map>
 #include <string>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/types.h>
-#endif
-
 namespace atom::system {
-#ifdef _WIN32
-struct ProcessHandle {
-    HANDLE handle;
-};
-#else
-struct ProcessHandle {
-    pid_t pid;
-};
-#endif
 
 /**
  * @brief Execute a command and return the command output as a string.
@@ -63,25 +48,18 @@ struct ProcessHandle {
 void executeCommands(const std::vector<std::string> &commands);
 
 /**
- * @brief Execute a command and return the process handle.
+ * @brief Kill a process by its name.
  *
- * @param command The command to execute.
- * @return The handle of the process.
- *
- * @note The function throws a std::runtime_error if the command fails to
- * execute.
+ * @param processName The name of the process to kill.
  */
-[[nodiscard]] ProcessHandle executeCommand(const std::string &command);
+void killProcessByName(const std::string &processName, int signal);
 
 /**
- * @brief Kill a process.
+ * @brief Kill a process by its PID.
  *
- * @param handle The handle of the process to kill.
- *
- * @note The function throws a std::runtime_error if the command fails to
- * execute.
+ * @param pid The PID of the process to kill.
  */
-void killProcess(const ProcessHandle &handle);
+void killProcessByPID(int pid, int signal);
 
 /**
  * @brief Execute a command with environment variables and return the command
@@ -96,7 +74,7 @@ void killProcess(const ProcessHandle &handle);
  */
 [[nodiscard]] std::string executeCommandWithEnv(
     const std::string &command,
-    const std::map<std::string, std::string> &envVars);
+    const std::unordered_map<std::string, std::string> &envVars);
 
 /**
  * @brief Execute a command and return the command output along with the exit

@@ -12,14 +12,18 @@ Description: A platform information collection.
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_PLATFORM_HPP
-#define ATOM_EXPERIMENT_PLATFORM_HPP
+#ifndef ATOM_SYSTEM_PLATFORM_HPP
+#define ATOM_SYSTEM_PLATFORM_HPP
 
 #include <string>
 
-// 获取系统平台
+namespace atom::system {
 #if defined(_WIN32)
-const std::string platform = "Windows";
+#if defined(__MINGW32__) || defined(__MINGW64__)
+const std::string platform = "Windows MinGW";
+#else
+const std::string platform = "Windows MSVC";
+#endif
 #elif defined(__APPLE__)
 #include "TargetConditionals.h"
 #if TARGET_IPHONE_SIMULATOR
@@ -39,7 +43,6 @@ const std::string platform = "Linux";
 const std::string platform = "Unknown platform";
 #endif
 
-// 获取系统架构
 #if defined(__i386__) || defined(__i386)
 const std::string architecture = "x86";
 #elif defined(__x86_64__)
@@ -52,24 +55,31 @@ const std::string architecture = "ARM64";
 const std::string architecture = "Unknown architecture";
 #endif
 
-#if defined(_WIN32)
+#ifdef _WIN32
 std::string getWindowsVersion();
 #endif
-// 获取操作系统版本
 const std::string os_version =
-#if defined(_WIN32)
+#ifdef _WIN32
     getWindowsVersion();
 #elif defined(__APPLE__)
-    "macOS";  // 可以根据需要获取更详细的版本信息
+    "macOS";
 #elif defined(__ANDROID__)
-    "Android";  // 可以根据需要获取更详细的版本信息
+    "Android";
 #elif defined(__linux__)
-    "Linux";  // 可以根据需要获取更详细的版本信息
+#if defined(__ANDROID__)
+#include <android/api-level.h>
+#if __ANDROID_API__ >= 21
+    "Android " + std::to_string(__ANDROID_API__);
+#else
+    "Android";
+#endif
+#else
+    "Linux";
+#endif
 #else
     "Unknown OS version";
 #endif
 
-// 获取编译器信息
 const std::string compiler =
 #if defined(__clang__)
     "Clang " + std::to_string(__clang_major__) + "." +
@@ -85,5 +95,6 @@ const std::string compiler =
 #endif
 
 bool hasGUI();
+}  // namespace atom::system
 
 #endif

@@ -48,6 +48,8 @@ public:
      */
     static std::unique_ptr<Env> createUnique(int argc, char **argv);
 
+    static std::unordered_map<std::string, std::string> Environ();
+
     /**
      * @brief 添加一个键值对到环境变量中。
      * @param key 键名。

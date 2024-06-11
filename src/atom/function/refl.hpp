@@ -242,7 +242,7 @@ struct ElemList {
     constexpr const auto& Get() const {
         return std::get<N>(elems);
     }
-#define USRefl_ElemList_GetByValue(list, value) \
+#define ATOM_META_ElemList_GetByValue(list, value) \
     list.Get<list.FindValue(value)>()
 };
 
@@ -370,7 +370,7 @@ Field(Name, T) -> Field<Name, T, AttrList<>>;
 
 }  // namespace atom::meta
 
-#define USREFL_TYPEINFO(Type, ...)                             \
+#define ATOM_META_TYPEINFO(Type, ...)                             \
     namespace atom::meta {                                     \
     template <>                                                \
     struct TypeInfo<Type> : TypeInfoBase<Type> {               \
@@ -378,6 +378,6 @@ Field(Name, T) -> Field<Name, T, AttrList<>>;
     };                                                         \
     }
 
-#define USREFL_FIELD(Name, Member) USRefl::Field(TSTR(Name), Member)
+#define ATOM_META_FIELD(Name, Member) atom::meta::Field(TSTR(Name), Member)
 
 #endif

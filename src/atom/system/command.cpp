@@ -41,13 +41,17 @@ Description: Simple wrapper for executing commands.
 #endif
 
 #include "atom/error/exception.hpp"
+#include "atom/system/process.hpp"
+#include "atom/utils/convert.hpp"
 #include "atom/utils/string.hpp"
 #include "atom/utils/to_string.hpp"
 
 namespace atom::system {
 std::string executeCommandInternal(
     const std::string &command, bool openTerminal,
-    std::function<void(const std::string &)> processLine, int &status) {
+    std::function<void(const std::string &)> processLine, int &status,
+    const std::string &username = "", const std::string &domain = "",
+    const std::string &password = "") {
     if (command.empty()) {
         status = -1;
         return "";
@@ -60,15 +64,22 @@ std::string executeCommandInternal(
 
     std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
 
+    if (!username.empty() && !domain.empty() && !password.empty()) {
+        if (!_CreateProcessAsUser(command, username, domain, password)) {
+            THROW_RUNTIME_ERROR("Error: failed to run command '" + command +
+                                "' as user.");
+        }
+        status = 0;
+        return "";
+    }
+
 #ifdef _WIN32
     if (openTerminal) {
-        STARTUPINFO startupInfo{};
+        STARTUPINFOW startupInfo{};
         PROCESS_INFORMATION processInfo{};
-        if (CreateProcess(NULL,
-                          const_cast<wchar_t *>(
-                              atom::utils::stringToWString(command).c_str()),
-                          NULL, NULL, FALSE, 0, NULL, NULL, &startupInfo,
-                          &processInfo)) {
+        if (CreateProcessW(NULL, atom::utils::StringToLPWSTR(command), NULL,
+                           NULL, FALSE, 0, NULL, NULL, &startupInfo,
+                           &processInfo)) {
             WaitForSingleObject(processInfo.hProcess, INFINITE);
             CloseHandle(processInfo.hProcess);
             CloseHandle(processInfo.hThread);
@@ -200,23 +211,24 @@ std::string executeCommandWithEnv(
     return result;
 }
 
-void killProcessByName(const std::string &processName, int signal) {
+void killProcessByName(const std::string &processName,
+                       [[maybe_unused]] int signal) {
 #ifdef _WIN32
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (snap == INVALID_HANDLE_VALUE) {
         THROW_SYSTEM_COLLAPSE("Error: unable to create toolhelp snapshot.");
     }
 
-    PROCESSENTRY32 entry;
+    PROCESSENTRY32W entry;
     entry.dwSize = sizeof(PROCESSENTRY32);
 
-    if (!Process32First(snap, &entry)) {
+    if (!Process32FirstW(snap, &entry)) {
         CloseHandle(snap);
         THROW_SYSTEM_COLLAPSE("Error: unable to get the first process.");
     }
 
     do {
-        if (strcmp(atom::utils::wstringToString(entry.szExeFile).c_str(),
+        if (strcmp(atom::utils::WCharArrayToString(entry.szExeFile).c_str(),
                    processName.c_str()) == 0) {
             HANDLE hProcess =
                 OpenProcess(PROCESS_TERMINATE, 0, entry.th32ProcessID);
@@ -225,7 +237,7 @@ void killProcessByName(const std::string &processName, int signal) {
                 CloseHandle(hProcess);
             }
         }
-    } while (Process32Next(snap, &entry));
+    } while (Process32NextW(snap, &entry));
 
     CloseHandle(snap);
 #else
@@ -239,7 +251,7 @@ void killProcessByName(const std::string &processName, int signal) {
 #endif
 }
 
-void killProcessByPID(int pid, int signal) {
+void killProcessByPID(int pid, [[maybe_unused]] int signal) {
 #ifdef _WIN32
     HANDLE hProcess =
         OpenProcess(PROCESS_TERMINATE, 0, static_cast<DWORD>(pid));

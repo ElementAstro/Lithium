@@ -144,40 +144,70 @@ std::vector<std::pair<int, std::string>> getAllProcesses();
 [[nodiscard]] std::string ctermid();
 
 /**
- * @brief Returns the priority of the current process.
+ * @brief Returns the priority of a process by its PID.
  *
- * This function returns the priority of the current process.
+ * This function retrieves the priority of a process given its process ID (PID).
+ * If the process is not found or an error occurs, an empty std::optional is
+ * returned.
  *
- * @return The priority of the current process.
+ * @param pid The process ID of the target process.
+ * @return std::optional<int> The priority of the process if found, otherwise an
+ * empty std::optional.
  */
 std::optional<int> getProcessPriorityByPid(int pid);
 
 /**
- * @brief Returns the priority of the current process.
+ * @brief Returns the priority of a process by its name.
  *
- * This function returns the priority of the current process.
+ * This function retrieves the priority of a process given its name.
+ * If the process is not found or an error occurs, an empty std::optional is
+ * returned.
  *
- * @return The priority of the current process.
+ * @param name The name of the target process.
+ * @return std::optional<int> The priority of the process if found, otherwise an
+ * empty std::optional.
  */
 std::optional<int> getProcessPriorityByName(const std::string &name);
 
 /**
- * @brief Returns the priority of the current process.
+ * @brief Checks if a process is running by its name.
  *
- * This function returns the priority of the current process.
+ * This function checks if a process with the specified name is currently
+ * running.
  *
- * @return The priority of the current process.
+ * @param processName The name of the process to check.
+ * @return bool True if the process is running, otherwise false.
  */
 bool isProcessRunning(const std::string &processName);
 
 /**
- * @brief Returns the priority of the current process.
+ * @brief Returns the parent process ID of a given process.
  *
- * This function returns the priority of the current process.
+ * This function retrieves the parent process ID (PPID) of a specified process.
+ * If the process is not found or an error occurs, the function returns -1.
  *
- * @return The priority of the current process.
+ * @param processId The process ID of the target process.
+ * @return int The parent process ID if found, otherwise -1.
  */
 int getParentProcessId(int processId);
+
+/**
+ * @brief Creates a process as a specified user.
+ *
+ * This function creates a new process using the specified user credentials.
+ * It logs in the user, duplicates the user token, and creates a new process
+ * with the specified command. This function is only available on Windows.
+ *
+ * @param command The command to be executed by the new process.
+ * @param username The username of the user account.
+ * @param domain The domain of the user account.
+ * @param password The password of the user account.
+ * @return bool True if the process is created successfully, otherwise false.
+ */
+bool _CreateProcessAsUser(const std::string &command,
+                          const std::string &username,
+                          const std::string &domain,
+                          const std::string &password);
 
 }  // namespace atom::system
 

@@ -378,6 +378,6 @@ Field(Name, T) -> Field<Name, T, AttrList<>>;
     };                                                         \
     }
 
-#define ATOM_META_FIELD(Name, Member) USRefl::Field(TSTR(Name), Member)
+#define ATOM_META_FIELD(Name, Member) atom::meta::Field(TSTR(Name), Member)
 
 #endif

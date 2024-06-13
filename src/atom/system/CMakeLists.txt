@@ -24,14 +24,14 @@ set(ATOM_SYSTEM_SOURCES
     crash.cpp
     env.cpp
     lregistry.cpp
-    os.cpp
     pidwatcher.cpp
     platform.cpp
+    power.cpp
     process.cpp
-    register.cpp
+    software.cpp
     storage.cpp
-    system.cpp
     user.cpp
+    wregistry.cpp
 )
 
 set(ATOM_SYSTEM_HEADERS
@@ -39,14 +39,14 @@ set(ATOM_SYSTEM_HEADERS
     crash_quotes.hpp
     crash.hpp
     env.hpp
-    os.hpp
     pidwatcher.hpp
     platform.hpp
+    power.hpp
     process.hpp
-    register.hpp
+    software.hpp
     storage.hpp
-    system.hpp
     user.hpp
+    wregistry.hpp
 )
 
 set(ATOM_SYSTEM_LIBS
@@ -66,6 +66,15 @@ target_sources(atom-system-object
 )
 
 add_library(atom-system STATIC)
+
+target_compile_definitions(atom-system-object PRIVATE
+    ENABLE_DEBUG = 1
+    $<$<CONFIG:Debug>:DEBUG_MODE>
+)
+target_compile_definitions(atom-system-object PRIVATE
+    LOGURU_DEBUG_LOGGING
+    $<$<CONFIG:Debug>:DEBUG_MODE>
+)
 
 # Platform-specific libraries
 if(WIN32)

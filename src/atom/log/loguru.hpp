@@ -278,6 +278,8 @@ loguru::Verbosity_MAX);
 #define LOGURU_PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
 #endif
 
+// Max: We use libfmt for now.
+#define LOGURU_USE_FMTLIB 1
 #if LOGURU_USE_FMTLIB
 #include <fmt/format.h>
 #define LOGURU_FMT(x) "{:" #x "}"

@@ -49,6 +49,7 @@ Description: Process Manager
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/system/command.hpp"
+#include "atom/utils/convert.hpp"
 #include "atom/utils/string.hpp"
 
 namespace atom::system {
@@ -63,11 +64,12 @@ bool ProcessManager::createProcess(const std::string &command,
     pid_t pid;
 
 #ifdef _WIN32
-    STARTUPINFO si{};
+    STARTUPINFOW si{};
     PROCESS_INFORMATION pi{};
     std::wstring wideCommand = L"powershell.exe -Command \"" +
                                std::wstring(command.begin(), command.end()) +
                                L"\"";
+    si.cb = sizeof(si);
     if (!CreateProcessW(NULL, &wideCommand[0], NULL, NULL, FALSE, 0, NULL, NULL,
                         &si, &pi)) {
         LOG_F(ERROR, "Failed to create PowerShell process");
@@ -268,9 +270,8 @@ std::vector<std::pair<int, std::string>> getAllProcesses() {
     if (Process32First(snapshot, &processEntry)) {
         do {
             int pid = processEntry.th32ProcessID;
-            std::wstring wstrExeFile(processEntry.szExeFile);
-            std::string name(wstrExeFile.begin(), wstrExeFile.end());
-            processes.emplace_back(pid, name);
+            processes.emplace_back(
+                pid, atom::utils::WCharArrayToString(processEntry.szExeFile));
         } while (Process32Next(snapshot, &processEntry));
     }
 
@@ -397,7 +398,7 @@ Process getSelfProcessInfo() {
     // 获取进程位置
 #ifdef _WIN32
     wchar_t path[MAX_PATH];
-    GetModuleFileName(NULL, path, MAX_PATH);
+    GetModuleFileNameW(NULL, path, MAX_PATH);
 #else
     char path[PATH_MAX];
     ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
@@ -480,7 +481,7 @@ std::optional<int> getProcessPriorityByName(const std::string &name) {
 
     if (Process32First(snapshot, &entry)) {
         do {
-            if (name == atom::utils::wstringToString(entry.szExeFile)) {
+            if (name == atom::utils::WCharArrayToString(entry.szExeFile)) {
                 CloseHandle(snapshot);
                 return getProcessPriorityByPid(entry.th32ProcessID);
             }
@@ -578,7 +579,7 @@ bool isProcessRunning(const std::string &processName) {
 
     bool isRunning = false;
     do {
-        if (processName == atom::utils::wstringToString(pe32.szExeFile)) {
+        if (processName == atom::utils::WCharArrayToString(pe32.szExeFile)) {
             isRunning = true;
             break;
         }
@@ -619,7 +620,7 @@ int getParentProcessId(int processId) {
 
         if (Process32First(hSnapshot, &processEntry)) {
             do {
-                if (processEntry.th32ProcessID == processId) {
+                if (static_cast<int>(processEntry.th32ProcessID) == processId) {
                     parentProcessId = processEntry.th32ParentProcessID;
                     break;
                 }
@@ -645,6 +646,99 @@ int getParentProcessId(int processId) {
         }
     }
     return 0;
+#endif
+}
+
+bool _CreateProcessAsUser(const std::string &command,
+                          const std::string &username,
+                          const std::string &domain,
+                          const std::string &password) {
+#ifdef _WIN32
+    HANDLE hToken = NULL;
+    HANDLE hNewToken = NULL;
+    STARTUPINFOW si;
+    PROCESS_INFORMATION pi;
+    bool result = false;
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    si.cb = sizeof(STARTUPINFO);
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+    if (!LogonUserA(atom::utils::StringToLPSTR(username),
+                    atom::utils::StringToLPSTR(domain),
+                    atom::utils::StringToLPSTR(password),
+                    LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT,
+                    &hToken)) {
+        LOG_F(ERROR, "LogonUser failed with error: {}", GetLastError());
+        goto Cleanup;
+    }
+
+    if (!DuplicateTokenEx(hToken, TOKEN_ALL_ACCESS, NULL, SecurityImpersonation,
+                          TokenPrimary, &hNewToken)) {
+        LOG_F(ERROR, "DuplicateTokenEx failed with error: {}", GetLastError());
+        goto Cleanup;
+    }
+
+    if (!CreateProcessAsUserW(hNewToken, NULL,
+                              atom::utils::StringToLPWSTR(command), NULL, NULL,
+                              FALSE, 0, NULL, NULL, &si, &pi)) {
+        LOG_F(ERROR, "CreateProcessAsUser failed with error: {}",
+              GetLastError());
+        goto Cleanup;
+    }
+    LOG_F(INFO, "Process created successfully!");
+    result = true;
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+Cleanup:
+    if (hToken) {
+        CloseHandle(hToken);
+    }
+    if (hNewToken) {
+        CloseHandle(hNewToken);
+    }
+    if (pi.hProcess) {
+        CloseHandle(pi.hProcess);
+    }
+    if (pi.hThread) {
+        CloseHandle(pi.hThread);
+    }
+
+    return result;
+#else
+    pid_t pid = fork();
+    if (pid < 0) {
+        LOG_F(ERROR, "Fork failed");
+        return false;
+    } else if (pid == 0) {
+        struct passwd *pw = getpwnam(username.c_str());
+        if (pw == NULL) {
+            LOG_F(ERROR, "Failed to get user information for {}", username);
+            exit(EXIT_FAILURE);
+        }
+
+        if (setgid(pw->pw_gid) != 0) {
+            LOG_F(ERROR, "Failed to set group ID");
+            exit(EXIT_FAILURE);
+        }
+        if (setuid(pw->pw_uid) != 0) {
+            LOG_F(ERROR, "Failed to set user ID");
+            exit(EXIT_FAILURE);
+        }
+
+        execl("/bin/sh", "sh", "-c", command.c_str(), (char *)0);
+        LOG_F(ERROR, "Failed to execute command");
+        exit(EXIT_FAILURE);
+    } else {
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status)) {
+            LOG_F("INFO", "Process exited with status {}",
+                  std::to_string(WEXITSTATUS(status)));
+            return WEXITSTATUS(status) == 0;
+        } else {
+            LOG_F(ERROR, "Process did not exit normally");
+            return false;
+        }
+    }
 #endif
 }
 

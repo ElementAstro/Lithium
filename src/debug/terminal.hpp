@@ -44,6 +44,8 @@ private:
     void printHeader();
     void clearConsole();
 
+    std::any ConsoleTerminal::processToken(const std::string& token);
+
     std::vector<std::any> parseArguments(const std::string& input);
 
     static constexpr int MAX_HISTORY_SIZE = 100;

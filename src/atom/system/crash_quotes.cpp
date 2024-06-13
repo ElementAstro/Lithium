@@ -38,6 +38,13 @@ void QuoteManager::removeQuote(const Quote &quote) {
     if (quotes.empty()) {
         return;
     }
+    for (auto it = quotes.begin(); it != quotes.end(); ++it) {
+        if (it->getText() == quote.getText() &&
+            it->getAuthor() == quote.getAuthor()) {
+            quotes.erase(it);
+            break;
+        }
+    }
 }
 
 #ifdef DEBUG

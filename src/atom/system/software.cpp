@@ -30,10 +30,10 @@ std::string getAppVersion(const fs::path& app_path) {
 #ifdef _WIN32
     DWORD handle;
     auto wapp_path = atom::utils::stringToWString(app_path.string());
-    DWORD size = GetFileVersionInfoSize(wapp_path.c_str(), &handle);
+    DWORD size = GetFileVersionInfoSizeW(wapp_path.c_str(), &handle);
     if (size != 0) {
         LPVOID buffer = malloc(size);
-        if (GetFileVersionInfo(wapp_path.c_str(), handle, size, buffer)) {
+        if (GetFileVersionInfoW(wapp_path.c_str(), handle, size, buffer)) {
             LPVOID value;
             UINT length;
             if (VerQueryValue(buffer,
@@ -156,9 +156,7 @@ std::vector<std::string> getAppPermissions(const fs::path& app_path) {
                                              user_name, &name_size, domain_name,
                                              &domain_size, &sid_type)) {
                             std::string permission = "User: ";
-                            permission +=
-                                atom::utils::LPWSTRToString(user_name) + "\\" +
-                                atom::utils::LPWSTRToString(domain_name);
+                            permission += user_name + "\\" + domain_name;
                             permissions.push_back(permission);
                         }
                         free(user_name);
@@ -281,22 +279,23 @@ bool checkSoftwareInstalled(const std::string& software_name) {
     HKEY hKey;
     std::string regPath =
         "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
-    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                     atom::utils::stringToWString(regPath).c_str(), 0, KEY_READ,
-                     &hKey) == ERROR_SUCCESS) {
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                      atom::utils::stringToWString(regPath).c_str(), 0,
+                      KEY_READ, &hKey) == ERROR_SUCCESS) {
         DWORD index = 0;
         wchar_t subKeyName[256];
         DWORD subKeyNameSize = sizeof(subKeyName);
-        while (RegEnumKeyEx(hKey, index, subKeyName, &subKeyNameSize, nullptr,
-                            nullptr, nullptr, nullptr) != ERROR_NO_MORE_ITEMS) {
+        while (RegEnumKeyExW(hKey, index, subKeyName, &subKeyNameSize, nullptr,
+                             nullptr, nullptr,
+                             nullptr) != ERROR_NO_MORE_ITEMS) {
             HKEY hSubKey;
-            if (RegOpenKeyEx(hKey, subKeyName, 0, KEY_READ, &hSubKey) ==
+            if (RegOpenKeyExW(hKey, subKeyName, 0, KEY_READ, &hSubKey) ==
                 ERROR_SUCCESS) {
                 char displayName[256];
                 DWORD displayNameSize = sizeof(displayName);
-                if (RegQueryValueEx(hSubKey, L"DisplayName", nullptr, nullptr,
-                                    reinterpret_cast<LPBYTE>(displayName),
-                                    &displayNameSize) == ERROR_SUCCESS) {
+                if (RegQueryValueExW(hSubKey, L"DisplayName", nullptr, nullptr,
+                                     reinterpret_cast<LPBYTE>(displayName),
+                                     &displayNameSize) == ERROR_SUCCESS) {
                     if (software_name == displayName) {
                         is_installed = true;
                         RegCloseKey(hSubKey);

@@ -30,8 +30,10 @@ Env::Env(int argc, char **argv) {
 
 #ifdef _WIN32
     wchar_t buf[MAX_PATH];
-    GetModuleFileName(NULL, buf, MAX_PATH);
-    exe_path = buf;
+    if (!GetModuleFileNameW(NULL, buf, MAX_PATH)) {
+        LOG_F(ERROR, "GetModuleFileNameW failed with error {}", GetLastError());
+        exe_path = buf;
+    }
 #else
     char link_buf[1024];
     ssize_t count = readlink("/proc/self/exe", link_buf, sizeof(link_buf));

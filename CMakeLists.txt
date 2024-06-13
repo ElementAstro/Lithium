@@ -81,8 +81,8 @@ configure_file(config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Add subdirectories
 add_subdirectory(libs)
-add_subdirectory(${lithium_module_dir})
 add_subdirectory(modules)
+add_subdirectory(${lithium_module_dir})
 add_subdirectory(driver)
 add_subdirectory(${lithium_src_dir}/config)
 add_subdirectory(tests)

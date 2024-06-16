@@ -1,26 +1,42 @@
-# CMakeLists.txt for Atom-Task
+# CMakeLists.txt for Lithium-Task
 # This project is licensed under the terms of the GPL3 license.
 #
-# Project Name: Atom-Task
-# Description: Core Task Definitions
+# Project Name: Lithium-Task
+# Description: The official config module for lithium server
 # Author: Max Qian
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom-task VERSION 1.0.0 LANGUAGES C CXX)
+project(lithium-task VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources
 set(PROJECT_SOURCES
-    loop_task.cpp
-    conditional_task.cpp
-    task.cpp
+    container.cpp
+    generator.cpp
+    loader.cpp
+    manager.cpp
+    pool.cpp
+    singlepool.cpp
+    tick.cpp
 )
 
 # Headers
 set(PROJECT_HEADERS
-    loop_task.hpp
-    conditional_task.hpp
-    task.hpp
+    container.hpp
+    generator.hpp
+    loader.hpp
+    manager.hpp
+    pool.hpp
+    singlepool.hpp
+    tick.hpp
+)
+
+# Required libraries
+set(PROJECT_LIBS
+    atom-component
+    atom-task
+    loguru
+    ${CMAKE_THREAD_LIBS_INIT} 
 )
 
 # Create Object Library
@@ -32,6 +48,8 @@ add_library(${PROJECT_NAME} STATIC $<TARGET_OBJECTS:${PROJECT_NAME}_OBJECT>)
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_LIBS})
 
 # Set version properties
 set_target_properties(${PROJECT_NAME} PROPERTIES

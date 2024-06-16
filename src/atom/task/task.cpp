@@ -133,6 +133,7 @@ bool SimpleTask::validateJsonString(const std::string &jsonString,
 
 json SimpleTask::execute() {
     m_isExecuting.store(true);
+    status = Status::Running;
     if (!m_paramsTemplate.is_null() && !m_params.is_null()) {
         if (!validateJsonValue(m_params, m_paramsTemplate)) {
             return {{"status", "error"},
@@ -141,7 +142,13 @@ json SimpleTask::execute() {
         }
     }
     if (!m_stopFlag) {
-        m_returns = m_function(m_params);
+        try {
+            m_returns = m_function(m_params);
+            status = Status::Completed;
+        } catch (const std::exception &e) {
+            status = Status::Failed;
+        }
+
     } else {
         m_returns = {{"status", "error"},
                      {"error", "Task has been stopped"},

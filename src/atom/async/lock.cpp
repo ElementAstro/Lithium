@@ -21,6 +21,10 @@ void Spinlock::lock() {
     }
 }
 
+bool Spinlock::try_lock() {
+    return !flag_.test_and_set(std::memory_order_acquire);
+}
+
 void Spinlock::unlock() { flag_.clear(std::memory_order_release); }
 
 uint64_t TicketSpinlock::lock() {

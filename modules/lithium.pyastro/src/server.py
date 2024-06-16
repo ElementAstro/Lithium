@@ -30,9 +30,7 @@ class IndiDevice:
         if not self.device:
             print(f"Device {self.name} not connected")
             return
-        # Add command handling logic based on the type of command and params
         print(f"Sending command {command} to device {self.name} with params {params}")
-        # Example: Update a number vector property
         if command == "update_property" and params:
             property_name = params.get("property_name")
             element_name = params.get("element_name")

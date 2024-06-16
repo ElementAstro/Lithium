@@ -51,10 +51,6 @@ std::optional<json> TaskLoader::readJsonFile(const fs::path& filePath) {
     return std::nullopt;
 }
 
-std::optional<json> TaskLoader::readJsonFile(const std::string& filePath) {
-    return readJsonFile(fs::path(filePath));
-}
-
 bool TaskLoader::writeJsonFile(const fs::path& filePath, const json& j) {
     try {
         std::ofstream outputFile(filePath);
@@ -67,10 +63,6 @@ bool TaskLoader::writeJsonFile(const fs::path& filePath, const json& j) {
     }
 }
 
-bool TaskLoader::writeJsonFile(const std::string& filePath, const json& j) {
-    return writeJsonFile(fs::path(filePath), j);
-}
-
 void TaskLoader::asyncReadJsonFile(
     const fs::path& filePath,
     std::function<void(std::optional<json>)> callback) {
@@ -80,23 +72,12 @@ void TaskLoader::asyncReadJsonFile(
     });
 }
 
-void TaskLoader::asyncReadJsonFile(
-    const std::string& filePath,
-    std::function<void(std::optional<json>)> callback) {
-    asyncReadJsonFile(fs::path(filePath), callback);
-}
-
 void TaskLoader::asyncWriteJsonFile(const fs::path& filePath, const json& j,
                                     std::function<void(bool)> callback) {
     std::jthread([filePath, j, callback = std::move(callback)]() {
         bool success = writeJsonFile(filePath, j);
         callback(success);
     });
-}
-
-void TaskLoader::asyncWriteJsonFile(const std::string& filePath, const json& j,
-                                    std::function<void(bool)> callback) {
-    asyncWriteJsonFile(fs::path(filePath), j, callback);
 }
 
 void TaskLoader::mergeJsonObjects(json& base, const json& toMerge) {
@@ -113,7 +94,7 @@ void TaskLoader::batchAsyncProcess(
     int totalFiles = filePaths.size();
 
     for (const auto& path : filePaths) {
-        asyncReadJsonFile(path, [&filesProcessed, &totalFiles, process,
+        asyncReadJsonFile(path, [&filesProcessed, totalFiles, process,
                                  onComplete](std::optional<json> j) {
             process(j);
             if (++filesProcessed == totalFiles) {
@@ -123,28 +104,12 @@ void TaskLoader::batchAsyncProcess(
     }
 }
 
-void TaskLoader::batchAsyncProcess(
-    const std::vector<std::string>& filePaths,
-    std::function<void(std::optional<json>)> process,
-    std::function<void()> onComplete) {
-    std::vector<fs::path> paths;
-    for (const auto& path : filePaths) {
-        paths.push_back(fs::path(path));
-    }
-    batchAsyncProcess(paths, process, onComplete);
-}
-
 void TaskLoader::asyncDeleteJsonFile(const fs::path& filePath,
                                      std::function<void(bool)> callback) {
     std::jthread([filePath, callback = std::move(callback)]() {
         bool success = fs::remove(filePath);
         callback(success);
     });
-}
-
-void TaskLoader::asyncDeleteJsonFile(const std::string& filePath,
-                                     std::function<void(bool)> callback) {
-    asyncDeleteJsonFile(fs::path(filePath), callback);
 }
 
 void TaskLoader::asyncQueryJsonValue(
@@ -165,12 +130,6 @@ void TaskLoader::asyncQueryJsonValue(
     });
 }
 
-void TaskLoader::asyncQueryJsonValue(
-    const std::string& filePath, const std::string& key,
-    std::function<void(std::optional<json>)> callback) {
-    asyncQueryJsonValue(fs::path(filePath), key, callback);
-}
-
 void TaskLoader::batchProcessDirectory(
     const fs::path& directoryPath,
     std::function<void(std::optional<json>)> process,
@@ -187,13 +146,7 @@ void TaskLoader::batchProcessDirectory(
         }
     }
 
-    batchAsyncProcess(filePaths, process, onComplete);
+    batchAsyncProcess(filePaths, process, std::move(onComplete));
 }
 
-void TaskLoader::batchProcessDirectory(
-    const std::string& directoryPath,
-    std::function<void(std::optional<json>)> process,
-    std::function<void()> onComplete) {
-    batchProcessDirectory(fs::path(directoryPath), process, onComplete);
-}
 }  // namespace lithium

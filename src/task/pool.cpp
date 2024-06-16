@@ -15,12 +15,13 @@ Description: Specialized task pool
 #include "pool.hpp"
 
 namespace lithium {
+
 // Initialize static thread_local variables
-thread_local WorkerQueue *TaskPool::t_localQueue = nullptr;
+thread_local WorkerQueue* TaskPool::t_localQueue = nullptr;
 thread_local size_t TaskPool::t_index = 0;
 
-bool WorkerQueue::tryPop(std::shared_ptr<Task> &task) {
-    std::lock_guard lock(mutex);
+bool WorkerQueue::tryPop(std::shared_ptr<Task>& task) {
+    std::unique_lock lock(mutex);
     if (queue.empty()) {
         return false;
     }
@@ -29,8 +30,8 @@ bool WorkerQueue::tryPop(std::shared_ptr<Task> &task) {
     return true;
 }
 
-bool WorkerQueue::trySteal(std::shared_ptr<Task> &task) {
-    std::lock_guard lock(mutex);
+bool WorkerQueue::trySteal(std::shared_ptr<Task>& task) {
+    std::unique_lock lock(mutex);
     if (queue.empty()) {
         return false;
     }
@@ -40,15 +41,12 @@ bool WorkerQueue::trySteal(std::shared_ptr<Task> &task) {
 }
 
 void WorkerQueue::push(std::shared_ptr<Task> task) {
-    std::lock_guard lock(mutex);
+    std::unique_lock lock(mutex);
     queue.push_front(std::move(task));
 }
 
 TaskPool::TaskPool(size_t threads) : m_defaultThreadCount(threads) {
-    for (size_t i = 0; i < m_defaultThreadCount; ++i) {
-        m_queues.emplace_back(std::make_unique<WorkerQueue>());
-    }
-    start();
+    start(threads);
 }
 
 TaskPool::~TaskPool() { stop(); }
@@ -80,7 +78,7 @@ void TaskPool::workerThread(size_t index) {
     }
 }
 
-bool TaskPool::tryStealing(std::shared_ptr<Task> &task) {
+bool TaskPool::tryStealing(std::shared_ptr<Task>& task) {
     for (size_t i = 0; i < m_queues.size(); ++i) {
         if (m_queues[(t_index + i + 1) % m_queues.size()]->trySteal(task)) {
             return true;
@@ -89,19 +87,42 @@ bool TaskPool::tryStealing(std::shared_ptr<Task> &task) {
     return false;
 }
 
-void TaskPool::start() {
-    for (size_t i = 0; i < m_defaultThreadCount; ++i) {
+void TaskPool::start(size_t threads) {
+    m_queues.resize(threads);
+    for (size_t i = 0; i < threads; ++i) {
+        m_queues[i] = std::make_unique<WorkerQueue>();
         m_workers.emplace_back([this, i] { workerThread(i); });
     }
 }
 
 void TaskPool::stop() {
     m_stop = true;
+    m_acceptTasks = false;
     m_condition.notify_all();
-    for (auto &worker : m_workers) {
+    for (auto& worker : m_workers) {
         if (worker.joinable()) {
             worker.join();
         }
     }
+    m_workers.clear();
+    m_queues.clear();
 }
+
+void TaskPool::resize(size_t newThreadCount) {
+    {
+        std::unique_lock lock(m_conditionMutex);
+        m_acceptTasks = false;
+    }
+    stop();
+    {
+        std::unique_lock lock(m_conditionMutex);
+        m_stop = false;
+        m_acceptTasks = true;
+    }
+    start(newThreadCount);
+    m_defaultThreadCount = newThreadCount;
+}
+
+size_t TaskPool::getThreadCount() const { return m_defaultThreadCount; }
+
 }  // namespace lithium

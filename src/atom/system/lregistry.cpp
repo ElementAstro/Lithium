@@ -34,27 +34,23 @@ public:
 
 Registry::Registry() : pImpl(std::make_unique<RegistryImpl>()) {}
 
-// Implementation of Registry class methods
-void Registry::loadRegistryFromFile() {
-    pImpl->saveRegistryToFile();  // Delegate to implementation
-}
+void Registry::loadRegistryFromFile() { pImpl->saveRegistryToFile(); }
 
 void Registry::createKey(const std::string& keyName) {
-    pImpl->saveRegistryToFile();                // Delegate to implementation
-    pImpl->notifyEvent("KeyCreated", keyName);  // Delegate to implementation
+    pImpl->saveRegistryToFile();
+    pImpl->notifyEvent("KeyCreated", keyName);
 }
 
 void Registry::deleteKey(const std::string& keyName) {
-    pImpl->saveRegistryToFile();                // Delegate to implementation
-    pImpl->notifyEvent("KeyDeleted", keyName);  // Delegate to implementation
+    pImpl->saveRegistryToFile();
+    pImpl->notifyEvent("KeyDeleted", keyName);
 }
 
 void Registry::setValue(const std::string& keyName,
                         const std::string& valueName, const std::string& data) {
-    pImpl->registryData[keyName][valueName] =
-        data;                                 // Access implementation directly
-    pImpl->saveRegistryToFile();              // Delegate to implementation
-    pImpl->notifyEvent("ValueSet", keyName);  // Delegate to implementation
+    pImpl->registryData[keyName][valueName] = data;
+    pImpl->saveRegistryToFile();
+    pImpl->notifyEvent("ValueSet", keyName);
 }
 
 std::string Registry::getValue(const std::string& keyName,
@@ -62,9 +58,7 @@ std::string Registry::getValue(const std::string& keyName,
     if (pImpl->registryData.find(keyName) != pImpl->registryData.end() &&
         pImpl->registryData[keyName].find(valueName) !=
             pImpl->registryData[keyName].end()) {
-        return pImpl
-            ->registryData[keyName]
-                          [valueName];  // Access implementation directly
+        return pImpl->registryData[keyName][valueName];
     } else {
         return "Value not found";
     }
@@ -73,11 +67,9 @@ std::string Registry::getValue(const std::string& keyName,
 void Registry::deleteValue(const std::string& keyName,
                            const std::string& valueName) {
     if (pImpl->registryData.find(keyName) != pImpl->registryData.end()) {
-        pImpl->registryData[keyName].erase(
-            valueName);               // Access implementation directly
-        pImpl->saveRegistryToFile();  // Delegate to implementation
-        pImpl->notifyEvent("ValueDeleted",
-                           keyName);  // Delegate to implementation
+        pImpl->registryData[keyName].erase(valueName);
+        pImpl->saveRegistryToFile();
+        pImpl->notifyEvent("ValueDeleted", keyName);
     }
 }
 

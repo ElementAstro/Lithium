@@ -24,6 +24,8 @@ Description: Python like stat for Windows & Linux
 #include <unistd.h>
 #endif
 
+#include "atom/utils/string.hpp"
+
 namespace atom::system {
 Stat::Stat(const fs::path& path) : path_(path) { update(); }
 
@@ -56,8 +58,9 @@ std::time_t Stat::mtime() const {
 std::time_t Stat::ctime() const {
 #ifdef _WIN32
     WIN32_FILE_ATTRIBUTE_DATA attr;
-    if (!GetFileAttributesEx(path_.string().c_str(), GetFileExInfoStandard,
-                             &attr)) {
+    if (!GetFileAttributesEx(
+            atom::utils::stringToWString(path_.string()).c_str(),
+            GetFileExInfoStandard, &attr)) {
         throw std::system_error(
             std::error_code(GetLastError(), std::system_category()),
             "Failed to get file attributes");

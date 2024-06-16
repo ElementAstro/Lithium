@@ -15,8 +15,8 @@ Description: System Script Manager
 #include "sheller.hpp"
 
 #include <fstream>
+#include <mutex>
 #include <sstream>
-
 
 #ifdef _WIN32
 const std::string SHELL_COMMAND = "powershell.exe -Command";
@@ -24,64 +24,62 @@ const std::string SHELL_COMMAND = "powershell.exe -Command";
 const std::string SHELL_COMMAND = "sh -c";
 #endif
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/system/command.hpp"
 
 namespace lithium {
-void ScriptManager::RegisterScript(const std::string &name,
-                                   const Script &script) {
-    if (scripts.find(name) != scripts.end()) {
-        LOG_F(ERROR, "Script already registered: {}", name);
-        return;
-    }
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    scripts[name] = script;
-    scriptOutputs[name] = "";
-    scriptStatus[name] = 0;
-    DLOG_F(INFO, "Script registered: {}", name);
+void ScriptManager::registerScript(std::string_view name,
+                                   const Script& script) {
+    registerCommon(scripts, name, script);
 }
 
-void ScriptManager::RegisterPowerShellScript(const std::string &name,
-                                             const Script &script) {
-    if (powerShellScripts.find(name) != powerShellScripts.end()) {
-        LOG_F(ERROR, "PowerShell script already registered: {}", name);
-        return;
-    }
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    powerShellScripts[name] = script;
-    scriptOutputs[name] = "";
-    scriptStatus[name] = 0;
-    DLOG_F(INFO, "PowerShell script registered: {}", name);
+void ScriptManager::registerPowerShellScript(std::string_view name,
+                                             const Script& script) {
+    registerCommon(powerShellScripts, name, script);
 }
 
-void ScriptManager::ViewScripts() {
-    if (scripts.empty() && powerShellScripts.empty()) {
-        LOG_F(INFO, "No scripts registered.");
-    } else {
-        std::shared_lock<std::shared_mutex> lock(m_sharedMutex);
-        LOG_F(INFO, "Registered scripts:");
-        for (const auto &pair : scripts) {
-            LOG_F(INFO, "{}", pair.first);
-        }
-        for (const auto &pair : powerShellScripts) {
-            LOG_F(INFO, "{} ps", pair.first);
-        }
+bool ScriptManager::registerCommon(
+    std::unordered_map<std::string, std::string>& scriptMap,
+    std::string_view name, const std::string& script) {
+    std::unique_lock lock(m_sharedMutex);
+    auto [it, inserted] = scriptMap.try_emplace(std::string(name), script);
+    if (!inserted) {
+        LOG_F(ERROR, "Script already registered: {}", std::string(name));
+        return false;
     }
+    scriptOutputs[std::string(name)] = "";
+    scriptStatus[std::string(name)] = 0;
+    DLOG_F(INFO, "Script registered: {}", std::string(name));
+    return true;
 }
 
-void ScriptManager::DeleteScript(const std::string &name) {
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    auto it = scripts.find(name);
-    if (it != scripts.end()) {
+ScriptMap ScriptManager::getAllScripts() const {
+    std::shared_lock lock(m_sharedMutex);
+    ScriptMap _scripts;
+    for (const auto& [name, script] : powerShellScripts) {
+        _scripts[name] = script;
+    }
+    for (const auto& [name, script] : scripts) {
+        _scripts[name] = script;
+    }
+    return _scripts;
+}
+
+void ScriptManager::deleteScript(std::string_view name) {
+    std::unique_lock lock(m_sharedMutex);
+    auto name_str = std::string(name);
+    if (auto it = scripts.find(name_str); it != scripts.end()) {
         scripts.erase(it);
-        scriptOutputs.erase(name);
-        scriptStatus.erase(name);
+        scriptOutputs.erase(name_str);
+        scriptStatus.erase(name_str);
         LOG_F(INFO, "Script deleted: {}", name);
     } else {
-        auto it2 = powerShellScripts.find(name);
-        if (it2 != powerShellScripts.end()) {
+        if (auto it2 = powerShellScripts.find(name_str);
+            it2 != powerShellScripts.end()) {
             powerShellScripts.erase(it2);
-            scriptOutputs.erase(name);
-            scriptStatus.erase(name);
+            scriptOutputs.erase(name_str);
+            scriptStatus.erase(name_str);
             LOG_F(ERROR, "PowerShell script not found: {}", name);
         } else {
             LOG_F(ERROR, "Script not found: {}", name);
@@ -89,123 +87,61 @@ void ScriptManager::DeleteScript(const std::string &name) {
     }
 }
 
-void ScriptManager::UpdateScript(const std::string &name,
-                                 const Script &script) {
+void ScriptManager::updateScript(std::string_view name, const Script& script) {
     std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    auto it = scripts.find(name);
-    if (it != scripts.end()) {
-        it->second = script;
-        scriptOutputs[name] = "";
-        scriptStatus[name] = 0;
-        LOG_F(INFO, "Script updated: {}", name);
+    std::string nameStr{name};
+
+    auto [it, success] = scripts.insert_or_assign(nameStr, script);
+    if (success) {
+        scriptOutputs[nameStr] = "";
+        scriptStatus[nameStr] = 0;
+        LOG_F(INFO, "Script updated: {}", nameStr);
+        return;
+    }
+
+    auto [it2, success2] = powerShellScripts.insert_or_assign(nameStr, script);
+    if (success2) {
+        scriptOutputs[nameStr] = "";
+        scriptStatus[nameStr] = 0;
+        LOG_F(INFO, "PowerShell script updated: {}", nameStr);
     } else {
-        auto it2 = powerShellScripts.find(name);
-        if (it2 != powerShellScripts.end()) {
-            it2->second = script;
-            scriptOutputs[name] = "";
-            scriptStatus[name] = 0;
-            LOG_F(INFO, "PowerShell script updated: {}", name);
-        } else {
-            LOG_F(ERROR, "PowerShell script not found: {}", name);
-        }
+        LOG_F(ERROR, "Script not found: {}", nameStr);
     }
 }
 
-bool ScriptManager::RunScript(const std::string &name,
-                              const std::vector<std::string> &args) {
-    if (scripts.empty() && powerShellScripts.empty()) {
-        LOG_F(ERROR, "No scripts registered.");
+bool ScriptManager::runScript(
+    std::string_view name,
+    const std::unordered_map<std::string, std::string>& args) {
+    std::unique_lock lock(m_sharedMutex);
+    std::string scriptCmd;
+
+    // 尝试从普通脚本中找到并执行
+    if (auto it = scripts.find(std::string(name)); it != scripts.end()) {
+        scriptCmd = SHELL_COMMAND + " \"" + it->second + "\"";
+    }
+    // 如果不是普通脚本，尝试从PowerShell脚本中找到并执行
+    else if (auto it2 = powerShellScripts.find(std::string(name));
+             it2 != powerShellScripts.end()) {
+        scriptCmd = "powershell.exe -Command \"" + it2->second + "\"";
+    }
+    // 如果两者都没有找到，返回错误
+    else {
+        LOG_F(ERROR, "Script not found: {}", name);
         return false;
     }
-    std::unique_lock<std::shared_mutex> lock(m_sharedMutex);
-    auto it = scripts.find(name);
-    if (it != scripts.end()) {
-        // 执行Shell脚本
-        const std::string &script = it->second;
-        std::string cmdLine = SHELL_COMMAND + " \"" + script + "\"";
-        return RunCommand(cmdLine, name, args);
-    } else {
-        auto it2 = powerShellScripts.find(name);
-        if (it2 != powerShellScripts.end()) {
-            // 执行PowerShell脚本
-            const std::string &script = it2->second;
-            std::string cmdLine = "powershell.exe -Command \"" + script + "\"";
-            return RunCommand(cmdLine, name, args);
-        } else {
-            LOG_F(ERROR, "PowerShell script not found: {}", name);
-            return false;
-        }
+
+    for (const auto& arg : args) {
+        scriptCmd += " \"" + arg.first + "=" + arg.second + "\"";
     }
-}
-
-void ScriptManager::ViewScriptOutput(const std::string &name) {
-    auto it = scriptOutputs.find(name);
-    if (it != scriptOutputs.end()) {
-        const std::string &output = it->second;
-        LOG_F(INFO, "Output of script {}: {}", name, output);
-    } else {
-        LOG_F(ERROR, "Script not found: {}", name);
-    }
-}
-
-void ScriptManager::ViewScriptStatus(const std::string &name) {
-    auto it = scriptStatus.find(name);
-    if (it != scriptStatus.end()) {
-        int status = it->second;
-        LOG_F(INFO, "Status of script {}: {}", name, status);
-    } else {
-        LOG_F(ERROR, "Script not found: {}", name);
-    }
-}
-
-bool ScriptManager::RunCommand(const std::string &cmdLine,
-                               const std::string &name,
-                               const std::vector<std::string> &args) {
-    // 构建命令行参数
-    std::string fullCmdLine = cmdLine;
-    for (const std::string &arg : args) {
-        fullCmdLine += " \"" + arg + "\"";
-    }
-
-    // 执行命令
-    std::stringstream outputBuffer;
-    FILE *pipe = popen(fullCmdLine.c_str(), "r");
-    if (pipe != nullptr) {
-        char buffer[128];
-        while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-            outputBuffer << buffer;
-        }
-
-        std::string output = outputBuffer.str();
-        scriptOutputs[name] = output;
-
-        int result = pclose(pipe);
-        scriptStatus[name] = result;
-
-        if (result != 0) {
-            LogError("Script run error: " + name);
-        }
-
-        return (result == 0);
-    } else {
-        LogError("Script run error: " + name);
+    try {
+        auto result = atom::system::executeCommandWithStatus(scriptCmd);
+        scriptOutputs[std::string(name)] = result.first;
+        scriptStatus[std::string(name)] = result.second;
+    } catch (const atom::error::RuntimeError& e) {
         return false;
     }
+
+    return true;
 }
 
-void ScriptManager::LogError(const std::string &message) {
-    // 记录错误日志
-    std::time_t now = std::time(nullptr);
-    std::tm *timeInfo = std::localtime(&now);
-    char buffer[80];
-    std::strftime(buffer, 80, "%Y-%m-%d %H:%M:%S", timeInfo);
-
-    std::ofstream logFile("error.log", std::ios_base::app);
-    logFile << "[" << buffer << "] " << message << std::endl;
-    logFile.close();
-}
-
-#if ENABLE_PEGTL
-
-#endif
 }  // namespace lithium

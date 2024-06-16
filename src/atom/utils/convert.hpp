@@ -31,6 +31,35 @@ namespace atom::utils {
 [[nodiscard]] LPWSTR CharToLPWSTR(std::string_view charString);
 
 /**
+ * @brief Converts a WCHAR array to a std::string.
+ *
+ * This function converts a wide character array (WCHAR) to a std::string
+ * using the UTF-8 encoding. It uses the WideCharToMultiByte function
+ * provided by the Windows API for the conversion.
+ *
+ * @param wCharArray A pointer to the null-terminated wide character array
+ * (WCHAR) to be converted.
+ * @return [[nodiscard]] std::string The converted std::string in UTF-8
+ * encoding.
+ */
+[[nodiscard]] std::string WCharArrayToString(const WCHAR* wCharArray);
+
+/**
+ * @brief Converts a string containing char characters to LPSTR (character
+ * string).
+ * @param str The string containing char characters to be converted.
+ * @return LPSTR representing the character version of the input string.
+ */
+[[nodiscard]] LPSTR StringToLPSTR(const std::string& str);
+
+/**
+ * @brief Converts a wstring to LPSTR (character string).
+ * @param wstr The wstring to be converted to LPSTR.
+ * @return LPSTR representing the character version of the input wstring.
+ */
+[[nodiscard]] LPSTR WStringToLPSTR(const std::wstring& wstr);
+
+/**
  * @brief Converts a string containing char characters to LPWSTR (wide character
  * string).
  * @param str The string containing char characters to be converted.

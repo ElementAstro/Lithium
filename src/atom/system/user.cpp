@@ -15,10 +15,12 @@ Description: Some system functions to get user information.
 #include "user.hpp"
 
 #ifdef _WIN32
-#include <Windows.h>
+// clang-format off
+#include <windows.h>
 #include <lmcons.h>
 #include <tchar.h>
 #include <userenv.h>
+// clang-format on
 #else
 #include <grp.h>
 #include <pwd.h>
@@ -31,18 +33,41 @@ Description: Some system functions to get user information.
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
+    bool isRoot() {
+#ifdef _WIN32
+    HANDLE hToken;
+    TOKEN_ELEVATION elevation;
+    DWORD dwSize;
+
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+        LOG_F(ERROR, "isRoot error: OpenProcessToken error");
+        return false;
+    }
+
+    if (!GetTokenInformation(hToken, TokenElevation, &elevation,
+                             sizeof(elevation), &dwSize)) {
+        LOG_F(ERROR, "isRoot error: GetTokenInformation error");
+        CloseHandle(hToken);
+        return false;
+    }
+
+    bool elevated = (elevation.TokenIsElevated != 0);
+    CloseHandle(hToken);
+    return elevated;
+#else
+    return (getuid() == 0);
+#endif
+}
+
 std::vector<std::wstring> getUserGroups() {
     std::vector<std::wstring> groups;
 
 #ifdef _WIN32
-    // 获取当前用户的令牌句柄
     HANDLE hToken;
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
         LOG_F(ERROR, "Failed to open process token.");
         return groups;
     }
-
-    // 获取用户组信息
     DWORD bufferSize = 0;
     GetTokenInformation(hToken, TokenGroups, NULL, 0, &bufferSize);
     if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
@@ -254,5 +279,21 @@ std::string getLoginShell() {
     loginShell = std::string(userInfo->pw_shell);
 #endif
     return loginShell;
+}
+
+std::string getLogin() {
+#ifdef _WIN32
+    char buffer[UNLEN + 1];
+    DWORD bufferSize = UNLEN + 1;
+    if (GetUserNameA(buffer, &bufferSize)) {
+        return buffer;
+    }
+#else
+    char *username = ::getlogin();
+    if (username != nullptr) {
+        return username;
+    }
+#endif
+    return "";
 }
 }  // namespace atom::system

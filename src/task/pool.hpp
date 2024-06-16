@@ -15,23 +15,17 @@ Description: Specialized task pool
 #ifndef LITHIUM_TASK_POOL_HPP
 #define LITHIUM_TASK_POOL_HPP
 
-#include <algorithm>
 #include <atomic>
-#include <cassert>
-#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <functional>
 #include <future>
 #include <memory>
-#include <mutex>
-#include <optional>
+#include <shared_mutex>
 #include <thread>
-#include <tuple>
-#include <type_traits>
-#include <vector>
 
 namespace lithium {
+
 /**
  * @struct Task
  * @brief Represents a task that can be executed by the thread pool.
@@ -53,7 +47,7 @@ struct Task {
 class WorkerQueue {
 public:
     std::deque<std::shared_ptr<Task>> queue;
-    std::mutex mutex;
+    std::shared_mutex mutex;
 
     bool tryPop(std::shared_ptr<Task>& task);
 
@@ -69,10 +63,11 @@ public:
 class TaskPool {
 private:
     std::atomic<bool> m_stop{false};
+    std::atomic<bool> m_acceptTasks{true};
     std::vector<std::thread> m_workers;
     std::vector<std::unique_ptr<WorkerQueue>> m_queues;
-    std::condition_variable m_condition;
-    std::mutex m_conditionMutex;
+    std::condition_variable_any m_condition;
+    std::shared_mutex m_conditionMutex;
     size_t m_defaultThreadCount;
 
     static thread_local WorkerQueue* t_localQueue;
@@ -96,21 +91,30 @@ public:
         std::future<return_type> res = task->get_future();
         auto wrappedTask = std::make_shared<Task>([task]() { (*task)(); });
 
-        if (t_localQueue) {
-            t_localQueue->push(wrappedTask);
-        } else {
-            m_queues[0]->push(wrappedTask);
+        {
+            std::shared_lock lock(m_conditionMutex);
+            if (m_acceptTasks) {
+                if (t_localQueue) {
+                    t_localQueue->push(wrappedTask);
+                } else {
+                    m_queues[0]->push(wrappedTask);
+                }
+                m_condition.notify_one();
+            }
         }
-        m_condition.notify_one();
         return res;
     }
+
+    void resize(size_t newThreadCount);
+
+    size_t getThreadCount() const;
 
 private:
     void workerThread(size_t index);
 
     bool tryStealing(std::shared_ptr<Task>& task);
 
-    void start();
+    void start(size_t threads);
 
     void stop();
 };

@@ -15,31 +15,21 @@ Description: Process Manager
 #ifndef ATOM_SYSTEM_PROCESS_HPP
 #define ATOM_SYSTEM_PROCESS_HPP
 
-#include <algorithm>
-#include <chrono>
 #include <condition_variable>
-#include <fstream>
-#include <iostream>
-#include <mutex>
-#include <sstream>
+#include <filesystem>
+#include <memory>
+#include <shared_mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#endif
+namespace fs = std::filesystem;
 
 namespace atom::system {
 struct Process {
-    pid_t pid;
+    int pid;
     std::string name;
     std::string output;
-    std::string path;
+    fs::path path;
     std::string status;
 };
 
@@ -47,14 +37,9 @@ class ProcessManager {
 public:
     /**
      * 创建一个进程管理器。
-     */
-    ProcessManager();
-
-    /**
-     * 创建一个进程管理器。
      * @param maxProcess 最大进程数。
      */
-    ProcessManager(int maxProcess);
+    explicit ProcessManager(int maxProcess = 10);
 
     // -------------------------------------------------------------------
     // Common methods
@@ -62,14 +47,9 @@ public:
 
     /**
      * 创建一个进程管理器。
-     */
-    static std::shared_ptr<ProcessManager> createShared();
-
-    /**
-     * 创建一个进程管理器。
      * @param maxProcess 最大进程数。
      */
-    static std::shared_ptr<ProcessManager> createShared(int maxProcess);
+    static std::shared_ptr<ProcessManager> createShared(int maxProcess = 10);
 
     // -------------------------------------------------------------------
     // Process methods
@@ -88,14 +68,15 @@ public:
      * @param pid 要终止的进程的PID。
      * @param signal 终止信号，默认为SIGTERM。
      */
-    bool terminateProcess(pid_t pid, int signal = SIGTERM);
+    bool terminateProcess(int pid, int signal = 15 /*SIGTERM*/);
 
     /**
      * 终止一个进程。
      * @param name 要终止的进程的名称。
      * @param signal 终止信号，默认为SIGTERM。
      */
-    bool terminateProcessByName(const std::string &name, int signal = SIGTERM);
+    bool terminateProcessByName(const std::string &name,
+                                int signal = 15 /*SIGTERM*/);
 
     /**
      * 检查是否存在指定进程。
@@ -104,7 +85,7 @@ public:
      */
     bool hasProcess(const std::string &identifier);
 
-    [[nodiscard]] std::vector<Process> getRunningProcesses();
+    [[nodiscard]] std::vector<Process> getRunningProcesses() const;
 
     /**
      * 获取指定进程的输出信息。
@@ -137,20 +118,96 @@ private:
              ///< wait for process completion.
     std::vector<Process> processes;  ///< 存储当前运行的进程列表。 // Stores the
                                      ///< list of currently running processes.
-    std::mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
-                     ///< manipulating the process list.
+    std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
+                            ///< manipulating the process list.
 };
 
 /**
  * 获取所有进程信息。
  * @return 所有进程信息。
  */
-std::vector<std::pair<int, std::string>> GetAllProcesses();
+std::vector<std::pair<int, std::string>> getAllProcesses();
 
 /*
  * 获取当前进程信息。
  */
-Process GetSelfProcessInfo();
+[[nodiscard("The process info is not used")]] Process getSelfProcessInfo();
+
+/**
+ * @brief Returns the name of the controlling terminal.
+ *
+ * This function returns the name of the controlling terminal associated with
+ * the current process.
+ *
+ * @return The name of the controlling terminal.
+ */
+[[nodiscard]] std::string ctermid();
+
+/**
+ * @brief Returns the priority of a process by its PID.
+ *
+ * This function retrieves the priority of a process given its process ID (PID).
+ * If the process is not found or an error occurs, an empty std::optional is
+ * returned.
+ *
+ * @param pid The process ID of the target process.
+ * @return std::optional<int> The priority of the process if found, otherwise an
+ * empty std::optional.
+ */
+std::optional<int> getProcessPriorityByPid(int pid);
+
+/**
+ * @brief Returns the priority of a process by its name.
+ *
+ * This function retrieves the priority of a process given its name.
+ * If the process is not found or an error occurs, an empty std::optional is
+ * returned.
+ *
+ * @param name The name of the target process.
+ * @return std::optional<int> The priority of the process if found, otherwise an
+ * empty std::optional.
+ */
+std::optional<int> getProcessPriorityByName(const std::string &name);
+
+/**
+ * @brief Checks if a process is running by its name.
+ *
+ * This function checks if a process with the specified name is currently
+ * running.
+ *
+ * @param processName The name of the process to check.
+ * @return bool True if the process is running, otherwise false.
+ */
+bool isProcessRunning(const std::string &processName);
+
+/**
+ * @brief Returns the parent process ID of a given process.
+ *
+ * This function retrieves the parent process ID (PPID) of a specified process.
+ * If the process is not found or an error occurs, the function returns -1.
+ *
+ * @param processId The process ID of the target process.
+ * @return int The parent process ID if found, otherwise -1.
+ */
+int getParentProcessId(int processId);
+
+/**
+ * @brief Creates a process as a specified user.
+ *
+ * This function creates a new process using the specified user credentials.
+ * It logs in the user, duplicates the user token, and creates a new process
+ * with the specified command. This function is only available on Windows.
+ *
+ * @param command The command to be executed by the new process.
+ * @param username The username of the user account.
+ * @param domain The domain of the user account.
+ * @param password The password of the user account.
+ * @return bool True if the process is created successfully, otherwise false.
+ */
+bool _CreateProcessAsUser(const std::string &command,
+                          const std::string &username,
+                          const std::string &domain,
+                          const std::string &password);
 
 }  // namespace atom::system
 

@@ -155,6 +155,24 @@ std::vector<std::string> explode(std::string_view text, char symbol);
  */
 [[nodiscard("the result of trim is not used")]]
 std::string trim(std::string_view line, std::string_view symbols = " \n\r\t");
+
+/**
+ * @brief Converts a u8string to a wstring.
+ *
+ * @param u8str The u8string to convert.
+ * @return The converted wstring.
+ */
+[[nodiscard("the result of stringToWString is not used")]]
+std::wstring stringToWString(const std::string& str);
+
+/**
+ * @brief Converts a wstring to a u8string.
+ *
+ * @param wstr The wstring to convert.
+ * @return The converted u8string.
+ */
+[[nodiscard("the result of wstringToString is not used")]]
+std::string wstringToString(const std::wstring& wstr);
 }  // namespace atom::utils
 
 #endif

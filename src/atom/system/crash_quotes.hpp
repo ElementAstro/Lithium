@@ -87,19 +87,9 @@ public:
      */
     void clearQuotes();
 
-    /**
-     * @brief Loads quotes from a file into the collection.
-     *
-     * @param filename The name of the file to load quotes from.
-     */
-    void loadQuotesFromFile(const std::string &filename);
+    void loadQuotesFromJson(const std::string &filename);
 
-    /**
-     * @brief Saves quotes in the collection to a file.
-     *
-     * @param filename The name of the file to save quotes to.
-     */
-    void saveQuotesToFile(const std::string &filename) const;
+    void saveQuotesToJson(const std::string &filename) const;
 
     /**
      * @brief Searches for quotes containing a keyword.

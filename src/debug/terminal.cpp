@@ -16,6 +16,7 @@
 
 #include <queue>
 
+#include <regex>
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
@@ -34,15 +35,12 @@ ConsoleTerminal::ConsoleTerminal() {
     suggestionEngine = std::make_shared<SuggestionEngine>(std::move(keywords));
     component = std::make_shared<Component>("lithium.terminal");
 
-    component->def("help", &ConsoleTerminal::helpCommand,
-                   PointerSentinel(this), "basic",
-                   "Show help");
+    component->def("help", &ConsoleTerminal::helpCommand, PointerSentinel(this),
+                   "basic", "Show help");
     component->def("list_component", &getComponentList, "component",
                    "Show all components");
     component->def("show_component_info", &getComponentInfo, "component",
                    "Show component info");
-
-
 }
 
 ConsoleTerminal::~ConsoleTerminal() {
@@ -115,40 +113,77 @@ void ConsoleTerminal::run() {
 std::vector<std::any> ConsoleTerminal::parseArguments(
     const std::string& input) {
     std::vector<std::any> args;
-    std::istringstream iss(input);
     std::string token;
+    bool inQuotes = false;
+    std::istringstream iss(input);
 
-    while (iss >> token) {
-        if (token.front() == '"' && token.back() == '"') {
-            args.push_back(token.substr(1, token.size() - 2));  // 去掉引号
-        } else if (token == "true" || token == "false") {
-            args.push_back(token == "true");
+    for (char ch : input) {
+        if (ch == '"' && !inQuotes) {
+            inQuotes = true;
+            if (!token.empty()) {
+                args.push_back(processToken(token));
+                token.clear();
+            }
+            token += ch;
+        } else if (ch == '"' && inQuotes) {
+            token += ch;
+            args.push_back(processToken(token));
+            token.clear();
+            inQuotes = false;
+        } else if (std::isspace(ch) && !inQuotes) {
+            if (!token.empty()) {
+                args.push_back(processToken(token));
+                token.clear();
+            }
         } else {
-            try {
-                size_t pos;
-                int int_val = std::stoi(token, &pos);
-                if (pos == token.size()) {
-                    args.push_back(int_val);
-                    continue;
-                }
-            } catch (...) {
-            }
-
-            try {
-                size_t pos;
-                double double_val = std::stod(token, &pos);
-                if (pos == token.size()) {
-                    args.push_back(double_val);
-                    continue;
-                }
-            } catch (...) {
-            }
-
-            args.push_back(token);  // 默认是字符串
+            token += ch;
         }
     }
 
+    if (!token.empty()) {
+        args.push_back(processToken(token));
+    }
+
     return args;
+}
+
+std::any ConsoleTerminal::processToken(const std::string& token) {
+    std::regex intRegex("^-?\\d+$");
+    std::regex uintRegex("^\\d+u$");
+    std::regex longRegex("^-?\\d+l$");
+    std::regex ulongRegex("^\\d+ul$");
+    std::regex floatRegex("^-?\\d*\\.\\d+f$");
+    std::regex doubleRegex("^-?\\d*\\.\\d+$");
+    std::regex ldoubleRegex("^-?\\d*\\.\\d+ld$");
+    std::regex dateRegex("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$");
+
+    if (token.front() == '"' && token.back() == '"') {
+        return token.substr(1, token.size() - 2);  // 去掉引号
+    } else if (std::regex_match(token, intRegex)) {
+        return std::stoi(token);
+    } else if (std::regex_match(token, uintRegex)) {
+        return static_cast<unsigned int>(
+            std::stoul(token.substr(0, token.size() - 1)));
+    } else if (std::regex_match(token, longRegex)) {
+        return std::stol(token.substr(0, token.size() - 1));
+    } else if (std::regex_match(token, ulongRegex)) {
+        return static_cast<unsigned long>(
+            std::stoul(token.substr(0, token.size() - 2)));
+    } else if (std::regex_match(token, floatRegex)) {
+        return std::stof(token.substr(0, token.size() - 1));
+    } else if (std::regex_match(token, doubleRegex)) {
+        return std::stod(token);
+    } else if (std::regex_match(token, ldoubleRegex)) {
+        return std::stold(token.substr(0, token.size() - 2));
+    } else if (token == "true" || token == "false") {
+        return token == "true";
+    } else if (std::regex_match(token, dateRegex)) {
+        std::tm tm = {};
+        std::istringstream ss(token);
+        ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+        return tm;
+    }
+    return token;  // 默认是字符串
 }
 
 void ConsoleTerminal::helpCommand(const std::vector<std::string>& args) {

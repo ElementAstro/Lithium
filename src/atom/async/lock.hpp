@@ -64,6 +64,13 @@ public:
      * @brief Releases the lock.
      */
     void unlock();
+
+    /**
+     * @brief Tries to acquire the lock.
+     *
+     * @return true if the lock was acquired, false otherwise.
+     */
+    bool try_lock();
 };
 
 /**
@@ -150,7 +157,8 @@ class ScopedLock {
 
 public:
     /**
-     * @brief Constructs the scoped lock and acquires the lock on the provided mutex.
+     * @brief Constructs the scoped lock and acquires the lock on the provided
+     * mutex.
      *
      * @param mutex The mutex to lock.
      */
@@ -177,7 +185,8 @@ class ScopedTicketLock {
 
 public:
     /**
-     * @brief Constructs the scoped lock and acquires the lock on the provided mutex.
+     * @brief Constructs the scoped lock and acquires the lock on the provided
+     * mutex.
      *
      * @param mutex The mutex to lock.
      */
@@ -204,7 +213,8 @@ class ScopedUnfairLock {
 
 public:
     /**
-     * @brief Constructs the scoped lock and acquires the lock on the provided mutex.
+     * @brief Constructs the scoped lock and acquires the lock on the provided
+     * mutex.
      *
      * @param mutex The mutex to lock.
      */

@@ -255,17 +255,44 @@ void createDirectory(const std::string &date, const std::string &rootDir);
 [[nodiscard]] std::uintmax_t fileSize(const std::string &path);
 
 /**
- * @brief Traverse the directories recursively and collect all folder paths.
+ * @brief Truncates a file to a specified size.
  *
- * This function traverses the directories recursively starting from the
- * specified directory, and collects all folder paths encountered during the
- * traversal.
+ * @param path The path of the file to truncate.
+ * @param size The size to truncate the file to.
+ * @return True if the operation was successful, false otherwise.
  *
- * @param directory The starting directory path.
- * @param[out] folders A vector to store the collected folder paths.
+ * 截断文件到指定的大小。
+ *
+ * @param path 要截断文件的路径。
+ * @param size 要截断文件到的大小。
+ * @return 如果操作成功，则返回true，否则返回false。
  */
-void traverseDirectories(const std::filesystem::path &directory,
-                         std::vector<std::string> &folders);
+bool truncateFile(const std::string &path, std::streamsize size);
+
+/**
+ * @brief Recursively walks through a directory and its subdirectories, applying
+ * a callback function to each file.
+ *
+ * This function traverses a directory and its subdirectories, calling the
+ * specified callback function for each file encountered.
+ *
+ * @param root The root path of the directory to walk.
+ * @return a json string containing the file information.
+ */
+std::string jwalk(const std::string &root);
+
+/**
+ * @brief Recursively walks through a directory and its subdirectories, applying
+ * a callback function to each file.
+ *
+ * This function traverses a directory and its subdirectories, calling the
+ * specified callback function for each file encountered.
+ *
+ * @param root     The root path of the directory to walk.
+ * @param callback The callback function to execute for each file.
+ */
+void fwalk(const fs::path &root,
+           const std::function<void(const fs::path &)> &callback);
 
 /**
  * @brief Convert Windows path to Linux path.
@@ -276,7 +303,7 @@ void traverseDirectories(const std::filesystem::path &directory,
  * @param windows_path The Windows path to convert.
  * @return The converted Linux path.
  */
-[[nodiscard]] std::string convertToLinuxPath(const std::string &windows_path);
+[[nodiscard]] std::string convertToLinuxPath(std::string_view windows_path);
 
 /**
  * @brief Convert Linux path to Windows path.
@@ -287,7 +314,9 @@ void traverseDirectories(const std::filesystem::path &directory,
  * @param linux_path The Linux path to convert.
  * @return The converted Windows path.
  */
-[[nodiscard]] std::string convertToWindowsPath(const std::string &linux_path);
+[[nodiscard]] std::string convertToWindowsPath(std::string_view &linux_path);
+
+[[nodiscard]] std::string normPath(const std::string &path);
 
 /**
  * @brief Check if the folder name is valid.
@@ -369,7 +398,7 @@ void traverseDirectories(const std::filesystem::path &directory,
  */
 [[nodiscard]] bool isAbsolutePath(const std::string &path);
 
-[[nodiscard]] std::string normPath(const std::string &path);
+
 
 [[nodiscard]] bool changeWorkingDirectory(const std::string &directoryPath);
 

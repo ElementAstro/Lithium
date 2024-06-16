@@ -15,8 +15,11 @@ Description: Some useful string functions
 #include "string.hpp"
 
 #include <algorithm>
+#include <codecvt>
 #include <iomanip>
+#include <locale>
 #include <sstream>
+#include <string>
 
 #include <charconv>
 #include "atom/error/exception.hpp"
@@ -211,6 +214,16 @@ std::string trim(std::string_view line, std::string_view symbols) {
                 }).base();
 
     return std::string(first, last);
+}
+
+std::wstring stringToWString(const std::string &str) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+    return converter.from_bytes(str);
+}
+
+std::string wstringToString(const std::wstring &wstr) {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> myconv;
+    return myconv.to_bytes(wstr);
 }
 
 }  // namespace atom::utils

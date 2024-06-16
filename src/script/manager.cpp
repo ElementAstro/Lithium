@@ -19,8 +19,6 @@ using namespace pkpy;
 
 #include "atom/log/loguru.hpp"
 
-#include "atom/system/system.hpp"
-
 #include "atom/io/io.hpp"
 
 namespace lithium {

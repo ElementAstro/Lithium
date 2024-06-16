@@ -17,10 +17,12 @@ Description: IO
 #include <algorithm>
 #include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <regex>
 #include <thread>
 
 #include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
 
 #if __cplusplus >= 202002L
@@ -43,6 +45,7 @@ const std::regex fileNameRegex("^[^/]+$");
 #endif
 
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 #define ATOM_IO_CHECK_ARGUMENT(value)                              \
     if (value.empty()) {                                           \
@@ -325,70 +328,115 @@ std::uintmax_t fileSize(const std::string &path) {
     }
 }
 
-std::string convertToLinuxPath(const std::string &windows_path) {
-    ATOM_IO_CHECK_ARGUMENT_S(windows_path);
-    std::string linux_path = windows_path;
-    for (char &c : linux_path) {
-        if (c == '\\') {
-            c = '/';
-        }
+bool truncateFile(const std::string &path, std::streamsize size) {
+    std::ofstream file(path,
+                       std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!file.is_open()) {
+        return false;
     }
+
+    file.seekp(size);
+    file.put('\0');
+    return true;
+}
+
+std::string convertToLinuxPath(std::string_view windows_path) {
+    std::string linux_path(windows_path);
+    std::replace(linux_path.begin(), linux_path.end(), '\\', '/');
     if (linux_path.length() >= 2 && linux_path[1] == ':') {
-        linux_path[0] = tolower(linux_path[0]);
+        linux_path[0] = std::tolower(linux_path[0]);
     }
     return linux_path;
 }
 
-std::string convertToWindowsPath(const std::string &linux_path) {
-    ATOM_IO_CHECK_ARGUMENT_S(linux_path);
-    std::string windows_path = linux_path;
-    for (char &c : windows_path) {
-        if (c == '/') {
-            c = '\\';
-        }
-    }
-    if (windows_path.length() >= 2 && islower(windows_path[0]) &&
+std::string convertToWindowsPath(std::string_view linux_path) {
+    std::string windows_path(linux_path);
+    std::replace(windows_path.begin(), windows_path.end(), '/', '\\');
+    if (windows_path.length() >= 2 && std::islower(windows_path[0]) &&
         windows_path[1] == ':') {
-        windows_path[0] = toupper(windows_path[0]);
+        windows_path[0] = std::toupper(windows_path[0]);
     }
     return windows_path;
 }
 
-std::string getAbsoluteDirectory() {
-    fs::path program_path;
-#ifdef _WIN32
-    wchar_t buffer[MAX_PATH];
-    GetModuleFileNameW(nullptr, buffer, MAX_PATH);
-    program_path = buffer;
-#else
-    char buffer[PATH_MAX];
-    ssize_t length = readlink("/proc/self/exe", buffer, sizeof(buffer));
-    if (length != -1) {
-        program_path = std::string(buffer, length);
-    }
-#endif
-    return program_path.parent_path().string();
-}
-
-std::string normalizePath(const std::string &path) {
-    std::string normalized_path = path;
+std::string normalizePath(std::string_view path) {
+    std::string normalized_path(path);
+    char preferred_separator = static_cast<char>(fs::path::preferred_separator);
     std::replace(normalized_path.begin(), normalized_path.end(), '/',
-                 PATH_SEPARATOR.front());
+                 preferred_separator);
     std::replace(normalized_path.begin(), normalized_path.end(), '\\',
-                 PATH_SEPARATOR.front());
+                 preferred_separator);
     return normalized_path;
 }
 
-void traverseDirectories(const fs::path &directory,
-                         std::vector<std::string> &folders) {
-    DLOG_F(INFO, "Traversing directory: {}", directory.string());
-    for (const auto &entry : fs::directory_iterator(directory)) {
-        if (entry.is_directory()) {
-            std::string folder_path = normalizePath(entry.path().string());
-            folders.push_back(folder_path);
-            traverseDirectories(entry.path(), folders);
+std::string normPath(std::string_view raw_path) {
+    std::string path = normalizePath(raw_path);
+    fs::path fs_path(path);
+    fs::path normalized_fs_path;
+
+    for (const auto &part : fs_path) {
+        if (part == ".") {
+            continue;
+        } else if (part == "..") {
+            if (!normalized_fs_path.empty() &&
+                normalized_fs_path.filename() != "..") {
+                normalized_fs_path = normalized_fs_path.parent_path();
+            } else {
+                normalized_fs_path /= part;
+            }
+        } else {
+            normalized_fs_path /= part;
         }
     }
+
+    return normalized_fs_path.string().empty() ? "/"
+                                               : normalized_fs_path.string();
+}
+
+void walk(const fs::path &root, bool recursive,
+          const std::function<void(const fs::path &)> &callback) {
+    for (const auto &entry : fs::directory_iterator(root)) {
+        if (fs::is_directory(entry)) {
+            callback(entry.path());
+            if (recursive) {
+                walk(entry.path(), recursive, callback);
+            }
+        } else {
+            callback(entry.path());
+        }
+    }
+}
+
+json build_json_structure(const fs::path &root, bool recursive) {
+    json folder = {{"path", root.generic_string()},
+                   {"directories", json::array()},
+                   {"files", json::array()}};
+
+    walk(root, recursive, [&](const fs::path &entry) {
+        if (fs::is_directory(entry)) {
+            folder["directories"].push_back(
+                build_json_structure(entry, recursive));
+        } else {
+            folder["files"].push_back(entry.generic_string());
+        }
+    });
+
+    return folder;
+}
+
+std::string jwalk(const std::string &root) {
+    fs::path root_path(root);
+    if (!isFolderExists(root_path)) {
+        return "";
+    }
+
+    json folder = build_json_structure(root_path, true);
+    return folder.dump();
+}
+
+void fwalk(const fs::path &root,
+           const std::function<void(const fs::path &)> &callback) {
+    walk(root, true, callback);
 }
 
 bool isFolderNameValid(const std::string &folderName) {
@@ -441,35 +489,6 @@ bool isAbsolutePath(const std::string &path) {
     return std::filesystem::path(path).is_absolute();
 }
 
-std::string normPath(const std::string &path) {
-    std::vector<std::string> components;
-    std::istringstream iss(path);
-    std::string component;
-
-    // 分割路径为组件
-    while (std::getline(iss, component, '/')) {
-        if (component == "" || component == ".") {
-            continue;  // 忽略空和当前目录符号
-        } else if (component == "..") {
-            if (!components.empty() && components.back() != "..") {
-                components.pop_back();  // 弹出上一级目录符号
-            } else {
-                components.push_back("..");  // 保留多余的上一级目录符号
-            }
-        } else {
-            components.push_back(component);  // 添加有效组件
-        }
-    }
-
-    // 重新组合路径
-    std::string result;
-    for (const std::string &comp : components) {
-        result += "/" + comp;
-    }
-
-    return result.empty() ? "/" : result;
-}
-
 bool changeWorkingDirectory(const std::string &directoryPath) {
     if (!isFolderNameValid(directoryPath) || !isFolderExists(directoryPath)) {
         LOG_F(ERROR, "Directory does not exist: {}", directoryPath);
@@ -489,8 +508,8 @@ std::pair<std::string, std::string> getFileTimes(const std::string &filePath) {
 
 #ifdef _WIN32
     WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-    if (!GetFileAttributesEx(filePath.c_str(), GetFileExInfoStandard,
-                             &fileInfo)) {
+    if (!GetFileAttributesEx(atom::utils::stringToWString(filePath).c_str(),
+                             GetFileExInfoStandard, &fileInfo)) {
         LOG_F(ERROR, "Error getting file information.");
         return fileTimes;
     }

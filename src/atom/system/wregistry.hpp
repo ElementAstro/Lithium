@@ -1,5 +1,5 @@
 /*
- * register.hpp
+ * wregistry.hpp
  *
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
@@ -12,11 +12,10 @@ Description: Some registry functions for Windows
 
 **************************************************/
 
-#ifndef ATOM_SYSTEM_REGISTER_HPP
-#define ATOM_SYSTEM_REGISTER_HPP
+#ifndef ATOM_SYSTEM_WREGISTRY_HPP
+#define ATOM_SYSTEM_WREGISTRY_HPP
 
 #ifdef _WIN32
-
 #include <windows.h>
 #include <string>
 #include <vector>

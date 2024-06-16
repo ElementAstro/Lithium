@@ -7,47 +7,40 @@
 # License: GPL3
 
 cmake_minimum_required(VERSION 3.20)
-project(atom-task C CXX)
+project(atom-task VERSION 1.0.0 LANGUAGES C CXX)
 
 # Sources
-list(APPEND ${PROJECT_NAME}_SOURCES
+set(PROJECT_SOURCES
     loop_task.cpp
     conditional_task.cpp
     task.cpp
 )
 
 # Headers
-list(APPEND ${PROJECT_NAME}_HEADERS
+set(PROJECT_HEADERS
     loop_task.hpp
     conditional_task.hpp
     task.hpp
 )
 
-# Build Object Library
-add_library(${PROJECT_NAME}_OBJECT OBJECT)
-set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
+# Create Object Library
+add_library(${PROJECT_NAME}_OBJECT OBJECT ${PROJECT_SOURCES} ${PROJECT_HEADERS})
+set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-target_sources(${PROJECT_NAME}_OBJECT
-    PUBLIC
-    ${${PROJECT_NAME}_HEADERS}
-    PRIVATE
-    ${${PROJECT_NAME}_SOURCES}
-)
+# Create Static Library
+add_library(${PROJECT_NAME} STATIC $<TARGET_OBJECTS:${PROJECT_NAME}_OBJECT>)
 
-target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+# Include directories
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_library(${PROJECT_NAME} STATIC)
-
-target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME} ${CMAKE_THREAD_LIBS_INIT})
-target_include_directories(${PROJECT_NAME} PUBLIC .)
-
+# Set version properties
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-    SOVERSION ${HYDROGEN_SOVERSION}
-    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
+    VERSION ${PROJECT_VERSION}
+    SOVERSION 1
+    OUTPUT_NAME ${PROJECT_NAME}
 )
 
+# Install target
 install(TARGETS ${PROJECT_NAME}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )

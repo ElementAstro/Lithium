@@ -187,6 +187,10 @@ void PidWatcher::MonitorThread() {
             break;
         }
         DWORD wait_result = WaitForSingleObject(process_handle, INFINITE);
+        if (wait_result == WAIT_FAILED) {
+            LOG_F(ERROR, "Failed to wait for process.");
+            break;
+        }
         CloseHandle(process_handle);
 #else
         int status;

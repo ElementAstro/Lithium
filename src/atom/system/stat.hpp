@@ -21,8 +21,7 @@ Description: Python like stat for Windows & Linux
 
 namespace fs = std::filesystem;
 
-namespace atom::system
-{
+namespace atom::system {
 /**
  * @brief Class representing file statistics.
  *
@@ -114,7 +113,6 @@ private:
     std::error_code
         ec_;  ///< The error code for handling errors during file operations.
 };
-}
-
+}  // namespace atom::system
 
 #endif  // ATOM_SYSTEM_STAT_HPP

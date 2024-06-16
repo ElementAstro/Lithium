@@ -14,6 +14,7 @@ Description: System Information Module - OS Information
 
 #include "atom/sysinfo/os.hpp"
 
+#include <optional>
 #include <sstream>
 
 #ifdef _WIN32
@@ -36,6 +37,32 @@ std::string OperatingSystemInfo::toJson() const {
     ss << "  \"architecture\": \"" << architecture << "\"\n";
     ss << "}\n";
     return ss.str();
+}
+
+std::optional<std::string> getComputerName() {
+    char buffer[256];
+
+#if defined(_WIN32)
+    DWORD size = sizeof(buffer);
+    if (GetComputerNameA(buffer, &size)) {
+        return std::string(buffer);
+    }
+#elif defined(__APPLE__)
+    CFStringRef name = SCDynamicStoreCopyComputerName(NULL, NULL);
+    if (name != NULL) {
+        CFStringGetCString(name, buffer, sizeof(buffer), kCFStringEncodingUTF8);
+        CFRelease(name);
+        return std::string(buffer);
+    }
+#elif defined(__linux__) || defined(__linux)
+    if (gethostname(buffer, sizeof(buffer)) == 0) {
+        return std::string(buffer);
+    }
+#elif defined(__ANDROID__)
+    return std::nullopt;
+#endif
+
+    return std::nullopt;
 }
 
 OperatingSystemInfo getOperatingSystemInfo() {
@@ -117,6 +144,9 @@ OperatingSystemInfo getOperatingSystemInfo() {
 #endif
     osInfo.compiler = compiler;
 
+    osInfo.computerName = getComputerName().value_or("Unknown computer name");
+
     return osInfo;
 }
+
 }  // namespace atom::system

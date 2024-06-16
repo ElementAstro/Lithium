@@ -40,6 +40,7 @@ using json = nlohmann::json;
  */
 class SimpleTask {
 public:
+    enum class Status { Pending, Running, Completed, Failed };
     /**
      * @brief Constructs a SimpleTask object with a stop function and a flag
      * indicating whether the task can be stopped.
@@ -52,7 +53,7 @@ public:
      * @note The stop function should stop the task immediately and return a
      * JSON object with the current status of the task.
      */
-    SimpleTask(const std::function<json(const json &)> &func,
+    explicit SimpleTask(const std::function<json(const json &)> &func,
                const std::function<json(const json &)> &stop_fn,
                const json &params_template);
 
@@ -235,10 +236,9 @@ public:
     virtual json execute();
 
     int getPriority() const { return priority; }
-    bool getStatus() const { return status; }
+    Status getStatus() const { return status; }
 
     void setPriority(int pri) { priority = pri; }
-    void setStatus(bool sta) { status = sta; }
 
     std::function<json(const json &)> m_function;
     json m_paramsTemplate;
@@ -253,7 +253,7 @@ public:
     std::string m_description;
     bool m_canExecute;
     int priority;
-    bool status;
+    Status status;
 };
 
 #endif

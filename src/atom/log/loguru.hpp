@@ -281,7 +281,11 @@ loguru::Verbosity_MAX);
 // Max: We use libfmt for now.
 #define LOGURU_USE_FMTLIB 1
 #if LOGURU_USE_FMTLIB
+#if __cplusplus >= 202002L && __has_include(<format>)
+#include <format>
+#else
 #include <fmt/format.h>
+#endif
 #define LOGURU_FMT(x) "{:" #x "}"
 #else
 #define LOGURU_FMT(x) "%" #x
@@ -327,6 +331,16 @@ private:
 
 // Like printf, but returns the formated text.
 #if LOGURU_USE_FMTLIB
+#if __cplusplus >= 202002L && __has_include(<format>)
+LOGURU_EXPORT
+Text vtextprintf(const char* format, std::format_args args);
+
+template <typename... Args>
+LOGURU_EXPORT Text textprintf(LOGURU_FORMAT_STRING_TYPE format,
+                              const Args&... args) {
+    return vtextprintf(format, std::make_format_args(args...));
+}
+#else
 LOGURU_EXPORT
 Text vtextprintf(const char* format, fmt::format_args args);
 
@@ -335,6 +349,7 @@ LOGURU_EXPORT Text textprintf(LOGURU_FORMAT_STRING_TYPE format,
                               const Args&... args) {
     return vtextprintf(format, fmt::make_format_args(args...));
 }
+#endif
 #else
 LOGURU_EXPORT
 Text textprintf(LOGURU_FORMAT_STRING_TYPE format, ...) LOGURU_PRINTF_LIKE(1, 2);
@@ -660,6 +675,29 @@ Verbosity current_verbosity_cutoff();
 
 #if LOGURU_USE_FMTLIB
 // Internal functions
+#if __cplusplus >= 202002L
+LOGURU_EXPORT
+void vlog(Verbosity verbosity, const char* file, unsigned line,
+          LOGURU_FORMAT_STRING_TYPE format, std::format_args args);
+LOGURU_EXPORT
+void raw_vlog(Verbosity verbosity, const char* file, unsigned line,
+              LOGURU_FORMAT_STRING_TYPE format, std::format_args args);
+
+// Actual logging function. Use the LOG macro instead of calling this directly.
+template <typename... Args>
+LOGURU_EXPORT void log(Verbosity verbosity, const char* file, unsigned line,
+                       LOGURU_FORMAT_STRING_TYPE format, const Args&... args) {
+    vlog(verbosity, file, line, format, std::make_format_args(args...));
+}
+
+// Log without any preamble or indentation.
+template <typename... Args>
+LOGURU_EXPORT void raw_log(Verbosity verbosity, const char* file, unsigned line,
+                           LOGURU_FORMAT_STRING_TYPE format,
+                           const Args&... args) {
+    raw_vlog(verbosity, file, line, format, std::make_format_args(args...));
+}
+#else
 LOGURU_EXPORT
 void vlog(Verbosity verbosity, const char* file, unsigned line,
           LOGURU_FORMAT_STRING_TYPE format, fmt::format_args args);
@@ -681,6 +719,7 @@ LOGURU_EXPORT void raw_log(Verbosity verbosity, const char* file, unsigned line,
                            const Args&... args) {
     raw_vlog(verbosity, file, line, format, fmt::make_format_args(args...));
 }
+#endif
 #else   // LOGURU_USE_FMTLIB?
         // Actual logging function. Use the LOG macro instead of calling this
         // directly.
@@ -751,6 +790,20 @@ private:
 // stack_trace_skip is the number of extrace stack frames to skip above
 // log_and_abort.
 #if LOGURU_USE_FMTLIB
+#if __cplusplus >= 202002L && __cpp_lib_format
+LOGURU_EXPORT
+LOGURU_NORETURN void vlog_and_abort(int stack_trace_skip, const char* expr,
+                                    const char* file, unsigned line,
+                                    LOGURU_FORMAT_STRING_TYPE format,
+                                    std::format_args);
+template <typename... Args>
+LOGURU_EXPORT LOGURU_NORETURN void log_and_abort(
+    int stack_trace_skip, const char* expr, const char* file, unsigned line,
+    LOGURU_FORMAT_STRING_TYPE format, const Args&... args) {
+    vlog_and_abort(stack_trace_skip, expr, file, line, format,
+                   std::make_format_args(args...));
+}
+#else
 LOGURU_EXPORT
 LOGURU_NORETURN void vlog_and_abort(int stack_trace_skip, const char* expr,
                                     const char* file, unsigned line,
@@ -763,6 +816,7 @@ LOGURU_EXPORT LOGURU_NORETURN void log_and_abort(
     vlog_and_abort(stack_trace_skip, expr, file, line, format,
                    fmt::make_format_args(args...));
 }
+#endif
 #else
 LOGURU_EXPORT
 LOGURU_NORETURN void log_and_abort(int stack_trace_skip, const char* expr,
@@ -1225,11 +1279,11 @@ LOGURU_ANONYMOUS_NAMESPACE_END
 // --------------------------------------------------------------------
 // CHECK_F macros:
 
-#define CHECK_WITH_INFO_F(test, info, ...)                                \
-    LOGURU_PREDICT_TRUE((test) == true)                                   \
-        ? (void)0                                                         \
-        : loguru::log_and_abort(0, "CHECK FAILED:  " info "  ", __FILE__, \
-                                __LINE__, ##__VA_ARGS__)
+#define CHECK_WITH_INFO_F(test, info, ...)                            \
+    LOGURU_PREDICT_TRUE((test) == true)                               \
+    ? (void)0                                                         \
+    : loguru::log_and_abort(0, "CHECK FAILED:  " info "  ", __FILE__, \
+                            __LINE__, ##__VA_ARGS__)
 
 /* Checked at runtime too. Will print error, then call fatal_handler (if any),
    then 'abort'. Note that the test must be boolean. CHECK_F(ptr); will not

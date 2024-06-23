@@ -3,15 +3,13 @@
 #include "compress.hpp"
 #include "file.hpp"
 #include "glob.hpp"
-#include "idirectory.hpp"
-#include "ifile.hpp"
 #include "io.hpp"
 
 namespace py = pybind11;
 
 using namespace atom::io;
 
-PYBIND11_MODULE(atom_io, m) {
+PYBIND11_EMBEDDED_MODULE(atom_io, m) {
     m.doc() = "atom_io module";
 
     m.def("compress_file", &compress_file, "Compress a file");
@@ -47,48 +45,19 @@ PYBIND11_MODULE(atom_io, m) {
     m.def("iter_directory", &glob::iter_directory, "Iterate over a directory");
     m.def("rlistdir", &glob::rlistdir, "List a directory recursively");
 
-    py::class_<DirectoryWrapper>(m, "DirectoryWrapper")
-        .def("get_path", &DirectoryWrapper::get_path,
-             "Get the path of a "
-             "directory")
-        .def("get_size", &DirectoryWrapper::get_size,
-             "Get the size of a "
-             "directory")
-        .def("get_size_string", &DirectoryWrapper::get_size_string,
-             "Get the size of a directory as a string")
-        .def("list_files", &DirectoryWrapper::list_files,
-             "List the files of a "
-             "directory")
-        .def("list_directories", &DirectoryWrapper::list_directories,
-             "List the directories of a directory")
-        .def("create_directory", &DirectoryWrapper::create_directory,
-             "Create a directory");
+    py::class_<CreateDirectoriesOptions>(m, "CreateDirectoriesOptions")
+        .def(py::init<>())
+        .def_readwrite("verbose", &CreateDirectoriesOptions::verbose)
+        .def_readwrite("dry_run", &CreateDirectoriesOptions::dryRun)
+        .def_readwrite("delay", &CreateDirectoriesOptions::delay)
+        .def_readwrite("filter", &CreateDirectoriesOptions::filter)
+        .def_readwrite("on_create", &CreateDirectoriesOptions::onCreate)
+        .def_readwrite("on_delete", &CreateDirectoriesOptions::onDelete);
 
-    py::class_<FileWrapper>(m, "FileWrapper")
-        .def("get_path", &FileWrapper::get_path, "Get the path of a file")
-        .def("get_size", &FileWrapper::get_size, "Get the size of a file")
-        .def("get_size_string", &FileWrapper::get_size_string,
-             "Get the size of a file as a string")
-        .def("get_parent_path", &FileWrapper::get_parent_path,
-             "Get the parent path of a file")
-        .def("get_extension", &FileWrapper::get_extension,
-             "Get the extension of a file")
-        .def("get_stem", &FileWrapper::get_stem, "Get the stem of a file")
-        .def("get_last_write_time", &FileWrapper::get_last_write_time,
-             "Get the last write time of a file")
-        .def("get_hard_link_count", &FileWrapper::get_hard_link_count,
-             "Get the hard link count of a file")
-        .def("is_directory", &FileWrapper::is_directory,
-             "Check if a file is a directory")
-        .def("is_regular_file", &FileWrapper::is_regular_file,
-             "Check if a file is a regular file")
-        .def("is_binary_file", &FileWrapper::is_binary_file,
-             "Check if a file is a binary file")
-        .def("is_symlink", &FileWrapper::is_symlink,
-             "Check if a file is a symlink")
-        .def("exists", &FileWrapper::exists, "Check if a file exists")
-        .def("rename", &FileWrapper::rename, "Rename a file");
-
+    m.def("create_dirs_r", &createDirectoriesRecursive,
+          "Create directories recursively");
+    m.def("remove_disr_r", &removeDirectoriesRecursive,
+          "Remove directories recursively");
     m.def("is_folder_exists",
           py::overload_cast<const std::string &>(&isFolderExists),
           "Check if a folder exists");
@@ -97,9 +66,36 @@ PYBIND11_MODULE(atom_io, m) {
     m.def("is_file_exists",
           py::overload_cast<const std::string &>(&isFileExists),
           "Check if a file exists");
+
+    py::enum_<FileOption>(m, "FileOption")
+        .value("Path", FileOption::Path)
+        .value("Name", FileOption::Name);
+
+    m.def("check_type", &checkFileTypeInFolder, "Check file type in folder");
     m.def("is_file_name_valid", &isFileNameValid,
           "Check if a file name is valid");
+    m.def("convert_to_windows_path", &convertToWindowsPath,
+          "Convert to windows path");
+    m.def("convert_to_linux_path", &convertToLinuxPath,
+          "Convert to linux path");
+    m.def("jwalk", &jwalk, "Walk a folder");
+    m.def("fwalk", &fwalk, "Walk a folder");
+    m.def("norm_path", &normPath, "Normalize a path");
+    m.def("file_size", &fileSize, "Get file size");
+    m.def("remove_file", &removeFile, "Remove a file");
+    m.def("rename_file", &renameFile, "Rename a file");
+    m.def("truncate_file", &truncateFile, "Truncate a file");
+    m.def("move_file", &moveFile, "Move a file");
+    m.def("remove_directory", &removeDirectory, "Remove a directory");
+    m.def("create_symlink", &createSymlink, "Create a symbolic link");
+    m.def("remove_symlink", &removeSymlink, "Remove a symbolic link");
+    m.def("rename_directory", &renameDirectory, "Rename a directory");
+    m.def("get_file_times", &getFileTimes, "Get file times");
+    m.def("move_directory", &moveDirectory, "Move a directory");
+    m.def("copy_file", &copyFile, "Copy a file");
+
     m.def("is_absolute_path", &isAbsolutePath, "Check if a path is absolute");
+    m.def("cwdir", &changeWorkingDirectory, "Change working directory");
     m.def("is_executable_file", &isExecutableFile,
           "Check if a file is executable");
     m.def("is_folder_empty", &isFolderEmpty, "Check if a folder is empty");

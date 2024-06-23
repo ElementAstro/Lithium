@@ -4,19 +4,19 @@ set -e
 
 echo "Checking system environment..."
 
-# Check if the script is run with sudo
+# 检查是否以 sudo 运行脚本
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run with sudo."
     exit 1
 fi
 
-# Check if the system is Debian-based
+# 检查是否为基于 Debian 的系统
 if ! command -v apt-get &> /dev/null; then
     echo "This script only supports Debian-based systems."
     exit 1
 fi
 
-# Check if gcc and g++ are installed
+# 安装或更新 gcc 和 g++
 if ! command -v gcc &> /dev/null || ! command -v g++ &> /dev/null; then
     echo "gcc and g++ are not installed. Installing..."
     apt-get install -y gcc g++
@@ -24,14 +24,15 @@ else
     echo "gcc and g++ are already installed."
 fi
 
-# Check if g++ version is at least 10
-gpp_version=$(g++ --version | grep -oP '(?<=g\+\+ )[0-9]+')
+# 检查 g++ 版本是否至少为 10
+gpp_version=$(g++ -dumpversion | cut -f1 -d.)
 if [ "$gpp_version" -lt "10" ]; then
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-    sudo apt-get install gcc-13 g++-13 -y
+    add-apt-repository ppa:ubuntu-toolchain-r/test -y
+    apt-get update
+    apt-get install -y gcc-13 g++-13
 fi
 
-# Check if CMake is installed
+# 安装或更新 CMake
 if ! command -v cmake &> /dev/null; then
     echo "CMake is not installed. Installing..."
     apt-get install -y cmake
@@ -39,14 +40,15 @@ else
     echo "CMake is already installed."
 fi
 
-# Check if CMake version is at least 3.20
-cmake_version=$(cmake --version | grep -oP '(?<=version )([0-9]+\.[0-9]+)')
-if [ "$(printf "%s\n" "3.20" "$cmake_version" | sort -V | head -n1)" != "3.20" ]; then
+# 检查 CMake 版本是否至少为 3.20
+cmake_version=$(cmake --version | awk -F " " '/version/ {print $3}')
+if dpkg --compare-versions "$cmake_version" lt "3.20"; then
     wget https://cmake.org/files/v3.28/cmake-3.28.0-rc5.tar.gz
     tar -zxvf cmake-3.28.0-rc5.tar.gz
     cd cmake-3.28.0-rc5
-    ./bootstrap && make && sudo make install
+    ./bootstrap && make && make install
     cd ..
+    rm -rf cmake-3.28.0-rc5 cmake-3.28.0-rc5.tar.gz
 fi
 
 echo "Updating system packages..."
@@ -54,14 +56,24 @@ apt-get update
 apt-get upgrade -y
 
 echo "Installing dependencies..."
-apt-get install -y libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev
+dependencies=(
+    libcfitsio-dev
+    zlib1g-dev
+    libssl-dev
+    libzip-dev
+    libnova-dev
+    libfmt-dev
+)
+
+apt-get install -y "${dependencies[@]}"
 
 echo "Checking installed dependencies..."
-for lib in cfitsio zlib ssl zip nova fmt; do
-    if ! ldconfig -p | grep -q "lib$lib"; then
-        echo "lib$lib is not properly installed. Please check the installation manually."
+for lib in "${dependencies[@]}"; do
+    lib_name=$(echo $lib | sed 's/-dev//')
+    if ! ldconfig -p | grep -q "lib${lib_name}"; then
+        echo "${lib_name} is not properly installed. Please check the installation manually."
     else
-        echo "lib$lib is properly installed."
+        echo "${lib_name} is properly installed."
     fi
 done
 

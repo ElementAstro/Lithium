@@ -1,48 +1,74 @@
 // Helper macro to register initializers with dependencies and cleanup
-#define REGISTER_INITIALIZER(name, init_func, cleanup_func)       \
-    namespace {                                                   \
-    struct Initializer {                                          \
-        Initializer() {                                           \
-            Registry::instance().add_initializer(name, init_func, \
-                                                 cleanup_func);   \
-        }                                                         \
-    };                                                            \
-    static Initializer initializer;                               \
-    }
-
-#define REGISTER_DEPENDENCY(name, dependency)                      \
+#ifndef REGISTER_INITIALIZER
+#define REGISTER_INITIALIZER(name, init_func, cleanup_func)        \
     namespace {                                                    \
-    struct Dependency {                                            \
-        Dependency() {                                             \
-            Registry::instance().add_dependency(name, dependency); \
+    struct Initializer_##name {                                    \
+        Initializer_##name() {                                     \
+            Registry::instance().add_initializer(#name, init_func, \
+                                                 cleanup_func);    \
         }                                                          \
     };                                                             \
-    static Dependency dependency;                                  \
+    static Initializer_##name initializer_##name;                  \
     }
+
+#endif
+
+#ifndef REGISTER_DEPENDENCY
+#define REGISTER_DEPENDENCY(name, dependency)                        \
+    namespace {                                                      \
+    struct Dependency_##name {                                       \
+        Dependency_##name() {                                        \
+            Registry::instance().add_dependency(#name, #dependency); \
+        }                                                            \
+    };                                                               \
+    static Dependency_##name dependency_##name;                      \
+    }
+#endif
 
 // Macro for dynamic library module
-#define ATOM_MODULE(module_name, init_func)                                    \
-    extern "C" void initialize_registry() {                                    \
-        init_func();                                                           \
-        Registry::instance().initialize_all();                                 \
-    }                                                                          \
-    extern "C" void cleanup_registry() { Registry::instance().cleanup_all(); } \
-    namespace module_name {                                                    \
-    struct ModuleInitializer {                                                 \
-        ModuleInitializer() { init_func(); }                                   \
-    };                                                                         \
-    static ModuleInitializer module_initializer;                               \
+#ifndef ATOM_MODULE
+#define ATOM_MODULE(module_name, init_func)                               \
+    namespace module_name {                                               \
+    struct ModuleManager {                                                \
+        static void init() {                                              \
+            static std::once_flag flag;                                   \
+            std::call_once(flag, []() {                                   \
+                init_func();                                              \
+                Registry::instance().initialize_all();                    \
+            });                                                           \
+        }                                                                 \
+        static void cleanup() {                                           \
+            static std::once_flag flag;                                   \
+            std::call_once(flag,                                          \
+                           []() { Registry::instance().cleanup_all(); }); \
+        }                                                                 \
+    };                                                                    \
+    }                                                                     \
+    extern "C" void initialize_registry() {                               \
+        module_name::ModuleManager::init();                               \
+    }                                                                     \
+    extern "C" void cleanup_registry() {                                  \
+        module_name::ModuleManager::cleanup();                            \
     }
+#endif
 
 // Macro for embedded module
-#define ATOM_EMBED_MODULE(module_name, init_func)                    \
-    namespace module_name {                                          \
-    struct ModuleInitializer {                                       \
-        ModuleInitializer() {                                        \
-            init_func();                                             \
-            Registry::instance().initialize_all();                   \
-        }                                                            \
-        ~ModuleInitializer() { Registry::instance().cleanup_all(); } \
-    };                                                               \
-    static ModuleInitializer module_initializer;                     \
+#ifndef ATOM_EMBED_MODULE
+#define ATOM_EMBED_MODULE(module_name, init_func)         \
+    namespace module_name {                               \
+    inline std::optional<std::once_flag> init_flag;       \
+    struct ModuleInitializer {                            \
+        ModuleInitializer() {                             \
+            std::call_once(init_flag.value(), init_func); \
+            Registry::instance().initialize_all();        \
+        }                                                 \
+        ~ModuleInitializer() {                            \
+            if (init_flag) {                              \
+                Registry::instance().cleanup_all();       \
+                init_flag.reset();                        \
+            }                                             \
+        }                                                 \
+    };                                                    \
+    static ModuleInitializer module_initializer;          \
     }
+#endif

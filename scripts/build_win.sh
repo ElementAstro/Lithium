@@ -16,60 +16,32 @@ sed -i "s#https\?://mirror.msys2.org/#https://mirrors.tuna.tsinghua.edu.cn/msys2
 echo "Updating system packages..."
 pacman -Syu --noconfirm
 
-echo "Installing mingw-w64-x86_64-toolchain..."
-if ! pacman -Q mingw-w64-x86_64-toolchain &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-toolchain
-else
-    echo "mingw-w64-x86_64-toolchain is already installed."
-fi
+# List of packages to install
+packages=(
+    "mingw-w64-x86_64-toolchain"
+    "mingw-w64-x86_64-dlfcn"
+    "mingw-w64-x86_64-cfitsio"
+    "mingw-w64-x86_64-cmake"
+    "mingw-w64-x86_64-libzip"
+    "mingw-w64-x86_64-zlib"
+    "mingw-w64-x86_64-fmt"
+    "mingw-w64-x86_64-libnova"
+    "mingw-w64-x86_64-libusb"
+    "mingw-w64-x86_64-minizip-ng"
+)
 
-echo "Installing mingw-w64-x86_64-dlfcn..."
-if ! pacman -Q mingw-w64-x86_64-dlfcn &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-dlfcn
-else
-    echo "mingw-w64-x86_64-dlfcn is already installed."
-fi
+install_package() {
+    local package=$1
+    echo "Installing $package..."
+    if ! pacman -Q $package &> /dev/null; then
+        pacman -S --noconfirm $package
+    else
+        echo "$package is already installed."
+    fi
+}
 
-echo "Installing mingw-w64-x86_64-cfitsio..."
-if ! pacman -Q mingw-w64-x86_64-cfitsio &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-cfitsio
-else
-    echo "mingw-w64-x86_64-cfitsio is already installed."
-fi
-
-echo "Installing mingw-w64-x86_64-cmake..."
-if ! pacman -Q mingw-w64-x86_64-cmake &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-cmake
-else
-    echo "mingw-w64-x86_64-cmake is already installed."
-fi
-
-echo "Installing mingw-w64-x86_64-libzip..."
-if ! pacman -Q mingw-w64-x86_64-libzip &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-libzip
-else
-    echo "mingw-w64-x86_64-libzip is already installed."
-fi
-
-echo "Installing mingw-w64-x86_64-zlib..."
-if ! pacman -Q mingw-w64-x86_64-zlib &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-zlib
-else
-    echo "mingw-w64-x86_64-zlib is already installed."
-fi
-
-echo "Installing mingw-w64-x86_64-fmt..."
-if ! pacman -Q mingw-w64-x86_64-fmt &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-fmt
-else
-    echo "mingw-w64-x86_64-fmt is already installed."
-fi
-
-echo "Installing mingw-w64-x86_64-libnova..."
-if ! pacman -Q mingw-w64-x86_64-libnova &> /dev/null; then
-    pacman -S --noconfirm mingw-w64-x86_64-libnova
-else
-    echo "mingw-w64-x86_64-libnova is already installed."
-fi
+for package in "${packages[@]}"; do
+    install_package $package
+done
 
 echo "Environment setup completed."

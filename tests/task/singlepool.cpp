@@ -4,7 +4,6 @@
 #include <chrono>
 #include <thread>
 
-
 using namespace lithium;
 
 class SingleThreadPoolTest : public ::testing::Test {
@@ -24,12 +23,10 @@ protected:
 TEST_F(SingleThreadPoolTest, TestStart) {
     std::atomic<bool> taskStarted = false;
 
-    auto task = [&taskStarted](const std::atomic_bool& quitting) {
-        taskStarted = true;
-        while (!quitting) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    };
+    auto task =
+        [&taskStarted]([[maybe_unused]] const std::atomic_bool& quitting) {
+            taskStarted = true;
+        };
 
     EXPECT_TRUE(pool.start(task));
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -39,12 +36,10 @@ TEST_F(SingleThreadPoolTest, TestStart) {
 TEST_F(SingleThreadPoolTest, TestStartDetach) {
     std::atomic<bool> taskStarted = false;
 
-    auto task = [&taskStarted](const std::atomic_bool& quitting) {
-        taskStarted = true;
-        while (!quitting) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    };
+    auto task =
+        [&taskStarted]([[maybe_unused]] const std::atomic_bool& quitting) {
+            taskStarted = true;
+        };
 
     pool.startDetach(task);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -54,12 +49,10 @@ TEST_F(SingleThreadPoolTest, TestStartDetach) {
 TEST_F(SingleThreadPoolTest, TestTryStart) {
     std::atomic<bool> taskStarted = false;
 
-    auto task = [&taskStarted](const std::atomic_bool& quitting) {
-        taskStarted = true;
-        while (!quitting) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    };
+    auto task =
+        [&taskStarted]([[maybe_unused]] const std::atomic_bool& quitting) {
+            taskStarted = true;
+        };
 
     EXPECT_TRUE(pool.tryStart(task));
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -69,12 +62,10 @@ TEST_F(SingleThreadPoolTest, TestTryStart) {
 TEST_F(SingleThreadPoolTest, TestTryStartDetach) {
     std::atomic<bool> taskStarted = false;
 
-    auto task = [&taskStarted](const std::atomic_bool& quitting) {
-        taskStarted = true;
-        while (!quitting) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    };
+    auto task =
+        [&taskStarted]([[maybe_unused]] const std::atomic_bool& quitting) {
+            taskStarted = true;
+        };
 
     pool.tryStartDetach(task);
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -85,11 +76,9 @@ TEST_F(SingleThreadPoolTest, TestQuit) {
     std::atomic<bool> taskStarted = false;
     std::atomic<bool> taskEnded = false;
 
-    auto task = [&taskStarted, &taskEnded](const std::atomic_bool& quitting) {
+    auto task = [&taskStarted, &taskEnded](
+                    [[maybe_unused]] const std::atomic_bool& quitting) {
         taskStarted = true;
-        while (!quitting) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
         taskEnded = true;
     };
 

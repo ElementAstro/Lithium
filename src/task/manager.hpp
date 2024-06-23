@@ -3,9 +3,7 @@
 
 #include <atomic>
 #include <functional>
-#include <iostream>
 #include <map>
-#include <nlohmann/json.hpp>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -13,7 +11,11 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include "atom/task/task.hpp"
+
+#include "task.hpp"
+#include "atom/type/json.hpp"
+
+class Component; // Forward declaration
 
 using json = nlohmann::json;
 
@@ -28,8 +30,16 @@ public:
 
     void loadScript(const std::string& name, const json& script);
 
+    void unloadScript(const std::string& name);
+
+    bool hasScript(const std::string& name) const;
+
+    std::optional<json> getScript(const std::string& name) const;
+
     void registerFunction(const std::string& name,
                           std::function<json(const json&)> func);
+
+    bool hasFunction(const std::string& name) const;
 
     void registerExceptionHandler(
         const std::string& name,
@@ -72,6 +82,7 @@ private:
 
 private:
     std::shared_ptr<TaskGenerator> taskGenerator;
+    std::weak_ptr<Component> component;
     std::unordered_map<std::string, json> scripts;
     json variables;
     std::unordered_map<std::string, std::function<json(const json&)>> functions;

@@ -14,7 +14,7 @@ Description: Python Binding of Atom-Algorithm
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
+#include <pybind11/operators.h>
 
 #include "algorithm.hpp"
 #include "base.hpp"
@@ -30,7 +30,7 @@ namespace py = pybind11;
 
 using namespace atom::algorithm;
 
-PYBIND11_MODULE(atom_algorithm, m) {
+PYBIND11_EMBEDDED_MODULE(atom_algorithm, m) {
     m.doc() = "Atom Algorithm Python Binding";
 
     m.def("base16encode", &base16Encode, "Base16 Encode");

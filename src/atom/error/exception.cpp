@@ -22,6 +22,10 @@ Description: Better Exception Library
 #include <memory>
 #include <vector>
 
+#if ENABLE_CPPTRACE
+#include <cpptrace/cpptrace.hpp>
+#endif
+
 namespace atom::error {
 const char* Exception::what() const noexcept {
     if (full_message_.empty()) {
@@ -31,8 +35,13 @@ const char* Exception::what() const noexcept {
             << "()";
         oss << " (thread " << thread_id_ << ")";
         oss << "\n\tMessage: " << message_;
+#if ENABLE_CPPTRACE
+        oss << "\n\tStack trace:\n"
+            << cpptrace::generate()
+#else
         oss << "\n\tStack trace:\n" << stack_trace_.toString();
-        full_message_ = oss.str();
+#endif
+                   full_message_ = oss.str();
     }
     return full_message_.c_str();
 }

@@ -519,4 +519,24 @@ private:
  * @return std::vector<std::string>
  */
 [[nodiscard]] std::vector<std::string> getIPv6Addresses();
+
+/**
+ * @brief Check if the string is in IPv6 format.
+ * 检查字符串是否为IPv6格式
+ *
+ * @param str The string to check. 要检查的字符串。
+ * @return `true` if the string is in IPv6 format, `false` otherwise.
+ * 如果字符串为IPv6格式，则返回true；否则返回false。
+ */
+[[nodiscard]] bool isIPv6Format(const std::string &str);
+
+/**
+ * @brief Check if the string is in IPv4 format.
+ * 检查字符串是否为IPv4格式
+ *
+ * @param str The string to check. 要检查的字符串。
+ * @return `true` if the string is in IPv4 format, `false` otherwise.
+ * 如果字符串为IPv4格式，则返回true；否则返回false。
+ */
+[[nodiscard]] bool isIPv4Format(const std::string &str);
 }  // namespace atom::web

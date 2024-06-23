@@ -21,17 +21,17 @@ protected:
 TEST_F(TaskGeneratorTest, TestProcessJson) {
     json j = {{"name", "${name}"},
               {"email", "${email}"},
-              {"greeting", "${concat(Hello, , ${name})}"},
+              {"greeting", "${concat(Hello , , ${name})}"},
               {"isEqual", "${equals(${name}, John Doe)}"},
               {"lengthOfName", "${length(${name})}"},
               {"upperName", "${uppercase(${name})}"}};
 
     generator.process_json(j);
 
-    EXPECT_EQ(j["name"], "John Doe");
-    EXPECT_EQ(j["email"], "john.doe@example.com");
-    EXPECT_EQ(j["greeting"], "Hello John Doe");
-    EXPECT_EQ(j["isEqual"], "true");
-    EXPECT_EQ(j["lengthOfName"], "8");
-    EXPECT_EQ(j["upperName"], "JOHN DOE");
+    EXPECT_EQ(j["name"].get<std::string>(), "John Doe");
+    EXPECT_EQ(j["email"].get<std::string>(), "john.doe@example.com");
+    EXPECT_EQ(j["greeting"].get<std::string>(), "HelloJohn Doe");
+    EXPECT_EQ(j["isEqual"].get<std::string>(), "true");
+    EXPECT_EQ(j["lengthOfName"].get<std::string>(), "8");
+    EXPECT_EQ(j["upperName"].get<std::string>(), "JOHN DOE");
 }

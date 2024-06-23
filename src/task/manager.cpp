@@ -15,6 +15,7 @@
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
+using namespace std::literals;
 using json = nlohmann::json;
 
 namespace lithium {
@@ -33,8 +34,23 @@ void TaskInterpretor::loadScript(const std::string& name, const json& script) {
     if (prepareScript(scripts[name])) {
         parseLabels(script);
     } else {
-        throw std::runtime_error("Failed to prepare script: " + name);
+        THROW_RUNTIME_ERROR("Failed to prepare script: " + name);
     }
+}
+
+void TaskInterpretor::unloadScript(const std::string& name) {
+    scripts.erase(name);
+}
+
+bool TaskInterpretor::hasScript(const std::string& name) const {
+    return scripts.find(name) != scripts.end();
+}
+
+std::optional<json> TaskInterpretor::getScript(const std::string& name) const {
+    if (auto it = scripts.find(name); it != scripts.end()) {
+        return scripts.at(name);
+    }
+    return std::nullopt;
 }
 
 bool TaskInterpretor::prepareScript(json& script) {
@@ -49,10 +65,16 @@ bool TaskInterpretor::prepareScript(json& script) {
 void TaskInterpretor::registerFunction(const std::string& name,
                                        std::function<json(const json&)> func) {
     if (functions.find(name) != functions.end()) {
-        throw std::runtime_error("Function '" + name +
-                                 "' is already registered.");
+        THROW_RUNTIME_ERROR("Function '" + name + "' is already registered.");
     }
     functions[name] = func;
+}
+
+bool TaskInterpretor::hasFunction(const std::string &name) const {
+    if (functions.find(name) == functions.end()) {
+        THROW_RUNTIME_ERROR("Function '" + name + "' is not registered.");
+    }
+    return true;
 }
 
 void TaskInterpretor::registerExceptionHandler(
@@ -67,7 +89,7 @@ void TaskInterpretor::setVariable(const std::string& name, const json& value) {
 
 json TaskInterpretor::getVariable(const std::string& name) {
     if (variables.find(name) == variables.end()) {
-        throw std::runtime_error("Variable '" + name + "' is not defined.");
+        THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
     }
     return variables[name];
 }
@@ -89,8 +111,7 @@ void TaskInterpretor::execute(const std::string& scriptName) {
     executionThread = std::thread([this, scriptName]() {
         try {
             if (scripts.find(scriptName) == scripts.end()) {
-                throw std::runtime_error("Script '" + scriptName +
-                                         "' not found.");
+                THROW_RUNTIME_ERROR("Script '" + scriptName + "' not found.");
             }
             const json& script = scripts[scriptName];
             size_t i = 0;
@@ -101,8 +122,7 @@ void TaskInterpretor::execute(const std::string& scriptName) {
                 i++;
             }
         } catch (const std::exception& e) {
-            std::cerr << "Error during script execution: " << e.what()
-                      << std::endl;
+            LOG_F(ERROR, "Error during script execution: {}", e.what());
             handleException(scriptName, e);
         }
     });
@@ -138,8 +158,7 @@ bool TaskInterpretor::executeStep(const json& step, size_t& idx,
         }
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception caught during step execution: " << e.what()
-                  << std::endl;
+        LOG_F(ERROR, "Error during step execution: {}", e.what());
         return false;  // Optionally, stop execution or handle differently
     }
 }
@@ -151,17 +170,15 @@ void TaskInterpretor::executeCall(const json& step) {
         params[key] = evaluate(value);
     }
     if (functions.find(functionName) != functions.end()) {
-        auto task = std::make_shared<SimpleTask>(
+        auto task = std::make_shared<Task>(
             functionName, params, functions[functionName],
             [this](const std::exception& e) {
-                std::cerr << "Task failed: " << e.what() << std::endl;
+                LOG_F(ERROR, "Task failed: {}", e.what());
             });
-        task->execute();
-        std::cout << "Function " << functionName
-                  << " executed, result: " << task->getResult().dump()
-                  << std::endl;
+        task->run();
+        LOG_F(INFO, "Task {} executed", functionName);
     } else {
-        std::cout << "Function " << functionName << " not found." << std::endl;
+        LOG_F(ERROR, "Function {} not found.", functionName);
     }
 }
 
@@ -196,7 +213,7 @@ void TaskInterpretor::executeGoto(const json& step, size_t& idx,
     if (labels.find(label) != labels.end()) {
         idx = labels[label] - 1;  // Adjust for subsequent increment in the loop
     } else {
-        throw std::runtime_error("Label '" + label + "' not found.");
+        THROW_RUNTIME_ERROR("Label '" + label + "' not found.");
     }
 }
 
@@ -237,18 +254,18 @@ void TaskInterpretor::executeDelay(const json& step) {
 void TaskInterpretor::executeParallel(const json& step, size_t& idx,
                                       const json& script) {
     std::vector<std::thread> threads;
-    std::vector<std::shared_ptr<SimpleTask>> tasks;
+    std::vector<std::shared_ptr<Task>> tasks;
 
     for (const auto& nestedStep : step["steps"]) {
         threads.emplace_back([this, &nestedStep, &idx, &script, &tasks]() {
-            auto task = std::make_shared<SimpleTask>(
+            auto task = std::make_shared<Task>(
                 nestedStep["function"], nestedStep["params"],
                 functions[nestedStep["function"]],
                 [this](const std::exception& e) {
-                    std::cerr << "Task failed: " << e.what() << std::endl;
+                    LOG_F(ERROR, "Task failed: {}", e.what());
                 });
             tasks.push_back(task);
-            task->execute();
+            task->run();
         });
     }
     for (auto& thread : threads) {
@@ -271,8 +288,8 @@ void TaskInterpretor::handleException(const std::string& scriptName,
     if (exceptionHandlers.find(scriptName) != exceptionHandlers.end()) {
         exceptionHandlers[scriptName](e);
     } else {
-        std::cerr << "Unhandled exception in script '" << scriptName
-                  << "': " << e.what() << std::endl;
+        LOG_F(ERROR, "Unhandled exception in script '{}': {}", scriptName,
+              e.what());
     }
 }
 

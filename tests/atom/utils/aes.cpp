@@ -2,40 +2,86 @@
 #include <gtest/gtest.h>
 #include <fstream>
 
-TEST(AESTest, EncryptAndDecrypt) {
+namespace {
+
+class AESTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Set up any necessary resources
+    }
+
+    void TearDown() override {
+        // Clean up any resources
+    }
+};
+
+TEST_F(AESTest, EncryptDecryptAES) {
     std::string plaintext = "Hello, World!";
-    std::string key = "supersecretkey";
+    std::string key = "0123456789abcdef";
 
     std::string ciphertext = atom::utils::encryptAES(plaintext, key);
-    EXPECT_NE(ciphertext, plaintext);  // 加密后的密文应与原始明文不同
+    EXPECT_NE(ciphertext, plaintext);
 
-    std::string decryptedtext = atom::utils::decryptAES(ciphertext, key);
-    EXPECT_EQ(decryptedtext, plaintext);
+    std::string decrypted = atom::utils::decryptAES(ciphertext, key);
+    EXPECT_EQ(decrypted, plaintext);
 }
 
-// Tests for compress and decompress
-TEST(CompressionTest, CompressAndDecompress) {
-    std::string data = "Hello, World! Hello, World! Hello, World!";
+TEST_F(AESTest, EncryptDecryptAESEmptyString) {
+    std::string plaintext = "";
+    std::string key = "0123456789abcdef";
 
-    std::string compressed = atom::utils::compress(data);
-    EXPECT_NE(compressed, data);
+    std::string ciphertext = atom::utils::encryptAES(plaintext, key);
+    EXPECT_NE(ciphertext, plaintext);
+
+    std::string decrypted = atom::utils::decryptAES(ciphertext, key);
+    EXPECT_EQ(decrypted, plaintext);
+}
+
+TEST_F(AESTest, CompressDecompress) {
+    std::string original =
+        "This is a test string that will be compressed and then decompressed.";
+
+    std::string compressed = atom::utils::compress(original);
+    EXPECT_NE(compressed, original);
+    EXPECT_LT(compressed.length(), original.length());
 
     std::string decompressed = atom::utils::decompress(compressed);
-    EXPECT_EQ(decompressed, data);
+    EXPECT_EQ(decompressed, original);
 }
 
-// Tests for calculateSha256
-TEST(HashTest, CalculateSha256) {
-    std::string filename = "testfile.txt";
+TEST_F(AESTest, CompressDecompressEmptyString) {
+    std::string original = "";
 
-    // 创建一个测试文件
-    std::ofstream outfile(filename);
-    outfile << "Hello, World!";
-    outfile.close();
+    std::string compressed = atom::utils::compress(original);
+    EXPECT_EQ(compressed, original);
+
+    std::string decompressed = atom::utils::decompress(compressed);
+    EXPECT_EQ(decompressed, original);
+}
+
+TEST_F(AESTest, CalculateSha256) {
+    // Create a temporary file
+    std::string filename = "test_file.txt";
+    std::string content = "This is a test file for SHA-256 calculation.";
+
+    std::ofstream file(filename);
+    file << content;
+    file.close();
 
     std::string hash = atom::utils::calculateSha256(filename);
-    EXPECT_EQ(hash, "dummyhash");
+    EXPECT_EQ(hash.length(), 64);  // SHA-256 hash is 64 characters long
 
-    // 删除测试文件
+    // Verify that the hash is consistent
+    std::string hash2 = atom::utils::calculateSha256(filename);
+    EXPECT_EQ(hash, hash2);
+
+    // Remove the temporary file
     std::remove(filename.c_str());
 }
+
+TEST_F(AESTest, CalculateSha256NonExistentFile) {
+    std::string filename = "non_existent_file.txt";
+    EXPECT_THROW(atom::utils::calculateSha256(filename), std::runtime_error);
+}
+
+}  // namespace

@@ -28,15 +28,16 @@ std::ostream &operator<<(std::ostream &os, const ErrorInfo &error) {
        << "\"functionName\": \"" << error.functionName << "\","
        << "\"line\": " << error.line << ","
        << "\"fileName\": \"" << error.fileName << "\","
-       << "\"timestamp\": \""
-       << atom::utils::timeStampToString(error.timestamp) << "\","
+       << "\"timestamp\": \"" << atom::utils::timeStampToString(error.timestamp)
+       << "\","
        << "\"uuid\": \"" << error.uuid << "\""
        << "}";
 
     return os;
 }
 
-std::string operator<<(const std::string &str, const ErrorInfo &error) {
+std::string operator<<([[maybe_unused]] const std::string &str,
+                       const ErrorInfo &error) {
     std::stringstream ss;
     ss << "{"
        << "\"errorMessage\": \"" << error.errorMessage << "\","
@@ -44,8 +45,8 @@ std::string operator<<(const std::string &str, const ErrorInfo &error) {
        << "\"functionName\": \"" << error.functionName << "\","
        << "\"line\": " << error.line << ","
        << "\"fileName\": \"" << error.fileName << "\","
-       << "\"timestamp\": \""
-       << atom::utils::timeStampToString(error.timestamp) << "\","
+       << "\"timestamp\": \"" << atom::utils::timeStampToString(error.timestamp)
+       << "\","
        << "\"uuid\": \"" << error.uuid << "\""
        << "}";
 

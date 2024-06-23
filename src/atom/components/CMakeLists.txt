@@ -11,6 +11,7 @@ project(atom-component C CXX)
 
 
 list(APPEND ${PROJECT_NAME}_SOURCES
+    registry.cpp
 )
 
 # Headers

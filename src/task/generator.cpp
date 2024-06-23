@@ -13,6 +13,7 @@ Description: Task Generator
 **************************************************/
 
 #include "generator.hpp"
+#include "task.hpp"
 
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
@@ -22,12 +23,14 @@ Description: Task Generator
 #include <future>
 #include <regex>
 
+using namespace std::literals;
+
 namespace lithium {
 TaskGenerator::TaskGenerator() {
     // Add some default macros
-    add_macro("name", "John Doe");
-    add_macro("email", "john.doe@example.com");
-    add_macro("choice", "A");
+    add_macro("name", "John Doe"s);
+    add_macro("email", "john.doe@example.com"s);
+    add_macro("choice", "A"s);
     add_macro("uppercase", [](const std::vector<std::string>& args) {
         std::string result = args[0];
         std::transform(result.begin(), result.end(), result.begin(), ::toupper);
@@ -89,36 +92,16 @@ void TaskGenerator::process_json(json& j) const {
     for (auto it = j.begin(); it != j.end(); ++it) {
         if (it->is_string()) {
             std::string value = it->get<std::string>();
-            std::regex macro_pattern(R"(\$\{([^\{\}]+(?:\([^\{\}]*\))*)\})");
-            std::smatch match;
-            if (std::regex_search(value, match, macro_pattern)) {
-                std::string macro_call = match[1].str();
-                auto pos = macro_call.find('(');
-                std::string macro_name = pos == std::string::npos
-                                             ? macro_call
-                                             : macro_call.substr(0, pos);
-                std::vector<std::string> args;
-
-                if (pos != std::string::npos) {
-                    std::string args_str = macro_call.substr(
-                        pos + 1, macro_call.length() - pos - 2);
-                    std::regex arg_pattern(R"(([^,]+))");
-                    std::sregex_token_iterator iter(
-                        args_str.begin(), args_str.end(), arg_pattern);
-                    std::sregex_token_iterator end;
-                    for (; iter != end; ++iter) {
-                        args.push_back(
-                            atom::utils::trim(replace_macros(iter->str())));
-                    }
-                }
-
-                json replacement = evaluate_macro(macro_name, args);
-                *it = replacement;
-            } else {
-                it.value() = replace_macros(value);
+            std::string new_value = replace_macros(value);
+            while (new_value != value) {
+                value = new_value;
+                new_value = replace_macros(value);
             }
+            it.value() = new_value;
         } else if (it->is_object() || it->is_array()) {
             process_json(*it);
+        } else if (it->is_string()) {
+            it.value() = replace_macros(it.value().get<std::string>());
         }
     }
 }
@@ -173,6 +156,9 @@ std::string TaskGenerator::replace_macros(const std::string& input) const {
         if (replacement.is_string()) {
             result.replace(match.position(0), match.length(0),
                            replacement.get<std::string>());
+        } else if (replacement.is_object()) {
+            result.replace(match.position(0), match.length(0),
+                           replacement.dump(4));
         } else {
             throw std::runtime_error(
                 "Macro replacement must be a string within a string context");
@@ -180,5 +166,58 @@ std::string TaskGenerator::replace_macros(const std::string& input) const {
     }
 
     return result;
+}
+
+void TaskGenerator::process_json_with_json_macros(json& j) {
+    for (auto it = j.begin(); it != j.end(); ++it) {
+        if (it->is_string()) {
+            std::string value = it->get<std::string>();
+            std::string new_value = replace_macros(value);
+            while (new_value != value) {
+                value = new_value;
+                new_value = replace_macros(value);
+            }
+            it.value() = new_value;
+        } else if (it->is_object() || it->is_array()) {
+            process_json_with_json_macros(*it);
+        } else if (it->is_string()) {
+            it.value() = replace_macros(it.value().get<std::string>());
+        }
+    }
+
+    // Handle JSON macros
+    std::regex macro_pattern(R"(\$\{([^\{\}]+(?:\([^\{\}]*\))*)\})");
+    for (auto it = j.begin(); it != j.end(); ++it) {
+        if (it->is_string()) {
+            std::string value = it->get<std::string>();
+            std::smatch match;
+            if (std::regex_search(value, match, macro_pattern)) {
+                std::string macro_call = match[1].str();
+                auto pos = macro_call.find('(');
+                std::string macro_name = pos == std::string::npos
+                                             ? macro_call
+                                             : macro_call.substr(0, pos);
+                std::vector<std::string> args;
+
+                if (pos != std::string::npos) {
+                    std::string args_str = macro_call.substr(
+                        pos + 1, macro_call.length() - pos - 2);
+                    std::regex arg_pattern(R"(([^,]+))");
+                    std::sregex_token_iterator iter(
+                        args_str.begin(), args_str.end(), arg_pattern);
+                    std::sregex_token_iterator end;
+                    for (; iter != end; ++iter) {
+                        args.push_back(
+                            atom::utils::trim(replace_macros(iter->str())));
+                    }
+                }
+
+                json replacement = evaluate_macro(macro_name, args);
+                *it = replacement;
+            }
+        } else if (it->is_object() || it->is_array()) {
+            process_json_with_json_macros(*it);
+        }
+    }
 }
 }  // namespace lithium

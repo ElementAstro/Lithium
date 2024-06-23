@@ -27,7 +27,7 @@ Description: Task container class.
 #include <unordered_map>
 #endif
 
-#include "atom/task/task.hpp"
+#include "task.hpp"
 #include <shared_mutex>
 
 namespace lithium {
@@ -36,22 +36,22 @@ public:
     static std::shared_ptr<TaskContainer> createShared();
 
     // Task management
-    void addTask(const std::shared_ptr<SimpleTask> &task);
-    std::optional<std::shared_ptr<SimpleTask>> getTask(const std::string &name);
+    void addTask(const std::shared_ptr<Task> &task);
+    std::optional<std::shared_ptr<Task>> getTask(const std::string &name);
     bool removeTask(const std::string &name);
-    std::vector<std::shared_ptr<SimpleTask>> getAllTasks();
+    std::vector<std::shared_ptr<Task>> getAllTasks();
     size_t getTaskCount();
     void clearTasks();
-    std::vector<std::shared_ptr<SimpleTask>> findTasks(int priority,
-                                                       bool status);
+    std::vector<std::shared_ptr<Task>> findTasks(int priority,
+                                                       Task::Status status);
     void sortTasks(
-        const std::function<bool(const std::shared_ptr<SimpleTask> &,
-                                 const std::shared_ptr<SimpleTask> &)> &cmp);
+        const std::function<bool(const std::shared_ptr<Task> &,
+                                 const std::shared_ptr<Task> &)> &cmp);
     void batchAddTasks(
-        const std::vector<std::shared_ptr<SimpleTask>> &tasksToAdd);
+        const std::vector<std::shared_ptr<Task>> &tasksToAdd);
     void batchRemoveTasks(const std::vector<std::string> &taskNamesToRemove);
     void batchModifyTasks(
-        const std::function<void(std::shared_ptr<SimpleTask> &)> &modifyFunc);
+        const std::function<void(std::shared_ptr<Task> &)> &modifyFunc);
 
     // Task parameters management
     bool addOrUpdateTaskParams(const std::string &name, const json &params);
@@ -62,7 +62,7 @@ public:
 
 private:
     mutable std::shared_mutex mtx;  ///< Mutex for thread-safe operations.
-    std::unordered_map<std::string, std::shared_ptr<SimpleTask>>
+    std::unordered_map<std::string, std::shared_ptr<Task>>
         tasks;  ///< The container holding tasks.
     std::unordered_map<std::string, json>
         taskParams;  ///< The container holding task parameters.

@@ -72,10 +72,10 @@ struct TickTask {
 
 class TickScheduler {
 public:
-    explicit TickScheduler(size_t threads);
+    explicit TickScheduler();
     ~TickScheduler();
 
-    static std::shared_ptr<TickScheduler> createShared(size_t threads);
+    static std::shared_ptr<TickScheduler> createShared();
 
     template <typename F, typename... Args>
     auto scheduleTask(unsigned long long tick, bool relative,

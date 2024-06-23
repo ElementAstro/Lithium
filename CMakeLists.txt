@@ -85,6 +85,7 @@ add_subdirectory(${lithium_module_dir})
 add_subdirectory(modules)
 add_subdirectory(driver)
 add_subdirectory(${lithium_src_dir}/config)
+add_subdirectory(${lithium_src_dir}/task)
 add_subdirectory(tests)
 
 # Set source files
@@ -115,16 +116,6 @@ set(script_module
     ${lithium_src_dir}/script/sheller.cpp
 )
 
-set(task_module
-    ${lithium_task_dir}/manager.cpp
-    ${lithium_task_dir}/generator.cpp
-    ${lithium_task_dir}/container.cpp
-    ${lithium_task_dir}/tick.cpp
-    ${lithium_task_dir}/loader.cpp
-    ${lithium_task_dir}/list.cpp
-    ${lithium_task_dir}/pool.cpp
-)
-
 set(Lithium_module
     ${lithium_src_dir}/LithiumApp.cpp
     ${lithium_src_dir}/utils/constant.cpp
@@ -136,7 +127,6 @@ add_library(lithium_server-library STATIC
     ${config_module}
     ${debug_module}
     ${script_module}
-    ${task_module}
     ${Lithium_module}
 )
 
@@ -153,6 +143,8 @@ target_link_libraries(lithium_server
     PRIVATE
         lithium_server-library
         lithium_webserver
+        lithium-config
+        lithium-task
         oatpp-websocket
         oatpp-swagger
         oatpp-openssl

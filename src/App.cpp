@@ -72,6 +72,9 @@ void setupLogFile() {
  * @return 0 on success
  */
 int main(int argc, char *argv[]) {
+#if ENABLE_CPPTRACE
+    cpptrace::init();
+#endif
     // NOTE: gettext is not supported yet, it will cause compilation error on
     // Mingw64
     /* Add gettext */

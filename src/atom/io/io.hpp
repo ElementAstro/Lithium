@@ -314,9 +314,9 @@ void fwalk(const fs::path &root,
  * @param linux_path The Linux path to convert.
  * @return The converted Windows path.
  */
-[[nodiscard]] std::string convertToWindowsPath(std::string_view &linux_path);
+[[nodiscard]] std::string convertToWindowsPath(std::string_view linux_path);
 
-[[nodiscard]] std::string normPath(const std::string &path);
+[[nodiscard]] std::string normPath(std::string_view raw_path);
 
 /**
  * @brief Check if the folder name is valid.

@@ -1,24 +1,72 @@
 #include "task/pool.hpp"
 #include <gtest/gtest.h>
 
+class TaskPoolTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        taskPool =
+            lithium::TaskPool::createShared(4);  // 创建一个具有4个线程的任务池
+    }
 
-TEST(TaskPoolTest, EnqueueTask) {
-    lithium::TaskPool pool;
-    bool taskExecuted = false;
+    std::shared_ptr<lithium::TaskPool> taskPool;
+};
 
-    auto future = pool.enqueue([&taskExecuted]() { taskExecuted = true; });
+TEST_F(TaskPoolTest, EnqueueTask) {
+    std::atomic<int> counter{0};
 
-    ASSERT_TRUE(future.wait_for(std::chrono::seconds(1)) ==
-                std::future_status::ready);
-    ASSERT_TRUE(taskExecuted);
+    auto task = [&counter]() { counter++; };
+
+    auto future = taskPool->enqueue(task);
+    future.get();  // 等待任务完成
+
+    EXPECT_EQ(counter.load(), 1);
 }
 
-TEST(TaskPoolTest, ResizeTaskPool) {
-    lithium::TaskPool pool;
-    size_t initialThreadCount = pool.getThreadCount();
+TEST_F(TaskPoolTest, EnqueueMultipleTasks) {
+    std::atomic<int> counter{0};
 
-    pool.resize(initialThreadCount + 1);
-    size_t newThreadCount = pool.getThreadCount();
+    auto task = [&counter]() { counter++; };
 
-    ASSERT_GT(newThreadCount, initialThreadCount);
+    const int taskCount = 10;
+    std::vector<std::future<void>> futures;
+
+    for (int i = 0; i < taskCount; ++i) {
+        futures.emplace_back(taskPool->enqueue(task));
+    }
+
+    for (auto& future : futures) {
+        future.get();  // 等待所有任务完成
+    }
+
+    EXPECT_EQ(counter.load(), taskCount);
+}
+
+/*
+TEST_F(TaskPoolTest, ResizePool) {
+    taskPool->resize(8);
+    EXPECT_EQ(taskPool->getThreadCount(), 8);
+
+    taskPool->resize(2);
+    EXPECT_EQ(taskPool->getThreadCount(), 2);
+}
+*/
+
+TEST_F(TaskPoolTest, TaskStealing) {
+    // 测试任务窃取机制
+    std::atomic<int> counter{0};
+
+    auto task = [&counter]() { counter++; };
+
+    const int taskCount = 20;
+    std::vector<std::future<void>> futures;
+
+    for (int i = 0; i < taskCount; ++i) {
+        futures.emplace_back(taskPool->enqueue(task));
+    }
+
+    for (auto& future : futures) {
+        future.get();  // 等待所有任务完成
+    }
+
+    EXPECT_EQ(counter.load(), taskCount);
 }

@@ -23,7 +23,7 @@ std::shared_ptr<TaskContainer> TaskContainer::createShared() {
 
 // Task management
 
-void TaskContainer::addTask(const std::shared_ptr<SimpleTask> &task) {
+void TaskContainer::addTask(const std::shared_ptr<Task> &task) {
     if (!task) {
         // LOG_F(ERROR, "TaskContainer::addTask - Task is null.");
         return;
@@ -32,7 +32,7 @@ void TaskContainer::addTask(const std::shared_ptr<SimpleTask> &task) {
     tasks[task->getName()] = task;
 }
 
-std::optional<std::shared_ptr<SimpleTask>> TaskContainer::getTask(
+std::optional<std::shared_ptr<Task>> TaskContainer::getTask(
     const std::string &name) {
     std::shared_lock lock(mtx);
     auto it = tasks.find(name);
@@ -49,9 +49,9 @@ bool TaskContainer::removeTask(const std::string &name) {
     return tasks.erase(name) > 0;
 }
 
-std::vector<std::shared_ptr<SimpleTask>> TaskContainer::getAllTasks() {
+std::vector<std::shared_ptr<Task>> TaskContainer::getAllTasks() {
     std::shared_lock lock(mtx);
-    std::vector<std::shared_ptr<SimpleTask>> result;
+    std::vector<std::shared_ptr<Task>> result;
     for (const auto &[_, task] : tasks) {
         result.push_back(task);
     }
@@ -68,12 +68,12 @@ void TaskContainer::clearTasks() {
     tasks.clear();
 }
 
-std::vector<std::shared_ptr<SimpleTask>> TaskContainer::findTasks(int priority,
-                                                                  bool status) {
+std::vector<std::shared_ptr<Task>> TaskContainer::findTasks(
+    [[maybe_unused]] int priority, Task::Status status) {
     std::shared_lock lock(mtx);
-    std::vector<std::shared_ptr<SimpleTask>> result;
+    std::vector<std::shared_ptr<Task>> result;
     for (const auto &[key, task] : tasks) {
-        if (task->getPriority() == priority && task->getStatus() == status) {
+        if (task->getStatus() == status) {
             result.push_back(task);
         }
     }
@@ -81,10 +81,10 @@ std::vector<std::shared_ptr<SimpleTask>> TaskContainer::findTasks(int priority,
 }
 
 void TaskContainer::sortTasks(
-    const std::function<bool(const std::shared_ptr<SimpleTask> &,
-                             const std::shared_ptr<SimpleTask> &)> &cmp) {
+    const std::function<bool(const std::shared_ptr<Task> &,
+                             const std::shared_ptr<Task> &)> &cmp) {
     std::unique_lock lock(mtx);
-    std::vector<std::shared_ptr<SimpleTask>> vec;
+    std::vector<std::shared_ptr<Task>> vec;
     for (const auto &[_, task] : tasks) {
         vec.push_back(task);
     }
@@ -96,7 +96,7 @@ void TaskContainer::sortTasks(
 }
 
 void TaskContainer::batchAddTasks(
-    const std::vector<std::shared_ptr<SimpleTask>> &tasksToAdd) {
+    const std::vector<std::shared_ptr<Task>> &tasksToAdd) {
     std::unique_lock lock(mtx);
     for (const auto &task : tasksToAdd) {
         if (task) {
@@ -114,7 +114,7 @@ void TaskContainer::batchRemoveTasks(
 }
 
 void TaskContainer::batchModifyTasks(
-    const std::function<void(std::shared_ptr<SimpleTask> &)> &modifyFunc) {
+    const std::function<void(std::shared_ptr<Task> &)> &modifyFunc) {
     std::unique_lock lock(mtx);
     for (auto &[_, task] : tasks) {
         modifyFunc(task);
@@ -139,7 +139,7 @@ bool TaskContainer::insertTaskParams(const std::string &name,
     if (taskParams.find(name) != taskParams.end()) {
         return false;  // 任务名已存在
     }
-    if (position > taskParams.size()) {
+    if (static_cast<unsigned long long>(position) > taskParams.size()) {
         return false;  // 位置超出当前任务列表范围
     }
     // 插入任务参数到指定位置（需要转换为vector进行操作）

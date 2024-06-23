@@ -15,7 +15,6 @@ Description: Python Binding of Atom-Async
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/stl_bind.h>
 
 #include "async.hpp"
 #include "thread_wrapper.hpp"

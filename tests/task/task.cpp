@@ -1,148 +1,69 @@
-#include "atom/task/task.hpp"
+#include "task/task.hpp"
 #include <gtest/gtest.h>
 
 
-TEST(SimpleTaskTest, TestToJson) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    json expected = json({{"type", "merged"},
-                          {"name", ""},
-                          {"id", 0},
-                          {"description", ""},
-                          {"can_stop", true}});
-    EXPECT_EQ(task.toJson(), expected);
+using json = nlohmann::json;
+
+// Test fixture for Task
+class TaskTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Setup code here
+    }
+
+    void TearDown() override {
+        // Cleanup code here
+    }
+};
+
+// Test case to check Task creation
+TEST_F(TaskTest, TaskCreation) {
+    json params = {{"key", "value"}};
+    Task task("TestTask", params, [](const json& p) { return p; });
+
+    EXPECT_EQ(task.getName(), "TestTask");
+    EXPECT_EQ(task.getParams(), params);
+    EXPECT_EQ(task.getStatus(), Task::Status::Pending);
 }
 
-TEST(SimpleTaskTest, TestGetResult) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    json expected = json({});
-    EXPECT_EQ(task.getResult(), expected);
+// Test case to check Task execution success
+TEST_F(TaskTest, TaskExecutionSuccess) {
+    json params = {{"key", "value"}};
+    Task task("TestTask", params, [](const json& p) { return p; });
+
+    task.run();
+
+    EXPECT_EQ(task.getStatus(), Task::Status::Completed);
+    ASSERT_TRUE(task.getResult().has_value());
+    EXPECT_EQ(task.getResult().value(), params);
 }
 
-TEST(SimpleTaskTest, TestGetParamsTemplate) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    json expected = json({});
-    EXPECT_EQ(task.getParamsTemplate(), expected);
+// Test case to check Task execution failure
+TEST_F(TaskTest, TaskExecutionFailure) {
+    json params = {{"key", "value"}};
+    bool onTerminateCalled = false;
+    Task task(
+        "TestTask", params,
+        [](const json&) -> json { throw std::runtime_error("error"); },
+        [&onTerminateCalled](const std::exception&) {
+            onTerminateCalled = true;
+        });
+
+    task.run();
+
+    EXPECT_EQ(task.getStatus(), Task::Status::Failed);
+    EXPECT_FALSE(task.getResult().has_value());
+    EXPECT_TRUE(onTerminateCalled);
 }
 
-TEST(SimpleTaskTest, TestSetParams) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    json params = json({{"key", "value"}});
-    task.setParams(params);
-    EXPECT_EQ(task.m_params, params);
-}
+// Test case to check Task execution without onTerminate handler
+TEST_F(TaskTest, TaskExecutionFailureWithoutOnTerminate) {
+    json params = {{"key", "value"}};
+    Task task("TestTask", params,
+              [](const json&) -> json { throw std::runtime_error("error"); });
 
-TEST(SimpleTaskTest, TestGetId) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    EXPECT_EQ(task.getId(), 0);
-}
+    task.run();
 
-TEST(SimpleTaskTest, TestSetId) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    int newId = 123;
-    task.setId(newId);
-    EXPECT_EQ(task.getId(), newId);
-}
-
-TEST(SimpleTaskTest, TestGetName) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    EXPECT_EQ(task.getName(), "");
-}
-
-TEST(SimpleTaskTest, TestSetName) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    std::string newName = "New Task";
-    task.setName(newName);
-    EXPECT_EQ(task.getName(), newName);
-}
-
-TEST(SimpleTaskTest, TestGetDescription) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    EXPECT_EQ(task.getDescription(), "");
-}
-
-TEST(SimpleTaskTest, TestSetDescription) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    std::string newDescription = "New Description";
-    task.setDescription(newDescription);
-    EXPECT_EQ(task.getDescription(), newDescription);
-}
-
-TEST(SimpleTaskTest, TestSetCanExecute) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    task.setCanExecute(false);
-    EXPECT_FALSE(task.isExecutable());
-}
-
-TEST(SimpleTaskTest, TestIsExecutable) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    EXPECT_TRUE(task.isExecutable());
-}
-
-TEST(SimpleTaskTest, TestSetStopFunction) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    std::function<json(const json&)> stopFunction = [](const json&) {
-        return json();
-    };
-    task.setStopFunction(stopFunction);
-    EXPECT_EQ(task.m_stopFn, stopFunction);
-}
-
-TEST(SimpleTaskTest, TestGetStopFlag) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    EXPECT_FALSE(task.getStopFlag());
-}
-
-TEST(SimpleTaskTest, TestSetStopFlag) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    task.setStopFlag(true);
-    EXPECT_TRUE(task.getStopFlag());
-}
-
-TEST(SimpleTaskTest, TestStop) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    task.stop();
-    EXPECT_TRUE(task.getStopFlag());
-}
-
-TEST(SimpleTaskTest, TestValidateJsonValue) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    json data = json({{"key", "value"}});
-    json templateValue = json({{"key", ""}});
-    EXPECT_TRUE(task.validateJsonValue(data, templateValue));
-}
-
-TEST(SimpleTaskTest, TestValidateJsonString) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    std::string jsonString = R"({"key": "value"})";
-    std::string templateString = R"({"key": ""})";
-    EXPECT_TRUE(task.validateJsonString(jsonString, templateString));
-}
-
-TEST(SimpleTaskTest, TestExecute) {
-    SimpleTask task([](const json&) { return json(); },
-                    [](const json&) { return json(); }, json());
-    json expected = json({{"type", "merged"},
-                          {"name", ""},
-                          {"id", 0},
-                          {"description", ""},
-                          {"can_stop", true}});
-    EXPECT_EQ(task.execute(), expected);
+    EXPECT_EQ(task.getStatus(), Task::Status::Failed);
+    EXPECT_FALSE(task.getResult().has_value());
 }

@@ -13,6 +13,7 @@ Description: StackTrace
 **************************************************/
 
 #include "stacktrace.hpp"
+#include "atom/function/abi.hpp"
 
 #include <chrono>
 #include <ctime>
@@ -20,8 +21,10 @@ Description: StackTrace
 #include <thread>
 
 #ifdef _WIN32
-#include <Windows.h>
-#include <DbgHelp.h>
+// clang-format off
+#include <windows.h>
+#include <dbgHelp.h>
+// clang-format on
 #if !defined(__MINGW32__) && !defined(__MINGW64__)
 #pragma comment(lib, "dbghelp.lib")
 #endif
@@ -43,8 +46,12 @@ std::string StackTrace::toString() const {
 
     for (void* frame : frames) {
         SymFromAddr(GetCurrentProcess(), (DWORD64)frame, 0, symbol);
-        oss << "\t\t" << symbol->Name << " - 0x" << std::hex << symbol->Address
-            << "\n";
+        std::string symbol_name = symbol->Name;
+        if (!symbol_name.empty()) {
+            oss << "\t\t"
+                << atom::meta::DemangleHelper::Demangle("_" + symbol_name)
+                << " - 0x" << std::hex << symbol->Address << "\n";
+        }
     }
     free(symbol);
 #elif defined(__APPLE__) || defined(__linux__)

@@ -71,13 +71,13 @@ constexpr X* alignDown(X* x, A a) {
 template <typename T>
 constexpr T log2(T x) {
     static_assert(std::is_integral<T>::value, "T must be integral type");
-    return x <= 1 ? 0 : 1 + god::log2(x >> 1);
+    return x <= 1 ? 0 : 1 + atom::meta::log2(x >> 1);
 }
 
 template <std::size_t N, typename X>
 constexpr X nb(X x) {
     static_assert((N & (N - 1)) == 0, "N must be power of 2");
-    return (x >> god::log2(static_cast<X>(N))) + !!(x & static_cast<X>(N - 1));
+    return (x >> atom::meta::log2(static_cast<X>(N))) + !!(x & static_cast<X>(N - 1));
 }
 
 template <typename T>

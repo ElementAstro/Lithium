@@ -8,7 +8,7 @@ namespace py = pybind11;
 
 using namespace atom::error;
 
-PYBIND11_MODULE(atom_error, m) {
+PYBIND11_EMBEDDED_MODULE(atom_error, m) {
     py::enum_<LIError>(m, "LIError")
         .value("None", LIError::None)
         .value("NotFound", LIError::NotFound)

@@ -17,8 +17,8 @@ set(${PROJECT_NAME}_SOURCES
 
 # Headers
 set(${PROJECT_NAME}_HEADERS
-    cache_impl.hpp
     cache.hpp
+    cache.tpp
     search.hpp
     sqlite.hpp
 )

@@ -129,10 +129,21 @@ public:
     throw atom::error::UnlawfulOperation(__FILE__, __LINE__, __func__, \
                                          __VA_ARGS__)
 
+class OutOfRange : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_OUT_OF_RANGE(...) \
+    throw atom::error::OutOfRange(__FILE__, __LINE__, __func__, __VA_ARGS__);
+
 class Unkown : public Exception {
 public:
     using Exception::Exception;
 };
+
+#define THROW_UNKOWN(...) \
+    throw atom::error::Unkown(__FILE__, __LINE__, __func__, __VA_ARGS__);
 
 // -------------------------------------------------------------------
 // Object
@@ -168,9 +179,6 @@ class ObjectUninitialized : public Exception {
 public:
     using Exception::Exception;
 };
-
-#define THROW_UNKOWN(...) \
-    throw atom::error::Unkown(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
 class SystemCollapse : public Exception {
 public:

@@ -15,15 +15,16 @@ Description: Registry Pattern
 #ifndef ATOM_COMPONENT_REGISTRY_HPP
 #define ATOM_COMPONENT_REGISTRY_HPP
 
-#include <functional> // for std::function
-#include <string> // for std::string
-#include <unordered_map> // for std::unordered_map
-#include <unordered_set> // for std::unordered_set
-#include <shared_mutex> // for std::shared_mutex
+#include <functional>     // for std::function
+#include <shared_mutex>   // for std::shared_mutex
+#include <string>         // for std::string
+#include <unordered_map>  // for std::unordered_map
+#include <unordered_set>  // for std::unordered_set
 
 /**
  * @class Registry
- * @brief Manages initialization and cleanup of components in a registry pattern.
+ * @brief Manages initialization and cleanup of components in a registry
+ * pattern.
  */
 class Registry {
 public:
@@ -41,7 +42,10 @@ public:
      * @brief Gets the singleton instance of the Registry.
      * @return Reference to the singleton instance of the Registry.
      */
-    static Registry& instance();
+    static inline Registry& instance() {
+        static Registry instance;
+        return instance;
+    }
 
     /**
      * @brief Adds an initializer function for a component to the registry.
@@ -89,32 +93,45 @@ private:
     Registry() = default;
 
     /**
-     * @brief Represents a component with its initialization and cleanup functions.
+     * @brief Represents a component with its initialization and cleanup
+     * functions.
      */
     struct Component {
-        InitFunc init_func; /**< The initialization function for the component. */
-        CleanupFunc cleanup_func; /**< The cleanup function for the component. */
+        InitFunc
+            init_func; /**< The initialization function for the component. */
+        CleanupFunc
+            cleanup_func; /**< The cleanup function for the component. */
     };
 
-    std::unordered_map<std::string, Component> initializers; /**< Map of component names to their initialization and cleanup functions. */
-    std::unordered_map<std::string, std::unordered_set<std::string>> dependencies; /**< Map of component names to their dependencies. */
-    std::unordered_map<std::string, bool> initialized; /**< Map of component names to their initialization status. */
-    mutable std::shared_mutex mutex_; /**< Mutex for thread-safe access to the registry. */
+    std::unordered_map<std::string, Component>
+        initializers; /**< Map of component names to their initialization and
+                         cleanup functions. */
+    std::unordered_map<std::string, std::unordered_set<std::string>>
+        dependencies; /**< Map of component names to their dependencies. */
+    std::unordered_map<std::string, bool>
+        initialized; /**< Map of component names to their initialization status.
+                      */
+    mutable std::shared_mutex
+        mutex_; /**< Mutex for thread-safe access to the registry. */
 
     /**
      * @brief Checks if adding a dependency creates a circular dependency.
      * @param name The name of the component.
      * @param dependency The name of the dependency.
-     * @return True if adding the dependency creates a circular dependency, false otherwise.
+     * @return True if adding the dependency creates a circular dependency,
+     * false otherwise.
      */
-    bool has_circular_dependency(const std::string& name, const std::string& dependency);
+    bool has_circular_dependency(const std::string& name,
+                                 const std::string& dependency);
 
     /**
      * @brief Initializes a component and its dependencies recursively.
      * @param name The name of the component to initialize.
-     * @param init_stack Stack to keep track of components being initialized to detect circular dependencies.
+     * @param init_stack Stack to keep track of components being initialized to
+     * detect circular dependencies.
      */
-    void initialize_component(const std::string& name, std::unordered_set<std::string>& init_stack);
+    void initialize_component(const std::string& name,
+                              std::unordered_set<std::string>& init_stack);
 };
 
-#endif // ATOM_COMPONENT_REGISTRY_HPP
+#endif  // ATOM_COMPONENT_REGISTRY_HPP

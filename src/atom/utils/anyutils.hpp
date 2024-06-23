@@ -16,20 +16,18 @@ Description: A collection of useful functions with std::any Or Any
 #define ATOM_EXPERIMENT_ANYUTILS_HPP
 
 #include <any>
+#include <concepts>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#if __cplusplus >= 202002L
-#include <concepts>
-#endif
-#ifdef __cpp_concepts
 template <typename T>
 concept CanBeStringified = requires(T t) {
     { toString(t) } -> std::convertible_to<std::string>;
 };
+
 template <typename T>
 concept CanBeStringifiedToJson = requires(T t) {
     { toJson(t) } -> std::convertible_to<std::string>;
@@ -38,15 +36,14 @@ concept CanBeStringifiedToJson = requires(T t) {
 template <typename T>
 concept IsBuiltIn =
     std::is_fundamental_v<T> || std::is_same_v<T, char> ||
-    std::is_same_v<T, std::string> || std::is_same_v<T, std::string_view>;
+    std::is_same_v<T, const char *> || std::is_same_v<T, std::string> ||
+    std::is_same_v<T, std::string_view>;
 
 template <typename Container>
 concept ContainerLike = requires(const Container &c) {
     { c.begin() } -> std::input_iterator;
     { c.end() } -> std::input_iterator;
 };
-
-#endif
 
 template <typename T>
 [[nodiscard]] std::string toString(const T &value, bool prettyPrint = false);
@@ -98,6 +95,8 @@ template <typename T>
                   std::is_same_v<T, const char *> ||
                   std::is_same_v<T, char *>) {
         return value;
+    } else if constexpr (std::is_same_v<T, bool>) {
+        return value ? "true" : "false";
     } else if constexpr (std::is_arithmetic_v<T>) {
         return std::to_string(value);
     } else if constexpr (std::is_pointer_v<T>) {
@@ -114,14 +113,14 @@ template <typename T>
 template <typename T>
 [[nodiscard]] std::string toJson(const T &value, bool prettyPrint = false);
 
-template <typename T>
-[[nodiscard]] std::string toJson(const std::vector<T> &vec,
+template <ContainerLike Container>
+[[nodiscard]] std::string toJson(const Container &container,
                                  bool prettyPrint = false) {
     std::string result = "[";
-    for (const auto &item : vec) {
+    for (const auto &item : container) {
         result += toJson(item, prettyPrint) + ", ";
     }
-    if (!vec.empty()) {
+    if (!container.empty()) {
         result.erase(result.length() - 2, 2);
     }
     result += "]";
@@ -150,25 +149,13 @@ template <typename T1, typename T2>
            toJson(pair.second, prettyPrint) + "}";
 }
 
-template <typename... Args>
-[[nodiscard]] std::string toJson(bool prettyPrint, const Args &...args) {
-    std::string result = "{";
-    ((result += toJson(args, prettyPrint) + ", "), ...);
-    if (sizeof...(args) > 0) {
-        result.erase(result.length() - 2, 2);
-    }
-    result += "}";
-    return result;
-}
-
 template <typename T>
 [[nodiscard]] std::string toJson(const T &value, bool prettyPrint) {
     if constexpr (std::is_same_v<T, std::string>) {
         return "\"" + value + "\"";
     } else if constexpr (std::is_same_v<T, const char *> ||
                          std::is_same_v<T, char *>) {
-        return "\"" + std::string(value) +
-               "\"";  // 将 const char* 转换为 std::string
+        return "\"" + std::string(value) + "\"";
     } else if constexpr (std::is_arithmetic_v<T>) {
         return std::to_string(value);
     } else if constexpr (std::is_pointer_v<T>) {
@@ -178,18 +165,18 @@ template <typename T>
             return toJson(*value, prettyPrint);
         }
     } else {
-        return "{}";  // Default to empty object for unknown type
+        return "{}";
     }
 }
 
 template <typename T>
 [[nodiscard]] std::string toXml(const T &value, const std::string &tagName);
 
-template <typename T>
-[[nodiscard]] std::string toXml(const std::vector<T> &vec,
+template <ContainerLike Container>
+[[nodiscard]] std::string toXml(const Container &container,
                                 const std::string &tagName) {
     std::string result;
-    for (const auto &item : vec) {
+    for (const auto &item : container) {
         result += toXml(item, tagName);
     }
     return result;
@@ -231,20 +218,19 @@ template <typename T>
             return toXml(*value, tagName);
         }
     } else {
-        return "<" + tagName + "></" + tagName +
-               ">";  // Default to empty element for unknown type
+        return "<" + tagName + "></" + tagName + ">";
     }
 }
 
 template <typename T>
 [[nodiscard]] std::string toYaml(const T &value, const std::string &key);
 
-template <typename T>
-[[nodiscard]] std::string toYaml(const std::vector<T> &vec,
+template <ContainerLike Container>
+[[nodiscard]] std::string toYaml(const Container &container,
                                  const std::string &key) {
-    std::string result = key + ":\n";
-    for (const auto &item : vec) {
-        result += "  - " + toYaml(item, "");
+    std::string result = key.empty() ? "" : key + ":\n";
+    for (const auto &item : container) {
+        result += (key.empty() ? "- " : "  - ") + toYaml(item, "") + "\n";
     }
     return result;
 }
@@ -252,9 +238,9 @@ template <typename T>
 template <typename K, typename V>
 [[nodiscard]] std::string toYaml(const std::unordered_map<K, V> &map,
                                  const std::string &key) {
-    std::string result = key + ":\n";
+    std::string result = key.empty() ? "" : key + ":\n";
     for (const auto &pair : map) {
-        result += "  " + toYaml(pair.second, pair.first);
+        result += (key.empty() ? "" : "  ") + toYaml(pair.second, pair.first);
     }
     return result;
 }
@@ -262,9 +248,11 @@ template <typename K, typename V>
 template <typename T1, typename T2>
 [[nodiscard]] std::string toYaml(const std::pair<T1, T2> &pair,
                                  const std::string &key) {
-    std::string result = key + ":\n";
-    result += "  key: " + toYaml(pair.first, "");
-    result += "  value: " + toYaml(pair.second, "");
+    std::string result = key.empty() ? "" : key + ":\n";
+    result += std::string((key.empty() ? "" : "  ")) +
+              "key: " + toYaml(pair.first, "");
+    result += std::string((key.empty() ? "" : "  ")) +
+              "value: " + toYaml(pair.second, "");
     return result;
 }
 
@@ -273,30 +261,112 @@ template <typename T>
     if constexpr (std::is_same_v<T, std::string> ||
                   std::is_same_v<T, const char *> ||
                   std::is_same_v<T, char *>) {
-        return key + ": \"" + value + "\"\n";
+        return key.empty() ? "\"" + std::string(value) + "\""
+                           : key + ": \"" + std::string(value) + "\"\n";
     } else if constexpr (std::is_arithmetic_v<T>) {
-        return key + ": " + std::to_string(value) + "\n";
+        return key.empty() ? std::to_string(value)
+                           : key + ": " + std::to_string(value) + "\n";
     } else if constexpr (std::is_pointer_v<T>) {
         if (value == nullptr) [[unlikely]] {
-            return key + ": null\n";
+            return key.empty() ? "null" : key + ": null\n";
         } else [[likely]] {
             return toYaml(*value, key);
         }
     } else {
-        return key + ":\n";
+        return key.empty() ? "" : key + ":\n";
     }
 }
 
 template <typename... Ts>
 [[nodiscard]] std::string toYaml(const std::tuple<Ts...> &tuple,
                                  const std::string &key) {
-    std::string result = key + ":\n";
+    std::string result = key.empty() ? "" : key + ":\n";
     std::apply(
         [&result, &key](const Ts &...args) {
-            ((result += "  - " + toYaml(args, "") + "\n"), ...);
+            ((result +=
+              (key.empty() ? "- " : "  - ") + toYaml(args, "") + "\n"),
+             ...);
         },
         tuple);
     return result;
 }
 
-#endif
+template <typename T>
+[[nodiscard]] std::string toToml(const T &value, const std::string &key);
+
+template <ContainerLike Container>
+[[nodiscard]] std::string toToml(const Container &container,
+                                 const std::string &key) {
+    std::string result = key + " = [\n";
+    for (const auto &item : container) {
+        result += "  " + toToml(item, "") + ",\n";
+    }
+    if (!container.empty()) {
+        result.erase(result.length() - 2, 1);  // Remove the last comma
+    }
+    result += "]\n";
+    return result;
+}
+
+template <typename K, typename V>
+[[nodiscard]] std::string toToml(const std::unordered_map<K, V> &map,
+                                 const std::string &key) {
+    std::string result = key.empty() ? "" : key + " = {\n";
+    for (const auto &pair : map) {
+        result += "  " + toToml(pair.second, pair.first);
+    }
+    if (!map.empty()) {
+        result.erase(result.length() - 1);  // Remove the last newline
+    }
+    result += key.empty() ? "" : "\n}\n";
+    return result;
+}
+
+template <typename T1, typename T2>
+[[nodiscard]] std::string toToml(const std::pair<T1, T2> &pair,
+                                 const std::string &key) {
+    std::string result = key.empty() ? "" : key + " = {\n";
+    result += "  key = " + toToml(pair.first, "") + ",\n";
+    result += "  value = " + toToml(pair.second, "") + "\n";
+    result += key.empty() ? "" : "}\n";
+    return result;
+}
+
+template <typename T>
+[[nodiscard]] std::string toToml(const T &value, const std::string &key) {
+    if constexpr (std::is_same_v<T, std::string> ||
+                  std::is_same_v<T, const char *> ||
+                  std::is_same_v<T, char *>) {
+        return key.empty() ? "\"" + std::string(value) + "\""
+                           : key + " = \"" + std::string(value) + "\"\n";
+    } else if constexpr (std::is_arithmetic_v<T>) {
+        return key.empty() ? std::to_string(value)
+                           : key + " = " + std::to_string(value) + "\n";
+    } else if constexpr (std::is_pointer_v<T>) {
+        if (value == nullptr) [[unlikely]] {
+            return key.empty() ? "null" : key + " = null\n";
+        } else [[likely]] {
+            return toToml(*value, key);
+        }
+    } else {
+        return key.empty() ? "" : key + " = {}\n";
+    }
+}
+
+template <typename... Ts>
+[[nodiscard]] std::string toToml(const std::tuple<Ts...> &tuple,
+                                 const std::string &key) {
+    std::string result = key.empty() ? "" : key + " = [\n";
+    std::apply(
+        [&result, &key](const Ts &...args) {
+            ((result += "  " + toToml(args, "") + ",\n"), ...);
+        },
+        tuple);
+    if (sizeof...(Ts) > 0) {
+        result.erase(result.length() - 2, 1);  // Remove the last comma
+    }
+    result += key.empty() ? "" : "]\n";
+    return result;
+}
+
+#endif  // ATOM_EXPERIMENT_ANYUTILS_HPP

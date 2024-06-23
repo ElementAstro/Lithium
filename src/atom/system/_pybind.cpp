@@ -14,13 +14,6 @@ Description: Python Binding of Atom-System Module
 
 #include <pybind11/pybind11.h>
 
-#include "module/battery.hpp"
-#include "module/cpu.hpp"
-#include "module/disk.hpp"
-#include "module/memory.hpp"
-#include "module/os.hpp"
-#include "module/wifi.hpp"
-
 #include "command.hpp"
 #include "crash_quotes.hpp"
 #include "lregistry.hpp"
@@ -32,7 +25,7 @@ namespace py = pybind11;
 
 using namespace atom::system;
 
-PYBIND11_MODULE(atom_system, m) {
+PYBIND11_EMBEDDED_MODULE(atom_system, m) {
     pybind11::class_<BatteryInfo>(m, "BatteryInfo")
         .def_readwrite("isBatteryPresent", &BatteryInfo::isBatteryPresent)
         .def_readwrite("isCharging", &BatteryInfo::isCharging)

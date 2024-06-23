@@ -10,14 +10,9 @@
 
 #include "atom/error/exception.hpp"
 
-Registry& Registry::instance() {
-    static Registry instance;
-    return instance;
-}
-
 void Registry::add_initializer(const std::string& name, InitFunc init_func,
-                               CleanupFunc cleanup_func = nullptr) {
-    std::unique_lock lock(mutex_);
+                               CleanupFunc cleanup_func) {
+    std::scoped_lock lock(mutex_);
     if (initializers.find(name) != initializers.end()) {
         THROW_OBJ_ALREADY_INITIALIZED("Initializer already registered: " +
                                       name);

@@ -16,7 +16,6 @@ Description: Python Binding of Atom-Connection
 
 #include "fifoclient.hpp"
 #include "fifoserver.hpp"
-#include "shared_memory.hpp"
 #include "sockethub.hpp"
 #include "udp_server.hpp"
 
@@ -27,19 +26,7 @@ namespace py = pybind11;
 
 using namespace atom::connection;
 
-template <typename T>
-void bind_shared_memory(py::module &m, const std::string &type_name) {
-    py::class_<SharedMemory<T>>(m, ("shared_memory_" + type_name).c_str())
-        .def(py::init<const std::string &, bool>())
-        .def("write", &SharedMemory<T>::write, py::arg("data"),
-             py::arg("timeout") = std::chrono::milliseconds(0))
-        .def("read", &SharedMemory<T>::read,
-             py::arg("timeout") = std::chrono::milliseconds(0))
-        .def("clear", &SharedMemory<T>::clear)
-        .def("isOccupied", &SharedMemory<T>::isOccupied);
-}
-
-PYBIND11_MODULE(atom_connection, m) {
+PYBIND11_EMBEDDED_MODULE(atom_connection, m) {
     m.doc() = "Atom Connection Python Binding";
 
     py::class_<FifoClient>(m, "FifoClient")
@@ -50,16 +37,13 @@ PYBIND11_MODULE(atom_connection, m) {
     py::class_<FIFOServer>(m, "FIFOServer")
         .def(py::init<const std::string &>())
         .def("sendMessage", &FIFOServer::sendMessage);
-
-    bind_shared_memory<int>(m, "int");
-    bind_shared_memory<float>(m, "float");
-    bind_shared_memory<double>(m, "double");
-
     py::class_<UdpSocketHub>(m, "UdpSocketHub")
         .def(py::init<>())
         .def("start", &UdpSocketHub::start, py::arg("port"))
         .def("stop", &UdpSocketHub::stop)
-        .def("addHandler", &UdpSocketHub::addHandler)
+        .def("isRunning", &UdpSocketHub::isRunning)
+        .def("addMessageHandler", &UdpSocketHub::addMessageHandler)
+        .def("removeMessageHandler", &UdpSocketHub::removeMessageHandler)
         .def("sendTo", &UdpSocketHub::sendTo, py::arg("message"), py::arg("ip"),
              py::arg("port"));
 

@@ -9,26 +9,31 @@
 cmake_minimum_required(VERSION 3.20)
 project(atom C CXX)
 
-CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
+# Versioning
+set(ATOM_VERSION_MAJOR 1)
+set(ATOM_VERSION_MINOR 0)
+set(ATOM_VERSION_PATCH 0)
+set(ATOM_SOVERSION ${ATOM_VERSION_MAJOR})
+set(ATOM_VERSION_STRING "${ATOM_VERSION_MAJOR}.${ATOM_VERSION_MINOR}.${ATOM_VERSION_PATCH}")
 
-set(CMAKE_ATOM_VERSION_MAJOR 1)
-set(CMAKE_ATOM_VERSION_MINOR 0)
-set(CMAKE_ATOM_VERSION_RELEASE 0)
-
-set(ATOM_SOVERSION ${CMAKE_ATOM_VERSION_MAJOR})
-set(CMAKE_ATOM_VERSION_STRING "${CMAKE_ATOM_VERSION_MAJOR}.${CMAKE_ATOM_VERSION_MINOR}.${CMAKE_ATOM_VERSION_RELEASE}")
-set(ATOM_VERSION ${CMAKE_ATOM_VERSION_MAJOR}.${CMAKE_ATOM_VERSION_MINOR}.${CMAKE_ATOM_VERSION_RELEASE})
-
-option(ATOM_BUILD_PYTHON " Build Atom with Python support" OFF)
-find_package(Python COMPONENTS Interpreter Development REQUIRED)
-if(${PYTHON_FOUND})
-    message("-- Found Python ${PYTHON_VERSION_STRING}: ${PYTHON_EXECUTABLE}")
-    find_package(pybind11 QUIET)
-    if (pybind11_FOUND)
-        message(STATUS "Found pybind11: ${pybind11_INCLUDE_DIRS}")
-        set(ATOM_BUILD_PYTHON ON)
+# Python Support
+option(ATOM_BUILD_PYTHON "Build Atom with Python support" OFF)
+if(ATOM_BUILD_PYTHON)
+    find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    if(PYTHON_FOUND)
+        message("-- Found Python ${PYTHON_VERSION_STRING}: ${PYTHON_EXECUTABLE}")
+        find_package(pybind11 QUIET)
+        if(pybind11_FOUND)
+            message(STATUS "Found pybind11: ${pybind11_INCLUDE_DIRS}")
+        else()
+            message(FATAL_ERROR "pybind11 not found")
+        endif()
+    else()
+        message(FATAL_ERROR "Python not found")
     endif()
 endif()
+
+# Subdirectories
 add_subdirectory(algorithm)
 add_subdirectory(async)
 add_subdirectory(components)
@@ -42,38 +47,33 @@ add_subdirectory(type)
 add_subdirectory(utils)
 add_subdirectory(web)
 
+# Check for std::format
+CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
 if(NOT HAS_STD_FORMAT)
     find_package(fmt REQUIRED)
 endif()
-# Sources
-list(APPEND ${PROJECT_NAME}_SOURCES
+
+# Sources and Headers
+set(ATOM_SOURCES
     log/logger.cpp
     log/global_logger.cpp
     log/syslog.cpp
-
     function/global_ptr.cpp
 )
 
-# Headers
-list(APPEND ${PROJECT_NAME}_HEADERS
+set(ATOM_HEADERS
     log/logger.hpp
     log/global_logger.hpp
     log/syslog.hpp
-
     function/global_ptr.hpp
 )
 
-# Private Headers
-list(APPEND ${PROJECT_NAME}_PRIVATE_HEADERS
-
-)
-
-list(APPEND ${PROJECT_NAME}_LIBS
+# Libraries
+set(ATOM_LIBS
     loguru
     cpp_httplib
     libzippp
     atom-algorithm
-    #atom-connection
     atom-async
     atom-task
     atom-io
@@ -83,41 +83,30 @@ list(APPEND ${PROJECT_NAME}_LIBS
     atom-search
     atom-web
     atom-system
-    )
+)
 
-# Build Object Library
-add_library(${PROJECT_NAME}_OBJECT OBJECT)
-set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
-
-target_compile_definitions(${PROJECT_NAME}_OBJECT PRIVATE "-DHAVE_LIBNOVA")
+# Object Library
+add_library(atom_object OBJECT ${ATOM_SOURCES} ${ATOM_HEADERS})
+target_compile_definitions(atom_object PRIVATE "-DHAVE_LIBNOVA")
 
 if(WIN32)
-target_link_libraries(${PROJECT_NAME}_OBJECT setupapi wsock32 ws2_32 shlwapi iphlpapi)
+    target_link_libraries(atom_object setupapi wsock32 ws2_32 shlwapi iphlpapi)
 endif()
-target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
 
-target_sources(${PROJECT_NAME}_OBJECT
-    PUBLIC
-    ${${PROJECT_NAME}_HEADERS}
-    PRIVATE
-    ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
+target_link_libraries(atom_object ${ATOM_LIBS})
+
+# Static Library
+add_library(atom STATIC)
+set_target_properties(atom PROPERTIES
+    IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}atom${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    VERSION ${ATOM_VERSION_STRING}
+    SOVERSION ${ATOM_SOVERSION}
 )
 
-target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
+target_link_libraries(atom atom_object ${CMAKE_THREAD_LIBS_INIT} ${ATOM_LIBS})
 
-add_library(${PROJECT_NAME}static STATIC)
-
-target_link_libraries(${PROJECT_NAME}static ${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})
-target_link_libraries(${PROJECT_NAME}static ${CMAKE_THREAD_LIBS_INIT})
-target_include_directories(${PROJECT_NAME}static PUBLIC .)
-
-set_target_properties(${PROJECT_NAME}static PROPERTIES
-    VERSION ${CMAKE_HYDROGEN_VERSION_STRING}
-    SOVERSION ${HYDROGEN_SOVERSION}
-    OUTPUT_NAME ${PROJECT_NAME} # this same name like shared library - backwards compatibility
-)
-
-install(TARGETS ${PROJECT_NAME}static
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+# Install
+install(TARGETS atom
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    COMPONENT library
 )

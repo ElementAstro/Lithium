@@ -19,89 +19,77 @@ Description: Basic Component Definition
 
 #include "atom/log/loguru.hpp"
 
-inline Component::Component(const std::string& name)
-    : m_name(name),
-      m_CommandDispatcher(std::make_shared<CommandDispatcher>()),
-      m_VariableManager(std::make_shared<VariableManager>()),
-      m_typeInfo(atom::meta::user_type<Component>()),
-      m_TypeCaster(atom::meta::TypeCaster::createShared()),
-      m_TypeConverter(atom::meta::TypeConversions::createShared()) {
-    // Empty
-}
+ATOM_INLINE Component::Component(const std::string& name) : m_name(name) {}
 
-inline Component::~Component() {
-    // Empty
-}
-
-inline std::weak_ptr<const Component> Component::getInstance() const {
+ATOM_INLINE std::weak_ptr<const Component> Component::getInstance() const {
     return shared_from_this();
 }
 
-inline bool Component::initialize() {
+ATOM_INLINE bool Component::initialize() {
     LOG_F(INFO, "Initializing component: {}", m_name);
     return true;
 }
 
-inline bool Component::destroy() {
+ATOM_INLINE bool Component::destroy() {
     LOG_F(INFO, "Destroying component: {}", m_name);
     return true;
 }
 
-inline std::string Component::getName() const { return m_name; }
+ATOM_INLINE std::string Component::getName() const { return m_name; }
 
-inline atom::meta::Type_Info Component::getTypeInfo() const {
+ATOM_INLINE atom::meta::Type_Info Component::getTypeInfo() const {
     return m_typeInfo;
 }
 
-inline void Component::setTypeInfo(atom::meta::Type_Info typeInfo) {
+ATOM_INLINE void Component::setTypeInfo(atom::meta::Type_Info typeInfo) {
     m_typeInfo = typeInfo;
 }
 
-inline void Component::addAlias(const std::string& name,
-                                const std::string& alias) {
+ATOM_INLINE void Component::addAlias(const std::string& name,
+                                     const std::string& alias) const {
     m_CommandDispatcher->addAlias(name, alias);
 }
 
-inline void Component::addGroup(const std::string& name,
-                                const std::string& group) {
+ATOM_INLINE void Component::addGroup(const std::string& name,
+                                     const std::string& group) const {
     m_CommandDispatcher->addGroup(name, group);
 }
 
-inline void Component::setTimeout(const std::string& name,
-                                  std::chrono::milliseconds timeout) {
+ATOM_INLINE void Component::setTimeout(
+    const std::string& name, std::chrono::milliseconds timeout) const {
     m_CommandDispatcher->setTimeout(name, timeout);
 }
 
-inline void Component::removeCommand(const std::string& name) {
+ATOM_INLINE void Component::removeCommand(const std::string& name) const {
     m_CommandDispatcher->removeCommand(name);
 }
 
-inline std::vector<std::string> Component::getCommandsInGroup(
+ATOM_INLINE std::vector<std::string> Component::getCommandsInGroup(
     const std::string& group) const {
     return m_CommandDispatcher->getCommandsInGroup(group);
 }
 
-inline std::string Component::getCommandDescription(
+ATOM_INLINE std::string Component::getCommandDescription(
     const std::string& name) const {
     return m_CommandDispatcher->getCommandDescription(name);
 }
 
 #if ENABLE_FASTHASH
-inline emhash::HashSet<std::string> Component::getCommandAliases(
+ATOM_INLINE emhash::HashSet<std::string> Component::getCommandAliases(
     const std::string& name) const
 #else
-inline std::unordered_set<std::string> Component::getCommandAliases(
+ATOM_INLINE std::unordered_set<std::string> Component::getCommandAliases(
     const std::string& name) const
 #endif
 {
     return m_CommandDispatcher->getCommandAliases(name);
 }
 
-inline std::vector<std::string> Component::getNeededComponents() const {
+ATOM_INLINE std::vector<std::string> Component::getNeededComponents() const {
     return {};
 }
 
-inline void Component::addOtherComponent(
+ATOM_INLINE void Component::addOtherComponent(
     const std::string& name, const std::weak_ptr<Component>& component) {
     if (m_OtherComponents.contains(name)) {
         THROW_OBJ_ALREADY_EXIST(name);
@@ -109,13 +97,15 @@ inline void Component::addOtherComponent(
     m_OtherComponents[name] = std::move(component);
 }
 
-inline void Component::removeOtherComponent(const std::string& name) {
+ATOM_INLINE void Component::removeOtherComponent(const std::string& name) {
     m_OtherComponents.erase(name);
 }
 
-inline void Component::clearOtherComponents() { m_OtherComponents.clear(); }
+ATOM_INLINE void Component::clearOtherComponents() {
+    m_OtherComponents.clear();
+}
 
-inline std::weak_ptr<Component> Component::getOtherComponent(
+ATOM_INLINE std::weak_ptr<Component> Component::getOtherComponent(
     const std::string& name) {
     if (m_OtherComponents.contains(name)) {
         return m_OtherComponents[name];
@@ -123,11 +113,11 @@ inline std::weak_ptr<Component> Component::getOtherComponent(
     return {};
 }
 
-inline bool Component::has(const std::string& name) const {
+ATOM_INLINE bool Component::has(const std::string& name) const {
     return m_CommandDispatcher->has(name);
 }
 
-inline bool Component::has_type(std::string_view name) const {
+ATOM_INLINE bool Component::has_type(std::string_view name) const {
     if (auto it = m_classes.find(name); it != m_classes.end()) {
         return true;
     }
@@ -144,37 +134,36 @@ bool Component::has_conversion() const {
         atom::meta::user_type<DestinationType>());
 }
 
-inline std::vector<std::string> Component::getAllCommands() const {
+ATOM_INLINE std::vector<std::string> Component::getAllCommands() const {
     return m_CommandDispatcher->getAllCommands();
 }
 
-std::vector<std::string> Component::getRegisteredTypes() const {
+ATOM_INLINE std::vector<std::string> Component::getRegisteredTypes() const {
     return m_TypeCaster->get_registered_types();
 }
 
-inline std::any Component::runCommand(const std::string& name,
-                                      const std::vector<std::any>& args) {
+ATOM_INLINE std::any Component::runCommand(const std::string& name,
+                                           const std::vector<std::any>& args) {
     auto _cmd = getAllCommands();
-    auto it = std::find(_cmd.begin(), _cmd.end(), name);
 
-    if (it != _cmd.end()) {
+    if (auto it = std::ranges::find(_cmd, name); it != _cmd.end()) {
         return m_CommandDispatcher->dispatch(name, args);
     } else {
-        for (auto& [key, value] : m_OtherComponents) {
-            if (!value.expired()) {
-                if (value.lock()->has(name)) {
-                    return value.lock()->dispatch(name, args);
-                }
+        for (const auto& [key, value] : m_OtherComponents) {
+            if (!value.expired() && value.lock()->has(name)) {
+                return value.lock()->dispatch(name, args);
             } else {
                 LOG_F(ERROR, "Component {} has expired", key);
                 m_OtherComponents.erase(key);
             }
         }
     }
-    THROW_EXCEPTION("Coomponent ", name, " not found");
+    THROW_EXCEPTION("Component ", name, " not found");
 }
 
-inline void Component::doc(const std::string& description) { m_doc = description; }
+ATOM_INLINE void Component::doc(const std::string& description) {
+    m_doc = description;
+}
 
 template <typename T>
 void Component::def_type(std::string_view name, const atom::meta::Type_Info& ti,
@@ -191,7 +180,7 @@ void Component::def_conversion(std::function<std::any(const std::any&)> func) {
     m_TypeCaster->register_conversion<SourceType, DestinationType>(func);
 }
 
-inline void Component::def_class_conversion(
+ATOM_INLINE void Component::def_class_conversion(
     const std::shared_ptr<atom::meta::Type_Conversion_Base>& conversion) {
     m_TypeConverter->add_conversion(conversion);
 }
@@ -203,20 +192,22 @@ void Component::def_base_class() {
     m_TypeConverter->add_base_class<Base, Derived>();
 }
 
-inline bool Component::hasVariable(const std::string& name) const {
+ATOM_INLINE bool Component::hasVariable(const std::string& name) const {
     return m_VariableManager->has(name);
 }
 
-inline std::string Component::getVariableDescription(
+ATOM_INLINE std::string Component::getVariableDescription(
     const std::string& name) const {
     return m_VariableManager->getDescription(name);
 }
 
-inline std::string Component::getVariableAlias(const std::string& name) const {
+ATOM_INLINE std::string Component::getVariableAlias(
+    const std::string& name) const {
     return m_VariableManager->getAlias(name);
 }
 
-inline std::string Component::getVariableGroup(const std::string& name) const {
+ATOM_INLINE std::string Component::getVariableGroup(
+    const std::string& name) const {
     return m_VariableManager->getGroup(name);
 }
 

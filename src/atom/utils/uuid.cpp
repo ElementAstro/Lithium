@@ -35,9 +35,6 @@ Description: UUID Generator
 #include <uuid/uuid.h>
 #endif
 
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-
 namespace atom::utils {
 UUID::UUID() { generate_random(); }
 
@@ -92,13 +89,11 @@ uint8_t UUID::version() const { return (data[6] & 0xF0) >> 4; }
 uint8_t UUID::variant() const { return (data[8] & 0xC0) >> 6; }
 
 UUID UUID::generate_v3(const UUID& namespace_uuid, const std::string& name) {
-    return generate_name_based<MD5_CTX, MD5_Init, MD5_Update, MD5_Final>(
-        namespace_uuid, name, 3);
+    return generate_name_based<EVP_md5>(namespace_uuid, name, 3);
 }
 
 UUID UUID::generate_v5(const UUID& namespace_uuid, const std::string& name) {
-    return generate_name_based<SHA_CTX, SHA1_Init, SHA1_Update, SHA1_Final>(
-        namespace_uuid, name, 5);
+    return generate_name_based<EVP_sha1>(namespace_uuid, name, 5);
 }
 
 UUID UUID::generate_v1() {

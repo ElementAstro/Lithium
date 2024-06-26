@@ -9,8 +9,23 @@ jobs:
       issues: write
       pull-requests: write
     steps:
+      # Check if the issue or PR already has the greeted label
+      - name: Check if Already Greeted
+        id: check_greeted
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          script: |
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            return labels.data.some(label => label.name === 'greeted');
+
       # Greeting for first interaction using actions/first-interaction
       - name: First Interaction Greeting
+        if: steps.check_greeted.outputs.result == 'false'
         uses: actions/first-interaction@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -19,7 +34,7 @@ jobs:
 
       # General greeting for every new issue
       - name: Greet Every Issue
-        if: github.event_name == 'issues'
+        if: github.event_name == 'issues' && steps.check_greeted.outputs.result == 'false'
         uses: actions/github-script@v6
         with:
           script: |
@@ -29,11 +44,11 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: issueComment
-            })
+            });
 
       # General greeting for every new pull request
       - name: Greet Every PR
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && steps.check_greeted.outputs.result == 'false'
         uses: actions/github-script@v6
         with:
           script: |
@@ -44,33 +59,25 @@ jobs:
               repo: context.repo.repo,
               body: prComment,
               event: 'COMMENT'
-            })
+            });
 
       # Add labels to new issues and PRs
       - name: Label New Issues and PRs
+        if: steps.check_greeted.outputs.result == 'false'
         uses: actions/github-script@v6
         with:
           script: |
-            const labels = ['needs-triage'];
-            if (context.eventName === 'issues') {
-              github.rest.issues.addLabels({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                labels: labels
-              })
-            } else if (context.eventName === 'pull_request_target') {
-              github.rest.issues.addLabels({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                labels: labels
-              })
-            }
+            const labels = ['needs-triage', 'greeted'];
+            github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: labels
+            });
 
       # Auto Assign Reviewers based on the time of day
       - name: Auto-assign Reviewers Based on Time of Day
-        if: github.event_name == 'pull_request_target'
+        if: github.event_name == 'pull_request_target' && steps.check_greeted.outputs.result == 'false'
         uses: actions/github-script@v6
         with:
           script: |
@@ -82,4 +89,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               reviewers: reviewers
-            })
+            });

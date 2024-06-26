@@ -1,6 +1,7 @@
-#include "atom/components/registry.hpp"
-#include "atom/components/macro.hpp"
 #include <gtest/gtest.h>
+
+#include "atom/components/module_macro.hpp"
+#include "atom/components/registry.hpp"
 #include "atom/error/exception.hpp"
 
 // 初始化和清理函数定义
@@ -31,7 +32,8 @@ void cleanup_component_C() {
 TEST(RegistryTest, SingletonInstance) {
     Registry& instance1 = Registry::instance();
     Registry& instance2 = Registry::instance();
-    ASSERT_EQ(&instance1, &instance2) << "Registry should return the same instance for all calls.";
+    ASSERT_EQ(&instance1, &instance2)
+        << "Registry should return the same instance for all calls.";
 }
 
 TEST(RegistryTest, AddAndInitializeComponents) {
@@ -96,7 +98,7 @@ void SampleCleanup() { /* 清理逻辑 */ }
 TEST(RegistryTest, ComponentInitializationAndCleanup) {
     Registry& registry = Registry::instance();
     registry.add_initializer("SampleComponent", SampleInit, SampleCleanup);
-    
+
     ASSERT_FALSE(registry.is_initialized("SampleComponent"));
     registry.initialize_all();
     ASSERT_TRUE(registry.is_initialized("SampleComponent"));
@@ -169,7 +171,7 @@ TEST(RegistryTest, ModuleInitializationAndCleanupOrder) {
     EXPECT_EQ(calls[1], "InitB");
     EXPECT_EQ(calls[2], "InitA");
 
-    calls.clear(); // 清理调用记录，为清理测试做准备
+    calls.clear();  // 清理调用记录，为清理测试做准备
 
     // 清理所有组件
     registry.cleanup_all();

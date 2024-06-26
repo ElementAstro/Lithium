@@ -37,7 +37,7 @@ struct FunctionInfo {
 
     FunctionInfo() = default;
 
-    void logFunctionInfo() {
+    void logFunctionInfo() const {
 #if ENABLE_DEBUG
         std::cout << "Function return type: " << returnType << "\n";
         for (size_t i = 0; i < argumentTypes.size(); ++i) {
@@ -93,7 +93,7 @@ struct ProxyFunction {
     using Traits = FunctionTraits<Func>;
     static constexpr std::size_t N = Traits::arity;
 
-    ProxyFunction(Func func) : func(func) {
+    explicit ProxyFunction(Func &&func) : func(std::move(func)) {
         collectFunctionInfo();
         calcFuncInfoHash();
     }
@@ -128,7 +128,7 @@ struct ProxyFunction {
         }
     }
 
-    FunctionInfo getFunctionInfo() { return info; }
+    FunctionInfo getFunctionInfo() const { return info; }
 
 private:
     void collectFunctionInfo() {
@@ -143,20 +143,21 @@ private:
     template <std::size_t... Is>
     void collectArgumentTypes(std::index_sequence<Is...>) {
         (info.argumentTypes.push_back(
-             DemangleHelper::DemangleType<typename Traits::argument_t<Is>>()),
+             DemangleHelper::DemangleType<
+                 typename Traits::template argument_t<Is>>()),
          ...);
     }
 
     void calcFuncInfoHash() {
         // 仅根据参数类型进行区分,返回值不支持,具体是因为在dispatch时不知道返回值的类型
-        if (info.argumentTypes.size() != 0) {
+        if (!info.argumentTypes.empty()) {
             info.hash = atom::algorithm::computeHash(info.argumentTypes);
         }
     }
 
     FunctionInfo info;
 
-    void logArgumentTypes() {
+    void logArgumentTypes() const {
 #if ENABLE_DEBUG
         std::cout << "Function Arity: " << N << "\n";
         info.logFunctionInfo();
@@ -167,13 +168,14 @@ private:
     std::any callFunction(const std::vector<std::any> &args,
                           std::index_sequence<Is...>) {
         if constexpr (std::is_void_v<typename Traits::return_type>) {
-            std::invoke(func, any_cast_helper<typename Traits::argument_t<Is>>(
-                                  args[Is])...);
+            std::invoke(
+                func, any_cast_helper<typename Traits::template argument_t<Is>>(
+                          args[Is])...);
             return {};
         } else {
             return std::make_any<typename Traits::return_type>(std::invoke(
-                func,
-                any_cast_helper<typename Traits::argument_t<Is>>(args[Is])...));
+                func, any_cast_helper<typename Traits::template argument_t<Is>>(
+                          args[Is])...));
         }
     }
 
@@ -217,15 +219,15 @@ private:
                     std::reference_wrapper<typename Traits::class_type>>(
                     args[0])
                     .get();
-            return invokeFunc(obj,
-                              any_cast_helper<typename Traits::argument_t<Is>>(
-                                  args[Is + 1])...);
+            return invokeFunc(
+                obj, any_cast_helper<typename Traits::template argument_t<Is>>(
+                         args[Is + 1])...);
         } else {
             auto &obj = const_cast<typename Traits::class_type &>(
                 std::any_cast<const typename Traits::class_type &>(args[0]));
-            return invokeFunc(obj,
-                              any_cast_helper<typename Traits::argument_t<Is>>(
-                                  args[Is + 1])...);
+            return invokeFunc(
+                obj, any_cast_helper<typename Traits::template argument_t<Is>>(
+                         args[Is + 1])...);
         }
     }
 };
@@ -236,7 +238,7 @@ struct TimerProxyFunction {
     using Traits = FunctionTraits<Func>;
     static constexpr std::size_t N = Traits::arity;
 
-    explicit TimerProxyFunction(Func &&f) : func(std::forward<Func>(f)) {}
+    explicit TimerProxyFunction(Func &&func) : func(std::move(func)) {}
 
     std::any operator()(const std::vector<std::any> &args,
                         std::chrono::milliseconds timeout) {
@@ -273,11 +275,12 @@ private:
     template <std::size_t... Is>
     void collectArgumentTypes(std::index_sequence<Is...>) {
         (info.argumentTypes.push_back(
-             DemangleHelper::DemangleType<typename Traits::argument_t<Is>>()),
+             DemangleHelper::DemangleType<
+                 typename Traits::template argument_t<Is>>()),
          ...);
     }
 
-    void logArgumentTypes() {
+    void logArgumentTypes() const {
 #if ENABLE_DEBUG
         std::cout << "Function Arity: " << N << "\n";
         info.logFunctionInfo();
@@ -290,14 +293,16 @@ private:
                                      std::index_sequence<Is...>) {
         auto task = [this, &args]() -> std::any {
             if constexpr (std::is_void_v<typename Traits::return_type>) {
-                std::invoke(func,
-                            std::any_cast<typename Traits::argument_t<Is>>(
-                                args[Is])...);
+                std::invoke(
+                    func,
+                    std::any_cast<typename Traits::template argument_t<Is>>(
+                        args[Is])...);
                 return {};
             } else {
                 return std::make_any<typename Traits::return_type>(std::invoke(
-                    func, std::any_cast<typename Traits::argument_t<Is>>(
-                              args[Is])...));
+                    func,
+                    std::any_cast<typename Traits::template argument_t<Is>>(
+                        args[Is])...));
             }
         };
 
@@ -314,17 +319,19 @@ private:
                     std::reference_wrapper<typename Traits::class_type>>(
                     args[0])
                     .get();
-            auto bound_func = std::bind(func, obj, std::placeholders::_1);
+            auto bound_func = std::bind_front(func, obj, std::placeholders::_1);
 
             if constexpr (std::is_void_v<typename Traits::return_type>) {
-                std::invoke(bound_func,
-                            std::any_cast<typename Traits::argument_t<Is>>(
-                                args[Is + 1])...);
+                std::invoke(
+                    bound_func,
+                    std::any_cast<typename Traits::template argument_t<Is>>(
+                        args[Is + 1])...);
                 return {};
             } else {
                 return std::make_any<typename Traits::return_type>(std::invoke(
-                    bound_func, std::any_cast<typename Traits::argument_t<Is>>(
-                                    args[Is + 1])...));
+                    bound_func,
+                    std::any_cast<typename Traits::template argument_t<Is>>(
+                        args[Is + 1])...));
             }
         };
 
@@ -333,7 +340,7 @@ private:
 
     template <typename TaskFunc>
     std::any executeWithTimeout(TaskFunc task,
-                                std::chrono::milliseconds timeout) {
+                                std::chrono::milliseconds timeout) const {
         std::packaged_task<std::any()> packaged_task(std::move(task));
         std::future<std::any> future = packaged_task.get_future();
 #if __cplusplus >= 201703L

@@ -31,7 +31,7 @@
 
 class Arg {
 public:
-    Arg(const std::string& name) : name(name) {}
+    explicit Arg(const std::string& name) : name(name) {}
     Arg(const std::string& name, std::any default_value)
         : name(name), default_value(default_value) {}
 
@@ -95,11 +95,36 @@ public:
     std::vector<std::string> getAllCommands() const;
 
 private:
+    struct Command;
+
     template <typename ArgsType>
     std::any dispatchHelper(const std::string& name, const ArgsType& args);
 
     template <typename... Args>
     std::vector<std::any> convertToArgsVector(std::tuple<Args...>&& tuple);
+
+    auto findCommand(const std::string& name);
+
+    template <typename ArgsType>
+    std::vector<std::any> completeArgs(const Command& cmd,
+                                       const ArgsType& args);
+
+    void checkPrecondition(const Command& cmd, const std::string& name);
+
+    std::any executeCommand(const Command& cmd, const std::string& name,
+                            const std::vector<std::any>& args);
+
+    std::any executeWithTimeout(const Command& cmd, const std::string& name,
+                                const std::vector<std::any>& args,
+                                const std::chrono::duration<double>& timeout);
+
+    std::any executeWithoutTimeout(const Command& cmd, const std::string& name,
+                                   const std::vector<std::any>& args);
+
+    std::any executeFunctions(const Command& cmd,
+                              const std::vector<std::any>& args);
+
+    std::string computeFunctionHash(const std::vector<std::any>& args);
 
 private:
     struct Command {

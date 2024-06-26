@@ -41,7 +41,19 @@ namespace atom::system {
  * @brief Get host IP addresses
  * @return Vector of host IP addresses
  */
-std::vector<std::string> getHostIPs();
+[[nodiscard]] std::vector<std::string> getHostIPs();
+
+/**
+ * @brief Get IPv4 addresses
+ * @return Vector of IPv4 addresses
+ */
+[[nodiscard]] std::vector<std::string> getIPv4Addresses();
+
+/**
+ * @brief Get IPv6 addresses
+ * @return Vector of IPv6 addresses
+ */
+[[nodiscard]] std::vector<std::string> getIPv6Addresses();
 }  // namespace atom::system
 
 #endif

@@ -155,7 +155,7 @@ constexpr std::size_t find(const char (&str)[N], char ch) {
 }
 
 template <std::size_t N>
-constexpr std::size_t length(const char (&str)[N]) {
+constexpr std::size_t length([[maybe_unused]] const char (&str)[N]) {
     return N - 1;
 }
 

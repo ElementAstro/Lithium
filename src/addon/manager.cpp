@@ -22,9 +22,9 @@ Description: Component Manager (the core of the plugin system)
 #include "sort.hpp"
 
 #include "atom/error/exception.hpp"
+#include "atom/function/global_ptr.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
-#include "atom/function/global_ptr.hpp"
 #include "atom/utils/ranges.hpp"
 #include "atom/utils/string.hpp"
 
@@ -71,22 +71,24 @@ ComponentManager::ComponentManager() : m_Sandbox(nullptr), m_Compiler(nullptr) {
 ComponentManager::~ComponentManager() {}
 
 bool ComponentManager::Initialize() {
-    // Check if the module path is valid or reset by the user
-    // Default path is ./modules
-    const std::string &module_path = m_Env.lock()->getEnv(
-        constants::ENV_VAR_MODULE_PATH, constants::MODULE_FOLDER);
-    m_module_path = m_Env.lock()->getEnv(constants::ENV_VAR_MODULE_PATH,
-                                         constants::MODULE_FOLDER);
+    auto env_lock = m_Env.lock();
+    if (!env_lock) {
+        LOG_F(ERROR, "Failed to lock environment");
+        return false;
+    }
 
-    // make a loading list of modules
-    const std::vector<std::string> &qualified_subdirs =
-        resolveDependencies(getQualifiedSubDirs(module_path));
+    m_module_path = env_lock->getEnv(constants::ENV_VAR_MODULE_PATH,
+                                     constants::MODULE_FOLDER);
+
+    const auto &qualified_subdirs =
+        resolveDependencies(getQualifiedSubDirs(m_module_path));
     if (qualified_subdirs.empty()) {
         LOG_F(INFO, "No modules found, just skip loading modules");
         return true;
     }
+
     LOG_F(INFO, "Loading modules from: {}", m_module_path);
-    // List all of the available modules folders
+
 #if ENABLE_DEBUG
     LOG_F(INFO, "Available modules:");
     for (const auto &dir : qualified_subdirs) {
@@ -94,42 +96,42 @@ bool ComponentManager::Initialize() {
     }
 #endif
 
-    for (const auto &dir : qualified_subdirs) {
-        std::filesystem::path path = std::filesystem::path(module_path) / dir;
+    auto addon_manager_lock = m_AddonManager.lock();
+    if (!addon_manager_lock) {
+        LOG_F(ERROR, "Failed to lock addon manager");
+        return false;
+    }
 
-        if (!m_AddonManager.lock()->addModule(path, dir)) {
+    for (const auto &dir : qualified_subdirs) {
+        std::filesystem::path path = std::filesystem::path(m_module_path) / dir;
+
+        if (!addon_manager_lock->addModule(path, dir)) {
             LOG_F(ERROR, "Failed to load module: {}", path.string());
             continue;
         }
-        // Get addon's package.json
-        const json &addon_info = m_AddonManager.lock()->getModule(dir);
+
+        const auto &addon_info = addon_manager_lock->getModule(dir);
         if (!addon_info.is_object() || !addon_info.contains("name") ||
             !addon_info["name"].is_string()) {
             LOG_F(ERROR, "Invalid module name: {}", path.string());
             continue;
         }
+
         auto addon_name = addon_info["name"].get<std::string>();
         LOG_F(INFO, "Start loading addon: {}", addon_name);
-        // Check if the addon info is valid
-        if (!addon_info.contains("modules")) {
-            LOG_F(ERROR,
-                  "Failed to load module {}: Missing modules field in module "
-                  "info",
-                  path.string());
-            m_AddonManager.lock()->removeModule(dir);
-            continue;
-        }
-        if (addon_info["modules"].is_null() ||
+
+        if (!addon_info.contains("modules") ||
             !addon_info["modules"].is_array()) {
-            LOG_F(ERROR, "Failed to load module {}: Modules field is null",
+            LOG_F(ERROR,
+                  "Failed to load module {}: Missing or invalid modules field",
                   path.string());
-            m_AddonManager.lock()->removeModule(dir);
+            addon_manager_lock->removeModule(dir);
             continue;
         }
-        // loading
-        for (const auto &component_info :
-             addon_info["modules"].get<json::array_t>()) {
-            if (component_info.is_null() || !component_info.contains("name") ||
+
+        for (const auto &component_info : addon_info["modules"]) {
+            if (!component_info.is_object() ||
+                !component_info.contains("name") ||
                 !component_info.contains("entry") ||
                 !component_info["name"].is_string() ||
                 !component_info["entry"].is_string()) {
@@ -138,28 +140,28 @@ bool ComponentManager::Initialize() {
                       path.string(), component_info.dump());
                 continue;
             }
+
             auto component_name = component_info["name"].get<std::string>();
             auto entry = component_info["entry"].get<std::string>();
-            auto dependencies = component_info.contains("dependencies")
-                                    ? component_info["dependencies"]
-                                          .get<std::vector<std::string>>()
-                                    : std::vector<std::string>();
+            auto dependencies = component_info.value(
+                "dependencies", std::vector<std::string>{});
             auto module_path =
                 path / (component_name + std::string(constants::LIB_EXTENSION));
             auto component_full_name = addon_name + "." + component_name;
+
             if (!loadComponentInfo(path.string(), component_full_name)) {
                 LOG_F(ERROR, "Failed to load addon package.json {}/{}",
                       path.string(), component_full_name);
                 return false;
             }
+
             if (!loadSharedComponent(component_name, addon_name,
                                      module_path.string(), entry,
                                      dependencies)) {
                 LOG_F(ERROR, "Failed to load module {}/{}", path.string(),
                       component_name);
-                // Max: We will directly throw a exception here, just like what
-                // Minecraft does
-                THROW_EXCEPTION("Failed to load module", component_name);
+                throw std::runtime_error("Failed to load module: " +
+                                         component_name);
             }
         }
     }
@@ -330,40 +332,47 @@ bool ComponentManager::loadComponentInfo(const std::string &module_path,
 
 bool ComponentManager::checkComponentInfo(const std::string &module_name,
                                           const std::string &component_name) {
-    auto it = m_ComponentInfos.find(module_name);
-    if (it == m_ComponentInfos.end()) {
+    if (auto it = m_ComponentInfos.find(module_name);
+        it == m_ComponentInfos.end()) {
         LOG_F(ERROR, "Component {} does not contain package.json file",
               module_name);
         return false;
-    }
-    const auto component_info = m_ComponentInfos[module_name];
+    } else {
+        const auto &component_info = it->second;
 
-    if (!component_info.contains("modules") ||
-        !component_info["modules"].is_array()) {
-        LOG_F(ERROR, "Component {} does not contain mmodules", module_name);
-        return false;
-    }
-    for (const auto &module : component_info["modules"]) {
-        if (!module.contains("name") || !module["name"].is_string() ||
-            !module.contains("entry") || !module["entry"].is_string()) {
-            LOG_F(ERROR, "Component {} does not contain name or entry",
-                  module_name);
+        if (!component_info.contains("modules") ||
+            !component_info["modules"].is_array()) {
+            LOG_F(ERROR, "Component {} does not contain modules", module_name);
             return false;
         }
-        if (module["name"] == component_name) {
-            auto func_name = module["entry"].get<std::string>();
-            if (!m_ModuleLoader.lock()->HasFunction(module_name, func_name)) {
-                LOG_F(ERROR, "Failed to load module: {}'s function {}",
-                      component_name, func_name);
+
+        for (const auto &module : component_info["modules"]) {
+            if (!module.contains("name") || !module["name"].is_string() ||
+                !module.contains("entry") || !module["entry"].is_string()) {
+                LOG_F(ERROR, "Component {} does not contain name or entry",
+                      module_name);
                 return false;
             }
-            m_ComponentEntries[component_name] =
-                std::make_shared<ComponentEntry>(component_name, func_name,
-                                                 "shared", module_name);
-            return true;
+
+            if (module["name"] == component_name) {
+                auto func_name = module["entry"].get<std::string>();
+
+                if (auto module_loader_lock = m_ModuleLoader.lock();
+                    module_loader_lock &&
+                    !module_loader_lock->HasFunction(module_name, func_name)) {
+                    LOG_F(ERROR, "Failed to load module: {}'s function {}",
+                          component_name, func_name);
+                    return false;
+                }
+
+                m_ComponentEntries[component_name] =
+                    std::make_shared<ComponentEntry>(component_name, func_name,
+                                                     "shared", module_name);
+                return true;
+            }
         }
+        return false;
     }
-    return false;
 }
 
 bool ComponentManager::unloadComponent(ComponentType component_type,
@@ -458,42 +467,44 @@ bool ComponentManager::loadSharedComponent(
     const std::string &module_path, const std::string &entry,
     const std::vector<std::string> &dependencies) {
     auto component_full_name = addon_name + "." + component_name;
-
     DLOG_F(INFO, "Loading module: {}", component_full_name);
+
 #ifdef _WIN32
-    // This is to pass file name check
     auto module_path_str = atom::utils::replaceString(module_path, "/", "\\");
 #else
     auto module_path_str = atom::utils::replaceString(module_path, "\\", "/");
 #endif
 
-    // This step is to load the dynamic library
-    if (!m_ModuleLoader.lock()->LoadModule(module_path_str,
-                                           component_full_name)) {
+    auto module_loader = m_ModuleLoader.lock();
+    if (!module_loader) {
+        LOG_F(ERROR, "Failed to lock module loader");
+        return false;
+    }
+
+    if (!module_loader->LoadModule(module_path_str, component_full_name)) {
         LOG_F(ERROR, "Failed to load module: {}", module_path_str);
         return false;
     }
+
     if (entry.empty()) {
         LOG_F(ERROR, "Failed to load module: {}/{}", module_path,
               component_name);
         return false;
     }
-    // get the component shared_ptr from dynamic library
-    if (auto component = m_ModuleLoader.lock()->GetInstance<Component>(
+
+    if (auto component = module_loader->GetInstance<Component>(
             component_full_name, {}, entry);
         component) {
         LOG_F(INFO, "Loaded shared component: {}", component_full_name);
-        // Inject all of the component dependencies
-        // Remember that the dependencies must be injected before
-        // initialization
+
         try {
             for (const auto &dependency : dependencies) {
-                // Check if the dependency is a string
                 if (!dependency.empty()) {
                     component->addOtherComponent(
                         dependency, GetWeakPtr<Component>(dependency));
+                } else {
+                    LOG_F(WARNING, "Empty dependency detected");
                 }
-                { LOG_F(WARNING, "Empty dependency detected"); }
             }
         } catch (const json::exception &e) {
             LOG_F(ERROR, "Failed to load shared component: {} {}",
@@ -502,23 +513,25 @@ bool ComponentManager::loadSharedComponent(
         }
 
         try {
-            // Initialize the component
             if (component->initialize()) {
                 m_Components[component_full_name] = component;
-                // Inject it into GSPM
                 AddPtr(component_full_name, component);
                 LOG_F(INFO, "Loaded shared component: {}", component_full_name);
-                auto component_entry = std::make_shared<ComponentEntry>(
-                    component_name, entry, "shared", module_path);
-                m_ComponentEntries[component_full_name] = component_entry;
+
+                m_ComponentEntries[component_full_name] =
+                    std::make_shared<ComponentEntry>(component_name, entry,
+                                                     "shared", module_path);
                 return true;
             }
         } catch (const std::exception &e) {
+            LOG_F(ERROR, "Failed to initialize shared component: {} {}",
+                  component_full_name, e.what());
         }
-        LOG_F(ERROR, "Failed to initialize shared component: {}",
+    } else {
+        LOG_F(ERROR, "Failed to load shared component: {}",
               component_full_name);
     }
-    LOG_F(ERROR, "Failed to load shared component: {}", component_full_name);
+
     return false;
 }
 

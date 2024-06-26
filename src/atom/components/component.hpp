@@ -20,6 +20,7 @@ Description: Basic Component Definition
 
 #include "dispatch.hpp"
 #include "macro.hpp"
+#include "module_macro.hpp"
 #include "registry.hpp"
 #include "types.hpp"
 #include "var.hpp"
@@ -40,7 +41,7 @@ public:
     /**
      * @brief Destroys the Component object.
      */
-    virtual ~Component();
+    virtual ~Component() = default;
 
     // -------------------------------------------------------------------
     // Inject methods
@@ -107,7 +108,7 @@ public:
     }
 
     void setStringOptions(const std::string& name,
-                          std::vector<std::string> options) {
+                          const std::vector<std::string>& options) {
         m_VariableManager->setStringOptions(name, options);
     }
 
@@ -304,11 +305,11 @@ public:
     void def_class_conversion(
         const std::shared_ptr<atom::meta::Type_Conversion_Base>& conversion);
 
-    void addAlias(const std::string& name, const std::string& alias);
+    void addAlias(const std::string& name, const std::string& alias) const;
 
-    void addGroup(const std::string& name, const std::string& group);
+    void addGroup(const std::string& name, const std::string& group) const;
 
-    void setTimeout(const std::string& name, std::chrono::milliseconds timeout);
+    void setTimeout(const std::string& name, std::chrono::milliseconds timeout) const;
 
     template <typename... Args>
     std::any dispatch(const std::string& name, Args&&... args) {
@@ -316,7 +317,7 @@ public:
     }
 
     std::any dispatch(const std::string& name,
-                      const std::vector<std::any>& args) {
+                      const std::vector<std::any>& args) const {
         return m_CommandDispatcher->dispatch(name, args);
     }
 
@@ -327,7 +328,7 @@ public:
     template <typename SourceType, typename DestinationType>
     [[nodiscard]] bool has_conversion() const;
 
-    void removeCommand(const std::string& name);
+    void removeCommand(const std::string& name) const;
 
     std::vector<std::string> getCommandsInGroup(const std::string& group) const;
 
@@ -379,23 +380,26 @@ private:
                           InstanceType instance, const std::string& group = "",
                           const std::string& description = "");
 
-private:
     std::string m_name;
     std::string m_doc;
     std::string m_configPath;
     std::string m_infoPath;
-    atom::meta::Type_Info m_typeInfo;
+    atom::meta::Type_Info m_typeInfo{atom::meta::user_type<Component>()};
     std::unordered_map<std::string_view, atom::meta::Type_Info> m_classes;
 
-    std::shared_ptr<CommandDispatcher>
-        m_CommandDispatcher;  ///< The command dispatcher for managing commands.
-    std::shared_ptr<VariableManager>
-        m_VariableManager;  ///< The variable registry for managing variables.
+    std::shared_ptr<CommandDispatcher> m_CommandDispatcher{
+        std::make_shared<CommandDispatcher>()};  ///< The command dispatcher for
+                                                 ///< managing commands.
+    std::shared_ptr<VariableManager> m_VariableManager{
+        std::make_shared<VariableManager>()};  ///< The variable registry for
+                                               ///< managing variables.
 
     std::unordered_map<std::string, std::weak_ptr<Component>> m_OtherComponents;
 
-    std::shared_ptr<atom::meta::TypeCaster> m_TypeCaster;
-    std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter;
+    std::shared_ptr<atom::meta::TypeCaster> m_TypeCaster{
+        atom::meta::TypeCaster::createShared()};
+    std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter{
+        atom::meta::TypeConversions::createShared()};
 };
 
 #include "component.inl"

@@ -22,6 +22,7 @@ Description: Inter-process shared memory for local driver communication.
 #include <thread>
 #include <type_traits>
 
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
@@ -124,13 +125,13 @@ SharedMemory<T>::SharedMemory(std::string_view name, bool create)
             sizeof(T) + sizeof(std::atomic_flag), name.data());
         if (handle_ == nullptr) {
             LOG_F(ERROR, "Failed to create file mapping.");
-            throw std::runtime_error("Failed to create file mapping.");
+            THROW_FAIL_TO_OPEN_FILE("Failed to create file mapping.");
         }
     } else {
         handle_ = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, name.data());
         if (handle_ == nullptr) {
             LOG_F(ERROR, "Failed to open file mapping.");
-            throw std::runtime_error("Failed to open file mapping.");
+            THROW_FAIL_TO_OPEN_FILE("Failed to open file mapping.");
         }
     }
 
@@ -139,7 +140,7 @@ SharedMemory<T>::SharedMemory(std::string_view name, bool create)
     if (buffer_ == nullptr) {
         CloseHandle(handle_);
         LOG_F(ERROR, "Failed to map view of file.");
-        throw std::runtime_error("Failed to map view of file.");
+        THROW_UNLAWFUL_OPERATION("Failed to map view of file.");
     }
 #else  // Unix-like
     if (is_creator_) {

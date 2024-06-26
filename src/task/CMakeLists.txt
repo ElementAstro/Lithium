@@ -17,6 +17,7 @@ set(PROJECT_SOURCES
     manager.cpp
     pool.cpp
     singlepool.cpp
+    task.cpp
     tick.cpp
 )
 

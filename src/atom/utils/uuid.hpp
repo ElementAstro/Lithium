@@ -21,6 +21,8 @@ Description: UUID Generator
 #include <sstream>
 #include <string>
 
+#include <openssl/evp.h>
+
 namespace atom::utils {
 /**
  * @class UUID
@@ -152,9 +154,7 @@ private:
      * @param version The version of the UUID to be generated.
      * @return A UUID generated from the name.
      */
-    template <typename CTX, int (*INIT)(CTX*),
-              int (*UPDATE)(CTX*, const void*, size_t),
-              int (*FINAL)(unsigned char*, CTX*)>
+    template <const EVP_MD* (*DIGEST)()>
     static UUID generate_name_based(const UUID& namespace_uuid,
                                     const std::string& name, int version);
 
@@ -166,6 +166,28 @@ private:
 
     std::array<uint8_t, 16> data;  ///< The internal storage of the UUID.
 };
+
+template <const EVP_MD* (*DIGEST)()>
+UUID UUID::generate_name_based(const UUID& namespace_uuid,
+                               const std::string& name, int version) {
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, DIGEST(), nullptr);
+    EVP_DigestUpdate(ctx, namespace_uuid.data.data(),
+                     namespace_uuid.data.size());
+    EVP_DigestUpdate(ctx, name.data(), name.size());
+    std::array<uint8_t, EVP_MAX_MD_SIZE> hash;
+    unsigned int hash_len;
+    EVP_DigestFinal_ex(ctx, hash.data(), &hash_len);
+    EVP_MD_CTX_free(ctx);
+
+    std::array<uint8_t, 16> uuid_data;
+    std::copy_n(hash.begin(), 16, uuid_data.begin());
+
+    uuid_data[6] = (uuid_data[6] & 0x0F) | (version << 4);  // Set version
+    uuid_data[8] = (uuid_data[8] & 0x3F) | 0x80;            // Set variant
+
+    return UUID(uuid_data);
+}
 
 /**
  * @brief Generates a unique UUID and returns it as a string.

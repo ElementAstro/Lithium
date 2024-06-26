@@ -265,4 +265,39 @@ std::pair<int, int> get_terminal_size() {
 
 #endif
 
+bool supportsColor() {
+#ifdef _WIN32
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    DWORD dwMode = 0;
+    if (!GetConsoleMode(hOut, &dwMode)) {
+        return false;
+    }
+
+    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    if (!SetConsoleMode(hOut, dwMode)) {
+        return false;
+    }
+
+    return true;
+#else
+    const char* term = std::getenv("TERM");
+    if (term == nullptr) {
+        return false;
+    }
+
+    std::string termStr(term);
+    return (termStr == "xterm" || termStr == "xterm-color" ||
+            termStr == "xterm-256color" || termStr == "screen" ||
+            termStr == "screen-256color" || termStr == "tmux" ||
+            termStr == "tmux-256color" || termStr == "rxvt-unicode" ||
+            termStr == "rxvt-unicode-256color" || termStr == "linux" ||
+            termStr == "cygwin") &&
+           isatty(fileno(stdout));
+#endif
+}
+
 }  // namespace lithium::debug

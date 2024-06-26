@@ -27,6 +27,7 @@
 
 namespace lithium::debug {
 class SuggestionEngine;  // Forwards declaration
+class CommandChecker;
 class ConsoleTerminal {
 public:
     ConsoleTerminal();
@@ -51,6 +52,8 @@ private:
     static constexpr int MAX_HISTORY_SIZE = 100;
 
     std::shared_ptr<SuggestionEngine> suggestionEngine;
+
+    std::shared_ptr<CommandChecker> commandChecker;
 
     std::shared_ptr<Component> component;
 

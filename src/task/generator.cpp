@@ -15,22 +15,22 @@ Description: Task Generator
 #include "generator.hpp"
 #include "task.hpp"
 
-#include "atom/io/io.hpp"
-#include "atom/log/loguru.hpp"
-#include "atom/utils/string.hpp"
-
 #include <fstream>
 #include <future>
 #include <regex>
 
+#include "atom/error/exception.hpp"
+#include "atom/io/io.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/utils/string.hpp"
+#include "atom/utils/to_string.hpp"
+
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
 using namespace std::literals;
 
 namespace lithium {
 TaskGenerator::TaskGenerator() {
-    // Add some default macros
-    add_macro("name", "John Doe"s);
-    add_macro("email", "john.doe@example.com"s);
-    add_macro("choice", "A"s);
     add_macro("uppercase", [](const std::vector<std::string>& args) {
         std::string result = args[0];
         std::transform(result.begin(), result.end(), result.begin(), ::toupper);
@@ -45,7 +45,7 @@ TaskGenerator::TaskGenerator() {
     });
     add_macro("if", [](const std::vector<std::string>& args) {
         if (args.size() < 3)
-            throw std::runtime_error("if macro requires 3 arguments");
+            THROW_INVALID_ARGUMENT("if macro requires 3 arguments");
         return args[0] == "true" ? args[1] : args[2];
     });
     add_macro("length", [](const std::vector<std::string>& args) {
@@ -62,12 +62,6 @@ TaskGenerator::TaskGenerator() {
         std::string result = args[0];
         std::transform(result.begin(), result.end(), result.begin(), ::tolower);
         return result;
-    });
-    add_macro("sqrt", [](const std::vector<std::string>& args) {
-        if (args.size() != 1)
-            throw std::runtime_error("sqrt macro requires 1 argument");
-        double value = std::stod(args[0]);
-        return std::to_string(std::sqrt(value));
     });
     add_macro("repeat", [](const std::vector<std::string>& args) {
         if (args.size() != 2)

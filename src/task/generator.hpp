@@ -26,21 +26,19 @@ Description: Task Generator
 #include <variant>
 #include <vector>
 
-#include "atom/type/json.hpp"
-
-using json = nlohmann::json;
+#include "atom/type/json_fwd.hpp"
 
 namespace lithium {
-using MacroValue =
-    std::variant<std::string, json,
-                 std::function<json(const std::vector<std::string>&)>>;
+using MacroValue = std::variant<
+    std::string, nlohmann::json,
+    std::function<nlohmann::json(const std::vector<std::string>&)>>;
 class TaskGenerator {
 public:
     TaskGenerator();
 
     void add_macro(const std::string& name, const MacroValue& value);
-    void process_json(json& j) const;
-    void process_json_with_json_macros(json& j);
+    void process_json(nlohmann::json& j) const;
+    void process_json_with_json_macros(nlohmann::json& j);
 
 private:
     std::unordered_map<std::string, MacroValue> macros;

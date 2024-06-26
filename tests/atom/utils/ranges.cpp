@@ -1,5 +1,6 @@
 #include "atom/utils/ranges.hpp"
 #include <gtest/gtest.h>
+#include <list>
 #include <map>
 #include <numeric>
 #include <string>
@@ -7,6 +8,7 @@
 #include <vector>
 
 using namespace std::literals;
+using namespace atom::utils;
 
 TEST(RangesTest, FilterAndTransform) {
     std::vector<int> numbers = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -107,7 +109,92 @@ TEST(RangesTest, SliceContainer) {
     EXPECT_EQ(result, expected);
 }
 
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+class ViewsTest : public ::testing::Test {
+protected:
+    std::vector<int> v1 = {1, 2, 3, 4, 5};
+    std::vector<int> v2 = {10, 20, 30, 40, 50};
+    std::array<int, 3> a = {1, 3, 7};
+    std::array<int, 4> b = {2, 4, 5, 9};
+};
+
+TEST_F(ViewsTest, MergeViewTest) {
+    std::vector<int> expected = {1, 2, 3, 4, 5, 7, 9};
+    std::vector<int> result;
+
+    for (auto i : merge_view(a, b)) {
+        result.push_back(i);
+    }
+
+    EXPECT_EQ(result, expected);
+}
+
+TEST_F(ViewsTest, ZipViewTest) {
+    std::vector<std::pair<int, int>> expected = {
+        {1, 10}, {2, 20}, {3, 30}, {4, 40}, {5, 50}};
+    std::vector<std::pair<int, int>> result;
+
+    for (auto [a, b] : zip_view(v1, v2)) {
+        result.emplace_back(a, b);
+    }
+
+    EXPECT_EQ(result, expected);
+}
+
+TEST_F(ViewsTest, ChunkViewTest) {
+    std::vector<std::vector<int>> expected = {{1, 2}, {3, 4}, {5}};
+    std::vector<std::vector<int>> result;
+
+    for (auto chunk : chunk_view(v1, 2)) {
+        result.push_back(chunk);
+    }
+
+    EXPECT_EQ(result, expected);
+}
+
+TEST_F(ViewsTest, FilterViewTest) {
+    std::vector<int> expected = {2, 4};
+    std::vector<int> result;
+
+    for (auto i : filter_view(v1, [](int x) { return x % 2 == 0; })) {
+        result.push_back(i);
+    }
+
+    EXPECT_EQ(result, expected);
+}
+
+TEST_F(ViewsTest, TransformViewTest) {
+    std::vector<int> expected = {1, 4, 9, 16, 25};
+    std::vector<int> result;
+
+    for (auto i : transform_view(v1, [](int x) { return x * x; })) {
+        result.push_back(i);
+    }
+
+    EXPECT_EQ(result, expected);
+}
+
+TEST_F(ViewsTest, AdjacentViewTest) {
+    std::vector<std::pair<int, int>> expected = {
+        {1, 2}, {2, 3}, {3, 4}, {4, 5}};
+    std::vector<std::pair<int, int>> result;
+
+    for (auto [a, b] : adjacent_view(v1)) {
+        result.emplace_back(a, b);
+    }
+
+    EXPECT_EQ(result, expected);
+}
+
+// 测试不同类型的组合
+TEST_F(ViewsTest, MixedTypeTest) {
+    std::vector<double> doubles = {1.1, 2.2, 3.3};
+    std::list<int> ints = {1, 2, 3};
+
+    auto result = zip_view(doubles, ints);
+    int count = 0;
+    for (auto [d, i] : result) {
+        EXPECT_DOUBLE_EQ(d, static_cast<double>(i) + 0.1);
+        count++;
+    }
+    EXPECT_EQ(count, 3);
 }

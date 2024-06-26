@@ -14,6 +14,10 @@ Description: Useful Macros
 
 #pragma once
 
+#if defined(__has_include) && __has_include(<source_location>)
+#include <source_location>
+#endif
+
 #define ATOM_MACRO_HPP
 //-------------------------------------------------------------------------------
 // unused
@@ -129,19 +133,19 @@ Description: Useful Macros
 
 // PTR_SIZE
 #ifdef _WIN32
-    #ifdef _WIN64
-        #define ATOM_PTR_SIZE 8
-    #else
-        #define ATOM_PTR_SIZE 4
-    #endif
+#ifdef _WIN64
+constexpr std::size_t ATOM_PTR_SIZE = 8;
 #else
-    #if INTPTR_MAX == 0x7FFFFFFFFFFFFFFFLL
-        #define ATOM_PTR_SIZE 8
-    #elif INTPTR_MAX == 0x7FFFFFFF
-        #define ATOM_PTR_SIZE 4
-    #else
-        #error unsupported platform
-    #endif
+constexpr std::size_t ATOM_PTR_SIZE = 4;
+#endif
+#else
+#if INTPTR_MAX == INT64_MAX
+constexpr std::size_t ATOM_PTR_SIZE = 8;
+#elif INTPTR_MAX == INT32_MAX
+constexpr std::size_t ATOM_PTR_SIZE = 4;
+#else
+static_assert(false, "unsupported platform");
+#endif
 #endif
 
 // NO_VTABLE
@@ -176,7 +180,7 @@ Description: Useful Macros
 #endif
 
 #if defined(__cplusplus)
-#define ATOM_DECLARE_ZERO(type, var)                             \
+#define ATOM_DECLARE_ZERO(type, var)                            \
     static_assert(std::is_trivially_constructible<type>::value, \
                   "not trival, 0 init is invalid!");            \
     type var = {};
@@ -187,12 +191,12 @@ Description: Useful Macros
 // VLA
 #ifndef __cplusplus
 #if defined(_MSC_VER) && !defined(__clang__)
-#define ATOM_DECLARE_ZERO_VLA(type, var, num)          \
+#define ATOM_DECLARE_ZERO_VLA(type, var, num)         \
     type* var = (type*)_alloca(sizeof(type) * (num)); \
     memset((void*)(var), 0, sizeof(type) * (num));
 #else
 #define ATOM_DECLARE_ZERO_VLA(type, var, num) \
-    type var[(num)];                         \
+    type var[(num)];                          \
     memset((void*)(var), 0, sizeof(type) * (num));
 #endif
 #endif
@@ -213,8 +217,18 @@ Description: Useful Macros
 #define ATOM_MAKE_STRING(...) ATOM_STRINGIZING(__VA_ARGS__)
 #endif
 
-#ifndef ATOM_FILE_LINE
-#define ATOM_FILE_LINE __FILE__ ":" ATOM_MAKE_STRING(__LINE__)
+#if defined(__has_include) && __has_include(<source_location>)
+#define ATOM_FILE_LINE std::source_location::current().line()
+#define ATOM_FILE_NAME std::source_location::current().file_name()
+#define ATOM_FILE_LINE_NAME                                         \
+    std::source_location::current().file_name() ":" std::to_string( \
+        std::source_location::current().line())
+#define ATOM_FUNC_NAME std::source_location::current().function_name()
+#else
+#define ATOM_FILE_LINE ATOM_MAKE_STRING(__LINE__)
+#define ATOM_FILE_NAME __FILE__
+#define ATOM_FILE_LINE_NAME __FILE__ ":" ATOM_MAKE_STRING(__LINE__)
+#define ATOM_FUNC_NAME __func__
 #endif
 
 #pragma endregion
@@ -249,31 +263,31 @@ typedef char char8_t;
 
 #ifdef __cplusplus
 #define ATOM_DECLARE_TYPE_ID_FWD(ns, type, ctype) \
-    namespace ns {                               \
-    struct type;                                 \
-    }                                            \
-    using ctype##_t = ns::type;                  \
+    namespace ns {                                \
+    struct type;                                  \
+    }                                             \
+    using ctype##_t = ns::type;                   \
     using ctype##_id = ns::type*;
 #else
 #define ATOM_DECLARE_TYPE_ID_FWD(ns, type, ctype) \
-    typedef struct ctype##_t ctype##_t;          \
+    typedef struct ctype##_t ctype##_t;           \
     typedef struct ctype* ctype##_id;
 #endif
 
 #ifdef __cplusplus
 #define ATOM_DECLARE_TYPE_ID(type, ctype) \
-    typedef struct type ctype##_t;       \
+    typedef struct type ctype##_t;        \
     typedef type* ctype##_id;
 #else
 #define ATOM_DECLARE_TYPE_ID(type, ctype) \
-    typedef struct ctype##_t ctype##_t;  \
+    typedef struct ctype##_t ctype##_t;   \
     typedef ctype##_t* ctype##_id;
 #endif
 
 #pragma endregion
 
-#define ATOM_IS_BIG_ENDIAN 0
-#define ATOM_IS_LITTLE_ENDIAN 1
+constexpr bool ATOM_IS_BIG_ENDIAN = false;
+constexpr bool ATOM_IS_LITTLE_ENDIAN = true;
 
 #pragma region deprecated
 

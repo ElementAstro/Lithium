@@ -25,6 +25,7 @@ void move_cursor(int row, int col);
 void hide_cursor();
 void show_cursor();
 std::pair<int, int> get_terminal_size();
+bool supportsColor();
 }  // namespace lithium::debug
 
 #endif

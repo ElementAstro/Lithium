@@ -16,15 +16,21 @@ Description: Some ranges functions for C++20
 #define ATOM_EXPERIMENT_RANGES_HPP
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <concepts>
+#include <coroutine>
 #include <functional>
 #include <map>
 #include <numeric>
 #include <optional>
 #include <ranges>
 #include <thread>
+#include <utility>
+#include <variant>
 #include <vector>
 
+namespace atom::utils {
 /**
  * @brief Filters elements in a range satisfying a predicate and transforms them
  * using a function.
@@ -302,5 +308,255 @@ auto slice(Container& c, Index start, Index end) {
 
     return std::vector<typename Container::value_type>(first, last);
 }
+
+template <typename T>
+struct generator {
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    struct promise_type {
+        T value_;
+        std::suspend_always yield_value(T value) noexcept {
+            value_ = value;
+            return {};
+        }
+        std::suspend_always initial_suspend() noexcept { return {}; }
+        std::suspend_always final_suspend() noexcept { return {}; }
+        generator get_return_object() noexcept {
+            return generator{handle_type::from_promise(*this)};
+        }
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
+    };
+
+    handle_type handle_;
+    explicit generator(handle_type handle) : handle_(handle) {}
+    ~generator() {
+        if (handle_)
+            handle_.destroy();
+    }
+    generator(const generator&) = delete;
+    generator& operator=(const generator&) = delete;
+    generator(generator&& other) noexcept
+        : handle_(std::exchange(other.handle_, {})) {}
+    generator& operator=(generator&& other) noexcept {
+        if (std::addressof(other) != this) {
+            if (handle_)
+                handle_.destroy();
+            handle_ = std::exchange(other.handle_, {});
+        }
+        return *this;
+    }
+
+    struct iterator {
+        handle_type handle_;
+        bool done_ = false;
+
+        iterator() = default;
+        iterator(handle_type handle) : handle_(handle) { ++(*this); }
+
+        iterator& operator++() {
+            handle_.resume();
+            done_ = handle_.done();
+            return *this;
+        }
+
+        T operator*() const { return handle_.promise().value_; }
+        bool operator==(std::default_sentinel_t) const { return done_; }
+    };
+
+    iterator begin() { return iterator{handle_}; }
+    std::default_sentinel_t end() { return {}; }
+};
+
+// 特化版本以支持引用类型
+template <typename T>
+struct generator<T&> {
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    struct promise_type {
+        T* value_;
+        std::suspend_always yield_value(T& value) noexcept {
+            value_ = std::addressof(value);
+            return {};
+        }
+        std::suspend_always initial_suspend() noexcept { return {}; }
+        std::suspend_always final_suspend() noexcept { return {}; }
+        generator get_return_object() noexcept {
+            return generator{handle_type::from_promise(*this)};
+        }
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
+    };
+
+    handle_type handle_;
+    explicit generator(handle_type handle) : handle_(handle) {}
+    ~generator() {
+        if (handle_)
+            handle_.destroy();
+    }
+    generator(const generator&) = delete;
+    generator& operator=(const generator&) = delete;
+    generator(generator&& other) noexcept
+        : handle_(std::exchange(other.handle_, {})) {}
+    generator& operator=(generator&& other) noexcept {
+        if (std::addressof(other) != this) {
+            if (handle_)
+                handle_.destroy();
+            handle_ = std::exchange(other.handle_, {});
+        }
+        return *this;
+    }
+
+    struct iterator {
+        handle_type handle_;
+        bool done_ = false;
+
+        iterator() = default;
+        iterator(handle_type handle) : handle_(handle) { ++(*this); }
+
+        iterator& operator++() {
+            handle_.resume();
+            done_ = handle_.done();
+            return *this;
+        }
+
+        T& operator*() const { return *handle_.promise().value_; }
+        bool operator==(std::default_sentinel_t) const { return done_; }
+    };
+
+    iterator begin() { return iterator{handle_}; }
+    std::default_sentinel_t end() { return {}; }
+};
+
+struct merge_view_impl {
+    template <std::ranges::input_range R1, std::ranges::input_range R2>
+        requires std::common_reference_with<std::ranges::range_reference_t<R1>,
+                                            std::ranges::range_reference_t<R2>>
+    generator<std::common_reference_t<std::ranges::range_reference_t<R1>,
+                                      std::ranges::range_reference_t<R2>>>
+    operator()(R1&& r1, R2&& r2) {
+        auto it1 = std::ranges::begin(r1);
+        auto it2 = std::ranges::begin(r2);
+        auto end1 = std::ranges::end(r1);
+        auto end2 = std::ranges::end(r2);
+
+        while (it1 != end1 && it2 != end2) {
+            if (*it1 <= *it2) {
+                co_yield *it1;
+                ++it1;
+            } else {
+                co_yield *it2;
+                ++it2;
+            }
+        }
+
+        while (it1 != end1) {
+            co_yield *it1;
+            ++it1;
+        }
+
+        while (it2 != end2) {
+            co_yield *it2;
+            ++it2;
+        }
+    }
+} merge_view;
+
+struct zip_view_impl {
+    template <std::ranges::input_range... Rs>
+    generator<std::tuple<std::ranges::range_value_t<Rs>...>> operator()(
+        Rs&&... ranges) {
+        auto its = std::tuple{std::ranges::begin(ranges)...};
+        auto ends = std::tuple{std::ranges::end(ranges)...};
+
+        while (check_iterators(its, ends, std::index_sequence_for<Rs...>{})) {
+            co_yield get_values(its, std::index_sequence_for<Rs...>{});
+            increment_iterators(its, std::index_sequence_for<Rs...>{});
+        }
+    }
+
+private:
+    template <typename Tuple, size_t... Is>
+    static bool check_iterators(const Tuple& its, const Tuple& ends,
+                                std::index_sequence<Is...>) {
+        return ((std::get<Is>(its) != std::get<Is>(ends)) && ...);
+    }
+
+    template <typename Tuple, size_t... Is>
+    static auto get_values(const Tuple& its, std::index_sequence<Is...>) {
+        return std::tuple{*std::get<Is>(its)...};
+    }
+
+    template <typename Tuple, size_t... Is>
+    static void increment_iterators(Tuple& its, std::index_sequence<Is...>) {
+        (++std::get<Is>(its), ...);
+    }
+} zip_view;
+
+struct chunk_view_impl {
+    template <std::ranges::input_range R>
+    generator<std::vector<std::ranges::range_value_t<R>>> operator()(
+        R&& range, size_t chunk_size) {
+        std::vector<std::ranges::range_value_t<R>> chunk;
+        chunk.reserve(chunk_size);
+
+        for (auto&& elem : range) {
+            chunk.push_back(std::forward<decltype(elem)>(elem));
+            if (chunk.size() == chunk_size) {
+                co_yield std::move(chunk);
+                chunk.clear();
+            }
+        }
+
+        if (!chunk.empty()) {
+            co_yield std::move(chunk);
+        }
+    }
+} chunk_view;
+
+struct filter_view_impl {
+    template <std::ranges::input_range R,
+              std::invocable<std::ranges::range_reference_t<R>> Pred>
+    generator<std::ranges::range_reference_t<R>> operator()(R&& range,
+                                                            Pred pred) {
+        for (auto&& elem : range) {
+            if (pred(elem)) {
+                co_yield elem;
+            }
+        }
+    }
+} filter_view;
+
+struct transform_view_impl {
+    template <std::ranges::input_range R,
+              std::invocable<std::ranges::range_reference_t<R>> F>
+    generator<std::invoke_result_t<F, std::ranges::range_reference_t<R>>>
+    operator()(R&& range, F f) {
+        for (auto&& elem : range) {
+            co_yield f(elem);
+        }
+    }
+} transform_view;
+
+struct adjacent_view_impl {
+    template <std::ranges::forward_range R>
+    generator<
+        std::pair<std::ranges::range_value_t<R>, std::ranges::range_value_t<R>>>
+    operator()(R&& range) {
+        auto it = std::ranges::begin(range);
+        auto end = std::ranges::end(range);
+        if (it == end)
+            co_return;
+
+        auto prev = *it++;
+        while (it != end) {
+            co_yield {prev, *it};
+            prev = *it++;
+        }
+    }
+} adjacent_view;
+}  // namespace atom::utils
 
 #endif

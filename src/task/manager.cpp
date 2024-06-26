@@ -70,7 +70,7 @@ void TaskInterpretor::registerFunction(const std::string& name,
     functions[name] = func;
 }
 
-bool TaskInterpretor::hasFunction(const std::string &name) const {
+bool TaskInterpretor::hasFunction(const std::string& name) const {
     if (functions.find(name) == functions.end()) {
         THROW_RUNTIME_ERROR("Function '" + name + "' is not registered.");
     }
@@ -172,7 +172,7 @@ void TaskInterpretor::executeCall(const json& step) {
     if (functions.find(functionName) != functions.end()) {
         auto task = std::make_shared<Task>(
             functionName, params, functions[functionName],
-            [this](const std::exception& e) {
+            [](const std::exception& e) {
                 LOG_F(ERROR, "Task failed: {}", e.what());
             });
         task->run();
@@ -251,17 +251,17 @@ void TaskInterpretor::executeDelay(const json& step) {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 }
 
-void TaskInterpretor::executeParallel(const json& step, size_t& idx,
-                                      const json& script) {
+void TaskInterpretor::executeParallel(const json& step,
+                                      [[maybe_unused]] size_t& idx,
+                                      [[maybe_unused]] const json& script) {
     std::vector<std::thread> threads;
     std::vector<std::shared_ptr<Task>> tasks;
 
     for (const auto& nestedStep : step["steps"]) {
-        threads.emplace_back([this, &nestedStep, &idx, &script, &tasks]() {
+        threads.emplace_back([this, &nestedStep, &tasks]() {
             auto task = std::make_shared<Task>(
                 nestedStep["function"], nestedStep["params"],
-                functions[nestedStep["function"]],
-                [this](const std::exception& e) {
+                functions[nestedStep["function"]], [](const std::exception& e) {
                     LOG_F(ERROR, "Task failed: {}", e.what());
                 });
             tasks.push_back(task);

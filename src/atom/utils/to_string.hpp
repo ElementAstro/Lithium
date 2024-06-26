@@ -27,6 +27,7 @@ Description: Implementation of command line generator.
 #include <utility>
 #include <vector>
 
+namespace atom::utils {
 template <typename T>
 constexpr bool is_string_type =
     std::is_same_v<T, char *> || std::is_same_v<T, const char *> ||
@@ -400,34 +401,6 @@ struct str_less {
 
     struct is_transparent {}; /**< Enables transparent comparison. */
 };
-
-struct str_more {
-    /**
-     * @brief Compares two std::string objects.
-     * @param t_lhs The left-hand side string.
-     * @param t_rhs The right-hand side string.
-     * @return True if t_lhs is greater than t_rhs, false otherwise.
-     */
-    [[nodiscard]] bool operator()(const std::string &t_lhs,
-                                  const std::string &t_rhs) const noexcept {
-        return t_lhs > t_rhs;
-    }
-
-    /**
-     * @brief Compares two objects using iterators.
-     * @tparam LHS Type of the left-hand side.
-     * @tparam RHS Type of the right-hand side.
-     * @param t_lhs The left-hand side operand.
-     * @param t_rhs The right-hand side operand.
-     * @return True if t_lhs is greater than t_rhs, false otherwise.
-     */
-    template <typename LHS, typename RHS>
-    [[nodiscard]] constexpr bool operator()(const LHS &t_lhs,
-                                            const RHS &t_rhs) const noexcept {
-        return str_more_impl(t_lhs, t_rhs);
-    }
-
-    struct is_transparent {}; /**< Enables transparent comparison. */
-};
+}  // namespace atom::utils
 
 #endif  // ATOM_STRINGUTILS_HPP

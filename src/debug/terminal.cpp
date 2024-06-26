@@ -7,6 +7,7 @@
  */
 
 #include "terminal.hpp"
+#include "check.hpp"
 #include "command.hpp"
 #include "suggestion.hpp"
 

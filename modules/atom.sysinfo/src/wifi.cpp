@@ -18,13 +18,17 @@ Description: System Information Module - Wifi Information
 #include <vector>
 
 #ifdef _WIN32
-#include <winsock2.h>
+// clang-format off
 #include <windows.h>
-#include <iptypes.h>
 #include <iphlpapi.h>
+#include <iptypes.h>
+#include <winsock2.h>
 #include <wlanapi.h>
 #include <ws2tcpip.h>
+// clang-format on
 #if !defined(__MINGW32__) && !defined(__MINGW64__)
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wlanapi.lib")
 #endif
 #elif defined(__linux__)
@@ -37,8 +41,7 @@ Description: System Information Module - Wifi Information
 
 #include "atom/log/loguru.hpp"
 
-namespace atom::system
-{
+namespace atom::system {
 // 获取当前连接的WIFI
 std::string getCurrentWifi() {
     std::string wifiName;
@@ -70,13 +73,11 @@ std::string getCurrentWifi() {
                     }
                 }
             }
-        }
-        else {
+        } else {
             LOG_F(ERROR, "Error: WlanEnumInterfaces failed");
         }
         WlanCloseHandle(handle, nullptr);
-    }
-    else {
+    } else {
         LOG_F(ERROR, "Error: WlanOpenHandle failed");
     }
 #elif defined(__linux__)
@@ -112,8 +113,7 @@ std::string getCurrentWifi() {
             CFRelease(info);
         }
         CFRelease(interfaces);
-    }
-    else {
+    } else {
         LOG_F(ERROR, "Error: CNCopySupportedInterfaces failed");
     }
 #else
@@ -137,15 +137,14 @@ std::string getCurrentWiredNetwork() {
         if (GetAdaptersInfo(adapterInfo, &bufferLength) == NO_ERROR) {
             for (PIP_ADAPTER_INFO adapter = adapterInfo; adapter != nullptr;
                  adapter = adapter->Next) {
-                if (adapter->Type == MIB_IF_TYPE_ETHERNET ) {
+                if (adapter->Type == MIB_IF_TYPE_ETHERNET) {
                     wiredNetworkName = adapter->AdapterName;
                     break;
                 }
             }
         }
         delete[] reinterpret_cast<char*>(adapterInfo);
-    }
-    else {
+    } else {
         LOG_F(ERROR, "Error: GetAdaptersInfo failed");
     }
 #elif defined(__linux__)
@@ -211,8 +210,7 @@ bool isHotspotConnected() {
             }
         }
         WlanCloseHandle(handle, nullptr);
-    }
-    else {
+    } else {
         LOG_F(ERROR, "Error: WlanOpenHandle failed");
     }
 #elif defined(__linux__)
@@ -318,4 +316,82 @@ std::vector<std::string> getHostIPs() {
 
     return hostIPs;
 }
+
+template <typename AddressType>
+std::vector<std::string> getIPAddresses(int addressFamily) {
+    std::vector<std::string> addresses;
+
+#ifdef _WIN32
+    ULONG bufferSize = 0;
+    if (GetAdaptersAddresses(addressFamily, 0, nullptr, nullptr, &bufferSize) !=
+        ERROR_BUFFER_OVERFLOW) {
+        return addresses;
+    }
+
+    auto adapterAddresses =
+        std::make_unique<IP_ADAPTER_ADDRESSES[]>(bufferSize);
+    if (GetAdaptersAddresses(addressFamily, 0, nullptr, adapterAddresses.get(),
+                             &bufferSize) == ERROR_SUCCESS) {
+        for (auto adapter = adapterAddresses.get(); adapter;
+             adapter = adapter->Next) {
+            for (auto unicastAddress = adapter->FirstUnicastAddress;
+                 unicastAddress; unicastAddress = unicastAddress->Next) {
+                auto sockAddr = reinterpret_cast<AddressType*>(
+                    unicastAddress->Address.lpSockaddr);
+                char addressBuffer[std::max(INET_ADDRSTRLEN,
+                                            INET6_ADDRSTRLEN)] = {0};
+                void* addrPtr =
+                    (addressFamily == AF_INET)
+                        ? static_cast<void*>(
+                              &reinterpret_cast<sockaddr_in*>(sockAddr)
+                                   ->sin_addr)
+                        : static_cast<void*>(
+                              &reinterpret_cast<sockaddr_in6*>(sockAddr)
+                                   ->sin6_addr);
+                if (inet_ntop(addressFamily, addrPtr, addressBuffer,
+                              sizeof(addressBuffer))) {
+                    addresses.emplace_back(addressBuffer);
+                }
+            }
+        }
+    }
+#else
+    struct ifaddrs* ifAddrList = nullptr;
+    if (getifaddrs(&ifAddrList) == -1) {
+        return addresses;
+    }
+
+    std::unique_ptr<ifaddrs, decltype(&freeifaddrs)> ifAddrListGuard(
+        ifAddrList, freeifaddrs);
+
+    for (auto ifa = ifAddrList; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == addressFamily) {
+            auto sockAddr = reinterpret_cast<AddressType*>(ifa->ifa_addr);
+            char addressBuffer[std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)] = {
+                0};
+            void* addrPtr =
+                (addressFamily == AF_INET)
+                    ? static_cast<void*>(
+                          &reinterpret_cast<sockaddr_in*>(sockAddr)->sin_addr)
+                    : static_cast<void*>(
+                          &reinterpret_cast<sockaddr_in6*>(sockAddr)
+                               ->sin6_addr);
+            if (inet_ntop(addressFamily, addrPtr, addressBuffer,
+                          sizeof(addressBuffer))) {
+                addresses.emplace_back(addressBuffer);
+            }
+        }
+    }
+#endif
+
+    return addresses;
 }
+
+std::vector<std::string> getIPv4Addresses() {
+    return getIPAddresses<sockaddr_in>(AF_INET);
+}
+
+std::vector<std::string> getIPv6Addresses() {
+    return getIPAddresses<sockaddr_in6>(AF_INET6);
+}
+}  // namespace atom::system

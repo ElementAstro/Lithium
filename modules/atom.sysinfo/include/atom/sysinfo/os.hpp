@@ -17,6 +17,8 @@ Description: System Information Module - OS Information
 
 #include <string>
 
+#include "macro.hpp"
+
 namespace atom::system {
 /**
  * @brief Represents information about the operating system.
@@ -33,7 +35,7 @@ struct OperatingSystemInfo {
     OperatingSystemInfo() = default;
 
     std::string toJson() const;
-};
+} ATOM_ALIGNAS(128);
 
 /**
  * @brief Retrieves the information about the operating system.

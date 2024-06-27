@@ -62,7 +62,7 @@ bool FifoClient::write(std::string_view data,
     }
 #else
     if (!timeout.has_value()) {
-        return write(m_fifo, buffer.data(), buffer.size()) != -1;
+        return ::write(m_fifo, buffer.data(), buffer.size()) != -1;
     } else {
         fd_set writeFds;
         FD_ZERO(&writeFds);
@@ -76,7 +76,7 @@ bool FifoClient::write(std::string_view data,
         } else if (selectResult == 0) {
             return false;  // Timeout occurred
         } else {
-            return write(m_fifo, buffer.data(), buffer.size()) != -1;
+            return ::write(m_fifo, buffer.data(), buffer.size()) != -1;
         }
     }
 #endif
@@ -113,7 +113,7 @@ std::optional<std::string> FifoClient::read(
 #else
     if (!timeout.has_value()) {
         ssize_t bytesRead;
-        while ((bytesRead = read(m_fifo, buffer, sizeof(buffer) - 1)) > 0) {
+        while ((bytesRead = ::read(m_fifo, buffer, sizeof(buffer) - 1)) > 0) {
             buffer[bytesRead] = '\0';
             data += buffer;
         }
@@ -130,7 +130,7 @@ std::optional<std::string> FifoClient::read(
         } else if (selectResult == 0) {
             // Timeout occurred
         } else {
-            ssize_t bytesRead = read(m_fifo, buffer, sizeof(buffer) - 1);
+            ssize_t bytesRead = ::read(m_fifo, buffer, sizeof(buffer) - 1);
             if (bytesRead > 0) {
                 buffer[bytesRead] = '\0';
                 data += buffer;

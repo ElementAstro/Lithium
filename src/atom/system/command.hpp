@@ -16,8 +16,8 @@ Description: Simple wrapper for executing commands.
 #define ATOM_SYSTEM_COMMAND_HPP
 
 #include <functional>
-#include <unordered_map>
 #include <string>
+#include <unordered_map>
 
 namespace atom::system {
 
@@ -34,7 +34,7 @@ namespace atom::system {
  */
 [[nodiscard]] std::string executeCommand(
     const std::string &command, bool openTerminal = false,
-    std::function<void(const std::string &)> processLine =
+    const std::function<void(const std::string &)> &processLine =
         [](const std::string &) {});
 
 /**

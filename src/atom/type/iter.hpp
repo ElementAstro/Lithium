@@ -17,7 +17,6 @@ Description: Some iterators
 
 #include <algorithm>
 #include <iterator>
-#include <list>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -27,7 +26,7 @@ Description: Some iterators
 #endif
 
 template <typename IteratorT>
-class pointer_iterator {
+class PointerIterator {
 public:
     using iterator_category = std::forward_iterator_tag;
     using value_type = decltype(&*std::declval<IteratorT>());
@@ -39,35 +38,35 @@ private:
     IteratorT it_;
 
 public:
-    pointer_iterator() = default;
+    PointerIterator() = default;
 
-    explicit pointer_iterator(IteratorT it) : it_(std::move(it)) {}
+    explicit PointerIterator(IteratorT it) : it_(std::move(it)) {}
 
     value_type operator*() const { return &*it_; }
 
-    pointer_iterator& operator++() {
+    PointerIterator& operator++() {
         ++it_;
         return *this;
     }
 
-    pointer_iterator operator++(int) {
-        pointer_iterator tmp = *this;
+    auto operator++(int) -> PointerIterator {
+        PointerIterator tmp = *this;
         ++(*this);
         return tmp;
     }
 
-    bool operator==(const pointer_iterator& other) const = default;
-    bool operator!=(const pointer_iterator& other) const = default;
+    auto operator==(const PointerIterator& other) const -> bool = default;
+    auto operator!=(const PointerIterator& other) const -> bool = default;
 };
 
 template <typename IteratorT>
-auto make_pointer_range(IteratorT begin, IteratorT end) {
-    return std::make_pair(pointer_iterator<IteratorT>(begin),
-                          pointer_iterator<IteratorT>(end));
+auto makePointerRange(IteratorT begin, IteratorT end) {
+    return std::make_pair(PointerIterator<IteratorT>(begin),
+                          PointerIterator<IteratorT>(end));
 }
 
 template <typename ContainerT>
-void process_container(ContainerT& container) {
+void processContainer(ContainerT& container) {
     auto beginIter = std::next(container.begin());
     auto endIter = std::prev(container.end());
 
@@ -93,7 +92,7 @@ void process_container(ContainerT& container) {
 }
 
 template <std::input_or_output_iterator I>
-class early_inc_iterator {
+class EarlyIncIterator {
 public:
     using iterator_category = std::output_iterator_tag;
     using value_type = void;
@@ -101,43 +100,43 @@ public:
     using pointer = void;
     using reference = void;
 
-    early_inc_iterator() = default;
-    explicit early_inc_iterator(I x) : current(x) {}
+    EarlyIncIterator() = default;
+    explicit EarlyIncIterator(I x) : current_(x) {}
 
-    early_inc_iterator& operator++() {
-        ++current;
+    auto operator++() -> EarlyIncIterator& {
+        ++current_;
         return *this;
     }
 
-    early_inc_iterator operator++(int) {
-        early_inc_iterator tmp = *this;
-        ++current;
+    auto operator++(int) -> EarlyIncIterator {
+        EarlyIncIterator tmp = *this;
+        ++current_;
         return tmp;
     }
 
-    friend bool operator==(const early_inc_iterator& x,
-                           const early_inc_iterator& y) {
-        return x.current == y.current;
+    friend auto operator==(const EarlyIncIterator& x,
+                           const EarlyIncIterator& y) -> bool {
+        return x.current_ == y.current_;
     }
 
-    friend bool operator!=(const early_inc_iterator& x,
-                           const early_inc_iterator& y) {
+    friend auto operator!=(const EarlyIncIterator& x,
+                           const EarlyIncIterator& y) -> bool {
         return !(x == y);
     }
 
-    auto operator*() const { return *current; }
+    auto operator*() const { return *current_; }
 
 private:
-    I current{};
+    I current_{};
 };
 
 template <std::input_or_output_iterator I>
-early_inc_iterator<I> make_early_inc_iterator(I x) {
-    return early_inc_iterator<I>(x);
+auto makeEarlyIncIterator(I x) -> EarlyIncIterator<I> {
+    return EarlyIncIterator<I>(x);
 }
 
 template <typename IteratorT, typename FuncT>
-class transform_iterator {
+class TransformIterator {
 public:
     using iterator_category =
         typename std::iterator_traits<IteratorT>::iterator_category;
@@ -153,38 +152,38 @@ private:
     FuncT func_;
 
 public:
-    transform_iterator() : it_(), func_() {}
-    transform_iterator(IteratorT it, FuncT func) : it_(it), func_(func) {}
+    TransformIterator() : it_(), func_() {}
+    TransformIterator(IteratorT it, FuncT func) : it_(it), func_(func) {}
 
-    reference operator*() const { return func_(*it_); }
-    pointer operator->() const { return &(operator*()); }
+    auto operator*() const -> reference { return func_(*it_); }
+    auto operator->() const -> pointer { return &(operator*()); }
 
-    transform_iterator& operator++() {
+    auto operator++() -> TransformIterator& {
         ++it_;
         return *this;
     }
-    transform_iterator operator++(int) {
-        transform_iterator tmp = *this;
+    auto operator++(int) -> TransformIterator {
+        TransformIterator tmp = *this;
         ++it_;
         return tmp;
     }
 
-    bool operator==(const transform_iterator& other) const {
+    auto operator==(const TransformIterator& other) const -> bool {
         return it_ == other.it_;
     }
-    bool operator!=(const transform_iterator& other) const {
+    auto operator!=(const TransformIterator& other) const -> bool {
         return !(*this == other);
     }
 };
 
 template <typename IteratorT, typename FuncT>
-transform_iterator<IteratorT, FuncT> make_transform_iterator(IteratorT it,
-                                                             FuncT func) {
-    return transform_iterator<IteratorT, FuncT>(it, func);
+auto makeTransformIterator(IteratorT it,
+                           FuncT func) -> TransformIterator<IteratorT, FuncT> {
+    return TransformIterator<IteratorT, FuncT>(it, func);
 }
 
 template <typename IteratorT, typename PredicateT>
-class filter_iterator {
+class FilterIterator {
 public:
     using iterator_category = std::forward_iterator_tag;
     using value_type = typename std::iterator_traits<IteratorT>::value_type;
@@ -198,44 +197,50 @@ private:
     IteratorT end_;
     PredicateT pred_;
 
-    void satisfy_predicate() {
+    void satisfyPredicate() {
         while (it_ != end_ && !pred_(*it_)) {
             ++it_;
         }
     }
 
 public:
-    filter_iterator() : it_(), end_(), pred_() {}
-    filter_iterator(IteratorT it, IteratorT end, PredicateT pred)
+    FilterIterator() : it_(), end_(), pred_() {}
+    FilterIterator(IteratorT it, IteratorT end, PredicateT pred)
         : it_(it), end_(end), pred_(pred) {
-        satisfy_predicate();
+        satisfyPredicate();
     }
 
-    reference operator*() const { return *it_; }
-    pointer operator->() const { return &(operator*()); }
+    auto operator*() const -> reference { return *it_; }
+    auto operator->() const -> pointer { return &(operator*()); }
 
-    filter_iterator& operator++() {
+    auto operator++() -> FilterIterator& {
         ++it_;
-        satisfy_predicate();
+        satisfyPredicate();
         return *this;
     }
 
-    filter_iterator operator++(int) {
-        filter_iterator tmp = *this;
+    auto operator++(int) -> FilterIterator {
+        FilterIterator tmp = *this;
         ++*this;
         return tmp;
     }
 
-    bool operator==(const filter_iterator& other) const {
+    auto operator==(const FilterIterator& other) const -> bool {
         return it_ == other.it_;
     }
-    bool operator!=(const filter_iterator& other) const {
+    auto operator!=(const FilterIterator& other) const -> bool {
         return !(*this == other);
     }
 };
 
+template <typename IteratorT, typename PredicateT>
+auto makeFilterIterator(IteratorT it, IteratorT end, PredicateT pred)
+    -> FilterIterator<IteratorT, PredicateT> {
+    return FilterIterator<IteratorT, PredicateT>(it, end, pred);
+}
+
 template <typename IteratorT>
-class reverse_iterator {
+class ReverseIterator {
 public:
     using iterator_category =
         typename std::iterator_traits<IteratorT>::iterator_category;
@@ -246,41 +251,43 @@ public:
     using reference = typename std::iterator_traits<IteratorT>::reference;
 
 private:
-    IteratorT current;
+    IteratorT current_;
 
 public:
-    reverse_iterator() : current() {}
-    explicit reverse_iterator(IteratorT x) : current(x) {}
+    ReverseIterator() : current_() {}
+    explicit ReverseIterator(IteratorT x) : current_(x) {}
 
-    IteratorT base() const { return current; }
-    reference operator*() const {
-        IteratorT tmp = current;
+    auto base() const -> IteratorT { return current_; }
+    auto operator*() const -> reference {
+        IteratorT tmp = current_;
         return *--tmp;
     }
-    pointer operator->() const { return &(operator*()); }
-    reverse_iterator& operator++() {
-        --current;
+    auto operator->() const -> pointer { return &(operator*()); }
+    auto operator++() -> ReverseIterator& {
+        --current_;
         return *this;
     }
-    reverse_iterator operator++(int) {
-        reverse_iterator tmp = *this;
-        --current;
+    auto operator++(int) -> ReverseIterator {
+        ReverseIterator tmp = *this;
+        --current_;
         return tmp;
     }
-    reverse_iterator& operator--() {
-        ++current;
+    auto operator--() -> ReverseIterator& {
+        ++current_;
         return *this;
     }
-    reverse_iterator operator--(int) {
-        reverse_iterator tmp = *this;
-        ++current;
+    auto operator--(int) -> ReverseIterator {
+        ReverseIterator tmp = *this;
+        ++current_;
         return tmp;
     }
 
-    bool operator==(const reverse_iterator& x) const {
-        return current == x.current;
+    auto operator==(const ReverseIterator& x) const -> bool {
+        return current_ == x.current_;
     }
-    bool operator!=(const reverse_iterator& x) const { return !(*this == x); }
+    auto operator!=(const ReverseIterator& x) const -> bool {
+        return !(*this == x);
+    }
 };
 
 #endif

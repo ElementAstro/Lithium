@@ -18,14 +18,14 @@ Description: A simple static string class
 #include <cstring>
 #include <string_view>
 
-class Static_String;
+class StaticString;
 template <typename T>
 concept Stringable = std::is_convertible_v<T, std::string> ||
                      std::is_convertible_v<T, std::string_view> ||
                      std::is_convertible_v<T, const char *> ||
-                     std::is_convertible_v<T, Static_String>;
+                     std::is_convertible_v<T, StaticString>;
 
-class Static_String {
+class StaticString {
 public:
     /**
      * @brief Constructs a Static_String object from a string literal.
@@ -34,15 +34,17 @@ public:
      * @param str The string literal.
      */
     template <size_t N>
-    constexpr Static_String(const char (&str)[N]) noexcept
-        : m_size(N - 1), data(str) {}
+    constexpr explicit StaticString(const char (&str)[N]) noexcept
+        : M_SIZE(N - 1), data_(str) {}
 
     /**
      * @brief Gets the size of the Static_String object.
      *
      * @return Size of the Static_String object.
      */
-    constexpr size_t size() const noexcept { return m_size; }
+    [[nodiscard]] constexpr auto size() const noexcept -> size_t {
+        return M_SIZE;
+    }
 
     /**
      * @brief Gets a pointer to the C-style string stored in the Static_String
@@ -50,21 +52,27 @@ public:
      *
      * @return Pointer to the C-style string.
      */
-    constexpr const char *c_str() const noexcept { return data; }
+    [[nodiscard]] constexpr auto cStr() const noexcept -> const char * {
+        return data_;
+    }
 
     /**
      * @brief Gets an iterator to the beginning of the Static_String object.
      *
      * @return Iterator to the beginning of the Static_String object.
      */
-    constexpr const char *begin() const noexcept { return data; }
+    [[nodiscard]] constexpr auto begin() const noexcept -> const char * {
+        return data_;
+    }
 
     /**
      * @brief Gets an iterator to the end of the Static_String object.
      *
      * @return Iterator to the end of the Static_String object.
      */
-    constexpr const char *end() const noexcept { return data + m_size; }
+    [[nodiscard]] constexpr auto end() const noexcept -> const char * {
+        return data_ + M_SIZE;
+    }
 
     /**
      * @brief Checks if the Static_String object is equal to the provided
@@ -74,8 +82,9 @@ public:
      * @return true if the Static_String object is equal to the
      * std::string_view, otherwise false.
      */
-    constexpr bool operator==(const std::string_view &other) const noexcept {
-        return std::string_view(data, m_size) == other;
+    constexpr auto operator==(const std::string_view &other) const noexcept
+        -> bool {
+        return std::string_view(data_, M_SIZE) == other;
     }
 
     /**
@@ -89,8 +98,8 @@ public:
      */
     template <typename T>
         requires Stringable<T>
-    constexpr bool operator==(T &&other) const noexcept {
-        return std::string_view(data, m_size) == std::forward<T>(other);
+    constexpr auto operator==(T &&other) const noexcept -> bool {
+        return std::string_view(data_, M_SIZE) == std::forward<T>(other);
     }
 
     /**
@@ -104,7 +113,7 @@ public:
      */
     template <typename T>
         requires Stringable<T>
-    constexpr bool operator!=(T &&other) const noexcept {
+    constexpr auto operator!=(T &&other) const noexcept -> bool {
         return !(*this == std::forward<T>(other));
     }
 
@@ -119,8 +128,8 @@ public:
      */
     template <typename T>
         requires Stringable<T>
-    constexpr bool operator<(T &&other) const noexcept {
-        return std::string_view(data, m_size) < std::forward<T>(other);
+    constexpr auto operator<(T &&other) const noexcept -> bool {
+        return std::string_view(data_, M_SIZE) < std::forward<T>(other);
     }
 
     /**
@@ -134,8 +143,8 @@ public:
      */
     template <typename T>
         requires Stringable<T>
-    constexpr bool operator<=(T &&other) const noexcept {
-        return std::string_view(data, m_size) <= std::forward<T>(other);
+    constexpr auto operator<=(T &&other) const noexcept -> bool {
+        return std::string_view(data_, M_SIZE) <= std::forward<T>(other);
     }
 
     /**
@@ -149,8 +158,8 @@ public:
      */
     template <typename T>
         requires Stringable<T>
-    constexpr bool operator>(T &&other) const noexcept {
-        return std::string_view(data, m_size) > std::forward<T>(other);
+    constexpr auto operator>(T &&other) const noexcept -> bool {
+        return std::string_view(data_, M_SIZE) > std::forward<T>(other);
     }
 
     /**
@@ -164,13 +173,13 @@ public:
      */
     template <typename T>
         requires Stringable<T>
-    constexpr bool operator>=(T &&other) const noexcept {
-        return std::string_view(data, m_size) >= std::forward<T>(other);
+    constexpr auto operator>=(T &&other) const noexcept -> bool {
+        return std::string_view(data_, M_SIZE) >= std::forward<T>(other);
     }
 
 private:
-    const size_t m_size; /**< Size of the Static_String object. */
-    const char *data;    /**< Pointer to the C-style string data. */
+    const size_t M_SIZE; /**< Size of the Static_String object. */
+    const char *data_;   /**< Pointer to the C-style string data. */
 };
 
 #endif

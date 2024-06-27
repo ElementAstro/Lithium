@@ -47,9 +47,12 @@ Description: Simple wrapper for executing commands.
 #include "atom/utils/to_string.hpp"
 
 namespace atom::system {
+
+std::mutex envMutex;
+
 std::string executeCommandInternal(
-    const std::string &command, bool openTerminal,
-    std::function<void(const std::string &)> processLine, int &status,
+    const std::string &command, [[maybe_unused]] bool openTerminal,
+    const std::function<void(const std::string &)> &processLine, int &status,
     const std::string &username = "", const std::string &domain = "",
     const std::string &password = "") {
     if (command.empty()) {
@@ -58,8 +61,9 @@ std::string executeCommandInternal(
     }
 
     auto pipeDeleter = [](FILE *pipe) {
-        if (pipe)
+        if (pipe != nullptr) {
             pclose(pipe);
+        }
     };
 
     std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
@@ -100,7 +104,8 @@ std::string executeCommandInternal(
         THROW_RUNTIME_ERROR("Error: failed to run command '" + command + "'.");
     }
 
-    std::array<char, 4096> buffer{};
+    constexpr std::size_t BUFFER_SIZE = 4096;
+    std::array<char, BUFFER_SIZE> buffer{};
     std::ostringstream output;
 
     bool interrupted = false;
@@ -122,12 +127,17 @@ std::string executeCommandInternal(
         }
     }
 #else
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr &&
-           !interrupted) {
-        std::string line = buffer.data();
-        output << line;
-        if (processLine) {
-            processLine(line);
+    while (!interrupted) {
+#pragma unroll
+        for (int i = 0; i < 4; ++i) {
+            if (fgets(buffer.data(), buffer.size(), pipe.get()) == nullptr) {
+                break;
+            }
+            std::string line = buffer.data();
+            output << line;
+            if (processLine) {
+                processLine(line);
+            }
         }
     }
 #endif
@@ -143,7 +153,7 @@ std::string executeCommandInternal(
 
 std::string executeCommand(
     const std::string &command, bool openTerminal,
-    std::function<void(const std::string &)> processLine) {
+    const std::function<void(const std::string &)> &processLine) {
     int status = 0;
     return executeCommandInternal(command, openTerminal, processLine, status);
 }
@@ -179,7 +189,8 @@ void executeCommands(const std::vector<std::string> &commands) {
     }
 
     if (!errors.empty()) {
-        THROW_RUNTIME_ERROR("One or more commands failed." + toString(errors));
+        THROW_RUNTIME_ERROR("One or more commands failed." +
+                            atom::utils::toString(errors));
     }
 }
 
@@ -189,22 +200,34 @@ std::string executeCommandWithEnv(
     if (command.empty()) {
         return "";
     }
+
     std::unordered_map<std::string, std::string> oldEnvVars;
-    for (const auto &var : envVars) {
-        char *oldValue = std::getenv(var.first.c_str());
-        if (oldValue) {
-            oldEnvVars[var.first] = oldValue;
+
+    {
+        // Lock the mutex to ensure thread safety
+        std::lock_guard lock(envMutex);
+
+        for (const auto &var : envVars) {
+            char *oldValue = std::getenv(var.first.c_str());
+            if (oldValue != nullptr) {
+                oldEnvVars[var.first] = std::string(oldValue);
+            }
+            SETENV(var.first.c_str(), var.second.c_str());
         }
-        SETENV(var.first.c_str(), var.second.c_str());
     }
 
     auto result = executeCommand(command, false);
 
-    for (const auto &var : envVars) {
-        if (oldEnvVars.find(var.first) != oldEnvVars.end()) {
-            SETENV(var.first.c_str(), oldEnvVars[var.first].c_str());
-        } else {
-            UNSETENV(var.first.c_str());
+    {
+        // Lock the mutex to ensure thread safety
+        std::lock_guard lock(envMutex);
+
+        for (const auto &var : envVars) {
+            if (oldEnvVars.find(var.first) != oldEnvVars.end()) {
+                SETENV(var.first.c_str(), oldEnvVars[var.first].c_str());
+            } else {
+                UNSETENV(var.first.c_str());
+            }
         }
     }
 
@@ -243,7 +266,7 @@ void killProcessByName(const std::string &processName,
 #else
     std::string command =
         "pkill -" + std::to_string(signal) + " -f " + processName;
-    int result = system(command.c_str());
+    int result = std::system(command.c_str());
     if (result != 0) {
         THROW_SYSTEM_COLLAPSE("Error: failed to kill process with name " +
                               processName);
@@ -265,10 +288,10 @@ void killProcessByPID(int pid, [[maybe_unused]] int signal) {
     if (kill(pid, signal) == -1) {
         THROW_SYSTEM_COLLAPSE("Error: failed to kill process with PID " +
                               std::to_string(pid));
-    } else {
-        int status;
-        waitpid(pid, &status, 0);
     }
+    int status;
+    waitpid(pid, &status, 0);
+
 #endif
 }
 

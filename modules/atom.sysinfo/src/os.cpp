@@ -20,6 +20,7 @@ Description: System Information Module - OS Information
 #ifdef _WIN32
 #include <windows.h>
 #elif __linux__
+#include <unistd.h>
 #include <fstream>
 #elif __APPLE__
 #include <sys/utsname.h>
@@ -31,10 +32,10 @@ namespace atom::system {
 std::string OperatingSystemInfo::toJson() const {
     std::stringstream ss;
     ss << "{\n";
-    ss << "  \"osName\": \"" << osName << "\",\n";
-    ss << "  \"osVersion\": \"" << osVersion << "\",\n";
-    ss << "  \"kernelVersion\": \"" << kernelVersion << "\"\n";
-    ss << "  \"architecture\": \"" << architecture << "\"\n";
+    ss << R"(  "osName": ")" << osName << "\",\n";
+    ss << R"(  "osVersion": ")" << osVersion << "\",\n";
+    ss << R"(  "kernelVersion": ")" << kernelVersion << "\"\n";
+    ss << R"(  "architecture": ")" << architecture << "\"\n";
     ss << "}\n";
     return ss.str();
 }
@@ -86,7 +87,7 @@ OperatingSystemInfo getOperatingSystemInfo() {
         std::string line;
         while (std::getline(osReleaseFile, line)) {
             if (line.find("PRETTY_NAME") != std::string::npos) {
-                osInfo.osName = line.substr(line.find("=") + 1);
+                osInfo.osName = line.substr(line.find('=') + 1);
                 break;
             }
         }
@@ -116,19 +117,19 @@ OperatingSystemInfo getOperatingSystemInfo() {
 
 // 获取系统架构
 #if defined(__i386__) || defined(__i386)
-    const std::string architecture = "x86";
+    const std::string ARCHITECTURE = "x86";
 #elif defined(__x86_64__)
-    const std::string architecture = "x86_64";
+    const std::string ARCHITECTURE = "x86_64";
 #elif defined(__arm__)
-    const std::string architecture = "ARM";
+    const std::string ARCHITECTURE = "ARM";
 #elif defined(__aarch64__)
-    const std::string architecture = "ARM64";
+    const std::string ARCHITECTURE = "ARM64";
 #else
-    const std::string architecture = "Unknown architecture";
+    const std::string ARCHITECTURE = "Unknown architecture";
 #endif
-    osInfo.architecture = architecture;
+    osInfo.architecture = ARCHITECTURE;
 
-    const std::string compiler =
+    const std::string COMPILER =
 #if defined(__clang__)
         "Clang " + std::to_string(__clang_major__) + "." +
         std::to_string(__clang_minor__) + "." +
@@ -142,7 +143,7 @@ OperatingSystemInfo getOperatingSystemInfo() {
 #else
         "Unknown compiler";
 #endif
-    osInfo.compiler = compiler;
+    osInfo.compiler = COMPILER;
 
     osInfo.computerName = getComputerName().value_or("Unknown computer name");
 

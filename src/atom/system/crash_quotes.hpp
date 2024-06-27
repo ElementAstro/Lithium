@@ -16,6 +16,7 @@ Description: Quote manager for crash report.
 #define ATOM_SYSTEM_CRASH_QUOTES_HPP
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace atom::system {
@@ -30,25 +31,26 @@ public:
      * @param text The text of the quote.
      * @param author The author of the quote.
      */
-    explicit Quote(const std::string &text, const std::string &author);
+    explicit Quote(std::string text, std::string author)
+        : text_(std::move(text)), author_(std::move(author)) {}
 
     /**
      * @brief Gets the text of the quote.
      *
      * @return The text of the quote.
      */
-    const std::string &getText() const;
+    [[nodiscard]] auto getText() const -> std::string { return text_; }
 
     /**
      * @brief Gets the author of the quote.
      *
      * @return The author of the quote.
      */
-    const std::string &getAuthor() const;
+    [[nodiscard]] auto getAuthor() const -> std::string { return author_; }
 
 private:
-    std::string text;
-    std::string author;
+    std::string text_;
+    std::string author_;
 };
 
 /**
@@ -115,7 +117,7 @@ public:
     std::string getRandomQuote() const;
 
 private:
-    std::vector<Quote> quotes;
+    std::vector<Quote> quotes_;
 };
 }  // namespace atom::system
 

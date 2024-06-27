@@ -17,20 +17,22 @@ Description: INI File Read/Write Library
 
 #include "ini.hpp"
 
+#include <mutex>
+
 namespace atom::type {
 
 template <typename T>
 void INIFile::set(const std::string &section, const std::string &key,
                   const T &value) {
-    std::unique_lock lock(m_sharedMutex);
-    data[section][key] = value;
+    std::unique_lock lock(m_sharedMutex_);
+    data_[section][key] = value;
 }
 
 template <typename T>
-std::optional<T> INIFile::get(const std::string &section,
-                              const std::string &key) const {
-    std::shared_lock lock(m_sharedMutex);
-    if (auto it = data.find(section); it != data.end()) {
+auto INIFile::get(const std::string &section,
+                  const std::string &key) const -> std::optional<T> {
+    std::shared_lock lock(m_sharedMutex_);
+    if (auto it = data_.find(section); it != data_.end()) {
         if (auto entryIt = it->second.find(key); entryIt != it->second.end()) {
             if constexpr (std::is_same_v<T, std::any>) {
                 return entryIt->second;

@@ -17,6 +17,7 @@ Description: System Information Module - Disk
 #include "atom/log/loguru.hpp"
 
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <ranges>
 #include <span>
@@ -27,22 +28,22 @@ Description: System Information Module - Disk
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
-#include <signal.h>
 #include <sys/statfs.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <csignal>
-#include <iterator>
 #elif __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #include <DiskArbitration/DiskArbitration.h>
 #include <mntent.h>
 #endif
 
+namespace fs = std::filesystem;
+
 namespace atom::system {
 std::vector<std::pair<std::string, float>> getDiskUsage() {
-    std::vector<std::pair<std::string, float>> disk_usage;
+    std::vector<std::pair<std::string, float>> diskUsage;
 
 #ifdef _WIN32
     DWORD drives = GetLogicalDrives();
@@ -73,10 +74,11 @@ std::vector<std::pair<std::string, float>> getDiskUsage() {
     std::string line;
     while (std::getline(file, line)) {
         std::istringstream iss(line);
-        std::string device, path;
+        std::string device;
+        std::string path;
         iss >> device >> path;
 
-        struct statfs stats;
+        struct statfs stats{};
         if (statfs(path.c_str(), &stats) == 0) {
             unsigned long long totalSpace =
                 static_cast<unsigned long long>(stats.f_blocks) * stats.f_bsize;
@@ -85,7 +87,7 @@ std::vector<std::pair<std::string, float>> getDiskUsage() {
 
             unsigned long long usedSpace = totalSpace - freeSpace;
             float usage = static_cast<float>(usedSpace) / totalSpace * 100.0;
-            disk_usage.push_back({path, usage});
+            diskUsage.emplace_back(path, usage);
         } else {
             LOG_F(ERROR, "GetDiskUsage error: statfs error");
         }
@@ -93,7 +95,7 @@ std::vector<std::pair<std::string, float>> getDiskUsage() {
 
 #endif
 
-    return disk_usage;
+    return diskUsage;
 }
 
 std::string getDriveModel(const std::string& drivePath) {
@@ -166,7 +168,7 @@ std::string getDriveModel(const std::string& drivePath) {
 }
 
 std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
-    std::vector<std::pair<std::string, std::string>> storage_device_models;
+    std::vector<std::pair<std::string, std::string>> storageDeviceModels;
 
 #ifdef _WIN32
     std::array<char, 1024> driveStrings = {};
@@ -198,7 +200,7 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
                 std::string devicePath = entry.path().filename().string();
                 std::string model = getDriveModel(devicePath);
                 if (!model.empty()) {
-                    storage_device_models.emplace_back(devicePath,
+                    storageDeviceModels.emplace_back(devicePath,
                                                        std::move(model));
                 }
             }
@@ -206,7 +208,7 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
     }
 #endif
 
-    return storage_device_models;
+    return storageDeviceModels;
 }
 
 std::vector<std::string> getAvailableDrives() {
@@ -222,7 +224,7 @@ std::vector<std::string> getAvailableDrives() {
         drivesBitMask >>= 1;
     }
 #elif __linux__
-    drives.push_back("/");
+    drives.emplace_back("/");
 #elif __APPLE__
     struct statfs* mounts;
     int numMounts = getmntinfo(&mounts, MNT_NOWAIT);

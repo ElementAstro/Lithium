@@ -4,15 +4,14 @@
 #include <bit>
 #include <concepts>
 #include <cstdint>
-#include <numeric>
-#include <type_traits>
+#include <limits>
 
 #include "macro.hpp"
 
 namespace atom::utils {
 
 template <std::unsigned_integral T>
-constexpr T CreateMask(uint32_t bits) ATOM_NOEXCEPT {
+constexpr auto createMask(uint32_t bits) ATOM_NOEXCEPT -> T {
     if (bits >= std::numeric_limits<T>::digits) {
         return std::numeric_limits<T>::max();
     }
@@ -20,7 +19,7 @@ constexpr T CreateMask(uint32_t bits) ATOM_NOEXCEPT {
 }
 
 template <std::unsigned_integral T>
-constexpr uint32_t CountBytes(T value) ATOM_NOEXCEPT {
+constexpr auto countBytes(T value) ATOM_NOEXCEPT -> uint32_t {
     if constexpr (sizeof(T) <= sizeof(unsigned int)) {
         return static_cast<uint32_t>(std::popcount(value));
     } else {
@@ -30,7 +29,7 @@ constexpr uint32_t CountBytes(T value) ATOM_NOEXCEPT {
 }
 
 template <std::unsigned_integral T>
-constexpr T ReverseBits(T value) ATOM_NOEXCEPT {
+constexpr auto reverseBits(T value) ATOM_NOEXCEPT -> T {
     T reversed = 0;
     for (int i = 0; i < std::numeric_limits<T>::digits; ++i) {
         reversed |= ((value >> i) & T{1})
@@ -40,17 +39,17 @@ constexpr T ReverseBits(T value) ATOM_NOEXCEPT {
 }
 
 template <std::unsigned_integral T>
-constexpr T RotateLeft(T value, int shift) ATOM_NOEXCEPT {
-    const int bits = std::numeric_limits<T>::digits;
-    shift %= bits;
-    return (value << shift) | (value >> (bits - shift));
+constexpr auto rotateLeft(T value, int shift) ATOM_NOEXCEPT -> T {
+    const int BITS = std::numeric_limits<T>::digits;
+    shift %= BITS;
+    return (value << shift) | (value >> (BITS - shift));
 }
 
 template <std::unsigned_integral T>
-constexpr T RotateRight(T value, int shift) ATOM_NOEXCEPT {
-    const int bits = std::numeric_limits<T>::digits;
-    shift %= bits;
-    return (value >> shift) | (value << (bits - shift));
+constexpr auto rotateRight(T value, int shift) ATOM_NOEXCEPT -> T {
+    const int BITS = std::numeric_limits<T>::digits;
+    shift %= BITS;
+    return (value >> shift) | (value << (BITS - shift));
 }
 }  // namespace atom::utils
 

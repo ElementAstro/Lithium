@@ -13,17 +13,18 @@ Description: Main Entry
 **************************************************/
 
 #include "_component.hpp"
+#include "macro.hpp"
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
 
-extern "C" {
-
-std::shared_ptr<Component> getInstance([[maybe_unused]] const json &params) {
-    if (params.contains("name") && params["name"].is_string()) {
-        return std::make_shared<SystemComponent>(
-            params["name"].get<std::string>());
+ATOM_EXTERN_C {
+    auto getInstance(
+        [[maybe_unused]] const json &params) -> std::shared_ptr<Component> {
+        if (params.contains("name") && params["name"].is_string()) {
+            return std::make_shared<SystemComponent>(
+                params["name"].get<std::string>());
+        }
+        return std::make_shared<SystemComponent>("atom.sysinfo");
     }
-    return std::make_shared<SystemComponent>("atom.system");
-}
 }

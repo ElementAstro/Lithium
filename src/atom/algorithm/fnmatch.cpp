@@ -25,10 +25,12 @@ Description: Python Like fnmatch for C++
 
 namespace atom::algorithm {
 
+#ifdef _WIN32
 constexpr int FNM_NOESCAPE = 0x01;
 constexpr int FNM_PATHNAME = 0x02;
 constexpr int FNM_PERIOD = 0x04;
 constexpr int FNM_CASEFOLD = 0x08;
+#endif
 
 bool fnmatch(std::string_view pattern, std::string_view string, int flags) {
 #ifdef _WIN32

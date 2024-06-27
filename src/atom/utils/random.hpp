@@ -16,11 +16,9 @@ Description: Simple random number generator
 #define ATOM_UTILS_RANDOM_HPP
 
 #include <algorithm>
-#include <concepts>
 #include <iterator>
 #include <random>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -71,7 +69,7 @@ public:
      * @param args Arguments to initialize the distribution.
      */
     template <typename Seed, typename... Args>
-    Random(Seed&& seed, Args&&... args)
+    explicit Random(Seed&& seed, Args&&... args)
         : BaseT(std::forward<Args>(args)...),
           engine_(std::forward<Seed>(seed)) {}
 
@@ -91,7 +89,7 @@ public:
      *
      * @return A randomly generated value.
      */
-    ResultType operator()() { return BaseT::operator()(engine_); }
+    auto operator()() -> ResultType { return BaseT::operator()(engine_); }
 
     /**
      * @brief Generates a random value using the underlying distribution and
@@ -100,7 +98,7 @@ public:
      * @param parm Parameters for the distribution.
      * @return A randomly generated value.
      */
-    ResultType operator()(const ParamType& parm) {
+    auto operator()(const ParamType& parm) -> ResultType {
         return BaseT::operator()(engine_, parm);
     }
 
@@ -121,7 +119,7 @@ public:
      * @param count The number of values to generate.
      * @return A vector containing randomly generated values.
      */
-    std::vector<ResultType> vector(size_t count) {
+    auto vector(size_t count) -> std::vector<ResultType> {
         std::vector<ResultType> vec;
         vec.reserve(count);
         std::generate_n(std::back_inserter(vec), count,
@@ -141,7 +139,7 @@ public:
      *
      * @return A reference to the engine.
      */
-    EngineType& engine() { return engine_; }
+    auto engine() -> EngineType& { return engine_; }
 };
 
 [[nodiscard]] std::string generateRandomString(int length);

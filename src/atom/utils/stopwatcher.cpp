@@ -17,7 +17,6 @@ Description: Simple implementation of a stopwatch
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <thread>
 
 
 namespace atom::utils {
@@ -96,7 +95,7 @@ std::string StopWatcher::elapsedFormatted() const {
 
 void StopWatcher::registerCallback(std::function<void()> callback,
                                    int milliseconds) {
-    m_callbacks.push_back({callback, milliseconds});
+    m_callbacks.emplace_back(callback, milliseconds);
 }
 
 void StopWatcher::checkCallbacks(

@@ -15,11 +15,13 @@ Description: Registry Pattern
 #ifndef ATOM_COMPONENT_REGISTRY_HPP
 #define ATOM_COMPONENT_REGISTRY_HPP
 
-#include <functional>     // for std::function
+#include <memory>         // for std::shared_ptr
 #include <shared_mutex>   // for std::shared_mutex
 #include <string>         // for std::string
 #include <unordered_map>  // for std::unordered_map
 #include <unordered_set>  // for std::unordered_set
+
+#include "component.hpp"
 
 /**
  * @class Registry
@@ -28,21 +30,12 @@ Description: Registry Pattern
  */
 class Registry {
 public:
-    /**
-     * @brief Type definition for initialization function.
-     */
-    using InitFunc = std::function<void()>;
-
-    /**
-     * @brief Type definition for cleanup function.
-     */
-    using CleanupFunc = std::function<void()>;
 
     /**
      * @brief Gets the singleton instance of the Registry.
      * @return Reference to the singleton instance of the Registry.
      */
-    static inline Registry& instance() {
+    static inline auto instance() -> Registry& {
         static Registry instance;
         return instance;
     }
@@ -53,38 +46,40 @@ public:
      * @param init_func The initialization function for the component.
      * @param cleanup_func The cleanup function for the component (optional).
      */
-    void add_initializer(const std::string& name, InitFunc init_func,
-                         CleanupFunc cleanup_func = nullptr);
+    void addInitializer(const std::string& name, Component::InitFunc init_func,
+                        Component::CleanupFunc cleanup_func = nullptr);
 
     /**
      * @brief Adds a dependency between two components.
      * @param name The name of the component.
      * @param dependency The name of the component's dependency.
      */
-    void add_dependency(const std::string& name, const std::string& dependency);
+    void addDependency(const std::string& name, const std::string& dependency);
 
     /**
      * @brief Initializes all components in the registry.
      */
-    void initialize_all();
+    void initializeAll();
 
     /**
      * @brief Cleans up all components in the registry.
      */
-    void cleanup_all();
+    void cleanupAll();
 
     /**
      * @brief Checks if a component is initialized.
      * @param name The name of the component to check.
      * @return True if the component is initialized, false otherwise.
      */
-    bool is_initialized(const std::string& name) const;
+    auto isInitialized(const std::string& name) const -> bool;
 
     /**
      * @brief Reinitializes a component in the registry.
      * @param name The name of the component to reinitialize.
      */
-    void reinitialize_component(const std::string& name);
+    void reinitializeComponent(const std::string& name);
+
+    auto getComponent(const std::string& name) const -> std::shared_ptr<Component>;
 
 private:
     /**
@@ -92,25 +87,15 @@ private:
      */
     Registry() = default;
 
-    /**
-     * @brief Represents a component with its initialization and cleanup
-     * functions.
-     */
-    struct Component {
-        InitFunc
-            init_func; /**< The initialization function for the component. */
-        CleanupFunc
-            cleanup_func; /**< The cleanup function for the component. */
-    };
-
-    std::unordered_map<std::string, Component>
-        initializers; /**< Map of component names to their initialization and
+    std::unordered_map<std::string, std::shared_ptr<Component>>
+        initializers_; /**< Map of component names to their initialization and
                          cleanup functions. */
     std::unordered_map<std::string, std::unordered_set<std::string>>
-        dependencies; /**< Map of component names to their dependencies. */
+        dependencies_; /**< Map of component names to their dependencies. */
     std::unordered_map<std::string, bool>
-        initialized; /**< Map of component names to their initialization status.
-                      */
+        initialized_; /**< Map of component names to their initialization
+                       * status.
+                       */
     mutable std::shared_mutex
         mutex_; /**< Mutex for thread-safe access to the registry. */
 
@@ -121,7 +106,7 @@ private:
      * @return True if adding the dependency creates a circular dependency,
      * false otherwise.
      */
-    bool has_circular_dependency(const std::string& name,
+    bool hasCircularDependency(const std::string& name,
                                  const std::string& dependency);
 
     /**
@@ -130,7 +115,7 @@ private:
      * @param init_stack Stack to keep track of components being initialized to
      * detect circular dependencies.
      */
-    void initialize_component(const std::string& name,
+    void initializeComponent(const std::string& name,
                               std::unordered_set<std::string>& init_stack);
 };
 

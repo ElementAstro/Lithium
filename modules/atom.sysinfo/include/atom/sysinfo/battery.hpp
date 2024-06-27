@@ -15,6 +15,8 @@ Description: System Information Module - Battery
 #ifndef ATOM_SYSTEM_MODULE_BATTERY_HPP
 #define ATOM_SYSTEM_MODULE_BATTERY_HPP
 
+#include "macro.hpp"
+
 namespace atom::system {
 /**
  * @brief Battery information.
@@ -31,7 +33,7 @@ struct BatteryInfo {
     float energyDesign = 0.0;         // 电池设计容量(微焦耳)
     float voltageNow = 0.0;           // 当前电压(伏特)
     float currentNow = 0.0;           // 电池当前电流(安培)
-};
+} ATOM_ALIGNAS(64);
 
 /**
  * @brief Get battery information.

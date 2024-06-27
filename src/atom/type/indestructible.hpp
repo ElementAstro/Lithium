@@ -38,7 +38,8 @@ struct Indestructible {
      */
     template <typename... Args>
         requires std::is_constructible_v<T, Args...>
-    constexpr explicit Indestructible(std::in_place_t, Args&&... args)
+    constexpr explicit Indestructible(std::in_place_t /*unused*/,
+                                      Args&&... args)
         : object(std::forward<Args>(args)...) {}
 
     /**
@@ -99,7 +100,7 @@ struct Indestructible {
      *
      * @param other The Indestructible object to move from.
      */
-    constexpr Indestructible(Indestructible&& other)
+    constexpr Indestructible(Indestructible&& other) noexcept
         requires(!std::is_trivially_move_constructible_v<T>)
         : object(std::move(other.object)) {}
 
@@ -158,7 +159,7 @@ struct Indestructible {
      * @param other The Indestructible object to move assign from.
      * @return Reference to the assigned Indestructible object.
      */
-    constexpr Indestructible& operator=(Indestructible&& other)
+    constexpr auto operator=(Indestructible&& other) noexcept -> Indestructible&
         requires(!std::is_trivially_move_assignable_v<T>)
     {
         if (this != &other) {

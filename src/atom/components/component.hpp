@@ -21,7 +21,6 @@ Description: Basic Component Definition
 #include "dispatch.hpp"
 #include "macro.hpp"
 #include "module_macro.hpp"
-#include "registry.hpp"
 #include "types.hpp"
 #include "var.hpp"
 
@@ -29,10 +28,19 @@ Description: Basic Component Definition
 #include "atom/function/conversion.hpp"
 #include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
-#include "atom/type/noncopyable.hpp"
 
 class Component : public std::enable_shared_from_this<Component> {
 public:
+    /**
+     * @brief Type definition for initialization function.
+     */
+    using InitFunc = std::function<void()>;
+
+    /**
+     * @brief Type definition for cleanup function.
+     */
+    using CleanupFunc = std::function<void()>;
+
     /**
      * @brief Constructs a new Component object.
      */
@@ -309,7 +317,8 @@ public:
 
     void addGroup(const std::string& name, const std::string& group) const;
 
-    void setTimeout(const std::string& name, std::chrono::milliseconds timeout) const;
+    void setTimeout(const std::string& name,
+                    std::chrono::milliseconds timeout) const;
 
     template <typename... Args>
     std::any dispatch(const std::string& name, Args&&... args) {
@@ -373,9 +382,12 @@ public:
     std::any runCommand(const std::string& name,
                         const std::vector<std::any>& args);
 
+    InitFunc initFunc; /**< The initialization function for the component. */
+    CleanupFunc cleanupFunc; /**< The cleanup function for the component. */
+    
 private:
     template <typename MemberType, typename ClassType, typename InstanceType>
-    void define_accessors(const std::string& name,
+    void defineAccessors(const std::string& name,
                           MemberType ClassType::*member_var,
                           InstanceType instance, const std::string& group = "",
                           const std::string& description = "");

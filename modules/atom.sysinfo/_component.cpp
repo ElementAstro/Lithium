@@ -33,10 +33,10 @@ SysInfoComponent::SysInfoComponent(const std::string& name) : Component(name) {
         "Get current CPU temperature");
     def("memory_usage", &atom::system::getMemoryUsage, "memory",
         "Get current memory usage percentage");
-    def("is_charging", &isBatteryCharging, PointerSentinel(this), "battery",
-        "Check if the battery is charging");
-    def("battery_level", &getCurrentBatteryLevel, PointerSentinel(this),
-        "battery", "Get current battery level");
+    def("is_charging", &SysInfoComponent::isBatteryCharging,
+        PointerSentinel(this), "battery", "Check if the battery is charging");
+    def("battery_level", &SysInfoComponent::getCurrentBatteryLevel,
+        PointerSentinel(this), "battery", "Get current battery level");
     def("disk_usage", &atom::system::getDiskUsage, "disk",
         "Get current disk usage percentage");
     def("is_hotspot_connected", &atom::system::isHotspotConnected, "wifi",
@@ -48,9 +48,10 @@ SysInfoComponent::SysInfoComponent(const std::string& name) : Component(name) {
     def("current_ip", &atom::system::getHostIPs, "network",
         "Get current IP address");
     def("gpu_info", &atom::system::getGPUInfo, "gpu", "Get GPU info");
-    def("os_name", &getOSName, PointerSentinel(this), "os", "Get OS name");
-    def("os_version", &getOSVersion, PointerSentinel(this), "os",
-        "Get OS version");
+    def("os_name", &SysInfoComponent::getOSName, PointerSentinel(this), "os",
+        "Get OS name");
+    def("os_version", &SysInfoComponent::getOSVersion, PointerSentinel(this),
+        "os", "Get OS version");
 }
 
 SysInfoComponent::~SysInfoComponent() {

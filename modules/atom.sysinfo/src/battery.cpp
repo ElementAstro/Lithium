@@ -15,13 +15,13 @@ Description: System Information Module - Battery
 #include "atom/sysinfo/battery.hpp"
 
 #include <fstream>
-#include <functional>
-#include <memory>
 #include <string>
 
 #ifdef _WIN32
+// clang-format off
 #include <windows.h>
 #include <conio.h>
+// clang-format on
 #elif defined(__APPLE__)
 #include <IOKit/ps/IOPSKeys.h>
 #include <IOKit/ps/IOPowerSources.h>
@@ -50,7 +50,6 @@ BatteryInfo getBatteryInfo() {
             powerStatus.BatteryFullLifeTime == 0xFFFFFFFF
                 ? 0.0
                 : static_cast<float>(powerStatus.BatteryFullLifeTime);
-        // 其他电池信息...
     }
 #elif defined(__APPLE__)
     CFTypeRef powerSourcesInfo = IOPSCopyPowerSourcesInfo();
@@ -104,36 +103,36 @@ BatteryInfo getBatteryInfo() {
         std::string line;
         while (std::getline(batteryInfo, line)) {
             if (line.find("POWER_SUPPLY_PRESENT") != std::string::npos) {
-                info.isBatteryPresent = line.substr(line.find("=") + 1) == "1";
+                info.isBatteryPresent = line.substr(line.find('=') + 1) == "1";
             } else if (line.find("POWER_SUPPLY_STATUS") != std::string::npos) {
-                std::string status = line.substr(line.find("=") + 1);
+                std::string status = line.substr(line.find('=') + 1);
                 info.isCharging = status == "Charging" || status == "Full";
             } else if (line.find("POWER_SUPPLY_CAPACITY") !=
                        std::string::npos) {
                 info.batteryLifePercent =
-                    std::stof(line.substr(line.find("=") + 1));
+                    std::stof(line.substr(line.find('=') + 1));
             } else if (line.find("POWER_SUPPLY_TIME_TO_EMPTY_MIN") !=
                        std::string::npos) {
                 info.batteryLifeTime =
-                    std::stof(line.substr(line.find("=") + 1));
+                    std::stof(line.substr(line.find('=') + 1));
             } else if (line.find("POWER_SUPPLY_TIME_TO_FULL_NOW") !=
                        std::string::npos) {
                 info.batteryFullLifeTime =
-                    std::stof(line.substr(line.find("=") + 1));
+                    std::stof(line.substr(line.find('=') + 1));
             } else if (line.find("POWER_SUPPLY_ENERGY_NOW") !=
                        std::string::npos) {
-                info.energyNow = std::stof(line.substr(line.find("=") + 1));
+                info.energyNow = std::stof(line.substr(line.find('=') + 1));
             } else if (line.find("POWER_SUPPLY_ENERGY_FULL_DESIGN") !=
                        std::string::npos) {
-                info.energyDesign = std::stof(line.substr(line.find("=") + 1));
+                info.energyDesign = std::stof(line.substr(line.find('=') + 1));
             } else if (line.find("POWER_SUPPLY_VOLTAGE_NOW") !=
                        std::string::npos) {
                 info.voltageNow =
-                    std::stof(line.substr(line.find("=") + 1)) / 1000000.0f;
+                    std::stof(line.substr(line.find('=') + 1)) / 1000000.0f;
             } else if (line.find("POWER_SUPPLY_CURRENT_NOW") !=
                        std::string::npos) {
                 info.currentNow =
-                    std::stof(line.substr(line.find("=") + 1)) / 1000000.0f;
+                    std::stof(line.substr(line.find('=') + 1)) / 1000000.0f;
             }
         }
     }

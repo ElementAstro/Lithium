@@ -19,7 +19,7 @@ Description: A Small Vector Implementation
 #include <array>
 #include <cstddef>
 #include <initializer_list>
-#include <numeric>
+#include <limits>
 #include <stdexcept>
 #include <type_traits>
 
@@ -68,14 +68,14 @@ public:
         deallocate();
     }
 
-    SmallVector& operator=(const SmallVector& other) {
+    auto operator=(const SmallVector& other) -> SmallVector& {
         if (this != &other) {
             assign(other.begin(), other.end());
         }
         return *this;
     }
 
-    SmallVector& operator=(SmallVector&& other) noexcept {
+    auto operator=(SmallVector&& other) noexcept -> SmallVector& {
         if (this != &other) {
             clear();
             deallocate();
@@ -84,7 +84,7 @@ public:
         return *this;
     }
 
-    SmallVector& operator=(std::initializer_list<T> init) {
+    auto operator=(std::initializer_list<T> init) -> SmallVector& {
         assign(init);
         return *this;
     }
@@ -115,111 +115,118 @@ public:
         assign(init.begin(), init.end());
     }
 
-    reference at(size_type pos) {
+    auto at(size_type pos) -> reference {
         if (pos >= size()) {
             throw std::out_of_range("SmallVector::at");
         }
         return (*this)[pos];
     }
 
-    const_reference at(size_type pos) const {
+    auto at(size_type pos) const -> const_reference {
         if (pos >= size()) {
             throw std::out_of_range("SmallVector::at");
         }
         return (*this)[pos];
     }
 
-    reference operator[](size_type pos) { return *(begin() + pos); }
+    auto operator[](size_type pos) -> reference { return *(begin() + pos); }
 
-    const_reference operator[](size_type pos) const { return *(begin() + pos); }
+    auto operator[](size_type pos) const -> const_reference {
+        return *(begin() + pos);
+    }
 
-    reference front() { return *begin(); }
+    auto front() -> reference { return *begin(); }
 
-    const_reference front() const { return *begin(); }
+    auto front() const -> const_reference { return *begin(); }
 
-    reference back() { return *(end() - 1); }
+    auto back() -> reference { return *(end() - 1); }
 
-    const_reference back() const { return *(end() - 1); }
+    auto back() const -> const_reference { return *(end() - 1); }
 
-    T* data() noexcept { return begin(); }
+    auto data() noexcept -> T* { return begin(); }
 
-    const T* data() const noexcept { return begin(); }
+    auto data() const noexcept -> const T* { return begin(); }
 
-    iterator begin() noexcept {
+    auto begin() noexcept -> iterator {
         return capacity() > N ? data_ : static_buffer_.data();
     }
 
-    const_iterator begin() const noexcept {
+    auto begin() const noexcept -> const_iterator {
         return capacity() > N ? data_ : static_buffer_.data();
     }
 
-    const_iterator cbegin() const noexcept { return begin(); }
+    auto cbegin() const noexcept -> const_iterator { return begin(); }
 
-    iterator end() noexcept { return begin() + size(); }
+    auto end() noexcept -> iterator { return begin() + size(); }
 
-    const_iterator end() const noexcept { return begin() + size(); }
+    auto end() const noexcept -> const_iterator { return begin() + size(); }
 
-    const_iterator cend() const noexcept { return end(); }
+    auto cend() const noexcept -> const_iterator { return end(); }
 
-    reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+    auto rbegin() noexcept -> reverse_iterator {
+        return reverse_iterator(end());
+    }
 
-    const_reverse_iterator rbegin() const noexcept {
+    auto rbegin() const noexcept -> const_reverse_iterator {
         return const_reverse_iterator(end());
     }
 
-    const_reverse_iterator crbegin() const noexcept { return rbegin(); }
+    auto crbegin() const noexcept -> const_reverse_iterator { return rbegin(); }
 
-    reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+    auto rend() noexcept -> reverse_iterator {
+        return reverse_iterator(begin());
+    }
 
-    const_reverse_iterator rend() const noexcept {
+    auto rend() const noexcept -> const_reverse_iterator {
         return const_reverse_iterator(begin());
     }
 
-    const_reverse_iterator crend() const noexcept { return rend(); }
+    auto crend() const noexcept -> const_reverse_iterator { return rend(); }
 
-    [[nodiscard]] bool empty() const noexcept { return size() == 0; }
+    [[nodiscard]] auto empty() const noexcept -> bool { return size() == 0; }
 
-    size_type size() const noexcept { return size_; }
+    [[nodiscard]] auto size() const noexcept -> size_type { return size_; }
 
-    size_type max_size() const noexcept {
+    [[nodiscard]] auto maxSize() const noexcept -> size_type {
         return std::numeric_limits<difference_type>::max();
     }
 
     void reserve(size_type new_cap) {
         if (new_cap > capacity()) {
-            T* new_data = allocate(new_cap);
-            std::move(begin(), end(), new_data);
+            T* newData = allocate(new_cap);
+            std::move(begin(), end(), newData);
             deallocate();
-            data_ = new_data;
+            data_ = newData;
             capacity_ = new_cap;
         }
     }
 
-    size_type capacity() const noexcept {
+    [[nodiscard]] auto capacity() const noexcept -> size_type {
         return capacity_ > N ? capacity_ : N;
     }
 
     void clear() noexcept { size_ = 0; }
 
-    iterator insert(const_iterator pos, const T& value) {
+    auto insert(const_iterator pos, const T& value) -> iterator {
         return insert(pos, 1, value);
     }
 
-    iterator insert(const_iterator pos, T&& value) {
+    auto insert(const_iterator pos, T&& value) -> iterator {
         return emplace(pos, std::move(value));
     }
 
-    iterator insert(const_iterator pos, size_type count, const T& value) {
+    auto insert(const_iterator pos, size_type count,
+                const T& value) -> iterator {
         size_type index = pos - begin();
         if (size() + count > capacity()) {
-            size_type new_cap = std::max(size() + count, capacity() * 2);
-            T* new_data = allocate(new_cap);
-            std::move(begin(), begin() + index, new_data);
-            std::fill_n(new_data + index, count, value);
-            std::move(begin() + index, end(), new_data + index + count);
+            size_type newCap = std::max(size() + count, capacity() * 2);
+            T* newData = allocate(newCap);
+            std::move(begin(), begin() + index, newData);
+            std::fill_n(newData + index, count, value);
+            std::move(begin() + index, end(), newData + index + count);
             deallocate();
-            data_ = new_data;
-            capacity_ = new_cap;
+            data_ = newData;
+            capacity_ = newCap;
         } else {
             std::move_backward(begin() + index, end(), end() + count);
             std::fill_n(begin() + index, count, value);
@@ -229,18 +236,18 @@ public:
     }
 
     template <typename InputIt>
-    iterator insert(const_iterator pos, InputIt first, InputIt last) {
+    auto insert(const_iterator pos, InputIt first, InputIt last) -> iterator {
         size_type index = pos - begin();
         size_type count = std::distance(first, last);
         if (size() + count > capacity()) {
-            size_type new_cap = std::max(size() + count, capacity() * 2);
-            T* new_data = allocate(new_cap);
-            std::move(begin(), begin() + index, new_data);
-            std::copy(first, last, new_data + index);
-            std::move(begin() + index, end(), new_data + index + count);
+            size_type newCap = std::max(size() + count, capacity() * 2);
+            T* newData = allocate(newCap);
+            std::move(begin(), begin() + index, newData);
+            std::copy(first, last, newData + index);
+            std::move(begin() + index, end(), newData + index + count);
             deallocate();
-            data_ = new_data;
-            capacity_ = new_cap;
+            data_ = newData;
+            capacity_ = newCap;
         } else {
             std::move_backward(begin() + index, end(), end() + count);
             std::copy(first, last, begin() + index);
@@ -249,22 +256,22 @@ public:
         return begin() + index;
     }
 
-    iterator insert(const_iterator pos, std::initializer_list<T> init) {
+    auto insert(const_iterator pos, std::initializer_list<T> init) -> iterator {
         return insert(pos, init.begin(), init.end());
     }
 
     template <typename... Args>
-    iterator emplace(const_iterator pos, Args&&... args) {
+    auto emplace(const_iterator pos, Args&&... args) -> iterator {
         size_type index = pos - begin();
         if (size() == capacity()) {
-            size_type new_cap = capacity() == 0 ? 1 : capacity() * 2;
-            T* new_data = allocate(new_cap);
-            std::move(begin(), begin() + index, new_data);
-            new (new_data + index) T(std::forward<Args>(args)...);
-            std::move(begin() + index, end(), new_data + index + 1);
+            size_type newCap = capacity() == 0 ? 1 : capacity() * 2;
+            T* newData = allocate(newCap);
+            std::move(begin(), begin() + index, newData);
+            new (newData + index) T(std::forward<Args>(args)...);
+            std::move(begin() + index, end(), newData + index + 1);
             deallocate();
-            data_ = new_data;
-            capacity_ = new_cap;
+            data_ = newData;
+            capacity_ = newCap;
         } else {
             std::move_backward(begin() + index, end(), end() + 1);
             *(begin() + index) = T(std::forward<Args>(args)...);
@@ -273,9 +280,9 @@ public:
         return begin() + index;
     }
 
-    iterator erase(const_iterator pos) { return erase(pos, pos + 1); }
+    auto erase(const_iterator pos) -> iterator { return erase(pos, pos + 1); }
 
-    iterator erase(const_iterator first, const_iterator last) {
+    auto erase(const_iterator first, const_iterator last) -> iterator {
         size_type index = first - begin();
         size_type count = last - first;
         std::move(begin() + index + count, end(), begin() + index);
@@ -283,12 +290,12 @@ public:
         return begin() + index;
     }
 
-    void push_back(const T& value) { emplace_back(value); }
+    void pushBack(const T& value) { emplace_back(value); }
 
-    void push_back(T&& value) { emplace_back(std::move(value)); }
+    void pushBack(T&& value) { emplace_back(std::move(value)); }
 
     template <typename... Args>
-    reference emplace_back(Args&&... args) {
+    auto emplaceBack(Args&&... args) -> reference {
         if (size() == capacity()) {
             reserve(capacity() == 0 ? 1 : capacity() * 2);
         }
@@ -297,7 +304,7 @@ public:
         return back();
     }
 
-    void pop_back() { --size_; }
+    void popBack() { --size_; }
 
     void resize(size_type count, const T& value = T()) {
         if (count < size()) {
@@ -312,17 +319,17 @@ public:
         if (capacity() > N && other.capacity() > N) {
             swap(data_, other.data_);
         } else if (capacity() > N) {
-            T* temp_data = data_;
+            T* tempData = data_;
             data_ = other.allocate(capacity());
             std::move(other.begin(), other.end(), data_);
             other.deallocate();
-            other.data_ = temp_data;
+            other.data_ = tempData;
         } else if (other.capacity() > N) {
-            T* temp_data = other.data_;
+            T* tempData = other.data_;
             other.data_ = allocate(other.capacity());
             std::move(begin(), end(), other.data_);
             deallocate();
-            data_ = temp_data;
+            data_ = tempData;
         } else {
             swap(static_buffer_, other.static_buffer_);
         }
@@ -331,7 +338,7 @@ public:
     }
 
 private:
-    T* allocate(size_type n) {
+    auto allocate(size_type n) -> T* {
         return static_cast<T*>(::operator new(n * sizeof(T)));
     }
 
@@ -361,34 +368,40 @@ private:
 };
 
 template <typename T, std::size_t N>
-bool operator==(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+auto operator==(const SmallVector<T, N>& lhs,
+                const SmallVector<T, N>& rhs) -> bool {
     return lhs.size() == rhs.size() &&
            std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template <typename T, std::size_t N>
-bool operator!=(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+auto operator!=(const SmallVector<T, N>& lhs,
+                const SmallVector<T, N>& rhs) -> bool {
     return !(lhs == rhs);
 }
 
 template <typename T, std::size_t N>
-bool operator<(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+auto operator<(const SmallVector<T, N>& lhs,
+               const SmallVector<T, N>& rhs) -> bool {
     return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
                                         rhs.end());
 }
 
 template <typename T, std::size_t N>
-bool operator<=(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+auto operator<=(const SmallVector<T, N>& lhs,
+                const SmallVector<T, N>& rhs) -> bool {
     return !(rhs < lhs);
 }
 
 template <typename T, std::size_t N>
-bool operator>(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+auto operator>(const SmallVector<T, N>& lhs,
+               const SmallVector<T, N>& rhs) -> bool {
     return rhs < lhs;
 }
 
 template <typename T, std::size_t N>
-bool operator>=(const SmallVector<T, N>& lhs, const SmallVector<T, N>& rhs) {
+auto operator>=(const SmallVector<T, N>& lhs,
+                const SmallVector<T, N>& rhs) -> bool {
     return !(lhs < rhs);
 }
 

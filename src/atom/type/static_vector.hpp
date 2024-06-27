@@ -19,7 +19,6 @@ Description: A static vector
 #include <cassert>
 #include <cstddef>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 
 template <typename T, std::size_t Capacity>
@@ -42,149 +41,163 @@ public:
     constexpr StaticVector(std::initializer_list<T> init) noexcept {
         assert(init.size() <= Capacity);
         std::copy(init.begin(), init.end(), begin());
-        m_size = init.size();
+        m_size_ = init.size();
     }
 
-    constexpr void push_back(const T& value) noexcept {
-        assert(m_size < Capacity);
-        m_data[m_size++] = value;
+    constexpr void pushBack(const T& value) noexcept {
+        assert(m_size_ < Capacity);
+        m_data_[m_size_++] = value;
     }
 
-    constexpr void push_back(T&& value) noexcept {
-        assert(m_size < Capacity);
-        m_data[m_size++] = std::move(value);
+    constexpr void pushBack(T&& value) noexcept {
+        assert(m_size_ < Capacity);
+        m_data_[m_size_++] = std::move(value);
     }
 
     template <typename... Args>
-    constexpr reference emplace_back(Args&&... args) noexcept {
-        assert(m_size < Capacity);
-        return m_data[m_size++] = T(std::forward<Args>(args)...);
+    constexpr auto emplaceBack(Args&&... args) noexcept -> reference {
+        assert(m_size_ < Capacity);
+        return m_data_[m_size_++] = T(std::forward<Args>(args)...);
     }
 
-    constexpr void pop_back() noexcept {
-        assert(m_size > 0);
-        --m_size;
+    constexpr void popBack() noexcept {
+        assert(m_size_ > 0);
+        --m_size_;
     }
 
-    constexpr void clear() noexcept { m_size = 0; }
+    constexpr void clear() noexcept { m_size_ = 0; }
 
-    [[nodiscard]] constexpr bool empty() const noexcept { return m_size == 0; }
+    [[nodiscard]] constexpr auto empty() const noexcept -> bool {
+        return m_size_ == 0;
+    }
 
-    [[nodiscard]] constexpr size_type size() const noexcept { return m_size; }
+    [[nodiscard]] constexpr auto size() const noexcept -> size_type {
+        return m_size_;
+    }
 
-    [[nodiscard]] constexpr size_type capacity() const noexcept {
+    [[nodiscard]] constexpr auto capacity() const noexcept -> size_type {
         return Capacity;
     }
 
-    [[nodiscard]] constexpr reference operator[](size_type index) noexcept {
-        assert(index < m_size);
-        return m_data[index];
+    [[nodiscard]] constexpr auto operator[](size_type index) noexcept
+        -> reference {
+        assert(index < m_size_);
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr const_reference operator[](
-        size_type index) const noexcept {
-        assert(index < m_size);
-        return m_data[index];
+    [[nodiscard]] constexpr auto operator[](size_type index) const noexcept
+        -> const_reference {
+        assert(index < m_size_);
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr reference at(size_type index) {
-        if (index >= m_size) {
+    [[nodiscard]] constexpr auto at(size_type index) -> reference {
+        if (index >= m_size_) {
             throw std::out_of_range("StaticVector::at");
         }
-        return m_data[index];
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr const_reference at(size_type index) const {
-        if (index >= m_size) {
+    [[nodiscard]] constexpr auto at(size_type index) const -> const_reference {
+        if (index >= m_size_) {
             throw std::out_of_range("StaticVector::at");
         }
-        return m_data[index];
+        return m_data_[index];
     }
 
-    [[nodiscard]] constexpr reference front() noexcept {
-        assert(m_size > 0);
-        return m_data[0];
+    [[nodiscard]] constexpr auto front() noexcept -> reference {
+        assert(m_size_ > 0);
+        return m_data_[0];
     }
 
-    [[nodiscard]] constexpr const_reference front() const noexcept {
-        assert(m_size > 0);
-        return m_data[0];
+    [[nodiscard]] constexpr auto front() const noexcept -> const_reference {
+        assert(m_size_ > 0);
+        return m_data_[0];
     }
 
-    [[nodiscard]] constexpr reference back() noexcept {
-        assert(m_size > 0);
-        return m_data[m_size - 1];
+    [[nodiscard]] constexpr auto back() noexcept -> reference {
+        assert(m_size_ > 0);
+        return m_data_[m_size_ - 1];
     }
 
-    [[nodiscard]] constexpr const_reference back() const noexcept {
-        assert(m_size > 0);
-        return m_data[m_size - 1];
+    [[nodiscard]] constexpr auto back() const noexcept -> const_reference {
+        assert(m_size_ > 0);
+        return m_data_[m_size_ - 1];
     }
 
-    [[nodiscard]] constexpr pointer data() noexcept { return m_data.data(); }
-
-    [[nodiscard]] constexpr const_pointer data() const noexcept {
-        return m_data.data();
+    [[nodiscard]] constexpr auto data() noexcept -> pointer {
+        return m_data_.data();
     }
 
-    [[nodiscard]] constexpr iterator begin() noexcept { return data(); }
+    [[nodiscard]] constexpr auto data() const noexcept -> const_pointer {
+        return m_data_.data();
+    }
 
-    [[nodiscard]] constexpr const_iterator begin() const noexcept {
+    [[nodiscard]] constexpr auto begin() noexcept -> iterator { return data(); }
+
+    [[nodiscard]] constexpr auto begin() const noexcept -> const_iterator {
         return data();
     }
 
-    [[nodiscard]] constexpr const_iterator cbegin() const noexcept {
+    [[nodiscard]] constexpr auto cbegin() const noexcept -> const_iterator {
         return begin();
     }
 
-    [[nodiscard]] constexpr iterator end() noexcept { return data() + m_size; }
-
-    [[nodiscard]] constexpr const_iterator end() const noexcept {
-        return data() + m_size;
+    [[nodiscard]] constexpr auto end() noexcept -> iterator {
+        return data() + m_size_;
     }
 
-    [[nodiscard]] constexpr const_iterator cend() const noexcept {
+    [[nodiscard]] constexpr auto end() const noexcept -> const_iterator {
+        return data() + m_size_;
+    }
+
+    [[nodiscard]] constexpr auto cend() const noexcept -> const_iterator {
         return end();
     }
 
-    [[nodiscard]] constexpr reverse_iterator rbegin() noexcept {
+    [[nodiscard]] constexpr auto rbegin() noexcept -> reverse_iterator {
         return reverse_iterator(end());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator rbegin() const noexcept {
+    [[nodiscard]] constexpr auto rbegin() const noexcept
+        -> const_reverse_iterator {
         return const_reverse_iterator(end());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept {
+    [[nodiscard]] constexpr auto crbegin() const noexcept
+        -> const_reverse_iterator {
         return rbegin();
     }
 
-    [[nodiscard]] constexpr reverse_iterator rend() noexcept {
+    [[nodiscard]] constexpr auto rend() noexcept -> reverse_iterator {
         return reverse_iterator(begin());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator rend() const noexcept {
+    [[nodiscard]] constexpr auto rend() const noexcept
+        -> const_reverse_iterator {
         return const_reverse_iterator(begin());
     }
 
-    [[nodiscard]] constexpr const_reverse_iterator crend() const noexcept {
+    [[nodiscard]] constexpr auto crend() const noexcept
+        -> const_reverse_iterator {
         return rend();
     }
 
     constexpr void swap(StaticVector& other) noexcept {
         using std::swap;
-        swap(m_data, other.m_data);
-        swap(m_size, other.m_size);
+        swap(m_data_, other.m_data_);
+        swap(m_size_, other.m_size_);
     }
 
 private:
-    std::array<T, Capacity> m_data{};
-    size_type m_size{0};
+    std::array<T, Capacity> m_data_{};
+    size_type m_size_{0};
 };
 
 template <typename T, std::size_t Capacity>
-constexpr bool operator==(const StaticVector<T, Capacity>& lhs,
-                          const StaticVector<T, Capacity>& rhs) noexcept {
+constexpr auto operator==(const StaticVector<T, Capacity>& lhs,
+                          const StaticVector<T, Capacity>& rhs) noexcept
+    -> bool {
     return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 

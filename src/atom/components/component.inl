@@ -94,7 +94,7 @@ ATOM_INLINE void Component::addOtherComponent(
     if (m_OtherComponents.contains(name)) {
         THROW_OBJ_ALREADY_EXIST(name);
     }
-    m_OtherComponents[name] = std::move(component);
+    m_OtherComponents[name] = component;
 }
 
 ATOM_INLINE void Component::removeOtherComponent(const std::string& name) {
@@ -271,11 +271,11 @@ void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
 template <typename Class, typename Ret, typename... Args>
 void Component::def(const std::string& name, Ret (Class::*func)(Args...),
                     const std::string& group, const std::string& description) {
-    auto bound_func = atom::meta::bind_member_function(func);
+    auto boundFunc = atom::meta::bind_member_function(func);
     m_CommandDispatcher->def(name, group, description,
                              std::function<Ret(Class&, Args...)>(
-                                 [bound_func](Class& instance, Args... args) {
-                                     return bound_func(
+                                 [boundFunc](Class& instance, Args... args) {
+                                     return boundFunc(
                                          instance, std::forward<Args>(args)...);
                                  }));
 }
@@ -283,12 +283,12 @@ void Component::def(const std::string& name, Ret (Class::*func)(Args...),
 template <typename Class, typename Ret, typename... Args>
 void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
                     const std::string& group, const std::string& description) {
-    auto bound_func = atom::meta::bind_member_function(func);
+    auto boundFunc = atom::meta::bind_member_function(func);
     m_CommandDispatcher->def(
         name, group, description,
         std::function<Ret(Class&, Args...)>(
-            [bound_func](Class& instance, Args... args) -> Ret {
-                return bound_func(instance, std::forward<Args>(args)...);
+            [boundFunc](Class& instance, Args... args) -> Ret {
+                return boundFunc(instance, std::forward<Args>(args)...);
             }));
 }
 
@@ -296,11 +296,11 @@ template <typename Class, typename VarType>
 void Component::def_v(const std::string& name, VarType Class::*var,
                       const std::string& group,
                       const std::string& description) {
-    auto bound_var = atom::meta::bind_member_variable(var);
+    auto boundVar = atom::meta::bind_member_variable(var);
     m_CommandDispatcher->def(
         name, group, description,
         std::function<VarType(Class&)>(
-            [bound_var](Class& instance) { return bound_var(instance); }));
+            [boundVar](Class& instance) { return boundVar(instance); }));
 }
 
 template <typename Ret, typename Class>
@@ -488,7 +488,7 @@ void Component::def(const std::string& name, const std::string& group,
 }
 
 template <typename MemberType, typename ClassType, typename InstanceType>
-void Component::define_accessors(const std::string& name,
+void Component::defineAccessors(const std::string& name,
                                  MemberType ClassType::*member_var,
                                  InstanceType instance,
                                  const std::string& group,

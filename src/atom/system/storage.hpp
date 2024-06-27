@@ -17,7 +17,7 @@ Description: Storage Monitor
 
 #include <functional>
 #include <mutex>
-#include <thread>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -83,7 +83,6 @@ private:
      */
     void listFiles(const std::string &path);
 
-private:
     std::vector<std::string> m_storagePaths;  ///< 所有已挂载的存储空间路径。
     std::unordered_map<std::string, std::pair<uintmax_t, uintmax_t>>
         m_storageStats;

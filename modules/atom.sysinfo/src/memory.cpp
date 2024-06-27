@@ -20,17 +20,18 @@ Description: System Information Module - Memory
 #include "atom/log/loguru.hpp"
 
 #ifdef _WIN32
+// clang-format off
 #include <windows.h>
-#include <Psapi.h>
+#include <psapi.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <pdh.h>
 #include <tlhelp32.h>
 #include <wincon.h>
+// clang-format on
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
-#include <signal.h>
 #include <sys/statfs.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
@@ -49,7 +50,7 @@ Description: System Information Module - Memory
 
 namespace atom::system {
 float getMemoryUsage() {
-    float memory_usage = 0.0;
+    float memoryUsage = 0.0;
 
 #ifdef _WIN32
     MEMORYSTATUSEX status;
@@ -71,10 +72,10 @@ float getMemoryUsage() {
     }
     std::string line;
 
-    unsigned long total_memory = 0;
-    unsigned long free_memory = 0;
-    unsigned long buffer_memory = 0;
-    unsigned long cache_memory = 0;
+    unsigned long totalMemory = 0;
+    unsigned long freeMemory = 0;
+    unsigned long bufferMemory = 0;
+    unsigned long cacheMemory = 0;
 
     while (std::getline(file, line)) {
         std::istringstream iss(line);
@@ -83,20 +84,20 @@ float getMemoryUsage() {
 
         if (iss >> name >> value) {
             if (name == "MemTotal:") {
-                total_memory = value;
+                totalMemory = value;
             } else if (name == "MemFree:") {
-                free_memory = value;
+                freeMemory = value;
             } else if (name == "Buffers:") {
-                buffer_memory = value;
+                bufferMemory = value;
             } else if (name == "Cached:") {
-                cache_memory = value;
+                cacheMemory = value;
             }
         }
     }
 
-    unsigned long used_memory =
-        total_memory - free_memory - buffer_memory - cache_memory;
-    memory_usage = static_cast<float>(used_memory) / total_memory * 100.0;
+    unsigned long usedMemory =
+        totalMemory - freeMemory - bufferMemory - cacheMemory;
+    memoryUsage = static_cast<float>(usedMemory) / totalMemory * 100.0;
 #elif __APPLE__
     struct statfs stats;
     statfs("/", &stats);
@@ -110,7 +111,7 @@ float getMemoryUsage() {
     LOG_F(ERROR, "GetTotalMemorySize error: not support");
 #endif
 
-    return memory_usage;
+    return memoryUsage;
 }
 
 unsigned long long getTotalMemorySize() {
@@ -134,9 +135,9 @@ unsigned long long getTotalMemorySize() {
     }
 #elif defined(__linux__)
     long pages = sysconf(_SC_PHYS_PAGES);
-    long page_size = sysconf(_SC_PAGE_SIZE);
+    long pageSize = sysconf(_SC_PAGE_SIZE);
     totalMemorySize = static_cast<unsigned long long>(pages) *
-                      static_cast<unsigned long long>(page_size);
+                      static_cast<unsigned long long>(pageSize);
 #endif
 
     return totalMemorySize;
@@ -163,19 +164,41 @@ unsigned long long getAvailableMemorySize() {
     }
 #elif defined(__linux__)
     std::ifstream meminfo("/proc/meminfo");
+    if (!meminfo.is_open()) {
+        LOG_F(ERROR, "GetAvailableMemorySize error: open /proc/meminfo error");
+        return 1;  // Return error code
+    }
+
     std::string line;
+    bool found = false;
+
+    // Read the file line by line
     while (std::getline(meminfo, line)) {
-        if (line.substr(0, 9) == "MemAvailable:") {
+        if (line.substr(0, 13) == "MemAvailable:") {
             unsigned long long availableMemory;
-            std::sscanf(line.c_str(), "MemAvailable: %llu kB",
-                        &availableMemory);
-            availableMemorySize = availableMemory * 1024;  // 转换为字节
-            break;
+            // Parse the line
+            if (std::sscanf(line.c_str(), "MemAvailable: %llu kB",
+                            &availableMemory) == 1) {
+                availableMemorySize =
+                    availableMemory * 1024;  // Convert from kB to bytes
+                found = true;
+                break;
+            } else {
+                LOG_F(ERROR, "GetAvailableMemorySize error: parse error");
+                return -1;
+            }
         }
     }
-    meminfo.close();
-#endif
 
+    meminfo.close();
+
+    if (!found) {
+        LOG_F(ERROR,
+              "GetAvailableMemorySize error: MemAvailable entry not found in "
+              "/proc/meminfo");
+        return -1;  // Return error code
+    }
+#endif
     return availableMemorySize;
 }
 
@@ -238,7 +261,7 @@ unsigned long long getVirtualMemoryMax() {
         pclose(pipe);
     }
 #elif defined(__linux__)
-    struct sysinfo si;
+    struct sysinfo si {};
     sysinfo(&si);
     virtualMemoryMax = (si.totalram + si.totalswap) / 1024;
 #endif
@@ -269,7 +292,7 @@ unsigned long long getVirtualMemoryUsed() {
         pclose(pipe);
     }
 #elif defined(__linux__)
-    struct sysinfo si;
+    struct sysinfo si {};
     sysinfo(&si);
     virtualMemoryUsed =
         (si.totalram - si.freeram + si.totalswap - si.freeswap) / 1024;
@@ -298,7 +321,7 @@ unsigned long long getSwapMemoryTotal() {
         pclose(pipe);
     }
 #elif defined(__linux__)
-    struct sysinfo si;
+    struct sysinfo si {};
     sysinfo(&si);
     swapMemoryTotal = si.totalswap / 1024;
 #endif
@@ -328,7 +351,7 @@ unsigned long long getSwapMemoryUsed() {
         pclose(pipe);
     }
 #elif defined(__linux__)
-    struct sysinfo si;
+    struct sysinfo si {};
     sysinfo(&si);
     swapMemoryUsed = (si.totalswap - si.freeswap) / 1024;
 #endif

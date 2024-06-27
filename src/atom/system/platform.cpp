@@ -17,7 +17,9 @@ Description: A platform information collection.
 #if defined(_WIN32)
 #include <windows.h>
 #elif defined(__linux__)
+#if __has_include(<X11/Xlib.h>)
 #include <X11/Xlib.h>
+#endif
 #elif defined(__APPLE__)
 #include <CoreServices/CoreServices.h>
 #include <TargetConditionals.h>

@@ -51,12 +51,14 @@ constexpr auto split(const char (&str)[N], char delimiter) {
             }
             result[index][i - start] = '\0';
             ++index;
-            if (index == result.size())
+            if (index == result.size()) {
                 break;
+            }
             start = i + 1;
         }
-        if (str[i] == '\0')
+        if (str[i] == '\0') {
             break;
+        }
     }
     return std::pair(result, index);
 }
@@ -170,13 +172,13 @@ constexpr auto reverse(const char (&str)[N]) {
 }
 
 inline constexpr std::string_view trim(std::string_view str) noexcept {
-    constexpr auto whitespace = " \t\n\r\f\v"sv;
-    const auto start = str.find_first_not_of(whitespace);
-    if (start == std::string_view::npos)
+    constexpr auto WHITESPACE = " \t\n\r\f\v"sv;
+    const auto START = str.find_first_not_of(WHITESPACE);
+    if (START == std::string_view::npos) {
         return {};
-
-    const auto end = str.find_last_not_of(whitespace);
-    return str.substr(start, end - start + 1);
+    }
+    const auto END = str.find_last_not_of(WHITESPACE);
+    return str.substr(START, END - START + 1);
 }
 }  // namespace atom::utils
 

@@ -19,8 +19,7 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     args.hpp
-    enum_flag.hpp
-    enum_flag.inl
+    argsview.hpp
     flatset.hpp
     ini.inl
     ini.hpp

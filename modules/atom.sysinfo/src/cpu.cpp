@@ -15,24 +15,23 @@ Description: System Information Module - CPU
 #include "atom/sysinfo/cpu.hpp"
 
 #include <cstdlib>
-#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <vector>
-namespace fs = std::filesystem;
 
 #ifdef _WIN32
-#include <Windows.h>
-#include <Psapi.h>
+// clang-format off
+#include <windows.h>
+#include <psapi.h>
 #include <intrin.h>
 #include <iphlpapi.h>
 #include <pdh.h>
 #include <tlhelp32.h>
 #include <wincon.h>
+// clang-format on
 #elif __linux__
 #include <dirent.h>
 #include <limits.h>
-#include <signal.h>
 #include <sys/statfs.h>
 #include <sys/sysinfo.h>
 #include <sys/types.h>
@@ -53,7 +52,7 @@ namespace fs = std::filesystem;
 
 namespace atom::system {
 float getCurrentCpuUsage() {
-    float cpu_usage = 0.0;
+    float cpuUsage = 0.0;
 
 #ifdef _WIN32
     PDH_HQUERY query;
@@ -74,7 +73,7 @@ float getCurrentCpuUsage() {
     std::ifstream file("/proc/stat");
     if (!file.is_open()) {
         LOG_F(ERROR, "Failed to open /proc/stat");
-        return cpu_usage;
+        return cpuUsage;
     }
     std::string line;
     std::getline(file, line);  // 读取第一行
@@ -83,15 +82,15 @@ float getCurrentCpuUsage() {
     std::vector<std::string> tokens(std::istream_iterator<std::string>{iss},
                                     std::istream_iterator<std::string>());
 
-    unsigned long total_time = 0;
+    unsigned long totalTime = 0;
     for (size_t i = 1; i < tokens.size(); i++) {
-        total_time += std::stoul(tokens[i]);
+        totalTime += std::stoul(tokens[i]);
     }
 
-    unsigned long idle_time = std::stoul(tokens[4]);
+    unsigned long idleTime = std::stoul(tokens[4]);
 
-    float usage = static_cast<float>(total_time - idle_time) / total_time;
-    cpu_usage = usage * 100.0;
+    float usage = static_cast<float>(totalTime - idleTime) / totalTime;
+    cpuUsage = usage * 100.0;
 #elif __APPLE__
     host_cpu_load_info_data_t cpu_load;
     mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
@@ -128,11 +127,11 @@ float getCurrentCpuUsage() {
     cpu_usage *= 100.0;
 #endif
 
-    return cpu_usage;
+    return cpuUsage;
 }
 
 float getCurrentCpuTemperature() {
-    float temperature = 0.0f;
+    float temperature = 0.0F;
 
 #ifdef _WIN32
     HKEY hKey;
@@ -175,7 +174,7 @@ float getCurrentCpuTemperature() {
         int temp = 0;
         tempFile >> temp;
         tempFile.close();
-        temperature = static_cast<float>(temp) / 1000.0f;
+        temperature = static_cast<float>(temp) / 1000.0F;
     } else {
         LOG_F(ERROR, "GetMemoryUsage error: open /proc/meminfo error");
     }
@@ -220,7 +219,7 @@ std::string getCPUModel() {
     std::string line;
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 10) == "model name") {
-            cpuModel = line.substr(line.find(":") + 2);
+            cpuModel = line.substr(line.find(':') + 2);
             break;
         }
     }
@@ -277,7 +276,7 @@ std::string getProcessorIdentifier() {
     std::string line;
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 9) == "processor") {
-            identifier = line.substr(line.find(":") + 2);
+            identifier = line.substr(line.find(':') + 2);
             break;
         }
     }
@@ -335,7 +334,7 @@ double getProcessorFrequency() {
     std::string line;
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 7) == "cpu MHz") {
-            std::size_t pos = line.find(":") + 2;
+            std::size_t pos = line.find(':') + 2;
             frequency = std::stod(line.substr(pos)) /
                         1000.0;  // Convert frequency to GHz
             break;
@@ -378,7 +377,7 @@ int getNumberOfPhysicalPackages() {
         pclose(pipe);
     }
 #elif defined(__linux__)
-    numberOfPackages = sysconf(_SC_PHYS_PAGES);
+    numberOfPackages = static_cast<int>(sysconf(_SC_PHYS_PAGES));
 #endif
 
     return numberOfPackages;
@@ -407,7 +406,7 @@ int getNumberOfPhysicalCPUs() {
     std::string line;
     while (std::getline(cpuinfo, line)) {
         if (line.substr(0, 7) == "physical") {
-            numberOfCPUs = std::stoi(line.substr(line.find(":") + 2));
+            numberOfCPUs = std::stoi(line.substr(line.find(':') + 2));
             break;
         }
     }

@@ -16,7 +16,10 @@ Description: System Information Module - Memory
 #define ATOM_SYSTEM_MODULE_MEMORY_HPP
 
 #include <string>
+#include <utility>
 #include <vector>
+
+#include "macro.hpp"
 
 namespace atom::system {
 struct MemoryInfo {
@@ -26,16 +29,19 @@ struct MemoryInfo {
         std::string type;
 
         MemorySlot() = default;
-        MemorySlot(const std::string &capacity, const std::string &clockSpeed, const std::string &type)
-            : capacity(capacity), clockSpeed(clockSpeed), type(type) {}
-    };
+        MemorySlot(std::string capacity, std::string clockSpeed,
+                   std::string type)
+            : capacity(std::move(capacity)),
+              clockSpeed(std::move(clockSpeed)),
+              type(std::move(type)) {}
+    } ATOM_ALIGNAS(128);
 
     std::vector<MemorySlot> slots;
     unsigned long long virtualMemoryMax;
     unsigned long long virtualMemoryUsed;
     unsigned long long swapMemoryTotal;
     unsigned long long swapMemoryUsed;
-};
+} ATOM_ALIGNAS(64);
 
 /**
  * @brief Get the memory usage percentage.

@@ -15,8 +15,6 @@ Description: A simple stack vector implementation
 #ifndef ATOM_EXPERIMENT_STACK_VECTOR_HPP
 #define ATOM_EXPERIMENT_STACK_VECTOR_HPP
 
-#include <cstdint>
-#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -28,20 +26,20 @@ Description: A simple stack vector implementation
  * @tparam MaxSize The maximum capacity of the Stack_Vector.
  */
 template <typename T, std::size_t MaxSize>
-struct Stack_Vector {
+struct StackVector {
     /**
      * @brief Default constructor.
      */
-    Stack_Vector() noexcept = default;
+    StackVector() noexcept = default;
 
     /**
      * @brief Copy constructor.
      *
      * @param other The Stack_Vector to copy from.
      */
-    Stack_Vector(const Stack_Vector &other) {
-        m_size = other.m_size;
-        for (std::size_t i = 0; i < m_size; ++i) {
+    StackVector(const StackVector &other) {
+        mSize = other.mSize;
+        for (std::size_t i = 0; i < mSize; ++i) {
             new (&(*this)[i]) T(other[i]);
         }
     }
@@ -51,16 +49,16 @@ struct Stack_Vector {
      *
      * @param other The Stack_Vector to move from.
      */
-    Stack_Vector(Stack_Vector &&other) noexcept
-        : data{other.data}, m_size{other.m_size} {
-        other.m_size = 0;
+    StackVector(StackVector &&other) noexcept
+        : data{other.data}, mSize{other.mSize} {
+        other.mSize = 0;
     }
 
     /**
      * @brief Destructor.
      */
-    ~Stack_Vector() noexcept(std::is_nothrow_destructible_v<T>) {
-        for (std::size_t pos = 0; pos < m_size; ++pos) {
+    ~StackVector() noexcept(std::is_nothrow_destructible_v<T>) {
+        for (std::size_t pos = 0; pos < mSize; ++pos) {
             (*this)[pos].~T();
         }
     }
@@ -71,8 +69,8 @@ struct Stack_Vector {
      * @param idx The index of the element.
      * @return Reference to the element at the specified index.
      */
-    [[nodiscard]] T &operator[](const std::size_t idx) noexcept {
-        return *reinterpret_cast<T *>(&data + aligned_size * idx);
+    [[nodiscard]] auto operator[](const std::size_t IDX) noexcept -> T & {
+        return *reinterpret_cast<T *>(&data + ALIGNED_SIZE * IDX);
     }
 
     /**
@@ -81,8 +79,8 @@ struct Stack_Vector {
      * @param idx The index of the element.
      * @return Const reference to the element at the specified index.
      */
-    [[nodiscard]] const T &operator[](const std::size_t idx) const noexcept {
-        return *reinterpret_cast<const T *>(&data + aligned_size * idx);
+    [[nodiscard]] auto operator[](const std::size_t IDX) const noexcept -> const T & {
+        return *reinterpret_cast<const T *>(&data + ALIGNED_SIZE * IDX);
     }
 
     /**
@@ -94,8 +92,8 @@ struct Stack_Vector {
      * @return Reference to the newly added element.
      */
     template <typename... Param>
-    T &emplace_back(Param &&...param) {
-        auto *p = new (&(*this)[m_size++]) T(std::forward<Param>(param)...);
+    auto emplaceBack(Param &&...param) -> T & {
+        auto *p = new (&(*this)[mSize++]) T(std::forward<Param>(param)...);
         return *p;
     };
 
@@ -104,7 +102,7 @@ struct Stack_Vector {
      *
      * @return The number of elements.
      */
-    auto size() const noexcept { return m_size; };
+    auto size() const noexcept { return mSize; };
 
     /**
      * @brief Gets the maximum capacity of the Stack_Vector.
@@ -116,8 +114,8 @@ struct Stack_Vector {
     /**
      * @brief Removes the last element from the Stack_Vector.
      */
-    void pop_back() noexcept(std::is_nothrow_destructible_v<T>) {
-        (*this)[--m_size].~T();
+    void popBack() noexcept(std::is_nothrow_destructible_v<T>) {
+        (*this)[--mSize].~T();
     }
 
     /**
@@ -126,7 +124,7 @@ struct Stack_Vector {
      *
      * @param new_size The new size of the Stack_Vector.
      */
-    void resize(std::size_t new_size) { m_size = new_size; }
+    void resize(std::size_t new_size) { mSize = new_size; }
 
     /**
      * @brief Copy assignment operator.
@@ -134,13 +132,13 @@ struct Stack_Vector {
      * @param other The Stack_Vector to copy from.
      * @return Reference to the modified Stack_Vector.
      */
-    Stack_Vector &operator=(const Stack_Vector &other) {
+    auto operator=(const StackVector &other) -> StackVector & {
         if (this != &other) {
-            for (std::size_t i = 0; i < m_size; ++i) {
+            for (std::size_t i = 0; i < mSize; ++i) {
                 (*this)[i].~T();
             }
-            m_size = other.m_size;
-            for (std::size_t i = 0; i < m_size; ++i) {
+            mSize = other.mSize;
+            for (std::size_t i = 0; i < mSize; ++i) {
                 new (&(*this)[i]) T(other[i]);
             }
         }
@@ -153,13 +151,13 @@ struct Stack_Vector {
      * @param other The Stack_Vector to move from.
      * @return Reference to the modified Stack_Vector.
      */
-    Stack_Vector &operator=(Stack_Vector &&other) noexcept {
+    auto operator=(StackVector &&other) noexcept -> StackVector & {
         if (this != &other) {
-            for (std::size_t i = 0; i < m_size; ++i) {
+            for (std::size_t i = 0; i < mSize; ++i) {
                 (*this)[i].~T();
             }
             std::swap(data, other.data);
-            std::swap(m_size, other.m_size);
+            std::swap(mSize, other.mSize);
         }
         return *this;
     }
@@ -167,15 +165,15 @@ struct Stack_Vector {
     /**
      * @brief Size of each aligned element in the Stack_Vector.
      */
-    constexpr static auto aligned_size =
+    constexpr static auto ALIGNED_SIZE =
         sizeof(T) + (sizeof(T) & std::alignment_of_v<T>) > 0
             ? std::alignment_of_v<T>
             : 0;
 
-    std::size_t m_size{
+    std::size_t mSize{
         0}; /**< Current number of elements in the Stack_Vector. */
     alignas(std::alignment_of_v<T>) char data
-        [aligned_size * MaxSize]; /**< Storage for the elements. */
+        [ALIGNED_SIZE * MaxSize]{}; /**< Storage for the elements. */
 };
 
 #endif

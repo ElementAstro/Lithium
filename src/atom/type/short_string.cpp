@@ -14,114 +14,113 @@ Description: ShortString for Atom
 
 #include "short_string.hpp"
 
-#include <algorithm>
-#include <stdexcept>
+#include "atom/error/exception.hpp"
 
 namespace atom::type {
 ShortString::ShortString(const std::string& s) {
     if (s.length() > MAX_LENGTH) {
-        throw std::invalid_argument("String too long for ShortString");
+        THROW_INVALID_ARGUMENT("String too long for ShortString");
     }
-    str = s;
+    str_ = s;
 }
 
 ShortString::ShortString(std::string_view s) {
     if (s.length() > MAX_LENGTH) {
-        throw std::invalid_argument("String too long for ShortString");
+        THROW_INVALID_ARGUMENT("String too long for ShortString");
     }
-    str = s;
+    str_ = s;
 }
 
 ShortString::ShortString(const char* s) : ShortString(std::string_view(s)) {}
 
-ShortString& ShortString::operator=(const std::string& s) {
+auto ShortString::operator=(const std::string& s) -> ShortString& {
     if (s.length() > MAX_LENGTH) {
-        throw std::invalid_argument("String too long for ShortString");
+        THROW_INVALID_ARGUMENT("String too long for ShortString");
     }
-    str = s;
+    str_ = s;
     return *this;
 }
 
-ShortString& ShortString::operator=(const char* s) {
+auto ShortString::operator=(const char* s) -> ShortString& {
     *this = std::string_view(s);
     return *this;
 }
 
-ShortString& ShortString::operator=(std::string_view s) {
+auto ShortString::operator=(std::string_view s) -> ShortString& {
     if (s.length() > MAX_LENGTH) {
-        throw std::invalid_argument("String too long for ShortString");
+        THROW_INVALID_ARGUMENT("String too long for ShortString");
     }
-    str = s;
+    str_ = s;
     return *this;
 }
 
-std::ostream& operator<<(std::ostream& os, const ShortString& ss) {
-    return os << ss.str;
+auto operator<<(std::ostream& os, const ShortString& ss) -> std::ostream& {
+    return os << ss.str_;
 }
 
-ShortString ShortString::operator+(const ShortString& other) const {
-    if (str.length() + other.str.length() > MAX_LENGTH) {
-        throw std::invalid_argument(
-            "Resulting string too long for ShortString");
+auto ShortString::operator+(const ShortString& other) const -> ShortString {
+    if (str_.length() + other.str_.length() > MAX_LENGTH) {
+        THROW_INVALID_ARGUMENT("Resulting string too long for ShortString");
     }
-    return ShortString(str + other.str);
+    return ShortString(str_ + other.str_);
 }
 
-ShortString& ShortString::operator+=(const ShortString& other) {
+auto ShortString::operator+=(const ShortString& other) -> ShortString& {
     *this = *this + other;
     return *this;
 }
 
-ShortString& ShortString::operator+=(std::string_view other) {
-    if (str.length() + other.length() > MAX_LENGTH) {
-        throw std::invalid_argument(
-            "Resulting string too long for ShortString");
+auto ShortString::operator+=(std::string_view other) -> ShortString& {
+    if (str_.length() + other.length() > MAX_LENGTH) {
+        THROW_INVALID_ARGUMENT("Resulting string too long for ShortString");
     }
-    str += other;
+    str_ += other;
     return *this;
 }
 
-bool ShortString::operator==(const ShortString& other) const noexcept {
-    return str == other.str;
+auto ShortString::operator==(const ShortString& other) const noexcept -> bool {
+    return str_ == other.str_;
 }
 
-bool ShortString::operator!=(const ShortString& other) const noexcept {
+auto ShortString::operator!=(const ShortString& other) const noexcept -> bool {
     return !(*this == other);
 }
 
-bool ShortString::operator<(const ShortString& other) const noexcept {
-    return str < other.str;
+auto ShortString::operator<(const ShortString& other) const noexcept -> bool {
+    return str_ < other.str_;
 }
 
-bool ShortString::operator>(const ShortString& other) const noexcept {
-    return str > other.str;
+auto ShortString::operator>(const ShortString& other) const noexcept -> bool {
+    return str_ > other.str_;
 }
 
-bool ShortString::operator<=(const ShortString& other) const noexcept {
+auto ShortString::operator<=(const ShortString& other) const noexcept -> bool {
     return !(*this > other);
 }
 
-bool ShortString::operator>=(const ShortString& other) const noexcept {
+auto ShortString::operator>=(const ShortString& other) const noexcept -> bool {
     return !(*this < other);
 }
 
-char& ShortString::operator[](size_t index) noexcept { return str[index]; }
-
-const char& ShortString::operator[](size_t index) const noexcept {
-    return str[index];
+auto ShortString::operator[](size_t index) noexcept -> char& {
+    return str_[index];
 }
 
-size_t ShortString::length() const noexcept { return str.length(); }
+auto ShortString::operator[](size_t index) const noexcept -> const char& {
+    return str_[index];
+}
 
-ShortString ShortString::substr(size_t pos, size_t count) const {
-    if (pos > str.length()) {
-        throw std::out_of_range("Starting position out of range");
+auto ShortString::length() const noexcept -> size_t { return str_.length(); }
+
+auto ShortString::substr(size_t pos, size_t count) const -> ShortString {
+    if (pos > str_.length()) {
+        THROW_OUT_OF_RANGE("Starting position out of range");
     }
-    return ShortString(str.substr(pos, count));
+    return ShortString(str_.substr(pos, count));
 }
 
-void ShortString::clear() noexcept { str.clear(); }
+void ShortString::clear() noexcept { str_.clear(); }
 
-void ShortString::swap(ShortString& other) noexcept { str.swap(other.str); }
+void ShortString::swap(ShortString& other) noexcept { str_.swap(other.str_); }
 
 }  // namespace atom::type

@@ -15,13 +15,11 @@ Description: A collection of useful functions with std::any Or Any
 #ifndef ATOM_EXPERIMENT_ANYUTILS_HPP
 #define ATOM_EXPERIMENT_ANYUTILS_HPP
 
-#include <any>
 #include <concepts>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
 template <typename T>
 concept CanBeStringified = requires(T t) {
@@ -102,9 +100,8 @@ template <typename T>
     } else if constexpr (std::is_pointer_v<T>) {
         if (value == nullptr) {
             return "nullptr";
-        } else {
-            return toString(*value, prettyPrint);
         }
+        return toString(*value, prettyPrint);
     } else {
         return "unknown type";
     }
@@ -161,9 +158,8 @@ template <typename T>
     } else if constexpr (std::is_pointer_v<T>) {
         if (value == nullptr) {
             return "null";
-        } else {
-            return toJson(*value, prettyPrint);
         }
+        return toJson(*value, prettyPrint);
     } else {
         return "{}";
     }

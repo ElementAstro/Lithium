@@ -16,7 +16,6 @@ Description: INI File Read/Write Library
 #define ATOM_TYPE_INI_HPP
 
 #include <any>
-#include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <string>
@@ -57,8 +56,8 @@ public:
      * @return 值，如果不存在则返回std::nullopt
      */
     template <typename T>
-    [[nodiscard]] std::optional<T> get(const std::string &section,
-                                       const std::string &key) const;
+    [[nodiscard]] auto get(const std::string &section,
+                                       const std::string &key) const -> std::optional<T>;
 
     /**
      * @brief 判断INI文件中是否存在指定键
@@ -66,21 +65,21 @@ public:
      * @param key 键
      * @return 存在返回true，否则返回false
      */
-    [[nodiscard]] bool has(const std::string &section,
-                           const std::string &key) const;
+    [[nodiscard]] auto has(const std::string &section,
+                           const std::string &key) const -> bool;
 
     /**
      * @brief 判断INI文件中是否存在指定部分
      * @param section 部分名
      * @return 存在返回true，否则返回false
      */
-    [[nodiscard]] bool hasSection(const std::string &section) const;
+    [[nodiscard]] auto hasSection(const std::string &section) const -> bool;
 
     /**
      * @brief 获取INI文件中所有的section
      * @return section列表
      */
-    [[nodiscard]] std::vector<std::string> sections() const;
+    [[nodiscard]] auto sections() const -> std::vector<std::string>;
 
     /**
      * @brief 获取指定section下的所有key
@@ -95,9 +94,9 @@ public:
      * @param section 部分名
      * @return 部分内容
      */
-    std::unordered_map<std::string, std::any> &operator[](
-        const std::string &section) {
-        return data[section];
+    auto operator[](
+        const std::string &section) -> std::unordered_map<std::string, std::any> & {
+        return data_[section];
     }
 
     /**
@@ -114,8 +113,8 @@ public:
 
 private:
     std::unordered_map<std::string, std::unordered_map<std::string, std::any>>
-        data;                                 // 存储数据的映射表
-    mutable std::shared_mutex m_sharedMutex;  // 共享互斥锁，用于线程安全
+        data_;                                 // 存储数据的映射表
+    mutable std::shared_mutex m_sharedMutex_;  // 共享互斥锁，用于线程安全
 
     /**
      * @brief 解析INI文件的一行，并更新当前部分
@@ -123,13 +122,6 @@ private:
      * @param currentSection 当前部分
      */
     void parseLine(std::string_view line, std::string &currentSection);
-
-    /**
-     * @brief 剔除字符串前后的空格
-     * @param str 字符串
-     * @return 剔除空格后的字符串
-     */
-    [[nodiscard]] static std::string_view trim(std::string_view str);
 };
 }  // namespace atom::type
 

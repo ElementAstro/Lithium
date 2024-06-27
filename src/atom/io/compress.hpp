@@ -16,6 +16,7 @@ Description: Compressor using ZLib
 #define ATOM_IO_COMPRESS_HPP
 
 #include <string>
+#include <vector>
 
 namespace atom::io {
 /**
@@ -82,23 +83,79 @@ bool decompress_file(const std::string &file_name,
 bool compress_folder(const char *folder_name);
 
 /**
- * @brief 创建ZIP文件，将指定文件夹中的内容压缩到目标ZIP文件中。
+ * @brief 对单个ZIP文件进行解压缩
+ * @param zip_file 待解压的ZIP文件名（包含路径）
+ * @param destination_folder 解压后的文件保存路径（包含路径）
+ * @return 是否解压成功
  *
- * @param source_folder 源文件夹的路径。
- * @param zip_file 目标ZIP文件的路径。
- * @return 成功创建ZIP文件返回true，否则返回false。
- */
-bool create_zip(const std::string &source_folder, const std::string &zip_file);
-
-/**
- * @brief 从ZIP文件中提取内容到指定的目标文件夹中。
+ * 该函数用于解压缩单个ZIP文件，解压后的文件将保存在指定的路径下。
  *
- * @param zip_file ZIP文件的路径。
- * @param destination_folder 目标文件夹的路径。
- * @return 成功提取内容返回true，否则返回false。
+ * @note 如果指定的路径不存在，则函数将尝试创建该路径。
+ *
  */
 bool extract_zip(const std::string &zip_file,
                  const std::string &destination_folder);
+
+/**
+ * @brief 创建ZIP文件
+ * @param source_folder 待压缩的文件夹名（包含路径）
+ * @param zip_file 压缩后的ZIP文件名（包含路径）
+ * @param compression_level 压缩级别（可选，默认为-1，表示使用默认级别）
+ * @return 是否创建成功
+ *
+ * 该函数用于创建ZIP文件，并将指定文件夹中的文件压缩到ZIP文件中。
+ *
+ * @note如果指定的路径不存在，则函数将尝试创建该路径。
+ */
+bool create_zip(const std::string &source_folder, const std::string &zip_file,
+                int compression_level = -1);
+/**
+ * @brief 列出ZIP文件中的文件列表
+ * @param zip_file ZIP文件名（包含路径）
+ * @return 文件列表
+ *
+ * 该函数用于列出ZIP文件中的文件列表。
+ *
+ * @note 如果指定的ZIP文件不存在，则函数将返回空列表。
+ */
+std::vector<std::string> list_files_in_zip(const std::string &zip_file);
+
+/**
+ * @brief 判断ZIP文件中是否存在指定的文件
+ * @param zip_file ZIP文件名（包含路径）
+ * @param file_name 文件名
+ * @return 是否存在
+ *
+ * 该函数用于判断ZIP文件中是否存在指定的文件。
+ *
+ * @note 如果指定的ZIP文件不存在，则函数将返回false。
+ */
+bool file_exists_in_zip(const std::string &zip_file,
+                        const std::string &file_name);
+
+/**
+ * @brief 从ZIP文件中删除指定的文件
+ * @param zip_file ZIP文件名（包含路径）
+ * @param file_name 文件名
+ * @return 是否删除成功
+ *
+ * 该函数用于从ZIP文件中删除指定的文件。
+ *
+ * @note 如果指定的ZIP文件不存在，则函数将返回false。
+ */
+bool remove_file_from_zip(const std::string &zip_file,
+                          const std::string &file_name);
+
+/**
+ * @brief 获取ZIP文件中的文件大小
+ * @param zip_file ZIP文件名（包含路径）
+ * @return 文件大小
+ *
+ * 该函数用于获取ZIP文件中的文件大小。
+ *
+ * @note 如果指定的ZIP文件不存在，则函数将返回0。
+ */
+size_t get_zip_file_size(const std::string &zip_file);
 }  // namespace atom::io
 
 #endif

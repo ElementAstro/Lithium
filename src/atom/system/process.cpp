@@ -81,7 +81,7 @@ bool ProcessManager::createProcess(const std::string &command,
 
     if (pid == 0) {
         // Child process code
-        DLOG_F(INFO, _("Running command: {}"), command);
+        DLOG_F(INFO, "Running command: {}", command);
         int pipefd[2];
         int result = pipe(pipefd);
         if (result != 0) {

@@ -17,11 +17,10 @@ Description: Compiler
 #include "utils/constant.hpp"
 
 #include <fstream>
-#include <sstream>
 
-#include <fmt/format.h>
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "atom/utils/to_string.hpp"
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -40,7 +39,7 @@ bool Compiler::compileToSharedLibrary(std::string_view code,
 
     // 检查模块是否已编译并缓存
     auto cachedModule =
-        cache_.find(fmt::format("{}::{}", moduleName, functionName));
+        cache_.find(std::format("{}::{}", moduleName, functionName));
     if (cachedModule != cache_.end()) {
         LOG_F(WARNING,
               "Module {}::{} is already compiled, using cached result.",
@@ -57,7 +56,8 @@ bool Compiler::compileToSharedLibrary(std::string_view code,
         LOG_F(ERROR, "No available compilers found.");
         return false;
     }
-    LOG_F(INFO, "Available compilers: {}", fmt::join(availableCompilers, ", "));
+    LOG_F(INFO, "Available compilers: {}",
+          atom::utils::toString(availableCompilers));
 
     // 读取编译选项
     std::ifstream optionsStream(optionsFile.data());
@@ -72,7 +72,7 @@ bool Compiler::compileToSharedLibrary(std::string_view code,
         try {
             json optionsJson;
             optionsStream >> optionsJson;
-            return fmt::format(
+            return std::format(
                 "{} {} {}",
                 optionsJson["optimization_level"].get<std::string>(),
                 optionsJson["cplus_version"].get<std::string>(),
@@ -90,14 +90,14 @@ bool Compiler::compileToSharedLibrary(std::string_view code,
 
     // 编译代码
     const auto outputPath =
-        outputDir / fmt::format("{}{}{}", constants::LIB_EXTENSION, moduleName,
+        outputDir / std::format("{}{}{}", constants::LIB_EXTENSION, moduleName,
                                 constants::LIB_EXTENSION);
     if (!compileCode(code, constants::COMPILER, compileOptions, outputPath)) {
         return false;
     }
 
     // 缓存编译结果
-    cache_[fmt::format("{}::{}", moduleName, functionName)] = outputPath;
+    cache_[std::format("{}::{}", moduleName, functionName)] = outputPath;
     return true;
 }
 
@@ -110,7 +110,7 @@ void Compiler::createOutputDirectory(const fs::path& outputDir) {
 }
 
 bool Compiler::syntaxCheck(std::string_view code, std::string_view compiler) {
-    const auto command = fmt::format("{} -fsyntax-only -xc++ -", compiler);
+    const auto command = std::format("{} -fsyntax-only -xc++ -", compiler);
     std::string output;
     const auto exitCode = runCommand(command, code, output);
     if (exitCode != 0) {
@@ -123,7 +123,7 @@ bool Compiler::syntaxCheck(std::string_view code, std::string_view compiler) {
 bool Compiler::compileCode(std::string_view code, std::string_view compiler,
                            std::string_view compileOptions,
                            const fs::path& output) {
-    const auto command = fmt::format("{} {} -xc++ - -o {}", compiler,
+    const auto command = std::format("{} {} -xc++ - -o {}", compiler,
                                      compileOptions, output.string());
     std::string compilationOutput;
     const auto exitCode = runCommand(command, code, compilationOutput);

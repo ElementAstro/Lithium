@@ -18,35 +18,38 @@ Description: INI File Read/Write Library
 #include <sstream>
 
 #include "atom/error/exception.hpp"
+#include "atom/utils/string.hpp"
 
 namespace atom::type {
 
-bool INIFile::has(const std::string &section, const std::string &key) const {
-    std::shared_lock lock(m_sharedMutex);
-    if (auto it = data.find(section); it != data.end()) {
+auto INIFile::has(const std::string &section,
+                  const std::string &key) const -> bool {
+    std::shared_lock lock(m_sharedMutex_);
+    if (auto it = data_.find(section); it != data_.end()) {
         return it->second.contains(key);
     }
     return false;
 }
 
-bool INIFile::hasSection(const std::string &section) const {
-    std::shared_lock lock(m_sharedMutex);
-    return data.contains(section);
+auto INIFile::hasSection(const std::string &section) const -> bool {
+    std::shared_lock lock(m_sharedMutex_);
+    return data_.contains(section);
 }
 
-std::vector<std::string> INIFile::sections() const {
-    std::shared_lock lock(m_sharedMutex);
+auto INIFile::sections() const -> std::vector<std::string> {
+    std::shared_lock lock(m_sharedMutex_);
     std::vector<std::string> result;
-    result.reserve(data.size());
-    for (const auto &[section, _] : data) {
+    result.reserve(data_.size());
+    for (const auto &[section, _] : data_) {
         result.emplace_back(section);
     }
     return result;
 }
 
-std::vector<std::string> INIFile::keys(const std::string &section) const {
-    std::shared_lock lock(m_sharedMutex);
-    if (auto it = data.find(section); it != data.end()) {
+auto INIFile::keys(const std::string &section) const
+    -> std::vector<std::string> {
+    std::shared_lock lock(m_sharedMutex_);
+    if (auto it = data_.find(section); it != data_.end()) {
         std::vector<std::string> result;
         result.reserve(it->second.size());
         for (const auto &[key, _] : it->second) {
@@ -58,7 +61,7 @@ std::vector<std::string> INIFile::keys(const std::string &section) const {
 }
 
 void INIFile::load(const std::string &filename) {
-    std::unique_lock lock(m_sharedMutex);
+    std::unique_lock lock(m_sharedMutex_);
     std::ifstream file(filename);
     if (!file) {
         THROW_EXCEPTION("Failed to open file: " + filename);
@@ -71,13 +74,13 @@ void INIFile::load(const std::string &filename) {
 }
 
 void INIFile::save(const std::string &filename) const {
-    std::shared_lock lock(m_sharedMutex);
+    std::shared_lock lock(m_sharedMutex_);
     std::ofstream file(filename);
     if (!file) {
         THROW_FILE_NOT_WRITABLE("Failed to create file: ", filename);
     }
 
-    for (const auto &[section, entries] : data) {
+    for (const auto &[section, entries] : data_) {
         file << "[" << section << "]\n";
         for (const auto &[key, value] : entries) {
             file << key << "=";
@@ -109,32 +112,23 @@ void INIFile::parseLine(std::string_view line, std::string &currentSection) {
     if (line.front() == '[') {
         auto pos = line.find(']');
         if (pos != std::string_view::npos) {
-            currentSection = std::string(trim(line.substr(1, pos - 1)));
+            currentSection = atom::utils::trim(line.substr(1, pos - 1));
         }
     } else {
         auto pos = line.find('=');
         if (pos != std::string_view::npos) {
-            auto key = trim(line.substr(0, pos));
-            auto value = trim(line.substr(pos + 1));
-            data[currentSection][std::string(key)] = std::string(value);
+            auto key = atom::utils::trim(line.substr(0, pos));
+            auto value = atom::utils::trim(line.substr(pos + 1));
+            data_[currentSection][key] = value;
         }
     }
 }
 
-std::string_view INIFile::trim(std::string_view str) {
-    auto start = str.find_first_not_of(" \t");
-    if (start == std::string_view::npos) {
-        return {};
-    }
-    auto end = str.find_last_not_of(" \t");
-    return str.substr(start, end - start + 1);
-}
-
-std::string INIFile::toJson() const {
-    std::shared_lock lock(m_sharedMutex);
+auto INIFile::toJson() const -> std::string {
+    std::shared_lock lock(m_sharedMutex_);
     std::ostringstream oss;
     oss << "{";
-    for (const auto &[section, entries] : data) {
+    for (const auto &[section, entries] : data_) {
         oss << "\"" << section << "\": {";
         for (const auto &[key, value] : entries) {
             oss << "\"" << key << "\": ";
@@ -163,12 +157,12 @@ std::string INIFile::toJson() const {
     return oss.str();
 }
 
-std::string INIFile::toXml() const {
-    std::shared_lock lock(m_sharedMutex);
+auto INIFile::toXml() const -> std::string {
+    std::shared_lock lock(m_sharedMutex_);
     std::ostringstream oss;
     oss << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     oss << "<config>\n";
-    for (const auto &[section, entries] : data) {
+    for (const auto &[section, entries] : data_) {
         oss << "  <section name=\"" << section << "\">\n";
         for (const auto &[key, value] : entries) {
             oss << "    <entry name=\"" << key << "\" type=\"";

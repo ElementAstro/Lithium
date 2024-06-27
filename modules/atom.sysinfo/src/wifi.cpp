@@ -32,7 +32,12 @@ Description: System Information Module - Wifi Information
 #pragma comment(lib, "wlanapi.lib")
 #endif
 #elif defined(__linux__)
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
 #include <fstream>
+#include <iterator>
+#include <memory>
 #include <sstream>
 #elif defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
@@ -91,7 +96,7 @@ std::string getCurrentWifi() {
                 std::istream_iterator<std::string>());
             if (tokens.size() >= 2 && tokens[1] != "off/any" &&
                 tokens[1] != "any") {
-                wifiName = tokens[0].substr(0, tokens[0].find(":"));
+                wifiName = tokens[0].substr(0, tokens[0].find(':'));
                 break;
             }
         }
@@ -222,7 +227,8 @@ bool isHotspotConnected() {
             std::vector<std::string> tokens(
                 std::istream_iterator<std::string>{iss},
                 std::istream_iterator<std::string>());
-            if (tokens.size() >= 17 && tokens[1].substr(0, 5) == "wlx00") {
+            constexpr int WIFI_INDEX = 5;
+            if (tokens.size() >= 17 && tokens[1].substr(0, WIFI_INDEX) == "wlx00") {
                 isConnected = true;
                 break;
             }
@@ -284,30 +290,32 @@ std::vector<std::string> getHostIPs() {
     WSACleanup();
 #else
     ifaddrs* ifaddr;
+
     if (getifaddrs(&ifaddr) == -1) {
         LOG_F(ERROR, "Error: getifaddrs failed");
         return hostIPs;
     }
 
-    for (ifaddrs* ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == NULL)
+    for (ifaddrs* ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr) {
             continue;
+        }
 
-        if (ifa->ifa_addr->sa_family == AF_INET ||
-            ifa->ifa_addr->sa_family == AF_INET6) {
-            char ipstr[INET6_ADDRSTRLEN];
+        int family = ifa->ifa_addr->sa_family;
+        if (family == AF_INET || family == AF_INET6) {
+            std::array<char, INET6_ADDRSTRLEN> ipstr{};
             void* addr;
-            if (ifa->ifa_addr->sa_family == AF_INET) {
-                sockaddr_in* ipv4 =
-                    reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
+
+            if (family == AF_INET) {
+                auto* ipv4 = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
                 addr = &(ipv4->sin_addr);
-            } else {
-                sockaddr_in6* ipv6 =
-                    reinterpret_cast<sockaddr_in6*>(ifa->ifa_addr);
+            } else {  // AF_INET6
+                auto* ipv6 = reinterpret_cast<sockaddr_in6*>(ifa->ifa_addr);
                 addr = &(ipv6->sin6_addr);
             }
-            inet_ntop(ifa->ifa_addr->sa_family, addr, ipstr, sizeof(ipstr));
-            hostIPs.push_back(std::string(ipstr));
+
+            inet_ntop(family, addr, ipstr.data(), ipstr.size());
+            hostIPs.emplace_back(ipstr.data());
         }
     }
 
@@ -357,31 +365,39 @@ std::vector<std::string> getIPAddresses(int addressFamily) {
     }
 #else
     struct ifaddrs* ifAddrList = nullptr;
+
     if (getifaddrs(&ifAddrList) == -1) {
         return addresses;
     }
 
+    // Use smart pointer to automatically manage the lifecycle of ifAddrList
     std::unique_ptr<ifaddrs, decltype(&freeifaddrs)> ifAddrListGuard(
         ifAddrList, freeifaddrs);
 
-    for (auto ifa = ifAddrList; ifa != nullptr; ifa = ifa->ifa_next) {
+    for (auto* ifa = ifAddrList; ifa != nullptr; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr && ifa->ifa_addr->sa_family == addressFamily) {
-            auto sockAddr = reinterpret_cast<AddressType*>(ifa->ifa_addr);
-            char addressBuffer[std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)] = {
-                0};
-            void* addrPtr =
-                (addressFamily == AF_INET)
-                    ? static_cast<void*>(
-                          &reinterpret_cast<sockaddr_in*>(sockAddr)->sin_addr)
-                    : static_cast<void*>(
-                          &reinterpret_cast<sockaddr_in6*>(sockAddr)
-                               ->sin6_addr);
-            if (inet_ntop(addressFamily, addrPtr, addressBuffer,
-                          sizeof(addressBuffer))) {
-                addresses.emplace_back(addressBuffer);
+            auto *sockAddr = reinterpret_cast<sockaddr*>(ifa->ifa_addr);
+            // Using std::array to manage the address buffer
+            std::array<char, std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)>
+                addressBuffer{};
+            void* addrPtr = nullptr;
+
+            // Determine the type of the IP address and set the pointer
+            // accordingly
+            if (addressFamily == AF_INET) {
+                addrPtr = &reinterpret_cast<sockaddr_in*>(sockAddr)->sin_addr;
+            } else if (addressFamily == AF_INET6) {
+                addrPtr = &reinterpret_cast<sockaddr_in6*>(sockAddr)->sin6_addr;
+            }
+
+            // Convert the IP address from binary to text form
+            if (inet_ntop(addressFamily, addrPtr, addressBuffer.data(),
+                          addressBuffer.size())) {
+                addresses.emplace_back(addressBuffer.data());
             }
         }
     }
+
 #endif
 
     return addresses;

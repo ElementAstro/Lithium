@@ -15,7 +15,6 @@ Description: Pointer Sentinel for Atom
 #ifndef ATOM_TYPE_POINTER_HPP
 #define ATOM_TYPE_POINTER_HPP
 
-#include <concepts>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -42,38 +41,39 @@ concept PointerType =
  */
 template <typename T>
 class PointerSentinel {
-public:
     // Using std::variant to store different types of pointers
     std::variant<std::shared_ptr<T>, std::unique_ptr<T>, std::weak_ptr<T>, T*>
-        ptr;
+        ptr_;
 
+public:
+    PointerSentinel() = default;
     /**
      * @brief Construct a new Pointer Sentinel object from a shared pointer.
      *
      * @param p The shared pointer.
      */
-    explicit PointerSentinel(std::shared_ptr<T> p) : ptr(std::move(p)) {}
+    explicit PointerSentinel(std::shared_ptr<T> p) : ptr_(std::move(p)) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a unique pointer.
      *
      * @param p The unique pointer.
      */
-    explicit PointerSentinel(std::unique_ptr<T>&& p) : ptr(std::move(p)) {}
+    explicit PointerSentinel(std::unique_ptr<T>&& p) : ptr_(std::move(p)) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a weak pointer.
      *
      * @param p The weak pointer.
      */
-    explicit PointerSentinel(std::weak_ptr<T> p) : ptr(std::move(p)) {}
+    explicit PointerSentinel(std::weak_ptr<T> p) : ptr_(std::move(p)) {}
 
     /**
      * @brief Construct a new Pointer Sentinel object from a raw pointer.
      *
      * @param p The raw pointer.
      */
-    explicit PointerSentinel(T* p) : ptr(p) {}
+    explicit PointerSentinel(T* p) : ptr_(p) {}
 
     /**
      * @brief Copy constructor.
@@ -81,7 +81,7 @@ public:
      * @param other The other Pointer Sentinel object to copy from.
      */
     PointerSentinel(const PointerSentinel& other)
-        : ptr(std::visit(
+        : ptr_(std::visit(
               [](const auto& p)
                   -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>,
                                   std::weak_ptr<T>, T*> {
@@ -98,7 +98,7 @@ public:
                       return new T(*p);
                   }
               },
-              other.ptr)) {}
+              other.ptr_)) {}
 
     /**
      * @brief Move constructor.
@@ -113,9 +113,9 @@ public:
      * @param other The other Pointer Sentinel object to copy from.
      * @return A reference to this Pointer Sentinel object.
      */
-    PointerSentinel& operator=(const PointerSentinel& other) {
+    auto operator=(const PointerSentinel& other) -> PointerSentinel& {
         if (this != &other) {
-            ptr = std::visit(
+            ptr_ = std::visit(
                 [](const auto& p)
                     -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>,
                                     std::weak_ptr<T>, T*> {
@@ -134,7 +134,7 @@ public:
                         return new T(*p);
                     }
                 },
-                other.ptr);
+                other.ptr_);
         }
         return *this;
     }
@@ -145,14 +145,15 @@ public:
      * @param other The other Pointer Sentinel object to move from.
      * @return A reference to this Pointer Sentinel object.
      */
-    PointerSentinel& operator=(PointerSentinel&& other) noexcept = default;
+    auto operator=(PointerSentinel&& other) noexcept -> PointerSentinel& =
+                                                            default;
 
     /**
      * @brief Get the raw pointer stored in the variant.
      *
      * @return T* The raw pointer.
      */
-    [[nodiscard]] T* get() const {
+    [[nodiscard]] auto get() const -> T* {
         return std::visit(
             [](auto&& arg) -> T* {
                 using U = std::decay_t<decltype(arg)>;
@@ -165,7 +166,7 @@ public:
                     return arg.get();
                 }
             },
-            ptr);
+            ptr_);
     }
 
     /**
@@ -191,15 +192,14 @@ public:
                     if (spt) {
                         return ((*spt.get()).*
                                 func)(std::forward<Args>(args)...);
-                    } else {
-                        // Handle the case where weak_ptr is expired
-                        throw std::runtime_error("weak_ptr is expired");
-                    }
+                    }  // Handle the case where weak_ptr is expired
+                    throw std::runtime_error("weak_ptr is expired");
+
                 } else {
                     return ((*arg.get()).*func)(std::forward<Args>(args)...);
                 }
             },
-            ptr);
+            ptr_);
     }
 
     /**
@@ -222,15 +222,15 @@ public:
                     if (spt) {
                         return std::invoke(std::forward<Callable>(callable),
                                            spt.get());
-                    } else {
-                        throw std::runtime_error("weak_ptr is expired");
                     }
+                    throw std::runtime_error("weak_ptr is expired");
+
                 } else {
                     return std::invoke(std::forward<Callable>(callable),
                                        arg.get());
                 }
             },
-            ptr);
+            ptr_);
     }
 
     /**
@@ -243,7 +243,7 @@ public:
      * @param args The arguments to the function.
      */
     template <typename Func, typename... Args>
-    void apply_void(Func func, Args&&... args) {
+    void applyVoid(Func func, Args&&... args) {
         std::visit(
             [&func, &args...](auto&& arg) {
                 if constexpr (std::is_pointer_v<std::decay_t<decltype(arg)>>) {
@@ -261,7 +261,7 @@ public:
                     func(*arg.get(), std::forward<Args>(args)...);
                 }
             },
-            ptr);
+            ptr_);
     }
 };
 

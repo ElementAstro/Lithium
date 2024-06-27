@@ -5,7 +5,6 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <functional>
 #include <mutex>
 #include <optional>
 #include <shared_mutex>
@@ -41,7 +40,7 @@ public:
          *
          * @param v The value to store in the entry.
          */
-        Entry(Value v) : value(std::move(v)) {}
+        explicit Entry(Value val) : value(std::move(val)) {}
     };
 
     /**
@@ -69,7 +68,7 @@ public:
      * @return An optional containing the value if found, otherwise
      * std::nullopt.
      */
-    std::optional<Value> get(const Key& key);
+    auto get(const Key& key) -> std::optional<Value>;
 
     /**
      * @brief Erases the entry associated with a given key.
@@ -77,7 +76,7 @@ public:
      * @param key The key to erase.
      * @return true if the key was found and erased, false otherwise.
      */
-    bool erase(const Key& key);
+    auto erase(const Key& key) -> bool;
 
     /**
      * @brief Clears all entries in the hash table.
@@ -90,7 +89,7 @@ public:
      * @return A vector of key-entry pairs representing all entries in the hash
      * table.
      */
-    std::vector<std::pair<Key, Entry>> getAllEntries() const;
+    auto getAllEntries() const -> std::vector<std::pair<Key, Entry>>;
 
     /**
      * @brief Sorts the entries in the hash table by their access count in
@@ -113,8 +112,8 @@ public:
 
 private:
     mutable std::shared_mutex
-        mtx;  ///< Mutex for synchronizing access to the hash table.
-    std::unordered_map<Key, Entry> table;  ///< The underlying hash table.
+        mtx_;  ///< Mutex for synchronizing access to the hash table.
+    std::unordered_map<Key, Entry> table_;  ///< The underlying hash table.
     std::atomic_flag stopSorting =
         ATOMIC_FLAG_INIT;        ///< Flag to indicate whether to stop automatic
                                  ///< sorting.

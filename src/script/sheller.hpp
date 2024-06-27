@@ -21,7 +21,6 @@ Description: System Script Manager
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <vector>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
@@ -38,12 +37,13 @@ using ScriptMap = std::unordered_map<std::string, Script>;
 
 namespace lithium {
 class ScriptManager {
-    ScriptMap scripts;
-    std::unordered_map<std::string, Script> powerShellScripts;
-    std::unordered_map<std::string, std::string> scriptOutputs;
-    std::unordered_map<std::string, int> scriptStatus;
-    std::shared_mutex m_sharedMutex;
-    bool registerCommon(std::unordered_map<std::string, std::string>& scriptMap, std::string_view name, const std::string& script);
+    ScriptMap scripts_;
+    std::unordered_map<std::string, Script> powerShellScripts_;
+    std::unordered_map<std::string, std::string> scriptOutputs_;
+    std::unordered_map<std::string, int> scriptStatus_;
+    std::shared_mutex m_sharedMutex_;
+    bool registerCommon(std::unordered_map<std::string, std::string>& scriptMap,
+                        std::string_view name, const std::string& script);
 
 public:
     void registerScript(std::string_view name, const Script& script);

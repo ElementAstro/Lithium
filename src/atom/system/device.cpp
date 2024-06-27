@@ -10,21 +10,25 @@
 #include <bluetoothapis.h>
 // clang-format on
 #else
-#include <bluetooth/bluetooth.h>
-#include <bluetooth/hci.h>
-#include <bluetooth/hci_lib.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <libusb.h>
+#include <libusb-1.0/libusb.h>
 #include <linux/serial.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <cstring>
+#if __has_include(<bluetooth/bluetooth.h>)
+#include <bluetooth/bluetooth.h>
+#include <bluetooth/hci.h>
+#include <bluetooth/hci_lib.h>
+#include <memory>
+#endif
 #endif
 
-#ifdef _WIN32
+#include "atom/log/loguru.hpp"
 
-namespace atom::system
-{
+namespace atom::system {
+#ifdef _WIN32
 std::vector<DeviceInfo> enumerate_usb_devices() {
     std::vector<DeviceInfo> devices;
     HDEVINFO device_info_set = SetupDiGetClassDevs(
@@ -104,78 +108,76 @@ std::vector<DeviceInfo> enumerate_bluetooth_devices() {
 
 std::vector<DeviceInfo> enumerate_usb_devices() {
     std::vector<DeviceInfo> devices;
-    libusb_context *ctx = NULL;
-    libusb_device **devs = NULL;
-    int i, ret;
+    libusb_context *ctx = nullptr;
+    libusb_device **devList = nullptr;
+    int count;
+    int ret;
 
     // Initialize libusb
-    ctx = libusb_init(NULL);
-    if (!ctx) {
-        std::cerr << "Failed to initialize libusb" << std::endl;
+    ret = libusb_init(&ctx);
+    if (ret < 0) {
+        LOG_F(ERROR, "Failed to initialize libusb: {}", libusb_error_name(ret));
         return devices;
     }
 
     // Get a list of all USB devices
-    ret = libusb_get_device_list(ctx, &devs);
-    if (ret < 0) {
-        std::cerr << "Failed to get device list" << std::endl;
-        libusb_free_device_list(devs, 1);
+    count = libusb_get_device_list(ctx, &devList);
+    if (count < 0) {
+        LOG_F(ERROR, "Failed to get device list: {}", libusb_error_name(count));
         libusb_exit(ctx);
         return devices;
     }
 
-    // Iterate through the devices and extract information
-    for (i = 0; i < ret; i++) {
-        libusb_device *dev = devs[i];
+    for (int i = 0; i < count; i++) {
+        libusb_device *dev = devList[i];
+        libusb_device_descriptor desc{};
+        libusb_config_descriptor *cfg;
         char buf[256];
-        struct libusb_device_descriptor desc;
-        struct libusb_config_descriptor *cfg;
 
         // Get the device descriptor
         ret = libusb_get_device_descriptor(dev, &desc);
         if (ret < 0) {
-            std::cerr << "Failed to get device descriptor" << std::endl;
+            LOG_F(ERROR, "Failed to get device descriptor: {}",
+                  libusb_error_name(ret));
             continue;
         }
 
-        // Get the device configuration
-        cfg = libusb_get_config_descriptor(dev);
-        if (!cfg) {
-            std::cerr << "Failed to get device configuration" << std::endl;
+        // Get the first configuration descriptor
+        ret = libusb_get_config_descriptor(dev, 0, &cfg);
+        if (ret < 0) {
+            LOG_F(ERROR, "Failed to get configuration descriptor: {}",
+                  libusb_error_name(ret));
             continue;
         }
 
         // Get the device address
-        std::string address;
-        address += "Bus ";
-        address += std::to_string(libusb_get_bus_number(dev));
-        address += " Device ";
-        address += std::to_string(libusb_get_device_address(dev));
+        std::string address =
+            "Bus " + std::to_string(libusb_get_bus_number(dev)) + " Device " +
+            std::to_string(libusb_get_device_address(dev));
 
-        // Get the device description
-        if (desc.iManufacturer && desc.iManufacturer < 256) {
-            libusb_get_string_descriptor_ascii(dev, desc.iManufacturer, buf,
-                                               256);
-            std::string manufacturer(buf);
-            if (!manufacturer.empty()) {
-                address += " (";
-                address += manufacturer;
-                address += ")";
+        libusb_device_handle *handle;
+        ret = libusb_open(dev, &handle);
+        if (ret == 0 && (desc.iManufacturer != 0U)) {
+            int len = libusb_get_string_descriptor_ascii(
+                handle, desc.iManufacturer, (unsigned char *)buf, sizeof(buf));
+            if (len > 0) {
+                address += " (" + std::string(buf, len) + ")";
             }
+            libusb_close(handle);
         }
 
         // Create a DeviceInfo struct and add it to the vector
-        DeviceInfo device;
-        device.description = address;
-        device.address = address;
-        devices.push_back(device);
+        DeviceInfo deviceInfo;
+        deviceInfo.description = address;
+        deviceInfo.address = address;
+        devices.push_back(deviceInfo);
 
         // Free the configuration descriptor
         libusb_free_config_descriptor(cfg);
     }
 
     // Free the device list
-    libusb_free_device_list(devs, 1);
+    libusb_free_device_list(devList, 1);
 
     // Clean up
     libusb_exit(ctx);
@@ -207,41 +209,65 @@ std::vector<DeviceInfo> enumerate_serial_ports() {
 
 std::vector<DeviceInfo> enumerate_bluetooth_devices() {
     std::vector<DeviceInfo> devices;
-    int dev_id = hci_get_route(nullptr);
-    int sock = hci_open_dev(dev_id);
-
-    if (dev_id < 0 || sock < 0) {
-        perror("opening socket");
+#if __has_include(<bluetooth/bluetooth.h>)
+    int devId = hci_get_route(nullptr);
+    if (devId < 0) {
+        LOG_F(ERROR, "No Bluetooth adapter available: {}",
+              std::strerror(errno));
         return devices;
     }
 
-    inquiry_info *ii = nullptr;
-    int max_rsp = 255;
-    int num_rsp;
-    int len = 8;
-    int flags = IREQ_CACHE_FLUSH;
-    char addr[19] = {0};
-    char name[248] = {0};
-
-    ii = (inquiry_info *)malloc(max_rsp * sizeof(inquiry_info));
-    num_rsp = hci_inquiry(dev_id, len, max_rsp, nullptr, &ii, flags);
-    if (num_rsp < 0)
-        perror("hci_inquiry");
-
-    for (int i = 0; i < num_rsp; i++) {
-        ba2str(&(ii + i)->bdaddr, addr);
-        if (hci_read_remote_name(sock, &(ii + i)->bdaddr, sizeof(name), name,
-                                 0) < 0) {
-            strcpy(name, "[unknown]");
-        }
-        devices.push_back({name, addr});
+    int sock = hci_open_dev(devId);
+    if (sock < 0) {
+        LOG_F(ERROR, "Failed to open socket to Bluetooth adapter: {}",
+              std::strerror(errno));
+        return devices;
     }
 
-    free(ii);
-    close(sock);
+    // RAII to manage the socket
+    struct CloseSocket {
+        void operator()(const int *ptr) const {
+            if (ptr != nullptr) {
+                auto sock = *ptr;
+                close(sock);
+                delete ptr;
+            }
+        }
+    };
+
+    auto sockGuard =
+        std::unique_ptr<int, CloseSocket>(new int(sock), CloseSocket());
+
+    int maxRsp = 255;
+    int len = 8;
+    int flags = IREQ_CACHE_FLUSH;
+    std::array<char, 19> addr{};
+    std::array<char, 248> name{};
+
+    // Use unique_ptr with custom deleter for automatic memory management
+    auto ii = std::unique_ptr<inquiry_info[]>(new inquiry_info[maxRsp]);
+    inquiry_info *localIi = ii.get();
+    int numRsp = hci_inquiry(devId, len, maxRsp, nullptr, &localIi, flags);
+    if (numRsp < 0) {
+        LOG_F(ERROR, "HCI inquiry failed: {}", std::strerror(errno));
+        return devices;
+    }
+
+    for (int i = 0; i < numRsp; i++) {
+        ba2str(&(ii.get()[i].bdaddr), addr.data());
+
+        memset(name.data(), 0, name.size());
+        if (hci_read_remote_name(*sockGuard, &(ii.get()[i].bdaddr), name.size(),
+                                 name.data(), 0) < 0) {
+            std::strcpy(name.data(), "[unknown]");
+        }
+        devices.push_back(
+            DeviceInfo{std::string(name.data()), std::string(addr.data())});
+    }
+#endif
     return devices;
 }
 
 #endif
 
-}
+}  // namespace atom::system

@@ -21,7 +21,7 @@ Description: Lithium Web Interface based on oatpp
 class ServerComponent : public Component {
 public:
     explicit ServerComponent(const std::string& name);
-    virtual ~ServerComponent();
+     ~ServerComponent() override;
 
     bool initialize() override;
     bool destroy() override;

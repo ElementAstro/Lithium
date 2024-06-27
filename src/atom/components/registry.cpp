@@ -1,102 +1,101 @@
 #include "registry.hpp"
 
 #include <algorithm>
-#include <filesystem>
-#include <memory>
 #include <mutex>
-#include <optional>
-#include <stdexcept>
 #include <vector>
 
 #include "atom/error/exception.hpp"
 
-void Registry::add_initializer(const std::string& name, InitFunc init_func,
-                               CleanupFunc cleanup_func) {
+void Registry::addInitializer(const std::string& name,
+                              Component::InitFunc init_func,
+                              Component::CleanupFunc cleanup_func) {
     std::scoped_lock lock(mutex_);
-    if (initializers.find(name) != initializers.end()) {
+    if (initializers_.find(name) != initializers_.end()) {
         THROW_OBJ_ALREADY_INITIALIZED("Initializer already registered: " +
                                       name);
     }
-    initializers[name] = {std::move(init_func), std::move(cleanup_func)};
-    initialized[name] = false;
+    initializers_[name]->initFunc = std::move(init_func);
+    initializers_[name]->cleanupFunc = std::move(cleanup_func);
+    initialized_[name] = false;
 }
 
-void Registry::add_dependency(const std::string& name,
-                              const std::string& dependency) {
+void Registry::addDependency(const std::string& name,
+                             const std::string& dependency) {
     std::unique_lock lock(mutex_);
-    if (has_circular_dependency(name, dependency)) {
+    if (hasCircularDependency(name, dependency)) {
         THROW_RUNTIME_ERROR("Circular dependency detected: " + name + " -> " +
                             dependency);
     }
-    dependencies[name].insert(dependency);
+    dependencies_[name].insert(dependency);
 }
 
-void Registry::initialize_all() {
+void Registry::initializeAll() {
     std::unique_lock lock(mutex_);
-    std::unordered_set<std::string> init_stack;
-    for (const auto& pair : initializers) {
-        initialize_component(pair.first, init_stack);
+    std::unordered_set<std::string> initStack;
+    for (const auto& pair : initializers_) {
+        initializeComponent(pair.first, initStack);
     }
 }
 
-void Registry::cleanup_all() {
+void Registry::cleanupAll() {
     std::unique_lock lock(mutex_);
     std::vector<std::string> keys;
-    for (const auto& pair : initializers) {
+    keys.reserve(initializers_.size());
+    for (const auto& pair : initializers_) {
         keys.push_back(pair.first);
     }
     std::reverse(keys.begin(), keys.end());
 
     for (const auto& key : keys) {
-        if (initializers[key].cleanup_func && initialized[key]) {
-            initializers[key].cleanup_func();
-            initialized[key] = false;
+        if (initializers_[key]->cleanupFunc && initialized_[key]) {
+            initializers_[key]->cleanupFunc();
+            initialized_[key] = false;
         }
     }
 }
 
-bool Registry::is_initialized(const std::string& name) const {
+bool Registry::isInitialized(const std::string& name) const {
     std::shared_lock lock(mutex_);
-    auto it = initialized.find(name);
-    return it != initialized.end() && it->second;
+    auto it = initialized_.find(name);
+    return it != initialized_.end() && it->second;
 }
 
-void Registry::reinitialize_component(const std::string& name) {
+void Registry::reinitializeComponent(const std::string& name) {
     std::unique_lock lock(mutex_);
-    if (initializers.find(name) == initializers.end()) {
+    if (initializers_.find(name) == initializers_.end()) {
         THROW_OBJ_NOT_EXIST("Component not registered: " + name);
     }
-    std::unordered_set<std::string> init_stack;
-    initialize_component(name, init_stack);
+    std::unordered_set<std::string> initStack;
+    initializeComponent(name, initStack);
 }
 
-bool Registry::has_circular_dependency(const std::string& name,
-                                       const std::string& dependency) {
-    if (dependencies[dependency].count(name)) {
+auto Registry::hasCircularDependency(const std::string& name,
+                                     const std::string& dependency) -> bool {
+    if (dependencies_[dependency].contains(name)) {
         return true;
     }
-    for (const auto& dep : dependencies[dependency]) {
-        if (has_circular_dependency(name, dep)) {
+    for (const auto& dep : dependencies_[dependency]) {
+        if (hasCircularDependency(name, dep)) {
             return true;
         }
     }
     return false;
 }
 
-void Registry::initialize_component(
+void Registry::initializeComponent(
     const std::string& name, std::unordered_set<std::string>& init_stack) {
-    if (initialized[name]) {
+    if (initialized_[name]) {
         return;
     }
-    if (init_stack.count(name)) {
+    if (init_stack.contains(name)) {
         THROW_RUNTIME_ERROR(
             "Circular dependency detected while initializing: " + name);
     }
     init_stack.insert(name);
-    for (const auto& dep : dependencies[name]) {
-        initialize_component(dep, init_stack);
+    for (const auto& dep : dependencies_[name]) {
+        initializeComponent(dep, init_stack);
     }
-    initializers[name].init_func();
-    initialized[name] = true;
+    initializers_[name]->initFunc();
+    initialized_[name] = true;
     init_stack.erase(name);
 }

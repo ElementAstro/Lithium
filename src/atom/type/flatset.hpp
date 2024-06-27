@@ -19,7 +19,6 @@ Description: A FlatSet
 #include <functional>
 #include <initializer_list>
 #include <iterator>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -42,19 +41,20 @@ public:
     using value_compare = Compare;
 
 private:
-    std::vector<T> m_data;
-    Compare m_comp;
+    std::vector<T> m_data_;
+    Compare m_comp_;
 
 public:
     FlatSet() = default;
+    ~FlatSet() = default;
 
-    explicit FlatSet(const Compare& comp) : m_comp(comp) {}
+    explicit FlatSet(const Compare& comp) : m_comp_(comp) {}
 
     template <typename InputIt>
     FlatSet(InputIt first, InputIt last, const Compare& comp = Compare())
-        : m_data(first, last), m_comp(comp) {
-        std::sort(m_data.begin(), m_data.end(), m_comp);
-        m_data.erase(std::unique(m_data.begin(), m_data.end()), m_data.end());
+        : m_data_(first, last), m_comp_(comp) {
+        std::sort(m_data_.begin(), m_data_.end(), m_comp_);
+        m_data_.erase(std::unique(m_data_.begin(), m_data_.end()), m_data_.end());
     }
 
     FlatSet(std::initializer_list<T> init, const Compare& comp = Compare())
@@ -66,13 +66,13 @@ public:
     FlatSet& operator=(const FlatSet& other) = default;
     FlatSet& operator=(FlatSet&& other) noexcept = default;
 
-    iterator begin() noexcept { return m_data.begin(); }
-    const_iterator begin() const noexcept { return m_data.begin(); }
-    const_iterator cbegin() const noexcept { return m_data.cbegin(); }
+    iterator begin() noexcept { return m_data_.begin(); }
+    const_iterator begin() const noexcept { return m_data_.begin(); }
+    const_iterator cbegin() const noexcept { return m_data_.cbegin(); }
 
-    iterator end() noexcept { return m_data.end(); }
-    const_iterator end() const noexcept { return m_data.end(); }
-    const_iterator cend() const noexcept { return m_data.cend(); }
+    iterator end() noexcept { return m_data_.end(); }
+    const_iterator end() const noexcept { return m_data_.end(); }
+    const_iterator cend() const noexcept { return m_data_.cend(); }
 
     reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
     const_reverse_iterator rbegin() const noexcept {
@@ -90,42 +90,42 @@ public:
         return const_reverse_iterator(cbegin());
     }
 
-    bool empty() const noexcept { return m_data.empty(); }
-    size_type size() const noexcept { return m_data.size(); }
-    size_type max_size() const noexcept { return m_data.max_size(); }
+    [[nodiscard]] auto empty() const noexcept -> bool { return m_data_.empty(); }
+    [[nodiscard]] auto size() const noexcept -> size_type { return m_data_.size(); }
+    [[nodiscard]] auto maxSize() const noexcept -> size_type { return m_data_.max_size(); }
 
-    void clear() noexcept { m_data.clear(); }
+    void clear() noexcept { m_data_.clear(); }
 
-    std::pair<iterator, bool> insert(const T& value) {
-        auto it = std::lower_bound(m_data.begin(), m_data.end(), value, m_comp);
-        if (it != m_data.end() && !m_comp(value, *it)) {
-            return {it, false};
+    auto insert(const T& value) -> std::pair<iterator, bool> {
+        auto data = std::lower_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
+        if (data != m_data_.end() && !m_comp_(value, *data)) {
+            return {data, false};
         }
-        return {m_data.insert(it, value), true};
+        return {m_data_.insert(data, value), true};
     }
 
-    std::pair<iterator, bool> insert(T&& value) {
-        auto it = std::lower_bound(m_data.begin(), m_data.end(), value, m_comp);
-        if (it != m_data.end() && !m_comp(value, *it)) {
-            return {it, false};
+    auto insert(T&& value) -> std::pair<iterator, bool> {
+        auto data = std::lower_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
+        if (data != m_data_.end() && !m_comp_(value, *data)) {
+            return {data, false};
         }
-        return {m_data.insert(it, std::move(value)), true};
+        return {m_data_.insert(data, std::move(value)), true};
     }
 
-    iterator insert(const_iterator hint, const T& value) {
-        if (hint == m_data.end() || m_comp(value, *hint)) {
-            if (hint == m_data.begin() || m_comp(*(hint - 1), value)) {
-                return m_data.insert(hint, value);
+    auto insert(const_iterator hint, const T& value) -> iterator {
+        if (hint == m_data_.end() || m_comp_(value, *hint)) {
+            if (hint == m_data_.begin() || m_comp_(*(hint - 1), value)) {
+                return m_data_.insert(hint, value);
             }
             return insert(value).first;
         }
         return hint;
     }
 
-    iterator insert(const_iterator hint, T&& value) {
-        if (hint == m_data.end() || m_comp(value, *hint)) {
-            if (hint == m_data.begin() || m_comp(*(hint - 1), value)) {
-                return m_data.insert(hint, std::move(value));
+    auto insert(const_iterator hint, T&& value) -> iterator {
+        if (hint == m_data_.end() || m_comp_(value, *hint)) {
+            if (hint == m_data_.begin() || m_comp_(*(hint - 1), value)) {
+                return m_data_.insert(hint, std::move(value));
             }
             return insert(std::move(value)).first;
         }
@@ -149,115 +149,115 @@ public:
     }
 
     template <typename... Args>
-    iterator emplace_hint(const_iterator hint, Args&&... args) {
+    auto emplaceHint(const_iterator hint, Args&&... args) -> iterator {
         return insert(hint, T(std::forward<Args>(args)...));
     }
 
-    iterator erase(const_iterator pos) { return m_data.erase(pos); }
+    auto erase(const_iterator pos) -> iterator { return m_data_.erase(pos); }
 
-    iterator erase(const_iterator first, const_iterator last) {
-        return m_data.erase(first, last);
+    auto erase(const_iterator first, const_iterator last) -> iterator {
+        return m_data_.erase(first, last);
     }
 
-    size_type erase(const T& value) {
-        auto it = find(value);
-        if (it != m_data.end()) {
-            erase(it);
+    auto erase(const T& value) -> size_type {
+        auto data = find(value);
+        if (data != m_data_.end()) {
+            erase(data);
             return 1;
         }
         return 0;
     }
 
     void swap(FlatSet& other) noexcept {
-        std::swap(m_data, other.m_data);
-        std::swap(m_comp, other.m_comp);
+        std::swap(m_data_, other.m_data_);
+        std::swap(m_comp_, other.m_comp_);
     }
 
-    size_type count(const T& value) const {
-        return find(value) != m_data.end() ? 1 : 0;
+    auto count(const T& value) const -> size_type {
+        return find(value) != m_data_.end() ? 1 : 0;
     }
 
-    iterator find(const T& value) {
-        auto it = std::lower_bound(m_data.begin(), m_data.end(), value, m_comp);
-        if (it != m_data.end() && !m_comp(value, *it)) {
-            return it;
+    auto find(const T& value) -> iterator {
+        auto data = std::lower_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
+        if (data != m_data_.end() && !m_comp_(value, *data)) {
+            return data;
         }
-        return m_data.end();
+        return m_data_.end();
     }
 
-    const_iterator find(const T& value) const {
-        auto it = std::lower_bound(m_data.begin(), m_data.end(), value, m_comp);
-        if (it != m_data.end() && !m_comp(value, *it)) {
-            return it;
+    auto find(const T& value) const -> const_iterator {
+        auto data = std::lower_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
+        if (data != m_data_.end() && !m_comp_(value, *data)) {
+            return data;
         }
-        return m_data.end();
+        return m_data_.end();
     }
 
-    std::pair<iterator, iterator> equal_range(const T& value) {
-        return std::equal_range(m_data.begin(), m_data.end(), value, m_comp);
+    auto equalRange(const T& value) -> std::pair<iterator, iterator> {
+        return std::equal_range(m_data_.begin(), m_data_.end(), value, m_comp_);
     }
 
-    std::pair<const_iterator, const_iterator> equal_range(
-        const T& value) const {
-        return std::equal_range(m_data.begin(), m_data.end(), value, m_comp);
+    auto equalRange(
+        const T& value) const -> std::pair<const_iterator, const_iterator> {
+        return std::equal_range(m_data_.begin(), m_data_.end(), value, m_comp_);
     }
 
-    iterator lower_bound(const T& value) {
-        return std::lower_bound(m_data.begin(), m_data.end(), value, m_comp);
+    auto lowerBound(const T& value) -> iterator {
+        return std::lower_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
     }
 
-    const_iterator lower_bound(const T& value) const {
-        return std::lower_bound(m_data.begin(), m_data.end(), value, m_comp);
+    auto lowerBound(const T& value) const -> const_iterator {
+        return std::lower_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
     }
 
-    iterator upper_bound(const T& value) {
-        return std::upper_bound(m_data.begin(), m_data.end(), value, m_comp);
+    auto upperBound(const T& value) -> iterator {
+        return std::upper_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
     }
 
-    const_iterator upper_bound(const T& value) const {
-        return std::upper_bound(m_data.begin(), m_data.end(), value, m_comp);
+    auto upperBound(const T& value) const -> const_iterator {
+        return std::upper_bound(m_data_.begin(), m_data_.end(), value, m_comp_);
     }
 
-    key_compare key_comp() const { return m_comp; }
+    auto keyComp() const -> key_compare { return m_comp_; }
 
-    value_compare value_comp() const { return m_comp; }
+    auto valueComp() const -> value_compare { return m_comp_; }
 
-    bool contains(const T& value) const { return find(value) != m_data.end(); }
+    auto contains(const T& value) const -> bool { return find(value) != m_data_.end(); }
 };
 
 template <typename T, typename Compare>
-bool operator==(const FlatSet<T, Compare>& lhs,
-                const FlatSet<T, Compare>& rhs) {
+auto operator==(const FlatSet<T, Compare>& lhs,
+                const FlatSet<T, Compare>& rhs) -> bool {
     return lhs.size() == rhs.size() &&
            std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
 
 template <typename T, typename Compare>
-bool operator!=(const FlatSet<T, Compare>& lhs,
-                const FlatSet<T, Compare>& rhs) {
+auto operator!=(const FlatSet<T, Compare>& lhs,
+                const FlatSet<T, Compare>& rhs) -> bool {
     return !(lhs == rhs);
 }
 
 template <typename T, typename Compare>
-bool operator<(const FlatSet<T, Compare>& lhs, const FlatSet<T, Compare>& rhs) {
+auto operator<(const FlatSet<T, Compare>& lhs, const FlatSet<T, Compare>& rhs) -> bool {
     return std::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
                                         rhs.end());
 }
 
 template <typename T, typename Compare>
-bool operator<=(const FlatSet<T, Compare>& lhs,
-                const FlatSet<T, Compare>& rhs) {
+auto operator<=(const FlatSet<T, Compare>& lhs,
+                const FlatSet<T, Compare>& rhs) -> bool {
     return !(rhs < lhs);
 }
 
 template <typename T, typename Compare>
-bool operator>(const FlatSet<T, Compare>& lhs, const FlatSet<T, Compare>& rhs) {
+auto operator>(const FlatSet<T, Compare>& lhs, const FlatSet<T, Compare>& rhs) -> bool {
     return rhs < lhs;
 }
 
 template <typename T, typename Compare>
-bool operator>=(const FlatSet<T, Compare>& lhs,
-                const FlatSet<T, Compare>& rhs) {
+auto operator>=(const FlatSet<T, Compare>& lhs,
+                const FlatSet<T, Compare>& rhs) -> bool {
     return !(lhs < rhs);
 }
 

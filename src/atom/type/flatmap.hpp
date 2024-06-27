@@ -17,7 +17,6 @@ Description: QuickFlatMap for C++20
 
 #include <algorithm>
 #include <iterator>
-#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -33,113 +32,109 @@ public:
     QuickFlatMap() = default;
 
     template <typename Lookup>
-    iterator find(const Lookup &s) noexcept {
+    auto find(const Lookup &s) noexcept -> iterator {
         return std::find_if(
-            data.begin(), data.end(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
+            data_.begin(), data_.end(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
     }
 
     template <typename Lookup>
-    const_iterator find(const Lookup &s) const noexcept {
+    auto find(const Lookup &s) const noexcept -> const_iterator {
         return std::find_if(
-            data.cbegin(), data.cend(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
+            data_.cbegin(), data_.cend(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
     }
 
     template <typename Lookup>
-    const_iterator find(const Lookup &s, std::size_t t_hint) const noexcept {
-        if constexpr (std::is_invocable_v<decltype(comparator), const Key &,
+    auto find(const Lookup &s,
+              std::size_t t_hint) const noexcept -> const_iterator {
+        if constexpr (std::is_invocable_v<decltype(comparator_), const Key &,
                                           const Lookup &>) {
-            if (data.size() > t_hint && comparator(data[t_hint].first, s)) {
-                return data.cbegin() + t_hint;
-            } else {
-                return find(s);
+            if (data_.size() > t_hint && comparator_(data_[t_hint].first, s)) {
+                return data_.cbegin() + t_hint;
             }
+            return find(s);
         } else {
-            if (data.size() > t_hint && comparator(s, data[t_hint].first)) {
-                return data.cbegin() + t_hint;
-            } else {
-                return find(s);
+            if (data_.size() > t_hint && comparator_(s, data_[t_hint].first)) {
+                return data_.cbegin() + t_hint;
             }
+            return find(s);
         }
     }
 
-    std::size_t size() const noexcept { return data.size(); }
+    auto size() const noexcept -> std::size_t { return data_.size(); }
 
-    bool empty() const noexcept { return data.empty(); }
+    auto empty() const noexcept -> bool { return data_.empty(); }
 
-    iterator begin() noexcept { return data.begin(); }
-    const_iterator begin() const noexcept { return data.begin(); }
-    iterator end() noexcept { return data.end(); }
-    const_iterator end() const noexcept { return data.end(); }
+    auto begin() noexcept -> iterator { return data_.begin(); }
+    auto begin() const noexcept -> const_iterator { return data_.begin(); }
+    auto end() noexcept -> iterator { return data_.end(); }
+    auto end() const noexcept -> const_iterator { return data_.end(); }
 
-    Value &operator[](const Key &s) {
+    auto operator[](const Key &s) -> Value & {
         auto itr = find(s);
-        if (itr != data.end()) {
+        if (itr != data_.end()) {
             return itr->second;
-        } else {
-            grow();
-            return data.emplace_back(s, Value()).second;
         }
+        grow();
+        return data_.emplace_back(s, Value()).second;
     }
 
-    Value &at_index(std::size_t idx) noexcept { return data[idx].second; }
-    const Value &at_index(std::size_t idx) const noexcept {
-        return data[idx].second;
+    auto atIndex(std::size_t idx) noexcept -> Value & {
+        return data_[idx].second;
+    }
+    auto atIndex(std::size_t idx) const noexcept -> const Value & {
+        return data_[idx].second;
     }
 
-    Value &at(const Key &s) {
+    auto at(const Key &s) -> Value & {
         auto itr = find(s);
-        if (itr != data.end()) {
+        if (itr != data_.end()) {
             return itr->second;
-        } else {
-            throw std::out_of_range("Unknown key: " + s);
         }
+        throw std::out_of_range("Unknown key: " + s);
     }
 
     const Value &at(const Key &s) const {
         auto itr = find(s);
-        if (itr != data.end()) {
+        if (itr != data_.end()) {
             return itr->second;
-        } else {
-            throw std::out_of_range("Unknown key: " + s);
         }
+        throw std::out_of_range("Unknown key: " + s);
     }
 
     template <typename M>
-    std::pair<iterator, bool> insert_or_assign(const Key &key, M &&m) {
-        if (auto itr = find(key); itr != data.end()) {
+    auto insertOrAssign(const Key &key, M &&m) -> std::pair<iterator, bool> {
+        if (auto itr = find(key); itr != data_.end()) {
             itr->second = std::forward<M>(m);
             return {itr, false};
-        } else {
-            grow();
-            return {data.emplace(data.end(), key, std::forward<M>(m)), true};
         }
+        grow();
+        return {data_.emplace(data_.end(), key, std::forward<M>(m)), true};
     }
 
     std::pair<iterator, bool> insert(value_type value) {
-        if (auto itr = find(value.first); itr != data.end()) {
+        if (auto itr = find(value.first); itr != data_.end()) {
             return {itr, false};
-        } else {
-            grow();
-            return {data.insert(data.end(), std::move(value)), true};
         }
+        grow();
+        return {data_.insert(data_.end(), std::move(value)), true};
     }
 
     template <typename Itr>
     void assign(Itr first, Itr last) {
-        data.assign(first, last);
+        data_.assign(first, last);
     }
 
     void grow() {
-        if (data.capacity() == data.size()) {
-            data.reserve(data.size() + 2);
+        if (data_.capacity() == data_.size()) {
+            data_.reserve(data_.size() + 2);
         }
     }
 
 private:
-    std::vector<value_type> data;
-    Comparator comparator;
+    std::vector<value_type> data_;
+    Comparator comparator_;
 };
 
 template <typename Key, typename Value, typename Comparator = std::equal_to<>>
@@ -152,114 +147,117 @@ public:
     QuickFlatMultiMap() = default;
 
     template <typename Lookup>
-    iterator find(const Lookup &s) noexcept {
+    auto find(const Lookup &s) noexcept -> iterator {
         return std::find_if(
-            data.begin(), data.end(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
+            data_.begin(), data_.end(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
     }
 
     template <typename Lookup>
-    const_iterator find(const Lookup &s) const noexcept {
+    auto find(const Lookup &s) const noexcept -> const_iterator {
         return std::find_if(
-            data.cbegin(), data.cend(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
+            data_.cbegin(), data_.cend(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
     }
 
     template <typename Lookup>
-    std::pair<iterator, iterator> equal_range(const Lookup &s) noexcept {
+    auto equalRange(const Lookup &s) noexcept -> std::pair<iterator, iterator> {
         auto lower = std::find_if(
-            data.begin(), data.end(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
-        if (lower == data.end())
+            data_.begin(), data_.end(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
+        if (lower == data_.end()) {
             return {lower, lower};
+        }
 
         auto upper = std::find_if_not(
-            lower, data.end(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
+            lower, data_.end(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
         return {lower, upper};
     }
 
     template <typename Lookup>
-    std::pair<const_iterator, const_iterator> equal_range(
-        const Lookup &s) const noexcept {
+    auto equalRange(const Lookup &s) const noexcept
+        -> std::pair<const_iterator, const_iterator> {
         auto lower = std::find_if(
-            data.cbegin(), data.cend(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
-        if (lower == data.cend())
+            data_.cbegin(), data_.cend(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
+        if (lower == data_.cend()) {
             return {lower, lower};
+        }
 
         auto upper = std::find_if_not(
-            lower, data.cend(),
-            [&s, this](const auto &d) { return comparator(d.first, s); });
+            lower, data_.cend(),
+            [&s, this](const auto &d) { return comparator_(d.first, s); });
         return {lower, upper};
     }
 
-    std::size_t size() const noexcept { return data.size(); }
-
-    bool empty() const noexcept { return data.empty(); }
-
-    iterator begin() noexcept { return data.begin(); }
-    const_iterator begin() const noexcept { return data.begin(); }
-    iterator end() noexcept { return data.end(); }
-    const_iterator end() const noexcept { return data.end(); }
-
-    Value &operator[](const Key &s) {
-        auto itr = find(s);
-        if (itr != data.end()) {
-            return itr->second;
-        } else {
-            grow();
-            return data.emplace_back(s, Value()).second;
-        }
+    [[nodiscard]] auto size() const noexcept -> std::size_t {
+        return data_.size();
     }
 
-    Value &at_index(std::size_t idx) noexcept { return data[idx].second; }
-    const Value &at_index(std::size_t idx) const noexcept {
-        return data[idx].second;
+    [[nodiscard]] auto empty() const noexcept -> bool { return data_.empty(); }
+
+    auto begin() noexcept -> iterator { return data_.begin(); }
+    auto begin() const noexcept -> const_iterator { return data_.begin(); }
+    auto end() noexcept -> iterator { return data_.end(); }
+    auto end() const noexcept -> const_iterator { return data_.end(); }
+
+    auto operator[](const Key &s) -> Value & {
+        auto itr = find(s);
+        if (itr != data_.end()) {
+            return itr->second;
+        }
+        grow();
+        return data_.emplace_back(s, Value()).second;
     }
 
-    Value &at(const Key &s) {
+    auto atIndex(std::size_t idx) noexcept -> Value & {
+        return data_[idx].second;
+    }
+    auto atIndex(std::size_t idx) const noexcept -> const Value & {
+        return data_[idx].second;
+    }
+
+    auto at(const Key &s) -> Value & {
         auto itr = find(s);
-        if (itr != data.end()) {
+        if (itr != data_.end()) {
             return itr->second;
-        } else {
-            throw std::out_of_range("Unknown key: " + s);
         }
+        throw std::out_of_range("Unknown key: " + s);
     }
 
     const Value &at(const Key &s) const {
         auto itr = find(s);
-        if (itr != data.end()) {
+        if (itr != data_.end()) {
             return itr->second;
-        } else {
-            throw std::out_of_range("Unknown key: " + s);
         }
+        throw std::out_of_range("Unknown key: " + s);
     }
 
-    std::pair<iterator, bool> insert(value_type value) {
+    auto insert(value_type value) -> std::pair<iterator, bool> {
         grow();
-        return {data.insert(data.end(), std::move(value)), true};
+        return {data_.insert(data_.end(), std::move(value)), true};
     }
 
     template <typename Itr>
     void assign(Itr first, Itr last) {
-        data.assign(first, last);
+        data_.assign(first, last);
     }
 
     void grow() {
-        if (data.capacity() == data.size()) {
-            data.reserve(data.size() + 2);
+        if (data_.capacity() == data_.size()) {
+            data_.reserve(data_.size() + 2);
         }
     }
 
-    size_t count(const Key &s) const {
+    auto count(const Key &s) const -> size_t {
         auto [lower, upper] = equal_range(s);
         return std::distance(lower, upper);
     }
 
 private:
-    std::vector<value_type> data;
-    Comparator comparator;
+    std::vector<value_type> data_;
+    Comparator comparator_;
 };
 
 #endif  // ATOM_TYPE_FLATMAP_HPP

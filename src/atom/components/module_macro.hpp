@@ -4,7 +4,7 @@
     namespace {                                                    \
     struct Initializer_##name {                                    \
         Initializer_##name() {                                     \
-            Registry::instance().add_initializer(#name, init_func, \
+            Registry::instance().addInitializer(#name, init_func, \
                                                  cleanup_func);    \
         }                                                          \
     };                                                             \
@@ -18,7 +18,7 @@
     namespace {                                                      \
     struct Dependency_##name {                                       \
         Dependency_##name() {                                        \
-            Registry::instance().add_dependency(#name, #dependency); \
+            Registry::instance().addDependency(#name, #dependency); \
         }                                                            \
     };                                                               \
     static Dependency_##name dependency_##name;                      \
@@ -40,7 +40,7 @@
         static void cleanup() {                                           \
             static std::once_flag flag;                                   \
             std::call_once(flag,                                          \
-                           []() { Registry::instance().cleanup_all(); }); \
+                           []() { Registry::instance().cleanupAll(); }); \
         }                                                                 \
     };                                                                    \
     }                                                                     \
@@ -60,11 +60,11 @@
     struct ModuleInitializer {                            \
         ModuleInitializer() {                             \
             std::call_once(init_flag.value(), init_func); \
-            Registry::instance().initialize_all();        \
+            Registry::instance().initializeAll();        \
         }                                                 \
         ~ModuleInitializer() {                            \
             if (init_flag) {                              \
-                Registry::instance().cleanup_all();       \
+                Registry::instance().cleanupAll();       \
                 init_flag.reset();                        \
             }                                             \
         }                                                 \

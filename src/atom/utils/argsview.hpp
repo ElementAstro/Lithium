@@ -22,6 +22,8 @@ Description: Enhanced ArgsView Class for C++ using C++17/20 features
 #include <unordered_map>
 #include <vector>
 
+#include "macro.hpp"
+
 namespace atom::utils {
 
 class ArgsView {
@@ -55,29 +57,29 @@ public:
     std::unordered_map<std::string, std::string_view> getArgs() const;
 
     void addRule(std::string_view prefix,
-                 std::function<void(std::string_view)> handler);
+                 const std::function<void(std::string_view)> &handler);
 
 private:
     void parseArguments();
 
-    int m_argc;
-    char** m_argv;
-    std::unordered_map<std::string, std::string_view> m_args;
-    std::vector<std::string_view> m_flags;
-    std::vector<std::string_view> m_positionals;
+    int m_argc_;
+    char** m_argv_;
+    std::unordered_map<std::string, std::string_view> m_args_;
+    std::vector<std::string_view> m_flags_;
+    std::vector<std::string_view> m_positionals_;
     std::vector<std::pair<std::string, std::function<void(std::string_view)>>>
-        m_rules;
+        m_rules_;
 
     struct Argument {
         std::string_view name;
         std::string_view help;
         bool required;
         std::optional<std::string_view> defaultValue;
-    };
+    } ATOM_ALIGNAS(64);
 
-    std::unordered_map<std::string, Argument> m_argDefinitions;
-    std::unordered_map<std::string, Argument> m_positionalDefinitions;
-    std::unordered_map<std::string, std::string_view> m_flagDefinitions;
+    std::unordered_map<std::string, Argument> m_argDefinitions_;
+    std::unordered_map<std::string, Argument> m_positionalDefinitions_;
+    std::unordered_map<std::string, std::string_view> m_flagDefinitions_;
 };
 
 }  // namespace atom::utils

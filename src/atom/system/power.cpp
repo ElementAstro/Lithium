@@ -12,7 +12,7 @@ bool shutdown() {
 #ifdef _WIN32
     ExitWindowsEx(EWX_SHUTDOWN | EWX_FORCE, 0);
 #else
-    int ret = system("shutdown -h now");
+    int ret = std::system("shutdown -h now");
     if (ret == 0 || ret == 1 /* success */) {
         return true;
     }
@@ -25,7 +25,7 @@ bool reboot() {
 #ifdef _WIN32
     ExitWindowsEx(EWX_REBOOT | EWX_FORCE, 0);
 #else
-    int ret = system("reboot");
+    int ret = std::system("reboot");
     if (ret == 0 || ret == 1 /* success */) {
         return true;
     }
@@ -39,7 +39,7 @@ bool hibernate() {
     SetSystemPowerState(TRUE, FALSE);
 #else
     // Linux: 使用 pm-utils 或 systemd 来休眠系统
-    int ret = system("systemctl hibernate");
+    int ret = std::system("systemctl hibernate");
     if (ret == 0 || ret == 1 /* success */) {
         return true;
     }
@@ -51,7 +51,7 @@ bool logout() {
 #ifdef _WIN32
     ExitWindowsEx(EWX_LOGOFF | EWX_FORCE, 0);
 #else
-    int ret = system("pkill -KILL -u $(whoami)");
+    int ret = std::system("pkill -KILL -u $(whoami)");
     if (ret == 0 || ret == 1 /* success */) {
         return true;
     }
@@ -63,7 +63,7 @@ bool lockScreen() {
 #ifdef _WIN32
     LockWorkStation();
 #else
-    int ret = system("gnome-screensaver-command -l");
+    int ret = std::system("gnome-screensaver-command -l");
     if (ret == 0 || ret == 1 /* success */) {
         return true;
     }

@@ -18,15 +18,12 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     async.hpp
-    async.inl
     lock.hpp
     pool.hpp
     queue.hpp
-    queue.inl
     thread_wrapper.hpp
     timer.hpp
     trigger.hpp
-    trigger.inl
 )
 
 set(${PROJECT_NAME}_LIBS

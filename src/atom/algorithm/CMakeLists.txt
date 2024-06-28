@@ -27,7 +27,6 @@ set(${PROJECT_NAME}_SOURCES
 # Headers
 set(${PROJECT_NAME}_HEADERS
     algorithm.hpp
-    algorithm.inl
     base.hpp
     calculator.hpp
     convolve.hpp

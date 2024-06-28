@@ -15,10 +15,8 @@ Description: StackTrace
 #include "stacktrace.hpp"
 #include "atom/function/abi.hpp"
 
-#include <chrono>
 #include <ctime>
 #include <sstream>
-#include <thread>
 
 #ifdef _WIN32
 // clang-format off
@@ -44,7 +42,7 @@ std::string StackTrace::toString() const {
     symbol->MaxNameLen = 255;
     symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
 
-    for (void* frame : frames) {
+    for (void* frame : frames_) {
         SymFromAddr(GetCurrentProcess(), (DWORD64)frame, 0, symbol);
         std::string symbol_name = symbol->Name;
         if (!symbol_name.empty()) {
@@ -55,41 +53,34 @@ std::string StackTrace::toString() const {
     }
     free(symbol);
 #elif defined(__APPLE__) || defined(__linux__)
-    for (int i = 0; i < num_frames; ++i) {
-        char* symbol_name = nullptr;
-        char* offset_begin = nullptr;
-        char* offset_end = nullptr;
+    for (int i = 0; i < num_frames_; ++i) {
+        char* symbolName = nullptr;
+        char* offsetBegin = nullptr;
+        char* offsetEnd = nullptr;
 
-        for (char* p = symbols.get()[i]; *p; ++p) {
-            if (*p == '(')
-                symbol_name = p;
-            else if (*p == '+')
-                offset_begin = p;
-            else if (*p == ')') {
-                offset_end = p;
+        for (char* p = symbols_.get()[i]; *p != 0; ++p) {
+            if (*p == '(') {
+                symbolName = p;
+            } else if (*p == '+') {
+                offsetBegin = p;
+            } else if (*p == ')') {
+                offsetEnd = p;
                 break;
             }
         }
 
-        if (symbol_name && offset_begin && offset_end &&
-            symbol_name < offset_begin) {
-            *symbol_name++ = '\0';
-            *offset_begin++ = '\0';
-            *offset_end = '\0';
+        if ((symbolName != nullptr) && (offsetBegin != nullptr) &&
+            (offsetEnd != nullptr) && symbolName < offsetBegin) {
+            *symbolName++ = '\0';
+            *offsetBegin++ = '\0';
+            *offsetEnd = '\0';
+            auto demangledName =
+                atom::meta::DemangleHelper::Demangle(symbolName);
 
-            int status = 0;
-            char* demangled_name =
-                abi::__cxa_demangle(symbol_name, nullptr, 0, &status);
-            if (status == 0) {
-                oss << "\t\t" << demangled_name << " +" << offset_begin
-                    << offset_end << "\n";
-                free(demangled_name);
-            } else {
-                oss << "\t\t" << symbol_name << " +" << offset_begin
-                    << offset_end << "\n";
-            }
+            oss << "\t\t" << demangledName << " +" << offsetBegin << offsetEnd
+                << "\n";
         } else {
-            oss << "\t\t" << symbols.get()[i] << "\n";
+            oss << "\t\t" << symbols_.get()[i] << "\n";
         }
     }
 #else
@@ -100,19 +91,32 @@ std::string StackTrace::toString() const {
 
 void StackTrace::capture() {
 #ifdef _WIN32
-    const int max_frames = 64;
+    constexpr int max_frames = 64;
     frames.resize(max_frames);
-    SymInitialize(GetCurrentProcess(), NULL, TRUE);
+    SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+
+    std::array<void*, max_frames> frame_ptrs;
     WORD captured_frames =
-        CaptureStackBackTrace(0, max_frames, frames.data(), NULL);
+        CaptureStackBackTrace(0, max_frames, frame_ptrs.data(), nullptr);
+
     frames.resize(captured_frames);
+    std::copy_n(frame_ptrs.begin(), captured_frames, frames.begin());
+
 #elif defined(__APPLE__) || defined(__linux__)
-    const int max_frames = 64;
-    void* frame_pointers[max_frames];
-    num_frames = backtrace(frame_pointers, max_frames);
-    symbols.reset(backtrace_symbols(frame_pointers, num_frames));
+    constexpr int MAX_FRAMES = 64;
+    std::array<void*, MAX_FRAMES> framePtrs{};
+
+    num_frames_ = backtrace(framePtrs.data(), MAX_FRAMES);
+
+#ifdef USE_GSL
+    gsl::span<void*> frame_span(frame_ptrs.data(), num_frames_);
+    symbols_.reset(backtrace_symbols(frame_span.data(), num_frames_));
 #else
-    num_frames = 0;
+    symbols_.reset(backtrace_symbols(framePtrs.data(), num_frames_));
+#endif
+
+#else
+    num_frames_ = 0;
 #endif
 }
 }  // namespace atom::error

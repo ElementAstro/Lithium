@@ -32,7 +32,8 @@ constexpr int FNM_PERIOD = 0x04;
 constexpr int FNM_CASEFOLD = 0x08;
 #endif
 
-bool fnmatch(std::string_view pattern, std::string_view string, int flags) {
+auto fnmatch(std::string_view pattern, std::string_view string,
+             int flags) -> bool {
 #ifdef _WIN32
     // Windows doesn't have a built-in fnmatch function, so we need to implement
     // it ourselves
@@ -122,16 +123,16 @@ bool fnmatch(std::string_view pattern, std::string_view string, int flags) {
 #endif
 }
 
-bool filter(const std::vector<std::string>& names, std::string_view pattern,
-            int flags) {
+auto filter(const std::vector<std::string>& names, std::string_view pattern,
+            int flags) -> bool {
     return std::any_of(
         names.begin(), names.end(),
         [&](const std::string& name) { return fnmatch(pattern, name, flags); });
 }
 
-std::vector<std::string> filter(const std::vector<std::string>& names,
-                                const std::vector<std::string>& patterns,
-                                int flags) {
+auto filter(const std::vector<std::string>& names,
+            const std::vector<std::string>& patterns,
+            int flags) -> std::vector<std::string> {
     std::vector<std::string> result;
     for (const auto& name : names) {
         if (std::any_of(patterns.begin(), patterns.end(),
@@ -144,9 +145,10 @@ std::vector<std::string> filter(const std::vector<std::string>& names,
     return result;
 }
 
-bool translate(std::string_view pattern, std::string& result, int flags) {
+auto translate(std::string_view pattern, std::string& result,
+               int flags) -> bool {
     result.clear();
-    for (auto it = pattern.begin(); it != pattern.end(); ++it) {
+    for (const auto *it = pattern.begin(); it != pattern.end(); ++it) {
         switch (*it) {
             case '*':
                 result += ".*";
@@ -164,21 +166,21 @@ bool translate(std::string_view pattern, std::string& result, int flags) {
                     ++it;
                 }
                 bool first = true;
-                char last_char = 0;
+                char lastChar = 0;
                 while (it != pattern.end() && *it != ']') {
-                    if (!first && *it == '-' && last_char != 0 &&
+                    if (!first && *it == '-' && lastChar != 0 &&
                         it + 1 != pattern.end() && *(it + 1) != ']') {
-                        result += last_char;
+                        result += lastChar;
                         result += '-';
                         ++it;
                         result += *it;
                     } else {
-                        if (flags & FNM_NOESCAPE && *it == '\\' &&
+                        if (((flags & FNM_NOESCAPE) != 0) && *it == '\\' &&
                             ++it == pattern.end()) {
                             return false;
                         }
                         result += *it;
-                        last_char = *it;
+                        lastChar = *it;
                     }
                     first = false;
                     ++it;
@@ -187,12 +189,12 @@ bool translate(std::string_view pattern, std::string& result, int flags) {
                 break;
             }
             case '\\':
-                if (!(flags & FNM_NOESCAPE) && ++it == pattern.end()) {
+                if (((flags & FNM_NOESCAPE) == 0) && ++it == pattern.end()) {
                     return false;
                 }
                 [[fallthrough]];
             default:
-                if (flags & FNM_CASEFOLD && std::isalpha(*it)) {
+                if (((flags & FNM_CASEFOLD) != 0) && (std::isalpha(*it) != 0)) {
                     result += '[';
                     result += std::tolower(*it);
                     result += std::toupper(*it);

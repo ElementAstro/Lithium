@@ -1,13 +1,13 @@
 #ifndef LITHIUM_DEBUG_CHECK_HPP
 #define LITHIUM_DEBUG_CHECK_HPP
 
-#include <cstdint>
 #include <functional>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "atom/type/json_fwd.hpp"
+#include "macro.hpp"
 
 namespace lithium::debug {
 class CommandChecker {
@@ -19,12 +19,12 @@ public:
         size_t line;
         size_t column;
         ErrorSeverity severity;
-    };
+    } ATOM_ALIGNAS(128);
 
     struct CheckRule {
         std::string name;
         std::function<std::optional<Error>(const std::string&, size_t)> check;
-    };
+    } ATOM_ALIGNAS(64);
 
     CommandChecker();
 
@@ -36,21 +36,24 @@ public:
 
     void setMaxLineLength(size_t length);
 
-    std::vector<Error> check(std::string_view command) const;
+    [[nodiscard]] auto check(std::string_view command) const
+        -> std::vector<Error>;
 
-    nlohmann::json toJson(const std::vector<Error>& errors) const;
+    [[nodiscard]] auto toJson(const std::vector<Error>& errors) const
+        -> nlohmann::json;
 
 private:
-    std::vector<CheckRule> rules;
-    std::vector<std::string> dangerousCommands = {"rm", "mkfs", "dd", "format"};
-    size_t maxLineLength = 80;
+    std::vector<CheckRule> rules_;
+    std::vector<std::string> dangerousCommands_{"rm", "mkfs", "dd", "format"};
+    size_t maxLineLength_{80};
 
     void initializeDefaultRules();
 
     void checkLine(const std::string& line, size_t lineNumber,
                    std::vector<Error>& errors) const;
 
-    std::string severityToString(ErrorSeverity severity) const;
+    [[nodiscard]] auto severityToString(ErrorSeverity severity) const
+        -> std::string;
 };
 
 void printErrors(const std::vector<CommandChecker::Error>& errors,

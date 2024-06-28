@@ -7,24 +7,32 @@
 namespace py = pybind11;
 
 using namespace atom::error;
-
 PYBIND11_EMBEDDED_MODULE(atom_error, m) {
-    py::enum_<LIError>(m, "LIError")
-        .value("None", LIError::None)
-        .value("NotFound", LIError::NotFound)
-        .value("OpenError", LIError::OpenError)
-        .value("AccessDenied", LIError::AccessDenied)
-        .value("ReadError", LIError::ReadError)
-        .value("WriteError", LIError::WriteError)
-        .value("PermissionDenied", LIError::PermissionDenied)
-        .value("ParseError", LIError::ParseError)
-        .value("InvalidPath", LIError::InvalidPath)
-        .value("FileExists", LIError::FileExists)
-        .value("DirectoryNotEmpty", LIError::DirectoryNotEmpty)
-        .value("TooManyOpenFiles", LIError::TooManyOpenFiles)
-        .value("DiskFull", LIError::DiskFull)
-        .value("LoadError", LIError::LoadError)
-        .value("UnLoadError", LIError::UnLoadError);
+    m.doc() = "ATOM error code module";
+
+    py::enum_<ErrorCodeBase>(m, "ErrorCodeBase")
+        .value("Success", ErrorCodeBase::Success)
+        .value("Failed", ErrorCodeBase::Failed)
+        .value("Cancelled", ErrorCodeBase::Cancelled);
+
+    py::enum_<FileError>(m, "FileError")
+        .value("None", FileError::None)
+        .value("NotFound", FileError::NotFound)
+        .value("OpenError", FileError::OpenError)
+        .value("AccessDenied", FileError::AccessDenied)
+        .value("ReadError", FileError::ReadError)
+        .value("WriteError", FileError::WriteError)
+        .value("PermissionDenied", FileError::PermissionDenied)
+        .value("ParseError", FileError::ParseError)
+        .value("InvalidPath", FileError::InvalidPath)
+        .value("FileExists", FileError::FileExists)
+        .value("DirectoryNotEmpty", FileError::DirectoryNotEmpty)
+        .value("TooManyOpenFiles", FileError::TooManyOpenFiles)
+        .value("DiskFull", FileError::DiskFull)
+        .value("LoadError", FileError::LoadError)
+        .value("UnLoadError", FileError::UnLoadError)
+        .value("LockError", FileError::LockError)
+        .value("FormatError", FileError::FormatError);
 
     py::enum_<DeviceError>(m, "DeviceError")
         .value("None", DeviceError::None)
@@ -44,19 +52,9 @@ PYBIND11_EMBEDDED_MODULE(atom_error, m) {
         .value("ParkError", DeviceError::ParkError)
         .value("UnParkError", DeviceError::UnParkError)
         .value("ParkedError", DeviceError::ParkedError)
-        .value("HomeError", DeviceError::HomeError);
-
-    py::enum_<DeviceWarning>(m, "DeviceWarning")
-        .value("ExposureWarning", DeviceWarning::ExposureWarning)
-        .value("GainWarning", DeviceWarning::GainWarning)
-        .value("OffsetWarning", DeviceWarning::OffsetWarning)
-        .value("ISOWarning", DeviceWarning::ISOWarning)
-        .value("CoolingWarning", DeviceWarning::CoolingWarning)
-        .value("GotoWarning", DeviceWarning::GotoWarning)
-        .value("ParkWarning", DeviceWarning::ParkWarning)
-        .value("UnParkWarning", DeviceWarning::UnParkWarning)
-        .value("ParkedWarning", DeviceWarning::ParkedWarning)
-        .value("HomeWarning", DeviceWarning::HomeWarning);
+        .value("HomeError", DeviceError::HomeError)
+        .value("InitializationError", DeviceError::InitializationError)
+        .value("ResourceExhausted", DeviceError::ResourceExhausted);
 
     py::enum_<ServerError>(m, "ServerError")
         .value("None", ServerError::None)
@@ -69,7 +67,10 @@ PYBIND11_EMBEDDED_MODULE(atom_error, m) {
         .value("UnknownDevice", ServerError::UnknownDevice)
         .value("UnknownDeviceType", ServerError::UnknownDeviceType)
         .value("UnknownDeviceName", ServerError::UnknownDeviceName)
-        .value("UnknownDeviceID", ServerError::UnknownDeviceID);
+        .value("UnknownDeviceID", ServerError::UnknownDeviceID)
+        .value("NetworkError", ServerError::NetworkError)
+        .value("TimeoutError", ServerError::TimeoutError)
+        .value("AuthenticationError", ServerError::AuthenticationError);
 
     py::class_<ErrorInfo>(m, "ErrorInfo")
         .def(py::init<>())

@@ -5,10 +5,10 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <thread>
 #include <unordered_map>
-#include <variant>
+#include "atom/error/exception.hpp"
 #include "atom/type/json.hpp"
+#include "macro.hpp"
 
 using json = nlohmann::json;
 
@@ -120,10 +120,10 @@ public:
      * @brief Get the type of the event.
      * @return The type of the event.
      */
-    Type getType() const;
+    [[nodiscard]] auto getType() const -> Type;
 
 private:
-    Type eventType; /**< The type of the event. */
+    Type eventType_; /**< The type of the event. */
 };
 
 /**
@@ -154,7 +154,7 @@ public:
      * @brief Get the name of the state.
      * @return The name of the state.
      */
-    std::string getName() const override;
+    [[nodiscard]] auto getName() const -> std::string override;
 
     /**
      * @brief Handle an incoming event.
@@ -185,7 +185,7 @@ public:
      * @brief Get the name of the state.
      * @return The name of the state.
      */
-    std::string getName() const override;
+    [[nodiscard]] auto getName() const -> std::string override;
 
     /**
      * @brief Handle an incoming event.
@@ -216,7 +216,7 @@ public:
      * @brief Get the name of the state.
      * @return The name of the state.
      */
-    std::string getName() const override;
+    [[nodiscard]] auto getName() const -> std::string override;
 
     /**
      * @brief Handle an incoming event.
@@ -247,13 +247,13 @@ public:
      * @brief Get the name of the state.
      * @return The name of the state.
      */
-    std::string getName() const override;
+    [[nodiscard]] auto getName() const -> std::string override;
 
     /**
      * @brief Handle an incoming event.
      * @param event The event to handle.
      */
-    void handleEvent([[maybe_unused]] std::shared_ptr<Event> event) override {}
+    void handleEvent(ATOM_UNUSED std::shared_ptr<Event> event) override {}
 
     /**
      * @brief Called when entering the state.
@@ -270,14 +270,13 @@ public:
  * @class TaskCanceledException
  * @brief An exception thrown when a task is canceled.
  */
-class TaskCanceledException : public std::exception {
-public:
-    /**
-     * @brief Get the description of the exception.
-     * @return The description of the exception.
-     */
-    const char* what() const noexcept override;
+class TaskCanceledException : public atom::error::Exception {
+    using atom::error::Exception::Exception;
 };
+
+#define THROW_TASK_CANCELED(...)                                \
+    throw TaskCanceledException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                ATOM_FUNC_NAME, __VA_ARGS__);
 
 /**
  * @class Task
@@ -328,25 +327,25 @@ public:
      * @brief Get the name of the task.
      * @return The name of the task.
      */
-    const std::string& getName() const;
+    auto getName() const -> const std::string&;
 
     /**
      * @brief Get the parameters of the task.
      * @return The parameters of the task.
      */
-    const json& getParams() const;
+    auto getParams() const -> const json&;
 
     /**
      * @brief Get the result of the task, if any.
      * @return The result of the task.
      */
-    const std::optional<json>& getResult() const;
+    auto getResult() const -> const std::optional<json>&;
 
     /**
      * @brief Get the status of the task.
      * @return The status of the task.
      */
-    Status getStatus() const;
+    auto getStatus() const -> Status;
 
     /**
      * @brief Set the status of the task.
@@ -358,7 +357,7 @@ public:
      * @brief Get the state machine of the task.
      * @return The state machine of the task.
      */
-    StateMachine& getStateMachine();
+    auto getStateMachine() -> StateMachine&;
 
     using CustomFunction = std::function<void(Task&)>;
 
@@ -390,7 +389,7 @@ public:
      * @brief Get the progress of the task.
      * @return The progress of the task.
      */
-    double getProgress() const;
+    auto getProgress() const -> double;
 
     /**
      * @brief Set the timeout for the task.
@@ -402,7 +401,7 @@ public:
      * @brief Check if the task has timed out.
      * @return True if the task has timed out, false otherwise.
      */
-    bool isTimeout() const;
+    auto isTimeout() const -> bool;
 
 private:
     std::string name; /**< The name of the task. */

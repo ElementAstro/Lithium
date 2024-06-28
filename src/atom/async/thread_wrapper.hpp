@@ -15,15 +15,11 @@ Description: A simple wrapper of std::jthread
 #ifndef ATOM_ASYNC_THREAD_WRAPPER_HPP
 #define ATOM_ASYNC_THREAD_WRAPPER_HPP
 
-#include <condition_variable>
-#include <exception>
-#include <functional>
-#include <future>
-#include <mutex>
 #include <stop_token>
 #include <thread>
 #include <type_traits>
 #include <utility>
+#include "type/noncopyable.hpp"
 
 namespace atom::async {
 /**
@@ -32,35 +28,12 @@ namespace atom::async {
  * This class provides a convenient interface for managing a C++20 jthread,
  * allowing for starting, stopping, and joining threads easily.
  */
-class Thread {
+class Thread : public NonCopyable {
 public:
     /**
      * @brief Default constructor.
      */
     Thread() = default;
-
-    /**
-     * @brief Move constructor.
-     * @param other The Thread object to move from.
-     */
-    Thread(Thread&&) noexcept = default;
-
-    /**
-     * @brief Move assignment operator.
-     * @param other The Thread object to move from.
-     * @return Reference to the assigned Thread object.
-     */
-    Thread& operator=(Thread&&) noexcept = default;
-
-    /**
-     * @brief Deleted copy constructor.
-     */
-    Thread(const Thread&) = delete;
-
-    /**
-     * @brief Deleted copy assignment operator.
-     */
-    Thread& operator=(const Thread&) = delete;
 
     /**
      * @brief Starts a new thread with the specified callable object and
@@ -94,7 +67,7 @@ public:
     /**
      * @brief Requests the thread to stop execution.
      */
-    void request_stop() { thread_.request_stop(); }
+    void requestStop() { thread_.request_stop(); }
 
     /**
      * @brief Waits for the thread to finish execution.
@@ -105,7 +78,9 @@ public:
      * @brief Checks if the thread is currently running.
      * @return True if the thread is running, false otherwise.
      */
-    [[nodiscard]] bool running() const noexcept { return thread_.joinable(); }
+    [[nodiscard]] auto running() const noexcept -> bool {
+        return thread_.joinable();
+    }
 
     /**
      * @brief Swaps the content of this Thread object with another Thread
@@ -118,13 +93,13 @@ public:
      * @brief Gets the underlying std::jthread object.
      * @return Reference to the underlying std::jthread object.
      */
-    [[nodiscard]] std::jthread& get_thread() noexcept { return thread_; }
+    [[nodiscard]] auto getThread() noexcept -> std::jthread& { return thread_; }
 
     /**
      * @brief Gets the underlying std::jthread object (const version).
      * @return Constant reference to the underlying std::jthread object.
      */
-    [[nodiscard]] const std::jthread& get_thread() const noexcept {
+    [[nodiscard]] auto getThread() const noexcept -> const std::jthread& {
         return thread_;
     }
 
@@ -132,7 +107,7 @@ public:
      * @brief Gets the ID of the thread.
      * @return The ID of the thread.
      */
-    [[nodiscard]] std::thread::id get_id() const noexcept {
+    [[nodiscard]] auto getId() const noexcept -> std::thread::id {
         return thread_.get_id();
     }
 
@@ -140,7 +115,7 @@ public:
      * @brief Gets the underlying std::stop_source object.
      * @return The underlying std::stop_source object.
      */
-    [[nodiscard]] std::stop_source get_stop_source() noexcept {
+    [[nodiscard]] auto getStopSource() noexcept -> std::stop_source {
         return thread_.get_stop_source();
     }
 
@@ -148,7 +123,7 @@ public:
      * @brief Gets the underlying std::stop_token object.
      * @return The underlying std::stop_token object.
      */
-    [[nodiscard]] std::stop_token get_stop_token() const noexcept {
+    [[nodiscard]] auto getStopToken() const noexcept -> std::stop_token {
         return thread_.get_stop_token();
     }
 

@@ -20,8 +20,8 @@ namespace atom::algorithm {
 HuffmanNode::HuffmanNode(char data, int frequency)
     : data(data), frequency(frequency), left(nullptr), right(nullptr) {}
 
-std::shared_ptr<HuffmanNode> createHuffmanTree(
-    const std::unordered_map<char, int>& frequencies) {
+auto createHuffmanTree(const std::unordered_map<char, int>& frequencies)
+    -> std::shared_ptr<HuffmanNode> {
     auto compare = [](const std::shared_ptr<HuffmanNode>& a,
                       const std::shared_ptr<HuffmanNode>& b) {
         return a->frequency > b->frequency;
@@ -50,13 +50,14 @@ std::shared_ptr<HuffmanNode> createHuffmanTree(
         minHeap.push(std::move(newNode));
     }
 
-    return minHeap.empty() ? nullptr : std::move(minHeap.top());
+    return minHeap.empty() ? nullptr : minHeap.top();
 }
 
 void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
                           std::unordered_map<char, std::string>& huffmanCodes) {
-    if (!root)
+    if (root == nullptr) {
         return;
+    }
     if (!root->left && !root->right) {
         huffmanCodes[root->data] = code;
     } else {
@@ -65,24 +66,24 @@ void generateHuffmanCodes(const HuffmanNode* root, const std::string& code,
     }
 }
 
-std::string compressText(
-    const std::string_view text,
-    const std::unordered_map<char, std::string>& huffmanCodes) {
+auto compressText(std::string_view TEXT,
+                  const std::unordered_map<char, std::string>& huffmanCodes)
+    -> std::string {
     std::string compressedText;
-    for (char c : text) {
+    for (char c : TEXT) {
         compressedText += huffmanCodes.at(c);
     }
     return compressedText;
 }
 
-std::string decompressText(const std::string_view compressedText,
-                           const HuffmanNode* root) {
+auto decompressText(std::string_view COMPRESSED_TEXT,
+                    const HuffmanNode* root) -> std::string {
     std::string decompressedText;
     const HuffmanNode* current = root;
 
-    for (char bit : compressedText) {
+    for (char bit : COMPRESSED_TEXT) {
         current = (bit == '0') ? current->left.get() : current->right.get();
-        if (current && !current->left && !current->right) {
+        if ((current != nullptr) && !current->left && !current->right) {
             decompressedText += current->data;
             current = root;
         }

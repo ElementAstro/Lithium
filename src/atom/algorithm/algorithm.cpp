@@ -3,12 +3,11 @@
 #include <random>
 
 namespace atom::algorithm {
-
 KMP::KMP(std::string_view pattern) : pattern_(pattern) {
-    failure_ = ComputeFailureFunction(pattern_);
+    failure_ = computeFailureFunction(pattern_);
 }
 
-std::vector<int> KMP::Search(std::string_view text) {
+std::vector<int> KMP::search(std::string_view text) {
     std::vector<int> occurrences;
     auto n = static_cast<int>(text.length());
     auto m = static_cast<int>(pattern_.length());
@@ -31,12 +30,12 @@ std::vector<int> KMP::Search(std::string_view text) {
     return occurrences;
 }
 
-void KMP::SetPattern(std::string_view pattern) {
+void KMP::setPattern(std::string_view pattern) {
     pattern_ = pattern;
-    failure_ = ComputeFailureFunction(pattern_);
+    failure_ = computeFailureFunction(pattern_);
 }
 
-std::vector<int> KMP::ComputeFailureFunction(std::string_view pattern) {
+auto KMP::computeFailureFunction(std::string_view pattern) -> std::vector<int> {
     auto m = static_cast<int>(pattern.length());
     std::vector<int> failure(m, 0);
     int i = 1;
@@ -57,60 +56,61 @@ std::vector<int> KMP::ComputeFailureFunction(std::string_view pattern) {
 }
 
 MinHash::MinHash(int num_hash_functions)
-    : m_num_hash_functions(num_hash_functions) {
+    : m_num_hash_functions_(num_hash_functions) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<unsigned long long> dis;
 
     for (int i = 0; i < num_hash_functions; ++i) {
-        m_coefficients_a.push_back(dis(gen));
-        m_coefficients_b.push_back(dis(gen));
+        m_coefficients_a_.push_back(dis(gen));
+        m_coefficients_b_.push_back(dis(gen));
     }
 }
 
-std::vector<unsigned long long> MinHash::compute_signature(
-    const std::unordered_set<std::string>& set) {
+auto MinHash::computeSignature(const std::unordered_set<std::string>& set)
+    -> std::vector<unsigned long long> {
     std::vector<unsigned long long> signature(
-        m_num_hash_functions, std::numeric_limits<unsigned long long>::max());
+        m_num_hash_functions_, std::numeric_limits<unsigned long long>::max());
 
     for (const auto& element : set) {
-        for (int i = 0; i < m_num_hash_functions; ++i) {
-            unsigned long long hash_value = hash(element, i);
-            signature[i] = std::min(signature[i], hash_value);
+        for (int i = 0; i < m_num_hash_functions_; ++i) {
+            unsigned long long hashValue = hash(element, i);
+            signature[i] = std::min(signature[i], hashValue);
         }
     }
 
     return signature;
 }
 
-double MinHash::estimate_similarity(
+auto MinHash::estimateSimilarity(
     const std::vector<unsigned long long>& signature1,
-    const std::vector<unsigned long long>& signature2) const {
-    int num_matches = 0;
-    for (int i = 0; i < m_num_hash_functions; ++i) {
+    const std::vector<unsigned long long>& signature2) const -> double {
+    int numMatches = 0;
+    for (int i = 0; i < m_num_hash_functions_; ++i) {
         if (signature1[i] == signature2[i]) {
-            ++num_matches;
+            ++numMatches;
         }
     }
-    return static_cast<double>(num_matches) / m_num_hash_functions;
+    return static_cast<double>(numMatches) / m_num_hash_functions_;
 }
 
-unsigned long long MinHash::hash(const std::string& element, int index) {
-    unsigned long long hash_value = 0;
+auto MinHash::hash(const std::string& element,
+                   int index) -> unsigned long long {
+    unsigned long long hashValue = 0;
     for (char c : element) {
-        hash_value +=
-            (m_coefficients_a[index] * static_cast<unsigned long long>(c) +
-             m_coefficients_b[index]);
+        hashValue +=
+            (m_coefficients_a_[index] * static_cast<unsigned long long>(c) +
+             m_coefficients_b_[index]);
     }
-    return hash_value;
+    return hashValue;
 }
 
 BoyerMoore::BoyerMoore(std::string_view pattern) : pattern_(pattern) {
-    ComputeBadCharacterShift();
-    ComputeGoodSuffixShift();
+    computeBadCharacterShift();
+    computeGoodSuffixShift();
 }
 
-std::vector<int> BoyerMoore::Search(std::string_view text) {
+auto BoyerMoore::search(std::string_view text) -> std::vector<int> {
     std::vector<int> occurrences;
     auto n = static_cast<int>(text.length());
     auto m = static_cast<int>(pattern_.length());
@@ -131,13 +131,13 @@ std::vector<int> BoyerMoore::Search(std::string_view text) {
     return occurrences;
 }
 
-void BoyerMoore::SetPattern(std::string_view pattern) {
+void BoyerMoore::setPattern(std::string_view pattern) {
     pattern_ = pattern;
-    ComputeBadCharacterShift();
-    ComputeGoodSuffixShift();
+    computeBadCharacterShift();
+    computeGoodSuffixShift();
 }
 
-void BoyerMoore::ComputeBadCharacterShift() {
+void BoyerMoore::computeBadCharacterShift() {
     bad_char_shift_.clear();
     for (int i = 0; i < static_cast<int>(pattern_.length()) - 1; ++i) {
         bad_char_shift_[pattern_[i]] =
@@ -145,7 +145,7 @@ void BoyerMoore::ComputeBadCharacterShift() {
     }
 }
 
-void BoyerMoore::ComputeGoodSuffixShift() {
+void BoyerMoore::computeGoodSuffixShift() {
     auto m = static_cast<int>(pattern_.length());
     good_suffix_shift_.resize(m, m);
     std::vector<int> suffix(m, 0);

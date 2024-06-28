@@ -10,10 +10,8 @@
 #define LITHIUM_DEBUG_TERMINAL_HPP
 
 #include <any>
-#include <functional>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #ifdef _WIN32
@@ -28,39 +26,39 @@
 namespace lithium::debug {
 class SuggestionEngine;  // Forwards declaration
 class CommandChecker;
+
 class ConsoleTerminal {
 public:
     ConsoleTerminal();
     ~ConsoleTerminal();
 
-    [[nodiscard]] std::vector<std::string> getRegisteredCommands() const;
+    [[nodiscard]] auto getRegisteredCommands() const -> std::vector<std::string>;
     void callCommand(std::string_view name,
                                       const std::vector<std::any>& args);
     void run();
 
 protected:
-    void helpCommand(const std::vector<std::string>& args);
+    void helpCommand(const std::vector<std::string>& args) const;
 
 private:
     void printHeader();
-    void clearConsole();
 
-    std::any ConsoleTerminal::processToken(const std::string& token);
+    auto processToken(const std::string& token) -> std::any;
 
-    std::vector<std::any> parseArguments(const std::string& input);
+    auto parseArguments(const std::string& input) -> std::vector<std::any>;
 
     static constexpr int MAX_HISTORY_SIZE = 100;
 
-    std::shared_ptr<SuggestionEngine> suggestionEngine;
+    std::shared_ptr<SuggestionEngine> suggestionEngine_;
 
-    std::shared_ptr<CommandChecker> commandChecker;
+    std::shared_ptr<CommandChecker> commandChecker_;
 
-    std::shared_ptr<Component> component;
+    std::shared_ptr<Component> component_;
 
 #ifdef _WIN32
-    HANDLE hConsole;
+    HANDLE hConsole_;
 #else
-    struct termios orig_termios;
+    struct termios orig_termios_;
 #endif
 };
 

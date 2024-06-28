@@ -11,14 +11,14 @@
 
 #include <any>
 #include <chrono>
-#include <cstdint>
 #include <functional>
 #include <future>
-#include <stdexcept>
 #include <thread>
 #include <typeinfo>
 #include <utility>
 #include <vector>
+#include "atom/async/async.hpp"
+#include "atom/macro.hpp"
 #if ENABLE_DEBUG
 #include <iostream>
 #endif
@@ -46,30 +46,30 @@ struct FunctionInfo {
         }
 #endif
     }
-};
+} ATOM_ALIGNAS(128);
 
 template <typename T>
-T &&any_cast_ref(std::any &operand) {
+auto anyCastRef(std::any &operand) -> T && {
     return *std::any_cast<std::decay_t<T> *>(operand);
 }
 
 template <typename T>
-T &&any_cast_ref(const std::any &operand) {
+auto anyCastRef(const std::any &operand) -> T && {
     return *std::any_cast<std::decay_t<T> *>(operand);
 }
 
 template <typename T>
-T any_cast_val(std::any &operand) {
+auto anyCastVal(std::any &operand) -> T {
     return std::any_cast<T>(operand);
 }
 
 template <typename T>
-T any_cast_val(const std::any &operand) {
+auto anyCastVal(const std::any &operand) -> T {
     return std::any_cast<T>(operand);
 }
 
 template <typename T>
-decltype(auto) any_cast_helper(std::any &operand) {
+auto anyCastHelper(std::any &operand) -> decltype(auto) {
     if constexpr (std::is_reference_v<T>) {
         return any_cast_ref<T>(operand);
     } else {
@@ -78,7 +78,7 @@ decltype(auto) any_cast_helper(std::any &operand) {
 }
 
 template <typename T>
-decltype(auto) any_cast_helper(const std::any &operand) {
+auto anyCastHelper(const std::any &operand) -> decltype(auto) {
     if constexpr (std::is_reference_v<T>) {
         return any_cast_ref<T>(operand);
     } else {
@@ -87,18 +87,19 @@ decltype(auto) any_cast_helper(const std::any &operand) {
 }
 
 template <typename Func>
-struct ProxyFunction {
-    std::decay_t<Func> func;
+class ProxyFunction {
+    std::decay_t<Func> func_;
 
     using Traits = FunctionTraits<Func>;
     static constexpr std::size_t N = Traits::arity;
 
-    explicit ProxyFunction(Func &&func) : func(std::move(func)) {
+public:
+    explicit ProxyFunction(Func &&func) : func_(std::move(func)) {
         collectFunctionInfo();
         calcFuncInfoHash();
     }
 
-    std::any operator()(const std::vector<std::any> &args) {
+    auto operator()(const std::vector<std::any> &args) -> std::any {
         logArgumentTypes();
         if constexpr (Traits::is_member_function) {
             if (args.size() != N + 1) {
@@ -113,28 +114,28 @@ struct ProxyFunction {
         }
     }
 
-    std::any operator()(const FunctionParams &params) {
+    auto operator()(const FunctionParams &params) -> std::any {
         logArgumentTypes();
         if constexpr (Traits::is_member_function) {
             if (params.size() != N + 1) {
                 THROW_EXCEPTION("Incorrect number of arguments");
             }
-            return callMemberFunction(params.to_vector());
+            return callMemberFunction(params.toVector());
         } else {
             if (params.size() != N) {
                 THROW_EXCEPTION("Incorrect number of arguments");
             }
-            return callFunction(params.to_vector());
+            return callFunction(params.toVector());
         }
     }
 
-    FunctionInfo getFunctionInfo() const { return info; }
+    [[nodiscard]] auto getFunctionInfo() const -> FunctionInfo { return info_; }
 
 private:
     void collectFunctionInfo() {
         // Collect return type information
-        info.returnType =
-            DemangleHelper::DemangleType<typename Traits::return_type>();
+        info_.returnType =
+            DemangleHelper::demangleType<typename Traits::return_type>();
 
         // Collect argument types information
         collectArgumentTypes(std::make_index_sequence<N>{});
@@ -142,20 +143,21 @@ private:
 
     template <std::size_t... Is>
     void collectArgumentTypes(std::index_sequence<Is...>) {
-        (info.argumentTypes.push_back(
-             DemangleHelper::DemangleType<
+        (info_.argumentTypes.push_back(
+             DemangleHelper::demangleType<
                  typename Traits::template argument_t<Is>>()),
          ...);
     }
 
     void calcFuncInfoHash() {
         // 仅根据参数类型进行区分,返回值不支持,具体是因为在dispatch时不知道返回值的类型
-        if (!info.argumentTypes.empty()) {
-            info.hash = atom::algorithm::computeHash(info.argumentTypes);
+        if (!info_.argumentTypes.empty()) {
+            info_.hash = std::to_string(
+                atom::algorithm::computeHash(info_.argumentTypes));
         }
     }
 
-    FunctionInfo info;
+    FunctionInfo info_;
 
     void logArgumentTypes() const {
 #if ENABLE_DEBUG
@@ -165,49 +167,51 @@ private:
     }
 
     template <std::size_t... Is>
-    std::any callFunction(const std::vector<std::any> &args,
-                          std::index_sequence<Is...>) {
+    auto callFunction(const std::vector<std::any> &args,
+                      std::index_sequence<Is...>) -> std::any {
         if constexpr (std::is_void_v<typename Traits::return_type>) {
             std::invoke(
-                func, any_cast_helper<typename Traits::template argument_t<Is>>(
-                          args[Is])...);
+                func_,
+                any_cast_helper<typename Traits::template argument_t<Is>>(
+                    args[Is])...);
             return {};
         } else {
             return std::make_any<typename Traits::return_type>(std::invoke(
-                func, any_cast_helper<typename Traits::template argument_t<Is>>(
-                          args[Is])...));
+                func_,
+                any_cast_helper<typename Traits::template argument_t<Is>>(
+                    args[Is])...));
         }
     }
 
-    std::any callFunction(const FunctionParams &params) {
+    auto callFunction(const FunctionParams &params) -> std::any {
         if constexpr (std::is_void_v<typename Traits::return_type>) {
-            std::invoke(func, params.to_vector());
+            std::invoke(func_, params.toVector());
             return {};
         } else {
             return std::make_any<typename Traits::return_type>(
-                std::invoke(func, params.to_vector()));
+                std::invoke(func_, params.toVector()));
         }
     }
 
     template <std::size_t... Is>
-    std::any callMemberFunction(const std::vector<std::any> &args,
-                                std::index_sequence<Is...>) {
+    auto callMemberFunction(const std::vector<std::any> &args,
+                            std::index_sequence<Is...>) -> std::any {
         auto invokeFunc = [this](auto &obj, auto &&...args) {
             if constexpr (Traits::is_const_member_function) {
                 if constexpr (std::is_void_v<typename Traits::return_type>) {
-                    (obj.*func)(std::forward<decltype(args)>(args)...);
+                    (obj.*func_)(std::forward<decltype(args)>(args)...);
                     return std::any{};
                 } else {
                     return std::make_any<typename Traits::return_type>(
-                        (obj.*func)(std::forward<decltype(args)>(args)...));
+                        (obj.*func_)(std::forward<decltype(args)>(args)...));
                 }
             } else {
                 if constexpr (std::is_void_v<typename Traits::return_type>) {
-                    (obj.*func)(std::forward<decltype(args)>(args)...);
+                    (obj.*func_)(std::forward<decltype(args)>(args)...);
                     return std::any{};
                 } else {
                     return std::make_any<typename Traits::return_type>(
-                        (obj.*func)(std::forward<decltype(args)>(args)...));
+                        (obj.*func_)(std::forward<decltype(args)>(args)...));
                 }
             }
         };
@@ -222,26 +226,26 @@ private:
             return invokeFunc(
                 obj, any_cast_helper<typename Traits::template argument_t<Is>>(
                          args[Is + 1])...);
-        } else {
-            auto &obj = const_cast<typename Traits::class_type &>(
-                std::any_cast<const typename Traits::class_type &>(args[0]));
-            return invokeFunc(
-                obj, any_cast_helper<typename Traits::template argument_t<Is>>(
-                         args[Is + 1])...);
         }
+        auto &obj = const_cast<typename Traits::class_type &>(
+            std::any_cast<const typename Traits::class_type &>(args[0]));
+        return invokeFunc(
+            obj, any_cast_helper<typename Traits::template argument_t<Is>>(
+                     args[Is + 1])...);
     }
 };
 
 template <typename Func>
-struct TimerProxyFunction {
-    std::decay_t<Func> func;
+class TimerProxyFunction {
+    std::decay_t<Func> func_;
     using Traits = FunctionTraits<Func>;
     static constexpr std::size_t N = Traits::arity;
 
-    explicit TimerProxyFunction(Func &&func) : func(std::move(func)) {}
+public:
+    explicit TimerProxyFunction(Func &&func) : func_(std::move(func)) {}
 
-    std::any operator()(const std::vector<std::any> &args,
-                        std::chrono::milliseconds timeout) {
+    auto operator()(const std::vector<std::any> &args,
+                    std::chrono::milliseconds timeout) -> std::any {
         logArgumentTypes();
         if constexpr (Traits::is_member_function) {
             if (args.size() != N + 1) {
@@ -261,12 +265,12 @@ struct TimerProxyFunction {
     }
 
 private:
-    FunctionInfo info;
+    FunctionInfo info_;
 
     void collectFunctionInfo() {
         // Collect return type information
-        info.returnType =
-            DemangleHelper::DemangleType<typename Traits::return_type>();
+        info_.returnType =
+            DemangleHelper::demangleType<typename Traits::return_type>();
 
         // Collect argument types information
         collectArgumentTypes(std::make_index_sequence<N>{});
@@ -274,8 +278,8 @@ private:
 
     template <std::size_t... Is>
     void collectArgumentTypes(std::index_sequence<Is...>) {
-        (info.argumentTypes.push_back(
-             DemangleHelper::DemangleType<
+        (info_.argumentTypes.push_back(
+             DemangleHelper::demangleType<
                  typename Traits::template argument_t<Is>>()),
          ...);
     }
@@ -288,19 +292,19 @@ private:
     }
 
     template <std::size_t... Is>
-    std::any callFunctionWithTimeout(const std::vector<std::any> &args,
-                                     std::chrono::milliseconds timeout,
-                                     std::index_sequence<Is...>) {
+    auto callFunctionWithTimeout(const std::vector<std::any> &args,
+                                 std::chrono::milliseconds timeout,
+                                 std::index_sequence<Is...>) -> std::any {
         auto task = [this, &args]() -> std::any {
             if constexpr (std::is_void_v<typename Traits::return_type>) {
                 std::invoke(
-                    func,
+                    func_,
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is])...);
                 return {};
             } else {
                 return std::make_any<typename Traits::return_type>(std::invoke(
-                    func,
+                    func_,
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is])...));
             }
@@ -310,26 +314,26 @@ private:
     }
 
     template <std::size_t... Is>
-    std::any callMemberFunctionWithTimeout(const std::vector<std::any> &args,
-                                           std::chrono::milliseconds timeout,
-                                           std::index_sequence<Is...>) {
+    auto callMemberFunctionWithTimeout(const std::vector<std::any> &args,
+                                       std::chrono::milliseconds timeout,
+                                       std::index_sequence<Is...>) -> std::any {
         auto task = [this, &args]() -> std::any {
             auto &obj =
                 std::any_cast<
                     std::reference_wrapper<typename Traits::class_type>>(
                     args[0])
                     .get();
-            auto bound_func = std::bind_front(func, obj, std::placeholders::_1);
+            auto boundFunc = std::bind_front(func_, obj, std::placeholders::_1);
 
             if constexpr (std::is_void_v<typename Traits::return_type>) {
                 std::invoke(
-                    bound_func,
+                    boundFunc,
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is + 1])...);
                 return {};
             } else {
                 return std::make_any<typename Traits::return_type>(std::invoke(
-                    bound_func,
+                    boundFunc,
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is + 1])...));
             }
@@ -339,21 +343,21 @@ private:
     }
 
     template <typename TaskFunc>
-    std::any executeWithTimeout(TaskFunc task,
-                                std::chrono::milliseconds timeout) const {
-        std::packaged_task<std::any()> packaged_task(std::move(task));
-        std::future<std::any> future = packaged_task.get_future();
+    auto executeWithTimeout(
+        TaskFunc task, std::chrono::milliseconds timeout) const -> std::any {
+        std::packaged_task<std::any()> packagedTask(std::move(task));
+        std::future<std::any> future = packagedTask.get_future();
 #if __cplusplus >= 201703L
-        std::jthread task_thread(std::move(packaged_task));
+        std::jthread taskThread(std::move(packagedTask));
 #else
-        std::thread task_thread(std::move(packaged_task));
+        std::thread taskThread(std::move(packaged_task));
 #endif
         if (future.wait_for(timeout) == std::future_status::timeout) {
-            task_thread.detach();  // Detach the thread on timeout
-            THROW_EXCEPTION("Function execution timed out");
+            taskThread.detach();  // Detach the thread on timeout
+            THROW_TIMEOUT_EXCEPTION("Function execution timed out");
         }
 
-        task_thread.join();  // Ensure the thread has finished
+        taskThread.join();  // Ensure the thread has finished
         return future.get();
     }
 };

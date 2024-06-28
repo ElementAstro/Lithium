@@ -16,7 +16,8 @@ Description: Some useful spinlock implementations
 #define ATOM_ASYNC_LOCK_HPP
 
 #include <atomic>
-#include <thread>
+
+#include "atom/type/noncopyable.hpp"
 
 namespace atom::async {
 
@@ -36,7 +37,7 @@ namespace atom::async {
 /**
  * @brief A simple spinlock implementation using atomic_flag.
  */
-class Spinlock {
+class Spinlock : public NonCopyable {
     std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
 
 public:
@@ -44,16 +45,6 @@ public:
      * @brief Default constructor.
      */
     Spinlock() = default;
-
-    /**
-     * @brief Disables copy.
-     */
-    Spinlock(const Spinlock &) = delete;
-
-    /**
-     * @brief Disables copy.
-     */
-    Spinlock &operator=(const Spinlock &) = delete;
 
     /**
      * @brief Acquires the lock.
@@ -70,26 +61,24 @@ public:
      *
      * @return true if the lock was acquired, false otherwise.
      */
-    bool try_lock();
+    auto tryLock() -> bool;
 };
 
 /**
  * @brief A ticket spinlock implementation using atomic operations.
  */
-class TicketSpinlock {
+class TicketSpinlock : public NonCopyable {
     std::atomic<uint64_t> ticket_{0};
     std::atomic<uint64_t> serving_{0};
 
 public:
     TicketSpinlock() = default;
-    TicketSpinlock(const TicketSpinlock &) = delete;
-    TicketSpinlock &operator=(const TicketSpinlock &) = delete;
     /**
      * @brief Lock guard for TicketSpinlock.
      */
     class LockGuard {
         TicketSpinlock &spinlock_;
-        const uint64_t ticket_;
+        const uint64_t TICKET;
 
     public:
         /**
@@ -98,12 +87,12 @@ public:
          * @param spinlock The TicketSpinlock to guard.
          */
         explicit LockGuard(TicketSpinlock &spinlock)
-            : spinlock_(spinlock), ticket_(spinlock_.lock()) {}
+            : spinlock_(spinlock), TICKET(spinlock_.lock()) {}
 
         /**
          * @brief Destructs the lock guard and releases the lock.
          */
-        ~LockGuard() { spinlock_.unlock(ticket_); }
+        ~LockGuard() { spinlock_.unlock(TICKET); }
     };
 
     using scoped_lock = LockGuard;
@@ -113,27 +102,24 @@ public:
      *
      * @return The acquired ticket number.
      */
-    uint64_t lock();
+    auto lock() -> uint64_t;
 
     /**
      * @brief Releases the lock given a specific ticket number.
      *
      * @param ticket The ticket number to release.
      */
-    void unlock(const uint64_t ticket);
+    void unlock(uint64_t TICKET);
 };
 
 /**
  * @brief An unfair spinlock implementation using atomic_flag.
  */
-class UnfairSpinlock {
+class UnfairSpinlock : public NonCopyable {
     std::atomic_flag flag_ = ATOMIC_FLAG_INIT;
 
 public:
     UnfairSpinlock() = default;
-    UnfairSpinlock(const UnfairSpinlock &) = delete;
-    UnfairSpinlock &operator=(const UnfairSpinlock &) = delete;
-
     /**
      * @brief Acquires the lock.
      */
@@ -179,9 +165,9 @@ public:
  * @tparam Mutex Type of the spinlock (i.e., TicketSpinlock).
  */
 template <typename Mutex>
-class ScopedTicketLock {
+class ScopedTicketLock : public NonCopyable {
     Mutex &mutex_;
-    const uint64_t ticket_;
+    const uint64_t TICKET;
 
 public:
     /**
@@ -191,15 +177,12 @@ public:
      * @param mutex The mutex to lock.
      */
     explicit ScopedTicketLock(Mutex &mutex)
-        : mutex_(mutex), ticket_(mutex_.lock()) {}
+        : mutex_(mutex), TICKET(mutex_.lock()) {}
 
     /**
      * @brief Destructs the scoped lock and releases the lock.
      */
-    ~ScopedTicketLock() { mutex_.unlock(ticket_); }
-
-    ScopedTicketLock(const ScopedTicketLock &) = delete;
-    ScopedTicketLock &operator=(const ScopedTicketLock &) = delete;
+    ~ScopedTicketLock() { mutex_.unlock(TICKET); }
 };
 
 /**
@@ -208,7 +191,7 @@ public:
  * @tparam Mutex Type of the spinlock (i.e., UnfairSpinlock).
  */
 template <typename Mutex>
-class ScopedUnfairLock {
+class ScopedUnfairLock : public NonCopyable {
     Mutex &mutex_;
 
 public:
@@ -224,9 +207,6 @@ public:
      * @brief Destructs the scoped lock and releases the lock.
      */
     ~ScopedUnfairLock() { mutex_.unlock(); }
-
-    ScopedUnfairLock(const ScopedUnfairLock &) = delete;
-    ScopedUnfairLock &operator=(const ScopedUnfairLock &) = delete;
 };
 
 }  // namespace atom::async

@@ -1,6 +1,7 @@
 #include "check.hpp"
 
 #include <iostream>
+#include <utility>
 
 #include "atom/type/json.hpp"
 using json = nlohmann::json;
@@ -11,15 +12,15 @@ CommandChecker::CommandChecker() { initializeDefaultRules(); }
 void CommandChecker::addRule(
     const std::string& name,
     std::function<std::optional<Error>(const std::string&, size_t)> check) {
-    rules.push_back({name, check});
+    rules_.push_back({name, std::move(check)});
 }
 
 void CommandChecker::setDangerousCommands(
     const std::vector<std::string>& commands) {
-    dangerousCommands = commands;
+    dangerousCommands_ = commands;
 }
 
-void CommandChecker::setMaxLineLength(size_t length) { maxLineLength = length; }
+void CommandChecker::setMaxLineLength(size_t length) { maxLineLength_ = length; }
 
 std::vector<CommandChecker::Error> CommandChecker::check(
     std::string_view command) const {
@@ -65,7 +66,7 @@ void CommandChecker::initializeDefaultRules() {
     addRule("dangerous_commands",
             [this](const std::string& line,
                    size_t lineNumber) -> std::optional<Error> {
-                for (const auto& cmd : dangerousCommands) {
+                for (const auto& cmd : dangerousCommands_) {
                     auto pos = line.find(cmd);
                     if (pos != std::string::npos) {
                         return Error{"Dangerous command detected: " + cmd,
@@ -78,9 +79,9 @@ void CommandChecker::initializeDefaultRules() {
     addRule("line_length",
             [this](const std::string& line,
                    size_t lineNumber) -> std::optional<Error> {
-                if (line.length() > maxLineLength) {
+                if (line.length() > maxLineLength_) {
                     return Error{"Line exceeds maximum length", lineNumber,
-                                 maxLineLength, ErrorSeverity::WARNING};
+                                 maxLineLength_, ErrorSeverity::WARNING};
                 }
                 return std::nullopt;
             });
@@ -111,14 +112,14 @@ void CommandChecker::initializeDefaultRules() {
 
 void CommandChecker::checkLine(const std::string& line, size_t lineNumber,
                                std::vector<Error>& errors) const {
-    for (const auto& rule : rules) {
+    for (const auto& rule : rules_) {
         if (auto error = rule.check(line, lineNumber)) {
             errors.push_back(*error);
         }
     }
 }
 
-std::string CommandChecker::severityToString(ErrorSeverity severity) const {
+auto CommandChecker::severityToString(ErrorSeverity severity) const -> std::string {
     switch (severity) {
         case ErrorSeverity::WARNING:
             return "warning";

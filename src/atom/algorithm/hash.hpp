@@ -21,7 +21,6 @@ Description: A collection of hash algorithms
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <vector>
 
 namespace atom::algorithm {
@@ -45,7 +44,7 @@ concept Hashable = requires(T a) {
  * @return The hash value of the input value.
  */
 template <Hashable T>
-std::size_t computeHash(const T& value) {
+auto computeHash(const T& value) -> std::size_t {
     return std::hash<T>{}(value);
 }
 
@@ -60,7 +59,7 @@ std::size_t computeHash(const T& value) {
  * @return The hash value of the vector.
  */
 template <Hashable T>
-std::size_t computeHash(const std::vector<T>& values) {
+auto computeHash(const std::vector<T>& values) -> std::size_t {
     std::size_t result = 0;
     for (const auto& value : values) {
         result ^=
@@ -80,7 +79,7 @@ std::size_t computeHash(const std::vector<T>& values) {
  * @return The hash value of the tuple.
  */
 template <Hashable... Ts>
-std::size_t computeHash(const std::tuple<Ts...>& tuple) {
+auto computeHash(const std::tuple<Ts...>& tuple) -> std::size_t {
     std::size_t result = 0;
     std::apply(
         [&result](const Ts&... values) {
@@ -103,7 +102,7 @@ std::size_t computeHash(const std::tuple<Ts...>& tuple) {
  * @return The hash value of the array.
  */
 template <Hashable T, std::size_t N>
-std::size_t computeHash(const std::array<T, N>& array) {
+auto computeHash(const std::array<T, N>& array) -> std::size_t {
     std::size_t result = 0;
     for (const auto& value : array) {
         result ^=
@@ -122,7 +121,7 @@ std::size_t computeHash(const std::array<T, N>& array) {
  * @return The FNV-1a hash value of the range.
  */
 template <typename Itr>
-constexpr std::uint32_t fnv1a_hash(Itr begin, Itr end) noexcept {
+constexpr auto fnv1aHash(Itr begin, Itr end) noexcept -> std::uint32_t {
     std::uint32_t h = 0x811c9dc5;
 
     while (begin != end) {
@@ -142,7 +141,7 @@ constexpr std::uint32_t fnv1a_hash(Itr begin, Itr end) noexcept {
  * @return The FNV-1a hash value of the string.
  */
 template <size_t N>
-constexpr std::uint32_t fnv1a_hash(const char (&str)[N]) noexcept {
+constexpr auto fnv1aHash(const char (&str)[N]) noexcept -> std::uint32_t {
     return fnv1a_hash(std::begin(str), std::end(str) - 1);
 }
 
@@ -154,8 +153,8 @@ constexpr std::uint32_t fnv1a_hash(const char (&str)[N]) noexcept {
  * @param sv The string view.
  * @return The FNV-1a hash value of the string view.
  */
-constexpr std::uint32_t fnv1a_hash(std::string_view sv) noexcept {
-    return fnv1a_hash(sv.begin(), sv.end());
+constexpr auto fnv1aHash(std::string_view sv) noexcept -> std::uint32_t {
+    return fnv1aHash(sv.begin(), sv.end());
 }
 
 /**
@@ -166,8 +165,8 @@ constexpr std::uint32_t fnv1a_hash(std::string_view sv) noexcept {
  * @param s The string.
  * @return The FNV-1a hash value of the string.
  */
-inline std::uint32_t fnv1a_hash(const std::string& s) noexcept {
-    return fnv1a_hash(std::string_view{s});
+inline auto fnv1aHash(const std::string& s) noexcept -> std::uint32_t {
+    return fnv1aHash(std::string_view{s});
 }
 
 /**
@@ -181,8 +180,8 @@ inline std::uint32_t fnv1a_hash(const std::string& s) noexcept {
  * @return The Jenkins One-at-a-Time hash value of the range.
  */
 template <typename Itr>
-constexpr std::uint32_t jenkins_one_at_a_time_hash(Itr begin,
-                                                   Itr end) noexcept {
+constexpr auto jenkinsOneAtATimeHash(Itr begin,
+                                     Itr end) noexcept -> std::uint32_t {
     std::uint32_t hash = 0;
 
     while (begin != end) {
@@ -209,8 +208,8 @@ constexpr std::uint32_t jenkins_one_at_a_time_hash(Itr begin,
  * @return The Jenkins One-at-a-Time hash value of the string.
  */
 template <size_t N>
-constexpr std::uint32_t jenkins_one_at_a_time_hash(
-    const char (&str)[N]) noexcept {
+constexpr auto jenkinsOneAtATimeHash(const char (&str)[N]) noexcept
+    -> std::uint32_t {
     return jenkins_one_at_a_time_hash(std::begin(str), std::end(str) - 1);
 }
 
@@ -222,9 +221,9 @@ constexpr std::uint32_t jenkins_one_at_a_time_hash(
  * @param sv The string view.
  * @return The Jenkins One-at-a-Time hash value of the string view.
  */
-constexpr std::uint32_t jenkins_one_at_a_time_hash(
-    std::string_view sv) noexcept {
-    return jenkins_one_at_a_time_hash(sv.begin(), sv.end());
+constexpr auto jenkinsOneAtATimeHash(std::string_view sv) noexcept
+    -> std::uint32_t {
+    return jenkinsOneAtATimeHash(sv.begin(), sv.end());
 }
 
 /**
@@ -235,11 +234,12 @@ constexpr std::uint32_t jenkins_one_at_a_time_hash(
  * @param s The string.
  * @return The Jenkins One-at-a-Time hash value of the string.
  */
-inline std::uint32_t jenkins_one_at_a_time_hash(const std::string& s) noexcept {
-    return jenkins_one_at_a_time_hash(std::string_view{s});
+inline auto jenkinsOneAtATimeHash(const std::string& s) noexcept
+    -> std::uint32_t {
+    return jenkinsOneAtATimeHash(std::string_view{s});
 }
 
-inline uint32_t quickHash(std::string_view str) {
+inline auto quickHash(std::string_view str) -> uint32_t {
     uint32_t h = 0;
     for (char c : str) {
         h = 31 * h + static_cast<unsigned char>(c);
@@ -247,9 +247,10 @@ inline uint32_t quickHash(std::string_view str) {
     return h;
 }
 
-inline uint32_t quickHash(const void* data, size_t size) {
-    if (data == nullptr || size == 0)
+inline auto quickHash(const void* data, size_t size) -> uint32_t {
+    if (data == nullptr || size == 0) {
         return 0;
+    }
 
     const auto* str = static_cast<const unsigned char*>(data);
     uint32_t h = 0;
@@ -269,10 +270,12 @@ inline uint32_t quickHash(const void* data, size_t size) {
  * @param str The string.
  * @return The hash value of the string.
  */
-constexpr unsigned int hash(const char* str, unsigned int basis = 2166136261u) {
-    return *str ? hash(str + 1,
-                       (basis ^ static_cast<unsigned int>(*str)) * 16777619u)
-                : basis;
+constexpr auto hash(const char* str,
+                    unsigned int basis = 2166136261U) -> unsigned int {
+    return (*str != 0)
+               ? hash(str + 1,
+                      (basis ^ static_cast<unsigned int>(*str)) * 16777619u)
+               : basis;
 }
 
 /**
@@ -283,7 +286,7 @@ constexpr unsigned int hash(const char* str, unsigned int basis = 2166136261u) {
  * @param str The string.
  * @return The hash value of the string.
  */
-constexpr unsigned int operator""_hash(const char* str, std::size_t) {
+constexpr auto operator""_hash(const char* str, std::size_t) -> unsigned int {
     return hash(str);
 }
 

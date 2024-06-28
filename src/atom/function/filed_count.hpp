@@ -135,7 +135,7 @@ consteval auto true_count_of_fields() {
 #endif
 
 template <typename T>
-struct type_info;
+struct TypeInfo;
 
 /**
  *  @brief Retrieve the count of fields of a struct
@@ -143,8 +143,8 @@ struct type_info;
 template <typename T>
     requires std::is_aggregate_v<T>
 consteval auto field_count_of() {
-    if constexpr (requires { type_info<T>::count; }) {
-        return type_info<T>::count;
+    if constexpr (requires { TypeInfo<T>::count; }) {
+        return TypeInfo<T>::count;
     } else {
 #if ATOM_META_C_ARRAY_SUPPORT
         return true_count_of_fields<T>();

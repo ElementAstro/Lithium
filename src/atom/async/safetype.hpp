@@ -5,7 +5,9 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <vector>
 
 #include "atom/error/exception.hpp"
@@ -32,8 +34,8 @@ private:
         explicit Node(T value_);
     };
 
-    std::atomic<Node*> head;  ///< Atomic pointer to the top of the stack.
-    std::atomic<int> approximateSize =
+    std::atomic<Node*> head_;  ///< Atomic pointer to the top of the stack.
+    std::atomic<int> approximateSize_ =
         0;  ///< An approximate count of the stack's elements.
 
 public:
@@ -67,7 +69,7 @@ public:
      * @return std::optional<T> The popped value if stack is not empty,
      * otherwise nullopt.
      */
-    std::optional<T> pop();
+    auto pop() -> std::optional<T>;
 
     /**
      * @brief Get the top value of the stack without removing it. Thread-safe.
@@ -75,7 +77,7 @@ public:
      * @return std::optional<T> The top value if stack is not empty, otherwise
      * nullopt.
      */
-    std::optional<T> top() const;
+    auto top() const -> std::optional<T>;
 
     /**
      * @brief Check if the stack is empty. Thread-safe.
@@ -83,14 +85,14 @@ public:
      * @return true If the stack is empty.
      * @return false If the stack has one or more elements.
      */
-    bool empty() const;
+    [[nodiscard]] auto empty() const -> bool;
 
     /**
      * @brief Get the approximate size of the stack. Thread-safe.
      *
      * @return int The approximate number of elements in the stack.
      */
-    int size() const;
+    [[nodiscard]] auto size() const -> int;
 };
 
 template <typename Key, typename Value>
@@ -118,7 +120,7 @@ private:
             }
         }
 
-        std::optional<Value> find(const Key& key) const {
+        auto find(const Key& key) const -> std::optional<Value> {
             Node* node = head.load();
             while (node) {
                 if (node->key == key) {
@@ -130,11 +132,11 @@ private:
         }
 
         void insert(const Key& key, const Value& value) {
-            Node* new_node = new Node(key, value);
-            new_node->next = head.load();
-            Node* expected = new_node->next.load();
-            while (!head.compare_exchange_weak(expected, new_node)) {
-                new_node->next = expected;
+            Node* newNode = new Node(key, value);
+            newNode->next = head.load();
+            Node* expected = newNode->next.load();
+            while (!head.compare_exchange_weak(expected, newNode)) {
+                newNode->next = expected;
             }
         }
 
@@ -158,33 +160,34 @@ private:
         }
     };
 
-    std::vector<std::unique_ptr<Bucket>> buckets;
-    std::hash<Key> hasher;
+    std::vector<std::unique_ptr<Bucket>> buckets_;
+    std::hash<Key> hasher_;
 
-    Bucket& get_bucket(const Key& key) const {
-        auto bucket_index = hasher(key) % buckets.size();
-        return *buckets[bucket_index];
+    auto getBucket(const Key& key) const -> Bucket& {
+        auto bucketIndex = hasher_(key) % buckets_.size();
+        return *buckets_[bucketIndex];
     }
 
 public:
-    LockFreeHashTable(size_t num_buckets = 16) : buckets(num_buckets) {
+    explicit LockFreeHashTable(size_t num_buckets = 16)
+        : buckets_(num_buckets) {
         for (size_t i = 0; i < num_buckets; ++i) {
-            buckets[i] = std::make_unique<Bucket>();
+            buckets_[i] = std::make_unique<Bucket>();
         }
     }
 
-    std::optional<Value> find(const Key& key) const {
-        return get_bucket(key).find(key);
+    auto find(const Key& key) const -> std::optional<Value> {
+        return getBucket(key).find(key);
     }
 
     void insert(const Key& key, const Value& value) {
-        get_bucket(key).insert(key, value);
+        getBucket(key).insert(key, value);
     }
 
-    void erase(const Key& key) { get_bucket(key).erase(key); }
+    void erase(const Key& key) { getBucket(key).erase(key); }
 
-    bool empty() const {
-        for (const auto& bucket : buckets) {
+    [[nodiscard]] auto empty() const -> bool {
+        for (const auto& bucket : buckets_) {
             if (bucket->head.load() != nullptr) {
                 return false;
             }
@@ -192,20 +195,20 @@ public:
         return true;
     }
 
-    size_t size() const {
-        size_t total_size = 0;
-        for (const auto& bucket : buckets) {
+    [[nodiscard]] auto size() const -> size_t {
+        size_t totalSize = 0;
+        for (const auto& bucket : buckets_) {
             Node* node = bucket->head.load();
             while (node) {
-                ++total_size;
+                ++totalSize;
                 node = node->next.load();
             }
         }
-        return total_size;
+        return totalSize;
     }
 
     void clear() {
-        for (const auto& bucket : buckets) {
+        for (const auto& bucket : buckets_) {
             Node* node = bucket->head.load();
             while (node) {
                 Node* next = node->next.load();
@@ -217,7 +220,7 @@ public:
     }
 
     // 迭代器类
-    class iterator {
+    class Iterator {
     public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = std::pair<Key, Value>;
@@ -225,198 +228,210 @@ public:
         using pointer = value_type*;
         using reference = value_type&;
 
-        iterator(
+        Iterator(
             typename std::vector<std::unique_ptr<Bucket>>::iterator bucket_iter,
             typename std::vector<std::unique_ptr<Bucket>>::iterator bucket_end,
             Node* node)
-            : bucket_iter(bucket_iter), bucket_end(bucket_end), node(node) {
-            advance_past_empty_buckets();
+            : bucket_iter_(bucket_iter), bucket_end_(bucket_end), node_(node) {
+            advancePastEmptyBuckets();
         }
 
-        iterator& operator++() {
-            if (node) {
-                node = node->next.load();
-                if (!node) {
-                    ++bucket_iter;
-                    advance_past_empty_buckets();
+        auto operator++() -> Iterator& {
+            if (node_) {
+                node_ = node_->next.load();
+                if (!node_) {
+                    ++bucket_iter_;
+                    advancePastEmptyBuckets();
                 }
             }
             return *this;
         }
 
-        iterator operator++(int) {
-            iterator tmp = *this;
+        auto operator++(int) -> Iterator {
+            Iterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        bool operator==(const iterator& other) const {
-            return bucket_iter == other.bucket_iter && node == other.node;
+        auto operator==(const Iterator& other) const -> bool {
+            return bucket_iter_ == other.bucket_iter_ && node_ == other.node_;
         }
 
-        bool operator!=(const iterator& other) const {
+        auto operator!=(const Iterator& other) const -> bool {
             return !(*this == other);
         }
 
-        reference operator*() const {
-            return *reinterpret_cast<value_type*>(node);
+        auto operator*() const -> reference {
+            return *reinterpret_cast<value_type*>(node_);
         }
 
-        pointer operator->() const { return reinterpret_cast<pointer>(node); }
+        auto operator->() const -> pointer {
+            return reinterpret_cast<pointer>(node_);
+        }
 
     private:
-        void advance_past_empty_buckets() {
-            while (bucket_iter != bucket_end && !node) {
-                node = (*bucket_iter)->head.load();
-                if (!node) {
-                    ++bucket_iter;
+        void advancePastEmptyBuckets() {
+            while (bucket_iter_ != bucket_end_ && !node_) {
+                node_ = (*bucket_iter_)->head.load();
+                if (!node_) {
+                    ++bucket_iter_;
                 }
             }
         }
 
-        typename std::vector<std::unique_ptr<Bucket>>::iterator bucket_iter;
-        typename std::vector<std::unique_ptr<Bucket>>::iterator bucket_end;
-        Node* node;
+        typename std::vector<std::unique_ptr<Bucket>>::iterator bucket_iter_;
+        typename std::vector<std::unique_ptr<Bucket>>::iterator bucket_end_;
+        Node* node_;
     };
 
-    iterator begin() {
-        auto bucket_iter = buckets.begin();
-        auto bucket_end = buckets.end();
+    auto begin() -> Iterator {
+        auto bucketIter = buckets_.begin();
+        auto bucketEnd = buckets_.end();
         Node* node =
-            bucket_iter != bucket_end ? (*bucket_iter)->head.load() : nullptr;
-        return iterator(bucket_iter, bucket_end, node);
+            bucketIter != bucketEnd ? (*bucketIter)->head.load() : nullptr;
+        return Iterator(bucketIter, bucketEnd, node);
     }
 
-    iterator end() { return iterator(buckets.end(), buckets.end(), nullptr); }
+    auto end() -> Iterator {
+        return Iterator(buckets_.end(), buckets_.end(), nullptr);
+    }
 };
 
 template <typename T>
 class ThreadSafeVector {
-private:
-    std::atomic<T*> data;
-    std::atomic<size_t> capacity;
-    std::atomic<size_t> size;
-    mutable std::shared_mutex resize_mutex;
+    std::atomic<T*> data_;
+    std::atomic<size_t> capacity_;
+    std::atomic<size_t> size_;
+    mutable std::shared_mutex resize_mutex_;
 
     void resize() {
-        std::unique_lock lock(resize_mutex);
+        std::unique_lock lock(resize_mutex_);
 
-        size_t old_capacity = capacity.load(std::memory_order_relaxed);
-        size_t new_capacity = old_capacity * 2;
-        T* new_data = new T[new_capacity];
+        size_t oldCapacity = capacity_.load(std::memory_order_relaxed);
+        size_t newCapacity = oldCapacity * 2;
+        T* newData = new T[newCapacity];
 
-        for (size_t i = 0; i < size.load(std::memory_order_relaxed); ++i) {
-            new_data[i] = std::move(data.load(std::memory_order_relaxed)[i]);
+        for (size_t i = 0; i < size_.load(std::memory_order_relaxed); ++i) {
+            newData[i] = std::move(data_.load(std::memory_order_relaxed)[i]);
         }
 
-        T* old_data = data.exchange(new_data, std::memory_order_acq_rel);
-        capacity.store(new_capacity, std::memory_order_release);
+        T* oldData = data_.exchange(newData, std::memory_order_acq_rel);
+        capacity_.store(newCapacity, std::memory_order_release);
 
-        delete[] old_data;
+        delete[] oldData;
     }
 
 public:
     explicit ThreadSafeVector(size_t initial_capacity = 16)
-        : data(new T[initial_capacity]), capacity(initial_capacity), size(0) {}
+        : data_(new T[initial_capacity]),
+          capacity_(initial_capacity),
+          size_(0) {}
 
-    ~ThreadSafeVector() { delete[] data.load(std::memory_order_relaxed); }
+    ~ThreadSafeVector() { delete[] data_.load(std::memory_order_relaxed); }
 
-    void push_back(const T& value) {
-        size_t current_size = size.load(std::memory_order_relaxed);
+    void pushBack(const T& value) {
+        size_t currentSize = size_.load(std::memory_order_relaxed);
         while (true) {
-            if (current_size < capacity.load(std::memory_order_relaxed)) {
-                if (size.compare_exchange_weak(current_size, current_size + 1,
-                                               std::memory_order_acq_rel)) {
-                    data.load(std::memory_order_relaxed)[current_size] = value;
+            if (currentSize < capacity_.load(std::memory_order_relaxed)) {
+                if (size_.compare_exchange_weak(currentSize, currentSize + 1,
+                                                std::memory_order_acq_rel)) {
+                    data_.load(std::memory_order_relaxed)[currentSize] = value;
                     return;
                 }
             } else {
                 resize();
             }
-            current_size = size.load(std::memory_order_relaxed);
+            currentSize = size_.load(std::memory_order_relaxed);
         }
     }
 
-    void push_back(T&& value) {
-        size_t current_size = size.load(std::memory_order_relaxed);
+    void pushBack(T&& value) {
+        size_t currentSize = size_.load(std::memory_order_relaxed);
         while (true) {
-            if (current_size < capacity.load(std::memory_order_relaxed)) {
-                if (size.compare_exchange_weak(current_size, current_size + 1,
-                                               std::memory_order_acq_rel)) {
-                    data.load(std::memory_order_relaxed)[current_size] =
+            if (currentSize < capacity_.load(std::memory_order_relaxed)) {
+                if (size_.compare_exchange_weak(currentSize, currentSize + 1,
+                                                std::memory_order_acq_rel)) {
+                    data_.load(std::memory_order_relaxed)[currentSize] =
                         std::move(value);
                     return;
                 }
             } else {
                 resize();
             }
-            current_size = size.load(std::memory_order_relaxed);
+            currentSize = size_.load(std::memory_order_relaxed);
         }
     }
 
-    std::optional<T> pop_back() {
-        size_t current_size = size.load(std::memory_order_relaxed);
-        while (current_size > 0) {
-            if (size.compare_exchange_weak(current_size, current_size - 1,
-                                           std::memory_order_acq_rel)) {
-                return data.load(std::memory_order_relaxed)[current_size - 1];
+    auto popBack() -> std::optional<T> {
+        size_t currentSize = size_.load(std::memory_order_relaxed);
+        while (currentSize > 0) {
+            if (size_.compare_exchange_weak(currentSize, currentSize - 1,
+                                            std::memory_order_acq_rel)) {
+                return data_.load(std::memory_order_relaxed)[currentSize - 1];
             }
-            current_size = size.load(std::memory_order_relaxed);
+            currentSize = size_.load(std::memory_order_relaxed);
         }
         return std::nullopt;
     }
 
-    std::optional<T> at(size_t index) const {
-        if (index >= size.load(std::memory_order_relaxed)) {
+    auto at(size_t index) const -> std::optional<T> {
+        if (index >= size_.load(std::memory_order_relaxed)) {
             return std::nullopt;
         }
-        return data.load(std::memory_order_relaxed)[index];
+        return data_.load(std::memory_order_relaxed)[index];
     }
 
-    bool empty() const { return size.load(std::memory_order_relaxed) == 0; }
-
-    size_t getSize() const { return size.load(std::memory_order_relaxed); }
-
-    size_t getCapacity() const {
-        return capacity.load(std::memory_order_relaxed);
+    auto empty() const -> bool {
+        return size_.load(std::memory_order_relaxed) == 0;
     }
 
-    void clear() { size.store(0, std::memory_order_relaxed); }
+    auto getSize() const -> size_t {
+        return size_.load(std::memory_order_relaxed);
+    }
 
-    void shrink_to_fit() {
-        std::unique_lock lock(resize_mutex);
+    auto getCapacity() const -> size_t {
+        return capacity_.load(std::memory_order_relaxed);
+    }
 
-        size_t current_size = size.load(std::memory_order_relaxed);
-        T* new_data = new T[current_size];
+    void clear() { size_.store(0, std::memory_order_relaxed); }
 
-        for (size_t i = 0; i < current_size; ++i) {
-            new_data[i] = std::move(data.load(std::memory_order_relaxed)[i]);
+    void shrinkToFit() {
+        std::unique_lock lock(resize_mutex_);
+
+        size_t currentSize = size_.load(std::memory_order_relaxed);
+        T* newData = new T[currentSize];
+
+        for (size_t i = 0; i < currentSize; ++i) {
+            newData[i] = std::move(data_.load(std::memory_order_relaxed)[i]);
         }
 
-        T* old_data = data.exchange(new_data, std::memory_order_acq_rel);
-        capacity.store(current_size, std::memory_order_release);
+        T* oldData = data_.exchange(newData, std::memory_order_acq_rel);
+        capacity_.store(currentSize, std::memory_order_release);
 
-        delete[] old_data;
+        delete[] oldData;
     }
 
-    T front() const {
-        if (empty())
+    auto front() const -> T {
+        if (empty()) {
             THROW_OUT_OF_RANGE("Vector is empty");
-        return data.load(std::memory_order_relaxed)[0];
+        }
+        return data_.load(std::memory_order_relaxed)[0];
     }
 
-    T back() const {
-        if (empty())
+    auto back() const -> T {
+        if (empty()) {
             THROW_OUT_OF_RANGE("Vector is empty");
-        return data.load(
-            std::memory_order_relaxed)[size.load(std::memory_order_relaxed) -
+        }
+        return data_.load(
+            std::memory_order_relaxed)[size_.load(std::memory_order_relaxed) -
                                        1];
     }
 
-    T operator[](size_t index) const {
-        if (index >= size.load(std::memory_order_relaxed))
+    auto operator[](size_t index) const -> T {
+        if (index >= size_.load(std::memory_order_relaxed)) {
             THROW_OUT_OF_RANGE("Index out of range");
-        return data.load(std::memory_order_relaxed)[index];
+        }
+        return data_.load(std::memory_order_relaxed)[index];
     }
 };
 
@@ -426,10 +441,10 @@ private:
     struct Node {
         std::shared_ptr<T> value;
         std::atomic<Node*> next;
-        Node(T val) : value(std::make_shared<T>(val)), next(nullptr) {}
+        explicit Node(T val) : value(std::make_shared<T>(val)), next(nullptr) {}
     };
 
-    std::atomic<Node*> head;
+    std::atomic<Node*> head_;
 
     // Hazard pointers structure
     struct HazardPointer {
@@ -438,101 +453,101 @@ private:
     };
 
     static const int MAX_HAZARD_POINTERS = 100;
-    HazardPointer hazard_pointers[MAX_HAZARD_POINTERS];
+    HazardPointer hazard_pointers_[MAX_HAZARD_POINTERS];
 
     // Get hazard pointer for current thread
-    std::atomic<void*>& get_hazard_pointer_for_current_thread() {
-        std::thread::id this_id = std::this_thread::get_id();
-        for (int i = 0; i < MAX_HAZARD_POINTERS; ++i) {
-            std::thread::id old_id;
-            if (hazard_pointers[i].id.compare_exchange_strong(old_id, this_id)) {
-                return hazard_pointers[i].pointer;
-            } else if (hazard_pointers[i].id == this_id) {
-                return hazard_pointers[i].pointer;
+    auto getHazardPointerForCurrentThread() -> std::atomic<void*>& {
+        std::thread::id thisId = std::this_thread::get_id();
+        for (auto& hazardPointer : hazard_pointers_) {
+            std::thread::id oldId;
+            if (hazardPointer.id.compare_exchange_strong(oldId, thisId)) {
+                return hazardPointer.pointer;
+            }
+            if (hazardPointer.id == thisId) {
+                return hazardPointer.pointer;
             }
         }
         THROW_RUNTIME_ERROR("No hazard pointers available");
     }
 
     // Reclaim list
-    void reclaim_later(Node* node) {
-        retired_nodes.push_back(node);
-        if (retired_nodes.size() >= MAX_HAZARD_POINTERS) {
-            do_reclamation();
+    void reclaimLater(Node* node) {
+        retired_nodes_.push_back(node);
+        if (retired_nodes_.size() >= MAX_HAZARD_POINTERS) {
+            doReclamation();
         }
     }
 
     // Reclaim retired nodes
-    void do_reclamation() {
-        std::vector<Node*> to_reclaim;
-        for (Node* node : retired_nodes) {
-            if (!is_hazard(node)) {
-                to_reclaim.push_back(node);
+    void doReclamation() {
+        std::vector<Node*> toReclaim;
+        for (Node* node : retired_nodes_) {
+            if (!isHazard(node)) {
+                toReclaim.push_back(node);
             }
         }
-        retired_nodes.clear();
-        for (Node* node : to_reclaim) {
+        retired_nodes_.clear();
+        for (Node* node : toReclaim) {
             delete node;
         }
     }
 
     // Check if node is a hazard
-    bool is_hazard(Node* node) {
-        for (int i = 0; i < MAX_HAZARD_POINTERS; ++i) {
-            if (hazard_pointers[i].pointer.load() == node) {
+    auto isHazard(Node* node) -> bool {
+        for (auto& hazardPointer : hazard_pointers_) {
+            if (hazardPointer.pointer.load() == node) {
                 return true;
             }
         }
         return false;
     }
 
-    std::vector<Node*> retired_nodes;
+    std::vector<Node*> retired_nodes_;
 
 public:
-    LockFreeList() : head(nullptr) {}
+    LockFreeList() : head_(nullptr) {}
 
     ~LockFreeList() {
-        while (head.load()) {
-            Node* old_head = head.load();
-            head.store(old_head->next);
-            delete old_head;
+        while (head_.load()) {
+            Node* oldHead = head_.load();
+            head_.store(oldHead->next);
+            delete oldHead;
         }
     }
 
-    void push_front(T value) {
-        Node* new_node = new Node(value);
-        new_node->next = head.load();
-        while (!head.compare_exchange_weak(new_node->next, new_node)) {}
+    void pushFront(T value) {
+        Node* newNode = new Node(value);
+        newNode->next = head_.load();
+        while (!head_.compare_exchange_weak(newNode->next, newNode)) {
+        }
     }
 
-    std::optional<T> pop_front() {
-        std::atomic<void*>& hazard_pointer = get_hazard_pointer_for_current_thread();
-        Node* old_head = head.load();
+    auto popFront() -> std::optional<T> {
+        std::atomic<void*>& hazardPointer = getHazardPointerForCurrentThread();
+        Node* oldHead = head_.load();
         do {
             Node* temp;
             do {
-                temp = old_head;
-                hazard_pointer.store(old_head);
-                old_head = head.load();
-            } while (old_head != temp);
-            if (!old_head) {
-                hazard_pointer.store(nullptr);
+                temp = oldHead;
+                hazardPointer.store(oldHead);
+                oldHead = head_.load();
+            } while (oldHead != temp);
+            if (!oldHead) {
+                hazardPointer.store(nullptr);
                 return std::nullopt;
             }
-        } while (!head.compare_exchange_strong(old_head, old_head->next));
-        hazard_pointer.store(nullptr);
-        std::shared_ptr<T> res = old_head->value;
+        } while (!head_.compare_exchange_strong(oldHead, oldHead->next));
+        hazardPointer.store(nullptr);
+        std::shared_ptr<T> res = oldHead->value;
         if (res.use_count() == 1) {
-            reclaim_later(old_head);
+            reclaimLater(oldHead);
         }
         return *res;
     }
 
-    bool empty() const {
-        return head.load() == nullptr;
-    }
+    [[nodiscard]] auto empty() const -> bool { return head_.load() == nullptr; }
 
-    class iterator {
+    class Iterator {
     public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = T;
@@ -540,52 +555,126 @@ public:
         using pointer = T*;
         using reference = T&;
 
-        iterator(Node* node, LockFreeList* list) : node(node), list(list) {}
+        Iterator(Node* node, LockFreeList* list) : node_(node), list_(list) {}
 
-        iterator& operator++() {
-            if (node) {
-                node = node->next.load();
+        auto operator++() -> Iterator& {
+            if (node_) {
+                node_ = node_->next.load();
             }
             return *this;
         }
 
-        iterator operator++(int) {
-            iterator tmp = *this;
+        auto operator++(int) -> Iterator {
+            Iterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        bool operator==(const iterator& other) const {
-            return node == other.node;
+        auto operator==(const Iterator& other) const -> bool {
+            return node_ == other.node_;
         }
 
-        bool operator!=(const iterator& other) const {
-            return node != other.node;
+        auto operator!=(const Iterator& other) const -> bool {
+            return node_ != other.node_;
         }
 
-        reference operator*() const {
-            return *(node->value);
-        }
+        auto operator*() const -> reference { return *(node_->value); }
 
-        pointer operator->() const {
-            return node->value.get();
-        }
+        auto operator->() const -> pointer { return node_->value.get(); }
 
     private:
-        Node* node;
-        LockFreeList* list;
+        Node* node_;
+        LockFreeList* list_;
     };
 
-    iterator begin() {
-        return iterator(head.load(), this);
-    }
+    auto begin() -> Iterator { return Iterator(head_.load(), this); }
 
-    iterator end() {
-        return iterator(nullptr, this);
-    }
+    auto end() -> Iterator { return Iterator(nullptr, this); }
 };
-}  // namespace atom::async
 
-#include "safetype.tpp"  // Include the implementation
+template <typename T>
+LockFreeStack<T>::Node::Node(T value_) : value(std::move(value_)) {}
+
+// 构造函数
+template <typename T>
+LockFreeStack<T>::LockFreeStack() : head_(nullptr) {}
+
+// 析构函数
+template <typename T>
+LockFreeStack<T>::~LockFreeStack() {
+    while (auto node = head_.load(std::memory_order_relaxed)) {
+        head_.store(node->next.load(std::memory_order_relaxed),
+                    std::memory_order_relaxed);
+        delete node;
+    }
+}
+
+// push 常量左值引用
+template <typename T>
+void LockFreeStack<T>::push(const T& value) {
+    auto newNode = new Node(value);
+    newNode->next = head_.load(std::memory_order_relaxed);
+    Node* expected = newNode->next.load(std::memory_order_relaxed);
+    while (!head_.compare_exchange_weak(expected, newNode,
+                                        std::memory_order_release,
+                                        std::memory_order_relaxed)) {
+        newNode->next = expected;
+    }
+    approximateSize_.fetch_add(1, std::memory_order_relaxed);
+}
+
+// push 右值引用
+template <typename T>
+void LockFreeStack<T>::push(T&& value) {
+    auto newNode = new Node(std::move(value));
+    newNode->next = head_.load(std::memory_order_relaxed);
+    Node* expected = newNode->next.load(std::memory_order_relaxed);
+    while (!head_.compare_exchange_weak(expected, newNode,
+                                        std::memory_order_release,
+                                        std::memory_order_relaxed)) {
+        newNode->next = expected;
+    }
+    approximateSize_.fetch_add(1, std::memory_order_relaxed);
+}
+
+// pop
+template <typename T>
+auto LockFreeStack<T>::pop() -> std::optional<T> {
+    Node* oldHead = head_.load(std::memory_order_relaxed);
+    while (oldHead && !head_.compare_exchange_weak(oldHead, oldHead->next,
+                                                   std::memory_order_acquire,
+                                                   std::memory_order_relaxed)) {
+    }
+    if (oldHead) {
+        T value = std::move(oldHead->value);
+        delete oldHead;
+        approximateSize_.fetch_sub(1, std::memory_order_relaxed);
+        return value;
+    }
+    return std::nullopt;
+}
+
+// top
+template <typename T>
+auto LockFreeStack<T>::top() const -> std::optional<T> {
+    Node* topNode = head_.load(std::memory_order_relaxed);
+    if (head_.load(std::memory_order_relaxed)) {
+        return std::optional<T>(topNode->value);
+    }
+    return std::nullopt;
+}
+
+// empty
+template <typename T>
+auto LockFreeStack<T>::empty() const -> bool {
+    return head_.load(std::memory_order_relaxed) == nullptr;
+}
+
+// size
+template <typename T>
+auto LockFreeStack<T>::size() const -> int {
+    return approximateSize_.load(std::memory_order_relaxed);
+}
+}  // namespace atom::async
 
 #endif  // ATOM_ASYNC_SAFETYPE_HPP

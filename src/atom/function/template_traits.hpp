@@ -12,7 +12,6 @@
 #include <limits>
 #include <tuple>
 #include <type_traits>
-#include <utility>
 
 #include "abi.hpp"
 
@@ -55,7 +54,7 @@ struct template_traits<Template<Args...>> {
 template <template <typename...> typename Template, typename... Args>
 const std::string template_traits<Template<Args...>>::full_name = [] {
     std::string name = typeid(Template<Args...>).name();
-    return DemangleHelper::Demangle(name);
+    return DemangleHelper::demangle(name);
 }();
 
 // Helper alias templates

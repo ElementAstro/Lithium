@@ -16,47 +16,45 @@ Description: Configor
 
 #include <filesystem>
 #include <fstream>
-#include <regex>
-#include <sstream>
-#if ENABLE_FASTHASH
-#include "emhash/hash_table8.hpp"
-#else
-#include <unordered_map>
-#endif
-#include "atom/utils/string.hpp"
-
+#include <mutex>
+#include <shared_mutex>
 #include "atom/log/loguru.hpp"
-
-namespace fs = std::filesystem;
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
 
 namespace lithium {
 
 class ConfigManagerImpl {
 public:
-    mutable std::shared_mutex rw_mutex_;
-    json config_;
+    mutable std::shared_mutex rwMutex;
+    json config;
 };
 
-ConfigManager::ConfigManager() : m_impl(std::make_unique<ConfigManagerImpl>()) {
+ConfigManager::ConfigManager()
+    : m_impl_(std::make_unique<ConfigManagerImpl>()) {
     if (loadFromFile("config.json")) {
         DLOG_F(INFO, "Config loaded successfully.");
     }
 }
 
-ConfigManager::~ConfigManager() { saveToFile("config.json"); }
+ConfigManager::~ConfigManager() {
+    if (saveToFile("config.json")) {
+        DLOG_F(INFO, "Config saved successfully.");
+    }
+}
 
-std::shared_ptr<ConfigManager> ConfigManager::createShared() {
+auto ConfigManager::createShared() -> std::shared_ptr<ConfigManager> {
     static std::shared_ptr<ConfigManager> instance =
         std::make_shared<ConfigManager>();
     return instance;
 }
 
-std::unique_ptr<ConfigManager> ConfigManager::createUnique() {
+auto ConfigManager::createUnique() -> std::unique_ptr<ConfigManager> {
     return std::make_unique<ConfigManager>();
 }
 
-bool ConfigManager::loadFromFile(const fs::path& path) {
-    std::shared_lock lock(m_impl->rw_mutex_);
+auto ConfigManager::loadFromFile(const fs::path& path) -> bool {
+    std::shared_lock lock(m_impl_->rwMutex);
     try {
         std::ifstream ifs(path);
         if (!ifs || ifs.peek() == std::ifstream::traits_type::eof()) {
@@ -80,8 +78,8 @@ bool ConfigManager::loadFromFile(const fs::path& path) {
     return false;
 }
 
-bool ConfigManager::loadFromDir(const fs::path& dir_path, bool recursive) {
-    std::shared_lock lock(m_impl->rw_mutex_);
+auto ConfigManager::loadFromDir(const fs::path& dir_path, bool recursive) -> bool {
+    std::shared_lock lock(m_impl_->rwMutex);
     try {
         for (const auto& entry : fs::directory_iterator(dir_path)) {
             if (entry.is_regular_file() &&
@@ -99,9 +97,9 @@ bool ConfigManager::loadFromDir(const fs::path& dir_path, bool recursive) {
     return true;
 }
 
-std::optional<json> ConfigManager::getValue(const std::string& key_path) const {
-    std::shared_lock lock(m_impl->rw_mutex_);
-    const json* p = &m_impl->config_;
+auto ConfigManager::getValue(const std::string& key_path) const -> std::optional<json> {
+    std::shared_lock lock(m_impl_->rwMutex);
+    const json* p = &m_impl_->config;
     for (const auto& key : key_path | std::views::split('/')) {
         if (p->is_object() &&
             p->contains(std::string(key.begin(), key.end()))) {
@@ -114,11 +112,11 @@ std::optional<json> ConfigManager::getValue(const std::string& key_path) const {
 }
 
 bool ConfigManager::setValue(const std::string& key_path, const json& value) {
-    std::unique_lock lock(m_impl->rw_mutex_);
-    json* p = &m_impl->config_;
+    std::unique_lock lock(m_impl_->rwMutex);
+    json* p = &m_impl_->config;
     std::vector<std::string_view> keys;
-    for (auto sub_range : key_path | std::views::split('/')) {
-        keys.emplace_back(sub_range.data(), sub_range.size());
+    for (auto subRange : key_path | std::views::split('/')) {
+        keys.emplace_back(subRange.data(), subRange.size());
     }
 
     for (auto it = keys.begin(); it != keys.end(); ++it) {
@@ -141,13 +139,13 @@ bool ConfigManager::setValue(const std::string& key_path, const json& value) {
     return true;
 }
 
-bool ConfigManager::deleteValue(const std::string& key_path) {
-    std::unique_lock lock(m_impl->rw_mutex_);
+auto ConfigManager::deleteValue(const std::string& key_path) -> bool {
+    std::unique_lock lock(m_impl_->rwMutex);
     std::vector<std::string_view> keys;
-    for (auto sub_range : key_path | std::views::split('/')) {
-        keys.emplace_back(sub_range.data(), sub_range.size());
+    for (auto subRange : key_path | std::views::split('/')) {
+        keys.emplace_back(subRange.data(), subRange.size());
     }
-    json* p = &m_impl->config_;
+    json* p = &m_impl_->config;
     for (auto it = keys.begin(); it != keys.end(); ++it) {
         if (it + 1 == keys.end()) {  // Last key
             if (p->contains(*it)) {
@@ -164,19 +162,19 @@ bool ConfigManager::deleteValue(const std::string& key_path) {
     return false;
 }
 
-bool ConfigManager::hasValue(const std::string& key_path) const {
+auto ConfigManager::hasValue(const std::string& key_path) const -> bool {
     return getValue(key_path).has_value();
 }
 
-bool ConfigManager::saveToFile(const fs::path& file_path) const {
-    std::unique_lock lock(m_impl->rw_mutex_);
+auto ConfigManager::saveToFile(const fs::path& file_path) const -> bool {
+    std::unique_lock lock(m_impl_->rwMutex);
     std::ofstream ofs(file_path);
     if (!ofs) {
         LOG_F(ERROR, "Failed to open file: {}", file_path.string());
         return false;
     }
     try {
-        ofs << m_impl->config_.dump(4);
+        ofs << m_impl_->config.dump(4);
         ofs.close();
         return true;
     } catch (const std::exception& e) {
@@ -187,25 +185,25 @@ bool ConfigManager::saveToFile(const fs::path& file_path) const {
 }
 
 void ConfigManager::tidyConfig() {
-    std::unique_lock lock(m_impl->rw_mutex_);
-    json updated_config;
-    for (const auto& [key, value] : m_impl->config_.items()) {
-        json* p = &updated_config;
-        for (auto sub_key : key | std::views::split('/')) {
-            if (!p->contains(std::string(sub_key.begin(), sub_key.end()))) {
-                (*p)[std::string(sub_key.begin(), sub_key.end())] =
+    std::unique_lock lock(m_impl_->rwMutex);
+    json updatedConfig;
+    for (const auto& [key, value] : m_impl_->config.items()) {
+        json* p = &updatedConfig;
+        for (auto subKey : key | std::views::split('/')) {
+            if (!p->contains(std::string(subKey.begin(), subKey.end()))) {
+                (*p)[std::string(subKey.begin(), subKey.end())] =
                     json::object();
             }
-            p = &(*p)[std::string(sub_key.begin(), sub_key.end())];
+            p = &(*p)[std::string(subKey.begin(), subKey.end())];
         }
         *p = value;
     }
-    m_impl->config_ = std::move(updated_config);
+    m_impl_->config = std::move(updatedConfig);
 }
 
 void ConfigManager::mergeConfig(const json& src) {
-    m_impl->config_.merge_patch(src);
+    m_impl_->config.merge_patch(src);
 }
 
-void ConfigManager::clearConfig() { m_impl->config_.clear(); }
+void ConfigManager::clearConfig() { m_impl_->config.clear(); }
 }  // namespace lithium

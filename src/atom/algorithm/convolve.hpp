@@ -29,8 +29,9 @@ namespace atom::algorithm {
  * @param kernel The convolution kernel.
  * @return The convolved signal.
  */
-[[nodiscard("The result of convolve is not used.")]] std::vector<double>
-convolve(const std::vector<double> &input, const std::vector<double> &kernel);
+[[nodiscard("The result of convolve is not used.")]] auto convolve(
+    const std::vector<double> &input,
+    const std::vector<double> &kernel) -> std::vector<double>;
 
 /**
  * @brief Performs 1D deconvolution operation.
@@ -41,8 +42,9 @@ convolve(const std::vector<double> &input, const std::vector<double> &kernel);
  * @param kernel The deconvolution kernel.
  * @return The deconvolved signal.
  */
-[[nodiscard("The result of deconvolve is not used.")]] std::vector<double>
-deconvolve(const std::vector<double> &input, const std::vector<double> &kernel);
+[[nodiscard("The result of deconvolve is not used.")]] auto deconvolve(
+    const std::vector<double> &input,
+    const std::vector<double> &kernel) -> std::vector<double>;
 
 /**
  * @brief Performs 2D convolution operation.
@@ -54,10 +56,10 @@ deconvolve(const std::vector<double> &input, const std::vector<double> &kernel);
  * @param numThreads Number of threads for parallel execution (default: 1).
  * @return The convolved image.
  */
-[[nodiscard(
-    "The result of convolve2D is not used.")]] std::vector<std::vector<double>>
-convolve2D(const std::vector<std::vector<double>> &input,
-           const std::vector<std::vector<double>> &kernel, int numThreads = 1);
+[[nodiscard("The result of convolve2D is not used.")]] auto convolve2D(
+    const std::vector<std::vector<double>> &input,
+    const std::vector<std::vector<double>> &kernel,
+    int numThreads = 1) -> std::vector<std::vector<double>>;
 
 /**
  * @brief Performs 2D deconvolution operation.
@@ -69,11 +71,10 @@ convolve2D(const std::vector<std::vector<double>> &input,
  * @param numThreads Number of threads for parallel execution (default: 1).
  * @return The deconvolved image.
  */
-[[nodiscard("The result of deconvolve2D is not used.")]] std::vector<
-    std::vector<double>>
-deconvolve2D(const std::vector<std::vector<double>> &signal,
-             const std::vector<std::vector<double>> &kernel,
-             int numThreads = 1);
+[[nodiscard("The result of deconvolve2D is not used.")]] auto deconvolve2D(
+    const std::vector<std::vector<double>> &signal,
+    const std::vector<std::vector<double>> &kernel,
+    int numThreads = 1) -> std::vector<std::vector<double>>;
 
 /**
  * @brief Performs 2D Discrete Fourier Transform (DFT).
@@ -84,9 +85,9 @@ deconvolve2D(const std::vector<std::vector<double>> &signal,
  * @param numThreads Number of threads for parallel execution (default: 1).
  * @return The 2D DFT spectrum.
  */
-[[nodiscard("The result of DFT2D is not used.")]] std::vector<
-    std::vector<std::complex<double>>>
-DFT2D(const std::vector<std::vector<double>> &signal, int numThreads = 1);
+[[nodiscard("The result of DFT2D is not used.")]] auto dfT2D(
+    const std::vector<std::vector<double>> &signal,
+    int numThreads = 1) -> std::vector<std::vector<std::complex<double>>>;
 
 /**
  * @brief Performs 2D Inverse Discrete Fourier Transform (IDFT).
@@ -97,10 +98,9 @@ DFT2D(const std::vector<std::vector<double>> &signal, int numThreads = 1);
  * @param numThreads Number of threads for parallel execution (default: 1).
  * @return The 2D IDFT image.
  */
-[[nodiscard(
-    "The result of IDFT2D is not used.")]] std::vector<std::vector<double>>
-IDFT2D(const std::vector<std::vector<std::complex<double>>> &spectrum,
-       int numThreads = 1);
+[[nodiscard("The result of IDFT2D is not used.")]] auto idfT2D(
+    const std::vector<std::vector<std::complex<double>>> &spectrum,
+    int numThreads = 1) -> std::vector<std::vector<double>>;
 
 /**
  * @brief Generates a Gaussian kernel for 2D convolution.
@@ -111,9 +111,9 @@ IDFT2D(const std::vector<std::vector<std::complex<double>>> &spectrum,
  * @param sigma The standard deviation of the Gaussian distribution.
  * @return The generated Gaussian kernel.
  */
-[[nodiscard("The result of generateGaussianKernel is not used.")]] std::vector<
-    std::vector<double>>
-generateGaussianKernel(int size, double sigma);
+[[nodiscard("The result of generateGaussianKernel is not used.")]] auto
+generateGaussianKernel(int size,
+                       double sigma) -> std::vector<std::vector<double>>;
 
 /**
  * @brief Applies a Gaussian filter to an image.
@@ -124,10 +124,10 @@ generateGaussianKernel(int size, double sigma);
  * @param kernel The Gaussian kernel.
  * @return The filtered image.
  */
-[[nodiscard("The result of applyGaussianFilter is not used.")]] std::vector<
-    std::vector<double>>
+[[nodiscard("The result of applyGaussianFilter is not used.")]] auto
 applyGaussianFilter(const std::vector<std::vector<double>> &image,
-                    const std::vector<std::vector<double>> &kernel);
+                    const std::vector<std::vector<double>> &kernel)
+    -> std::vector<std::vector<double>>;
 }  // namespace atom::algorithm
 
 #endif

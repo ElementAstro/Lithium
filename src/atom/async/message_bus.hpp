@@ -39,33 +39,32 @@ Description: Main Message Bus
 namespace atom::async {
 class MessageBus {
 public:
-    MessageBus() {}
+    MessageBus() = default;
 
-    MessageBus(const int &max_queue_size) {
+    explicit MessageBus(const int &max_queue_size) {
         maxMessageBusSize_.store(max_queue_size);
     }
 
-    ~MessageBus() { StopAllProcessingThreads(); }
+    ~MessageBus() { stopAllProcessingThreads(); }
 
     // -------------------------------------------------------------------
     // Common methods
     // -------------------------------------------------------------------
 
-    static std::shared_ptr<MessageBus> createShared() {
+    static auto createShared() -> std::shared_ptr<MessageBus> {
         return std::make_shared<MessageBus>();
     }
 
-    static std::unique_ptr<MessageBus> createUnique() {
+    static auto createUnique() -> std::unique_ptr<MessageBus> {
         return std::make_unique<MessageBus>();
     }
 
-public:
     // -------------------------------------------------------------------
     // MessageBus methods
     // -------------------------------------------------------------------
 
     template <typename T>
-    void Subscribe(const std::string &topic,
+    void subscribe(const std::string &topic,
                    std::function<void(const T &)> callback, int priority = 0,
                    const std::string &namespace_ = "") {
         std::string fullTopic =
@@ -81,7 +80,7 @@ public:
     }
 
     template <typename T>
-    void SubscribeToNamespace(const std::string &namespaceName,
+    void subscribeToNamespace(const std::string &namespaceName,
                               std::function<void(const T &)> callback,
                               int priority = 0) {
         std::string topic = namespaceName + ".*";
@@ -89,7 +88,7 @@ public:
     }
 
     template <typename T>
-    void Unsubscribe(const std::string &topic,
+    void unsubscribe(const std::string &topic,
                      std::function<void(const T &)> callback,
                      const std::string &namespace_ = "") {
         std::string fullTopic =
@@ -112,13 +111,13 @@ public:
     }
 
     template <typename T>
-    void UnsubscribeFromNamespace(const std::string &namespaceName,
+    void unsubscribeFromNamespace(const std::string &namespaceName,
                                   std::function<void(const T &)> callback) {
         std::string topic = namespaceName + ".*";
         Unsubscribe<T>(topic, callback, namespaceName);
     }
 
-    void UnsubscribeAll(const std::string &namespace_ = "") {
+    void unsubscribeAll(const std::string &namespace_ = "") {
         std::string fullTopic = namespace_.empty() ? "*" : (namespace_ + "::*");
 
         std::scoped_lock lock(subscribersLock_);
@@ -128,14 +127,15 @@ public:
     }
 
     template <typename T>
-    void Publish(const std::string &topic, const T &message,
+    void publish(const std::string &topic, const T &message,
                  const std::string &namespace_ = "") {
         std::string fullTopic =
             namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
         {
             std::scoped_lock lock(messageQueueLock_);
-            if (messageQueue_.size() >= maxMessageBusSize_) {
+            if (messageQueue_.size() >=
+                static_cast<unsigned long>(maxMessageBusSize_)) {
                 LOG_F(WARNING,
                       "Message queue is full. Discarding oldest message.");
                 messageQueue_.pop();
@@ -148,10 +148,10 @@ public:
     }
 
     template <typename T>
-    bool TryPublish(
-        const std::string &topic, const T &message,
-        const std::string &namespace_ = "",
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(100)) {
+    auto tryPublish(const std::string &topic, const T &message,
+                    const std::string &namespace_ = "",
+                    std::chrono::milliseconds timeout =
+                        std::chrono::milliseconds(100)) -> bool {
         std::string fullTopic =
             namespace_.empty() ? topic : (namespace_ + "::" + topic);
 
@@ -164,18 +164,17 @@ public:
                 messageAvailableFlag_.notify_one();
                 DLOG_F(INFO, "Published message to topic: {}", fullTopic);
                 return true;
-            } else {
-                LOG_F(WARNING,
-                      "Failed to publish message to topic: {} due to timeout",
-                      fullTopic);
-                return false;
             }
+            LOG_F(WARNING,
+                  "Failed to publish message to topic: {} due to timeout",
+                  fullTopic);
+            return false;
         }
     }
 
     template <typename T>
-    bool TryReceive(T &outMessage, std::chrono::milliseconds timeout =
-                                       std::chrono::milliseconds(100)) {
+    auto tryReceive(T &outMessage, std::chrono::milliseconds timeout =
+                                       std::chrono::milliseconds(100)) -> bool {
         std::unique_lock lock(waitingMutex_);
         if (messageAvailableFlag_.wait_for(
                 lock, timeout, [this] { return !messageQueue_.empty(); })) {
@@ -184,20 +183,19 @@ public:
             messageQueue_.pop();
             outMessage = std::any_cast<T>(message.second);
             return true;
-        } else {
-            LOG_F(WARNING, "Failed to receive message due to timeout");
-            return false;
         }
+        LOG_F(WARNING, "Failed to receive message due to timeout");
+        return false;
     }
 
     template <typename T>
-    void GlobalSubscribe(std::function<void(const T &)> callback) {
+    void globalSubscribe(std::function<void(const T &)> callback) {
         std::scoped_lock lock(globalSubscribersLock_);
         globalSubscribers_.emplace_back(std::move(callback));
     }
 
     template <typename T>
-    void GlobalUnsubscribe(std::function<void(const T &)> callback) {
+    void globalUnsubscribe(std::function<void(const T &)> callback) {
         std::scoped_lock lock(globalSubscribersLock_);
         globalSubscribers_.erase(
             std::remove_if(globalSubscribers_.begin(), globalSubscribers_.end(),
@@ -208,12 +206,12 @@ public:
     }
 
     template <typename T>
-    void StartProcessingThread() {
+    void startProcessingThread() {
         std::type_index typeIndex = typeid(T);
         if (processingThreads_.find(typeIndex) == processingThreads_.end()) {
             processingThreads_.emplace(
-                typeIndex,
-                std::jthread([this, typeIndex](std::stop_token stopToken) {
+                typeIndex, std::jthread([this, typeIndex](
+                                            const std::stop_token &stopToken) {
                     while (!stopToken.stop_requested()) {
                         std::pair<std::string, std::any> message;
                         bool hasMessage = false;
@@ -293,7 +291,7 @@ public:
     }
 
     template <typename T>
-    void StopProcessingThread() {
+    void stopProcessingThread() {
         std::type_index typeIndex = typeid(T);
         auto it = processingThreads_.find(typeIndex);
         if (it != processingThreads_.end()) {
@@ -305,7 +303,7 @@ public:
         }
     }
 
-    void StopAllProcessingThreads() {
+    void stopAllProcessingThreads() {
         for (auto &thread : processingThreads_) {
             thread.second.request_stop();
         }

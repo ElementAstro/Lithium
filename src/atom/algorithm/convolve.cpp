@@ -22,16 +22,16 @@ and deconvolution.
 #include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
-std::vector<double> convolve(const std::vector<double> &input,
-                             const std::vector<double> &kernel) {
-    auto input_size = input.size();
-    auto kernel_size = kernel.size();
-    auto output_size = input_size + kernel_size - 1;
-    std::vector<double> output(output_size, 0.0);
+auto convolve(const std::vector<double> &input,
+              const std::vector<double> &kernel) -> std::vector<double> {
+    auto inputSize = input.size();
+    auto kernelSize = kernel.size();
+    auto outputSize = inputSize + kernelSize - 1;
+    std::vector<double> output(outputSize, 0.0);
 
-    for (std::size_t i = 0; i < output_size; ++i) {
-        for (std::size_t j = 0; j < kernel_size; ++j) {
-            if (i >= j && (i - j) < input_size) {
+    for (std::size_t i = 0; i < outputSize; ++i) {
+        for (std::size_t j = 0; j < kernelSize; ++j) {
+            if (i >= j && (i - j) < inputSize) {
                 output[i] += input[i - j] * kernel[j];
             }
         }
@@ -40,19 +40,19 @@ std::vector<double> convolve(const std::vector<double> &input,
     return output;
 }
 
-std::vector<double> deconvolve(const std::vector<double> &input,
-                               const std::vector<double> &kernel) {
-    auto input_size = input.size();
-    auto kernel_size = kernel.size();
-    if (kernel_size > input_size) {
-        THROW_EXCEPTION("Kernel size cannot be larger than input size.");
+auto deconvolve(const std::vector<double> &input,
+                const std::vector<double> &kernel) -> std::vector<double> {
+    auto inputSize = input.size();
+    auto kernelSize = kernel.size();
+    if (kernelSize > inputSize) {
+        THROW_INVALID_ARGUMENT("Kernel size cannot be larger than input size.");
     }
 
-    auto output_size = input_size - kernel_size + 1;
-    std::vector<double> output(output_size, 0.0);
+    auto outputSize = inputSize - kernelSize + 1;
+    std::vector<double> output(outputSize, 0.0);
 
-    for (std::size_t i = 0; i < output_size; ++i) {
-        for (std::size_t j = 0; j < kernel_size; ++j) {
+    for (std::size_t i = 0; i < outputSize; ++i) {
+        for (std::size_t j = 0; j < kernelSize; ++j) {
             output[i] += input[i + j] * kernel[j];
         }
     }
@@ -60,9 +60,9 @@ std::vector<double> deconvolve(const std::vector<double> &input,
     return output;
 }
 
-std::vector<std::vector<double>> convolve2D(
-    const std::vector<std::vector<double>> &input,
-    const std::vector<std::vector<double>> &kernel, int numThreads) {
+auto convolve2D(const std::vector<std::vector<double>> &input,
+                const std::vector<std::vector<double>> &kernel,
+                int numThreads) -> std::vector<std::vector<double>> {
     auto inputRows = input.size();
     auto inputCols = input[0].size();
     auto kernelRows = kernel.size();
@@ -136,9 +136,9 @@ std::vector<std::vector<double>> convolve2D(
     return output;
 }
 
-std::vector<std::vector<double>> deconvolve2D(
-    const std::vector<std::vector<double>> &signal,
-    const std::vector<std::vector<double>> &kernel, int numThreads) {
+auto deconvolve2D(const std::vector<std::vector<double>> &signal,
+                  const std::vector<std::vector<double>> &kernel,
+                  int numThreads) -> std::vector<std::vector<double>> {
     int M = signal.size();
     int N = signal[0].size();
     int K = kernel.size();
@@ -163,24 +163,24 @@ std::vector<std::vector<double>> deconvolve2D(
     }
 
     // 计算信号和卷积核的二维DFT
-    auto DFT2DWrapper = [&](const std::vector<std::vector<double>> &input) {
-        return DFT2D(input,
+    auto dfT2DWrapper = [&](const std::vector<std::vector<double>> &input) {
+        return dfT2D(input,
                      numThreads);  // Assume DFT2D supports multithreading
     };
 
-    auto X = DFT2DWrapper(extendedSignal);
-    auto H = DFT2DWrapper(extendedKernel);
+    auto x = dfT2DWrapper(extendedSignal);
+    auto h = dfT2DWrapper(extendedKernel);
 
     // 对卷积核的频谱进行修正
-    std::vector<std::vector<std::complex<double>>> G(
+    std::vector<std::vector<std::complex<double>>> g(
         M + K - 1, std::vector<std::complex<double>>(N + L - 1));
     double alpha = 0.1;  // 防止分母为0
     for (int u = 0; u < M + K - 1; ++u) {
         for (int v = 0; v < N + L - 1; ++v) {
-            if (std::abs(H[u][v]) > alpha) {
-                G[u][v] = std::conj(H[u][v]) / (std::norm(H[u][v]) + alpha);
+            if (std::abs(h[u][v]) > alpha) {
+                g[u][v] = std::conj(h[u][v]) / (std::norm(h[u][v]) + alpha);
             } else {
-                G[u][v] = std::conj(H[u][v]);
+                g[u][v] = std::conj(h[u][v]);
             }
         }
     }
@@ -190,11 +190,11 @@ std::vector<std::vector<double>> deconvolve2D(
         M + K - 1, std::vector<std::complex<double>>(N + L - 1));
     for (int u = 0; u < M + K - 1; ++u) {
         for (int v = 0; v < N + L - 1; ++v) {
-            Y[u][v] = G[u][v] * X[u][v];
+            Y[u][v] = g[u][v] * x[u][v];
         }
     }
 
-    auto y = IDFT2D(Y, numThreads);
+    auto y = idfT2D(Y, numThreads);
 
     // 提取有效结果
     std::vector<std::vector<double>> result(M, std::vector<double>(N, 0));
@@ -208,8 +208,8 @@ std::vector<std::vector<double>> deconvolve2D(
 }
 
 // 二维离散傅里叶变换（2D DFT）
-std::vector<std::vector<std::complex<double>>> DFT2D(
-    const std::vector<std::vector<double>> &signal, int numThreads) {
+auto dfT2D(const std::vector<std::vector<double>> &signal,
+           int numThreads) -> std::vector<std::vector<std::complex<double>>> {
     const auto M = signal.size();
     const auto N = signal[0].size();
     std::vector<std::vector<std::complex<double>>> X(
@@ -255,9 +255,8 @@ std::vector<std::vector<std::complex<double>>> DFT2D(
 }
 
 // 二维离散傅里叶逆变换（2D IDFT）
-std::vector<std::vector<double>> IDFT2D(
-    const std::vector<std::vector<std::complex<double>>> &spectrum,
-    int numThreads) {
+auto idfT2D(const std::vector<std::vector<std::complex<double>>> &spectrum,
+            int numThreads) -> std::vector<std::vector<double>> {
     const auto M = spectrum.size();
     const auto N = spectrum[0].size();
     std::vector<std::vector<double>> x(M, std::vector<double>(N, 0.0));
@@ -301,8 +300,8 @@ std::vector<std::vector<double>> IDFT2D(
     return x;
 }
 
-std::vector<std::vector<double>> generateGaussianKernel(int size,
-                                                        double sigma) {
+auto generateGaussianKernel(int size,
+                            double sigma) -> std::vector<std::vector<double>> {
     std::vector<std::vector<double>> kernel(size, std::vector<double>(size));
     double sum = 0.0;
     int center = size / 2;
@@ -326,9 +325,9 @@ std::vector<std::vector<double>> generateGaussianKernel(int size,
     return kernel;
 }
 
-std::vector<std::vector<double>> applyGaussianFilter(
-    const std::vector<std::vector<double>> &image,
-    const std::vector<std::vector<double>> &kernel) {
+auto applyGaussianFilter(const std::vector<std::vector<double>> &image,
+                         const std::vector<std::vector<double>> &kernel)
+    -> std::vector<std::vector<double>> {
     auto imageHeight = image.size();
     auto imageWidth = image[0].size();
     auto kernelSize = kernel.size();

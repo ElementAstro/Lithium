@@ -11,10 +11,10 @@ public:
     ~PIDImpl();
     void setIntegratorLimits(double min, double max);
     void setTau(double value);
-    double calculate(double setpoint, double measurement);
-    double propotionalTerm() const;
-    double integralTerm() const;
-    double derivativeTerm() const;
+    auto calculate(double setpoint, double measurement) -> double;
+    [[nodiscard]] auto propotionalTerm() const -> double;
+    [[nodiscard]] auto integralTerm() const -> double;
+    [[nodiscard]] auto derivativeTerm() const -> double;
 
 private:
     double m_T{1};
@@ -70,29 +70,29 @@ public:
      * @param pv The process variable (current measurement).
      * @return The calculated control output.
      */
-    double calculate(double setpoint, double pv);
+    auto calculate(double setpoint, double pv) -> double;
 
     /**
      * @brief Get the proportional term of the controller.
      * @return The proportional term value.
      */
-    double propotionalTerm() const;
+    [[nodiscard]] auto propotionalTerm() const -> double;
 
     /**
      * @brief Get the integral term of the controller.
      * @return The integral term value.
      */
-    double integralTerm() const;
+    [[nodiscard]] auto integralTerm() const -> double;
 
     /**
      * @brief Get the derivative term of the controller.
      * @return The derivative term value.
      */
-    double derivativeTerm() const;
+    [[nodiscard]] auto derivativeTerm() const -> double;
 
 private:
     std::unique_ptr<PIDImpl>
-        pimpl; /**< Pointer to the implementation of the PID controller. */
+        pimpl_; /**< Pointer to the implementation of the PID controller. */
 };
 }  // namespace atom::algorithm
 

@@ -41,13 +41,13 @@ public:
      * @return A vector containing the starting positions of all occurrences of
      * the pattern in the text.
      */
-    std::vector<int> Search(std::string_view text);
+    auto search(std::string_view text) -> std::vector<int>;
 
     /**
      * @brief Sets a new pattern to search for.
      * @param pattern The new pattern to set.
      */
-    void SetPattern(std::string_view pattern);
+    void setPattern(std::string_view pattern);
 
 private:
     /**
@@ -55,7 +55,7 @@ private:
      * @param pattern The pattern for which to compute the failure function.
      * @return A vector containing the failure function values.
      */
-    std::vector<int> ComputeFailureFunction(std::string_view pattern);
+    auto computeFailureFunction(std::string_view pattern) -> std::vector<int>;
 
     std::string pattern_; /**< The pattern to search for. */
     std::vector<int>
@@ -81,8 +81,8 @@ public:
      * @param set The set for which to compute the MinHash signature.
      * @return A vector containing the MinHash signature of the set.
      */
-    std::vector<unsigned long long> compute_signature(
-        const std::unordered_set<std::string>& set);
+    auto computeSignature(const std::unordered_set<std::string>& set)
+        -> std::vector<unsigned long long>;
 
     /**
      * @brief Estimates the Jaccard similarity between two sets using their
@@ -91,9 +91,9 @@ public:
      * @param signature2 The MinHash signature of the second set.
      * @return The estimated Jaccard similarity between the two sets.
      */
-    double estimate_similarity(
+    [[nodiscard]] auto estimateSimilarity(
         const std::vector<unsigned long long>& signature1,
-        const std::vector<unsigned long long>& signature2) const;
+        const std::vector<unsigned long long>& signature2) const -> double;
 
 private:
     /**
@@ -105,12 +105,12 @@ private:
      */
     unsigned long long hash(const std::string& element, int index);
 
-    int m_num_hash_functions; /**< The number of hash functions used for
+    int m_num_hash_functions_; /**< The number of hash functions used for
                                  MinHash. */
     std::vector<unsigned long long>
-        m_coefficients_a; /**< Coefficients 'a' for hash functions. */
+        m_coefficients_a_; /**< Coefficients 'a' for hash functions. */
     std::vector<unsigned long long>
-        m_coefficients_b; /**< Coefficients 'b' for hash functions. */
+        m_coefficients_b_; /**< Coefficients 'b' for hash functions. */
 };
 
 /**
@@ -142,8 +142,9 @@ public:
     bool contains(std::string_view element) const;
 
 private:
-    std::bitset<N> m_bits; /**< The bitset representing the Bloom filter. */
-    std::size_t m_num_hash_functions; /**< The number of hash functions used. */
+    std::bitset<N> m_bits_; /**< The bitset representing the Bloom filter. */
+    std::size_t
+        m_num_hash_functions_; /**< The number of hash functions used. */
 
     /**
      * @brief Computes the hash value of an element using a specific seed.
@@ -151,7 +152,7 @@ private:
      * @param seed The seed value for the hash function.
      * @return The hash value of the element.
      */
-    std::size_t hash(std::string_view element, std::size_t seed) const;
+    auto hash(std::string_view element, std::size_t seed) const -> std::size_t;
 };
 
 /**
@@ -172,32 +173,63 @@ public:
      * @return A vector containing the starting positions of all occurrences of
      * the pattern in the text.
      */
-    std::vector<int> Search(std::string_view text);
+    auto search(std::string_view text) -> std::vector<int>;
 
     /**
      * @brief Sets a new pattern for the BoyerMoore object.
      * @param pattern The new pattern to set.
      */
-    void SetPattern(std::string_view pattern);
+    void setPattern(std::string_view pattern);
 
 private:
     /**
      * @brief Computes the bad character shift table for the pattern.
      */
-    void ComputeBadCharacterShift();
+    void computeBadCharacterShift();
 
     /**
      * @brief Computes the good suffix shift table for the pattern.
      */
-    void ComputeGoodSuffixShift();
+    void computeGoodSuffixShift();
 
     std::string pattern_; /**< The pattern to search for. */
     std::unordered_map<char, int>
         bad_char_shift_;                 /**< The bad character shift table. */
     std::vector<int> good_suffix_shift_; /**< The good suffix shift table. */
 };
-}  // namespace atom::algorithm
 
-#include "algorithm.inl"
+template <std::size_t N>
+BloomFilter<N>::BloomFilter(std::size_t num_hash_functions)
+    : m_num_hash_functions_(num_hash_functions) {}
+
+template <std::size_t N>
+void BloomFilter<N>::insert(std::string_view element) {
+    for (std::size_t i = 0; i < m_num_hash_functions_; ++i) {
+        std::size_t hashValue = hash(element, i);
+        m_bits_.set(hashValue % N);
+    }
+}
+
+template <std::size_t N>
+auto BloomFilter<N>::contains(std::string_view element) const -> bool {
+    for (std::size_t i = 0; i < m_num_hash_functions_; ++i) {
+        std::size_t hashValue = hash(element, i);
+        if (!m_bits_.test(hashValue % N)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+template <std::size_t N>
+auto BloomFilter<N>::hash(std::string_view element,
+                          std::size_t seed) const -> std::size_t {
+    std::size_t hashValue = seed;
+    for (char c : element) {
+        hashValue = hashValue * 31 + static_cast<std::size_t>(c);
+    }
+    return hashValue;
+}
+}  // namespace atom::algorithm
 
 #endif

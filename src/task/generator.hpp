@@ -21,7 +21,6 @@ Description: Task Generator
 #include <unordered_map>
 #endif
 #include <functional>
-#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -36,16 +35,16 @@ class TaskGenerator {
 public:
     TaskGenerator();
 
-    void add_macro(const std::string& name, const MacroValue& value);
-    void process_json(nlohmann::json& j) const;
-    void process_json_with_json_macros(nlohmann::json& j);
+    void addMacro(const std::string& name, const MacroValue& value);
+    void processJson(nlohmann::json& j) const;
+    void processJsonWithJsonMacros(nlohmann::json& j);
 
 private:
-    std::unordered_map<std::string, MacroValue> macros;
+    std::unordered_map<std::string, MacroValue> macros_;
 
-    std::string evaluate_macro(const std::string& name,
-                               const std::vector<std::string>& args) const;
-    std::string replace_macros(const std::string& input) const;
+    auto evaluateMacro(const std::string& name,
+                               const std::vector<std::string>& args) const -> std::string;
+    auto replaceMacros(const std::string& input) const -> std::string;
 };
 
 }  // namespace lithium

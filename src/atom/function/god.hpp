@@ -13,125 +13,127 @@
 #include <cstring>
 #include <type_traits>
 #include <utility>
+#include "atom/macro.hpp"
 
 namespace atom::meta {
 
 // No-op function for blessing with no bugs
-inline void blessNoBugs() {}
+ATOM_INLINE void blessNoBugs() {}
 
 template <typename To, typename From>
-constexpr To cast(From&& f) {
+constexpr auto cast(From&& f) -> To {
     return static_cast<To>(std::forward<From>(f));
 }
 
 template <std::size_t A, typename X>
-constexpr X alignUp(X x) {
+constexpr auto alignUp(X x) -> X {
     static_assert((A & (A - 1)) == 0, "A must be power of 2");
     return (x + static_cast<X>(A - 1)) & ~static_cast<X>(A - 1);
 }
 
 template <std::size_t A, typename X>
-constexpr X* alignUp(X* x) {
+constexpr auto alignUp(X* x) -> X* {
     return reinterpret_cast<X*>(alignUp<A>(reinterpret_cast<std::size_t>(x)));
 }
 
 template <typename X, typename A>
-constexpr X alignUp(X x, A a) {
+constexpr auto alignUp(X x, A a) -> X {
     static_assert(std::is_integral<A>::value, "A must be integral type");
     return (x + static_cast<X>(a - 1)) & ~static_cast<X>(a - 1);
 }
 
 template <typename X, typename A>
-constexpr X* alignUp(X* x, A a) {
+constexpr auto alignUp(X* x, A a) -> X* {
     return reinterpret_cast<X*>(alignUp(reinterpret_cast<std::size_t>(x), a));
 }
 
 template <std::size_t A, typename X>
-constexpr X alignDown(X x) {
+constexpr auto alignDown(X x) -> X {
     static_assert((A & (A - 1)) == 0, "A must be power of 2");
     return x & ~static_cast<X>(A - 1);
 }
 
 template <std::size_t A, typename X>
-constexpr X* alignDown(X* x) {
+constexpr auto alignDown(X* x) -> X* {
     return reinterpret_cast<X*>(alignDown<A>(reinterpret_cast<std::size_t>(x)));
 }
 
 template <typename X, typename A>
-constexpr X alignDown(X x, A a) {
+constexpr auto alignDown(X x, A a) -> X {
     static_assert(std::is_integral<A>::value, "A must be integral type");
     return x & ~static_cast<X>(a - 1);
 }
 
 template <typename X, typename A>
-constexpr X* alignDown(X* x, A a) {
+constexpr auto alignDown(X* x, A a) -> X* {
     return reinterpret_cast<X*>(alignDown(reinterpret_cast<std::size_t>(x), a));
 }
 
 template <typename T>
-constexpr T log2(T x) {
+constexpr auto log2(T x) -> T {
     static_assert(std::is_integral<T>::value, "T must be integral type");
     return x <= 1 ? 0 : 1 + atom::meta::log2(x >> 1);
 }
 
 template <std::size_t N, typename X>
-constexpr X nb(X x) {
+constexpr auto nb(X x) -> X {
     static_assert((N & (N - 1)) == 0, "N must be power of 2");
-    return (x >> atom::meta::log2(static_cast<X>(N))) + !!(x & static_cast<X>(N - 1));
+    return (x >> atom::meta::log2(static_cast<X>(N))) +
+           !!(x & static_cast<X>(N - 1));
 }
 
 template <typename T>
-inline bool eq(const void* p, const void* q) {
+ATOM_INLINE auto eq(const void* p, const void* q) -> bool {
     return *reinterpret_cast<const T*>(p) == *reinterpret_cast<const T*>(q);
 }
 
 template <std::size_t N>
-inline void copy(void* dst, const void* src) {
+ATOM_INLINE void copy(void* dst, const void* src) {
     if constexpr (N > 0) {
         std::memcpy(dst, src, N);
     }
 }
 
 template <>
-inline void copy<0>(void*, const void*) {}
+ATOM_INLINE void copy<0>(void*, const void*) {}
 
 template <typename T, typename V>
-inline T swap(T* p, V v) {
+ATOM_INLINE auto swap(T* p, V v) -> T {
     T x = *p;
     *p = static_cast<T>(v);
     return x;
 }
 
 template <typename T, typename V>
-inline T fetchAdd(T* p, V v) {
+ATOM_INLINE auto fetchAdd(T* p, V v) -> T {
     T x = *p;
     *p += v;
     return x;
 }
 
 template <typename T, typename V>
-inline T fetchSub(T* p, V v) {
+ATOM_INLINE auto fetchSub(T* p, V v) -> T {
     T x = *p;
     *p -= v;
     return x;
 }
 
 template <typename T, typename V>
-inline T fetchAnd(T* p, V v) {
+ATOM_INLINE auto fetchAnd(T* p, V v) -> T {
     T x = *p;
     *p &= static_cast<T>(v);
     return x;
 }
 
 template <typename T, typename V>
-inline T fetchOr(T* p, V v) {
+ATOM_INLINE auto fetchOr(T* p, V v) -> T {
     T x = *p;
     *p |= static_cast<T>(v);
     return x;
 }
 
 template <typename T, typename V>
-inline T fetchXor(T* p, V v) {
+ATOM_INLINE auto fetchXor(T* p, V v) -> T {
     T x = *p;
     *p ^= static_cast<T>(v);
     return x;
@@ -172,47 +174,47 @@ struct isSame<T, U, X...> {
 }  // namespace detail
 
 template <typename T, typename U, typename... X>
-constexpr bool isSame() {
+constexpr auto isSame() -> bool {
     return detail::isSame<T, U, X...>::value;
 }
 
 template <typename T>
-constexpr bool isRef() {
+constexpr auto isRef() -> bool {
     return std::is_reference_v<T>;
 }
 
 template <typename T>
-constexpr bool isArray() {
+constexpr auto isArray() -> bool {
     return std::is_array_v<T>;
 }
 
 template <typename T>
-constexpr bool isClass() {
+constexpr auto isClass() -> bool {
     return std::is_class_v<T>;
 }
 
 template <typename T>
-constexpr bool isScalar() {
+constexpr auto isScalar() -> bool {
     return std::is_scalar_v<T>;
 }
 
 template <typename T>
-constexpr bool isTriviallyCopyable() {
+constexpr auto isTriviallyCopyable() -> bool {
     return std::is_trivially_copyable_v<T>;
 }
 
 template <typename T>
-constexpr bool isTriviallyDestructible() {
+constexpr auto isTriviallyDestructible() -> bool {
     return std::is_trivially_destructible_v<T>;
 }
 
 template <typename B, typename D>
-constexpr bool isBaseOf() {
+constexpr auto isBaseOf() -> bool {
     return std::is_base_of_v<B, D>;
 }
 
 template <typename T>
-constexpr bool hasVirtualDestructor() {
+constexpr auto hasVirtualDestructor() -> bool {
     return std::has_virtual_destructor_v<T>;
 }
 

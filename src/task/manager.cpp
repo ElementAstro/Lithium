@@ -5,11 +5,10 @@
 #include <functional>
 #include <map>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
-#include <variant>
+#include <utility>
 #include <vector>
 
 #include "atom/error/exception.hpp"
@@ -46,16 +45,17 @@ bool TaskInterpretor::hasScript(const std::string& name) const {
     return scripts.find(name) != scripts.end();
 }
 
-std::optional<json> TaskInterpretor::getScript(const std::string& name) const {
+auto TaskInterpretor::getScript(const std::string& name) const
+    -> std::optional<json> {
     if (auto it = scripts.find(name); it != scripts.end()) {
         return scripts.at(name);
     }
     return std::nullopt;
 }
 
-bool TaskInterpretor::prepareScript(json& script) {
+auto TaskInterpretor::prepareScript(json& script) -> bool {
     try {
-        taskGenerator->process_json(script);
+        taskGenerator->processJson(script);
     } catch (const std::exception& e) {
         return false;
     }
@@ -67,10 +67,10 @@ void TaskInterpretor::registerFunction(const std::string& name,
     if (functions.find(name) != functions.end()) {
         THROW_RUNTIME_ERROR("Function '" + name + "' is already registered.");
     }
-    functions[name] = func;
+    functions[name] = std::move(func);
 }
 
-bool TaskInterpretor::hasFunction(const std::string& name) const {
+auto TaskInterpretor::hasFunction(const std::string& name) const -> bool {
     if (functions.find(name) == functions.end()) {
         THROW_RUNTIME_ERROR("Function '" + name + "' is not registered.");
     }
@@ -80,14 +80,14 @@ bool TaskInterpretor::hasFunction(const std::string& name) const {
 void TaskInterpretor::registerExceptionHandler(
     const std::string& name,
     std::function<void(const std::exception&)> handler) {
-    exceptionHandlers[name] = handler;
+    exceptionHandlers[name] = std::move(handler);
 }
 
 void TaskInterpretor::setVariable(const std::string& name, const json& value) {
     variables[name] = value;
 }
 
-json TaskInterpretor::getVariable(const std::string& name) {
+auto TaskInterpretor::getVariable(const std::string& name) -> json {
     if (variables.find(name) == variables.end()) {
         THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
     }
@@ -135,10 +135,11 @@ void TaskInterpretor::stop() {
     }
 }
 
-bool TaskInterpretor::executeStep(const json& step, size_t& idx,
-                                  const json& script) {
-    if (stopRequested)
+auto TaskInterpretor::executeStep(const json& step, size_t& idx,
+                                  const json& script) -> bool {
+    if (stopRequested) {
         return false;
+    }
     try {
         std::string type = step["type"];
         if (type == "call") {
@@ -166,7 +167,7 @@ bool TaskInterpretor::executeStep(const json& step, size_t& idx,
 void TaskInterpretor::executeCall(const json& step) {
     std::string functionName = step["function"];
     json params = step["params"];
-    for (auto& [key, value] : params.items()) {
+    for (const auto& [key, value] : params.items()) {
         params[key] = evaluate(value);
     }
     if (functions.find(functionName) != functions.end()) {
@@ -192,8 +193,8 @@ void TaskInterpretor::executeCondition(const json& step, size_t& idx,
     }
 }
 
-bool TaskInterpretor::executeLoop(const json& step, size_t& idx,
-                                  const json& script) {
+auto TaskInterpretor::executeLoop(const json& step, size_t& idx,
+                                  const json& script) -> bool {
     int count = evaluate(step["loop_iterations"]).get<int>();
     size_t startIdx = idx;
     for (int i = 0; i < count && !stopRequested; i++) {
@@ -226,9 +227,9 @@ void TaskInterpretor::executeSwitch(const json& step, size_t& idx,
     bool caseFound = false;  // Flag to check if a case has been matched
 
     if (step.contains("cases")) {
-        for (const auto& case_block : step["cases"]) {
-            if (case_block["case"] == value) {
-                for (const auto& nestedStep : case_block["steps"]) {
+        for (const auto& caseBlock : step["cases"]) {
+            if (caseBlock["case"] == value) {
+                for (const auto& nestedStep : caseBlock["steps"]) {
                     executeStep(nestedStep, idx, script);
                 }
                 caseFound = true;  // Mark that a case has been matched
@@ -276,8 +277,8 @@ void TaskInterpretor::executeParallel(const json& step,
 json TaskInterpretor::evaluate(const json& value) {
     if (value.is_primitive()) {
         return value;
-    } else if (value.is_string() &&
-               variables.contains(value.get<std::string>())) {
+    }
+    if (value.is_string() && variables.contains(value.get<std::string>())) {
         return variables[value.get<std::string>()];
     }
     return value;

@@ -18,7 +18,6 @@ Description: Implementation of murmur3 hash and quick hash
 #include <stdint.h>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 namespace atom::algorithm {
 /**
@@ -28,8 +27,8 @@ namespace atom::algorithm {
  * @param seed The seed value (optional, default is 1060627423).
  * @return uint32_t The calculated hash value.
  */
-[[nodiscard]] uint32_t murmur3Hash(std::string_view data,
-                                   uint32_t seed = 1060627423) noexcept;
+[[nodiscard]] auto murmur3Hash(std::string_view data,
+                               uint32_t seed = 1060627423) noexcept -> uint32_t;
 
 /**
  * @brief Calculates the 64-bit MurmurHash3 hash value for a given string.
@@ -39,9 +38,9 @@ namespace atom::algorithm {
  * @param seed2 The second seed value (optional, default is 1050126127).
  * @return uint64_t The calculated hash value.
  */
-[[nodiscard]] uint64_t murmur3Hash64(std::string_view str,
-                                     uint32_t seed = 1060627423,
-                                     uint32_t seed2 = 1050126127);
+[[nodiscard]] auto murmur3Hash64(std::string_view str,
+                                 uint32_t seed = 1060627423,
+                                 uint32_t seed2 = 1050126127) -> uint64_t;
 
 /**
  * @brief Converts binary data to a hexadecimal string representation.
@@ -59,7 +58,7 @@ void hexstringFromData(const void *data, size_t len, char *output);
  * @param data The input string.
  * @return std::string The hexadecimal string representation.
  */
-[[nodiscard]] std::string hexstringFromData(const std::string &data);
+[[nodiscard]] auto hexstringFromData(const std::string &data) -> std::string;
 
 /**
  * @brief Converts a hexadecimal string representation to binary data.
@@ -69,7 +68,7 @@ void hexstringFromData(const void *data, size_t len, char *output);
  * @throw std::invalid_argument If the input hexstring is not a valid
  * hexadecimal string.
  */
-[[nodiscard]] std::string dataFromHexstring(const std::string &data);
+[[nodiscard]] auto dataFromHexstring(const std::string &data) -> std::string;
 }  // namespace atom::algorithm
 
 #endif

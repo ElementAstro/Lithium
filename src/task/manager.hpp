@@ -3,14 +3,10 @@
 
 #include <atomic>
 #include <functional>
-#include <map>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
-#include <variant>
-#include <vector>
 
 #include "task.hpp"
 #include "atom/type/json.hpp"
@@ -32,14 +28,14 @@ public:
 
     void unloadScript(const std::string& name);
 
-    bool hasScript(const std::string& name) const;
+    auto hasScript(const std::string& name) const -> bool;
 
-    std::optional<json> getScript(const std::string& name) const;
+    auto getScript(const std::string& name) const -> std::optional<json>;
 
     void registerFunction(const std::string& name,
                           std::function<json(const json&)> func);
 
-    bool hasFunction(const std::string& name) const;
+    auto hasFunction(const std::string& name) const -> bool;
 
     void registerExceptionHandler(
         const std::string& name,
@@ -47,7 +43,7 @@ public:
 
     void setVariable(const std::string& name, const json& value);
 
-    json getVariable(const std::string& name);
+    auto getVariable(const std::string& name) -> json;
 
     void parseLabels(const json& script);
 
@@ -56,15 +52,15 @@ public:
     void stop();
 
 private:
-    bool prepareScript(json& script);
+    auto prepareScript(json& script) -> bool;
 
-    bool executeStep(const json& step, size_t& idx, const json& script);
+    auto executeStep(const json& step, size_t& idx, const json& script) -> bool;
 
     void executeCall(const json& step);
 
     void executeCondition(const json& step, size_t& idx, const json& script);
 
-    bool executeLoop(const json& step, size_t& idx, const json& script);
+    auto executeLoop(const json& step, size_t& idx, const json& script) -> bool;
 
     void executeGoto(const json& step, size_t& idx,
                      [[maybe_unused]] const json& script);
@@ -75,12 +71,11 @@ private:
 
     void executeParallel(const json& step, size_t& idx, const json& script);
 
-    json evaluate(const json& value);
+    auto evaluate(const json& value) -> json;
 
     void handleException(const std::string& scriptName,
                          const std::exception& e);
 
-private:
     std::shared_ptr<TaskGenerator> taskGenerator;
     std::weak_ptr<Component> component;
     std::unordered_map<std::string, json> scripts;

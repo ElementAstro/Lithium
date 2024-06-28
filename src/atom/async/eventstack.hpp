@@ -15,16 +15,14 @@ Description: A thread-safe stack data structure for managing events.
 #ifndef ATOM_SERVER_EVENTSTACK_HPP
 #define ATOM_SERVER_EVENTSTACK_HPP
 
-#include <algorithm>
 #include <atomic>
 #include <functional>
-#include <memory>
-#include <mutex>
 #include <optional>
 #include <shared_mutex>
 #include <string>
 #include <vector>
 
+namespace atom::async {
 /**
  * @brief A thread-safe stack data structure for managing events.
  *
@@ -33,8 +31,8 @@ Description: A thread-safe stack data structure for managing events.
 template <typename T>
 class EventStack {
 public:
-    EventStack();  /**< Constructor. */
-    ~EventStack(); /**< Destructor. */
+    EventStack() = default;
+    ~EventStack() = default;
 
     /**
      * @brief Pushes an event onto the stack.
@@ -48,26 +46,28 @@ public:
      *
      * @return The popped event, or std::nullopt if the stack is empty.
      */
-    std::optional<T> popEvent();
+    auto popEvent() -> std::optional<T>;
 
+#if ENABLE_DEBUG
     /**
      * @brief Prints all events in the stack.
      */
     void printEvents() const;
+#endif
 
     /**
      * @brief Checks if the stack is empty.
      *
      * @return true if the stack is empty, false otherwise.
      */
-    bool isEmpty() const;
+    auto isEmpty() const -> bool;
 
     /**
      * @brief Returns the number of events in the stack.
      *
      * @return The number of events.
      */
-    size_t size() const;
+    auto size() const -> size_t;
 
     /**
      * @brief Clears all events from the stack.
@@ -79,14 +79,14 @@ public:
      *
      * @return The top event, or std::nullopt if the stack is empty.
      */
-    std::optional<T> peekTopEvent() const;
+    auto peekTopEvent() const -> std::optional<T>;
 
     /**
      * @brief Copies the current stack.
      *
      * @return A copy of the stack.
      */
-    EventStack<T> copyStack() const;
+    auto copyStack() const -> EventStack<T>;
 
     /**
      * @brief Filters events based on a custom filter function.
@@ -100,7 +100,7 @@ public:
      *
      * @return The serialized stack.
      */
-    std::string serializeStack() const;
+    auto serializeStack() const -> std::string;
 
     /**
      * @brief Deserializes a string into the stack.
@@ -133,7 +133,7 @@ public:
      * @param predicate The predicate function.
      * @return The count of events satisfying the predicate.
      */
-    size_t countEvents(std::function<bool(const T&)> predicate) const;
+    auto countEvents(std::function<bool(const T&)> predicate) const -> size_t;
 
     /**
      * @brief Finds the first event that satisfies a predicate.
@@ -142,7 +142,8 @@ public:
      * @return The first event satisfying the predicate, or std::nullopt if not
      * found.
      */
-    std::optional<T> findEvent(std::function<bool(const T&)> predicate) const;
+    auto findEvent(std::function<bool(const T&)> predicate) const
+        -> std::optional<T>;
 
     /**
      * @brief Checks if any event in the stack satisfies a predicate.
@@ -150,7 +151,7 @@ public:
      * @param predicate The predicate function.
      * @return true if any event satisfies the predicate, false otherwise.
      */
-    bool anyEvent(std::function<bool(const T&)> predicate) const;
+    auto anyEvent(std::function<bool(const T&)> predicate) const -> bool;
 
     /**
      * @brief Checks if all events in the stack satisfy a predicate.
@@ -158,13 +159,14 @@ public:
      * @param predicate The predicate function.
      * @return true if all events satisfy the predicate, false otherwise.
      */
-    bool allEvents(std::function<bool(const T&)> predicate) const;
+    auto allEvents(std::function<bool(const T&)> predicate) const -> bool;
 
 private:
-    std::vector<T> events;             /**< Vector to store events. */
-    mutable std::shared_mutex mtx;     /**< Mutex for thread safety. */
-    std::atomic<size_t> eventCount{0}; /**< Atomic counter for event count. */
+    std::vector<T> events_;             /**< Vector to store events. */
+    mutable std::shared_mutex mtx_;     /**< Mutex for thread safety. */
+    std::atomic<size_t> eventCount_{0}; /**< Atomic counter for event count. */
 };
+}  // namespace atom::async
 
 #include "eventstack.inl"
 

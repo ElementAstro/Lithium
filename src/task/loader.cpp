@@ -17,8 +17,11 @@ Description: Json file manager
 #include <atomic>
 #include <fstream>
 #include <thread>
+#include <utility>
 
 #include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
+using json = nlohmann::json;
 
 namespace lithium {
 std::shared_ptr<TaskLoader> TaskLoader::createShared() {
@@ -51,7 +54,8 @@ std::optional<json> TaskLoader::readJsonFile(const fs::path& filePath) {
     return std::nullopt;
 }
 
-bool TaskLoader::writeJsonFile(const fs::path& filePath, const json& j) {
+auto TaskLoader::writeJsonFile(const fs::path& filePath,
+                               const json& j) -> bool {
     try {
         std::ofstream outputFile(filePath);
         outputFile << j.dump(4);
@@ -81,7 +85,7 @@ void TaskLoader::asyncWriteJsonFile(const fs::path& filePath, const json& j,
 }
 
 void TaskLoader::mergeJsonObjects(json& base, const json& toMerge) {
-    for (auto& [key, value] : toMerge.items()) {
+    for (const auto& [key, value] : toMerge.items()) {
         base[key] = value;
     }
 }
@@ -146,7 +150,7 @@ void TaskLoader::batchProcessDirectory(
         }
     }
 
-    batchAsyncProcess(filePaths, process, std::move(onComplete));
+    batchAsyncProcess(filePaths, std::move(process), std::move(onComplete));
 }
 
 }  // namespace lithium

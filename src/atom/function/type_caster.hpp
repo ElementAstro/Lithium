@@ -12,11 +12,7 @@
 #include <any>
 #include <functional>
 #include <queue>
-#include <set>
-#include <stdexcept>
-#include <typeindex>
 #include <typeinfo>
-
 #include <vector>
 
 #if ENABLE_FASTHASH
@@ -34,39 +30,39 @@ namespace atom::meta {
 class TypeCaster {
 public:
     using ConvertFunc = std::function<std::any(const std::any&)>;
-    using ConvertMap = std::unordered_map<Type_Info, ConvertFunc>;
+    using ConvertMap = std::unordered_map<TypeInfo, ConvertFunc>;
 
-    TypeCaster() { register_builtin_types(); }
+    TypeCaster() { registerBuiltinTypes(); }
 
     static std::shared_ptr<TypeCaster> createShared() {
         return std::make_shared<TypeCaster>();
     }
 
     template <typename SourceType, typename DestinationType>
-    void register_conversion(ConvertFunc func) {
-        auto src_info = user_type<SourceType>();
-        auto dest_info = user_type<DestinationType>();
-        register_type<SourceType>(src_info.bare_name());
-        register_type<DestinationType>(dest_info.bare_name());
-        if (src_info == dest_info) {
+    void registerConversion(ConvertFunc func) {
+        auto srcInfo = user_type<SourceType>();
+        auto destInfo = user_type<DestinationType>();
+        register_type<SourceType>(srcInfo.bare_name());
+        register_type<DestinationType>(destInfo.bare_name());
+        if (srcInfo == destInfo) {
             THROW_INVALID_ARGUMENT(
                 "Source and destination types must be different.");
         }
-        conversions[src_info][dest_info] = std::move(func);
-        clear_cache();  // Clear cache because new conversion might affect
-                        // existing paths
+        conversions_[srcInfo][destInfo] = std::move(func);
+        clearCache();  // Clear cache because new conversion might affect
+                       // existing paths
     }
 
     template <typename SourceType, typename DestinationType>
-    bool has_conversion() const {
-        auto src_info = user_type<SourceType>();
-        auto dest_info = user_type<DestinationType>();
-        return has_conversion(src_info, dest_info);
+    auto hasConversion() const -> bool {
+        auto srcInfo = user_type<SourceType>();
+        auto destInfo = user_type<DestinationType>();
+        return hasConversion(srcInfo, destInfo);
     }
 
-    std::vector<std::any> convert(
-        const std::vector<std::any>& input,
-        const std::vector<std::string>& target_type_names) const {
+    auto convert(const std::vector<std::any>& input,
+                 const std::vector<std::string>& target_type_names) const
+        -> std::vector<std::any> {
         if (input.size() != target_type_names.size()) {
             THROW_INVALID_ARGUMENT(
                 "Input and target type names must be of the same length.");
@@ -74,100 +70,101 @@ public:
 
         std::vector<std::any> output;
         for (size_t i = 0; i < input.size(); ++i) {
-            auto dest_info = user_type_by_name(target_type_names[i]);
-            auto src_info = get_type_info(input[i].type().name());
-            if (!src_info.has_value()) {
+            auto destInfo = userTypeByName(target_type_names[i]);
+            auto srcInfo = getTypeInfo(input[i].type().name());
+            if (!srcInfo.has_value()) {
                 THROW_INVALID_ARGUMENT("Type " + target_type_names[i] +
                                        " not found.");
             }
 
-            if (src_info.value() == dest_info) {
+            if (srcInfo.value() == destInfo) {
                 output.push_back(input[i]);
                 continue;
             }
 
-            auto path = find_conversion_path(src_info.value(), dest_info);
+            auto path = findConversionPath(srcInfo.value(), destInfo);
             std::any result = input[i];
             for (size_t j = 0; j < path.size() - 1; ++j) {
-                result = conversions.at(path[j]).at(path[j + 1])(result);
+                result = conversions_.at(path[j]).at(path[j + 1])(result);
             }
             output.push_back(result);
         }
         return output;
     }
 
-    std::vector<std::string> get_registered_types() const {
-        std::vector<std::string> type_names;
-        for (const auto& [name, info] : type_name_map) {
-            type_names.push_back(name);
+    auto getRegisteredTypes() const -> std::vector<std::string> {
+        std::vector<std::string> typeNames;
+        typeNames.reserve(type_name_map_.size());
+        for (const auto& [name, info] : type_name_map_) {
+            typeNames.push_back(name);
         }
-        return type_names;
+        return typeNames;
     }
 
     template <typename T>
-    void register_type(const std::string& name) {
-        type_name_map[name] = user_type<T>();
-        type_name_map[typeid(T).name()] = user_type<T>();
-        detail::get_type_registry()[typeid(T).name()] = user_type<T>();
+    void registerType(const std::string& name) {
+        type_name_map_[name] = userType<T>();
+        type_name_map_[typeid(T).name()] = userType<T>();
+        detail::getTypeRegistry()[typeid(T).name()] = userType<T>();
     }
 
 private:
-    std::unordered_map<Type_Info, ConvertMap> conversions;
-    mutable std::unordered_map<std::string, std::vector<Type_Info>>
-        conversion_paths_cache;
-    std::unordered_map<std::string, Type_Info> type_name_map;
+    std::unordered_map<TypeInfo, ConvertMap> conversions_;
+    mutable std::unordered_map<std::string, std::vector<TypeInfo>>
+        conversion_paths_cache_;
+    std::unordered_map<std::string, TypeInfo> type_name_map_;
 
-    void register_builtin_types() {
-        register_type<int>("int");
-        register_type<double>("double");
-        register_type<std::string>("std::string");
+    void registerBuiltinTypes() {
+        registerType<int>("int");
+        registerType<double>("double");
+        registerType<std::string>("std::string");
     }
 
-    bool has_conversion(Type_Info src, Type_Info dst) const {
-        return conversions.find(src) != conversions.end() &&
-               conversions.at(src).find(dst) != conversions.at(src).end();
+    auto hasConversion(TypeInfo src, TypeInfo dst) const -> bool {
+        return conversions_.find(src) != conversions_.end() &&
+               conversions_.at(src).find(dst) != conversions_.at(src).end();
     }
 
     // Helper to generate a unique key for caching purposes
-    std::string make_cache_key(Type_Info src, Type_Info dst) const {
-        return src.bare_name() + "->" + dst.bare_name();
+    static auto makeCacheKey(TypeInfo src, TypeInfo dst) -> std::string {
+        return src.bareName() + "->" + dst.bareName();
     }
 
     // Clears cached paths
-    void clear_cache() { conversion_paths_cache.clear(); }
+    void clearCache() { conversion_paths_cache_.clear(); }
 
     // Helper function to find conversion path
-    std::vector<Type_Info> find_conversion_path(Type_Info src,
-                                                Type_Info dst) const {
-        std::string cache_key = make_cache_key(src, dst);
-        if (conversion_paths_cache.find(cache_key) !=
-            conversion_paths_cache.end()) {
-            return conversion_paths_cache.at(cache_key);
+    auto findConversionPath(TypeInfo src,
+                            TypeInfo dst) const -> std::vector<TypeInfo> {
+        std::string cacheKey = makeCacheKey(src, dst);
+        if (conversion_paths_cache_.find(cacheKey) !=
+            conversion_paths_cache_.end()) {
+            return conversion_paths_cache_.at(cacheKey);
         }
 
-        std::queue<std::vector<Type_Info>> paths;
+        std::queue<std::vector<TypeInfo>> paths;
         paths.push({src});
 
-        std::unordered_set<Type_Info> visited;
+        std::unordered_set<TypeInfo> visited;
         visited.insert(src);
 
         while (!paths.empty()) {
-            auto current_path = paths.front();
+            auto currentPath = paths.front();
             paths.pop();
-            auto last = current_path.back();
+            auto last = currentPath.back();
 
             if (last == dst) {
-                conversion_paths_cache[cache_key] = current_path;
-                return current_path;
+                conversion_paths_cache_[cacheKey] = currentPath;
+                return currentPath;
             }
 
-            auto find_it = conversions.find(last);
-            if (find_it != conversions.end()) {
-                for (const auto& [next_type, _] : find_it->second) {
+            auto findIt = conversions_.find(last);
+            if (findIt != conversions_.end()) {
+                for (const auto& [next_type, _] : findIt->second) {
                     if (visited.insert(next_type).second) {
-                        auto new_path = current_path;
-                        new_path.push_back(next_type);
-                        paths.push(std::move(new_path));
+                        auto newPath = currentPath;
+                        newPath.push_back(next_type);
+                        paths.push(std::move(newPath));
                     }
                 }
             }
@@ -176,13 +173,12 @@ private:
         THROW_RUNTIME_ERROR("No conversion path found for these types.");
     }
 
-    Type_Info user_type_by_name(const std::string& name) const {
-        auto it = type_name_map.find(name);
-        if (it != type_name_map.end()) {
-            return it->second;
-        } else {
-            THROW_RUNTIME_ERROR("Unknown type name: " + name);
+    auto userTypeByName(const std::string& name) const -> TypeInfo {
+        auto findIt = type_name_map_.find(name);
+        if (findIt != type_name_map_.end()) {
+            return findIt->second;
         }
+        THROW_RUNTIME_ERROR("Unknown type name: " + name);
     }
 };
 

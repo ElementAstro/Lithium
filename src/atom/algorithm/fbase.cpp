@@ -12,9 +12,7 @@ Description: Faster Base64 Encode & Decode from pocketpy
 
 **************************************************/
 
-#include <algorithm>
 #include <array>
-#include <stdexcept>
 
 #include "fbase.hpp"
 
@@ -26,18 +24,18 @@ constexpr char BASE64_PAD = '=';
 constexpr char BASE64DE_FIRST = '+';
 constexpr char BASE64DE_LAST = 'z';
 
-constexpr std::array<char, 64> base64en = {
+constexpr std::array<char, 64> BASE64EN = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
 
-constexpr std::array<unsigned char, 256> base64de = [] {
-    std::array<unsigned char, 256> arr;
+constexpr std::array<unsigned char, 256> BASE64DE = [] {
+    std::array<unsigned char, 256> arr{};
     arr.fill(255);
     for (unsigned char i = 0; i < 64; ++i) {
-        arr[static_cast<unsigned char>(base64en[i])] = i;
+        arr[static_cast<unsigned char>(BASE64EN[i])] = i;
     }
     arr['+'] = 62;
     arr['/'] = 63;
@@ -53,7 +51,7 @@ constexpr std::array<unsigned char, 256> base64de = [] {
     return arr;
 }();
 
-std::string fbase64Encode(std::span<const unsigned char> input) {
+auto fbase64Encode(std::span<const unsigned char> input) -> std::string {
     std::string output;
     output.reserve((input.size() + 2) / 3 * 4);
 
@@ -63,16 +61,16 @@ std::string fbase64Encode(std::span<const unsigned char> input) {
     for (unsigned char c : input) {
         switch (s) {
             case 0:
-                output.push_back(base64en[(c >> 2) & 0x3F]);
+                output.push_back(BASE64EN[(c >> 2) & 0x3F]);
                 s = 1;
                 break;
             case 1:
-                output.push_back(base64en[((l & 0x3) << 4) | ((c >> 4) & 0xF)]);
+                output.push_back(BASE64EN[((l & 0x3) << 4) | ((c >> 4) & 0xF)]);
                 s = 2;
                 break;
             case 2:
-                output.push_back(base64en[((l & 0xF) << 2) | ((c >> 6) & 0x3)]);
-                output.push_back(base64en[c & 0x3F]);
+                output.push_back(BASE64EN[((l & 0xF) << 2) | ((c >> 6) & 0x3)]);
+                output.push_back(BASE64EN[c & 0x3F]);
                 s = 0;
                 break;
         }
@@ -81,12 +79,12 @@ std::string fbase64Encode(std::span<const unsigned char> input) {
 
     switch (s) {
         case 1:
-            output.push_back(base64en[(l & 0x3) << 4]);
+            output.push_back(BASE64EN[(l & 0x3) << 4]);
             output.push_back(BASE64_PAD);
             output.push_back(BASE64_PAD);
             break;
         case 2:
-            output.push_back(base64en[(l & 0xF) << 2]);
+            output.push_back(BASE64EN[(l & 0xF) << 2]);
             output.push_back(BASE64_PAD);
             break;
     }
@@ -94,7 +92,7 @@ std::string fbase64Encode(std::span<const unsigned char> input) {
     return output;
 }
 
-std::vector<unsigned char> fbase64Decode(std::span<const char> input) {
+auto fbase64Decode(std::span<const char> input) -> std::vector<unsigned char> {
     if (input.size() % 4 != 0) {
         THROW_INVALID_ARGUMENT("Invalid base64 input length");
     }
@@ -114,7 +112,7 @@ std::vector<unsigned char> fbase64Decode(std::span<const char> input) {
             THROW_INVALID_ARGUMENT("Invalid base64 character");
         }
 
-        unsigned char c = base64de[static_cast<unsigned char>(input[i])];
+        unsigned char c = BASE64DE[static_cast<unsigned char>(input[i])];
         if (c == 255) {
             THROW_INVALID_ARGUMENT("Invalid base64 character");
         }

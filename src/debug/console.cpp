@@ -179,9 +179,9 @@ std::pair<int, int> get_terminal_size() {
 
 #else
 
-void clear_screen() { std::cout << "\033[2J\033[1;1H"; }
+void clearScreen() { std::cout << "\033[2J\033[1;1H"; }
 
-void set_text_color(Color color) {
+void setTextColor(Color color) {
     switch (color) {
         case Color::Black:
             std::cout << "\033[30m";
@@ -214,7 +214,7 @@ void set_text_color(Color color) {
     }
 }
 
-void set_background_color(Color color) {
+void setBackgroundColor(Color color) {
     switch (color) {
         case Color::Black:
             std::cout << "\033[40m";
@@ -247,25 +247,25 @@ void set_background_color(Color color) {
     }
 }
 
-void reset_text_format() { std::cout << "\033[0m"; }
+void resetTextFormat() { std::cout << "\033[0m"; }
 
-void move_cursor(int row, int col) {
+void moveCursor(int row, int col) {
     std::cout << "\033[" << row << ";" << col << "H";
 }
 
-void hide_cursor() { std::cout << "\033[?25l"; }
+void hideCursor() { std::cout << "\033[?25l"; }
 
-void show_cursor() { std::cout << "\033[?25h"; }
+void showCursor() { std::cout << "\033[?25h"; }
 
-std::pair<int, int> get_terminal_size() {
-    struct winsize w;
+auto getTerminalSize() -> std::pair<int, int> {
+    struct winsize w{};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     return {w.ws_row, w.ws_col};
 }
 
 #endif
 
-bool supportsColor() {
+auto supportsColor() -> bool {
 #ifdef _WIN32
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) {
@@ -296,7 +296,7 @@ bool supportsColor() {
             termStr == "tmux-256color" || termStr == "rxvt-unicode" ||
             termStr == "rxvt-unicode-256color" || termStr == "linux" ||
             termStr == "cygwin") &&
-           isatty(fileno(stdout));
+           (isatty(fileno(stdout)) != 0);
 #endif
 }
 

@@ -16,14 +16,13 @@ Description: Configor
 #define LITHIUM_CONFIG_CONFIGOR_HPP
 
 #include <filesystem>
-#include <mutex>
-#include <shared_mutex>
+#include <memory>
+#include <optional>
+#include <string>
+
+#include "atom/type//json_fwd.hpp"
+
 namespace fs = std::filesystem;
-
-#include "error/error_code.hpp"
-
-#include "atom/type/json.hpp"
-using json = nlohmann::json;
 
 #define GetIntConfig(path)                  \
     GetPtr<ConfigManager>("lithium.config") \
@@ -87,9 +86,9 @@ public:
      *
      * Create a shared pointer of ConfigManager. But global only
      */
-    static std::shared_ptr<ConfigManager> createShared();
+    static auto createShared() -> std::shared_ptr<ConfigManager>;
 
-    static std::unique_ptr<ConfigManager> createUnique();
+    static auto createUnique() -> std::unique_ptr<ConfigManager>;
 
     // -------------------------------------------------------------------
     // Config methods
@@ -104,8 +103,8 @@ public:
      * "database/username"
      * @return json 配置项对应的值，如果键不存在则返回 nullptr
      */
-    [[nodiscard("config value should not be ignored!")]] std::optional<json>
-    getValue(const std::string& key_path) const;
+    [[nodiscard("config value should not be ignored!")]] auto getValue(
+        const std::string& key_path) const -> std::optional<nlohmann::json>;
 
     /**
      * @brief 添加或更新一个配置项
@@ -117,7 +116,8 @@ public:
      * @param value 配置项的值，使用 JSON 格式进行表示
      * @return bool 成功返回 true，失败返回 false
      */
-    bool setValue(const std::string& key_path, const json& value);
+    auto setValue(const std::string& key_path,
+                  const nlohmann::json& value) -> bool;
     /**
      * @brief 删除一个配置项
      *
@@ -127,7 +127,7 @@ public:
      * "database/username"
      */
 
-    bool deleteValue(const std::string& key_path);
+    auto deleteValue(const std::string& key_path) -> bool;
 
     /**
      * @brief 判断一个配置项是否存在
@@ -138,8 +138,8 @@ public:
      * "database/username"
      * @return bool 存在返回 true，不存在返回 false
      */
-    [[nodiscard("status of the value should not be ignored")]] bool hasValue(
-        const std::string& key_path) const;
+    [[nodiscard("status of the value should not be ignored")]] auto hasValue(
+        const std::string& key_path) const -> bool;
 
     /**
      * @brief 从指定文件中加载JSON配置，并与原有配置进行合并
@@ -149,7 +149,7 @@ public:
      *
      * @param path 配置文件路径
      */
-    bool loadFromFile(const fs::path& path);
+    auto loadFromFile(const fs::path& path) -> bool;
 
     /**
      * @brief 加载指定目录下的所有JSON配置文件
@@ -158,7 +158,7 @@ public:
      *
      * @param dir_path 配置文件所在目录的路径
      */
-    bool loadFromDir(const fs::path& dir_path, bool recursive = false);
+    auto loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
 
     /**
      * @brief 将当前配置保存到指定文件
@@ -167,7 +167,7 @@ public:
      *
      * @param file_path 目标文件路径
      */
-    bool saveToFile(const fs::path& file_path) const;
+    [[nodiscard]] auto saveToFile(const fs::path& file_path) const -> bool;
 
     /**
      * @brief 清理配置项
@@ -184,7 +184,7 @@ public:
     void clearConfig();
 
 private:
-    std::unique_ptr<ConfigManagerImpl> m_impl;
+    std::unique_ptr<ConfigManagerImpl> m_impl_;
 
     /**
      * @brief 将 JSON 配置合并到当前配置中
@@ -193,7 +193,7 @@ private:
      *
      * @param j JSON 配置
      */
-    void mergeConfig(const json& j);
+    void mergeConfig(const nlohmann::json& src);
 };
 }  // namespace lithium
 

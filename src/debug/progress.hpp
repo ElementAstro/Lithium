@@ -27,7 +27,7 @@ enum class Color {
  * @param color The color enum value.
  * @return The corresponding color code as a string.
  */
-std::string getColorCode(Color color);
+auto getColorCode(Color color) -> std::string;
 
 /**
  * @brief Print a progress bar to the console.

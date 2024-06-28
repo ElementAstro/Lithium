@@ -35,9 +35,9 @@ StateMachine::StatePtr StateMachine::getCurrentState() const {
 
 // TaskEvent method implementations
 
-TaskEvent::TaskEvent(Type type) : eventType(type) {}
+TaskEvent::TaskEvent(Type type) : eventType_(type) {}
 
-TaskEvent::Type TaskEvent::getType() const { return eventType; }
+auto TaskEvent::getType() const -> TaskEvent::Type { return eventType_; }
 
 // TaskState method implementations
 
@@ -45,7 +45,7 @@ TaskState::TaskState(Task& task) : task(task) {}
 
 // PendingState method implementations
 
-std::string PendingState::getName() const { return "Pending"; }
+auto PendingState::getName() const -> std::string { return "Pending"; }
 
 void PendingState::handleEvent(std::shared_ptr<Event> event) {
     auto taskEvent = std::dynamic_pointer_cast<TaskEvent>(event);
@@ -62,7 +62,7 @@ void PendingState::onExit() {}
 
 // RunningState method implementations
 
-std::string RunningState::getName() const { return "Running"; }
+auto RunningState::getName() const -> std::string { return "Running"; }
 
 void RunningState::handleEvent(std::shared_ptr<Event> event) {
     auto taskEvent = std::dynamic_pointer_cast<TaskEvent>(event);
@@ -83,7 +83,7 @@ void RunningState::onExit() {}
 
 // CompletedState method implementations
 
-std::string CompletedState::getName() const { return "Completed"; }
+auto CompletedState::getName() const -> std::string { return "Completed"; }
 
 void CompletedState::onEnter() {}
 
@@ -91,19 +91,11 @@ void CompletedState::onExit() {}
 
 // FailedState method implementations
 
-std::string FailedState::getName() const { return "Failed"; }
+auto FailedState::getName() const -> std::string { return "Failed"; }
 
 void FailedState::onEnter() {}
 
 void FailedState::onExit() {}
-
-// TaskCanceledException method implementations
-
-const char* TaskCanceledException::what() const noexcept {
-    return "Task was canceled";
-}
-
-// Task method implementations
 
 Task::Task(
     const std::string& name, const json& params,
@@ -146,17 +138,17 @@ void Task::fail(const std::exception& e) {
     statusMachine.handleEvent(std::make_shared<TaskEvent>(TaskEvent::Fail));
 }
 
-const std::string& Task::getName() const { return name; }
+auto Task::getName() const -> const std::string& { return name; }
 
-const json& Task::getParams() const { return params; }
+auto Task::getParams() const -> const json& { return params; }
 
-const std::optional<json>& Task::getResult() const { return result; }
+auto Task::getResult() const -> const std::optional<json>& { return result; }
 
-Task::Status Task::getStatus() const { return status; }
+auto Task::getStatus() const -> Task::Status { return status; }
 
 void Task::setStatus(Status status) { this->status = status; }
 
-StateMachine& Task::getStateMachine() { return statusMachine; }
+auto Task::getStateMachine() -> StateMachine& { return statusMachine; }
 
 void Task::registerCustomFunction(Status status, CustomFunction function) {
     customFunctions[status].push_back(std::move(function));
@@ -176,7 +168,7 @@ void Task::cancel() {
         status = Status::Failed;
         result = std::nullopt;
         statusMachine.handleEvent(std::make_shared<TaskEvent>(TaskEvent::Fail));
-        throw TaskCanceledException();
+        THROW_TASK_CANCELED("");
     }
 }
 
@@ -185,13 +177,13 @@ void Task::setProgress(double progress) {
     executeCustomFunctions(Status::Running);
 }
 
-double Task::getProgress() const { return progress; }
+auto Task::getProgress() const -> double { return progress; }
 
 void Task::setTimeout(std::chrono::milliseconds timeout) {
     this->timeout = timeout;
 }
 
-bool Task::isTimeout() const {
+auto Task::isTimeout() const -> bool {
     if (timeout.has_value()) {
         auto now = std::chrono::steady_clock::now();
         return now - startTime >= timeout.value();

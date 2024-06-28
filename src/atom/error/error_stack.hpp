@@ -15,12 +15,11 @@ Description: Error Stack
 #ifndef ATOM_ERROR_STACK_HPP
 #define ATOM_ERROR_STACK_HPP
 
-#include <algorithm>
 #include <memory>
 #include <ostream>
 #include <vector>
 
-#include "atom//type/string.hpp"
+#include "atom/macro.hpp"
 
 namespace atom::error {
 /**
@@ -34,7 +33,7 @@ struct ErrorInfo {
     std::string fileName;     /**< File name where the error occurred. */
     time_t timestamp;         /**< Timestamp of the error. */
     std::string uuid;         /**< UUID of the error. */
-};
+} ATOM_ALIGNAS(128);
 
 /**
  * @brief Overloaded stream insertion operator to print ErrorInfo object.
@@ -42,7 +41,7 @@ struct ErrorInfo {
  * @param error ErrorInfo object to be printed.
  * @return Reference to the output stream.
  */
-std::ostream &operator<<(std::ostream &os, const ErrorInfo &error);
+auto operator<<(std::ostream &os, const ErrorInfo &error) -> std::ostream &;
 
 /**
  * @brief Overloaded string concatenation operator to concatenate ErrorInfo
@@ -51,29 +50,28 @@ std::ostream &operator<<(std::ostream &os, const ErrorInfo &error);
  * @param error ErrorInfo object to be concatenated.
  * @return Concatenated string.
  */
-std::string operator<<(const std::string &str, const ErrorInfo &error);
+auto operator<<(const std::string &str, const ErrorInfo &error) -> std::string;
 
 /// Represents a stack of errors and provides operations to manage and retrieve
 /// them.
 class ErrorStack {
-private:
-    std::vector<ErrorInfo> errorStack;  ///< The stack of all errors.
+    std::vector<ErrorInfo> errorStack_;  ///< The stack of all errors.
     std::vector<ErrorInfo>
-        compressedErrorStack;  ///< The compressed stack of unique errors.
-    std::vector<std::string>
-        filteredModules;  ///< Modules to be filtered out while printing errors.
+        compressedErrorStack_;  ///< The compressed stack of unique errors.
+    std::vector<std::string> filteredModules_;  ///< Modules to be filtered out
+                                                ///< while printing errors.
 
 public:
     /// Default constructor.
-    ErrorStack();
+    ErrorStack() = default;
 
     /// Create a shared pointer to an ErrorStack object.
     /// \return A shared pointer to the ErrorStack object.
-    [[nodiscard]] std::shared_ptr<ErrorStack> createShared();
+    [[nodiscard]] static auto createShared() -> std::shared_ptr<ErrorStack>;
 
     /// Create a unique pointer to an ErrorStack object.
     /// \return A unique pointer to the ErrorStack object.
-    [[nodiscard]] std::unique_ptr<ErrorStack> createUnique();
+    [[nodiscard]] static auto createUnique() -> std::unique_ptr<ErrorStack>;
 
     /// Insert a new error into the error stack.
     /// \param errorMessage The error message.
@@ -99,12 +97,12 @@ public:
     /// Get a vector of errors filtered by a specific module.
     /// \param moduleName The module name for which errors are to be retrieved.
     /// \return A vector of errors filtered by the given module.
-    [[nodiscard]] std::vector<ErrorInfo> getFilteredErrorsByModule(
-        const std::string &moduleName) const;
+    [[nodiscard]] auto getFilteredErrorsByModule(
+        const std::string &moduleName) const -> std::vector<ErrorInfo>;
 
     /// Get a string containing the compressed errors in the stack.
     /// \return A string containing the compressed errors.
-    [[nodiscard]] std::string getCompressedErrors() const;
+    [[nodiscard]] auto getCompressedErrors() const -> std::string;
 
 private:
     /// Update the compressed error stack based on the current error stack.

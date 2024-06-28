@@ -14,6 +14,7 @@ Description: Error Stack
 
 #include "error_stack.hpp"
 
+#include <algorithm>
 #include <ctime>
 #include <sstream>
 
@@ -22,16 +23,13 @@ Description: Error Stack
 
 namespace atom::error {
 std::ostream &operator<<(std::ostream &os, const ErrorInfo &error) {
-    os << "{"
-       << "\"errorMessage\": \"" << error.errorMessage << "\","
-       << "\"moduleName\": \"" << error.moduleName << "\","
-       << "\"functionName\": \"" << error.functionName << "\","
-       << "\"line\": " << error.line << ","
-       << "\"fileName\": \"" << error.fileName << "\","
-       << "\"timestamp\": \"" << atom::utils::timeStampToString(error.timestamp)
-       << "\","
-       << "\"uuid\": \"" << error.uuid << "\""
-       << "}";
+    os << "{" << R"("errorMessage": ")" << error.errorMessage << "\","
+       << R"("moduleName": ")" << error.moduleName << "\","
+       << R"("functionName": ")" << error.functionName << "\","
+       << "\"line\": " << error.line << "," << R"("fileName": ")"
+       << error.fileName << "\"," << "\"timestamp\": \""
+       << atom::utils::timeStampToString(error.timestamp) << "\","
+       << "\"uuid\": \"" << error.uuid << "\"" << "}";
 
     return os;
 }
@@ -39,27 +37,22 @@ std::ostream &operator<<(std::ostream &os, const ErrorInfo &error) {
 std::string operator<<([[maybe_unused]] const std::string &str,
                        const ErrorInfo &error) {
     std::stringstream ss;
-    ss << "{"
-       << "\"errorMessage\": \"" << error.errorMessage << "\","
-       << "\"moduleName\": \"" << error.moduleName << "\","
-       << "\"functionName\": \"" << error.functionName << "\","
-       << "\"line\": " << error.line << ","
-       << "\"fileName\": \"" << error.fileName << "\","
-       << "\"timestamp\": \"" << atom::utils::timeStampToString(error.timestamp)
-       << "\","
-       << "\"uuid\": \"" << error.uuid << "\""
-       << "}";
+    ss << "{" << R"("errorMessage": ")" << error.errorMessage << "\","
+       << R"("moduleName": ")" << error.moduleName << "\","
+       << R"("functionName": ")" << error.functionName << "\","
+       << "\"line\": " << error.line << "," << R"("fileName": ")"
+       << error.fileName << "\"," << R"("timestamp": ")"
+       << atom::utils::timeStampToString(error.timestamp) << "\","
+       << R"("uuid": ")" << error.uuid << "\"" << "}";
 
     return ss.str();
 }
 
-ErrorStack::ErrorStack() {}
-
-std::shared_ptr<ErrorStack> ErrorStack::createShared() {
+auto ErrorStack::createShared() -> std::shared_ptr<ErrorStack> {
     return std::make_shared<ErrorStack>();
 }
 
-std::unique_ptr<ErrorStack> ErrorStack::createUnique() {
+auto ErrorStack::createUnique() -> std::unique_ptr<ErrorStack> {
     return std::make_unique<ErrorStack>();
 }
 
@@ -70,57 +63,57 @@ void ErrorStack::insertError(const std::string &errorMessage,
     auto currentTime = std::time(nullptr);
 
     auto iter =
-        std::find_if(errorStack.begin(), errorStack.end(),
+        std::find_if(errorStack_.begin(), errorStack_.end(),
                      [&errorMessage, &moduleName](const ErrorInfo &error) {
                          return error.errorMessage == errorMessage &&
                                 error.moduleName == moduleName;
                      });
 
-    if (iter != errorStack.end()) {
+    if (iter != errorStack_.end()) {
         iter->timestamp = currentTime;
     } else {
-        errorStack.emplace_back(ErrorInfo{errorMessage, moduleName,
-                                          functionName, line, fileName,
-                                          currentTime, ""});
+        errorStack_.emplace_back(ErrorInfo{errorMessage, moduleName,
+                                           functionName, line, fileName,
+                                           currentTime, ""});
     }
 
     updateCompressedErrors();
 }
 
 void ErrorStack::setFilteredModules(const std::vector<std::string> &modules) {
-    filteredModules = modules;
+    filteredModules_ = modules;
 }
 
-void ErrorStack::clearFilteredModules() { filteredModules.clear(); }
+void ErrorStack::clearFilteredModules() { filteredModules_.clear(); }
 
 void ErrorStack::printFilteredErrorStack() const {
-    for (const auto &error : errorStack) {
-        if (std::find(filteredModules.begin(), filteredModules.end(),
-                      error.moduleName) == filteredModules.end()) {
+    for (const auto &error : errorStack_) {
+        if (std::find(filteredModules_.begin(), filteredModules_.end(),
+                      error.moduleName) == filteredModules_.end()) {
             LOG_F(ERROR, "{}", error.errorMessage);
         }
     }
 }
 
-std::vector<ErrorInfo> ErrorStack::getFilteredErrorsByModule(
-    const std::string &moduleName) const {
+auto ErrorStack::getFilteredErrorsByModule(const std::string &moduleName) const
+    -> std::vector<ErrorInfo> {
     std::vector<ErrorInfo> errors;
 
     std::copy_if(
-        errorStack.begin(), errorStack.end(), std::back_inserter(errors),
+        errorStack_.begin(), errorStack_.end(), std::back_inserter(errors),
         [&moduleName, this](const ErrorInfo &error) {
             return error.moduleName == moduleName &&
-                   std::find(filteredModules.begin(), filteredModules.end(),
-                             error.moduleName) == filteredModules.end();
+                   std::find(filteredModules_.begin(), filteredModules_.end(),
+                             error.moduleName) == filteredModules_.end();
         });
 
     return errors;
 }
 
-std::string ErrorStack::getCompressedErrors() const {
+auto ErrorStack::getCompressedErrors() const -> std::string {
     std::stringstream compressedErrors;
 
-    for (const auto &error : compressedErrorStack) {
+    for (const auto &error : compressedErrorStack_) {
         compressedErrors << error.errorMessage << " ";
     }
 
@@ -128,20 +121,20 @@ std::string ErrorStack::getCompressedErrors() const {
 }
 
 void ErrorStack::updateCompressedErrors() {
-    compressedErrorStack.clear();
+    compressedErrorStack_.clear();
 
-    for (const auto &error : errorStack) {
+    for (const auto &error : errorStack_) {
         auto iter = std::find_if(
-            compressedErrorStack.begin(), compressedErrorStack.end(),
+            compressedErrorStack_.begin(), compressedErrorStack_.end(),
             [&error](const ErrorInfo &compressedError) {
                 return compressedError.errorMessage == error.errorMessage &&
                        compressedError.moduleName == error.moduleName;
             });
 
-        if (iter != compressedErrorStack.end()) {
+        if (iter != compressedErrorStack_.end()) {
             iter->timestamp = error.timestamp;
         } else {
-            compressedErrorStack.push_back(error);
+            compressedErrorStack_.push_back(error);
         }
     }
 
@@ -149,7 +142,7 @@ void ErrorStack::updateCompressedErrors() {
 }
 
 void ErrorStack::sortCompressedErrorStack() {
-    std::sort(compressedErrorStack.begin(), compressedErrorStack.end(),
+    std::sort(compressedErrorStack_.begin(), compressedErrorStack_.end(),
               [](const ErrorInfo &error1, const ErrorInfo &error2) {
                   return error1.timestamp > error2.timestamp;
               });

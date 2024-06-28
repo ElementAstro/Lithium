@@ -93,9 +93,9 @@ public:
      *
      * @return The type information of the plugin.
      */
-    atom::meta::Type_Info getTypeInfo() const;
+    atom::meta::TypeInfo getTypeInfo() const;
 
-    void setTypeInfo(atom::meta::Type_Info typeInfo);
+    void setTypeInfo(atom::meta::TypeInfo typeInfo);
 
     // -------------------------------------------------------------------
     // Variable methods
@@ -300,7 +300,7 @@ public:
                                  const std::string& description = "");
 
     template <typename T>
-    void def_type(std::string_view name, const atom::meta::Type_Info& ti,
+    void def_type(std::string_view name, const atom::meta::TypeInfo& ti,
                   const std::string& group = "",
                   const std::string& description = "");
 
@@ -396,8 +396,8 @@ private:
     std::string m_doc;
     std::string m_configPath;
     std::string m_infoPath;
-    atom::meta::Type_Info m_typeInfo{atom::meta::user_type<Component>()};
-    std::unordered_map<std::string_view, atom::meta::Type_Info> m_classes;
+    atom::meta::TypeInfo m_typeInfo{atom::meta::user_type<Component>()};
+    std::unordered_map<std::string_view, atom::meta::TypeInfo> m_classes;
 
     std::shared_ptr<CommandDispatcher> m_CommandDispatcher{
         std::make_shared<CommandDispatcher>()};  ///< The command dispatcher for

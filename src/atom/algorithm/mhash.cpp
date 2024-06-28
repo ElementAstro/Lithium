@@ -15,7 +15,6 @@ Description: Implementation of murmur3 hash and quick hash
 #include "mhash.hpp"
 
 #include <algorithm>
-#include <bit>
 #include <charconv>
 #include <cstdlib>
 #include <cstring>
@@ -30,7 +29,7 @@ Description: Implementation of murmur3 hash and quick hash
 #include <openssl/sha.h>
 
 namespace atom::algorithm {
-uint32_t fmix32(uint32_t h) noexcept {
+auto fmix32(uint32_t h) noexcept -> uint32_t {
     h ^= h >> 16;
     h *= 0x85ebca6b;
     h ^= h >> 13;
@@ -39,58 +38,59 @@ uint32_t fmix32(uint32_t h) noexcept {
     return h;
 }
 
-uint32_t ROTL(uint32_t x, int8_t r) noexcept {
+auto rotl(uint32_t x, int8_t r) noexcept -> uint32_t {
     return (x << r) | (x >> (32 - r));
 }
 
-uint32_t murmur3Hash(std::string_view data, uint32_t seed) noexcept {
+auto murmur3Hash(std::string_view data, uint32_t seed) noexcept -> uint32_t {
     uint32_t hash = seed;
-    const uint32_t seed1 = 0xcc9e2d51;
-    const uint32_t seed2 = 0x1b873593;
+    const uint32_t SEED1 = 0xcc9e2d51;
+    const uint32_t SEED2 = 0x1b873593;
 
     // Process 4-byte chunks
-    const uint32_t *blocks = reinterpret_cast<const uint32_t *>(data.data());
+    const auto *blocks = reinterpret_cast<const uint32_t *>(data.data());
     size_t nblocks = data.size() / 4;
     for (size_t i = 0; i < nblocks; i++) {
         uint32_t k = blocks[i];
-        k *= seed1;
-        k = ROTL(k, 15);
-        k *= seed2;
+        k *= SEED1;
+        k = rotl(k, 15);
+        k *= SEED2;
 
         hash ^= k;
-        hash = ROTL(hash, 13);
+        hash = rotl(hash, 13);
         hash = hash * 5 + 0xe6546b64;
     }
 
     // Handle the tail
-    const uint8_t *tail =
+    const auto *tail =
         reinterpret_cast<const uint8_t *>(data.data() + nblocks * 4);
-    uint32_t tail_val = 0;
+    uint32_t tailVal = 0;
     switch (data.size() & 3) {
         case 3:
-            tail_val |= tail[2] << 16;
+            tailVal |= tail[2] << 16;
             [[fallthrough]];
         case 2:
-            tail_val |= tail[1] << 8;
+            tailVal |= tail[1] << 8;
             [[fallthrough]];
         case 1:
-            tail_val |= tail[0];
-            tail_val *= seed1;
-            tail_val = ROTL(tail_val, 15);
-            tail_val *= seed2;
-            hash ^= tail_val;
+            tailVal |= tail[0];
+            tailVal *= SEED1;
+            tailVal = rotl(tailVal, 15);
+            tailVal *= SEED2;
+            hash ^= tailVal;
     }
 
     return fmix32(hash ^ static_cast<uint32_t>(data.size()));
 }
 
-uint64_t murmur3Hash64(std::string_view str, uint32_t seed, uint32_t seed2) {
+auto murmur3Hash64(std::string_view str, uint32_t seed,
+                   uint32_t seed2) -> uint64_t {
     return (static_cast<uint64_t>(murmur3Hash(str, seed)) << 32) |
            murmur3Hash(str, seed2);
 }
 
 void hexstringFromData(const void *data, size_t len, char *output) {
-    const unsigned char *buf = static_cast<const unsigned char *>(data);
+    const auto *buf = static_cast<const unsigned char *>(data);
     std::span<const unsigned char> bytes(buf, len);
     std::ostringstream stream;
 
@@ -105,7 +105,7 @@ void hexstringFromData(const void *data, size_t len, char *output) {
     output[hexstr.size()] = '\0';  // Null-terminate the output string
 }
 
-std::string hexstringFromData(const std::string &data) {
+auto hexstringFromData(const std::string &data) -> std::string {
     if (data.empty()) {
         return {};
     }
@@ -114,15 +114,16 @@ std::string hexstringFromData(const std::string &data) {
     result.reserve(data.size() * 2);
 
     for (unsigned char c : data) {
-        char buf[3];  // buffer for two hex chars and null terminator
-        std::to_chars_result conv_result =
-            std::to_chars(buf, buf + sizeof(buf), c, 16);
+        std::array<char, 3>
+            buf{};  // buffer for two hex chars and null terminator
+        std::to_chars_result convResult =
+            std::to_chars(buf.data(), buf.data() + buf.size(), c, 16);
 
-        if (conv_result.ec == std::errc{}) {
+        if (convResult.ec == std::errc{}) {
             if (buf[1] == '\0') {
                 result += '0';  // pad single digit hex numbers
             }
-            result.append(buf, conv_result.ptr);
+            result.append(buf.data(), convResult.ptr);
         }
     }
 

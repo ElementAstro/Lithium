@@ -19,7 +19,6 @@ Description: Self implemented MD5 algorithm.
 #include <string>
 #include <vector>
 
-
 namespace atom::algorithm {
 /**
  * @brief The MD5 class for calculating MD5 hash of input data.
@@ -32,7 +31,7 @@ public:
      * @param input The input string to be encrypted.
      * @return The MD5 hash of the input string.
      */
-    static std::string encrypt(const std::string &input);
+    static auto encrypt(const std::string &input) -> std::string;
 
 private:
     /**
@@ -52,7 +51,7 @@ private:
      *
      * @return The MD5 hash of all the input data provided so far.
      */
-    std::string finalize();
+    auto finalize() -> std::string;
 
     /**
      * @brief Processes a 64-byte block of input data.
@@ -64,37 +63,37 @@ private:
     /**
      * @brief The F function for MD5 algorithm.
      */
-    static uint32_t F(uint32_t x, uint32_t y, uint32_t z);
+    static auto F(uint32_t x, uint32_t y, uint32_t z) -> uint32_t;
 
     /**
      * @brief The G function for MD5 algorithm.
      */
-    static uint32_t G(uint32_t x, uint32_t y, uint32_t z);
+    static auto G(uint32_t x, uint32_t y, uint32_t z) -> uint32_t;
 
     /**
      * @brief The H function for MD5 algorithm.
      */
-    static uint32_t H(uint32_t x, uint32_t y, uint32_t z);
+    static auto H(uint32_t x, uint32_t y, uint32_t z) -> uint32_t;
 
     /**
      * @brief The I function for MD5 algorithm.
      */
-    static uint32_t I(uint32_t x, uint32_t y, uint32_t z);
+    static auto I(uint32_t x, uint32_t y, uint32_t z) -> uint32_t;
 
     /**
      * @brief Performs a left rotate operation on the input.
      */
-    static uint32_t leftRotate(uint32_t x, uint32_t n);
+    static auto leftRotate(uint32_t x, uint32_t n) -> uint32_t;
 
     /**
      * @brief Reverses the bytes in the input.
      */
-    static uint32_t reverseBytes(uint32_t x);
+    static auto reverseBytes(uint32_t x) -> uint32_t;
 
-    uint32_t _a, _b, _c,
-        _d;          /**< Internal state variables for MD5 computation. */
-    uint64_t _count; /**< Total count of input bits. */
-    std::vector<uint8_t> _buffer; /**< Buffer for input data. */
+    uint32_t a_, b_, c_,
+        d_;          /**< Internal state variables for MD5 computation. */
+    uint64_t count_; /**< Total count of input bits. */
+    std::vector<uint8_t> buffer_; /**< Buffer for input data. */
 };
 
 }  // namespace atom::algorithm

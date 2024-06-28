@@ -16,7 +16,7 @@
 
 namespace lithium::debug {
 
-std::string getColorCode(Color color) {
+auto getColorCode(Color color) -> std::string {
     switch (color) {
         case Color::Red:
             return "\033[31m";
@@ -43,12 +43,13 @@ void printProgressBar(int current, int total, int width, char completeChar,
     std::cout << getColorCode(color);
     std::cout << "[";
     for (int i = 0; i < width; ++i) {
-        if (i < pos)
+        if (i < pos) {
             std::cout << completeChar;
-        else if (i == pos)
+        } else if (i == pos) {
             std::cout << ">";
-        else
+        } else {
             std::cout << incompleteChar;
+        }
     }
     std::cout << "] ";
 
@@ -87,7 +88,7 @@ void ProgressBar::start() {
 
     future = std::async(std::launch::async, [&]() {
         while (running) {
-            std::unique_lock<std::mutex> lock(mutex);
+            std::unique_lock lock(mutex);
             cv.wait(lock, [&]() { return !paused || !running; });
 
             if (!running)
@@ -108,24 +109,24 @@ void ProgressBar::start() {
 }
 
 void ProgressBar::pause() {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     paused = true;
 }
 
 void ProgressBar::resume() {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     paused = false;
     cv.notify_one();
 }
 
 void ProgressBar::stop() {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     running = false;
     cv.notify_one();
 }
 
 void ProgressBar::reset() {
-    std::lock_guard<std::mutex> lock(mutex);
+    std::lock_guard lock(mutex);
     current = 0;
     start_time = std::chrono::steady_clock::now();
     paused = false;

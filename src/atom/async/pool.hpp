@@ -16,28 +16,26 @@ Description: A very simple thread pool for preload
 #define ATOM_ASYNC_POOL_HPP
 
 #include <condition_variable>
-#include <cstdint>
 #include <functional>
 #include <future>
-#include <latch>
 #include <mutex>
 #include <queue>
-#include <semaphore>
-#include <stdexcept>
 #include <thread>
 #include <vector>
 
 #include "atom/error/exception.hpp"
+#include "atom/type/noncopyable.hpp"
 
 namespace atom::async {
-class ThreadPool {
+class ThreadPool : public NonCopyable {
 public:
     /**
      * @brief Construct a new Thread Pool object
      *
      * @param n_threads The number of threads in the pool
      */
-    explicit ThreadPool(std::size_t n_threads) : stop(false), active_count(0) {
+    explicit ThreadPool(std::size_t n_threads)
+        : stop_(false), active_count_(0) {
         startThreads(n_threads);
     }
 
@@ -65,13 +63,13 @@ public:
 
         auto res = task->get_future();
         {
-            std::scoped_lock lock(queue_mutex);
-            if (stop) {
+            std::scoped_lock lock(queue_mutex_);
+            if (stop_) {
                 THROW_UNLAWFUL_OPERATION("enqueue on stopped ThreadPool");
             }
-            tasks.emplace([task = std::move(task)]() { (*task)(); });
+            tasks_.emplace([task = std::move(task)]() { (*task)(); });
         }
-        condition.notify_one();
+        condition_.notify_one();
         return res;
     }
 
@@ -79,9 +77,9 @@ public:
      * @brief Wait for all tasks to finish
      */
     void wait() {
-        std::unique_lock lock(queue_mutex);
-        condition.wait(lock,
-                       [this] { return tasks.empty() && active_count == 0; });
+        std::unique_lock lock(queue_mutex_);
+        condition_.wait(
+            lock, [this] { return tasks_.empty() && active_count_ == 0; });
     }
 
     /**
@@ -89,16 +87,16 @@ public:
      *
      * @return std::size_t The number of threads in the pool
      */
-    std::size_t size() const { return threads.size(); }
+    auto size() const -> std::size_t { return threads_.size(); }
 
     /**
      * @brief Get the number of tasks in the pool
      *
      * @return std::size_t The number of tasks in the pool
      */
-    std::size_t taskCount() const {
-        std::scoped_lock lock(queue_mutex);
-        return tasks.size();
+    auto taskCount() const -> std::size_t {
+        std::scoped_lock lock(queue_mutex_);
+        return tasks_.size();
     }
 
     /**
@@ -108,31 +106,31 @@ public:
      */
     void resize(std::size_t n_threads) {
         {
-            std::scoped_lock lock(queue_mutex);
-            stop = true;
+            std::scoped_lock lock(queue_mutex_);
+            stop_ = true;
         }
-        condition.notify_all();
+        condition_.notify_all();
 
-        for (auto& thread : threads) {
+        for (auto& thread : threads_) {
             thread.join();
         }
 
-        threads.clear();
+        threads_.clear();
         {
-            std::scoped_lock lock(queue_mutex);
-            stop = false;
+            std::scoped_lock lock(queue_mutex_);
+            stop_ = false;
         }
         startThreads(n_threads);
     }
 
 private:
-    std::vector<std::jthread> threads;
-    std::queue<std::function<void()>> tasks;
+    std::vector<std::jthread> threads_;
+    std::queue<std::function<void()>> tasks_;
 
-    mutable std::mutex queue_mutex;
-    std::condition_variable condition;
-    std::atomic<bool> stop;
-    std::atomic<int> active_count;
+    mutable std::mutex queue_mutex_;
+    std::condition_variable condition_;
+    std::atomic<bool> stop_;
+    std::atomic<int> active_count_;
 
     /**
      * @brief Start the threads in the pool
@@ -140,28 +138,28 @@ private:
      * @param n_threads The number of threads in the pool
      */
     void startThreads(std::size_t n_threads) {
-        threads.reserve(n_threads);
+        threads_.reserve(n_threads);
         for (std::size_t i = 0; i < n_threads; ++i) {
-            threads.emplace_back([this] {
+            threads_.emplace_back([this] {
                 while (true) {
                     std::function<void()> task;
                     {
-                        std::unique_lock lock(queue_mutex);
-                        condition.wait(
-                            lock, [this] { return stop || !tasks.empty(); });
+                        std::unique_lock lock(queue_mutex_);
+                        condition_.wait(
+                            lock, [this] { return stop_ || !tasks_.empty(); });
 
-                        if (stop && tasks.empty()) {
+                        if (stop_ && tasks_.empty()) {
                             return;
                         }
 
-                        task = std::move(tasks.front());
-                        tasks.pop();
-                        ++active_count;
+                        task = std::move(tasks_.front());
+                        tasks_.pop();
+                        ++active_count_;
                     }
 
                     task();
-                    --active_count;
-                    condition.notify_one();
+                    --active_count_;
+                    condition_.notify_one();
                 }
             });
         }
@@ -172,11 +170,11 @@ private:
      */
     void stopPool() {
         {
-            std::scoped_lock lock(queue_mutex);
-            stop = true;
+            std::scoped_lock lock(queue_mutex_);
+            stop_ = true;
         }
-        condition.notify_all();
-        for (auto& thread : threads) {
+        condition_.notify_all();
+        for (auto& thread : threads_) {
             thread.join();
         }
     }

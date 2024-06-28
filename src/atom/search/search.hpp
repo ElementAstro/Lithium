@@ -1,69 +1,69 @@
-#include <algorithm>
+#ifndef ATOM_SEARCH_SEARCH_HPP
+#define ATOM_SEARCH_SEARCH_HPP
+
 #include <cmath>
-#include <iostream>
-#include <numeric>
-#include <queue>
 #include <set>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace atom::search {
-
-class Document {
-public:
+struct Document {
     std::string id;
     std::string content;
     std::set<std::string> tags;
     int clickCount;  // 用于调整权重
 
     explicit Document(std::string id, std::string content,
-             std::initializer_list<std::string> tags);
+                      std::initializer_list<std::string> tags);
 };
 
 class SearchEngine {
 private:
-    std::unordered_map<std::string, std::vector<Document>> tagIndex;
+    std::unordered_map<std::string, std::vector<Document>> tagIndex_;
     std::unordered_map<std::string, std::unordered_set<std::string>>
-        contentIndex;
-    std::unordered_map<std::string, int> docFrequency;
-    int totalDocs = 0;
+        contentIndex_;
+    std::unordered_map<std::string, int> docFrequency_;
+    int totalDocs_ = 0;
 
 public:
     void addDocument(const Document& doc);
 
     void addContentToIndex(const Document& doc);
 
-    std::vector<Document> searchByTag(const std::string& tag);
+    auto searchByTag(const std::string& tag) -> std::vector<Document>;
 
-    std::vector<Document> fuzzySearchByTag(const std::string& tag,
-                                           int tolerance);
+    auto fuzzySearchByTag(const std::string& tag,
+                          int tolerance) -> std::vector<Document>;
 
-    std::vector<Document> searchByTags(const std::vector<std::string>& tags);
+    auto searchByTags(const std::vector<std::string>& tags)
+        -> std::vector<Document>;
 
-    std::vector<Document> searchByContent(const std::string& query);
+    auto searchByContent(const std::string& query) -> std::vector<Document>;
 
-    std::vector<Document> booleanSearch(const std::string& query);
+    auto booleanSearch(const std::string& query) -> std::vector<Document>;
 
-    std::vector<std::string> autoComplete(const std::string& prefix);
+    auto autoComplete(const std::string& prefix) -> std::vector<std::string>;
 
 private:
-    int levenshteinDistance(const std::string& s1, const std::string& s2);
+    auto levenshteinDistance(const std::string& s1,
+                             const std::string& s2) -> int;
 
-    double tfIdf(const Document& doc, const std::string& term);
+    auto tfIdf(const Document& doc, const std::string& term) -> double;
 
-    Document findDocumentById(const std::string& id);
+    auto findDocumentById(const std::string& id) -> Document;
 
     struct Compare {
-        bool operator()(const std::pair<double, Document>& a,
-                        const std::pair<double, Document>& b) const {
+        auto operator()(const std::pair<double, Document>& a,
+                        const std::pair<double, Document>& b) const -> bool {
             return a.first < b.first;
         }
     };
 
-    std::vector<Document> getRankedResults(
-        const std::unordered_map<std::string, double>& scores);
+    auto getRankedResults(const std::unordered_map<std::string, double>& scores)
+        -> std::vector<Document>;
 };
 }  // namespace atom::search
+
+#endif

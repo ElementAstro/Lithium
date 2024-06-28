@@ -10,10 +10,7 @@
 #define ATOM_META_CONVERSION_HPP
 
 #include <any>
-#include <list>
-#include <map>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
@@ -31,7 +28,7 @@
 namespace atom::meta {
 class bad_conversion : public std::bad_cast {
 public:
-    bad_conversion(const Type_Info& from_type, const Type_Info& to_type)
+    bad_conversion(const TypeInfo& from_type, const TypeInfo& to_type)
         : message("Failed to convert from " + std::string(from_type.name()) +
                   " to " + std::string(to_type.name())) {}
 
@@ -54,18 +51,18 @@ public:
     virtual std::any convert(const std::any& from) const = 0;
     virtual std::any convert_down(const std::any& to) const = 0;
 
-    const Type_Info& to() const noexcept { return to_type; }
-    const Type_Info& from() const noexcept { return from_type; }
+    const TypeInfo& to() const noexcept { return to_type; }
+    const TypeInfo& from() const noexcept { return from_type; }
 
     virtual bool bidir() const noexcept { return true; }
 
     virtual ~Type_Conversion_Base() = default;
 
-    Type_Info to_type;
-    Type_Info from_type;
+    TypeInfo to_type;
+    TypeInfo from_type;
 
 protected:
-    Type_Conversion_Base(const Type_Info& to, const Type_Info& from)
+    Type_Conversion_Base(const TypeInfo& to, const TypeInfo& from)
         : to_type(to), from_type(from) {}
 };
 
@@ -406,7 +403,7 @@ public:
         throw bad_conversion(from_type, to_type);
     }
 
-    bool can_convert(const Type_Info& from, const Type_Info& to) const {
+    bool can_convert(const TypeInfo& from, const TypeInfo& to) const {
         if (conversions.count(from)) {
             for (const auto& conv : conversions.at(from)) {
                 if (conv->to_type == to) {
@@ -458,14 +455,14 @@ public:
 
 private:
 #if ENABLE_FASTHASH
-    emhash8::HashMap<Type_Info,
+    emhash8::HashMap<TypeInfo,
                      std::vector<std::shared_ptr<Type_Conversion_Base>>,
-                     std::hash<Type_Info>>
+                     std::hash<TypeInfo>>
         conversions;
 #else
-    std::unordered_map<Type_Info,
+    std::unordered_map<TypeInfo,
                        std::vector<std::shared_ptr<Type_Conversion_Base>>,
-                       std::hash<Type_Info>>
+                       std::hash<TypeInfo>>
         conversions;
 #endif
 };

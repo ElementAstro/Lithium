@@ -20,8 +20,21 @@ Description: Faster Base64 Encode & Decode from pocketpy
 #include <vector>
 
 namespace atom::algorithm {
-std::string fbase64Encode(std::span<const unsigned char> input);
-std::vector<unsigned char> fbase64Decode(std::span<const char> input);
+/**
+ * @brief Faster Base64 Encode
+ *
+ * @param input
+ * @return std::string
+ */
+auto fbase64Encode(std::span<const unsigned char> input) -> std::string;
+
+/**
+ * @brief Faster Base64 Decode
+ *
+ * @param input
+ * @return std::vector<unsigned char>
+ */
+auto fbase64Decode(std::span<const char> input) -> std::vector<unsigned char>;
 }  // namespace atom::algorithm
 
 #endif

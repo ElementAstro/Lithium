@@ -16,9 +16,7 @@ Description: Better Exception Library
 #define ATOM_ERROR_EXCEPTION_HPP
 
 #include <exception>
-#include <iomanip>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <thread>
 
@@ -51,44 +49,44 @@ public:
      * @brief Returns a C-style string describing the exception.
      * @return A pointer to a string describing the exception.
      */
-    const char *what() const ATOM_NOEXCEPT override;
+    auto what() const ATOM_NOEXCEPT -> const char * override;
 
     /**
      * @brief Gets the file where the exception occurred.
      * @return The file where the exception occurred.
      */
-    const std::string &getFile() const;
+    auto getFile() const -> std::string;
 
     /**
      * @brief Gets the line number where the exception occurred.
      * @return The line number where the exception occurred.
      */
-    int getLine() const;
+    auto getLine() const -> int;
 
     /**
      * @brief Gets the function where the exception occurred.
      * @return The function where the exception occurred.
      */
-    const std::string &getFunction() const;
+    auto getFunction() const -> std::string;
 
     /**
      * @brief Gets the message associated with the exception.
      * @return The message associated with the exception.
      */
-    const std::string &getMessage() const;
+    auto getMessage() const -> std::string;
 
     /**
      * @brief Gets the ID of the thread where the exception occurred.
      * @return The ID of the thread where the exception occurred.
      */
-    std::thread::id getThreadId() const;
+    auto getThreadId() const -> std::thread::id;
 
 private:
     /**
      * @brief Gets the current time as a formatted string.
      * @return The current time as a formatted string.
      */
-    std::string getCurrentTime() const;
+    auto getCurrentTime() const -> std::string;
 
     std::string file_; /**< The file where the exception occurred. */
     int line_; /**< The line number in the file where the exception occurred. */
@@ -138,6 +136,24 @@ public:
 #define THROW_OUT_OF_RANGE(...)                                   \
     throw atom::error::OutOfRange(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                   ATOM_FUNC_NAME, __VA_ARGS__);
+
+class OverflowException : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_OVERFLOW(...)                                              \
+    throw atom::error::OverflowException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                         ATOM_FUNC_NAME, __VA_ARGS__);
+
+class UnderflowException : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_UNDERFLOW(...)                                              \
+    throw atom::error::UnderflowException(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                          ATOM_FUNC_NAME, __VA_ARGS__);
 
 class Unkown : public Exception {
 public:

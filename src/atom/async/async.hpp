@@ -15,17 +15,22 @@ Description: A simple but useful async worker manager
 #ifndef ATOM_ASYNC_ASYNC_HPP
 #define ATOM_ASYNC_ASYNC_HPP
 
-#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <future>
 #include <memory>
-#include <stdexcept>
-#include <thread>
-#include <type_traits>
 #include <vector>
 
 #include "atom/error/exception.hpp"
+
+class TimeoutException : public atom::error::RuntimeError {
+public:
+    using atom::error::RuntimeError::RuntimeError;
+};
+
+#define THROW_TIMEOUT_EXCEPTION(...)                                       \
+    throw TimeoutException(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
+                           __VA_ARGS__);
 
 namespace atom::async {
 /**
@@ -50,7 +55,7 @@ public:
      * @param args The arguments to be passed to the function.
      */
     template <typename Func, typename... Args>
-    void StartAsync(Func &&func, Args &&...args);
+    void startAsync(Func &&func, Args &&...args);
 
     /**
      * @brief Gets the result of the task.
@@ -58,28 +63,28 @@ public:
      * @throw std::runtime_error if the task is not valid.
      * @return The result of the task.
      */
-    ResultType GetResult();
+    auto getResult() -> ResultType;
 
     /**
      * @brief Cancels the task.
      *
      * If the task is valid, this function waits for the task to complete.
      */
-    void Cancel();
+    void cancel();
 
     /**
      * @brief Checks if the task is done.
      *
      * @return True if the task is done, false otherwise.
      */
-    bool IsDone() const;
+    [[nodiscard]] auto isDone() const -> bool;
 
     /**
      * @brief Checks if the task is active.
      *
      * @return True if the task is active, false otherwise.
      */
-    bool IsActive() const;
+    [[nodiscard]] auto isActive() const -> bool;
 
     /**
      * @brief Validates the result of the task using a validator function.
@@ -87,21 +92,21 @@ public:
      * @param validator The function used to validate the result.
      * @return True if the result is valid, false otherwise.
      */
-    bool Validate(std::function<bool(ResultType)> validator);
+    auto validate(std::function<bool(ResultType)> validator) -> bool;
 
     /**
      * @brief Sets a callback function to be called when the task is done.
      *
      * @param callback The callback function to be set.
      */
-    void SetCallback(std::function<void(ResultType)> callback);
+    void setCallback(std::function<void(ResultType)> callback);
 
     /**
      * @brief Sets a timeout for the task.
      *
      * @param timeout The timeout duration.
      */
-    void SetTimeout(std::chrono::seconds timeout);
+    void setTimeout(std::chrono::seconds timeout);
 
     /**
      * @brief Waits for the task to complete.
@@ -110,7 +115,7 @@ public:
      * timeout is reached. If a callback function is set and the task is done,
      * the callback function is called with the result.
      */
-    void WaitForCompletion();
+    void waitForCompletion();
 
 private:
     std::future<ResultType>
@@ -149,25 +154,25 @@ public:
      * @return A shared pointer to the created AsyncWorker instance.
      */
     template <typename Func, typename... Args>
-    std::shared_ptr<AsyncWorker<ResultType>> CreateWorker(Func &&func,
-                                                          Args &&...args);
+    auto createWorker(Func &&func, Args &&...args)
+        -> std::shared_ptr<AsyncWorker<ResultType>>;
 
     /**
      * @brief Cancels all the managed tasks.
      */
-    void CancelAll();
+    void cancelAll();
 
     /**
      * @brief Checks if all the managed tasks are done.
      *
      * @return True if all tasks are done, false otherwise.
      */
-    bool AllDone() const;
+    auto allDone() const -> bool;
 
     /**
      * @brief Waits for all the managed tasks to complete.
      */
-    void WaitForAll();
+    void waitForAll();
 
     /**
      * @brief Checks if a specific task is done.
@@ -175,14 +180,14 @@ public:
      * @param worker The AsyncWorker instance to check.
      * @return True if the task is done, false otherwise.
      */
-    bool IsDone(std::shared_ptr<AsyncWorker<ResultType>> worker) const;
+    bool isDone(std::shared_ptr<AsyncWorker<ResultType>> worker) const;
 
     /**
      * @brief Cancels a specific task.
      *
      * @param worker The AsyncWorker instance to cancel.
      */
-    void Cancel(std::shared_ptr<AsyncWorker<ResultType>> worker);
+    void cancel(std::shared_ptr<AsyncWorker<ResultType>> worker);
 
 private:
     std::vector<std::shared_ptr<AsyncWorker<ResultType>>>
@@ -199,9 +204,9 @@ private:
  * @return A shared pointer to the created AsyncWorker instance.
  */
 template <typename Func, typename... Args>
-std::future<decltype(std::declval<Func>()(std::declval<Args>()...))> asyncRetry(
+auto asyncRetry(
     Func &&func, int attemptsLeft, std::chrono::milliseconds delay,
-    Args &&...args);
+    Args &&...args) -> std::future<decltype(std::declval<Func>()(std::declval<Args>()...))>;
 
 /**
  * @brief Gets the result of the task with a timeout.
@@ -211,10 +216,188 @@ std::future<decltype(std::declval<Func>()(std::declval<Args>()...))> asyncRetry(
  * @return The result of the task.
  */
 template <typename ReturnType>
-ReturnType getWithTimeout(std::future<ReturnType> &future,
-                          std::chrono::milliseconds timeout);
+auto getWithTimeout(std::future<ReturnType> &future,
+                          std::chrono::milliseconds timeout) -> ReturnType;
+
+template <typename ResultType>
+template <typename Func, typename... Args>
+void AsyncWorker<ResultType>::startAsync(Func &&func, Args &&...args) {
+    static_assert(std::is_invocable_r_v<ResultType, Func, Args...>,
+                  "Function must return a result");
+    task_ = std::async(std::launch::async, std::forward<Func>(func),
+                       std::forward<Args>(args)...);
+}
+
+template <typename ResultType>
+[[nodiscard]] auto AsyncWorker<ResultType>::getResult() -> ResultType {
+    if (!task_.valid()) {
+        throw std::invalid_argument("Task is not valid");
+    }
+    return task_.get();
+}
+
+template <typename ResultType>
+void AsyncWorker<ResultType>::cancel() {
+    if (task_.valid()) {
+        task_.wait();  // 等待任务完成
+    }
+}
+
+template <typename ResultType>
+auto AsyncWorker<ResultType>::isDone() const -> bool {
+    return task_.valid() && (task_.wait_for(std::chrono::seconds(0)) ==
+                             std::future_status::ready);
+}
+
+template <typename ResultType>
+auto AsyncWorker<ResultType>::isActive() const -> bool {
+    return task_.valid() && (task_.wait_for(std::chrono::seconds(0)) ==
+                             std::future_status::timeout);
+}
+
+template <typename ResultType>
+auto AsyncWorker<ResultType>::validate(
+    std::function<bool(ResultType)> validator) -> bool {
+    if (!isDone()) {
+    }
+    ResultType result = getResult();
+    return validator(result);
+}
+
+template <typename ResultType>
+void AsyncWorker<ResultType>::setCallback(
+    std::function<void(ResultType)> callback) {
+    callback_ = callback;
+}
+
+template <typename ResultType>
+void AsyncWorker<ResultType>::setTimeout(std::chrono::seconds timeout) {
+    timeout_ = timeout;
+}
+
+template <typename ResultType>
+void AsyncWorker<ResultType>::waitForCompletion() {
+    if (timeout_ != std::chrono::seconds(0)) {
+        auto startTime = std::chrono::steady_clock::now();
+        while (!isDone()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            if (std::chrono::steady_clock::now() - startTime > timeout_) {
+                cancel();
+                break;
+            }
+        }
+    } else {
+        while (!isDone()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
+
+    if (callback_ && isDone()) {
+        callback_(getResult());
+    }
+}
+
+template <typename ResultType>
+template <typename Func, typename... Args>
+[[nodiscard]] auto AsyncWorkerManager<ResultType>::createWorker(
+    Func &&func, Args &&...args) -> std::shared_ptr<AsyncWorker<ResultType>> {
+    auto worker = std::make_shared<AsyncWorker<ResultType>>();
+    workers_.push_back(worker);
+    worker->StartAsync(std::forward<Func>(func), std::forward<Args>(args)...);
+    return worker;
+}
+
+template <typename ResultType>
+void AsyncWorkerManager<ResultType>::cancelAll() {
+    for (auto &worker : workers_) {
+        worker->Cancel();
+    }
+}
+
+template <typename ResultType>
+auto AsyncWorkerManager<ResultType>::allDone() const -> bool {
+    return std::all_of(workers_.begin(), workers_.end(),
+                       [](const auto &worker) { return worker->IsDone(); });
+}
+
+template <typename ResultType>
+void AsyncWorkerManager<ResultType>::waitForAll() {
+    while (!allDone()) {
+    }
+}
+
+template <typename ResultType>
+auto AsyncWorkerManager<ResultType>::isDone(
+    std::shared_ptr<AsyncWorker<ResultType>> worker) const -> bool {
+    return worker->IsDone();
+}
+
+template <typename ResultType>
+void AsyncWorkerManager<ResultType>::cancel(
+    std::shared_ptr<AsyncWorker<ResultType>> worker) {
+    worker->Cancel();
+}
+
+template <typename Func, typename... Args>
+    requires std::invocable<Func, Args...>
+[[nodiscard]] auto asyncRetry(Func &&func, int attemptsLeft,
+                              std::chrono::milliseconds delay, Args &&...args) {
+    using ReturnType = std::invoke_result_t<Func, Args...>;
+    static_assert(!std::is_void_v<ReturnType>, "Func must return a value");
+
+    if (attemptsLeft <= 1) {
+        // 最后一次尝试，直接执行
+        return std::async(std::launch::deferred, std::forward<Func>(func),
+                          std::forward<Args>(args)...);
+    }
+
+    // 尝试执行函数
+    auto attempt = std::async(std::launch::async, std::forward<Func>(func),
+                              std::forward<Args>(args)...);
+
+    try {
+        // 立即获取结果，如果有异常会在这里抛出
+        if constexpr (std::is_same_v<ReturnType, void>) {
+            attempt.get();
+            return std::async(std::launch::deferred, []() {});
+        } else {
+            auto result = attempt.get();
+            return std::async(std::launch::deferred,
+                              [result = std::move(result)]() mutable {
+                                  return std::move(result);
+                              });
+        }
+    } catch (...) {
+        if (attemptsLeft <= 1) {
+            // 所有尝试都失败，重新抛出最后一次的异常
+            throw;
+        }  // 等待一段时间后重试
+        std::this_thread::sleep_for(delay);
+        return asyncRetry(std::forward<Func>(func), attemptsLeft - 1, delay,
+                          std::forward<Args>(args)...);
+    }
+}
+
+template <typename T>
+[[nodiscard]] auto getWithTimeout(std::future<T> &future,
+                                  std::chrono::milliseconds timeout) -> T {
+    static_assert(!std::is_void_v<T>, "T must not be void");
+
+    if (future.wait_for(timeout) == std::future_status::ready) {
+        return future.get();
+    }
+    THROW_TIMEOUT_EXCEPTION("Timeout occurred while waiting for future result");
+}
+
+template <typename T, typename Rep, typename Period>
+[[nodiscard]] auto getWithTimeout(
+    std::future<T> &future, std::chrono::duration<Rep, Period> timeout) -> T {
+    static_assert(!std::is_void_v<T>, "T must not be void");
+
+    if (future.wait_for(timeout) == std::future_status::ready) {
+        return future.get();
+    }
+    THROW_TIMEOUT_EXCEPTION("Timeout occurred while waiting for future result");
+}
 }  // namespace atom::async
-
-#include "async.inl"
-
 #endif

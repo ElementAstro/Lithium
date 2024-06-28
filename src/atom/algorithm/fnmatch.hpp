@@ -32,7 +32,7 @@ namespace atom::algorithm {
  * @param flags Optional flags to modify the matching behavior (default is 0).
  * @return True if the `string` matches the `pattern`, false otherwise.
  */
-bool fnmatch(std::string_view pattern, std::string_view string, int flags = 0);
+auto fnmatch(std::string_view pattern, std::string_view string, int flags = 0) -> bool;
 
 /**
  * @brief Filters a vector of strings based on a specified pattern.
@@ -47,8 +47,8 @@ bool fnmatch(std::string_view pattern, std::string_view string, int flags = 0);
  * @return True if any element of `names` matches the `pattern`, false
  * otherwise.
  */
-bool filter(const std::vector<std::string>& names, std::string_view pattern,
-            int flags = 0);
+auto filter(const std::vector<std::string>& names, std::string_view pattern,
+            int flags = 0) -> bool;
 
 /**
  * @brief Filters a vector of strings based on multiple patterns.
@@ -63,9 +63,9 @@ bool filter(const std::vector<std::string>& names, std::string_view pattern,
  * @return A vector containing strings from `names` that match any pattern in
  * `patterns`.
  */
-std::vector<std::string> filter(const std::vector<std::string>& names,
+auto filter(const std::vector<std::string>& names,
                                 const std::vector<std::string>& patterns,
-                                int flags = 0);
+                                int flags = 0) -> std::vector<std::string>;
 
 /**
  * @brief Translates a pattern into a different representation.
@@ -81,7 +81,7 @@ std::vector<std::string> filter(const std::vector<std::string>& names,
  * 0).
  * @return True if the translation was successful, false otherwise.
  */
-bool translate(std::string_view pattern, std::string& result, int flags = 0);
+auto translate(std::string_view pattern, std::string& result, int flags = 0) -> bool;
 
 }  // namespace atom::algorithm
 

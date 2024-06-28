@@ -19,12 +19,15 @@ Description: Extra Math Library
 #include <numeric>    // For std::gcd
 #include <stdexcept>  // For std::runtime_error
 
+#include "atom/error/exception.hpp"
+
 namespace atom::algorithm {
 
 #if defined(__GNUC__) && defined(__SIZEOF_INT128__)
-uint64_t mulDiv64(uint64_t operand, uint64_t multiplier, uint64_t divider) {
+auto mulDiv64(uint64_t operand, uint64_t multiplier,
+              uint64_t divider) -> uint64_t {
     if (divider == 0) {
-        throw std::runtime_error("Division by zero");
+        THROW_INVALID_ARGUMENT("Division by zero");
     }
 
     __uint128_t a = operand;
@@ -38,7 +41,7 @@ uint64_t mulDiv64(uint64_t operand, uint64_t multiplier, uint64_t divider) {
 
 uint64_t mulDiv64(uint64_t operand, uint64_t multiplier, uint64_t divider) {
     if (divider == 0) {
-        throw std::runtime_error("Division by zero");
+        THROW_INVALID_ARGUMENT("Division by zero");
     }
 
     uint64_t highProd;
@@ -59,10 +62,10 @@ uint64_t mulDiv64(uint64_t operand, uint64_t multiplier, uint64_t divider) {
 #error "Platform not supported for mulDiv64 function!"
 #endif
 
-uint64_t safeAdd(uint64_t a, uint64_t b) {
+auto safeAdd(uint64_t a, uint64_t b) -> uint64_t {
     uint64_t result;
     if (__builtin_add_overflow(a, b, &result)) {
-        throw std::overflow_error("Overflow in addition");
+        THROW_OVERFLOW("Overflow in addition");
     }
     return result;
 }
@@ -70,44 +73,46 @@ uint64_t safeAdd(uint64_t a, uint64_t b) {
 uint64_t safeMul(uint64_t a, uint64_t b) {
     uint64_t result;
     if (__builtin_mul_overflow(a, b, &result)) {
-        throw std::overflow_error("Overflow in multiplication");
+        THROW_OVERFLOW("Overflow in multiplication");
     }
     return result;
 }
 
-uint64_t rotl64(uint64_t n, unsigned int c) { return std::rotl(n, c); }
+auto rotl64(uint64_t n, unsigned int c) -> uint64_t { return std::rotl(n, c); }
 
-uint64_t rotr64(uint64_t n, unsigned int c) { return std::rotr(n, c); }
+auto rotr64(uint64_t n, unsigned int c) -> uint64_t { return std::rotr(n, c); }
 
-int clz64(uint64_t x) {
-    if (x == 0)
+auto clz64(uint64_t x) -> int {
+    if (x == 0) {
         return 64;
+    }
     return __builtin_clzll(x);
 }
 
-uint64_t normalize(uint64_t x) {
-    if (x == 0)
+auto normalize(uint64_t x) -> uint64_t {
+    if (x == 0) {
         return 0;
+    }
     int n = clz64(x);
     return x << n;
 }
 
-uint64_t safeSub(uint64_t a, uint64_t b) {
+auto safeSub(uint64_t a, uint64_t b) -> uint64_t {
     uint64_t result;
     if (__builtin_sub_overflow(a, b, &result)) {
-        throw std::underflow_error("Underflow in subtraction");
+        THROW_UNDERFLOW("Underflow in subtraction");
     }
     return result;
 }
 
-uint64_t safeDiv(uint64_t a, uint64_t b) {
+auto safeDiv(uint64_t a, uint64_t b) -> uint64_t {
     if (b == 0) {
-        throw std::runtime_error("Division by zero");
+        THROW_INVALID_ARGUMENT("Division by zero");
     }
     return a / b;
 }
 
-uint64_t bitReverse64(uint64_t n) {
+auto bitReverse64(uint64_t n) -> uint64_t {
     n = ((n & 0xAAAAAAAAAAAAAAAA) >> 1) | ((n & 0x5555555555555555) << 1);
     n = ((n & 0xCCCCCCCCCCCCCCCC) >> 2) | ((n & 0x3333333333333333) << 2);
     n = ((n & 0xF0F0F0F0F0F0F0F0) >> 4) | ((n & 0x0F0F0F0F0F0F0F0F) << 4);
@@ -117,7 +122,7 @@ uint64_t bitReverse64(uint64_t n) {
     return n;
 }
 
-uint64_t approximateSqrt(uint64_t n) {
+auto approximateSqrt(uint64_t n) -> uint64_t {
     if (n == 0 || n == 1) {
         return n;
     }
@@ -131,13 +136,13 @@ uint64_t approximateSqrt(uint64_t n) {
     return static_cast<uint64_t>(x);
 }
 
-uint64_t gcd64(uint64_t a, uint64_t b) { return std::gcd(a, b); }
+auto gcd64(uint64_t a, uint64_t b) -> uint64_t { return std::gcd(a, b); }
 
-uint64_t lcm64(uint64_t a, uint64_t b) { return a / gcd64(a, b) * b; }
+auto lcm64(uint64_t a, uint64_t b) -> uint64_t { return a / gcd64(a, b) * b; }
 
-bool isPowerOfTwo(uint64_t n) { return n != 0 && (n & (n - 1)) == 0; }
+auto isPowerOfTwo(uint64_t n) -> bool { return n != 0 && (n & (n - 1)) == 0; }
 
-uint64_t nextPowerOfTwo(uint64_t n) {
+auto nextPowerOfTwo(uint64_t n) -> uint64_t {
     if (n == 0) {
         return 1;
     }

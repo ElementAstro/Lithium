@@ -17,7 +17,7 @@
 #define ENUM_SEARCH_RANGE 32
 namespace atom::meta {
 template <typename T>
-struct type_info;
+struct TypeInfo;
 
 namespace details {
 template <typename T, std::ptrdiff_t N = 0>
@@ -52,8 +52,8 @@ consteval std::ptrdiff_t search_possible_continuous_enum_max() {
 template <typename T>
     requires std::is_enum_v<T>
 consteval std::ptrdiff_t enum_start() {
-    if constexpr (requires { type_info<T>::start; }) {
-        return type_info<T>::start;
+    if constexpr (requires { TypeInfo<T>::start; }) {
+        return TypeInfo<T>::start;
     } else {
         return details::search_possible_enum_start<T>();
     }
@@ -62,8 +62,8 @@ consteval std::ptrdiff_t enum_start() {
 template <typename T>
     requires std::is_enum_v<T>
 consteval std::ptrdiff_t enum_max() {
-    if constexpr (requires { type_info<T>::max; }) {
-        return type_info<T>::max;
+    if constexpr (requires { TypeInfo<T>::max; }) {
+        return TypeInfo<T>::max;
     } else {
         return details::search_possible_continuous_enum_max<T>();
     }
@@ -71,8 +71,8 @@ consteval std::ptrdiff_t enum_max() {
 
 template <typename T>
 consteval bool is_bit_field_enum() {
-    if constexpr (requires { type_info<T>::bit; }) {
-        return type_info<T>::bit;
+    if constexpr (requires { TypeInfo<T>::bit; }) {
+        return TypeInfo<T>::bit;
     } else {
         return false;
     }

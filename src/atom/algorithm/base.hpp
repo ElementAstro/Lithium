@@ -31,8 +31,8 @@ namespace atom::algorithm {
  * @param data The vector of unsigned characters to be encoded.
  * @return The Base16 encoded string.
  */
-[[nodiscard("The result of base16Encode is not used.")]] std::string
-base16Encode(const std::vector<unsigned char> &data);
+[[nodiscard("The result of base16Encode is not used.")]] auto base16Encode(
+    const std::vector<unsigned char> &data) -> std::string;
 
 /**
  * @brief Decodes a Base16 string into a vector of unsigned characters.
@@ -45,25 +45,24 @@ base16Encode(const std::vector<unsigned char> &data);
  * @param data The Base16 encoded string to be decoded.
  * @return The decoded vector of unsigned characters.
  */
-[[nodiscard(
-    "The result of base16Decode is not used.")]] std::vector<unsigned char>
-base16Decode(const std::string &data);
+[[nodiscard("The result of base16Decode is not used.")]] auto base16Decode(
+    const std::string &data) -> std::vector<unsigned char>;
 
 /**
  * @brief Encodes a string to Base32
  * @param data The string to encode
  * @return The encoded string
  */
-[[nodiscard("The result of base32Encode is not used.")]] std::string
-base32Encode(const uint8_t *data, size_t length);
+[[nodiscard("The result of base32Encode is not used.")]] auto base32Encode(
+    const uint8_t *data, size_t length) -> std::string;
 
 /**
  * @brief Decodes a Base32 string
  * @param data The string to decode
  * @return The decoded string
  */
-[[nodiscard("The result of base32Decode is not used.")]] std::string
-base32Decode(std::string_view encoded);
+[[nodiscard("The result of base32Decode is not used.")]] auto base32Decode(
+    std::string_view encoded) -> std::string;
 
 /**
  * @brief Base64编码函数
@@ -71,8 +70,8 @@ base32Decode(std::string_view encoded);
  * @param bytes_to_encode 待编码数据
  * @return std::string 编码后的字符串
  */
-[[nodiscard("The result of base64Encode is not used.")]] std::string
-base64Encode(std::string_view bytes_to_encode);
+[[nodiscard("The result of base64Encode is not used.")]] auto base64Encode(
+    std::string_view bytes_to_encode) -> std::string;
 
 /**
  * @brief Base64解码函数
@@ -80,8 +79,8 @@ base64Encode(std::string_view bytes_to_encode);
  * @param encoded_string 待解码字符串
  * @return std::vector<unsigned char> 解码后的数据
  */
-[[nodiscard("The result of base64Decode is not used.")]] std::string
-base64Decode(std::string_view encoded_string);
+[[nodiscard("The result of base64Decode is not used.")]] auto base64Decode(
+    std::string_view encoded_string) -> std::string;
 
 /**
  * @brief Encodes a vector of unsigned characters into a Base85 string.
@@ -93,8 +92,8 @@ base64Decode(std::string_view encoded_string);
  * @param data The vector of unsigned characters to be encoded.
  * @return The Base85 encoded string.
  */
-[[nodiscard("The result of base85Encode is not used.")]] std::string
-base85Encode(const std::vector<unsigned char> &data);
+[[nodiscard("The result of base85Encode is not used.")]] auto base85Encode(
+    const std::vector<unsigned char> &data) -> std::string;
 
 /**
  * @brief Decodes a Base85 string into a vector of unsigned characters.
@@ -106,9 +105,8 @@ base85Encode(const std::vector<unsigned char> &data);
  * @param data The Base85 encoded string to be decoded.
  * @return The decoded vector of unsigned characters.
  */
-[[nodiscard(
-    "The result of base85Decode is not used.")]] std::vector<unsigned char>
-base85Decode(const std::string &data);
+[[nodiscard("The result of base85Decode is not used.")]] auto base85Decode(
+    const std::string &data) -> std::vector<unsigned char>;
 
 /**
  * @brief Encodes a string to Base91
@@ -116,15 +114,15 @@ base85Decode(const std::string &data);
  * @return The encoded string
  */
 [[nodiscard("The result of base91Encode is not used.")]]
-std::string base91Encode(std::string_view data);
+auto base91Encode(std::string_view data) -> std::string;
 
 /**
  * @brief Decodes a Base91 string
  * @param data The string to decode
  * @return The decoded string
  */
-[[nodiscard("The result of base91Decode is not used.")]] std::string
-base91Decode(std::string_view data);
+[[nodiscard("The result of base91Decode is not used.")]] auto base91Decode(
+    std::string_view data) -> std::string;
 
 /**
  * @brief Encodes a vector of unsigned characters into a Base128 string.
@@ -136,8 +134,8 @@ base91Decode(std::string_view data);
  * @param data The vector of unsigned characters to be encoded.
  * @return The Base128 encoded string.
  */
-[[nodiscard("The result of encodeBase128 is not used.")]] std::string
-base128Encode(const uint8_t *data, size_t length);
+[[nodiscard("The result of encodeBase128 is not used.")]] auto base128Encode(
+    const uint8_t *data, size_t length) -> std::string;
 
 /**
  * @brief Decodes a Base128 string into a vector of unsigned characters.
@@ -149,14 +147,28 @@ base128Encode(const uint8_t *data, size_t length);
  * @param data The Base128 encoded string to be decoded.
  * @return The decoded vector of unsigned characters.
  */
-[[nodiscard("The result of decodeBase128 is not used.")]] std::string
-base128Decode(std::string_view encoded);
+[[nodiscard("The result of decodeBase128 is not used.")]] auto base128Decode(
+    std::string_view encoded) -> std::string;
 
-[[nodiscard("The result of xorEncrypt is not used.")]] std::string xorEncrypt(
-    std::string_view plaintext, uint8_t key);
+/**
+ * @brief Encrypts a string using the XOR algorithm.
+ *
+ * @param data The string to be encrypted.
+ * @param key The encryption key.
+ * @return The encrypted string.
+ */
+[[nodiscard("The result of xorEncrypt is not used.")]] auto xorEncrypt(
+    std::string_view plaintext, uint8_t key) -> std::string;
 
-[[nodiscard("The result of xorDecrypt is not used.")]] std::string xorDecrypt(
-    std::string_view ciphertext, uint8_t key);
+/**
+ * @brief Decrypts a string using the XOR algorithm.
+ *
+ * @param data The string to be decrypted.
+ * @param key The decryption key.
+ * @return The decrypted string.
+ */
+[[nodiscard("The result of xorDecrypt is not used.")]] auto xorDecrypt(
+    std::string_view ciphertext, uint8_t key) -> std::string;
 }  // namespace atom::algorithm
 
 #endif

@@ -60,11 +60,6 @@ struct OverloadCast {
     }
 
     template <typename ReturnType>
-    constexpr auto operator()(ReturnType (*func)(Args...)) const noexcept {
-        return func;
-    }
-
-    template <typename ReturnType>
     constexpr auto operator()(
         ReturnType (*func)(Args...) noexcept) const noexcept {
         return func;

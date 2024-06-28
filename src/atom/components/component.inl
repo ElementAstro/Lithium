@@ -37,11 +37,11 @@ ATOM_INLINE bool Component::destroy() {
 
 ATOM_INLINE std::string Component::getName() const { return m_name; }
 
-ATOM_INLINE atom::meta::Type_Info Component::getTypeInfo() const {
+ATOM_INLINE atom::meta::TypeInfo Component::getTypeInfo() const {
     return m_typeInfo;
 }
 
-ATOM_INLINE void Component::setTypeInfo(atom::meta::Type_Info typeInfo) {
+ATOM_INLINE void Component::setTypeInfo(atom::meta::TypeInfo typeInfo) {
     m_typeInfo = typeInfo;
 }
 
@@ -166,7 +166,7 @@ ATOM_INLINE void Component::doc(const std::string& description) {
 }
 
 template <typename T>
-void Component::def_type(std::string_view name, const atom::meta::Type_Info& ti,
+void Component::def_type(std::string_view name, const atom::meta::TypeInfo& ti,
                          [[maybe_unused]] const std::string& group,
                          [[maybe_unused]] const std::string& description) {
     m_classes[name] = ti;

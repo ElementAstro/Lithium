@@ -13,7 +13,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <utility>
 
 #include "abi.hpp"
 #include "template_traits.hpp"
@@ -51,7 +50,7 @@ struct FunctionTraitsBase {
 template <typename Return, typename... Args>
 const std::string FunctionTraitsBase<Return, Args...>::full_name = [] {
     std::string name = typeid(Return(Args...)).name();
-    return DemangleHelper::Demangle(name);
+    return DemangleHelper::demangle(name);
 }();
 
 template <typename Return, typename... Args>

@@ -14,20 +14,17 @@ Description: Better Exception Library
 
 #include "exception.hpp"
 
-#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <memory>
-#include <vector>
 
 #if ENABLE_CPPTRACE
 #include <cpptrace/cpptrace.hpp>
 #endif
 
 namespace atom::error {
-const char* Exception::what() const noexcept {
+auto Exception::what() const noexcept -> const char* {
     if (full_message_.empty()) {
         std::ostringstream oss;
         oss << "[" << getCurrentTime() << "] ";
@@ -46,18 +43,23 @@ const char* Exception::what() const noexcept {
     return full_message_.c_str();
 }
 
-const std::string& Exception::getFile() const { return file_; }
-int Exception::getLine() const { return line_; }
-const std::string& Exception::getFunction() const { return func_; }
-const std::string& Exception::getMessage() const { return message_; }
-std::thread::id Exception::getThreadId() const { return thread_id_; }
+auto Exception::getFile() const -> std::string { return file_; }
+auto Exception::getLine() const -> int { return line_; }
+auto Exception::getFunction() const -> std::string { return func_; }
+auto Exception::getMessage() const -> std::string { return message_; }
+auto Exception::getThreadId() const -> std::thread::id { return thread_id_; }
 
-std::string Exception::getCurrentTime() const {
+auto Exception::getCurrentTime() const -> std::string {
     auto now = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
-    char buffer[80];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S",
-                  std::localtime(&time));
-    return buffer;
+    auto timeT = std::chrono::system_clock::to_time_t(now);
+    std::tm tmTime{};
+#if defined(_MSC_VER)
+    localtime_s(&tm_time, &time_t);
+#else
+    localtime_r(&timeT, &tmTime);
+#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tmTime, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
 }
 }  // namespace atom::error

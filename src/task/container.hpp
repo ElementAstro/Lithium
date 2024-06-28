@@ -17,7 +17,6 @@ Description: Task container class.
 
 #include <functional>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -30,20 +29,22 @@ Description: Task container class.
 #include "task.hpp"
 #include <shared_mutex>
 
+#include "atom/type/json_fwd.hpp"
+
 namespace lithium {
 class TaskContainer {
 public:
-    static std::shared_ptr<TaskContainer> createShared();
+    static auto createShared() -> std::shared_ptr<TaskContainer>;
 
     // Task management
     void addTask(const std::shared_ptr<Task> &task);
-    std::optional<std::shared_ptr<Task>> getTask(const std::string &name);
-    bool removeTask(const std::string &name);
-    std::vector<std::shared_ptr<Task>> getAllTasks();
-    size_t getTaskCount();
+    auto getTask(const std::string &name) -> std::optional<std::shared_ptr<Task>>;
+    auto removeTask(const std::string &name) -> bool;
+    auto getAllTasks() -> std::vector<std::shared_ptr<Task>>;
+    auto getTaskCount() -> size_t;
     void clearTasks();
-    std::vector<std::shared_ptr<Task>> findTasks(int priority,
-                                                       Task::Status status);
+    auto findTasks(int priority,
+                                                       Task::Status status) -> std::vector<std::shared_ptr<Task>>;
     void sortTasks(
         const std::function<bool(const std::shared_ptr<Task> &,
                                  const std::shared_ptr<Task> &)> &cmp);
@@ -54,18 +55,18 @@ public:
         const std::function<void(std::shared_ptr<Task> &)> &modifyFunc);
 
     // Task parameters management
-    bool addOrUpdateTaskParams(const std::string &name, const json &params);
-    bool insertTaskParams(const std::string &name, const json &params,
-                          const int &position);
-    std::optional<json> getTaskParams(const std::string &name) const;
+    auto addOrUpdateTaskParams(const std::string &name, const json &params) -> bool;
+    auto insertTaskParams(const std::string &name, const json &params,
+                          const int &position) -> bool;
+    auto getTaskParams(const std::string &name) const -> std::optional<json>;
     void listTaskParams() const;
 
 private:
-    mutable std::shared_mutex mtx;  ///< Mutex for thread-safe operations.
+    mutable std::shared_mutex mtx_;  ///< Mutex for thread-safe operations.
     std::unordered_map<std::string, std::shared_ptr<Task>>
-        tasks;  ///< The container holding tasks.
+        tasks_;  ///< The container holding tasks.
     std::unordered_map<std::string, json>
-        taskParams;  ///< The container holding task parameters.
+        taskParams_;  ///< The container holding task parameters.
 };
 }  // namespace lithium
 

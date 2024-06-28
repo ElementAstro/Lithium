@@ -17,7 +17,6 @@ Description: StackTrace
 
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace atom::error {
 /**
@@ -41,7 +40,7 @@ public:
      *
      * @return A string representing the captured stack trace.
      */
-    std::string toString() const;
+    auto toString() const -> std::string;
 
 private:
     /**
@@ -53,12 +52,12 @@ private:
     void capture();
 
 #ifdef _WIN32
-    std::vector<void*> frames; /**< Vector to store stack frames on Windows. */
+    std::vector<void*> frames_; /**< Vector to store stack frames on Windows. */
 #elif defined(__APPLE__) || defined(__linux__)
-    std::unique_ptr<char*, decltype(&free)> symbols{
+    std::unique_ptr<char*, decltype(&free)> symbols_{
         nullptr,
         &free}; /**< Pointer to store stack symbols on macOS or Linux. */
-    int num_frames = 0; /**< Number of stack frames captured. */
+    int num_frames_ = 0; /**< Number of stack frames captured. */
 #endif
 };
 }  // namespace atom::error

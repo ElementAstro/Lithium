@@ -15,17 +15,15 @@ Description: Logger for Atom
 #ifndef ATOM_LOG_ATOMLOG_HPP
 #define ATOM_LOG_ATOMLOG_HPP
 
-#include <chrono>
 #include <condition_variable>
 #include <filesystem>
 #include <fstream>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <queue>
 #include <string>
 #include <thread>
-#include <unordered_set>
+#include <unordered_map>
 
 #include <fmt/chrono.h>
 #include <fmt/core.h>
@@ -253,7 +251,7 @@ private:
      *
      * @return The name of the current thread.
      */
-    std::string getThreadName();
+    auto getThreadName() -> std::string;
 
     /**
      * @brief Converts a log level to a string.
@@ -263,7 +261,7 @@ private:
      * @param level The log level to convert.
      * @return The string representation of the log level.
      */
-    static std::string logLevelToString(LogLevel level);
+    static auto logLevelToString(LogLevel level) -> std::string;
 
     /**
      * @brief Formats a log message.
@@ -274,7 +272,7 @@ private:
      * @param msg The message to format.
      * @return The formatted log message.
      */
-    std::string formatMessage(LogLevel level, const std::string& msg);
+    auto formatMessage(LogLevel level, const std::string& msg) -> std::string;
 
     /**
      * @brief Logs a message.

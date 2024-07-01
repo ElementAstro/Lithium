@@ -24,6 +24,7 @@ Description: IO
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
+#include "macro.hpp"
 
 #if __cplusplus >= 202002L
 #include <format>
@@ -32,8 +33,8 @@ Description: IO
 #ifdef _WIN32
 #include <windows.h>
 const std::string PATH_SEPARATOR = "\\";
-const std::regex folderNameRegex("^[^\\/?*:;{}\\\\]+[^\\\\]*$");
-const std::regex fileNameRegex("^[^\\/:*?\"<>|]+$");
+const std::regex FOLDER_NAME_REGEX(R"(^[^\/?*:;{}\\]+[^\\]*$)");
+const std::regex FILE_NAME_REGEX("^[^\\/:*?\"<>|]+$");
 #else
 #include <limits.h>
 #include <sys/stat.h>
@@ -48,20 +49,19 @@ namespace fs = std::filesystem;
 using json = nlohmann::json;
 
 #define ATOM_IO_CHECK_ARGUMENT(value)                              \
-    if (value.empty()) {                                           \
+    if ((value).empty()) {                                         \
         LOG_F(ERROR, "{}: Invalid argument: {}", __func__, value); \
         return false;                                              \
     }
 
 #define ATOM_IO_CHECK_ARGUMENT_S(value)                            \
-    if (value.empty()) {                                           \
+    if ((value).empty()) {                                         \
         LOG_F(ERROR, "{}: Invalid argument: {}", __func__, value); \
         return "";                                                 \
     }
 
 namespace atom::io {
-
-bool createDirectory(const std::string &path) {
+auto createDirectory(const std::string &path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
         fs::create_directory(path);
@@ -104,12 +104,10 @@ void createDirectory(const std::string &date, const std::string &rootDir) {
     DLOG_F(INFO, "Directory creation completed: {}", currentDir.string());
 }
 
-bool createDirectoriesRecursive(const fs::path &basePath,
-                                const std::vector<std::string> &subdirs,
-                                const CreateDirectoriesOptions &options = {}) {
-    for (size_t i = 0; i < subdirs.size(); ++i) {
-        const std::string &subdir = subdirs[i];
-
+auto createDirectoriesRecursive(
+    const fs::path &basePath, const std::vector<std::string> &subdirs,
+    const CreateDirectoriesOptions &options = {}) -> bool {
+    for (const auto &subdir : subdirs) {
 #if __cplusplus >= 202002L
         std::string fullPath = std::format("{}/{}", basePath.string(), subdir);
 #else
@@ -156,7 +154,7 @@ bool createDirectoriesRecursive(const fs::path &basePath,
     return true;
 }
 
-bool removeDirectory(const std::string &path) {
+auto removeDirectory(const std::string &path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
         fs::remove_all(path);
@@ -168,9 +166,9 @@ bool removeDirectory(const std::string &path) {
     return false;
 }
 
-bool removeDirectoriesRecursive(const fs::path &basePath,
-                                const std::vector<std::string> &subdirs,
-                                const CreateDirectoriesOptions &options) {
+auto removeDirectoriesRecursive(
+    const fs::path &basePath, const std::vector<std::string> &subdirs,
+    const CreateDirectoriesOptions &options) -> bool {
     for (const auto &subdir : subdirs) {
         auto fullPath = (basePath / subdir).string();
 
@@ -209,7 +207,8 @@ bool removeDirectoriesRecursive(const fs::path &basePath,
     return true;
 }
 
-bool renameDirectory(const std::string &old_path, const std::string &new_path) {
+auto renameDirectory(const std::string &old_path,
+                     const std::string &new_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
     try {
@@ -223,7 +222,8 @@ bool renameDirectory(const std::string &old_path, const std::string &new_path) {
     return false;
 }
 
-bool moveDirectory(const std::string &old_path, const std::string &new_path) {
+auto moveDirectory(const std::string &old_path,
+                   const std::string &new_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
     try {
@@ -237,7 +237,8 @@ bool moveDirectory(const std::string &old_path, const std::string &new_path) {
     return false;
 }
 
-bool copyFile(const std::string &src_path, const std::string &dst_path) {
+auto copyFile(const std::string &src_path,
+              const std::string &dst_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(src_path);
     ATOM_IO_CHECK_ARGUMENT(dst_path);
     try {
@@ -251,7 +252,8 @@ bool copyFile(const std::string &src_path, const std::string &dst_path) {
     return false;
 }
 
-bool moveFile(const std::string &src_path, const std::string &dst_path) {
+auto moveFile(const std::string &src_path,
+              const std::string &dst_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(src_path);
     ATOM_IO_CHECK_ARGUMENT(dst_path);
     try {
@@ -265,7 +267,8 @@ bool moveFile(const std::string &src_path, const std::string &dst_path) {
     return false;
 }
 
-bool renameFile(const std::string &old_path, const std::string &new_path) {
+auto renameFile(const std::string &old_path,
+                const std::string &new_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(old_path);
     ATOM_IO_CHECK_ARGUMENT(new_path);
     try {
@@ -279,7 +282,7 @@ bool renameFile(const std::string &old_path, const std::string &new_path) {
     return false;
 }
 
-bool removeFile(const std::string &path) {
+auto removeFile(const std::string &path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
         fs::remove(path);
@@ -291,8 +294,8 @@ bool removeFile(const std::string &path) {
     return false;
 }
 
-bool createSymlink(const std::string &target_path,
-                   const std::string &symlink_path) {
+auto createSymlink(const std::string &target_path,
+                   const std::string &symlink_path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(target_path);
     ATOM_IO_CHECK_ARGUMENT(symlink_path);
     try {
@@ -307,7 +310,7 @@ bool createSymlink(const std::string &target_path,
     return false;
 }
 
-bool removeSymlink(const std::string &path) {
+auto removeSymlink(const std::string &path) -> bool {
     ATOM_IO_CHECK_ARGUMENT(path);
     try {
         fs::remove(path);
@@ -319,7 +322,7 @@ bool removeSymlink(const std::string &path) {
     return false;
 }
 
-std::uintmax_t fileSize(const std::string &path) {
+auto fileSize(const std::string &path) -> std::uintmax_t {
     try {
         return fs::file_size(path);
     } catch (const std::filesystem::filesystem_error &e) {
@@ -328,7 +331,7 @@ std::uintmax_t fileSize(const std::string &path) {
     }
 }
 
-bool truncateFile(const std::string &path, std::streamsize size) {
+auto truncateFile(const std::string &path, std::streamsize size) -> bool {
     std::ofstream file(path,
                        std::ios::out | std::ios::binary | std::ios::trunc);
     if (!file.is_open()) {
@@ -340,57 +343,57 @@ bool truncateFile(const std::string &path, std::streamsize size) {
     return true;
 }
 
-std::string convertToLinuxPath(std::string_view windows_path) {
-    std::string linux_path(windows_path);
-    std::replace(linux_path.begin(), linux_path.end(), '\\', '/');
-    if (linux_path.length() >= 2 && linux_path[1] == ':') {
-        linux_path[0] = std::tolower(linux_path[0]);
+auto convertToLinuxPath(std::string_view windows_path) -> std::string {
+    std::string linuxPath(windows_path);
+    std::replace(linuxPath.begin(), linuxPath.end(), '\\', '/');
+    if (linuxPath.length() >= 2 && linuxPath[1] == ':') {
+        linuxPath[0] = std::tolower(linuxPath[0]);
     }
-    return linux_path;
+    return linuxPath;
 }
 
-std::string convertToWindowsPath(std::string_view linux_path) {
-    std::string windows_path(linux_path);
-    std::replace(windows_path.begin(), windows_path.end(), '/', '\\');
-    if (windows_path.length() >= 2 && std::islower(windows_path[0]) &&
-        windows_path[1] == ':') {
-        windows_path[0] = std::toupper(windows_path[0]);
+auto convertToWindowsPath(std::string_view linux_path) -> std::string {
+    std::string windowsPath(linux_path);
+    std::replace(windowsPath.begin(), windowsPath.end(), '/', '\\');
+    if (windowsPath.length() >= 2 && (std::islower(windowsPath[0]) != 0) &&
+        windowsPath[1] == ':') {
+        windowsPath[0] = std::toupper(windowsPath[0]);
     }
-    return windows_path;
+    return windowsPath;
 }
 
-std::string normalizePath(std::string_view path) {
-    std::string normalized_path(path);
-    char preferred_separator = static_cast<char>(fs::path::preferred_separator);
-    std::replace(normalized_path.begin(), normalized_path.end(), '/',
-                 preferred_separator);
-    std::replace(normalized_path.begin(), normalized_path.end(), '\\',
-                 preferred_separator);
-    return normalized_path;
+auto normalizePath(std::string_view path) -> std::string {
+    std::string normalizedPath(path);
+    char preferredSeparator = static_cast<char>(fs::path::preferred_separator);
+    std::replace(normalizedPath.begin(), normalizedPath.end(), '/',
+                 preferredSeparator);
+    std::replace(normalizedPath.begin(), normalizedPath.end(), '\\',
+                 preferredSeparator);
+    return normalizedPath;
 }
 
-std::string normPath(std::string_view raw_path) {
+auto normPath(std::string_view raw_path) -> std::string {
     std::string path = normalizePath(raw_path);
-    fs::path fs_path(path);
-    fs::path normalized_fs_path;
+    fs::path fsPath(path);
+    fs::path normalizedFsPath;
 
-    for (const auto &part : fs_path) {
+    for (const auto &part : fsPath) {
         if (part == ".") {
             continue;
-        } else if (part == "..") {
-            if (!normalized_fs_path.empty() &&
-                normalized_fs_path.filename() != "..") {
-                normalized_fs_path = normalized_fs_path.parent_path();
+        }
+        if (part == "..") {
+            if (!normalizedFsPath.empty() &&
+                normalizedFsPath.filename() != "..") {
+                normalizedFsPath = normalizedFsPath.parent_path();
             } else {
-                normalized_fs_path /= part;
+                normalizedFsPath /= part;
             }
         } else {
-            normalized_fs_path /= part;
+            normalizedFsPath /= part;
         }
     }
 
-    return normalized_fs_path.string().empty() ? "/"
-                                               : normalized_fs_path.string();
+    return normalizedFsPath.string().empty() ? "/" : normalizedFsPath.string();
 }
 
 void walk(const fs::path &root, bool recursive,
@@ -407,7 +410,7 @@ void walk(const fs::path &root, bool recursive,
     }
 }
 
-json build_json_structure(const fs::path &root, bool recursive) {
+auto buildJsonStructure(const fs::path &root, bool recursive) -> json {
     json folder = {{"path", root.generic_string()},
                    {"directories", json::array()},
                    {"files", json::array()}};
@@ -415,7 +418,7 @@ json build_json_structure(const fs::path &root, bool recursive) {
     walk(root, recursive, [&](const fs::path &entry) {
         if (fs::is_directory(entry)) {
             folder["directories"].push_back(
-                build_json_structure(entry, recursive));
+                buildJsonStructure(entry, recursive));
         } else {
             folder["files"].push_back(entry.generic_string());
         }
@@ -424,13 +427,13 @@ json build_json_structure(const fs::path &root, bool recursive) {
     return folder;
 }
 
-std::string jwalk(const std::string &root) {
-    fs::path root_path(root);
-    if (!isFolderExists(root_path)) {
+auto jwalk(const std::string &root) -> std::string {
+    fs::path rootPath(root);
+    if (!isFolderExists(rootPath)) {
         return "";
     }
 
-    json folder = build_json_structure(root_path, true);
+    json folder = buildJsonStructure(rootPath, true);
     return folder.dump();
 }
 
@@ -439,28 +442,28 @@ void fwalk(const fs::path &root,
     walk(root, true, callback);
 }
 
-bool isFolderNameValid(const std::string &folderName) {
+auto isFolderNameValid(const std::string &folderName) -> bool {
     ATOM_IO_CHECK_ARGUMENT(folderName);
-    return std::regex_match(folderName, folderNameRegex);
+    return std::regex_match(folderName, FOLDER_NAME_REGEX);
 }
 
-bool isFileNameValid(const std::string &fileName) {
+auto isFileNameValid(const std::string &fileName) -> bool {
     ATOM_IO_CHECK_ARGUMENT(fileName);
-    return std::regex_match(fileName, fileNameRegex);
+    return std::regex_match(fileName, FILE_NAME_REGEX);
 }
 
-bool isFolderExists(const std::string &folderName) {
+auto isFolderExists(const std::string &folderName) -> bool {
     if (!isFolderNameValid(folderName)) {
         return false;
     }
     return fs::exists(folderName) && fs::is_directory(folderName);
 }
 
-bool isFolderExists(const fs::path &folderName) {
+auto isFolderExists(const fs::path &folderName) -> bool {
     return isFolderExists(folderName.string());
 }
 
-bool isFileExists(const std::string &fileName) {
+auto isFileExists(const std::string &fileName) -> bool {
     if (!isFileNameValid(fileName)) {
         LOG_F(ERROR, "Invalid file name: {}", fileName);
         return false;
@@ -468,16 +471,16 @@ bool isFileExists(const std::string &fileName) {
     return fs::exists(fileName) && fs::is_regular_file(fileName);
 }
 
-bool isFileExists(const fs::path &fileName) {
+auto isFileExists(const fs::path &fileName) -> bool {
     return isFileExists(fileName.string());
 }
 
-bool isFolderEmpty(const std::string &folderName) {
+auto isFolderEmpty(const std::string &folderName) -> bool {
     if (!isFolderExists(folderName)) {
         return false;
     }
-    fs::path directory_path = folderName;
-    for (const auto &entry : fs::directory_iterator(directory_path)) {
+    fs::path directoryPath = folderName;
+    for (const auto &entry : fs::directory_iterator(directoryPath)) {
         if (fs::is_regular_file(entry)) {
             return true;
         }
@@ -485,11 +488,11 @@ bool isFolderEmpty(const std::string &folderName) {
     return false;
 }
 
-bool isAbsolutePath(const std::string &path) {
+auto isAbsolutePath(const std::string &path) -> bool {
     return std::filesystem::path(path).is_absolute();
 }
 
-bool changeWorkingDirectory(const std::string &directoryPath) {
+auto changeWorkingDirectory(const std::string &directoryPath) -> bool {
     if (!isFolderNameValid(directoryPath) || !isFolderExists(directoryPath)) {
         LOG_F(ERROR, "Directory does not exist: {}", directoryPath);
         return false;
@@ -503,37 +506,43 @@ bool changeWorkingDirectory(const std::string &directoryPath) {
     }
 }
 
-std::pair<std::string, std::string> getFileTimes(const std::string &filePath) {
+auto getFileTimes(const std::string &filePath)
+    -> std::pair<std::string, std::string> {
     std::pair<std::string, std::string> fileTimes;
 
 #ifdef _WIN32
     WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-    if (!GetFileAttributesEx(atom::utils::stringToWString(filePath).c_str(),
-                             GetFileExInfoStandard, &fileInfo)) {
+    if (GetFileAttributesExW(atom::utils::stringToWString(filePath).c_str(),
+                             GetFileExInfoStandard, &fileInfo) == 0) {
         LOG_F(ERROR, "Error getting file information.");
         return fileTimes;
     }
 
-    FILETIME createTime, modifyTime;
+    FILETIME createTime;
+    FILETIME modifyTime;
     FileTimeToLocalFileTime(&fileInfo.ftCreationTime, &createTime);
     FileTimeToLocalFileTime(&fileInfo.ftLastWriteTime, &modifyTime);
 
-    SYSTEMTIME createSysTime, modifySysTime;
+    SYSTEMTIME createSysTime;
+    SYSTEMTIME modifySysTime;
     FileTimeToSystemTime(&createTime, &createSysTime);
     FileTimeToSystemTime(&modifyTime, &modifySysTime);
 
-    char createTimeStr[20], modifyTimeStr[20];
-    sprintf_s(createTimeStr, "%04d/%02d/%02d %02d:%02d:%02d",
-              createSysTime.wYear, createSysTime.wMonth, createSysTime.wDay,
-              createSysTime.wHour, createSysTime.wMinute,
-              createSysTime.wSecond);
-    sprintf_s(modifyTimeStr, "%04d/%02d/%02d %02d:%02d:%02d",
-              modifySysTime.wYear, modifySysTime.wMonth, modifySysTime.wDay,
-              modifySysTime.wHour, modifySysTime.wMinute,
-              modifySysTime.wSecond);
+    std::array<char, 20> createTimeStr{};
+    std::array<char, 20> modifyTimeStr{};
+    ATOM_UNUSED_RESULT(std::snprintf(
+        createTimeStr.data(), createTimeStr.size(),
+        "%04d/%02d/%02d %02d:%02d:%02d", createSysTime.wYear,
+        createSysTime.wMonth, createSysTime.wDay, createSysTime.wHour,
+        createSysTime.wMinute, createSysTime.wSecond));
+    ATOM_UNUSED_RESULT(std::snprintf(
+        modifyTimeStr.data(), modifyTimeStr.size(),
+        "%04d/%02d/%02d %02d:%02d:%02d", modifySysTime.wYear,
+        modifySysTime.wMonth, modifySysTime.wDay, modifySysTime.wHour,
+        modifySysTime.wMinute, modifySysTime.wSecond));
 
-    fileTimes.first = createTimeStr;
-    fileTimes.second = modifyTimeStr;
+    fileTimes.first = std::string(createTimeStr.data());
+    fileTimes.second = std::string(modifyTimeStr.data());
 
 #else
     struct stat fileInfo;
@@ -562,9 +571,9 @@ std::pair<std::string, std::string> getFileTimes(const std::string &filePath) {
     return fileTimes;
 }
 
-std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath,
-                                               const std::string &fileType,
-                                               FileOption fileOption) {
+auto checkFileTypeInFolder(const std::string &folderPath,
+                           const std::string &fileType,
+                           FileOption fileOption) -> std::vector<std::string> {
     std::vector<std::string> files;
 
     try {
@@ -572,9 +581,9 @@ std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath,
              std::filesystem::directory_iterator(folderPath)) {
             if (entry.is_regular_file() &&
                 entry.path().extension() == fileType) {
-                if (fileOption == FileOption::Path) {
+                if (fileOption == FileOption::PATH) {
                     files.push_back(entry.path().string());
-                } else if (fileOption == FileOption::Name) {
+                } else if (fileOption == FileOption::NAME) {
                     files.push_back(entry.path().filename().string());
                 }
             }
@@ -586,7 +595,8 @@ std::vector<std::string> checkFileTypeInFolder(const std::string &folderPath,
     return files;
 }
 
-bool isExecutableFile(const std::string &fileName, const std::string &fileExt) {
+auto isExecutableFile(const std::string &fileName,
+                      const std::string &fileExt) -> bool {
 #ifdef _WIN32
     fs::path filePath = fileName + fileExt;
 #else

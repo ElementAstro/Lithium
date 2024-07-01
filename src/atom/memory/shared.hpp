@@ -17,11 +17,11 @@ Description: Inter-process shared memory for local driver communication.
 
 #include <chrono>
 #include <cstring>
-#include <memory>
 #include <mutex>
 #include <thread>
 #include <type_traits>
 
+#include "async/async.hpp"
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
 
@@ -65,8 +65,8 @@ public:
      * @param timeout 超时时间,默认为0,表示不设超时时间
      * @return 读取到的数据
      */
-    [[nodiscard]] T read(
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const;
+    [[nodiscard]] auto read(
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const -> T;
 
     /**
      * @brief 清空共享内存中的数据
@@ -77,25 +77,25 @@ public:
      * @brief 判断共享内存是否被占用
      * @return 如果共享内存已被占用,返回true；否则返回false
      */
-    [[nodiscard]] bool isOccupied() const;
+    [[nodiscard]] auto isOccupied() const -> bool;
 
     /**
      * @brief 获取共享内存的名称
      * @return 共享内存的名称
      */
-    [[nodiscard]] std::string_view getName() const noexcept;
+    [[nodiscard]] auto getName() const noexcept -> std::string_view;
 
     /**
      * @brief 获取共享内存的大小
      * @return 共享内存的大小,单位为字节
      */
-    [[nodiscard]] std::size_t getSize() const noexcept;
+    [[nodiscard]] auto getSize() const noexcept -> std::size_t;
 
     /**
      * @brief 判断当前进程是否是共享内存的创建者
      * @return 如果当前进程是共享内存的创建者,返回true；否则返回false
      */
-    [[nodiscard]] bool isCreator() const noexcept;
+    [[nodiscard]] auto isCreator() const noexcept -> bool;
 
 private:
     std::string name_;                  ///< 共享内存名称
@@ -199,15 +199,15 @@ void SharedMemory<T>::write(const T& data, std::chrono::milliseconds timeout) {
     static_assert(std::is_standard_layout_v<T>,
                   "T must be a standard layout type.");
 
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
 
-    auto start_time = std::chrono::steady_clock::now();
+    auto startTime = std::chrono::steady_clock::now();
     while (flag_->test_and_set(std::memory_order_acquire)) {
         if (timeout != std::chrono::milliseconds(0)) {
-            auto elapsed_time =
+            auto elapsedTime =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - start_time);
-            if (elapsed_time >= timeout) {
+                    std::chrono::steady_clock::now() - startTime);
+            if (elapsedTime >= timeout) {
                 LOG_F(ERROR, "Failed to acquire mutex within timeout.");
                 throw std::runtime_error(
                     "Failed to acquire mutex within timeout.");
@@ -225,23 +225,23 @@ void SharedMemory<T>::write(const T& data, std::chrono::milliseconds timeout) {
 }
 
 template <typename T>
-[[nodiscard]] T SharedMemory<T>::read(std::chrono::milliseconds timeout) const {
+[[nodiscard]] auto SharedMemory<T>::read(std::chrono::milliseconds timeout) const -> T {
     static_assert(std::is_trivially_copyable_v<T>,
                   "T must be a trivially copyable type.");
     static_assert(std::is_standard_layout_v<T>,
                   "T must be a standard layout type.");
 
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
 
-    auto start_time = std::chrono::steady_clock::now();
+    auto startTime = std::chrono::steady_clock::now();
     while (flag_->test_and_set(std::memory_order_acquire)) {
         if (timeout != std::chrono::milliseconds(0)) {
-            auto elapsed_time =
+            auto elapsedTime =
                 std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now() - start_time);
-            if (elapsed_time >= timeout) {
+                    std::chrono::steady_clock::now() - startTime);
+            if (elapsedTime >= timeout) {
                 LOG_F(ERROR, "Failed to acquire mutex within timeout.");
-                throw std::runtime_error(
+                THROW_TIMEOUT_EXCEPTION(
                     "Failed to acquire mutex within timeout.");
             }
         }
@@ -262,29 +262,29 @@ template <typename T>
 
 template <typename T>
 void SharedMemory<T>::clear() {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock lock(mutex_);
     std::memset(static_cast<char*>(buffer_) + sizeof(std::atomic_flag), 0,
                 sizeof(T));
     DLOG_F(INFO, "Shared memory cleared.");
 }
 
 template <typename T>
-[[nodiscard]] bool SharedMemory<T>::isOccupied() const {
+[[nodiscard]] auto SharedMemory<T>::isOccupied() const -> bool {
     return flag_->test(std::memory_order_acquire);
 }
 
 template <typename T>
-[[nodiscard]] std::string_view SharedMemory<T>::getName() const noexcept {
+[[nodiscard]] auto SharedMemory<T>::getName() const noexcept -> std::string_view {
     return name_;
 }
 
 template <typename T>
-[[nodiscard]] std::size_t SharedMemory<T>::getSize() const noexcept {
+[[nodiscard]] auto SharedMemory<T>::getSize() const noexcept -> std::size_t {
     return sizeof(T);
 }
 
 template <typename T>
-[[nodiscard]] bool SharedMemory<T>::isCreator() const noexcept {
+[[nodiscard]] auto SharedMemory<T>::isCreator() const noexcept -> bool {
     return is_creator_;
 }
 }  // namespace atom::connection

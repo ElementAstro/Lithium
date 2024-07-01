@@ -46,33 +46,33 @@ public:
 #define THROW_CONVERSION_ERROR(...) \
     throw ConversionError(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
-class Type_Conversion_Base {
+class TypeConversionBase {
 public:
-    virtual std::any convert(const std::any& from) const = 0;
-    virtual std::any convert_down(const std::any& to) const = 0;
+    [[nodiscard]] virtual auto convert(const std::any& from) const -> std::any = 0;
+    [[nodiscard]] virtual auto convert_down(const std::any& to) const -> std::any = 0;
 
-    const TypeInfo& to() const noexcept { return to_type; }
-    const TypeInfo& from() const noexcept { return from_type; }
+    [[nodiscard]] auto to() const noexcept -> const TypeInfo& { return toType; }
+    [[nodiscard]] auto from() const noexcept -> const TypeInfo& { return fromType; }
 
-    virtual bool bidir() const noexcept { return true; }
+    [[nodiscard]] virtual auto bidir() const noexcept -> bool { return true; }
 
-    virtual ~Type_Conversion_Base() = default;
+    virtual ~TypeConversionBase() = default;
 
-    TypeInfo to_type;
-    TypeInfo from_type;
+    TypeInfo toType;
+    TypeInfo fromType;
 
 protected:
-    Type_Conversion_Base(const TypeInfo& to, const TypeInfo& from)
-        : to_type(to), from_type(from) {}
+    TypeConversionBase(const TypeInfo& to, const TypeInfo& from)
+        : toType(to), fromType(from) {}
 };
 
 template <typename From, typename To>
-class Static_Conversion : public Type_Conversion_Base {
+class StaticConversion : public TypeConversionBase {
 public:
-    Static_Conversion()
-        : Type_Conversion_Base(user_type<To>(), user_type<From>()) {}
+    StaticConversion()
+        : TypeConversionBase(user_type<To>(), user_type<From>()) {}
 
-    std::any convert(const std::any& from) const override {
+    [[nodiscard]] auto convert(const std::any& from) const -> std::any override {
         // Pointer types static conversion (upcasting)
         if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto fromPtr = std::any_cast<From>(from);
@@ -85,14 +85,14 @@ public:
                 auto& fromRef = std::any_cast<From&>(from);
                 return std::any(static_cast<To&>(fromRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(from_type, to_type);
+                throw bad_conversion(fromType, toType);
             }
         } else {
-            throw bad_conversion(from_type, to_type);
+            throw bad_conversion(fromType, toType);
         }
     }
 
-    std::any convert_down(const std::any& to) const override {
+    [[nodiscard]] auto convert_down(const std::any& to) const -> std::any override {
         // Pointer types static conversion (downcasting)
         if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto toPtr = std::any_cast<To>(to);
@@ -105,27 +105,28 @@ public:
                 auto& toRef = std::any_cast<To&>(to);
                 return std::any(static_cast<From&>(toRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(to_type, from_type);
+                throw bad_conversion(toType, fromType);
             }
         } else {
-            throw bad_conversion(to_type, from_type);
+            throw bad_conversion(toType, fromType);
         }
     }
 };
 
 template <typename From, typename To>
-class Dynamic_Conversion : public Type_Conversion_Base {
+class DynamicConversion : public TypeConversionBase {
 public:
-    Dynamic_Conversion()
-        : Type_Conversion_Base(user_type<To>(), user_type<From>()) {}
+    DynamicConversion()
+        : TypeConversionBase(user_type<To>(), user_type<From>()) {}
 
-    std::any convert(const std::any& from) const override {
+    [[nodiscard]] auto convert(const std::any& from) const -> std::any override {
         // Pointer types dynamic conversion
         if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto fromPtr = std::any_cast<From>(from);
             auto convertedPtr = dynamic_cast<To>(fromPtr);
-            if (!convertedPtr && fromPtr != nullptr)
+            if (!convertedPtr && fromPtr != nullptr) {
                 throw std::bad_cast();
+}
             return std::any(convertedPtr);
         }
         // Reference types dynamic conversion
@@ -135,20 +136,21 @@ public:
                 auto& fromRef = std::any_cast<From&>(from);
                 return std::any(dynamic_cast<To&>(fromRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(from_type, to_type);
+                throw bad_conversion(fromType, toType);
             }
         } else {
-            throw bad_conversion(from_type, to_type);
+            throw bad_conversion(fromType, toType);
         }
     }
 
-    std::any convert_down(const std::any& to) const override {
+    [[nodiscard]] auto convert_down(const std::any& to) const -> std::any override {
         // Pointer types dynamic conversion
         if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto toPtr = std::any_cast<To>(to);
             auto convertedPtr = dynamic_cast<From>(toPtr);
-            if (!convertedPtr && toPtr != nullptr)
+            if (!convertedPtr && toPtr != nullptr) {
                 throw std::bad_cast();
+}
             return std::any(convertedPtr);
         }
         // Reference types dynamic conversion
@@ -158,30 +160,30 @@ public:
                 auto& toRef = std::any_cast<To&>(to);
                 return std::any(dynamic_cast<From&>(toRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(to_type, from_type);
+                throw bad_conversion(toType, fromType);
             }
         } else {
-            throw bad_conversion(to_type, from_type);
+            throw bad_conversion(toType, fromType);
         }
     }
 };
 
 template <typename Base, typename Derived>
-std::shared_ptr<Type_Conversion_Base> base_class() {
+auto baseClass() -> std::shared_ptr<TypeConversionBase> {
     if constexpr (std::is_polymorphic<Base>::value &&
                   std::is_polymorphic<Derived>::value) {
-        return std::make_shared<Dynamic_Conversion<Derived*, Base*>>();
+        return std::make_shared<DynamicConversion<Derived*, Base*>>();
     } else {
-        return std::make_shared<Static_Conversion<Derived, Base>>();
+        return std::make_shared<StaticConversion<Derived, Base>>();
     }
 }
 
 // Specialized conversion for std::vector
 template <typename From, typename To>
-class Vector_Conversion : public Type_Conversion_Base {
+class Vector_Conversion : public TypeConversionBase {
 public:
     Vector_Conversion()
-        : Type_Conversion_Base(user_type<std::vector<To>>(),
+        : TypeConversionBase(user_type<std::vector<To>>(),
                                user_type<std::vector<From>>()) {}
 
     std::any convert(const std::any& from) const override {
@@ -201,7 +203,7 @@ public:
 
             return std::any(toVec);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(from_type, to_type);
+            throw bad_conversion(fromType, toType);
         }
     }
 
@@ -224,17 +226,17 @@ public:
             return std::any(fromVec);
         }
         catch (const std::bad_any_cast&) {
-            throw bad_conversion(to_type, from_type);
+            throw bad_conversion(toType, fromType);
         }
     }
 };
 
 template <template <typename...> class MapType, typename K1, typename V1,
           typename K2, typename V2>
-class Map_Conversion : public Type_Conversion_Base {
+class Map_Conversion : public TypeConversionBase {
 public:
     Map_Conversion()
-        : Type_Conversion_Base(user_type<MapType<K2, V2>>(),
+        : TypeConversionBase(user_type<MapType<K2, V2>>(),
                                user_type<MapType<K1, V1>>()) {}
 
     std::any convert(const std::any& from) const override {
@@ -251,7 +253,7 @@ public:
 
             return std::any(toMap);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(from_type, to_type);
+            throw bad_conversion(fromType, toType);
         }
     }
 
@@ -269,16 +271,16 @@ public:
 
             return std::any(fromMap);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(to_type, from_type);
+            throw bad_conversion(toType, fromType);
         }
     }
 };
 
 template <template <typename...> class SeqType, typename From, typename To>
-class Sequence_Conversion : public Type_Conversion_Base {
+class Sequence_Conversion : public TypeConversionBase {
 public:
     Sequence_Conversion()
-        : Type_Conversion_Base(user_type<SeqType<To>>(),
+        : TypeConversionBase(user_type<SeqType<To>>(),
                                user_type<SeqType<From>>()) {}
 
     std::any convert(const std::any& from) const override {
@@ -297,7 +299,7 @@ public:
 
             return std::any(toSeq);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(from_type, to_type);
+            throw bad_conversion(fromType, toType);
         }
     }
 
@@ -317,16 +319,16 @@ public:
 
             return std::any(fromSeq);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(to_type, from_type);
+            throw bad_conversion(toType, fromType);
         }
     }
 };
 
 template <template <typename...> class SetType, typename From, typename To>
-class Set_Conversion : public Type_Conversion_Base {
+class Set_Conversion : public TypeConversionBase {
 public:
     Set_Conversion()
-        : Type_Conversion_Base(user_type<SetType<To>>(),
+        : TypeConversionBase(user_type<SetType<To>>(),
                                user_type<SetType<From>>()) {}
 
     std::any convert(const std::any& from) const override {
@@ -344,7 +346,7 @@ public:
 
             return std::any(toSet);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(from_type, to_type);
+            throw bad_conversion(fromType, toType);
         }
     }
 
@@ -364,7 +366,7 @@ public:
 
             return std::any(fromSet);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(to_type, from_type);
+            throw bad_conversion(toType, fromType);
         }
     }
 };
@@ -378,8 +380,8 @@ public:
     }
 
     void add_conversion(
-        const std::shared_ptr<Type_Conversion_Base>& conversion) {
-        auto key = conversion->from_type;
+        const std::shared_ptr<TypeConversionBase>& conversion) {
+        auto key = conversion->fromType;
         conversions[key].push_back(conversion);
     }
 
@@ -406,7 +408,7 @@ public:
     bool can_convert(const TypeInfo& from, const TypeInfo& to) const {
         if (conversions.count(from)) {
             for (const auto& conv : conversions.at(from)) {
-                if (conv->to_type == to) {
+                if (conv->toType == to) {
                     return true;
                 }
             }
@@ -416,10 +418,10 @@ public:
 
     template <typename Base, typename Derived>
     void add_base_class() {
-        add_conversion(std::make_shared<Dynamic_Conversion<Derived*, Base*>>());
+        add_conversion(std::make_shared<DynamicConversion<Derived*, Base*>>());
         if constexpr (!std::is_same_v<Base, Derived>) {
             add_conversion(
-                std::make_shared<Static_Conversion<Base, Derived>>());
+                std::make_shared<StaticConversion<Base, Derived>>());
         }
     }
 
@@ -461,7 +463,7 @@ private:
         conversions;
 #else
     std::unordered_map<TypeInfo,
-                       std::vector<std::shared_ptr<Type_Conversion_Base>>,
+                       std::vector<std::shared_ptr<TypeConversionBase>>,
                        std::hash<TypeInfo>>
         conversions;
 #endif

@@ -16,7 +16,6 @@
 #include <optional>
 #include <shared_mutex>
 #include <string>
-#include <type_traits>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -45,7 +44,7 @@ public:
      *
      * @return the singleton instance of the GlobalSharedPtrManager.
      */
-    static GlobalSharedPtrManager &getInstance();
+    static auto getInstance() -> GlobalSharedPtrManager &;
 
     /**
      * @brief getSharedPtr retrieves a shared pointer from the shared pointer
@@ -56,8 +55,8 @@ public:
      * @return the shared pointer if found, std::nullopt otherwise.
      */
     template <typename T>
-    [[nodiscard]] std::optional<std::shared_ptr<T>> getSharedPtr(
-        const std::string &key);
+    [[nodiscard]] auto getSharedPtr(const std::string &key)
+        -> std::optional<std::shared_ptr<T>>;
 
     /**
      * @brief getOrCreateSharedPtr retrieves a shared pointer from the shared
@@ -71,8 +70,8 @@ public:
      * @return the shared pointer.
      */
     template <typename T, typename CreatorFunc>
-    std::shared_ptr<T> getOrCreateSharedPtr(const std::string &key,
-                                            CreatorFunc creator);
+    auto getOrCreateSharedPtr(const std::string &key,
+                              CreatorFunc creator) -> std::shared_ptr<T>;
 
     /**
      * @brief getWeakPtr retrieves a weak pointer from the shared pointer map
@@ -84,7 +83,7 @@ public:
      * @note The weak pointer is not guaranteed to be valid after the shared
      */
     template <typename T>
-    [[nodiscard]] std::weak_ptr<T> getWeakPtr(const std::string &key);
+    [[nodiscard]] auto getWeakPtr(const std::string &key) -> std::weak_ptr<T>;
 
     /**
      * @brief addSharedPtr adds a shared pointer to the shared pointer map with
@@ -126,8 +125,8 @@ public:
      * object still exists, an empty shared pointer otherwise.
      */
     template <typename T>
-    [[nodiscard]] std::shared_ptr<T> getSharedPtrFromWeakPtr(
-        const std::string &key);
+    [[nodiscard]] auto getSharedPtrFromWeakPtr(const std::string &key)
+        -> std::shared_ptr<T>;
 
     /**
      * @brief getWeakPtrFromSharedPtr retrieves a weak pointer from a shared
@@ -139,8 +138,8 @@ public:
      * pointer otherwise.
      */
     template <typename T>
-    [[nodiscard]] std::weak_ptr<T> getWeakPtrFromSharedPtr(
-        const std::string &key);
+    [[nodiscard]] auto getWeakPtrFromSharedPtr(const std::string &key)
+        -> std::weak_ptr<T>;
 
     /**
      * @brief removeExpiredWeakPtrs removes all expired weak pointers from the
@@ -184,7 +183,7 @@ public:
      *
      * @return the number of elements in the shared pointer map.
      */
-    size_t size() const;
+    auto size() const -> size_t;
 
     /**
      * @brief printSharedPtrMap prints the contents of the shared pointer map.
@@ -204,8 +203,8 @@ private:
 };
 
 template <typename T>
-std::optional<std::shared_ptr<T>> GlobalSharedPtrManager::getSharedPtr(
-    const std::string &key) {
+auto GlobalSharedPtrManager::getSharedPtr(const std::string &key)
+    -> std::optional<std::shared_ptr<T>> {
     std::shared_lock lock(mtx);
     auto it = sharedPtrMap.find(key);
     if (it != sharedPtrMap.end()) {
@@ -219,8 +218,8 @@ std::optional<std::shared_ptr<T>> GlobalSharedPtrManager::getSharedPtr(
 }
 
 template <typename T, typename CreatorFunc>
-std::shared_ptr<T> GlobalSharedPtrManager::getOrCreateSharedPtr(
-    const std::string &key, CreatorFunc creator) {
+auto GlobalSharedPtrManager::getOrCreateSharedPtr(
+    const std::string &key, CreatorFunc creator) -> std::shared_ptr<T> {
     std::unique_lock lock(mtx);
     auto it = sharedPtrMap.find(key);
     if (it != sharedPtrMap.end()) {
@@ -240,7 +239,8 @@ std::shared_ptr<T> GlobalSharedPtrManager::getOrCreateSharedPtr(
 }
 
 template <typename T>
-std::weak_ptr<T> GlobalSharedPtrManager::getWeakPtr(const std::string &key) {
+auto GlobalSharedPtrManager::getWeakPtr(const std::string &key)
+    -> std::weak_ptr<T> {
     std::shared_lock lock(mtx);
     auto it = sharedPtrMap.find(key);
     if (it != sharedPtrMap.end()) {
@@ -268,8 +268,8 @@ void GlobalSharedPtrManager::addWeakPtr(const std::string &key,
 }
 
 template <typename T>
-std::shared_ptr<T> GlobalSharedPtrManager::getSharedPtrFromWeakPtr(
-    const std::string &key) {
+auto GlobalSharedPtrManager::getSharedPtrFromWeakPtr(const std::string &key)
+    -> std::shared_ptr<T> {
     std::shared_lock lock(mtx);
     auto it = sharedPtrMap.find(key);
     if (it != sharedPtrMap.end()) {

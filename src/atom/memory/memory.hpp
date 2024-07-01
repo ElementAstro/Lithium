@@ -16,7 +16,6 @@ Description: A simple implementation of memory pool
 #define ATOM_MEMORY_MEMORY_POOL_HPP
 
 #include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <memory_resource>
 #include <mutex>
@@ -45,7 +44,7 @@ public:
     /**
      * @brief Destructs the MemoryPool object and releases all allocated memory.
      */
-    ~MemoryPool() = default;
+    ~MemoryPool() override = default;
 
     /**
      * @brief Allocates memory for n objects of type T.
@@ -54,7 +53,7 @@ public:
      * @return A pointer to the allocated memory.
      * @throw std::bad_alloc If the memory allocation fails.
      */
-    T* allocate(size_t n);
+    auto allocate(size_t n) -> T*;
 
     /**
      * @brief Deallocates memory for n objects of type T.
@@ -71,8 +70,8 @@ public:
      * @return true If the memory resources are equal.
      * @return false Otherwise.
      */
-    bool do_is_equal(
-        const std::pmr::memory_resource& other) const noexcept override;
+    [[nodiscard]] auto do_is_equal(
+        const std::pmr::memory_resource& other) const noexcept -> bool override;
 
 private:
     /**
@@ -96,14 +95,14 @@ private:
      *
      * @return The maximum size in bytes.
      */
-    size_t max_size() const;
+    [[nodiscard]] auto maxSize() const -> size_t;
 
     /**
      * @brief Gets the available space in a chunk for allocation.
      *
      * @return The available space in bytes.
      */
-    size_t chunk_space() const;
+    [[nodiscard]] auto chunkSpace() const -> size_t;
 
     /**
      * @brief Allocates memory from the pool if available.
@@ -112,7 +111,7 @@ private:
      * @return A pointer to the allocated memory, or nullptr if allocation
      * fails.
      */
-    T* allocate_from_pool(size_t num_bytes);
+    auto allocateFromPool(size_t num_bytes) -> T*;
 
     /**
      * @brief Deallocates memory back to the pool.
@@ -120,7 +119,7 @@ private:
      * @param p A pointer to the memory to deallocate.
      * @param num_bytes The number of bytes to deallocate.
      */
-    void deallocate_to_pool(T* p, size_t num_bytes);
+    void deallocateToPool(T* p, size_t num_bytes);
 
     /**
      * @brief Allocates a new chunk of memory and returns a pointer to it.
@@ -128,7 +127,7 @@ private:
      * @param num_bytes The number of bytes to allocate.
      * @return A pointer to the allocated memory.
      */
-    T* allocate_from_chunk(size_t num_bytes);
+    auto allocateFromChunk(size_t num_bytes) -> T*;
 
     /**
      * @brief Deallocates memory back to a chunk.
@@ -136,7 +135,7 @@ private:
      * @param p A pointer to the memory to deallocate.
      * @param num_bytes The number of bytes to deallocate.
      */
-    void deallocate_to_chunk(T* p, size_t num_bytes);
+    void deallocateToChunk(T* p, size_t num_bytes);
 
     /**
      * @brief Checks if the memory pointer belongs to the pool.
@@ -145,7 +144,7 @@ private:
      * @return true If the memory belongs to the pool.
      * @return false Otherwise.
      */
-    bool is_from_pool(T* p);
+    auto isFromPool(T* p) -> bool;
 
 protected:
     /**
@@ -156,7 +155,7 @@ protected:
      * @return A pointer to the allocated memory.
      * @throw std::bad_alloc If the memory allocation fails.
      */
-    void* do_allocate(size_t bytes, size_t alignment) override;
+    auto do_allocate(size_t bytes, size_t alignment) -> void* override;
 
     /**
      * @brief Deallocates memory previously allocated with do_allocate.
@@ -167,10 +166,134 @@ protected:
      */
     void do_deallocate(void* p, size_t bytes, size_t alignment) override;
 
+private:
     std::vector<Chunk> pool_;  ///< The memory pool containing chunks.
     std::mutex mutex_;         ///< A mutex for thread-safe access to the pool.
 };
 
-#include "memory.tpp"
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::allocate(size_t n) -> T* {
+    std::lock_guard lock(mutex_);
+    size_t numBytes = n * sizeof(T);
+    if (numBytes > maxSize()) {
+        throw std::bad_alloc();
+    }
+
+    if (auto p = allocateFromPool(numBytes)) {
+        return p;
+    }
+    return allocateFromChunk(numBytes);
+}
+
+template <typename T, size_t BlockSize>
+void MemoryPool<T, BlockSize>::deallocate(T* p, size_t n) {
+    std::lock_guard lock(mutex_);
+    size_t numBytes = n * sizeof(T);
+    if (isFromPool(p)) {
+        deallocateToPool(p, numBytes);
+    } else {
+        deallocateToChunk(p, numBytes);
+    }
+}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::do_is_equal(
+    const std::pmr::memory_resource& other) const noexcept -> bool {
+    return this == &other;
+}
+
+template <typename T, size_t BlockSize>
+MemoryPool<T, BlockSize>::Chunk::Chunk(size_t s)
+    : size(s), used(), memory(new std::byte[s]) {}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::maxSize() const -> size_t {
+    return BlockSize - sizeof(T);
+}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::chunkSpace() const -> size_t {
+    return BlockSize - sizeof(Chunk);
+}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::allocateFromPool(size_t num_bytes) -> T* {
+    if (pool_.empty() || pool_.back().used + num_bytes > pool_.back().size) {
+        return nullptr;
+    }
+
+    auto& chunk = pool_.back();
+    T* p = reinterpret_cast<T*>(chunk.memory.get() + chunk.used);
+    chunk.used += num_bytes;
+    return p;
+}
+
+template <typename T, size_t BlockSize>
+void MemoryPool<T, BlockSize>::deallocateToPool(T* p, size_t num_bytes) {
+    auto it = std::find_if(pool_.begin(), pool_.end(), [p](const Chunk& chunk) {
+        return chunk.memory.get() <= reinterpret_cast<std::byte*>(p) &&
+               reinterpret_cast<std::byte*>(p) <
+                   chunk.memory.get() + chunk.size;
+    });
+    assert(it != pool_.end());
+    it->used -= num_bytes;
+}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::allocateFromChunk(size_t num_bytes) -> T* {
+    pool_.emplace_back(std::max(num_bytes, chunkSpace()));
+    auto& chunk = pool_.back();
+    T* p = reinterpret_cast<T*>(chunk.memory.get() + chunk.used);
+    chunk.used += num_bytes;
+    return p;
+}
+
+template <typename T, size_t BlockSize>
+void MemoryPool<T, BlockSize>::deallocateToChunk(T* p, size_t num_bytes) {
+    auto it = std::find_if(pool_.begin(), pool_.end(), [p](const Chunk& chunk) {
+        return chunk.memory.get() <= reinterpret_cast<std::byte*>(p) &&
+               reinterpret_cast<std::byte*>(p) <
+                   chunk.memory.get() + chunk.size;
+    });
+    assert(it != pool_.end());
+    it->used -= num_bytes;
+    if (it->used == 0) {
+        pool_.erase(it);
+    }
+}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::isFromPool(T* p) -> bool {
+    return std::any_of(pool_.begin(), pool_.end(), [p](const Chunk& chunk) {
+        return chunk.memory.get() <= reinterpret_cast<std::byte*>(p) &&
+               reinterpret_cast<std::byte*>(p) <
+                   chunk.memory.get() + chunk.size;
+    });
+}
+
+template <typename T, size_t BlockSize>
+auto MemoryPool<T, BlockSize>::do_allocate(size_t bytes,
+                                           size_t alignment) -> void* {
+    std::lock_guard lock(mutex_);
+    size_t space = bytes;
+    void* p = std::malloc(bytes + alignment);
+    if (!p) {
+        throw std::bad_alloc();
+    }
+
+    void* aligned = p;
+    if (std::align(alignment, bytes, aligned, space) == nullptr) {
+        std::free(p);
+        throw std::bad_alloc();
+    }
+    return aligned;
+}
+
+template <typename T, size_t BlockSize>
+void MemoryPool<T, BlockSize>::do_deallocate(void* p, size_t /*bytes*/,
+                                             size_t /*alignment*/) {
+    std::lock_guard lock(mutex_);
+    std::free(p);
+}
 
 #endif  // ATOM_MEMORY_MEMORY_POOL_HPP

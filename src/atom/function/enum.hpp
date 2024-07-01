@@ -11,7 +11,7 @@
 
 #include "raw_name.hpp"
 
-#ifdef ATOM_META_CPP_20_SUPPORT
+#ifdef ATOM_CPP_20_SUPPORT
 #include <array>
 
 #define ENUM_SEARCH_RANGE 32

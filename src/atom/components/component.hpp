@@ -68,7 +68,7 @@ public:
      * @note This function is called by the server when the plugin is loaded.
      * @note This function should be overridden by the plugin.
      */
-    virtual bool initialize();
+    virtual auto initialize() -> bool;
 
     /**
      * @brief Destroys the plugin.
@@ -79,7 +79,7 @@ public:
      * @note The plugin should not be used after this function is called.
      * @note This is for the plugin to release any resources it has allocated.
      */
-    virtual bool destroy();
+    virtual auto destroy() -> bool;
 
     /**
      * @brief Gets the name of the plugin.
@@ -311,7 +311,7 @@ public:
     void def_base_class();
 
     void def_class_conversion(
-        const std::shared_ptr<atom::meta::Type_Conversion_Base>& conversion);
+        const std::shared_ptr<atom::meta::Type_ConversionBase>& conversion);
 
     void addAlias(const std::string& name, const std::string& alias) const;
 
@@ -396,7 +396,7 @@ private:
     std::string m_doc;
     std::string m_configPath;
     std::string m_infoPath;
-    atom::meta::TypeInfo m_typeInfo{atom::meta::user_type<Component>()};
+    atom::meta::TypeInfo m_typeInfo{atom::meta::userType<Component>()};
     std::unordered_map<std::string_view, atom::meta::TypeInfo> m_classes;
 
     std::shared_ptr<CommandDispatcher> m_CommandDispatcher{

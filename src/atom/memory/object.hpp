@@ -17,13 +17,13 @@ Description: A simple implementation of object pool
 
 #include <cassert>
 #include <chrono>
-#include <concepts>
 #include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
-#include <stdexcept>
 #include <vector>
+
+#include "atom/error/exception.hpp"
 
 template <typename T>
 concept Resettable = requires(T& obj) { obj.reset(); };
@@ -64,11 +64,11 @@ public:
      * @return A shared pointer to the acquired object.
      * @throw std::runtime_error If the pool is full and no object is available.
      */
-    std::shared_ptr<T> acquire() {
+    auto acquire() -> std::shared_ptr<T> {
         std::unique_lock lock(mutex_);
 
         if (available_ == 0 && pool_.empty()) {
-            throw std::runtime_error("ObjectPool is full.");
+            THROW_INVALID_ARGUMENT("ObjectPool is full.");
         }
         cv_.wait(lock, [this] { return !pool_.empty() || available_ > 0; });
 
@@ -92,12 +92,12 @@ public:
      * expires.
      */
     template <typename Rep, typename Period>
-    std::shared_ptr<T> acquire_for(
-        const std::chrono::duration<Rep, Period>& timeout_duration) {
+    auto acquireFor(const std::chrono::duration<Rep, Period>& timeout_duration)
+        -> std::shared_ptr<T> {
         std::unique_lock lock(mutex_);
 
         if (available_ == 0 && pool_.empty()) {
-            throw std::runtime_error("ObjectPool is full.");
+            THROW_INVALID_ARGUMENT("ObjectPool is full.");
         }
         if (!cv_.wait_for(lock, timeout_duration, [this] {
                 return !pool_.empty() || available_ > 0;
@@ -137,7 +137,7 @@ public:
      *
      * @return The number of available objects.
      */
-    size_t available() const {
+    auto available() const -> size_t {
         std::lock_guard lock(mutex_);
         return available_ + pool_.size();
     }
@@ -147,7 +147,7 @@ public:
      *
      * @return The current number of objects in the pool.
      */
-    size_t size() const {
+    auto size() const -> size_t {
         std::lock_guard lock(mutex_);
         return max_size_ - available_ + pool_.size();
     }

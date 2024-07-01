@@ -15,7 +15,11 @@ Description: StackTrace
 #ifndef ATOM_ERROR_STACKTRACE_HPP
 #define ATOM_ERROR_STACKTRACE_HPP
 
+#ifdef _WIN32
+#include <vector>
+#else
 #include <memory>
+#endif
 #include <string>
 
 namespace atom::error {
@@ -40,7 +44,7 @@ public:
      *
      * @return A string representing the captured stack trace.
      */
-    auto toString() const -> std::string;
+    [[nodiscard]] auto toString() const -> std::string;
 
 private:
     /**

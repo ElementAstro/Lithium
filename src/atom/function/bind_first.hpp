@@ -47,67 +47,68 @@ template <typename F, typename... Args>
 constexpr bool is_nothrow_invocable_v = std::is_nothrow_invocable_v<F, Args...>;
 
 template <typename O, typename Ret, typename P1, typename... Param>
-constexpr auto bindFirst(Ret (*f)(P1, Param...), O &&o)
+constexpr auto bindFirst(Ret (*func)(P1, Param...), O &&object)
     requires invocable<Ret (*)(P1, Param...), O, Param...>
 {
-    return [f, o = std::forward<O>(o)](Param... param) -> Ret {
-        return f(o, std::forward<Param>(param)...);
+    return [func, object = std::forward<O>(object)](Param... param) -> Ret {
+        return func(object, std::forward<Param>(param)...);
     };
 }
 
 template <typename O, typename Ret, typename Class, typename... Param>
-constexpr auto bindFirst(Ret (Class::*f)(Param...), O &&o)
+constexpr auto bindFirst(Ret (Class::*func)(Param...), O &&object)
     requires invocable<Ret (Class::*)(Param...), O, Param...>
 {
-    return [f, o = std::forward<O>(o)](Param... param) -> Ret {
-        return (remove_const_pointer(get_pointer(o))->*f)(
+    return [func, object = std::forward<O>(object)](Param... param) -> Ret {
+        return (remove_const_pointer(get_pointer(object))->*func)(
             std::forward<Param>(param)...);
     };
 }
 
 template <typename O, typename Ret, typename Class, typename... Param>
-constexpr auto bindFirst(Ret (Class::*f)(Param...) const, O &&o)
+constexpr auto bindFirst(Ret (Class::*func)(Param...) const, O &&object)
     requires invocable<Ret (Class::*)(Param...) const, O, Param...>
 {
-    return [f, o = std::forward<O>(o)](Param... param) -> Ret {
-        return (get_pointer(o)->*f)(std::forward<Param>(param)...);
+    return [func, object = std::forward<O>(object)](Param... param) -> Ret {
+        return (get_pointer(object)->*func)(std::forward<Param>(param)...);
     };
 }
 
 template <typename O, typename Ret, typename P1, typename... Param>
-auto bindFirst(const std::function<Ret(P1, Param...)> &f, O &&o)
+auto bindFirst(const std::function<Ret(P1, Param...)> &func, O &&object)
     requires invocable<std::function<Ret(P1, Param...)>, O, Param...>
 {
-    return [f, o = std::forward<O>(o)](Param... param) -> Ret {
-        return f(o, std::forward<Param>(param)...);
+    return [func, object = std::forward<O>(object)](Param... param) -> Ret {
+        return func(object, std::forward<Param>(param)...);
     };
 }
 
 template <typename F, typename O, typename Ret, typename Class, typename P1,
           typename... Param>
-constexpr auto bindFirst(const F &fo, O &&o,
-                         Ret (Class::*f)(P1, Param...) const)
+constexpr auto bindFirst(const F &fo, O &&object,
+                         Ret (Class::*func)(P1, Param...) const)
     requires invocable<F, O, P1, Param...>
 {
-    return [fo, o = std::forward<O>(o), f](Param... param) -> Ret {
-        return (fo.*f)(o, std::forward<Param>(param)...);
+    return [fo, object = std::forward<O>(object), func](Param... param) -> Ret {
+        return (fo.*func)(object, std::forward<Param>(param)...);
     };
 }
 
 template <typename F, typename O>
-constexpr auto bindFirst(const F &f, O &&o)
+constexpr auto bindFirst(const F &func, O &&object)
     requires invocable<F, O>
 {
-    return bind_first(f, std::forward<O>(o), &F::operator());
+    return bind_first(func, std::forward<O>(object), &F::operator());
 }
 
 template <typename F, typename O>
-constexpr auto bindFirst(F &&f, O &&o)
+constexpr auto bindFirst(F &&func, O &&object)
     requires std::invocable<F, O>
 {
-    return [f = std::forward<F>(f),
-            o = std::forward<O>(o)](auto &&...param) -> decltype(auto) {
-        return std::invoke(f, o, std::forward<decltype(param)>(param)...);
+    return [func = std::forward<F>(func), object = std::forward<O>(object)](
+               auto &&...param) -> decltype(auto) {
+        return std::invoke(func, object,
+                           std::forward<decltype(param)>(param)...);
     };
 }
 }  // namespace atom::meta

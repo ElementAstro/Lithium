@@ -15,13 +15,10 @@
 #include <dlfcn.h>
 #endif
 #include <ffi.h>
-#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <type_traits>
-#include <variant>
 #include <vector>
 
 #if ENABLE_FASTHASH
@@ -73,7 +70,7 @@ public:
         }
     }
 
-    ReturnType call(void *funcPtr, Args... args) {
+    auto call(void *funcPtr, Args... args) -> ReturnType {
         std::vector<void *> argsArray = {reinterpret_cast<void *>(&args)...};
         ReturnType result;
 
@@ -82,26 +79,26 @@ public:
     }
 
 private:
-    ffi_cif cif_;
+    ffi_cif cif_{};
     std::vector<ffi_type *> argTypes_;
     ffi_type *returnType_;
 };
 
 class DynamicLibrary : public NonCopyable {
 public:
-    explicit DynamicLibrary(std::string_view libraryPath) : handle_(nullptr) {
+    explicit DynamicLibrary(std::string_view libraryPath) {
 #ifdef _MSC_VER
         handle_ = LoadLibraryA(libraryPath.data());
 #else
         handle_ = dlopen(libraryPath.data(), RTLD_LAZY);
 #endif
-        if (!handle_) {
+        if (handle_ == nullptr) {
             THROW_FFI_EXCEPTION("Failed to load dynamic library.");
         }
     }
 
     ~DynamicLibrary() {
-        if (handle_) {
+        if (handle_ != nullptr) {
 #ifdef _MSC_VER
             FreeLibrary((HMODULE)handle_);
 #else
@@ -126,21 +123,21 @@ public:
     }
 
     template <typename ReturnType, typename... Args>
-    std::optional<ReturnType> callFunction(std::string_view functionName,
-                                           Args... args) {
-        auto it = functionMap_.find(std::string(functionName));
-        if (it == functionMap_.end()) {
+    auto callFunction(std::string_view functionName,
+                      Args... args) -> std::optional<ReturnType> {
+        auto findIt = functionMap_.find(std::string(functionName));
+        if (findIt == functionMap_.end()) {
             return std::nullopt;
         }
 
-        void *funcPtr = it->second;
+        void *funcPtr = findIt->second;
         FFIWrapper<ReturnType, Args...> ffiWrapper;
 
         return ffiWrapper.call(funcPtr, args...);
     }
 
 private:
-    void *handle_;
+    void *handle_{};
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string, void *> functionMap_;
 #else

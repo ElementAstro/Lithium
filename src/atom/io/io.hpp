@@ -20,6 +20,7 @@ Description: IO
 #include <functional>
 #include <string>
 #include <vector>
+#include "macro.hpp"
 namespace fs = std::filesystem;
 
 namespace atom::io {
@@ -34,7 +35,7 @@ namespace atom::io {
  * @param path 要创建的目录的路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool createDirectory(const std::string &path);
+[[nodiscard]] auto createDirectory(const std::string &path) -> bool;
 
 /**
  * @brief Creates a directory with the specified path.
@@ -50,7 +51,7 @@ struct CreateDirectoriesOptions {
         [](const std::string &) {};
     std::function<void(const std::string &)> onDelete =
         [](const std::string &) {};
-};
+} ATOM_ALIGNAS(128);
 
 /**
  * @brief Creates a directory with the specified path.
@@ -67,9 +68,9 @@ struct CreateDirectoriesOptions {
  * @param options 创建目录的选项。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-bool createDirectoriesRecursive(const fs::path &basePath,
-                                const std::vector<std::string> &subdirs,
-                                const CreateDirectoriesOptions &options);
+auto createDirectoriesRecursive(
+    const fs::path &basePath, const std::vector<std::string> &subdirs,
+    const CreateDirectoriesOptions &options) -> bool;
 
 /**
  * @brief Creates a directory with the specified path.
@@ -97,7 +98,7 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param path 要删除的目录的路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool removeDirectory(const std::string &path);
+[[nodiscard]] auto removeDirectory(const std::string &path) -> bool;
 
 /**
  * @brief Removes a directory with the specified path.
@@ -114,9 +115,9 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param options 删除目录的选项。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool removeDirectoriesRecursive(
+[[nodiscard]] auto removeDirectoriesRecursive(
     const fs::path &basePath, const std::vector<std::string> &subdirs,
-    const CreateDirectoriesOptions &options = {});
+    const CreateDirectoriesOptions &options = {}) -> bool;
 
 /**
  * @brief Renames a directory with the specified old and new paths.
@@ -131,8 +132,8 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param new_path 重命名后目录的新路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool renameDirectory(const std::string &old_path,
-                                   const std::string &new_path);
+[[nodiscard]] auto renameDirectory(const std::string &old_path,
+                                   const std::string &new_path) -> bool;
 
 /**
  * @brief Moves a directory from one path to another.
@@ -147,8 +148,8 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param new_path 移动后目录的新路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool moveDirectory(const std::string &old_path,
-                                 const std::string &new_path);
+[[nodiscard]] auto moveDirectory(const std::string &old_path,
+                                 const std::string &new_path) -> bool;
 
 /**
  * @brief Copies a file from source path to destination path.
@@ -163,8 +164,8 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param dst_path 复制后文件的目标路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool copyFile(const std::string &src_path,
-                            const std::string &dst_path);
+[[nodiscard]] auto copyFile(const std::string &src_path,
+                            const std::string &dst_path) -> bool;
 
 /**
  * @brief Moves a file from source path to destination path.
@@ -179,8 +180,8 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param dst_path 移动后文件的目标路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool moveFile(const std::string &src_path,
-                            const std::string &dst_path);
+[[nodiscard]] auto moveFile(const std::string &src_path,
+                            const std::string &dst_path) -> bool;
 
 /**
  * @brief Renames a file with the specified old and new paths.
@@ -195,8 +196,8 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param new_path 重命名后文件的新路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool renameFile(const std::string &old_path,
-                              const std::string &new_path);
+[[nodiscard]] auto renameFile(const std::string &old_path,
+                              const std::string &new_path) -> bool;
 
 /**
  * @brief Removes a file with the specified path.
@@ -209,7 +210,7 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param path 要删除的文件的路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool removeFile(const std::string &path);
+[[nodiscard]] auto removeFile(const std::string &path) -> bool;
 
 /**
  * @brief Creates a symbolic link with the specified target and symlink paths.
@@ -224,8 +225,8 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param symlink_path 要创建的符号链接的路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool createSymlink(const std::string &target_path,
-                                 const std::string &symlink_path);
+[[nodiscard]] auto createSymlink(const std::string &target_path,
+                                 const std::string &symlink_path) -> bool;
 
 /**
  * @brief Removes a symbolic link with the specified path.
@@ -238,7 +239,7 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param path 要删除的符号链接的路径。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-[[nodiscard]] bool removeSymlink(const std::string &path);
+[[nodiscard]] auto removeSymlink(const std::string &path) -> bool;
 
 /**
  * @brief Returns the size of a file in bytes.
@@ -252,7 +253,7 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param path 要获取大小的文件的路径。
  * @return 文件的大小（以字节为单位），如果文件不存在或无法读取，则返回0。
  */
-[[nodiscard]] std::uintmax_t fileSize(const std::string &path);
+[[nodiscard]] auto fileSize(const std::string &path) -> std::uintmax_t;
 
 /**
  * @brief Truncates a file to a specified size.
@@ -267,7 +268,7 @@ void createDirectory(const std::string &date, const std::string &rootDir);
  * @param size 要截断文件到的大小。
  * @return 如果操作成功，则返回true，否则返回false。
  */
-bool truncateFile(const std::string &path, std::streamsize size);
+auto truncateFile(const std::string &path, std::streamsize size) -> bool;
 
 /**
  * @brief Recursively walks through a directory and its subdirectories, applying
@@ -279,7 +280,7 @@ bool truncateFile(const std::string &path, std::streamsize size);
  * @param root The root path of the directory to walk.
  * @return a json string containing the file information.
  */
-std::string jwalk(const std::string &root);
+auto jwalk(const std::string &root) -> std::string;
 
 /**
  * @brief Recursively walks through a directory and its subdirectories, applying
@@ -303,7 +304,8 @@ void fwalk(const fs::path &root,
  * @param windows_path The Windows path to convert.
  * @return The converted Linux path.
  */
-[[nodiscard]] std::string convertToLinuxPath(std::string_view windows_path);
+[[nodiscard]] auto convertToLinuxPath(std::string_view windows_path)
+    -> std::string;
 
 /**
  * @brief Convert Linux path to Windows path.
@@ -314,9 +316,10 @@ void fwalk(const fs::path &root,
  * @param linux_path The Linux path to convert.
  * @return The converted Windows path.
  */
-[[nodiscard]] std::string convertToWindowsPath(std::string_view linux_path);
+[[nodiscard]] auto convertToWindowsPath(std::string_view linux_path)
+    -> std::string;
 
-[[nodiscard]] std::string normPath(std::string_view raw_path);
+[[nodiscard]] auto normPath(std::string_view raw_path) -> std::string;
 
 /**
  * @brief Check if the folder name is valid.
@@ -329,7 +332,7 @@ void fwalk(const fs::path &root,
  * @param folderName 要检查的文件夹名称。
  * @return 如果文件夹名称有效，则返回true，否则返回false。
  */
-[[nodiscard]] bool isFolderNameValid(const std::string &folderName);
+[[nodiscard]] auto isFolderNameValid(const std::string &folderName) -> bool;
 
 /**
  * @brief Check if the file name is valid.
@@ -342,7 +345,7 @@ void fwalk(const fs::path &root,
  * @param fileName 要检查的文件名称。
  * @return 如果文件名称有效，则返回true，否则返回false。
  */
-[[nodiscard]] bool isFileNameValid(const std::string &fileName);
+[[nodiscard]] auto isFileNameValid(const std::string &fileName) -> bool;
 
 /**
  * @brief Check if the folder exists.
@@ -355,8 +358,8 @@ void fwalk(const fs::path &root,
  * @param folderPath 要检查的文件夹路径。
  * @return 如果文件夹存在，则返回true，否则返回false。
  */
-[[nodiscard]] bool isFolderExists(const std::string &folderPath);
-[[nodiscard]] bool isFolderExists(const fs::path &folderPath);
+[[nodiscard]] auto isFolderExists(const std::string &folderPath) -> bool;
+[[nodiscard]] auto isFolderExists(const fs::path &folderPath) -> bool;
 
 /**
  * @brief Check if the file exists.
@@ -369,8 +372,8 @@ void fwalk(const fs::path &root,
  * @param filePath 要检查的文件路径。
  * @return 如果文件存在，则返回true，否则返回false。
  */
-[[nodiscard]] bool isFileExists(const std::string &filePath);
-[[nodiscard]] bool isFileExists(const fs::path &filePath);
+[[nodiscard]] auto isFileExists(const std::string &filePath) -> bool;
+[[nodiscard]] auto isFileExists(const fs::path &filePath) -> bool;
 
 /**
  * @brief Check if the folder is empty.
@@ -383,7 +386,7 @@ void fwalk(const fs::path &root,
  * @param folderPath 要检查的文件夹路径。
  * @return 如果文件夹为空，则返回true，否则返回false。
  */
-[[nodiscard]] bool isFolderEmpty(const std::string &folderPath);
+[[nodiscard]] auto isFolderEmpty(const std::string &folderPath) -> bool;
 
 /**
  * @brief Check if the path is an absolute path.
@@ -396,11 +399,22 @@ void fwalk(const fs::path &root,
  * @param path 要检查的路径。
  * @return 如果路径为绝对路径，则返回true，否则返回false。
  */
-[[nodiscard]] bool isAbsolutePath(const std::string &path);
+[[nodiscard]] auto isAbsolutePath(const std::string &path) -> bool;
 
-
-
-[[nodiscard]] bool changeWorkingDirectory(const std::string &directoryPath);
+/**
+ * @brief Change the working directory.
+ *
+ * @param directoryPath The directory path to change to.
+ * @return True if the working directory was changed successfully, false
+ * otherwise.
+ *
+ * 更改工作目录。
+ *
+ * @param directoryPath 要更改到的目录路径。
+ * @return 如果工作目录更改成功，则返回true，否则返回false。
+ */
+[[nodiscard]] auto changeWorkingDirectory(const std::string &directoryPath)
+    -> bool;
 
 [[nodiscard]] std::pair<std::string, std::string> getFileTimes(
     const std::string &filePath);
@@ -410,7 +424,7 @@ void fwalk(const fs::path &root,
  *
  * @remark The file type is checked by the file extension.
  */
-enum class FileOption { Path, Name };
+enum class FileOption { PATH, NAME };
 
 /**
  * @brief Check the file type in the folder.
@@ -428,9 +442,9 @@ enum class FileOption { Path, Name };
  * @return 一个文件路径的向量。
  * @remark The file type is checked by the file extension.
  */
-[[nodiscard]] std::vector<std::string> checkFileTypeInFolder(
+[[nodiscard]] auto checkFileTypeInFolder(
     const std::string &folderPath, const std::string &fileType,
-    FileOption fileOption);
+    FileOption fileOption) -> std::vector<std::string>;
 
 /**
  * @brief Check whether the specified file exists.
@@ -443,7 +457,8 @@ enum class FileOption { Path, Name };
  * @return false if the file does not exist or an error occurred.
  *         如果文件不存在或发生错误，则返回 false
  */
-bool isExecutableFile(const std::string &fileName, const std::string &fileExt);
+auto isExecutableFile(const std::string &fileName,
+                      const std::string &fileExt) -> bool;
 }  // namespace atom::io
 
 #endif

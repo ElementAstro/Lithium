@@ -57,7 +57,7 @@ auto buildCopyConstructor(Class (* /*unused*/)(Params...)) {
 }
 
 template <typename Class, typename... Params>
-auto buildPlainConstructor(Class (*)(Params...)) {
+auto buildPlainConstructor(Class (* /*unused*/)(Params...)) {
     return [](auto &&...params) {
         return Class(std::forward<decltype(params)>(params)...);
     };
@@ -77,13 +77,13 @@ auto buildDefaultConstructor() {
 
 template <typename T>
 auto constructor() {
-    T *f = nullptr;
+    T *func = nullptr;
     using ClassType = typename FunctionTraits<T>::class_type;
 
     if constexpr (!std::is_copy_constructible_v<ClassType>) {
-        return build_shared_constructor_(f);
+        return build_shared_constructor_(func);
     } else {
-        return build_copy_constructor_(f);
+        return build_copy_constructor_(func);
     }
 }
 

@@ -17,10 +17,9 @@ Description: Short Alloc from Howard Hinnant
 
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
-#include <iostream>
 #include <memory>
-#include <type_traits>
+
+#include "macro.hpp"
 
 /**
  * @brief A fixed-size memory arena for allocating objects with a specific
@@ -37,15 +36,15 @@ Description: Short Alloc from Howard Hinnant
  * to alignof(std::max_align_t).
  */
 template <std::size_t N, std::size_t alignment = alignof(std::max_align_t)>
-class arena {
-    alignas(alignment) char buf_[N];
+class Arena {
+    alignas(alignment) char buf_[N]{};
     char* ptr_;
 
 public:
-    ~arena() { ptr_ = nullptr; }
-    arena() noexcept : ptr_(buf_) {}
-    arena(const arena&) = delete;
-    arena& operator=(const arena&) = delete;
+    ~Arena() { ptr_ = nullptr; }
+    Arena() ATOM_NOEXCEPT : ptr_(buf_) {}
+    Arena(const Arena&) = delete;
+    auto operator=(const Arena&) -> Arena& = delete;
 
     /**
      * @brief Allocates memory for an object with the specified size and
@@ -57,7 +56,7 @@ public:
      * @throws std::bad_alloc if the allocation fails due to insufficient space
      * in the arena.
      */
-    void* allocate(std::size_t n) {
+    auto allocate(std::size_t n) -> void* {
         std::size_t space = N - used();
         void* result = ptr_;
         if (!std::align(alignment, n, result, space)) {
@@ -73,7 +72,7 @@ public:
      * @param p A pointer to the memory to deallocate.
      * @param n The size of the object that was deallocated.
      */
-    void deallocate(void* p, std::size_t n) noexcept {
+    void deallocate(void* p, std::size_t n) ATOM_NOEXCEPT {
         // Only assert if the deallocation is exactly at the top of the stack
         if (static_cast<char*>(p) + n == ptr_) {
             ptr_ = static_cast<char*>(p);
@@ -85,21 +84,21 @@ public:
      *
      * @return The total size of the arena in bytes.
      */
-    static constexpr std::size_t size() noexcept { return N; }
+    static constexpr auto size() ATOM_NOEXCEPT -> std::size_t { return N; }
 
     /**
      * @brief Returns the amount of memory used in the arena.
      *
      * @return The amount of memory used in the arena in bytes.
      */
-    std::size_t used() const noexcept {
+    auto used() const ATOM_NOEXCEPT -> std::size_t {
         return static_cast<std::size_t>(ptr_ - buf_);
     }
 
     /**
      * @brief Resets the arena to its initial state, deallocating all memory.
      */
-    void reset() noexcept { ptr_ = buf_; }
+    void reset() ATOM_NOEXCEPT { ptr_ = buf_; }
 
 private:
     /**
@@ -109,7 +108,7 @@ private:
      * @return true if the pointer is within the arena's buffer, false
      * otherwise.
      */
-    bool pointer_in_buffer(char* p) noexcept {
+    auto pointerInBuffer(char* p) ATOM_NOEXCEPT -> bool {
         return buf_ <= p && p <= buf_ + N;
     }
 };
@@ -129,12 +128,12 @@ private:
  * alignof(std::max_align_t).
  */
 template <class T, std::size_t N, std::size_t Align = alignof(std::max_align_t)>
-class short_alloc {
+class ShortAlloc {
 public:
     using value_type = T;
-    static constexpr auto alignment = Align;
-    static constexpr auto size = N;
-    using arena_type = arena<N, Align>;
+    static constexpr auto ALIGNMENT = Align;
+    static constexpr auto SIZE = N;
+    using arena_type = Arena<N, Align>;
 
 private:
     arena_type& a_;
@@ -145,7 +144,7 @@ public:
      *
      * @param a The arena to use for allocations.
      */
-    short_alloc(arena_type& a) noexcept : a_(a) {}
+    explicit ShortAlloc(arena_type& a) ATOM_NOEXCEPT : a_(a) {}
 
     /**
      * @brief Constructs a short_alloc object by copying another short_alloc
@@ -155,7 +154,8 @@ public:
      * @param a The other short_alloc object to copy from.
      */
     template <class U>
-    short_alloc(const short_alloc<U, N, alignment>& a) noexcept : a_(a.a_) {}
+    explicit ShortAlloc(const ShortAlloc<U, N, ALIGNMENT>& a) ATOM_NOEXCEPT
+        : a_(a.a_) {}
 
     /**
      * @brief Allocates memory for an object of type T.
@@ -163,7 +163,7 @@ public:
      * @param n The number of objects to allocate.
      * @return A pointer to the allocated memory.
      */
-    T* allocate(std::size_t n) {
+    auto allocate(std::size_t n) -> T* {
         return static_cast<T*>(a_.allocate(n * sizeof(T)));
     }
 
@@ -173,7 +173,7 @@ public:
      * @param p A pointer to the memory to deallocate.
      * @param n The number of objects that were deallocated.
      */
-    void deallocate(T* p, std::size_t n) noexcept {
+    void deallocate(T* p, std::size_t n) ATOM_NOEXCEPT {
         a_.deallocate(p, n * sizeof(T));
     }
 
@@ -183,15 +183,15 @@ public:
      * @tparam U The type of objects to allocate with the rebinded allocator.
      */
     template <class U>
-    struct rebind {
-        using other = short_alloc<U, N, Align>;
+    struct Rebind {
+        using other = ShortAlloc<U, N, Align>;
     };
 
     // Friendship declarations
     template <class T1, std::size_t N1, std::size_t A1, class U, std::size_t M,
               std::size_t A2>
-    friend bool operator==(const short_alloc<T1, N1, A1>& x,
-                           const short_alloc<U, M, A2>& y) noexcept;
+    friend auto operator==(const ShortAlloc<T1, N1, A1>& x,
+                           const ShortAlloc<U, M, A2>& y) ATOM_NOEXCEPT->bool;
 
     template <class U, std::size_t M, std::size_t A2>
     friend class short_alloc;
@@ -217,8 +217,8 @@ public:
  */
 template <class T, std::size_t N, std::size_t A1, class U, std::size_t M,
           std::size_t A2>
-inline bool operator==(const short_alloc<T, N, A1>& x,
-                       const short_alloc<U, M, A2>& y) noexcept {
+inline auto operator==(const ShortAlloc<T, N, A1>& x,
+                       const ShortAlloc<U, M, A2>& y) ATOM_NOEXCEPT->bool {
     return N == M && A1 == A2 && &x.a_ == &y.a_;
 }
 
@@ -242,8 +242,8 @@ inline bool operator==(const short_alloc<T, N, A1>& x,
  */
 template <class T, std::size_t N, std::size_t A1, class U, std::size_t M,
           std::size_t A2>
-inline bool operator!=(const short_alloc<T, N, A1>& x,
-                       const short_alloc<U, M, A2>& y) noexcept {
+inline auto operator!=(const ShortAlloc<T, N, A1>& x,
+                       const ShortAlloc<U, M, A2>& y) ATOM_NOEXCEPT->bool {
     return !(x == y);
 }
 

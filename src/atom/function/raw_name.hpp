@@ -102,7 +102,7 @@ constexpr auto raw_name_of_enum() {
 #endif
 }
 
-#ifdef ATOM_META_CPP_20_SUPPORT
+#ifdef ATOM_CPP_20_SUPPORT
 template <typename T>
 struct Wrapper {
     T a;
@@ -136,7 +136,7 @@ constexpr auto raw_name_of_member() {
 #error "Unsupported compiler"
 #endif
 }
-#endif  // ATOM_META_CPP_20_SUPPORT
+#endif  // ATOM_CPP_20_SUPPORT
 
 template <typename T>
 using args_type_of = args_type_of<T>;

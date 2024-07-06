@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Can-Chat</title>
+    <style>
+
+        body {
+            text-align: center;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        #container {
+            display: inline-block;
+            max-width: 600px;
+        }
+
+        #note {
+            text-align: left;
+        }
+
+        #note p {
+            color: #555555;
+            font-size: 0.85rem;
+        }
+
+        #starter {
+            display: inline-grid;
+            text-align: center;
+            margin: 0 0 50px 0
+        }
+
+        h1 {
+            font-size: 4rem;
+        }
+
+        .welcome {
+            padding: 0 0 20px 0;
+            font-size: 1.5rem;
+        }
+
+        h2{
+            margin: 40px 0 40px 0;
+        }
+
+        h3 {
+            font-size: medium;
+        }
+
+        input {
+            display: inline;
+            border: none;
+            outline: none;
+            padding: 9px 20px;
+            cursor: pointer;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 3px;
+            background-color: #448AFF;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        input:hover {
+            background-color: #2979FF;
+        }
+
+        input:active {
+            background-color: #2979FF;
+        }
+
+        .info {
+            font-size: 0.85rem;
+            padding-bottom: 50px;
+        }
+
+        .iframe {
+            display: inline-block;
+            max-width: 130px;
+        }
+
+        @media (max-device-width : 560px) {
+
+            .iframe {
+                max-width: 200px;
+                -ms-zoom: 1.5;
+                -moz-transform: scale(1.5);
+                -moz-transform-origin: 0 0;
+                -o-transform: scale(1.5);
+                -o-transform-origin: 0 0;
+                -webkit-transform: scale(1.5);
+                -webkit-transform-origin: 0 0;
+            }
+
+            h1 {
+                font-size: 7rem;
+            }
+
+            .welcome {
+                padding: 0 0 20px 0;
+                font-size: 2rem;
+            }
+
+            h2{
+                margin: 40px 0 60px 0;
+                font-size: 3.8rem;
+            }
+
+            h3 {
+                font-size: medium;
+            }
+
+            input {
+                font-size: 36px;
+                padding: 14px 20px;
+                margin: 0 0 20px 0;
+            }
+
+            #container {
+                display: inline-block;
+                max-width: 700px;
+            }
+
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="container">
+
+        <h1>Can-Chat</h1>
+
+        <p class="welcome">
+            Welcome to Can-Chat - Anonymous, secret chat!
+        </p>
+
+        <div>
+            <div class="iframe">
+                <iframe src="https://ghbtns.com/github-btn.html?user=lganzzzo&repo=canchat&type=star&count=true&size=large" frameborder="0" scrolling="0" height="30px"></iframe>
+            </div>
+            <div class="iframe">
+                <iframe src="https://ghbtns.com/github-btn.html?user=lganzzzo&repo=canchat&type=fork&count=true&size=large" frameborder="0" scrolling="0" height="30px"></iframe>
+            </div>
+        </div>
+
+        <h2>Join Room</h2>
+
+        <div id="starter">
+
+            <input type="button" value="Public Lobby" onclick="startLobby();">
+            <input type="button" value="New Private Room" onclick="startPrivateRoom();">
+
+        </div>
+
+        <p class="info">
+            <i>If you are the first time here, please read the short info below.</i>
+        </p>
+
+        <div id="note">
+
+            <h3>Rooms</h3>
+
+            <p>
+                All communication happens in chat-rooms.
+                Each room has a unique URL.
+                Anyone who has room-URL can join the room. Generating random long enough room-URL gives privacy to participants.
+                Be sure to share room-URL with wanted participants only.
+            </p>
+
+            <p>
+                Rooms are automatically created when the first participant joins the room,
+                and are automatically deleted when the last participant leaves the room.
+            </p>
+
+            <p>
+                Chat-history is available for newly joined participants.
+                History is rounded when the number of messages in the room exceeds the <code>maxRoomHistoryMessages</code> config parameter.
+                History is deleted and no-longer-available once the room is deleted.
+            </p>
+
+            <h3>File Sharing</h3>
+
+            <p>
+                Users can share multiple files at once.
+            </p>
+
+            <p>
+                Files are streamed directly from the host-peer machine. Nothing is uploaded to the server nor stored in any 3d-party place.
+            </p>
+
+            <p>
+                Once host-peer cancels file-sharing, files are no longer available.
+                If host-peer exits the room, all of his file-sharing is canceled.
+            </p>
+
+        </div>
+
+    </div>
+
+    <script>
+
+        function uuidv4() {
+            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        function startLobby() {
+            window.open('/room/lobby', '_blank');
+        }
+
+        function startPrivateRoom() {
+            window.open('/room/' + uuidv4(), '_blank');
+        }
+    </script>
+
+</body>
+</html>

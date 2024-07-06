@@ -1,54 +1,103 @@
 #include "atom/async/timer.hpp"
-#include <iostream>
+#include <gtest/gtest.h>
 
-// 用法示例
-int main()
-{
-    Timer timer;
+TEST(TimerTest, setTimeout) {
+    atom::async::Timer timer;
+    bool funcCalled = false;
 
-    // 可取消的定时器任务
-    std::future<void> future = timer.setTimeout([]()
-                                                { std::cout << "Timeout!" << std::endl; },
-                                                1000);
-    timer.setTimeout([]()
-                     { std::cout << "This should not be printed!" << std::endl; },
-                     2000);
+    auto future = timer.setTimeout([&funcCalled]() { funcCalled = true; }, 100);
+
+    // Wait for the task to complete
+    future.wait();
+
+    EXPECT_TRUE(funcCalled);
+}
+
+TEST(TimerTest, setInterval) {
+    atom::async::Timer timer;
+    int funcCalls = 0;
+
+    timer.setInterval([&funcCalls]() { funcCalls++; }, 100, 5, 0);
+
+    // Run the timer for 1 second
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    EXPECT_GE(funcCalls, 5);
+}
+
+TEST(TimerTest, cancelAllTasks) {
+    atom::async::Timer timer;
+    bool funcCalled = false;
+
+    timer.setTimeout([&funcCalled]() { funcCalled = true; }, 100);
     timer.cancelAllTasks();
 
-    // 任务函数支持返回值
-    std::future<int> result = timer.setTimeout([]()
-                                               { return 42; },
-                                               2000);
-    std::cout << "Result: " << result.get() << std::endl;
+    // Wait for the task to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    // 定时器线程池
-    for (int i = 0; i < 5; ++i)
-    {
-        timer.setInterval([i]()
-                          { std::cout << "Interval from thread " << i << "!" << std::endl; },
-                          500, 10 - i, i);
-    }
+    EXPECT_FALSE(funcCalled);
+}
 
-    // 暂停定时器任务
+TEST(TimerTest, pause) {
+    atom::async::Timer timer;
+    bool funcCalled = false;
+
+    timer.setTimeout([&funcCalled]() { funcCalled = true; }, 100);
     timer.pause();
-    std::this_thread::sleep_for(std::chrono::seconds(3));
 
-    // 恢复定时器任务
+    // Wait for the task to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    EXPECT_FALSE(funcCalled);
+}
+
+TEST(TimerTest, resume) {
+    atom::async::Timer timer;
+    bool funcCalled = false;
+
+    timer.setTimeout([&funcCalled]() { funcCalled = true; }, 100);
+    timer.pause();
     timer.resume();
 
-    timer.setTimeout([]() -> void
-                     { std::cout << "High priority task!" << std::endl; },
-                     1000);
-    timer.setTimeout([]() -> void
-                     { std::cout << "Low priority task!" << std::endl; },
-                     1000);
+    // Wait for the task to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    // 添加回调函数
-    timer.setCallback([]()
-                      { std::cout << "Task completed!" << std::endl; });
+    EXPECT_TRUE(funcCalled);
+}
 
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+TEST(TimerTest, stop) {
+    atom::async::Timer timer;
+    bool funcCalled = false;
+
+    timer.setTimeout([&funcCalled]() { funcCalled = true; }, 100);
     timer.stop();
 
-    return 0;
+    // Wait for the task to complete
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    EXPECT_FALSE(funcCalled);
+}
+
+TEST(TimerTest, setCallback) {
+    atom::async::Timer timer;
+    bool callbackCalled = false;
+
+    timer.setCallback([&callbackCalled]() { callbackCalled = true; });
+
+    // Trigger the callback
+    timer.now();
+
+    EXPECT_TRUE(callbackCalled);
+}
+
+TEST(TimerTest, getTaskCount) {
+    atom::async::Timer timer;
+
+    EXPECT_EQ(timer.getTaskCount(), 0);
+
+    timer.setTimeout([]() {}, 100);
+    EXPECT_EQ(timer.getTaskCount(), 1);
+
+    timer.setInterval([]() {}, 100, 5, 0);
+    EXPECT_EQ(timer.getTaskCount(), 2);
 }

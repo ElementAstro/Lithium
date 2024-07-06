@@ -17,8 +17,9 @@ Description: Short Alloc from Howard Hinnant
 
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <memory>
-
+#include <type_traits>
 #include "macro.hpp"
 
 /**
@@ -164,6 +165,9 @@ public:
      * @return A pointer to the allocated memory.
      */
     auto allocate(std::size_t n) -> T* {
+        if (n > SIZE / sizeof(T)) {
+            throw std::bad_alloc();
+        }
         return static_cast<T*>(a_.allocate(n * sizeof(T)));
     }
 
@@ -175,6 +179,29 @@ public:
      */
     void deallocate(T* p, std::size_t n) ATOM_NOEXCEPT {
         a_.deallocate(p, n * sizeof(T));
+    }
+
+    /**
+     * @brief Constructs an object of type T in allocated memory.
+     *
+     * @tparam U The type of the object to construct.
+     * @param p A pointer to the allocated memory.
+     * @param args The arguments to pass to the constructor of T.
+     */
+    template <class U, class... Args>
+    void construct(U* p, Args&&... args) {
+        new (p) U(std::forward<Args>(args)...);
+    }
+
+    /**
+     * @brief Destroys an object of type T in allocated memory.
+     *
+     * @tparam U The type of the object to destroy.
+     * @param p A pointer to the allocated memory.
+     */
+    template <class U>
+    void destroy(U* p) {
+        p->~U();
     }
 
     /**
@@ -194,7 +221,7 @@ public:
                            const ShortAlloc<U, M, A2>& y) ATOM_NOEXCEPT->bool;
 
     template <class U, std::size_t M, std::size_t A2>
-    friend class short_alloc;
+    friend class ShortAlloc;
 };
 
 /**
@@ -225,8 +252,8 @@ inline auto operator==(const ShortAlloc<T, N, A1>& x,
 /**
  * @brief Checks if two short_alloc objects are not equal.
  *
- * Two short_alloc objects are considered not equal if they have different
- * sizes, alignments, or are using different underlying arenas.
+ * Two short_alloc objects are considered not equal if they have
+ * different sizes, alignments, or are using different underlying arenas.
  *
  * @tparam T The type of objects allocated by the first allocator.
  * @tparam N The size of the fixed-size memory arena for the first allocator.
@@ -245,6 +272,37 @@ template <class T, std::size_t N, std::size_t A1, class U, std::size_t M,
 inline auto operator!=(const ShortAlloc<T, N, A1>& x,
                        const ShortAlloc<U, M, A2>& y) ATOM_NOEXCEPT->bool {
     return !(x == y);
+}
+
+/**
+ * @brief A utility function to create a new object using the allocator.
+ *
+ * @tparam Alloc The allocator type.
+ * @tparam T The type of the object to create.
+ * @tparam Args The types of the arguments to pass to the constructor.
+ * @param alloc The allocator to use.
+ * @param args The arguments to pass to the constructor.
+ * @return A unique_ptr to the created object.
+ */
+template <typename Alloc, typename T, typename... Args>
+auto allocate_unique(Alloc& alloc, Args&&... args)
+    -> std::unique_ptr<T, std::function<void(T*)>> {
+    using AllocTraits = std::allocator_traits<Alloc>;
+
+    auto p = AllocTraits::allocate(alloc, 1);
+    try {
+        AllocTraits::construct(alloc, p, std::forward<Args>(args)...);
+    } catch (...) {
+        AllocTraits::deallocate(alloc, p, 1);
+        throw;
+    }
+
+    auto deleter = [&alloc](T* ptr) {
+        AllocTraits::destroy(alloc, ptr);
+        AllocTraits::deallocate(alloc, ptr, 1);
+    };
+
+    return std::unique_ptr<T, std::function<void(T*)>>(p, deleter);
 }
 
 #endif  // ATOM_MEMORY_SHORT_ALLOC_HPP

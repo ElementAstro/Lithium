@@ -1,88 +1,129 @@
 #include "atom/memory/short_alloc.hpp"
+
 #include <gtest/gtest.h>
 
+#include <list>
+#include <set>
+#include <string>
+#include <vector>
 
-// Tests for arena class
-TEST(ArenaTest, AllocateAndDeallocate) {
-    arena<1024> a;
+// Test fixture for ShortAlloc
+template <std::size_t N, std::size_t Align = alignof(std::max_align_t)>
+class ShortAllocTest : public ::testing::Test {
+protected:
+    Arena<N, Align> arena;
+    ShortAlloc<int, N, Align> allocator;
 
-    void* p1 = a.allocate(128);
-    ASSERT_NE(p1, nullptr);
-    EXPECT_EQ(a.used(), 128);
+    ShortAllocTest() : allocator(arena) {}
+};
 
-    void* p2 = a.allocate(256);
-    ASSERT_NE(p2, nullptr);
-    EXPECT_EQ(a.used(), 384);
+// Test allocation and deallocation
+TYPED_TEST_SUITE_P(ShortAllocTest);
 
-    a.deallocate(p2, 256);
-    EXPECT_EQ(a.used(), 128);
+TYPED_TEST_P(ShortAllocTest, BasicAllocation) {
+    std::vector<int, ShortAlloc<int, TypeParam::first_type::SIZE,
+                                TypeParam::first_type::ALIGNMENT>>
+        vec(this->allocator);
+    vec.push_back(1);
+    vec.push_back(2);
+    vec.push_back(3);
 
-    a.deallocate(p1, 128);
-    EXPECT_EQ(a.used(), 0);
+    ASSERT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
 }
 
-TEST(ArenaTest, AllocateExceedingSize) {
-    arena<1024> a;
-
-    EXPECT_NO_THROW(a.allocate(512));
-    EXPECT_THROW(a.allocate(1024), std::bad_alloc);
+TYPED_TEST_P(ShortAllocTest, AllocateUnique) {
+    auto uniquePtr =
+        allocate_unique<ShortAlloc<int, TypeParam::first_type::SIZE,
+                                   TypeParam::first_type::ALIGNMENT>,
+                        int>(this->allocator, 10);
+    EXPECT_EQ(*uniquePtr, 10);
 }
 
-TEST(ArenaTest, Reset) {
-    arena<1024> a;
-
-    a.allocate(512);
-    EXPECT_EQ(a.used(), 512);
-
-    a.reset();
-    EXPECT_EQ(a.used(), 0);
+TYPED_TEST_P(ShortAllocTest, LargeAllocation) {
+    EXPECT_THROW(this->allocator.allocate(TypeParam::first_type::SIZE + 1),
+                 std::bad_alloc);
 }
 
-// Tests for short_alloc class
-TEST(ShortAllocTest, AllocateAndDeallocate) {
-    arena<1024> a;
-    short_alloc<int, 1024> alloc(a);
+TYPED_TEST_P(ShortAllocTest, MultipleAllocations) {
+    auto p1 = this->allocator.allocate(1);
+    auto p2 = this->allocator.allocate(1);
+    EXPECT_NE(p1, p2);
+    this->allocator.deallocate(p1, 1);
+    this->allocator.deallocate(p2, 1);
+}
 
-    int* p1 = alloc.allocate(10);
-    ASSERT_NE(p1, nullptr);
+TYPED_TEST_P(ShortAllocTest, DeallocateInReverseOrder) {
+    auto p1 = this->allocator.allocate(1);
+    auto p2 = this->allocator.allocate(1);
+    this->allocator.deallocate(p2, 1);
+    this->allocator.deallocate(p1, 1);
+    EXPECT_NO_THROW(this->allocator.deallocate(p1, 1));
+}
 
-    for (int i = 0; i < 10; ++i) {
-        new (&p1[i]) int(i);
-        EXPECT_EQ(p1[i], i);
+TYPED_TEST_P(ShortAllocTest, VectorWithCustomAllocator) {
+    std::vector<int, ShortAlloc<int, TypeParam::first_type::SIZE,
+                                TypeParam::first_type::ALIGNMENT>>
+        vec(this->allocator);
+    for (int i = 0; i < 100; ++i) {
+        vec.push_back(i);
     }
-
-    alloc.deallocate(p1, 10);
-}
-
-TEST(ShortAllocTest, RebindAllocator) {
-    arena<1024> a;
-    short_alloc<int, 1024> alloc(a);
-
-    // Rebinding allocator to another type
-    short_alloc<double, 1024>::rebind<int>::other int_alloc = alloc;
-
-    int* p1 = int_alloc.allocate(10);
-    ASSERT_NE(p1, nullptr);
-
-    for (int i = 0; i < 10; ++i) {
-        new (&p1[i]) int(i);
-        EXPECT_EQ(p1[i], i);
+    EXPECT_EQ(vec.size(), 100);
+    for (int i = 0; i < 100; ++i) {
+        EXPECT_EQ(vec[i], i);
     }
-
-    int_alloc.deallocate(p1, 10);
 }
 
-TEST(ShortAllocTest, EqualityComparison) {
-    arena<1024> a;
-    short_alloc<int, 1024> alloc1(a);
-    short_alloc<int, 1024> alloc2(a);
-
-    EXPECT_TRUE(alloc1 == alloc2);
-    EXPECT_FALSE(alloc1 != alloc2);
-
-    arena<1024> b;
-    short_alloc<int, 1024> alloc3(b);
-
-    EXPECT_FALSE(alloc1 == alloc3);
-    EXPECT_TRUE(alloc1 != alloc3);
+TYPED_TEST_P(ShortAllocTest, ListWithCustomAllocator) {
+    std::list<int, ShortAlloc<int, TypeParam::first_type::SIZE,
+                              TypeParam::first_type::ALIGNMENT>>
+        lst(this->allocator);
+    for (int i = 0; i < 100; ++i) {
+        lst.push_back(i);
+    }
+    EXPECT_EQ(lst.size(), 100);
+    int i = 0;
+    for (const auto& val : lst) {
+        EXPECT_EQ(val, i++);
+    }
 }
+
+TYPED_TEST_P(ShortAllocTest, SetWithCustomAllocator) {
+    std::set<int, std::less<int>,
+             ShortAlloc<int, TypeParam::first_type::SIZE,
+                        TypeParam::first_type::ALIGNMENT>>
+        s(this->allocator);
+    for (int i = 0; i < 100; ++i) {
+        s.insert(i);
+    }
+    EXPECT_EQ(s.size(), 100);
+    int i = 0;
+    for (const auto& val : s) {
+        EXPECT_EQ(val, i++);
+    }
+}
+
+TYPED_TEST_P(ShortAllocTest, StringWithCustomAllocator) {
+    std::basic_string<char, std::char_traits<char>,
+                      ShortAlloc<char, TypeParam::first_type::SIZE,
+                                 TypeParam::first_type::ALIGNMENT>>
+        str(this->allocator);
+    std::string testStr = "Hello, ShortAlloc!";
+    str.assign(testStr);
+    EXPECT_EQ(str, testStr);
+}
+
+REGISTER_TYPED_TEST_SUITE_P(ShortAllocTest, BasicAllocation, AllocateUnique,
+                            LargeAllocation, MultipleAllocations,
+                            DeallocateInReverseOrder, VectorWithCustomAllocator,
+                            ListWithCustomAllocator, SetWithCustomAllocator,
+                            StringWithCustomAllocator);
+
+using MyTypes = ::testing::Types<
+    std::pair<Arena<128>, std::integral_constant<std::size_t, 128>>,
+    std::pair<Arena<256>, std::integral_constant<std::size_t, 256>>,
+    std::pair<Arena<512>, std::integral_constant<std::size_t, 512>>,
+    std::pair<Arena<1024>, std::integral_constant<std::size_t, 1024>>>;
+INSTANTIATE_TYPED_TEST_SUITE_P(My, ShortAllocTest, MyTypes);

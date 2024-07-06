@@ -19,6 +19,8 @@ Description: Implementation of murmur3 hash and quick hash
 #include <cstdint>
 #include <string>
 
+#include "macro.hpp"
+
 namespace atom::algorithm {
 /**
  * @brief Calculates the MurmurHash3 hash value for a given string.
@@ -28,7 +30,7 @@ namespace atom::algorithm {
  * @return uint32_t The calculated hash value.
  */
 [[nodiscard]] auto murmur3Hash(std::string_view data,
-                               uint32_t seed = 1060627423) noexcept -> uint32_t;
+                               uint32_t seed = 1060627423) ATOM_NOEXCEPT -> uint32_t;
 
 /**
  * @brief Calculates the 64-bit MurmurHash3 hash value for a given string.

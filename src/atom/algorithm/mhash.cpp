@@ -22,6 +22,7 @@ Description: Implementation of murmur3 hash and quick hash
 #include <span>
 #include <sstream>
 #include <stdexcept>
+#include "error/exception.hpp"
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -29,7 +30,7 @@ Description: Implementation of murmur3 hash and quick hash
 #include <openssl/sha.h>
 
 namespace atom::algorithm {
-auto fmix32(uint32_t h) noexcept -> uint32_t {
+auto fmix32(uint32_t h) ATOM_NOEXCEPT -> uint32_t {
     h ^= h >> 16;
     h *= 0x85ebca6b;
     h ^= h >> 13;
@@ -38,11 +39,11 @@ auto fmix32(uint32_t h) noexcept -> uint32_t {
     return h;
 }
 
-auto rotl(uint32_t x, int8_t r) noexcept -> uint32_t {
+auto rotl(uint32_t x, int8_t r) ATOM_NOEXCEPT -> uint32_t {
     return (x << r) | (x >> (32 - r));
 }
 
-auto murmur3Hash(std::string_view data, uint32_t seed) noexcept -> uint32_t {
+auto murmur3Hash(std::string_view data, uint32_t seed) ATOM_NOEXCEPT -> uint32_t {
     uint32_t hash = seed;
     const uint32_t SEED1 = 0xcc9e2d51;
     const uint32_t SEED2 = 0x1b873593;
@@ -130,15 +131,15 @@ auto hexstringFromData(const std::string &data) -> std::string {
     return result;
 }
 
-std::string dataFromHexstring(const std::string &hexstring) {
+auto dataFromHexstring(const std::string &hexstring) -> std::string {
     if (hexstring.size() % 2 != 0) {
-        throw std::invalid_argument("Hex string length must be even");
+        THROW_INVALID_ARGUMENT("Hex string length must be even");
     }
 
     std::string result;
     result.resize(hexstring.size() / 2);
 
-    size_t output_index = 0;
+    size_t outputIndex = 0;
     for (size_t i = 0; i < hexstring.size(); i += 2) {
         int byte = 0;
         auto [ptr, ec] = std::from_chars(hexstring.data() + i,
@@ -146,10 +147,10 @@ std::string dataFromHexstring(const std::string &hexstring) {
 
         if (ec == std::errc::invalid_argument ||
             ptr != hexstring.data() + i + 2) {
-            throw std::invalid_argument("Invalid hex character");
+            THROW_INVALID_ARGUMENT("Invalid hex character");
         }
 
-        result[output_index++] = static_cast<char>(byte);
+        result[outputIndex++] = static_cast<char>(byte);
     }
 
     return result;

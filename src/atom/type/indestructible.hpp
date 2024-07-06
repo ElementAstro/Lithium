@@ -15,6 +15,7 @@ Description: Indestructible
 #ifndef ATOM_TYPE_INDESTRUCTIBLE_HPP
 #define ATOM_TYPE_INDESTRUCTIBLE_HPP
 
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -195,6 +196,48 @@ struct Indestructible {
      * @return Const rvalue reference to the stored object.
      */
     constexpr const T&& get() const&& { return std::move(object); }
+
+    /**
+     * @brief Returns a pointer to the stored object.
+     *
+     * @return Pointer to the stored object.
+     */
+    constexpr T* operator->() { return &object; }
+
+    /**
+     * @brief Returns a const pointer to the stored object.
+     *
+     * @return Const pointer to the stored object.
+     */
+    constexpr const T* operator->() const { return &object; }
+
+    /**
+     * @brief Returns a reference to the stored object.
+     *
+     * @return Reference to the stored object.
+     */
+    constexpr operator T&() & { return object; }
+
+    /**
+     * @brief Returns a const reference to the stored object.
+     *
+     * @return Const reference to the stored object.
+     */
+    constexpr operator const T&() const& { return object; }
+
+    /**
+     * @brief Returns an rvalue reference to the stored object.
+     *
+     * @return Rvalue reference to the stored object.
+     */
+    constexpr operator T&&() && { return std::move(object); }
+
+    /**
+     * @brief Returns a const rvalue reference to the stored object.
+     *
+     * @return Const rvalue reference to the stored object.
+     */
+    constexpr operator const T&&() const&& { return std::move(object); }
 };
 
 #endif  // ATOM_TYPE_INDESTRUCTIBLE_HPP

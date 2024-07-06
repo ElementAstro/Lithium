@@ -26,17 +26,17 @@ Description: Main Message Bus
 #include <string>
 #include <thread>
 #include <typeindex>
+#include <unordered_map>
 #include <vector>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
-#else
-#include <unordered_map>
 #endif
 
 #include "atom/log/loguru.hpp"
 
 namespace atom::async {
+
 class MessageBus {
 public:
     MessageBus() = default;
@@ -67,13 +67,12 @@ public:
     void subscribe(const std::string &topic,
                    std::function<void(const T &)> callback, int priority = 0,
                    const std::string &namespace_ = "") {
-        std::string fullTopic =
-            namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
+        std::string fullTopic = getFullTopic(topic, namespace_);
         std::scoped_lock lock(subscribersLock_);
-        subscribers_[fullTopic].emplace_back(priority, std::move(callback));
+        auto &topicSubscribers = subscribers_[fullTopic];
+        topicSubscribers.emplace_back(priority, std::move(callback));
         std::sort(
-            subscribers_[fullTopic].begin(), subscribers_[fullTopic].end(),
+            topicSubscribers.begin(), topicSubscribers.end(),
             [](const auto &a, const auto &b) { return a.first > b.first; });
 
         DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
@@ -84,16 +83,14 @@ public:
                               std::function<void(const T &)> callback,
                               int priority = 0) {
         std::string topic = namespaceName + ".*";
-        Subscribe<T>(topic, callback, priority, namespaceName);
+        subscribe<T>(topic, callback, priority, namespaceName);
     }
 
     template <typename T>
     void unsubscribe(const std::string &topic,
                      std::function<void(const T &)> callback,
                      const std::string &namespace_ = "") {
-        std::string fullTopic =
-            namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
+        std::string fullTopic = getFullTopic(topic, namespace_);
         std::scoped_lock lock(subscribersLock_);
         auto it = subscribers_.find(fullTopic);
         if (it != subscribers_.end()) {
@@ -114,28 +111,24 @@ public:
     void unsubscribeFromNamespace(const std::string &namespaceName,
                                   std::function<void(const T &)> callback) {
         std::string topic = namespaceName + ".*";
-        Unsubscribe<T>(topic, callback, namespaceName);
+        unsubscribe<T>(topic, callback, namespaceName);
     }
 
     void unsubscribeAll(const std::string &namespace_ = "") {
         std::string fullTopic = namespace_.empty() ? "*" : (namespace_ + "::*");
-
         std::scoped_lock lock(subscribersLock_);
         subscribers_.erase(fullTopic);
-
         DLOG_F(INFO, "Unsubscribed from all topics");
     }
 
     template <typename T>
     void publish(const std::string &topic, const T &message,
                  const std::string &namespace_ = "") {
-        std::string fullTopic =
-            namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
+        std::string fullTopic = getFullTopic(topic, namespace_);
         {
             std::scoped_lock lock(messageQueueLock_);
             if (messageQueue_.size() >=
-                static_cast<unsigned long>(maxMessageBusSize_)) {
+                static_cast<size_t>(maxMessageBusSize_)) {
                 LOG_F(WARNING,
                       "Message queue is full. Discarding oldest message.");
                 messageQueue_.pop();
@@ -143,7 +136,6 @@ public:
             messageQueue_.emplace(fullTopic, message);
         }
         messageAvailableFlag_.notify_one();
-
         DLOG_F(INFO, "Published message to topic: {}", fullTopic);
     }
 
@@ -152,13 +144,12 @@ public:
                     const std::string &namespace_ = "",
                     std::chrono::milliseconds timeout =
                         std::chrono::milliseconds(100)) -> bool {
-        std::string fullTopic =
-            namespace_.empty() ? topic : (namespace_ + "::" + topic);
-
+        std::string fullTopic = getFullTopic(topic, namespace_);
         {
             std::unique_lock lock(messageQueueLock_);
             if (messageQueueCondition_.wait_for(lock, timeout, [this] {
-                    return messageQueue_.size() < maxMessageBusSize_;
+                    return messageQueue_.size() <
+                           static_cast<size_t>(maxMessageBusSize_);
                 })) {
                 messageQueue_.emplace(fullTopic, message);
                 messageAvailableFlag_.notify_one();
@@ -212,80 +203,7 @@ public:
             processingThreads_.emplace(
                 typeIndex, std::jthread([this, typeIndex](
                                             const std::stop_token &stopToken) {
-                    while (!stopToken.stop_requested()) {
-                        std::pair<std::string, std::any> message;
-                        bool hasMessage = false;
-
-                        {
-                            std::unique_lock lock(waitingMutex_);
-                            messageAvailableFlag_.wait(lock, [this] {
-                                return !messageQueue_.empty();
-                            });
-                            if (stopToken.stop_requested()) {
-                                break;
-                            }
-                            std::scoped_lock messageLock(messageQueueLock_);
-                            if (!messageQueue_.empty()) {
-                                message = std::move(messageQueue_.front());
-                                messageQueue_.pop();
-                                hasMessage = true;
-                            }
-                        }
-
-                        if (hasMessage) {
-                            const std::string &topic = message.first;
-                            const std::any &data = message.second;
-
-                            std::shared_lock subscribersLock(subscribersLock_);
-                            auto it = subscribers_.find(topic);
-                            if (it != subscribers_.end()) {
-                                try {
-                                    for (const auto &subscriber : it->second) {
-                                        if (subscriber.second.type() ==
-                                            typeid(std::function<void(
-                                                       const T &)>)) {
-                                            std::any_cast<
-                                                std::function<void(const T &)>>(
-                                                subscriber.second)(
-                                                std::any_cast<const T &>(data));
-                                        }
-                                    }
-                                } catch (const std::bad_any_cast &e) {
-                                    LOG_F(ERROR, "Message type mismatch: {}",
-                                          e.what());
-                                } catch (...) {
-                                    LOG_F(ERROR,
-                                          "Unknown error occurred during "
-                                          "message processing");
-                                }
-                            }
-
-                            std::shared_lock globalLock(globalSubscribersLock_);
-                            try {
-                                for (const auto &subscriber :
-                                     globalSubscribers_) {
-                                    if (subscriber.type() ==
-                                        typeid(
-                                            std::function<void(const T &)>)) {
-                                        std::any_cast<
-                                            std::function<void(const T &)>>(
-                                            subscriber)(
-                                            std::any_cast<const T &>(data));
-                                    }
-                                }
-                            } catch (const std::bad_any_cast &e) {
-                                LOG_F(ERROR, "Global message type mismatch: {}",
-                                      e.what());
-                            } catch (...) {
-                                LOG_F(ERROR,
-                                      "Unknown error occurred during global "
-                                      "message processing");
-                            }
-
-                            DLOG_F(INFO, "Processed message on topic: {}",
-                                   topic);
-                        }
-                    }
+                    processMessages<T>(stopToken);
                 }));
         }
     }
@@ -315,7 +233,6 @@ public:
     }
 
 private:
-    // using SubscriberCallback = std::function<void(const std::any &)>;
     using SubscriberCallback = std::any;
     using SubscriberList = std::vector<std::pair<int, SubscriberCallback>>;
     using SubscriberMap = std::unordered_map<std::string, SubscriberList>;
@@ -340,7 +257,89 @@ private:
     using GlobalSubscriberList = std::vector<SubscriberCallback>;
     GlobalSubscriberList globalSubscribers_;
     std::shared_mutex globalSubscribersLock_;
+
+    auto getFullTopic(const std::string &topic,
+                      const std::string &namespace_) const -> std::string {
+        return namespace_.empty() ? topic : (namespace_ + "::" + topic);
+    }
+
+    template <typename T>
+    void processMessages(const std::stop_token &stopToken) {
+        while (!stopToken.stop_requested()) {
+            std::pair<std::string, std::any> message;
+            bool hasMessage = false;
+
+            {
+                std::unique_lock lock(waitingMutex_);
+                messageAvailableFlag_.wait(
+                    lock, [this] { return !messageQueue_.empty(); });
+                if (stopToken.stop_requested()) {
+                    break;
+                }
+                std::scoped_lock messageLock(messageQueueLock_);
+                if (!messageQueue_.empty()) {
+                    message = std::move(messageQueue_.front());
+                    messageQueue_.pop();
+                    hasMessage = true;
+                }
+            }
+
+            if (hasMessage) {
+                const std::string &topic = message.first;
+                const std::any &data = message.second;
+
+                // Process local subscribers
+                {
+                    std::shared_lock subscribersLock(subscribersLock_);
+                    auto it = subscribers_.find(topic);
+                    if (it != subscribers_.end()) {
+                        try {
+                            for (const auto &subscriber : it->second) {
+                                if (subscriber.second.type() ==
+                                    typeid(std::function<void(const T &)>)) {
+                                    std::any_cast<
+                                        std::function<void(const T &)>>(
+                                        subscriber.second)(
+                                        std::any_cast<const T &>(data));
+                                }
+                            }
+                        } catch (const std::bad_any_cast &e) {
+                            LOG_F(ERROR, "Message type mismatch: {}", e.what());
+                        } catch (...) {
+                            LOG_F(ERROR,
+                                  "Unknown error occurred during message "
+                                  "processing");
+                        }
+                    }
+                }
+
+                // Process global subscribers
+                {
+                    std::shared_lock globalLock(globalSubscribersLock_);
+                    try {
+                        for (const auto &subscriber : globalSubscribers_) {
+                            if (subscriber.type() ==
+                                typeid(std::function<void(const T &)>)) {
+                                std::any_cast<std::function<void(const T &)>>(
+                                    subscriber)(std::any_cast<const T &>(data));
+                            }
+                        }
+                    } catch (const std::bad_any_cast &e) {
+                        LOG_F(ERROR, "Global message type mismatch: {}",
+                              e.what());
+                    } catch (...) {
+                        LOG_F(ERROR,
+                              "Unknown error occurred during global message "
+                              "processing");
+                    }
+                }
+
+                DLOG_F(INFO, "Processed message on topic: {}", topic);
+            }
+        }
+    }
 };
+
 }  // namespace atom::async
 
-#endif
+#endif  // ATOM_ASYNC_MESSAGE_BUS_HPP

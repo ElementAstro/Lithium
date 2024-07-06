@@ -10,6 +10,7 @@
         margin: 0;
         padding: 20px;
         line-height: 1.6;
+        background-color: #f0f0f0;
       }
       #messageLog {
         height: 300px;
@@ -17,18 +18,35 @@
         border: 1px solid #ccc;
         padding: 10px;
         margin-bottom: 20px;
+        background-color: white;
       }
       input[type="text"],
       button,
       select {
-        padding: 5px;
+        padding: 8px;
         margin: 5px 0;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+      }
+      button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #45a049;
       }
       #status {
         font-weight: bold;
       }
       .settings {
         margin-bottom: 20px;
+        background-color: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       .received {
         color: blue;
@@ -43,7 +61,10 @@
       #jsonBuilder {
         margin-top: 20px;
         border: 1px solid #ccc;
-        padding: 10px;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       #jsonBuilder input,
       #jsonBuilder select {
@@ -52,15 +73,25 @@
       #jsonPreview {
         margin-top: 10px;
         padding: 10px;
-        background-color: #f0f0f0;
+        background-color: #f9f9f9;
         white-space: pre-wrap;
+        border-radius: 4px;
+        border: 1px solid #ddd;
       }
       .json-field {
         margin-left: 20px;
-        border-left: 1px solid #ccc;
+        border-left: 2px solid #ccc;
         padding-left: 10px;
+        margin-bottom: 10px;
       }
       .json-field-controls {
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .json-field-controls > * {
+        margin-right: 5px;
         margin-bottom: 5px;
       }
     </style>
@@ -278,24 +309,24 @@
       function addJsonField(parentId = null) {
         const fieldId = `field-${jsonFieldsCounter++}`;
         const fieldHtml = `
-                <div id="${fieldId}" class="json-field">
-                    <div class="json-field-controls">
-                        <input type="text" id="key-${fieldId}" placeholder="Key">
-                        <select id="type-${fieldId}" onchange="handleTypeChange('${fieldId}')">
-                            <option value="string">String</option>
-                            <option value="number">Number</option>
-                            <option value="boolean">Boolean</option>
-                            <option value="null">Null</option>
-                            <option value="object">Object</option>
-                            <option value="array">Array</option>
-                        </select>
-                        <input type="text" id="value-${fieldId}" placeholder="Value">
-                        <button onclick="addJsonField('${fieldId}')">Add Child</button>
-                        <button onclick="removeJsonField('${fieldId}')">Remove</button>
-                    </div>
-                    <div id="children-${fieldId}"></div>
-                </div>
-            `;
+          <div id="${fieldId}" class="json-field">
+            <div class="json-field-controls">
+              <input type="text" id="key-${fieldId}" placeholder="Key">
+              <select id="type-${fieldId}" onchange="handleTypeChange('${fieldId}')">
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="null">Null</option>
+                <option value="object">Object</option>
+                <option value="array">Array</option>
+              </select>
+              <input type="text" id="value-${fieldId}" placeholder="Value">
+              <button onclick="addJsonField('${fieldId}')">Add Child</button>
+              <button onclick="removeJsonField('${fieldId}')">Remove</button>
+            </div>
+            <div id="children-${fieldId}"></div>
+          </div>
+        `;
 
         if (parentId) {
           document

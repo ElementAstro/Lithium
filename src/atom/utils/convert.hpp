@@ -28,7 +28,7 @@ namespace atom::utils {
  * @param charString The string_view containing char characters to be converted.
  * @return LPWSTR representing the wide character version of the input string.
  */
-[[nodiscard]] LPWSTR CharToLPWSTR(std::string_view charString);
+[[nodiscard]] auto CharToLPWSTR(std::string_view charString) -> LPWSTR;
 
 /**
  * @brief Converts a WCHAR array to a std::string.
@@ -42,7 +42,7 @@ namespace atom::utils {
  * @return [[nodiscard]] std::string The converted std::string in UTF-8
  * encoding.
  */
-[[nodiscard]] std::string WCharArrayToString(const WCHAR* wCharArray);
+[[nodiscard]] auto WCharArrayToString(const WCHAR* wCharArray) -> std::string;
 
 /**
  * @brief Converts a string containing char characters to LPSTR (character
@@ -50,14 +50,14 @@ namespace atom::utils {
  * @param str The string containing char characters to be converted.
  * @return LPSTR representing the character version of the input string.
  */
-[[nodiscard]] LPSTR StringToLPSTR(const std::string& str);
+[[nodiscard]] auto StringToLPSTR(const std::string& str) -> LPSTR;
 
 /**
  * @brief Converts a wstring to LPSTR (character string).
  * @param wstr The wstring to be converted to LPSTR.
  * @return LPSTR representing the character version of the input wstring.
  */
-[[nodiscard]] LPSTR WStringToLPSTR(const std::wstring& wstr);
+[[nodiscard]] auto WStringToLPSTR(const std::wstring& wstr) -> LPSTR;
 
 /**
  * @brief Converts a string containing char characters to LPWSTR (wide character
@@ -65,7 +65,7 @@ namespace atom::utils {
  * @param str The string containing char characters to be converted.
  * @return LPWSTR representing the wide character version of the input string.
  */
-[[nodiscard]] LPWSTR StringToLPWSTR(const std::string& str);
+[[nodiscard]] auto StringToLPWSTR(const std::string& str) -> LPWSTR;
 
 /**
  * @brief Converts LPWSTR (wide character string) to a string containing char
@@ -73,7 +73,7 @@ namespace atom::utils {
  * @param lpwstr The LPWSTR to be converted to a string.
  * @return std::string containing char characters.
  */
-[[nodiscard]] std::string LPWSTRToString(LPWSTR lpwstr);
+[[nodiscard]] auto LPWSTRToString(LPWSTR lpwstr) -> std::string;
 
 /**
  * @brief Converts LPCWSTR (const wide character string) to a string containing
@@ -81,28 +81,28 @@ namespace atom::utils {
  * @param lpcwstr The LPCWSTR to be converted to a string.
  * @return std::string containing char characters.
  */
-[[nodiscard]] std::string LPCWSTRToString(LPCWSTR lpcwstr);
+[[nodiscard]] auto LPCWSTRToString(LPCWSTR lpcwstr) -> std::string;
 
 /**
  * @brief Converts a wstring to LPWSTR (wide character string).
  * @param wstr The wstring to be converted.
  * @return LPWSTR representing the wide character version of the input wstring.
  */
-[[nodiscard]] LPWSTR WStringToLPWSTR(const std::wstring& wstr);
+[[nodiscard]] auto WStringToLPWSTR(const std::wstring& wstr) -> LPWSTR;
 
 /**
  * @brief Converts LPWSTR (wide character string) to a wstring.
  * @param lpwstr The LPWSTR to be converted to a wstring.
  * @return std::wstring.
  */
-[[nodiscard]] std::wstring LPWSTRToWString(LPWSTR lpwstr);
+[[nodiscard]] auto LPWSTRToWString(LPWSTR lpwstr) -> std::wstring;
 
 /**
  * @brief Converts LPCWSTR (const wide character string) to a wstring.
  * @param lpcwstr The LPCWSTR to be converted to a wstring.
  * @return std::wstring.
  */
-[[nodiscard]] std::wstring LPCWSTRToWString(LPCWSTR lpcwstr);
+[[nodiscard]] auto LPCWSTRToWString(LPCWSTR lpcwstr) -> std::wstring;
 
 }  // namespace atom::utils
 

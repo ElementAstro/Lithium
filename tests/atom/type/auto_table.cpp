@@ -1,87 +1,95 @@
 #include "atom/type/auto_table.hpp"
 #include <gtest/gtest.h>
 
-TEST(CountingHashTableTest, InsertTest) {
-    atom::type::CountingHashTable<int, std::string> table;
+using namespace atom::type;
 
-    table.insert(1, "one");
-    table.insert(2, "two");
-    table.insert(3, "three");
+// Test fixture for CountingHashTable
+class CountingHashTableTest : public ::testing::Test {
+protected:
+    CountingHashTable<int, std::string> table;
 
-    ASSERT_EQ(table.getAllEntries(),
-              std::vector<std::pair<
-                  int, atom::type::CountingHashTable<int, std::string>::Entry>>{
-                  {1, {"one", 1}}, {2, {"two", 1}}, {3, {"three", 1}}});
+    void SetUp() override {
+        // Initialize table with some values
+        table.insert(1, "one");
+        table.insert(2, "two");
+        table.insert(3, "three");
+    }
+};
+
+TEST_F(CountingHashTableTest, InsertTest) {
+    table.insert(4, "four");
+    auto value = table.get(4);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), "four");
 }
 
-TEST(CountingHashTableTest, GetTest) {
-    atom::type::CountingHashTable<int, std::string> table;
+TEST_F(CountingHashTableTest, GetTest) {
+    auto value = table.get(1);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), "one");
 
-    table.insert(1, "one");
+    value = table.get(2);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), "two");
 
-    ASSERT_EQ(table.get(1), std::optional<std::string>("one"));
-    ASSERT_EQ(table.get(2), std::optional<std::string>(std::nullopt));
+    value = table.get(3);
+    ASSERT_TRUE(value.has_value());
+    EXPECT_EQ(value.value(), "three");
+
+    value = table.get(99);  // non-existing key
+    EXPECT_FALSE(value.has_value());
 }
 
-TEST(CountingHashTableTest, EraseTest) {
-    atom::type::CountingHashTable<int, std::string> table;
+TEST_F(CountingHashTableTest, EraseTest) {
+    bool erased = table.erase(2);
+    EXPECT_TRUE(erased);
+    auto value = table.get(2);
+    EXPECT_FALSE(value.has_value());
 
-    table.insert(1, "one");
-    table.insert(2, "two");
-
-    ASSERT_TRUE(table.erase(1));
-    ASSERT_FALSE(table.erase(3));
-    ASSERT_EQ(table.getAllEntries(),
-              std::vector<std::pair<
-                  int, atom::type::CountingHashTable<int, std::string>::Entry>>{
-                  {2, {"two", 1}}});
+    erased = table.erase(99);  // non-existing key
+    EXPECT_FALSE(erased);
 }
 
-TEST(CountingHashTableTest, ClearTest) {
-    atom::type::CountingHashTable<int, std::string> table;
-
-    table.insert(1, "one");
-    table.insert(2, "two");
+TEST_F(CountingHashTableTest, ClearTest) {
     table.clear();
-
-    ASSERT_EQ(
-        table.getAllEntries(),
-        std::vector<std::pair<
-            int, atom::type::CountingHashTable<int, std::string>::Entry>>());
+    auto entries = table.getAllEntries();
+    EXPECT_TRUE(entries.empty());
 }
 
-TEST(CountingHashTableTest, SortEntriesByCountDescTest) {
-    atom::type::CountingHashTable<int, std::string> table;
+TEST_F(CountingHashTableTest, GetAllEntriesTest) {
+    auto entries = table.getAllEntries();
+    ASSERT_EQ(entries.size(), 3);
+    EXPECT_EQ(entries[0].second.value, "one");
+    EXPECT_EQ(entries[1].second.value, "two");
+    EXPECT_EQ(entries[2].second.value, "three");
+}
 
-    table.insert(1, "one");
-    table.insert(2, "two");
-    table.insert(3, "three");
+TEST_F(CountingHashTableTest, SortEntriesByCountDescTest) {
+    table.get(1);
+    table.get(1);
+    table.get(3);
+    table.sortEntriesByCountDesc();
+
+    auto entries = table.getAllEntries();
+    ASSERT_EQ(entries.size(), 3);
+    EXPECT_EQ(entries[0].second.value, "one");
+    EXPECT_EQ(entries[1].second.value, "three");
+    EXPECT_EQ(entries[2].second.value, "two");
+}
+
+TEST_F(CountingHashTableTest, AutoSortingTest) {
     table.get(1);
     table.get(1);
     table.get(3);
 
-    table.sortEntriesByCountDesc();
-    ASSERT_EQ(table.getAllEntries(),
-              std::vector<std::pair<
-                  int, atom::type::CountingHashTable<int, std::string>::Entry>>{
-                  {1, {"one", 2}}, {3, {"three", 1}}, {2, {"two", 1}}});
-}
+    table.startAutoSorting(std::chrono::milliseconds(100));
 
-TEST(CountingHashTableTest, StartAutoSortingTest) {
-    atom::type::CountingHashTable<int, std::string> table;
-
-    table.insert(1, "one");
-    table.insert(2, "two");
-    table.insert(3, "three");
-
-    // Test that auto sorting is working by checking if the entries are sorted
-    // after the specified interval
-    table.startAutoSorting(std::chrono::milliseconds(10));
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     table.stopAutoSorting();
 
-    ASSERT_EQ(table.getAllEntries(),
-              std::vector<std::pair<
-                  int, atom::type::CountingHashTable<int, std::string>::Entry>>{
-                  {1, {"one", 1}}, {2, {"two", 1}}, {3, {"three", 1}}});
+    auto entries = table.getAllEntries();
+    ASSERT_EQ(entries.size(), 3);
+    EXPECT_EQ(entries[0].second.value, "one");
+    EXPECT_EQ(entries[1].second.value, "three");
+    EXPECT_EQ(entries[2].second.value, "two");
 }

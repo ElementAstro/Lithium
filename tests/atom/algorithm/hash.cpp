@@ -5,14 +5,14 @@ using namespace atom::algorithm;
 
 // Helper function to test FNV-1a hash
 void test_fnv1a_hash(const std::string& input, uint32_t expected) {
-    EXPECT_EQ(fnv1a_hash(input), expected);
-    EXPECT_EQ(fnv1a_hash(std::string_view(input)), expected);
+    EXPECT_EQ(fnv1aHash(input), expected);
+    EXPECT_EQ(fnv1aHash(std::string_view(input)), expected);
 }
 
 // Helper function to test Jenkins One-at-a-Time hash
 void test_jenkins_hash(const std::string& input, uint32_t expected) {
-    EXPECT_EQ(jenkins_one_at_a_time_hash(input), expected);
-    EXPECT_EQ(jenkins_one_at_a_time_hash(std::string_view(input)), expected);
+    EXPECT_EQ(jenkinsOneAtATimeHash(input), expected);
+    EXPECT_EQ(jenkinsOneAtATimeHash(std::string_view(input)), expected);
 }
 
 TEST(HashTest, ComputeHashSingleValue) {

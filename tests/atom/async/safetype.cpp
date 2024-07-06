@@ -264,34 +264,34 @@ TEST_F(ThreadSafeVectorTest, InitialState) {
 }
 
 TEST_F(ThreadSafeVectorTest, PushBackAndSize) {
-    vec.push_back(1);
-    vec.push_back(2);
-    vec.push_back(3);
+    vec.pushBack(1);
+    vec.pushBack(2);
+    vec.pushBack(3);
 
     EXPECT_EQ(vec.getSize(), 3);
     EXPECT_FALSE(vec.empty());
 }
 
 TEST_F(ThreadSafeVectorTest, PopBack) {
-    vec.push_back(1);
-    vec.push_back(2);
+    vec.pushBack(1);
+    vec.pushBack(2);
 
-    auto value = vec.pop_back();
+    auto value = vec.popBack();
     ASSERT_TRUE(value.has_value());
     EXPECT_EQ(value.value(), 2);
 
-    value = vec.pop_back();
+    value = vec.popBack();
     ASSERT_TRUE(value.has_value());
     EXPECT_EQ(value.value(), 1);
 
-    value = vec.pop_back();
+    value = vec.popBack();
     EXPECT_FALSE(value.has_value());
 }
 
 TEST_F(ThreadSafeVectorTest, AtMethod) {
-    vec.push_back(1);
-    vec.push_back(2);
-    vec.push_back(3);
+    vec.pushBack(1);
+    vec.pushBack(2);
+    vec.pushBack(3);
 
     auto value = vec.at(0);
     ASSERT_TRUE(value.has_value());
@@ -310,8 +310,8 @@ TEST_F(ThreadSafeVectorTest, AtMethod) {
 }
 
 TEST_F(ThreadSafeVectorTest, Clear) {
-    vec.push_back(1);
-    vec.push_back(2);
+    vec.pushBack(1);
+    vec.pushBack(2);
     vec.clear();
 
     EXPECT_TRUE(vec.empty());
@@ -320,7 +320,7 @@ TEST_F(ThreadSafeVectorTest, Clear) {
 
 TEST_F(ThreadSafeVectorTest, ResizeAndCapacity) {
     for (int i = 0; i < 20; ++i) {
-        vec.push_back(i);
+        vec.pushBack(i);
     }
 
     EXPECT_EQ(vec.getSize(), 20);
@@ -328,9 +328,9 @@ TEST_F(ThreadSafeVectorTest, ResizeAndCapacity) {
 }
 
 TEST_F(ThreadSafeVectorTest, FrontAndBack) {
-    vec.push_back(1);
-    vec.push_back(2);
-    vec.push_back(3);
+    vec.pushBack(1);
+    vec.pushBack(2);
+    vec.pushBack(3);
 
     EXPECT_EQ(vec.front(), 1);
     EXPECT_EQ(vec.back(), 3);
@@ -338,19 +338,19 @@ TEST_F(ThreadSafeVectorTest, FrontAndBack) {
 
 TEST_F(ThreadSafeVectorTest, ShrinkToFit) {
     for (int i = 0; i < 20; ++i) {
-        vec.push_back(i);
+        vec.pushBack(i);
     }
 
     size_t old_capacity = vec.getCapacity();
-    vec.shrink_to_fit();
+    vec.shrinkToFit();
     EXPECT_EQ(vec.getSize(), vec.getCapacity());
     EXPECT_LT(vec.getCapacity(), old_capacity);
 }
 
 TEST_F(ThreadSafeVectorTest, OperatorSquareBrackets) {
-    vec.push_back(1);
-    vec.push_back(2);
-    vec.push_back(3);
+    vec.pushBack(1);
+    vec.pushBack(2);
+    vec.pushBack(3);
 
     EXPECT_EQ(vec[0], 1);
     EXPECT_EQ(vec[1], 2);
@@ -366,7 +366,7 @@ TEST_F(ThreadSafeVectorTest, ConcurrentPushBack) {
 
     auto push_function = [this](int start, int numIterations) {
         for (int i = 0; i < numIterations; ++i) {
-            vec.push_back(start + i);
+            vec.pushBack(start + i);
         }
     };
 
@@ -387,12 +387,12 @@ TEST_F(ThreadSafeVectorTest, ConcurrentPopBack) {
     std::vector<std::thread> threads;
 
     for (int i = 0; i < numThreads * numIterations; ++i) {
-        vec.push_back(i);
+        vec.pushBack(i);
     }
 
     auto pop_function = [this](int numIterations) {
         for (int i = 0; i < numIterations; ++i) {
-            vec.pop_back();
+            vec.popBack();
         }
     };
 
@@ -411,7 +411,7 @@ TEST_F(ThreadSafeVectorTest, PushBackResize) {
     vec.clear();
     size_t initial_capacity = vec.getCapacity();
     for (size_t i = 0; i < initial_capacity + 1; ++i) {
-        vec.push_back(static_cast<int>(i));
+        vec.pushBack(static_cast<int>(i));
     }
     EXPECT_GT(vec.getCapacity(), initial_capacity);
     EXPECT_EQ(vec.getSize(), initial_capacity + 1);
@@ -419,7 +419,7 @@ TEST_F(ThreadSafeVectorTest, PushBackResize) {
 
 TEST_F(ThreadSafeVectorTest, PopBackEmpty) {
     vec.clear();
-    auto value = vec.pop_back();
+    auto value = vec.popBack();
     EXPECT_FALSE(value.has_value());
 }
 
@@ -439,30 +439,30 @@ protected:
 TEST_F(LockFreeListTest, InitialState) { EXPECT_TRUE(list.empty()); }
 
 TEST_F(LockFreeListTest, PushFrontAndEmpty) {
-    list.push_front(1);
+    list.pushFront(1);
     EXPECT_FALSE(list.empty());
 }
 
 TEST_F(LockFreeListTest, PopFront) {
-    list.push_front(1);
-    list.push_front(2);
+    list.pushFront(1);
+    list.pushFront(2);
 
-    auto value = list.pop_front();
+    auto value = list.popFront();
     ASSERT_TRUE(value.has_value());
     EXPECT_EQ(value.value(), 2);
 
-    value = list.pop_front();
+    value = list.popFront();
     ASSERT_TRUE(value.has_value());
     EXPECT_EQ(value.value(), 1);
 
-    value = list.pop_front();
+    value = list.popFront();
     EXPECT_FALSE(value.has_value());
 }
 
 TEST_F(LockFreeListTest, Iterator) {
-    list.push_front(1);
-    list.push_front(2);
-    list.push_front(3);
+    list.pushFront(1);
+    list.pushFront(2);
+    list.pushFront(3);
 
     auto it = list.begin();
     EXPECT_EQ(*it, 3);
@@ -481,13 +481,13 @@ TEST_F(LockFreeListTest, ConcurrentPushAndPop) {
 
     auto push_function = [this](int id, int numIterations) {
         for (int i = 0; i < numIterations; ++i) {
-            list.push_front(i + id * 1000);
+            list.pushFront(i + id * 1000);
         }
     };
 
     auto pop_function = [this](int numIterations) {
         for (int i = 0; i < numIterations; ++i) {
-            list.pop_front();
+            list.popFront();
         }
     };
 
@@ -507,7 +507,7 @@ TEST_F(LockFreeListTest, ConcurrentPushAndPop) {
 }
 
 TEST_F(LockFreeListTest, FrontEmptyList) {
-    auto value = list.pop_front();
+    auto value = list.popFront();
     EXPECT_FALSE(value.has_value());
 }
 

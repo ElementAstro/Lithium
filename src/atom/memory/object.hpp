@@ -21,6 +21,7 @@ Description: A simple implementation of object pool
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #include "atom/error/exception.hpp"
@@ -64,7 +65,7 @@ public:
      * @return A shared pointer to the acquired object.
      * @throw std::runtime_error If the pool is full and no object is available.
      */
-    auto acquire() -> std::shared_ptr<T> {
+    [[nodiscard]] auto acquire() -> std::shared_ptr<T> {
         std::unique_lock lock(mutex_);
 
         if (available_ == 0 && pool_.empty()) {
@@ -72,15 +73,7 @@ public:
         }
         cv_.wait(lock, [this] { return !pool_.empty() || available_ > 0; });
 
-        if (!pool_.empty()) {
-            auto obj = pool_.back();
-            pool_.pop_back();
-            return obj;
-        }
-
-        assert(available_ > 0);
-        --available_;
-        return creator_();
+        return acquireImpl();
     }
 
     /**
@@ -92,8 +85,9 @@ public:
      * expires.
      */
     template <typename Rep, typename Period>
-    auto acquireFor(const std::chrono::duration<Rep, Period>& timeout_duration)
-        -> std::shared_ptr<T> {
+    [[nodiscard]] auto acquireFor(
+        const std::chrono::duration<Rep, Period>& timeout_duration)
+        -> std::optional<std::shared_ptr<T>> {
         std::unique_lock lock(mutex_);
 
         if (available_ == 0 && pool_.empty()) {
@@ -102,18 +96,10 @@ public:
         if (!cv_.wait_for(lock, timeout_duration, [this] {
                 return !pool_.empty() || available_ > 0;
             })) {
-            return nullptr;
+            return std::nullopt;
         }
 
-        if (!pool_.empty()) {
-            auto obj = pool_.back();
-            pool_.pop_back();
-            return obj;
-        }
-
-        assert(available_ > 0);
-        --available_;
-        return creator_();
+        return acquireImpl();
     }
 
     /**
@@ -137,7 +123,7 @@ public:
      *
      * @return The number of available objects.
      */
-    auto available() const -> size_t {
+    [[nodiscard]] auto available() const -> size_t {
         std::lock_guard lock(mutex_);
         return available_ + pool_.size();
     }
@@ -147,7 +133,7 @@ public:
      *
      * @return The current number of objects in the pool.
      */
-    auto size() const -> size_t {
+    [[nodiscard]] auto size() const -> size_t {
         std::lock_guard lock(mutex_);
         return max_size_ - available_ + pool_.size();
     }
@@ -164,7 +150,53 @@ public:
         }
     }
 
+    /**
+     * @brief Clears all objects from the pool.
+     */
+    void clear() {
+        std::unique_lock lock(mutex_);
+        pool_.clear();
+        available_ = max_size_;
+    }
+
+    /**
+     * @brief Resizes the pool to a new maximum size.
+     *
+     * @param new_max_size The new maximum size for the pool.
+     */
+    void resize(size_t new_max_size) {
+        std::unique_lock lock(mutex_);
+        if (new_max_size < max_size_) {
+            pool_.erase(pool_.begin() + new_max_size, pool_.end());
+        }
+        max_size_ = new_max_size;
+        available_ = std::max(available_, max_size_ - pool_.size());
+        pool_.reserve(max_size_);
+    }
+
+    /**
+     * @brief Applies a function to all objects in the pool.
+     *
+     * @param func The function to apply to each object.
+     */
+    void applyToAll(const std::function<void(T&)>& func) {
+        std::unique_lock lock(mutex_);
+        std::for_each(pool_, [&func](const auto& obj) { func(*obj); });
+    }
+
 private:
+    [[nodiscard]] auto acquireImpl() -> std::shared_ptr<T> {
+        if (!pool_.empty()) {
+            auto obj = std::move(pool_.back());
+            pool_.pop_back();
+            return obj;
+        }
+
+        assert(available_ > 0);
+        --available_;
+        return creator_();
+    }
+
     size_t max_size_;
     size_t available_;
     mutable std::mutex mutex_;

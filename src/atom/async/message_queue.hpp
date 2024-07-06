@@ -15,6 +15,7 @@ Description: A simple message queue (just learn something)
 #ifndef ATOM_ASYNC_MESSAGE_QUEUE_HPP
 #define ATOM_ASYNC_MESSAGE_QUEUE_HPP
 
+#include <algorithm>
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
@@ -27,6 +28,7 @@ Description: A simple message queue (just learn something)
 #include <vector>
 
 namespace atom::async {
+
 /**
  * @brief A message queue that allows subscribers to receive messages of type T.
  *
@@ -39,7 +41,7 @@ public:
      * @brief The callback function type that will be called when a new message
      * is received.
      */
-    using CallbackType = std::function<void(const T &)>;
+    using CallbackType = std::function<void(const T&)>;
 
     /**
      * @brief Subscribe a callback function to receive messages.
@@ -50,7 +52,7 @@ public:
      * @param priority The priority of the subscriber. Higher priority
      * subscribers will receive messages before lower priority subscribers.
      */
-    void subscribe(CallbackType callback, const std::string &subscriberName,
+    void subscribe(CallbackType callback, const std::string& subscriberName,
                    int priority = 0);
 
     /**
@@ -65,7 +67,7 @@ public:
      *
      * @param message The message to be published.
      */
-    void publish(const T &message);
+    void publish(const T& message);
 
     /**
      * @brief Start the processing thread(s) to receive and handle messages.
@@ -115,7 +117,7 @@ private:
          * is received.
          * @param priority The priority of the subscriber.
          */
-        Subscriber(std::string name, const CallbackType &callback, int priority)
+        Subscriber(std::string name, const CallbackType& callback, int priority)
             : name(std::move(name)), callback(callback), priority(priority) {}
 
         /**
@@ -125,7 +127,7 @@ private:
          * @return True if this Subscriber has a higher priority than the other
          * Subscriber, false otherwise.
          */
-        auto operator<(const Subscriber &other) const -> bool {
+        auto operator<(const Subscriber& other) const -> bool {
             return priority > other.priority;
         }
     };
@@ -141,14 +143,16 @@ private:
                         threads of new messages. */
     std::atomic<bool> m_isRunning_{
         true}; /**< The flag used to indicate whether the processing thread(s)
-                  should continue running. */
+                 should continue running. */
     std::vector<std::thread> m_processingThreads_; /**< The vector containing
-                                                     all processing threads. */
+                                                      all processing threads. */
+
+    void processMessages();
 };
 
 template <typename T>
 void MessageQueue<T>::subscribe(CallbackType callback,
-                                const std::string &subscriberName,
+                                const std::string& subscriberName,
                                 int priority) {
     std::lock_guard lock(m_mutex_);
     m_subscribers_.emplace_back(subscriberName, callback, priority);
@@ -159,7 +163,7 @@ template <typename T>
 void MessageQueue<T>::unsubscribe(CallbackType callback) {
     std::lock_guard lock(m_mutex_);
     auto it = std::remove_if(m_subscribers_.begin(), m_subscribers_.end(),
-                             [&callback](const auto &subscriber) {
+                             [&callback](const auto& subscriber) {
                                  return subscriber.callback.target_type() ==
                                         callback.target_type();
                              });
@@ -167,7 +171,7 @@ void MessageQueue<T>::unsubscribe(CallbackType callback) {
 }
 
 template <typename T>
-void MessageQueue<T>::publish(const T &message) {
+void MessageQueue<T>::publish(const T& message) {
     {
         std::lock_guard lock(m_mutex_);
         m_messages_.emplace_back(message);
@@ -177,44 +181,8 @@ void MessageQueue<T>::publish(const T &message) {
 
 template <typename T>
 void MessageQueue<T>::startProcessingThread(size_t numThreads) {
-    for (int i = 0; i < numThreads; ++i) {
-        m_processingThreads_.emplace_back([this]() {
-            while (m_isRunning_.load()) {
-                std::optional<T> message;
-
-                {
-                    std::unique_lock lock(m_mutex_);
-                    m_condition_.wait(lock, [this]() {
-                        return !m_messages_.empty() || !m_isRunning_.load();
-                    });
-
-                    if (!m_isRunning_.load()) {
-                        return;
-                    }
-
-                    if (!m_messages_.empty()) {
-                        message = std::move(m_messages_.front());
-                        m_messages_.pop_front();
-                    }
-                }
-
-                if (message) {
-                    std::vector<CallbackType> subscribersCopy;
-
-                    {
-                        std::lock_guard lock(m_mutex_);
-                        subscribersCopy.reserve(m_subscribers_.size());
-                        for (const auto &subscriber : m_subscribers_) {
-                            subscribersCopy.emplace_back(subscriber.callback);
-                        }
-                    }
-
-                    for (const auto &subscriber : subscribersCopy) {
-                        subscriber(*message);
-                    }
-                }
-            }
-        });
+    for (size_t i = 0; i < numThreads; ++i) {
+        m_processingThreads_.emplace_back(&MessageQueue::processMessages, this);
     }
 }
 
@@ -222,7 +190,7 @@ template <typename T>
 void MessageQueue<T>::stopProcessingThread() {
     m_isRunning_.store(false);
     m_condition_.notify_all();
-    for (auto &thread : m_processingThreads_) {
+    for (auto& thread : m_processingThreads_) {
         if (thread.joinable()) {
             thread.join();
         }
@@ -240,6 +208,45 @@ template <typename T>
 auto MessageQueue<T>::getSubscriberCount() const -> size_t {
     std::lock_guard lock(m_mutex_);
     return m_subscribers_.size();
+}
+
+template <typename T>
+void MessageQueue<T>::processMessages() {
+    while (m_isRunning_.load()) {
+        std::optional<T> message;
+
+        {
+            std::unique_lock lock(m_mutex_);
+            m_condition_.wait(lock, [this]() {
+                return !m_messages_.empty() || !m_isRunning_.load();
+            });
+
+            if (!m_isRunning_.load() && m_messages_.empty()) {
+                return;
+            }
+
+            if (!m_messages_.empty()) {
+                message = std::move(m_messages_.front());
+                m_messages_.pop_front();
+            }
+        }
+
+        if (message) {
+            std::vector<CallbackType> subscribersCopy;
+
+            {
+                std::lock_guard lock(m_mutex_);
+                subscribersCopy.reserve(m_subscribers_.size());
+                for (const auto& subscriber : m_subscribers_) {
+                    subscribersCopy.emplace_back(subscriber.callback);
+                }
+            }
+
+            for (const auto& subscriber : subscribersCopy) {
+                subscriber(*message);
+            }
+        }
+    }
 }
 
 }  // namespace atom::async

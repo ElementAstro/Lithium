@@ -127,6 +127,10 @@ template <typename T>
 concept Swappable = requires(T t) { std::swap(t, t); };
 
 template <typename T>
+concept Copyable =
+    std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
+
+template <typename T>
 concept Destructible = requires(T t) {
     { t.~T() } -> std::same_as<void>;
 };
@@ -234,6 +238,10 @@ concept Trivial = std::is_trivial_v<T>;
 // Checks if a type is trivially constructible
 template <typename T>
 concept TriviallyConstructible = std::is_trivially_constructible_v<T>;
+
+template <typename T>
+concept TriviallyCopyable =
+    std::is_trivially_copyable_v<T> && std::is_standard_layout_v<T>;
 
 #if __has_include(<iterator>)
 #include <iterator>

@@ -39,6 +39,7 @@ target_link_libraries(${project_name}-lib
         PUBLIC oatpp
         PUBLIC oatpp-websocket
         PUBLIC oatpp-openssl
+        PUBLIC oatpp-zlib
 
         # OpenSSL libraries
         PUBLIC OpenSSL::SSL

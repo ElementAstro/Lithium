@@ -47,23 +47,15 @@ add_subdirectory(type)
 add_subdirectory(utils)
 add_subdirectory(web)
 
-# Check for std::format
-CHECK_INCLUDE_FILE(format HAS_STD_FORMAT)
-if(NOT HAS_STD_FORMAT)
-    find_package(fmt REQUIRED)
-endif()
-
 # Sources and Headers
 set(ATOM_SOURCES
     log/logger.cpp
-    log/global_logger.cpp
     log/syslog.cpp
     function/global_ptr.cpp
 )
 
 set(ATOM_HEADERS
     log/logger.hpp
-    log/global_logger.hpp
     log/syslog.hpp
     function/global_ptr.hpp
 )
@@ -87,7 +79,6 @@ set(ATOM_LIBS
 
 # Object Library
 add_library(atom_object OBJECT ${ATOM_SOURCES} ${ATOM_HEADERS})
-target_compile_definitions(atom_object PRIVATE "-DHAVE_LIBNOVA")
 
 if(WIN32)
     target_link_libraries(atom_object setupapi wsock32 ws2_32 shlwapi iphlpapi)

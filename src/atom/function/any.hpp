@@ -23,6 +23,7 @@
 #include <variant>
 #include <vector>
 
+#include "macro.hpp"
 #include "type_info.hpp"
 
 namespace atom::meta {
@@ -49,7 +50,7 @@ private:
               mReturnValue(return_value),
               mReadonly(readonly),
               mConstDataPtr((const void*)std::addressof(obj)) {}
-    };
+    } ATOM_ALIGNAS(128);
 
     std::shared_ptr<Data> m_data_;
     mutable std::shared_mutex m_mutex_;
@@ -110,7 +111,7 @@ public:
 
     auto isConst() const noexcept -> bool {
         std::shared_lock lock(m_mutex_);
-        return m_data_->mTypeInfo.is_const();
+        return m_data_->mTypeInfo.isConst();
     }
 
     auto isType(const TypeInfo& ti) const noexcept -> bool {

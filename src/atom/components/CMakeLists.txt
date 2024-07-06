@@ -17,10 +17,8 @@ set(${PROJECT_NAME}_SOURCES
 set(${PROJECT_NAME}_HEADERS
     component.hpp
     dispatch.hpp
-    dispatch.inl
     types.hpp
     var.hpp
-    var.inl
 )
 
 # Dependencies

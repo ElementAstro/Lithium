@@ -1,41 +1,34 @@
 #ifndef LITHIUM_TASK_INTERPRETOR_HPP
 #define LITHIUM_TASK_INTERPRETOR_HPP
 
-#include <atomic>
+#include <cstddef>
 #include <functional>
-#include <optional>
+#include <memory>
 #include <string>
-#include <thread>
-#include <unordered_map>
 
-#include "task.hpp"
-#include "atom/type/json.hpp"
-
-class Component; // Forward declaration
-
+#include "atom/type/json_fwd.hpp"
 using json = nlohmann::json;
 
 namespace lithium {
-class TaskGenerator;
+class TaskInterpreterImpl;
 
-class TaskInterpretor {
+class TaskInterpreter {
 public:
-    TaskInterpretor();
+    TaskInterpreter();
 
-    ~TaskInterpretor();
+    ~TaskInterpreter();
 
     void loadScript(const std::string& name, const json& script);
 
     void unloadScript(const std::string& name);
 
-    auto hasScript(const std::string& name) const -> bool;
+    [[nodiscard]] auto hasScript(const std::string& name) const -> bool;
 
-    auto getScript(const std::string& name) const -> std::optional<json>;
+    [[nodiscard]] auto getScript(const std::string& name) const
+        -> std::optional<json>;
 
     void registerFunction(const std::string& name,
                           std::function<json(const json&)> func);
-
-    auto hasFunction(const std::string& name) const -> bool;
 
     void registerExceptionHandler(
         const std::string& name,
@@ -51,8 +44,18 @@ public:
 
     void stop();
 
+    void pause();
+
+    void resume();
+
+    void queueEvent(const std::string& eventName, const json& eventData);
+
 private:
     auto prepareScript(json& script) -> bool;
+
+    void executeScript(const std::string& scriptName);
+
+    void checkPause();
 
     auto executeStep(const json& step, size_t& idx, const json& script) -> bool;
 
@@ -62,8 +65,7 @@ private:
 
     auto executeLoop(const json& step, size_t& idx, const json& script) -> bool;
 
-    void executeGoto(const json& step, size_t& idx,
-                     [[maybe_unused]] const json& script);
+    void executeGoto(const json& step, size_t& idx, const json& /*script*/);
 
     void executeSwitch(const json& step, size_t& idx, const json& script);
 
@@ -71,22 +73,26 @@ private:
 
     void executeParallel(const json& step, size_t& idx, const json& script);
 
+    void executeNestedScript(const json& step);
+
+    void executeAssign(const json& step);
+
+    void executeImport(const json& step);
+
+    void executeWaitEvent(const json& step);
+
+    void executePrint(const json& step);
+
+    void executeAsync(const json& step);
+
+    void executeSteps(const json& steps, size_t& idx, const json& script);
+
     auto evaluate(const json& value) -> json;
 
     void handleException(const std::string& scriptName,
                          const std::exception& e);
 
-    std::shared_ptr<TaskGenerator> taskGenerator;
-    std::weak_ptr<Component> component;
-    std::unordered_map<std::string, json> scripts;
-    json variables;
-    std::unordered_map<std::string, std::function<json(const json&)>> functions;
-    std::unordered_map<std::string, size_t>
-        labels;  // Label to script index mapping
-    std::unordered_map<std::string, std::function<void(const std::exception&)>>
-        exceptionHandlers;
-    std::atomic<bool> stopRequested{false};
-    std::thread executionThread;
+    std::unique_ptr<TaskInterpreterImpl> impl_;
 };
 }  // namespace lithium
 

@@ -2,9 +2,12 @@
 #include "generator.hpp"
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
+#include <queue>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -13,88 +16,116 @@
 
 #include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "task.hpp"
 
 using namespace std::literals;
 using json = nlohmann::json;
 
 namespace lithium {
-TaskInterpretor::TaskInterpretor()
-    : taskGenerator(std::make_shared<TaskGenerator>()) {}
 
-TaskInterpretor::~TaskInterpretor() {
-    if (executionThread.joinable()) {
+class TaskInterpreterImpl {
+public:
+    std::unordered_map<std::string, json> scripts_;
+    json variables_;
+    std::unordered_map<std::string, std::function<json(const json&)>>
+        functions_;
+    std::unordered_map<std::string, size_t> labels_;
+    std::unordered_map<std::string, std::function<void(const std::exception&)>>
+        exceptionHandlers_;
+    std::atomic<bool> stopRequested_{false};
+    std::atomic<bool> pauseRequested_{false};
+    std::thread executionThread_;
+    std::vector<std::string> callStack_;
+    std::mutex mtx_;
+    std::condition_variable cv_;
+    std::queue<std::pair<std::string, json>> eventQueue_;
+
+    std::shared_ptr<TaskGenerator> taskGenerator_;
+};
+
+TaskInterpreter::TaskInterpreter()
+    : impl_(std::make_unique<TaskInterpreterImpl>()) {}
+
+TaskInterpreter::~TaskInterpreter() {
+    if (impl_->executionThread_.joinable()) {
         stop();
-        executionThread.join();
+        impl_->executionThread_.join();
     }
 }
 
-void TaskInterpretor::loadScript(const std::string& name, const json& script) {
-    scripts[name] = script;
-    if (prepareScript(scripts[name])) {
+void TaskInterpreter::loadScript(const std::string& name, const json& script) {
+    impl_->scripts_[name] = script;
+    if (prepareScript(impl_->scripts_[name])) {
         parseLabels(script);
     } else {
         THROW_RUNTIME_ERROR("Failed to prepare script: " + name);
     }
 }
 
-void TaskInterpretor::unloadScript(const std::string& name) {
-    scripts.erase(name);
+void TaskInterpreter::unloadScript(const std::string& name) {
+    if (hasScript(name)) {
+        impl_->scripts_.erase(name);
+    }
 }
 
-bool TaskInterpretor::hasScript(const std::string& name) const {
-    return scripts.find(name) != scripts.end();
+bool TaskInterpreter::hasScript(const std::string& name) const {
+    return impl_->scripts_.contains(name);
 }
 
-auto TaskInterpretor::getScript(const std::string& name) const
+auto TaskInterpreter::getScript(const std::string& name) const
     -> std::optional<json> {
-    if (auto it = scripts.find(name); it != scripts.end()) {
-        return scripts.at(name);
+    if (hasScript(name)) {
+        return impl_->scripts_.at(name);
     }
     return std::nullopt;
 }
 
-auto TaskInterpretor::prepareScript(json& script) -> bool {
+auto TaskInterpreter::prepareScript(json& script) -> bool {
     try {
-        taskGenerator->processJson(script);
+        impl_->taskGenerator_->processJson(script);
+    } catch (const json::parse_error& e) {
+        LOG_F(ERROR, "Failed to parse script: {}", e.what());
+        return false;
     } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to process script: {}", e.what());
         return false;
     }
     return true;
 }
 
-void TaskInterpretor::registerFunction(const std::string& name,
+void TaskInterpreter::registerFunction(const std::string& name,
                                        std::function<json(const json&)> func) {
-    if (functions.find(name) != functions.end()) {
+    if (impl_->functions_.find(name) != functions.end()) {
         THROW_RUNTIME_ERROR("Function '" + name + "' is already registered.");
     }
     functions[name] = std::move(func);
 }
 
-auto TaskInterpretor::hasFunction(const std::string& name) const -> bool {
+auto TaskInterpreter::hasFunction(const std::string& name) const -> bool {
     if (functions.find(name) == functions.end()) {
         THROW_RUNTIME_ERROR("Function '" + name + "' is not registered.");
     }
     return true;
 }
 
-void TaskInterpretor::registerExceptionHandler(
+void TaskInterpreter::registerExceptionHandler(
     const std::string& name,
     std::function<void(const std::exception&)> handler) {
     exceptionHandlers[name] = std::move(handler);
 }
 
-void TaskInterpretor::setVariable(const std::string& name, const json& value) {
+void TaskInterpreter::setVariable(const std::string& name, const json& value) {
     variables[name] = value;
 }
 
-auto TaskInterpretor::getVariable(const std::string& name) -> json {
+auto TaskInterpreter::getVariable(const std::string& name) -> json {
     if (variables.find(name) == variables.end()) {
         THROW_RUNTIME_ERROR("Variable '" + name + "' is not defined.");
     }
     return variables[name];
 }
 
-void TaskInterpretor::parseLabels(const json& script) {
+void TaskInterpreter::parseLabels(const json& script) {
     for (size_t i = 0; i < script.size(); ++i) {
         if (script[i].contains("label")) {
             labels[script[i]["label"]] = i;
@@ -102,7 +133,7 @@ void TaskInterpretor::parseLabels(const json& script) {
     }
 }
 
-void TaskInterpretor::execute(const std::string& scriptName) {
+void TaskInterpreter::execute(const std::string& scriptName) {
     stopRequested = false;
     if (executionThread.joinable()) {
         executionThread.join();
@@ -128,14 +159,14 @@ void TaskInterpretor::execute(const std::string& scriptName) {
     });
 }
 
-void TaskInterpretor::stop() {
+void TaskInterpreter::stop() {
     stopRequested = true;
     if (executionThread.joinable()) {
         executionThread.join();
     }
 }
 
-auto TaskInterpretor::executeStep(const json& step, size_t& idx,
+auto TaskInterpreter::executeStep(const json& step, size_t& idx,
                                   const json& script) -> bool {
     if (stopRequested) {
         return false;
@@ -164,7 +195,7 @@ auto TaskInterpretor::executeStep(const json& step, size_t& idx,
     }
 }
 
-void TaskInterpretor::executeCall(const json& step) {
+void TaskInterpreter::executeCall(const json& step) {
     std::string functionName = step["function"];
     json params = step["params"];
     for (const auto& [key, value] : params.items()) {
@@ -183,7 +214,7 @@ void TaskInterpretor::executeCall(const json& step) {
     }
 }
 
-void TaskInterpretor::executeCondition(const json& step, size_t& idx,
+void TaskInterpreter::executeCondition(const json& step, size_t& idx,
                                        const json& script) {
     json condition = evaluate(step["condition"]);
     if (condition.get<bool>()) {
@@ -193,7 +224,7 @@ void TaskInterpretor::executeCondition(const json& step, size_t& idx,
     }
 }
 
-auto TaskInterpretor::executeLoop(const json& step, size_t& idx,
+auto TaskInterpreter::executeLoop(const json& step, size_t& idx,
                                   const json& script) -> bool {
     int count = evaluate(step["loop_iterations"]).get<int>();
     size_t startIdx = idx;
@@ -208,7 +239,7 @@ auto TaskInterpretor::executeLoop(const json& step, size_t& idx,
     return true;
 }
 
-void TaskInterpretor::executeGoto(const json& step, size_t& idx,
+void TaskInterpreter::executeGoto(const json& step, size_t& idx,
                                   [[maybe_unused]] const json& script) {
     std::string label = step["label"];
     if (labels.find(label) != labels.end()) {
@@ -218,7 +249,7 @@ void TaskInterpretor::executeGoto(const json& step, size_t& idx,
     }
 }
 
-void TaskInterpretor::executeSwitch(const json& step, size_t& idx,
+void TaskInterpreter::executeSwitch(const json& step, size_t& idx,
                                     const json& script) {
     std::string variable = step["variable"];
     json value = evaluate(
@@ -247,12 +278,12 @@ void TaskInterpretor::executeSwitch(const json& step, size_t& idx,
     }
 }
 
-void TaskInterpretor::executeDelay(const json& step) {
+void TaskInterpreter::executeDelay(const json& step) {
     int milliseconds = evaluate(step["milliseconds"]).get<int>();
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 }
 
-void TaskInterpretor::executeParallel(const json& step,
+void TaskInterpreter::executeParallel(const json& step,
                                       [[maybe_unused]] size_t& idx,
                                       [[maybe_unused]] const json& script) {
     std::vector<std::thread> threads;
@@ -274,7 +305,7 @@ void TaskInterpretor::executeParallel(const json& step,
     }
 }
 
-json TaskInterpretor::evaluate(const json& value) {
+json TaskInterpreter::evaluate(const json& value) {
     if (value.is_primitive()) {
         return value;
     }
@@ -284,7 +315,7 @@ json TaskInterpretor::evaluate(const json& value) {
     return value;
 }
 
-void TaskInterpretor::handleException(const std::string& scriptName,
+void TaskInterpreter::handleException(const std::string& scriptName,
                                       const std::exception& e) {
     if (exceptionHandlers.find(scriptName) != exceptionHandlers.end()) {
         exceptionHandlers[scriptName](e);

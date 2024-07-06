@@ -14,6 +14,10 @@ Description: Component Manager (the core of the plugin system)
 
 #pragma once
 
+#include <utility>
+
+#include <utility>
+
 #include "atom/components/component.hpp"
 #include "atom/components/types.hpp"
 
@@ -38,13 +42,13 @@ public:
 
     std::vector<std::string> m_dependencies;
 
-    ComponentEntry(const std::string& name, const std::string& func_name,
-                   const std::string& component_type,
-                   const std::string& module_name)
-        : m_name(name),
-          m_func_name(func_name),
-          m_component_type(component_type),
-          m_module_name(module_name) {}
+    ComponentEntry(std::string  name, std::string  func_name,
+                   std::string  component_type,
+                   std::string  module_name)
+        : m_name(std::move(name)),
+          m_func_name(std::move(func_name)),
+          m_component_type(std::move(component_type)),
+          m_module_name(std::move(module_name)) {}
 };
 
 class ComponentManager {

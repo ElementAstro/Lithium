@@ -281,7 +281,7 @@ bool ComponentManager::checkComponent(const std::string &module_name,
     }
     // Check component library files
     std::vector<std::string> files = atom::io::checkFileTypeInFolder(
-        module_path, constants::LIB_EXTENSION, atom::io::FileOption::Name);
+        module_path, constants::LIB_EXTENSION, atom::io::FileOption::NAME);
 
     if (files.empty()) {
         LOG_F(ERROR, "Component path {} does not contain dll or so file",
@@ -535,8 +535,8 @@ bool ComponentManager::loadSharedComponent(
     return false;
 }
 
-bool ComponentManager::unloadSharedComponent(const std::string &component_name,
-                                             bool forced) {
+auto ComponentManager::unloadSharedComponent(const std::string &component_name,
+                                             bool forced) -> bool {
     LOG_F(WARNING,
           "Unload a component is very dangerous, you should make sure "
           "everything proper");
@@ -548,7 +548,7 @@ bool ComponentManager::unloadSharedComponent(const std::string &component_name,
     std::vector<std::string> dependencies;  // record all of the components
                                             // which depend on this component
     for (const auto &entry : m_ComponentEntries) {
-        if (find_element(entry.second->m_dependencies, component_name)) {
+        if (atom::utils::findElement(entry.second->m_dependencies, component_name)) {
             dependencies.push_back(entry.first);
         }
     }

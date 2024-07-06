@@ -16,6 +16,7 @@ Description: Basic Component Definition
 #define ATOM_COMPONENT_HPP
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "dispatch.hpp"
@@ -28,6 +29,7 @@ Description: Basic Component Definition
 #include "atom/function/conversion.hpp"
 #include "atom/function/type_caster.hpp"
 #include "atom/function/type_info.hpp"
+#include "atom/log/loguru.hpp"
 
 class Component : public std::enable_shared_from_this<Component> {
 public:
@@ -44,7 +46,7 @@ public:
     /**
      * @brief Constructs a new Component object.
      */
-    explicit Component(const std::string& name);
+    explicit Component(std::string name);
 
     /**
      * @brief Destroys the Component object.
@@ -106,18 +108,18 @@ public:
                      const std::string& description = "",
                      const std::string& alias = "",
                      const std::string& group = "") {
-        m_VariableManager->addVariable(name, initialValue, description, alias,
-                                       group);
+        m_VariableManager_->addVariable(name, initialValue, description, alias,
+                                        group);
     }
 
     template <typename T>
     void setRange(const std::string& name, T min, T max) {
-        m_VariableManager->setRange(name, min, max);
+        m_VariableManager_->setRange(name, min, max);
     }
 
     void setStringOptions(const std::string& name,
                           const std::vector<std::string>& options) {
-        m_VariableManager->setStringOptions(name, options);
+        m_VariableManager_->setStringOptions(name, options);
     }
 
     /**
@@ -127,7 +129,7 @@ public:
      */
     template <typename T>
     std::shared_ptr<Trackable<T>> getVariable(const std::string& name) {
-        return m_VariableManager->getVariable<T>(name);
+        return m_VariableManager_->getVariable<T>(name);
     }
 
     [[nodiscard]] bool hasVariable(const std::string& name) const;
@@ -141,7 +143,7 @@ public:
      */
     template <typename T>
     void setValue(const std::string& name, T newValue) {
-        m_VariableManager->setValue(name, newValue);
+        m_VariableManager_->setValue(name, newValue);
     }
 
     std::vector<std::string> getVariableNames() const;
@@ -271,16 +273,16 @@ public:
              const std::string& description = "");
 
     template <typename MemberType, typename ClassType>
-    void def_m(const std::string& name, MemberType ClassType::*member_var,
-               std::shared_ptr<ClassType> instance,
-               const std::string& group = "",
-               const std::string& description = "");
+    void defM(const std::string& name, MemberType ClassType::*member_var,
+              std::shared_ptr<ClassType> instance,
+              const std::string& group = "",
+              const std::string& description = "");
 
     template <typename MemberType, typename ClassType>
-    void def_m(const std::string& name, MemberType ClassType::*member_var,
-               PointerSentinel<ClassType> instance,
-               const std::string& group = "",
-               const std::string& description = "");
+    void defM(const std::string& name, MemberType ClassType::*member_var,
+              PointerSentinel<ClassType> instance,
+              const std::string& group = "",
+              const std::string& description = "");
 
     template <typename Class>
     void def(const std::string& name, const std::string& group = "",
@@ -291,27 +293,27 @@ public:
              const std::string& description = "");
 
     template <typename Class, typename... Args>
-    void def_constructor(const std::string& name, const std::string& group = "",
-                         const std::string& description = "");
+    void defConstructor(const std::string& name, const std::string& group = "",
+                        const std::string& description = "");
 
     template <typename Class>
-    void def_default_constructor(const std::string& name,
-                                 const std::string& group = "",
-                                 const std::string& description = "");
+    void defDefaultConstructor(const std::string& name,
+                               const std::string& group = "",
+                               const std::string& description = "");
 
     template <typename T>
-    void def_type(std::string_view name, const atom::meta::TypeInfo& ti,
-                  const std::string& group = "",
-                  const std::string& description = "");
+    void defType(std::string_view name, const atom::meta::TypeInfo& ti,
+                 const std::string& group = "",
+                 const std::string& description = "");
 
     template <typename SourceType, typename DestinationType>
-    void def_conversion(std::function<std::any(const std::any&)> func);
+    void defConversion(std::function<std::any(const std::any&)> func);
 
     template <typename Base, typename Derived>
-    void def_base_class();
+    void defBaseClass();
 
-    void def_class_conversion(
-        const std::shared_ptr<atom::meta::Type_ConversionBase>& conversion);
+    void defClassConversion(
+        const std::shared_ptr<atom::meta::TypeConversionBase>& conversion);
 
     void addAlias(const std::string& name, const std::string& alias) const;
 
@@ -321,39 +323,41 @@ public:
                     std::chrono::milliseconds timeout) const;
 
     template <typename... Args>
-    std::any dispatch(const std::string& name, Args&&... args) {
-        return m_CommandDispatcher->dispatch(name, std::forward<Args>(args)...);
+    auto dispatch(const std::string& name, Args&&... args) -> std::any {
+        return m_CommandDispatcher_->dispatch(name,
+                                              std::forward<Args>(args)...);
     }
 
-    std::any dispatch(const std::string& name,
-                      const std::vector<std::any>& args) const {
-        return m_CommandDispatcher->dispatch(name, args);
+    auto dispatch(const std::string& name,
+                  const std::vector<std::any>& args) const -> std::any {
+        return m_CommandDispatcher_->dispatch(name, args);
     }
 
-    [[nodiscard]] bool has(const std::string& name) const;
+    [[nodiscard]] auto has(const std::string& name) const -> bool;
 
-    [[nodiscard]] bool has_type(std::string_view name) const;
+    [[nodiscard]] auto hasType(std::string_view name) const -> bool;
 
     template <typename SourceType, typename DestinationType>
-    [[nodiscard]] bool has_conversion() const;
+    [[nodiscard]] auto hasConversion() const -> bool;
 
     void removeCommand(const std::string& name) const;
 
-    std::vector<std::string> getCommandsInGroup(const std::string& group) const;
+    auto getCommandsInGroup(const std::string& group) const
+        -> std::vector<std::string>;
 
-    std::string getCommandDescription(const std::string& name) const;
+    auto getCommandDescription(const std::string& name) const -> std::string;
 
 #if ENABLE_FASTHASH
     emhash::HashSet<std::string> getCommandAliases(
         const std::string& name) const;
 #else
-    std::unordered_set<std::string> getCommandAliases(
-        const std::string& name) const;
+    auto getCommandAliases(const std::string& name) const
+        -> std::unordered_set<std::string>;
 #endif
 
-    std::vector<std::string> getAllCommands() const;
+    auto getAllCommands() const -> std::vector<std::string>;
 
-    std::vector<std::string> getRegisteredTypes() const;
+    auto getRegisteredTypes() const -> std::vector<std::string>;
 
     // -------------------------------------------------------------------
     // Other Components methods
@@ -368,7 +372,7 @@ public:
      * @return The names of the components that are needed by this component.
      * @note This will be called when the component is initialized.
      */
-    std::vector<std::string> getNeededComponents() const;
+    static auto getNeededComponents()  -> std::vector<std::string>;
 
     void addOtherComponent(const std::string& name,
                            const std::weak_ptr<Component>& component);
@@ -377,43 +381,524 @@ public:
 
     void clearOtherComponents();
 
-    std::weak_ptr<Component> getOtherComponent(const std::string& name);
+    auto getOtherComponent(const std::string& name) -> std::weak_ptr<Component>;
 
-    std::any runCommand(const std::string& name,
-                        const std::vector<std::any>& args);
+    auto runCommand(const std::string& name,
+                    const std::vector<std::any>& args) -> std::any;
 
     InitFunc initFunc; /**< The initialization function for the component. */
     CleanupFunc cleanupFunc; /**< The cleanup function for the component. */
-    
+
 private:
     template <typename MemberType, typename ClassType, typename InstanceType>
     void defineAccessors(const std::string& name,
-                          MemberType ClassType::*member_var,
-                          InstanceType instance, const std::string& group = "",
-                          const std::string& description = "");
+                         MemberType ClassType::*member_var,
+                         InstanceType instance, const std::string& group = "",
+                         const std::string& description = "");
 
-    std::string m_name;
-    std::string m_doc;
-    std::string m_configPath;
-    std::string m_infoPath;
-    atom::meta::TypeInfo m_typeInfo{atom::meta::userType<Component>()};
-    std::unordered_map<std::string_view, atom::meta::TypeInfo> m_classes;
+    std::string m_name_;
+    std::string m_doc_;
+    std::string m_configPath_;
+    std::string m_infoPath_;
+    atom::meta::TypeInfo m_typeInfo_{atom::meta::userType<Component>()};
+    std::unordered_map<std::string_view, atom::meta::TypeInfo> m_classes_;
 
-    std::shared_ptr<CommandDispatcher> m_CommandDispatcher{
+    std::shared_ptr<CommandDispatcher> m_CommandDispatcher_{
         std::make_shared<CommandDispatcher>()};  ///< The command dispatcher for
                                                  ///< managing commands.
-    std::shared_ptr<VariableManager> m_VariableManager{
+    std::shared_ptr<VariableManager> m_VariableManager_{
         std::make_shared<VariableManager>()};  ///< The variable registry for
                                                ///< managing variables.
 
-    std::unordered_map<std::string, std::weak_ptr<Component>> m_OtherComponents;
+    std::unordered_map<std::string, std::weak_ptr<Component>>
+        m_OtherComponents_;
 
-    std::shared_ptr<atom::meta::TypeCaster> m_TypeCaster{
+    std::shared_ptr<atom::meta::TypeCaster> m_TypeCaster_{
         atom::meta::TypeCaster::createShared()};
-    std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter{
+    std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter_{
         atom::meta::TypeConversions::createShared()};
 };
 
-#include "component.inl"
+ATOM_INLINE Component::Component(std::string name) : m_name_(std::move(name)) {}
+
+ATOM_INLINE auto Component::getInstance() const -> std::weak_ptr<const Component> {
+    return shared_from_this();
+}
+
+ATOM_INLINE auto Component::initialize() -> bool {
+    LOG_F(INFO, "Initializing component: {}", m_name_);
+    return true;
+}
+
+ATOM_INLINE auto Component::destroy() -> bool {
+    LOG_F(INFO, "Destroying component: {}", m_name_);
+    return true;
+}
+
+ATOM_INLINE auto Component::getName() const -> std::string { return m_name_; }
+
+ATOM_INLINE auto Component::getTypeInfo() const -> atom::meta::TypeInfo {
+    return m_typeInfo_;
+}
+
+ATOM_INLINE void Component::setTypeInfo(atom::meta::TypeInfo typeInfo) {
+    m_typeInfo_ = typeInfo;
+}
+
+ATOM_INLINE void Component::addAlias(const std::string& name,
+                                     const std::string& alias) const {
+    m_CommandDispatcher_->addAlias(name, alias);
+}
+
+ATOM_INLINE void Component::addGroup(const std::string& name,
+                                     const std::string& group) const {
+    m_CommandDispatcher_->addGroup(name, group);
+}
+
+ATOM_INLINE void Component::setTimeout(
+    const std::string& name, std::chrono::milliseconds timeout) const {
+    m_CommandDispatcher_->setTimeout(name, timeout);
+}
+
+ATOM_INLINE void Component::removeCommand(const std::string& name) const {
+    m_CommandDispatcher_->removeCommand(name);
+}
+
+ATOM_INLINE auto Component::getCommandsInGroup(
+    const std::string& group) const -> std::vector<std::string> {
+    return m_CommandDispatcher_->getCommandsInGroup(group);
+}
+
+ATOM_INLINE auto Component::getCommandDescription(
+    const std::string& name) const -> std::string {
+    return m_CommandDispatcher_->getCommandDescription(name);
+}
+
+#if ENABLE_FASTHASH
+ATOM_INLINE emhash::HashSet<std::string> Component::getCommandAliases(
+    const std::string& name) const
+#else
+ATOM_INLINE auto Component::getCommandAliases(
+    const std::string& name) const -> std::unordered_set<std::string>
+#endif
+{
+    return m_CommandDispatcher_->getCommandAliases(name);
+}
+
+ATOM_INLINE auto Component::getNeededComponents() -> std::vector<std::string>  {
+    return {};
+}
+
+ATOM_INLINE void Component::addOtherComponent(
+    const std::string& name, const std::weak_ptr<Component>& component) {
+    if (m_OtherComponents_.contains(name)) {
+        THROW_OBJ_ALREADY_EXIST(name);
+    }
+    m_OtherComponents_[name] = component;
+}
+
+ATOM_INLINE void Component::removeOtherComponent(const std::string& name) {
+    m_OtherComponents_.erase(name);
+}
+
+ATOM_INLINE void Component::clearOtherComponents() {
+    m_OtherComponents_.clear();
+}
+
+ATOM_INLINE auto Component::getOtherComponent(
+    const std::string& name) -> std::weak_ptr<Component> {
+    if (m_OtherComponents_.contains(name)) {
+        return m_OtherComponents_[name];
+    }
+    return {};
+}
+
+ATOM_INLINE bool Component::has(const std::string& name) const {
+    return m_CommandDispatcher_->has(name);
+}
+
+ATOM_INLINE bool Component::hasType(std::string_view name) const {
+    if (auto it = m_classes_.find(name); it != m_classes_.end()) {
+        return true;
+    }
+    return false;
+}
+
+template <typename SourceType, typename DestinationType>
+auto Component::hasConversion() const -> bool {
+    if constexpr (std::is_same_v<SourceType, DestinationType>) {
+        return true;
+    }
+    return m_TypeConverter_->can_convert(
+        atom::meta::userType<SourceType>(),
+        atom::meta::userType<DestinationType>());
+}
+
+ATOM_INLINE auto Component::getAllCommands() const -> std::vector<std::string> {
+    return m_CommandDispatcher_->getAllCommands();
+}
+
+ATOM_INLINE auto Component::getRegisteredTypes() const -> std::vector<std::string> {
+    return m_TypeCaster_->getRegisteredTypes();
+}
+
+ATOM_INLINE auto Component::runCommand(const std::string& name,
+                                           const std::vector<std::any>& args) -> std::any {
+    auto cmd = getAllCommands();
+
+    if (auto it = std::ranges::find(cmd, name); it != cmd.end()) {
+        return m_CommandDispatcher_->dispatch(name, args);
+    }
+    for (const auto& [key, value] : m_OtherComponents_) {
+        if (!value.expired() && value.lock()->has(name)) {
+            return value.lock()->dispatch(name, args);
+        }
+        LOG_F(ERROR, "Component {} has expired", key);
+        m_OtherComponents_.erase(key);
+    }
+
+    THROW_EXCEPTION("Component ", name, " not found");
+}
+
+ATOM_INLINE void Component::doc(const std::string& description) {
+    m_doc_ = description;
+}
+
+template <typename T>
+void Component::defType(std::string_view name, const atom::meta::TypeInfo& ti,
+                        [[maybe_unused]] const std::string& group,
+                        [[maybe_unused]] const std::string& description) {
+    m_classes_[name] = ti;
+    m_TypeCaster_->registerType<T>(std::string(name));
+}
+
+template <typename SourceType, typename DestinationType>
+void Component::defConversion(std::function<std::any(const std::any&)> func) {
+    static_assert(!std::is_same_v<SourceType, DestinationType>,
+                  "SourceType and DestinationType must be not the same");
+    m_TypeCaster_->registerConversion<SourceType, DestinationType>(func);
+}
+
+ATOM_INLINE void Component::defClassConversion(
+    const std::shared_ptr<atom::meta::TypeConversionBase>& conversion) {
+    m_TypeConverter_->add_conversion(conversion);
+}
+
+template <typename Base, typename Derived>
+void Component::defBaseClass() {
+    static_assert(std::is_base_of_v<Base, Derived>,
+                  "Derived must be derived from Base");
+    m_TypeConverter_->add_base_class<Base, Derived>();
+}
+
+ATOM_INLINE auto Component::hasVariable(const std::string& name) const -> bool {
+    return m_VariableManager_->has(name);
+}
+
+ATOM_INLINE auto Component::getVariableDescription(
+    const std::string& name) const -> std::string {
+    return m_VariableManager_->getDescription(name);
+}
+
+ATOM_INLINE auto Component::getVariableAlias(const std::string& name) const
+    -> std::string {
+    return m_VariableManager_->getAlias(name);
+}
+
+ATOM_INLINE auto Component::getVariableGroup(const std::string& name) const
+    -> std::string {
+    return m_VariableManager_->getGroup(name);
+}
+
+template <typename Callable>
+void Component::def(const std::string& name, Callable&& func,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function(std::forward<Callable>(func)));
+}
+
+template <typename Ret>
+void Component::def(const std::string& name, Ret (*func)(),
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function<Ret()>(func));
+}
+
+template <typename... Args, typename Ret>
+void Component::def(const std::string& name, Ret (*func)(Args...),
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function<Ret(Args...)>([func](Args... args) {
+                                  return func(std::forward<Args>(args)...);
+                              }));
+}
+
+template <typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*func)(),
+                    std::shared_ptr<Class> instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function<Ret()>([instance, func]() {
+                                  return std::invoke(func, instance.get());
+                              }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...),
+                    std::shared_ptr<Class> instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
+                    std::shared_ptr<Class> instance, const std::string& group,
+                    const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename Class, typename Ret, typename... Args>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...),
+                    const std::string& group, const std::string& description) {
+    auto boundFunc = atom::meta::bindMemberFunction(func);
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Class&, Args...)>(
+            [boundFunc](Class& instance, Args... args) {
+                return boundFunc(instance, std::forward<Args>(args)...);
+            }));
+}
+
+template <typename Class, typename Ret, typename... Args>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
+                    const std::string& group, const std::string& description) {
+    auto boundFunc = atom::meta::bindMemberFunction(func);
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Class&, Args...)>(
+            [boundFunc](Class& instance, Args... args) -> Ret {
+                return boundFunc(instance, std::forward<Args>(args)...);
+            }));
+}
+
+template <typename Class, typename VarType>
+void Component::def_v(const std::string& name, VarType Class::*var,
+                      const std::string& group,
+                      const std::string& description) {
+    auto boundVar = atom::meta::bindMemberVariable(var);
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<VarType(Class&)>(
+            [boundVar](Class& instance) { return boundVar(instance); }));
+}
+
+template <typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*func)(),
+                    const PointerSentinel<Class>& instance,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function<Ret()>([instance, func]() {
+                                  return std::invoke(func, instance.get());
+                              }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...),
+                    const PointerSentinel<Class>& instance,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*func)(Args...) const,
+                    const PointerSentinel<Class>& instance,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename... Args, typename Ret, typename Class>
+void Component::def(const std::string& name,
+                    Ret (Class::*func)(Args...) noexcept,
+                    const PointerSentinel<Class>& instance,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<Ret(Args...)>([instance, func](Args... args) {
+            return std::invoke(func, instance.get(),
+                               std::forward<Args>(args)...);
+        }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def(const std::string& name, MemberType ClassType::*member_var,
+                    std::shared_ptr<ClassType> instance,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(
+        "get_" + name, group, "Get " + description,
+        std::function<MemberType()>([instance, member_var]() {
+            return atom::meta::bindMemberVariable(member_var)(*instance);
+        }));
+    m_CommandDispatcher_->def(
+        "set_" + name, group, "Set " + description,
+        std::function<void(MemberType)>(
+            [instance, member_var](MemberType value) {
+                atom::meta::bindMemberVariable(member_var)(*instance) = value;
+            }));
+}
+
+template <typename Ret, typename Class>
+void Component::def(const std::string& name, Ret (Class::*getter)() const,
+                    void (Class::*setter)(Ret), std::shared_ptr<Class> instance,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def("get_" + name, group, "Get " + description,
+                              std::function<Ret()>([instance, getter]() {
+                                  return std::invoke(getter, instance.get());
+                              }));
+    m_CommandDispatcher_->def(
+        "set_" + name, group, "Set " + description,
+        std::function<void(Ret)>([instance, setter](Ret value) {
+            std::invoke(setter, instance.get(), value);
+        }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def(const std::string& name, MemberType ClassType::*member_var,
+                    const PointerSentinel<ClassType>& instance,
+                    const std::string& group, const std::string& description) {
+    auto callable = bind_member_variable(member_var);
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<MemberType&(ClassType&)>(
+            [instance, callable]() { return callable(*instance.get()); }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def(const std::string& name,
+                    const MemberType ClassType::*member_var,
+                    std::shared_ptr<ClassType> instance,
+                    const std::string& group, const std::string& description) {
+    auto callable = bind_member_variable(member_var);
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<const MemberType&(ClassType&)>(
+            [instance, callable]() { return callable(*instance); }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def(const std::string& name,
+                    const MemberType ClassType::*member_var,
+                    const PointerSentinel<ClassType>& instance,
+                    const std::string& group, const std::string& description) {
+    auto callable = bind_member_variable(member_var);
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<const MemberType&(ClassType&)>(
+            [instance, callable]() { return callable(*instance.get()); }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def(const std::string& name, MemberType* member_var,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<MemberType&()>(
+            [member_var]() -> MemberType& { return *member_var; }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::def(const std::string& name, const MemberType* member_var,
+                    const std::string& group, const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<const MemberType&()>(
+            [member_var]() -> const MemberType& { return *member_var; }));
+}
+
+template <typename Class, typename... Args>
+void Component::defConstructor(const std::string& name,
+                               const std::string& group,
+                               const std::string& description) {
+    m_CommandDispatcher_->def(name, group, description,
+                              std::function<std::shared_ptr<Class>(Args...)>(
+                                  atom::meta::constructor<Class, Args...>()));
+}
+
+template <typename Class>
+void Component::defDefaultConstructor(const std::string& name,
+                                      const std::string& group,
+                                      const std::string& description) {
+    m_CommandDispatcher_->def(
+        name, group, description,
+        std::function<std::shared_ptr<Class>()>([]() -> std::shared_ptr<Class> {
+            return std::make_shared<Class>();
+        }));
+}
+
+template <typename MemberType, typename ClassType>
+void Component::defM(const std::string& name, MemberType ClassType::*member_var,
+                     std::shared_ptr<ClassType> instance,
+                     const std::string& group, const std::string& description) {
+    define_accessors(name, member_var, instance, group, description);
+}
+
+template <typename MemberType, typename ClassType>
+void Component::defM(const std::string& name, MemberType ClassType::*member_var,
+                     PointerSentinel<ClassType> instance,
+                     const std::string& group, const std::string& description) {
+    define_accessors(name, member_var, instance, group, description);
+}
+
+template <typename Class>
+void Component::def(const std::string& name, const std::string& group,
+                    const std::string& description) {
+    auto constructor = atom::meta::defaultConstructor<Class>();
+    def(name, constructor, group, description);
+}
+
+template <typename Class, typename... Args>
+void Component::def(const std::string& name, const std::string& group,
+                    const std::string& description) {
+    auto constructor_ = atom::meta::constructor<Class, Args...>();
+    def(name, constructor_, group, description);
+}
+
+template <typename MemberType, typename ClassType, typename InstanceType>
+void Component::defineAccessors(const std::string& name,
+                                MemberType ClassType::*member_var,
+                                InstanceType instance, const std::string& group,
+                                const std::string& description) {
+    auto getter = [instance, member_var]() -> MemberType& {
+        return instance->*member_var;
+    };
+
+    auto setter = [instance, member_var](const MemberType& value) {
+        instance->*member_var = value;
+    };
+
+    m_CommandDispatcher_->def("get_" + name, group, description,
+                              std::function<MemberType&()>(getter));
+    m_CommandDispatcher_->def("set_" + name, group, description,
+                              std::function<void(const MemberType&)>(setter));
+}
 
 #endif

@@ -14,11 +14,11 @@ Description: Logger for Atom
 
 #include "atomlog.hpp"
 
-#include "atom/error/exception.hpp"
-#include "atom/function/enum.hpp"
-#include "atom/utils/time.hpp"
-
+#include <algorithm>
 #include <sstream>
+
+#include "atom/error/exception.hpp"
+#include "atom/utils/time.hpp"
 
 namespace atom::log {
 Logger::Logger(const fs::path& file_name_, LogLevel min_level,
@@ -91,8 +91,9 @@ auto Logger::logLevelToString(LogLevel level) -> std::string {
     }
 }
 
-auto Logger::formatMessage(LogLevel level, const std::string& msg) -> std::string {
-    auto currentTime = atom::utils::getChinaTimestampString();
+auto Logger::formatMessage(LogLevel level,
+                           const std::string& msg) -> std::string {
+    auto currentTime = utils::getChinaTimestampString();
     auto threadName = getThreadName();
     std::ostringstream sss;
     sss << "[" << currentTime << "]"
@@ -185,5 +186,4 @@ void Logger::rotateLogFile() {
                                 file_name_.string());
     }
 }
-
 }  // namespace atom::log

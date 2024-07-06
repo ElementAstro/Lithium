@@ -17,6 +17,7 @@ Description: Logger for Atom
 
 #include <condition_variable>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -24,6 +25,7 @@ Description: Logger for Atom
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -50,22 +52,40 @@ public:
     auto operator=(const Logger&) -> Logger& = delete;
 
     template <typename... Args>
-    void trace(const std::string& format, Args&&... args);
+    void trace(const std::string& format, const Args&... args) {
+        log(LogLevel::TRACE,
+            std::vformat(format, std::make_format_args(args...)));
+    }
 
     template <typename... Args>
-    void debug(const std::string& format, Args&&... args);
+    void debug(const std::string& format, const Args&... args) {
+        log(LogLevel::DEBUG,
+            std::vformat(format, std::make_format_args(args...)));
+    }
 
     template <typename... Args>
-    void info(const std::string& format, Args&&... args);
+    void info(const std::string& format, const Args&... args) {
+        log(LogLevel::INFO,
+            std::vformat(format, std::make_format_args(args...)));
+    }
 
     template <typename... Args>
-    void warn(const std::string& format, Args&&... args);
+    void warn(const std::string& format, const Args&... args) {
+        log(LogLevel::WARN,
+            std::vformat(format, std::make_format_args(args...)));
+    }
 
     template <typename... Args>
-    void error(const std::string& format, Args&&... args);
+    void error(const std::string& format, const Args&... args) {
+        log(LogLevel::ERROR,
+            std::vformat(format, std::make_format_args(args...)));
+    }
 
     template <typename... Args>
-    void critical(const std::string& format, Args&&... args);
+    void critical(const std::string& format, const Args&... args) {
+        log(LogLevel::CRITICAL,
+            std::vformat(format, std::make_format_args(args...)));
+    }
 
     void setLevel(LogLevel level);
 
@@ -107,43 +127,6 @@ private:
 
     void run();
 };
-
-template <typename... Args>
-void Logger::trace(const std::string& format, Args&&... args) {
-    log(LogLevel::TRACE,
-        fmt::format(fmt::runtime(format), std::forward<Args>(args)...));
-}
-
-template <typename... Args>
-void Logger::debug(const std::string& format, Args&&... args) {
-    log(LogLevel::DEBUG,
-        fmt::format(fmt::runtime(format), std::forward<Args>(args)...));
-}
-
-template <typename... Args>
-void Logger::info(const std::string& format, Args&&... args) {
-    log(LogLevel::INFO,
-        fmt::format(fmt::runtime(format), std::forward<Args>(args)...));
-}
-
-template <typename... Args>
-void Logger::warn(const std::string& format, Args&&... args) {
-    log(LogLevel::WARN,
-        fmt::format(fmt::runtime(format), std::forward<Args>(args)...));
-}
-
-template <typename... Args>
-void Logger::error(const std::string& format, Args&&... args) {
-    log(LogLevel::ERROR,
-        fmt::format(fmt::runtime(format), std::forward<Args>(args)...));
-}
-
-template <typename... Args>
-void Logger::critical(const std::string& format, Args&&... args) {
-    log(LogLevel::CRITICAL,
-        fmt::format(fmt::runtime(format), std::forward<Args>(args)...));
-}
-
 }  // namespace atom::log
 
-#endif
+#endif  // ATOM_LOG_ATOMLOG_HPP

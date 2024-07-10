@@ -20,8 +20,13 @@ Description: Compiler
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+#include <array>
+#include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
+#include "atom/utils/to_string.hpp"
 
 namespace lithium {
+
 class Compiler {
 public:
     /**
@@ -32,10 +37,22 @@ public:
      * @param optionsFile 编译选项文件路径,默认为 "compile_options.json"
      * @return 编译是否成功
      */
-    [[nodiscard]] bool compileToSharedLibrary(
+    [[nodiscard]] auto compileToSharedLibrary(
         std::string_view code, std::string_view moduleName,
         std::string_view functionName,
-        std::string_view optionsFile = "compile_options.json");
+        std::string_view optionsFile = "compile_options.json") -> bool;
+
+    /**
+     * 添加自定义编译选项
+     * @param options 编译选项
+     */
+    void addCompileOptions(const std::string& options);
+
+    /**
+     * 获取可用编译器列表
+     * @return 编译器列表
+     */
+    [[nodiscard]] auto getAvailableCompilers() const -> std::vector<std::string>;
 
 private:
     /**
@@ -50,8 +67,8 @@ private:
      * @param compiler 编译器路径
      * @return 语法检查是否成功
      */
-    [[nodiscard]] bool syntaxCheck(std::string_view code,
-                                   std::string_view compiler);
+    [[nodiscard]] auto syntaxCheck(std::string_view code,
+                                   std::string_view compiler) -> bool;
 
     /**
      * 编译代码
@@ -70,7 +87,7 @@ private:
      * 查找可用的编译器
      * @return 可用的编译器列表
      */
-    [[nodiscard]] std::vector<std::string> findAvailableCompilers();
+    [[nodiscard]] auto findAvailableCompilers() -> std::vector<std::string>;
 
     /**
      * 运行外部 shell 命令，并将标准输入输出流转发到命令的标准输入输出流中
@@ -79,10 +96,13 @@ private:
      * @param output 标准输出
      * @return 命令运行的返回值
      */
-    int runCommand(std::string_view command, std::string_view input,
-                   std::string& output);
+    auto runCommand(std::string_view command, std::string_view input,
+                   std::string& output) -> int;
 
     std::unordered_map<std::string, std::filesystem::path> cache_;
+    std::string customCompileOptions_;
 };
+
 }  // namespace lithium
+
 #endif

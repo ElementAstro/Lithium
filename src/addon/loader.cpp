@@ -14,38 +14,21 @@ Description: C++ and Modules Loader
 
 #include "loader.hpp"
 
-#include <cxxabi.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <memory>
-#include <mutex>
 #include <regex>
-#include <typeinfo>
-
-#include "atom/io/io.hpp"
-
+#include "macro.hpp"
 #ifdef _WIN32
-#include <Windows.h>
-#include <psapi.h>
+#include <windows.h>
 #else
-#include <dlfcn.h>
 #include <link.h>
 #endif
-
-namespace fs = std::filesystem;
-
-#ifdef _WIN32
-#define PATH_SEPARATOR "\\"
-#else
-#define PATH_SEPARATOR "/"
-#endif
-
-#define SET_CONFIG_VALUE(key) \
-    config[dir.path().string()][#key] = module_config.value(#key, "");
+#include "atom/io/io.hpp"
 
 namespace lithium {
-ModuleLoader::ModuleLoader(const std::string &dir_name = "modules") {
+
+ModuleLoader::ModuleLoader(const std::string& dir_name) {
     DLOG_F(INFO, "C++ module manager loaded successfully.");
 }
 
@@ -63,211 +46,130 @@ std::shared_ptr<ModuleLoader> ModuleLoader::createShared() {
 }
 
 std::shared_ptr<ModuleLoader> ModuleLoader::createShared(
-    const std::string &dir_name = "modules") {
+    const std::string& dir_name) {
     return std::make_shared<ModuleLoader>(dir_name);
 }
 
-bool ModuleLoader::LoadModule(const std::string &path,
-                              const std::string &name) {
-    // dead lock if use std::lock_guard
-    // std::unique_lock lock(m_SharedMutex);
-    try {
-        // Max : The mod's name should be unique, so we check if it already
-        // exists
-        if (HasModule(name)) {
-            LOG_F(ERROR, "Module {} already loaded", name);
-            return false;
-        }
-        if (!atom::io::isFileExists(path)) {
-            LOG_F(ERROR, "Module {} does not exist", name);
-            return false;
-        }
-        // Create module info
-        std::shared_ptr<ModuleInfo> mod_info = std::make_shared<ModuleInfo>();
-        // Load the library file
-        void *handle = LOAD_LIBRARY(path.c_str());
-        if (!handle) {
-            LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
-            return false;
-        }
-        mod_info->handle = handle;
-        mod_info->functions = loadModuleFunctions(name);
-        // Load infomation from the library
-
-        // Store the library handle in handles_ map with the module name as key
-        // handles_[name] = handle;
-        modules_[name] = mod_info;
-        DLOG_F(INFO, "Loaded module : {}", name);
-        return true;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to load library {}: {}", path, e.what());
+bool ModuleLoader::LoadModule(const std::string& path,
+                              const std::string& name) {
+    std::unique_lock lock(m_SharedMutex);
+    if (HasModule(name)) {
+        LOG_F(ERROR, "Module {} already loaded", name);
         return false;
     }
+
+    if (!atom::io::isFileExists(path)) {
+        LOG_F(ERROR, "Module {} does not exist", name);
+        return false;
+    }
+
+    auto mod_info = std::make_shared<ModuleInfo>();
+    if (auto handle = LOAD_LIBRARY(path.c_str()); handle) {
+        mod_info->handle = handle;
+        mod_info->functions = loadModuleFunctions(name);
+        modules_[name] = mod_info;
+        DLOG_F(INFO, "Loaded module: {}", name);
+        return true;
+    } else {
+        LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
+    }
+    return false;
 }
 
 std::vector<std::unique_ptr<FunctionInfo>> ModuleLoader::loadModuleFunctions(
-    const std::string &name) {
+    const std::string& name) {
     std::vector<std::unique_ptr<FunctionInfo>> funcs;
-    auto it = modules_.find(name);
-    if (it == modules_.end()) {
-        LOG_F(ERROR, "Module {} not found", name);
-        return funcs;
-    }
+    std::shared_lock lock(m_SharedMutex);
 
+    if (auto it = modules_.find(name); it != modules_.end()) {
+        if (void* handle = it->second->handle) {
 #ifdef _WIN32
-    HMODULE handle = reinterpret_cast<HMODULE>(it->second->handle);
+            HMODULE hModule = static_cast<HMODULE>(handle);
+            ULONG size;
+            PIMAGE_EXPORT_DIRECTORY exports =
+                (PIMAGE_EXPORT_DIRECTORY)ImageDirectoryEntryToDataEx(
+                    hModule, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &size, NULL);
 
-    PIMAGE_DOS_HEADER dosHeader = reinterpret_cast<PIMAGE_DOS_HEADER>(handle);
-    PIMAGE_NT_HEADERS ntHeader = reinterpret_cast<PIMAGE_NT_HEADERS>(
-        reinterpret_cast<char *>(handle) + dosHeader->e_lfanew);
-    PIMAGE_EXPORT_DIRECTORY exportDir =
-        reinterpret_cast<PIMAGE_EXPORT_DIRECTORY>(
-            reinterpret_cast<char *>(handle) +
-            ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT]
-                .VirtualAddress);
-
-    DWORD *nameTable = reinterpret_cast<DWORD *>(
-        reinterpret_cast<char *>(handle) + exportDir->AddressOfNames);
-    WORD *ordinalTable = reinterpret_cast<WORD *>(
-        reinterpret_cast<char *>(handle) + exportDir->AddressOfNameOrdinals);
-    DWORD *functionTable = reinterpret_cast<DWORD *>(
-        reinterpret_cast<char *>(handle) + exportDir->AddressOfFunctions);
-
-    for (DWORD i = 0; i < exportDir->NumberOfNames; ++i) {
-        std::unique_ptr<FunctionInfo> func = std::make_unique<FunctionInfo>();
-        func->name = reinterpret_cast<const char *>(
-            reinterpret_cast<char *>(handle) + nameTable[i]);
-        func->address = reinterpret_cast<void *>(
-            reinterpret_cast<char *>(handle) + functionTable[ordinalTable[i]]);
-        // TODO funcs.push_back(std::construct_at(func.get()));
-        DLOG_F(INFO, "Function: {}", func->name);
-
-        // Trying to get function's parameters, but there are some issues with
-        // it
-        DWORD functionRva = functionTable[ordinalTable[i]];
-        PIMAGE_FUNCTION_ENTRY functionEntry =
-            reinterpret_cast<PIMAGE_FUNCTION_ENTRY>(
-                reinterpret_cast<char *>(handle) + functionRva);
-        ULONG_PTR dwFunctionLength =
-            functionEntry->EndOfPrologue - functionEntry->StartingAddress;
-
-        DWORD64 dwImageBase = reinterpret_cast<DWORD64>(handle);
-        DWORD64 dwFunctionAddress =
-            dwImageBase + functionEntry->StartingAddress;
-
-        const int maxParameters = 16;
-        BYTE parameters[maxParameters * sizeof(DWORD64)];
-        DWORD cbParameterSize = sizeof(DWORD64) * maxParameters;
-        DWORD cbBytesRead;
-        if (ReadProcessMemory(GetCurrentProcess(),
-                              reinterpret_cast<LPCVOID>(dwFunctionAddress),
-                              parameters, cbParameterSize,
-                              reinterpret_cast<SIZE_T *>(&cbBytesRead))) {
-            BYTE *dwParameterPtr = parameters;
-            DWORD64 dwParameter = *reinterpret_cast<DWORD64 *>(dwParameterPtr);
-            for (int j = 0; j < maxParameters; ++j) {
-                DWORD64 dwParameter = *dwParameterPtr;
-
-                if (dwParameter == 0) {
-                    break;
+            if (exports) {
+                DWORD* names =
+                    (DWORD*)((BYTE*)hModule + exports->AddressOfNames);
+                for (DWORD i = 0; i < exports->NumberOfNames; ++i) {
+                    char* name = (char*)hModule + names[i];
+                    auto func = std::make_unique<FunctionInfo>();
+                    func->name = name;
+                    func->address = (void*)GetProcAddress(hModule, name);
+                    funcs.push_back(std::move(func));
                 }
-
-                char parameterBuffer[256];
-                sprintf_s(parameterBuffer, "%#010I64x", dwParameter);
-                funcs[i].get()->parameters.push_back(parameterBuffer);
-
-                ++dwParameterPtr;
             }
-        }
-    }
 #else
-    void *handle = it->second->handle;
+            dl_iterate_phdr(
+                [](struct dl_phdr_info* info, ATOM_UNUSED size_t size, void* data) {
+                    auto *funcs = static_cast<
+                        std::vector<std::unique_ptr<FunctionInfo>>*>(data);
+                    for (int i = 0; i < info->dlpi_phnum; i++) {
+                        const ElfW(Phdr)* phdr = &info->dlpi_phdr[i];
+                        if (phdr->p_type == PT_DYNAMIC) {
+                            ElfW(Dyn)* dyn =
+                                (ElfW(Dyn)*)(info->dlpi_addr + phdr->p_vaddr);
+                            ElfW(Sym)* symtab = nullptr;
+                            char* strtab = nullptr;
 
-    dl_iterate_phdr(
-        [](struct dl_phdr_info *info, size_t size, void *data) {
-            auto funcs =
-                static_cast<std::vector<std::unique_ptr<FunctionInfo>> *>(data);
-            if (info->dlpi_name && strcmp(info->dlpi_name, "") != 0) {
-                DLOG_F(INFO, "Module: %s", info->dlpi_name);
-
-                const ElfW(Addr) base_address = info->dlpi_addr;
-                const ElfW(Phdr) *phdr = info->dlpi_phdr;
-                const auto phnum = info->dlpi_phnum;
-
-                for (int j = 0; j < phnum; ++j) {
-                    if (phdr[j].p_type == PT_DYNAMIC) {
-                        auto *dyn = reinterpret_cast<ElfW(Dyn) *>(
-                            base_address + phdr[j].p_vaddr);
-                        ElfW(Sym) *symtab = nullptr;
-                        char *strtab = nullptr;
-
-                        for (; dyn->d_tag != DT_NULL; ++dyn) {
-                            if (dyn->d_tag == DT_SYMTAB) {
-                                symtab = reinterpret_cast<ElfW(Sym) *>(
-                                    base_address + dyn->d_un.d_ptr);
-                            } else if (dyn->d_tag == DT_STRTAB) {
-                                strtab = reinterpret_cast<char *>(
-                                    base_address + dyn->d_un.d_ptr);
+                            for (; dyn->d_tag != DT_NULL; dyn++) {
+                                if (dyn->d_tag == DT_SYMTAB) {
+                                    symtab = (ElfW(Sym)*)(info->dlpi_addr +
+                                                          dyn->d_un.d_ptr);
+                                } else if (dyn->d_tag == DT_STRTAB) {
+                                    strtab = (char*)(info->dlpi_addr +
+                                                     dyn->d_un.d_ptr);
+                                }
                             }
-                        }
 
-                        if (symtab && strtab) {
-                            for (ElfW(Sym) *sym = symtab; sym->st_name != 0;
-                                 ++sym) {
-                                if (ELF32_ST_TYPE(sym->st_info) == STT_FUNC) {
-                                    const char *name = &strtab[sym->st_name];
-                                    std::unique_ptr<FunctionInfo> func =
-                                        std::make_unique<FunctionInfo>();
-                                    func->name = name;
-                                    func->address = reinterpret_cast<void *>(
-                                        base_address + sym->st_value);
-                                    funcs->push_back(std::move(func));
-                                    DLOG_F(INFO, "Function: %s", name);
+                            if (symtab && strtab) {
+                                for (ElfW(Sym)* sym = symtab; sym->st_name != 0;
+                                     sym++) {
+                                    if (ELF32_ST_TYPE(sym->st_info) ==
+                                        STT_FUNC) {
+                                        auto func =
+                                            std::make_unique<FunctionInfo>();
+                                        func->name = &strtab[sym->st_name];
+                                        func->address =
+                                            (void*)(info->dlpi_addr +
+                                                    sym->st_value);
+                                        funcs->push_back(std::move(func));
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            }
-            return 0;
-        },
-        funcs);
-
+                    return 0;
+                },
+                &funcs);
 #endif
-
+        }
+    }
     return funcs;
 }
 
-bool ModuleLoader::UnloadModule(const std::string &name) {
-    // Check if the module is loaded and has a valid handle
-    // Max: Check before loading to avaid dead lock
-    if (!HasModule(name)) {
-        LOG_F(ERROR, "Module {} is not loaded", name);
-        return false;
-    };
-    // TODO: Fix this, maybe use a lock
-    // std::unique_lock lock(m_SharedMutex);
-    try {
-        // Unload the library and remove its handle from handles_ map
-        int result = UNLOAD_LIBRARY(GetModule(name)->handle);
-        if (result != 0) {
+bool ModuleLoader::UnloadModule(const std::string& name) {
+    std::unique_lock lock(m_SharedMutex);
+    if (HasModule(name)) {
+        if (auto result = UNLOAD_LIBRARY(modules_[name]->handle); result == 0) {
+            modules_.erase(name);
+            return true;
+        } else {
             LOG_F(ERROR, "Failed to unload module {}", name);
-            return false;
         }
-        modules_.erase(name);
-        return true;
-    } catch (const std::exception &e) {
-        LOG_F(ERROR, "{}", e.what());
-        return false;
+    } else {
+        LOG_F(ERROR, "Module {} is not loaded", name);
     }
+    return false;
 }
 
 bool ModuleLoader::UnloadAllModules() {
     std::unique_lock lock(m_SharedMutex);
-    for (auto entry : modules_) {
-        int result = UNLOAD_LIBRARY(entry.second->handle);
-        if (result != 0) {
-            LOG_F(ERROR, "Failed to unload module {}", entry.first);
+    for (auto& [name, module] : modules_) {
+        if (UNLOAD_LIBRARY(module->handle) != 0) {
+            LOG_F(ERROR, "Failed to unload module {}", name);
             return false;
         }
     }
@@ -275,147 +177,101 @@ bool ModuleLoader::UnloadAllModules() {
     return true;
 }
 
-bool ModuleLoader::CheckModuleExists(const std::string &name) const {
-    std::shared_lock lock(m_SharedMutex);
-    // Max : Directly check if the library exists seems to be a litle bit slow.
-    // May we use filesystem instead?
-    void *handle = LOAD_LIBRARY(name.c_str());
-    if (handle == nullptr) {
-        LOG_F(ERROR, "Module {} does not exist.", name);
-        return false;
-    }
-    DLOG_F(INFO, "Module {} is existing.", name);
-    UNLOAD_LIBRARY(handle);
-    return true;
-}
-
-std::shared_ptr<ModuleInfo> ModuleLoader::GetModule(
-    const std::string &name) const {
-    std::shared_lock lock(m_SharedMutex);
-    auto it = modules_.find(name);
-    if (it == modules_.end()) {
-        return nullptr;
-    }
-    return it->second;
-}
-
-void *ModuleLoader::GetHandle(const std::string &name) const {
-    std::shared_lock lock(m_SharedMutex);
-    auto it = modules_.find(name);
-    if (it == modules_.end()) {
-        return nullptr;
-    }
-    return it->second->handle;
-}
-
-bool ModuleLoader::HasModule(const std::string &name) const {
-    std::shared_lock lock(m_SharedMutex);
-    return modules_.count(name) > 0;
-}
-
-bool ModuleLoader::EnableModule(const std::string &name) {
-    std::unique_lock lock(m_SharedMutex);
-    // Check if the module is loaded
-    if (!HasModule(name)) {
-        LOG_F(ERROR, "Module {} is not loaded", name);
-        return false;
-    }
-    std::shared_ptr<ModuleInfo> mod = GetModule(name);
-    if (!mod->m_enabled.load()) {
-        mod->m_enabled.store(true);
-        std::string disabled_file = mod->m_path;
-        std::string enabled_file =
-            disabled_file.substr(0, disabled_file.size() - 8);
-        if (CheckModuleExists(enabled_file)) {
-            if (UnloadModule(enabled_file)) {
-                std::rename(disabled_file.c_str(), enabled_file.c_str());
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            LOG_F(ERROR, "Enabled file not found for module {}", name);
-            return false;
-        }
-    }
-    return true;
-}
-
-bool ModuleLoader::DisableModule(const std::string &name) {
-    std::unique_lock lock(m_SharedMutex);
-    // Check if the module is loaded
-    if (!HasModule(name)) {
-        LOG_F(ERROR, "Module {} is not loaded", name);
-        return false;
-    }
-    std::shared_ptr<ModuleInfo> mod = GetModule(name);
-    if (mod->m_enabled.load()) {
-        mod->m_enabled.store(false);
-        std::string module_path = GetModulePath(name);
-        if (module_path.empty()) {
-            LOG_F(ERROR, "Module path not found for module {}", name);
-            return false;
-        }
-        std::string disabled_file = module_path + ".disabled";
-        if (std::rename(module_path.c_str(), disabled_file.c_str()) == 0) {
-            modules_.erase(name);
-            return true;
-        } else {
-            LOG_F(ERROR, "Failed to disable module {}", name);
-            return false;
-        }
-    }
-    return true;
-}
-
-bool ModuleLoader::IsModuleEnabled(const std::string &name) const {
-    std::shared_lock lock(m_SharedMutex);
-    if (!HasModule(name)) {
-        LOG_F(ERROR, "Module {} is not loaded", name);
-        return false;
-    }
-    if (GetModule(name)->m_enabled.load()) {
+bool ModuleLoader::CheckModuleExists(const std::string& name) const {
+    if (void* handle = LOAD_LIBRARY(name.c_str()); handle) {
+        UNLOAD_LIBRARY(handle);
         return true;
     }
     return false;
 }
 
-std::string ModuleLoader::GetModuleVersion(const std::string &name) {
+std::shared_ptr<ModuleInfo> ModuleLoader::GetModule(
+    const std::string& name) const {
     std::shared_lock lock(m_SharedMutex);
-    if (HasModule(name)) {
-        return GetFunction<std::string (*)()>(name, "GetVersion")();
+    if (auto it = modules_.find(name); it != modules_.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+void* ModuleLoader::GetHandle(const std::string& name) const {
+    std::shared_lock lock(m_SharedMutex);
+    if (auto it = modules_.find(name); it != modules_.end()) {
+        return it->second->handle;
+    }
+    return nullptr;
+}
+
+bool ModuleLoader::HasModule(const std::string& name) const {
+    std::shared_lock lock(m_SharedMutex);
+    return modules_.contains(name);
+}
+
+bool ModuleLoader::EnableModule(const std::string& name) {
+    std::unique_lock lock(m_SharedMutex);
+    if (auto mod = GetModule(name); mod && !mod->m_enabled.load()) {
+        mod->m_enabled.store(true);
+        return true;
+    }
+    return false;
+}
+
+bool ModuleLoader::DisableModule(const std::string& name) {
+    std::unique_lock lock(m_SharedMutex);
+    if (auto mod = GetModule(name); mod && mod->m_enabled.load()) {
+        mod->m_enabled.store(false);
+        return true;
+    }
+    return false;
+}
+
+bool ModuleLoader::IsModuleEnabled(const std::string& name) const {
+    std::shared_lock lock(m_SharedMutex);
+    if (auto mod = GetModule(name); mod) {
+        return mod->m_enabled.load();
+    }
+    return false;
+}
+
+std::string ModuleLoader::GetModuleVersion(const std::string& name) {
+    if (auto get_version_func =
+            GetFunction<std::string (*)()>(name, "GetVersion");
+        get_version_func) {
+        return get_version_func();
     }
     return "";
 }
 
-std::string ModuleLoader::GetModuleDescription(const std::string &name) {
-    std::shared_lock lock(m_SharedMutex);
-    if (HasModule(name)) {
-        return GetFunction<std::string (*)()>(name, "GetDescription")();
+std::string ModuleLoader::GetModuleDescription(const std::string& name) {
+    if (auto get_description_func =
+            GetFunction<std::string (*)()>(name, "GetDescription");
+        get_description_func) {
+        return get_description_func();
     }
     return "";
 }
 
-std::string ModuleLoader::GetModuleAuthor(const std::string &name) {
-    std::shared_lock lock(m_SharedMutex);
-    if (HasModule(name)) {
-        return GetFunction<std::string (*)()>(name, "GetAuthor")();
+std::string ModuleLoader::GetModuleAuthor(const std::string& name) {
+    if (auto get_author_func =
+            GetFunction<std::string (*)()>(name, "GetAuthor");
+        get_author_func) {
+        return get_author_func();
     }
     return "";
 }
 
-std::string ModuleLoader::GetModuleLicense(const std::string &name) {
-    std::shared_lock lock(m_SharedMutex);
-    if (HasModule(name)) {
-        return GetFunction<std::string (*)()>(name, "GetLicense")();
+std::string ModuleLoader::GetModuleLicense(const std::string& name) {
+    if (auto get_license_func =
+            GetFunction<std::string (*)()>(name, "GetLicense");
+        get_license_func) {
+        return get_license_func();
     }
     return "";
 }
 
-std::string ModuleLoader::GetModulePath(const std::string &name) {
+std::string ModuleLoader::GetModulePath(const std::string& name) {
     std::shared_lock lock(m_SharedMutex);
-    auto it = modules_.find(name);
-    if (it != modules_.end()) {
+    if (auto it = modules_.find(name); it != modules_.end()) {
         Dl_info dl_info;
         if (dladdr(it->second->handle, &dl_info) != 0) {
             return dl_info.dli_fname;
@@ -424,34 +280,32 @@ std::string ModuleLoader::GetModulePath(const std::string &name) {
     return "";
 }
 
-json ModuleLoader::GetModuleConfig(const std::string &name) {
-    if (HasModule(name)) {
-        return GetFunction<json (*)()>(name, "GetConfig")();
+json ModuleLoader::GetModuleConfig(const std::string& name) {
+    if (auto get_config_func = GetFunction<json (*)()>(name, "GetConfig");
+        get_config_func) {
+        return get_config_func();
     }
     return {};
 }
 
 const std::vector<std::string> ModuleLoader::GetAllExistedModules() const {
     std::shared_lock lock(m_SharedMutex);
-    std::vector<std::string> modules_name;
-    if (modules_.empty()) {
-        return modules_name;
+    std::vector<std::string> module_names;
+    for (const auto& [name, _] : modules_) {
+        module_names.push_back(name);
     }
-    for (auto module_ : modules_) {
-        modules_name.push_back(module_.first);
-    }
-    return modules_name;
+    return module_names;
 }
 
-bool ModuleLoader::HasFunction(const std::string &name,
-                               const std::string &function_name) {
+bool ModuleLoader::HasFunction(const std::string& name,
+                               const std::string& function_name) {
     std::shared_lock lock(m_SharedMutex);
-    auto handle_it = modules_.find(name);
-    if (handle_it == modules_.end()) {
-        LOG_F(ERROR, "Failed to find module {}", name);
-        return false;
+    if (auto it = modules_.find(name); it != modules_.end()) {
+        return (LOAD_FUNCTION(it->second->handle, function_name.c_str()) !=
+                nullptr);
     }
-    return (LOAD_FUNCTION(handle_it->second->handle, function_name.c_str()) !=
-            nullptr);
+    LOG_F(ERROR, "Failed to find module {}", name);
+    return false;
 }
+
 }  // namespace lithium

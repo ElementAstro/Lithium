@@ -75,7 +75,7 @@ std::string StackTrace::toString() const {
             *offsetBegin++ = '\0';
             *offsetEnd = '\0';
             auto demangledName =
-                atom::meta::DemangleHelper::Demangle(symbolName);
+                atom::meta::DemangleHelper::demangle(symbolName);
 
             oss << "\t\t" << demangledName << " +" << offsetBegin << offsetEnd
                 << "\n";
@@ -104,15 +104,15 @@ void StackTrace::capture() {
 
 #elif defined(__APPLE__) || defined(__linux__)
     constexpr int MAX_FRAMES = 64;
-    std::array<void*, MAX_FRAMES> framePtrs{};
+    void* framePtrs[MAX_FRAMES];
 
-    num_frames_ = backtrace(framePtrs.data(), MAX_FRAMES);
+    num_frames_ = backtrace(framePtrs, MAX_FRAMES);
 
 #ifdef USE_GSL
-    gsl::span<void*> frame_span(frame_ptrs.data(), num_frames_);
-    symbols_.reset(backtrace_symbols(frame_span.data(), num_frames_));
+    gsl::span<void*> frameSpan(framePtrs, num_frames_);
+    symbols_.reset(backtrace_symbols(frameSpan, num_frames_));
 #else
-    symbols_.reset(backtrace_symbols(framePtrs.data(), num_frames_));
+    symbols_.reset(backtrace_symbols(framePtrs, num_frames_));
 #endif
 
 #else

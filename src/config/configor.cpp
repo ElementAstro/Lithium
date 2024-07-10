@@ -14,9 +14,9 @@ Description: Configor
 
 #include "configor.hpp"
 
-#include <filesystem>
 #include <fstream>
 #include <mutex>
+#include <ranges>
 #include <shared_mutex>
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
@@ -65,7 +65,6 @@ auto ConfigManager::loadFromFile(const fs::path& path) -> bool {
         if (j.empty()) {
             return false;
         }
-
         mergeConfig(j);
         return true;
     } catch (const json::exception& e) {
@@ -78,7 +77,8 @@ auto ConfigManager::loadFromFile(const fs::path& path) -> bool {
     return false;
 }
 
-auto ConfigManager::loadFromDir(const fs::path& dir_path, bool recursive) -> bool {
+auto ConfigManager::loadFromDir(const fs::path& dir_path,
+                                bool recursive) -> bool {
     std::shared_lock lock(m_impl_->rwMutex);
     try {
         for (const auto& entry : fs::directory_iterator(dir_path)) {
@@ -97,13 +97,14 @@ auto ConfigManager::loadFromDir(const fs::path& dir_path, bool recursive) -> boo
     return true;
 }
 
-auto ConfigManager::getValue(const std::string& key_path) const -> std::optional<json> {
+auto ConfigManager::getValue(const std::string& key_path) const
+    -> std::optional<json> {
     std::shared_lock lock(m_impl_->rwMutex);
     const json* p = &m_impl_->config;
     for (const auto& key : key_path | std::views::split('/')) {
-        if (p->is_object() &&
-            p->contains(std::string(key.begin(), key.end()))) {
-            p = &(*p)[std::string(key.begin(), key.end())];
+        std::string key_str = std::string(key.begin(), key.end());
+        if (p->is_object() && p->contains(key_str)) {
+            p = &(*p)[key_str];
         } else {
             return std::nullopt;
         }
@@ -111,50 +112,88 @@ auto ConfigManager::getValue(const std::string& key_path) const -> std::optional
     return *p;
 }
 
-bool ConfigManager::setValue(const std::string& key_path, const json& value) {
+auto ConfigManager::setValue(const std::string& key_path,
+                             const json& value) -> bool {
     std::unique_lock lock(m_impl_->rwMutex);
-    json* p = &m_impl_->config;
-    std::vector<std::string_view> keys;
-    for (auto subRange : key_path | std::views::split('/')) {
-        keys.emplace_back(subRange.data(), subRange.size());
+
+    // Check if the key_path is "/" and set the root value directly
+    if (key_path == "/") {
+        m_impl_->config = value;
+        LOG_F(INFO, "Set root config: {}", m_impl_->config.dump());
+        return true;
     }
 
+    json* p = &m_impl_->config;
+    auto keys = key_path | std::views::split('/');
+
     for (auto it = keys.begin(); it != keys.end(); ++it) {
-        if (it + 1 == keys.end()) {
-            (*p)[*it] = value;
+        std::string keyStr = std::string((*it).begin(), (*it).end());
+        LOG_F(INFO, "Set config: {}", keyStr);
+
+        if (std::next(it) == keys.end()) {  // If this is the last key
+            (*p)[keyStr] = value;
+            LOG_F(INFO, "Final config: {}", m_impl_->config.dump());
             return true;
         }
 
-        if (!p->is_object()) {
-            return false;
+        if (!p->contains(keyStr) || !(*p)[keyStr].is_object()) {
+            (*p)[keyStr] = json::object();
         }
-
-        if (!p->contains(*it)) {
-            (*p)[*it] = json::object();
-        }
-
-        p = &(*p)[*it];
+        p = &(*p)[keyStr];
+        LOG_F(INFO, "Current config: {}", p->dump());
     }
+    return false;
+}
 
-    return true;
+auto ConfigManager::appendValue(const std::string& key_path,
+                                const json& value) -> bool {
+    std::unique_lock lock(m_impl_->rwMutex);
+
+    json* p = &m_impl_->config;
+    auto keys = key_path | std::views::split('/');
+
+    for (auto it = keys.begin(); it != keys.end(); ++it) {
+        std::string keyStr = std::string((*it).begin(), (*it).end());
+
+        if (std::next(it) == keys.end()) {  // If this is the last key
+            if (!p->contains(keyStr)) {
+                (*p)[keyStr] = json::array();
+            }
+
+            if (!(*p)[keyStr].is_array()) {
+                LOG_F(ERROR, "Target key is not an array");
+                return false;
+            }
+
+            (*p)[keyStr].push_back(value);
+            LOG_F(INFO, "Appended value to config: {}", m_impl_->config.dump());
+            return true;
+        }
+
+        if (!p->contains(keyStr) || !(*p)[keyStr].is_object()) {
+            (*p)[keyStr] = json::object();
+        }
+        p = &(*p)[keyStr];
+    }
+    return false;
 }
 
 auto ConfigManager::deleteValue(const std::string& key_path) -> bool {
     std::unique_lock lock(m_impl_->rwMutex);
-    std::vector<std::string_view> keys;
-    for (auto subRange : key_path | std::views::split('/')) {
-        keys.emplace_back(subRange.data(), subRange.size());
-    }
     json* p = &m_impl_->config;
+    std::vector<std::string> keys;
+    for (const auto& key : key_path | std::views::split('/')) {
+        keys.emplace_back(key.begin(), key.end());
+    }
     for (auto it = keys.begin(); it != keys.end(); ++it) {
-        if (it + 1 == keys.end()) {  // Last key
-            if (p->contains(*it)) {
+        if (std::next(it) == keys.end()) {
+            if (p->is_object() && p->contains(*it)) {
                 p->erase(*it);
                 return true;
             }
             return false;
         }
-        if (!p->contains(*it) || !(*p)[*it].is_object()) {
+        if (!p->is_object() || !p->contains(*it)) {
             return false;
         }
         p = &(*p)[*it];
@@ -189,21 +228,49 @@ void ConfigManager::tidyConfig() {
     json updatedConfig;
     for (const auto& [key, value] : m_impl_->config.items()) {
         json* p = &updatedConfig;
-        for (auto subKey : key | std::views::split('/')) {
-            if (!p->contains(std::string(subKey.begin(), subKey.end()))) {
-                (*p)[std::string(subKey.begin(), subKey.end())] =
-                    json::object();
+        for (const auto& subKey : key | std::views::split('/')) {
+            std::string subKeyStr = std::string(subKey.begin(), subKey.end());
+            if (!p->contains(subKeyStr)) {
+                (*p)[subKeyStr] = json::object();
             }
-            p = &(*p)[std::string(subKey.begin(), subKey.end())];
+            p = &(*p)[subKeyStr];
         }
         *p = value;
     }
     m_impl_->config = std::move(updatedConfig);
 }
 
+void ConfigManager::mergeConfig(const json& src, json& target) {
+    for (auto it = src.begin(); it != src.end(); ++it) {
+        LOG_F(INFO, "Merge config: {}", it.key());
+        if (it->is_object() && target.contains(it.key()) &&
+            target[it.key()].is_object()) {
+            mergeConfig(*it, target[it.key()]);
+        } else {
+            target[it.key()] = *it;
+        }
+    }
+}
+
 void ConfigManager::mergeConfig(const json& src) {
-    m_impl_->config.merge_patch(src);
+    LOG_F(INFO, "Current config: {}", m_impl_->config.dump());
+    std::function<void(json&, const json&)> merge = [&](json& target,
+                                                        const json& source) {
+        for (auto it = source.begin(); it != source.end(); ++it) {
+            if (it.value().is_object() && target.contains(it.key()) &&
+                target[it.key()].is_object()) {
+                LOG_F(INFO, "Merge config: {}", it.key());
+                merge(target[it.key()], it.value());
+            } else {
+                LOG_F(INFO, "Merge config: {}", it.key());
+                target[it.key()] = it.value();
+            }
+        }
+    };
+
+    merge(m_impl_->config, src);
 }
 
 void ConfigManager::clearConfig() { m_impl_->config.clear(); }
+
 }  // namespace lithium

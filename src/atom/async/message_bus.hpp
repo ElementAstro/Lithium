@@ -22,6 +22,7 @@ Description: Main Message Bus
 #include <functional>
 #include <mutex>
 #include <queue>
+#include <ranges>
 #include <shared_mutex>
 #include <string>
 #include <thread>
@@ -47,10 +48,6 @@ public:
 
     ~MessageBus() { stopAllProcessingThreads(); }
 
-    // -------------------------------------------------------------------
-    // Common methods
-    // -------------------------------------------------------------------
-
     static auto createShared() -> std::shared_ptr<MessageBus> {
         return std::make_shared<MessageBus>();
     }
@@ -58,10 +55,6 @@ public:
     static auto createUnique() -> std::unique_ptr<MessageBus> {
         return std::make_unique<MessageBus>();
     }
-
-    // -------------------------------------------------------------------
-    // MessageBus methods
-    // -------------------------------------------------------------------
 
     template <typename T>
     void subscribe(const std::string &topic,
@@ -71,9 +64,9 @@ public:
         std::scoped_lock lock(subscribersLock_);
         auto &topicSubscribers = subscribers_[fullTopic];
         topicSubscribers.emplace_back(priority, std::move(callback));
-        std::sort(
-            topicSubscribers.begin(), topicSubscribers.end(),
-            [](const auto &a, const auto &b) { return a.first > b.first; });
+        std::ranges::sort(topicSubscribers, [](const auto &a, const auto &b) {
+            return a.first > b.first;
+        });
 
         DLOG_F(INFO, "Subscribed to topic: {}", fullTopic);
     }
@@ -96,11 +89,11 @@ public:
         if (it != subscribers_.end()) {
             auto &topicSubscribers = it->second;
             topicSubscribers.erase(
-                std::remove_if(topicSubscribers.begin(), topicSubscribers.end(),
-                               [&](const auto &subscriber) {
-                                   return subscriber.second.type() ==
-                                          typeid(callback);
-                               }),
+                std::ranges::remove_if(topicSubscribers,
+                                       [&](const auto &subscriber) {
+                                           return subscriber.second.type() ==
+                                                  typeid(callback);
+                                       }),
                 topicSubscribers.end());
 
             DLOG_F(INFO, "Unsubscribed from topic: {}", fullTopic);
@@ -189,10 +182,11 @@ public:
     void globalUnsubscribe(std::function<void(const T &)> callback) {
         std::scoped_lock lock(globalSubscribersLock_);
         globalSubscribers_.erase(
-            std::remove_if(globalSubscribers_.begin(), globalSubscribers_.end(),
-                           [&](const auto &subscriber) {
-                               return subscriber.type() == typeid(callback);
-                           }),
+            std::ranges::remove_if(globalSubscribers_,
+                                   [&](const auto &subscriber) {
+                                       return subscriber.type() ==
+                                              typeid(callback);
+                                   }),
             globalSubscribers_.end());
     }
 

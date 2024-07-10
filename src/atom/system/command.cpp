@@ -18,6 +18,7 @@ Description: Simple wrapper for executing commands.
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <future>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -34,8 +35,6 @@ Description: Simple wrapper for executing commands.
 #include <sys/wait.h>
 #include <unistd.h>
 #include <csignal>
-#include <cstdio>
-#include <cstring>
 #define SETENV(name, value) setenv(name, value, 1)
 #define UNSETENV(name) unsetenv(name)
 #endif
@@ -146,6 +145,116 @@ std::string executeCommandInternal(
     status = 0;
 #else
     status = WEXITSTATUS(pclose(pipe.get()));
+#endif
+
+    return output.str();
+}
+
+auto executeCommandStream(
+    const std::string &command, bool /*openTerminal*/,
+    const std::function<void(const std::string &)> &processLine, int &status,
+    const std::function<bool()> &terminateCondition = [] {
+        return false;
+    }) -> std::string {
+    if (command.empty()) {
+        status = -1;
+        return "";
+    }
+
+    auto pipeDeleter = [](FILE *pipe) {
+        if (pipe != nullptr) {
+            pclose(pipe);
+        }
+    };
+
+    std::unique_ptr<FILE, decltype(pipeDeleter)> pipe(nullptr, pipeDeleter);
+
+#ifdef _WIN32
+    if (!username.empty() && !domain.empty() && !password.empty()) {
+        // Implement CreateProcessAsUser() if needed for your specific use case
+        // CreateProcessAsUser(command, username, domain, password);
+        status = 0;
+        return "";
+    }
+
+    if (openTerminal) {
+        STARTUPINFO startupInfo{};
+        PROCESS_INFORMATION processInfo{};
+        ZeroMemory(&startupInfo, sizeof(startupInfo));
+        startupInfo.cb = sizeof(startupInfo);
+        ZeroMemory(&processInfo, sizeof(processInfo));
+
+        if (CreateProcess(NULL, const_cast<LPSTR>(command.c_str()), NULL, NULL,
+                          FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &startupInfo,
+                          &processInfo)) {
+            WaitForSingleObject(processInfo.hProcess, INFINITE);
+            CloseHandle(processInfo.hProcess);
+            CloseHandle(processInfo.hThread);
+            status = 0;
+            return "";  // Since terminal window will execute in new process, we
+                        // can't get output here.
+        } else {
+            throw std::runtime_error("Error: failed to run command '" +
+                                     command + "'.");
+        }
+    } else {
+        pipe.reset(_popen(command.c_str(), "r"));
+    }
+#else
+    pipe.reset(popen(command.c_str(), "r"));
+#endif
+
+    if (!pipe) {
+        throw std::runtime_error("Error: failed to run command '" + command +
+                                 "'.");
+    }
+
+    constexpr std::size_t BUFFER_SIZE = 4096;
+    std::array<char, BUFFER_SIZE> buffer{};
+    std::ostringstream output;
+
+    std::promise<void> exitSignal;
+    std::future<void> futureObj = exitSignal.get_future();
+    std::atomic<bool> stopReading{false};
+
+    std::thread readerThread(
+        [&pipe, &buffer, &output, &processLine, &futureObj, &stopReading]() {
+#pragma GCC unroll 4
+            while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+                if (stopReading) {
+                    break;
+                }
+
+                std::string line = buffer.data();
+                output << line;
+                if (processLine) {
+                    processLine(line);
+                }
+
+                if (futureObj.wait_for(std::chrono::milliseconds(1)) !=
+                    std::future_status::timeout) {
+                    break;
+                }
+            }
+        });
+
+    // Monitor for termination condition
+    while (!terminateCondition()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    stopReading = true;
+    exitSignal.set_value();
+
+    if (readerThread.joinable()) {
+        readerThread.join();
+    }
+
+#ifdef _WIN32
+    status = _pclose(pipe.release());
+#else
+    status =
+        WEXITSTATUS(pclose(pipe.release()));  // Release ownership to ensure the
+                                              // pipe is closed correctly
 #endif
 
     return output.str();

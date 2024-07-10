@@ -2,25 +2,27 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Project name and version, using C and C++ languages
-project(lithium-config VERSION 1.0.0 LANGUAGES C CXX)
+project(lithium-addons VERSION 1.0.0 LANGUAGES C CXX)
 
 # Project description and information
-# This project is the official configuration module for the Lithium server.
+# This project is the official addonsuration module for the Lithium server.
 # Author: Max Qian
 # License: GPL3
-# Project Name: Lithium-Config
-# Description: The official config module for lithium server
+# Project Name: Lithium-Addons
+# Description: The official addons module for lithium server
 # Author: Max Qian
 # License: GPL3
 
 # Project sources
 set(PROJECT_SOURCES
-    configor.cpp
+    addons.cpp
+    compiler.cpp
 )
 
 # Project headers
 set(PROJECT_HEADERS
-    configor.hpp
+    addons.hpp
+    compiler.hpp
 )
 
 # Required libraries for the project

@@ -25,7 +25,10 @@ Description: Compiler
 using json = nlohmann::json;
 namespace fs = std::filesystem;
 
+#include <fstream>
+
 namespace lithium {
+
 bool Compiler::compileToSharedLibrary(std::string_view code,
                                       std::string_view moduleName,
                                       std::string_view functionName,
@@ -38,45 +41,39 @@ bool Compiler::compileToSharedLibrary(std::string_view code,
     }
 
     // 检查模块是否已编译并缓存
-    auto cachedModule =
-        cache_.find(std::format("{}::{}", moduleName, functionName));
-    if (cachedModule != cache_.end()) {
-        LOG_F(WARNING,
-              "Module {}::{} is already compiled, using cached result.",
-              moduleName, functionName);
+    std::string cacheKey = std::format("{}::{}", moduleName, functionName);
+    if (cache_.find(cacheKey) != cache_.end()) {
+        LOG_F(WARNING, "Module {} is already compiled, using cached result.", cacheKey);
         return true;
     }
 
     // 创建输出目录
-    const fs::path outputDir = "atom/global";
+    const std::filesystem::path outputDir = "atom/global";
     createOutputDirectory(outputDir);
 
-    const auto availableCompilers = findAvailableCompilers();
+    auto availableCompilers = findAvailableCompilers();
     if (availableCompilers.empty()) {
         LOG_F(ERROR, "No available compilers found.");
         return false;
     }
-    LOG_F(INFO, "Available compilers: {}",
-          atom::utils::toString(availableCompilers));
+    LOG_F(INFO, "Available compilers: {}", atom::utils::toString(availableCompilers));
 
     // 读取编译选项
     std::ifstream optionsStream(optionsFile.data());
-    const auto compileOptions = [&optionsStream] {
+    std::string compileOptions = [&optionsStream, this] {
         if (!optionsStream) {
-            LOG_F(
-                WARNING,
-                "Failed to open compile options file, using default options.");
+            LOG_F(WARNING, "Failed to open compile options file, using default options.");
             return std::string{"-O2 -std=c++20 -Wall -shared -fPIC"};
         }
 
         try {
             json optionsJson;
             optionsStream >> optionsJson;
-            return std::format(
-                "{} {} {}",
-                optionsJson["optimization_level"].get<std::string>(),
-                optionsJson["cplus_version"].get<std::string>(),
-                optionsJson["warnings"].get<std::string>());
+            return std::format("{} {} {} {}", 
+                               optionsJson["optimization_level"].get<std::string>(),
+                               optionsJson["cplus_version"].get<std::string>(),
+                               optionsJson["warnings"].get<std::string>(),
+                               customCompileOptions_);
         } catch (const std::exception& e) {
             LOG_F(ERROR, "Failed to parse compile options file: {}", e.what());
             return std::string{"-O2 -std=c++20 -Wall -shared -fPIC"};
@@ -89,30 +86,27 @@ bool Compiler::compileToSharedLibrary(std::string_view code,
     }
 
     // 编译代码
-    const auto outputPath =
-        outputDir / std::format("{}{}{}", constants::LIB_EXTENSION, moduleName,
-                                constants::LIB_EXTENSION);
+    std::filesystem::path outputPath = outputDir / std::format("{}{}{}", constants::LIB_EXTENSION, moduleName, constants::LIB_EXTENSION);
     if (!compileCode(code, constants::COMPILER, compileOptions, outputPath)) {
         return false;
     }
 
     // 缓存编译结果
-    cache_[std::format("{}::{}", moduleName, functionName)] = outputPath;
+    cache_[cacheKey] = outputPath;
     return true;
 }
 
-void Compiler::createOutputDirectory(const fs::path& outputDir) {
-    if (!fs::exists(outputDir)) {
-        LOG_F(WARNING, "Output directory {} does not exist, creating it.",
-              outputDir.string());
-        fs::create_directories(outputDir);
+void Compiler::createOutputDirectory(const std::filesystem::path& outputDir) {
+    if (!std::filesystem::exists(outputDir)) {
+        LOG_F(WARNING, "Output directory {} does not exist, creating it.", outputDir.string());
+        std::filesystem::create_directories(outputDir);
     }
 }
 
 bool Compiler::syntaxCheck(std::string_view code, std::string_view compiler) {
-    const auto command = std::format("{} -fsyntax-only -xc++ -", compiler);
+    std::string command = std::format("{} -fsyntax-only -xc++ -", compiler);
     std::string output;
-    const auto exitCode = runCommand(command, code, output);
+    int exitCode = runCommand(command, code, output);
     if (exitCode != 0) {
         LOG_F(ERROR, "Syntax check failed:\n{}", output);
         return false;
@@ -121,12 +115,10 @@ bool Compiler::syntaxCheck(std::string_view code, std::string_view compiler) {
 }
 
 bool Compiler::compileCode(std::string_view code, std::string_view compiler,
-                           std::string_view compileOptions,
-                           const fs::path& output) {
-    const auto command = std::format("{} {} -xc++ - -o {}", compiler,
-                                     compileOptions, output.string());
+                           std::string_view compileOptions, const std::filesystem::path& output) {
+    std::string command = std::format("{} {} -xc++ - -o {}", compiler, compileOptions, output.string());
     std::string compilationOutput;
-    const auto exitCode = runCommand(command, code, compilationOutput);
+    int exitCode = runCommand(command, code, compilationOutput);
     if (exitCode != 0) {
         LOG_F(ERROR, "Compilation failed:\n{}", compilationOutput);
         return false;
@@ -134,8 +126,7 @@ bool Compiler::compileCode(std::string_view code, std::string_view compiler,
     return true;
 }
 
-int Compiler::runCommand(std::string_view command, std::string_view input,
-                         std::string& output) {
+int Compiler::runCommand(std::string_view command, std::string_view input, std::string& output) {
     std::array<char, 128> buffer;
     output.clear();
 
@@ -160,8 +151,7 @@ std::vector<std::string> Compiler::findAvailableCompilers() {
 
     for (const auto& path : constants::COMPILER_PATHS) {
         for (const auto& compiler : constants::COMMON_COMPILERS) {
-            std::filesystem::path compilerPath =
-                std::filesystem::path(path) / compiler;
+            std::filesystem::path compilerPath = std::filesystem::path(path) / compiler;
             if (std::filesystem::exists(compilerPath)) {
                 availableCompilers.push_back(compilerPath.string());
             }
@@ -170,4 +160,17 @@ std::vector<std::string> Compiler::findAvailableCompilers() {
 
     return availableCompilers;
 }
+
+void Compiler::addCompileOptions(const std::string& options) {
+    customCompileOptions_ = options;
+}
+
+std::vector<std::string> Compiler::getAvailableCompilers() const {
+    std::vector<std::string> availableCompilers;
+    for (const auto& [key, value] : cache_) {
+        availableCompilers.push_back(key);
+    }
+    return availableCompilers;
+}
+
 }  // namespace lithium

@@ -14,12 +14,15 @@ Description: Self implemented MD5 algorithm.
 
 #include "md5.hpp"
 
+#include <array>
+#include <bit>
 #include <cstddef>
 #include <cstring>
 #include <iomanip>
 #include <sstream>
 
 namespace atom::algorithm {
+
 constexpr std::array<uint32_t, 64> T{
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a,
     0xa8304613, 0xfd469501, 0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -49,24 +52,26 @@ void MD5::init() {
 }
 
 void MD5::update(const std::string &input) {
+    auto update_length = [this](size_t length) { count_ += length * 8; };
+
+    update_length(input.size());
+
     for (char ch : input) {
         buffer_.push_back(static_cast<uint8_t>(ch));
         if (buffer_.size() == 64) {
             processBlock(buffer_.data());
-            count_ += 512;
             buffer_.clear();
         }
     }
 
     // Padding
-    size_t bitLen = count_ + buffer_.size() * 8;
     buffer_.push_back(0x80);
     while (buffer_.size() < 56) {
         buffer_.push_back(0x00);
     }
 
     for (int i = 0; i < 8; ++i) {
-        buffer_.push_back(static_cast<uint8_t>((bitLen >> (i * 8)) & 0xff));
+        buffer_.push_back(static_cast<uint8_t>((count_ >> (i * 8)) & 0xff));
     }
 
     processBlock(buffer_.data());
@@ -75,21 +80,19 @@ void MD5::update(const std::string &input) {
 auto MD5::finalize() -> std::string {
     std::stringstream ss;
     ss << std::hex << std::setfill('0');
-    ss << std::setw(8) << reverseBytes(a_);
-    ss << std::setw(8) << reverseBytes(b_);
-    ss << std::setw(8) << reverseBytes(c_);
-    ss << std::setw(8) << reverseBytes(d_);
+    ss << std::setw(8) << std::byteswap(a_);
+    ss << std::setw(8) << std::byteswap(b_);
+    ss << std::setw(8) << std::byteswap(c_);
+    ss << std::setw(8) << std::byteswap(d_);
     return ss.str();
 }
 
 void MD5::processBlock(const uint8_t *block) {
-    uint32_t M[16];
-    for (int i = 0; i < 16; ++i) {
-        // 将block的每四个字节转换为32位整数（考虑到小端字节序）
-        M[i] = (uint32_t)block[static_cast<ptrdiff_t>(i * 4)] |
-               ((uint32_t)block[i * 4 + 1] << 8) |
-               ((uint32_t)block[i * 4 + 2] << 16) |
-               ((uint32_t)block[i * 4 + 3] << 24);
+    std::array<uint32_t, 16> M;
+    for (size_t i = 0; i < 16; ++i) {
+        M[i] = std::bit_cast<uint32_t>(
+            std::array<uint8_t, 4>{block[i * 4], block[i * 4 + 1],
+                                   block[i * 4 + 2], block[i * 4 + 3]});
     }
 
     uint32_t a = a_;
@@ -97,10 +100,8 @@ void MD5::processBlock(const uint8_t *block) {
     uint32_t c = c_;
     uint32_t d = d_;
 
-    // 主循环
     for (uint32_t i = 0; i < 64; ++i) {
-        uint32_t f;
-        uint32_t g;
+        uint32_t f, g;
         if (i < 16) {
             f = F(b, c, d);
             g = i;
@@ -118,7 +119,7 @@ void MD5::processBlock(const uint8_t *block) {
         uint32_t temp = d;
         d = c;
         c = b;
-        b = b + leftRotate((a + f + T[i] + M[g]), s[i]);
+        b += leftRotate(a + f + T[i] + M[g], s[i]);
         a = temp;
     }
 
@@ -128,7 +129,7 @@ void MD5::processBlock(const uint8_t *block) {
     d_ += d;
 }
 
-uint32_t MD5::F(uint32_t x, uint32_t y, uint32_t z) {
+auto MD5::F(uint32_t x, uint32_t y, uint32_t z) -> uint32_t {
     return (x & y) | (~x & z);
 }
 
@@ -145,12 +146,7 @@ auto MD5::I(uint32_t x, uint32_t y, uint32_t z) -> uint32_t {
 }
 
 auto MD5::leftRotate(uint32_t x, uint32_t n) -> uint32_t {
-    return (x << n) | (x >> (32 - n));
-}
-
-auto MD5::reverseBytes(uint32_t x) -> uint32_t {
-    return ((x & 0x000000FF) << 24) | ((x & 0x0000FF00) << 8) |
-           ((x & 0x00FF0000) >> 8) | ((x & 0xFF000000) >> 24);
+    return std::rotl(x, n);
 }
 
 auto MD5::encrypt(const std::string &input) -> std::string {
@@ -159,4 +155,5 @@ auto MD5::encrypt(const std::string &input) -> std::string {
     md5.update(input);
     return md5.finalize();
 }
+
 }  // namespace atom::algorithm

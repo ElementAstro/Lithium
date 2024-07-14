@@ -18,7 +18,7 @@ if command -v apt-get > /dev/null; then
     PKG_UPGRADE="$PKG_MANAGER upgrade -y"
     PKG_REMOVE="$PKG_MANAGER autoremove -y"
     PKG_CLEAN="$PKG_MANAGER clean"
-    DEPENDENCIES="libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libopencv-dev build-essential software-properties-common"
+    DEPENDENCIES="libcfitsio-dev zlib1g-dev libssl-dev libzip-dev libnova-dev libfmt-dev libopencv-dev build-essential software-properties-common uuid-dev"
 elif command -v yum > /dev/null; then
     PKG_MANAGER="yum"
     PKG_INSTALL="$PKG_MANAGER install -y"
@@ -26,7 +26,7 @@ elif command -v yum > /dev/null; then
     PKG_UPGRADE="$PKG_MANAGER upgrade -y"
     PKG_REMOVE="$PKG_MANAGER autoremove -y"
     PKG_CLEAN="$PKG_MANAGER clean all"
-    DEPENDENCIES="cfitsio-devel zlib-devel openssl-devel libzip-devel nova-devel fmt-devel opencv-devel make automake gcc gcc-c++ kernel-devel"
+    DEPENDENCIES="cfitsio-devel zlib-devel openssl-devel libzip-devel nova-devel fmt-devel opencv-devel make automake gcc gcc-c++ kernel-devel uuid-devel"
 else
     echo "This script only supports Debian-based or RedHat-based systems."
     exit 1

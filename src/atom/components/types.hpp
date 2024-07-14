@@ -66,8 +66,8 @@ struct EnumReflection {
 
 enum class ComponentType {
     NONE,
-    SHREAD,
-    SHREAD_INJECTED,
+    SHARED,
+    SHARED_INJECTED,
     SCRIPT,
     EXECUTABLE,
     TASK,
@@ -77,8 +77,8 @@ enum class ComponentType {
 constexpr auto COMPONENT_TYPE_REFLECTION =
     EnumReflection<ComponentType, enumSize<ComponentType>()>(
         {{ComponentType::NONE, "none"},
-         {ComponentType::SHREAD, "shared"},
-         {ComponentType::SHREAD_INJECTED, "injected"},
+         {ComponentType::SHARED, "shared"},
+         {ComponentType::SHARED_INJECTED, "injected"},
          {ComponentType::SCRIPT, "script"},
          {ComponentType::EXECUTABLE, "executable"},
          {ComponentType::TASK, "task"}});

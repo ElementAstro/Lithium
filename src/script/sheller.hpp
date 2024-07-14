@@ -20,7 +20,6 @@ Description: System Script Manager
 #include <shared_mutex>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
@@ -38,21 +37,22 @@ using ScriptMap = std::unordered_map<std::string, Script>;
 namespace lithium {
 class ScriptManager {
     ScriptMap scripts_;
-    std::unordered_map<std::string, Script> powerShellScripts_;
+    ScriptMap powerShellScripts_;
     std::unordered_map<std::string, std::string> scriptOutputs_;
     std::unordered_map<std::string, int> scriptStatus_;
-    std::shared_mutex m_sharedMutex_;
-    bool registerCommon(std::unordered_map<std::string, std::string>& scriptMap,
-                        std::string_view name, const std::string& script);
+    mutable std::shared_mutex mSharedMutex_;
+    auto registerCommon(ScriptMap& scriptMap, std::string_view name,
+                        const Script& script) -> bool;
 
 public:
     void registerScript(std::string_view name, const Script& script);
     void registerPowerShellScript(std::string_view name, const Script& script);
-    ScriptMap getAllScripts() const;
+    auto getAllScripts() const -> ScriptMap;
     void deleteScript(std::string_view name);
     void updateScript(std::string_view name, const Script& script);
-    bool runScript(std::string_view name,
-                   const std::unordered_map<std::string, std::string>& args);
+    auto runScript(std::string_view name,
+                   const std::unordered_map<std::string, std::string>& args)
+        -> bool;
 };
 }  // namespace lithium
 

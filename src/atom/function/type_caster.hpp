@@ -40,8 +40,8 @@ public:
 
     template <typename SourceType, typename DestinationType>
     void registerConversion(ConvertFunc func) {
-        auto srcInfo = user_type<SourceType>();
-        auto destInfo = user_type<DestinationType>();
+        auto srcInfo = userType<SourceType>();
+        auto destInfo = userType<DestinationType>();
         register_type<SourceType>(srcInfo.bare_name());
         register_type<DestinationType>(destInfo.bare_name());
         if (srcInfo == destInfo) {
@@ -55,8 +55,8 @@ public:
 
     template <typename SourceType, typename DestinationType>
     auto hasConversion() const -> bool {
-        auto srcInfo = user_type<SourceType>();
-        auto destInfo = user_type<DestinationType>();
+        auto srcInfo = userType<SourceType>();
+        auto destInfo = userType<DestinationType>();
         return hasConversion(srcInfo, destInfo);
     }
 

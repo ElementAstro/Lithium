@@ -1,109 +1,84 @@
-/*
- * INDI_driver.cpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2023-3-29
-
-Description: INDI Web Driver
-
-**************************************************/
-
 #include "collection.hpp"
-#include <filesystem>
-#include <fstream>
-#include <regex>
-#include <stdexcept>
 
+#include <algorithm>
+#include <filesystem>
+
+#include <tinyxml2.h>
 
 #include "atom/log/loguru.hpp"
-#include "tinyxml2/tinyxml2.h"
-
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
+#include "atom/type/json.hpp"
 
 namespace fs = std::filesystem;
 
-bool INDIDriverCollection::parseDrivers(const std::string &path) {
+auto INDIDriverCollection::parseDrivers(const std::string& path) -> bool {
     if (!fs::exists(path) || !fs::is_directory(path)) {
         LOG_F(ERROR, "INDI driver path {} does not exist", path);
         return false;
     }
-    for (const auto &entry : fs::directory_iterator(path)) {
-        const std::string &fname = entry.path().filename().string();
+    for (const auto& entry : fs::directory_iterator(path)) {
+        const auto& fname = entry.path().filename().string();
         if (fname.ends_with(".xml") && fname.find("_sk") == std::string::npos) {
-            files.push_back(entry.path().string());
+            files_.push_back(entry.path().string());
         }
     }
 
-    for (const std::string &fname : files) {
+    for (const auto& fname : files_) {
         tinyxml2::XMLDocument doc;
         if (doc.LoadFile(fname.c_str()) != tinyxml2::XML_SUCCESS) {
             LOG_F(ERROR, "Error loading file {}", fname);
             continue;
         }
 
-        tinyxml2::XMLElement *root = doc.FirstChildElement("root");
-        for (tinyxml2::XMLElement *group = root->FirstChildElement("devGroup");
-             group; group = group->NextSiblingElement("devGroup")) {
-            const std::string &family = group->Attribute("group");
-            for (tinyxml2::XMLElement *device =
-                     group->FirstChildElement("device");
-                 device; device = device->NextSiblingElement("device")) {
-                const std::string &label = device->Attribute("label");
-                const std::string &skel = device->Attribute("skel");
-                const std::string &name =
+        auto* root = doc.FirstChildElement("root");
+        for (auto* group = root->FirstChildElement("devGroup");
+             group != nullptr; group = group->NextSiblingElement("devGroup")) {
+            const auto& family = group->Attribute("group");
+            for (auto* device = group->FirstChildElement("device");
+                 device != nullptr;
+                 device = device->NextSiblingElement("device")) {
+                const auto& label = device->Attribute("label");
+                const auto& skel = device->Attribute("skel");
+                const auto& name =
                     device->FirstChildElement("driver")->Attribute("name");
-                const std::string &binary =
+                const auto& binary =
                     device->FirstChildElement("driver")->GetText();
-                const std::string &version =
+                const auto& version =
                     device->FirstChildElement("version")->GetText();
 
-                drivers.push_back(std::make_shared<INDIDeviceContainer>(
+                drivers_.push_back(std::make_shared<INDIDeviceContainer>(
                     name, label, version, binary, family, skel));
             }
         }
     }
 
-    // Sort drivers by label
-    std::sort(drivers.begin(), drivers.end(),
-              [](const std::shared_ptr<INDIDeviceContainer> a,
-                 const std::shared_ptr<INDIDeviceContainer> b) {
-                  return a->label < b->label;
-              });
+    std::sort(drivers_.begin(), drivers_.end(),
+              [](const auto& a, const auto& b) { return a->label < b->label; });
     return true;
 }
 
-bool INDIDriverCollection::parseCustomDrivers(const json &drivers) {
-    for (const auto &custom : drivers) {
-        const std::string &name = custom["name"].get<std::string>();
-        const std::string &label = custom["label"].get<std::string>();
-        const std::string &version = custom["version"].get<std::string>();
-        const std::string &binary = custom["exec"].get<std::string>();
-        const std::string &family = custom["family"].get<std::string>();
-        this->drivers.push_back(std::make_shared<INDIDeviceContainer>(
+auto INDIDriverCollection::parseCustomDrivers(const json& drivers) -> bool {
+    for (const auto& custom : drivers) {
+        const auto& name = custom["name"].get<std::string>();
+        const auto& label = custom["label"].get<std::string>();
+        const auto& version = custom["version"].get<std::string>();
+        const auto& binary = custom["exec"].get<std::string>();
+        const auto& family = custom["family"].get<std::string>();
+        drivers_.push_back(std::make_shared<INDIDeviceContainer>(
             name, label, version, binary, family, "", true));
     }
     return true;
 }
 
 void INDIDriverCollection::clearCustomDrivers() {
-    drivers.erase(
-        std::remove_if(drivers.begin(), drivers.end(),
-                       [](const std::shared_ptr<INDIDeviceContainer> driver) {
-                           return driver->custom == true;
-                       }),
-        drivers.end());
+    drivers_.erase(
+        std::remove_if(drivers_.begin(), drivers_.end(),
+                       [](const auto& driver) { return driver->custom; }),
+        drivers_.end());
 }
 
-std::shared_ptr<INDIDeviceContainer> INDIDriverCollection::getByLabel(
-    const std::string &label) {
-    for (auto driver : drivers) {
+auto INDIDriverCollection::getByLabel(const std::string& label)
+    -> std::shared_ptr<INDIDeviceContainer> {
+    for (const auto& driver : drivers_) {
         if (driver->label == label) {
             return driver;
         }
@@ -112,9 +87,9 @@ std::shared_ptr<INDIDeviceContainer> INDIDriverCollection::getByLabel(
     return nullptr;
 }
 
-std::shared_ptr<INDIDeviceContainer> INDIDriverCollection::getByName(
-    const std::string &name) {
-    for (auto driver : drivers) {
+auto INDIDriverCollection::getByName(const std::string& name)
+    -> std::shared_ptr<INDIDeviceContainer> {
+    for (const auto& driver : drivers_) {
         if (driver->name == name) {
             return driver;
         }
@@ -123,9 +98,9 @@ std::shared_ptr<INDIDeviceContainer> INDIDriverCollection::getByName(
     return nullptr;
 }
 
-std::shared_ptr<INDIDeviceContainer> INDIDriverCollection::getByBinary(
-    const std::string &binary) {
-    for (auto driver : drivers) {
+auto INDIDriverCollection::getByBinary(const std::string& binary)
+    -> std::shared_ptr<INDIDeviceContainer> {
+    for (const auto& driver : drivers_) {
         if (driver->binary == binary) {
             return driver;
         }
@@ -134,20 +109,10 @@ std::shared_ptr<INDIDeviceContainer> INDIDriverCollection::getByBinary(
     return nullptr;
 }
 
-#if ENABLE_FASTHASH
-emhash8::HashMap<std::string, std::vector<std::string>>
-INDIDriverCollection::getFamilies()
-#else
-std::unordered_map<std::string, std::vector<std::string>>
-INDIDriverCollection::getFamilies()
-#endif
-{
-#if ENABLE_FASTHASH
-    emhash8::HashMap<std::string, std::vector<std::string>> families;
-#else
+auto INDIDriverCollection::getFamilies()
+    -> std::unordered_map<std::string, std::vector<std::string>> {
     std::unordered_map<std::string, std::vector<std::string>> families;
-#endif
-    for (const auto driver : drivers) {
+    for (const auto& driver : drivers_) {
         families[driver->family].push_back(driver->label);
         DLOG_F(INFO, "Family {} contains devices {}", driver->family,
                driver->label);

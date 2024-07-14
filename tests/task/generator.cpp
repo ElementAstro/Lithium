@@ -1,6 +1,6 @@
 #include "task/generator.hpp"
 #include <gtest/gtest.h>
-#include <nlohmann/json.hpp>
+#include "atom/type/json.hpp"
 
 using namespace lithium;
 using json = nlohmann::json;
@@ -26,7 +26,7 @@ TEST_F(TaskGeneratorTest, TestProcessJson) {
               {"lengthOfName", "${length(${name})}"},
               {"upperName", "${uppercase(${name})}"}};
 
-    generator.process_json(j);
+    generator.processJson(j);
 
     EXPECT_EQ(j["name"].get<std::string>(), "John Doe");
     EXPECT_EQ(j["email"].get<std::string>(), "john.doe@example.com");

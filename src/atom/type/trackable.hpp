@@ -88,7 +88,7 @@ public:
      * @return std::string The demangled type name of the value.
      */
     auto getTypeName() const -> std::string {
-        return atom::meta::DemangleHelper::DemangleType<T>();
+        return atom::meta::DemangleHelper::demangleType<T>();
     }
 
     /**

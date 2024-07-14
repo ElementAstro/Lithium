@@ -2,9 +2,9 @@
 #define LITHIUM_INDISERVER_CONTAINER_HPP
 
 #include <string>
+#include <utility>
 
-class INDIDeviceContainer
-{
+class INDIDeviceContainer {
 public:
     std::string name;
     std::string label;
@@ -14,9 +14,17 @@ public:
     std::string skeleton;
     bool custom;
 
-    explicit INDIDeviceContainer(const std::string &name, const std::string &label, const std::string &version,
-                        const std::string &binary, const std::string &family,
-                        const std::string &skeleton = "", bool custom = false);
+    INDIDeviceContainer(std::string name, std::string label,
+                        std::string version, std::string binary,
+                        std::string family, std::string skeleton = "",
+                        bool custom = false)
+        : name(std::move(name)),
+          label(std::move(label)),
+          version(std::move(version)),
+          binary(std::move(binary)),
+          family(std::move(family)),
+          skeleton(std::move(skeleton)),
+          custom(custom) {}
 };
 
-#endif
+#endif  // LITHIUM_INDISERVER_CONTAINER_HPP

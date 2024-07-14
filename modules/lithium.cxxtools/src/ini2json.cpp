@@ -4,19 +4,9 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2023-7-29
-
-Description: INI to JSON Converter
-
-**************************************************/
-
 #include "ini2json.hpp"
 
-#include <algorithm>
-#include <chrono>
-#include <ctime>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -26,92 +16,96 @@ Description: INI to JSON Converter
 #include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
 
-using namespace std;
-using namespace std::chrono;
 namespace fs = std::filesystem;
 
-string tab(unsigned level) { return string(level * 4, ' '); }
+namespace lithium::cxxtools::detail {
+auto tab(unsigned level) -> std::string {
+    return std::string(static_cast<size_t>(level * 4), ' ');
+}
 
-bool iniToJson(const string& iniFilePath, const string& jsonFilePath) {
+auto iniToJson(std::string_view iniFilePath,
+               std::string_view jsonFilePath) -> bool {
     LOG_F(INFO, "Converting INI file to JSON: {}", iniFilePath);
     if (!fs::exists(iniFilePath) || !fs::is_regular_file(iniFilePath)) {
-        THROW_RUNTIME_ERROR("File not found: " + iniFilePath);
+        THROW_FILE_NOT_FOUND("File not found: ", iniFilePath);
     }
 
-    std::ifstream in(iniFilePath);
-    std::ofstream out(jsonFilePath);
+    std::ifstream in(iniFilePath.data());
+    std::ofstream out(jsonFilePath.data());
     if (!out.is_open()) {
         LOG_F(ERROR, "Can't create file: {}", jsonFilePath);
         return false;
     }
 
-    out << "{" << endl;
+    out << "{" << std::endl;
 
-    string line;
+    std::string line;
     bool sectionOpened = false;
     bool hasAttributes = false;
 
-    while (getline(in, line)) {
-        size_t commentPos = line.find(';');
-        if (commentPos != string::npos)
+    while (std::getline(in, line)) {
+        auto commentPos = line.find(';');
+        if (commentPos != std::string::npos) {
             line = line.substr(0, commentPos);
+        }
 
         line = atom::utils::trim(line);
 
-        if (line.empty())
+        if (line.empty()) {
             continue;
+        }
 
         if (line.front() == '[') {
             line = atom::utils::trim(line, "[]");
 
             if (hasAttributes) {
                 hasAttributes = false;
-                out << endl;
+                out << std::endl;
             }
 
             if (sectionOpened) {
-                out << tab(1) << "}," << endl;
+                out << tab(1) << "}," << std::endl;
             } else {
                 sectionOpened = true;
             }
 
-            out << tab(1) << "\"" << line << "\": {" << endl;
+            out << tab(1) << "\"" << line << "\": {" << std::endl;
         } else {
             auto pos = line.find('=');
-            if (pos == string::npos)
+            if (pos == std::string::npos) {
                 continue;
+            }
 
-            string attribute = atom::utils::trim(line.substr(0, pos));
-            string value = atom::utils::trim(line.substr(pos + 1));
+            auto attribute = atom::utils::trim(line.substr(0, pos));
+            auto value = atom::utils::trim(line.substr(pos + 1));
 
             if (hasAttributes) {
-                out << "," << endl;
+                out << "," << std::endl;
             } else {
                 hasAttributes = true;
             }
 
-            out << tab(3) << "\"" << attribute << "\": ";
-            if (value.find(':') != string::npos) {
-                out << "{" << endl;
-                auto items = atom::utils::explode(value, ',');
-                for (const auto& item : items) {
+            out << tab(2) << "\"" << attribute << "\": ";
+            if (value.find(':') != std::string::npos) {
+                out << "{" << std::endl;
+                for (const auto& item : atom::utils::explode(value, ',')) {
                     auto kv = atom::utils::explode(item, ':');
-                    if (kv.size() == 2)
-                        out << tab(4) << "\"" << atom::utils::trim(kv[0])
+                    if (kv.size() == 2) {
+                        out << tab(3) << "\"" << atom::utils::trim(kv[0])
                             << "\": \"" << atom::utils::trim(kv[1]) << "\","
-                            << endl;
+                            << std::endl;
+                    }
                 }
-                out.seekp(-2, out.cur);  // Remove the last comma
-                out << endl << tab(3) << "}";
-            } else if (value.find(',') != string::npos) {
-                out << "[" << endl;
-                auto items = atom::utils::explode(value, ',');
-                for (const auto& item : items) {
-                    out << tab(4) << "\"" << atom::utils::trim(item) << "\","
-                        << endl;
+                out.seekp(-2, std::ofstream::cur);  // Remove the last comma
+                out << std::endl << tab(2) << "}";
+            } else if (value.find(',') != std::string::npos) {
+                out << "[" << std::endl;
+                for (const auto& item : atom::utils::explode(value, ',')) {
+                    out << tab(3) << "\"" << atom::utils::trim(item) << "\","
+                        << std::endl;
                 }
-                out.seekp(-2, out.cur);  // Remove the last comma
-                out << endl << tab(3) << "]";
+                out.seekp(-2, std::ofstream::cur);  // Remove the last comma
+                out << std::endl << tab(2) << "]";
             } else {
                 out << "\"" << value << "\"";
             }
@@ -119,48 +113,63 @@ bool iniToJson(const string& iniFilePath, const string& jsonFilePath) {
     }
 
     if (hasAttributes) {
-        out << endl;
+        out << std::endl;
     }
 
     if (sectionOpened) {
-        out << tab(1) << "}" << endl;
+        out << tab(1) << "}" << std::endl;
     }
 
-    out << "}" << endl;
+    out << "}" << std::endl;
     return true;
 }
+}  // namespace lithium::cxxtools::detail
 
 #if ATOM_STANDALONE_COMPONENT_ENABLED
 #include <argparse/argparse.hpp>
 int main(int argc, char** argv) {
     loguru::init(argc, argv);
-    loguru::add_file("conversion_log.txt", loguru::Append, loguru::Verbosity_INFO);
+    loguru::add_file("conversion_log.txt", loguru::Append,
+                     loguru::Verbosity_INFO);
 
-    argparse::ArgumentParser program;
+    argparse::ArgumentParser program("ini2json");
     program.add_argument("-i", "--input")
         .required()
         .help("path to input INI file");
-
     program.add_argument("-o", "--output")
         .required()
         .help("path to output JSON file");
-    program.parse_args(argc, argv);
 
-    std::string iniFilePath = program.get<std::string>("input");
-    std::string jsonFilePath = program.get<std::string>("output");
-
-    if (!iniToJson(iniFilePath, jsonFilePath)) {
-        LOG_F(ERROR, "Conversion failed.");
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::runtime_error& err) {
+        LOG_F(ERROR, "Error parsing arguments: {}", err.what());
         return 1;
     }
 
-    LOG_F(INFO, "Conversion completed. Result has been saved to {}",
-          jsonFilePath);
+    std::string iniFilePath = program.get<std::string>("--input");
+    std::string jsonFilePath = program.get<std::string>("--output");
+
+    try {
+        LOG_F(INFO, "Converting INI to JSON...");
+        if (!iniToJson(iniFilePath, jsonFilePath)) {
+            LOG_F(ERROR, "Conversion failed.");
+            return 1;
+        }
+        LOG_F(INFO, "Conversion completed. Result has been saved to {}",
+              jsonFilePath);
+    } catch (const std::exception& ex) {
+        LOG_F(ERROR, "Conversion failed: {}", ex.what());
+        return 1;
+    }
 
     return 0;
 }
 #else
-bool ini_to_json(const std::string& ini_file, const std::string& json_file) {
-    return iniToJson(ini_file, json_file);
+namespace lithium::cxxtools {
+auto iniToJson(std::string_view ini_file, std::string_view json_file) -> bool {
+    return detail::iniToJson(ini_file, json_file);
 }
+}  // namespace lithium::cxxtools
+
 #endif

@@ -11,6 +11,7 @@
 
 #include <chrono>
 #include <concepts>
+#include <exception>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -18,18 +19,10 @@
 #include <utility>
 #include <vector>
 
-#include "atom/error/exception.hpp"
 #include "func_traits.hpp"  // Ensure this is implemented properly
 #include "macro.hpp"
 
 namespace atom::meta {
-class DecoratorError : public atom::error::RuntimeError {
-    using atom::error::RuntimeError::RuntimeError;
-};
-
-#define THROW_DECORATOR_ERROR(...)                                   \
-    throw atom::meta::DecoratorError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
-                                     ATOM_FUNC_NAME, __VA_ARGS__)
 
 // Concept for checking if a type is callable, adjusted for better utility
 template <typename F, typename... Args>
@@ -196,13 +189,23 @@ struct ConditionCheckDecorator : public decorator<FuncType> {
             return ReturnType{};
         }
     }
-} ATOM_ALIGNAS(1);
+} __attribute__((aligned(1)));
 
 template <typename FuncType>
 auto makeConditionCheckDecorator(FuncType&& f) {
     return ConditionCheckDecorator<std::remove_reference_t<FuncType>>(
         std::forward<FuncType>(f));
 }
+
+class DecoratorError : public std::exception {
+    std::string message_;
+
+public:
+    explicit DecoratorError(std::string msg) : message_(std::move(msg)) {}
+    [[nodiscard]] auto what() const noexcept -> const char* override {
+        return message_.c_str();
+    }
+};
 
 template <typename R, typename... Args>
 class BaseDecorator {

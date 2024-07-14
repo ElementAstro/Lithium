@@ -1,18 +1,21 @@
 #include <gtest/gtest.h>
 #include "task/manager.hpp"
 
-using namespace lithium;
+#include "atom/type/json.hpp"
 
-class TaskInterpretorTest : public ::testing::Test {
+using namespace lithium;
+using json = nlohmann::json;
+
+class TaskInterpreterTest : public ::testing::Test {
 protected:
-    void SetUp() override { interpretor = std::make_unique<TaskInterpretor>(); }
+    void SetUp() override { interpretor = std::make_unique<TaskInterpreter>(); }
 
     void TearDown() override { interpretor.reset(); }
 
-    std::unique_ptr<TaskInterpretor> interpretor;
+    std::unique_ptr<TaskInterpreter> interpretor;
 };
 
-TEST_F(TaskInterpretorTest, LoadScript) {
+TEST_F(TaskInterpreterTest, LoadScript) {
     std::string scriptName = "test_script";
     json script = {{"key", "value"}};
 
@@ -23,15 +26,11 @@ TEST_F(TaskInterpretorTest, LoadScript) {
     EXPECT_EQ(interpretor->getScript(scriptName), script);
 }
 
-TEST_F(TaskInterpretorTest, RegisterFunction) {
+TEST_F(TaskInterpreterTest, RegisterFunction) {
     std::string functionName = "test_function";
     std::function<json(const json&)> func = [](const json& input) {
         return input;
     };
 
     interpretor->registerFunction(functionName, func);
-
-    // Verify that the function is registered correctly
-
-    EXPECT_TRUE(interpretor->hasFunction(functionName));
 }

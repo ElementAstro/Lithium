@@ -4,8 +4,11 @@
 #include <filesystem>
 #include <fstream>
 
+#include "atom/type/json.hpp"
+
 using namespace lithium;
 namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 class TaskLoaderTest : public ::testing::Test {
 protected:

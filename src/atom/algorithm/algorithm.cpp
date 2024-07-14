@@ -1,16 +1,15 @@
 #include "algorithm.hpp"
 
-#include <random>
-
 namespace atom::algorithm {
-KMP::KMP(std::string_view pattern) : pattern_(pattern) {
-    failure_ = computeFailureFunction(pattern_);
-}
+KMP::KMP(std::string_view pattern) { setPattern(pattern); }
 
-std::vector<int> KMP::search(std::string_view text) {
+auto KMP::search(std::string_view text) const -> std::vector<int> {
     std::vector<int> occurrences;
     auto n = static_cast<int>(text.length());
     auto m = static_cast<int>(pattern_.length());
+    if (m == 0) {
+        return occurrences;
+    }
     int i = 0;
     int j = 0;
     while (i < n) {
@@ -38,82 +37,27 @@ void KMP::setPattern(std::string_view pattern) {
 auto KMP::computeFailureFunction(std::string_view pattern) -> std::vector<int> {
     auto m = static_cast<int>(pattern.length());
     std::vector<int> failure(m, 0);
-    int i = 1;
     int j = 0;
-    while (i < m) {
+    for (int i = 1; i < m; ++i) {
         if (pattern[i] == pattern[j]) {
-            failure[i] = j + 1;
-            ++i;
-            ++j;
+            failure[i] = ++j;
         } else if (j > 0) {
             j = failure[j - 1];
-        } else {
-            failure[i] = 0;
-            ++i;
+            --i;  // stay in the same position
         }
     }
     return failure;
 }
 
-MinHash::MinHash(int num_hash_functions)
-    : m_num_hash_functions_(num_hash_functions) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<unsigned long long> dis;
+BoyerMoore::BoyerMoore(std::string_view pattern) { setPattern(pattern); }
 
-    for (int i = 0; i < num_hash_functions; ++i) {
-        m_coefficients_a_.push_back(dis(gen));
-        m_coefficients_b_.push_back(dis(gen));
-    }
-}
-
-auto MinHash::computeSignature(const std::unordered_set<std::string>& set)
-    -> std::vector<unsigned long long> {
-    std::vector<unsigned long long> signature(
-        m_num_hash_functions_, std::numeric_limits<unsigned long long>::max());
-
-    for (const auto& element : set) {
-        for (int i = 0; i < m_num_hash_functions_; ++i) {
-            unsigned long long hashValue = hash(element, i);
-            signature[i] = std::min(signature[i], hashValue);
-        }
-    }
-
-    return signature;
-}
-
-auto MinHash::estimateSimilarity(
-    const std::vector<unsigned long long>& signature1,
-    const std::vector<unsigned long long>& signature2) const -> double {
-    int numMatches = 0;
-    for (int i = 0; i < m_num_hash_functions_; ++i) {
-        if (signature1[i] == signature2[i]) {
-            ++numMatches;
-        }
-    }
-    return static_cast<double>(numMatches) / m_num_hash_functions_;
-}
-
-auto MinHash::hash(const std::string& element,
-                   int index) -> unsigned long long {
-    unsigned long long hashValue = 0;
-    for (char c : element) {
-        hashValue +=
-            (m_coefficients_a_[index] * static_cast<unsigned long long>(c) +
-             m_coefficients_b_[index]);
-    }
-    return hashValue;
-}
-
-BoyerMoore::BoyerMoore(std::string_view pattern) : pattern_(pattern) {
-    computeBadCharacterShift();
-    computeGoodSuffixShift();
-}
-
-auto BoyerMoore::search(std::string_view text) -> std::vector<int> {
+auto BoyerMoore::search(std::string_view text) const -> std::vector<int> {
     std::vector<int> occurrences;
     auto n = static_cast<int>(text.length());
     auto m = static_cast<int>(pattern_.length());
+    if (m == 0) {
+        return occurrences;
+    }
     int i = 0;
     while (i <= n - m) {
         int j = m - 1;
@@ -124,15 +68,18 @@ auto BoyerMoore::search(std::string_view text) -> std::vector<int> {
             occurrences.push_back(i);
             i += good_suffix_shift_[0];
         } else {
-            i += std::max(good_suffix_shift_[j + 1],
-                          bad_char_shift_[text[i + j]] - m + 1 + j);
+            int badCharShift =
+                bad_char_shift_.find(text[i + j]) != bad_char_shift_.end()
+                    ? bad_char_shift_.at(text[i + j])
+                    : m;
+            i += std::max(good_suffix_shift_[j + 1], badCharShift - m + 1 + j);
         }
     }
     return occurrences;
 }
 
 void BoyerMoore::setPattern(std::string_view pattern) {
-    pattern_ = pattern;
+    pattern_ = std::string(pattern);
     computeBadCharacterShift();
     computeGoodSuffixShift();
 }
@@ -147,20 +94,34 @@ void BoyerMoore::computeBadCharacterShift() {
 
 void BoyerMoore::computeGoodSuffixShift() {
     auto m = static_cast<int>(pattern_.length());
-    good_suffix_shift_.resize(m, m);
-    std::vector<int> suffix(m, 0);
-    int j = 0;
-    for (int i = m - 1; i >= 0; --i) {
-        if (pattern_.substr(i) == pattern_.substr(m - j - 1, j + 1)) {
-            suffix[i] = j + 1;
+    good_suffix_shift_.resize(m + 1, m);
+    std::vector<int> suffix(m + 1, 0);
+    suffix[m] = m + 1;
+
+    for (int i = m; i > 0; --i) {
+        int j = i - 1;
+        while (j >= 0 && pattern_[j] != pattern_[m - 1 - (i - 1 - j)]) {
+            --j;
         }
-        if (i > 0) {
-            good_suffix_shift_[m - suffix[i]] = m - i;
+        suffix[i - 1] = j + 1;
+    }
+
+    for (int i = 0; i <= m; ++i) {
+        good_suffix_shift_[i] = m;
+    }
+
+    for (int i = m; i > 0; --i) {
+        if (suffix[i - 1] == i) {
+            for (int j = 0; j < m - i; ++j) {
+                if (good_suffix_shift_[j] == m) {
+                    good_suffix_shift_[j] = m - i;
+                }
+            }
         }
     }
+
     for (int i = 0; i < m - 1; ++i) {
-        good_suffix_shift_[m - suffix[i]] = m - i;
+        good_suffix_shift_[m - suffix[i]] = m - 1 - i;
     }
 }
-
 }  // namespace atom::algorithm

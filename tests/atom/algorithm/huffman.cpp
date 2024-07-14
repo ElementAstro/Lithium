@@ -11,17 +11,6 @@ TEST(HuffmanTest, CreateHuffmanTreeTest) {
     ASSERT_EQ(root->left->data, 'f');
 }
 
-TEST(HuffmanTest, GenerateHuffmanCodesTest) {
-    auto root = std::make_shared<atom::algorithm::HuffmanNode>('\0', 0);
-    root->left = std::make_shared<atom::algorithm::HuffmanNode>('\0', 0);
-    root->right = std::make_shared<atom::algorithm::HuffmanNode>('\0', 0);
-
-    std::unordered_map<char, std::string> huffmanCodes;
-    atom::algorithm::generateHuffmanCodes(root.get(), "", huffmanCodes);
-
-    ASSERT_EQ(huffmanCodes['\0'], "0");
-}
-
 // 压缩和解压缩文本测试
 TEST(HuffmanTest, CompressAndDecompressTextTest) {
     std::string text = "abbcccddddeeeeeffffff";

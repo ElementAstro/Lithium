@@ -22,6 +22,7 @@ Description: C++ and Modules Loader
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
 #include "module.hpp"
@@ -37,69 +38,69 @@ using json = nlohmann::json;
 namespace lithium {
 class ModuleLoader {
 public:
-    explicit ModuleLoader(const std::string& dir_name);
+    explicit ModuleLoader(std::string dirName);
     ~ModuleLoader();
 
     static std::shared_ptr<ModuleLoader> createShared();
-    static std::shared_ptr<ModuleLoader> createShared(
-        const std::string& dir_name);
+    static std::shared_ptr<ModuleLoader> createShared(std::string dirName);
 
-    bool LoadModule(const std::string& path, const std::string& name);
-    bool UnloadModule(const std::string& name);
-    bool UnloadAllModules();
-    bool HasModule(const std::string& name) const;
-    std::shared_ptr<ModuleInfo> GetModule(const std::string& name) const;
-    bool EnableModule(const std::string& name);
-    bool DisableModule(const std::string& name);
-    bool IsModuleEnabled(const std::string& name) const;
-    std::string GetModuleVersion(const std::string& name);
-    std::string GetModuleDescription(const std::string& name);
-    std::string GetModuleAuthor(const std::string& name);
-    std::string GetModuleLicense(const std::string& name);
-    std::string GetModulePath(const std::string& name);
-    json GetModuleConfig(const std::string& name);
-    const std::vector<std::string> GetAllExistedModules() const;
-
-    template <typename T>
-    T GetFunction(const std::string& name, const std::string& function_name);
+    bool loadModule(const std::string& path, const std::string& name);
+    bool unloadModule(const std::string& name);
+    bool unloadAllModules();
+    bool hasModule(const std::string& name) const;
+    std::shared_ptr<ModuleInfo> getModule(const std::string& name) const;
+    bool enableModule(const std::string& name);
+    bool disableModule(const std::string& name);
+    bool isModuleEnabled(const std::string& name) const;
+    std::string getModuleVersion(const std::string& name);
+    std::string getModuleDescription(const std::string& name);
+    std::string getModuleAuthor(const std::string& name);
+    std::string getModuleLicense(const std::string& name);
+    std::string getModulePath(const std::string& name);
+    json getModuleConfig(const std::string& name);
+    std::vector<std::string> getAllExistedModules() const;
 
     template <typename T>
-    std::shared_ptr<T> GetInstance(const std::string& name, const json& config,
-                                   const std::string& symbol_name);
+    T getFunction(const std::string& name, const std::string& functionName);
 
     template <typename T>
-    std::unique_ptr<T> GetUniqueInstance(
+    std::shared_ptr<T> getInstance(const std::string& name, const json& config,
+                                   const std::string& symbolName);
+
+    template <typename T>
+    std::unique_ptr<T> getUniqueInstance(
         const std::string& name, const json& config,
-        const std::string& instance_function_name);
+        const std::string& instanceFunctionName);
 
     template <typename T>
-    std::shared_ptr<T> GetInstancePointer(
+    std::shared_ptr<T> getInstancePointer(
         const std::string& name, const json& config,
-        const std::string& instance_function_name);
+        const std::string& instanceFunctionName);
+
+    bool hasFunction(const std::string& name, const std::string& functionName);
 
 private:
     std::unordered_map<std::string, std::shared_ptr<ModuleInfo>> modules_;
-    mutable std::shared_mutex m_SharedMutex;
+    mutable std::shared_mutex sharedMutex_;
 
     std::vector<std::unique_ptr<FunctionInfo>> loadModuleFunctions(
         const std::string& name);
-    void* GetHandle(const std::string& name) const;
-    bool CheckModuleExists(const std::string& name) const;
-    bool HasFunction(const std::string& name, const std::string& function_name);
+    void* getHandle(const std::string& name) const;
+    bool checkModuleExists(const std::string& name) const;
 };
 
 template <typename T>
-T ModuleLoader::GetFunction(const std::string& name,
-                            const std::string& function_name) {
-    std::shared_lock lock(m_SharedMutex);
+T ModuleLoader::getFunction(const std::string& name,
+                            const std::string& functionName) {
+    std::shared_lock lock(sharedMutex_);
     if (auto it = modules_.find(name); it != modules_.end()) {
-        if (auto func_ptr = reinterpret_cast<T>(
-                LOAD_FUNCTION(it->second->handle, function_name.c_str()));
-            func_ptr) {
-            return func_ptr;
+        if (auto funcPtr = reinterpret_cast<T>(
+                LOAD_FUNCTION(it->second->handle, functionName.c_str()));
+            funcPtr) {
+            return funcPtr;
         }
-        LOG_F(ERROR, "Failed to get symbol {} from module {}: {}",
-              function_name, name, LOAD_ERROR());
+        LOG_F(ERROR, "Failed to get symbol {} from module {}: {}", functionName,
+              name, LOAD_ERROR());
     } else {
         LOG_F(ERROR, "Failed to find module {}", name);
     }
@@ -107,35 +108,34 @@ T ModuleLoader::GetFunction(const std::string& name,
 }
 
 template <typename T>
-std::shared_ptr<T> ModuleLoader::GetInstance(const std::string& name,
+std::shared_ptr<T> ModuleLoader::getInstance(const std::string& name,
                                              const json& config,
-                                             const std::string& symbol_name) {
-    if (auto get_instance_func =
-            GetFunction<std::shared_ptr<T> (*)(const json&)>(name, symbol_name);
-        get_instance_func) {
-        return get_instance_func(config);
+                                             const std::string& symbolName) {
+    if (auto getInstanceFunc =
+            getFunction<std::shared_ptr<T> (*)(const json&)>(name, symbolName);
+        getInstanceFunc) {
+        return getInstanceFunc(config);
     }
     return nullptr;
 }
 
 template <typename T>
-std::unique_ptr<T> ModuleLoader::GetUniqueInstance(
+std::unique_ptr<T> ModuleLoader::getUniqueInstance(
     const std::string& name, const json& config,
-    const std::string& instance_function_name) {
-    if (auto get_instance_func =
-            GetFunction<std::unique_ptr<T> (*)(const json&)>(
-                name, instance_function_name);
-        get_instance_func) {
-        return get_instance_func(config);
+    const std::string& instanceFunctionName) {
+    if (auto getInstanceFunc = getFunction<std::unique_ptr<T> (*)(const json&)>(
+            name, instanceFunctionName);
+        getInstanceFunc) {
+        return getInstanceFunc(config);
     }
     return nullptr;
 }
 
 template <typename T>
-std::shared_ptr<T> ModuleLoader::GetInstancePointer(
+std::shared_ptr<T> ModuleLoader::getInstancePointer(
     const std::string& name, const json& config,
-    const std::string& instance_function_name) {
-    return GetInstance<T>(name, config, instance_function_name);
+    const std::string& instanceFunctionName) {
+    return getInstance<T>(name, config, instanceFunctionName);
 }
 
 }  // namespace lithium

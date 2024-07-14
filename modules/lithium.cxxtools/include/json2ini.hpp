@@ -1,8 +1,17 @@
+/*
+ * json2ini.hpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
 #ifndef LITHIUM_CXXTOOLS_JSON2INI_HPP
 #define LITHIUM_CXXTOOLS_JSON2INI_HPP
 
-#include <string>
+#include <string_view>
 
-bool json_to_ini(const std::string& json_file, const std::string& ini_file);
+namespace lithium::cxxtools {
+auto jsonToIni(std::string_view jsonFilePath,
+               std::string_view iniFilePath) -> bool;
+}
 
-#endif
+#endif  // LITHIUM_CXXTOOLS_JSON2INI_HPP

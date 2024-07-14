@@ -19,10 +19,14 @@ Description: Implementation of murmur3 hash and quick hash
 #include <cstdlib>
 #include <cstring>
 #include <iomanip>
+#include <limits>
+#include <random>
 #include <span>
 #include <sstream>
-#include <stdexcept>
-#include "error/exception.hpp"
+
+#include "atom/error/exception.hpp"
+#include "atom/utils/random.hpp"
+#include "macro.hpp"
 
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
@@ -30,67 +34,7 @@ Description: Implementation of murmur3 hash and quick hash
 #include <openssl/sha.h>
 
 namespace atom::algorithm {
-auto fmix32(uint32_t h) ATOM_NOEXCEPT -> uint32_t {
-    h ^= h >> 16;
-    h *= 0x85ebca6b;
-    h ^= h >> 13;
-    h *= 0xc2b2ae35;
-    h ^= h >> 16;
-    return h;
-}
-
-auto rotl(uint32_t x, int8_t r) ATOM_NOEXCEPT -> uint32_t {
-    return (x << r) | (x >> (32 - r));
-}
-
-auto murmur3Hash(std::string_view data, uint32_t seed) ATOM_NOEXCEPT -> uint32_t {
-    uint32_t hash = seed;
-    const uint32_t SEED1 = 0xcc9e2d51;
-    const uint32_t SEED2 = 0x1b873593;
-
-    // Process 4-byte chunks
-    const auto *blocks = reinterpret_cast<const uint32_t *>(data.data());
-    size_t nblocks = data.size() / 4;
-    for (size_t i = 0; i < nblocks; i++) {
-        uint32_t k = blocks[i];
-        k *= SEED1;
-        k = rotl(k, 15);
-        k *= SEED2;
-
-        hash ^= k;
-        hash = rotl(hash, 13);
-        hash = hash * 5 + 0xe6546b64;
-    }
-
-    // Handle the tail
-    const auto *tail =
-        reinterpret_cast<const uint8_t *>(data.data() + nblocks * 4);
-    uint32_t tailVal = 0;
-    switch (data.size() & 3) {
-        case 3:
-            tailVal |= tail[2] << 16;
-            [[fallthrough]];
-        case 2:
-            tailVal |= tail[1] << 8;
-            [[fallthrough]];
-        case 1:
-            tailVal |= tail[0];
-            tailVal *= SEED1;
-            tailVal = rotl(tailVal, 15);
-            tailVal *= SEED2;
-            hash ^= tailVal;
-    }
-
-    return fmix32(hash ^ static_cast<uint32_t>(data.size()));
-}
-
-auto murmur3Hash64(std::string_view str, uint32_t seed,
-                   uint32_t seed2) -> uint64_t {
-    return (static_cast<uint64_t>(murmur3Hash(str, seed)) << 32) |
-           murmur3Hash(str, seed2);
-}
-
-void hexstringFromData(const void *data, size_t len, char *output) {
+void dataFromData(const void *data, size_t len, char *output) {
     const auto *buf = static_cast<const unsigned char *>(data);
     std::span<const unsigned char> bytes(buf, len);
     std::ostringstream stream;
@@ -106,7 +50,7 @@ void hexstringFromData(const void *data, size_t len, char *output) {
     output[hexstr.size()] = '\0';  // Null-terminate the output string
 }
 
-auto hexstringFromData(const std::string &data) -> std::string {
+auto dataFromData(const std::string &data) -> std::string {
     if (data.empty()) {
         return {};
     }
@@ -131,22 +75,34 @@ auto hexstringFromData(const std::string &data) -> std::string {
     return result;
 }
 
-auto dataFromHexstring(const std::string &hexstring) -> std::string {
-    if (hexstring.size() % 2 != 0) {
+auto hexstringFromData(const std::string &data) -> std::string {
+    const char *hexChars = "0123456789ABCDEF";
+    std::string output;
+    output.reserve(data.size() * 2);  // Reserve space for the hex string
+
+    for (unsigned char byte : data) {
+        output.push_back(hexChars[(byte >> 4) & 0x0F]);
+        output.push_back(hexChars[byte & 0x0F]);
+    }
+
+    return output;
+}
+
+auto dataFromHexstring(const std::string &data) -> std::string {
+    if (data.size() % 2 != 0) {
         THROW_INVALID_ARGUMENT("Hex string length must be even");
     }
 
     std::string result;
-    result.resize(hexstring.size() / 2);
+    result.resize(data.size() / 2);
 
     size_t outputIndex = 0;
-    for (size_t i = 0; i < hexstring.size(); i += 2) {
+    for (size_t i = 0; i < data.size(); i += 2) {
         int byte = 0;
-        auto [ptr, ec] = std::from_chars(hexstring.data() + i,
-                                         hexstring.data() + i + 2, byte, 16);
+        auto [ptr, ec] =
+            std::from_chars(data.data() + i, data.data() + i + 2, byte, 16);
 
-        if (ec == std::errc::invalid_argument ||
-            ptr != hexstring.data() + i + 2) {
+        if (ec == std::errc::invalid_argument || ptr != data.data() + i + 2) {
             THROW_INVALID_ARGUMENT("Invalid hex character");
         }
 
@@ -154,6 +110,37 @@ auto dataFromHexstring(const std::string &hexstring) -> std::string {
     }
 
     return result;
+}
+
+MinHash::MinHash(size_t num_hashes) {
+    hash_functions_.reserve(num_hashes);
+    for (size_t i = 0; i < num_hashes; ++i) {
+        hash_functions_.emplace_back(generateHashFunction());
+    }
+}
+
+auto MinHash::generateHashFunction() -> HashFunction {
+    utils::Random<std::mt19937, std::uniform_int_distribution<>> rand(
+        0, std::numeric_limits<int>::max());
+
+    size_t a = rand();
+    size_t b = rand();
+    size_t p = std::numeric_limits<size_t>::max();
+
+    return [a, b, p](size_t x) -> size_t { return (a * x + b) % p; };
+}
+
+auto MinHash::jaccardIndex(const std::vector<size_t> &sig1,
+                           const std::vector<size_t> &sig2) -> double {
+    size_t equalCount = 0;
+
+    for (size_t i = 0; i < sig1.size(); ++i) {
+        if (sig1[i] == sig2[i]) {
+            ++equalCount;
+        }
+    }
+
+    return static_cast<double>(equalCount) / sig1.size();
 }
 
 }  // namespace atom::algorithm

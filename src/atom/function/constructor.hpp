@@ -89,15 +89,15 @@ auto constructor() {
 
 template <typename Class, typename... Args>
 auto constructor() {
-    return build_constructor_<Class, Args...>();
+    return buildConstructor<Class, Args...>();
 }
 
 template <typename Class>
 auto defaultConstructor() {
     if constexpr (std::is_default_constructible_v<Class>) {
-        return build_default_constructor_<Class>();
+        return buildDefaultConstructor<Class>();
     } else {
-        THROW_EXCEPTION("Class is not default constructible");
+        THROW_NOT_FOUND("Class is not default constructible");
     }
 }
 }  // namespace atom::meta

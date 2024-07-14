@@ -71,18 +71,18 @@ auto anyCastVal(const std::any &operand) -> T {
 template <typename T>
 auto anyCastHelper(std::any &operand) -> decltype(auto) {
     if constexpr (std::is_reference_v<T>) {
-        return any_cast_ref<T>(operand);
+        return anyCastRef<T>(operand);
     } else {
-        return any_cast_val<T>(operand);
+        return anyCastVal<T>(operand);
     }
 }
 
 template <typename T>
 auto anyCastHelper(const std::any &operand) -> decltype(auto) {
     if constexpr (std::is_reference_v<T>) {
-        return any_cast_ref<T>(operand);
+        return anyCastRef<T>(operand);
     } else {
-        return any_cast_val<T>(operand);
+        return anyCastVal<T>(operand);
     }
 }
 
@@ -170,16 +170,14 @@ private:
     auto callFunction(const std::vector<std::any> &args,
                       std::index_sequence<Is...>) -> std::any {
         if constexpr (std::is_void_v<typename Traits::return_type>) {
-            std::invoke(
-                func_,
-                any_cast_helper<typename Traits::template argument_t<Is>>(
-                    args[Is])...);
+            std::invoke(func_,
+                        anyCastHelper<typename Traits::template argument_t<Is>>(
+                            args[Is])...);
             return {};
         } else {
             return std::make_any<typename Traits::return_type>(std::invoke(
-                func_,
-                any_cast_helper<typename Traits::template argument_t<Is>>(
-                    args[Is])...));
+                func_, anyCastHelper<typename Traits::template argument_t<Is>>(
+                           args[Is])...));
         }
     }
 
@@ -224,13 +222,13 @@ private:
                     args[0])
                     .get();
             return invokeFunc(
-                obj, any_cast_helper<typename Traits::template argument_t<Is>>(
+                obj, anyCastHelper<typename Traits::template argument_t<Is>>(
                          args[Is + 1])...);
         }
         auto &obj = const_cast<typename Traits::class_type &>(
             std::any_cast<const typename Traits::class_type &>(args[0]));
         return invokeFunc(
-            obj, any_cast_helper<typename Traits::template argument_t<Is>>(
+            obj, anyCastHelper<typename Traits::template argument_t<Is>>(
                      args[Is + 1])...);
     }
 };

@@ -20,8 +20,9 @@ Description: A Small Vector Implementation
 #include <cstddef>
 #include <initializer_list>
 #include <limits>
-#include <stdexcept>
 #include <type_traits>
+#include "error/exception.hpp"
+#include "macro.hpp"
 
 template <typename T, std::size_t N>
 class SmallVector {
@@ -61,7 +62,7 @@ public:
         assign(other.begin(), other.end());
     }
 
-    SmallVector(SmallVector&& other) noexcept { move(std::move(other)); }
+    SmallVector(SmallVector&& other) ATOM_NOEXCEPT { move(std::move(other)); }
 
     ~SmallVector() {
         clear();
@@ -75,7 +76,7 @@ public:
         return *this;
     }
 
-    auto operator=(SmallVector&& other) noexcept -> SmallVector& {
+    auto operator=(SmallVector&& other) ATOM_NOEXCEPT->SmallVector& {
         if (this != &other) {
             clear();
             deallocate();
@@ -117,14 +118,14 @@ public:
 
     auto at(size_type pos) -> reference {
         if (pos >= size()) {
-            throw std::out_of_range("SmallVector::at");
+            THROW_OUT_OF_RANGE("SmallVector::at");
         }
         return (*this)[pos];
     }
 
     auto at(size_type pos) const -> const_reference {
         if (pos >= size()) {
-            throw std::out_of_range("SmallVector::at");
+            THROW_OUT_OF_RANGE("SmallVector::at");
         }
         return (*this)[pos];
     }
@@ -143,51 +144,61 @@ public:
 
     auto back() const -> const_reference { return *(end() - 1); }
 
-    auto data() noexcept -> T* { return begin(); }
+    auto data() ATOM_NOEXCEPT -> T* { return begin(); }
 
-    auto data() const noexcept -> const T* { return begin(); }
+    auto data() const ATOM_NOEXCEPT -> const T* { return begin(); }
 
-    auto begin() noexcept -> iterator {
+    auto begin() ATOM_NOEXCEPT -> iterator {
         return capacity() > N ? data_ : static_buffer_.data();
     }
 
-    auto begin() const noexcept -> const_iterator {
+    auto begin() const ATOM_NOEXCEPT -> const_iterator {
         return capacity() > N ? data_ : static_buffer_.data();
     }
 
-    auto cbegin() const noexcept -> const_iterator { return begin(); }
+    auto cbegin() const ATOM_NOEXCEPT -> const_iterator { return begin(); }
 
-    auto end() noexcept -> iterator { return begin() + size(); }
+    auto end() ATOM_NOEXCEPT -> iterator { return begin() + size(); }
 
-    auto end() const noexcept -> const_iterator { return begin() + size(); }
+    auto end() const ATOM_NOEXCEPT -> const_iterator {
+        return begin() + size();
+    }
 
-    auto cend() const noexcept -> const_iterator { return end(); }
+    auto cend() const ATOM_NOEXCEPT -> const_iterator { return end(); }
 
-    auto rbegin() noexcept -> reverse_iterator {
+    auto rbegin() ATOM_NOEXCEPT -> reverse_iterator {
         return reverse_iterator(end());
     }
 
-    auto rbegin() const noexcept -> const_reverse_iterator {
+    auto rbegin() const ATOM_NOEXCEPT -> const_reverse_iterator {
         return const_reverse_iterator(end());
     }
 
-    auto crbegin() const noexcept -> const_reverse_iterator { return rbegin(); }
+    auto crbegin() const ATOM_NOEXCEPT -> const_reverse_iterator {
+        return rbegin();
+    }
 
-    auto rend() noexcept -> reverse_iterator {
+    auto rend() ATOM_NOEXCEPT -> reverse_iterator {
         return reverse_iterator(begin());
     }
 
-    auto rend() const noexcept -> const_reverse_iterator {
+    auto rend() const ATOM_NOEXCEPT -> const_reverse_iterator {
         return const_reverse_iterator(begin());
     }
 
-    auto crend() const noexcept -> const_reverse_iterator { return rend(); }
+    auto crend() const ATOM_NOEXCEPT -> const_reverse_iterator {
+        return rend();
+    }
 
-    [[nodiscard]] auto empty() const noexcept -> bool { return size() == 0; }
+    ATOM_NODISCARD auto empty() const ATOM_NOEXCEPT -> bool {
+        return size() == 0;
+    }
 
-    [[nodiscard]] auto size() const noexcept -> size_type { return size_; }
+    ATOM_NODISCARD auto size() const ATOM_NOEXCEPT -> size_type {
+        return size_;
+    }
 
-    [[nodiscard]] auto maxSize() const noexcept -> size_type {
+    ATOM_NODISCARD auto maxSize() const ATOM_NOEXCEPT -> size_type {
         return std::numeric_limits<difference_type>::max();
     }
 
@@ -201,11 +212,11 @@ public:
         }
     }
 
-    [[nodiscard]] auto capacity() const noexcept -> size_type {
+    ATOM_NODISCARD auto capacity() const ATOM_NOEXCEPT -> size_type {
         return capacity_ > N ? capacity_ : N;
     }
 
-    void clear() noexcept { size_ = 0; }
+    void clear() ATOM_NOEXCEPT { size_ = 0; }
 
     auto insert(const_iterator pos, const T& value) -> iterator {
         return insert(pos, 1, value);
@@ -314,7 +325,7 @@ public:
         }
     }
 
-    void swap(SmallVector& other) noexcept {
+    void swap(SmallVector& other) ATOM_NOEXCEPT {
         using std::swap;
         if (capacity() > N && other.capacity() > N) {
             swap(data_, other.data_);
@@ -406,7 +417,7 @@ auto operator>=(const SmallVector<T, N>& lhs,
 }
 
 template <typename T, std::size_t N>
-void swap(SmallVector<T, N>& lhs, SmallVector<T, N>& rhs) noexcept {
+void swap(SmallVector<T, N>& lhs, SmallVector<T, N>& rhs) ATOM_NOEXCEPT {
     lhs.swap(rhs);
 }
 

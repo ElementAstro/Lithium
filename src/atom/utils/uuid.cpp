@@ -17,8 +17,10 @@ Description: UUID Generator
 #include <algorithm>
 #include <chrono>
 #include <cstring>
-#include <functional>
+#include <fstream>
 #include <iomanip>
+#include <limits>
+#include <random>
 
 #if defined(_WIN32)
 // clang-format off
@@ -29,22 +31,25 @@ Description: UUID Generator
 // clang-format on
 #elif defined(__linux__) || defined(__APPLE__)
 #include <net/if.h>
+#include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <uuid/uuid.h>
 #endif
 
+#include "random.hpp"
+
 namespace atom::utils {
-UUID::UUID() { generate_random(); }
+UUID::UUID() { generateRandom(); }
 
-UUID::UUID(const std::array<uint8_t, 16>& data) : data(data) {}
+UUID::UUID(const std::array<uint8_t, 16>& data) : data_(data) {}
 
-std::string UUID::to_string() const {
+auto UUID::toString() const -> std::string {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');
-    for (size_t i = 0; i < data.size(); ++i) {
-        oss << std::setw(2) << static_cast<int>(data[i]);
+    for (size_t i = 0; i < data_.size(); ++i) {
+        oss << std::setw(2) << static_cast<int>(data_[i]);
         if (i == 3 || i == 5 || i == 7 || i == 9) {
             oss << '-';
         }
@@ -52,51 +57,59 @@ std::string UUID::to_string() const {
     return oss.str();
 }
 
-UUID UUID::from_string(const std::string& str) {
+auto UUID::fromString(const std::string& str) -> UUID {
     UUID uuid;
     size_t pos = 0;
-    for (size_t i = 0; i < uuid.data.size(); ++i) {
+    for (unsigned char& i : uuid.data_) {
         if (str[pos] == '-') {
             ++pos;
         }
-        uuid.data[i] = std::stoi(str.substr(pos, 2), nullptr, 16);
+        i = std::stoi(str.substr(pos, 2), nullptr, 16);
         pos += 2;
     }
     return uuid;
 }
 
-bool UUID::operator==(const UUID& other) const { return data == other.data; }
-
-bool UUID::operator!=(const UUID& other) const { return !(*this == other); }
-
-bool UUID::operator<(const UUID& other) const { return data < other.data; }
-
-std::ostream& operator<<(std::ostream& os, const UUID& uuid) {
-    return os << uuid.to_string();
+auto UUID::operator==(const UUID& other) const -> bool {
+    return data_ == other.data_;
 }
 
-std::istream& operator>>(std::istream& is, UUID& uuid) {
+auto UUID::operator!=(const UUID& other) const -> bool {
+    return !(*this == other);
+}
+
+auto UUID::operator<(const UUID& other) const -> bool {
+    return data_ < other.data_;
+}
+
+auto operator<<(std::ostream& os, const UUID& uuid) -> std::ostream& {
+    return os << uuid.toString();
+}
+
+auto operator>>(std::istream& is, UUID& uuid) -> std::istream& {
     std::string str;
     is >> str;
-    uuid = UUID::from_string(str);
+    uuid = UUID::fromString(str);
     return is;
 }
 
-std::array<uint8_t, 16> UUID::get_data() const { return data; }
+auto UUID::getData() const -> std::array<uint8_t, 16> { return data_; }
 
-uint8_t UUID::version() const { return (data[6] & 0xF0) >> 4; }
+auto UUID::version() const -> uint8_t { return (data_[6] & 0xF0) >> 4; }
 
-uint8_t UUID::variant() const { return (data[8] & 0xC0) >> 6; }
+auto UUID::variant() const -> uint8_t { return (data_[8] & 0xC0) >> 6; }
 
-UUID UUID::generate_v3(const UUID& namespace_uuid, const std::string& name) {
-    return generate_name_based<EVP_md5>(namespace_uuid, name, 3);
+auto UUID::generateV3(const UUID& namespace_uuid,
+                      const std::string& name) -> UUID {
+    return generateNameBased<EVP_md5>(namespace_uuid, name, 3);
 }
 
-UUID UUID::generate_v5(const UUID& namespace_uuid, const std::string& name) {
-    return generate_name_based<EVP_sha1>(namespace_uuid, name, 5);
+auto UUID::generateV5(const UUID& namespace_uuid,
+                      const std::string& name) -> UUID {
+    return generateNameBased<EVP_sha1>(namespace_uuid, name, 5);
 }
 
-UUID UUID::generate_v1() {
+auto UUID::generateV1() -> UUID {
     UUID uuid;
     auto now = std::chrono::system_clock::now();
     auto duration = now.time_since_epoch();
@@ -104,39 +117,40 @@ UUID UUID::generate_v1() {
         std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
     auto timestamp = static_cast<uint64_t>(millis * 10000) + 0x01B21DD213814000;
 
-    uint16_t clock_seq = static_cast<uint16_t>(rand() % 0x4000);
-    uint64_t node = generate_node();
+    Random<std::mt19937, std::uniform_int_distribution<>> rand(
+        1, std::numeric_limits<int>::max());
 
-    std::memcpy(uuid.data.data(), &timestamp, 8);
-    std::memcpy(uuid.data.data() + 8, &clock_seq, 2);
-    std::memcpy(uuid.data.data() + 10, &node, 6);
+    uint16_t clockSeq = static_cast<uint16_t>(rand() % 0x4000);
+    uint64_t node = generateNode();
 
-    uuid.data[6] = (uuid.data[6] & 0x0F) | 0x10;  // Version 1
-    uuid.data[8] = (uuid.data[8] & 0x3F) | 0x80;  // Variant
+    std::memcpy(uuid.data_.data(), &timestamp, 8);
+    std::memcpy(uuid.data_.data() + 8, &clockSeq, 2);
+    std::memcpy(uuid.data_.data() + 10, &node, 6);
+
+    uuid.data_[6] = (uuid.data_[6] & 0x0F) | 0x10;  // Version 1
+    uuid.data_[8] = (uuid.data_[8] & 0x3F) | 0x80;  // Variant
 
     return uuid;
 }
 
-void UUID::generate_random() {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 255);
-
-    for (auto& byte : data) {
-        byte = dis(gen);
+void UUID::generateRandom() {
+    Random<std::mt19937, std::uniform_int_distribution<>> gen(
+        1, std::numeric_limits<int>::max());
+    for (auto& byte : data_) {
+        byte = static_cast<uint8_t>(gen());
     }
 
-    data[6] = (data[6] & 0x0F) | 0x40;  // Version 4
-    data[8] = (data[8] & 0x3F) | 0x80;  // Variant
+    data_[6] = (data_[6] & 0x0F) | 0x40;  // Version 4
+    data_[8] = (data_[8] & 0x3F) | 0x80;  // Variant
 }
 
-uint64_t UUID::generate_node() {
+auto UUID::generateNode() -> uint64_t {
     std::random_device rd;
     std::uniform_int_distribution<uint64_t> dist(0, 0xFFFFFFFFFFFF);
     return dist(rd) | 0x010000000000;  // Multicast bit set to 1
 }
 
-std::string getMAC() {
+auto getMAC() -> std::string {
     std::string mac;
 
 #if defined(_WIN32)
@@ -202,7 +216,7 @@ std::string getMAC() {
     return mac;
 }
 
-std::string getCPUSerial() {
+auto getCPUSerial() -> std::string {
     std::string cpuSerial;
 
 #if defined(_WIN32)
@@ -222,7 +236,8 @@ std::string getCPUSerial() {
         while (std::getline(file, line)) {
             if (line.find("Serial") != std::string::npos) {
                 std::istringstream iss(line);
-                std::string key, value;
+                std::string key;
+                std::string value;
                 if (std::getline(iss, key, ':') && std::getline(iss, value)) {
                     cpuSerial = value;
                     break;
@@ -250,7 +265,7 @@ std::string getCPUSerial() {
     return cpuSerial;
 }
 
-std::string formatUUID(const std::string& uuid) {
+auto formatUUID(const std::string& uuid) -> std::string {
     std::string formattedUUID;
     formattedUUID.reserve(36);
 
@@ -264,7 +279,7 @@ std::string formatUUID(const std::string& uuid) {
     return formattedUUID;
 }
 
-std::string generateUniqueUUID() {
+auto generateUniqueUUID() -> std::string {
     std::string mac = getMAC();
     std::string cpuSerial = getCPUSerial();
 

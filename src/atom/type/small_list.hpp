@@ -19,6 +19,7 @@ Description: A Small List Implementation
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
+#include "macro.hpp"
 
 template <typename T>
 class SmallList {
@@ -107,9 +108,9 @@ public:
 
     auto back() const -> const T& { return tail_->data; }
 
-    [[nodiscard]] auto empty() const -> bool { return list_size_ == 0; }
+    ATOM_NODISCARD auto empty() const -> bool { return list_size_ == 0; }
 
-    [[nodiscard]] auto size() const -> size_t { return list_size_; }
+    ATOM_NODISCARD auto size() const -> size_t { return list_size_; }
 
     void clear() {
         while (!empty()) {

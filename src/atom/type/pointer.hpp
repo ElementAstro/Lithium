@@ -20,6 +20,9 @@ Description: Pointer Sentinel for Atom
 #include <type_traits>
 #include <variant>
 
+#include "error/exception.hpp"
+#include "macro.hpp"
+
 /**
  * @brief Concept to check if a type is a pointer type, including raw pointers,
  * std::shared_ptr, std::unique_ptr, and std::weak_ptr.
@@ -85,14 +88,16 @@ public:
               [](const auto& p)
                   -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>,
                                   std::weak_ptr<T>, T*> {
-                  if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
-                                               std::shared_ptr<T>>) {
+                  if ATOM_CONSTEXPR (std::is_same_v<std::decay_t<decltype(p)>,
+                                                    std::shared_ptr<T>>) {
                       return p;
-                  } else if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
-                                                      std::unique_ptr<T>>) {
+                  } else if ATOM_CONSTEXPR (std::is_same_v<
+                                                std::decay_t<decltype(p)>,
+                                                std::unique_ptr<T>>) {
                       return std::make_unique<T>(*p);
-                  } else if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
-                                                      std::weak_ptr<T>>) {
+                  } else if ATOM_CONSTEXPR (std::is_same_v<
+                                                std::decay_t<decltype(p)>,
+                                                std::weak_ptr<T>>) {
                       return p;
                   } else {
                       return new T(*p);
@@ -119,16 +124,16 @@ public:
                 [](const auto& p)
                     -> std::variant<std::shared_ptr<T>, std::unique_ptr<T>,
                                     std::weak_ptr<T>, T*> {
-                    if constexpr (std::is_same_v<std::decay_t<decltype(p)>,
-                                                 std::shared_ptr<T>>) {
+                    if ATOM_CONSTEXPR (std::is_same_v<std::decay_t<decltype(p)>,
+                                                      std::shared_ptr<T>>) {
                         return p;
-                    } else if constexpr (std::is_same_v<
-                                             std::decay_t<decltype(p)>,
-                                             std::unique_ptr<T>>) {
+                    } else if ATOM_CONSTEXPR (std::is_same_v<
+                                                  std::decay_t<decltype(p)>,
+                                                  std::unique_ptr<T>>) {
                         return std::make_unique<T>(*p);
-                    } else if constexpr (std::is_same_v<
-                                             std::decay_t<decltype(p)>,
-                                             std::weak_ptr<T>>) {
+                    } else if ATOM_CONSTEXPR (std::is_same_v<
+                                                  std::decay_t<decltype(p)>,
+                                                  std::weak_ptr<T>>) {
                         return p;
                     } else {
                         return new T(*p);
@@ -153,13 +158,13 @@ public:
      *
      * @return T* The raw pointer.
      */
-    [[nodiscard]] auto get() const -> T* {
+    ATOM_NODISCARD auto get() const -> T* {
         return std::visit(
             [](auto&& arg) -> T* {
                 using U = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_pointer_v<U>) {
+                if ATOM_CONSTEXPR (std::is_pointer_v<U>) {
                     return arg;
-                } else if constexpr (std::is_same_v<U, std::weak_ptr<T>>) {
+                } else if ATOM_CONSTEXPR (std::is_same_v<U, std::weak_ptr<T>>) {
                     auto spt = arg.lock();  // Try to lock the weak_ptr
                     return spt ? spt.get() : nullptr;
                 } else {
@@ -179,22 +184,22 @@ public:
      * @return auto The return type of the member function.
      */
     template <typename Func, typename... Args>
-    [[nodiscard]] auto invoke(Func func, Args&&... args) {
+    ATOM_NODISCARD auto invoke(Func func, Args&&... args) {
         static_assert(std::is_member_function_pointer_v<Func>,
                       "Func must be a member function pointer");
         return std::visit(
             [func, &args...](auto&& arg) -> decltype(auto) {
                 using U = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_pointer_v<U>) {
+                if ATOM_CONSTEXPR (std::is_pointer_v<U>) {
                     return ((*arg).*func)(std::forward<Args>(args)...);
-                } else if constexpr (std::is_same_v<U, std::weak_ptr<T>>) {
+                } else if ATOM_CONSTEXPR (std::is_same_v<U, std::weak_ptr<T>>) {
                     auto spt = arg.lock();
                     if (spt) {
                         return ((*spt.get()).*
                                 func)(std::forward<Args>(args)...);
-                    }  // Handle the case where weak_ptr is expired
-                    throw std::runtime_error("weak_ptr is expired");
-
+                    }
+                    // Handle the case where weak_ptr is expired
+                    THROW_OBJ_NOT_EXIST("weak_ptr is expired");
                 } else {
                     return ((*arg.get()).*func)(std::forward<Args>(args)...);
                 }
@@ -211,20 +216,19 @@ public:
      * @return auto The return type of the callable object.
      */
     template <typename Callable>
-    [[nodiscard]] auto apply(Callable&& callable) {
+    ATOM_NODISCARD auto apply(Callable&& callable) {
         return std::visit(
             [&callable](auto&& arg) -> decltype(auto) {
                 using U = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_pointer_v<U>) {
+                if ATOM_CONSTEXPR (std::is_pointer_v<U>) {
                     return std::invoke(std::forward<Callable>(callable), arg);
-                } else if constexpr (std::is_same_v<U, std::weak_ptr<T>>) {
+                } else if ATOM_CONSTEXPR (std::is_same_v<U, std::weak_ptr<T>>) {
                     auto spt = arg.lock();
                     if (spt) {
                         return std::invoke(std::forward<Callable>(callable),
                                            spt.get());
                     }
-                    throw std::runtime_error("weak_ptr is expired");
-
+                    THROW_OBJ_NOT_EXIST("weak_ptr is expired");
                 } else {
                     return std::invoke(std::forward<Callable>(callable),
                                        arg.get());
@@ -246,16 +250,17 @@ public:
     void applyVoid(Func func, Args&&... args) {
         std::visit(
             [&func, &args...](auto&& arg) {
-                if constexpr (std::is_pointer_v<std::decay_t<decltype(arg)>>) {
+                if ATOM_CONSTEXPR (std::is_pointer_v<
+                                       std::decay_t<decltype(arg)>>) {
                     func(*arg, std::forward<Args>(args)...);
-                } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>,
-                                                    std::weak_ptr<T>>) {
+                } else if ATOM_CONSTEXPR (std::is_same_v<
+                                              std::decay_t<decltype(arg)>,
+                                              std::weak_ptr<T>>) {
                     auto spt = arg.lock();
                     if (spt) {
                         func(*spt.get(), std::forward<Args>(args)...);
                     } else {
-                        // Handle the case where weak_ptr is expired
-                        throw std::runtime_error("weak_ptr is expired");
+                        THROW_OBJ_NOT_EXIST("weak_ptr is expired");
                     }
                 } else {
                     func(*arg.get(), std::forward<Args>(args)...);

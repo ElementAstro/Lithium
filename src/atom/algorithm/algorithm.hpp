@@ -19,98 +19,59 @@ Description: A collection of algorithms for C++
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace atom::algorithm {
 /**
- * @brief The KMP class implements the Knuth-Morris-Pratt string searching
- * algorithm.
+ * @brief Implements the Knuth-Morris-Pratt (KMP) string searching algorithm.
+ *
+ * This class provides methods to search for occurrences of a pattern within a
+ * text using the KMP algorithm, which preprocesses the pattern to achieve
+ * efficient string searching.
  */
 class KMP {
 public:
     /**
-     * @brief Constructs a new KMP object with the specified pattern.
-     * @param pattern The pattern to search for.
+     * @brief Constructs a KMP object with the given pattern.
+     *
+     * @param pattern The pattern to search for in text.
      */
     explicit KMP(std::string_view pattern);
 
     /**
      * @brief Searches for occurrences of the pattern in the given text.
-     * @param text The text to search in.
-     * @return A vector containing the starting positions of all occurrences of
-     * the pattern in the text.
+     *
+     * @param text The text to search within.
+     * @return std::vector<int> Vector containing positions where the pattern
+     * starts in the text.
      */
-    auto search(std::string_view text) -> std::vector<int>;
+    [[nodiscard]] auto search(std::string_view text) const -> std::vector<int>;
 
     /**
-     * @brief Sets a new pattern to search for.
-     * @param pattern The new pattern to set.
+     * @brief Sets a new pattern for searching.
+     *
+     * @param pattern The new pattern to search for.
      */
     void setPattern(std::string_view pattern);
 
 private:
     /**
-     * @brief Computes the failure function for the specified pattern.
+     * @brief Computes the failure function (partial match table) for the given
+     * pattern.
+     *
+     * This function preprocesses the pattern to determine the length of the
+     * longest proper prefix which is also a suffix at each position in the
+     * pattern.
+     *
      * @param pattern The pattern for which to compute the failure function.
-     * @return A vector containing the failure function values.
+     * @return std::vector<int> The computed failure function (partial match
+     * table).
      */
     auto computeFailureFunction(std::string_view pattern) -> std::vector<int>;
 
-    std::string pattern_; /**< The pattern to search for. */
+    std::string pattern_;  ///< The pattern to search for.
     std::vector<int>
-        failure_; /**< The failure function for the current pattern. */
-};
-
-/**
- * @brief The MinHash class implements the MinHash algorithm for estimating the
- * Jaccard similarity between sets.
- */
-class MinHash {
-public:
-    /**
-     * @brief Constructs a new MinHash object with the specified number of hash
-     * functions.
-     * @param num_hash_functions The number of hash functions to use for
-     * computing MinHash signatures.
-     */
-    explicit MinHash(int num_hash_functions);
-
-    /**
-     * @brief Computes the MinHash signature for the given set.
-     * @param set The set for which to compute the MinHash signature.
-     * @return A vector containing the MinHash signature of the set.
-     */
-    auto computeSignature(const std::unordered_set<std::string>& set)
-        -> std::vector<unsigned long long>;
-
-    /**
-     * @brief Estimates the Jaccard similarity between two sets using their
-     * MinHash signatures.
-     * @param signature1 The MinHash signature of the first set.
-     * @param signature2 The MinHash signature of the second set.
-     * @return The estimated Jaccard similarity between the two sets.
-     */
-    [[nodiscard]] auto estimateSimilarity(
-        const std::vector<unsigned long long>& signature1,
-        const std::vector<unsigned long long>& signature2) const -> double;
-
-private:
-    /**
-     * @brief Computes the hash value of an element using a specific hash
-     * function.
-     * @param element The element to hash.
-     * @param index The index of the hash function to use.
-     * @return The hash value of the element.
-     */
-    unsigned long long hash(const std::string& element, int index);
-
-    int m_num_hash_functions_; /**< The number of hash functions used for
-                                 MinHash. */
-    std::vector<unsigned long long>
-        m_coefficients_a_; /**< Coefficients 'a' for hash functions. */
-    std::vector<unsigned long long>
-        m_coefficients_b_; /**< Coefficients 'b' for hash functions. */
+        failure_;  ///< Failure function (partial match table) for the pattern.
 };
 
 /**
@@ -139,7 +100,7 @@ public:
      * @param element The element to check.
      * @return True if the element might be present, false otherwise.
      */
-    bool contains(std::string_view element) const;
+    [[nodiscard]] auto contains(std::string_view element) const -> bool;
 
 private:
     std::bitset<N> m_bits_; /**< The bitset representing the Bloom filter. */
@@ -156,46 +117,59 @@ private:
 };
 
 /**
- * @brief The BoyerMoore class implements the Boyer-Moore algorithm for string
- * searching.
+ * @brief Implements the Boyer-Moore string searching algorithm.
+ *
+ * This class provides methods to search for occurrences of a pattern within a
+ * text using the Boyer-Moore algorithm, which preprocesses the pattern to
+ * achieve efficient string searching.
  */
 class BoyerMoore {
 public:
     /**
-     * @brief Constructs a new BoyerMoore object with the specified pattern.
-     * @param pattern The pattern to search for.
+     * @brief Constructs a BoyerMoore object with the given pattern.
+     *
+     * @param pattern The pattern to search for in text.
      */
     explicit BoyerMoore(std::string_view pattern);
 
     /**
      * @brief Searches for occurrences of the pattern in the given text.
-     * @param text The text in which to search for the pattern.
-     * @return A vector containing the starting positions of all occurrences of
-     * the pattern in the text.
+     *
+     * @param text The text to search within.
+     * @return std::vector<int> Vector containing positions where the pattern
+     * starts in the text.
      */
-    auto search(std::string_view text) -> std::vector<int>;
+    auto search(std::string_view text) const -> std::vector<int>;
 
     /**
-     * @brief Sets a new pattern for the BoyerMoore object.
-     * @param pattern The new pattern to set.
+     * @brief Sets a new pattern for searching.
+     *
+     * @param pattern The new pattern to search for.
      */
     void setPattern(std::string_view pattern);
 
 private:
     /**
-     * @brief Computes the bad character shift table for the pattern.
+     * @brief Computes the bad character shift table for the current pattern.
+     *
+     * This table determines how far to shift the pattern relative to the text
+     * based on the last occurrence of a mismatched character.
      */
     void computeBadCharacterShift();
 
     /**
-     * @brief Computes the good suffix shift table for the pattern.
+     * @brief Computes the good suffix shift table for the current pattern.
+     *
+     * This table helps determine how far to shift the pattern when a mismatch
+     * occurs based on the occurrence of a partial match (suffix of the
+     * pattern).
      */
     void computeGoodSuffixShift();
 
-    std::string pattern_; /**< The pattern to search for. */
+    std::string pattern_;  ///< The pattern to search for.
     std::unordered_map<char, int>
-        bad_char_shift_;                 /**< The bad character shift table. */
-    std::vector<int> good_suffix_shift_; /**< The good suffix shift table. */
+        bad_char_shift_;                  ///< Bad character shift table.
+    std::vector<int> good_suffix_shift_;  ///< Good suffix shift table.
 };
 
 template <std::size_t N>

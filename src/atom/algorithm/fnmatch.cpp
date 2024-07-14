@@ -16,6 +16,8 @@ Description: Python Like fnmatch for C++
 
 #include <algorithm>
 #include <cctype>
+#include <ranges>
+#include <regex>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -35,8 +37,6 @@ constexpr int FNM_CASEFOLD = 0x08;
 auto fnmatch(std::string_view pattern, std::string_view string,
              int flags) -> bool {
 #ifdef _WIN32
-    // Windows doesn't have a built-in fnmatch function, so we need to implement
-    // it ourselves
     auto p = pattern.begin();
     auto s = string.begin();
 
@@ -118,16 +118,15 @@ auto fnmatch(std::string_view pattern, std::string_view string,
     }
     return p == pattern.end() && s == string.end();
 #else
-    // On POSIX systems, we can use the built-in fnmatch function
     return ::fnmatch(pattern.data(), string.data(), flags) == 0;
 #endif
 }
 
 auto filter(const std::vector<std::string>& names, std::string_view pattern,
             int flags) -> bool {
-    return std::any_of(
-        names.begin(), names.end(),
-        [&](const std::string& name) { return fnmatch(pattern, name, flags); });
+    return std::ranges::any_of(names, [&](const std::string& name) {
+        return fnmatch(pattern, name, flags);
+    });
 }
 
 auto filter(const std::vector<std::string>& names,
@@ -135,10 +134,9 @@ auto filter(const std::vector<std::string>& names,
             int flags) -> std::vector<std::string> {
     std::vector<std::string> result;
     for (const auto& name : names) {
-        if (std::any_of(patterns.begin(), patterns.end(),
-                        [&](std::string_view pattern) {
-                            return fnmatch(pattern, name, flags);
-                        })) {
+        if (std::ranges::any_of(patterns, [&](std::string_view pattern) {
+                return fnmatch(pattern, name, flags);
+            })) {
             result.push_back(name);
         }
     }
@@ -148,7 +146,7 @@ auto filter(const std::vector<std::string>& names,
 auto translate(std::string_view pattern, std::string& result,
                int flags) -> bool {
     result.clear();
-    for (const auto *it = pattern.begin(); it != pattern.end(); ++it) {
+    for (auto it = pattern.begin(); it != pattern.end(); ++it) {
         switch (*it) {
             case '*':
                 result += ".*";
@@ -165,36 +163,32 @@ auto translate(std::string_view pattern, std::string& result,
                     result += '^';
                     ++it;
                 }
-                bool first = true;
-                char lastChar = 0;
-                while (it != pattern.end() && *it != ']') {
-                    if (!first && *it == '-' && lastChar != 0 &&
-                        it + 1 != pattern.end() && *(it + 1) != ']') {
-                        result += lastChar;
-                        result += '-';
-                        ++it;
+                if (it == pattern.end()) {
+                    return false;
+                }
+                char lastChar = *it;
+                result += *it;
+                while (++it != pattern.end() && *it != ']') {
+                    if (*it == '-' && it + 1 != pattern.end() &&
+                        *(it + 1) != ']') {
                         result += *it;
+                        result += *(++it);
+                        lastChar = *it;
                     } else {
-                        if (((flags & FNM_NOESCAPE) != 0) && *it == '\\' &&
-                            ++it == pattern.end()) {
-                            return false;
-                        }
                         result += *it;
                         lastChar = *it;
                     }
-                    first = false;
-                    ++it;
                 }
                 result += ']';
                 break;
             }
             case '\\':
-                if (((flags & FNM_NOESCAPE) == 0) && ++it == pattern.end()) {
+                if (!(flags & FNM_NOESCAPE) && ++it == pattern.end()) {
                     return false;
                 }
                 [[fallthrough]];
             default:
-                if (((flags & FNM_CASEFOLD) != 0) && (std::isalpha(*it) != 0)) {
+                if ((flags & FNM_CASEFOLD) && std::isalpha(*it)) {
                     result += '[';
                     result += std::tolower(*it);
                     result += std::toupper(*it);

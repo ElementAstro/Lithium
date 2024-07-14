@@ -12,39 +12,40 @@ Description: Addon manager to solve the dependency problem.
 
 **************************************************/
 
-#include "addons.hpp"
+#include "addon.hpp"
 
 #include <fstream>
 #include <queue>
-
-
 #include "atom/log/loguru.hpp"
 
 namespace lithium {
+
 bool AddonManager::addModule(const std::filesystem::path &path,
                              const std::string &name) {
-    if (m_modules.find(name) != m_modules.end()) {
+    if (modules_.contains(name)) {
         LOG_F(ERROR, "Addon {} has already been added.", name);
         return false;
     }
-    if (std::filesystem::exists(path)) {
-        std::filesystem::path new_path = path / "package.json";
-        try {
-            m_modules[name] = json::parse(std::ifstream(new_path.string()));
-        } catch (const std::exception &e) {
-            LOG_F(ERROR, "Addon {} package.json file does not exist.", name);
-            return false;
-        }
-    } else {
+
+    if (!std::filesystem::exists(path)) {
         LOG_F(ERROR, "Addon {} does not exist.", name);
         return false;
     }
+
+    std::filesystem::path packagePath = path / "package.json";
+    try {
+        modules_[name] = json::parse(std::ifstream(packagePath));
+    } catch (const std::exception &e) {
+        LOG_F(ERROR, "Addon {} package.json file does not exist or is invalid.",
+              name);
+        return false;
+    }
+
     return true;
 }
 
 bool AddonManager::removeModule(const std::string &name) {
-    if (m_modules.find(name) != m_modules.end()) {
-        m_modules.erase(name);
+    if (modules_.erase(name)) {
         DLOG_F(INFO, "Addon {} has been removed.", name);
         return true;
     }
@@ -52,9 +53,9 @@ bool AddonManager::removeModule(const std::string &name) {
     return false;
 }
 
-json AddonManager::getModule(const std::string &name) {
-    if (m_modules.find(name) != m_modules.end()) {
-        return m_modules[name];
+json AddonManager::getModule(const std::string &name) const {
+    if (auto it = modules_.find(name); it != modules_.end()) {
+        return it->second;
     }
     LOG_F(ERROR, "Addon {} does not exist.", name);
     return nullptr;
@@ -63,84 +64,82 @@ json AddonManager::getModule(const std::string &name) {
 bool AddonManager::resolveDependencies(const std::string &modName,
                                        std::vector<std::string> &resolvedDeps,
                                        std::vector<std::string> &missingDeps) {
-    // 检查模组是否存在
-    if (m_modules.find(modName) == m_modules.end()) {
+    if (!modules_.contains(modName)) {
         LOG_F(ERROR, "Addon {} does not exist.", modName);
         return false;
     }
+
     std::unordered_map<std::string, int> inDegree;
     std::queue<json> q;
 
-    for (const auto &pair : m_modules) {
-        inDegree[pair.second["name"]] = 0;
-        for (auto &dep : pair.second["dependencies"]) {
-            inDegree[dep["name"]]++;
+    for (const auto &[name, module] : modules_) {
+        inDegree[name] = 0;
+        for (const auto &dep : module["dependencies"]) {
+            inDegree[dep]++;
         }
     }
 
-    // 将入度为0的模组加入队列
-    const json &mod = m_modules[modName];
+    const auto &mod = modules_.at(modName);
     q.push(mod);
+
     while (!q.empty()) {
-        json currentMod = q.front();
+        const auto currentMod = q.front();
         q.pop();
 
-        resolvedDeps.push_back(currentMod["name"].get<std::string>());
+        resolvedDeps.push_back(currentMod["name"]);
 
-        for (const json &dep :
-             currentMod["dependencies"].get<std::vector<json>>()) {
-            inDegree[dep.get<std::string>()]--;
-            if (inDegree[dep.get<std::string>()] == 0) {
-                q.push(dep);
+        for (const auto &dep : currentMod["dependencies"]) {
+            if (--inDegree[dep] == 0) {
+                q.push(modules_.at(dep));
             }
         }
     }
-    // 检查是否有循环依赖关系
-    if (resolvedDeps.size() < m_modules.size() ||
+
+    if (resolvedDeps.size() < modules_.size() ||
         !checkMissingDependencies(modName, missingDeps)) {
         return false;
     }
+
     return true;
 }
 
 bool AddonManager::checkMissingDependencies(
-    const std::string &modName, std::vector<std::string> &missingDeps) {
+    const std::string &modName, std::vector<std::string> &missingDeps) const {
     std::unordered_map<std::string, bool> expectedDeps;
-    for (const std::string &depName :
-         m_modules[modName]["dependencies"].get<std::vector<std::string>>()) {
-        expectedDeps[depName] = true;
+    for (const auto &dep : modules_.at(modName)["dependencies"]) {
+        expectedDeps[dep] = true;
     }
-    for (const std::string &dep :
-         m_modules[modName]["dependencies"].get<std::vector<std::string>>()) {
-        if (expectedDeps.find(dep) != expectedDeps.end()) {
-            expectedDeps.erase(dep);
-        }
+
+    for (const auto &dep : modules_.at(modName)["dependencies"]) {
+        expectedDeps.erase(dep);
     }
-    for (const auto &pair : expectedDeps) {
-        missingDeps.push_back(pair.first);
+
+    for (const auto &[dep, _] : expectedDeps) {
+        missingDeps.push_back(dep);
     }
+
     return missingDeps.empty();
 }
 
 bool AddonManager::checkCircularDependencies(
     const std::string &modName, std::unordered_map<std::string, bool> &visited,
-    std::unordered_map<std::string, bool> &recursionStack) {
+    std::unordered_map<std::string, bool> &recursionStack) const {
     if (!visited[modName]) {
         visited[modName] = true;
         recursionStack[modName] = true;
 
-        const json &mod = m_modules[modName];
-        for (const json &dep : mod["dependencies"]) {
-            if (!visited[dep.get<std::string>()] &&
-                checkCircularDependencies(dep.get<std::string>(), visited,
-                                          recursionStack)) {
+        for (const auto &dep : modules_.at(modName)["dependencies"]) {
+            if (!visited[dep] &&
+                checkCircularDependencies(dep, visited, recursionStack)) {
                 return true;
-            } else if (recursionStack[dep["name"]]) {
+            } else if (recursionStack[dep]) {
                 return true;
             }
         }
     }
+
     recursionStack[modName] = false;
     return false;
 }
+
 }  // namespace lithium

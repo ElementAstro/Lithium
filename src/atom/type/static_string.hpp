@@ -1,185 +1,125 @@
-/*
- * sstring.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2024-4-2
-
-Description: A simple static string class
-
-**************************************************/
-
 #ifndef ATOM_EXPERIMENT_SSTRING_HPP
 #define ATOM_EXPERIMENT_SSTRING_HPP
 
+#include <algorithm>
 #include <cstring>
 #include <string_view>
+#include <type_traits>
+#include <utility>
+#include "macro.hpp"
 
-class StaticString;
-template <typename T>
-concept Stringable = std::is_convertible_v<T, std::string> ||
-                     std::is_convertible_v<T, std::string_view> ||
-                     std::is_convertible_v<T, const char *> ||
-                     std::is_convertible_v<T, StaticString>;
-
+template <size_t N>
 class StaticString {
 public:
-    /**
-     * @brief Constructs a Static_String object from a string literal.
-     *
-     * @tparam N Size of the string literal.
-     * @param str The string literal.
-     */
-    template <size_t N>
-    constexpr explicit StaticString(const char (&str)[N]) noexcept
-        : M_SIZE(N - 1), data_(str) {}
+    using value_type = char;
 
-    /**
-     * @brief Gets the size of the Static_String object.
-     *
-     * @return Size of the Static_String object.
-     */
-    [[nodiscard]] constexpr auto size() const noexcept -> size_t {
+    ATOM_CONSTEXPR StaticString() ATOM_NOEXCEPT : M_SIZE(0) { data_[0] = '\0'; }
+
+    template <size_t M>
+    ATOM_CONSTEXPR explicit StaticString(const char (&str)[M]) ATOM_NOEXCEPT
+        : M_SIZE(M - 1) {
+        std::copy_n(str, M, data_);
+    }
+
+    ATOM_CONSTEXPR StaticString(const char *str) ATOM_NOEXCEPT {
+        M_SIZE = std::strlen(str);
+        std::copy_n(str, M_SIZE + 1, data_);
+    }
+
+    ATOM_NODISCARD ATOM_CONSTEXPR auto size() const ATOM_NOEXCEPT -> size_t {
         return M_SIZE;
     }
 
-    /**
-     * @brief Gets a pointer to the C-style string stored in the Static_String
-     * object.
-     *
-     * @return Pointer to the C-style string.
-     */
-    [[nodiscard]] constexpr auto cStr() const noexcept -> const char * {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto cStr() const ATOM_NOEXCEPT -> const
+        char * {
         return data_;
     }
 
-    /**
-     * @brief Gets an iterator to the beginning of the Static_String object.
-     *
-     * @return Iterator to the beginning of the Static_String object.
-     */
-    [[nodiscard]] constexpr auto begin() const noexcept -> const char * {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto begin() const ATOM_NOEXCEPT -> const
+        char * {
         return data_;
     }
 
-    /**
-     * @brief Gets an iterator to the end of the Static_String object.
-     *
-     * @return Iterator to the end of the Static_String object.
-     */
-    [[nodiscard]] constexpr auto end() const noexcept -> const char * {
+    ATOM_NODISCARD ATOM_CONSTEXPR auto end() const ATOM_NOEXCEPT -> const
+        char * {
         return data_ + M_SIZE;
     }
 
-    /**
-     * @brief Checks if the Static_String object is equal to the provided
-     * std::string_view.
-     *
-     * @param other The std::string_view to compare with.
-     * @return true if the Static_String object is equal to the
-     * std::string_view, otherwise false.
-     */
-    constexpr auto operator==(const std::string_view &other) const noexcept
-        -> bool {
+    ATOM_CONSTEXPR auto operator==(const std::string_view &other) const
+        ATOM_NOEXCEPT->bool {
         return std::string_view(data_, M_SIZE) == other;
     }
 
-    /**
-     * @brief Checks if the Static_String object is equal to the provided
-     * convertible type.
-     *
-     * @tparam T The convertible type.
-     * @param other The convertible type to compare with.
-     * @return true if the Static_String object is equal to the convertible
-     * type, otherwise false.
-     */
     template <typename T>
-        requires Stringable<T>
-    constexpr auto operator==(T &&other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) == std::forward<T>(other);
+    ATOM_CONSTEXPR auto operator==(T &&other) const ATOM_NOEXCEPT->bool {
+        return std::string_view(data_, M_SIZE) ==
+               std::string_view(std::forward<T>(other));
     }
 
-    /**
-     * @brief Checks if the Static_String object is not equal to the provided
-     * convertible type.
-     *
-     * @tparam T The convertible type.
-     * @param other The convertible type to compare with.
-     * @return true if the Static_String object is not equal to the convertible
-     * type, otherwise false.
-     */
     template <typename T>
-        requires Stringable<T>
-    constexpr auto operator!=(T &&other) const noexcept -> bool {
+    ATOM_CONSTEXPR auto operator!=(T &&other) const ATOM_NOEXCEPT->bool {
         return !(*this == std::forward<T>(other));
     }
 
-    /**
-     * @brief Checks if the Static_String object is less than the provided
-     * convertible type.
-     *
-     * @tparam T The convertible type.
-     * @param other The convertible type to compare with.
-     * @return true if the Static_String object is less than the convertible
-     * type, otherwise false.
-     */
     template <typename T>
-        requires Stringable<T>
-    constexpr auto operator<(T &&other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) < std::forward<T>(other);
+    ATOM_CONSTEXPR auto operator<(T &&other) const ATOM_NOEXCEPT->bool {
+        return std::string_view(data_, M_SIZE) <
+               std::string_view(std::forward<T>(other));
     }
 
-    /**
-     * @brief Checks if the Static_String object is less than or equal to the
-     * provided convertible type.
-     *
-     * @tparam T The convertible type.
-     * @param other The convertible type to compare with.
-     * @return true if the Static_String object is less than or equal to the
-     * convertible type, otherwise false.
-     */
     template <typename T>
-        requires Stringable<T>
-    constexpr auto operator<=(T &&other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) <= std::forward<T>(other);
+    ATOM_CONSTEXPR auto operator<=(T &&other) const ATOM_NOEXCEPT->bool {
+        return std::string_view(data_, M_SIZE) <=
+               std::string_view(std::forward<T>(other));
     }
 
-    /**
-     * @brief Checks if the Static_String object is greater than the provided
-     * convertible type.
-     *
-     * @tparam T The convertible type.
-     * @param other The convertible type to compare with.
-     * @return true if the Static_String object is greater than the convertible
-     * type, otherwise false.
-     */
     template <typename T>
-        requires Stringable<T>
-    constexpr auto operator>(T &&other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) > std::forward<T>(other);
+    ATOM_CONSTEXPR auto operator>(T &&other) const ATOM_NOEXCEPT->bool {
+        return std::string_view(data_, M_SIZE) >
+               std::string_view(std::forward<T>(other));
     }
 
-    /**
-     * @brief Checks if the Static_String object is greater than or equal to the
-     * provided convertible type.
-     *
-     * @tparam T The convertible type.
-     * @param other The convertible type to compare with.
-     * @return true if the Static_String object is greater than or equal to the
-     * convertible type, otherwise false.
-     */
     template <typename T>
-        requires Stringable<T>
-    constexpr auto operator>=(T &&other) const noexcept -> bool {
-        return std::string_view(data_, M_SIZE) >= std::forward<T>(other);
+    ATOM_CONSTEXPR auto operator>=(T &&other) const ATOM_NOEXCEPT->bool {
+        return std::string_view(data_, M_SIZE) >=
+               std::string_view(std::forward<T>(other));
+    }
+
+    ATOM_CONSTEXPR auto operator+=(char c) -> StaticString<N> & {
+        if (M_SIZE < N) {
+            data_[M_SIZE] = c;
+            ++M_SIZE;
+            data_[M_SIZE] = '\0';
+        }
+        return *this;
+    }
+
+    ATOM_CONSTEXPR auto operator+(char c) const -> StaticString<N + 1> {
+        StaticString<N + 1> result;
+        for (size_t i = 0; i < M_SIZE; ++i) {
+            result += data_[i];
+        }
+        result += c;
+        return result;
     }
 
 private:
-    const size_t M_SIZE; /**< Size of the Static_String object. */
-    const char *data_;   /**< Pointer to the C-style string data. */
+    size_t M_SIZE;
+    char data_[N + 1]{};
 };
+
+template <size_t N, size_t M>
+ATOM_CONSTEXPR auto operator+(const StaticString<N> &lhs,
+                              const StaticString<M> &rhs)
+    -> StaticString<N + M> {
+    StaticString<N + M> result;
+    for (size_t i = 0; i < lhs.size(); ++i) {
+        result += lhs.cStr()[i];
+    }
+    for (size_t i = 0; i < rhs.size(); ++i) {
+        result += rhs.cStr()[i];
+    }
+    return result;
+}
 
 #endif

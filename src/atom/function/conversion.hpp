@@ -66,42 +66,46 @@ public:
     [[nodiscard]] auto convert(const std::any& from) const
         -> std::any override {
         // Pointer types static conversion (upcasting)
-        if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
+        if ATOM_CONSTEXPR (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto fromPtr = std::any_cast<From>(from);
             return std::any(static_cast<To>(fromPtr));
         }
         // Reference types static conversion (upcasting)
-        else if constexpr (std::is_reference_v<From> &&
-                           std::is_reference_v<To>) {
+        else if ATOM_CONSTEXPR (std::is_reference_v<From> &&
+                                std::is_reference_v<To>) {
             try {
                 auto& fromRef = std::any_cast<From&>(from);
                 return std::any(static_cast<To&>(fromRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(fromType, toType);
+                THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                       " to ", toType.name());
             }
         } else {
-            throw bad_conversion(fromType, toType);
+            THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                   " to ", toType.name());
         }
     }
 
     [[nodiscard]] auto convertDown(const std::any& to) const
         -> std::any override {
         // Pointer types static conversion (downcasting)
-        if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
+        if ATOM_CONSTEXPR (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto toPtr = std::any_cast<To>(to);
             return std::any(static_cast<From>(toPtr));
         }
         // Reference types static conversion (downcasting)
-        else if constexpr (std::is_reference_v<From> &&
-                           std::is_reference_v<To>) {
+        else if ATOM_CONSTEXPR (std::is_reference_v<From> &&
+                                std::is_reference_v<To>) {
             try {
                 auto& toRef = std::any_cast<To&>(to);
                 return std::any(static_cast<From&>(toRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(toType, fromType);
+                THROW_CONVERSION_ERROR("Failed to convert ", toType.name(),
+                                       " to ", fromType.name());
             }
         } else {
-            throw bad_conversion(toType, fromType);
+            THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
+                                   fromType.name());
         }
     }
 };
@@ -115,7 +119,7 @@ public:
     [[nodiscard]] auto convert(const std::any& from) const
         -> std::any override {
         // Pointer types dynamic conversion
-        if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
+        if ATOM_CONSTEXPR (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto fromPtr = std::any_cast<From>(from);
             auto convertedPtr = dynamic_cast<To>(fromPtr);
             if (!convertedPtr && fromPtr != nullptr) {
@@ -124,23 +128,25 @@ public:
             return std::any(convertedPtr);
         }
         // Reference types dynamic conversion
-        else if constexpr (std::is_reference_v<From> &&
-                           std::is_reference_v<To>) {
+        else if ATOM_CONSTEXPR (std::is_reference_v<From> &&
+                                std::is_reference_v<To>) {
             try {
                 auto& fromRef = std::any_cast<From&>(from);
                 return std::any(dynamic_cast<To&>(fromRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(fromType, toType);
+                THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                       " to ", toType.name());
             }
         } else {
-            throw bad_conversion(fromType, toType);
+            THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                   " to ", toType.name());
         }
     }
 
     [[nodiscard]] auto convertDown(const std::any& to) const
         -> std::any override {
         // Pointer types dynamic conversion
-        if constexpr (std::is_pointer_v<From> && std::is_pointer_v<To>) {
+        if ATOM_CONSTEXPR (std::is_pointer_v<From> && std::is_pointer_v<To>) {
             auto toPtr = std::any_cast<To>(to);
             auto convertedPtr = dynamic_cast<From>(toPtr);
             if (!convertedPtr && toPtr != nullptr) {
@@ -149,24 +155,26 @@ public:
             return std::any(convertedPtr);
         }
         // Reference types dynamic conversion
-        else if constexpr (std::is_reference_v<From> &&
-                           std::is_reference_v<To>) {
+        else if ATOM_CONSTEXPR (std::is_reference_v<From> &&
+                                std::is_reference_v<To>) {
             try {
                 auto& toRef = std::any_cast<To&>(to);
                 return std::any(dynamic_cast<From&>(toRef));
             } catch (const std::bad_cast&) {
-                throw bad_conversion(toType, fromType);
+                THROW_CONVERSION_ERROR("Failed to convert ", toType.name(),
+                                       " to ", fromType.name());
             }
         } else {
-            throw bad_conversion(toType, fromType);
+            THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
+                                   fromType.name());
         }
     }
 };
 
 template <typename Base, typename Derived>
 auto baseClass() -> std::shared_ptr<TypeConversionBase> {
-    if constexpr (std::is_polymorphic<Base>::value &&
-                  std::is_polymorphic<Derived>::value) {
+    if ATOM_CONSTEXPR (std::is_polymorphic<Base>::value &&
+                       std::is_polymorphic<Derived>::value) {
         return std::make_shared<DynamicConversion<Derived*, Base*>>();
     } else {
         return std::make_shared<StaticConversion<Derived, Base>>();
@@ -198,7 +206,8 @@ public:
 
             return std::any(toVec);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(fromType, toType);
+            THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                   " to ", toType.name());
         }
     }
 
@@ -221,7 +230,8 @@ public:
 
             return std::any(fromVec);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(toType, fromType);
+            THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
+                                   fromType.name());
         }
     }
 };
@@ -248,7 +258,8 @@ public:
 
             return std::any(toMap);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(fromType, toType);
+            THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                   " to ", toType.name());
         }
     }
 
@@ -266,7 +277,8 @@ public:
 
             return std::any(fromMap);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(toType, fromType);
+            THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
+                                   fromType.name());
         }
     }
 };
@@ -294,7 +306,8 @@ public:
 
             return std::any(toSeq);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(fromType, toType);
+            THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                   " to ", toType.name());
         }
     }
 
@@ -314,7 +327,8 @@ public:
 
             return std::any(fromSeq);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(toType, fromType);
+            THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
+                                   fromType.name());
         }
     }
 };
@@ -341,7 +355,8 @@ public:
 
             return std::any(toSet);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(fromType, toType);
+            THROW_CONVERSION_ERROR("Failed to convert ", fromType.name(),
+                                   " to ", toType.name());
         }
     }
 
@@ -361,7 +376,8 @@ public:
 
             return std::any(fromSet);
         } catch (const std::bad_any_cast&) {
-            throw bad_conversion(toType, fromType);
+            THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
+                                   fromType.name());
         }
     }
 };
@@ -413,7 +429,7 @@ public:
     template <typename Base, typename Derived>
     void add_base_class() {
         add_conversion(std::make_shared<DynamicConversion<Derived*, Base*>>());
-        if constexpr (!std::is_same_v<Base, Derived>) {
+        if ATOM_CONSTEXPR (!std::is_same_v<Base, Derived>) {
             add_conversion(std::make_shared<StaticConversion<Base, Derived>>());
         }
     }

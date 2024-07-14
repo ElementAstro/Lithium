@@ -26,7 +26,7 @@ Message::Message(Type t, const string &name, const string &target,
     : type_(t), target_(target), origin_(origin), name_(name) {
     timestamp_ = atom::utils::getChinaTimestampString();
     atom::utils::UUID generator;
-    uuid_ = generator.to_string();
+    uuid_ = generator.toString();
 }
 
 Message::Type Message::fromInt(const int &t) {

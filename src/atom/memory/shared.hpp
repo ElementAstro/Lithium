@@ -1,17 +1,3 @@
-/*
- * shared_memory.hpp
- *
- * Copyright (C) 2023-2024 Max Qian <lightapt.com>
- */
-
-/*************************************************
-
-Date: 2024-1-4
-
-Description: Inter-process shared memory for local driver communication.
-
-*************************************************/
-
 #ifndef ATOM_CONNECTION_SHARED_MEMORY_HPP
 #define ATOM_CONNECTION_SHARED_MEMORY_HPP
 
@@ -39,171 +25,57 @@ Description: Inter-process shared memory for local driver communication.
 #endif
 
 namespace atom::connection {
-/**
- * @brief A shared memory class for inter-process communication.
- *
- * @tparam T The type of data to be stored in shared memory. Must be
- * TriviallyCopyable.
- */
+
 template <TriviallyCopyable T>
 class SharedMemory : public NonCopyable {
 public:
-    /**
-     * @brief Construct a new SharedMemory object.
-     *
-     * @param name The name of the shared memory segment.
-     * @param create If true, create a new shared memory segment; if false, open
-     * an existing one.
-     */
     explicit SharedMemory(std::string_view name, bool create = true);
-
-    /**
-     * @brief Destroy the SharedMemory object and release associated resources.
-     */
     ~SharedMemory() final;
 
-    /**
-     * @brief Write data to the shared memory.
-     *
-     * @param data The data to write.
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     */
     void write(const T& data, std::chrono::milliseconds timeout =
                                   std::chrono::milliseconds(0));
-
-    /**
-     * @brief Read data from the shared memory.
-     *
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     * @return The data read from shared memory.
-     */
     [[nodiscard]] auto read(std::chrono::milliseconds timeout =
                                 std::chrono::milliseconds(0)) const -> T;
-
-    /**
-     * @brief Clear the contents of the shared memory.
-     */
     void clear();
-
-    /**
-     * @brief Check if the shared memory is currently occupied.
-     *
-     * @return true if occupied, false otherwise.
-     */
     [[nodiscard]] auto isOccupied() const -> bool;
+    [[nodiscard]] auto getName() const noexcept -> std::string_view;
+    [[nodiscard]] auto getSize() const noexcept -> std::size_t;
+    [[nodiscard]] auto isCreator() const noexcept -> bool;
 
-    /**
-     * @brief Get the name of the shared memory segment.
-     *
-     * @return The name of the shared memory segment.
-     */
-    [[nodiscard]] auto getName() const ATOM_NOEXCEPT -> std::string_view;
-
-    /**
-     * @brief Get the size of the shared memory segment.
-     *
-     * @return The size of the shared memory segment in bytes.
-     */
-    [[nodiscard]] auto getSize() const ATOM_NOEXCEPT -> std::size_t;
-
-    /**
-     * @brief Check if this object created the shared memory segment.
-     *
-     * @return true if this object created the segment, false if it opened an
-     * existing one.
-     */
-    [[nodiscard]] auto isCreator() const ATOM_NOEXCEPT -> bool;
-
-    /**
-     * @brief Write a partial amount of data to the shared memory.
-     *
-     * @tparam U The type of data to write. Must be TriviallyCopyable.
-     * @param data The data to write.
-     * @param offset The offset in bytes where to start writing.
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     */
     template <typename U>
     void writePartial(
         const U& data, std::size_t offset,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
-
-    /**
-     * @brief Read a partial amount of data from the shared memory.
-     *
-     * @tparam U The type of data to read. Must be TriviallyCopyable.
-     * @param offset The offset in bytes where to start reading.
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     * @return The data read from shared memory.
-     */
     template <typename U>
     [[nodiscard]] auto readPartial(std::size_t offset,
                                    std::chrono::milliseconds timeout =
                                        std::chrono::milliseconds(0)) const -> U;
-
-    /**
-     * @brief Attempt to read data from the shared memory, returning an
-     * optional.
-     *
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     * @return std::optional<T> containing the data if successful, or
-     * std::nullopt if the operation failed.
-     */
     [[nodiscard]] auto tryRead(
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const
         -> std::optional<T>;
-
-    /**
-     * @brief Write a span of bytes to the shared memory.
-     *
-     * @param data The span of bytes to write.
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     */
     void writeSpan(
         std::span<const std::byte> data,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
-
-    /**
-     * @brief Read a span of bytes from the shared memory.
-     *
-     * @param data The span to fill with read data.
-     * @param timeout Maximum time to wait for the operation. 0 means no
-     * timeout.
-     * @return The number of bytes actually read.
-     */
     [[nodiscard]] auto readSpan(
         std::span<std::byte> data,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const
         -> std::size_t;
 
 private:
-    std::string name_;  ///< The name of the shared memory segment.
+    std::string name_;
 #ifdef _WIN32
-    HANDLE handle_;  ///< Windows-specific handle to the shared memory.
+    HANDLE handle_;
 #else
-    int fd_;  ///< Unix-specific file descriptor for the shared memory.
+    int fd_;
 #endif
-    void* buffer_;              ///< Pointer to the shared memory buffer.
-    std::atomic_flag* flag_;    ///< Atomic flag for synchronization.
-    mutable std::mutex mutex_;  ///< Mutex for thread-safety.
-    bool is_creator_;  ///< Whether this object created the shared memory
-                       ///< segment.
+    void* buffer_;
+    std::atomic_flag* flag_;
+    mutable std::mutex mutex_;
+    bool is_creator_;
 
-    /**
-     * @brief Helper function to perform operations with proper locking.
-     *
-     * @tparam Func The type of the function to execute.
-     * @param func The function to execute while holding the lock.
-     * @param timeout Maximum time to wait for acquiring the lock.
-     * @return The result of the executed function.
-     */
     template <typename Func>
-    auto withLock(Func&& func, std::chrono::milliseconds timeout) const;
+    auto withLock(Func&& func, std::chrono::milliseconds timeout) const
+        -> decltype(std::forward<Func>(func)());
 };
 
 template <TriviallyCopyable T>
@@ -260,8 +132,8 @@ SharedMemory<T>::~SharedMemory() {
 
 template <TriviallyCopyable T>
 template <typename Func>
-auto SharedMemory<T>::withLock(Func&& func,
-                               std::chrono::milliseconds timeout) const {
+auto SharedMemory<T>::withLock(Func&& func, std::chrono::milliseconds timeout)
+    const -> decltype(std::forward<Func>(func)()) {
     std::unique_lock lock(mutex_);
     auto startTime = std::chrono::steady_clock::now();
     while (flag_->test_and_set(std::memory_order_acquire)) {
@@ -271,9 +143,15 @@ auto SharedMemory<T>::withLock(Func&& func,
         }
         std::this_thread::yield();
     }
-    auto result = std::forward<Func>(func)();
-    flag_->clear(std::memory_order_release);
-    return result;
+    if constexpr (std::is_void_v<decltype(std::forward<Func>(func)())>) {
+        std::forward<Func>(func)();
+        flag_->clear(std::memory_order_release);
+        return;
+    } else {
+        auto result = std::forward<Func>(func)();
+        flag_->clear(std::memory_order_release);
+        return result;
+    }
 }
 
 template <TriviallyCopyable T>
@@ -319,17 +197,17 @@ auto SharedMemory<T>::isOccupied() const -> bool {
 }
 
 template <TriviallyCopyable T>
-auto SharedMemory<T>::getName() const ATOM_NOEXCEPT -> std::string_view {
+auto SharedMemory<T>::getName() const noexcept -> std::string_view {
     return name_;
 }
 
 template <TriviallyCopyable T>
-auto SharedMemory<T>::getSize() const ATOM_NOEXCEPT -> std::size_t {
+auto SharedMemory<T>::getSize() const noexcept -> std::size_t {
     return sizeof(T);
 }
 
 template <TriviallyCopyable T>
-auto SharedMemory<T>::isCreator() const ATOM_NOEXCEPT -> bool {
+auto SharedMemory<T>::isCreator() const noexcept -> bool {
     return is_creator_;
 }
 

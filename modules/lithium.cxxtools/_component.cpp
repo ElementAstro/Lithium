@@ -20,35 +20,31 @@ Description: Some useful tools written in c++
 #include "ini2json.hpp"
 #include "json2ini.hpp"
 #include "json2xml.hpp"
+#include "pci_generator.hpp"
 #include "xml2json.hpp"
 
-#if ENABLE_TOML
-#include "json2toml.hpp"
-#include "toml2json.hpp"
-#endif
+using namespace lithium::cxxtools;
 
 ToolsComponent::ToolsComponent(const std::string& name) : Component(name) {
     LOG_F(INFO, "ToolsComponent Constructed");
 
-    def("csv_to_json", &csv_to_json, "utils", "Convert csv to json");
-    def("ini_to_json", &ini_to_json, "utils", "Convert ini to json");
-    def("json_to_ini", &json_to_ini, "utils", "Convert json to ini");
-    def("json_to_xml", &json_to_xml, "utils", "Convert json to xml");
-    def("xml_to_json", &xml_to_json, "utils", "Convert xml to json");
-#if ENABLE_TOML
-    def("json_to_toml", &json_to_toml, "utils", "Convert json to toml");
-    def("toml_to_json", &toml_to_json, "utils", "Convert toml to json");
-#endif
+    def("csv_to_json", &csvToJson, "lithium.cxxtools", "Convert csv to json");
+    def("ini_to_json", &iniToJson, "lithium.cxxtools", "Convert ini to json");
+    def("json_to_ini", &jsonToIni, "lithium.cxxtools", "Convert json to ini");
+    def("json_to_xml", &jsonToXml, "lithium.cxxtools", "Convert json to xml");
+    def("xml_to_json", &xmlToJson, "lithium.cxxtools", "Convert xml to json");
+    def("pci_generator", &parseAndGeneratePCIInfo, "lithium.cxxtools",
+        "Generate pci id");
 }
 
 ToolsComponent::~ToolsComponent() { LOG_F(INFO, "ToolsComponent Destructed"); }
 
-bool ToolsComponent::initialize() {
+auto ToolsComponent::initialize() -> bool {
     LOG_F(INFO, "ToolsComponent Initialized");
     return true;
 }
 
-bool ToolsComponent::destroy() {
+auto ToolsComponent::destroy() -> bool {
     LOG_F(INFO, "ToolsComponent Destroyed");
     return true;
 }

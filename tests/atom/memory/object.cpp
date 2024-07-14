@@ -1,5 +1,6 @@
 #include "atom/memory/object.hpp"
 #include <gtest/gtest.h>
+#include "exception.hpp"
 
 class TestObject {
 public:
@@ -35,7 +36,7 @@ TEST(ObjectPoolTest, MaxSize) {
     auto obj2 = pool.acquire();
 
     EXPECT_THROW(pool.acquire(),
-                 std::runtime_error);  // No more objects available
+                 atom::error::InvalidArgument);  // No more objects available
 }
 
 TEST(ObjectPoolTest, Prefill) {

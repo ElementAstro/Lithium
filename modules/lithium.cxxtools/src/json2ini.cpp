@@ -14,14 +14,18 @@ Description: JSON to INI
 
 #include "json2ini.hpp"
 
+#include <filesystem>
 #include <fstream>
 
 #include "atom/log/loguru.hpp"
 #include "atom/type/json.hpp"
+#include "exception.hpp"
 
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
-void writeIniSection(std::ofstream &iniFile, const std::string &sectionName,
+namespace lithium::cxxtools::detail {
+void writeIniSection(std::ofstream &iniFile, std::string_view sectionName,
                      const json &jsonObject) {
     iniFile << "[" << sectionName << "]" << std::endl;
     for (auto it = jsonObject.begin(); it != jsonObject.end(); ++it) {
@@ -32,27 +36,27 @@ void writeIniSection(std::ofstream &iniFile, const std::string &sectionName,
     iniFile << std::endl;
 }
 
-void jsonToIni(const std::string &jsonFilePath,
-               const std::string &iniFilePath) {
-    std::ifstream jsonFile(jsonFilePath);
+void jsonToIni(std::string_view jsonFilePath, std::string_view iniFilePath) {
+    if (!fs::exists(jsonFilePath) || !fs::is_regular_file(jsonFilePath)) {
+        THROW_FILE_NOT_FOUND("JSON file not found: ", jsonFilePath);
+    }
+
+    std::ifstream jsonFile(jsonFilePath.data());
     if (!jsonFile.is_open()) {
-        LOG_F(ERROR, "Failed to open JSON file: {}", jsonFilePath);
-        return;
+        THROW_FILE_NOT_READABLE("Failed to open JSON file: ", jsonFilePath);
     }
 
     json jsonData;
     try {
         jsonFile >> jsonData;
     } catch (const std::exception &e) {
-        LOG_F(ERROR, "Failed to parse JSON file: {}. Error: {}", jsonFilePath,
-              e.what());
-        return;
+        THROW_RUNTIME_ERROR("Failed to parse JSON file: ", jsonFilePath,
+                            ". Error: ", e.what());
     }
 
-    std::ofstream iniFile(iniFilePath);
+    std::ofstream iniFile(iniFilePath.data());
     if (!iniFile.is_open()) {
-        LOG_F(ERROR, "Failed to create INI file: {}", iniFilePath);
-        return;
+        THROW_RUNTIME_ERROR("Failed to create INI file: ", iniFilePath);
     }
 
     for (auto it = jsonData.begin(); it != jsonData.end(); ++it) {
@@ -61,54 +65,63 @@ void jsonToIni(const std::string &jsonFilePath,
         }
     }
 
-    iniFile.close();
     if (!iniFile) {
-        LOG_F(ERROR, "Failed to save INI file: {}", iniFilePath);
-    } else {
-        LOG_F(INFO, "INI file is saved: {}", iniFilePath);
+        THROW_FILE_NOT_WRITABLE("Failed to save INI file: ", iniFilePath);
     }
+    LOG_F(INFO, "INI file is saved: {}", iniFilePath);
 }
+}  // namespace lithium::cxxtools::detail
 
 #if ATOM_STANDALONE_COMPONENT_ENABLED
 #include <argparse/argparse.hpp>
 int main(int argc, char *argv[]) {
     loguru::init(argc, argv);
-    loguru::add_file("conversion_log.txt", loguru::Append, loguru::Verbosity_INFO);
+    loguru::add_file("conversion_log.txt", loguru::Append,
+                     loguru::Verbosity_INFO);
 
-    argparse::ArgumentParser program;
+    argparse::ArgumentParser program("json2ini");
     program.add_argument("-i", "--input")
         .required()
-        .help("path to input CSV file");
-
+        .help("path to input JSON file");
     program.add_argument("-o", "--output")
         .required()
-        .help("path to output JSON file");
-    program.parse_args(argc, argv);
+        .help("path to output INI file");
 
-    std::string jsonFilePath = program.get<std::string>("input");
-    std::string iniFilePath = program.get<std::string>("output");
-
-    std::ifstream inputFile(jsonFilePath);
-    if (!inputFile.is_open()) {
-        LOG_F(ERROR, "JSON file not found: {}", jsonFilePath);
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::runtime_error &err) {
+        LOG_F(ERROR, "Error parsing arguments: {}", err.what());
         return 1;
     }
-    inputFile.close();
-    jsonToIni(jsonFilePath, iniFilePath);
 
-    LOG_F(INFO, "JSON to INI conversion is completed.");
+    std::string jsonFilePath = program.get<std::string>("--input");
+    std::string iniFilePath = program.get<std::string>("--output");
+
+    try {
+        LOG_F(INFO, "Converting JSON to INI...");
+        jsonToIni(jsonFilePath, iniFilePath);
+        LOG_F(INFO, "JSON to INI conversion completed.");
+    } catch (const std::exception &ex) {
+        LOG_F(ERROR, "JSON to INI conversion failed: {}", ex.what());
+        return 1;
+    }
+
     return 0;
 }
 #else
-bool json_to_ini(const std::string &json_file, const std::string &ini_file) {
+namespace lithium::cxxtools {
+auto jsonToIni(std::string_view jsonFilePath,
+               std::string_view iniFilePath) -> bool {
     try {
         LOG_F(INFO, "Converting JSON to INI...");
-        jsonToIni(json_file, ini_file);
-        LOG_F(INFO, "JSON to INI conversion is completed.");
+        detail::jsonToIni(jsonFilePath, iniFilePath);
+        LOG_F(INFO, "JSON to INI conversion completed.");
         return true;
     } catch (const std::exception &e) {
         LOG_F(ERROR, "JSON to INI conversion failed: {}", e.what());
     }
     return false;
 }
+}  // namespace lithium::cxxtools
+
 #endif

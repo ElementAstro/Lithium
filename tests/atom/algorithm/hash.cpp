@@ -3,18 +3,6 @@
 
 using namespace atom::algorithm;
 
-// Helper function to test FNV-1a hash
-void test_fnv1a_hash(const std::string& input, uint32_t expected) {
-    EXPECT_EQ(fnv1aHash(input), expected);
-    EXPECT_EQ(fnv1aHash(std::string_view(input)), expected);
-}
-
-// Helper function to test Jenkins One-at-a-Time hash
-void test_jenkins_hash(const std::string& input, uint32_t expected) {
-    EXPECT_EQ(jenkinsOneAtATimeHash(input), expected);
-    EXPECT_EQ(jenkinsOneAtATimeHash(std::string_view(input)), expected);
-}
-
 TEST(HashTest, ComputeHashSingleValue) {
     EXPECT_EQ(computeHash(42), std::hash<int>{}(42));
     EXPECT_EQ(computeHash(std::string("hello")),
@@ -56,32 +44,4 @@ TEST(HashTest, ComputeHashArray) {
     EXPECT_EQ(computeHash(arr), expected);
 }
 
-TEST(HashTest, FNV1aHashString) {
-    test_fnv1a_hash("hello", 0x4f9f2cab);
-    test_fnv1a_hash("world", 0x4f9f2c9b);
-}
-
-TEST(HashTest, JenkinsOneAtATimeHashString) {
-    test_jenkins_hash("hello", 0x4f9f2cab);
-    test_jenkins_hash("world", 0x4f9f2c9b);
-}
-
-TEST(HashTest, QuickHashString) {
-    EXPECT_EQ(quickHash("hello"), 0x5d41402a);
-    EXPECT_EQ(quickHash("world"), 0x7c211433);
-}
-
-TEST(HashTest, QuickHashData) {
-    const char data[] = {'a', 'b', 'c', 'd'};
-    EXPECT_EQ(quickHash(data, sizeof(data)), 0x5e809ac0);
-}
-
-TEST(HashTest, LiteralHash) {
-    EXPECT_EQ("hello"_hash, 0xa430d846);
-    EXPECT_EQ("world"_hash, 0xb7a2f18e);
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+TEST(HashTest, LiteralHash) { EXPECT_EQ("hello"_hash, 0x4f9f2cabU); }

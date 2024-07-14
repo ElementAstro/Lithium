@@ -12,11 +12,13 @@ Description: A simple stack vector implementation
 
 **************************************************/
 
-#ifndef ATOM_EXPERIMENT_STACK_VECTOR_HPP
-#define ATOM_EXPERIMENT_STACK_VECTOR_HPP
+#ifndef ATOM_TYPE_STACK_VECTOR_HPP
+#define ATOM_TYPE_STACK_VECTOR_HPP
 
 #include <type_traits>
 #include <utility>
+
+#include "macro.hpp"
 
 /**
  * @brief A stack-allocated vector that stores elements of type T with a maximum
@@ -30,7 +32,7 @@ struct StackVector {
     /**
      * @brief Default constructor.
      */
-    StackVector() noexcept = default;
+    StackVector() ATOM_NOEXCEPT = default;
 
     /**
      * @brief Copy constructor.
@@ -49,15 +51,15 @@ struct StackVector {
      *
      * @param other The Stack_Vector to move from.
      */
-    StackVector(StackVector &&other) noexcept
-        : data{other.data}, mSize{other.mSize} {
+    StackVector(StackVector &&other) ATOM_NOEXCEPT : data{other.data},
+                                                     mSize{other.mSize} {
         other.mSize = 0;
     }
 
     /**
      * @brief Destructor.
      */
-    ~StackVector() noexcept(std::is_nothrow_destructible_v<T>) {
+    ~StackVector() ATOM_NOEXCEPT(std::is_nothrow_destructible_v<T>) {
         for (std::size_t pos = 0; pos < mSize; ++pos) {
             (*this)[pos].~T();
         }
@@ -69,7 +71,7 @@ struct StackVector {
      * @param idx The index of the element.
      * @return Reference to the element at the specified index.
      */
-    [[nodiscard]] auto operator[](const std::size_t IDX) noexcept -> T & {
+    ATOM_NODISCARD auto operator[](const std::size_t IDX) ATOM_NOEXCEPT->T & {
         return *reinterpret_cast<T *>(&data + ALIGNED_SIZE * IDX);
     }
 
@@ -79,7 +81,8 @@ struct StackVector {
      * @param idx The index of the element.
      * @return Const reference to the element at the specified index.
      */
-    [[nodiscard]] auto operator[](const std::size_t IDX) const noexcept -> const T & {
+    ATOM_NODISCARD auto operator[](const std::size_t IDX) const
+        ATOM_NOEXCEPT->const T & {
         return *reinterpret_cast<const T *>(&data + ALIGNED_SIZE * IDX);
     }
 
@@ -102,19 +105,19 @@ struct StackVector {
      *
      * @return The number of elements.
      */
-    auto size() const noexcept { return mSize; };
+    auto size() const ATOM_NOEXCEPT { return mSize; };
 
     /**
      * @brief Gets the maximum capacity of the Stack_Vector.
      *
      * @return The maximum capacity.
      */
-    auto capacity() const noexcept { return MaxSize; };
+    auto capacity() const ATOM_NOEXCEPT { return MaxSize; };
 
     /**
      * @brief Removes the last element from the Stack_Vector.
      */
-    void popBack() noexcept(std::is_nothrow_destructible_v<T>) {
+    void popBack() ATOM_NOEXCEPT(std::is_nothrow_destructible_v<T>) {
         (*this)[--mSize].~T();
     }
 
@@ -151,7 +154,7 @@ struct StackVector {
      * @param other The Stack_Vector to move from.
      * @return Reference to the modified Stack_Vector.
      */
-    auto operator=(StackVector &&other) noexcept -> StackVector & {
+    auto operator=(StackVector &&other) ATOM_NOEXCEPT->StackVector & {
         if (this != &other) {
             for (std::size_t i = 0; i < mSize; ++i) {
                 (*this)[i].~T();

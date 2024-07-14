@@ -263,7 +263,7 @@ auto CommandDispatcher::convertToArgsVector(std::tuple<Args...>&& tuple)
     return argsVec;
 }
 
-auto CommandDispatcher::findCommand(const std::string& name) {
+ATOM_INLINE auto CommandDispatcher::findCommand(const std::string& name) {
     auto it = commands_.find(name);
     if (it == commands_.end()) {
         for (const auto& [cmdName, cmd] : commands_) {
@@ -317,14 +317,14 @@ auto CommandDispatcher::completeArgs(const Command& cmd, const ArgsType& args)
     return fullArgs;
 }
 
-void CommandDispatcher::checkPrecondition(const Command& cmd,
-                                          const std::string& name) {
+ATOM_INLINE void CommandDispatcher::checkPrecondition(const Command& cmd,
+                                                      const std::string& name) {
     if (cmd.precondition && !cmd.precondition.value()()) {
         THROW_DISPATCH_EXCEPTION("Precondition failed for command: " + name);
     }
 }
 
-auto CommandDispatcher::executeCommand(
+ATOM_INLINE auto CommandDispatcher::executeCommand(
     const Command& cmd, const std::string& name,
     const std::vector<std::any>& args) -> std::any {
     auto timeoutIt = timeoutMap_.find(name);
@@ -334,7 +334,7 @@ auto CommandDispatcher::executeCommand(
     return executeWithoutTimeout(cmd, name, args);
 }
 
-auto CommandDispatcher::executeWithTimeout(
+ATOM_INLINE auto CommandDispatcher::executeWithTimeout(
     const Command& cmd, const std::string& name,
     const std::vector<std::any>& args,
     const std::chrono::duration<double>& timeout) -> std::any {
@@ -348,7 +348,7 @@ auto CommandDispatcher::executeWithTimeout(
     return future.get();
 }
 
-auto CommandDispatcher::executeWithoutTimeout(
+ATOM_INLINE auto CommandDispatcher::executeWithoutTimeout(
     const Command& cmd, const std::string& name,
     const std::vector<std::any>& args) -> std::any {
     if (cmd.funcs.size() == 1) {
@@ -362,7 +362,7 @@ auto CommandDispatcher::executeWithoutTimeout(
     return executeFunctions(cmd, args);
 }
 
-auto CommandDispatcher::executeFunctions(
+ATOM_INLINE auto CommandDispatcher::executeFunctions(
     const Command& cmd, const std::vector<std::any>& args) -> std::any {
     if (cmd.funcs.size() == 1) {
         return cmd.funcs[0](args);
@@ -383,8 +383,8 @@ auto CommandDispatcher::executeFunctions(
     THROW_INVALID_ARGUMENT("No matching overload found");
 }
 
-auto CommandDispatcher::computeFunctionHash(const std::vector<std::any>& args)
-    -> std::string {
+ATOM_INLINE auto CommandDispatcher::computeFunctionHash(
+    const std::vector<std::any>& args) -> std::string {
     std::vector<std::string> argTypes;
     for (const auto& arg : args) {
         argTypes.emplace_back(

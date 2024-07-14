@@ -1,76 +1,67 @@
-#include <gtest/gtest.h>
 #include "atom/memory/shared.hpp"
+#include <gtest/gtest.h>
 
-TEST(SharedMemoryTest, WriteReadTest) {
-    std::string name = "test_shared_memory";
-    atom::connection::SharedMemory<int> sharedMemory(name);
 
-    // Write data to shared memory
-    int dataToWrite = 42;
-    sharedMemory.write(dataToWrite);
+using namespace atom::connection;
 
-    // Read data from shared memory
-    int dataRead = sharedMemory.read();
-    EXPECT_EQ(dataToWrite, dataRead);
+struct TestData {
+    int a;
+    double b;
+    char c;
+};
+
+TEST(SharedMemoryTest, BasicWriteRead) {
+    SharedMemory<TestData> shm("/test_shm", true);
+    TestData data{1, 2.0, 'a'};
+    shm.write(data);
+
+    SharedMemory<TestData> shm_reader("/test_shm", false);
+    auto read_data = shm_reader.read();
+    EXPECT_EQ(data.a, read_data.a);
+    EXPECT_EQ(data.b, read_data.b);
+    EXPECT_EQ(data.c, read_data.c);
 }
 
-TEST(SharedMemoryTest, ClearTest) {
-    std::string name = "test_shared_memory";
-    atom::connection::SharedMemory<int> sharedMemory(name);
+TEST(SharedMemoryTest, PartialWriteRead) {
+    SharedMemory<TestData> shm("/test_shm", true);
+    int new_a = 42;
+    shm.writePartial(new_a, offsetof(TestData, a));
 
-    // Write data to shared memory
-    int dataToWrite = 42;
-    sharedMemory.write(dataToWrite);
-
-    // Clear shared memory
-    sharedMemory.clear();
-
-    // Read data from shared memory after clear
-    int dataRead = sharedMemory.read();
-    EXPECT_EQ(0, dataRead);  // Expecting cleared value
+    SharedMemory<TestData> shm_reader("/test_shm", false);
+    auto read_a = shm_reader.readPartial<int>(offsetof(TestData, a));
+    EXPECT_EQ(new_a, read_a);
 }
 
-TEST(SharedMemoryTest, PartialWriteReadTest) {
-    std::string name = "test_shared_memory";
-    atom::connection::SharedMemory<char[10]> sharedMemory(name);
+TEST(SharedMemoryTest, SpanWriteRead) {
+    SharedMemory<TestData> shm("/test_shm", true);
+    TestData write_data{1, 2.0, 'a'};
+    std::span<const std::byte> write_span(reinterpret_cast<const std::byte*>(&write_data), sizeof(write_data));
+    shm.writeSpan(write_span);
 
-    // Write partial data to shared memory
-    std::string dataToWrite = "Hello";
-    sharedMemory.writePartial(dataToWrite, 0);
+    SharedMemory<TestData> shm_reader("/test_shm", false);
+    TestData read_data;
+    std::span<std::byte> read_span(reinterpret_cast<std::byte*>(&read_data), sizeof(read_data));
+    shm_reader.readSpan(read_span);
 
-    // Read partial data from shared memory
-    std::string dataRead = sharedMemory.readPartial(0);
-    EXPECT_EQ(dataToWrite, dataRead);
+    EXPECT_EQ(read_data.a, 1);
+    EXPECT_EQ(read_data.b, 2.0);
+    EXPECT_EQ(read_data.c, 'a');
 }
 
-TEST(SharedMemoryTest, TryReadTest) {
-    std::string name = "test_shared_memory";
-    atom::connection::SharedMemory<int> sharedMemory(name);
+TEST(SharedMemoryTest, TryRead) {
+    SharedMemory<TestData> shm("/test_shm", true);
+    TestData data{1, 2.0, 'a'};
+    shm.write(data);
 
-    // Try to read data from empty shared memory
-    std::optional<int> dataRead = sharedMemory.tryRead();
-    EXPECT_FALSE(dataRead.has_value());
-
-    // Write data to shared memory
-    int dataToWrite = 42;
-    sharedMemory.write(dataToWrite);
-
-    // Try to read data from shared memory
-    dataRead = sharedMemory.tryRead();
-    EXPECT_TRUE(dataRead.has_value());
-    EXPECT_EQ(dataToWrite, *dataRead);
+    SharedMemory<TestData> shm_reader("/test_shm", false);
+    auto read_data = shm_reader.tryRead();
+    ASSERT_TRUE(read_data.has_value());
+    EXPECT_EQ(read_data->a, data.a);
+    EXPECT_EQ(read_data->b, data.b);
+    EXPECT_EQ(read_data->c, data.c);
 }
 
-TEST(SharedMemoryTest, WriteSpanReadSpanTest) {
-    std::string name = "test_shared_memory";
-    atom::connection::SharedMemory<char[10]> sharedMemory(name);
-
-    // Write span of data to shared memory
-    std::string dataToWrite = "Hello World";
-    sharedMemory.writeSpan({dataToWrite.data(), dataToWrite.size()});
-
-    // Read span of data from shared memory
-    std::string dataRead;
-    sharedMemory.readSpan({dataRead.data(), dataRead.size()});
-    EXPECT_EQ(dataToWrite, dataRead);
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

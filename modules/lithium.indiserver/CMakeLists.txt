@@ -14,7 +14,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(SOURCE_FILES
     src/indiserver.cpp
     src/collection.cpp
-    src/container.cpp
 
     _component.cpp
     _main.cpp

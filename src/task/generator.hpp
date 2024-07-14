@@ -31,11 +31,12 @@ namespace lithium {
 using MacroValue = std::variant<
     std::string, nlohmann::json,
     std::function<nlohmann::json(const std::vector<std::string>&)>>;
+
 class TaskGenerator {
 public:
     TaskGenerator();
 
-    void addMacro(const std::string& name, const MacroValue& value);
+    void addMacro(const std::string& name, MacroValue value);
     void processJson(nlohmann::json& j) const;
     void processJsonWithJsonMacros(nlohmann::json& j);
 
@@ -43,9 +44,11 @@ private:
     std::unordered_map<std::string, MacroValue> macros_;
 
     auto evaluateMacro(const std::string& name,
-                               const std::vector<std::string>& args) const -> std::string;
+                       const std::vector<std::string>& args) const
+        -> std::string;
     auto replaceMacros(const std::string& input) const -> std::string;
 };
 
 }  // namespace lithium
-#endif
+
+#endif  // LITHIUM_TASK_GENERATOR_HPP

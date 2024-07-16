@@ -20,8 +20,8 @@ TEST_F(ComponentTest, GetName) {
 }
 
 TEST_F(ComponentTest, GetTypeInfo) {
-    component->setTypeInfo(atom::meta::user_type<ComponentTest>());
-    EXPECT_EQ(component->getTypeInfo(), atom::meta::user_type<ComponentTest>());
+    component->setTypeInfo(atom::meta::userType<ComponentTest>());
+    EXPECT_EQ(component->getTypeInfo(), atom::meta::userType<ComponentTest>());
 }
 
 // 变量操作测试
@@ -107,9 +107,9 @@ TEST_F(ComponentTest, DefineConstructors) {
         std::string testStr;
     };
 
-    component->def_constructor<MyClass, int, std::string>(
+    component->defConstructor<MyClass, int, std::string>(
         "create_my_class", "MyGroup", "Create MyClass");
-    component->def_default_constructor<MyClass>(
+    component->defDefaultConstructor<MyClass>(
         "create_default_my_class", "MyGroup", "Create default MyClass");
 
     auto class_with_args =
@@ -129,9 +129,9 @@ TEST_F(ComponentTest, DefineConstructors) {
 // 类型定义测试
 TEST_F(ComponentTest, DefineTypes) {
     class TestClass {};
-    component->def_type<TestClass>("TestClass",
-                                   atom::meta::user_type<TestClass>());
-    EXPECT_TRUE(component->has_type("TestClass"));
+    component->defType<TestClass>("TestClass",
+                                   atom::meta::userType<TestClass>());
+    EXPECT_TRUE(component->hasType("TestClass"));
 }
 
 TEST_F(ComponentTest, DefineClass) {
@@ -139,26 +139,26 @@ TEST_F(ComponentTest, DefineClass) {
     public:
         int testVar = 0;
 
-        TestClass() : testVar(0) {}
+        TestClass() = default;
 
-        TestClass(int value) : testVar(value) {}
+        explicit TestClass(int value) : testVar(value) {}
 
-        int var_getter() const { return testVar; }
+        auto varGetter() const -> int { return testVar; }
 
-        void var_setter(int value) { testVar = value; }
+        void varSetter(int value) { testVar = value; }
     };
 
     component->doc("This is a test class");
-    component->def_type<TestClass>("TestClass",
-                                   atom::meta::user_type<TestClass>(),
+    component->defType<TestClass>("TestClass",
+                                   atom::meta::userType<TestClass>(),
                                    "MyGroup", "Test class");
-    component->def_constructor<TestClass, int>("create_test_class", "MyGroup",
+    component->defConstructor<TestClass, int>("create_test_class", "MyGroup",
                                                "Create TestClass");
-    component->def_default_constructor<TestClass>(
+    component->defDefaultConstructor<TestClass>(
         "create_default_test_class", "MyGroup", "Create default TestClass");
-    component->def("var_getter", &TestClass::var_getter, "MyGroup",
+    component->def("var_getter", &TestClass::varGetter, "MyGroup",
                    "Get testVar");
-    component->def("var_setter", &TestClass::var_setter, "MyGroup",
+    component->def("var_setter", &TestClass::varSetter, "MyGroup",
                    "Set testVar");
 }
 
@@ -206,7 +206,6 @@ TEST_F(ComponentTest, BoundaryConditions) {
 }
 
 #include <chrono>
-#include <mutex>
 #include <thread>
 
 TEST_F(ComponentTest, ThreadSafety) {

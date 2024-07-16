@@ -12,7 +12,7 @@ Description: Addon manager to solve the dependency problem.
 
 **************************************************/
 
-#include "addon.hpp"
+#include "addons.hpp"
 
 #include <fstream>
 #include <queue>
@@ -20,8 +20,8 @@ Description: Addon manager to solve the dependency problem.
 
 namespace lithium {
 
-bool AddonManager::addModule(const std::filesystem::path &path,
-                             const std::string &name) {
+auto AddonManager::addModule(const std::filesystem::path &path,
+                             const std::string &name) -> bool {
     if (modules_.contains(name)) {
         LOG_F(ERROR, "Addon {} has already been added.", name);
         return false;
@@ -44,8 +44,8 @@ bool AddonManager::addModule(const std::filesystem::path &path,
     return true;
 }
 
-bool AddonManager::removeModule(const std::string &name) {
-    if (modules_.erase(name)) {
+auto AddonManager::removeModule(const std::string &name) -> bool {
+    if (modules_.erase(name) != 0U) {
         DLOG_F(INFO, "Addon {} has been removed.", name);
         return true;
     }
@@ -53,7 +53,7 @@ bool AddonManager::removeModule(const std::string &name) {
     return false;
 }
 
-json AddonManager::getModule(const std::string &name) const {
+auto AddonManager::getModule(const std::string &name) const -> json {
     if (auto it = modules_.find(name); it != modules_.end()) {
         return it->second;
     }
@@ -61,9 +61,9 @@ json AddonManager::getModule(const std::string &name) const {
     return nullptr;
 }
 
-bool AddonManager::resolveDependencies(const std::string &modName,
-                                       std::vector<std::string> &resolvedDeps,
-                                       std::vector<std::string> &missingDeps) {
+auto AddonManager::resolveDependencies(
+    const std::string &modName, std::vector<std::string> &resolvedDeps,
+    std::vector<std::string> &missingDeps) -> bool {
     if (!modules_.contains(modName)) {
         LOG_F(ERROR, "Addon {} does not exist.", modName);
         return false;
@@ -83,28 +83,25 @@ bool AddonManager::resolveDependencies(const std::string &modName,
     q.push(mod);
 
     while (!q.empty()) {
-        const auto currentMod = q.front();
+        const auto CURRENT_MOD = q.front();
         q.pop();
 
-        resolvedDeps.push_back(currentMod["name"]);
+        resolvedDeps.push_back(CURRENT_MOD["name"]);
 
-        for (const auto &dep : currentMod["dependencies"]) {
+        for (const auto &dep : CURRENT_MOD["dependencies"]) {
             if (--inDegree[dep] == 0) {
                 q.push(modules_.at(dep));
             }
         }
     }
 
-    if (resolvedDeps.size() < modules_.size() ||
-        !checkMissingDependencies(modName, missingDeps)) {
-        return false;
-    }
-
-    return true;
+    return !(resolvedDeps.size() < modules_.size() ||
+             !checkMissingDependencies(modName, missingDeps));
 }
 
-bool AddonManager::checkMissingDependencies(
-    const std::string &modName, std::vector<std::string> &missingDeps) const {
+auto AddonManager::checkMissingDependencies(
+    const std::string &modName,
+    std::vector<std::string> &missingDeps) const -> bool {
     std::unordered_map<std::string, bool> expectedDeps;
     for (const auto &dep : modules_.at(modName)["dependencies"]) {
         expectedDeps[dep] = true;
@@ -121,9 +118,9 @@ bool AddonManager::checkMissingDependencies(
     return missingDeps.empty();
 }
 
-bool AddonManager::checkCircularDependencies(
+auto AddonManager::checkCircularDependencies(
     const std::string &modName, std::unordered_map<std::string, bool> &visited,
-    std::unordered_map<std::string, bool> &recursionStack) const {
+    std::unordered_map<std::string, bool> &recursionStack) const -> bool {
     if (!visited[modName]) {
         visited[modName] = true;
         recursionStack[modName] = true;
@@ -132,7 +129,8 @@ bool AddonManager::checkCircularDependencies(
             if (!visited[dep] &&
                 checkCircularDependencies(dep, visited, recursionStack)) {
                 return true;
-            } else if (recursionStack[dep]) {
+            }
+            if (recursionStack[dep]) {
                 return true;
             }
         }

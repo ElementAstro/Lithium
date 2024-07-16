@@ -12,7 +12,7 @@ TEST(TypeCasterTest, RegisterConversion) {
 
     // Attempt to register the conversion
     try {
-        caster.register_conversion<int, double>(intToDoubleFunc);
+        caster.registerConversion<int, double>(intToDoubleFunc);
         conversionRegistered = true;
     } catch (const std::exception&) {
         conversionRegistered = false;
@@ -20,17 +20,17 @@ TEST(TypeCasterTest, RegisterConversion) {
 
     // Verify that the conversion was registered
     ASSERT_TRUE(conversionRegistered);
-    ASSERT_TRUE((caster.has_conversion<int, double>()));
+    ASSERT_TRUE((caster.hasConversion<int, double>()));
 }
 
 TEST(TypeCasterTest, Convert) {
     atom::meta::TypeCaster caster;
 
     // Register conversions
-    caster.register_conversion<int, double>([](const std::any& value) {
+    caster.registerConversion<int, double>([](const std::any& value) {
         return static_cast<double>(std::any_cast<int>(value));
     });
-    caster.register_conversion<double, std::string>([](const std::any& value) {
+    caster.registerConversion<double, std::string>([](const std::any& value) {
         std::stringstream ss;
         ss << std::any_cast<double>(value);
         return ss.str();
@@ -42,7 +42,7 @@ TEST(TypeCasterTest, Convert) {
     // Define target type names
     std::vector<std::string> targetTypeNames = {
         "int", "double",
-        atom::meta::DemangleHelper::DemangleType<std::string>()};
+        atom::meta::DemangleHelper::demangleType<std::string>()};
 
     // Perform conversion
     std::vector<std::any> output = caster.convert(input, targetTypeNames);
@@ -61,7 +61,7 @@ TEST(TypeCasterTest, InvalidArgument) {
     std::vector<std::any> input = {1, 2.0};
     std::vector<std::string> targetTypeNames = {
         "int", "double",
-        atom::meta::DemangleHelper::DemangleType<std::string>()};
+        atom::meta::DemangleHelper::demangleType<std::string>()};
 
     // Verify that an exception is thrown for mismatched sizes
     ASSERT_THROW(caster.convert(input, targetTypeNames),

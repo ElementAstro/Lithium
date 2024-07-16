@@ -18,6 +18,7 @@ Description: Process Manager
 #include <condition_variable>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <vector>

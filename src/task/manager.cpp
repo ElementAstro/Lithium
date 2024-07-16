@@ -54,6 +54,10 @@ TaskInterpreter::~TaskInterpreter() {
     }
 }
 
+auto TaskInterpreter::createShared() -> std::shared_ptr<TaskInterpreter> {
+    return std::make_shared<TaskInterpreter>();
+}
+
 void TaskInterpreter::loadScript(const std::string& name, const json& script) {
     impl_->scripts_[name] = script;
     if (prepareScript(impl_->scripts_[name])) {

@@ -9,8 +9,8 @@
 
 class INDIConnector : public Connector {
 public:
-    INDIConnector(const std::string& hst, int prt, const std::string& cfg,
-                  const std::string& dta, const std::string& fif);
+    INDIConnector(const std::string& hst = "localhost", int prt = 7624, const std::string& cfg = "",
+                  const std::string& dta = "/usr/share/indi", const std::string& fif = "/tmp/indi.fifo");
     ~INDIConnector() override = default;
     auto startServer() -> bool override;
     auto stopServer() -> bool override;

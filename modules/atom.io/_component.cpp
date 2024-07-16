@@ -26,21 +26,21 @@ using namespace atom::io;
 IOComponent::IOComponent(const std::string &name) : Component(name) {
     DLOG_F(INFO, "IOComponent::IOComponent");
 
-    def("compress", &compress_file, "Compress a file");
-    def("decompress", &decompress_file, "Decompress a file");
-    def("create_zip", &create_zip, "Create a zip file");
-    def("extract_zip", &extract_zip, "Extract a zip file");
-    def("compress_folder", &compress_folder, "Compress a folder");
+    def("compress", &compressFile, "Compress a file");
+    def("decompress", &decompressFile, "Decompress a file");
+    def("create_zip", &createZip, "Create a zip file");
+    def("extract_zip", &extractZip, "Extract a zip file");
+    def("compress_folder", &compressFolder, "Compress a folder");
 
     def("translate", &glob::translate, "Translate a pattern");
-    def("compile_pattern", &glob::compile_pattern, "Compile a pattern");
+    def("compile_pattern", &glob::compilePattern, "Compile a pattern");
     def("fnmatch", &glob::fnmatch, "Check if a name matches a pattern");
     def("filter", &glob::filter, "Filter a list of names");
-    def("expand_tilde", &glob::expand_tilde, "Expand a tilde");
-    def("has_magic", &glob::has_magic, "Check if a pattern has magic");
-    def("is_hidden", &glob::is_hidden, "Check if a path is hidden");
-    def("is_recursive", &glob::is_recursive, "Check if a pattern is recursive");
-    def("iter_dir", &glob::iter_directory, "Iterate a directory");
+    def("expand_tilde", &glob::expandTilde, "Expand a tilde");
+    def("has_magic", &glob::hasMagic, "Check if a pattern has magic");
+    def("is_hidden", &glob::isHidden, "Check if a path is hidden");
+    def("is_recursive", &glob::isRecursive, "Check if a pattern is recursive");
+    def("iter_dir", &glob::iterDirectory, "Iterate a directory");
     def("rlistdir", &glob::rlistdir, "Recursively list a directory");
     def<const std::string &>("glob", &glob::glob, "Glob a list of files");
     def<const std::string &>("rglob", &glob::rglob,
@@ -70,6 +70,6 @@ IOComponent::IOComponent(const std::string &name) : Component(name) {
 
 IOComponent::~IOComponent() { DLOG_F(INFO, "IOComponent::~IOComponent"); }
 
-bool IOComponent::initialize() { return true; }
+auto IOComponent::initialize() -> bool { return true; }
 
-bool IOComponent::destroy() { return true; }
+auto IOComponent::destroy() -> bool { return true; }

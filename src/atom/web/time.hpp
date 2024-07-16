@@ -29,7 +29,7 @@ namespace atom::web {
  * epoch.
  * @note 该函数获取当前时间距Unix纪元以秒的形式表示的系统时间。
  */
-std::time_t getSystemTime();
+auto getSystemTime() -> std::time_t;
 
 /**
  * @brief Sets the system time to a specified date and time.
@@ -54,7 +54,7 @@ void setSystemTime(int year, int month, int day, int hour, int minute,
  * @note This function sets the system timezone to the specified timezone.
  * @note 该函数将系统时区设置为指定的时区。
  */
-bool setSystemTimezone(const std::string &timezone);
+auto setSystemTimezone(const std::string &timezone) -> bool;
 
 /**
  * @brief Synchronizes the system time with an RTC (real-time clock) device.
@@ -63,7 +63,7 @@ bool setSystemTimezone(const std::string &timezone);
  * @note This function synchronizes the system time with an RTC device.
  * @note 该函数将系统时间与RTC设备同步。
  */
-bool syncTimeFromRTC();
+auto syncTimeFromRTC() -> bool;
 
 }  // namespace atom::web
 

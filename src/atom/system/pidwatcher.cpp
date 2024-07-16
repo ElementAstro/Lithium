@@ -241,7 +241,7 @@ void PidWatcher::exitThread() {
         CloseHandle(processHandle);
 #else
         int status;
-        pid_t wait_result = waitpid(pid_, &status, WNOHANG);
+        pid_t waitResult = waitpid(pid_, &status, WNOHANG);
 #endif
 
         if (waitResult != 0) {

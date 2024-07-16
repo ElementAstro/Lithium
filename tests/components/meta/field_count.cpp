@@ -27,30 +27,30 @@ struct ComplexStruct {
 };
 
 TEST(FieldCountTest, SimpleStructTest) {
-    constexpr auto count = field_count_of<SimpleStruct>();
-    EXPECT_EQ(count, 2);
+    constexpr auto COUNT = fieldCountOf<SimpleStruct>();
+    EXPECT_EQ(COUNT, 2);
 }
 
 TEST(FieldCountTest, NestedStructTest) {
-    constexpr auto count = field_count_of<NestedStruct>();
-    EXPECT_EQ(count, 3);
+    constexpr auto COUNT = fieldCountOf<NestedStruct>();
+    EXPECT_EQ(COUNT, 3);
 }
 
 TEST(FieldCountTest, ArrayStructTest) {
-    constexpr auto count = field_count_of<ArrayStruct>();
-    EXPECT_EQ(count, 2);
+    constexpr auto COUNT = fieldCountOf<ArrayStruct>();
+    EXPECT_EQ(COUNT, 2);
 }
 
 TEST(FieldCountTest, ComplexStructTest) {
-    constexpr auto count = field_count_of<ComplexStruct>();
-    EXPECT_EQ(count, 3);
+    constexpr auto COUNT = fieldCountOf<ComplexStruct>();
+    EXPECT_EQ(COUNT, 3);
 }
 
 TEST(FieldCountTest, EmptyStructTest) {
     struct EmptyStruct {};
 
-    constexpr auto count = field_count_of<EmptyStruct>();
-    EXPECT_EQ(count, 0);
+    constexpr auto COUNT = fieldCountOf<EmptyStruct>();
+    EXPECT_EQ(COUNT, 0);
 }
 
 TEST(FieldCountTest, SingleFieldStructTest) {
@@ -58,8 +58,8 @@ TEST(FieldCountTest, SingleFieldStructTest) {
         int a;
     };
 
-    constexpr auto count = field_count_of<SingleFieldStruct>();
-    EXPECT_EQ(count, 1);
+    constexpr auto COUNT = fieldCountOf<SingleFieldStruct>();
+    EXPECT_EQ(COUNT, 1);
 }
 
 /*

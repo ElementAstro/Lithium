@@ -15,6 +15,7 @@ Description: Environment variable management
 #include "env.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 
 #ifdef _WIN32
@@ -208,41 +209,41 @@ auto Env::getConfigPath() -> std::string {
 }
 
 auto Env::Environ() -> std::unordered_map<std::string, std::string> {
-    std::unordered_map<std::string, std::string> env;
+    std::unordered_map<std::string, std::string> envMap;
 
 #ifdef _WIN32
-    LPWCH variables = GetEnvironmentStringsW();
-    if (variables != nullptr) {
-        LPWSTR currentVariable = variables;
-        while (*currentVariable != L'\0') {
-            std::wstring wideString(currentVariable);
-            std::string variable(wideString.begin(), wideString.end());
-            size_t delimiterPos = variable.find('=');
-            if (delimiterPos != std::string::npos) {
-                std::string key = variable.substr(0, delimiterPos);
-                std::string value = variable.substr(delimiterPos + 1);
-                env[key] = value;
-            }
-            currentVariable += wideString.size() + 1;
-        }
-
-        FreeEnvironmentStringsW(variables);
+    LPCH envStrings = GetEnvironmentStrings();
+    if (envStrings == nullptr) {
+        return envMap;
     }
-#else
-    extern char **environ;
-    char **currentVariable = environ;
-    while (*currentVariable != nullptr) {
-        std::string variable(*currentVariable);
-        size_t delimiterPos = variable.find('=');
-        if (delimiterPos != std::string::npos) {
-            std::string key = variable.substr(0, delimiterPos);
-            std::string value = variable.substr(delimiterPos + 1);
-            env[key] = value;
+
+    LPCH var = envStrings;
+    while (*var != '\0') {
+        std::string_view envVar(var);
+        auto pos = envVar.find('=');
+        if (pos != std::string_view::npos) {
+            std::string key = std::string(envVar.substr(0, pos));
+            std::string value = std::string(envVar.substr(pos + 1));
+            envMap.emplace(key, value);
         }
-        ++currentVariable;
+        var += envVar.length() + 1;
+    }
+
+    FreeEnvironmentStrings(envStrings);
+
+#elif __APPLE__ || __linux__ || __ANDROID__
+    // Use POSIX API to get environment variables
+    for (char **current = environ; *current; ++current) {
+        std::string_view envVar(*current);
+        auto pos = envVar.find('=');
+        if (pos != std::string_view::npos) {
+            std::string key = std::string(envVar.substr(0, pos));
+            std::string value = std::string(envVar.substr(pos + 1));
+            envMap.emplace(key, value);
+        }
     }
 #endif
 
-    return env;
+    return envMap;
 }
 }  // namespace atom::utils

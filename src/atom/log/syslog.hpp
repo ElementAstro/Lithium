@@ -140,12 +140,6 @@ private:
     bool m_exitThread;                   // 退出线程标志
 
     /**
-     * 将当前时间格式化为字符串
-     * @return 格式化后的时间字符串
-     */
-    std::string formatTime() const;
-
-    /**
      * 异步日志处理函数
      */
     void processLogQueue();

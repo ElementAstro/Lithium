@@ -21,6 +21,7 @@ Description: Process Manager
 // clang-format on
 #elif defined(__linux__) || defined(__ANDROID__)
 #include <dirent.h>
+#include <pwd.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -139,7 +140,7 @@ auto ProcessManager::runScript(const std::string &script,
 
         if (pid == 0) {
             // Child process code
-            DLOG_F(INFO, _("Running script: {}"), script);
+            DLOG_F(INFO, "Running script: {}", script);
 
 #ifdef __APPLE__
             execl("/bin/sh", "sh", "-c", script.c_str(), nullptr);
@@ -244,7 +245,7 @@ void ProcessManager::waitForCompletion() {
         int status;
         waitpid(process.pid, &status, 0);
 
-        DLOG_F(INFO, _("Process completed: %s (PID: %d)"), process.name.c_str(),
+        DLOG_F(INFO, "Process completed: {} (PID: {})", process.name.c_str(),
                process.pid);
 #endif
     }
@@ -279,7 +280,7 @@ auto getAllProcesses() -> std::vector<std::pair<int, std::string>> {
 }
 
 #elif defined(__linux__)
-std::optional<std::string> GetProcessName(int pid) {
+auto GetProcessName(int pid) -> std::optional<std::string> {
     std::string path = "/proc/" + std::to_string(pid) + "/comm";
     std::ifstream commFile(path);
     if (commFile) {
@@ -290,11 +291,11 @@ std::optional<std::string> GetProcessName(int pid) {
     return std::nullopt;
 }
 
-std::vector<std::pair<int, std::string>> getAllProcesses() {
+auto getAllProcesses() -> std::vector<std::pair<int, std::string>> {
     std::vector<std::pair<int, std::string>> processes;
 
     DIR *procDir = opendir("/proc");
-    if (!procDir) {
+    if (procDir == nullptr) {
         LOG_F(ERROR, "Failed to open /proc directory");
         return processes;
     }
@@ -723,7 +724,6 @@ Cleanup:
             LOG_F(ERROR, "Failed to set user ID");
             exit(EXIT_FAILURE);
         }
-
         execl("/bin/sh", "sh", "-c", command.c_str(), (char *)0);
         LOG_F(ERROR, "Failed to execute command");
         exit(EXIT_FAILURE);
@@ -731,13 +731,12 @@ Cleanup:
         int status;
         waitpid(pid, &status, 0);
         if (WIFEXITED(status)) {
-            LOG_F("INFO", "Process exited with status {}",
+            LOG_F(INFO, "Process exited with status {}",
                   std::to_string(WEXITSTATUS(status)));
             return WEXITSTATUS(status) == 0;
-        } else {
-            LOG_F(ERROR, "Process did not exit normally");
-            return false;
         }
+        LOG_F(ERROR, "Process did not exit normally");
+        return false;
     }
 #endif
 }

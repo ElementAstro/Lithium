@@ -18,6 +18,7 @@ Description: Component of Atom-System
 
 #include "command.hpp"
 #include "crash.hpp"
+#include "macro.hpp"
 #include "pidwatcher.hpp"
 #include "platform.hpp"
 #include "user.hpp"
@@ -100,13 +101,13 @@ void SystemComponent::makePidWatcher(const std::string &name) {
     m_pidWatchers[name] = std::make_shared<PidWatcher>();
 }
 
-bool SystemComponent::startPidWatcher(const std::string &name,
-                                      const std::string &pid) {
-    return m_pidWatchers[name]->Start(pid);
+auto SystemComponent::startPidWatcher(const std::string &name,
+                                      const std::string &pid) -> bool {
+    return m_pidWatchers[name]->start(pid);
 }
 
 void SystemComponent::stopPidWatcher(const std::string &name) {
-    m_pidWatchers[name]->Stop();
+    m_pidWatchers[name]->stop();
 }
 
 bool SystemComponent::switchPidWatcher(const std::string &name,
@@ -115,16 +116,16 @@ bool SystemComponent::switchPidWatcher(const std::string &name,
 }
 void SystemComponent::setPidWatcherExitCallback(
     const std::string &name, const std::function<void()> &callback) {
-    m_pidWatchers[name]->SetExitCallback(callback);
+    m_pidWatchers[name]->setExitCallback(callback);
 }
 
 void SystemComponent::setPidWatcherMonitorFunction(
     const std::string &name, const std::function<void()> &callback,
     std::chrono::milliseconds interval) {
-    m_pidWatchers[name]->SetMonitorFunction(callback, interval);
+    m_pidWatchers[name]->setMonitorFunction(callback, interval);
 }
 
 void SystemComponent::getPidByName(const std::string &name,
                                    const std::string &pid) {
-    m_pidWatchers[name]->GetPidByName(pid);
+    ATOM_UNUSED_RESULT(m_pidWatchers[name]->getPidByName(pid));
 }

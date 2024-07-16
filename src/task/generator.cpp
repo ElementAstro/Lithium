@@ -75,6 +75,10 @@ TaskGenerator::TaskGenerator() {
     });
 }
 
+auto TaskGenerator::createShared() -> std::shared_ptr<TaskGenerator> {
+    return std::make_shared<TaskGenerator>();
+}
+
 void TaskGenerator::addMacro(const std::string& name, MacroValue value) {
     macros_[name] = std::move(value);
 }

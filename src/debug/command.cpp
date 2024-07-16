@@ -1,7 +1,7 @@
 #include "addon/manager.hpp"
 
 #include "atom/function/global_ptr.hpp"
-
+#include "atom/type/json.hpp"
 #include "utils/constant.hpp"
 
 #include <iostream>

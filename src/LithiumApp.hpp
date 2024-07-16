@@ -57,7 +57,7 @@ class ConfigManager;
 
 class TaskPool;
 
-class TaskManager;
+class TaskInterpreter;
 
 class LithiumApp {
 public:
@@ -75,7 +75,7 @@ private:
     std::weak_ptr<atom::async::MessageBus> m_MessageBus;
     std::weak_ptr<atom::error::ErrorStack> m_ErrorStack;
     std::weak_ptr<ComponentManager> m_ComponentManager;
-    std::weak_ptr<TaskManager> m_TaskManager;
+    std::weak_ptr<TaskInterpreter> m_TaskInterpreter;
 
     std::weak_ptr<PyScriptManager> m_PyScriptManager;
     std::weak_ptr<CarbonScript> m_CarbonScript;

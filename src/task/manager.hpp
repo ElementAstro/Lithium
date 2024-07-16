@@ -21,6 +21,8 @@ public:
     TaskInterpreter();
     ~TaskInterpreter();
 
+    static auto createShared() -> std::shared_ptr<TaskInterpreter>;
+
     void loadScript(const std::string& name, const json& script);
     void unloadScript(const std::string& name);
 

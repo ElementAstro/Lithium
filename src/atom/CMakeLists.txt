@@ -39,6 +39,7 @@ add_subdirectory(async)
 add_subdirectory(components)
 add_subdirectory(connection)
 add_subdirectory(error)
+add_subdirectory(function)
 add_subdirectory(io)
 add_subdirectory(log)
 add_subdirectory(search)
@@ -52,13 +53,11 @@ add_subdirectory(web)
 set(ATOM_SOURCES
     log/logger.cpp
     log/syslog.cpp
-    function/global_ptr.cpp
 )
 
 set(ATOM_HEADERS
     log/logger.hpp
     log/syslog.hpp
-    function/global_ptr.hpp
 )
 
 # Libraries
@@ -66,6 +65,7 @@ set(ATOM_LIBS
     loguru
     cpp_httplib
     libzippp
+    atom-function
     atom-algorithm
     atom-async
     atom-task

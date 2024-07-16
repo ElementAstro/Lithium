@@ -15,6 +15,7 @@ Description: Task Generator
 #ifndef LITHIUM_TASK_GENERATOR_HPP
 #define LITHIUM_TASK_GENERATOR_HPP
 
+#include <memory>
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -35,6 +36,8 @@ using MacroValue = std::variant<
 class TaskGenerator {
 public:
     TaskGenerator();
+
+    static auto createShared() -> std::shared_ptr<TaskGenerator>;
 
     void addMacro(const std::string& name, MacroValue value);
     void processJson(nlohmann::json& j) const;

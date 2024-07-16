@@ -2,8 +2,8 @@
 #include <gtest/gtest.h>
 
 TEST(ConversionTest, StaticConversion) {
-    atom::meta::Type_Conversion_Base* conversion =
-        new atom::meta::Static_Conversion<int, float>();
+    atom::meta::TypeConversionBase* conversion =
+        new atom::meta::StaticConversion<int, float>();
     std::any from = 10;
     std::any to = conversion->convert(from);
     EXPECT_EQ(std::any_cast<float>(to), 10);
@@ -23,9 +23,9 @@ public:
 
 TEST(ConversionTest, BaseClassConversion) {
     atom::meta::TypeConversions conversions;
-    conversions.add_base_class<Base, Derived>();
-    conversions.add_conversion(
-        std::make_shared<atom::meta::Dynamic_Conversion<
+    conversions.addBaseClass<Base, Derived>();
+    conversions.addConversion(
+        std::make_shared<atom::meta::DynamicConversion<
             std::shared_ptr<Derived>, std::shared_ptr<Base>>>());
     std::any from = std::make_shared<Derived>();
     std::any to =
@@ -36,7 +36,7 @@ TEST(ConversionTest, BaseClassConversion) {
 
 TEST(ConversionTest, VectorConversion) {
     atom::meta::TypeConversions conversions;
-    conversions.add_vector_conversion<Derived, Base>();
+    conversions.addVectorConversion<Derived, Base>();
     std::vector<std::shared_ptr<Derived>> from;
     from.push_back(std::make_shared<Derived>());
     std::any to =

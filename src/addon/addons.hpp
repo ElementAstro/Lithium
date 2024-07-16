@@ -47,20 +47,21 @@ public:
     // -------------------------------------------------------------------
     // Common methods
     // -------------------------------------------------------------------
-    static std::shared_ptr<AddonManager> createShared() {
+    static auto createShared() -> std::shared_ptr<AddonManager> {
         return std::make_shared<AddonManager>();
     }
 
     // -------------------------------------------------------------------
     // Module methods
     // -------------------------------------------------------------------
-    bool addModule(const std::filesystem::path &path, const std::string &name);
-    bool removeModule(const std::string &name);
-    json getModule(const std::string &name) const;
+    auto addModule(const std::filesystem::path &path,
+                   const std::string &name) -> bool;
+    auto removeModule(const std::string &name) -> bool;
+    auto getModule(const std::string &name) const -> json;
 
-    bool resolveDependencies(const std::string &modName,
+    auto resolveDependencies(const std::string &modName,
                              std::vector<std::string> &resolvedDeps,
-                             std::vector<std::string> &missingDeps);
+                             std::vector<std::string> &missingDeps) -> bool;
 
 private:
 #if ENABLE_FASTHASH
@@ -69,13 +70,14 @@ private:
     std::unordered_map<std::string, json> modules_;
 #endif
 
-    bool checkCircularDependencies(
+    auto checkCircularDependencies(
         const std::string &modName,
         std::unordered_map<std::string, bool> &visited,
-        std::unordered_map<std::string, bool> &recursionStack) const;
+        std::unordered_map<std::string, bool> &recursionStack) const -> bool;
 
-    bool checkMissingDependencies(const std::string &modName,
-                                  std::vector<std::string> &missingDeps) const;
+    auto checkMissingDependencies(const std::string &modName,
+                                  std::vector<std::string> &missingDeps) const
+        -> bool;
 };
 
 }  // namespace lithium

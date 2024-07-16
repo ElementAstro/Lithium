@@ -37,8 +37,8 @@ namespace atom::io {
  * @note If the file name already contains the .gz suffix, it will not be
  * compressed again.
  */
-auto compressFile(const std::string &file_name,
-                  const std::string &output_folder) -> bool;
+auto compressFile(std::string_view file_name,
+                  std::string_view output_folder) -> bool;
 
 /**
  * @brief 对单个文件进行解压缩
@@ -59,8 +59,8 @@ auto compressFile(const std::string &file_name,
  * @note If the file name does not contain the .gz suffix, it will not be
  * decompressed.
  */
-auto decompressFile(const std::string &file_name,
-                    const std::string &output_folder) -> bool;
+auto decompressFile(std::string_view file_name,
+                    std::string_view output_folder) -> bool;
 
 /**
  * @brief 对指定目录下的文件进行压缩
@@ -93,8 +93,8 @@ auto compressFolder(const char *folder_name) -> bool;
  * @note 如果指定的路径不存在，则函数将尝试创建该路径。
  *
  */
-auto extractZip(const std::string &zip_file,
-                const std::string &destination_folder) -> bool;
+auto extractZip(std::string_view zip_file,
+                std::string_view destination_folder) -> bool;
 
 /**
  * @brief 创建ZIP文件
@@ -107,7 +107,7 @@ auto extractZip(const std::string &zip_file,
  *
  * @note如果指定的路径不存在，则函数将尝试创建该路径。
  */
-auto createZip(const std::string &source_folder, const std::string &zip_file,
+auto createZip(std::string_view source_folder, std::string_view zip_file,
                int compression_level = -1) -> bool;
 /**
  * @brief 列出ZIP文件中的文件列表
@@ -118,7 +118,7 @@ auto createZip(const std::string &source_folder, const std::string &zip_file,
  *
  * @note 如果指定的ZIP文件不存在，则函数将返回空列表。
  */
-auto listFilesInZip(const std::string &zip_file) -> std::vector<std::string>;
+auto listFilesInZip(std::string_view zip_file) -> std::vector<std::string>;
 
 /**
  * @brief 判断ZIP文件中是否存在指定的文件
@@ -130,8 +130,8 @@ auto listFilesInZip(const std::string &zip_file) -> std::vector<std::string>;
  *
  * @note 如果指定的ZIP文件不存在，则函数将返回false。
  */
-auto fileExistsInZip(const std::string &zip_file,
-                     const std::string &file_name) -> bool;
+auto fileExistsInZip(std::string_view zip_file,
+                     std::string_view file_name) -> bool;
 
 /**
  * @brief 从ZIP文件中删除指定的文件
@@ -143,8 +143,8 @@ auto fileExistsInZip(const std::string &zip_file,
  *
  * @note 如果指定的ZIP文件不存在，则函数将返回false。
  */
-auto removeFileFromZip(const std::string &zip_file,
-                       const std::string &file_name) -> bool;
+auto removeFileFromZip(std::string_view zip_file,
+                       std::string_view file_name) -> bool;
 
 /**
  * @brief 获取ZIP文件中的文件大小
@@ -155,7 +155,7 @@ auto removeFileFromZip(const std::string &zip_file,
  *
  * @note 如果指定的ZIP文件不存在，则函数将返回0。
  */
-auto getZipFileSize(const std::string &zip_file) -> size_t;
+auto getZipFileSize(std::string_view zip_file) -> size_t;
 }  // namespace atom::io
 
 #endif

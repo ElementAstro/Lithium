@@ -89,6 +89,8 @@ add_subdirectory(${lithium_module_dir})
 add_subdirectory(${lithium_src_dir}/config)
 add_subdirectory(${lithium_src_dir}/task)
 add_subdirectory(${lithium_src_dir}/server)
+add_subdirectory(${lithium_src_dir}/utils)
+add_subdirectory(${lithium_src_dir}/addon)
 add_subdirectory(tests)
 
 # Set source files
@@ -114,8 +116,6 @@ set(debug_module
 
 set(script_module
     ${lithium_src_dir}/script/manager.cpp
-    ${lithium_src_dir}/script/custom/sys.cpp
-    ${lithium_src_dir}/script/custom/config.cpp
     ${lithium_src_dir}/script/sheller.cpp
 )
 
@@ -145,7 +145,6 @@ add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_libraries(lithium_server
     PRIVATE
         lithium_server-library
-        lithium_webserver
         lithium-config
         lithium-task
         oatpp-websocket
@@ -154,16 +153,13 @@ target_link_libraries(lithium_server
         oatpp-zlib
         oatpp
         loguru
-        libzippp
-        atomstatic
-        carbon
+        atom
         fmt::fmt
         OpenSSL::SSL
         OpenSSL::Crypto
         ${ZLIB_LIBRARIES}
         sqlite3
         cpp_httplib
-        backward
         tinyxml2
         pocketpy
 )

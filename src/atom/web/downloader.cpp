@@ -32,7 +32,8 @@ DownloadManager::DownloadManager(const std::string &task_file)
             THROW_EXCEPTION("Failed to open task file.");
         }
         while (infile >> std::ws && !infile.eof()) {
-            std::string url, filepath;
+            std::string url;
+            std::string filepath;
             infile >> url >> filepath;
             if (!url.empty() && !filepath.empty()) {
                 tasks_.push_back({url, filepath});
@@ -41,7 +42,7 @@ DownloadManager::DownloadManager(const std::string &task_file)
         infile.close();
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Error: {}", e.what());
-        THROW_EXCEPTION(fmt::format("Error: {}", e.what()).c_str());
+        THROW_EXCEPTION("Error: ", e.what());
     }
 }
 
@@ -59,7 +60,7 @@ void DownloadManager::add_task(const std::string &url,
         outfile.close();
     } catch (const std::exception &e) {
         LOG_F(ERROR, "Error: {}", e.what());
-        THROW_EXCEPTION(fmt::format("Error: {}", e.what()).c_str());
+        THROW_EXCEPTION("Error: ", e.what());
     }
     tasks_.push_back({url, filepath, false, false, 0, priority});
 }

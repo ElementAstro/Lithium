@@ -17,17 +17,30 @@ project(lithium-addons VERSION 1.0.0 LANGUAGES C CXX)
 set(PROJECT_SOURCES
     addons.cpp
     compiler.cpp
+    dependency.cpp
+    loader.cpp
+    manager.cpp
+    sandbox.cpp
 )
 
 # Project headers
 set(PROJECT_HEADERS
     addons.hpp
     compiler.hpp
+    dependency.hpp
+    loader.hpp
+    manager.hpp
+    sandbox.hpp
 )
 
 # Required libraries for the project
 set(PROJECT_LIBS
+    atom-io
+    atom-error
+    atom-function
+    atom-system
     loguru
+    lithium-utils
     ${CMAKE_THREAD_LIBS_INIT} 
 )
 

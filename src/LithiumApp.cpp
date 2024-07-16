@@ -12,7 +12,7 @@ Description: Lithium App Enter
 
 **************************************************/
 
-#include "lithiumapp.hpp"
+#include "LithiumApp.hpp"
 
 #include "config.h"
 
@@ -22,7 +22,12 @@ Description: Lithium App Enter
 
 #include "config/configor.hpp"
 
+#include "task/container.hpp"
+#include "task/generator.hpp"
+#include "task/loader.hpp"
 #include "task/manager.hpp"
+#include "task/pool.hpp"
+#include "task/tick.hpp"
 
 #include "script/manager.hpp"
 
@@ -34,8 +39,6 @@ Description: Lithium App Enter
 #include "atom/system/process.hpp"
 #include "atom/utils/time.hpp"
 #include "utils/marco.hpp"
-
-#include "magic_enum/magic_enum.hpp"
 
 using json = nlohmann::json;
 
@@ -89,9 +92,9 @@ LithiumApp::LithiumApp() {
         CHECK_WEAK_PTR_EXPIRED(m_MessageBus,
                                "load message bus from gpm: lithium.bus");
 
-        m_TaskManager = GetWeakPtr<TaskManager>("lithium.task.manager");
+        m_TaskInterpreter = GetWeakPtr<TaskInterpreter>("lithium.task.manager");
         CHECK_WEAK_PTR_EXPIRED(
-            m_TaskManager, "load task manager from gpm: lithium.task.manager");
+            m_TaskInterpreter, "load task manager from gpm: lithium.task.manager");
 
         // Common Message Processing Threads
         // Max : Maybe we only need one thread for Message, and dynamically cast
@@ -110,8 +113,8 @@ LithiumApp::LithiumApp() {
 }
 
 LithiumApp::~LithiumApp() {
-    m_MessageBus.lock()->UnsubscribeAll();
-    m_MessageBus.lock()->StopAllProcessingThreads();
+    m_MessageBus.lock()->unsubscribeAll();
+    m_MessageBus.lock()->stopAllProcessingThreads();
 }
 
 std::shared_ptr<LithiumApp> LithiumApp::createShared() {
@@ -127,7 +130,7 @@ void InitLithiumApp(int argc, char **argv) {
     // Atom::Async::ThreadManager::createShared(GetIntConfig("config/server/maxthread")));
     // AddPtr("PluginManager",
     // PluginManager::createShared(GetPtr<Process::ProcessManager>("ProcessManager")));
-    // AddPtr("TaskManager", std::make_shared<Task::TaskManager>("tasks.json"));
+    // AddPtr("TaskInterpreter", std::make_shared<Task::TaskInterpreter>("tasks.json"));
     // AddPtr("TaskGenerator",
     // std::make_shared<Task::TaskGenerator>(GetPtr<DeviceManager>("DeviceManager")));
     // AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
@@ -142,8 +145,8 @@ void InitLithiumApp(int argc, char **argv) {
     AddPtr("lithium.task.pool",
            TaskPool::createShared(std::thread::hardware_concurrency()));
     AddPtr("lithium.task.tick",
-           TickScheduler::createShared(std::thread::hardware_concurrency()));
-    AddPtr("lithium.task.manager", TaskManager::createShared());
+           TickScheduler::createShared());
+    AddPtr("lithium.task.manager", TaskInterpreter::createShared());
 
     AddPtr("lithium.utils.env", atom::utils::Env::createShared(argc, argv));
 

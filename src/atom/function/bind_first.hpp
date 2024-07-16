@@ -60,7 +60,7 @@ constexpr auto bindFirst(Ret (Class::*func)(Param...), O &&object)
     requires invocable<Ret (Class::*)(Param...), O, Param...>
 {
     return [func, object = std::forward<O>(object)](Param... param) -> Ret {
-        return (remove_const_pointer(get_pointer(object))->*func)(
+        return (removeConstPointer(getPointer(object))->*func)(
             std::forward<Param>(param)...);
     };
 }
@@ -70,7 +70,7 @@ constexpr auto bindFirst(Ret (Class::*func)(Param...) const, O &&object)
     requires invocable<Ret (Class::*)(Param...) const, O, Param...>
 {
     return [func, object = std::forward<O>(object)](Param... param) -> Ret {
-        return (get_pointer(object)->*func)(std::forward<Param>(param)...);
+        return (getPointer(object)->*func)(std::forward<Param>(param)...);
     };
 }
 
@@ -98,7 +98,7 @@ template <typename F, typename O>
 constexpr auto bindFirst(const F &func, O &&object)
     requires invocable<F, O>
 {
-    return bind_first(func, std::forward<O>(object), &F::operator());
+    return bindFirst(func, std::forward<O>(object), &F::operator());
 }
 
 template <typename F, typename O>

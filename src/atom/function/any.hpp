@@ -44,7 +44,7 @@ private:
         template <typename T>
         Data(T&& obj, bool is_ref, bool return_value, bool readonly)
             : mObj(std::forward<T>(obj)),
-              mTypeInfo(user_type<std::decay_t<T>>()),
+              mTypeInfo(userType<std::decay_t<T>>()),
               mAttrs(nullptr),
               mIsRef(is_ref),
               mReturnValue(return_value),

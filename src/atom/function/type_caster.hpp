@@ -42,8 +42,8 @@ public:
     void registerConversion(ConvertFunc func) {
         auto srcInfo = userType<SourceType>();
         auto destInfo = userType<DestinationType>();
-        register_type<SourceType>(srcInfo.bare_name());
-        register_type<DestinationType>(destInfo.bare_name());
+        registerType<SourceType>(srcInfo.bareName());
+        registerType<DestinationType>(destInfo.bareName());
         if (srcInfo == destInfo) {
             THROW_INVALID_ARGUMENT(
                 "Source and destination types must be different.");

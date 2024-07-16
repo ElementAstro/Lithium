@@ -21,12 +21,11 @@ Description: Compressor using ZLib
 #include <minizip-ng/mz_strm_split.h>
 #include <minizip-ng/mz_strm_zlib.h>
 #include <minizip-ng/mz_zip.h>
-#include <minizip-ng/unzip.h>
-#include <minizip-ng/zip.h>
 #include <zlib.h>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <string>
 #ifdef __cpp_lib_format
 #include <format>
 #else
@@ -51,8 +50,8 @@ namespace fs = std::filesystem;
 constexpr int CHUNK = 16384;
 
 namespace atom::io {
-auto compressFile(const std::string &file_name,
-                  const std::string &output_folder) -> bool {
+auto compressFile(std::string_view file_name,
+                  std::string_view output_folder) -> bool {
     fs::path input_path(file_name);
     if (!fs::exists(input_path)) {
         LOG_F(ERROR, "Input file {} does not exist.", file_name);
@@ -61,14 +60,14 @@ auto compressFile(const std::string &file_name,
 
     fs::path outputPath =
         fs::path(output_folder) / input_path.filename().concat(".gz");
-    gzFile out = gzopen(outputPath.string().c_str(), "wb");
+    gzFile out = gzopen(outputPath.string().data(), "wb");
     if (out == nullptr) {
         LOG_F(ERROR, "Failed to create compressed file {}",
               outputPath.string());
         return false;
     }
 
-    std::ifstream input(file_name, std::ios::binary);
+    std::ifstream input(file_name.data(), std::ios::binary);
     if (!input) {
         LOG_F(ERROR, "Failed to open input file {}", file_name);
         gzclose(out);
@@ -131,25 +130,25 @@ auto compressFile(const fs::path &file, gzFile out) -> bool {
     return true;
 }
 
-auto decompressFile(const std::string &file_name,
-                    const std::string &output_folder) -> bool {
-    fs::path input_path(file_name);
-    if (!fs::exists(input_path)) {
+auto decompressFile(std::string_view file_name,
+                    std::string_view output_folder) -> bool {
+    fs::path inputPath(file_name);
+    if (!fs::exists(inputPath)) {
         LOG_F(ERROR, "Input file {} does not exist.", file_name);
         return false;
     }
 
-    fs::path output_path =
-        fs::path(output_folder) / input_path.filename().stem().concat(".out");
-    FILE *out = fopen(output_path.string().c_str(), "wb");
+    fs::path outputPath =
+        fs::path(output_folder) / inputPath.filename().stem().concat(".out");
+    FILE *out = fopen(outputPath.string().data(), "wb");
     if (!out) {
         LOG_F(ERROR, "Failed to create decompressed file {}",
-              output_path.string());
+              outputPath.string());
         return false;
     }
 
-    gzFile in = gzopen(file_name.c_str(), "rb");
-    if (!in) {
+    gzFile in = gzopen(file_name.data(), "rb");
+    if (in == nullptr) {
         LOG_F(ERROR, "Failed to open compressed file {}", file_name);
         fclose(out);
         return false;
@@ -175,13 +174,13 @@ auto decompressFile(const std::string &file_name,
 
     fclose(out);
     gzclose(in);
-    DLOG_F(INFO, "Decompressed file {} -> {}", file_name, output_path.string());
+    DLOG_F(INFO, "Decompressed file {} -> {}", file_name, outputPath.string());
     return true;
 }
 
 auto compressFolder(const fs::path &folder_name) -> bool {
     auto outfileName = folder_name.string() + ".gz";
-    gzFile out = gzopen(outfileName.c_str(), "wb");
+    gzFile out = gzopen(outfileName.data(), "wb");
     if (out == nullptr) {
         LOG_F(ERROR, "Failed to create compressed file {}", outfileName);
         return false;
@@ -216,9 +215,9 @@ auto compressFolder(const char *folder_name) -> bool {
     return compressFolder(fs::path(folder_name));
 }
 
-auto extractZip(const std::string &zip_file,
-                const std::string &destination_folder) -> bool {
-    void *zipReader = unzOpen(zip_file.c_str());
+auto extractZip(std::string_view zip_file,
+                std::string_view destination_folder) -> bool {
+    void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
         return false;
@@ -279,9 +278,9 @@ auto extractZip(const std::string &zip_file,
     return true;
 }
 
-auto createZip(const std::string &source_folder, const std::string &zip_file,
+auto createZip(std::string_view source_folder, std::string_view zip_file,
                int compression_level) -> bool {
-    void *zipWriter = zipOpen(zip_file.c_str(), APPEND_STATUS_CREATE);
+    void *zipWriter = zipOpen(zip_file.data(), APPEND_STATUS_CREATE);
     if (zipWriter == nullptr) {
         LOG_F(ERROR, "Failed to create ZIP file: {}", zip_file);
         return false;
@@ -296,7 +295,7 @@ auto createZip(const std::string &source_folder, const std::string &zip_file,
                     fs::relative(filePath, source_folder).string();
 
                 zip_fileinfo file_info = {};
-                if (zipOpenNewFileInZip(zipWriter, relativePath.c_str(),
+                if (zipOpenNewFileInZip(zipWriter, relativePath.data(),
                                         &file_info, nullptr, 0, nullptr, 0,
                                         nullptr, Z_DEFLATED,
                                         compression_level) != ZIP_OK) {
@@ -337,9 +336,9 @@ auto createZip(const std::string &source_folder, const std::string &zip_file,
     }
 }
 
-auto listFilesInZip(const std::string &zip_file) -> std::vector<std::string> {
+auto listFilesInZip(std::string_view zip_file) -> std::vector<std::string> {
     std::vector<std::string> fileList;
-    void *zipReader = unzOpen(zip_file.c_str());
+    void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
         return fileList;
@@ -368,15 +367,15 @@ auto listFilesInZip(const std::string &zip_file) -> std::vector<std::string> {
     return fileList;
 }
 
-auto fileExistsInZip(const std::string &zip_file,
-                     const std::string &file_name) -> bool {
-    void *zipReader = unzOpen(zip_file.c_str());
+auto fileExistsInZip(std::string_view zip_file,
+                     std::string_view file_name) -> bool {
+    void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
         return false;
     }
 
-    if (unzLocateFile(zipReader, file_name.c_str(), 0) == UNZ_OK) {
+    if (unzLocateFile(zipReader, file_name.data(), 0) == UNZ_OK) {
         unzClose(zipReader);
         return true;
     }
@@ -385,15 +384,15 @@ auto fileExistsInZip(const std::string &zip_file,
     return false;
 }
 
-auto removeFileFromZip(const std::string &zip_file,
-                       const std::string &file_name) -> bool {
-    void *zipReader = unzOpen(zip_file.c_str());
+auto removeFileFromZip(std::string_view zip_file,
+                       std::string_view file_name) -> bool {
+    void *zipReader = unzOpen(zip_file.data());
     if (zipReader == nullptr) {
         LOG_F(ERROR, "Failed to open ZIP file: {}", zip_file);
         return false;
     }
 
-    if (unzLocateFile(zipReader, file_name.c_str(), 0) != UNZ_OK) {
+    if (unzLocateFile(zipReader, file_name.data(), 0) != UNZ_OK) {
         LOG_F(ERROR, "File not found in ZIP: {}", file_name);
         unzClose(zipReader);
         return false;
@@ -401,7 +400,7 @@ auto removeFileFromZip(const std::string &zip_file,
 
     // This is a simplified method that recreates the ZIP file without the
     // specified file.
-    std::string tempZipFile = zip_file + ".tmp";
+    std::string tempZipFile = std::string(zip_file) + ".tmp";
     void *zipWriter = zipOpen(tempZipFile.c_str(), APPEND_STATUS_CREATE);
 
     if (zipWriter == nullptr) {
@@ -472,8 +471,9 @@ auto removeFileFromZip(const std::string &zip_file,
     return true;
 }
 
-auto getZipFileSize(const std::string &zip_file) -> size_t {
-    std::ifstream in(zip_file, std::ifstream::ate | std::ifstream::binary);
+auto getZipFileSize(std::string_view zip_file) -> size_t {
+    std::ifstream in(zip_file.data(),
+                     std::ifstream::ate | std::ifstream::binary);
     return in.tellg();
 }
 }  // namespace atom::io

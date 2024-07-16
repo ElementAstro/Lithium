@@ -17,14 +17,15 @@ protected:
     )";
 
     fs::path tempDir;
+    std::string path;
 
     void SetUp() override {
         // 创建临时目录
-        tempDir = fs::temp_directory_path() / fs::unique_path();
+        tempDir = fs::temp_directory_path() / fs::path("temp_dir");
         fs::create_directories(tempDir);
-
+        path = tempDir / "compile_options.json";
         // 创建一个 compile_options.json 文件
-        std::ofstream optionsFile(tempDir / "compile_options.json");
+        std::ofstream optionsFile(path);
         optionsFile << R"({
             "optimization_level": "-O2",
             "cplus_version": "-std=c++20",
@@ -48,9 +49,8 @@ TEST_F(CompilerTest, FindAvailableCompilers) {
 }
 
 TEST_F(CompilerTest, CompileToSharedLibrary) {
-    bool result =
-        compiler.compileToSharedLibrary(testCode, "testModule", "testFunction",
-                                        tempDir / "compile_options.json");
+    bool result = compiler.compileToSharedLibrary(testCode, "testModule",
+                                                  "testFunction", path);
     ASSERT_TRUE(result);
 
     // 检查输出文件是否存在
@@ -60,9 +60,8 @@ TEST_F(CompilerTest, CompileToSharedLibrary) {
 
 TEST_F(CompilerTest, CompileWithCustomOptions) {
     compiler.addCompileOptions("-DENABLE_DEBUG -g");
-    bool result = compiler.compileToSharedLibrary(
-        testCode, "testModuleDebug", "testFunction",
-        tempDir / "compile_options.json");
+    bool result = compiler.compileToSharedLibrary(testCode, "testModuleDebug",
+                                                  "testFunction", path);
     ASSERT_TRUE(result);
 
     // 检查输出文件是否存在
@@ -78,14 +77,13 @@ TEST_F(CompilerTest, CompileSyntaxError) {
         }
     )";
 
-    bool result = compiler.compileToSharedLibrary(
-        erroneousCode, "errorModule", "testFunction",
-        tempDir / "compile_options.json");
+    bool result = compiler.compileToSharedLibrary(erroneousCode, "errorModule",
+                                                  "testFunction", path);
     ASSERT_FALSE(result);
 }
 
 TEST_F(CompilerTest, CompileEmptyCode) {
-    bool result = compiler.compileToSharedLibrary(
-        "", "emptyModule", "testFunction", tempDir / "compile_options.json");
+    bool result = compiler.compileToSharedLibrary("", "emptyModule",
+                                                  "testFunction", path);
     ASSERT_FALSE(result);
 }

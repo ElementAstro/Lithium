@@ -535,8 +535,3 @@ TEST_F(DependencyGraphTest, ResolveDependencies) {
         std::find(sortedPackages.begin(), sortedPackages.end(), "package3"),
         sortedPackages.end());
 }
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

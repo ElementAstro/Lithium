@@ -529,7 +529,7 @@ auto Component::hasConversion() const -> bool {
     if constexpr (std::is_same_v<SourceType, DestinationType>) {
         return true;
     }
-    return m_TypeConverter_->can_convert(
+    return m_TypeConverter_->canConvert(
         atom::meta::userType<SourceType>(),
         atom::meta::userType<DestinationType>());
 }
@@ -581,14 +581,14 @@ void Component::defConversion(std::function<std::any(const std::any&)> func) {
 
 ATOM_INLINE void Component::defClassConversion(
     const std::shared_ptr<atom::meta::TypeConversionBase>& conversion) {
-    m_TypeConverter_->add_conversion(conversion);
+    m_TypeConverter_->addConversion(conversion);
 }
 
 template <typename Base, typename Derived>
 void Component::defBaseClass() {
     static_assert(std::is_base_of_v<Base, Derived>,
                   "Derived must be derived from Base");
-    m_TypeConverter_->add_base_class<Base, Derived>();
+    m_TypeConverter_->addBaseClass<Base, Derived>();
 }
 
 ATOM_INLINE auto Component::hasVariable(const std::string& name) const -> bool {

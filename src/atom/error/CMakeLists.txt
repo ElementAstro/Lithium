@@ -24,6 +24,7 @@ list(APPEND ${PROJECT_NAME}_HEADERS
 
 list(APPEND ${PROJECT_NAME}_LIBS
     loguru
+    atom-utils
 )
 
 if (LINUX)

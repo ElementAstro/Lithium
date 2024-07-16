@@ -17,9 +17,10 @@
 
 #include "utils/constant.hpp"
 
+#include <iostream>
 #include <queue>
-
 #include <regex>
+
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"

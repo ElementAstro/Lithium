@@ -12,12 +12,12 @@ Description: Main Entry
 
 **************************************************/
 
-#include "lithiumapp.hpp"
+#include "LithiumApp.hpp"
 
 #include "preload.hpp"
 
-#include "atom/log/loguru.hpp"
 #include "atom/function/global_ptr.hpp"
+#include "atom/log/loguru.hpp"
 #include "atom/system/crash.hpp"
 #include "atom/web/utils.hpp"
 
@@ -51,10 +51,10 @@ void setupLogFile() {
         std::filesystem::create_directory(logsFolder);
     }
     auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    std::tm *local_time = std::localtime(&now_time_t);
+    auto nowTimeT = std::chrono::system_clock::to_time_t(now);
+    std::tm *localTime = std::localtime(&nowTimeT);
     char filename[100];
-    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", local_time);
+    std::strftime(filename, sizeof(filename), "%Y%m%d_%H%M%S.log", localTime);
     std::filesystem::path logFilePath = logsFolder / filename;
     loguru::add_file(logFilePath.string().c_str(), loguru::Append,
                      loguru::Verbosity_MAX);
@@ -71,7 +71,7 @@ void setupLogFile() {
  * @param argv arguments
  * @return 0 on success
  */
-int main(int argc, char *argv[]) {
+auto main(int argc, char *argv[]) -> int {
 #if ENABLE_CPPTRACE
     cpptrace::init();
 #endif
@@ -124,12 +124,12 @@ int main(int argc, char *argv[]) {
     lithium::MyApp = lithium::LithiumApp::createShared();
     // Parse arguments
     try {
-        auto cmd_host = program.get<std::string>("--host");
-        auto cmd_port = program.get<int>("--port");
-        auto cmd_config_path = program.get<std::string>("--config");
-        auto cmd_module_path = program.get<std::string>("--module-path");
-        auto cmd_web_panel = program.get<bool>("--web-panel");
-        auto cmd_debug = program.get<bool>("--debug");
+        auto cmdHost = program.get<std::string>("--host");
+        auto cmdPort = program.get<int>("--port");
+        auto cmdConfigPath = program.get<std::string>("--config");
+        auto cmdModulePath = program.get<std::string>("--module-path");
+        auto cmdWebPanel = program.get<bool>("--web-panel");
+        auto cmdDebug = program.get<bool>("--debug");
 
         // TODO: We need a new way to handle command line arguments.
         // Maybe we will generate a json object or a map and then given to the
@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 
     ConsoleTerminal terminal;
     terminal.run();
-    runServer();
+    lithium::runServer(argc, const_cast<const char **>(argv));
 
     return 0;
 }

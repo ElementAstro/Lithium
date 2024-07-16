@@ -14,12 +14,14 @@ compatibility
 **************************************************/
 
 #include "_component.hpp"
+#include <memory>
+#include "connector.hpp"
 #include "indiserver.hpp"
 
 #include "atom/log/loguru.hpp"
 
 INDIServerComponent::INDIServerComponent(const std::string& name)
-    : Component(name), m_manager(std::make_shared<INDIManager>()) {
+    : Component(name), m_manager(std::make_shared<INDIManager>(std::make_unique<INDIConnector>())) {
     LOG_F(INFO, "INDIServerComponent Constructed");
 
     def("start", &INDIManager::startServer, m_manager, "astro",

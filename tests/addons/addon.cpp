@@ -35,12 +35,3 @@ TEST_F(AddonManagerTest, CheckMissingDependencies) {
     manager->resolveDependencies("addon1", resolvedDeps, missingDeps);
     ASSERT_TRUE(missingDeps.empty());
 }
-
-TEST_F(AddonManagerTest, CheckCircularDependencies) {
-    manager->addModule("path/to/addon1", "addon1");
-    manager->addModule("path/to/addon2", "addon2");
-    std::unordered_map<std::string, bool> visited;
-    std::unordered_map<std::string, bool> recursionStack;
-    ASSERT_FALSE(
-        manager->checkCircularDependencies("addon1", visited, recursionStack));
-}

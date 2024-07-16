@@ -64,4 +64,7 @@ add_executable(${project_name}-exe
 )
 target_link_libraries(${project_name}-exe ${project_name}-lib)
 add_dependencies(${project_name}-exe ${project_name}-lib)
-
+target_compile_definitions(
+        ${project_name}-exe
+        PRIVATE ENABLE_SERVER_STANDALONE
+)

@@ -40,7 +40,7 @@ Description: Time
 #include <cstring>
 #endif
 
-#include "atom/system/system.hpp"
+#include "atom/system/user.hpp"
 
 #include "atom/log/loguru.hpp"
 
@@ -210,23 +210,23 @@ bool syncTimeFromRTC() {
 
 void setSystemTime(int year, int month, int day, int hour, int minute,
                    int second) {
-    if (!System::isRoot()) {
+    if (!system::isRoot()) {
         LOG_F(ERROR,
               "Permission denied. Need root privilege to set system time.");
         return;
     }
 
-    struct tm new_time;
+    struct tm newTime;
     std::time_t now = std::time(nullptr);
-    new_time.tm_sec = second;
-    new_time.tm_min = minute;
-    new_time.tm_hour = hour;
-    new_time.tm_mday = day;
-    new_time.tm_mon = month - 1;
-    new_time.tm_year = year - 1900;
-    new_time.tm_isdst = -1;
+    newTime.tm_sec = second;
+    newTime.tm_min = minute;
+    newTime.tm_hour = hour;
+    newTime.tm_mday = day;
+    newTime.tm_mon = month - 1;
+    newTime.tm_year = year - 1900;
+    newTime.tm_isdst = -1;
 
-    if (std::mktime(&new_time) == -1) {
+    if (std::mktime(&newTime) == -1) {
         LOG_F(
             ERROR,
             "Failed to set new time to {}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.",
@@ -234,7 +234,7 @@ void setSystemTime(int year, int month, int day, int hour, int minute,
         return;
     }
 
-    if (std::abs(std::difftime(now, std::mktime(&new_time))) < 2) {
+    if (std::abs(std::difftime(now, std::mktime(&newTime))) < 2) {
         DLOG_F(INFO,
                "System time has been set to {}-{:02d}-{:02d} "
                "{:02d}:{:02d}:{:02d}.",
@@ -275,44 +275,49 @@ bool syncTimeFromRTC() {
     // 获取当前时间戳（单位：秒）
     time_t now = time(nullptr);
     // Linux平台使用sysfs接口读取RTC时间
-    const char *rtc_path = "/sys/class/rtc/rtc0/time";
-    struct stat rtc_stat;
-    if (stat(rtc_path, &rtc_stat) != 0) {
+    const char *rtcPath = "/sys/class/rtc/rtc0/time";
+    struct stat rtcStat;
+    if (stat(rtcPath, &rtcStat) != 0) {
         LOG_F(ERROR, "Failed to stat RTC file: {}", strerror(errno));
         return false;
     }
-    if (!S_ISREG(rtc_stat.st_mode)) {
+    if (!S_ISREG(rtcStat.st_mode)) {
         LOG_F(ERROR, "RTC path is not a regular file");
         return false;
     }
-    std::ifstream rtc_file(rtc_path);
-    if (!rtc_file.is_open()) {
+    std::ifstream rtcFile(rtcPath);
+    if (!rtcFile.is_open()) {
         LOG_F(ERROR, "Failed to open RTC file: {}", strerror(errno));
         return false;
     }
-    int year, month, day, hour, minute, second;
-    rtc_file >> year >> month >> day >> hour >> minute >> second;
-    rtc_file.close();
-    struct tm rtc_tm;
-    rtc_tm.tm_year = year - 1900;
-    rtc_tm.tm_mon = month - 1;
-    rtc_tm.tm_mday = day;
-    rtc_tm.tm_hour = hour;
-    rtc_tm.tm_min = minute;
-    rtc_tm.tm_sec = second;
-    time_t rtc_timestamp = mktime(&rtc_tm);
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    int second;
+    rtcFile >> year >> month >> day >> hour >> minute >> second;
+    rtcFile.close();
+    struct tm rtcTm;
+    rtcTm.tm_year = year - 1900;
+    rtcTm.tm_mon = month - 1;
+    rtcTm.tm_mday = day;
+    rtcTm.tm_hour = hour;
+    rtcTm.tm_min = minute;
+    rtcTm.tm_sec = second;
+    time_t rtcTimestamp = mktime(&rtcTm);
 
     // 计算当前UTC时间距离1970年1月1日0时0分0秒的微秒数
-    long long local_timestamp = (long long)now * 1000000LL;
+    long long localTimestamp = (long long)now * 1000000LL;
 
     // 计算RTC时间距离当前时间的微秒偏差
-    long us_offset = (int)(local_timestamp - rtc_timestamp * 1000000LL);
+    long usOffset = (int)(localTimestamp - rtcTimestamp * 1000000LL);
 
     // 调用Linux系统调用函数来调整系统时间
     struct timeval tv;
     gettimeofday(&tv, nullptr);
-    tv.tv_sec += us_offset / 1000000;
-    tv.tv_usec += us_offset % 1000000;
+    tv.tv_sec += usOffset / 1000000;
+    tv.tv_usec += usOffset % 1000000;
     if (tv.tv_usec >= 1000000) {
         tv.tv_sec += 1;
         tv.tv_usec -= 1000000;

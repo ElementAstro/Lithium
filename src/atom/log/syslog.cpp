@@ -14,6 +14,8 @@ Description: Simple syslog wrapper for Windows and Linux
 
 #include "syslog.hpp"
 
+#include "atom/utils/time.hpp"
+
 namespace atom::log {
 SyslogWrapper::SyslogWrapper(LogLevel logLevel, const std::string &target)
     : m_target(target), m_logLevel(logLevel), m_exitThread(false) {
@@ -83,7 +85,7 @@ void SyslogWrapper::rotateLogFile() {
     if (m_logFile.is_open() && getLogFileSize() > 10 * 1024 * 1024) {  // 10 MB
         m_logFile.close();
 
-        std::string newName = m_target + "." + formatTime();
+        std::string newName = m_target + "." + utils::getChinaTimestampString();
         std::filesystem::rename(m_target, newName);
 
         m_logFile.open(m_target, std::ios::out | std::ios::app);
@@ -152,7 +154,7 @@ std::string SyslogWrapper::formatLogMessage(LogLevel level,
                                             fmt::string_view format,
                                             fmt::format_args args) {
     std::string logMessage = fmt::vformat(format, args);
-    std::string timeStr = formatTime();
+    std::string timeStr = utils::getChinaTimestampString();
     std::string logString = fmt::format("[{}] [{}] {}", timeStr,
                                         logLevelToString(level), logMessage);
     return logString;
@@ -161,24 +163,4 @@ std::string SyslogWrapper::formatLogMessage(LogLevel level,
 void SyslogWrapper::setLogLevel(LogLevel logLevel) { m_logLevel = logLevel; }
 
 LogLevel SyslogWrapper::getLogLevel() const { return m_logLevel; }
-
-std::string SyslogWrapper::formatTime() const {
-    auto now = std::chrono::system_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  now.time_since_epoch())
-                  .count() %
-              1000;
-    std::tm tm_now{};
-#ifdef _WIN32
-    localtime_s(&tm_now, &time_t_now);
-#else
-    localtime_r(&time_t_now, &tm_now);
-#endif
-    char buf[40] = {0};
-    snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d.%03lld",
-             tm_now.tm_year + 1900, tm_now.tm_mon + 1, tm_now.tm_mday,
-             tm_now.tm_hour, tm_now.tm_min, tm_now.tm_sec, ms);
-    return buf;
-}
 }  // namespace atom::log

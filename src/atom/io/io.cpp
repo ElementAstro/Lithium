@@ -41,8 +41,8 @@ const std::regex FILE_NAME_REGEX("^[^\\/:*?\"<>|]+$");
 #include <sys/types.h>
 #include <unistd.h>
 const std::string PATH_SEPARATOR = "/";
-const std::regex folderNameRegex("^[^/]+$");
-const std::regex fileNameRegex("^[^/]+$");
+const std::regex FOLDER_NAME_REGEX("^[^/]+$");
+const std::regex FILE_NAME_REGEX("^[^/]+$");
 #endif
 
 namespace fs = std::filesystem;

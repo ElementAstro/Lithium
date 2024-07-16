@@ -29,7 +29,7 @@ Description: A platform information collection.
 
 namespace atom::system {
 #ifdef _WIN32
-std::string getWindowsVersion() {
+auto getWindowsVersion() -> std::string {
     OSVERSIONINFOEX osvi;
     ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
@@ -60,7 +60,7 @@ std::string getWindowsVersion() {
 }
 #endif
 
-bool hasGUI() {
+auto hasGUI() -> bool {
 #if defined(_WIN32)
     return GetSystemMetrics(SM_CXSCREEN) > 0;
 #elif defined(__APPLE__)

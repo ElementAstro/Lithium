@@ -51,7 +51,7 @@ Description: System Information Module - CPU
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
-float getCurrentCpuUsage() {
+auto getCurrentCpuUsage() -> float {
     float cpuUsage = 0.0;
 
 #ifdef _WIN32
@@ -62,11 +62,11 @@ float getCurrentCpuUsage() {
     PdhAddCounter(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
     PdhCollectQueryData(query);
 
-    PDH_FMT_COUNTERVALUE counter_value;
+    PDH_FMT_COUNTERVALUE counterValue;
     PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, nullptr,
-                                &counter_value);
+                                &counterValue);
 
-    cpu_usage = static_cast<float>(counter_value.doubleValue);
+    cpuUsage = static_cast<float>(counterValue.doubleValue);
 
     PdhCloseQuery(query);
 #elif __linux__
@@ -130,7 +130,7 @@ float getCurrentCpuUsage() {
     return cpuUsage;
 }
 
-float getCurrentCpuTemperature() {
+auto getCurrentCpuTemperature() -> float {
     float temperature = 0.0F;
 
 #ifdef _WIN32
@@ -139,11 +139,12 @@ float getCurrentCpuTemperature() {
     DWORD size = sizeof(DWORD);
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0,
+                     R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)", 0,
                      KEY_READ, &hKey) == ERROR_SUCCESS) {
-        if (RegQueryValueEx(hKey, "~MHz", NULL, NULL, (LPBYTE)&temperatureValue,
+        if (RegQueryValueEx(hKey, "~MHz", nullptr, nullptr,
+                            (LPBYTE)&temperatureValue,
                             &size) == ERROR_SUCCESS) {
-            temperature = static_cast<float>(temperatureValue) / 10.0f;
+            temperature = static_cast<float>(temperatureValue) / 10.0F;
         }
         RegCloseKey(hKey);
     }
@@ -196,17 +197,17 @@ float getCurrentCpuTemperature() {
     return temperature;
 }
 
-std::string getCPUModel() {
+auto getCPUModel() -> std::string {
     std::string cpuModel;
 #ifdef _WIN32
 
     HKEY hKey;
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0,
+                     R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)", 0,
                      KEY_READ, &hKey) == ERROR_SUCCESS) {
         char cpuName[1024];
         DWORD size = sizeof(cpuName);
-        if (RegQueryValueEx(hKey, "ProcessorNameString", NULL, NULL,
+        if (RegQueryValueEx(hKey, "ProcessorNameString", nullptr, nullptr,
                             (LPBYTE)cpuName, &size) == ERROR_SUCCESS) {
             cpuModel = cpuName;
         }
@@ -254,7 +255,7 @@ std::string getCPUModel() {
     return cpuModel;
 }
 
-std::string getProcessorIdentifier() {
+auto getProcessorIdentifier() -> std::string {
     std::string identifier;
 
 #ifdef _WIN32
@@ -263,10 +264,10 @@ std::string getProcessorIdentifier() {
     DWORD bufSize = sizeof(identifierValue);
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0,
+                     R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)", 0,
                      KEY_READ, &hKey) == ERROR_SUCCESS) {
-        RegQueryValueEx(hKey, "Identifier", NULL, NULL, (LPBYTE)identifierValue,
-                        &bufSize);
+        RegQueryValueEx(hKey, "Identifier", nullptr, nullptr,
+                        (LPBYTE)identifierValue, &bufSize);
         RegCloseKey(hKey);
 
         identifier = identifierValue;
@@ -310,7 +311,7 @@ std::string getProcessorIdentifier() {
     return identifier;
 }
 
-double getProcessorFrequency() {
+auto getProcessorFrequency() -> double {
     double frequency = 0;
 
 #ifdef _WIN32
@@ -319,9 +320,9 @@ double getProcessorFrequency() {
     DWORD bufSize = sizeof(frequencyValue);
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                     "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0", 0,
+                     R"(HARDWARE\DESCRIPTION\System\CentralProcessor\0)", 0,
                      KEY_READ, &hKey) == ERROR_SUCCESS) {
-        RegQueryValueEx(hKey, "~MHz", NULL, NULL, (LPBYTE)&frequencyValue,
+        RegQueryValueEx(hKey, "~MHz", nullptr, nullptr, (LPBYTE)&frequencyValue,
                         &bufSize);
         RegCloseKey(hKey);
 
@@ -358,7 +359,7 @@ double getProcessorFrequency() {
     return frequency;
 }
 
-int getNumberOfPhysicalPackages() {
+auto getNumberOfPhysicalPackages() -> int {
     int numberOfPackages = 0;
 
 #ifdef _WIN32
@@ -383,7 +384,7 @@ int getNumberOfPhysicalPackages() {
     return numberOfPackages;
 }
 
-int getNumberOfPhysicalCPUs() {
+auto getNumberOfPhysicalCPUs() -> int {
     int numberOfCPUs = 0;
 
 #ifdef _WIN32

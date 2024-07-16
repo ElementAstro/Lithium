@@ -82,12 +82,6 @@ public:
     auto getThreadId() const -> std::thread::id;
 
 private:
-    /**
-     * @brief Gets the current time as a formatted string.
-     * @return The current time as a formatted string.
-     */
-    auto getCurrentTime() const -> std::string;
-
     std::string file_; /**< The file where the exception occurred. */
     int line_; /**< The line number in the file where the exception occurred. */
     std::string func_;    /**< The function where the exception occurred. */
@@ -341,6 +335,28 @@ public:
 #define THROW_FAIL_TO_LOAD_SYMBOL(...)                                  \
     throw atom::error::FailToLoadSymbol(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                         ATOM_FUNC_NAME, __VA_ARGS__)
+
+// -------------------------------------------------------------------
+// Proccess Library
+// -------------------------------------------------------------------
+
+class FailToCreateProcess : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_CREATE_PROCESS(...)                                  \
+    throw atom::error::FailToCreateProcess(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                           ATOM_FUNC_NAME, __VA_ARGS__)
+
+class FailToTerminateProcess : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_FAIL_TO_TERMINATE_PROCESS(...)                                  \
+    throw atom::error::FailToTerminateProcess(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                              ATOM_FUNC_NAME, __VA_ARGS__)
 }  // namespace atom::error
 
 #endif

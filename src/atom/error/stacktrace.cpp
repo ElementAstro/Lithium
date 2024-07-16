@@ -20,8 +20,10 @@ Description: StackTrace
 #include <vector>
 
 #ifdef _WIN32
-#include <dbghelp.h>
+// clang-format off
 #include <windows.h>
+#include <dbghelp.h>
+// clang-format on
 #if !defined(__MINGW32__) && !defined(__MINGW64__)
 #pragma comment(lib, "dbghelp.lib")
 #endif

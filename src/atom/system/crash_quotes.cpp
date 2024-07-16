@@ -86,8 +86,8 @@ void QuoteManager::saveQuotesToJson(const std::string &filename) const {
     file.close();
 }
 
-std::vector<Quote> QuoteManager::searchQuotes(
-    const std::string &keyword) const {
+auto QuoteManager::searchQuotes(const std::string &keyword) const
+    -> std::vector<Quote> {
     std::vector<Quote> results;
     for (const auto &quote : quotes_) {
         if (quote.getText().find(keyword) != std::string::npos) {
@@ -97,8 +97,8 @@ std::vector<Quote> QuoteManager::searchQuotes(
     return results;
 }
 
-std::vector<Quote> QuoteManager::filterQuotesByAuthor(
-    const std::string &author) const {
+auto QuoteManager::filterQuotesByAuthor(const std::string &author) const
+    -> std::vector<Quote> {
     std::vector<Quote> results;
     for (const auto &quote : quotes_) {
         if (quote.getAuthor() == author) {
@@ -108,7 +108,7 @@ std::vector<Quote> QuoteManager::filterQuotesByAuthor(
     return results;
 }
 
-std::string QuoteManager::getRandomQuote() const {
+auto QuoteManager::getRandomQuote() const -> std::string {
     if (quotes_.empty()) {
         return "";
     }

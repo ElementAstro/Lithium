@@ -22,18 +22,17 @@
 #include <cstring>
 #endif
 
-#include "atom/utils/convert.hpp"
 #include "atom/utils/string.hpp"
 
 namespace atom::system {
-std::string getAppVersion(const fs::path& app_path) {
+auto getAppVersion(const fs::path& app_path) -> std::string {
 #ifdef _WIN32
     DWORD handle;
-    auto wapp_path = atom::utils::stringToWString(app_path.string());
-    DWORD size = GetFileVersionInfoSizeW(wapp_path.c_str(), &handle);
+    auto wappPath = atom::utils::stringToWString(app_path.string());
+    DWORD size = GetFileVersionInfoSizeW(wappPath.c_str(), &handle);
     if (size != 0) {
         LPVOID buffer = malloc(size);
-        if (GetFileVersionInfoW(wapp_path.c_str(), handle, size, buffer)) {
+        if (GetFileVersionInfoW(wappPath.c_str(), handle, size, buffer) != 0) {
             LPVOID value;
             UINT length;
             if (VerQueryValue(buffer,
@@ -115,57 +114,58 @@ std::string getAppVersion(const fs::path& app_path) {
     return "1.0.0";
 }
 
-std::vector<std::string> getAppPermissions(const fs::path& app_path) {
+auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {
     std::vector<std::string> permissions;
 
 #ifdef _WIN32
-    PSECURITY_DESCRIPTOR security_descriptor;
-    DWORD length = 0;
-    PSID owner_sid = nullptr;
-    PSID group_sid = nullptr;
+    PSECURITY_DESCRIPTOR securityDescriptor;
     PACL dacl = nullptr;
-    PACL sacl = nullptr;
-    PSECURITY_DESCRIPTOR absolute_sd = nullptr;
 
-    if (GetNamedSecurityInfo(
+    if (GetNamedSecurityInfoW(
             atom::utils::stringToWString(app_path.string()).c_str(),
             SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, nullptr, nullptr, &dacl,
-            nullptr, &security_descriptor) == ERROR_SUCCESS) {
+            nullptr, &securityDescriptor) == ERROR_SUCCESS) {
         if (dacl != nullptr) {
             LPVOID ace;
             for (DWORD i = 0; i < dacl->AceCount; ++i) {
-                if (GetAce(dacl, i, &ace)) {
+                if (GetAce(dacl, i, &ace) != 0) {
                     if (static_cast<PACE_HEADER>(ace)->AceType ==
                         ACCESS_ALLOWED_ACE_TYPE) {
-                        PACCESS_ALLOWED_ACE allowed_ace =
+                        auto* allowedAce =
                             static_cast<PACCESS_ALLOWED_ACE>(ace);
-                        LPTSTR user_name = nullptr;
-                        DWORD name_size = 0;
-                        LPTSTR domain_name = nullptr;
-                        DWORD domain_size = 0;
-                        SID_NAME_USE sid_type;
+                        LPTSTR userName = nullptr;
+                        DWORD nameSize = 0;
+                        LPTSTR domainName = nullptr;
+                        DWORD domainSize = 0;
+                        SID_NAME_USE sidType;
 
-                        LookupAccountSid(nullptr, &allowed_ace->SidStart,
-                                         user_name, &name_size, domain_name,
-                                         &domain_size, &sid_type);
-                        user_name = static_cast<LPTSTR>(
-                            malloc(name_size * sizeof(TCHAR)));
-                        domain_name = static_cast<LPTSTR>(
-                            malloc(domain_size * sizeof(TCHAR)));
-                        if (LookupAccountSid(nullptr, &allowed_ace->SidStart,
-                                             user_name, &name_size, domain_name,
-                                             &domain_size, &sid_type)) {
+                        LookupAccountSid(nullptr, &allowedAce->SidStart,
+                                         userName, &nameSize, domainName,
+                                         &domainSize, &sidType);
+                        userName = static_cast<LPTSTR>(
+                            malloc(nameSize * sizeof(TCHAR)));
+                        domainName = static_cast<LPTSTR>(
+                            malloc(domainSize * sizeof(TCHAR)));
+                        if (LookupAccountSid(nullptr, &allowedAce->SidStart,
+                                             userName, &nameSize, domainName,
+                                             &domainSize, &sidType)) {
                             std::string permission = "User: ";
-                            permission += user_name + "\\" + domain_name;
+                            std::string permissionStr = permission;
+                            std::string userNameStr = userName;
+                            std::string domainNameStr = domainName;
+
+                            permissionStr += userNameStr + "\\" + domainNameStr;
+                            permission = permissionStr;
+
                             permissions.push_back(permission);
                         }
-                        free(user_name);
-                        free(domain_name);
+                        free(userName);
+                        free(domainName);
                     }
                 }
             }
         }
-        LocalFree(security_descriptor);
+        LocalFree(securityDescriptor);
     }
 #elif defined(__APPLE__) || defined(__linux__)
     struct stat file_stat;
@@ -229,12 +229,12 @@ std::vector<std::string> getAppPermissions(const fs::path& app_path) {
     return permissions;
 }
 
-fs::path getAppPath(const std::string& software_name) {
+auto getAppPath(const std::string& software_name) -> fs::path {
 #ifdef _WIN32
-    WCHAR program_files_path[MAX_PATH];
-    if (SHGetFolderPathW(NULL, CSIDL_PROGRAM_FILES, NULL, 0,
-                         program_files_path) == S_OK) {
-        fs::path path(program_files_path);
+    WCHAR programFilesPath[MAX_PATH];
+    if (SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILES, nullptr, 0,
+                         programFilesPath) == S_OK) {
+        fs::path path(programFilesPath);
         path.append(software_name);
         if (fs::exists(path)) {
             return path;
@@ -272,13 +272,13 @@ fs::path getAppPath(const std::string& software_name) {
                                 // else fails
 }
 
-bool checkSoftwareInstalled(const std::string& software_name) {
-    bool is_installed = false;
+auto checkSoftwareInstalled(const std::string& software_name) -> bool {
+    bool isInstalled = false;
 
 #ifdef _WIN32
     HKEY hKey;
     std::string regPath =
-        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
+        R"(SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall)";
     if (RegOpenKeyExW(HKEY_LOCAL_MACHINE,
                       atom::utils::stringToWString(regPath).c_str(), 0,
                       KEY_READ, &hKey) == ERROR_SUCCESS) {
@@ -297,7 +297,7 @@ bool checkSoftwareInstalled(const std::string& software_name) {
                                      reinterpret_cast<LPBYTE>(displayName),
                                      &displayNameSize) == ERROR_SUCCESS) {
                     if (software_name == displayName) {
-                        is_installed = true;
+                        isInstalled = true;
                         RegCloseKey(hSubKey);
                         break;
                     }
@@ -322,16 +322,16 @@ bool checkSoftwareInstalled(const std::string& software_name) {
         while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
             result += buffer.data();
         }
-        is_installed = !result.empty();
+        isInstalled = !result.empty();
     }
 
 #elif defined(__linux__)
     std::string command = "which " + software_name + " > /dev/null 2>&1";
     int result = std::system(command.c_str());
-    is_installed = (result == 0);
+    isInstalled = (result == 0);
 
 #endif
 
-    return is_installed;
+    return isInstalled;
 }
 }  // namespace atom::system

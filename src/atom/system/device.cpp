@@ -29,65 +29,69 @@
 
 namespace atom::system {
 #ifdef _WIN32
-std::vector<DeviceInfo> enumerate_usb_devices() {
+auto enumerateUsbDevices() -> std::vector<DeviceInfo> {
     std::vector<DeviceInfo> devices;
-    HDEVINFO device_info_set = SetupDiGetClassDevs(
+    HDEVINFO deviceInfoSet = SetupDiGetClassDevs(
         nullptr, "USB", nullptr, DIGCF_PRESENT | DIGCF_ALLCLASSES);
-    if (device_info_set == INVALID_HANDLE_VALUE)
+    if (deviceInfoSet == INVALID_HANDLE_VALUE) {
         return devices;
+    }
 
-    SP_DEVINFO_DATA device_info_data;
-    device_info_data.cbSize = sizeof(SP_DEVINFO_DATA);
+    SP_DEVINFO_DATA deviceInfoData;
+    deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
     for (int i = 0;
-         SetupDiEnumDeviceInfo(device_info_set, i, &device_info_data); i++) {
-        DWORD data_type, size;
+         SetupDiEnumDeviceInfo(deviceInfoSet, i, &deviceInfoData) != 0; i++) {
+        DWORD dataType;
+        DWORD size;
         char buffer[512];
         if (SetupDiGetDeviceRegistryProperty(
-                device_info_set, &device_info_data, SPDRP_DEVICEDESC,
-                &data_type, (PBYTE)buffer, sizeof(buffer), &size)) {
+                deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, &dataType,
+                (PBYTE)buffer, sizeof(buffer), &size)) {
             devices.push_back({buffer, ""});
         }
     }
 
-    SetupDiDestroyDeviceInfoList(device_info_set);
+    SetupDiDestroyDeviceInfoList(deviceInfoSet);
     return devices;
 }
 
-std::vector<DeviceInfo> enumerate_serial_ports() {
+auto enumerateSerialPorts() -> std::vector<DeviceInfo> {
     std::vector<DeviceInfo> devices;
-    HDEVINFO device_info_set =
+    HDEVINFO deviceInfoSet =
         SetupDiGetClassDevs(nullptr, "COM", nullptr, DIGCF_PRESENT);
-    if (device_info_set == INVALID_HANDLE_VALUE)
+    if (deviceInfoSet == INVALID_HANDLE_VALUE) {
         return devices;
+    }
 
-    SP_DEVINFO_DATA device_info_data;
-    device_info_data.cbSize = sizeof(SP_DEVINFO_DATA);
+    SP_DEVINFO_DATA deviceInfoData;
+    deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
     for (int i = 0;
-         SetupDiEnumDeviceInfo(device_info_set, i, &device_info_data); i++) {
-        DWORD data_type, size;
+         SetupDiEnumDeviceInfo(deviceInfoSet, i, &deviceInfoData) != 0; i++) {
+        DWORD dataType;
+        DWORD size;
         char buffer[512];
         if (SetupDiGetDeviceRegistryProperty(
-                device_info_set, &device_info_data, SPDRP_DEVICEDESC,
-                &data_type, (PBYTE)buffer, sizeof(buffer), &size)) {
+                deviceInfoSet, &deviceInfoData, SPDRP_DEVICEDESC, &dataType,
+                (PBYTE)buffer, sizeof(buffer), &size)) {
             devices.push_back({buffer, ""});
         }
     }
 
-    SetupDiDestroyDeviceInfoList(device_info_set);
+    SetupDiDestroyDeviceInfoList(deviceInfoSet);
     return devices;
 }
 
-std::vector<DeviceInfo> enumerate_bluetooth_devices() {
+auto enumerateBluetoothDevices() -> std::vector<DeviceInfo> {
     std::vector<DeviceInfo> devices;
     BLUETOOTH_DEVICE_SEARCH_PARAMS searchParams = {
-        sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS), 1, 0, 1, 1, 1, 15, NULL};
+        sizeof(BLUETOOTH_DEVICE_SEARCH_PARAMS), 1, 0, 1, 1, 1, 15, nullptr};
 
     BLUETOOTH_DEVICE_INFO deviceInfo;
     deviceInfo.dwSize = sizeof(BLUETOOTH_DEVICE_INFO);
     HBLUETOOTH_DEVICE_FIND btFind =
         BluetoothFindFirstDevice(&searchParams, &deviceInfo);
 
-    if (btFind != NULL) {
+    if (btFind != nullptr) {
         do {
             std::wstring ws(deviceInfo.szName);
             std::string name(ws.begin(), ws.end());
@@ -98,7 +102,7 @@ std::vector<DeviceInfo> enumerate_bluetooth_devices() {
                 deviceInfo.Address.rgBytes[3], deviceInfo.Address.rgBytes[2],
                 deviceInfo.Address.rgBytes[1], deviceInfo.Address.rgBytes[0]);
             devices.push_back({name, address});
-        } while (BluetoothFindNextDevice(btFind, &deviceInfo));
+        } while (BluetoothFindNextDevice(btFind, &deviceInfo) != 0);
         BluetoothFindDeviceClose(btFind);
     }
     return devices;

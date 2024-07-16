@@ -19,14 +19,16 @@ Description: PID Watcher
 #include <istream>
 
 #ifdef _WIN32
+// clang-format off
 #include <windows.h>
 #include <psapi.h>
+// clang-format on
 #else
 #include <dirent.h>
 #include <signal.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 namespace fs = std::filesystem;
@@ -36,46 +38,46 @@ namespace fs = std::filesystem;
 namespace atom::system {
 PidWatcher::PidWatcher() : running_(false), monitoring_(false) {}
 
-PidWatcher::~PidWatcher() { Stop(); }
+PidWatcher::~PidWatcher() { stop(); }
 
-void PidWatcher::SetExitCallback(Callback callback) {
-    std::lock_guard<std::mutex> lock(mutex_);
+void PidWatcher::setExitCallback(Callback callback) {
+    std::lock_guard lock(mutex_);
     exit_callback_ = std::move(callback);
 }
 
-void PidWatcher::SetMonitorFunction(Callback callback,
+void PidWatcher::setMonitorFunction(Callback callback,
                                     std::chrono::milliseconds interval) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
     monitor_callback_ = std::move(callback);
     monitor_interval_ = interval;
 }
 
-pid_t PidWatcher::GetPidByName(const std::string &name) const {
+auto PidWatcher::getPidByName(const std::string &name) const -> pid_t {
 #ifdef _WIN32
-    DWORD pid_list[1024], cb_needed;
-    if (EnumProcesses(pid_list, sizeof(pid_list), &cb_needed)) {
-        for (unsigned int i = 0; i < cb_needed / sizeof(DWORD); i++) {
-            HANDLE process_handle =
-                OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE,
-                            pid_list[i]);
-            if (process_handle != NULL) {
+    DWORD pidList[1024];
+    DWORD cbNeeded;
+    if (EnumProcesses(pidList, sizeof(pidList), &cbNeeded)) {
+        for (unsigned int i = 0; i < cbNeeded / sizeof(DWORD); i++) {
+            HANDLE processHandle = OpenProcess(
+                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pidList[i]);
+            if (processHandle != nullptr) {
                 char filename[MAX_PATH];
-                if (GetModuleFileNameEx(process_handle, NULL, filename,
+                if (GetModuleFileNameEx(processHandle, nullptr, filename,
                                         MAX_PATH)) {
-                    std::string process_name = strrchr(filename, '\\') + 1;
-                    if (process_name == name) {
-                        CloseHandle(process_handle);
-                        return pid_list[i];
+                    std::string processName = strrchr(filename, '\\') + 1;
+                    if (processName == name) {
+                        CloseHandle(processHandle);
+                        return pidList[i];
                     }
                 }
-                CloseHandle(process_handle);
+                CloseHandle(processHandle);
             }
         }
     }
 #else
     DIR *dir = opendir("/proc");
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != nullptr) {
         if (entry->d_type != DT_DIR) {
             continue;
         }
@@ -94,15 +96,15 @@ pid_t PidWatcher::GetPidByName(const std::string &name) const {
 }
 
 // 开始监视指定进程
-bool PidWatcher::Start(const std::string &name) {
-    std::lock_guard<std::mutex> lock(mutex_);
+auto PidWatcher::start(const std::string &name) -> bool {
+    std::lock_guard lock(mutex_);
 
     if (running_) {
         LOG_F(ERROR, "Already running.");
         return false;
     }
 
-    pid_ = GetPidByName(name);
+    pid_ = getPidByName(name);
     if (pid_ == 0) {
         LOG_F(ERROR, "Failed to get PID.");
         return false;
@@ -112,8 +114,8 @@ bool PidWatcher::Start(const std::string &name) {
     monitoring_ = true;
 
 #if __cplusplus >= 202002L
-    monitor_thread_ = std::jthread(&PidWatcher::MonitorThread, this);
-    exit_thread_ = std::jthread(&PidWatcher::ExitThread, this);
+    monitor_thread_ = std::jthread(&PidWatcher::monitorThread, this);
+    exit_thread_ = std::jthread(&PidWatcher::exitThread, this);
 #else
     monitor_thread_ = std::thread(&PidWatcher::MonitorThread, this);
     exit_thread_ = std::thread(&PidWatcher::ExitThread, this);
@@ -123,8 +125,8 @@ bool PidWatcher::Start(const std::string &name) {
 }
 
 // 停止监视进程
-void PidWatcher::Stop() {
-    std::lock_guard<std::mutex> lock(mutex_);
+void PidWatcher::stop() {
+    std::lock_guard lock(mutex_);
 
     if (!running_) {
         return;
@@ -146,14 +148,14 @@ void PidWatcher::Stop() {
 
 // 切换目标进程
 bool PidWatcher::Switch(const std::string &name) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard lock(mutex_);
 
     if (!running_) {
         LOG_F(ERROR, "Not running.");
         return false;
     }
 
-    pid_ = GetPidByName(name);
+    pid_ = getPidByName(name);
     if (pid_ == 0) {
         LOG_F(ERROR, "Failed to get PID.");
         return false;
@@ -164,9 +166,9 @@ bool PidWatcher::Switch(const std::string &name) {
     return true;
 }
 
-void PidWatcher::MonitorThread() {
+void PidWatcher::monitorThread() {
     while (true) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
 
         while (!monitoring_ && running_) {
             monitor_cv_.wait(lock);
@@ -181,17 +183,17 @@ void PidWatcher::MonitorThread() {
         }
 
 #ifdef _WIN32
-        HANDLE process_handle = OpenProcess(SYNCHRONIZE, FALSE, pid_);
-        if (process_handle == NULL) {
+        HANDLE processHandle = OpenProcess(SYNCHRONIZE, FALSE, pid_);
+        if (processHandle == nullptr) {
             LOG_F(ERROR, "Failed to open process.");
             break;
         }
-        DWORD wait_result = WaitForSingleObject(process_handle, INFINITE);
-        if (wait_result == WAIT_FAILED) {
+        DWORD waitResult = WaitForSingleObject(processHandle, INFINITE);
+        if (waitResult == WAIT_FAILED) {
             LOG_F(ERROR, "Failed to wait for process.");
             break;
         }
-        CloseHandle(process_handle);
+        CloseHandle(processHandle);
 #else
         int status;
         pid_t wait_result = waitpid(pid_, &status, 0);
@@ -215,9 +217,9 @@ void PidWatcher::MonitorThread() {
     }
 }
 
-void PidWatcher::ExitThread() {
+void PidWatcher::exitThread() {
     while (true) {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
 
         if (!running_) {
             break;
@@ -230,19 +232,19 @@ void PidWatcher::ExitThread() {
         }
 
 #ifdef _WIN32
-        HANDLE process_handle = OpenProcess(SYNCHRONIZE, FALSE, pid_);
-        if (process_handle == NULL) {
+        HANDLE processHandle = OpenProcess(SYNCHRONIZE, FALSE, pid_);
+        if (processHandle == nullptr) {
             LOG_F(ERROR, "Failed to open process.");
             break;
         }
-        DWORD wait_result = WaitForSingleObject(process_handle, 0);
-        CloseHandle(process_handle);
+        DWORD waitResult = WaitForSingleObject(processHandle, 0);
+        CloseHandle(processHandle);
 #else
         int status;
         pid_t wait_result = waitpid(pid_, &status, WNOHANG);
 #endif
 
-        if (wait_result != 0) {
+        if (waitResult != 0) {
             if (exit_callback_) {
                 exit_callback_();
             }

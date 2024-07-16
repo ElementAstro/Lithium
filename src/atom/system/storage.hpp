@@ -20,6 +20,7 @@ Description: Storage Monitor
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "macro.hpp"
 
 namespace atom::system {
 /**
@@ -48,12 +49,19 @@ public:
      *
      * @return 成功返回true，否则返回false。
      */
-    [[nodiscard]] bool startMonitoring();
+    ATOM_NODISCARD auto startMonitoring() -> bool;
 
     /**
      * @brief 停止存储空间监控。
      */
     void stopMonitoring();
+
+    /**
+     * @brief 检查是否正在运行监控。
+     *
+     * @return 如果正在运行则返回true，否则返回false。
+     */
+    ATOM_NODISCARD auto isRunning() const -> bool;
 
     /**
      * @brief 触发所有注册的回调函数。
@@ -62,14 +70,13 @@ public:
      */
     void triggerCallbacks(const std::string &path);
 
-private:
     /**
      * @brief 检查指定路径是否有新的存储设备插入。
      *
      * @param path 存储空间路径。
      * @return 如果有新的存储设备插入则返回true，否则返回false。
      */
-    [[nodiscard]] bool isNewMediaInserted(const std::string &path);
+    ATOM_NODISCARD auto isNewMediaInserted(const std::string &path) -> bool;
 
     /**
      * @brief 列举所有已挂载的存储空间。
@@ -83,6 +90,7 @@ private:
      */
     void listFiles(const std::string &path);
 
+private:
     std::vector<std::string> m_storagePaths;  ///< 所有已挂载的存储空间路径。
     std::unordered_map<std::string, std::pair<uintmax_t, uintmax_t>>
         m_storageStats;

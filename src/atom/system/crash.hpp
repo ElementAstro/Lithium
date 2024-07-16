@@ -15,7 +15,7 @@ Description: Crash Report
 #ifndef ATOM_SYSTEM_CRASH_HPP
 #define ATOM_SYSTEM_CRASH_HPP
 
-#include <string>
+#include <string_view>
 
 namespace atom::system {
 /**
@@ -35,7 +35,7 @@ namespace atom::system {
  * @note Make sure the crash log has been recorded before calling this function,
  * otherwise calling this function will have no effect.
  */
-void saveCrashLog(const std::string &error_msg);
+void saveCrashLog(std::string_view error_msg);
 }  // namespace atom::system
 
 #endif

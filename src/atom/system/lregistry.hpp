@@ -18,6 +18,7 @@ Description: A self-contained registry manager.
 #include <memory>
 #include <string>
 #include <vector>
+#include "macro.hpp"
 
 namespace atom::system {
 /**
@@ -63,8 +64,8 @@ public:
      * @param valueName The name of the value to retrieve.
      * @return The value associated with the key and value name.
      */
-    std::string getValue(const std::string &keyName,
-                         const std::string &valueName);
+    auto getValue(const std::string &keyName,
+                  const std::string &valueName) -> std::string;
 
     /**
      * @brief Deletes a value from a key in the registry.
@@ -92,7 +93,7 @@ public:
      * @param keyName The name of the key to check for existence.
      * @return true if the key exists, false otherwise.
      */
-    bool keyExists(const std::string &keyName) const;
+    ATOM_NODISCARD auto keyExists(const std::string &keyName) const -> bool;
 
     /**
      * @brief Checks if a value exists for a key in the registry.
@@ -101,8 +102,8 @@ public:
      * @param valueName The name of the value to check for existence.
      * @return true if the value exists, false otherwise.
      */
-    bool valueExists(const std::string &keyName,
-                     const std::string &valueName) const;
+    ATOM_NODISCARD auto valueExists(const std::string &keyName,
+                                    const std::string &valueName) const -> bool;
 
     /**
      * @brief Retrieves all value names for a given key from the registry.
@@ -110,11 +111,12 @@ public:
      * @param keyName The name of the key.
      * @return A vector of value names associated with the given key.
      */
-    std::vector<std::string> getValueNames(const std::string &keyName) const;
+    ATOM_NODISCARD auto getValueNames(const std::string &keyName) const
+        -> std::vector<std::string>;
 
 private:
     class RegistryImpl;  // Forward declaration of the implementation class
-    std::unique_ptr<RegistryImpl> pImpl;  // Pointer to the implementation class
+    std::unique_ptr<RegistryImpl> pImpl_;  // Pointer to the implementation class
 };
 
 }  // namespace atom::system

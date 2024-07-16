@@ -12,7 +12,7 @@ Description: INDI Device Manager
 
 **************************************************/
 
-#include "connector.hpp"
+#include "./connector.hpp"
 #include "container.hpp"
 
 #include <regex>

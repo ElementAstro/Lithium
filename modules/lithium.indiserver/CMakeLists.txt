@@ -14,6 +14,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(SOURCE_FILES
     src/indiserver.cpp
     src/collection.cpp
+    src/connector.cpp
 
     _component.cpp
     _main.cpp
@@ -33,4 +34,4 @@ add_library(lithium.indiserver SHARED ${SOURCE_FILES} ${HEADER_FILES})
 target_link_libraries(lithium.indiserver PUBLIC ${LIBS})
 
 # Include directories
-target_include_directories(lithium.indiserver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(lithium.indiserver PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

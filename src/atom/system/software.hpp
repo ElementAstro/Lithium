@@ -18,7 +18,7 @@ namespace atom::system {
  * @return false if the software is not installed or an error occurred.
  *         如果软件未安装或发生错误，则返回 false
  */
-bool checkSoftwareInstalled(const std::string& software_name);
+auto checkSoftwareInstalled(const std::string& software_name) -> bool;
 
 /**
  * @brief Get the version of the specified application.
@@ -27,7 +27,7 @@ bool checkSoftwareInstalled(const std::string& software_name);
  * @param app_path The path to the application. 应用程序路径
  * @return The version of the application. 应用程序的版本
  */
-std::string getAppVersion(const fs::path& app_path);
+auto getAppVersion(const fs::path& app_path) -> std::string;
 
 /**
  * @brief Get the path to the specified application.
@@ -36,7 +36,7 @@ std::string getAppVersion(const fs::path& app_path);
  * @param software_name The name of the software. 软件名称
  * @return The path to the application. 应用程序的路径
  */
-fs::path getAppPath(const std::string& software_name);
+auto getAppPath(const std::string& software_name) -> fs::path;
 
 /**
  * @brief Get the permissions of the specified application.
@@ -45,7 +45,7 @@ fs::path getAppPath(const std::string& software_name);
  * @param app_path The path to the application. 应用程序路径
  * @return The permissions of the application. 应用程序的权限
  */
-std::vector<std::string> getAppPermissions(const fs::path& app_path);
+auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string>;
 }  // namespace atom::system
 
 #endif

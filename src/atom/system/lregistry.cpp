@@ -32,55 +32,54 @@ public:
     void notifyEvent(const std::string& eventType, const std::string& keyName);
 };
 
-Registry::Registry() : pImpl(std::make_unique<RegistryImpl>()) {}
+Registry::Registry() : pImpl_(std::make_unique<RegistryImpl>()) {}
 
-void Registry::loadRegistryFromFile() { pImpl->saveRegistryToFile(); }
+void Registry::loadRegistryFromFile() { pImpl_->saveRegistryToFile(); }
 
 void Registry::createKey(const std::string& keyName) {
-    pImpl->saveRegistryToFile();
-    pImpl->notifyEvent("KeyCreated", keyName);
+    pImpl_->saveRegistryToFile();
+    pImpl_->notifyEvent("KeyCreated", keyName);
 }
 
 void Registry::deleteKey(const std::string& keyName) {
-    pImpl->saveRegistryToFile();
-    pImpl->notifyEvent("KeyDeleted", keyName);
+    pImpl_->saveRegistryToFile();
+    pImpl_->notifyEvent("KeyDeleted", keyName);
 }
 
 void Registry::setValue(const std::string& keyName,
                         const std::string& valueName, const std::string& data) {
-    pImpl->registryData[keyName][valueName] = data;
-    pImpl->saveRegistryToFile();
-    pImpl->notifyEvent("ValueSet", keyName);
+    pImpl_->registryData[keyName][valueName] = data;
+    pImpl_->saveRegistryToFile();
+    pImpl_->notifyEvent("ValueSet", keyName);
 }
 
-std::string Registry::getValue(const std::string& keyName,
-                               const std::string& valueName) {
-    if (pImpl->registryData.find(keyName) != pImpl->registryData.end() &&
-        pImpl->registryData[keyName].find(valueName) !=
-            pImpl->registryData[keyName].end()) {
-        return pImpl->registryData[keyName][valueName];
-    } else {
-        return "Value not found";
+auto Registry::getValue(const std::string& keyName,
+                        const std::string& valueName) -> std::string {
+    if (pImpl_->registryData.find(keyName) != pImpl_->registryData.end() &&
+        pImpl_->registryData[keyName].find(valueName) !=
+            pImpl_->registryData[keyName].end()) {
+        return pImpl_->registryData[keyName][valueName];
     }
+    return "Value not found";
 }
 
 void Registry::deleteValue(const std::string& keyName,
                            const std::string& valueName) {
-    if (pImpl->registryData.find(keyName) != pImpl->registryData.end()) {
-        pImpl->registryData[keyName].erase(valueName);
-        pImpl->saveRegistryToFile();
-        pImpl->notifyEvent("ValueDeleted", keyName);
+    if (pImpl_->registryData.find(keyName) != pImpl_->registryData.end()) {
+        pImpl_->registryData[keyName].erase(valueName);
+        pImpl_->saveRegistryToFile();
+        pImpl_->notifyEvent("ValueDeleted", keyName);
     }
 }
 
 void Registry::backupRegistryData() {
     std::time_t currentTime = std::time(nullptr);
-    const std::string& backupFileName =
+    std::string backupFileName =
         "registry_backup_" + std::to_string(currentTime) + ".txt";
 
     std::ofstream backupFile(backupFileName);
     if (backupFile.is_open()) {
-        for (const auto& key : pImpl->registryData) {
+        for (const auto& key : pImpl_->registryData) {
             backupFile << key.first << std::endl;
             for (const auto& value : key.second) {
                 backupFile << value.first << "=" << value.second << std::endl;
@@ -98,20 +97,20 @@ void Registry::backupRegistryData() {
 void Registry::restoreRegistryData(const std::string& backupFile) {
     std::ifstream backup(backupFile);
     if (backup.is_open()) {
-        pImpl->registryData.clear();  // Clear existing data before restoring
+        pImpl_->registryData.clear();  // Clear existing data before restoring
 
         std::string line;
         std::string currentKey;
         while (std::getline(backup, line)) {
             if (!line.empty() && line.find('=') == std::string::npos) {
                 currentKey = line;
-                pImpl->registryData[currentKey] =
+                pImpl_->registryData[currentKey] =
                     std::unordered_map<std::string, std::string>();
             } else if (line.find('=') != std::string::npos) {
                 size_t splitPos = line.find('=');
                 std::string valueName = line.substr(0, splitPos);
                 std::string data = line.substr(splitPos + 1);
-                pImpl->registryData[currentKey][valueName] = data;
+                pImpl_->registryData[currentKey][valueName] = data;
             }
         }
 
@@ -123,22 +122,22 @@ void Registry::restoreRegistryData(const std::string& backupFile) {
     }
 }
 
-bool Registry::keyExists(const std::string& keyName) const {
-    return pImpl->registryData.find(keyName) != pImpl->registryData.end();
+auto Registry::keyExists(const std::string& keyName) const -> bool {
+    return pImpl_->registryData.find(keyName) != pImpl_->registryData.end();
 }
 
-bool Registry::valueExists(const std::string& keyName,
-                           const std::string& valueName) const {
-    auto keyIter = pImpl->registryData.find(keyName);
-    return keyIter != pImpl->registryData.end() &&
+auto Registry::valueExists(const std::string& keyName,
+                           const std::string& valueName) const -> bool {
+    auto keyIter = pImpl_->registryData.find(keyName);
+    return keyIter != pImpl_->registryData.end() &&
            keyIter->second.find(valueName) != keyIter->second.end();
 }
 
-std::vector<std::string> Registry::getValueNames(
-    const std::string& keyName) const {
+auto Registry::getValueNames(const std::string& keyName) const
+    -> std::vector<std::string> {
     std::vector<std::string> valueNames;
-    if (pImpl->registryData.find(keyName) != pImpl->registryData.end()) {
-        for (const auto& pair : pImpl->registryData.at(keyName)) {
+    if (pImpl_->registryData.find(keyName) != pImpl_->registryData.end()) {
+        for (const auto& pair : pImpl_->registryData.at(keyName)) {
             valueNames.push_back(pair.first);
         }
     }

@@ -4,17 +4,19 @@
 #include <string>
 #include <vector>
 
+#include "macro.hpp"
+
 namespace atom::system {
 struct DeviceInfo {
     std::string description;
     std::string address;
-};
+} ATOM_ALIGNAS(64);
 
-std::vector<DeviceInfo> enumerate_usb_devices();
+auto enumerateUsbDevices() -> std::vector<DeviceInfo>;
 
-std::vector<DeviceInfo> enumerate_serial_ports();
+auto enumerateSerialPorts() -> std::vector<DeviceInfo>;
 
-std::vector<DeviceInfo> enumerate_bluetooth_devices();
+auto enumerateBluetoothDevices() -> std::vector<DeviceInfo>;
 
 }  // namespace atom::system
 

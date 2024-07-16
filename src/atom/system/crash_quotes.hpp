@@ -18,6 +18,7 @@ Description: Quote manager for crash report.
 #include <string>
 #include <utility>
 #include <vector>
+#include "macro.hpp"
 
 namespace atom::system {
 /**
@@ -39,14 +40,14 @@ public:
      *
      * @return The text of the quote.
      */
-    [[nodiscard]] auto getText() const -> std::string { return text_; }
+    ATOM_NODISCARD auto getText() const -> std::string { return text_; }
 
     /**
      * @brief Gets the author of the quote.
      *
      * @return The author of the quote.
      */
-    [[nodiscard]] auto getAuthor() const -> std::string { return author_; }
+    ATOM_NODISCARD auto getAuthor() const -> std::string { return author_; }
 
 private:
     std::string text_;
@@ -99,7 +100,8 @@ public:
      * @param keyword The keyword to search for.
      * @return A vector of quotes containing the keyword.
      */
-    std::vector<Quote> searchQuotes(const std::string &keyword) const;
+    ATOM_NODISCARD auto searchQuotes(const std::string &keyword) const
+        -> std::vector<Quote>;
 
     /**
      * @brief Filters quotes by author.
@@ -107,14 +109,15 @@ public:
      * @param author The name of the author to filter by.
      * @return A vector of quotes by the specified author.
      */
-    std::vector<Quote> filterQuotesByAuthor(const std::string &author) const;
+    ATOM_NODISCARD auto filterQuotesByAuthor(const std::string &author) const
+        -> std::vector<Quote>;
 
     /**
      * @brief Gets a random quote from the collection.
      *
      * @return A random quote.
      */
-    std::string getRandomQuote() const;
+    ATOM_NODISCARD auto getRandomQuote() const -> std::string;
 
 private:
     std::vector<Quote> quotes_;

@@ -50,63 +50,63 @@ public:
      *
      * @return The type of the file as an `fs::file_type` enum value.
      */
-    [[nodiscard]] fs::file_type type() const;
+    [[nodiscard]] auto type() const -> fs::file_type;
 
     /**
      * @brief Gets the size of the file.
      *
      * @return The size of the file in bytes.
      */
-    [[nodiscard]] std::uintmax_t size() const;
+    [[nodiscard]] auto size() const -> std::uintmax_t;
 
     /**
      * @brief Gets the last access time of the file.
      *
      * @return The last access time of the file as a `std::time_t` value.
      */
-    [[nodiscard]] std::time_t atime() const;
+    [[nodiscard]] auto atime() const -> std::time_t;
 
     /**
      * @brief Gets the last modification time of the file.
      *
      * @return The last modification time of the file as a `std::time_t` value.
      */
-    [[nodiscard]] std::time_t mtime() const;
+    [[nodiscard]] auto mtime() const -> std::time_t;
 
     /**
      * @brief Gets the creation time of the file.
      *
      * @return The creation time of the file as a `std::time_t` value.
      */
-    [[nodiscard]] std::time_t ctime() const;
+    [[nodiscard]] auto ctime() const -> std::time_t;
 
     /**
      * @brief Gets the file mode/permissions.
      *
      * @return The file mode/permissions as an integer value.
      */
-    [[nodiscard]] int mode() const;
+    [[nodiscard]] auto mode() const -> int;
 
     /**
      * @brief Gets the user ID of the file owner.
      *
      * @return The user ID of the file owner as an integer value.
      */
-    [[nodiscard]] int uid() const;
+    [[nodiscard]] auto uid() const -> int;
 
     /**
      * @brief Gets the group ID of the file owner.
      *
      * @return The group ID of the file owner as an integer value.
      */
-    [[nodiscard]] int gid() const;
+    [[nodiscard]] auto gid() const -> int;
 
     /**
      * @brief Gets the path of the file.
      *
      * @return The path of the file as an `fs::path` object.
      */
-    [[nodiscard]] fs::path path() const;
+    [[nodiscard]] auto path() const -> fs::path;
 
 private:
     fs::path path_;  ///< The path to the file.

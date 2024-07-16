@@ -11,7 +11,7 @@ namespace atom::system {
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool shutdown();
+auto shutdown() -> bool;
 
 /**
  * @brief Reboot the system.
@@ -22,7 +22,7 @@ bool shutdown();
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool reboot();
+auto reboot() -> bool;
 
 /**
  * @brief Hibernate the system.
@@ -33,7 +33,7 @@ bool reboot();
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool hibernate();
+auto hibernate() -> bool;
 
 /**
  * @brief Logout the current user.
@@ -44,7 +44,7 @@ bool hibernate();
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool logout();
+auto logout() -> bool;
 
 /**
  * @brief Lock the screen.
@@ -55,7 +55,7 @@ bool logout();
  * @return false if an error occurred.
  *         如果发生错误，则返回 false
  */
-bool lockScreen();
+auto lockScreen() -> bool;
 }  // namespace atom::system
 
 #endif

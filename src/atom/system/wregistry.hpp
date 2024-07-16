@@ -16,9 +16,17 @@ Description: Some registry functions for Windows
 #define ATOM_SYSTEM_WREGISTRY_HPP
 
 #ifdef _WIN32
-#include <windows.h>
-#include <string>
+#include <string_view>
+#include <utility>
 #include <vector>
+
+// Forward declaration to avoid including windows.h in the header
+struct HKEY__;
+
+// Alias for HKEY
+using HKEY = HKEY__*;
+
+namespace atom::system {
 
 /**
  * @brief 获取指定注册表键下的所有子键名称。
@@ -27,8 +35,9 @@ Description: Some registry functions for Windows
  * @param subKeys 子键名称的字符串向量。
  * @return true 表示成功，false 表示失败。
  */
-bool getRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
-                        std::vector<std::string> &subKeys);
+[[nodiscard]] auto getRegistrySubKeys(HKEY hRootKey, std::string_view subKey,
+                                      std::vector<std::string>& subKeys)
+    -> bool;
 
 /**
  * @brief 获取指定注册表键下的所有值名称和数据。
@@ -37,9 +46,9 @@ bool getRegistrySubKeys(HKEY hRootKey, const std::string &subKey,
  * @param values 名称和数据的字符串对向量。
  * @return true 表示成功，false 表示失败。
  */
-bool getRegistryValues(
-    HKEY hRootKey, const std::string &subKey,
-    std::vector<std::pair<std::string, std::string>> &values);
+[[nodiscard]] auto getRegistryValues(
+    HKEY hRootKey, std::string_view subKey,
+    std::vector<std::pair<std::string, std::string>>& values) -> bool;
 
 /**
  * @brief 修改指定注册表键下的指定值的数据。
@@ -49,9 +58,9 @@ bool getRegistryValues(
  * @param newValue 新的值数据。
  * @return true 表示成功，false 表示失败。
  */
-bool modifyRegistryValue(HKEY hRootKey, const std::string &subKey,
-                         const std::string &valueName,
-                         const std::string &newValue);
+[[nodiscard]] auto modifyRegistryValue(HKEY hRootKey, std::string_view subKey,
+                                       std::string_view valueName,
+                                       std::string_view newValue) -> bool;
 
 /**
  * @brief 删除指定注册表键及其所有子键。
@@ -59,7 +68,8 @@ bool modifyRegistryValue(HKEY hRootKey, const std::string &subKey,
  * @param subKey 要删除的键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  * @return true 表示成功，false 表示失败。
  */
-bool deleteRegistrySubKey(HKEY hRootKey, const std::string &subKey);
+[[nodiscard]] auto deleteRegistrySubKey(HKEY hRootKey,
+                                        std::string_view subKey) -> bool;
 
 /**
  * @brief 删除指定注册表键下的指定值。
@@ -68,8 +78,8 @@ bool deleteRegistrySubKey(HKEY hRootKey, const std::string &subKey);
  * @param valueName 要删除的值的名称。
  * @return true 表示成功，false 表示失败。
  */
-bool deleteRegistryValue(HKEY hRootKey, const std::string &subKey,
-                         const std::string &valueName);
+[[nodiscard]] auto deleteRegistryValue(HKEY hRootKey, std::string_view subKey,
+                                       std::string_view valueName) -> bool;
 
 /**
  * @brief 递归枚举指定注册表键下的所有子键和值。
@@ -77,7 +87,7 @@ bool deleteRegistryValue(HKEY hRootKey, const std::string &subKey,
  * @param subKey 指定键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  */
 void recursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
-                                         const std::string &subKey);
+                                         std::string_view subKey);
 
 /**
  * @brief 备份指定注册表键及其所有子键和值。
@@ -86,8 +96,8 @@ void recursivelyEnumerateRegistrySubKeys(HKEY hRootKey,
  * @param backupFilePath 备份文件的完整路径。
  * @return true 表示成功，false 表示失败。
  */
-bool backupRegistry(HKEY hRootKey, const std::string &subKey,
-                    const std::string &backupFilePath);
+[[nodiscard]] auto backupRegistry(HKEY hRootKey, std::string_view subKey,
+                                  std::string_view backupFilePath) -> bool;
 
 /**
  * @brief 在指定注册表键下递归查找包含指定字符串的子键名称。
@@ -95,8 +105,8 @@ bool backupRegistry(HKEY hRootKey, const std::string &subKey,
  * @param subKey 指定键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  * @param searchKey 要查找的字符串。
  */
-void findRegistryKey(HKEY hRootKey, const std::string &subKey,
-                     const std::string &searchKey);
+void findRegistryKey(HKEY hRootKey, std::string_view subKey,
+                     std::string_view searchKey);
 
 /**
  * @brief 在指定注册表键下递归查找包含指定字符串的值名称和数据。
@@ -104,8 +114,8 @@ void findRegistryKey(HKEY hRootKey, const std::string &subKey,
  * @param subKey 指定键的名称，可以包括多个嵌套的键，用反斜杠分隔。
  * @param searchValue 要查找的字符串。
  */
-void findRegistryValue(HKEY hRootKey, const std::string &subKey,
-                       const std::string &searchValue);
+void findRegistryValue(HKEY hRootKey, std::string_view subKey,
+                       std::string_view searchValue);
 
 /**
  * @brief 导出指定注册表键及其所有子键和值为 REG 文件。
@@ -114,9 +124,11 @@ void findRegistryValue(HKEY hRootKey, const std::string &subKey,
  * @param exportFilePath 导出文件的完整路径。
  * @return true 表示成功，false 表示失败。
  */
-bool exportRegistry(HKEY hRootKey, const std::string &subKey,
-                    const std::string &exportFilePath);
+[[nodiscard]] auto exportRegistry(HKEY hRootKey, std::string_view subKey,
+                                  std::string_view exportFilePath) -> bool;
+
+}  // namespace atom::system
 
 #endif
 
-#endif
+#endif  // ATOM_SYSTEM_WREGISTRY_HPP

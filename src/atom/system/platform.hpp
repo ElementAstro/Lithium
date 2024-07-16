@@ -56,7 +56,7 @@ const std::string architecture = "Unknown architecture";
 #endif
 
 #ifdef _WIN32
-std::string getWindowsVersion();
+auto getWindowsVersion() -> std::string;
 #endif
 const std::string os_version =
 #ifdef _WIN32

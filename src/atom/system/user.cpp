@@ -33,19 +33,19 @@ Description: Some system functions to get user information.
 #include "atom/log/loguru.hpp"
 
 namespace atom::system {
-    bool isRoot() {
+auto isRoot() -> bool {
 #ifdef _WIN32
     HANDLE hToken;
     TOKEN_ELEVATION elevation;
     DWORD dwSize;
 
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) == 0) {
         LOG_F(ERROR, "isRoot error: OpenProcessToken error");
         return false;
     }
 
-    if (!GetTokenInformation(hToken, TokenElevation, &elevation,
-                             sizeof(elevation), &dwSize)) {
+    if (GetTokenInformation(hToken, TokenElevation, &elevation,
+                            sizeof(elevation), &dwSize) == 0) {
         LOG_F(ERROR, "isRoot error: GetTokenInformation error");
         CloseHandle(hToken);
         return false;
@@ -59,17 +59,17 @@ namespace atom::system {
 #endif
 }
 
-std::vector<std::wstring> getUserGroups() {
+auto getUserGroups() -> std::vector<std::wstring> {
     std::vector<std::wstring> groups;
 
 #ifdef _WIN32
     HANDLE hToken;
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) == 0) {
         LOG_F(ERROR, "Failed to open process token.");
         return groups;
     }
     DWORD bufferSize = 0;
-    GetTokenInformation(hToken, TokenGroups, NULL, 0, &bufferSize);
+    GetTokenInformation(hToken, TokenGroups, nullptr, 0, &bufferSize);
     if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
         LOG_F(ERROR, "Failed to get token information size.");
         CloseHandle(hToken);
@@ -77,20 +77,21 @@ std::vector<std::wstring> getUserGroups() {
     }
 
     std::vector<BYTE> buffer(bufferSize);
-    if (!GetTokenInformation(hToken, TokenGroups, buffer.data(), bufferSize,
-                             &bufferSize)) {
+    if (GetTokenInformation(hToken, TokenGroups, buffer.data(), bufferSize,
+                            &bufferSize) == 0) {
         LOG_F(ERROR, "Failed to get token information.");
         CloseHandle(hToken);
         return groups;
     }
 
     // 解析用户组信息
-    PTOKEN_GROUPS pTokenGroups = reinterpret_cast<PTOKEN_GROUPS>(buffer.data());
+    auto *pTokenGroups = reinterpret_cast<PTOKEN_GROUPS>(buffer.data());
     for (DWORD i = 0; i < pTokenGroups->GroupCount; i++) {
         SID_NAME_USE sidUse;
-        DWORD nameLength = 0, domainLength = 0;
-        LookupAccountSid(NULL, pTokenGroups->Groups[i].Sid, NULL, &nameLength,
-                         NULL, &domainLength, &sidUse);
+        DWORD nameLength = 0;
+        DWORD domainLength = 0;
+        LookupAccountSid(nullptr, pTokenGroups->Groups[i].Sid, nullptr,
+                         &nameLength, nullptr, &domainLength, &sidUse);
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
             LOG_F(ERROR, "Failed to get account name and domain length.");
             CloseHandle(hToken);
@@ -99,7 +100,7 @@ std::vector<std::wstring> getUserGroups() {
 
         std::vector<TCHAR> nameBuffer(nameLength);
         std::vector<TCHAR> domainBuffer(domainLength);
-        if (!LookupAccountSid(NULL, pTokenGroups->Groups[i].Sid,
+        if (!LookupAccountSid(nullptr, pTokenGroups->Groups[i].Sid,
                               nameBuffer.data(), &nameLength,
                               domainBuffer.data(), &domainLength, &sidUse)) {
             LOG_F(ERROR, "Failed to lookup account SID.");
@@ -107,7 +108,7 @@ std::vector<std::wstring> getUserGroups() {
             return groups;
         }
 
-        std::wstring groupName = L"";
+        std::wstring groupName;
         std::wstring nameStr(nameBuffer.begin(), nameBuffer.end());
         groupName += nameStr;
         groups.push_back(groupName);
@@ -117,7 +118,7 @@ std::vector<std::wstring> getUserGroups() {
 #else
     // 获取用户组信息
     gid_t *groupsArray = nullptr;
-    int groupCount = getgroups(0, NULL);
+    int groupCount = getgroups(0, nullptr);
     if (groupCount == -1) {
         LOG_F(ERROR, "Failed to get user group count.");
         return groups;
@@ -148,12 +149,12 @@ std::vector<std::wstring> getUserGroups() {
     return groups;
 }
 
-std::string getUsername() {
+auto getUsername() -> std::string {
     std::string username;
 #ifdef _WIN32
     char buffer[UNLEN + 1];
     DWORD size = UNLEN + 1;
-    if (GetUserNameA(buffer, &size)) {
+    if (GetUserNameA(buffer, &size) != 0) {
         username = buffer;
     }
 #else
@@ -166,12 +167,12 @@ std::string getUsername() {
     return username;
 }
 
-std::string getHostname() {
+auto getHostname() -> std::string {
     std::string hostname;
 #ifdef _WIN32
     char buffer[MAX_COMPUTERNAME_LENGTH + 1];
     DWORD size = MAX_COMPUTERNAME_LENGTH + 1;
-    if (GetComputerNameA(buffer, &size)) {
+    if (GetComputerNameA(buffer, &size) != 0) {
         hostname = buffer;
     }
 #else
@@ -187,12 +188,12 @@ int getUserId() {
     int userId = 0;
 #ifdef _WIN32
     HANDLE hToken;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) != 0) {
         DWORD dwLengthNeeded;
-        GetTokenInformation(hToken, TokenUser, NULL, 0, &dwLengthNeeded);
+        GetTokenInformation(hToken, TokenUser, nullptr, 0, &dwLengthNeeded);
         TOKEN_USER *pTokenUser = (TOKEN_USER *)malloc(dwLengthNeeded);
         if (GetTokenInformation(hToken, TokenUser, pTokenUser, dwLengthNeeded,
-                                &dwLengthNeeded)) {
+                                &dwLengthNeeded) != 0) {
             PSID sid = pTokenUser->User.Sid;
             DWORD subAuthorityCount = *GetSidSubAuthorityCount(sid);
             DWORD *subAuthority =
@@ -208,18 +209,18 @@ int getUserId() {
     return userId;
 }
 
-int getGroupId() {
+auto getGroupId() -> int {
     int groupId = 0;
 #ifdef _WIN32
     HANDLE hToken;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) != 0) {
         DWORD dwLengthNeeded;
-        GetTokenInformation(hToken, TokenPrimaryGroup, NULL, 0,
+        GetTokenInformation(hToken, TokenPrimaryGroup, nullptr, 0,
                             &dwLengthNeeded);
-        TOKEN_PRIMARY_GROUP *pTokenPrimaryGroup =
+        auto *pTokenPrimaryGroup =
             (TOKEN_PRIMARY_GROUP *)malloc(dwLengthNeeded);
         if (GetTokenInformation(hToken, TokenPrimaryGroup, pTokenPrimaryGroup,
-                                dwLengthNeeded, &dwLengthNeeded)) {
+                                dwLengthNeeded, &dwLengthNeeded) != 0) {
             PSID sid = pTokenPrimaryGroup->PrimaryGroup;
             DWORD subAuthorityCount = *GetSidSubAuthorityCount(sid);
             DWORD *subAuthority =
@@ -236,14 +237,14 @@ int getGroupId() {
 }
 
 #ifdef _WIN32
-std::string getUserProfileDirectory() {
+auto getUserProfileDirectory() -> std::string {
     std::string userProfileDir;
     HANDLE hToken;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken) != 0) {
         DWORD dwSize = 0;
-        GetUserProfileDirectoryA(hToken, NULL, &dwSize);
+        GetUserProfileDirectoryA(hToken, nullptr, &dwSize);
         char *buffer = new char[dwSize];
-        if (GetUserProfileDirectoryA(hToken, buffer, &dwSize)) {
+        if (GetUserProfileDirectoryA(hToken, buffer, &dwSize) != 0) {
             userProfileDir = buffer;
         }
         delete[] buffer;
@@ -253,7 +254,7 @@ std::string getUserProfileDirectory() {
 }
 #endif
 
-std::string getHomeDirectory() {
+auto getHomeDirectory() -> std::string {
     std::string homeDir;
 #ifdef _WIN32
     homeDir = getUserProfileDirectory();
@@ -265,7 +266,7 @@ std::string getHomeDirectory() {
     return homeDir;
 }
 
-std::string getLoginShell() {
+auto getLoginShell() -> std::string {
     std::string loginShell;
 #ifdef _WIN32
     char buf[MAX_PATH];
@@ -285,7 +286,7 @@ std::string getLogin() {
 #ifdef _WIN32
     char buffer[UNLEN + 1];
     DWORD bufferSize = UNLEN + 1;
-    if (GetUserNameA(buffer, &bufferSize)) {
+    if (GetUserNameA(buffer, &bufferSize) != 0) {
         return buffer;
     }
 #else

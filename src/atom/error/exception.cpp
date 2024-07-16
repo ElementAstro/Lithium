@@ -13,6 +13,7 @@ Description: Better Exception Library
 **************************************************/
 
 #include "exception.hpp"
+#include "atom/utils/time.hpp"
 
 #include <chrono>
 #include <cstdio>
@@ -27,7 +28,7 @@ namespace atom::error {
 auto Exception::what() const noexcept -> const char* {
     if (full_message_.empty()) {
         std::ostringstream oss;
-        oss << "[" << getCurrentTime() << "] ";
+        oss << "[" << utils::getChinaTimestampString() << "] ";
         oss << "Exception at " << file_ << ":" << line_ << " in " << func_
             << "()";
         oss << " (thread " << thread_id_ << ")";
@@ -48,18 +49,4 @@ auto Exception::getLine() const -> int { return line_; }
 auto Exception::getFunction() const -> std::string { return func_; }
 auto Exception::getMessage() const -> std::string { return message_; }
 auto Exception::getThreadId() const -> std::thread::id { return thread_id_; }
-
-auto Exception::getCurrentTime() const -> std::string {
-    auto now = std::chrono::system_clock::now();
-    auto timeT = std::chrono::system_clock::to_time_t(now);
-    std::tm tmTime{};
-#if defined(_MSC_VER)
-    localtime_s(&tm_time, &time_t);
-#else
-    localtime_r(&timeT, &tmTime);
-#endif
-    std::ostringstream oss;
-    oss << std::put_time(&tmTime, "%Y-%m-%d %H:%M:%S");
-    return oss.str();
-}
 }  // namespace atom::error

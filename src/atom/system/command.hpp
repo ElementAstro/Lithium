@@ -19,6 +19,8 @@ Description: Simple wrapper for executing commands.
 #include <string>
 #include <unordered_map>
 
+#include "macro.hpp"
+
 namespace atom::system {
 
 /**
@@ -32,10 +34,31 @@ namespace atom::system {
  * @note The function throws a std::runtime_error if the command fails to
  * execute.
  */
-[[nodiscard]] std::string executeCommand(
+ATOM_NODISCARD auto executeCommand(
     const std::string &command, bool openTerminal = false,
     const std::function<void(const std::string &)> &processLine =
-        [](const std::string &) {});
+        [](const std::string &) {}) -> std::string;
+
+/**
+ * @brief Execute a command and return the command output as a string.
+ *
+ * @param command The command to execute.
+ * @param openTerminal Whether to open a terminal window for the command.
+ * @param processLine A callback function to process each line of output.
+ * @param status The exit status of the command.
+ * @param terminateCondition A callback function to determine whether to
+ * terminate the command execution.
+ * @return The output of the command as a string.
+ *
+ * @note The function throws a std::runtime_error if the command fails to
+ * execute.
+ */
+auto executeCommandStream(
+    const std::string &command, bool openTerminal,
+    const std::function<void(const std::string &)> &processLine, int &status,
+    const std::function<bool()> &terminateCondition = [] {
+        return false;
+    }) -> std::string;
 
 /**
  * @brief Execute a list of commands.
@@ -72,9 +95,9 @@ void killProcessByPID(int pid, int signal);
  * @note The function throws a std::runtime_error if the command fails to
  * execute.
  */
-[[nodiscard]] std::string executeCommandWithEnv(
+ATOM_NODISCARD auto executeCommandWithEnv(
     const std::string &command,
-    const std::unordered_map<std::string, std::string> &envVars);
+    const std::unordered_map<std::string, std::string> &envVars) -> std::string;
 
 /**
  * @brief Execute a command and return the command output along with the exit
@@ -87,8 +110,8 @@ void killProcessByPID(int pid, int signal);
  * @note The function throws a std::runtime_error if the command fails to
  * execute.
  */
-[[nodiscard]] std::pair<std::string, int> executeCommandWithStatus(
-    const std::string &command);
+ATOM_NODISCARD auto executeCommandWithStatus(const std::string &command)
+    -> std::pair<std::string, int>;
 }  // namespace atom::system
 
 #endif

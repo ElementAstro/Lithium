@@ -118,7 +118,7 @@ private:
              ///< wait for process completion.
     std::vector<Process> processes;  ///< 存储当前运行的进程列表。 // Stores the
                                      ///< list of currently running processes.
-    std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
+    mutable std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
                             ///< manipulating the process list.
 };
 
@@ -126,12 +126,12 @@ private:
  * 获取所有进程信息。
  * @return 所有进程信息。
  */
-std::vector<std::pair<int, std::string>> getAllProcesses();
+auto getAllProcesses() -> std::vector<std::pair<int, std::string>>;
 
 /*
  * 获取当前进程信息。
  */
-[[nodiscard("The process info is not used")]] Process getSelfProcessInfo();
+[[nodiscard("The process info is not used")]] auto getSelfProcessInfo() -> Process;
 
 /**
  * @brief Returns the name of the controlling terminal.
@@ -141,7 +141,7 @@ std::vector<std::pair<int, std::string>> getAllProcesses();
  *
  * @return The name of the controlling terminal.
  */
-[[nodiscard]] std::string ctermid();
+[[nodiscard]] auto ctermid() -> std::string;
 
 /**
  * @brief Returns the priority of a process by its PID.
@@ -154,7 +154,7 @@ std::vector<std::pair<int, std::string>> getAllProcesses();
  * @return std::optional<int> The priority of the process if found, otherwise an
  * empty std::optional.
  */
-std::optional<int> getProcessPriorityByPid(int pid);
+auto getProcessPriorityByPid(int pid) -> std::optional<int>;
 
 /**
  * @brief Returns the priority of a process by its name.
@@ -167,7 +167,7 @@ std::optional<int> getProcessPriorityByPid(int pid);
  * @return std::optional<int> The priority of the process if found, otherwise an
  * empty std::optional.
  */
-std::optional<int> getProcessPriorityByName(const std::string &name);
+auto getProcessPriorityByName(const std::string &name) -> std::optional<int>;
 
 /**
  * @brief Checks if a process is running by its name.
@@ -178,7 +178,7 @@ std::optional<int> getProcessPriorityByName(const std::string &name);
  * @param processName The name of the process to check.
  * @return bool True if the process is running, otherwise false.
  */
-bool isProcessRunning(const std::string &processName);
+auto isProcessRunning(const std::string &processName) -> bool;
 
 /**
  * @brief Returns the parent process ID of a given process.
@@ -189,7 +189,7 @@ bool isProcessRunning(const std::string &processName);
  * @param processId The process ID of the target process.
  * @return int The parent process ID if found, otherwise -1.
  */
-int getParentProcessId(int processId);
+auto getParentProcessId(int processId) -> int;
 
 /**
  * @brief Creates a process as a specified user.
@@ -204,10 +204,10 @@ int getParentProcessId(int processId);
  * @param password The password of the user account.
  * @return bool True if the process is created successfully, otherwise false.
  */
-bool _CreateProcessAsUser(const std::string &command,
+auto _CreateProcessAsUser(const std::string &command,
                           const std::string &username,
                           const std::string &domain,
-                          const std::string &password);
+                          const std::string &password) -> bool;
 
 }  // namespace atom::system
 

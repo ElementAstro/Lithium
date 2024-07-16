@@ -67,15 +67,6 @@ target_sources(atom-system-object
 
 add_library(atom-system STATIC)
 
-target_compile_definitions(atom-system-object PRIVATE
-    ENABLE_DEBUG = 1
-    $<$<CONFIG:Debug>:DEBUG_MODE>
-)
-target_compile_definitions(atom-system-object PRIVATE
-    LOGURU_DEBUG_LOGGING
-    $<$<CONFIG:Debug>:DEBUG_MODE>
-)
-
 # Platform-specific libraries
 if(WIN32)
     target_link_libraries(atom-system pdh wlanapi)

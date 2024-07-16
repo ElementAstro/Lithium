@@ -16,36 +16,37 @@ Description: Environment variable management
 
 #include <algorithm>
 #include <filesystem>
-#include <iomanip>
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 #include "atom/log/loguru.hpp"
 
+namespace fs = std::filesystem;
+
 namespace atom::utils {
 Env::Env(int argc, char **argv) {
-    std::filesystem::path exe_path;
+    fs::path exePath;
 
 #ifdef _WIN32
     wchar_t buf[MAX_PATH];
-    if (!GetModuleFileNameW(NULL, buf, MAX_PATH)) {
+    if (GetModuleFileNameW(nullptr, buf, MAX_PATH) == 0U) {
         LOG_F(ERROR, "GetModuleFileNameW failed with error {}", GetLastError());
-        exe_path = buf;
+        exePath = buf;
     }
 #else
     char link_buf[1024];
     ssize_t count = readlink("/proc/self/exe", link_buf, sizeof(link_buf));
     if (count != -1) {
         link_buf[count] = '\0';
-        exe_path = link_buf;
+        exePath = link_buf;
     }
 #endif
 
-    m_exe = exe_path.string();
+    m_exe = exePath.string();
 
-    m_cwd = exe_path.parent_path().string() + '/';
+    m_cwd = exePath.parent_path().string() + '/';
 
     m_program = argv[0];
 
@@ -75,16 +76,12 @@ Env::Env(int argc, char **argv) {
     }
 }
 
-std::shared_ptr<Env> Env::createShared(int argc, char **argv) {
+auto Env::createShared(int argc, char **argv) -> std::shared_ptr<Env> {
     return std::make_shared<Env>(argc, argv);
 }
 
-std::unique_ptr<Env> Env::createUnique(int argc, char **argv) {
-    return std::make_unique<Env>(argc, argv);
-}
-
 void Env::add(const std::string &key, const std::string &val) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard lock(m_mutex);
     if (has(key)) {
         LOG_F(ERROR, "Env::add: Duplicate key: {}", key);
     } else {
@@ -94,18 +91,18 @@ void Env::add(const std::string &key, const std::string &val) {
 }
 
 bool Env::has(const std::string &key) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    return m_args.count(key) > 0;
+    std::lock_guard lock(m_mutex);
+    return m_args.contains(key);
 }
 
 void Env::del(const std::string &key) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard lock(m_mutex);
     m_args.erase(key);
     DLOG_F(INFO, "Env::del: Remove key: {}", key);
 }
 
 std::string Env::get(const std::string &key, const std::string &default_value) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard lock(m_mutex);
     auto it = m_args.find(key);
     if (it == m_args.end()) {
         DLOG_F(INFO, "Env::get: Key: {} not found, return default value: {}",
@@ -116,13 +113,13 @@ std::string Env::get(const std::string &key, const std::string &default_value) {
 }
 
 void Env::addHelp(const std::string &key, const std::string &desc) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_helps.push_back(std::make_pair(key, desc));
+    std::lock_guard lock(m_mutex);
+    m_helps.emplace_back(key, desc);
     DLOG_F(INFO, "Env::addHelp: Add key: {} with description: {}", key, desc);
 }
 
 void Env::removeHelp(const std::string &key) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard lock(m_mutex);
     m_helps.erase(
         std::remove_if(m_helps.begin(), m_helps.end(),
                        [&](const std::pair<std::string, std::string> &p) {
@@ -133,15 +130,15 @@ void Env::removeHelp(const std::string &key) {
 }
 
 void Env::printHelp() {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard lock(m_mutex);
     DLOG_F(INFO, "Usage: {} [options]", m_program);
     for (const auto &i : m_helps) {
         DLOG_F(INFO, "    {} : {}", i.first, i.second);
     }
 }
 
-bool Env::setEnv(const std::string &key, const std::string &val) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+auto Env::setEnv(const std::string &key, const std::string &val) -> bool {
+    std::lock_guard lock(m_mutex);
     DLOG_F(INFO, "Env::setEnv: Set key: {} with value: {}", key, val);
 #ifdef _WIN32
     return SetEnvironmentVariableA(key.c_str(), val.c_str()) != 0;
@@ -150,9 +147,9 @@ bool Env::setEnv(const std::string &key, const std::string &val) {
 #endif
 }
 
-std::string Env::getEnv(const std::string &key,
-                        const std::string &default_value) {
-    std::lock_guard<std::mutex> lock(m_mutex);
+auto Env::getEnv(const std::string &key,
+                 const std::string &default_value) -> std::string {
+    std::lock_guard lock(m_mutex);
     DLOG_F(INFO, "Env::getEnv: Get key: {} with default value: {}", key,
            default_value);
 #ifdef _WIN32
@@ -175,7 +172,7 @@ std::string Env::getEnv(const std::string &key,
 #endif
 }
 
-std::string Env::getAbsolutePath(const std::string &path) const {
+auto Env::getAbsolutePath(const std::string &path) const -> std::string {
     if (path.empty()) {
         return "/";
     }
@@ -191,7 +188,7 @@ std::string Env::getAbsolutePath(const std::string &path) const {
     return m_cwd + path;
 }
 
-std::string Env::getAbsoluteWorkPath(const std::string &path) const {
+auto Env::getAbsoluteWorkPath(const std::string &path) const -> std::string {
     if (!path.empty()) {
 #ifdef _WIN32
         if (path[1] == ':') {
@@ -206,9 +203,11 @@ std::string Env::getAbsoluteWorkPath(const std::string &path) const {
     return "/";
 }
 
-std::string Env::getConfigPath() { return getAbsolutePath(get("c", "config")); }
+auto Env::getConfigPath() -> std::string {
+    return getAbsolutePath(get("c", "config"));
+}
 
-std::unordered_map<std::string, std::string> Env::Environ() {
+auto Env::Environ() -> std::unordered_map<std::string, std::string> {
     std::unordered_map<std::string, std::string> env;
 
 #ifdef _WIN32

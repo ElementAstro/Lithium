@@ -16,6 +16,7 @@ Description: Storage Monitor
 
 #include <filesystem>
 #include <format>
+#include <thread>
 
 #ifdef _WIN32
 // clang-format off
@@ -44,7 +45,7 @@ void StorageMonitor::registerCallback(
     m_callbacks.push_back(std::move(callback));
 }
 
-bool StorageMonitor::startMonitoring() {
+auto StorageMonitor::startMonitoring() -> bool {
     m_isRunning = true;
     std::thread([this] {
         try {
@@ -70,6 +71,8 @@ void StorageMonitor::stopMonitoring() {
     DLOG_F(INFO, "Storage monitor stopped.");
 }
 
+auto StorageMonitor::isRunning() const -> bool { return m_isRunning; }
+
 void StorageMonitor::triggerCallbacks(const std::string& path) {
     std::lock_guard lock(m_mutex);
     for (const auto& callback : m_callbacks) {
@@ -77,7 +80,7 @@ void StorageMonitor::triggerCallbacks(const std::string& path) {
     }
 }
 
-bool StorageMonitor::isNewMediaInserted(const std::string& path) {
+auto StorageMonitor::isNewMediaInserted(const std::string& path) -> bool {
     auto currentSpace = fs::space(path);
     std::lock_guard lock(m_mutex);
     auto& [lastCapacity, lastFree] = m_storageStats[path];
@@ -107,7 +110,7 @@ void StorageMonitor::listAllStorage() {
 void StorageMonitor::listFiles(const std::string& path) {
     DLOG_F(INFO, "List files in {}", path);
     for (const auto& entry : fs::directory_iterator(path)) {
-        LOG_F(INFO, "- {}", entry.path().filename());
+        LOG_F(INFO, "- {}", entry.path().filename().string());
     }
 }
 
@@ -126,15 +129,15 @@ void monitorUdisk() {
     }
 
     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0)) {
+    while (GetMessage(&msg, nullptr, 0, 0)) {
         if (msg.message == WM_DEVICECHANGE) {
             auto* hdr = reinterpret_cast<PDEV_BROADCAST_HDR>(msg.lParam);
-            if (hdr && hdr->dbch_devicetype == DBT_DEVTYP_VOLUME) {
+            if ((hdr != nullptr) && hdr->dbch_devicetype == DBT_DEVTYP_VOLUME) {
                 auto* volume = reinterpret_cast<PDEV_BROADCAST_VOLUME>(hdr);
                 if (volume->dbcv_flags == DBT_DEVICEARRIVAL) {
-                    for (char driveLetter = 'A'; volume->dbcv_unitmask;
+                    for (char driveLetter = 'A'; volume->dbcv_unitmask != 0U;
                          volume->dbcv_unitmask >>= 1, ++driveLetter) {
-                        if (volume->dbcv_unitmask & 1) {
+                        if ((volume->dbcv_unitmask & 1) != 0U) {
                             std::string drivePath =
                                 std::format("{}:\\", driveLetter);
                             DLOG_F(INFO, "U disk inserted. Drive path: {}",
@@ -142,9 +145,9 @@ void monitorUdisk() {
                         }
                     }
                 } else if (volume->dbcv_flags == DBT_DEVICEREMOVECOMPLETE) {
-                    for (char driveLetter = 'A'; volume->dbcv_unitmask;
+                    for (char driveLetter = 'A'; volume->dbcv_unitmask != 0U;
                          volume->dbcv_unitmask >>= 1, ++driveLetter) {
-                        if (volume->dbcv_unitmask & 1) {
+                        if ((volume->dbcv_unitmask & 1) != 0U) {
                             std::string drivePath =
                                 std::format("{}:\\", driveLetter);
                             DLOG_F(INFO, "U disk removed. Drive path: {}",

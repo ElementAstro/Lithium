@@ -91,16 +91,17 @@ add_subdirectory(${lithium_src_dir}/task)
 add_subdirectory(${lithium_src_dir}/server)
 add_subdirectory(${lithium_src_dir}/utils)
 add_subdirectory(${lithium_src_dir}/addon)
+add_subdirectory(${lithium_src_dir}/client)
 add_subdirectory(tests)
 
 # Set source files
 set(component_module
     ${lithium_component_dir}/addons.cpp
     ${lithium_component_dir}/compiler.cpp
+    ${lithium_component_dir}/dependency.cpp
     ${lithium_component_dir}/loader.cpp
     ${lithium_component_dir}/manager.cpp
     ${lithium_component_dir}/sandbox.cpp
-    ${lithium_component_dir}/sort.cpp
 )
 
 set(config_module

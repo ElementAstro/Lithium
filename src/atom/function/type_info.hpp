@@ -63,7 +63,7 @@ public:
     static auto fromType() ATOM_NOEXCEPT -> TypeInfo {
         using BareT = BareType<T>;
         return TypeInfo(
-            std::is_const_v<T>, std::is_reference_v<T>, std::is_pointer_v<T>,
+            std::is_const_v<typename std::remove_reference<T>::type>, std::is_reference_v<T>, std::is_pointer_v<T>,
             std::is_void_v<T>, std::is_arithmetic_v<T>, std::is_array_v<T>,
             std::is_enum_v<T>, std::is_class_v<T>, std::is_function_v<T>,
             std::is_trivial_v<T>, std::is_standard_layout_v<T>,

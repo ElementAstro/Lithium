@@ -1,92 +1,85 @@
 #include "dependency.hpp"
 
 #include <condition_variable>
-#include <future>
-#include <memory>
-#include <mutex>
+#include <fstream>
 #include <queue>
 #include <thread>
-#include <unordered_map>
 
 namespace lithium {
-
-void DependencyGraph::addNode(const DependencyGraph::Node& node) {
-    adjList.try_emplace(node);
-    incomingEdges.try_emplace(node);
+void DependencyGraph::addNode(const Node& node) {
+    adjList_.try_emplace(node);
+    incomingEdges_.try_emplace(node);
 }
 
-void DependencyGraph::addDependency(const DependencyGraph::Node& from,
-                                    const DependencyGraph::Node& to) {
-    adjList[from].insert(to);
-    incomingEdges[to].insert(from);
+void DependencyGraph::addDependency(const Node& from, const Node& to) {
+    adjList_[from].insert(to);
+    incomingEdges_[to].insert(from);
 }
 
-void DependencyGraph::removeNode(const DependencyGraph::Node& node) {
-    adjList.erase(node);
-    incomingEdges.erase(node);
-    for (auto& [key, neighbors] : adjList) {
+void DependencyGraph::removeNode(const Node& node) {
+    adjList_.erase(node);
+    incomingEdges_.erase(node);
+    for (auto& [key, neighbors] : adjList_) {
         neighbors.erase(node);
     }
-    for (auto& [key, sources] : incomingEdges) {
+    for (auto& [key, sources] : incomingEdges_) {
         sources.erase(node);
     }
 }
 
-void DependencyGraph::removeDependency(const DependencyGraph::Node& from,
-                                       const DependencyGraph::Node& to) {
-    if (adjList.find(from) != adjList.end()) {
-        adjList[from].erase(to);
+void DependencyGraph::removeDependency(const Node& from, const Node& to) {
+    if (adjList_.find(from) != adjList_.end()) {
+        adjList_[from].erase(to);
     }
-    if (incomingEdges.find(to) != incomingEdges.end()) {
-        incomingEdges[to].erase(from);
+    if (incomingEdges_.find(to) != incomingEdges_.end()) {
+        incomingEdges_[to].erase(from);
     }
 }
 
-std::vector<DependencyGraph::Node> DependencyGraph::getDependencies(
-    const DependencyGraph::Node& node) const {
-    if (adjList.find(node) != adjList.end()) {
-        return std::vector<DependencyGraph::Node>(adjList.at(node).begin(),
-                                                  adjList.at(node).end());
+auto DependencyGraph::getDependencies(const Node& node) const
+    -> std::vector<DependencyGraph::Node> {
+    if (adjList_.find(node) != adjList_.end()) {
+        return {adjList_.at(node).begin(), adjList_.at(node).end()};
     }
     return {};
 }
 
-std::vector<DependencyGraph::Node> DependencyGraph::getDependents(
-    const DependencyGraph::Node& node) const {
-    std::vector<DependencyGraph::Node> dependents;
-    for (const auto& [key, neighbors] : adjList) {
-        if (neighbors.find(node) != neighbors.end()) {
+auto DependencyGraph::getDependents(const Node& node) const
+    -> std::vector<DependencyGraph::Node> {
+    std::vector<Node> dependents;
+    for (const auto& [key, neighbors] : adjList_) {
+        if (neighbors.contains(node)) {
             dependents.push_back(key);
         }
     }
     return dependents;
 }
 
-bool DependencyGraph::hasCycle() const {
-    std::unordered_set<DependencyGraph::Node> visited;
-    std::unordered_set<DependencyGraph::Node> recStack;
+auto DependencyGraph::hasCycle() const -> bool {
+    std::unordered_set<Node> visited;
+    std::unordered_set<Node> recStack;
 
-    for (const auto& pair : adjList) {
-        if (hasCycleUtil(pair.first, visited, recStack)) {
+    for (const auto& [node, _] : adjList_) {
+        if (hasCycleUtil(node, visited, recStack)) {
             return true;
         }
     }
     return false;
 }
 
-std::optional<std::vector<DependencyGraph::Node>>
-DependencyGraph::topologicalSort() const {
-    std::unordered_set<DependencyGraph::Node> visited;
-    std::stack<DependencyGraph::Node> stack;
-    for (const auto& pair : adjList) {
-        if (visited.find(pair.first) == visited.end()) {
-            if (!topologicalSortUtil(pair.first, visited, stack)) {
+auto DependencyGraph::topologicalSort() const
+    -> std::optional<std::vector<DependencyGraph::Node>> {
+    std::unordered_set<Node> visited;
+    std::stack<Node> stack;
+    for (const auto& [node, _] : adjList_) {
+        if (!visited.contains(node)) {
+            if (!topologicalSortUtil(node, visited, stack)) {
                 return std::nullopt;  // Cycle detected
             }
         }
     }
 
-    std::vector<DependencyGraph::Node> sortedNodes;
+    std::vector<Node> sortedNodes;
     while (!stack.empty()) {
         sortedNodes.push_back(stack.top());
         stack.pop();
@@ -94,27 +87,27 @@ DependencyGraph::topologicalSort() const {
     return sortedNodes;
 }
 
-std::unordered_set<DependencyGraph::Node> DependencyGraph::getAllDependencies(
-    const DependencyGraph::Node& node) const {
-    std::unordered_set<DependencyGraph::Node> allDependencies;
+auto DependencyGraph::getAllDependencies(const Node& node) const
+    -> std::unordered_set<DependencyGraph::Node> {
+    std::unordered_set<Node> allDependencies;
     getAllDependenciesUtil(node, allDependencies);
     return allDependencies;
 }
 
 void DependencyGraph::loadNodesInParallel(
-    std::function<void(const DependencyGraph::Node&)> loadFunction) const {
-    std::queue<DependencyGraph::Node> readyQueue;
+    std::function<void(const Node&)> loadFunction) const {
+    std::queue<Node> readyQueue;
     std::mutex mtx;
     std::condition_variable cv;
-    std::unordered_map<DependencyGraph::Node, int> inDegree;
-    std::unordered_set<DependencyGraph::Node> loadedNodes;
-    std::vector<std::thread> threads;
+    std::unordered_map<Node, int> inDegree;
+    std::unordered_set<Node> loadedNodes;
+    std::vector<std::jthread> threads;
     bool done = false;
 
     // Initialize in-degree and ready queue
-    for (const auto& [node, deps] : adjList) {
+    for (const auto& [node, deps] : adjList_) {
         inDegree[node] =
-            incomingEdges.count(node) ? incomingEdges.at(node).size() : 0;
+            incomingEdges_.contains(node) ? incomingEdges_.at(node).size() : 0;
         if (inDegree[node] == 0) {
             readyQueue.push(node);
         }
@@ -122,9 +115,9 @@ void DependencyGraph::loadNodesInParallel(
 
     auto worker = [&]() {
         while (true) {
-            DependencyGraph::Node node;
+            Node node;
             {
-                std::unique_lock<std::mutex> lock(mtx);
+                std::unique_lock lock(mtx);
                 cv.wait(lock, [&] { return !readyQueue.empty() || done; });
 
                 if (done && readyQueue.empty()) {
@@ -138,10 +131,10 @@ void DependencyGraph::loadNodesInParallel(
             loadFunction(node);
 
             {
-                std::unique_lock<std::mutex> lock(mtx);
+                std::unique_lock lock(mtx);
                 loadedNodes.insert(node);
 
-                for (const auto& dep : adjList.at(node)) {
+                for (const auto& dep : adjList_.at(node)) {
                     inDegree[dep]--;
                     if (inDegree[dep] == 0) {
                         readyQueue.push(dep);
@@ -149,7 +142,7 @@ void DependencyGraph::loadNodesInParallel(
                 }
 
                 if (readyQueue.empty() &&
-                    loadedNodes.size() == adjList.size()) {
+                    loadedNodes.size() == adjList_.size()) {
                     done = true;
                     cv.notify_all();
                 } else {
@@ -160,28 +153,25 @@ void DependencyGraph::loadNodesInParallel(
     };
 
     int numThreads = std::thread::hardware_concurrency();
+    threads.reserve(numThreads);
     for (int i = 0; i < numThreads; ++i) {
         threads.emplace_back(worker);
     }
-
-    for (auto& thread : threads) {
-        thread.join();
-    }
 }
 
-bool DependencyGraph::hasCycleUtil(
-    const DependencyGraph::Node& node,
-    std::unordered_set<DependencyGraph::Node>& visited,
-    std::unordered_set<DependencyGraph::Node>& recStack) const {
-    if (!visited.count(node)) {
+auto DependencyGraph::hasCycleUtil(
+    const Node& node, std::unordered_set<Node>& visited,
+    std::unordered_set<Node>& recStack) const -> bool {
+    if (!visited.contains(node)) {
         visited.insert(node);
         recStack.insert(node);
 
-        for (const auto& neighbour : adjList.at(node)) {
-            if (!visited.count(neighbour) &&
+        for (const auto& neighbour : adjList_.at(node)) {
+            if (!visited.contains(neighbour) &&
                 hasCycleUtil(neighbour, visited, recStack)) {
                 return true;
-            } else if (recStack.count(neighbour)) {
+            }
+            if (recStack.contains(neighbour)) {
                 return true;
             }
         }
@@ -190,13 +180,12 @@ bool DependencyGraph::hasCycleUtil(
     return false;
 }
 
-bool DependencyGraph::topologicalSortUtil(
-    const DependencyGraph::Node& node,
-    std::unordered_set<DependencyGraph::Node>& visited,
-    std::stack<DependencyGraph::Node>& stack) const {
+auto DependencyGraph::topologicalSortUtil(
+    const Node& node, std::unordered_set<Node>& visited,
+    std::stack<Node>& stack) const -> bool {
     visited.insert(node);
-    for (const auto& neighbour : adjList.at(node)) {
-        if (visited.find(neighbour) == visited.end()) {
+    for (const auto& neighbour : adjList_.at(node)) {
+        if (!visited.contains(neighbour)) {
             if (!topologicalSortUtil(neighbour, visited, stack)) {
                 return false;  // Cycle detected
             }
@@ -207,15 +196,89 @@ bool DependencyGraph::topologicalSortUtil(
 }
 
 void DependencyGraph::getAllDependenciesUtil(
-    const DependencyGraph::Node& node,
-    std::unordered_set<DependencyGraph::Node>& allDependencies) const {
-    if (adjList.find(node) != adjList.end()) {
-        for (const auto& neighbour : adjList.at(node)) {
-            if (allDependencies.find(neighbour) == allDependencies.end()) {
+    const Node& node, std::unordered_set<Node>& allDependencies) const {
+    if (adjList_.contains(node)) {
+        for (const auto& neighbour : adjList_.at(node)) {
+            if (!allDependencies.contains(neighbour)) {
                 allDependencies.insert(neighbour);
                 getAllDependenciesUtil(neighbour, allDependencies);
             }
         }
     }
+}
+
+auto DependencyGraph::removeDuplicates(const std::vector<std::string>& input)
+    -> std::vector<std::string> {
+    std::unordered_set<std::string> seen;
+    std::vector<std::string> result;
+
+    for (const auto& element : input) {
+        if (seen.insert(element).second) {
+            result.push_back(element);
+        }
+    }
+
+    return result;
+}
+
+auto DependencyGraph::parsePackageJson(const std::string& path)
+    -> std::pair<std::string, std::vector<std::string>> {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        // THROW_EXCEPTION("Failed to open " + path);
+    }
+
+    json packageJson;
+    try {
+        file >> packageJson;
+    } catch (const json::exception& e) {
+        // THROW_EXCEPTION("Error parsing JSON in " + path + ": " + e.what());
+    }
+
+    if (!packageJson.contains("name")) {
+        // THROW_EXCEPTION("Missing package name in " + path);
+    }
+
+    std::string packageName = packageJson["name"];
+    std::vector<std::string> deps;
+
+    if (packageJson.contains("dependencies")) {
+        for (const auto& dep : packageJson["dependencies"].items()) {
+            deps.push_back(dep.key());
+        }
+    }
+
+    file.close();
+    return {packageName, deps};
+}
+
+auto DependencyGraph::resolveDependencies(
+    const std::vector<std::string>& directories) -> std::vector<std::string> {
+    DependencyGraph graph;
+
+    for (const auto& dir : directories) {
+        std::string packagePath = dir + "/package.json";
+        auto [package_name, deps] = parsePackageJson(packagePath);
+
+        graph.addNode(package_name);
+        for (const auto& dep : deps) {
+            graph.addNode(dep);
+            graph.addDependency(
+                dep, package_name);  // Ensure correct order of dependencies
+        }
+    }
+
+    if (graph.hasCycle()) {
+        // LOG_F(ERROR, "Circular dependency detected.");
+        return {};
+    }
+
+    auto sortedPackagesOpt = graph.topologicalSort();
+    if (!sortedPackagesOpt) {
+        // LOG_F(ERROR, "Failed to sort packages.");
+        return {};
+    }
+
+    return removeDuplicates(sortedPackagesOpt.value());
 }
 }  // namespace lithium

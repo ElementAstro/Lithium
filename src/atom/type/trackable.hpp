@@ -54,6 +54,11 @@ public:
         observers_.emplace_back(std::move(onChange));
     }
 
+    void setOnChangeCallback(std::function<void(const T&)> onChange) {
+        std::lock_guard lock(mutex_);
+        onChangeCallback_ = std::move(onChange);
+    }
+
     /**
      * @brief Unsubscribe all observer functions.
      */
@@ -205,6 +210,8 @@ private:
     bool notifyDeferred_{};     ///< Flag to control deferred notifications.
     std::optional<T>
         lastOldValue_;  ///< Last old value for deferred notifications.
+    std::function<void(const T&)>
+        onChangeCallback_;  ///< Callback for value changes.
 
     /**
      * @brief Notifies all observers about the value change.
@@ -216,6 +223,7 @@ private:
         // Make a local copy of the observers to avoid holding the lock while
         // notifying.
         auto localObservers = observers_;
+        auto localOnChangeCallback = onChangeCallback_;
         mutex_.unlock();  // Unlock before notifying to prevent deadlocks.
         for (const auto& observer : localObservers) {
             try {
@@ -226,6 +234,17 @@ private:
             } catch (...) {
                 mutex_.lock();
                 THROW_EXCEPTION("Unknown exception in observer.");
+            }
+        }
+        if (localOnChangeCallback) {
+            try {
+                localOnChangeCallback(newVal);
+            } catch (const std::exception& e) {
+                mutex_.lock();
+                THROW_EXCEPTION("Exception in onChangeCallback: ", e.what());
+            } catch (...) {
+                mutex_.lock();
+                THROW_EXCEPTION("Unknown exception in onChangeCallback.");
             }
         }
         mutex_.lock();

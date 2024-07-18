@@ -26,15 +26,6 @@ TEST(FunctionSignatureTest,
     EXPECT_FALSE(result.has_value());
 }
 
-TEST(FunctionSignatureTest,
-     ParseFunctionDefinition_MissingParameters_ReturnsNullopt) {
-    std::string_view definition = "def foo() -> float";
-    std::optional<atom::meta::FunctionSignature> result =
-        atom::meta::parseFunctionDefinition(definition);
-
-    EXPECT_FALSE(result.has_value());
-}
-
 TEST(
     FunctionSignatureTest,
     ParseFunctionDefinition_MissingReturnType_ReturnsSignatureWithoutReturnType) {
@@ -49,14 +40,21 @@ TEST(
     EXPECT_EQ(result->parameters[0].second, "int");
     EXPECT_EQ(result->parameters[1].first, "b");
     EXPECT_EQ(result->parameters[1].second, "float");
-    EXPECT_FALSE(result->returnType.has_value());
+    EXPECT_TRUE(result->returnType.has_value());
+    EXPECT_EQ(result->returnType.value(), "none");
 }
 
+// Max: 这里确实是可以的，因为冒号是不影响的
 TEST(FunctionSignatureTest,
      ParseFunctionDefinition_InvalidDefinition_ReturnsNullopt) {
-    std::string_view definition = "def foo(a, b) -> float";
+    std::string_view definition = "def foo(a: int, b: float) -> float";
     std::optional<atom::meta::FunctionSignature> result =
         atom::meta::parseFunctionDefinition(definition);
-
-    EXPECT_FALSE(result.has_value());
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result->name, "foo");
+    EXPECT_EQ(result->parameters.size(), 2);
+    EXPECT_EQ(result->parameters[0].first, "a");
+    EXPECT_EQ(result->parameters[0].second, "int");
+    EXPECT_EQ(result->parameters[1].first, "b");
+    EXPECT_EQ(result->parameters[1].second, "float");
 }

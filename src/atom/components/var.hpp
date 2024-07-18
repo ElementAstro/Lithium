@@ -21,6 +21,8 @@ Description: Variable Manager
 #include <utility>
 #include <vector>
 
+#include <iostream>
+
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"
 #else
@@ -35,6 +37,12 @@ class VariableManager {
 public:
     template <typename T>
     void addVariable(const std::string& name, T initialValue,
+                     const std::string& description = "",
+                     const std::string& alias = "",
+                     const std::string& group = "");
+
+    template <typename T, typename C>
+    void addVariable(const std::string& name, T C::*memberPointer, C& instance,
                      const std::string& description = "",
                      const std::string& alias = "",
                      const std::string& group = "");
@@ -87,6 +95,20 @@ ATOM_INLINE void VariableManager::addVariable(const std::string& name,
                                               const std::string& alias,
                                               const std::string& group) {
     auto variable = std::make_shared<Trackable<T>>(std::move(initialValue));
+    variables_[name] = {std::move(variable), description, alias, group};
+}
+
+template <typename T, typename C>
+ATOM_INLINE void VariableManager::addVariable(const std::string& name,
+                                              T C::*memberPointer, C& instance,
+                                              const std::string& description,
+                                              const std::string& alias,
+                                              const std::string& group) {
+    auto variable = std::make_shared<Trackable<T>>(instance.*memberPointer);
+    variable->setOnChangeCallback(
+        [&instance, memberPointer](const T& newValue) {
+            instance.*memberPointer = newValue;
+        });
     variables_[name] = {std::move(variable), description, alias, group};
 }
 

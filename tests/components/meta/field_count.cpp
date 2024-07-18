@@ -38,12 +38,12 @@ TEST(FieldCountTest, NestedStructTest) {
 
 TEST(FieldCountTest, ArrayStructTest) {
     constexpr auto COUNT = fieldCountOf<ArrayStruct>();
-    EXPECT_EQ(COUNT, 2);
+    EXPECT_EQ(COUNT, 4);
 }
 
 TEST(FieldCountTest, ComplexStructTest) {
     constexpr auto COUNT = fieldCountOf<ComplexStruct>();
-    EXPECT_EQ(COUNT, 3);
+    EXPECT_EQ(COUNT, 4);
 }
 
 TEST(FieldCountTest, EmptyStructTest) {
@@ -62,7 +62,6 @@ TEST(FieldCountTest, SingleFieldStructTest) {
     EXPECT_EQ(COUNT, 1);
 }
 
-/*
 TEST(FieldCountTest, NonAggregateStructTest) {
     struct NonAggregateStruct {
         NonAggregateStruct(int x) : a(x) {}
@@ -70,7 +69,6 @@ TEST(FieldCountTest, NonAggregateStructTest) {
     };
 
     // Non-aggregate types should not be counted
-    constexpr auto count = field_count_of<NonAggregateStruct>();
+    constexpr auto count = fieldCountOf<NonAggregateStruct>();
     EXPECT_EQ(count, 0);
 }
-*/

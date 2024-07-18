@@ -31,11 +31,8 @@ auto getColorCode(Color color) -> std::string {
     }
 }
 
-void printProgressBar(int current, int total, int width, char completeChar,
-                      char incompleteChar, bool showTimeLeft,
-                      std::chrono::time_point<std::chrono::steady_clock> start,
-                      Color color) {
-    float progress = (float)current / total;
+void ProgressBar::printProgressBar() {
+    float progress = static_cast<float>(current) / total;
     int pos = static_cast<int>(progress * width);
 
     std::system(CLEAR_SCREEN);
@@ -55,7 +52,7 @@ void printProgressBar(int current, int total, int width, char completeChar,
 
     if (showTimeLeft && current > 0) {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::steady_clock::now() - start)
+                           std::chrono::steady_clock::now() - start_time)
                            .count();
         int remaining = static_cast<int>((elapsed * total) / current - elapsed);
         std::cout << int(progress * 100.0) << " % (ETA: " << remaining / 60000
@@ -81,21 +78,20 @@ ProgressBar::ProgressBar(int total, int width, char completeChar,
 
 void ProgressBar::start() {
     running = true;
-    interrupted = false;
+    paused = false;
     start_time = std::chrono::steady_clock::now();
 
     std::cout << HIDE_CURSOR;  // Hide cursor
 
-    future = std::async(std::launch::async, [&]() {
+    future = std::async(std::launch::async, [this]() {
         while (running) {
             std::unique_lock lock(mutex);
-            cv.wait(lock, [&]() { return !paused || !running; });
+            cv.wait(lock, [this]() { return !paused || !running; });
 
             if (!running)
                 break;
 
-            printProgressBar(current, total, width, completeChar,
-                             incompleteChar, showTimeLeft, start_time, color);
+            printProgressBar();
 
             if (++current > total) {
                 running = false;
@@ -139,5 +135,7 @@ void ProgressBar::wait() {
         future.wait();
     }
 }
+
+auto ProgressBar::getCurrent() const -> int { return current; }
 
 }  // namespace lithium::debug

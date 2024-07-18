@@ -45,8 +45,8 @@ constexpr auto parseFunctionDefinition(
 
     size_t nameStart = DEF_PREFIX.size();
     size_t nameEnd = DEFINITION.find('(', nameStart);
-    if (nameEnd == std::string_view::npos) {
-        return std::nullopt;
+    if (nameEnd == std::string_view::npos || nameEnd == nameStart) {
+        return std::nullopt;  // No function name present
     }
 
     std::string_view name = DEFINITION.substr(nameStart, nameEnd - nameStart);
@@ -59,7 +59,7 @@ constexpr auto parseFunctionDefinition(
     std::string_view params =
         DEFINITION.substr(paramsStart, paramsEnd - paramsStart);
     size_t arrowPos = DEFINITION.find(ARROW, paramsEnd + 1);
-    std::optional<std::string_view> returnType;
+    std::optional<std::string_view> returnType = "none";
     if (arrowPos != std::string_view::npos) {
         returnType = DEFINITION.substr(arrowPos + ARROW.size());
     }
@@ -87,14 +87,17 @@ constexpr auto parseFunctionDefinition(
         std::string_view param =
             params.substr(paramStart, paramEnd - paramStart);
         size_t colonPos = param.find(':');
+        std::string_view paramName;
+        std::string_view paramType = "any";  // Default type
+
         if (colonPos != std::string_view::npos) {
-            std::string_view paramName =
-                atom::utils::trim(param.substr(0, colonPos));
-            std::string_view paramType =
-                atom::utils::trim(param.substr(colonPos + 1));
-            parameters[paramIndex++] = {paramName, paramType};
+            paramName = atom::utils::trim(param.substr(0, colonPos));
+            paramType = atom::utils::trim(param.substr(colonPos + 1));
+        } else {
+            paramName = atom::utils::trim(param);
         }
 
+        parameters[paramIndex++] = {paramName, paramType};
         paramStart = paramEnd + 1;
     }
 

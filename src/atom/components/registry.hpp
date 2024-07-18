@@ -15,12 +15,17 @@ Description: Registry Pattern
 #ifndef ATOM_COMPONENT_REGISTRY_HPP
 #define ATOM_COMPONENT_REGISTRY_HPP
 
+#include <algorithm>      // for std::reverse
 #include <memory>         // for std::shared_ptr
+#include <mutex>          // for std::scoped_lock
+#include <ranges>         // for std::ranges
 #include <shared_mutex>   // for std::shared_mutex
 #include <string>         // for std::string
 #include <unordered_map>  // for std::unordered_map
 #include <unordered_set>  // for std::unordered_set
+#include <vector>         // for std::vector
 
+#include "atom/error/exception.hpp"
 #include "component.hpp"
 
 /**
@@ -30,7 +35,6 @@ Description: Registry Pattern
  */
 class Registry {
 public:
-
     /**
      * @brief Gets the singleton instance of the Registry.
      * @return Reference to the singleton instance of the Registry.
@@ -79,7 +83,8 @@ public:
      */
     void reinitializeComponent(const std::string& name);
 
-    auto getComponent(const std::string& name) const -> std::shared_ptr<Component>;
+    auto getComponent(const std::string& name) const
+        -> std::shared_ptr<Component>;
 
 private:
     /**
@@ -89,13 +94,15 @@ private:
 
     std::unordered_map<std::string, std::shared_ptr<Component>>
         initializers_; /**< Map of component names to their initialization and
-                         cleanup functions. */
+                          cleanup functions. */
     std::unordered_map<std::string, std::unordered_set<std::string>>
         dependencies_; /**< Map of component names to their dependencies. */
     std::unordered_map<std::string, bool>
         initialized_; /**< Map of component names to their initialization
-                       * status.
-                       */
+                         status. */
+    std::vector<std::string>
+        initializationOrder_; /**< List of component names in initialization
+                                 order. */
     mutable std::shared_mutex
         mutex_; /**< Mutex for thread-safe access to the registry. */
 
@@ -107,7 +114,7 @@ private:
      * false otherwise.
      */
     bool hasCircularDependency(const std::string& name,
-                                 const std::string& dependency);
+                               const std::string& dependency);
 
     /**
      * @brief Initializes a component and its dependencies recursively.
@@ -116,7 +123,12 @@ private:
      * detect circular dependencies.
      */
     void initializeComponent(const std::string& name,
-                              std::unordered_set<std::string>& init_stack);
+                             std::unordered_set<std::string>& init_stack);
+
+    /**
+     * @brief Determines the order of initialization based on dependencies.
+     */
+    void determineInitializationOrder();
 };
 
 #endif  // ATOM_COMPONENT_REGISTRY_HPP

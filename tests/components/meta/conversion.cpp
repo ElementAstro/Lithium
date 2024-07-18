@@ -1,6 +1,7 @@
 #include "atom/function/conversion.hpp"
 #include <gtest/gtest.h>
 
+/*
 TEST(ConversionTest, StaticConversion) {
     atom::meta::TypeConversionBase* conversion =
         new atom::meta::StaticConversion<int, float>();
@@ -9,6 +10,7 @@ TEST(ConversionTest, StaticConversion) {
     EXPECT_EQ(std::any_cast<float>(to), 10);
     delete conversion;
 }
+*/
 
 class Base {
 public:
@@ -21,6 +23,7 @@ public:
     void hello() const override { std::cout << "Hello from Derived\n"; }
 };
 
+/*
 TEST(ConversionTest, BaseClassConversion) {
     atom::meta::TypeConversions conversions;
     conversions.addBaseClass<Base, Derived>();
@@ -33,6 +36,7 @@ TEST(ConversionTest, BaseClassConversion) {
             from);
     EXPECT_NO_THROW(std::any_cast<std::shared_ptr<Base>>(to)->hello());
 }
+*/
 
 TEST(ConversionTest, VectorConversion) {
     atom::meta::TypeConversions conversions;

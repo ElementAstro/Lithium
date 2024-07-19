@@ -30,7 +30,6 @@ class ArgsView {
 public:
     explicit ArgsView(int argc, char** argv);
 
-    // 添加参数定义
     void addArgument(
         std::string_view name, std::string_view help = "",
         bool required = false,
@@ -40,7 +39,6 @@ public:
                                bool required = false);
     void addFlag(std::string_view name, std::string_view help = "");
 
-    // 自动生成帮助信息
     std::string help() const;
 
     std::optional<std::string_view> get(std::string_view key) const;
@@ -57,7 +55,7 @@ public:
     std::unordered_map<std::string, std::string_view> getArgs() const;
 
     void addRule(std::string_view prefix,
-                 const std::function<void(std::string_view)> &handler);
+                 const std::function<void(std::string_view)>& handler);
 
 private:
     void parseArguments();
@@ -66,7 +64,7 @@ private:
     char** m_argv_;
     std::unordered_map<std::string, std::string_view> m_args_;
     std::vector<std::string_view> m_flags_;
-    std::vector<std::string_view> m_positionals_;
+    std::vector<std::string> m_positionals_;
     std::vector<std::pair<std::string, std::function<void(std::string_view)>>>
         m_rules_;
 

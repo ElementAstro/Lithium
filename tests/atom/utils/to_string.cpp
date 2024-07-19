@@ -1,6 +1,6 @@
 #include "atom/utils/to_string.hpp"
 #include <gtest/gtest.h>
-
+using namespace atom::utils;
 
 TEST(StringUtilsTest, ToStringTest) {
     // Basic type

@@ -1,9 +1,8 @@
 #include "atom/utils/convert.hpp"
 #include <gtest/gtest.h>
 
-using namespace atom::utils;
-
 #ifdef _WIN32
+using namespace atom::utils;
 
 TEST(ConvertUtilsTest, CharToLPWSTR) {
     std::string_view charString = "Hello, World!";

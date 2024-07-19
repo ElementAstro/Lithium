@@ -16,6 +16,7 @@ Description: ArgsView Class for C++
 
 #include <algorithm>
 #include <charconv>
+#include <sstream>
 #include <stdexcept>
 
 namespace atom::utils {
@@ -27,39 +28,40 @@ ArgsView::ArgsView(int argc, char** argv) : m_argc_(argc), m_argv_(argv) {
 void ArgsView::addArgument(std::string_view name, std::string_view help,
                            bool required,
                            std::optional<std::string_view> defaultValue) {
-    m_argDefinitions_.emplace(name,
+    m_argDefinitions_.emplace(std::string(name),
                               Argument{name, help, required, defaultValue});
 }
 
 void ArgsView::addPositionalArgument(std::string_view name,
                                      std::string_view help, bool required) {
     m_positionalDefinitions_.emplace(
-        name, Argument{name, help, required, std::nullopt});
+        std::string(name), Argument{name, help, required, std::nullopt});
+    m_positionals_.emplace_back(std::string(name));
 }
 
 void ArgsView::addFlag(std::string_view name, std::string_view help) {
-    m_flagDefinitions_.emplace(name, help);
+    m_flagDefinitions_.emplace(std::string(name), help);
 }
 
 std::string ArgsView::help() const {
-    std::string helpMessage = "Usage: program [options] ";
+    std::ostringstream helpMessage;
+    helpMessage << "Usage: program [options] ";
     for (const auto& [name, arg] : m_positionalDefinitions_) {
-        helpMessage += "<" + std::string(name) + "> ";
+        helpMessage << "<" << name << "> ";
     }
-    helpMessage += "\n\nOptions:\n";
+    helpMessage << "\n\nOptions:\n";
     for (const auto& [name, arg] : m_argDefinitions_) {
-        helpMessage += "--" + std::string(name) + ": " + std::string(arg.help) +
-                       (arg.required ? " (required)" : "");
+        helpMessage << "--" << name << ": " << arg.help
+                    << (arg.required ? " (required)" : "");
         if (arg.defaultValue) {
-            helpMessage += " (default: " + std::string(*arg.defaultValue) + ")";
+            helpMessage << " (default: " << *arg.defaultValue << ")";
         }
-        helpMessage += '\n';
+        helpMessage << '\n';
     }
     for (const auto& [name, help] : m_flagDefinitions_) {
-        helpMessage +=
-            "--" + std::string(name) + ": " + std::string(help) + '\n';
+        helpMessage << "--" << name << ": " << help << '\n';
     }
-    return helpMessage;
+    return helpMessage.str();
 }
 
 void ArgsView::parseArguments() {
@@ -82,11 +84,8 @@ void ArgsView::parseArguments() {
                 m_flags_.emplace_back(flag);
             }
         } else {
-            if (positionalIndex < m_positionalDefinitions_.size()) {
-                auto positionalName =
-                    m_positionalDefinitions_
-                        .at(std::string(m_positionals_[positionalIndex++]))
-                        .name;
+            if (positionalIndex < m_positionals_.size()) {
+                auto positionalName = m_positionals_[positionalIndex++];
                 m_args_[std::string(positionalName)] = arg;
             }
         }
@@ -94,8 +93,7 @@ void ArgsView::parseArguments() {
 
     for (const auto& [key, arg] : m_argDefinitions_) {
         if (arg.required && !has(key)) {
-            throw std::runtime_error("Missing required argument: " +
-                                     std::string(key));
+            throw std::runtime_error("Missing required argument: " + key);
         }
         if (!has(key) && arg.defaultValue) {
             m_args_[key] = *arg.defaultValue;
@@ -105,7 +103,7 @@ void ArgsView::parseArguments() {
     for (const auto& [key, arg] : m_positionalDefinitions_) {
         if (arg.required && !has(key)) {
             throw std::runtime_error("Missing required positional argument: " +
-                                     std::string(key));
+                                     key);
         }
     }
 }
@@ -131,7 +129,7 @@ std::optional<T> ArgsView::get(std::string_view key) const {
 }
 
 bool ArgsView::has(std::string_view key) const {
-    return m_args_.contains(std::string(key));
+    return m_args_.find(std::string(key)) != m_args_.end();
 }
 
 bool ArgsView::hasFlag(std::string_view flag) const {
@@ -146,7 +144,7 @@ std::unordered_map<std::string, std::string_view> ArgsView::getArgs() const {
 
 void ArgsView::addRule(std::string_view prefix,
                        const std::function<void(std::string_view)>& handler) {
-    m_rules_.emplace_back(prefix, handler);
+    m_rules_.emplace_back(std::string(prefix), handler);
 }
 
 }  // namespace atom::utils

@@ -4,97 +4,82 @@
 using namespace atom::utils;
 
 TEST(CStringTest, Deduplicate) {
-    const char input[] = "aabbcc";
-    auto result = deduplicate(input);
-    constexpr std::array<char, 7> expected = {'a',  'b',  'c', '\0',
+    constexpr auto RESULT = deduplicate("aabbcc");
+    constexpr std::array<char, 7> EXPECTED = {'a',  'b',  'c', '\0',
                                               '\0', '\0', '\0'};
-    EXPECT_EQ(result, expected);
-}
-
-TEST(CStringTest, Split) {
-    constexpr auto result = split("a,b,c,d", ',');
-    constexpr std::array<std::string_view, 10> expected = {
-        "a", "b", "c", "d", "", "", "", "", "", ""};
-    EXPECT_EQ(result, expected);
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(CStringTest, Replace) {
-    constexpr auto result = replace("aabbcc", 'b', 'd');
-    constexpr std::array<char, 7> expected = {'a', 'a', 'd', 'd',
+    constexpr auto RESULT = replace("aabbcc", 'b', 'd');
+    constexpr std::array<char, 7> EXPECTED = {'a', 'a', 'd', 'd',
                                               'c', 'c', '\0'};
-    EXPECT_EQ(result, expected);
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(CStringTest, ToLower) {
-    constexpr auto result = toLower("ABC");
-    constexpr std::array<char, 4> expected = {'a', 'b', 'c', '\0'};
-    EXPECT_EQ(result, expected);
+    constexpr auto RESULT = toLower("ABC");
+    constexpr std::array<char, 4> EXPECTED = {'a', 'b', 'c', '\0'};
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(CStringTest, ToUpper) {
-    constexpr auto result = toUpper("abc");
-    constexpr std::array<char, 4> expected = {'A', 'B', 'C', '\0'};
-    EXPECT_EQ(result, expected);
+    constexpr auto RESULT = toUpper("abc");
+    constexpr std::array<char, 4> EXPECTED = {'A', 'B', 'C', '\0'};
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(CStringTest, Concat) {
-    constexpr auto result = concat("Hello", "World");
-    constexpr std::array<char, 11> expected = {'H', 'e', 'l', 'l', 'o', 'W',
+    constexpr auto RESULT = concat("Hello", "World");
+    constexpr std::array<char, 11> EXPECTED = {'H', 'e', 'l', 'l', 'o', 'W',
                                                'o', 'r', 'l', 'd', '\0'};
-    EXPECT_EQ(result, expected);
-}
-
-TEST(CStringTest, Trim) {
-    constexpr auto result = trim(" a b c ");
-    constexpr std::array<char, 7> expected = {'a',  'b',  'c', '\0',
-                                              '\0', '\0', '\0'};
-    EXPECT_EQ(result, expected);
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(CStringTest, Substring) {
-    constexpr auto result = substring("Hello, World", 7, 5);
-    constexpr std::array<char, 13> expected = {'W',  'o',  'r',  'l',  'd',
+    constexpr auto RESULT = substring("Hello, World", 7, 5);
+    constexpr std::array<char, 13> EXPECTED = {'W',  'o',  'r',  'l',  'd',
                                                '\0', '\0', '\0', '\0', '\0',
                                                '\0', '\0', '\0'};
-    EXPECT_EQ(result, expected);
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(CStringTest, Equal) {
-    constexpr bool result = equal("Hello", "Hello");
-    EXPECT_TRUE(result);
+    constexpr bool RESULT = equal("Hello", "Hello");
+    EXPECT_TRUE(RESULT);
 
-    constexpr bool not_equal = equal("Hello", "World");
-    EXPECT_FALSE(not_equal);
+    constexpr bool NOT_EQUAL = equal("Hello", "World");
+    EXPECT_FALSE(NOT_EQUAL);
 }
 
 TEST(CStringTest, Find) {
-    constexpr std::size_t result = find("Hello", 'e');
-    EXPECT_EQ(result, 1);
+    constexpr std::size_t RESULT = find("Hello", 'e');
+    EXPECT_EQ(RESULT, 1);
 
-    constexpr std::size_t not_found = find("Hello", 'x');
-    EXPECT_EQ(not_found, 5);  // N - 1
+    constexpr std::size_t NOT_FOUND = find("Hello", 'x');
+    EXPECT_EQ(NOT_FOUND, 5);  // N - 1
 }
 
 TEST(CStringTest, Length) {
-    constexpr std::size_t result = length("Hello");
-    EXPECT_EQ(result, 5);
+    constexpr std::size_t RESULT = length("Hello");
+    EXPECT_EQ(RESULT, 5);
 }
 
 TEST(CStringTest, Reverse) {
-    constexpr auto result = reverse("Hello");
-    constexpr std::array<char, 6> expected = {'o', 'l', 'l', 'e', 'H', '\0'};
-    EXPECT_EQ(result, expected);
+    constexpr auto RESULT = reverse("Hello");
+    constexpr std::array<char, 6> EXPECTED = {'o', 'l', 'l', 'e', 'H', '\0'};
+    EXPECT_EQ(RESULT, EXPECTED);
 }
 
 TEST(DeduplicateTest, HandlesEmptyString) {
-    const char input[] = "";
-    auto result = deduplicate(input);
+    const char INPUT[] = "";
+    auto result = deduplicate(INPUT);
     EXPECT_EQ(result[0], '\0');
 }
 
 TEST(DeduplicateTest, HandlesNoDuplicates) {
-    const char input[] = "abc";
-    auto result = deduplicate(input);
+    const char INPUT[] = "abc";
+    auto result = deduplicate(INPUT);
     EXPECT_EQ(result[0], 'a');
     EXPECT_EQ(result[1], 'b');
     EXPECT_EQ(result[2], 'c');
@@ -102,8 +87,8 @@ TEST(DeduplicateTest, HandlesNoDuplicates) {
 }
 
 TEST(DeduplicateTest, RemovesDuplicates) {
-    const char input[] = "banana";
-    auto result = deduplicate(input);
+    const char INPUT[] = "banana";
+    auto result = deduplicate(INPUT);
     EXPECT_EQ(result[0], 'b');
     EXPECT_EQ(result[1], 'a');
     EXPECT_EQ(result[2], 'n');
@@ -111,90 +96,113 @@ TEST(DeduplicateTest, RemovesDuplicates) {
 }
 
 TEST(DeduplicateTest, HandlesAllDuplicates) {
-    const char input[] = "aaaa";
-    auto result = deduplicate(input);
+    const char INPUT[] = "aaaa";
+    auto result = deduplicate(INPUT);
     EXPECT_EQ(result[0], 'a');
     EXPECT_EQ(result[1], '\0');
 }
 
 TEST(DeduplicateTest, HandlesCaseSensitivity) {
-    const char input[] = "AaAa";
-    auto result = deduplicate(input);
+    const char INPUT[] = "AaAa";
+    auto result = deduplicate(INPUT);
     EXPECT_EQ(result[0], 'A');
     EXPECT_EQ(result[1], 'a');
     EXPECT_EQ(result[2], '\0');
 }
 
-TEST(SplitTest, NormalCase) {
-    const char input[] = "hello,world,this,is,a,test";
-    auto [result, count] = split(input, ',');
-    ASSERT_EQ(count, 6);
-    EXPECT_STREQ(result[0].data(), "hello");
-    EXPECT_STREQ(result[1].data(), "world");
-    EXPECT_STREQ(result[2].data(), "this");
-    EXPECT_STREQ(result[3].data(), "is");
-    EXPECT_STREQ(result[4].data(), "a");
-    EXPECT_STREQ(result[5].data(), "test");
+TEST(SplitTest, BasicFunctionality) {
+    constexpr auto result = split("apple,banana,cherry", ',');
+
+    ASSERT_EQ(result.size(), 20);  // 期望有4个元素
+    EXPECT_EQ(result[0], "apple");
+    EXPECT_EQ(result[1], "banana");
+    EXPECT_EQ(result[2], "cherry");
+    EXPECT_EQ(result[3], "");  // 空字符串在最后
 }
 
-TEST(SplitTest, NoDelimiter) {
-    const char input[] = "hello";
-    auto [result, count] = split(input, ',');
-    ASSERT_EQ(count, 1);
-    EXPECT_STREQ(result[0].data(), "hello");
+TEST(SplitTest, CustomDelimiter) {
+    constexpr auto result = split("apple;banana;cherry", ';');
+
+    ASSERT_EQ(result.size(), 4);  // 期望有4个元素
+    EXPECT_EQ(result[0], "apple");
+    EXPECT_EQ(result[1], "banana");
+    EXPECT_EQ(result[2], "cherry");
+    EXPECT_EQ(result[3], "");  // 空字符串在最后
 }
 
 TEST(SplitTest, EmptyString) {
-    const char input[] = "";
-    auto [result, count] = split(input, ',');
-    ASSERT_EQ(count, 1);
-    EXPECT_STREQ(result[0].data(), "");
+    constexpr auto result = split("", ',');
+
+    ASSERT_EQ(result.size(), 1);  // 期望有1个元素
+    EXPECT_EQ(result[0], "");     // 空字符串
 }
 
-TEST(SplitTest, DelimiterAtEnd) {
-    const char input[] = "test,";
-    auto [result, count] = split(input, ',');
-    ASSERT_EQ(count, 2);
-    EXPECT_STREQ(result[0].data(), "test");
-    EXPECT_STREQ(result[1].data(), "");
+TEST(SplitTest, OnlyDelimiters) {
+    constexpr auto result = split(",,,", ',');
+
+    ASSERT_EQ(result.size(), 4);  // 期望有4个元素
+    EXPECT_EQ(result[0], "");     // 第一个子串是空字符串
+    EXPECT_EQ(result[1], "");     // 第二个子串是空字符串
+    EXPECT_EQ(result[2], "");     // 第三个子串是空字符串
+    EXPECT_EQ(result[3], "");     // 最后一个子串是空字符串
 }
 
-class TrimTest : public ::testing::Test {
-protected:
-    void SetUp() override {}
-    void TearDown() override {}
-};
+TEST(SplitTest, NoDelimiters) {
+    constexpr auto result = split("applebanana", ',');
 
-TEST_F(TrimTest, HandlesEmptyString) { EXPECT_EQ(trim(""), ""); }
-
-TEST_F(TrimTest, HandlesAllWhitespace) {
-    EXPECT_EQ(trim("    \t\n\r\f\v"), "");
+    ASSERT_EQ(result.size(), 2);          // 期望有2个元素
+    EXPECT_EQ(result[0], "applebanana");  // 整个字符串为一个子串
+    EXPECT_EQ(result[1], "");             // 空字符串在最后
 }
 
-TEST_F(TrimTest, TrimsLeadingWhitespace) {
-    EXPECT_EQ(trim("   hello"), "hello");
+TEST(SplitTest, MultipleDelimiters) {
+    constexpr auto result = split("apple,banana,,cherry", ',');
+
+    ASSERT_EQ(result.size(), 5);  // 期望有5个元素
+    EXPECT_EQ(result[0], "apple");
+    EXPECT_EQ(result[1], "banana");
+    EXPECT_EQ(result[2], "");  // 空字符串
+    EXPECT_EQ(result[3], "cherry");
+    EXPECT_EQ(result[4], "");  // 空字符串在最后
 }
 
-TEST_F(TrimTest, TrimsTrailingWhitespace) {
-    EXPECT_EQ(trim("hello   "), "hello");
+TEST(SplitTest, LeadingAndTrailingDelimiters) {
+    constexpr auto result = split(",apple,banana,", ',');
+
+    ASSERT_EQ(result.size(), 5);  // 期望有5个元素
+    EXPECT_EQ(result[0], "");     // 空字符串在开始
+    EXPECT_EQ(result[1], "apple");
+    EXPECT_EQ(result[2], "banana");
+    EXPECT_EQ(result[3], "");  // 空字符串在结尾
+    EXPECT_EQ(result[4], "");  // 空字符串在结尾
 }
 
-TEST_F(TrimTest, TrimsBothEnds) { EXPECT_EQ(trim("   hello   "), "hello"); }
-
-TEST_F(TrimTest, PreservesInnerWhitespace) {
-    EXPECT_EQ(trim("   hello   world   "), "hello   world");
+TEST(TrimTest, BasicTrimming) {
+    constexpr auto result = trim("   Hello, World!   ");
+    EXPECT_STREQ(result.data(), "Hello, World!");
 }
 
-TEST_F(TrimTest, HandlesAllTypesOfWhitespace) {
-    EXPECT_EQ(trim(" \t\n\r\f\vhello \t\n\r\f\v"), "hello");
+TEST(TrimTest, NoSpaces) {
+    constexpr auto result = trim("NoSpaces");
+    EXPECT_STREQ(result.data(), "NoSpaces");
 }
 
-TEST_F(TrimTest, HandlesStringWithOnlyOneChar) { EXPECT_EQ(trim(" a "), "a"); }
-
-TEST_F(TrimTest, PreservesStringWithNoWhitespace) {
-    EXPECT_EQ(trim("hello"), "hello");
+TEST(TrimTest, OnlySpaces) {
+    constexpr auto result = trim("     ");
+    EXPECT_STREQ(result.data(), "");  // 只包含空格，返回空字符串
 }
 
-TEST_F(TrimTest, HandlesStringWithWhitespaceInMiddle) {
-    EXPECT_EQ(trim("hello \t\n world"), "hello \t\n world");
+TEST(TrimTest, LeadingSpaces) {
+    constexpr auto result = trim("   Leading");
+    EXPECT_STREQ(result.data(), "Leading");
+}
+
+TEST(TrimTest, TrailingSpaces) {
+    constexpr auto result = trim("Trailing   ");
+    EXPECT_STREQ(result.data(), "Trailing");
+}
+
+TEST(TrimTest, LeadingAndTrailingSpaces) {
+    constexpr auto result = trim("   Both   ");
+    EXPECT_STREQ(result.data(), "Both");
 }

@@ -22,71 +22,124 @@ Description: Simple implementation of AES encryption
 #include <openssl/rand.h>
 #include <zlib.h>
 
+#include "atom/error/exception.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 
 const int AES_BLOCK_SIZE = 16;
 
 namespace atom::utils {
-std::string encryptAES(std::string_view plaintext, std::string_view key) {
+auto encryptAES(std::string_view plaintext, std::string_view key,
+                std::vector<unsigned char> &iv,
+                std::vector<unsigned char> &tag) -> std::string {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr,
-                       reinterpret_cast<const unsigned char *>(key.data()),
-                       nullptr);
+    if (ctx == nullptr) {
+        THROW_RUNTIME_ERROR("Failed to create EVP_CIPHER_CTX");
+    }
 
-    unsigned long cLen = plaintext.length() + AES_BLOCK_SIZE;
-    auto *ciphertext = new unsigned char[cLen];
+    iv.resize(12);  // GCM recommends a 12-byte IV
+    if (RAND_bytes(iv.data(), iv.size()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Failed to generate IV");
+    }
+
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr,
+                           reinterpret_cast<const unsigned char *>(key.data()),
+                           iv.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Failed to initialize encryption context");
+    }
+
+    // Allocate buffer for ciphertext
+    std::vector<unsigned char> ciphertext(plaintext.length() +
+                                          EVP_MAX_BLOCK_LENGTH);
 
     int len;
-    EVP_EncryptUpdate(ctx, ciphertext, &len,
-                      reinterpret_cast<const unsigned char *>(plaintext.data()),
-                      plaintext.length());
+    if (EVP_EncryptUpdate(
+            ctx, ciphertext.data(), &len,
+            reinterpret_cast<const unsigned char *>(plaintext.data()),
+            plaintext.length()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Encryption failed");
+    }
+
     int ciphertextLen = len;
 
-    EVP_EncryptFinal_ex(ctx, ciphertext + len, &len);
+    if (EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Final encryption step failed");
+    }
+
     ciphertextLen += len;
 
-    std::string result(reinterpret_cast<char *>(ciphertext), ciphertextLen);
+    tag.resize(16);  // GCM tag is 16 bytes
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, tag.size(),
+                            tag.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Failed to get tag");
+    }
 
-    delete[] ciphertext;
     EVP_CIPHER_CTX_free(ctx);
 
-    return result;
+    return std::string(ciphertext.begin(), ciphertext.begin() + ciphertextLen);
 }
 
-std::string decryptAES(std::string_view ciphertext, std::string_view key) {
+auto decryptAES(std::string_view ciphertext, std::string_view key,
+                std::vector<unsigned char> &iv,
+                std::vector<unsigned char> &tag) -> std::string {
     EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr,
-                       reinterpret_cast<const unsigned char *>(key.data()),
-                       nullptr);
+    if (ctx == nullptr) {
+        THROW_RUNTIME_ERROR("Failed to create EVP_CIPHER_CTX");
+    }
 
-    int pLen = ciphertext.length() + AES_BLOCK_SIZE;
-    auto *plaintext = new unsigned char[pLen];
+    if (EVP_DecryptInit_ex(ctx, EVP_aes_128_gcm(), nullptr,
+                           reinterpret_cast<const unsigned char *>(key.data()),
+                           iv.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Failed to initialize decryption context");
+    }
+
+    // Allocate buffer for plaintext
+    std::vector<unsigned char> plaintext(ciphertext.length() +
+                                         EVP_MAX_BLOCK_LENGTH);
 
     int len;
-    EVP_DecryptUpdate(
-        ctx, plaintext, &len,
-        reinterpret_cast<const unsigned char *>(ciphertext.data()),
-        ciphertext.length());
+    if (EVP_DecryptUpdate(
+            ctx, plaintext.data(), &len,
+            reinterpret_cast<const unsigned char *>(ciphertext.data()),
+            ciphertext.length()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Decryption failed");
+    }
+
     int plaintextLen = len;
 
-    EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
+    if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, tag.size(),
+                            tag.data()) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Failed to set tag");
+    }
+
+    if (EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        THROW_RUNTIME_ERROR("Final decryption step failed");
+    }
+
     plaintextLen += len;
 
-    std::string result(reinterpret_cast<char *>(plaintext), plaintextLen);
-
-    delete[] plaintext;
     EVP_CIPHER_CTX_free(ctx);
 
-    return result;
+    return std::string(plaintext.begin(), plaintext.begin() + plaintextLen);
 }
 
-std::string compress(std::string_view data) {
-    z_stream zstream;
-    memset(&zstream, 0, sizeof(zstream));
+auto compress(std::string_view data) -> std::string {
+    if (data.empty()) {
+        THROW_INVALID_ARGUMENT("Input data is empty.");
+    }
 
+    z_stream zstream{};
     if (deflateInit(&zstream, Z_BEST_COMPRESSION) != Z_OK) {
-        return "";
+        THROW_RUNTIME_ERROR("Failed to initialize compression.");
     }
 
     zstream.next_in =
@@ -103,23 +156,33 @@ std::string compress(std::string_view data) {
         zstream.avail_out = outbuffer.size();
 
         ret = deflate(&zstream, Z_FINISH);
-        if (ret == Z_STREAM_END || zstream.avail_out != outbuffer.size()) {
-            compressed.append(outbuffer.data(),
-                              outbuffer.size() - zstream.avail_out);
+        if (ret == Z_STREAM_ERROR) {
+            deflateEnd(&zstream);
+            THROW_RUNTIME_ERROR("Compression error during deflation.");
         }
+
+        // Append the output to the compressed string
+        compressed.append(outbuffer.data(),
+                          outbuffer.size() - zstream.avail_out);
     } while (ret == Z_OK);
 
     deflateEnd(&zstream);
 
+    if (ret != Z_STREAM_END) {
+        THROW_RUNTIME_ERROR("Compression did not finish successfully.");
+    }
+
     return compressed;
 }
 
-std::string decompress(std::string_view data) {
-    z_stream zstream;
-    memset(&zstream, 0, sizeof(zstream));
+auto decompress(std::string_view data) -> std::string {
+    if (data.empty()) {
+        THROW_INVALID_ARGUMENT("Input data is empty.");
+    }
 
+    z_stream zstream{};
     if (inflateInit(&zstream) != Z_OK) {
-        return "";
+        THROW_RUNTIME_ERROR("Failed to initialize decompression.");
     }
 
     zstream.next_in =
@@ -135,14 +198,22 @@ std::string decompress(std::string_view data) {
         zstream.next_out = reinterpret_cast<Bytef *>(outbuffer.data());
         zstream.avail_out = outbuffer.size();
 
-        ret = inflate(&zstream, 0);
-        if (ret == Z_STREAM_END || zstream.avail_out != outbuffer.size()) {
-            decompressed.append(outbuffer.data(),
-                                outbuffer.size() - zstream.avail_out);
+        ret = inflate(&zstream, Z_NO_FLUSH);
+        if (ret < 0) {
+            inflateEnd(&zstream);
+            THROW_RUNTIME_ERROR("Decompression error during inflation.");
         }
+
+        // Append the output to the decompressed string
+        decompressed.append(outbuffer.data(),
+                            outbuffer.size() - zstream.avail_out);
     } while (ret == Z_OK);
 
     inflateEnd(&zstream);
+
+    if (ret != Z_STREAM_END) {
+        THROW_RUNTIME_ERROR("Decompression did not finish successfully.");
+    }
 
     return decompressed;
 }

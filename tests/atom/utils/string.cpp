@@ -1,5 +1,6 @@
 #include "atom/utils/string.hpp"
 #include <gtest/gtest.h>
+#include <string_view>
 
 using namespace atom::utils;
 
@@ -41,8 +42,8 @@ TEST(StringUtilsTest, EndsWith) {
 }
 
 TEST(StringUtilsTest, SplitString) {
-    std::vector<std::string_view> result = splitString("a,b,c", ',');
-    std::vector<std::string_view> expected = {"a", "b", "c"};
+    std::vector<std::string> result = splitString("a,b,c", ',');
+    std::vector<std::string> expected = {"a", "b", "c"};
     EXPECT_EQ(result, expected);
 }
 

@@ -16,6 +16,7 @@ Description: Simple implementation of AES encryption
 #define ATOM_UTILS_AES_HPP
 
 #include <string>
+#include <vector>
 
 namespace atom::utils {
 /**
@@ -25,8 +26,9 @@ namespace atom::utils {
  * @param key The encryption key
  * @return The encrypted ciphertext
  */
-[[nodiscard]] std::string encryptAES(std::string_view plaintext,
-                                     std::string_view key);
+[[nodiscard]] auto encryptAES(std::string_view plaintext, std::string_view key,
+                              std::vector<unsigned char> &iv,
+                              std::vector<unsigned char> &tag) -> std::string;
 
 /**
  * @brief Decrypts the input ciphertext using the AES algorithm.
@@ -35,8 +37,9 @@ namespace atom::utils {
  * @param key The decryption key
  * @return The decrypted plaintext
  */
-[[nodiscard]] std::string decryptAES(std::string_view ciphertext,
-                                     std::string_view key);
+[[nodiscard]] auto decryptAES(std::string_view ciphertext, std::string_view key,
+                              std::vector<unsigned char> &iv,
+                              std::vector<unsigned char> &tag) -> std::string;
 
 /**
  * @brief Compresses the input data using the Zlib library.

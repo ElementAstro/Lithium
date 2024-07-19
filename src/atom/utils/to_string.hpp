@@ -264,7 +264,7 @@ template <typename... Args>
 [[nodiscard]] std::string joinCommandLine(const Args &...args) {
     std::ostringstream oss;
     bool firstArg = true;
-    ((oss << (!firstArg ? " " : " ") << toString(args)), ...);
+    ((oss << (firstArg ? (firstArg = false, "") : " ") << toString(args)), ...);
     return oss.str();
 }
 
@@ -275,10 +275,13 @@ template <typename... Args>
  * @return A string representation of the vector.
  */
 template <typename T>
-auto toStringArray(const std::vector<T> &array) {
+auto toStringArray(const std::vector<T> &array) -> std::string {
     std::ostringstream oss;
-    for (const auto &elem : array) {
-        oss << toString(elem) << " ";
+    for (size_t i = 0; i < array.size(); ++i) {
+        oss << toString(array[i]);
+        if (i < array.size() - 1) {
+            oss << " ";
+        }
     }
     return oss.str();
 }

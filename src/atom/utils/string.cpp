@@ -37,12 +37,18 @@ auto toUnderscore(std::string_view str) -> std::string {
                        return std::isupper(ch);
                    }));
 
+    bool firstChar = true;
+
     for (char ch : str) {
-        if (std::isupper(ch) != 0) {
-            result.push_back('_');
-            result.push_back(std::tolower(ch));
+        if (std::isupper(static_cast<unsigned char>(ch))) {
+            if (!firstChar) {
+                result.push_back('_');
+            }
+            result.push_back(std::tolower(static_cast<unsigned char>(ch)));
+            firstChar = false;
         } else {
             result.push_back(ch);
+            firstChar = false;
         }
     }
 
@@ -74,14 +80,15 @@ auto urlEncode(std::string_view str) -> std::string {
     escaped << std::hex;
 
     for (auto c : str) {
-        if ((std::isalnum(c) != 0) || c == '-' || c == '_' || c == '.' ||
-            c == '~') {
+        if ((std::isalnum(static_cast<unsigned char>(c)) != 0) || c == '-' ||
+            c == '_' || c == '.' || c == '~') {
             escaped << c;
         } else if (c == ' ') {
             escaped << '+';
         } else {
             escaped << '%' << std::setw(2)
-                    << static_cast<int>(static_cast<unsigned char>(c));
+                    << static_cast<int>(
+                           static_cast<unsigned char>(c));  // 编码其他字符
         }
     }
 
@@ -95,14 +102,16 @@ auto urlDecode(std::string_view str) -> std::string {
     for (size_t i = 0; i < str.size(); ++i) {
         if (str[i] == '%') {
             if (i + 2 >= str.size()) {
-                throw std::invalid_argument("urlDecode failed");
+                throw std::invalid_argument(
+                    "urlDecode failed: incomplete escape sequence");
             }
 
             int value;
             if (auto [p, ec] =
                     std::from_chars(&str[i + 1], &str[i + 3], value, 16);
                 ec != std::errc()) {
-                throw std::invalid_argument("urlDecode failed");
+                throw std::invalid_argument(
+                    "urlDecode failed: invalid escape sequence");
             }
 
             result.push_back(static_cast<char>(value));

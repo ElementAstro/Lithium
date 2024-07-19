@@ -15,13 +15,12 @@ Description: Variable Manager
 #ifndef ATOM_COMPONENT_VAR_HPP
 #define ATOM_COMPONENT_VAR_HPP
 
+#include <algorithm>
 #include <any>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <iostream>
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_table8.hpp"

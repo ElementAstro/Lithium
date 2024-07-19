@@ -38,29 +38,29 @@ constexpr auto deduplicate(const char (&str)[N]) {
     return result;
 }
 
-template <std::size_t N>
-constexpr auto split(const char (&str)[N], char delimiter) {
-    std::array<std::array<char, N>, 10> result{};
-    std::size_t index = 0;
-    std::size_t start = 0;
+template<std::size_t N, std::size_t... Is>
+constexpr auto splitImpl(const char(&str)[N], char delimiter, std::index_sequence<Is...>) {
+    std::array<std::string_view, N> result{};
+    size_t index = 0;
+    size_t start = 0;
 
-    for (std::size_t i = 0; i < N; ++i) {
-        if (str[i] == delimiter || str[i] == '\0') {
-            for (std::size_t j = start; j < i; ++j) {
-                result[index][j - start] = str[j];
-            }
-            result[index][i - start] = '\0';
-            ++index;
-            if (index == result.size()) {
-                break;
-            }
+    for (size_t i = 0; i < N; ++i) {
+        if (str[i] == delimiter) {
+            result[index++] = std::string_view(str + start, i - start);
             start = i + 1;
         }
-        if (str[i] == '\0') {
-            break;
-        }
     }
-    return std::pair(result, index);
+
+    if (start < N) {
+        result[index++] = std::string_view(str + start, N - start);
+    }
+
+    return result;
+}
+
+template<std::size_t N>
+constexpr auto split(const char(&str)[N], char delimiter) {
+    return splitImpl(str, delimiter, std::make_index_sequence<N>());
 }
 
 template <std::size_t N>
@@ -112,12 +112,21 @@ template <std::size_t N>
 constexpr auto trim(const char (&str)[N]) {
     std::array<char, N> result{};
     std::size_t index = 0;
-    for (std::size_t i = 0; i < N - 1; ++i) {
-        if (str[i] != ' ') {
-            result[index++] = str[i];
-        }
+
+    auto view = std::string_view(str);
+
+    auto start = view.find_first_not_of(' ');
+    if (start == std::string_view::npos) {
+        result[0] = '\0'; // 如果全是空格，返回空字符串
+        return result;
     }
-    result[index] = '\0';
+
+    auto end = view.find_last_not_of(' ');
+
+    std::ranges::copy(view.substr(start, end - start + 1), result.begin());
+
+    result[end - start + 1] = '\0';
+
     return result;
 }
 

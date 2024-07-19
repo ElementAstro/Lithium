@@ -24,22 +24,20 @@ set(${PROJECT_NAME}_HEADERS
     io.hpp
 )
 
-# Private Headers
-set(${PROJECT_NAME}_PRIVATE_HEADERS
+set(${PROJECT_NAME}_LIBS
+    loguru
+    ZLIB::ZLIB
 )
 
 # Build Object Library
 add_library(${PROJECT_NAME}_OBJECT OBJECT)
 set_property(TARGET ${PROJECT_NAME}_OBJECT PROPERTY POSITION_INDEPENDENT_CODE 1)
 
-target_link_libraries(${PROJECT_NAME}_OBJECT loguru)
-
 target_sources(${PROJECT_NAME}_OBJECT
     PUBLIC
     ${${PROJECT_NAME}_HEADERS}
     PRIVATE
     ${${PROJECT_NAME}_SOURCES}
-    ${${PROJECT_NAME}_PRIVATE_HEADERS}
 )
 
 target_link_libraries(${PROJECT_NAME}_OBJECT ${${PROJECT_NAME}_LIBS})

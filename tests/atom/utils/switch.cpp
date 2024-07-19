@@ -61,7 +61,7 @@ TEST_F(StringSwitchTest, GetCases) {
 
 // Test duplicate case registration
 TEST_F(StringSwitchTest, DuplicateCase) {
-    EXPECT_THROW(switch_.registerCase("case1", [](int x) {}),
+    EXPECT_THROW(switch_.registerCase("case1", [](ATOM_UNUSED int x) {}),
                  atom::error::ObjectAlreadyExist);
 }
 

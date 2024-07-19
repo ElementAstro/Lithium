@@ -308,37 +308,42 @@ auto slice(Container& c, Index start, Index end) {
 
 template <typename T>
 struct generator {
-    struct PromiseType;
-    using handle_type = std::coroutine_handle<PromiseType>;
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
 
-    struct PromiseType {
+    struct promise_type {
         T value;
-        auto yieldValue(T value) noexcept -> std::suspend_always {
+
+        auto yield_value(T value) noexcept {
             this->value = value;
-            return {};
+            return std::suspend_always{};
         }
-        auto initialSuspend() noexcept -> std::suspend_always { return {}; }
-        auto finalSuspend() noexcept -> std::suspend_always { return {}; }
-        auto getReturnObject() noexcept -> generator {
+        auto initial_suspend() noexcept { return std::suspend_always{}; }
+        auto final_suspend() noexcept { return std::suspend_always{}; }
+        auto get_return_object() noexcept {
             return generator{handle_type::from_promise(*this)};
         }
-        void unhandledException() { std::terminate(); }
-        void returnVoid() {}
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
     };
 
     handle_type handle;
+
     explicit generator(handle_type handle) : handle(handle) {}
     ~generator() {
         if (handle) {
             handle.destroy();
         }
     }
+
     generator(const generator&) = delete;
     auto operator=(const generator&) -> generator& = delete;
+
     generator(generator&& other) noexcept
         : handle(std::exchange(other.handle, {})) {}
+
     auto operator=(generator&& other) noexcept -> generator& {
-        if (std::addressof(other) != this) {
+        if (this != &other) {
             if (handle) {
                 handle.destroy();
             }
@@ -347,61 +352,68 @@ struct generator {
         return *this;
     }
 
-    struct Iterator {
+    struct iterator {
         handle_type handle;
         bool done = false;
 
-        Iterator() = default;
-        explicit Iterator(handle_type handle) : handle(handle) { ++(*this); }
+        iterator() = default;
+        explicit iterator(handle_type handle) : handle(handle) {
+            handle.resume();
+            done = handle.done();
+        }
 
-        auto operator++() -> Iterator& {
+        auto operator++() -> iterator& {
             handle.resume();
             done = handle.done();
             return *this;
         }
 
-        auto operator*() const -> T { return handle.promise().value_; }
+        auto operator*() const -> T { return handle.promise().value; }
         auto operator==(std::default_sentinel_t) const -> bool { return done; }
     };
 
-    auto begin() -> Iterator { return Iterator{handle}; }
+    auto begin() -> iterator { return iterator{handle}; }
     auto end() -> std::default_sentinel_t { return {}; }
 };
 
-// 特化版本以支持引用类型
 template <typename T>
 struct generator<T&> {
-    struct PromiseType;
-    using handle_type = std::coroutine_handle<PromiseType>;
+    struct promise_type;
+    using handle_type = std::coroutine_handle<promise_type>;
 
-    struct PromiseType {
+    struct promise_type {
         T* value;
-        auto yieldValue(T& value) noexcept -> std::suspend_always {
-            value = std::addressof(value);
-            return {};
+
+        auto yield_value(T& value) noexcept {
+            this->value = std::addressof(value);
+            return std::suspend_always{};
         }
-        auto initialSuspend() noexcept -> std::suspend_always { return {}; }
-        auto finalSuspend() noexcept -> std::suspend_always { return {}; }
-        auto getReturnObject() noexcept -> generator {
+        auto initial_suspend() noexcept { return std::suspend_always{}; }
+        auto final_suspend() noexcept { return std::suspend_always{}; }
+        auto get_return_object() noexcept {
             return generator{handle_type::from_promise(*this)};
         }
-        void unhandledException() { std::terminate(); }
-        void returnVoid() {}
+        void unhandled_exception() { std::terminate(); }
+        void return_void() {}
     };
 
     handle_type handle;
+
     explicit generator(handle_type handle) : handle(handle) {}
     ~generator() {
         if (handle) {
             handle.destroy();
         }
     }
+
     generator(const generator&) = delete;
     auto operator=(const generator&) -> generator& = delete;
+
     generator(generator&& other) noexcept
         : handle(std::exchange(other.handle, {})) {}
+
     auto operator=(generator&& other) noexcept -> generator& {
-        if (std::addressof(other) != this) {
+        if (this != &other) {
             if (handle) {
                 handle.destroy();
             }
@@ -415,7 +427,10 @@ struct generator<T&> {
         bool done = false;
 
         Iterator() = default;
-        explicit Iterator(handle_type handle) : handle(handle) { ++(*this); }
+        explicit Iterator(handle_type handle) : handle(handle) {
+            handle.resume();
+            done = handle.done();
+        }
 
         auto operator++() -> Iterator& {
             handle.resume();
@@ -423,7 +438,7 @@ struct generator<T&> {
             return *this;
         }
 
-        auto operator*() const -> T& { return *handle.promise().value_; }
+        auto operator*() const -> T& { return *handle.promise().value; }
         auto operator==(std::default_sentinel_t) const -> bool { return done; }
     };
 
@@ -473,9 +488,9 @@ struct ZipViewImpl {
         auto its = std::tuple{std::ranges::begin(ranges)...};
         auto ends = std::tuple{std::ranges::end(ranges)...};
 
-        while (check_iterators(its, ends, std::index_sequence_for<Rs...>{})) {
-            co_yield get_values(its, std::index_sequence_for<Rs...>{});
-            increment_iterators(its, std::index_sequence_for<Rs...>{});
+        while (checkIterators(its, ends, std::index_sequence_for<Rs...>{})) {
+            co_yield getValues(its, std::index_sequence_for<Rs...>{});
+            incrementIterators(its, std::index_sequence_for<Rs...>{});
         }
     }
 
@@ -561,6 +576,15 @@ struct AdjacentViewImpl {
         }
     }
 };
+
+template <typename Range>
+auto toVector(Range&& range) {
+    using ValueType =
+        typename std::decay<decltype(*std::begin(std::declval<Range>()))>::type;
+    std::vector<ValueType> result;
+    std::ranges::copy(std::forward<Range>(range), std::back_inserter(result));
+    return result;
+}
 }  // namespace atom::utils
 
 #endif

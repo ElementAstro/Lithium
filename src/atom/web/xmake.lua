@@ -43,7 +43,7 @@ target("atom-web-object")
 target("atom-web")
     set_kind("static")
     add_deps("atom-web-object")
-    add_packages("loguru", "cpp_httplib")
+    add_packages("loguru", "cpp-httplib")
     add_includedirs(".", {public = true})
 
     if is_plat("windows") then

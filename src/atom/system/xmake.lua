@@ -4,7 +4,6 @@
 set_project("Atom-System")
 set_version("1.0.0")
 set_description("A collection of useful system functions")
-set_licenses("GPL-3.0")
 
 -- Specify the C++ Languages
 set_languages("c++17")
@@ -28,14 +27,3 @@ target("Atom-System")
     if is_plat("windows") then
         add_links("pdh", "wlanapi")
     end
-
--- Install Rules
-after_install("install_headers")
-after_install("install_libraries")
-
--- Install Headers
-install_headers("*.hpp", "$(projectdir)/include/$(projectname)")
-install_headers("module/*.hpp", "$(projectdir)/include/$(projectname)/module")
-
--- Install Libraries
-install_libraries("$(targetdir)/*.a", "$(projectdir)/lib")

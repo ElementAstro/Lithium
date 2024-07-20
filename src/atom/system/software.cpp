@@ -111,7 +111,7 @@ auto getAppVersion(const fs::path& app_path) -> std::string {
     }
 #endif
 
-    return "1.0.0";
+    return "";
 }
 
 auto getAppPermissions(const fs::path& app_path) -> std::vector<std::string> {

@@ -453,3 +453,14 @@ ATOM_INLINE void unreachable ATOM_NORETURN() {
 #define ATOM_C extern "C"
 
 #pragma endregion more_macros
+
+// This is a hack to make the virtual keyword work in tests
+#pragma  region virtual_macros
+
+#if defined(TEST_F) || defined(TEST)
+#define ATOM_VIRTUAL virtual
+#else
+#define ATOM_VIRTUAL
+#endif
+
+#pragma endregion virtual_macros

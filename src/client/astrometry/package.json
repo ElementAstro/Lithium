@@ -1,8 +1,8 @@
 {
-    "name": "lithium.client.astap",
+    "name": "lithium.client.astrometry",
     "version": "1.0.0",
     "type": "shared",
-    "description": "Simple wrapper around ASTAP for Lithium",
+    "description": "Simple wrapper around Astrometry for Lithium",
     "license": "GPL-3.0-or-later",
     "author": "Max Qian",
     "repository": {
@@ -15,7 +15,7 @@
     "homepage": "https://github.com/ElementAstro/Lithium",
     "keywords": [
         "lithium",
-        "astap",
+        "astrometry",
         "platesolve"
     ],
     "scripts": {
@@ -24,7 +24,7 @@
     },
     "modules": [
         {
-            "name": "astap",
+            "name": "astrometry",
             "entry": "getInstance"
         }
     ]

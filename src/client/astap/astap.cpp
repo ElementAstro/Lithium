@@ -50,7 +50,7 @@ auto AstapSolver::disconnect() -> bool {
     return true;
 }
 
-bool AstapSolver::reconnect() {
+auto AstapSolver::reconnect() -> bool {
     DLOG_F(INFO, "Reconnecting to Astap Solver...");
     std::string currentPath = solverPath_;
     if (!disconnect()) {
@@ -63,7 +63,7 @@ bool AstapSolver::reconnect() {
     return true;
 }
 
-bool AstapSolver::isConnected() { return !solverPath_.empty(); }
+auto AstapSolver::isConnected() -> bool { return !solverPath_.empty(); }
 
 auto AstapSolver::scanSolver() -> bool {
     DLOG_F(INFO, "Scanning Astap Solver...");

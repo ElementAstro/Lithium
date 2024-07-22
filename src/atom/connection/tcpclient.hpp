@@ -17,6 +17,7 @@ Description: TCP Client Class
 
 #include <chrono>
 #include <functional>
+#include <future>
 #include <memory>
 #include <string>
 #include <vector>
@@ -52,7 +53,7 @@ public:
     /**
      * @brief Destructor.
      */
-    ~TcpClient();
+    ~TcpClient() override;
 
     /**
      * @brief Connects to a TCP server.
@@ -61,9 +62,9 @@ public:
      * @param timeout The connection timeout duration.
      * @return True if the connection is successful, false otherwise.
      */
-    bool connect(
-        const std::string& host, int port,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
+    auto connect(const std::string& host, int port,
+                 std::chrono::milliseconds timeout =
+                     std::chrono::milliseconds::zero()) -> bool;
 
     /**
      * @brief Disconnects from the server.
@@ -75,7 +76,7 @@ public:
      * @param data The data to be sent.
      * @return True if the data is sent successfully, false otherwise.
      */
-    bool send(const std::vector<char>& data);
+    auto send(const std::vector<char>& data) -> bool;
 
     /**
      * @brief Receives data from the server.
@@ -83,21 +84,21 @@ public:
      * @param timeout The receive timeout duration.
      * @return The received data.
      */
-    std::vector<char> receive(
-        size_t size,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds::zero());
+    auto receive(size_t size, std::chrono::milliseconds timeout =
+                                  std::chrono::milliseconds::zero())
+        -> std::future<std::vector<char>>;
 
     /**
      * @brief Checks if the client is connected to the server.
      * @return True if connected, false otherwise.
      */
-    bool isConnected() const;
+    [[nodiscard]] auto isConnected() const -> bool;
 
     /**
      * @brief Gets the error message in case of any error.
      * @return The error message.
      */
-    std::string getErrorMessage() const;
+    [[nodiscard]] auto getErrorMessage() const -> std::string;
 
     /**
      * @brief Sets the callback function to be called when connected to the

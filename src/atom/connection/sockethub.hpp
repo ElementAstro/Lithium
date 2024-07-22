@@ -17,7 +17,10 @@ Description: SocketHub类用于管理socket连接的类。
 
 #include <atomic>
 #include <functional>
+#include <future>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <thread>
 #include <vector>
 
@@ -27,6 +30,7 @@ Description: SocketHub类用于管理socket连接的类。
 #pragma comment(lib, "ws2_32.lib")
 #else
 #include <arpa/inet.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -87,6 +91,8 @@ public:
      */
     void addHandler(std::function<void(std::string)> handler);
 
+    [[nodiscard]] auto isRunning() const;
+
 private:
     static const int maxConnections = 10;  ///< 最大连接数。
                                            ///< Maximum number of connections.
@@ -101,21 +107,14 @@ private:
 #else
     int serverSocket;
     std::vector<int> clients;
+    int epoll_fd;
+    std::map<int, std::jthread> clientThreads;  ///< 客户端处理线程列表。
 #endif
+    std::mutex clientMutex;
 #if __cplusplus >= 202002L
-    std::unique_ptr<std::jthread>
-        acceptThread;  ///< 用于接受连接的线程。
-                       ///< Thread for accepting connections.
-    std::vector<std::unique_ptr<std::jthread>>
-        clientThreads;  ///< 客户端处理线程列表。
-                        ///< List of threads for handling clients.
+    std::jthread acceptThread;  ///< 用于接受连接的线程。
 #else
-    std::unique_ptr<std::thread>
-        acceptThread;  ///< 用于接受连接的线程。
-                       ///< Thread for accepting connections.
-    std::vector<std::unique_ptr<std::thread>>
-        clientThreads;  ///< 客户端处理线程列表。
-                        ///< List of threads for handling clients.
+    std::unique_ptr<std::thread> acceptThread;
 #endif
 
     std::function<void(std::string)> handler;  ///< 消息处理函数。
@@ -177,4 +176,4 @@ private:
 };
 }  // namespace atom::connection
 
-#endif
+#endif  // ATOM_CONNECTION_SOCKETHUB_HPP

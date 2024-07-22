@@ -26,7 +26,7 @@ typedef int SOCKET;
 #endif
 
 namespace atom::connection {
-SocketHub::SocketHub() : running(false) {}
+SocketHub::SocketHub() : running(false), serverSocket(-1), epoll_fd(-1) {}
 
 SocketHub::~SocketHub() { stop(); }
 
@@ -81,12 +81,29 @@ void SocketHub::start(int port) {
         return;
     }
 
+#ifdef __linux__
+    epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        LOG_F(ERROR, "Failed to create epoll file descriptor.");
+        cleanupSocket();
+        return;
+    }
+
+    struct epoll_event event;
+    event.events = EPOLLIN;
+    event.data.fd = serverSocket;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, serverSocket, &event) == -1) {
+        LOG_F(ERROR, "Failed to add server socket to epoll.");
+        cleanupSocket();
+        return;
+    }
+#endif
+
     running.store(true);
     DLOG_F(INFO, "SocketHub started on port {}", port);
 
 #if __cplusplus >= 202002L
-    acceptThread =
-        std::make_unique<std::jthread>(&SocketHub::acceptConnections, this);
+    acceptThread = std::jthread(&SocketHub::acceptConnections, this);
 #else
     acceptThread =
         std::make_unique<std::thread>(&SocketHub::acceptConnections, this);
@@ -101,8 +118,8 @@ void SocketHub::stop() {
 
     running.store(false);
 
-    if (acceptThread && acceptThread->joinable()) {
-        acceptThread->join();
+    if (acceptThread.joinable()) {
+        acceptThread.join();
     }
 
     cleanupSocket();
@@ -145,6 +162,46 @@ void SocketHub::closeSocket(int socket)
 }
 
 void SocketHub::acceptConnections() {
+#ifdef __linux__
+    struct epoll_event events[maxConnections];
+    while (running.load()) {
+        int n = epoll_wait(epoll_fd, events, maxConnections, -1);
+        for (int i = 0; i < n; i++) {
+            if (events[i].data.fd == serverSocket) {
+                sockaddr_in clientAddress{};
+                socklen_t clientAddressLength = sizeof(clientAddress);
+                int clientSocket = accept(
+                    serverSocket, reinterpret_cast<sockaddr *>(&clientAddress),
+                    &clientAddressLength);
+
+                if (clientSocket < 0) {
+                    if (running.load()) {
+                        LOG_F(ERROR, "Failed to accept client connection.");
+                    }
+                    continue;
+                }
+
+                struct epoll_event event;
+                event.events = EPOLLIN | EPOLLET;
+                event.data.fd = clientSocket;
+                if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, clientSocket, &event) ==
+                    -1) {
+                    LOG_F(ERROR, "Failed to add client socket to epoll.");
+                    closeSocket(clientSocket);
+                    continue;
+                }
+
+                std::scoped_lock lock(clientMutex);
+                clients.push_back(clientSocket);
+
+                clientThreads[clientSocket] = std::jthread(
+                    &SocketHub::handleClientMessages, this, clientSocket);
+            } else {
+                handleClientMessages(events[i].data.fd);
+            }
+        }
+    }
+#else
     while (running.load()) {
         sockaddr_in clientAddress{};
         socklen_t clientAddressLength = sizeof(clientAddress);
@@ -152,28 +209,20 @@ void SocketHub::acceptConnections() {
         SOCKET clientSocket =
             accept(serverSocket, reinterpret_cast<sockaddr *>(&clientAddress),
                    &clientAddressLength);
-#ifdef _WIN32
-        if (clientSocket == INVALID_SOCKET)
-#else
-        if (clientSocket < 0)
-#endif
-        {
+        if (clientSocket == INVALID_SOCKET) {
             if (running.load()) {
                 LOG_F(ERROR, "Failed to accept client connection.");
             }
             continue;
         }
 
+        std::scoped_lock lock(clientMutex);
         clients.push_back(clientSocket);
 
-#if __cplusplus >= 202002L
-        clientThreads.push_back(std::make_unique<std::jthread>(
-            [this, clientSocket]() { handleClientMessages(clientSocket); }));
-#else
-        clientThreads.push_back(std::make_unique<std::thread>(
-            [this, clientSocket]() { handleClientMessages(clientSocket); }));
-#endif
+        clientThreads.push_back(
+            std::jthread(&SocketHub::handleClientMessages, this, clientSocket));
     }
+#endif
 }
 
 void SocketHub::handleClientMessages(SOCKET clientSocket) {
@@ -182,15 +231,20 @@ void SocketHub::handleClientMessages(SOCKET clientSocket) {
         memset(buffer, 0, sizeof(buffer));
         int bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         if (bytesRead <= 0) {
-            closeSocket(clientSocket);
-            clients.erase(
-                std::remove(clients.begin(), clients.end(), clientSocket),
-                clients.end());
+            {
+                std::scoped_lock lock(clientMutex);
+                closeSocket(clientSocket);
+                clients.erase(
+                    std::remove(clients.begin(), clients.end(), clientSocket),
+                    clients.end());
+            }
+#ifdef __linux__
+            clientThreads.erase(clientSocket);
+#endif
             break;
         }
 
         std::string message(buffer, bytesRead);
-
         if (handler) {
             handler(message);
         }
@@ -198,16 +252,26 @@ void SocketHub::handleClientMessages(SOCKET clientSocket) {
 }
 
 void SocketHub::cleanupSocket() {
-    for (const auto &client : clients) {
-        closeSocket(client);
+    {
+        std::scoped_lock lock(clientMutex);
+        for (const auto &client : clients) {
+            closeSocket(client);
+        }
+        clients.clear();
     }
-    clients.clear();
 
     closeSocket(serverSocket);
 
+#ifdef __linux__
+    if (epoll_fd != -1) {
+        close(epoll_fd);
+        epoll_fd = -1;
+    }
+#endif
+
     for (auto &thread : clientThreads) {
-        if (thread->joinable()) {
-            thread->join();
+        if (thread.second.joinable()) {
+            thread.second.join();
         }
     }
     clientThreads.clear();

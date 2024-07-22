@@ -15,6 +15,7 @@ Description: TCP Client Class
 #include "tcpclient.hpp"
 
 #include <cstring>
+#include <future>
 #include <stdexcept>
 #include <thread>
 
@@ -25,6 +26,7 @@ Description: TCP Client Class
 #else
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #endif
@@ -46,12 +48,22 @@ public:
         if (socket_ < 0) {
             THROW_RUNTIME_ERROR("Socket creation failed");
         }
+
+#ifdef __linux__
+        epoll_fd_ = epoll_create1(0);
+        if (epoll_fd_ == -1) {
+            THROW_RUNTIME_ERROR("Failed to create epoll file descriptor");
+        }
+#endif
     }
 
     ~Impl() {
         disconnect();
 #ifdef _WIN32
         WSACleanup();
+#endif
+#ifdef __linux__
+        close(epoll_fd_);
 #endif
     }
 
@@ -70,13 +82,19 @@ public:
         serverAddress.sin_port = htons(port);
 
         if (timeout > std::chrono::milliseconds::zero()) {
-            struct timeval tv;
-            tv.tv_sec = timeout.count() / 1000;
-            tv.tv_usec = (timeout.count() % 1000) * 1000;
+#ifdef _WIN32
+            DWORD tv = timeout.count();
             setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO,
                        reinterpret_cast<const char*>(&tv), sizeof(tv));
             setsockopt(socket_, SOL_SOCKET, SO_SNDTIMEO,
                        reinterpret_cast<const char*>(&tv), sizeof(tv));
+#else
+            struct timeval tv;
+            tv.tv_sec = timeout.count() / 1000;
+            tv.tv_usec = (timeout.count() % 1000) * 1000;
+            setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+            setsockopt(socket_, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+#endif
         }
 
         if (::connect(socket_,
@@ -87,6 +105,17 @@ public:
         }
 
         connected_ = true;
+
+#ifdef __linux__
+        struct epoll_event event;
+        event.events = EPOLLIN | EPOLLOUT;
+        event.data.fd = socket_;
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, socket_, &event) == -1) {
+            errorMessage_ = "Failed to add file descriptor to epoll";
+            return false;
+        }
+#endif
+
         return true;
     }
 
@@ -115,25 +144,32 @@ public:
         return true;
     }
 
-    std::vector<char> receive(
+    std::future<std::vector<char>> receive(
         size_t size,
         std::chrono::milliseconds timeout = std::chrono::milliseconds::zero()) {
-        if (timeout > std::chrono::milliseconds::zero()) {
-            struct timeval tv;
-            tv.tv_sec = timeout.count() / 1000;
-            tv.tv_usec = (timeout.count() % 1000) * 1000;
-            setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO,
-                       reinterpret_cast<const char*>(&tv), sizeof(tv));
-        }
+        return std::async(std::launch::async, [this, size, timeout] {
+            if (timeout > std::chrono::milliseconds::zero()) {
+#ifdef _WIN32
+                DWORD tv = timeout.count();
+                setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO,
+                           reinterpret_cast<const char*>(&tv), sizeof(tv));
+#else
+                struct timeval tv;
+                tv.tv_sec = timeout.count() / 1000;
+                tv.tv_usec = (timeout.count() % 1000) * 1000;
+                setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+#endif
+            }
 
-        std::vector<char> data(size);
-        ssize_t bytesRead = ::recv(socket_, data.data(), size, 0);
-        if (bytesRead < 0) {
-            errorMessage_ = "Receive failed";
-            return {};
-        }
-        data.resize(bytesRead);
-        return data;
+            std::vector<char> data(size);
+            ssize_t bytesRead = ::recv(socket_, data.data(), size, 0);
+            if (bytesRead < 0) {
+                errorMessage_ = "Receive failed";
+                return std::vector<char>{};
+            }
+            data.resize(bytesRead);
+            return data;
+        });
     }
 
     [[nodiscard]] bool isConnected() const { return connected_; }
@@ -171,11 +207,26 @@ public:
 
 private:
     void receivingLoop(size_t bufferSize) {
+#ifdef __linux__
+        struct epoll_event events[10];
+#endif
         while (!receivingStopped_) {
-            std::vector<char> data = receive(bufferSize);
+#ifdef __linux__
+            int n = epoll_wait(epoll_fd_, events, 10, -1);
+            for (int i = 0; i < n; i++) {
+                if (events[i].events & EPOLLIN) {
+                    std::vector<char> data = receive(bufferSize).get();
+                    if (!data.empty() && onDataReceivedCallback_) {
+                        onDataReceivedCallback_(data);
+                    }
+                }
+            }
+#else
+            std::vector<char> data = receive(bufferSize).get();
             if (!data.empty() && onDataReceivedCallback_) {
                 onDataReceivedCallback_(data);
             }
+#endif
         }
     }
 
@@ -183,6 +234,7 @@ private:
     SOCKET socket_;
 #else
     int socket_;
+    int epoll_fd_;
 #endif
     bool connected_ = false;
     std::string errorMessage_;
@@ -211,8 +263,8 @@ bool TcpClient::send(const std::vector<char>& data) {
     return impl_->send(data);
 }
 
-std::vector<char> TcpClient::receive(size_t size,
-                                     std::chrono::milliseconds timeout) {
+std::future<std::vector<char>> TcpClient::receive(
+    size_t size, std::chrono::milliseconds timeout) {
     return impl_->receive(size, timeout);
 }
 

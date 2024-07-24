@@ -17,7 +17,16 @@ Description: System Information Module - CPU
 
 #include <string>
 
+#include "macro.hpp"
+
 namespace atom::system {
+struct CacheSizes {
+    size_t l1d;
+    size_t l1i;
+    size_t l2;
+    size_t l3;
+} ATOM_ALIGNAS(32);
+
 /**
  * @brief Get the CPU usage percentage.
  * 获取 CPU 使用率百分比
@@ -25,7 +34,7 @@ namespace atom::system {
  * @return The CPU usage percentage.
  *         CPU 使用率百分比
  */
-float getCurrentCpuUsage();
+auto getCurrentCpuUsage() -> float;
 
 /**
  * @brief Get the CPU temperature.
@@ -34,7 +43,7 @@ float getCurrentCpuUsage();
  * @return The CPU temperature.
  *         CPU 温度
  */
-float getCurrentCpuTemperature();
+auto getCurrentCpuTemperature() -> float;
 
 /**
  * @brief Get the CPU model.
@@ -43,7 +52,7 @@ float getCurrentCpuTemperature();
  * @return The CPU model.
  *         CPU 型号
  */
-std::string getCPUModel();
+auto getCPUModel() -> std::string;
 
 /**
  * @brief Get the CPU identifier.
@@ -52,7 +61,7 @@ std::string getCPUModel();
  * @return The CPU identifier.
  *         CPU 标识
  */
-std::string getProcessorIdentifier();
+auto getProcessorIdentifier() -> std::string;
 
 /**
  * @brief Get the CPU frequency.
@@ -61,7 +70,7 @@ std::string getProcessorIdentifier();
  * @return The CPU frequency.
  *         CPU 频率
  */
-double getProcessorFrequency();
+auto getProcessorFrequency() -> double;
 
 /**
  * @brief Get the number of physical CPUs.
@@ -70,7 +79,7 @@ double getProcessorFrequency();
  * @return The number of physical CPUs.
  *         物理 CPU 数量
  */
-int getNumberOfPhysicalPackages();
+auto getNumberOfPhysicalPackages() -> int;
 
 /**
  * @brief Get the number of logical CPUs.
@@ -79,7 +88,16 @@ int getNumberOfPhysicalPackages();
  * @return The number of logical CPUs.
  *         逻辑 CPU 数量
  */
-int getNumberOfPhysicalCPUs();
+auto getNumberOfPhysicalCPUs() -> int;
+
+/**
+ * @brief Get the cache sizes.
+ * 获取缓存大小
+ *
+ * @return The cache sizes.
+ *         缓存大小
+ */
+auto getCacheSizes() -> CacheSizes;
 
 }  // namespace atom::system
 

@@ -18,42 +18,44 @@ Description: System Information Module - Wifi Information
 #include <string>
 #include <vector>
 
+#include "macro.hpp"
+
 namespace atom::system {
 /**
  * @brief Get current wifi name
  * @return Current wifi name
  */
-[[nodiscard]] std::string getCurrentWifi();
+ATOM_NODISCARD auto getCurrentWifi() -> std::string;
 
 /**
  * @brief Get current wired network name
  * @return Current wired network name
  */
-[[nodiscard]] std::string getCurrentWiredNetwork();
+ATOM_NODISCARD auto getCurrentWiredNetwork() -> std::string;
 
 /**
  * @brief Check if hotspot is connected
  * @return True if hotspot is connected
  */
-[[nodiscard]] bool isHotspotConnected();
+ATOM_NODISCARD auto isHotspotConnected() -> bool;
 
 /*
  * @brief Get host IP addresses
  * @return Vector of host IP addresses
  */
-[[nodiscard]] std::vector<std::string> getHostIPs();
+ATOM_NODISCARD auto getHostIPs() -> std::vector<std::string>;
 
 /**
  * @brief Get IPv4 addresses
  * @return Vector of IPv4 addresses
  */
-[[nodiscard]] std::vector<std::string> getIPv4Addresses();
+ATOM_NODISCARD auto getIPv4Addresses() -> std::vector<std::string>;
 
 /**
  * @brief Get IPv6 addresses
  * @return Vector of IPv6 addresses
  */
-[[nodiscard]] std::vector<std::string> getIPv6Addresses();
+ATOM_NODISCARD auto getIPv6Addresses() -> std::vector<std::string>;
 }  // namespace atom::system
 
 #endif

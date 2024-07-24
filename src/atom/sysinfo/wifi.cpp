@@ -48,7 +48,7 @@ Description: System Information Module - Wifi Information
 
 namespace atom::system {
 // 获取当前连接的WIFI
-std::string getCurrentWifi() {
+auto getCurrentWifi() -> std::string {
     std::string wifiName;
 
 #ifdef _WIN32
@@ -129,7 +129,7 @@ std::string getCurrentWifi() {
 }
 
 // 获取当前连接的有线网络
-std::string getCurrentWiredNetwork() {
+auto getCurrentWiredNetwork() -> std::string {
     std::string wiredNetworkName;
 
 #ifdef _WIN32
@@ -179,7 +179,7 @@ std::string getCurrentWiredNetwork() {
 }
 
 // 检查是否连接到热点
-bool isHotspotConnected() {
+auto isHotspotConnected() -> bool {
     bool isConnected = false;
 
 #ifdef _WIN32
@@ -228,7 +228,8 @@ bool isHotspotConnected() {
                 std::istream_iterator<std::string>{iss},
                 std::istream_iterator<std::string>());
             constexpr int WIFI_INDEX = 5;
-            if (tokens.size() >= 17 && tokens[1].substr(0, WIFI_INDEX) == "wlx00") {
+            if (tokens.size() >= 17 &&
+                tokens[1].substr(0, WIFI_INDEX) == "wlx00") {
                 isConnected = true;
                 break;
             }
@@ -243,7 +244,7 @@ bool isHotspotConnected() {
     return isConnected;
 }
 
-std::vector<std::string> getHostIPs() {
+auto getHostIPs() -> std::vector<std::string> {
     std::vector<std::string> hostIPs;
 
 #ifdef _WIN32
@@ -326,7 +327,7 @@ std::vector<std::string> getHostIPs() {
 }
 
 template <typename AddressType>
-std::vector<std::string> getIPAddresses(int addressFamily) {
+auto getIPAddresses(int addressFamily) -> std::vector<std::string> {
     std::vector<std::string> addresses;
 
 #ifdef _WIN32
@@ -376,7 +377,7 @@ std::vector<std::string> getIPAddresses(int addressFamily) {
 
     for (auto* ifa = ifAddrList; ifa != nullptr; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr && ifa->ifa_addr->sa_family == addressFamily) {
-            auto *sockAddr = reinterpret_cast<sockaddr*>(ifa->ifa_addr);
+            auto* sockAddr = reinterpret_cast<sockaddr*>(ifa->ifa_addr);
             // Using std::array to manage the address buffer
             std::array<char, std::max(INET_ADDRSTRLEN, INET6_ADDRSTRLEN)>
                 addressBuffer{};
@@ -403,11 +404,11 @@ std::vector<std::string> getIPAddresses(int addressFamily) {
     return addresses;
 }
 
-std::vector<std::string> getIPv4Addresses() {
+auto getIPv4Addresses() -> std::vector<std::string> {
     return getIPAddresses<sockaddr_in>(AF_INET);
 }
 
-std::vector<std::string> getIPv6Addresses() {
+auto getIPv6Addresses() -> std::vector<std::string> {
     return getIPAddresses<sockaddr_in6>(AF_INET6);
 }
 }  // namespace atom::system

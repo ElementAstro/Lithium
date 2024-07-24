@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include "macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -26,19 +27,21 @@
 namespace lithium::debug {
 class SuggestionEngine;  // Forwards declaration
 class CommandChecker;
+class CommandHistory;
 
 class ConsoleTerminal {
 public:
     ConsoleTerminal();
     ~ConsoleTerminal();
 
-    [[nodiscard]] auto getRegisteredCommands() const -> std::vector<std::string>;
-    void callCommand(std::string_view name,
-                                      const std::vector<std::any>& args);
+    ATOM_NODISCARD auto getRegisteredCommands() const
+        -> std::vector<std::string>;
+    void callCommand(std::string_view name, const std::vector<std::any>& args);
     void run();
 
 protected:
-    void helpCommand(const std::vector<std::string>& args) const;
+    void helpCommand() const;
+    void printHistory() const;
 
 private:
     void printHeader();
@@ -52,6 +55,8 @@ private:
     std::shared_ptr<SuggestionEngine> suggestionEngine_;
 
     std::shared_ptr<CommandChecker> commandChecker_;
+
+    std::shared_ptr<CommandHistory> commandHistory_;
 
     std::shared_ptr<Component> component_;
 

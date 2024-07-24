@@ -15,11 +15,13 @@ Description: Basic Component Definition
 #ifndef ATOM_COMPONENT_HPP
 #define ATOM_COMPONENT_HPP
 
+#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "dispatch.hpp"
+#include "error/exception.hpp"
 #include "macro.hpp"
 #include "module_macro.hpp"
 #include "types.hpp"
@@ -535,6 +537,9 @@ auto Component::hasConversion() const -> bool {
 }
 
 ATOM_INLINE auto Component::getAllCommands() const -> std::vector<std::string> {
+    if (m_CommandDispatcher_ == nullptr) {
+        THROW_OBJ_UNINITIALIZED("Component command dispatch is not initialized");
+    }
     return m_CommandDispatcher_->getAllCommands();
 }
 

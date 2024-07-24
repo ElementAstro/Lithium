@@ -22,6 +22,7 @@ Description: Process Manager
 #include <shared_mutex>
 #include <string>
 #include <vector>
+#include "macro.hpp"
 
 namespace fs = std::filesystem;
 
@@ -33,6 +34,11 @@ struct Process {
     fs::path path;
     std::string status;
 };
+
+struct NetworkConnection {
+    std::string protocol;
+    std::string line;
+} ATOM_ALIGNAS(64);
 
 class ProcessManager {
 public:
@@ -50,7 +56,8 @@ public:
      * 创建一个进程管理器。
      * @param maxProcess 最大进程数。
      */
-    static std::shared_ptr<ProcessManager> createShared(int maxProcess = 10);
+    static auto createShared(int maxProcess = 10)
+        -> std::shared_ptr<ProcessManager>;
 
     // -------------------------------------------------------------------
     // Process methods
@@ -61,23 +68,23 @@ public:
      * @param command 要执行的命令。
      * @param identifier 进程的标识符。
      */
-    bool createProcess(const std::string &command,
-                       const std::string &identifier);
+    auto createProcess(const std::string &command,
+                       const std::string &identifier) -> bool;
 
     /**
      * 终止一个进程。
      * @param pid 要终止的进程的PID。
      * @param signal 终止信号，默认为SIGTERM。
      */
-    bool terminateProcess(int pid, int signal = 15 /*SIGTERM*/);
+    auto terminateProcess(int pid, int signal = 15 /*SIGTERM*/) -> bool;
 
     /**
      * 终止一个进程。
      * @param name 要终止的进程的名称。
      * @param signal 终止信号，默认为SIGTERM。
      */
-    bool terminateProcessByName(const std::string &name,
-                                int signal = 15 /*SIGTERM*/);
+    auto terminateProcessByName(const std::string &name,
+                                int signal = 15 /*SIGTERM*/) -> bool;
 
     /**
      * 检查是否存在指定进程。
@@ -86,15 +93,15 @@ public:
      */
     bool hasProcess(const std::string &identifier);
 
-    [[nodiscard]] std::vector<Process> getRunningProcesses() const;
+    [[nodiscard]] auto getRunningProcesses() const -> std::vector<Process>;
 
     /**
      * 获取指定进程的输出信息。
      * @param identifier 进程的标识符。
      * @return 进程的输出信息。
      */
-    [[nodiscard]] std::vector<std::string> getProcessOutput(
-        const std::string &identifier);
+    [[nodiscard]] auto getProcessOutput(const std::string &identifier)
+        -> std::vector<std::string>;
 
     /**
      * 等待所有进程完成并清除进程列表。
@@ -106,21 +113,30 @@ public:
      * @param script 要运行的脚本。
      * @param identifier 进程的标识符。
      */
-    bool runScript(const std::string &script, const std::string &identifier);
+    auto runScript(const std::string &script,
+                   const std::string &identifier) -> bool;
+
+    auto monitorProcesses() -> bool;
 
     // -------------------------------------------------------------------
     // Script methods
     // -------------------------------------------------------------------
 
+#ifdef _WIN32
+    HANDLE getProcessHandle() const;
+#else
+    static auto getProcFilePath(int pid, const std::string& file) -> std::string;
+#endif
 private:
+
     int m_maxProcesses;  ///< 最大进程数。 // Maximum number of processes.
     std::condition_variable
         cv;  ///< 条件变量，用于等待进程完成。 // Condition variable used to
              ///< wait for process completion.
     std::vector<Process> processes;  ///< 存储当前运行的进程列表。 // Stores the
                                      ///< list of currently running processes.
-    mutable std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex used for
-                            ///< manipulating the process list.
+    mutable std::shared_mutex mtx;  ///< 互斥锁，用于操作进程列表。 // Mutex
+                                    ///< used for manipulating the process list.
 };
 
 /**
@@ -132,7 +148,8 @@ auto getAllProcesses() -> std::vector<std::pair<int, std::string>>;
 /*
  * 获取当前进程信息。
  */
-[[nodiscard("The process info is not used")]] auto getSelfProcessInfo() -> Process;
+[[nodiscard("The process info is not used")]] auto getSelfProcessInfo()
+    -> Process;
 
 /**
  * @brief Returns the name of the controlling terminal.
@@ -209,6 +226,8 @@ auto _CreateProcessAsUser(const std::string &command,
                           const std::string &username,
                           const std::string &domain,
                           const std::string &password) -> bool;
+
+auto getNetworkConnections() -> std::vector<NetworkConnection>;
 
 }  // namespace atom::system
 

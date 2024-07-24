@@ -19,8 +19,9 @@ Description: Lithium App Enter
 #include <memory>
 
 #include "atom/async/message_bus.hpp"
-#include "atom/type/message.hpp"
+#include "atom/components/component.hpp"
 #include "atom/type/json.hpp"
+#include "atom/type/message.hpp"
 using json = nlohmann::json;
 
 // -------------------------------------------------------------------
@@ -34,24 +35,19 @@ using json = nlohmann::json;
 //       parameters. However, It is more convenient to use json object.
 // -------------------------------------------------------------------
 
-namespace atom
-{
-    namespace error
-    {
-        class ErrorStack;
-    }
-
-    namespace system
-    {
-        class ProcessManager;
-    }
+namespace atom {
+namespace error {
+class ErrorStack;
 }
+
+namespace system {
+class ProcessManager;
+}
+}  // namespace atom
 namespace lithium {
 class PyScriptManager;  // FWD
 
-class CarbonScript;
-
-class ComponentManager; // FWD
+class ComponentManager;  // FWD
 
 class ConfigManager;
 
@@ -59,28 +55,70 @@ class TaskPool;
 
 class TaskInterpreter;
 
-class LithiumApp {
+class LithiumApp : public Component {
 public:
-    LithiumApp();
-    ~LithiumApp();
+    explicit LithiumApp();
+    ~LithiumApp() override;
 
     // -------------------------------------------------------------------
     // Common methods
     // -------------------------------------------------------------------
 
-    static std::shared_ptr<LithiumApp> createShared();
+    static auto createShared() -> std::shared_ptr<LithiumApp>;
+    auto initialize() -> bool override;
+    auto destroy() -> bool override;
+
+    // -------------------------------------------------------------------
+    // Component methods
+    // -------------------------------------------------------------------
+
+    auto getComponentManager() -> std::weak_ptr<ComponentManager>;
+    auto loadComponent(const std::string& name) -> bool;
+    auto unloadComponent(const std::string& name) -> bool;
+    auto unloadAllComponents() -> bool;
+    auto reloadComponent(const std::string& name) -> bool;
+    auto reloadAllComponents() -> bool;
+    auto getComponent(const std::string& name) -> std::weak_ptr<Component>;
+    auto getComponentInfo(const std::string& name) -> json;
+    auto getComponentList() -> std::vector<std::string>;
+
+    // -------------------------------------------------------------------
+    // Task methods
+    // -------------------------------------------------------------------
+
+    void loadScript(const std::string& name, const json& script);
+    void unloadScript(const std::string& name);
+
+    [[nodiscard]] auto hasScript(const std::string& name) const -> bool;
+    [[nodiscard]] auto getScript(const std::string& name) const
+        -> std::optional<json>;
+
+    void registerFunction(const std::string& name,
+                          std::function<json(const json&)> func);
+    void registerExceptionHandler(
+        const std::string& name,
+        std::function<void(const std::exception&)> handler);
+
+    void setVariable(const std::string& name, const json& value);
+    auto getVariable(const std::string& name) -> json;
+
+    void parseLabels(const json& script);
+    void execute(const std::string& scriptName);
+    void stop();
+    void pause();
+    void resume();
+    void queueEvent(const std::string& eventName, const json& eventData);
 
 private:
-    std::weak_ptr<TaskPool> m_TaskPool;
-    std::weak_ptr<atom::async::MessageBus> m_MessageBus;
-    std::weak_ptr<atom::error::ErrorStack> m_ErrorStack;
-    std::weak_ptr<ComponentManager> m_ComponentManager;
-    std::weak_ptr<TaskInterpreter> m_TaskInterpreter;
+    std::weak_ptr<TaskPool> m_taskpool_;
+    std::weak_ptr<atom::async::MessageBus> m_messagebus_;
+    std::weak_ptr<atom::error::ErrorStack> m_errorstack_;
+    std::weak_ptr<ComponentManager> m_component_manager_;
+    std::weak_ptr<TaskInterpreter> m_task_interpreter_;
 
-    std::weak_ptr<PyScriptManager> m_PyScriptManager;
-    std::weak_ptr<CarbonScript> m_CarbonScript;
+    std::weak_ptr<PyScriptManager> m_py_script_manager_;
 };
-extern std::shared_ptr<LithiumApp> MyApp;
+extern std::shared_ptr<LithiumApp> myApp;
 
-void InitLithiumApp(int argc, char **argv);
+void initLithiumApp(int argc, char** argv);
 }  // namespace lithium

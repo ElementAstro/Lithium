@@ -67,7 +67,7 @@ void run(const oatpp::base::CommandLineArguments& args) {
     statThread.join();
 }
 
-#ifdef ENABLE_SERVER_STANDALONE
+#ifndef ENABLE_SERVER_STANDALONE
 int main(int argc, const char* argv[]) {
     oatpp::Environment::init();
 

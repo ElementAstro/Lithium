@@ -1,33 +1,92 @@
 #include "manager.hpp"
 
+#include <csignal>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 
 #include "addons.hpp"
 #include "compiler.hpp"
 #include "loader.hpp"
+#include "macro.hpp"
 #include "sandbox.hpp"
-#include "sort.hpp"
+#include "template/standalone.hpp"
 
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/system/process.hpp"
 #include "atom/type/json.hpp"
-#include "atom/utils/ranges.hpp"
 #include "atom/utils/string.hpp"
 
+#include "system/command.hpp"
 #include "utils/constant.hpp"
 #include "utils/marco.hpp"
 
-namespace lithium {
+#if defined(_WIN32) || defined(_WIN64)
+// clang-format off
+#include <windows.h>
+#include <io.h>
+#include <process.h>
+#define pipe _pipe
+#define popen _popen
+#define pclose _pclose
+// clang-format on
+#else
+#include <fcntl.h>
+#include <semaphore.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
-ComponentManager::ComponentManager() : sandbox_(nullptr), compiler_(nullptr) {
-    module_loader_ = GetWeakPtr<ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
-    env_ = GetWeakPtr<atom::utils::Env>(constants::LITHIUM_UTILS_ENV);
-    addon_manager_ = GetWeakPtr<AddonManager>(constants::LITHIUM_ADDON_MANAGER);
-    sandbox_ = std::make_unique<Sandbox>();
-    compiler_ = std::make_unique<Compiler>();
+constexpr int MAX_DRIVERS = 32;
+
+#if defined(_WIN32) || defined(_WIN64)
+constexpr char SEM_NAME[] = "driver_semaphore";
+constexpr char SHM_NAME[] = "driver_shm";
+#else
+constexpr char SEM_NAME[] = "/driver_semaphore";
+constexpr char SHM_NAME[] = "/driver_shm";
+#endif
+
+namespace lithium {
+struct LocalDriver {
+    int processHandle;
+    int stdinFd;
+    int stdoutFd;
+    std::string name;
+    bool isListening;
+} ATOM_ALIGNAS(64);
+
+class ComponentManagerImpl {
+public:
+    std::weak_ptr<ModuleLoader> moduleLoader;
+    std::weak_ptr<atom::utils::Env> env;
+    std::unique_ptr<Sandbox> sandbox;
+    std::unique_ptr<Compiler> compiler;
+    std::weak_ptr<AddonManager> addonManager;
+    std::unordered_map<std::string, std::shared_ptr<ComponentEntry>>
+        componentEntries;
+    std::weak_ptr<atom::system::ProcessManager> processManager;
+    std::unordered_map<std::string, json> componentInfos;
+    std::unordered_map<std::string, std::weak_ptr<Component>> components;
+    std::string modulePath;
+    DependencyGraph dependencyGraph;
+};
+
+ComponentManager::ComponentManager()
+    : impl_(std::make_unique<ComponentManagerImpl>()) {
+    impl_->moduleLoader =
+        GetWeakPtr<ModuleLoader>(constants::LITHIUM_MODULE_LOADER);
+    impl_->env = GetWeakPtr<atom::utils::Env>(constants::LITHIUM_UTILS_ENV);
+    impl_->addonManager =
+        GetWeakPtr<AddonManager>(constants::LITHIUM_ADDON_MANAGER);
+    impl_->processManager = GetWeakPtr<atom::system::ProcessManager>(
+        constants::LITHIUM_PROCESS_MANAGER);
+    impl_->sandbox = std::make_unique<Sandbox>();
+    impl_->compiler = std::make_unique<Compiler>();
 
     if (!initialize()) {
         LOG_F(ERROR, "Failed to initialize component manager");
@@ -39,32 +98,33 @@ ComponentManager::ComponentManager() : sandbox_(nullptr), compiler_(nullptr) {
 ComponentManager::~ComponentManager() {}
 
 auto ComponentManager::initialize() -> bool {
-    auto envLock = env_.lock();
+    auto envLock = impl_->env.lock();
     if (!envLock) {
         LOG_F(ERROR, "Failed to lock environment");
         return false;
     }
 
-    module_path_ = envLock->getEnv(constants::ENV_VAR_MODULE_PATH,
-                                   constants::MODULE_FOLDER);
+    impl_->modulePath = envLock->getEnv(constants::ENV_VAR_MODULE_PATH,
+                                        constants::MODULE_FOLDER);
 
-    auto qualifiedSubdirs =
-        resolveDependencies(getQualifiedSubDirs(module_path_));
+    auto qualifiedSubdirs = impl_->dependencyGraph.resolveDependencies(
+        getQualifiedSubDirs(impl_->modulePath));
     if (qualifiedSubdirs.empty()) {
         LOG_F(INFO, "No modules found, just skip loading modules");
         return true;
     }
 
-    LOG_F(INFO, "Loading modules from: {}", module_path_);
+    LOG_F(INFO, "Loading modules from: {}", impl_->modulePath);
 
-    auto addonManagerLock = addon_manager_.lock();
+    auto addonManagerLock = impl_->addonManager.lock();
     if (!addonManagerLock) {
         LOG_F(ERROR, "Failed to lock addon manager");
         return false;
     }
 
     for (const auto& dir : qualifiedSubdirs) {
-        std::filesystem::path path = std::filesystem::path(module_path_) / dir;
+        std::filesystem::path path =
+            std::filesystem::path(impl_->modulePath) / dir;
 
         if (!addonManagerLock->addModule(path, dir)) {
             LOG_F(ERROR, "Failed to load module: {}", path.string());
@@ -179,8 +239,7 @@ auto ComponentManager::getQualifiedSubDirs(const std::string& path)
     return qualifiedSubDirs;
 }
 
-auto ComponentManager::loadComponent(ComponentType component_type,
-                                     const json& params) -> bool {
+auto ComponentManager::loadComponent(const json& params) -> bool {
     if (params.is_null()) {
         return false;
     }
@@ -208,20 +267,28 @@ auto ComponentManager::loadComponent(ComponentType component_type,
         return false;
     }
 
-    auto it = component_entries_.find(moduleName + "." + componentName);
-    if (it == component_entries_.end()) {
+    auto it = impl_->componentEntries.find(moduleName + "." + componentName);
+    if (it == impl_->componentEntries.end()) {
         LOG_F(ERROR, "Failed to load component entry: {}", componentName);
         return false;
     }
     if (it->second->component_type == "shared") {
-        // 仅示例：实际使用时需要实现组件加载逻辑
+        return loadSharedComponent(componentName, moduleName, modulePath,
+                                   it->second->func_name,
+                                   it->second->dependencies);
     }
-    return true;
+    if (it->second->component_type == "standalone") {
+        return loadStandaloneComponent(componentName, moduleName, modulePath,
+                                       it->second->func_name,
+                                       it->second->dependencies);
+    }
+    LOG_F(ERROR, "Unknown component type: {}", componentName);
+    return false;
 }
 
 auto ComponentManager::checkComponent(const std::string& module_name,
                                       const std::string& module_path) -> bool {
-    if (module_loader_.lock()->hasModule(module_name)) {
+    if (impl_->moduleLoader.lock()->hasModule(module_name)) {
         LOG_F(WARNING, "Module {} has been loaded, please do not load again",
               module_name);
         return true;
@@ -250,7 +317,7 @@ auto ComponentManager::checkComponent(const std::string& module_name,
     auto it = std::find(files.begin(), files.end(),
                         module_name + constants::LIB_EXTENSION);
     if (it != files.end()) {
-        if (!module_loader_.lock()->loadModule(
+        if (!impl_->moduleLoader.lock()->loadModule(
                 module_path + constants::PATH_SEPARATOR + module_name +
                     constants::LIB_EXTENSION,
                 module_name)) {
@@ -269,17 +336,17 @@ auto ComponentManager::checkComponent(const std::string& module_name,
 
 auto ComponentManager::loadComponentInfo(
     const std::string& module_path, const std::string& component_name) -> bool {
-    std::string file_path =
+    std::string filePath =
         module_path + constants::PATH_SEPARATOR + constants::PACKAGE_NAME;
 
-    if (!std::filesystem::exists(file_path)) {
+    if (!std::filesystem::exists(filePath)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
     }
     try {
-        component_infos_[component_name] =
-            json::parse(std::ifstream(file_path));
+        impl_->componentInfos[component_name] =
+            json::parse(std::ifstream(filePath));
     } catch (const json::parse_error& e) {
         LOG_F(ERROR, "Failed to load package.json file: {}", e.what());
         return false;
@@ -289,8 +356,8 @@ auto ComponentManager::loadComponentInfo(
 
 auto ComponentManager::checkComponentInfo(
     const std::string& module_name, const std::string& component_name) -> bool {
-    auto it = component_infos_.find(module_name);
-    if (it == component_infos_.end()) {
+    auto it = impl_->componentInfos.find(module_name);
+    if (it == impl_->componentInfos.end()) {
         LOG_F(ERROR, "Component {} does not contain package.json file",
               module_name);
         return false;
@@ -314,7 +381,7 @@ auto ComponentManager::checkComponentInfo(
         if (module["name"] == component_name) {
             auto funcName = module["entry"].get<std::string>();
 
-            if (auto moduleLoaderLock = module_loader_.lock();
+            if (auto moduleLoaderLock = impl_->moduleLoader.lock();
                 moduleLoaderLock &&
                 !moduleLoaderLock->hasFunction(module_name, funcName)) {
                 LOG_F(ERROR, "Failed to load module: {}'s function {}",
@@ -322,7 +389,7 @@ auto ComponentManager::checkComponentInfo(
                 return false;
             }
 
-            component_entries_[component_name] =
+            impl_->componentEntries[component_name] =
                 std::make_shared<ComponentEntry>(component_name, funcName,
                                                  "shared", module_name);
             return true;
@@ -331,8 +398,7 @@ auto ComponentManager::checkComponentInfo(
     return false;
 }
 
-auto ComponentManager::unloadComponent(ComponentType component_type,
-                                       const json& params) -> bool {
+auto ComponentManager::unloadComponent(const json& params) -> bool {
     if (params.is_null()) {
         return false;
     }
@@ -345,8 +411,8 @@ auto ComponentManager::unloadComponent(ComponentType component_type,
     auto componentName = params["component_name"].get<std::string>();
     auto forced = params["forced"].get<bool>();
 
-    auto it = component_entries_.find(componentName);
-    if (it == component_entries_.end()) {
+    auto it = impl_->componentEntries.find(componentName);
+    if (it == impl_->componentEntries.end()) {
         LOG_F(ERROR, "Failed to load component entry: {}", componentName);
         return false;
     }
@@ -359,8 +425,7 @@ auto ComponentManager::unloadComponent(ComponentType component_type,
     return true;
 }
 
-auto ComponentManager::reloadComponent(ComponentType component_type,
-                                       const json& params) -> bool {
+auto ComponentManager::reloadComponent(const json& params) -> bool {
     if (params.is_null()) {
         return false;
     }
@@ -372,8 +437,8 @@ auto ComponentManager::reloadComponent(ComponentType component_type,
 
     auto componentName = params["component_name"].get<std::string>();
 
-    auto it = component_entries_.find(componentName);
-    if (it == component_entries_.end()) {
+    auto it = impl_->componentEntries.find(componentName);
+    if (it == impl_->componentEntries.end()) {
         LOG_F(ERROR, "Failed to load component entry: {}", componentName);
         return false;
     }
@@ -388,9 +453,8 @@ auto ComponentManager::reloadComponent(ComponentType component_type,
 
 auto ComponentManager::reloadAllComponents() -> bool {
     LOG_F(INFO, "Reloading all components");
-    for (auto& [name, component] : components_) {
-        if (!reloadComponent(ComponentType::SHARED,
-                             json::object({{"component_name", name}}))) {
+    for (auto& [name, component] : impl_->components) {
+        if (!reloadComponent(json::object({{"component_name", name}}))) {
             LOG_F(ERROR, "Failed to reload component: {}", name);
             return false;
         }
@@ -400,25 +464,25 @@ auto ComponentManager::reloadAllComponents() -> bool {
 
 auto ComponentManager::getComponent(const std::string& component_name)
     -> std::optional<std::weak_ptr<Component>> {
-    if (!component_entries_.contains(component_name)) {
+    if (!impl_->componentEntries.contains(component_name)) {
         LOG_F(ERROR, "Could not found the component: {}", component_name);
         return std::nullopt;
     }
-    return components_[component_name];
+    return impl_->components[component_name];
 }
 
 auto ComponentManager::getComponentInfo(const std::string& component_name)
     -> std::optional<json> {
-    if (!component_entries_.contains(component_name)) {
+    if (!impl_->componentEntries.contains(component_name)) {
         LOG_F(ERROR, "Could not found the component: {}", component_name);
         return std::nullopt;
     }
-    return component_infos_[component_name];
+    return impl_->componentInfos[component_name];
 }
 
 auto ComponentManager::getComponentList() -> std::vector<std::string> {
     std::vector<std::string> list;
-    for (const auto& [name, component] : components_) {
+    for (const auto& [name, component] : impl_->components) {
         list.push_back(name);
     }
     std::sort(list.begin(), list.end());
@@ -438,7 +502,7 @@ auto ComponentManager::loadSharedComponent(
     auto modulePathStr = atom::utils::replaceString(module_path, "\\", "/");
 #endif
 
-    auto moduleLoader = module_loader_.lock();
+    auto moduleLoader = impl_->moduleLoader.lock();
     if (!moduleLoader) {
         LOG_F(ERROR, "Failed to lock module loader");
         return false;
@@ -455,8 +519,8 @@ auto ComponentManager::loadSharedComponent(
         return false;
     }
 
-    if (auto component = moduleLoader->getInstance<Component>(
-            componentFullName, {}, entry);
+    if (auto component =
+            moduleLoader->getInstance<Component>(componentFullName, {}, entry);
         component) {
         LOG_F(INFO, "Loaded shared component: {}", componentFullName);
 
@@ -477,11 +541,11 @@ auto ComponentManager::loadSharedComponent(
 
         try {
             if (component->initialize()) {
-                components_[componentFullName] = component;
+                impl_->components[componentFullName] = component;
                 AddPtr(componentFullName, component);
                 LOG_F(INFO, "Loaded shared component: {}", componentFullName);
 
-                component_entries_[componentFullName] =
+                impl_->componentEntries[componentFullName] =
                     std::make_shared<ComponentEntry>(component_name, entry,
                                                      "shared", module_path);
                 return true;
@@ -503,17 +567,17 @@ auto ComponentManager::unloadSharedComponent(const std::string& component_name,
           "Unload a component is very dangerous, you should make sure "
           "everything proper");
 
-    if (!components_.contains(component_name)) {
+    if (!impl_->components.contains(component_name)) {
         LOG_F(ERROR, "Component {} is not loaded", component_name);
         return false;
     }
 
     std::vector<std::string> dependencies;
-    for (const auto& entry : component_entries_) {
-        if (atom::utils::findElement(entry.second->dependencies,
-                                     component_name)) {
-            dependencies.push_back(entry.first);
-        }
+    for (const auto& entry : impl_->componentEntries) {
+        // if (atom::utils::findElement(entry.second->dependencies,
+        //                              component_name).has_value()) {
+        //     dependencies.push_back(entry.first);
+        // }
     }
 
     if (!dependencies.empty()) {
@@ -525,11 +589,11 @@ auto ComponentManager::unloadSharedComponent(const std::string& component_name,
         }
     }
 
-    if (!components_[component_name].lock()->destroy()) {
+    if (!impl_->components[component_name].lock()->destroy()) {
         LOG_F(ERROR, "Failed to destroy component: {}", component_name);
         return false;
     }
-    components_.erase(component_name);
+    impl_->components.erase(component_name);
     RemovePtr(component_name);
     LOG_F(INFO, "Unloaded shared component: {}", component_name);
     return true;
@@ -537,7 +601,7 @@ auto ComponentManager::unloadSharedComponent(const std::string& component_name,
 
 auto ComponentManager::reloadSharedComponent(const std::string& component_name)
     -> bool {
-    if (!components_.contains(component_name)) {
+    if (!impl_->components.contains(component_name)) {
         LOG_F(ERROR, "Component {} is not loaded", component_name);
         return false;
     }
@@ -546,11 +610,97 @@ auto ComponentManager::reloadSharedComponent(const std::string& component_name)
         return false;
     }
     if (!loadSharedComponent(
-            component_name, component_entries_[component_name]->module_name,
-            component_entries_[component_name]->module_name,
-            component_entries_[component_name]->func_name,
-            component_entries_[component_name]->dependencies)) {
+            component_name,
+            impl_->componentEntries[component_name]->module_name,
+            impl_->componentEntries[component_name]->module_name,
+            impl_->componentEntries[component_name]->func_name,
+            impl_->componentEntries[component_name]->dependencies)) {
         LOG_F(ERROR, "Failed to reload component: {}", component_name);
+        return false;
+    }
+    return true;
+}
+
+auto ComponentManager::loadStandaloneComponent(
+    const std::string& component_name, const std::string& addon_name,
+    const std::string& module_path, const std::string& entry,
+    const std::vector<std::string>& dependencies) -> bool {
+    // Max: 先检查进程运行情况， 如果有相同的进程，则优先杀死
+    for (const auto& [name, component] : impl_->components) {
+        if (name == component_name) {
+            LOG_F(ERROR, "Component {} is already loaded", component_name);
+            return false;
+        }
+    }
+    if (atom::system::isProcessRunning(component_name)) {
+        LOG_F(ERROR, "Component {} is already running, just kill it",
+              component_name);
+        atom::system::killProcessByName(component_name, SIGTERM);
+        LOG_F(INFO, "Killed process {}", component_name);
+        if (atom::system::isProcessRunning(component_name)) {
+            LOG_F(ERROR, "Failed to kill process {}", component_name);
+            return false;
+        }
+    }
+    for (const auto& dependency : dependencies) {
+        if (!atom::system::isProcessRunning(dependency)) {
+            LOG_F(ERROR, "Dependency {} is not running", dependency);
+            return false;
+        }
+    }
+    auto componentFullPath = module_path + constants::PATH_SEPARATOR +
+                             component_name + constants::EXECUTABLE_EXTENSION;
+    auto standaloneComponent =
+        std::make_shared<StandAloneComponent>(component_name);
+    standaloneComponent->startLocalDriver(componentFullPath);
+    if (!standaloneComponent->initialize()) {
+        LOG_F(ERROR, "Failed to initialize component {}", component_name);
+        return false;
+    }
+    standaloneComponent->toggleDriverListening();
+    LOG_F(INFO, "Start listening to driver for component {}", component_name);
+    standaloneComponent->monitorDrivers();
+    LOG_F(INFO, "Start monitoring drivers for component {}", component_name);
+
+    LOG_F(INFO, "Successfully loaded component {}", component_name);
+    return true;
+}
+auto ComponentManager::unloadStandaloneComponent(
+    const std::string& component_name, bool forced) -> bool {
+    bool isLoaded;
+    for (const auto& [name, component] : impl_->components) {
+        if (name == component_name) {
+            LOG_F(ERROR, "Component {} is already loaded", component_name);
+            isLoaded = true;
+        }
+    }
+    if (!isLoaded) {
+        LOG_F(WARNING, "Component {} is not loaded", component_name);
+        return true;
+    }
+    auto component = impl_->components.at(component_name);
+    if (component.expired()) {
+        LOG_F(ERROR, "Component {} is expired", component_name);
+        impl_->components.erase(component_name);
+        return true;
+    }
+    auto standalone =
+        std::dynamic_pointer_cast<StandAloneComponent>(component.lock());
+    if (forced) {
+        LOG_F(INFO, "Forcefully unloading component {}", component_name);
+        if (!standalone->destroy()) {
+            LOG_F(ERROR, "Failed to destroy component {}", component_name);
+        }
+        impl_->components.erase(component_name);
+        return true;
+    }
+    LOG_F(INFO, "Unloaded component {}", component_name);
+    return true;
+}
+auto ComponentManager::reloadStandaloneComponent(
+    const std::string& component_name) -> bool {
+    if (!impl_->components.contains(component_name)) {
+        LOG_F(ERROR, "Component {} not found", component_name);
         return false;
     }
     return true;

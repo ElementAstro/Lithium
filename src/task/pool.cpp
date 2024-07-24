@@ -46,6 +46,10 @@ void WorkerQueue::push(std::shared_ptr<Task> task) {
 }
 
 TaskPool::TaskPool(size_t threads) : m_defaultThreadCount(threads) {
+    m_queues.resize(threads);
+    for (size_t i = 0; i < threads; ++i) {
+        m_queues[i] = std::make_unique<WorkerQueue>();
+    }
     start(threads);
 }
 

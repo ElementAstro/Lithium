@@ -4,7 +4,6 @@
 #include <utility>
 
 #include "atom/type/json.hpp"
-using json = nlohmann::json;
 
 namespace lithium::debug {
 CommandChecker::CommandChecker() { initializeDefaultRules(); }
@@ -22,8 +21,8 @@ void CommandChecker::setDangerousCommands(
 
 void CommandChecker::setMaxLineLength(size_t length) { maxLineLength_ = length; }
 
-std::vector<CommandChecker::Error> CommandChecker::check(
-    std::string_view command) const {
+auto CommandChecker::check(
+    std::string_view command) const -> std::vector<CommandChecker::Error> {
     std::vector<Error> errors;
     std::vector<std::string> lines;
 
@@ -40,7 +39,7 @@ std::vector<CommandChecker::Error> CommandChecker::check(
     return errors;
 }
 
-json CommandChecker::toJson(const std::vector<Error>& errors) const {
+auto CommandChecker::toJson(const std::vector<Error>& errors) const -> json {
     json j = json::array();
     for (const auto& error : errors) {
         j.push_back({{"message", error.message},

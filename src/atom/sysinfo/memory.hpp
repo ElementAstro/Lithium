@@ -50,7 +50,7 @@ struct MemoryInfo {
  * @return The memory usage percentage.
  *         内存使用率百分比
  */
-float getMemoryUsage();
+auto getMemoryUsage() -> float;
 
 /**
  * @brief Get the total memory size.
@@ -59,7 +59,7 @@ float getMemoryUsage();
  * @return The total memory size.
  *         总内存大小
  */
-unsigned long long getTotalMemorySize();
+auto getTotalMemorySize() -> unsigned long long;
 
 /**
  * @brief Get the available memory size.
@@ -68,7 +68,7 @@ unsigned long long getTotalMemorySize();
  * @return The available memory size.
  *         可用内存大小
  */
-unsigned long long getAvailableMemorySize();
+auto getAvailableMemorySize() -> unsigned long long;
 
 /**
  * @brief Get the physical memory slot info.
@@ -77,7 +77,7 @@ unsigned long long getAvailableMemorySize();
  * @return The physical memory slot info.
  *         物理内存槽信息
  */
-MemoryInfo::MemorySlot getPhysicalMemoryInfo();
+auto getPhysicalMemoryInfo() -> MemoryInfo::MemorySlot;
 
 /**
  * @brief Get the virtual memory max size.
@@ -86,7 +86,7 @@ MemoryInfo::MemorySlot getPhysicalMemoryInfo();
  * @return The virtual memory max size.
  *         虚拟内存最大值
  */
-unsigned long long getVirtualMemoryMax();
+auto getVirtualMemoryMax() -> unsigned long long;
 
 /**
  * @brief Get the virtual memory used size.
@@ -95,7 +95,7 @@ unsigned long long getVirtualMemoryMax();
  * @return The virtual memory used size.
  *         虚拟内存已用值
  */
-unsigned long long getVirtualMemoryUsed();
+auto getVirtualMemoryUsed() -> unsigned long long;
 
 /**
  * @brief Get the swap memory total size.
@@ -104,7 +104,7 @@ unsigned long long getVirtualMemoryUsed();
  * @return The swap memory total size.
  *         交换内存总值
  */
-unsigned long long getSwapMemoryTotal();
+auto getSwapMemoryTotal() -> unsigned long long;
 
 /**
  * @brief Get the swap memory used size.
@@ -113,7 +113,25 @@ unsigned long long getSwapMemoryTotal();
  * @return The swap memory used size.
  *         交换内存已用值
  */
-unsigned long long getSwapMemoryUsed();
+auto getSwapMemoryUsed() -> unsigned long long;
+
+/**
+ * @brief Get the committed memory.
+ * 获取已分配内存
+ *
+ * @return The committed memory.
+ *         已分配内存
+ */
+auto getCommittedMemory() -> size_t;
+
+/**
+ * @brief Get the uncommitted memory.
+ * 获取未分配内存
+ *
+ * @return The uncommitted memory.
+ *         未分配内存
+ */
+auto getUncommittedMemory() -> size_t;
 }  // namespace atom::system
 
 #endif

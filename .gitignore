@@ -50,3 +50,5 @@ test
 
 .xmake
 .cache
+
+cmake-build-debug/

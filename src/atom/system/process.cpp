@@ -741,4 +741,48 @@ Cleanup:
 #endif
 }
 
+auto ProcessManager::getProcFilePath(int pid, const std::string& file) -> std::string {
+    return "/proc/" + std::to_string(pid) + "/" + file;
+}
+
+auto getNetworkConnections() -> std::vector<NetworkConnection> {
+    std::vector<NetworkConnection> connections;
+#ifdef _WIN32
+    MIB_TCPTABLE_OWNER_PID *pTCPInfo;
+    DWORD dwSize = 0;
+    GetExtendedTcpTable(nullptr, &dwSize, false, AF_INET,
+                        TCP_TABLE_OWNER_PID_ALL, 0);
+    pTCPInfo = (MIB_TCPTABLE_OWNER_PID *)malloc(dwSize);
+    if (GetExtendedTcpTable(pTCPInfo, &dwSize, false, AF_INET,
+                            TCP_TABLE_OWNER_PID_ALL, 0) == NO_ERROR) {
+        for (DWORD i = 0; i < pTCPInfo->dwNumEntries; i++) {
+            if (pTCPInfo->table[i].dwOwningPid == pid_) {
+                std::ostringstream oss;
+                oss << "Local: "
+                    << inet_ntoa(*(in_addr *)&pTCPInfo->table[i].dwLocalAddr)
+                    << ":" << ntohs((u_short)pTCPInfo->table[i].dwLocalPort);
+                oss << " Remote: "
+                    << inet_ntoa(*(in_addr *)&pTCPInfo->table[i].dwRemoteAddr)
+                    << ":" << ntohs((u_short)pTCPInfo->table[i].dwRemotePort);
+                connections.push_back({"TCP", oss.str()});
+            }
+        }
+    }
+    free(pTCPInfo);
+
+#else
+    for (const auto &[protocol, path] :
+         {std::pair{"TCP", "net/tcp"}, {"UDP", "net/udp"}}) {
+        std::ifstream netFile(ProcessManager::getProcFilePath(getpid(),path));
+        if (netFile.is_open()) {
+            std::string line;
+            while (std::getline(netFile, line)) {
+                connections.push_back({protocol, line});
+            }
+        }
+    }
+#endif
+    return connections;
+}
+
 }  // namespace atom::system

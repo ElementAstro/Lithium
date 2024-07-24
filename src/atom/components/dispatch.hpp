@@ -354,6 +354,7 @@ ATOM_INLINE auto CommandDispatcher::executeWithoutTimeout(
     if (cmd.funcs.size() == 1) {
         try {
             return cmd.funcs[0](args);
+
         } catch (const std::bad_any_cast&) {
             THROW_DISPATCH_EXCEPTION("Bad command invoke: " + name);
         }

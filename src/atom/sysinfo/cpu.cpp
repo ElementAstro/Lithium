@@ -416,4 +416,88 @@ auto getNumberOfPhysicalCPUs() -> int {
     return numberOfCPUs;
 }
 
+auto getCacheSizes() -> CacheSizes {
+    CacheSizes cacheSizes{0, 0, 0, 0};
+
+#ifdef _WIN32
+    SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *info = nullptr;
+    DWORD bufferSize = 0;
+
+    // Get required buffer size
+    GetLogicalProcessorInformationEx(InfoCache, nullptr, &bufferSize);
+    info = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)malloc(bufferSize);
+    if (!info)
+        return cacheSizes;
+
+    if (GetLogicalProcessorInformationEx(InfoCache, info, &bufferSize)) {
+        SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *current = info;
+        while ((char *)current < (char *)info + bufferSize) {
+            if (current->Relationship == RelationCache) {
+                switch (current->Cache.Type) {
+                    case CacheUnified:
+                        if (current->Cache.Level == 3)
+                            cacheSizes.l3 = current->Cache.Size / 1024;
+                        break;
+                    case CacheData:
+                        if (current->Cache.Level == 1)
+                            cacheSizes.l1d = current->Cache.Size / 1024;
+                        else if (current->Cache.Level == 2)
+                            cacheSizes.l2 = current->Cache.Size / 1024;
+                        break;
+                    case CacheInstruction:
+                        if (current->Cache.Level == 1)
+                            cacheSizes.l1i = current->Cache.Size / 1024;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            current =
+                (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)((char *)current +
+                                                            current->Size);
+        }
+    }
+    free(info);
+
+#elif defined(__linux__)
+    std::vector<std::string> cacheLevels = {
+        "/sys/devices/system/cpu/cpu0/cache/index1/size",
+        "/sys/devices/system/cpu/cpu0/cache/index2/size",
+        "/sys/devices/system/cpu/cpu0/cache/index3/size"};
+    for (const auto& path : cacheLevels) {
+        std::ifstream file(path);
+        if (file) {
+            std::string sizeStr;
+            std::getline(file, sizeStr);
+            size_t size = std::stoul(sizeStr) * 1024;  // Convert KB to bytes
+            if (path.find("index1") != std::string::npos)
+                cacheSizes.l1i = size / 1024;
+            else if (path.find("index2") != std::string::npos)
+                cacheSizes.l2 = size / 1024;
+            else if (path.find("index3") != std::string::npos)
+                cacheSizes.l3 = size / 1024;
+        }
+    }
+
+#elif defined(__APPLE__)
+    size_t l1i = 0, l1d = 0, l2 = 0, l3 = 0;
+    size_t length = sizeof(size_t);
+
+    if (sysctlbyname("machdep.cpu.cache.l1i.size", &l1i, &length, nullptr, 0) ==
+        0)
+        cacheSizes.l1i = l1i / 1024;
+    if (sysctlbyname("machdep.cpu.cache.l1d.size", &l1d, &length, nullptr, 0) ==
+        0)
+        cacheSizes.l1d = l1d / 1024;
+    if (sysctlbyname("machdep.cpu.cache.l2.size", &l2, &length, nullptr, 0) ==
+        0)
+        cacheSizes.l2 = l2 / 1024;
+    if (sysctlbyname("machdep.cpu.cache.l3.size", &l3, &length, nullptr, 0) ==
+        0)
+        cacheSizes.l3 = l3 / 1024;
+#endif
+
+    return cacheSizes;
+}
+
 }  // namespace atom::system

@@ -108,4 +108,127 @@ void RateLimiter::process_waiters() {
         }
     }
 }
+
+Debounce::Debounce(std::function<void()> func, std::chrono::milliseconds delay,
+                   bool leading,
+                   std::optional<std::chrono::milliseconds> maxWait)
+    : func_(std::move(func)),
+      delay_(delay),
+      leading_(leading),
+      maxWait_(maxWait) {}
+
+void Debounce::operator()() {
+    auto now = std::chrono::steady_clock::now();
+    std::unique_lock lock(mutex_);
+
+    if (leading_ && !scheduled_) {
+        scheduled_ = true;
+        func_();
+        ++call_count_;
+    }
+
+    last_call_ = now;
+    if (!thread_.joinable()) {
+        thread_ = std::jthread([this]() { this->run(); });
+    }
+}
+
+void Debounce::cancel() {
+    std::unique_lock lock(mutex_);
+    scheduled_ = false;
+    last_call_.reset();
+}
+
+void Debounce::flush() {
+    std::unique_lock lock(mutex_);
+    if (scheduled_) {
+        func_();
+        ++call_count_;
+        scheduled_ = false;
+    }
+}
+
+void Debounce::reset() {
+    std::unique_lock lock(mutex_);
+    last_call_.reset();
+    scheduled_ = false;
+}
+
+size_t Debounce::callCount() const {
+    std::unique_lock lock(mutex_);
+    return call_count_;
+}
+
+void Debounce::run() {
+    while (true) {
+        std::this_thread::sleep_for(delay_);
+        std::unique_lock lock(mutex_);
+        auto now = std::chrono::steady_clock::now();
+        if (last_call_ && now - last_call_.value() >= delay_) {
+            if (scheduled_) {
+                func_();
+                ++call_count_;
+                scheduled_ = false;
+            }
+            return;
+        }
+        if (maxWait_ && now - last_call_.value() >= maxWait_) {
+            if (scheduled_) {
+                func_();
+                ++call_count_;
+                scheduled_ = false;
+            }
+            return;
+        }
+    }
+}
+
+Throttle::Throttle(std::function<void()> func,
+                   std::chrono::milliseconds interval, bool leading,
+                   std::optional<std::chrono::milliseconds> maxWait)
+    : func_(std::move(func)),
+      interval_(interval),
+      last_call_(std::chrono::steady_clock::now() - interval),
+      leading_(leading),
+      maxWait_(maxWait) {}
+
+void Throttle::operator()() {
+    auto now = std::chrono::steady_clock::now();
+    std::unique_lock lock(mutex_);
+
+    if (leading_ && !called_) {
+        called_ = true;
+        func_();
+        last_call_ = now;
+        ++call_count_;
+        return;
+    }
+
+    if (now - last_call_ >= interval_) {
+        last_call_ = now;
+        func_();
+        ++call_count_;
+    } else if (maxWait_ && (now - last_call_ >= maxWait_)) {
+        last_call_ = now;
+        func_();
+        ++call_count_;
+    }
+}
+
+void Throttle::cancel() {
+    std::unique_lock lock(mutex_);
+    called_ = false;
+}
+
+void Throttle::reset() {
+    std::unique_lock lock(mutex_);
+    last_call_ = std::chrono::steady_clock::now() - interval_;
+    called_ = false;
+}
+
+auto Throttle::callCount() const -> size_t {
+    std::unique_lock lock(mutex_);
+    return call_count_;
+}
+
 }  // namespace atom::async

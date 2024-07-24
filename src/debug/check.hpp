@@ -6,8 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "atom/type/json_fwd.hpp"
 #include "macro.hpp"
+
+#include "atom/type/json_fwd.hpp"
+using json = nlohmann::json;
 
 namespace lithium::debug {
 class CommandChecker {
@@ -19,7 +21,7 @@ public:
         size_t line;
         size_t column;
         ErrorSeverity severity;
-    } ATOM_ALIGNAS(128);
+    } ATOM_ALIGNAS(64);
 
     struct CheckRule {
         std::string name;
@@ -36,11 +38,10 @@ public:
 
     void setMaxLineLength(size_t length);
 
-    [[nodiscard]] auto check(std::string_view command) const
+    ATOM_NODISCARD auto check(std::string_view command) const
         -> std::vector<Error>;
 
-    [[nodiscard]] auto toJson(const std::vector<Error>& errors) const
-        -> nlohmann::json;
+    ATOM_NODISCARD auto toJson(const std::vector<Error>& errors) const -> json;
 
 private:
     std::vector<CheckRule> rules_;
@@ -52,7 +53,7 @@ private:
     void checkLine(const std::string& line, size_t lineNumber,
                    std::vector<Error>& errors) const;
 
-    [[nodiscard]] auto severityToString(ErrorSeverity severity) const
+    ATOM_NODISCARD auto severityToString(ErrorSeverity severity) const
         -> std::string;
 };
 

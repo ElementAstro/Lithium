@@ -119,9 +119,9 @@ auto main(int argc, char *argv[]) -> int {
 
     program.parse_args(argc, argv);
 
-    lithium::InitLithiumApp(argc, argv);
+    lithium::initLithiumApp(argc, argv);
     // Create shared instance
-    lithium::MyApp = lithium::LithiumApp::createShared();
+    lithium::myApp = lithium::LithiumApp::createShared();
     // Parse arguments
     try {
         auto cmdHost = program.get<std::string>("--host");
@@ -190,7 +190,7 @@ auto main(int argc, char *argv[]) -> int {
 
     ConsoleTerminal terminal;
     terminal.run();
-    lithium::runServer(argc, const_cast<const char **>(argv));
+    //lithium::runServer(argc, const_cast<const char **>(argv));
 
     return 0;
 }

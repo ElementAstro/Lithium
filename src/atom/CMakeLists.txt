@@ -64,11 +64,9 @@ set(ATOM_HEADERS
 set(ATOM_LIBS
     loguru
     cpp_httplib
-    libzippp
     atom-function
     atom-algorithm
     atom-async
-    atom-task
     atom-io
     atom-component
     atom-type
@@ -76,6 +74,7 @@ set(ATOM_LIBS
     atom-search
     atom-web
     atom-system
+    atom-sysinfo
 )
 
 # Object Library

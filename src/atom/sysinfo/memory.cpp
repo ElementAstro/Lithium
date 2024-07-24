@@ -49,7 +49,7 @@ Description: System Information Module - Memory
 #endif
 
 namespace atom::system {
-float getMemoryUsage() {
+auto getMemoryUsage() -> float {
     float memoryUsage = 0.0;
 
 #ifdef _WIN32
@@ -114,7 +114,7 @@ float getMemoryUsage() {
     return memoryUsage;
 }
 
-unsigned long long getTotalMemorySize() {
+auto getTotalMemorySize() -> unsigned long long {
     unsigned long long totalMemorySize = 0;
 
 #ifdef _WIN32
@@ -143,7 +143,7 @@ unsigned long long getTotalMemorySize() {
     return totalMemorySize;
 }
 
-unsigned long long getAvailableMemorySize() {
+auto getAvailableMemorySize() -> unsigned long long {
     unsigned long long availableMemorySize = 0;
 
 #ifdef _WIN32
@@ -202,7 +202,7 @@ unsigned long long getAvailableMemorySize() {
     return availableMemorySize;
 }
 
-MemoryInfo::MemorySlot getPhysicalMemoryInfo() {
+auto getPhysicalMemoryInfo() -> MemoryInfo::MemorySlot {
     MemoryInfo::MemorySlot slot;
 
 #ifdef _WIN32
@@ -241,7 +241,7 @@ MemoryInfo::MemorySlot getPhysicalMemoryInfo() {
     return slot;
 }
 
-unsigned long long getVirtualMemoryMax() {
+auto getVirtualMemoryMax() -> unsigned long long {
     unsigned long long virtualMemoryMax;
 
 #ifdef _WIN32
@@ -269,7 +269,7 @@ unsigned long long getVirtualMemoryMax() {
     return virtualMemoryMax;
 }
 
-unsigned long long getVirtualMemoryUsed() {
+auto getVirtualMemoryUsed() -> unsigned long long {
     unsigned long long virtualMemoryUsed;
 
 #ifdef _WIN32
@@ -301,7 +301,7 @@ unsigned long long getVirtualMemoryUsed() {
     return virtualMemoryUsed;
 }
 
-unsigned long long getSwapMemoryTotal() {
+auto getSwapMemoryTotal() -> unsigned long long {
     unsigned long long swapMemoryTotal = 0;
 
 #ifdef _WIN32
@@ -357,6 +357,86 @@ unsigned long long getSwapMemoryUsed() {
 #endif
 
     return swapMemoryUsed;
+}
+
+auto getTotalMemory() -> size_t {
+#ifdef _WIN32
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    if (GlobalMemoryStatusEx(&status)) {
+        return status.ullTotalPhys;
+    }
+    return 0;
+#elif defined(__linux__)
+    std::ifstream memInfoFile("/proc/meminfo");
+    std::string line;
+    size_t totalMemory = 0;
+    while (std::getline(memInfoFile, line)) {
+        size_t value;
+        if (sscanf(line.c_str(), "MemTotal: %zu kB", &value) == 1) {
+            totalMemory = value * 1024; // Convert kB to bytes
+            break;
+        }
+    }
+    return totalMemory;
+#elif defined(__APPLE__)
+    int mib[2];
+    size_t length = sizeof(size_t);
+    size_t totalMemory;
+
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    if (sysctl(mib, 2, &totalMemory, &length, nullptr, 0) == 0) {
+        return totalMemory;
+    }
+    return 0;
+#endif
+}
+
+auto getAvailableMemory() -> size_t {
+#ifdef _WIN32
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    if (GlobalMemoryStatusEx(&status)) {
+        return status.ullAvailPhys;
+    }
+    return 0;
+#elif defined(__linux__)
+    std::ifstream memInfoFile("/proc/meminfo");
+    std::string line;
+    size_t availableMemory = 0;
+    while (std::getline(memInfoFile, line)) {
+        size_t value;
+        if (sscanf(line.c_str(), "MemAvailable: %zu kB", &value) == 1) {
+            availableMemory = value * 1024; // Convert kB to bytes
+            break;
+        }
+    }
+    return availableMemory;
+#elif defined(__APPLE__)
+    int mib[2];
+    size_t length = sizeof(vm_statistics64);
+    struct vm_statistics64 vm_stats;
+
+    mib[0] = CTL_VM;
+    mib[1] = VM_LOADAVG;
+    if (sysctl(mib, 2, &vm_stats, &length, nullptr, 0) == 0) {
+        return vm_stats.free_count * vm_page_size;
+    }
+    return 0;
+#endif
+}
+
+auto getCommittedMemory() -> size_t {
+    size_t totalMemory = getTotalMemory();
+    size_t availableMemory = getAvailableMemory();
+    return totalMemory - availableMemory;
+}
+
+auto getUncommittedMemory() -> size_t {
+    size_t totalMemory = getTotalMemory();
+    size_t committedMemory = getCommittedMemory();
+    return totalMemory - committedMemory;
 }
 
 }  // namespace atom::system

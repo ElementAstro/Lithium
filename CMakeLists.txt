@@ -128,6 +128,9 @@ function(check_python_package package version)
     set(result TRUE PARENT_SCOPE)
 endfunction()
 
+if (EXISTS "${CMAKE_BINARY_DIR}/check_marker.txt")
+    message(STATUS "Check marker file found, skipping the checks.")
+else()
 # Create a virtual environment
 set(VENV_DIR "${CMAKE_BINARY_DIR}/venv")
 execute_process(
@@ -191,6 +194,11 @@ foreach(requirement ${requirements_list})
         message(STATUS "Package '${package_name}' is already installed with a suitable version.")
     endif()
 endforeach()
+execute_process(
+    COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_BINARY_DIR}/check_marker.txt"
+    RESULT_VARIABLE result
+)
+endif()
 
 # Configure config.h
 configure_file(${lithium_src_dir}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
@@ -228,6 +236,10 @@ set(debug_module
     ${lithium_src_dir}/debug/suggestion.cpp
     ${lithium_src_dir}/debug/command.cpp
     ${lithium_src_dir}/debug/console.cpp
+    ${lithium_src_dir}/debug/history.cpp
+    ${lithium_src_dir}/debug/progress.cpp
+    ${lithium_src_dir}/debug/output_style.cpp
+    ${lithium_src_dir}/debug/check.cpp
 )
 
 set(script_module
@@ -261,8 +273,10 @@ add_executable(lithium_server ${lithium_src_dir}/App.cpp)
 target_link_libraries(lithium_server
     PRIVATE
         lithium_server-library
+        lithium.server-lib
         lithium-config
         lithium-task
+        lithium-addons
         oatpp-websocket
         oatpp-swagger
         oatpp-openssl

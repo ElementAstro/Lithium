@@ -21,6 +21,8 @@ set(PROJECT_SOURCES
     loader.cpp
     manager.cpp
     sandbox.cpp
+
+    template/standalone.cpp
 )
 
 # Project headers

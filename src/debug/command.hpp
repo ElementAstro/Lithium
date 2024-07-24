@@ -3,6 +3,7 @@
 
 #include <string>
 
+void quit();
 void getComponentInfo(const std::string &name);
 void getComponentList();
 

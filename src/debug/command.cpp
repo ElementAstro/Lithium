@@ -6,24 +6,28 @@
 
 #include <iostream>
 
+void quit() {
+    std::exit(0);
+}
+
 void getComponentInfo(const std::string &name) {
     if (name.empty()) {
-        std::cout << "Usage: getComponentInfo <component name>" << std::endl;
+        std::cout << "Usage: getComponentInfo <component name>" << '\n';
         return;
     }
     auto manager = GetWeakPtr<lithium::ComponentManager>(
         constants::LITHIUM_COMPONENT_MANAGER);
     if (manager.expired()) {
-        std::cout << "Component manager not found" << std::endl;
+        std::cout << "Component manager not found" << '\n';
         return;
     }
     auto info = manager.lock()->getComponentInfo(name);
     if (!info.has_value()) {
-        std::cout << "Component not found" << std::endl;
+        std::cout << "Component not found" << '\n';
         return;
     }
-    std::cout << "Component info:" << std::endl;
-    std::cout << info.value().dump(4) << std::endl;
+    std::cout << "Component info:" << '\n';
+    std::cout << info.value().dump(4) << '\n';
 }
 
 void getComponentList() {

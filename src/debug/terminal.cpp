@@ -10,14 +10,16 @@
 #include "check.hpp"
 #include "command.hpp"
 #include "console.hpp"
-#include "macro.hpp"
+#include "history.hpp"
 #include "suggestion.hpp"
 
 #include "addon/manager.hpp"
 
+#include "system/user.hpp"
 #include "utils/constant.hpp"
 
 #include <iostream>
+#include <memory>
 #include <queue>
 #include <regex>
 
@@ -26,25 +28,31 @@
 #include "atom/utils/string.hpp"
 
 namespace lithium::debug {
-ConsoleTerminal::ConsoleTerminal() {
+ConsoleTerminal::ConsoleTerminal()
+    : commandChecker_(std::make_shared<CommandChecker>()),
+      commandHistory_(
+          std::make_shared<CommandHistory>(64, atom::system::getUsername())) {
 #ifdef _WIN32
     hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 #else
     tcgetattr(STDIN_FILENO, &orig_termios_);
 #endif
+    component_ = std::make_shared<Component>("lithium.terminal");
+    component_->def("quit", &quit, "main", "quit lithium debug terminal");
+    component_->def("help", &ConsoleTerminal::helpCommand,
+                    PointerSentinel(this), "main", "Show help");
+    component_->def("history", &ConsoleTerminal::printHistory,
+                    PointerSentinel(this), "main", "Show command history");
+
+    component_->def("list_component", &getComponentList, "component",
+                    "Show all components");
+    component_->def("show_component_info", &getComponentInfo, "component",
+                    "Show component info");
     std::vector<std::string> keywords;
     for (const auto& name : getRegisteredCommands()) {
         keywords.emplace_back(name);
     }
     suggestionEngine_ = std::make_shared<SuggestionEngine>(std::move(keywords));
-    component_ = std::make_shared<Component>("lithium.terminal");
-
-    component_->def("help", &ConsoleTerminal::helpCommand,
-                    PointerSentinel(this), "basic", "Show help");
-    component_->def("list_component", &getComponentList, "component",
-                    "Show all components");
-    component_->def("show_component_info", &getComponentInfo, "component",
-                    "Show component info");
 }
 
 ConsoleTerminal::~ConsoleTerminal() {
@@ -66,13 +74,18 @@ void ConsoleTerminal::callCommand(std::string_view name,
                                   const std::vector<std::any>& args) {
     if (component_->has(name.data())) {
         try {
-            component_->dispatch(name.data(), args);
+            if (args.size() != 0) {
+                component_->dispatch(name.data(), args);
+            } else {
+                component_->dispatch(name.data());
+            }
         } catch (const std::exception& e) {
             std::cout << "Error: " << e.what() << '\n';
         }
+        commandHistory_->addCommand(std::string(name));
     } else {
         std::cout << "Command '" << name << "' not found.\n";
-        auto possibleCommand = suggestionEngine_->suggest(std::string(name));
+        auto possibleCommand = suggestionEngine_->suggest(name);
         if (!possibleCommand.empty()) {
             std::cout << "Did you mean: ";
             for (const auto& cmd : possibleCommand) {
@@ -111,13 +124,18 @@ void ConsoleTerminal::run() {
 
         std::string argsStr((std::istreambuf_iterator<char>(iss)),
                             std::istreambuf_iterator<char>());
+        // before parsing, we need to check if the command is dangerous
+        if (!commandChecker_->check(input).empty()) {
+            std::cout << "Command '" << command << "' is dangerous.\n";
+            continue;
+        }
         auto args = parseArguments(argsStr);
         callCommand(command, args);
     }
 }
 
-std::vector<std::any> ConsoleTerminal::parseArguments(
-    const std::string& input) {
+auto ConsoleTerminal::parseArguments(const std::string& input)
+    -> std::vector<std::any> {
     std::vector<std::any> args;
     std::string token;
     bool inQuotes = false;
@@ -201,22 +219,49 @@ auto ConsoleTerminal::processToken(const std::string& token) -> std::any {
     return token;  // 默认是字符串
 }
 
-void ConsoleTerminal::helpCommand(
-    ATOM_UNUSED const std::vector<std::string>& args) const {
+void ConsoleTerminal::helpCommand() const {
     std::cout << "Available commands:\n";
     for (const auto& cmd : getRegisteredCommands()) {
         std::cout << "  " << cmd << "\n";
     }
 }
 
+void ConsoleTerminal::printHistory() const {
+    std::cout << "History:\n";
+    commandHistory_->printHistory();
+}
+
+const std::string RESET = "\033[0m";
+const std::string RED = "\033[1;31m";
+const std::string GREEN = "\033[1;32m";
+const std::string BLUE = "\033[1;34m";
+const std::string CYAN = "\033[1;36m";
+
 void ConsoleTerminal::printHeader() {
-    std::cout << "Welcome to Lithium Command Line Tool v1.0" << std::endl;
-    std::cout << "A debugging tool for Lithium Engine" << std::endl;
-    std::cout << "--------------------------------------------------"
-              << std::endl;
-    std::cout << "Type 'help' to see a list of available commands."
-              << std::endl;
-    std::cout << "--------------------------------------------------"
-              << std::endl;
+    const int BORDER_WIDTH = 60;
+
+    // Print top border
+    std::cout << BLUE << std::string(BORDER_WIDTH, '*') << RESET << std::endl;
+
+    // Print title
+    std::cout << BLUE << "* " << GREEN << std::setw(BORDER_WIDTH - 4)
+              << std::left << "Welcome to Lithium Command Line Tool v1.0"
+              << " *" << RESET << std::endl;
+
+    // Print description
+    std::cout << BLUE << "* " << GREEN << std::setw(BORDER_WIDTH - 4)
+              << std::left << "A debugging tool for Lithium Engine" << " *"
+              << RESET << std::endl;
+
+    // Print separator line
+    std::cout << BLUE << std::string(BORDER_WIDTH, '*') << RESET << std::endl;
+
+    // Print command hint
+    std::cout << BLUE << "* " << CYAN << std::setw(BORDER_WIDTH - 4)
+              << std::left << "Type 'help' to see a list of available commands."
+              << " *" << RESET << std::endl;
+
+    // Print bottom border
+    std::cout << BLUE << std::string(BORDER_WIDTH, '*') << RESET << std::endl;
 }
 }  // namespace lithium::debug

@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 include_directories(.)
 
 add_library(${project_name}-lib
+        App.cpp
         AppComponent.hpp
         controller/FileController.hpp
         controller/RoomsController.hpp

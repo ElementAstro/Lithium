@@ -218,22 +218,24 @@ auto Peer::handleFileChunkMessage(const oatpp::Object<MessageDto>& message)
 
 auto Peer::handleQTextMessage(const std::string& message)
     -> oatpp::async::CoroutineStarter {
-        std::vector<std::string> parts;
+    std::vector<std::string> parts;
     std::stringstream ss(message);
     std::string part;
     while (std::getline(ss, part, ':')) {
         parts.push_back(part);
     }
 
-    auto trim = [](std::string &s) -> std::string {
+    auto trim = [](std::string& s) -> std::string {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
-            return !std::isspace(ch);
-        }));
-        s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
-            return !std::isspace(ch);
-        }).base(), s.end());
+                    return !std::isspace(ch);
+                }));
+        s.erase(std::find_if(s.rbegin(), s.rend(),
+                             [](int ch) { return !std::isspace(ch); })
+                    .base(),
+                s.end());
     };
 
+    /*
     if (parts.size() == 2 && trim(parts[0]) == "ConfirmIndiDriver") {
         std::string driverName = trim(parts[1]);
         indi_Driver_Confirm(driverName);
@@ -253,16 +255,12 @@ auto Peer::handleQTextMessage(const std::string& message)
         int Speed = std::stoi(trim(parts[1]));
         std::cout << Speed << std::endl;
         int Speed_ = FocuserControl_setSpeed(Speed);
-        wsThread->sendMessageToClient("FocusChangeSpeedSuccess:" + std::to_string(Speed_));
-    } else if (parts.size() == 3 && trim(parts[0]) == "focusMove") {
-        std::string LR = trim(parts[1]);
-        int Steps = std::stoi(trim(parts[2]));
-        if (LR == "Left") {
-            FocusMoveAndCalHFR(true, Steps);
-        } else if (LR == "Right") {
-            FocusMoveAndCalHFR(false, Steps);
-        } else if (LR == "Target") {
-            FocusGotoAndCalFWHM(Steps);
+        wsThread->sendMessageToClient("FocusChangeSpeedSuccess:" +
+    std::to_string(Speed_)); } else if (parts.size() == 3 && trim(parts[0]) ==
+    "focusMove") { std::string LR = trim(parts[1]); int Steps =
+    std::stoi(trim(parts[2])); if (LR == "Left") { FocusMoveAndCalHFR(true,
+    Steps); } else if (LR == "Right") { FocusMoveAndCalHFR(false, Steps); } else
+    if (LR == "Target") { FocusGotoAndCalFWHM(Steps);
         }
     } else if (parts.size() == 5 && trim(parts[0]) == "RedBox") {
         int x = std::stoi(trim(parts[1]));
@@ -273,20 +271,16 @@ auto Peer::handleQTextMessage(const std::string& message)
         glROI_y = y;
         CaptureViewWidth = width;
         CaptureViewHeight = height;
-        std::cout << "RedBox:" << glROI_x << glROI_y << CaptureViewWidth << CaptureViewHeight << std::endl;
-    } else if (parts.size() == 2 && trim(parts[0]) == "RedBoxSizeChange") {
-        BoxSideLength = std::stoi(trim(parts[1]));
-        std::cout << "BoxSideLength:" << BoxSideLength << std::endl;
-        wsThread->sendMessageToClient("MainCameraSize:" + std::to_string(glMainCCDSizeX) + ":" + std::to_string(glMainCCDSizeY));
-    } else if (message == "AutoFocus") {
-        AutoFocus();
-    } else if (message == "StopAutoFocus") {
-        StopAutoFocus = true;
-    } else if (message == "abortExposure") {
-        INDI_AbortCapture();
-    } else if (message == "connectAllDevice") {
-        DeviceConnect();
-    } else if (message == "CS") {
+        std::cout << "RedBox:" << glROI_x << glROI_y << CaptureViewWidth <<
+    CaptureViewHeight << std::endl; } else if (parts.size() == 2 &&
+    trim(parts[0]) == "RedBoxSizeChange") { BoxSideLength =
+    std::stoi(trim(parts[1])); std::cout << "BoxSideLength:" << BoxSideLength <<
+    std::endl; wsThread->sendMessageToClient("MainCameraSize:" +
+    std::to_string(glMainCCDSizeX) + ":" + std::to_string(glMainCCDSizeY)); }
+    else if (message == "AutoFocus") { AutoFocus(); } else if (message ==
+    "StopAutoFocus") { StopAutoFocus = true; } else if (message ==
+    "abortExposure") { INDI_AbortCapture(); } else if (message ==
+    "connectAllDevice") { DeviceConnect(); } else if (message == "CS") {
         // std::string Dev = connectIndiServer();
         // websocket->messageSend("AddDevice:" + Dev);
     } else if (message == "DS") {
@@ -344,7 +338,8 @@ auto Peer::handleQTextMessage(const std::string& message)
             indi_Client->setTelescopeSlewRate(dpMount, Speed - 1);
             int Speed_;
             indi_Client->getTelescopeSlewRate(dpMount, Speed_);
-            wsThread->sendMessageToClient("MountSetSpeedSuccess:" + std::to_string(Speed_));
+            wsThread->sendMessageToClient("MountSetSpeedSuccess:" +
+    std::to_string(Speed_));
         }
     } else if (parts.size() == 2 && trim(parts[0]) == "ImageGainR") {
         ImageGainR = std::stod(trim(parts[1]));
@@ -410,8 +405,9 @@ auto Peer::handleQTextMessage(const std::string& message)
         int pos = std::stoi(trim(parts[1]));
         if (dpCFW != NULL) {
             indi_Client->setCFWPosition(dpCFW, pos);
-            wsThread->sendMessageToClient("SetCFWPositionSuccess:" + std::to_string(pos));
-            std::cout << "Set CFW Position to " << pos << " Success!!!" << std::endl;
+            wsThread->sendMessageToClient("SetCFWPositionSuccess:" +
+    std::to_string(pos)); std::cout << "Set CFW Position to " << pos << "
+    Success!!!" << std::endl;
         }
     } else if (parts.size() == 2 && trim(parts[0]) == "CFWList") {
         if (dpCFW != NULL) {
@@ -421,17 +417,16 @@ auto Peer::handleQTextMessage(const std::string& message)
         if (dpCFW != NULL) {
             int min, max, pos;
             indi_Client->getCFWPosition(dpCFW, pos, min, max);
-            wsThread->sendMessageToClient("CFWPositionMax:" + std::to_string(max));
-            std::string cfwList = Tools::readCFWList(std::string(dpCFW->getDeviceName()));
-            if (!cfwList.empty()) {
-                wsThread->sendMessageToClient("getCFWList:" + cfwList);
+            wsThread->sendMessageToClient("CFWPositionMax:" +
+    std::to_string(max)); std::string cfwList =
+    Tools::readCFWList(std::string(dpCFW->getDeviceName())); if
+    (!cfwList.empty()) { wsThread->sendMessageToClient("getCFWList:" + cfwList);
             }
         }
     } else if (message == "ClearCalibrationData") {
         ClearCalibrationData = true;
-        std::cout << "ClearCalibrationData: " << ClearCalibrationData << std::endl;
-    } else if (message == "GuiderSwitch") {
-        if (isGuiding) {
+        std::cout << "ClearCalibrationData: " << ClearCalibrationData <<
+    std::endl; } else if (message == "GuiderSwitch") { if (isGuiding) {
             isGuiding = false;
             call_phd_StopLooping();
             wsThread->sendMessageToClient("GuiderStatus:false");
@@ -467,15 +462,13 @@ auto Peer::handleQTextMessage(const std::string& message)
         std::cout << allFile << std::endl;
         wsThread->sendMessageToClient("ShowAllImageFolder:" + allFile);
     } else if (parts.size() == 2 && trim(parts[0]) == "MoveFileToUSB") {
-        std::vector<std::string> ImagePath = parseString(parts[1], ImageSaveBasePath);
-        RemoveImageToUsb(ImagePath);
-    } else if (parts.size() == 2 && trim(parts[0]) == "DeleteFile") {
-        std::vector<std::string> ImagePath = parseString(parts[1], ImageSaveBasePath);
-        DeleteImage(ImagePath);
-    } else if (message == "USBCheck") {
-        USBCheck();
+        std::vector<std::string> ImagePath = parseString(parts[1],
+    ImageSaveBasePath); RemoveImageToUsb(ImagePath); } else if (parts.size() ==
+    2 && trim(parts[0]) == "DeleteFile") { std::vector<std::string> ImagePath =
+    parseString(parts[1], ImageSaveBasePath); DeleteImage(ImagePath); } else if
+    (message == "USBCheck") { USBCheck();
     }
-
+    */
 }
 
 auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
@@ -500,7 +493,7 @@ auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
         auto act() -> Action override {
             auto command = m_message_.getValue("");
             try {
-                m_jsonData_ = json::parse(m_message_);
+                m_jsonData_ = json::parse(m_message_.getValue(""));
                 yieldTo(&SendMessageCoroutine::process);
             } catch (const json::parse_error& e) {
                 m_response_["error"] = "Invalid JSON";
@@ -509,9 +502,8 @@ auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
             yieldTo(&SendMessageCoroutine::send);
         }
 
-        auto process()  -> Action{
+        auto process() -> Action {
             if (!m_jsonData_.contains("name")) {
-
             }
         }
 
@@ -521,7 +513,6 @@ auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
                        m_websocket_->sendOneFrameTextAsync(m_response_.dump()))
                 .next(finish());
         }
-
     };
     if (m_socket_) {
         m_asyncExecutor->execute<SendMessageCoroutine>(&m_writeLock_, m_socket_,

@@ -424,29 +424,29 @@ auto getCacheSizes() -> CacheSizes {
     DWORD bufferSize = 0;
 
     // Get required buffer size
-    GetLogicalProcessorInformationEx(InfoCache, nullptr, &bufferSize);
+    GetLogicalProcessorInformationEx(RelationCache, nullptr, &bufferSize);
     info = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)malloc(bufferSize);
     if (!info)
         return cacheSizes;
 
-    if (GetLogicalProcessorInformationEx(InfoCache, info, &bufferSize)) {
+    if (GetLogicalProcessorInformationEx(RelationCache, info, &bufferSize)) {
         SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *current = info;
         while ((char *)current < (char *)info + bufferSize) {
             if (current->Relationship == RelationCache) {
                 switch (current->Cache.Type) {
                     case CacheUnified:
                         if (current->Cache.Level == 3)
-                            cacheSizes.l3 = current->Cache.Size / 1024;
+                            cacheSizes.l3 = current->Cache.CacheSize / 1024;
                         break;
                     case CacheData:
                         if (current->Cache.Level == 1)
-                            cacheSizes.l1d = current->Cache.Size / 1024;
+                            cacheSizes.l1d = current->Cache.CacheSize / 1024;
                         else if (current->Cache.Level == 2)
-                            cacheSizes.l2 = current->Cache.Size / 1024;
+                            cacheSizes.l2 = current->Cache.CacheSize / 1024;
                         break;
                     case CacheInstruction:
                         if (current->Cache.Level == 1)
-                            cacheSizes.l1i = current->Cache.Size / 1024;
+                            cacheSizes.l1i = current->Cache.CacheSize / 1024;
                         break;
                     default:
                         break;
@@ -464,7 +464,7 @@ auto getCacheSizes() -> CacheSizes {
         "/sys/devices/system/cpu/cpu0/cache/index1/size",
         "/sys/devices/system/cpu/cpu0/cache/index2/size",
         "/sys/devices/system/cpu/cpu0/cache/index3/size"};
-    for (const auto& path : cacheLevels) {
+    for (const auto &path : cacheLevels) {
         std::ifstream file(path);
         if (file) {
             std::string sizeStr;

@@ -190,7 +190,7 @@ auto main(int argc, char *argv[]) -> int {
 
     ConsoleTerminal terminal;
     terminal.run();
-    //lithium::runServer(argc, const_cast<const char **>(argv));
+    lithium::runServer({argc, const_cast<const char **>(argv)});
 
     return 0;
 }

@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(SOURCE_FILES
     src/indiserver.cpp
     src/collection.cpp
-    src/connector.cpp
+    src/iconnector.cpp
 
     _component.cpp
     _main.cpp
@@ -27,7 +27,12 @@ set(LIBS
     tinyxml2
     atom-component
     atom-error
+    atom-utils
 )
+
+if (WIN32)
+    set(LIBS ${LIBS} ws2_32 version iphlpapi)
+endif()
 
 # Create the module library
 add_library(lithium.indiserver SHARED ${SOURCE_FILES} ${HEADER_FILES})

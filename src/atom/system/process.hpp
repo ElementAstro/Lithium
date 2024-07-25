@@ -24,6 +24,10 @@ Description: Process Manager
 #include <vector>
 #include "macro.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace atom::system {
@@ -91,7 +95,7 @@ public:
      * @param identifier 进程的标识符。
      * @return 是否存在指定进程。
      */
-    bool hasProcess(const std::string &identifier);
+    auto hasProcess(const std::string &identifier) -> bool;
 
     [[nodiscard]] auto getRunningProcesses() const -> std::vector<Process>;
 
@@ -123,7 +127,7 @@ public:
     // -------------------------------------------------------------------
 
 #ifdef _WIN32
-    HANDLE getProcessHandle() const;
+    auto getProcessHandle(int pid) const -> HANDLE;
 #else
     static auto getProcFilePath(int pid, const std::string& file) -> std::string;
 #endif
@@ -227,7 +231,7 @@ auto _CreateProcessAsUser(const std::string &command,
                           const std::string &domain,
                           const std::string &password) -> bool;
 
-auto getNetworkConnections() -> std::vector<NetworkConnection>;
+auto getNetworkConnections(int pid) -> std::vector<NetworkConnection>;
 
 }  // namespace atom::system
 

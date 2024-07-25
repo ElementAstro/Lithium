@@ -4,7 +4,7 @@ set(project_name lithium.server)
 
 project(${project_name})
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 include_directories(.)
 

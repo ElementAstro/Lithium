@@ -18,35 +18,41 @@ namespace lithium::debug {
 
 #ifdef _WIN32
 
-void clear_screen() {
+void clearScreen() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    DWORD cellCount, count;
+    DWORD cellCount;
+    DWORD count;
     COORD homeCoords = {0, 0};
 
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+    }
 
-    if (!GetConsoleScreenBufferInfo(hConsole, &csbi))
+    if (GetConsoleScreenBufferInfo(hConsole, &csbi) == 0) {
         THROW_RUNTIME_ERROR("Console buffer info error");
+    }
 
     cellCount = csbi.dwSize.X * csbi.dwSize.Y;
 
     if (!FillConsoleOutputCharacter(hConsole, (TCHAR)' ', cellCount, homeCoords,
-                                    &count))
+                                    &count)) {
         THROW_RUNTIME_ERROR("Fill console output error");
+}
 
-    if (!FillConsoleOutputAttribute(hConsole, csbi.wAttributes, cellCount,
-                                    homeCoords, &count))
+    if (FillConsoleOutputAttribute(hConsole, csbi.wAttributes, cellCount,
+                                    homeCoords, &count) == 0) {
         THROW_RUNTIME_ERROR("Fill console attribute error");
+}
 
     SetConsoleCursorPosition(hConsole, homeCoords);
 }
 
-void set_text_color(Color color) {
+void setTextColor(Color color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+}
 
     WORD attributes = 0;
 
@@ -84,10 +90,11 @@ void set_text_color(Color color) {
     SetConsoleTextAttribute(hConsole, attributes);
 }
 
-void set_background_color(Color color) {
+void setBackgroundColor(Color color) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+}
 
     WORD attributes = 0;
 
@@ -127,24 +134,26 @@ void set_background_color(Color color) {
     SetConsoleTextAttribute(hConsole, (csbi.wAttributes & 0x0F) | attributes);
 }
 
-void reset_text_format() {
-    set_text_color(Color::Default);
-    set_background_color(Color::Default);
+void resetTextFormat() {
+    setTextColor(Color::Default);
+    setBackgroundColor(Color::Default);
 }
 
-void move_cursor(int row, int col) {
+void moveCursor(int row, int col) {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+}
 
     COORD position = {static_cast<SHORT>(col), static_cast<SHORT>(row)};
     SetConsoleCursorPosition(hConsole, position);
 }
 
-void hide_cursor() {
+void hideCursor() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+}
 
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(hConsole, &cursorInfo);
@@ -152,10 +161,11 @@ void hide_cursor() {
     SetConsoleCursorInfo(hConsole, &cursorInfo);
 }
 
-void show_cursor() {
+void showCursor() {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+}
 
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(hConsole, &cursorInfo);
@@ -163,14 +173,16 @@ void show_cursor() {
     SetConsoleCursorInfo(hConsole, &cursorInfo);
 }
 
-std::pair<int, int> get_terminal_size() {
+auto getTerminalSize() -> std::pair<int, int> {
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE)
+    if (hConsole == INVALID_HANDLE_VALUE) {
         THROW_RUNTIME_ERROR("Invalid handle");
+}
 
     CONSOLE_SCREEN_BUFFER_INFO csbi;
-    if (!GetConsoleScreenBufferInfo(hConsole, &csbi))
+    if (GetConsoleScreenBufferInfo(hConsole, &csbi) == 0) {
         THROW_RUNTIME_ERROR("Console buffer info error");
+}
 
     int rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
     int cols = csbi.srWindow.Right - csbi.srWindow.Left + 1;
@@ -258,7 +270,7 @@ void hideCursor() { std::cout << "\033[?25l"; }
 void showCursor() { std::cout << "\033[?25h"; }
 
 auto getTerminalSize() -> std::pair<int, int> {
-    struct winsize w{};
+    struct winsize w {};
     ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
     return {w.ws_row, w.ws_col};
 }

@@ -33,7 +33,7 @@ ConsoleTerminal::ConsoleTerminal()
       commandHistory_(
           std::make_shared<CommandHistory>(64, atom::system::getUsername())) {
 #ifdef _WIN32
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    hConsole_ = GetStdHandle(STD_OUTPUT_HANDLE);
 #else
     tcgetattr(STDIN_FILENO, &orig_termios_);
 #endif

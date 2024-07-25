@@ -69,7 +69,7 @@ add_library(atom-system STATIC)
 
 # Platform-specific libraries
 if(WIN32)
-    target_link_libraries(atom-system pdh wlanapi)
+    target_link_libraries(atom-system pdh wlanapi userenv)
 endif()
 
 target_link_libraries(atom-system atom-system-object ${ATOM_SYSTEM_LIBS})

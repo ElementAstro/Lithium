@@ -13,6 +13,7 @@ project(atom-utils C CXX)
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
     argsview.cpp
+    convert.cpp
     qdatetime.cpp
     qtimer.cpp
     qtimezone.cpp
@@ -28,6 +29,7 @@ set(${PROJECT_NAME}_SOURCES
 set(${PROJECT_NAME}_HEADERS
     aes.hpp
     argsview.hpp
+    convert.hpp
     qdatetime.hpp
     qtimer.hpp
     qtimezone.hpp

@@ -18,6 +18,8 @@ Description: Process Manager
 // clang-format off
 #include <windows.h>
 #include <tlhelp32.h>
+#include <iprtrmib.h>
+#include <iphlpapi.h>
 // clang-format on
 #elif defined(__linux__) || defined(__ANDROID__)
 #include <dirent.h>
@@ -741,11 +743,17 @@ Cleanup:
 #endif
 }
 
+#ifdef _WIN32
+auto ProcessManager::getProcessHandle(int pid) const -> HANDLE {
+    return OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
+}
+#else
 auto ProcessManager::getProcFilePath(int pid, const std::string& file) -> std::string {
     return "/proc/" + std::to_string(pid) + "/" + file;
 }
+#endif
 
-auto getNetworkConnections() -> std::vector<NetworkConnection> {
+auto getNetworkConnections(int pid) -> std::vector<NetworkConnection> {
     std::vector<NetworkConnection> connections;
 #ifdef _WIN32
     MIB_TCPTABLE_OWNER_PID *pTCPInfo;
@@ -756,7 +764,7 @@ auto getNetworkConnections() -> std::vector<NetworkConnection> {
     if (GetExtendedTcpTable(pTCPInfo, &dwSize, false, AF_INET,
                             TCP_TABLE_OWNER_PID_ALL, 0) == NO_ERROR) {
         for (DWORD i = 0; i < pTCPInfo->dwNumEntries; i++) {
-            if (pTCPInfo->table[i].dwOwningPid == pid_) {
+            if (pTCPInfo->table[i].dwOwningPid == pid) {
                 std::ostringstream oss;
                 oss << "Local: "
                     << inet_ntoa(*(in_addr *)&pTCPInfo->table[i].dwLocalAddr)

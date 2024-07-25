@@ -60,7 +60,7 @@ std::vector<std::pair<std::string, float>> getDiskUsage() {
                 unsigned long long free = free_space.QuadPart / (1024 * 1024);
 
                 float usage = 100.0 * static_cast<float>(total - free) / total;
-                disk_usage.push_back(std::make_pair(drive_path, usage));
+                diskUsage.push_back(std::make_pair(drive_path, usage));
             } else {
                 LOG_F(ERROR, "GetDiskUsage error: GetDiskFreeSpaceExA error");
             }
@@ -185,7 +185,7 @@ std::vector<std::pair<std::string, std::string>> getStorageDeviceModels() {
             if (driveType == DRIVE_FIXED) {
                 std::string model = getDriveModel(drivePath);
                 if (!model.empty()) {
-                    storage_device_models.emplace_back(drivePath,
+                    storageDeviceModels.emplace_back(drivePath,
                                                        std::move(model));
                 }
             }

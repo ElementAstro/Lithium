@@ -4,14 +4,6 @@
  * Copyright (C) 2023-2024 Max Qian <lightapt.com>
  */
 
-/*************************************************
-
-Date: 2024-1-4
-
-Description: A sandbox for isolated components, such as executables.
-
-**************************************************/
-
 #include "sandbox.hpp"
 
 #ifdef _WIN32
@@ -29,8 +21,66 @@ Description: A sandbox for isolated components, such as executables.
 
 namespace lithium {
 
-bool Sandbox::setTimeLimit(int timeLimitMs) {
-    m_timeLimit = timeLimitMs;
+class SandboxImpl {
+public:
+    int mTimeLimit{0};
+    long mMemoryLimit{0};
+    std::string mRootDirectory;
+    int mUserId{0};
+    std::string mProgramPath;
+    std::vector<std::string> mProgramArgs;
+    int mTimeUsed{0};
+    long mMemoryUsed{0};
+
+    auto setTimeLimit(int timeLimitMs) -> bool;
+    auto setMemoryLimit(long memoryLimitKb) -> bool;
+    auto setRootDirectory(const std::string& rootDirectory) -> bool;
+    auto setUserId(int userId) -> bool;
+    auto setProgramPath(const std::string& programPath) -> bool;
+    auto setProgramArgs(const std::vector<std::string>& programArgs) -> bool;
+    auto run() -> bool;
+#ifdef _WIN32
+    auto setWindowsLimits(PROCESS_INFORMATION& processInfo) const -> bool;
+#else
+    bool setUnixLimits();
+#endif
+};
+
+Sandbox::Sandbox() : pimpl(std::make_unique<SandboxImpl>()) {}
+
+Sandbox::~Sandbox() = default;
+
+auto Sandbox::setTimeLimit(int timeLimitMs) -> bool {
+    return pimpl->setTimeLimit(timeLimitMs);
+}
+
+auto Sandbox::setMemoryLimit(long memoryLimitKb) -> bool {
+    return pimpl->setMemoryLimit(memoryLimitKb);
+}
+
+auto Sandbox::setRootDirectory(const std::string& rootDirectory) -> bool {
+    return pimpl->setRootDirectory(rootDirectory);
+}
+
+auto Sandbox::setUserId(int userId) -> bool { return pimpl->setUserId(userId); }
+
+auto Sandbox::setProgramPath(const std::string& programPath) -> bool {
+    return pimpl->setProgramPath(programPath);
+}
+
+auto Sandbox::setProgramArgs(const std::vector<std::string>& programArgs)
+    -> bool {
+    return pimpl->setProgramArgs(programArgs);
+}
+
+auto Sandbox::run() -> bool { return pimpl->run(); }
+
+auto Sandbox::getTimeUsed() const -> int { return pimpl->mTimeUsed; }
+
+auto Sandbox::getMemoryUsed() const -> long { return pimpl->mMemoryUsed; }
+
+auto SandboxImpl::setTimeLimit(int timeLimitMs) -> bool {
+    mTimeLimit = timeLimitMs;
 #ifndef _WIN32
     rlimit limit{.rlim_cur = static_cast<rlim_t>(timeLimitMs) / 1000,
                  .rlim_max = static_cast<rlim_t>(timeLimitMs) / 1000};
@@ -39,8 +89,8 @@ bool Sandbox::setTimeLimit(int timeLimitMs) {
     return true;
 }
 
-bool Sandbox::setMemoryLimit(long memoryLimitKb) {
-    m_memoryLimit = memoryLimitKb;
+auto SandboxImpl::setMemoryLimit(long memoryLimitKb) -> bool {
+    mMemoryLimit = memoryLimitKb;
 #ifndef _WIN32
     rlimit limit{.rlim_cur = static_cast<rlim_t>(memoryLimitKb) * 1024,
                  .rlim_max = static_cast<rlim_t>(memoryLimitKb) * 1024};
@@ -49,8 +99,8 @@ bool Sandbox::setMemoryLimit(long memoryLimitKb) {
     return true;
 }
 
-bool Sandbox::setRootDirectory(const std::string& rootDirectory) {
-    m_rootDirectory = rootDirectory;
+auto SandboxImpl::setRootDirectory(const std::string& rootDirectory) -> bool {
+    mRootDirectory = rootDirectory;
 #ifndef _WIN32
     return (chdir(rootDirectory.c_str()) == 0) &&
            (chroot(rootDirectory.c_str()) == 0);
@@ -58,43 +108,43 @@ bool Sandbox::setRootDirectory(const std::string& rootDirectory) {
     return true;
 }
 
-bool Sandbox::setUserId(int userId) {
-    m_userId = userId;
+auto SandboxImpl::setUserId(int userId) -> bool {
+    mUserId = userId;
 #ifndef _WIN32
     return (setuid(userId) == 0) && (setgid(userId) == 0);
 #endif
     return true;
 }
 
-bool Sandbox::setProgramPath(const std::string& programPath) {
-    m_programPath = programPath;
+auto SandboxImpl::setProgramPath(const std::string& programPath) -> bool {
+    mProgramPath = programPath;
     return true;
 }
 
-bool Sandbox::setProgramArgs(const std::vector<std::string>& programArgs) {
-    m_programArgs = programArgs;
+auto SandboxImpl::setProgramArgs(const std::vector<std::string>& programArgs) -> bool {
+    mProgramArgs = programArgs;
     return true;
 }
 
 #ifdef _WIN32
-bool Sandbox::setWindowsLimits(PROCESS_INFORMATION& processInfo) {
-    const HANDLE processHandle = processInfo.hProcess;
+auto SandboxImpl::setWindowsLimits(PROCESS_INFORMATION& processInfo) const -> bool {
+    const HANDLE PROCESS_HANDLE = processInfo.hProcess;
 
-    if (m_timeLimit > 0) {
-        SetProcessAffinityMask(processHandle,
-                               static_cast<DWORD_PTR>(m_timeLimit));
+    if (mTimeLimit > 0) {
+        SetProcessAffinityMask(PROCESS_HANDLE,
+                               static_cast<DWORD_PTR>(mTimeLimit));
     }
 
-    if (m_memoryLimit > 0) {
-        SetProcessWorkingSetSize(processHandle,
-                                 static_cast<SIZE_T>(m_memoryLimit),
-                                 static_cast<SIZE_T>(m_memoryLimit));
+    if (mMemoryLimit > 0) {
+        SetProcessWorkingSetSize(PROCESS_HANDLE,
+                                 static_cast<SIZE_T>(mMemoryLimit),
+                                 static_cast<SIZE_T>(mMemoryLimit));
     }
 
     return true;
 }
 #else
-bool Sandbox::setUnixLimits() {
+bool SandboxImpl::setUnixLimits() {
     if (m_timeLimit > 0) {
         rlimit limit{.rlim_cur = static_cast<rlim_t>(m_timeLimit) / 1000,
                      .rlim_max = static_cast<rlim_t>(m_timeLimit) / 1000};
@@ -115,14 +165,14 @@ bool Sandbox::setUnixLimits() {
 }
 #endif
 
-auto Sandbox::run() -> bool {
+auto SandboxImpl::run() -> bool {
 #ifdef _WIN32
     STARTUPINFO startupInfo{};
     startupInfo.cb = sizeof(startupInfo);
     PROCESS_INFORMATION processInfo{};
 
-    std::string commandLine = m_programPath;
-    for (const auto& arg : m_programArgs) {
+    std::string commandLine = mProgramPath;
+    for (const auto& arg : mProgramArgs) {
         commandLine += ' ' + arg;
     }
 
@@ -146,8 +196,8 @@ auto Sandbox::run() -> bool {
     GetProcessMemoryInfo(processInfo.hProcess, &memoryCounters,
                          sizeof(memoryCounters));
 
-    m_timeUsed = GetTickCount();
-    m_memoryUsed = static_cast<long>(memoryCounters.WorkingSetSize / 1024);
+    mTimeUsed = GetTickCount();
+    mMemoryUsed = static_cast<long>(memoryCounters.WorkingSetSize / 1024);
 
     CloseHandle(processInfo.hProcess);
     CloseHandle(processInfo.hThread);

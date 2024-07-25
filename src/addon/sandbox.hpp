@@ -15,10 +15,13 @@ Description: A sandbox for isolated components, such as executables.
 #ifndef LITHIUM_ADDON_SANDBOX_HPP
 #define LITHIUM_ADDON_SANDBOX_HPP
 
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace lithium {
+
+class SandboxImpl;  // Forward declaration of the implementation class
 
 /**
  * @brief Sandbox class for running programs with time and memory limits in a
@@ -26,8 +29,8 @@ namespace lithium {
  */
 class Sandbox {
 public:
-    Sandbox() = default;
-    ~Sandbox() = default;
+    Sandbox();
+    ~Sandbox();
 
     auto setTimeLimit(int timeLimitMs) -> bool;
     auto setMemoryLimit(long memoryLimitKb) -> bool;
@@ -37,26 +40,13 @@ public:
     auto setProgramArgs(const std::vector<std::string>& programArgs) -> bool;
     auto run() -> bool;
 
-    [[nodiscard]] int getTimeUsed() const { return m_timeUsed; }
-    [[nodiscard]] long getMemoryUsed() const { return m_memoryUsed; }
+    [[nodiscard]] auto getTimeUsed() const -> int;
+    [[nodiscard]] auto getMemoryUsed() const -> long;
 
 private:
-    int m_timeLimit{0};
-    long m_memoryLimit{0};
-    std::string m_rootDirectory;
-    int m_userId{0};
-    std::string m_programPath;
-    std::vector<std::string> m_programArgs;
-    int m_timeUsed{0};
-    long m_memoryUsed{0};
-
-#ifdef _WIN32
-    bool setWindowsLimits(PROCESS_INFORMATION& processInfo);
-#else
-    bool setUnixLimits();
-#endif
+    std::unique_ptr<SandboxImpl> pimpl;  // Pointer to the implementation class
 };
 
 }  // namespace lithium
 
-#endif  // LITHIUM_ADDON_SANDBOX_HPP
+#endif

@@ -15,7 +15,7 @@ compatibility
 
 #include "_component.hpp"
 #include <memory>
-#include "connector.hpp"
+#include "iconnector.hpp"
 #include "indiserver.hpp"
 
 #include "atom/log/loguru.hpp"

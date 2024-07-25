@@ -15,14 +15,18 @@ Description: C++ and Modules Loader
 #include "loader.hpp"
 
 #include <filesystem>
+
+#include "macro.hpp"
+#ifdef _WIN32
+// clang-format off
+#include <windows.h>
+#include <dbghelp.h>
+// clang-format on
+#else
+#include <link.h>
 #include <fstream>
 #include <iostream>
 #include <regex>
-#include "macro.hpp"
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <link.h>
 #endif
 #include "atom/io/io.hpp"
 
@@ -41,16 +45,17 @@ ModuleLoader::~ModuleLoader() {
     }
 }
 
-std::shared_ptr<ModuleLoader> ModuleLoader::createShared() {
+auto ModuleLoader::createShared() -> std::shared_ptr<ModuleLoader> {
     return std::make_shared<ModuleLoader>("modules");
 }
 
-std::shared_ptr<ModuleLoader> ModuleLoader::createShared(std::string dirName) {
+auto ModuleLoader::createShared(std::string dirName)
+    -> std::shared_ptr<ModuleLoader> {
     return std::make_shared<ModuleLoader>(std::move(dirName));
 }
 
-bool ModuleLoader::loadModule(const std::string& path,
-                              const std::string& name) {
+auto ModuleLoader::loadModule(const std::string& path,
+                              const std::string& name) -> bool {
     std::unique_lock lock(sharedMutex_);
     if (hasModule(name)) {
         LOG_F(ERROR, "Module {} already loaded", name);
@@ -63,15 +68,14 @@ bool ModuleLoader::loadModule(const std::string& path,
     }
 
     auto modInfo = std::make_shared<ModuleInfo>();
-    if (auto handle = LOAD_LIBRARY(path.c_str()); handle) {
+    if (auto* handle = LOAD_LIBRARY(path.c_str()); handle) {
         modInfo->handle = handle;
         modInfo->functions = loadModuleFunctions(name);
         modules_[name] = modInfo;
         DLOG_F(INFO, "Loaded module: {}", name);
         return true;
-    } else {
-        LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
     }
+    LOG_F(ERROR, "Failed to load library {}: {}", path, LOAD_ERROR());
     return false;
 }
 
@@ -83,14 +87,14 @@ std::vector<std::unique_ptr<FunctionInfo>> ModuleLoader::loadModuleFunctions(
     if (auto it = modules_.find(name); it != modules_.end()) {
         if (void* handle = it->second->handle) {
 #ifdef _WIN32
-            HMODULE hModule = static_cast<HMODULE>(handle);
+            auto* hModule = static_cast<HMODULE>(handle);
             ULONG size;
-            PIMAGE_EXPORT_DIRECTORY exports =
+            auto* exports =
                 (PIMAGE_EXPORT_DIRECTORY)ImageDirectoryEntryToDataEx(
                     hModule, TRUE, IMAGE_DIRECTORY_ENTRY_EXPORT, &size, NULL);
 
-            if (exports) {
-                DWORD* names =
+            if (exports != nullptr) {
+                auto* names =
                     (DWORD*)((BYTE*)hModule + exports->AddressOfNames);
                 for (DWORD i = 0; i < exports->NumberOfNames; ++i) {
                     char* name = (char*)hModule + names[i];
@@ -149,22 +153,22 @@ std::vector<std::unique_ptr<FunctionInfo>> ModuleLoader::loadModuleFunctions(
     return funcs;
 }
 
-bool ModuleLoader::unloadModule(const std::string& name) {
+auto ModuleLoader::unloadModule(const std::string& name) -> bool {
     std::unique_lock lock(sharedMutex_);
     if (hasModule(name)) {
         if (auto result = UNLOAD_LIBRARY(modules_[name]->handle); result == 0) {
             modules_.erase(name);
             return true;
-        } else {
-            LOG_F(ERROR, "Failed to unload module {}", name);
         }
+        LOG_F(ERROR, "Failed to unload module {}", name);
+
     } else {
         LOG_F(ERROR, "Module {} is not loaded", name);
     }
     return false;
 }
 
-bool ModuleLoader::unloadAllModules() {
+auto ModuleLoader::unloadAllModules() -> bool {
     std::unique_lock lock(sharedMutex_);
     for (auto& [name, module] : modules_) {
         if (UNLOAD_LIBRARY(module->handle) != 0) {
@@ -176,7 +180,7 @@ bool ModuleLoader::unloadAllModules() {
     return true;
 }
 
-bool ModuleLoader::checkModuleExists(const std::string& name) const {
+auto ModuleLoader::checkModuleExists(const std::string& name) const -> bool {
     if (void* handle = LOAD_LIBRARY(name.c_str()); handle) {
         UNLOAD_LIBRARY(handle);
         return true;
@@ -184,8 +188,8 @@ bool ModuleLoader::checkModuleExists(const std::string& name) const {
     return false;
 }
 
-std::shared_ptr<ModuleInfo> ModuleLoader::getModule(
-    const std::string& name) const {
+auto ModuleLoader::getModule(const std::string& name) const
+    -> std::shared_ptr<ModuleInfo> {
     std::shared_lock lock(sharedMutex_);
     if (auto it = modules_.find(name); it != modules_.end()) {
         return it->second;
@@ -193,7 +197,7 @@ std::shared_ptr<ModuleInfo> ModuleLoader::getModule(
     return nullptr;
 }
 
-void* ModuleLoader::getHandle(const std::string& name) const {
+auto ModuleLoader::getHandle(const std::string& name) const -> void* {
     std::shared_lock lock(sharedMutex_);
     if (auto it = modules_.find(name); it != modules_.end()) {
         return it->second->handle;
@@ -201,12 +205,12 @@ void* ModuleLoader::getHandle(const std::string& name) const {
     return nullptr;
 }
 
-bool ModuleLoader::hasModule(const std::string& name) const {
+auto ModuleLoader::hasModule(const std::string& name) const -> bool {
     std::shared_lock lock(sharedMutex_);
     return modules_.contains(name);
 }
 
-bool ModuleLoader::enableModule(const std::string& name) {
+auto ModuleLoader::enableModule(const std::string& name) -> bool {
     std::unique_lock lock(sharedMutex_);
     if (auto mod = getModule(name); mod && !mod->m_enabled.load()) {
         mod->m_enabled.store(true);
@@ -215,7 +219,7 @@ bool ModuleLoader::enableModule(const std::string& name) {
     return false;
 }
 
-bool ModuleLoader::disableModule(const std::string& name) {
+auto ModuleLoader::disableModule(const std::string& name) -> bool {
     std::unique_lock lock(sharedMutex_);
     if (auto mod = getModule(name); mod && mod->m_enabled.load()) {
         mod->m_enabled.store(false);
@@ -224,7 +228,7 @@ bool ModuleLoader::disableModule(const std::string& name) {
     return false;
 }
 
-bool ModuleLoader::isModuleEnabled(const std::string& name) const {
+auto ModuleLoader::isModuleEnabled(const std::string& name) const -> bool {
     std::shared_lock lock(sharedMutex_);
     if (auto mod = getModule(name); mod) {
         return mod->m_enabled.load();
@@ -232,7 +236,7 @@ bool ModuleLoader::isModuleEnabled(const std::string& name) const {
     return false;
 }
 
-std::string ModuleLoader::getModuleVersion(const std::string& name) {
+auto ModuleLoader::getModuleVersion(const std::string& name) -> std::string {
     if (auto getVersionFunc =
             getFunction<std::string (*)()>(name, "getVersion");
         getVersionFunc) {
@@ -241,7 +245,8 @@ std::string ModuleLoader::getModuleVersion(const std::string& name) {
     return "";
 }
 
-std::string ModuleLoader::getModuleDescription(const std::string& name) {
+auto ModuleLoader::getModuleDescription(const std::string& name)
+    -> std::string {
     if (auto getDescriptionFunc =
             getFunction<std::string (*)()>(name, "getDescription");
         getDescriptionFunc) {
@@ -250,7 +255,7 @@ std::string ModuleLoader::getModuleDescription(const std::string& name) {
     return "";
 }
 
-std::string ModuleLoader::getModuleAuthor(const std::string& name) {
+auto ModuleLoader::getModuleAuthor(const std::string& name) -> std::string {
     if (auto getAuthorFunc = getFunction<std::string (*)()>(name, "getAuthor");
         getAuthorFunc) {
         return getAuthorFunc();
@@ -258,7 +263,7 @@ std::string ModuleLoader::getModuleAuthor(const std::string& name) {
     return "";
 }
 
-std::string ModuleLoader::getModuleLicense(const std::string& name) {
+auto ModuleLoader::getModuleLicense(const std::string& name) -> std::string {
     if (auto getLicenseFunc =
             getFunction<std::string (*)()>(name, "getLicense");
         getLicenseFunc) {
@@ -267,7 +272,7 @@ std::string ModuleLoader::getModuleLicense(const std::string& name) {
     return "";
 }
 
-std::string ModuleLoader::getModulePath(const std::string& name) {
+auto ModuleLoader::getModulePath(const std::string& name) -> std::string {
     std::shared_lock lock(sharedMutex_);
     if (auto it = modules_.find(name); it != modules_.end()) {
         Dl_info dlInfo;
@@ -278,7 +283,7 @@ std::string ModuleLoader::getModulePath(const std::string& name) {
     return "";
 }
 
-json ModuleLoader::getModuleConfig(const std::string& name) {
+auto ModuleLoader::getModuleConfig(const std::string& name) -> json {
     if (auto getConfigFunc = getFunction<json (*)()>(name, "getConfig");
         getConfigFunc) {
         return getConfigFunc();
@@ -286,17 +291,18 @@ json ModuleLoader::getModuleConfig(const std::string& name) {
     return {};
 }
 
-std::vector<std::string> ModuleLoader::getAllExistedModules() const {
+auto ModuleLoader::getAllExistedModules() const -> std::vector<std::string> {
     std::shared_lock lock(sharedMutex_);
     std::vector<std::string> moduleNames;
+    moduleNames.reserve(modules_.size());
     for (const auto& [name, _] : modules_) {
         moduleNames.push_back(name);
     }
     return moduleNames;
 }
 
-bool ModuleLoader::hasFunction(const std::string& name,
-                               const std::string& functionName) {
+auto ModuleLoader::hasFunction(const std::string& name,
+                               const std::string& functionName) -> bool {
     std::shared_lock lock(sharedMutex_);
     if (auto it = modules_.find(name); it != modules_.end()) {
         return (LOAD_FUNCTION(it->second->handle, functionName.c_str()) !=

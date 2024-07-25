@@ -67,28 +67,15 @@ void run(const oatpp::base::CommandLineArguments& args) {
     statThread.join();
 }
 
-#ifndef ENABLE_SERVER_STANDALONE
-int main(int argc, const char* argv[]) {
-    oatpp::Environment::init();
-
-    run(oatpp::base::CommandLineArguments(argc, argv));
-
-    oatpp::Environment::destroy();
-
-    return 0;
-}
-#else
 #include "App.hpp"
 namespace lithium {
-auto runServer(int argc, const char* argv[]) -> bool {
+auto runServer(CommandLineArgs args) -> bool {
     oatpp::Environment::init();
 
-    run(oatpp::base::CommandLineArguments(argc, argv));
+    run(oatpp::base::CommandLineArguments(args.argc, args.argv));
 
     oatpp::Environment::destroy();
 
     return true;
 }
 }  // namespace lithium
-
-#endif

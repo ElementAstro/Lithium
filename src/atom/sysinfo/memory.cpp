@@ -55,13 +55,13 @@ auto getMemoryUsage() -> float {
 #ifdef _WIN32
     MEMORYSTATUSEX status;
     status.dwLength = sizeof(status);
-    float total_memory = 0.0f;
-    float available_memory = 0.0f;
+    float totalMemory = 0.0f;
+    float availableMemory = 0.0f;
     if (GlobalMemoryStatusEx(&status)) {
-        total_memory = static_cast<float>(status.ullTotalPhys / 1024 / 1024);
-        available_memory =
+        totalMemory = static_cast<float>(status.ullTotalPhys / 1024 / 1024);
+        availableMemory =
             static_cast<float>(status.ullAvailPhys / 1024 / 1024);
-        memory_usage = (total_memory - available_memory) / total_memory * 100.0;
+        memoryUsage = (totalMemory - availableMemory) / totalMemory * 100.0;
     } else {
         LOG_F(ERROR, "GetMemoryUsage error: GlobalMemoryStatusEx error");
     }

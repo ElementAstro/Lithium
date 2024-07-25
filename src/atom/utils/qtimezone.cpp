@@ -19,10 +19,18 @@ MyTimeZone::MyTimeZone(const std::string& timeZoneId) {
 
     std::tm localTime = {};
     std::time_t currentTime = std::time(nullptr);
+#ifdef _WIN32
+    localtime_s(&localTime, &currentTime);
+#else
     localtime_r(&currentTime, &localTime);
+#endif
 
     std::tm utcTime = {};
+#ifdef _WIN32
+    gmtime_s(&utcTime, &currentTime);
+#else
     gmtime_r(&currentTime, &utcTime);
+#endif
 
     auto localTimeT = std::mktime(&localTime);
     auto utcTimeT = std::mktime(&utcTime);

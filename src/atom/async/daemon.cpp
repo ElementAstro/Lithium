@@ -86,7 +86,7 @@ auto DaemonGuard::realDaemon(
 
         // 等待一段时间后重新启动子进程
         m_restartCount++;
-        Sleep(g_daemonRestartInterval * 1000);
+        Sleep(gDaemonRestartInterval * 1000);
     }
 #else
     if (daemon(1, 0) == -1) {
@@ -163,7 +163,7 @@ auto DaemonGuard::startDaemon(
 void signalHandler(int signum) {
 #ifdef _WIN32
     if (signum == SIGTERM || signum == SIGINT) {
-        remove(g_pidFilePath.c_str());
+        remove(gPidFilePath.c_str());
         exit(0);
     }
 #else

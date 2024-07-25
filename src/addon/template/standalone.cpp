@@ -1,9 +1,12 @@
 #include "standalone.hpp"
 
-#include <memory>
+#include <array>
+#include <chrono>
+#include <iostream>
 #include <string>
 #include <string_view>
-
+#include <thread>
+#include <vector>
 #include "macro.hpp"
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -11,6 +14,7 @@
 #include <windows.h>
 #include <io.h>
 #include <process.h>
+#include <fcntl.h>
 #define pipe _pipe
 #define popen _popen
 #define pclose _pclose
@@ -52,15 +56,23 @@ public:
     }
 
     void closePipes(int stdinPipe[2], int stdoutPipe[2]) {
+#if defined(_WIN32) || defined(_WIN64)
+        _close(stdinPipe[0]);
+        _close(stdinPipe[1]);
+        _close(stdoutPipe[0]);
+        _close(stdoutPipe[1]);
+#else
         close(stdinPipe[0]);
         close(stdinPipe[1]);
         close(stdoutPipe[0]);
         close(stdoutPipe[1]);
+#endif
     }
 };
 
 StandAloneComponent::StandAloneComponent(std::string name)
-    : Component(name), impl_(std::make_unique<StandAloneComponentImpl>()) {
+    : Component(std::move(name)),
+      impl_(std::make_unique<StandAloneComponentImpl>()) {
     doc("A standalone component that can be used to run a local driver");
     def("start", &StandAloneComponent::startLocalDriver);
     def("stop", &StandAloneComponent::stopLocalDriver);
@@ -101,25 +113,57 @@ void StandAloneComponent::backgroundProcessing() {
 
 auto StandAloneComponent::createPipes(int stdinPipe[2],
                                       int stdoutPipe[2]) -> bool {
-    if (pipe(stdinPipe) == -1 || pipe(stdoutPipe) == -1) {
-        LOG_F(ERROR, "Failed to create pipes");
-        return false;
-    }
-    return true;
+#if defined(_WIN32) || defined(_WIN64)
+    return _pipe(stdinPipe, 4096, _O_BINARY | _O_NOINHERIT) == 0 &&
+           _pipe(stdoutPipe, 4096, _O_BINARY | _O_NOINHERIT) == 0;
+#else
+    return pipe(stdinPipe) == 0 && pipe(stdoutPipe) == 0;
+#endif
 }
 
 #if defined(_WIN32) || defined(_WIN64)
 void StandAloneComponent::startWindowsProcess(const std::string& driver_name,
                                               int stdinPipe[2],
                                               int stdoutPipe[2]) {
-    HANDLE processHandle =
-        CreateProcess(NULL, const_cast<char*>(driver_name.data()), NULL, NULL,
-                      TRUE, 0, NULL, NULL, &startupInfo, &processInfo);
-    if (processHandle == NULL) {
+    SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
+    HANDLE hStdinRead, hStdinWrite, hStdoutRead, hStdoutWrite;
+
+    if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0) ||
+        !CreatePipe(&hStdoutRead, &hStdoutWrite, &sa, 0)) {
+        LOG_F(ERROR, "Failed to create pipes");
+        return;
+    }
+
+    SetHandleInformation(hStdoutRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(hStdinWrite, HANDLE_FLAG_INHERIT, 0);
+
+    STARTUPINFO si = {sizeof(STARTUPINFO)};
+    si.hStdError = hStdoutWrite;
+    si.hStdOutput = hStdoutWrite;
+    si.hStdInput = hStdinRead;
+    si.dwFlags |= STARTF_USESTDHANDLES;
+
+    PROCESS_INFORMATION pi;
+    std::string cmd = driver_name;
+
+    if (!CreateProcess(NULL, cmd.data(), NULL, NULL, TRUE, CREATE_NO_WINDOW,
+                       NULL, NULL, &si, &pi)) {
         LOG_F(ERROR, "Failed to start process");
         impl_->closePipes(stdinPipe, stdoutPipe);
         return;
     }
+
+    CloseHandle(hStdoutWrite);
+    CloseHandle(hStdinRead);
+
+    // Cast HANDLE to int (not recommended)
+    impl_->driver.processHandle = static_cast<int>(reinterpret_cast<intptr_t>(pi.hProcess));
+
+    impl_->driver.stdinFd =
+        _open_osfhandle(reinterpret_cast<intptr_t>(hStdinWrite), 0);
+    impl_->driver.stdoutFd =
+        _open_osfhandle(reinterpret_cast<intptr_t>(hStdoutRead), 0);
+    impl_->driver.name = driver_name;
 }
 #else
 void StandAloneComponent::startUnixProcess(const std::string& driver_name,
@@ -252,7 +296,10 @@ void StandAloneComponent::handleParentProcess(pid_t pid, int stdinPipe[2],
             close(stdoutPipe[0]);
             waitpid(pid, nullptr, 0);  // Ensure child process is cleaned up
         } else {
-            impl_->driver = LocalDriver(pid, stdinPipe[1], stdoutPipe[0], "");
+            impl_->driver.processHandle = pid;
+            impl_->driver.stdinFd = stdinPipe[1];
+            impl_->driver.stdoutFd = stdoutPipe[0];
+            impl_->driver.name = driver_name;
         }
     }
     closeSharedMemory(shm_fd, shm_ptr);
@@ -264,24 +311,28 @@ void StandAloneComponent::stopLocalDriver() {
     close(impl_->driver.stdinFd);
     close(impl_->driver.stdoutFd);
 #if defined(_WIN32) || defined(_WIN64)
-    TerminateProcess(impl_->driver_.processHandle, 0);
-    CloseHandle(impl_->driver_.processHandle);
+    TerminateProcess(reinterpret_cast<HANDLE>(impl_->driver.processHandle), 0);
+    CloseHandle(reinterpret_cast<HANDLE>(impl_->driver.processHandle));
 #else
     kill(impl_->driver.processHandle, SIGTERM);
     waitpid(impl_->driver.processHandle, nullptr, 0);
 #endif
+    impl_->shouldExit = true;
+    if (impl_->driverThread.joinable()) {
+        impl_->driverThread.join();
+    }
 }
 
 void StandAloneComponent::monitorDrivers() {
 #if defined(_WIN32) || defined(_WIN64)
     DWORD exitCode;
-    if (GetExitCodeProcess(impl_->driver_.processHandle, &exitCode) &&
+    if (GetExitCodeProcess(
+            reinterpret_cast<HANDLE>(impl_->driver.processHandle), &exitCode) &&
         exitCode == STILL_ACTIVE) {
         return;
     }
-    logInfo("Driver {} exited, restarting...", impl_->driver_.name);
-    startLocalDriver(impl_->driver_.name);
-    return true;
+    LOG_F(INFO, "Driver {} exited, restarting...", impl_->driver.name);
+    startLocalDriver(impl_->driver.name);
 #else
     int status;
     pid_t result = waitpid(impl_->driver.processHandle, &status, WNOHANG);
@@ -300,10 +351,15 @@ void StandAloneComponent::monitorDrivers() {
 void StandAloneComponent::processMessages() {
     std::array<char, 1024> buffer;
     if (impl_->driver.isListening) {
+#if defined(_WIN32) || defined(_WIN64)
+        int bytesRead =
+            _read(impl_->driver.stdoutFd, buffer.data(), buffer.size());
+#else
         int flags = fcntl(impl_->driver.stdoutFd, F_GETFL, 0);
         fcntl(impl_->driver.stdoutFd, F_SETFL, flags | O_NONBLOCK);
         int bytesRead =
             read(impl_->driver.stdoutFd, buffer.data(), buffer.size());
+#endif
         if (bytesRead > 0) {
             impl_->handleDriverOutput(impl_->driver.name, buffer.data(),
                                       bytesRead);
@@ -312,7 +368,12 @@ void StandAloneComponent::processMessages() {
 }
 
 void StandAloneComponent::sendMessageToDriver(const std::string_view message) {
+#if defined(_WIN32) || defined(_WIN64)
+    _write(impl_->driver.stdinFd, message.data(),
+           static_cast<unsigned int>(message.size()));
+#else
     write(impl_->driver.stdinFd, message.data(), message.size());
+#endif
 }
 
 void StandAloneComponent::printDriver() {

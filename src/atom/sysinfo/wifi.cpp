@@ -14,15 +14,16 @@ Description: System Information Module - Wifi Information
 
 #include "atom/sysinfo/wifi.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
 // clang-format off
+#include <winsock2.h>
 #include <windows.h>
 #include <iphlpapi.h>
 #include <iptypes.h>
-#include <winsock2.h>
 #include <wlanapi.h>
 #include <ws2tcpip.h>
 // clang-format on

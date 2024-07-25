@@ -1,10 +1,16 @@
 #ifndef LITHIUM_ADDON_TEMPLATE_STANDALONE_HPP
 #define LITHIUM_ADDON_TEMPLATE_STANDALONE_HPP
 
+#include <atomic>
 #include <memory>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <vector>
 #include "atom/components/component.hpp"
 
 class StandAloneComponentImpl;
+
 class StandAloneComponent : public Component {
 public:
     explicit StandAloneComponent(std::string name);
@@ -45,6 +51,7 @@ private:
     void handleParentProcess(pid_t pid, int stdinPipe[2], int stdoutPipe[2],
                              int* shm_ptr, sem_t* sem, int shm_fd);
 #endif
+
     std::unique_ptr<StandAloneComponentImpl> impl_;
 };
 

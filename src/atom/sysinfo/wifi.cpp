@@ -47,6 +47,19 @@ Description: System Information Module - Wifi Information
 
 #include "atom/log/loguru.hpp"
 
+#if defined(_WIN32) || defined(__USE_W32_SOCKETS)
+using IF_ADDRS = PIP_ADAPTER_ADDRESSES;
+using IF_ADDRS_UNICAST = PIP_ADAPTER_UNICAST_ADDRESS;
+#else
+using IF_ADDRS = struct ifaddrs*;
+using IF_ADDRS_UNICAST = struct ifaddrs*;
+#endif
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#endif
+
 namespace atom::system {
 // 获取当前连接的WIFI
 auto getCurrentWifi() -> std::string {
@@ -411,5 +424,76 @@ auto getIPv4Addresses() -> std::vector<std::string> {
 
 auto getIPv6Addresses() -> std::vector<std::string> {
     return getIPAddresses<sockaddr_in6>(AF_INET6);
+}
+
+void freeAddresses(IF_ADDRS addrs) {
+#if defined(_WIN32) || defined(__USE_W32_SOCKETS)
+    HeapFree(GetProcessHeap(), 0, addrs);
+#else
+    freeifaddrs(addrs);
+#endif
+}
+
+auto getAddresses(int family, IF_ADDRS* addrs) -> int {
+#if defined(_WIN32) || defined(__USE_W32_SOCKETS)
+    DWORD rv = 0;
+    ULONG bufLen =
+        15000;  // recommended size from Windows API docs to avoid error
+    ULONG iter = 0;
+    do {
+        *addrs = (IP_ADAPTER_ADDRESSES*)HeapAlloc(GetProcessHeap(), 0, bufLen);
+        if (*addrs == nullptr) {
+            return -1;
+        }
+
+        rv = GetAdaptersAddresses(family, GAA_FLAG_INCLUDE_PREFIX, NULL, *addrs,
+                                  &bufLen);
+        if (rv == ERROR_BUFFER_OVERFLOW) {
+            freeAddresses(*addrs);
+            *addrs = nullptr;
+            bufLen = bufLen * 2;  // Double buffer length for the next attempt
+        } else {
+            break;
+        }
+        iter++;
+    } while ((rv == ERROR_BUFFER_OVERFLOW) && (iter < 3));
+    if (rv != NO_ERROR) {
+        return -1;
+    }
+    return 0;
+#else
+    (void)family;
+    return getifaddrs(addrs);
+#endif
+}
+
+auto getInterfaceNames() -> std::vector<std::string> {
+    std::vector<std::string> interfaceNames;
+    IF_ADDRS allAddrs = nullptr;
+
+    if (getAddresses(AF_UNSPEC, &allAddrs) != 0) {
+        return interfaceNames;
+    }
+
+#if defined(_WIN32) || defined(__USE_W32_SOCKETS)
+    for (auto adapter = allAddrs; adapter != nullptr; adapter = adapter->Next) {
+        std::string interfaceName =
+            adapter->FriendlyName ? adapter->FriendlyName : "";
+        if (!interfaceName.empty()) {
+            interfaceNames.push_back(interfaceName);
+        }
+    }
+#else
+    for (auto *addr = allAddrs; addr != nullptr; addr = addr->ifa_next) {
+        if (addr->ifa_name != nullptr) {
+            interfaceNames.emplace_back(addr->ifa_name);
+        }
+    }
+#endif
+
+    if (allAddrs != nullptr) {
+        freeAddresses(allAddrs);
+    }
+    return interfaceNames;
 }
 }  // namespace atom::system

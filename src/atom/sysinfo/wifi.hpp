@@ -56,6 +56,12 @@ ATOM_NODISCARD auto getIPv4Addresses() -> std::vector<std::string>;
  * @return Vector of IPv6 addresses
  */
 ATOM_NODISCARD auto getIPv6Addresses() -> std::vector<std::string>;
+
+/**
+ * @brief Get interface names
+ * @return Vector of interface names
+ */
+ATOM_NODISCARD auto getInterfaceNames() -> std::vector<std::string>;
 }  // namespace atom::system
 
 #endif

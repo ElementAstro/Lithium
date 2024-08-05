@@ -16,13 +16,18 @@ Description: Lithium App Enter
 
 #define LITHIUM_APP_MAIN
 
+#include <filesystem>
 #include <memory>
 
 #include "atom/async/message_bus.hpp"
 #include "atom/components/component.hpp"
-#include "atom/type/json.hpp"
+#include "atom/type/json_fwd.hpp"
 #include "atom/type/message.hpp"
+
+#include "macro.hpp"
+
 using json = nlohmann::json;
+namespace fs = std::filesystem;
 
 // -------------------------------------------------------------------
 // About the LithiumApp
@@ -83,14 +88,33 @@ public:
     auto getComponentList() -> std::vector<std::string>;
 
     // -------------------------------------------------------------------
+    // Config methods
+    // -------------------------------------------------------------------
+
+    ATOM_NODISCARD auto getValue(const std::string& key_path) const
+        -> std::optional<nlohmann::json>;
+    auto setValue(const std::string& key_path,
+                  const nlohmann::json& value) -> bool;
+
+    auto appendValue(const std::string& key_path, const nlohmann::json& value) -> bool;
+    auto deleteValue(const std::string& key_path) -> bool;
+    ATOM_NODISCARD auto hasValue(const std::string& key_path) const -> bool;
+    auto loadFromFile(const fs::path& path) -> bool;
+    auto loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
+    ATOM_NODISCARD auto saveToFile(const fs::path& file_path) const -> bool;
+    void tidyConfig();
+    void clearConfig();
+    void mergeConfig(const nlohmann::json& src);
+
+    // -------------------------------------------------------------------
     // Task methods
     // -------------------------------------------------------------------
 
     void loadScript(const std::string& name, const json& script);
     void unloadScript(const std::string& name);
 
-    [[nodiscard]] auto hasScript(const std::string& name) const -> bool;
-    [[nodiscard]] auto getScript(const std::string& name) const
+    ATOM_NODISCARD auto hasScript(const std::string& name) const -> bool;
+    ATOM_NODISCARD auto getScript(const std::string& name) const
         -> std::optional<json>;
 
     void registerFunction(const std::string& name,

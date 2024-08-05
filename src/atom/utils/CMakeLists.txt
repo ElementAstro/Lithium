@@ -12,7 +12,6 @@ project(atom-utils C CXX)
 # Sources
 set(${PROJECT_NAME}_SOURCES
     aes.cpp
-    argsview.cpp
     convert.cpp
     qdatetime.cpp
     qtimer.cpp

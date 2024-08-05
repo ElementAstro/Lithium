@@ -299,7 +299,7 @@ void StandAloneComponent::handleParentProcess(pid_t pid, int stdinPipe[2],
             impl_->driver.processHandle = pid;
             impl_->driver.stdinFd = stdinPipe[1];
             impl_->driver.stdoutFd = stdoutPipe[0];
-            impl_->driver.name = driver_name;
+            //impl_->driver.name = driver_name;
         }
     }
     closeSharedMemory(shm_fd, shm_ptr);

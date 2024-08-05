@@ -44,6 +44,14 @@ ConsoleTerminal::ConsoleTerminal()
     component_->def("history", &ConsoleTerminal::printHistory,
                     PointerSentinel(this), "main", "Show command history");
 
+    component_->def("load_component", &loadSharedCompoennt, "component",
+                    "Load a shared component");
+    component_->def("unload_component", &unloadSharedCompoennt, "component",
+                    "Unload a shared component");
+    component_->def("reload_component", &reloadSharedCompoennt, "component",
+                    "Reload a shared component");
+    component_->def("scan_component", &scanComponents, "component",
+                    "Scan a path");
     component_->def("list_component", &getComponentList, "component",
                     "Show all components");
     component_->def("show_component_info", &getComponentInfo, "component",

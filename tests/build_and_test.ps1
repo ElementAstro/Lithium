@@ -8,7 +8,7 @@
     It installs any missing tools and then proceeds to clone and build a specified project using CMake and Git.
 
 .AUTHOR
-    Your Name
+    Max Qian
 #>
 
 # Function to check if a specific command exists in the system
@@ -25,7 +25,7 @@ function CommandExists {
 
     .EXAMPLE
         if (CommandExists 'git') {
-            Write-Host "Git is installed."
+            Write-Output "Git is installed."
         }
 
     .RETURN
@@ -34,7 +34,7 @@ function CommandExists {
     param (
         [string]$Command
     )
-    $null = Get-Command $Command -ErrorAction SilentlyContinue
+    $null = Get-Command -Name $Command -ErrorAction SilentlyContinue
     return $?
 }
 
@@ -47,11 +47,12 @@ function InstallChocolatey {
     .DESCRIPTION
         Checks for the presence of the Chocolatey command and installs it using an online script if it is absent.
 #>
-    if (-not (CommandExists 'choco')) {
-        Write-Host "Chocolatey is not installed. Installing Chocolatey..."
-        Set-ExecutionPolicy Bypass -Scope Process -Force;
-        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+    if (-not (CommandExists -Command 'choco')) {
+        Write-Output "Chocolatey is not installed. Installing Chocolatey..."
+        Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        $chocoInstallScript = (New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')
+        Invoke-Command -ScriptBlock ([Scriptblock]::Create($chocoInstallScript))
     }
 }
 
@@ -65,13 +66,13 @@ function InstallPackage {
         The name of the package to install.
 
     .EXAMPLE
-        InstallPackage 'cmake'
+        InstallPackage -Package 'cmake'
 #>
     param (
         [string]$Package
     )
-    if (-not (CommandExists $Package)) {
-        Write-Host "$Package is not installed. Installing $Package..."
+    if (-not (CommandExists -Command $Package)) {
+        Write-Output "$Package is not installed. Installing $Package..."
         choco install $Package -y
     }
 }
@@ -81,11 +82,11 @@ function InstallPackage {
 InstallChocolatey
 
 # Install essential packages
-'cmake', 'git', 'visualstudio2019buildtools' | ForEach-Object { InstallPackage $_ }
+'cmake', 'git', 'visualstudio2019buildtools' | ForEach-Object { InstallPackage -Package $_ }
 
 # Validate Visual Studio Build Tools installation
-if (-not (CommandExists 'cl')) {
-    Write-Host "Visual Studio Build Tools are not installed properly."
+if (-not (CommandExists -Command 'cl')) {
+    Write-Output "Visual Studio Build Tools are not installed properly."
     exit
 }
 
@@ -98,23 +99,23 @@ Set-Location -Path $buildDir
 
 # Clone Google Test if it's not already present
 if (-not (Test-Path -Path "googletest")) {
-    Write-Host "Cloning Google Test..."
+    Write-Output "Cloning Google Test..."
     git clone https://github.com/google/googletest.git
 }
 
 # Configure the project with CMake
-Write-Host "Configuring the project with CMake..."
+Write-Output "Configuring the project with CMake..."
 cmake ..
 
 # Build the project
-Write-Host "Building the project..."
+Write-Output "Building the project..."
 cmake --build .
 
 # Run the tests
-Write-Host "Running the tests..."
+Write-Output "Running the tests..."
 ctest --output-on-failure
 
 # Return to the original directory
 Set-Location -Path ..
 
-Write-Host "Build and test process completed successfully."
+Write-Output "Build and test process completed successfully."

@@ -37,6 +37,7 @@ Description: Lithium App Enter
 #include "atom/error/exception.hpp"
 #include "atom/function/global_ptr.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/system/env.hpp"
 #include "atom/system/process.hpp"
 #include "atom/utils/time.hpp"
 #include "utils/marco.hpp"
@@ -253,6 +254,23 @@ void LithiumApp::queueEvent(const std::string &eventName,
                             const json &eventData) {
     m_task_interpreter_.lock()->queueEvent(eventName, eventData);
 }
+
+ auto LithiumApp::getValue(const std::string& key_path) const
+        -> std::optional<nlohmann::json> {
+            
+        }
+    auto LithiumApp::setValue(const std::string& key_path,
+                  const nlohmann::json& value) -> bool;
+
+    auto LithiumApp::appendValue(const std::string& key_path, const nlohmann::json& value) -> bool;
+    auto LithiumApp::deleteValue(const std::string& key_path) -> bool;
+     auto LithiumApp::hasValue(const std::string& key_path) const -> bool;
+    auto LithiumApp::loadFromFile(const fs::path& path) -> bool;
+    auto LithiumApp::loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
+     auto LithiumApp::saveToFile(const fs::path& file_path) const -> bool;
+    void LithiumApp::tidyConfig();
+    void LithiumApp::clearConfig();
+    void LithiumApp::mergeConfig(const nlohmann::json& src);
 
 void initLithiumApp(int argc, char **argv) {
     LOG_F(INFO, "Init Lithium App");

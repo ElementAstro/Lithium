@@ -39,7 +39,9 @@ using namespace lithium::debug;
 #include <signal.h>
 #endif
 
-#include "argparse/argparse.hpp"
+#include "atom/utils/argsview.hpp"
+
+using namespace std::literals;
 
 /**
  * @brief setup log file
@@ -91,45 +93,33 @@ auto main(int argc, char *argv[]) -> int {
     loguru::init(argc, argv);
 
     /* Parse arguments */
-    argparse::ArgumentParser program("Lithium Server");
+    atom::utils::ArgumentParser program("Lithium Server"s);
 
     // NOTE: The command arguments' priority is higher than the config file
-    program.add_argument("-P", "--port")
-        .help("port the server running on")
-        .default_value(8000);
-    program.add_argument("-H", "--host")
-        .help("host the server running on")
-        .default_value("0.0.0.0");
-    program.add_argument("-C", "--config")
-        .help("path to the config file")
-        .default_value("config.json");
-    program.add_argument("-M", "--module-path")
-        .help("path to the modules directory")
-        .default_value("./modules");
-    program.add_argument("-W", "--web-panel")
-        .help("web panel")
-        .default_value(true);
-    program.add_argument("-D", "--debug")
-        .help("debug mode")
-        .default_value(false);
-    program.add_argument("-L", "--log-file").help("path to log file");
+    program.addArgument("port", atom::utils::ArgumentParser::ArgType::INTEGER, false, 8000, "Port of the server", {"p"});
+    program.addArgument("host", atom::utils::ArgumentParser::ArgType::STRING, false, "0.0.0.0", "Host of the server", {"h"});
+    program.addArgument("config", atom::utils::ArgumentParser::ArgType::STRING, false, "config.json", "Path to the config file", {"c"});
+    program.addArgument("module-path", atom::utils::ArgumentParser::ArgType::STRING, false, "modules", "Path to the modules directory", {"m"});
+    program.addArgument("web-panel", atom::utils::ArgumentParser::ArgType::BOOLEAN, false, true, "Enable web panel", {"w"});
+    program.addArgument("debug", atom::utils::ArgumentParser::ArgType::BOOLEAN, false, false, "Enable debug mode", {"d"});
+    program.addArgument("log-file", atom::utils::ArgumentParser::ArgType::STRING, false, "", "Path to the log file", {"l"});
 
-    program.add_description("Lithium Command Line Interface:");
-    program.add_epilog("End.");
+    program.addDescription("Lithium Command Line Interface:");
+    program.addEpilog("End.");
 
-    program.parse_args(argc, argv);
+    program.parse(argc, argv);
 
     lithium::initLithiumApp(argc, argv);
     // Create shared instance
     lithium::myApp = lithium::LithiumApp::createShared();
     // Parse arguments
     try {
-        auto cmdHost = program.get<std::string>("--host");
-        auto cmdPort = program.get<int>("--port");
-        auto cmdConfigPath = program.get<std::string>("--config");
-        auto cmdModulePath = program.get<std::string>("--module-path");
-        auto cmdWebPanel = program.get<bool>("--web-panel");
-        auto cmdDebug = program.get<bool>("--debug");
+        auto cmdHost = program.get<std::string>("host");
+        auto cmdPort = program.get<int>("port");
+        auto cmdConfigPath = program.get<std::string>("config");
+        auto cmdModulePath = program.get<std::string>("module-path");
+        auto cmdWebPanel = program.get<bool>("web-panel");
+        auto cmdDebug = program.get<bool>("debug");
 
         // TODO: We need a new way to handle command line arguments.
         // Maybe we will generate a json object or a map and then given to the

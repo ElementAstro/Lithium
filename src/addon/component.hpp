@@ -16,26 +16,22 @@ Description: Component Entry, which is used to describe the component.
 #define LITIHUM_ADDON_COMPONENT_HPP
 
 #include <string>
+#include <vector>
 
 namespace lithium {
-class ComponentEntry {
-public:
-    std::string m_name;
-    std::string m_main_entry;
-    std::string m_component_type;
-    std::string m_module_name;
-    std::string m_project_name;
+struct ComponentEntry {
+    std::string name;
+    std::string func_name;
+    std::string component_type;
+    std::string module_name;
+    std::vector<std::string> dependencies;
 
-    explicit ComponentEntry(const std::string &name,
-                            const std::string &func_name,
-                            const std::string &component_type,
-                            const std::string &module_name,
-                            const std::string &project_name)
-        : m_name(name),
-          m_main_entry(func_name),
-          m_component_type(component_type),
-          m_module_name(module_name),
-          m_project_name(project_name) {}
+    ComponentEntry(std::string name, std::string func_name,
+                   std::string component_type, std::string module_name)
+        : name(std::move(name)),
+          func_name(std::move(func_name)),
+          component_type(std::move(component_type)),
+          module_name(std::move(module_name)) {}
 };
 
 }  // namespace lithium

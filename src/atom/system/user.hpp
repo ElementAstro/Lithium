@@ -58,6 +58,12 @@ ATOM_NODISCARD auto getGroupId() -> int;
 ATOM_NODISCARD auto getHomeDirectory() -> std::string;
 
 /**
+ * @brief Get current working directory.
+ * @return Current working directory.
+ */
+ATOM_NODISCARD auto getCurrentWorkingDirectory() -> std::string;
+
+/**
  * @brief Get login shell.
  * @return Login shell.
  */

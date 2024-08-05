@@ -121,13 +121,15 @@ auto SandboxImpl::setProgramPath(const std::string& programPath) -> bool {
     return true;
 }
 
-auto SandboxImpl::setProgramArgs(const std::vector<std::string>& programArgs) -> bool {
+auto SandboxImpl::setProgramArgs(const std::vector<std::string>& programArgs)
+    -> bool {
     mProgramArgs = programArgs;
     return true;
 }
 
 #ifdef _WIN32
-auto SandboxImpl::setWindowsLimits(PROCESS_INFORMATION& processInfo) const -> bool {
+auto SandboxImpl::setWindowsLimits(PROCESS_INFORMATION& processInfo) const
+    -> bool {
     const HANDLE PROCESS_HANDLE = processInfo.hProcess;
 
     if (mTimeLimit > 0) {
@@ -144,18 +146,18 @@ auto SandboxImpl::setWindowsLimits(PROCESS_INFORMATION& processInfo) const -> bo
     return true;
 }
 #else
-bool SandboxImpl::setUnixLimits() {
-    if (m_timeLimit > 0) {
-        rlimit limit{.rlim_cur = static_cast<rlim_t>(m_timeLimit) / 1000,
-                     .rlim_max = static_cast<rlim_t>(m_timeLimit) / 1000};
+auto SandboxImpl::setUnixLimits() -> bool {
+    if (mTimeLimit > 0) {
+        rlimit limit{.rlim_cur = static_cast<rlim_t>(mTimeLimit) / 1000,
+                     .rlim_max = static_cast<rlim_t>(mTimeLimit) / 1000};
         if (setrlimit(RLIMIT_CPU, &limit) != 0) {
             return false;
         }
     }
 
-    if (m_memoryLimit > 0) {
-        rlimit limit{.rlim_cur = static_cast<rlim_t>(m_memoryLimit) * 1024,
-                     .rlim_max = static_cast<rlim_t>(m_memoryLimit) * 1024};
+    if (mMemoryLimit > 0) {
+        rlimit limit{.rlim_cur = static_cast<rlim_t>(mMemoryLimit) * 1024,
+                     .rlim_max = static_cast<rlim_t>(mMemoryLimit) * 1024};
         if (setrlimit(RLIMIT_AS, &limit) != 0) {
             return false;
         }
@@ -212,9 +214,9 @@ auto SandboxImpl::run() -> bool {
         ptrace(PTRACE_TRACEME, 0, nullptr, nullptr);
 
         std::vector<char*> args;
-        args.reserve(m_programArgs.size() + 2);
-        args.emplace_back(m_programPath.data());
-        for (const auto& arg : m_programArgs) {
+        args.reserve(mProgramArgs.size() + 2);
+        args.emplace_back(mProgramPath.data());
+        for (const auto& arg : mProgramArgs) {
             args.emplace_back(const_cast<char*>(arg.c_str()));
         }
         args.emplace_back(nullptr);
@@ -223,7 +225,7 @@ auto SandboxImpl::run() -> bool {
             exit(1);
         }
 
-        execvp(m_programPath.c_str(), args.data());
+        execvp(mProgramPath.c_str(), args.data());
         exit(0);
     } else {
         int status = 0;
@@ -231,9 +233,9 @@ auto SandboxImpl::run() -> bool {
         while (wait4(PID, &status, 0, &usage) != PID) {
             ;
         }
-        m_timeUsed = static_cast<int>(usage.ru_utime.tv_sec * 1000 +
-                                      usage.ru_utime.tv_usec / 1000);
-        m_memoryUsed = static_cast<long>(usage.ru_maxrss);
+        mTimeUsed = static_cast<int>(usage.ru_utime.tv_sec * 1000 +
+                                     usage.ru_utime.tv_usec / 1000);
+        mMemoryUsed = static_cast<long>(usage.ru_maxrss);
         return WIFEXITED(status) && WEXITSTATUS(status) == 0;
     }
 #endif

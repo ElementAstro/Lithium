@@ -4,12 +4,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
-#include <execution>
+#include <format>
 #include <functional>
 #include <iomanip>
 #include <iostream>
 #include <numeric>
+#include <ranges>
 #include <string>
+#include <utility>
 #include <vector>
 
 class Benchmark {
@@ -18,18 +20,17 @@ public:
     using TimePoint = Clock::time_point;
     using Duration = Clock::duration;
 
-    Benchmark(const std::string& name) : name_(name) {}
+    explicit Benchmark(std::string name) : name_(std::move(name)) {}
 
     template <typename Func>
     void Run(Func&& func, int iterations) {
         std::vector<Duration> durations(iterations);
 
-        std::transform(std::execution::par, durations.begin(), durations.end(),
-                       durations.begin(), [&func](const Duration&) {
-                           TimePoint start = Clock::now();
-                           func();
-                           return Clock::now() - start;
-                       });
+        std::ranges::generate(durations, [&func]() {
+            TimePoint start = Clock::now();
+            func();
+            return Clock::now() - start;
+        });
 
         Duration totalDuration = std::accumulate(
             durations.begin(), durations.end(), Duration::zero());
@@ -38,8 +39,7 @@ public:
 
         double variance =
             std::transform_reduce(
-                std::execution::par, durations.begin(), durations.end(), 0.0,
-                std::plus<>(),
+                durations.begin(), durations.end(), 0.0, std::plus<>(),
                 [&averageDuration](const Duration& d) {
                     double durationInMicroseconds =
                         static_cast<double>(d.count()) / 1000.0;
@@ -57,14 +57,15 @@ public:
     static void PrintResults() {
         std::cout << "Benchmark Results:\n";
         for (const auto& result : results_) {
-            std::cout << std::setw(20) << std::left << result.name << ": "
-                      << std::chrono::duration_cast<std::chrono::microseconds>(
-                             result.totalDuration)
-                             .count()
-                      << " us (avg: " << std::setprecision(4)
-                      << result.averageDuration
-                      << " us, std dev: " << result.standardDeviation << " us, "
-                      << result.iterations << " iterations)\n";
+            std::cout << std::format(
+                "{:<20}: {:>8} us (avg: {:>.4f} us, std dev: {:>.4f} us, {:>4} "
+                "iterations)\n",
+                result.name,
+                std::chrono::duration_cast<std::chrono::microseconds>(
+                    result.totalDuration)
+                    .count(),
+                result.averageDuration, result.standardDeviation,
+                result.iterations);
         }
     }
 
@@ -77,12 +78,10 @@ private:
         int iterations;
     };
 
-    static inline std::vector<Result> results_;
+    static std::vector<Result> results_;
     std::string name_;
 };
 
 #define BENCHMARK(name, func, iterations) Benchmark(name).Run(func, iterations)
-
-std::vector<Benchmark::Result> Benchmark::results_;
 
 #endif

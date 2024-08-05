@@ -26,6 +26,7 @@ Description: Some system functions to get user information.
 #include <pwd.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <climits>
 #include <codecvt>
 #include <locale>
 #endif
@@ -264,6 +265,24 @@ auto getHomeDirectory() -> std::string {
     homeDir = std::string(userInfo->pw_dir);
 #endif
     return homeDir;
+}
+
+auto getCurrentWorkingDirectory() -> std::string {
+#ifdef _WIN32
+    // Windows-specific code
+    char cwd[MAX_PATH];
+    if (GetCurrentDirectory(MAX_PATH, cwd)) {
+        return std::string(cwd);
+    }
+    return "Error getting current working directory";
+#else
+    // POSIX (Linux, macOS) specific code
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+        return cwd;
+    }
+    return "Error getting current working directory";
+#endif
 }
 
 auto getLoginShell() -> std::string {

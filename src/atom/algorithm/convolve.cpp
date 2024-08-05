@@ -22,6 +22,18 @@ and deconvolution.
 #include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
+#include <algorithm>
+#include <complex>
+#include <execution>
+#include <future>
+#include <jthread>
+#include <numbers>
+#include <numeric>
+#include <ranges>
+#include <stdexcept>
+#include <vector>
+
+// Function to convolve a 1D input with a kernel
 auto convolve(const std::vector<double> &input,
               const std::vector<double> &kernel) -> std::vector<double> {
     auto inputSize = input.size();
@@ -40,12 +52,14 @@ auto convolve(const std::vector<double> &input,
     return output;
 }
 
+// Function to deconvolve a 1D input with a kernel
 auto deconvolve(const std::vector<double> &input,
                 const std::vector<double> &kernel) -> std::vector<double> {
     auto inputSize = input.size();
     auto kernelSize = kernel.size();
     if (kernelSize > inputSize) {
-        THROW_INVALID_ARGUMENT("Kernel size cannot be larger than input size.");
+        throw std::invalid_argument(
+            "Kernel size cannot be larger than input size.");
     }
 
     auto outputSize = inputSize - kernelSize + 1;
@@ -60,6 +74,22 @@ auto deconvolve(const std::vector<double> &input,
     return output;
 }
 
+// Helper function to extend 2D vectors
+template <typename T>
+auto extend2D(const std::vector<std::vector<T>> &input, std::size_t newRows,
+              std::size_t newCols) -> std::vector<std::vector<T>> {
+    std::vector<std::vector<T>> extended(newRows, std::vector<T>(newCols, 0.0));
+    auto inputRows = input.size();
+    auto inputCols = input[0].size();
+    for (std::size_t i = 0; i < inputRows; ++i) {
+        for (std::size_t j = 0; j < inputCols; ++j) {
+            extended[i + newRows / 2][j + newCols / 2] = input[i][j];
+        }
+    }
+    return extended;
+}
+
+// Function to convolve a 2D input with a 2D kernel using multithreading
 auto convolve2D(const std::vector<std::vector<double>> &input,
                 const std::vector<std::vector<double>> &kernel,
                 int numThreads) -> std::vector<std::vector<double>> {
@@ -68,29 +98,11 @@ auto convolve2D(const std::vector<std::vector<double>> &input,
     auto kernelRows = kernel.size();
     auto kernelCols = kernel[0].size();
 
-    // Extend input and kernel matrices with zeros
-    std::vector<std::vector<double>> extendedInput(
-        inputRows + kernelRows - 1,
-        std::vector<double>(inputCols + kernelCols - 1, 0.0));
-    std::vector<std::vector<double>> extendedKernel(
-        inputRows + kernelRows - 1,
-        std::vector<double>(inputCols + kernelCols - 1, 0.0));
+    auto extendedInput =
+        extend2D(input, inputRows + kernelRows - 1, inputCols + kernelCols - 1);
+    auto extendedKernel = extend2D(kernel, inputRows + kernelRows - 1,
+                                   inputCols + kernelCols - 1);
 
-    // Center the input in the extended input matrix
-    for (std::size_t i = 0; i < inputRows; ++i) {
-        for (std::size_t j = 0; j < inputCols; ++j) {
-            extendedInput[i + kernelRows / 2][j + kernelCols / 2] = input[i][j];
-        }
-    }
-
-    // Center the kernel in the extended kernel matrix
-    for (std::size_t i = 0; i < kernelRows; ++i) {
-        for (std::size_t j = 0; j < kernelCols; ++j) {
-            extendedKernel[i][j] = kernel[i][j];
-        }
-    }
-
-    // Prepare output matrix
     std::vector<std::vector<double>> output(
         inputRows, std::vector<double>(inputCols, 0.0));
 
@@ -136,6 +148,7 @@ auto convolve2D(const std::vector<std::vector<double>> &input,
     return output;
 }
 
+// Function to deconvolve a 2D input with a 2D kernel using multithreading
 auto deconvolve2D(const std::vector<std::vector<double>> &signal,
                   const std::vector<std::vector<double>> &kernel,
                   int numThreads) -> std::vector<std::vector<double>> {
@@ -144,25 +157,9 @@ auto deconvolve2D(const std::vector<std::vector<double>> &signal,
     int K = kernel.size();
     int L = kernel[0].size();
 
-    // 扩展信号和卷积核到相同的大小
-    std::vector<std::vector<double>> extendedSignal(
-        M + K - 1, std::vector<double>(N + L - 1, 0));
-    std::vector<std::vector<double>> extendedKernel(
-        M + K - 1, std::vector<double>(N + L - 1, 0));
+    auto extendedSignal = extend2D(signal, M + K - 1, N + L - 1);
+    auto extendedKernel = extend2D(kernel, M + K - 1, N + L - 1);
 
-    // 复制原始信号和卷积核到扩展矩阵中
-    for (int i = 0; i < M; ++i) {
-        for (int j = 0; j < N; ++j) {
-            extendedSignal[i][j] = signal[i][j];
-        }
-    }
-    for (int i = 0; i < K; ++i) {
-        for (int j = 0; j < L; ++j) {
-            extendedKernel[i][j] = kernel[i][j];
-        }
-    }
-
-    // 计算信号和卷积核的二维DFT
     auto dfT2DWrapper = [&](const std::vector<std::vector<double>> &input) {
         return dfT2D(input,
                      numThreads);  // Assume DFT2D supports multithreading
@@ -171,10 +168,9 @@ auto deconvolve2D(const std::vector<std::vector<double>> &signal,
     auto x = dfT2DWrapper(extendedSignal);
     auto h = dfT2DWrapper(extendedKernel);
 
-    // 对卷积核的频谱进行修正
     std::vector<std::vector<std::complex<double>>> g(
         M + K - 1, std::vector<std::complex<double>>(N + L - 1));
-    double alpha = 0.1;  // 防止分母为0
+    double alpha = 0.1;  // Prevent division by zero
     for (int u = 0; u < M + K - 1; ++u) {
         for (int v = 0; v < N + L - 1; ++v) {
             if (std::abs(h[u][v]) > alpha) {
@@ -185,7 +181,6 @@ auto deconvolve2D(const std::vector<std::vector<double>> &signal,
         }
     }
 
-    // 计算反卷积结果
     std::vector<std::vector<std::complex<double>>> Y(
         M + K - 1, std::vector<std::complex<double>>(N + L - 1));
     for (int u = 0; u < M + K - 1; ++u) {
@@ -196,8 +191,7 @@ auto deconvolve2D(const std::vector<std::vector<double>> &signal,
 
     auto y = idfT2D(Y, numThreads);
 
-    // 提取有效结果
-    std::vector<std::vector<double>> result(M, std::vector<double>(N, 0));
+    std::vector<std::vector<double>> result(M, std::vector<double>(N, 0.0));
     for (int i = 0; i < M; ++i) {
         for (int j = 0; j < N; ++j) {
             result[i][j] = y[i][j];
@@ -207,7 +201,7 @@ auto deconvolve2D(const std::vector<std::vector<double>> &signal,
     return result;
 }
 
-// 二维离散傅里叶变换（2D DFT）
+// 2D Discrete Fourier Transform (2D DFT)
 auto dfT2D(const std::vector<std::vector<double>> &signal,
            int numThreads) -> std::vector<std::vector<std::complex<double>>> {
     const auto M = signal.size();
@@ -254,7 +248,7 @@ auto dfT2D(const std::vector<std::vector<double>> &signal,
     return X;
 }
 
-// 二维离散傅里叶逆变换（2D IDFT）
+// 2D Inverse Discrete Fourier Transform (2D IDFT)
 auto idfT2D(const std::vector<std::vector<std::complex<double>>> &spectrum,
             int numThreads) -> std::vector<std::vector<double>> {
     const auto M = spectrum.size();
@@ -275,7 +269,8 @@ auto idfT2D(const std::vector<std::vector<std::complex<double>>> &spectrum,
                         sum += spectrum[u][v] * w;
                     }
                 }
-                x[m][n] = real(sum) / (M * N);  // Normalize by dividing by M*N
+                x[m][n] =
+                    std::real(sum) / (M * N);  // Normalize by dividing by M*N
             }
         }
     };

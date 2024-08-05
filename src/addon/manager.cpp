@@ -1,12 +1,25 @@
+/*
+ * component_manager.cpp
+ *
+ * Copyright (C) 2023-2024 Max Qian <lightapt.com>
+ */
+
 #include "manager.hpp"
 
+#include <algorithm>
+#include <atomic>
 #include <csignal>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <memory>
+#include <mutex>
+#include <string>
+#include <thread>
 
 #include "addons.hpp"
 #include "compiler.hpp"
+#include "component.hpp"
 #include "loader.hpp"
 #include "macro.hpp"
 #include "sandbox.hpp"
@@ -16,6 +29,7 @@
 #include "atom/function/global_ptr.hpp"
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
+#include "atom/system/env.hpp"
 #include "atom/system/process.hpp"
 #include "atom/type/json.hpp"
 #include "atom/utils/string.hpp"
@@ -52,13 +66,6 @@ constexpr char SHM_NAME[] = "/driver_shm";
 #endif
 
 namespace lithium {
-struct LocalDriver {
-    int processHandle;
-    int stdinFd;
-    int stdoutFd;
-    std::string name;
-    bool isListening;
-} ATOM_ALIGNAS(64);
 
 class ComponentManagerImpl {
 public:
@@ -74,6 +81,10 @@ public:
     std::unordered_map<std::string, std::weak_ptr<Component>> components;
     std::string modulePath;
     DependencyGraph dependencyGraph;
+    std::mutex mutex;
+
+    ComponentManagerImpl() = default;
+    ~ComponentManagerImpl() = default;
 };
 
 ComponentManager::ComponentManager()
@@ -98,6 +109,7 @@ ComponentManager::ComponentManager()
 ComponentManager::~ComponentManager() {}
 
 auto ComponentManager::initialize() -> bool {
+    std::lock_guard lock(impl_->mutex);
     auto envLock = impl_->env.lock();
     if (!envLock) {
         LOG_F(ERROR, "Failed to lock environment");
@@ -165,7 +177,7 @@ auto ComponentManager::initialize() -> bool {
             auto entry = componentInfo["entry"].get<std::string>();
             auto dependencies =
                 componentInfo.value("dependencies", std::vector<std::string>{});
-            auto modulePath =
+            auto module_path =
                 path / (componentName + std::string(constants::LIB_EXTENSION));
             std::string componentFullName;
             componentFullName.reserve(addonName.length() +
@@ -180,9 +192,8 @@ auto ComponentManager::initialize() -> bool {
                 return false;
             }
 
-            if (!loadSharedComponent(componentName, addonName,
-                                     modulePath.string(), entry,
-                                     dependencies)) {
+            if (!loadSharedComponent(componentName, addonName, path.string(),
+                                     entry, dependencies)) {
                 LOG_F(ERROR, "Failed to load module {}/{}", path.string(),
                       componentName);
                 throw std::runtime_error("Failed to load module: " +
@@ -193,19 +204,47 @@ auto ComponentManager::initialize() -> bool {
     return true;
 }
 
-auto ComponentManager::destroy() -> bool { return true; }
+auto ComponentManager::destroy() -> bool {
+    std::lock_guard lock(impl_->mutex);
+    // 销毁组件管理器的逻辑
+    impl_->components.clear();
+    impl_->componentInfos.clear();
+    impl_->componentEntries.clear();
+    return true;
+}
 
 auto ComponentManager::createShared() -> std::shared_ptr<ComponentManager> {
     return std::make_shared<ComponentManager>();
 }
 
+auto ComponentManager::scanComponents(const std::string& path)
+    -> std::vector<std::string> {
+    std::vector<std::string> foundComponents;
+    try {
+        auto subDirs = getQualifiedSubDirs(path);
+        for (const auto& subDir : subDirs) {
+            auto componentFiles = getFilesInDir(subDir);
+            foundComponents.insert(foundComponents.end(),
+                                   componentFiles.begin(),
+                                   componentFiles.end());
+        }
+    } catch (const std::exception& e) {
+        LOG_F(ERROR, "Failed to scan components: {}", e.what());
+    }
+    return foundComponents;
+}
+
 auto ComponentManager::getFilesInDir(const std::string& path)
     -> std::vector<std::string> {
     std::vector<std::string> files;
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-        if (!entry.is_directory()) {
-            files.push_back(entry.path().filename().string());
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+            if (!entry.is_directory()) {
+                files.push_back(entry.path().filename().string());
+            }
         }
+    } catch (const std::filesystem::filesystem_error& e) {
+        LOG_F(ERROR, "Error accessing directory {}: {}", path, e.what());
     }
     return files;
 }
@@ -213,33 +252,37 @@ auto ComponentManager::getFilesInDir(const std::string& path)
 auto ComponentManager::getQualifiedSubDirs(const std::string& path)
     -> std::vector<std::string> {
     std::vector<std::string> qualifiedSubDirs;
-    for (const auto& entry : std::filesystem::directory_iterator(path)) {
-        if (entry.is_directory()) {
-            bool hasJson = false;
-            bool hasLib = false;
-            std::vector<std::string> files =
-                getFilesInDir(entry.path().string());
-            for (const auto& fileName : files) {
-                if (fileName == constants::PACKAGE_NAME) {
-                    hasJson = true;
-                } else if (fileName.size() > 4 &&
-                           fileName.substr(fileName.size() - 4) ==
-                               constants::LIB_EXTENSION) {
-                    hasLib = true;
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(path)) {
+            if (entry.is_directory()) {
+                bool hasJson = false;
+                bool hasLib = false;
+                auto files = getFilesInDir(entry.path().string());
+                for (const auto& fileName : files) {
+                    if (fileName == constants::PACKAGE_NAME) {
+                        hasJson = true;
+                    } else if (fileName.size() > 4 &&
+                               fileName.substr(fileName.size() - 4) ==
+                                   constants::LIB_EXTENSION) {
+                        hasLib = true;
+                    }
+                    if (hasJson && hasLib) {
+                        break;
+                    }
                 }
                 if (hasJson && hasLib) {
-                    break;
+                    qualifiedSubDirs.push_back(entry.path().string());
                 }
             }
-            if (hasJson && hasLib) {
-                qualifiedSubDirs.push_back(entry.path().string());
-            }
         }
+    } catch (const std::filesystem::filesystem_error& e) {
+        LOG_F(ERROR, "Error accessing directory {}: {}", path, e.what());
     }
     return qualifiedSubDirs;
 }
 
 auto ComponentManager::loadComponent(const json& params) -> bool {
+    std::lock_guard lock(impl_->mutex);
     if (params.is_null()) {
         return false;
     }
@@ -288,46 +331,44 @@ auto ComponentManager::loadComponent(const json& params) -> bool {
 
 auto ComponentManager::checkComponent(const std::string& module_name,
                                       const std::string& module_path) -> bool {
-    if (impl_->moduleLoader.lock()->hasModule(module_name)) {
+    auto moduleLoader = impl_->moduleLoader.lock();
+    if (moduleLoader && moduleLoader->hasModule(module_name)) {
         LOG_F(WARNING, "Module {} has been loaded, please do not load again",
               module_name);
         return true;
     }
 
-    if (!atom::io::isFolderExists(module_path)) {
+    if (!std::filesystem::exists(module_path)) {
         LOG_F(ERROR, "Component path {} does not exist", module_path);
         return false;
     }
 
-    if (!atom::io::isFileExists(module_path + constants::PATH_SEPARATOR +
-                                constants::PACKAGE_NAME)) {
+    if (!std::filesystem::exists(module_path + constants::PATH_SEPARATOR +
+                                 constants::PACKAGE_NAME)) {
         LOG_F(ERROR, "Component path {} does not contain package.json",
               module_path);
         return false;
     }
 
-    auto files = atom::io::checkFileTypeInFolder(
-        module_path, constants::LIB_EXTENSION, atom::io::FileOption::NAME);
-    if (files.empty()) {
-        LOG_F(ERROR, "Component path {} does not contain dll or so file",
+    auto files = getFilesInDir(module_path);
+    auto it = std::find_if(files.begin(), files.end(),
+                           [&](const std::string& fileName) {
+                               return fileName.size() > 4 &&
+                                      fileName.substr(fileName.size() - 4) ==
+                                          constants::LIB_EXTENSION;
+                           });
+
+    if (it == files.end()) {
+        LOG_F(ERROR,
+              "Component path {} does not contain specified dll or so file",
               module_path);
         return false;
     }
 
-    auto it = std::find(files.begin(), files.end(),
-                        module_name + constants::LIB_EXTENSION);
-    if (it != files.end()) {
-        if (!impl_->moduleLoader.lock()->loadModule(
-                module_path + constants::PATH_SEPARATOR + module_name +
-                    constants::LIB_EXTENSION,
-                module_name)) {
-            LOG_F(ERROR, "Failed to load module: {}'s library {}", module_name,
-                  module_path);
-            return false;
-        }
-    } else {
-        LOG_F(ERROR,
-              "Component path {} does not contain specified dll or so file",
+    if (moduleLoader &&
+        !moduleLoader->loadModule(module_path + constants::PATH_SEPARATOR + *it,
+                                  module_name)) {
+        LOG_F(ERROR, "Failed to load module: {}'s library {}", module_name,
               module_path);
         return false;
     }
@@ -345,8 +386,8 @@ auto ComponentManager::loadComponentInfo(
         return false;
     }
     try {
-        impl_->componentInfos[component_name] =
-            json::parse(std::ifstream(filePath));
+        std::ifstream file(filePath);
+        impl_->componentInfos[component_name] = json::parse(file);
     } catch (const json::parse_error& e) {
         LOG_F(ERROR, "Failed to load package.json file: {}", e.what());
         return false;
@@ -381,8 +422,8 @@ auto ComponentManager::checkComponentInfo(
         if (module["name"] == component_name) {
             auto funcName = module["entry"].get<std::string>();
 
-            if (auto moduleLoaderLock = impl_->moduleLoader.lock();
-                moduleLoaderLock &&
+            auto moduleLoaderLock = impl_->moduleLoader.lock();
+            if (moduleLoaderLock &&
                 !moduleLoaderLock->hasFunction(module_name, funcName)) {
                 LOG_F(ERROR, "Failed to load module: {}'s function {}",
                       component_name, funcName);
@@ -399,6 +440,7 @@ auto ComponentManager::checkComponentInfo(
 }
 
 auto ComponentManager::unloadComponent(const json& params) -> bool {
+    std::lock_guard lock(impl_->mutex);
     if (params.is_null()) {
         return false;
     }
@@ -421,11 +463,18 @@ auto ComponentManager::unloadComponent(const json& params) -> bool {
             LOG_F(ERROR, "Failed to unload component: {}", componentName);
             return false;
         }
+    } else if (it->second->component_type == "standalone") {
+        if (!unloadStandaloneComponent(componentName, forced)) {
+            LOG_F(ERROR, "Failed to unload standalone component: {}",
+                  componentName);
+            return false;
+        }
     }
     return true;
 }
 
 auto ComponentManager::reloadComponent(const json& params) -> bool {
+    std::lock_guard lock(impl_->mutex);
     if (params.is_null()) {
         return false;
     }
@@ -444,7 +493,13 @@ auto ComponentManager::reloadComponent(const json& params) -> bool {
     }
     if (it->second->component_type == "shared") {
         if (!reloadSharedComponent(componentName)) {
-            LOG_F(ERROR, "Failed to unload component: {}", componentName);
+            LOG_F(ERROR, "Failed to reload component: {}", componentName);
+            return false;
+        }
+    } else if (it->second->component_type == "standalone") {
+        if (!reloadStandaloneComponent(componentName)) {
+            LOG_F(ERROR, "Failed to reload standalone component: {}",
+                  componentName);
             return false;
         }
     }
@@ -452,8 +507,9 @@ auto ComponentManager::reloadComponent(const json& params) -> bool {
 }
 
 auto ComponentManager::reloadAllComponents() -> bool {
+    std::lock_guard lock(impl_->mutex);
     LOG_F(INFO, "Reloading all components");
-    for (auto& [name, component] : impl_->components) {
+    for (const auto& [name, component] : impl_->components) {
         if (!reloadComponent(json::object({{"component_name", name}}))) {
             LOG_F(ERROR, "Failed to reload component: {}", name);
             return false;
@@ -464,8 +520,9 @@ auto ComponentManager::reloadAllComponents() -> bool {
 
 auto ComponentManager::getComponent(const std::string& component_name)
     -> std::optional<std::weak_ptr<Component>> {
+    std::lock_guard lock(impl_->mutex);
     if (!impl_->componentEntries.contains(component_name)) {
-        LOG_F(ERROR, "Could not found the component: {}", component_name);
+        LOG_F(ERROR, "Could not find the component: {}", component_name);
         return std::nullopt;
     }
     return impl_->components[component_name];
@@ -473,14 +530,16 @@ auto ComponentManager::getComponent(const std::string& component_name)
 
 auto ComponentManager::getComponentInfo(const std::string& component_name)
     -> std::optional<json> {
+    std::lock_guard lock(impl_->mutex);
     if (!impl_->componentEntries.contains(component_name)) {
-        LOG_F(ERROR, "Could not found the component: {}", component_name);
+        LOG_F(ERROR, "Could not find the component: {}", component_name);
         return std::nullopt;
     }
     return impl_->componentInfos[component_name];
 }
 
 auto ComponentManager::getComponentList() -> std::vector<std::string> {
+    std::lock_guard lock(impl_->mutex);
     std::vector<std::string> list;
     for (const auto& [name, component] : impl_->components) {
         list.push_back(name);
@@ -493,6 +552,7 @@ auto ComponentManager::loadSharedComponent(
     const std::string& component_name, const std::string& addon_name,
     const std::string& module_path, const std::string& entry,
     const std::vector<std::string>& dependencies) -> bool {
+    std::lock_guard lock(impl_->mutex);
     auto componentFullName = addon_name + "." + component_name;
     DLOG_F(INFO, "Loading module: {}", componentFullName);
 
@@ -533,7 +593,7 @@ auto ComponentManager::loadSharedComponent(
                     LOG_F(WARNING, "Empty dependency detected");
                 }
             }
-        } catch (const json::exception& e) {
+        } catch (const std::exception& e) {
             LOG_F(ERROR, "Failed to load shared component: {} {}",
                   componentFullName, e.what());
             return false;
@@ -564,8 +624,8 @@ auto ComponentManager::loadSharedComponent(
 auto ComponentManager::unloadSharedComponent(const std::string& component_name,
                                              bool forced) -> bool {
     LOG_F(WARNING,
-          "Unload a component is very dangerous, you should make sure "
-          "everything proper");
+          "Unloading a component is very dangerous, you should make sure "
+          "everything is proper");
 
     if (!impl_->components.contains(component_name)) {
         LOG_F(ERROR, "Component {} is not loaded", component_name);
@@ -574,10 +634,11 @@ auto ComponentManager::unloadSharedComponent(const std::string& component_name,
 
     std::vector<std::string> dependencies;
     for (const auto& entry : impl_->componentEntries) {
-        // if (atom::utils::findElement(entry.second->dependencies,
-        //                              component_name).has_value()) {
-        //     dependencies.push_back(entry.first);
-        // }
+        if (std::find(entry.second->dependencies.begin(),
+                      entry.second->dependencies.end(),
+                      component_name) != entry.second->dependencies.end()) {
+            dependencies.push_back(entry.first);
+        }
     }
 
     if (!dependencies.empty()) {
@@ -625,7 +686,7 @@ auto ComponentManager::loadStandaloneComponent(
     const std::string& component_name, const std::string& addon_name,
     const std::string& module_path, const std::string& entry,
     const std::vector<std::string>& dependencies) -> bool {
-    // Max: 先检查进程运行情况， 如果有相同的进程，则优先杀死
+    std::lock_guard lock(impl_->mutex);
     for (const auto& [name, component] : impl_->components) {
         if (name == component_name) {
             LOG_F(ERROR, "Component {} is already loaded", component_name);
@@ -633,7 +694,7 @@ auto ComponentManager::loadStandaloneComponent(
         }
     }
     if (atom::system::isProcessRunning(component_name)) {
-        LOG_F(ERROR, "Component {} is already running, just kill it",
+        LOG_F(ERROR, "Component {} is already running, killing it",
               component_name);
         atom::system::killProcessByName(component_name, SIGTERM);
         LOG_F(INFO, "Killed process {}", component_name);
@@ -662,45 +723,61 @@ auto ComponentManager::loadStandaloneComponent(
     standaloneComponent->monitorDrivers();
     LOG_F(INFO, "Start monitoring drivers for component {}", component_name);
 
-    LOG_F(INFO, "Successfully loaded component {}", component_name);
+    impl_->components[component_name] = standaloneComponent;
+    impl_->componentEntries[component_name] = std::make_shared<ComponentEntry>(
+        component_name, entry, "standalone", module_path);
+    LOG_F(INFO, "Successfully loaded standalone component {}", component_name);
     return true;
 }
+
 auto ComponentManager::unloadStandaloneComponent(
     const std::string& component_name, bool forced) -> bool {
-    bool isLoaded;
-    for (const auto& [name, component] : impl_->components) {
-        if (name == component_name) {
-            LOG_F(ERROR, "Component {} is already loaded", component_name);
-            isLoaded = true;
-        }
-    }
-    if (!isLoaded) {
+    std::lock_guard lock(impl_->mutex);
+    auto it = impl_->components.find(component_name);
+    if (it == impl_->components.end()) {
         LOG_F(WARNING, "Component {} is not loaded", component_name);
         return true;
     }
-    auto component = impl_->components.at(component_name);
-    if (component.expired()) {
+    auto component = it->second.lock();
+    if (!component) {
         LOG_F(ERROR, "Component {} is expired", component_name);
         impl_->components.erase(component_name);
         return true;
     }
-    auto standalone =
-        std::dynamic_pointer_cast<StandAloneComponent>(component.lock());
+    auto standaloneComponent =
+        std::dynamic_pointer_cast<StandAloneComponent>(component);
     if (forced) {
         LOG_F(INFO, "Forcefully unloading component {}", component_name);
-        if (!standalone->destroy()) {
+        if (!standaloneComponent->destroy()) {
             LOG_F(ERROR, "Failed to destroy component {}", component_name);
         }
         impl_->components.erase(component_name);
         return true;
     }
-    LOG_F(INFO, "Unloaded component {}", component_name);
+    LOG_F(INFO, "Unloaded standalone component {}", component_name);
     return true;
 }
+
 auto ComponentManager::reloadStandaloneComponent(
     const std::string& component_name) -> bool {
+    std::lock_guard lock(impl_->mutex);
     if (!impl_->components.contains(component_name)) {
         LOG_F(ERROR, "Component {} not found", component_name);
+        return false;
+    }
+    if (!unloadStandaloneComponent(component_name, false)) {
+        LOG_F(ERROR, "Failed to unload standalone component: {}",
+              component_name);
+        return false;
+    }
+    if (!loadStandaloneComponent(
+            component_name,
+            impl_->componentEntries[component_name]->module_name,
+            impl_->componentEntries[component_name]->module_name,
+            impl_->componentEntries[component_name]->func_name,
+            impl_->componentEntries[component_name]->dependencies)) {
+        LOG_F(ERROR, "Failed to reload standalone component: {}",
+              component_name);
         return false;
     }
     return true;

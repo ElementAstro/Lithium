@@ -17,12 +17,9 @@ Description: Component Manager (the core of the plugin system)
 #include <memory>
 #include <optional>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "atom/components/component.hpp"
-#include "atom/components/types.hpp"
-#include "atom/system/env.hpp"
 
 #include "dependency.hpp"
 
@@ -36,21 +33,8 @@ class Compiler;
 class ModuleLoader;
 class Sandbox;
 
-struct ComponentEntry {
-    std::string name;
-    std::string func_name;
-    std::string component_type;
-    std::string module_name;
-    std::vector<std::string> dependencies;
-
-    ComponentEntry(std::string name, std::string func_name,
-                   std::string component_type, std::string module_name)
-        : name(std::move(name)),
-          func_name(std::move(func_name)),
-          component_type(std::move(component_type)),
-          module_name(std::move(module_name)) {}
-};
 class ComponentManagerImpl;
+
 class ComponentManager {
 public:
     explicit ComponentManager();
@@ -65,6 +49,8 @@ public:
     auto unloadComponent(const json& params) -> bool;
     auto reloadComponent(const json& params) -> bool;
     auto reloadAllComponents() -> bool;
+
+    auto scanComponents(const std::string& path) -> std::vector<std::string>;
 
     auto getComponent(const std::string& component_name)
         -> std::optional<std::weak_ptr<Component>>;
@@ -90,13 +76,12 @@ private:
                                bool forced) -> bool;
     auto reloadSharedComponent(const std::string& component_name) -> bool;
 
-    // Max: 特意增加的对INDIDriver的支持，也可以作为管道组件的通用的支持
     auto loadStandaloneComponent(
         const std::string& component_name, const std::string& addon_name,
         const std::string& module_path, const std::string& entry,
         const std::vector<std::string>& dependencies) -> bool;
     auto unloadStandaloneComponent(const std::string& component_name,
-                               bool forced) -> bool;
+                                   bool forced) -> bool;
     auto reloadStandaloneComponent(const std::string& component_name) -> bool;
 
     std::unique_ptr<ComponentManagerImpl> impl_;

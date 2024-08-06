@@ -99,7 +99,7 @@ void saveCrashLog(std::string_view error_msg) {
     }
 
     QuoteManager quotes;
-
+    quotes.loadQuotesFromJson("./quotes.json");
     sss << "============ Famous saying: " << quotes.getRandomQuote()
         << " ============" << std::endl;
 

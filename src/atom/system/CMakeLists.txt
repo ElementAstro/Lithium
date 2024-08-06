@@ -52,6 +52,7 @@ set(ATOM_SYSTEM_HEADERS
 set(ATOM_SYSTEM_LIBS
     loguru
     ${CMAKE_THREAD_LIBS_INIT}
+    atom-sysinfo
 )
 
 # Build Object Library

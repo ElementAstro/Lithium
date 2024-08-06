@@ -84,6 +84,9 @@ public:
 
     static constexpr const char* LITHIUM_PROCESS_MANAGER = "lithium.system.process";
 
+    static constexpr const char* LITHIUM_DEVICE_LOADER = "lithium.device.loader";
+    static constexpr const char* LITHIUM_DEVICE_MANAGER = "lithium.device.manager";
+
     static std::vector<std::string> LITHIUM_RESOURCES;
     static std::vector<std::string_view> LITHIUM_RESOURCES_SHA256;
 

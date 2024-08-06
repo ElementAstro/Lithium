@@ -150,4 +150,16 @@ OperatingSystemInfo getOperatingSystemInfo() {
     return osInfo;
 }
 
+auto isWsl() -> bool {
+    std::ifstream procVersion("/proc/version");
+    std::string line;
+    if (procVersion.is_open()) {
+        std::getline(procVersion, line);
+        procVersion.close();
+        // Check if the line contains "Microsoft" which is a typical indicator of WSL
+        return line.find("microsoft") != std::string::npos || line.find("WSL") != std::string::npos;
+    }
+    return false;
+}
+
 }  // namespace atom::system

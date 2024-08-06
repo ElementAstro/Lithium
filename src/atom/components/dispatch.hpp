@@ -5,11 +5,14 @@
 #include <chrono>
 #include <functional>
 #include <future>
+#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
+#include "function/type_caster.hpp"
 
 #if ENABLE_FASTHASH
 #include "emhash/hash_set8.hpp"
@@ -69,6 +72,9 @@ public:
 
 class CommandDispatcher {
 public:
+    explicit CommandDispatcher(std::weak_ptr<atom::meta::TypeCaster> typeCaster)
+        : typeCaster_(std::move(typeCaster)) {}
+
     template <typename Ret, typename... Args>
     void def(const std::string& name, const std::string& group,
              const std::string& description, std::function<Ret(Args...)> func,
@@ -83,7 +89,7 @@ public:
               std::optional<std::function<void()>> postcondition = std::nullopt,
               std::vector<Arg> arg_info = {});
 
-    [[nodiscard]] bool has(const std::string& name) const;
+    [[nodiscard]] auto has(const std::string& name) const -> bool;
 
     void addAlias(const std::string& name, const std::string& alias);
 
@@ -178,6 +184,8 @@ private:
     std::unordered_map<std::string, std::string> groupMap_;
     std::unordered_map<std::string, std::chrono::milliseconds> timeoutMap_;
 #endif
+
+    std::weak_ptr<atom::meta::TypeCaster> typeCaster_;
 };
 
 template <typename Ret, typename... Args>
@@ -289,7 +297,20 @@ auto CommandDispatcher::dispatchHelper(const std::string& name,
     }
 
     const auto& cmd = it->second;
-    std::vector<std::any> fullArgs = completeArgs(cmd, args);
+    std::vector<std::any> fullArgs;
+    // if constexpr (std::is_same_v<ArgsType, std::vector<std::any>>) {
+    //     fullArgs = args;
+    // } else {
+    fullArgs = completeArgs(cmd, args);
+    //}
+
+    if constexpr (std::is_same_v<ArgsType, std::vector<std::any>>) {
+        auto it1 = args.begin();
+        auto it2 = cmd.argTypes.begin();
+        // Max: 这里需要自动处理类型差异
+        for (; it1 != args.end() && it2 != cmd.argTypes.end(); ++it1, ++it2) {
+        }
+    }
 
     checkPrecondition(cmd, name);
 
@@ -349,14 +370,13 @@ ATOM_INLINE auto CommandDispatcher::executeWithTimeout(
 }
 
 ATOM_INLINE auto CommandDispatcher::executeWithoutTimeout(
-    const Command& cmd, const std::string& name,
+    const Command& cmd, [[maybe_unused]] const std::string& name,
     const std::vector<std::any>& args) -> std::any {
-    if (cmd.funcs.size() == 1) {
-        try {
-            return cmd.funcs[0](args);
-
-        } catch (const std::bad_any_cast&) {
-            THROW_DISPATCH_EXCEPTION("Bad command invoke: " + name);
+    if (!args.empty()) {
+        if (args.size() == 1 &&
+            args[0].type() == typeid(std::vector<std::any>)) {
+            return executeFunctions(
+                cmd, std::any_cast<std::vector<std::any>>(args[0]));
         }
     }
 

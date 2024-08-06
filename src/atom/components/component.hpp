@@ -38,7 +38,7 @@ public:
     /**
      * @brief Type definition for initialization function.
      */
-    using InitFunc = std::function<void()>;
+    using InitFunc = std::function<void(Component&)>;
 
     /**
      * @brief Type definition for cleanup function.
@@ -304,8 +304,7 @@ public:
                                const std::string& description = "");
 
     template <typename T>
-    void defType(std::string_view name, const atom::meta::TypeInfo& ti,
-                 const std::string& group = "",
+    void defType(std::string_view name, const std::string& group = "",
                  const std::string& description = "");
 
     template <typename SourceType, typename DestinationType>
@@ -374,7 +373,7 @@ public:
      * @return The names of the components that are needed by this component.
      * @note This will be called when the component is initialized.
      */
-    static auto getNeededComponents()  -> std::vector<std::string>;
+    static auto getNeededComponents() -> std::vector<std::string>;
 
     void addOtherComponent(const std::string& name,
                            const std::weak_ptr<Component>& component);
@@ -405,9 +404,7 @@ private:
     atom::meta::TypeInfo m_typeInfo_{atom::meta::userType<Component>()};
     std::unordered_map<std::string_view, atom::meta::TypeInfo> m_classes_;
 
-    std::shared_ptr<CommandDispatcher> m_CommandDispatcher_{
-        std::make_shared<CommandDispatcher>()};  ///< The command dispatcher for
-                                                 ///< managing commands.
+    ///< managing commands.
     std::shared_ptr<VariableManager> m_VariableManager_{
         std::make_shared<VariableManager>()};  ///< The variable registry for
                                                ///< managing variables.
@@ -419,11 +416,16 @@ private:
         atom::meta::TypeCaster::createShared()};
     std::shared_ptr<atom::meta::TypeConversions> m_TypeConverter_{
         atom::meta::TypeConversions::createShared()};
+
+    std::shared_ptr<CommandDispatcher> m_CommandDispatcher_{
+        std::make_shared<CommandDispatcher>(
+            m_TypeCaster_)};  ///< The command dispatcher for
 };
 
 ATOM_INLINE Component::Component(std::string name) : m_name_(std::move(name)) {}
 
-ATOM_INLINE auto Component::getInstance() const -> std::weak_ptr<const Component> {
+ATOM_INLINE auto Component::getInstance() const
+    -> std::weak_ptr<const Component> {
     return shared_from_this();
 }
 
@@ -466,13 +468,13 @@ ATOM_INLINE void Component::removeCommand(const std::string& name) const {
     m_CommandDispatcher_->removeCommand(name);
 }
 
-ATOM_INLINE auto Component::getCommandsInGroup(
-    const std::string& group) const -> std::vector<std::string> {
+ATOM_INLINE auto Component::getCommandsInGroup(const std::string& group) const
+    -> std::vector<std::string> {
     return m_CommandDispatcher_->getCommandsInGroup(group);
 }
 
-ATOM_INLINE auto Component::getCommandDescription(
-    const std::string& name) const -> std::string {
+ATOM_INLINE auto Component::getCommandDescription(const std::string& name) const
+    -> std::string {
     return m_CommandDispatcher_->getCommandDescription(name);
 }
 
@@ -480,14 +482,14 @@ ATOM_INLINE auto Component::getCommandDescription(
 ATOM_INLINE emhash::HashSet<std::string> Component::getCommandAliases(
     const std::string& name) const
 #else
-ATOM_INLINE auto Component::getCommandAliases(
-    const std::string& name) const -> std::unordered_set<std::string>
+ATOM_INLINE auto Component::getCommandAliases(const std::string& name) const
+    -> std::unordered_set<std::string>
 #endif
 {
     return m_CommandDispatcher_->getCommandAliases(name);
 }
 
-ATOM_INLINE auto Component::getNeededComponents() -> std::vector<std::string>  {
+ATOM_INLINE auto Component::getNeededComponents() -> std::vector<std::string> {
     return {};
 }
 
@@ -507,8 +509,8 @@ ATOM_INLINE void Component::clearOtherComponents() {
     m_OtherComponents_.clear();
 }
 
-ATOM_INLINE auto Component::getOtherComponent(
-    const std::string& name) -> std::weak_ptr<Component> {
+ATOM_INLINE auto Component::getOtherComponent(const std::string& name)
+    -> std::weak_ptr<Component> {
     if (m_OtherComponents_.contains(name)) {
         return m_OtherComponents_[name];
     }
@@ -538,17 +540,19 @@ auto Component::hasConversion() const -> bool {
 
 ATOM_INLINE auto Component::getAllCommands() const -> std::vector<std::string> {
     if (m_CommandDispatcher_ == nullptr) {
-        THROW_OBJ_UNINITIALIZED("Component command dispatch is not initialized");
+        THROW_OBJ_UNINITIALIZED(
+            "Component command dispatch is not initialized");
     }
     return m_CommandDispatcher_->getAllCommands();
 }
 
-ATOM_INLINE auto Component::getRegisteredTypes() const -> std::vector<std::string> {
+ATOM_INLINE auto Component::getRegisteredTypes() const
+    -> std::vector<std::string> {
     return m_TypeCaster_->getRegisteredTypes();
 }
 
-ATOM_INLINE auto Component::runCommand(const std::string& name,
-                                           const std::vector<std::any>& args) -> std::any {
+ATOM_INLINE auto Component::runCommand(
+    const std::string& name, const std::vector<std::any>& args) -> std::any {
     auto cmd = getAllCommands();
 
     if (auto it = std::ranges::find(cmd, name); it != cmd.end()) {
@@ -570,10 +574,10 @@ ATOM_INLINE void Component::doc(const std::string& description) {
 }
 
 template <typename T>
-void Component::defType(std::string_view name, const atom::meta::TypeInfo& ti,
+void Component::defType(std::string_view name,
                         [[maybe_unused]] const std::string& group,
                         [[maybe_unused]] const std::string& description) {
-    m_classes_[name] = ti;
+    m_classes_[name] = atom::meta::userType<T>();
     m_TypeCaster_->registerType<T>(std::string(name));
 }
 

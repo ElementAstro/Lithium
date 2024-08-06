@@ -32,7 +32,7 @@
         static void init() {                                                   \
             static std::once_flag flag;                                        \
             std::call_once(flag, []() {                                        \
-                init_func();                                                   \
+                Registry::instance().registerModule(#module_name, init_func);  \
                 Registry::instance().initializeAll();                          \
             });                                                                \
         }                                                                      \
@@ -47,29 +47,30 @@
     }                                                                          \
     extern "C" void cleanup_registry() {                                       \
         module_name::ModuleManager::cleanup();                                 \
+    }                                                                          \
+    extern "C" auto getInstance() -> std::shared_ptr<Component> {              \
+        return Registry::instance().getComponent(#module_name);                \
     }
 #endif
 
 // Macro for embedded module
 #ifndef ATOM_EMBED_MODULE
-#define ATOM_EMBED_MODULE(module_name, init_func)      \
-    namespace module_name {                            \
-    inline std::optional<std::once_flag> init_flag;    \
-    struct ModuleInitializer {                         \
-        ModuleInitializer() {                          \
-            if (!init_flag.has_value()) {              \
-                init_flag.emplace();                   \
-                std::call_once(*init_flag, init_func); \
-                Registry::instance().initializeAll();  \
-            }                                          \
-        }                                              \
-        ~ModuleInitializer() {                         \
-            if (init_flag.has_value()) {               \
-                Registry::instance().cleanupAll();     \
-                init_flag.reset();                     \
-            }                                          \
-        }                                              \
-    };                                                 \
-    static ModuleInitializer module_initializer;       \
+#define ATOM_EMBED_MODULE(module_name, init_func)                             \
+    namespace module_name {                                                   \
+    inline std::optional<std::once_flag> init_flag;                           \
+    struct ModuleInitializer {                                                \
+        ModuleInitializer() {                                                 \
+            if (!init_flag.has_value()) {                                     \
+                init_flag.emplace();                                          \
+                Registry::instance().registerModule(#module_name, init_func); \
+            }                                                                 \
+        }                                                                     \
+        ~ModuleInitializer() {                                                \
+            if (init_flag.has_value()) {                                      \
+                init_flag.reset();                                            \
+            }                                                                 \
+        }                                                                     \
+    };                                                                        \
+    static ModuleInitializer module_initializer;                              \
     }
 #endif

@@ -1,6 +1,8 @@
 #include "atom/components/component.hpp"
 #include <gtest/gtest.h>
 
+using namespace std::literals;
+
 class ComponentTest : public ::testing::Test {
 protected:
     void SetUp() override {
@@ -49,6 +51,39 @@ TEST_F(ComponentTest, DefineFunctions) {
     component->def("incrementCounter", [&counter]() { ++counter; });
     component->dispatch("incrementCounter", {});
     EXPECT_EQ(counter, 1);
+}
+
+TEST_F(ComponentTest, DefineFunctionsWithParameters) {
+    component->def("add", [](int a, int b) { return a + b; });
+    EXPECT_EQ(std::any_cast<int>(component->dispatch("add", {1, 2})), 3);
+}
+
+TEST_F(ComponentTest, DefineFunctionsWithAnyVectorParameters) {
+    component->def("add", [](int a, int b, int c) { return a + b + c; });
+    std::vector<std::any> args = {1, 2, 3};
+    EXPECT_EQ(std::any_cast<int>(component->dispatch("add", args)), 6);
+}
+
+TEST_F(ComponentTest, DefineFunctionsWithConstRefStringParameters) {
+    component->def("concat",
+                   [](std::string a, std::string b) { return a + b; });
+    EXPECT_EQ(std::any_cast<std::string>(
+                  component->dispatch("concat", "Hello"s, "World"s)),
+              "HelloWorld"s);
+
+    component->def("cconcat", [](const std::string a, const std::string b) {
+        return a + b;
+    });
+    EXPECT_EQ(std::any_cast<std::string>(
+                  component->dispatch("cconcat", "Hello"s, "World"s)),
+              "HelloWorld"s);
+
+    component->def("crconcat", [](const std::string& a, const std::string& b) {
+        return a + b;
+    });
+    EXPECT_EQ(std::any_cast<std::string>(
+                  component->dispatch("crconcat", "Hello"s, "World"s)),
+              "HelloWorld"s);
 }
 
 TEST_F(ComponentTest, DefineMemberFunctions) {
@@ -130,7 +165,7 @@ TEST_F(ComponentTest, DefineConstructors) {
 TEST_F(ComponentTest, DefineTypes) {
     class TestClass {};
     component->defType<TestClass>("TestClass",
-                                   atom::meta::userType<TestClass>());
+                                  atom::meta::userType<TestClass>());
     EXPECT_TRUE(component->hasType("TestClass"));
 }
 
@@ -150,10 +185,10 @@ TEST_F(ComponentTest, DefineClass) {
 
     component->doc("This is a test class");
     component->defType<TestClass>("TestClass",
-                                   atom::meta::userType<TestClass>(),
-                                   "MyGroup", "Test class");
+                                  atom::meta::userType<TestClass>(), "MyGroup",
+                                  "Test class");
     component->defConstructor<TestClass, int>("create_test_class", "MyGroup",
-                                               "Create TestClass");
+                                              "Create TestClass");
     component->defDefaultConstructor<TestClass>(
         "create_default_test_class", "MyGroup", "Create default TestClass");
     component->def("var_getter", &TestClass::varGetter, "MyGroup",

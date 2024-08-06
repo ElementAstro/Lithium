@@ -7,19 +7,17 @@
 #include "manager.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <csignal>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 
 #include "addons.hpp"
 #include "compiler.hpp"
 #include "component.hpp"
+#include "components/registry.hpp"
 #include "loader.hpp"
 #include "macro.hpp"
 #include "sandbox.hpp"
@@ -109,7 +107,20 @@ ComponentManager::ComponentManager()
 ComponentManager::~ComponentManager() {}
 
 auto ComponentManager::initialize() -> bool {
-    std::lock_guard lock(impl_->mutex);
+    // std::lock_guard lock(impl_->mutex);
+    // Max: 优先加载内置模组
+    Registry::instance().initializeAll();
+    for (const auto& name : Registry::instance().getAllComponentNames()) {
+        LOG_F(INFO, "Registering component: {}", name);
+    }
+    for (const auto& component : Registry::instance().getAllComponents()) {
+        impl_->components[component->getName()] = component;
+        impl_->componentInfos[component->getName()] = json();
+        impl_->componentEntries[component->getName()] =
+            std::make_shared<ComponentEntry>(component->getName(), "builtin",
+                                             "embed", "main");
+    }
+
     auto envLock = impl_->env.lock();
     if (!envLock) {
         LOG_F(ERROR, "Failed to lock environment");
@@ -119,6 +130,9 @@ auto ComponentManager::initialize() -> bool {
     impl_->modulePath = envLock->getEnv(constants::ENV_VAR_MODULE_PATH,
                                         constants::MODULE_FOLDER);
 
+    for (const auto& dir : getQualifiedSubDirs(impl_->modulePath)) {
+        LOG_F(INFO, "Found module: {}", dir);
+    }
     auto qualifiedSubdirs = impl_->dependencyGraph.resolveDependencies(
         getQualifiedSubDirs(impl_->modulePath));
     if (qualifiedSubdirs.empty()) {
@@ -177,7 +191,7 @@ auto ComponentManager::initialize() -> bool {
             auto entry = componentInfo["entry"].get<std::string>();
             auto dependencies =
                 componentInfo.value("dependencies", std::vector<std::string>{});
-            auto module_path =
+            auto modulePath =
                 path / (componentName + std::string(constants::LIB_EXTENSION));
             std::string componentFullName;
             componentFullName.reserve(addonName.length() +
@@ -196,8 +210,7 @@ auto ComponentManager::initialize() -> bool {
                                      entry, dependencies)) {
                 LOG_F(ERROR, "Failed to load module {}/{}", path.string(),
                       componentName);
-                throw std::runtime_error("Failed to load module: " +
-                                         componentName);
+                THROW_RUNTIME_ERROR("Failed to load module: " + componentName);
             }
         }
     }
@@ -257,15 +270,24 @@ auto ComponentManager::getQualifiedSubDirs(const std::string& path)
             if (entry.is_directory()) {
                 bool hasJson = false;
                 bool hasLib = false;
+                LOG_F(INFO, "Checking directory: {}", entry.path().string());
                 auto files = getFilesInDir(entry.path().string());
                 for (const auto& fileName : files) {
                     if (fileName == constants::PACKAGE_NAME) {
                         hasJson = true;
                     } else if (fileName.size() > 4 &&
+#ifdef _WIN32
                                fileName.substr(fileName.size() - 4) ==
-                                   constants::LIB_EXTENSION) {
+                                   constants::LIB_EXTENSION
+#else
+                               fileName.substr(fileName.size() - 3) ==
+                                   constants::LIB_EXTENSION
+#endif
+                    ) {
                         hasLib = true;
                     }
+                    LOG_F(INFO, "Dir {} has json: {}, lib: {}",
+                          entry.path().string(), hasJson, hasLib);
                     if (hasJson && hasLib) {
                         break;
                     }
@@ -548,6 +570,11 @@ auto ComponentManager::getComponentList() -> std::vector<std::string> {
     return list;
 }
 
+auto ComponentManager::hasComponent(const std::string& component_name) -> bool {
+    std::lock_guard lock(impl_->mutex);
+    return impl_->componentEntries.contains(component_name);
+}
+
 auto ComponentManager::loadSharedComponent(
     const std::string& component_name, const std::string& addon_name,
     const std::string& module_path, const std::string& entry,
@@ -555,12 +582,13 @@ auto ComponentManager::loadSharedComponent(
     std::lock_guard lock(impl_->mutex);
     auto componentFullName = addon_name + "." + component_name;
     DLOG_F(INFO, "Loading module: {}", componentFullName);
-
+    auto modulePathStr =
 #ifdef _WIN32
-    auto modulePathStr = atom::utils::replaceString(module_path, "/", "\\");
+        atom::utils::replaceString(module_path, "/", "\\")
 #else
-    auto modulePathStr = atom::utils::replaceString(module_path, "\\", "/");
+        atom::utils::replaceString(module_path, "\\", "/")
 #endif
+        + constants::PATH_SEPARATOR + component_name + constants::LIB_EXTENSION;
 
     auto moduleLoader = impl_->moduleLoader.lock();
     if (!moduleLoader) {
@@ -579,6 +607,13 @@ auto ComponentManager::loadSharedComponent(
         return false;
     }
 
+    // Max: 对组件进行初始化，如果存在可以使用的初始化函数
+    auto moduleInitFunc = moduleLoader->getFunction<void (*)()>(
+        componentFullName, "initialize_registry");
+    if (moduleInitFunc != nullptr) {
+        LOG_F(INFO, "Initializing registry for shared component: {}", componentFullName);
+        moduleInitFunc();
+    }
     if (auto component =
             moduleLoader->getInstance<Component>(componentFullName, {}, entry);
         component) {
@@ -683,7 +718,8 @@ auto ComponentManager::reloadSharedComponent(const std::string& component_name)
 }
 
 auto ComponentManager::loadStandaloneComponent(
-    const std::string& component_name, const std::string& addon_name,
+    const std::string& component_name,
+    [[maybe_unused]] const std::string& addon_name,
     const std::string& module_path, const std::string& entry,
     const std::vector<std::string>& dependencies) -> bool {
     std::lock_guard lock(impl_->mutex);

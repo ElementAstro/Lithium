@@ -23,6 +23,8 @@ Description: Lithium App Enter
 
 #include "config/configor.hpp"
 
+#include "device/manager.hpp"
+
 #include "task/container.hpp"
 #include "task/generator.hpp"
 #include "task/loader.hpp"
@@ -40,6 +42,8 @@ Description: Lithium App Enter
 #include "atom/system/env.hpp"
 #include "atom/system/process.hpp"
 #include "atom/utils/time.hpp"
+
+#include "utils/constant.hpp"
 #include "utils/marco.hpp"
 
 using json = nlohmann::json;
@@ -150,13 +154,9 @@ auto LithiumApp::createShared() -> std::shared_ptr<LithiumApp> {
     return std::make_shared<LithiumApp>();
 }
 
-auto LithiumApp::initialize() -> bool {
-    return true;
-}
+auto LithiumApp::initialize() -> bool { return true; }
 
-auto LithiumApp::destroy() -> bool {
-    return true;
-}
+auto LithiumApp::destroy() -> bool { return true; }
 
 auto LithiumApp::getComponentManager() -> std::weak_ptr<ComponentManager> {
     return m_component_manager_;
@@ -255,22 +255,22 @@ void LithiumApp::queueEvent(const std::string &eventName,
     m_task_interpreter_.lock()->queueEvent(eventName, eventData);
 }
 
- auto LithiumApp::getValue(const std::string& key_path) const
-        -> std::optional<nlohmann::json> {
-            
-        }
-    auto LithiumApp::setValue(const std::string& key_path,
-                  const nlohmann::json& value) -> bool;
+auto LithiumApp::getValue(const std::string &key_path) const
+    -> std::optional<nlohmann::json> {}
+auto LithiumApp::setValue(const std::string &key_path,
+                          const nlohmann::json &value) -> bool {}
 
-    auto LithiumApp::appendValue(const std::string& key_path, const nlohmann::json& value) -> bool;
-    auto LithiumApp::deleteValue(const std::string& key_path) -> bool;
-     auto LithiumApp::hasValue(const std::string& key_path) const -> bool;
-    auto LithiumApp::loadFromFile(const fs::path& path) -> bool;
-    auto LithiumApp::loadFromDir(const fs::path& dir_path, bool recursive = false) -> bool;
-     auto LithiumApp::saveToFile(const fs::path& file_path) const -> bool;
-    void LithiumApp::tidyConfig();
-    void LithiumApp::clearConfig();
-    void LithiumApp::mergeConfig(const nlohmann::json& src);
+auto LithiumApp::appendValue(const std::string &key_path,
+                             const nlohmann::json &value) -> bool {}
+auto LithiumApp::deleteValue(const std::string &key_path) -> bool {}
+auto LithiumApp::hasValue(const std::string &key_path) const -> bool {}
+auto LithiumApp::loadFromFile(const fs::path &path) -> bool {}
+auto LithiumApp::loadFromDir(const fs::path &dir_path,
+                             bool recursive) -> bool {}
+auto LithiumApp::saveToFile(const fs::path &file_path) const -> bool {}
+void LithiumApp::tidyConfig() {}
+void LithiumApp::clearConfig() {}
+void LithiumApp::mergeConfig(const nlohmann::json &src) {}
 
 void initLithiumApp(int argc, char **argv) {
     LOG_F(INFO, "Init Lithium App");
@@ -288,6 +288,9 @@ void initLithiumApp(int argc, char **argv) {
     // AddPtr("TaskStack", std::make_shared<Task::TaskStack>());
     // AddPtr("ScriptManager",
     // ScriptManager::createShared(GetPtr<MessageBus>("MessageBus")));
+
+    AddPtr(constants::LITHIUM_DEVICE_MANAGER, DeviceManager::createShared());
+    AddPtr(constants::LITHIUM_DEVICE_LOADER, ModuleLoader::createShared("./drivers"));
 
     AddPtr("lithium.error.stack", std::make_shared<atom::error::ErrorStack>());
 

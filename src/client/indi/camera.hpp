@@ -8,6 +8,8 @@
 #include <optional>
 #include <string>
 
+#include "device/template/camera.hpp"
+
 enum class ImageFormat { FITS, NATIVE, XISF, NONE };
 
 enum class CameraState {
@@ -20,39 +22,46 @@ enum class CameraState {
     UNKNOWN
 };
 
-class INDICamera : public INDI::BaseClient {
+class INDICamera : public INDI::BaseClient, public AtomCamera {
 public:
     explicit INDICamera(std::string name);
     ~INDICamera() override = default;
 
-    auto connect(const std::string &deviceName) -> bool;
-    auto disconnect() -> void;
-    auto reconnect() -> bool;
+    auto connect(const std::string &deviceName, int timeout,
+                 int maxRetry) -> bool override;
 
-    virtual auto watchAdditionalProperty() -> bool;
+    auto disconnect(bool force, int timeout, int maxRetry) -> bool override;
+
+    auto reconnect(int timeout, int maxRetry) -> bool override;
+
+    auto scan() -> std::vector<std::string> override;
+
+    auto isConnected() -> bool override;
+
+    auto watchAdditionalProperty() -> bool;
 
     void setPropertyNumber(std::string_view propertyName, double value);
 
-    auto startExposure(double exposure) -> bool;
-    auto abortExposure() -> bool;
+    auto startExposure(const double &exposure) -> bool override;
+    auto abortExposure() -> bool override;
 
-    auto startCooling() -> bool;
-    auto stopCooling() -> bool;
+    auto startCooling() -> bool override;
+    auto stopCooling() -> bool override;
 
-    auto setTemperature(double value) -> bool;
-    auto getTemperature() -> std::optional<double>;
+    auto setTemperature(const double &value) -> bool override;
+    auto getTemperature() -> std::optional<double> override;
 
     auto getCameraFrameInfo() -> std::optional<std::tuple<int, int, int, int>>;
     auto setCameraFrameInfo(int x, int y, int width, int height) -> bool;
     auto resetCameraFrameInfo() -> bool;
 
-    auto getGain() -> std::optional<double>;
-    auto setGain(double value) -> bool;
-    auto getOffset() -> std::optional<double>;
-    auto setOffset(double value) -> bool;
+    auto getGain() -> std::optional<double> override;
+    auto setGain(const int &value) -> bool override;
+    auto getOffset() -> std::optional<double> override;
+    auto setOffset(const int &value) -> bool override;
 
-    auto setBinning(int binx, int biny) -> bool;
-    auto getBinning() -> std::optional<std::tuple<int, int, int, int>>;
+    auto setBinning(const int &hor, const int &ver) -> bool override;
+    auto getBinning() -> std::optional<std::tuple<int, int, int, int>> override;
 
     auto getDeviceInstance() -> INDI::BaseDevice &;
 

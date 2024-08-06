@@ -10,9 +10,14 @@
 #define ATOM_META_TYPE_CASTER_HPP
 
 #include <any>
+#include <concepts>
 #include <functional>
+#include <memory>
 #include <queue>
+#include <stdexcept>
 #include <typeinfo>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #if ENABLE_FASTHASH
@@ -27,6 +32,7 @@
 #include "type_info.hpp"
 
 namespace atom::meta {
+
 class TypeCaster {
 public:
     using ConvertFunc = std::function<std::any(const std::any&)>;
@@ -34,7 +40,7 @@ public:
 
     TypeCaster() { registerBuiltinTypes(); }
 
-    static std::shared_ptr<TypeCaster> createShared() {
+    static auto createShared() -> std::shared_ptr<TypeCaster> {
         return std::make_shared<TypeCaster>();
     }
 
@@ -49,8 +55,7 @@ public:
                 "Source and destination types must be different.");
         }
         conversions_[srcInfo][destInfo] = std::move(func);
-        clearCache();  // Clear cache because new conversion might affect
-                       // existing paths
+        clearCache();
     }
 
     template <typename SourceType, typename DestinationType>
@@ -58,6 +63,11 @@ public:
         auto srcInfo = userType<SourceType>();
         auto destInfo = userType<DestinationType>();
         return hasConversion(srcInfo, destInfo);
+    }
+
+    auto hasConversion(TypeInfo src, TypeInfo dst) const -> bool {
+        return conversions_.find(src) != conversions_.end() &&
+               conversions_.at(src).find(dst) != conversions_.at(src).end();
     }
 
     auto convert(const std::vector<std::any>& input,
@@ -120,20 +130,12 @@ private:
         registerType<std::string>("std::string");
     }
 
-    auto hasConversion(TypeInfo src, TypeInfo dst) const -> bool {
-        return conversions_.find(src) != conversions_.end() &&
-               conversions_.at(src).find(dst) != conversions_.at(src).end();
-    }
-
-    // Helper to generate a unique key for caching purposes
     static auto makeCacheKey(TypeInfo src, TypeInfo dst) -> std::string {
         return src.bareName() + "->" + dst.bareName();
     }
 
-    // Clears cached paths
     void clearCache() { conversion_paths_cache_.clear(); }
 
-    // Helper function to find conversion path
     auto findConversionPath(TypeInfo src,
                             TypeInfo dst) const -> std::vector<TypeInfo> {
         std::string cacheKey = makeCacheKey(src, dst);
@@ -178,10 +180,20 @@ private:
         if (findIt != type_name_map_.end()) {
             return findIt->second;
         }
-        THROW_RUNTIME_ERROR("Unknown type name: " + name);
+        THROW_INVALID_ARGUMENT("Unknown type name: " + name);
+    }
+
+    static auto getTypeInfo(const std::string& name)
+        -> std::optional<TypeInfo> {
+        auto& registry = detail::getTypeRegistry();
+        auto it = registry.find(name);
+        if (it != registry.end()) {
+            return it->second;
+        }
+        return std::nullopt;
     }
 };
 
 }  // namespace atom::meta
 
-#endif
+#endif  // ATOM_META_TYPE_CASTER_HPP

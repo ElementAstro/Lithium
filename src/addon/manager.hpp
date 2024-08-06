@@ -57,6 +57,7 @@ public:
     auto getComponentInfo(const std::string& component_name)
         -> std::optional<json>;
     auto getComponentList() -> std::vector<std::string>;
+    auto hasComponent(const std::string& component_name) -> bool;
 
 private:
     auto getFilesInDir(const std::string& path) -> std::vector<std::string>;

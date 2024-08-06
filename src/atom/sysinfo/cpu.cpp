@@ -13,6 +13,7 @@ Description: System Information Module - CPU
 **************************************************/
 
 #include "atom/sysinfo/cpu.hpp"
+#include "os.hpp"
 
 #include <cstdlib>
 #include <fstream>
@@ -170,14 +171,20 @@ auto getCurrentCpuTemperature() -> float {
         pclose(pipe);
     }
 #elif defined(__linux__)
-    std::ifstream tempFile("/sys/class/thermal/thermal_zone0/temp");
-    if (tempFile.is_open()) {
-        int temp = 0;
-        tempFile >> temp;
-        tempFile.close();
-        temperature = static_cast<float>(temp) / 1000.0F;
+    if (isWsl()) {
+        LOG_F(WARNING, "GetCpuTemperature error: WSL not supported");
     } else {
-        LOG_F(ERROR, "GetMemoryUsage error: open /proc/meminfo error");
+        std::ifstream tempFile("/sys/class/thermal/thermal_zone0/temp");
+        if (tempFile.is_open()) {
+            int temp = 0;
+            tempFile >> temp;
+            tempFile.close();
+            temperature = static_cast<float>(temp) / 1000.0F;
+        } else {
+            LOG_F(ERROR,
+                  "GetCpuTemperature error: open "
+                  "/sys/class/thermal/thermal_zone0/temp error");
+        }
     }
 #elif defined(__ANDROID__)
     // Android 实现

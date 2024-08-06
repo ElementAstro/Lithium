@@ -96,13 +96,24 @@ auto main(int argc, char *argv[]) -> int {
     atom::utils::ArgumentParser program("Lithium Server"s);
 
     // NOTE: The command arguments' priority is higher than the config file
-    program.addArgument("port", atom::utils::ArgumentParser::ArgType::INTEGER, false, 8000, "Port of the server", {"p"});
-    program.addArgument("host", atom::utils::ArgumentParser::ArgType::STRING, false, "0.0.0.0", "Host of the server", {"h"});
-    program.addArgument("config", atom::utils::ArgumentParser::ArgType::STRING, false, "config.json", "Path to the config file", {"c"});
-    program.addArgument("module-path", atom::utils::ArgumentParser::ArgType::STRING, false, "modules", "Path to the modules directory", {"m"});
-    program.addArgument("web-panel", atom::utils::ArgumentParser::ArgType::BOOLEAN, false, true, "Enable web panel", {"w"});
-    program.addArgument("debug", atom::utils::ArgumentParser::ArgType::BOOLEAN, false, false, "Enable debug mode", {"d"});
-    program.addArgument("log-file", atom::utils::ArgumentParser::ArgType::STRING, false, "", "Path to the log file", {"l"});
+    program.addArgument("port", atom::utils::ArgumentParser::ArgType::INTEGER,
+                        false, 8000, "Port of the server", {"p"});
+    program.addArgument("host", atom::utils::ArgumentParser::ArgType::STRING,
+                        false, "0.0.0.0"s, "Host of the server", {"h"});
+    program.addArgument("config", atom::utils::ArgumentParser::ArgType::STRING,
+                        false, "config.json"s, "Path to the config file",
+                        {"c"});
+    program.addArgument("module-path",
+                        atom::utils::ArgumentParser::ArgType::STRING, false,
+                        "modules"s, "Path to the modules directory", {"m"});
+    program.addArgument("web-panel",
+                        atom::utils::ArgumentParser::ArgType::BOOLEAN, false,
+                        true, "Enable web panel", {"w"});
+    program.addArgument("debug", atom::utils::ArgumentParser::ArgType::BOOLEAN,
+                        false, false, "Enable debug mode", {"d"});
+    program.addArgument("log-file",
+                        atom::utils::ArgumentParser::ArgType::STRING, false,
+                        ""s, "Path to the log file", {"l"});
 
     program.addDescription("Lithium Command Line Interface:");
     program.addEpilog("End.");
@@ -179,6 +190,7 @@ auto main(int argc, char *argv[]) -> int {
     }
 
     ConsoleTerminal terminal;
+    globalConsoleTerminal = &terminal;
     terminal.run();
     lithium::runServer({argc, const_cast<const char **>(argv)});
 

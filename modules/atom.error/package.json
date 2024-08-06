@@ -1,0 +1,34 @@
+{
+    "name": "atom.error",
+    "version": "1.0.0",
+    "type": "shared",
+    "description": "Atom Error Module",
+    "license": "GPL-3.0-or-later",
+    "author": "Max Qian",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "bugs": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium/issues"
+    },
+    "homepage": {
+        "type": "git",
+        "url": "https://github.com/ElementAstro/Lithium"
+    },
+    "keywords": [
+        "lithium",
+        "config"
+    ],
+    "scripts": {
+        "build": "cmake --build-type=Release -- -j 4",
+        "lint": "clang-format -i src/*.cpp src/*.h"
+    },
+    "modules": [
+        {
+            "name": "error",
+            "entry": "getInstance"
+        }
+    ]
+}

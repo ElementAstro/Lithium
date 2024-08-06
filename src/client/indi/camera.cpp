@@ -1,30 +1,38 @@
-// tutorial_client_base.cpp - 基类实现
-
 #include "camera.hpp"
-#include <libindi/abstractbaseclient.h>
-#include <libindi/basedevice.h>
-#include <libindi/indipropertynumber.h>
-#include <libindi/indipropertyswitch.h>
 
 #include <fstream>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
 
+#include "atom/components/module_macro.hpp"
+#include "atom/components/registry.hpp"
+#include "atom/error/exception.hpp"
 #include "atom/log/loguru.hpp"
+#include "components/component.hpp"
+#include "device/template/camera.hpp"
+#include "function/conversion.hpp"
+#include "function/type_info.hpp"
+#include "macro.hpp"
 
-INDICamera::INDICamera(std::string deviceName) : name_(std::move(deviceName)) {}
+INDICamera::INDICamera(std::string deviceName)
+    : AtomCamera(name_), name_(std::move(deviceName)) {}
 
 auto INDICamera::getDeviceInstance() -> INDI::BaseDevice & {
     if (!isConnected_.load()) {
         LOG_F(ERROR, "{} is not connected.", deviceName_);
-        throw std::runtime_error("Device is not connected.");
+        THROW_NOT_FOUND("Device is not connected.");
     }
     return device_;
 }
 
-auto INDICamera::connect(const std::string &deviceName) -> bool {
+auto INDICamera::connect(const std::string &deviceName, int timeout,
+                         int maxRetry) -> bool {
+    ATOM_UNREF_PARAM(timeout);
+    ATOM_UNREF_PARAM(maxRetry);
     if (isConnected_.load()) {
         LOG_F(ERROR, "{} is already connected.", deviceName_);
         return false;
@@ -321,17 +329,23 @@ auto INDICamera::connect(const std::string &deviceName) -> bool {
     return true;
 }
 
-auto INDICamera::disconnect() -> void {
+auto INDICamera::disconnect(bool force, int timeout, int maxRetry) -> bool {
+    ATOM_UNREF_PARAM(force);
+    ATOM_UNREF_PARAM(timeout);
+    ATOM_UNREF_PARAM(maxRetry);
     if (!isConnected_.load()) {
         LOG_F(ERROR, "{} is not connected.", deviceName_);
-        return;
+        return false;
     }
     LOG_F(INFO, "Disconnecting from {}...", deviceName_);
     disconnectDevice(name_.c_str());
     LOG_F(INFO, "{} is disconnected.", deviceName_);
+    return true;
 }
 
-auto INDICamera::reconnect() -> bool {
+auto INDICamera::reconnect(int timeout, int maxRetry) -> bool {
+    ATOM_UNREF_PARAM(timeout);
+    ATOM_UNREF_PARAM(maxRetry);
     if (isConnected_.load()) {
         LOG_F(ERROR, "{} is already connected.", deviceName_);
         return false;
@@ -341,6 +355,18 @@ auto INDICamera::reconnect() -> bool {
     LOG_F(INFO, "{} is reconnected.", deviceName_);
     return true;
 }
+
+auto INDICamera::scan() -> std::vector<std::string> {
+    std::vector<std::string> devices;
+    auto devices_ = getDevices();
+    devices.reserve(devices_.size());
+    for (auto &device : devices_) {
+        devices.emplace_back(device.getDeviceName());
+    }
+    return devices;
+}
+
+auto INDICamera::isConnected() -> bool { return isConnected_.load(); }
 
 auto INDICamera::watchAdditionalProperty() -> bool { return true; }
 
@@ -358,11 +384,12 @@ void INDICamera::setPropertyNumber(std::string_view propertyName,
 
 void INDICamera::newMessage(INDI::BaseDevice baseDevice, int messageID) {
     // Handle incoming messages from devices
+    LOG_F(INFO, "New message from {}.{}", baseDevice.getDeviceName(),
+          messageID);
 }
 
-auto INDICamera::startExposure(double exposure) -> bool {
-    INDI::PropertyNumber exposureProperty =
-        device_.getProperty("CCD_EXPOSURE");
+auto INDICamera::startExposure(const double &exposure) -> bool {
+    INDI::PropertyNumber exposureProperty = device_.getProperty("CCD_EXPOSURE");
     if (!exposureProperty.isValid()) {
         LOG_F(ERROR, "Error: unable to find CCD_EXPOSURE property...");
         return false;
@@ -415,7 +442,7 @@ auto INDICamera::getTemperature() -> std::optional<double> {
     return currentTemperature_;
 }
 
-auto INDICamera::setTemperature(double value) -> bool {
+auto INDICamera::setTemperature(const double &value) -> bool {
     if (!isConnected_.load()) {
         LOG_F(ERROR, "{} is not connected.", deviceName_);
         return false;
@@ -502,7 +529,7 @@ auto INDICamera::getGain() -> std::optional<double> {
     return currentGain_;
 }
 
-auto INDICamera::setGain(double value) -> bool {
+auto INDICamera::setGain(const int &value) -> bool {
     INDI::PropertyNumber ccdGain = device_.getProperty("CCD_GAIN");
 
     if (!ccdGain.isValid()) {
@@ -529,7 +556,7 @@ auto INDICamera::getOffset() -> std::optional<double> {
     return currentOffset_;
 }
 
-auto INDICamera::setOffset(double value) -> bool {
+auto INDICamera::setOffset(const int &value) -> bool {
     INDI::PropertyNumber ccdOffset = device_.getProperty("CCD_OFFSET");
 
     if (!ccdOffset.isValid()) {
@@ -558,21 +585,75 @@ auto INDICamera::getBinning() -> std::optional<std::tuple<int, int, int, int>> {
     return std::make_tuple(binHor_, binVer_, maxBinHor_, maxBinVer_);
 }
 
-auto INDICamera::setBinning(int binx, int biny) -> bool {
+auto INDICamera::setBinning(const int &hor, const int &ver) -> bool {
     INDI::PropertyNumber ccdBinning = device_.getProperty("CCD_BINNING");
 
     if (!ccdBinning.isValid()) {
         LOG_F(ERROR, "Error: unable to find CCD_BINNING property...");
         return false;
     }
-    if (binx > maxBinHor_ || biny > maxBinVer_) {
+    if (hor > maxBinHor_ || ver > maxBinVer_) {
         LOG_F(ERROR, "Error: binning value is out of range...");
         return false;
     }
 
-    ccdBinning[0].setValue(binx);
-    ccdBinning[1].setValue(biny);
+    ccdBinning[0].setValue(hor);
+    ccdBinning[1].setValue(ver);
     sendNewProperty(ccdBinning);
-    LOG_F(INFO, "setCCDBinnign: {}, {}", binx, biny);
+    LOG_F(INFO, "setCCDBinnign: {}, {}", hor, ver);
     return true;
 }
+
+ATOM_MODULE(indi_camera, [](Component &component) {
+    LOG_F(INFO, "Registering indi_camera module...");
+    component.def("connect", &INDICamera::connect, "device",
+                  "Connect to a camera device.");
+    component.def("disconnect", &INDICamera::disconnect, "device",
+                  "Disconnect from a camera device.");
+    component.def("reconnect", &INDICamera::reconnect, "device",
+                  "Reconnect to a camera device.");
+    component.def("scan", &INDICamera::scan, "Scan for camera devices.");
+    component.def("is_connected", &INDICamera::isConnected,
+                  "Check if a camera device is connected.");
+    component.def("start_exposure", &INDICamera::startExposure, "device",
+                  "Start exposure.");
+    component.def("abort_exposure", &INDICamera::abortExposure, "device",
+                  "Stop exposure.");
+    component.def("start_cooling", &INDICamera::startCooling, "device",
+                  "Start cooling.");
+    component.def("stop_cooling", &INDICamera::stopCooling, "device",
+                  "Stop cooling.");
+    component.def("get_temperature", &INDICamera::getTemperature,
+                  "Get the current temperature of a camera device.");
+    component.def("set_temperature", &INDICamera::setTemperature,
+                  "Set the temperature of a camera device.");
+    component.def("get_gain", &INDICamera::getGain,
+                  "Get the current gain of a camera device.");
+    component.def("set_gain", &INDICamera::setGain,
+                  "Set the gain of a camera device.");
+    component.def("get_offset", &INDICamera::getOffset,
+                  "Get the current offset of a camera device.");
+    component.def("set_offset", &INDICamera::setOffset,
+                  "Set the offset of a camera device.");
+    component.def("get_binning", &INDICamera::getBinning,
+                  "Get the current binning of a camera device.");
+    component.def("set_binning", &INDICamera::setBinning,
+                  "Set the binning of a camera device.");
+    component.def("get_frame_type", &INDICamera::getFrameType, "device",
+                  "Get the current frame type of a camera device.");
+    component.def("set_frame_type", &INDICamera::setFrameType, "device",
+                  "Set the frame type of a camera device.");
+
+    component.def(
+        "create_instance",
+        [](const std::string &name) {
+            std::shared_ptr<AtomCamera> instance =
+                std::make_shared<INDICamera>(name);
+            return instance;
+        },
+        "device", "Create a new camera instance.");
+    component.defType<INDICamera>("indi_camera", "device",
+                                  "Define a new camera instance.");
+
+    LOG_F(INFO, "Registered indi_camera module.");
+});

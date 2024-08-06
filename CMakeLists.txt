@@ -76,6 +76,7 @@ find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(fmt REQUIRED)
+find_package(Readline REQUIRED)
 
 # Install Python dependencies
 cmake_policy(SET CMP0140 NEW)
@@ -215,6 +216,7 @@ add_subdirectory(${lithium_src_dir}/server)
 add_subdirectory(${lithium_src_dir}/utils)
 add_subdirectory(${lithium_src_dir}/addon)
 add_subdirectory(${lithium_src_dir}/client)
+add_subdirectory(${lithium_src_dir}/device)
 add_subdirectory(tests)
 
 # Set source files
@@ -242,6 +244,13 @@ set(debug_module
     ${lithium_src_dir}/debug/check.cpp
 )
 
+set(device_module
+    ${lithium_src_dir}/device/manager.cpp
+
+    ${lithium_src_dir}/device/template/device.cpp
+    ${lithium_src_dir}/device/template/camera.cpp
+)
+
 set(script_module
     ${lithium_src_dir}/script/manager.cpp
     ${lithium_src_dir}/script/sheller.cpp
@@ -257,6 +266,7 @@ add_library(lithium_server-library STATIC
     ${component_module}
     ${config_module}
     ${debug_module}
+    ${device_module}
     ${script_module}
     ${Lithium_module}
 )
@@ -292,6 +302,7 @@ target_link_libraries(lithium_server
         cpp_httplib
         tinyxml2
         pocketpy
+        ${Readline_LIBRARIES}
 )
 
 if(WIN32)
@@ -308,6 +319,11 @@ if(WIN32)
     )
 elseif(UNIX OR LINUX OR APPLE)
     target_link_libraries(lithium_server PRIVATE dl)
+    find_package(Seccomp REQUIRED)
+    if(Seccomp_FOUND)
+        include_directories(${Seccomp_INCLUDE_DIRS})
+        target_link_libraries(lithium_server PRIVATE ${Seccomp_LIBRARIES})
+    endif()
 else()
     message(FATAL_ERROR "Unsupported platform")
 endif()

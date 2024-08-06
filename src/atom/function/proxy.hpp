@@ -69,8 +69,19 @@ auto anyCastVal(const std::any &operand) -> T {
 }
 
 template <typename T>
+auto anyCastConstRef(const std::any &operand) -> const T & {
+    // Max: 有的时候大道至简
+    // return *std::any_cast<std::remove_reference_t<std::remove_const_t<T>> *>(
+    //    &const_cast<std::any &>(operand));
+    return std::any_cast<T>(operand);
+}
+
+template <typename T>
 auto anyCastHelper(std::any &operand) -> decltype(auto) {
-    if constexpr (std::is_reference_v<T>) {
+    if constexpr (std::is_reference_v<T> &&
+                  std::is_const_v<std::remove_reference_t<T>>) {
+        return anyCastConstRef<T>(operand);
+    } else if constexpr (std::is_reference_v<T>) {
         return anyCastRef<T>(operand);
     } else {
         return anyCastVal<T>(operand);
@@ -79,7 +90,10 @@ auto anyCastHelper(std::any &operand) -> decltype(auto) {
 
 template <typename T>
 auto anyCastHelper(const std::any &operand) -> decltype(auto) {
-    if constexpr (std::is_reference_v<T>) {
+    if constexpr (std::is_reference_v<T> &&
+                  std::is_const_v<std::remove_reference_t<T>>) {
+        return anyCastConstRef<T>(operand);
+    } else if constexpr (std::is_reference_v<T>) {
         return anyCastRef<T>(operand);
     } else {
         return anyCastVal<T>(operand);
@@ -87,51 +101,23 @@ auto anyCastHelper(const std::any &operand) -> decltype(auto) {
 }
 
 template <typename Func>
-class ProxyFunction {
+class BaseProxyFunction {
+protected:
     std::decay_t<Func> func_;
 
     using Traits = FunctionTraits<Func>;
     static constexpr std::size_t N = Traits::arity;
+    FunctionInfo info_;
 
 public:
-    explicit ProxyFunction(Func &&func) : func_(std::move(func)) {
+    explicit BaseProxyFunction(Func &&func) : func_(std::move(func)) {
         collectFunctionInfo();
         calcFuncInfoHash();
     }
 
-    auto operator()(const std::vector<std::any> &args) -> std::any {
-        logArgumentTypes();
-        if constexpr (Traits::is_member_function) {
-            if (args.size() != N + 1) {
-                THROW_EXCEPTION("Incorrect number of arguments");
-            }
-            return callMemberFunction(args, std::make_index_sequence<N>());
-        } else {
-            if (args.size() != N) {
-                THROW_EXCEPTION("Incorrect number of arguments");
-            }
-            return callFunction(args, std::make_index_sequence<N>());
-        }
-    }
-
-    auto operator()(const FunctionParams &params) -> std::any {
-        logArgumentTypes();
-        if constexpr (Traits::is_member_function) {
-            if (params.size() != N + 1) {
-                THROW_EXCEPTION("Incorrect number of arguments");
-            }
-            return callMemberFunction(params.toVector());
-        } else {
-            if (params.size() != N) {
-                THROW_EXCEPTION("Incorrect number of arguments");
-            }
-            return callFunction(params.toVector());
-        }
-    }
-
     [[nodiscard]] auto getFunctionInfo() const -> FunctionInfo { return info_; }
 
-private:
+protected:
     void collectFunctionInfo() {
         // Collect return type information
         info_.returnType =
@@ -142,7 +128,7 @@ private:
     }
 
     template <std::size_t... Is>
-    void collectArgumentTypes(std::index_sequence<Is...>) {
+    void collectArgumentTypes(std::index_sequence<Is...> /*unused*/) {
         (info_.argumentTypes.push_back(
              DemangleHelper::demangleType<
                  typename Traits::template argument_t<Is>>()),
@@ -157,18 +143,16 @@ private:
         }
     }
 
-    FunctionInfo info_;
-
     void logArgumentTypes() const {
 #if ENABLE_DEBUG
         std::cout << "Function Arity: " << N << "\n";
-        info.logFunctionInfo();
+        info_.logFunctionInfo();
 #endif
     }
 
     template <std::size_t... Is>
     auto callFunction(const std::vector<std::any> &args,
-                      std::index_sequence<Is...>) -> std::any {
+                      std::index_sequence<Is...> /*unused*/) -> std::any {
         if constexpr (std::is_void_v<typename Traits::return_type>) {
             std::invoke(func_,
                         anyCastHelper<typename Traits::template argument_t<Is>>(
@@ -193,7 +177,7 @@ private:
 
     template <std::size_t... Is>
     auto callMemberFunction(const std::vector<std::any> &args,
-                            std::index_sequence<Is...>) -> std::any {
+                            std::index_sequence<Is...> /*unused*/) -> std::any {
         auto invokeFunc = [this](auto &obj, auto &&...args) {
             if constexpr (Traits::is_const_member_function) {
                 if constexpr (std::is_void_v<typename Traits::return_type>) {
@@ -234,75 +218,94 @@ private:
 };
 
 template <typename Func>
-class TimerProxyFunction {
-    std::decay_t<Func> func_;
-    using Traits = FunctionTraits<Func>;
-    static constexpr std::size_t N = Traits::arity;
+class ProxyFunction : public BaseProxyFunction<Func> {
+    using Base = BaseProxyFunction<Func>;
+    using Traits = typename Base::Traits;
+    static constexpr std::size_t N = Base::N;
 
 public:
-    explicit TimerProxyFunction(Func &&func) : func_(std::move(func)) {}
+    explicit ProxyFunction(Func &&func) : Base(std::move(func)) {}
+
+    auto operator()(const std::vector<std::any> &args) -> std::any {
+        this->logArgumentTypes();
+        if constexpr (Traits::is_member_function) {
+            if (args.size() != N + 1) {
+                THROW_EXCEPTION("Incorrect number of arguments");
+            }
+            return this->callMemberFunction(args,
+                                            std::make_index_sequence<N>());
+        } else {
+#if ENABLE_DEBUG
+            std::cout << "Function Arity: " << N << "\n";
+            std::cout << "Arguments size: " << args.size() << "\n";
+#endif
+            if (args.size() != N) {
+                THROW_EXCEPTION("Incorrect number of arguments");
+            }
+            return this->callFunction(args, std::make_index_sequence<N>());
+        }
+    }
+
+    auto operator()(const FunctionParams &params) -> std::any {
+        this->logArgumentTypes();
+        if constexpr (Traits::is_member_function) {
+            if (params.size() != N + 1) {
+                THROW_EXCEPTION("Incorrect number of arguments");
+            }
+            return this->callMemberFunction(params.toVector());
+        } else {
+            if (params.size() != N) {
+                THROW_EXCEPTION("Incorrect number of arguments");
+            }
+            return this->callFunction(params.toVector());
+        }
+    }
+};
+
+template <typename Func>
+class TimerProxyFunction : public BaseProxyFunction<Func> {
+    using Base = BaseProxyFunction<Func>;
+    using Traits = typename Base::Traits;
+    static constexpr std::size_t N = Base::N;
+
+public:
+    explicit TimerProxyFunction(Func &&func) : Base(std::move(func)) {}
 
     auto operator()(const std::vector<std::any> &args,
                     std::chrono::milliseconds timeout) -> std::any {
-        logArgumentTypes();
+        this->logArgumentTypes();
         if constexpr (Traits::is_member_function) {
             if (args.size() != N + 1) {
                 THROW_EXCEPTION(
                     "Incorrect number of arguments for member function");
             }
-            return callMemberFunctionWithTimeout(args, timeout,
-                                                 std::make_index_sequence<N>());
+            return this->callMemberFunctionWithTimeout(
+                args, timeout, std::make_index_sequence<N>());
         } else {
             if (args.size() != N) {
                 THROW_EXCEPTION(
                     "Incorrect number of arguments for non-member function");
             }
-            return callFunctionWithTimeout(args, timeout,
-                                           std::make_index_sequence<N>());
+            return this->callFunctionWithTimeout(args, timeout,
+                                                 std::make_index_sequence<N>());
         }
     }
 
 private:
-    FunctionInfo info_;
-
-    void collectFunctionInfo() {
-        // Collect return type information
-        info_.returnType =
-            DemangleHelper::demangleType<typename Traits::return_type>();
-
-        // Collect argument types information
-        collectArgumentTypes(std::make_index_sequence<N>{});
-    }
-
     template <std::size_t... Is>
-    void collectArgumentTypes(std::index_sequence<Is...>) {
-        (info_.argumentTypes.push_back(
-             DemangleHelper::demangleType<
-                 typename Traits::template argument_t<Is>>()),
-         ...);
-    }
-
-    void logArgumentTypes() const {
-#if ENABLE_DEBUG
-        std::cout << "Function Arity: " << N << "\n";
-        info.logFunctionInfo();
-#endif
-    }
-
-    template <std::size_t... Is>
-    auto callFunctionWithTimeout(const std::vector<std::any> &args,
-                                 std::chrono::milliseconds timeout,
-                                 std::index_sequence<Is...>) -> std::any {
+    auto callFunctionWithTimeout(
+        const std::vector<std::any> &args, std::chrono::milliseconds timeout,
+        std::index_sequence<Is...> /*unused*/) -> std::any {
         auto task = [this, &args]() -> std::any {
             if constexpr (std::is_void_v<typename Traits::return_type>) {
                 std::invoke(
-                    func_,
+                    this->func_,
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is])...);
                 return {};
             } else {
                 return std::make_any<typename Traits::return_type>(std::invoke(
-                    func_,
+                    this->func_,
                     std::any_cast<typename Traits::template argument_t<Is>>(
                         args[Is])...));
             }
@@ -312,16 +315,17 @@ private:
     }
 
     template <std::size_t... Is>
-    auto callMemberFunctionWithTimeout(const std::vector<std::any> &args,
-                                       std::chrono::milliseconds timeout,
-                                       std::index_sequence<Is...>) -> std::any {
+    auto callMemberFunctionWithTimeout(
+        const std::vector<std::any> &args, std::chrono::milliseconds timeout,
+        std::index_sequence<Is...> /*unused*/) -> std::any {
         auto task = [this, &args]() -> std::any {
             auto &obj =
                 std::any_cast<
                     std::reference_wrapper<typename Traits::class_type>>(
                     args[0])
                     .get();
-            auto boundFunc = std::bind_front(func_, obj, std::placeholders::_1);
+            auto boundFunc =
+                std::bind_front(this->func_, obj, std::placeholders::_1);
 
             if constexpr (std::is_void_v<typename Traits::return_type>) {
                 std::invoke(
@@ -348,7 +352,7 @@ private:
 #if __cplusplus >= 201703L
         std::jthread taskThread(std::move(packagedTask));
 #else
-        std::thread taskThread(std::move(packaged_task));
+        std::thread taskThread(std::move(packagedTask));
 #endif
         if (future.wait_for(timeout) == std::future_status::timeout) {
             taskThread.detach();  // Detach the thread on timeout

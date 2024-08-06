@@ -6,6 +6,7 @@
 #include "atom/system/user.hpp"
 #include "atom/type/json.hpp"
 
+#include "components/registry.hpp"
 #include "system/process.hpp"
 #include "utils/constant.hpp"
 
@@ -128,6 +129,13 @@ void getComponentList() {
     auto list = manager.lock()->getComponentList();
     std::cout << "Component list:" << std::endl;
     for (auto &component : list) {
+        std::cout << component << std::endl;
+    }
+}
+
+void getEmbedComponentList() {
+    std::cout << "Component list:" << std::endl;
+    for (auto &component : Registry::instance().getAllComponentNames()) {
         std::cout << component << std::endl;
     }
 }

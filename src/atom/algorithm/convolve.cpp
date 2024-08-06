@@ -16,23 +16,17 @@ and deconvolution.
 #include "convolve.hpp"
 
 #include <algorithm>
+#include <complex>
 #include <cstddef>
+#include <numbers>
+#include <ranges>
+#include <stdexcept>
 #include <thread>
+#include <vector>
 
 #include "atom/error/exception.hpp"
 
 namespace atom::algorithm {
-#include <algorithm>
-#include <complex>
-#include <execution>
-#include <future>
-#include <jthread>
-#include <numbers>
-#include <numeric>
-#include <ranges>
-#include <stdexcept>
-#include <vector>
-
 // Function to convolve a 1D input with a kernel
 auto convolve(const std::vector<double> &input,
               const std::vector<double> &kernel) -> std::vector<double> {
@@ -58,8 +52,7 @@ auto deconvolve(const std::vector<double> &input,
     auto inputSize = input.size();
     auto kernelSize = kernel.size();
     if (kernelSize > inputSize) {
-        throw std::invalid_argument(
-            "Kernel size cannot be larger than input size.");
+        THROW_INVALID_ARGUMENT("Kernel size cannot be larger than input size.");
     }
 
     auto outputSize = inputSize - kernelSize + 1;

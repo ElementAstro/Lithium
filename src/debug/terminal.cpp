@@ -27,6 +27,11 @@
 #include "atom/log/loguru.hpp"
 #include "atom/utils/string.hpp"
 
+#if __has_include(<readline/readline.h>)
+#include <readline/history.h>
+#include <readline/readline.h>
+#endif
+
 namespace lithium::debug {
 ConsoleTerminal::ConsoleTerminal()
     : commandChecker_(std::make_shared<CommandChecker>()),
@@ -56,11 +61,18 @@ ConsoleTerminal::ConsoleTerminal()
                     "Show all components");
     component_->def("show_component_info", &getComponentInfo, "component",
                     "Show component info");
+
+    component_->def("get_embed_component_list", &getEmbedComponentList,
+                    "component", "Show embed component list");
     std::vector<std::string> keywords;
     for (const auto& name : getRegisteredCommands()) {
         keywords.emplace_back(name);
     }
     suggestionEngine_ = std::make_shared<SuggestionEngine>(std::move(keywords));
+
+#if __has_include(<readline/readline.h>)
+    rl_attempted_completion_function = commandCompletion;
+#endif
 }
 
 ConsoleTerminal::~ConsoleTerminal() {
@@ -138,6 +150,11 @@ void ConsoleTerminal::run() {
             continue;
         }
         auto args = parseArguments(argsStr);
+        if (!args.empty()) {
+            for (auto& arg : args) {
+                std::cout << "arg: " << arg.type().name() << '\n';
+            }
+        }
         callCommand(command, args);
     }
 }
@@ -272,4 +289,39 @@ void ConsoleTerminal::printHeader() {
     // Print bottom border
     std::cout << BLUE << std::string(BORDER_WIDTH, '*') << RESET << std::endl;
 }
+
+char** ConsoleTerminal::commandCompletion(const char* text, int start,
+                                          int end) {
+    (void)start;
+    (void)end;
+
+    rl_attempted_completion_over = 1;  // Disable default filename completion
+    return rl_completion_matches(text, commandGenerator);
+}
+
+char* ConsoleTerminal::commandGenerator(const char* text, int state) {
+    static std::vector<std::string> matches;
+    static size_t match_index;
+
+    if (state == 0) {
+        matches.clear();
+        match_index = 0;
+        std::string prefix(text);
+
+        auto registeredCommands =
+            globalConsoleTerminal->getRegisteredCommands();
+        for (const auto& command : registeredCommands) {
+            if (command.find(prefix) == 0) {
+                matches.push_back(command);
+            }
+        }
+    }
+
+    if (match_index < matches.size()) {
+        return strdup(matches[match_index++].c_str());
+    }
+    return nullptr;
+}
+
+ConsoleTerminal* globalConsoleTerminal = nullptr;
 }  // namespace lithium::debug

@@ -50,6 +50,9 @@ private:
 
     auto parseArguments(const std::string& input) -> std::vector<std::any>;
 
+    static auto commandCompletion(const char* text, int start, int end) -> char**;
+    static auto commandGenerator(const char* text, int state) -> char*;
+
     static constexpr int MAX_HISTORY_SIZE = 100;
 
     std::shared_ptr<SuggestionEngine> suggestionEngine_;
@@ -66,6 +69,8 @@ private:
     struct termios orig_termios_;
 #endif
 };
+
+extern ConsoleTerminal* globalConsoleTerminal;
 
 }  // namespace lithium::debug
 

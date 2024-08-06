@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <stdexcept>
 #include <string>
+#include "components/component.hpp"
 #include "error/exception.hpp"
 
 class TestComponent : public Component {
@@ -13,7 +14,7 @@ public:
 
 TEST(RegistryTest, AddAndGetComponent) {
     auto& registry = Registry::instance();
-    registry.addInitializer("Component1", []() {}, []() {});
+    registry.addInitializer("Component1", [](Component&) {}, []() {});
     auto component = registry.getComponent("Component1");
     EXPECT_EQ(component->getName(), "Component1");
 }
@@ -36,7 +37,6 @@ TEST(RegistryTest, InitializeAndCleanupComponent) {
 }
 */
 
-
 /*
 TEST(RegistryTest, ReinitializeComponent) {
     auto& registry = Registry::instance();
@@ -58,8 +58,8 @@ TEST(RegistryTest, ReinitializeComponent) {
 
 TEST(RegistryTest, CircularDependencyDetection) {
     auto& registry = Registry::instance();
-    registry.addInitializer("Component1", []() {}, []() {});
-    registry.addInitializer("Component2", []() {}, []() {});
+    registry.addInitializer("Component1", [](Component&) {}, []() {});
+    registry.addInitializer("Component2", [](Component&) {}, []() {});
 
     registry.addDependency("Component1", "Component2");
     EXPECT_THROW(registry.addDependency("Component2", "Component1"),
@@ -73,13 +73,16 @@ TEST(RegistryTest, DependencyInitializationOrder) {
 
     registry.addInitializer(
         "ComponentA",
-        [&]() { initialization_order.emplace_back("ComponentA"); }, []() {});
+        [&](Component&) { initialization_order.emplace_back("ComponentA"); },
+        []() {});
     registry.addInitializer(
         "ComponentB",
-        [&]() { initialization_order.emplace_back("ComponentB"); }, []() {});
+        [&](Component&) { initialization_order.emplace_back("ComponentB"); },
+        []() {});
     registry.addInitializer(
         "ComponentC",
-        [&]() { initialization_order.emplace_back("ComponentC"); }, []() {});
+        [&](Component&) { initialization_order.emplace_back("ComponentC"); },
+        []() {});
 
     registry.addDependency("ComponentA", "ComponentB");
     registry.addDependency("ComponentB", "ComponentC");

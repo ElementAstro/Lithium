@@ -66,7 +66,7 @@ auto ModuleLoader::loadModule(const std::string& path,
         LOG_F(ERROR, "Module {} does not exist", name);
         return false;
     }
-
+    LOG_F(INFO, "Loading module: {} from {}", name, path);
     auto modInfo = std::make_shared<ModuleInfo>();
     if (auto* handle = LOAD_LIBRARY(path.c_str()); handle) {
         modInfo->handle = handle;
@@ -82,7 +82,7 @@ auto ModuleLoader::loadModule(const std::string& path,
 std::vector<std::unique_ptr<FunctionInfo>> ModuleLoader::loadModuleFunctions(
     const std::string& name) {
     std::vector<std::unique_ptr<FunctionInfo>> funcs;
-    std::shared_lock lock(sharedMutex_);
+    // std::shared_lock lock(sharedMutex_);
 
     if (auto it = modules_.find(name); it != modules_.end()) {
         if (void* handle = it->second->handle) {
@@ -206,7 +206,7 @@ auto ModuleLoader::getHandle(const std::string& name) const -> void* {
 }
 
 auto ModuleLoader::hasModule(const std::string& name) const -> bool {
-    std::shared_lock lock(sharedMutex_);
+    // std::shared_lock lock(sharedMutex_);
     return modules_.contains(name);
 }
 

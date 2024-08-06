@@ -12,6 +12,8 @@
 #include <psapi.h>
 // clang-format on
 #else
+#include <fcntl.h>
+#include <seccomp.h>
 #include <sys/ptrace.h>
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -39,10 +41,12 @@ public:
     auto setProgramPath(const std::string& programPath) -> bool;
     auto setProgramArgs(const std::vector<std::string>& programArgs) -> bool;
     auto run() -> bool;
+
 #ifdef _WIN32
     auto setWindowsLimits(PROCESS_INFORMATION& processInfo) const -> bool;
 #else
     bool setUnixLimits();
+    bool applySeccomp();
 #endif
 };
 
@@ -165,6 +169,35 @@ auto SandboxImpl::setUnixLimits() -> bool {
 
     return true;
 }
+
+auto SandboxImpl::applySeccomp() -> bool {
+    scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_KILL);  // Default action: kill
+    if (ctx == nullptr) {
+        return false;
+    }
+
+    // Allow necessary syscalls
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit_group), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(brk), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mmap), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(munmap), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(open), 1,
+                     SCMP_A1(SCMP_CMP_MASKED_EQ, O_WRONLY, O_WRONLY));
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(close), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+
+    // Load the filter
+    if (seccomp_load(ctx) != 0) {
+        seccomp_release(ctx);
+        return false;
+    }
+
+    seccomp_release(ctx);
+    return true;
+}
 #endif
 
 auto SandboxImpl::run() -> bool {
@@ -185,7 +218,7 @@ auto SandboxImpl::run() -> bool {
     }
 
     if (!setWindowsLimits(processInfo)) {
-        return false;
+        return;
     }
 
     ResumeThread(processInfo.hThread);
@@ -222,6 +255,10 @@ auto SandboxImpl::run() -> bool {
         args.emplace_back(nullptr);
 
         if (!setUnixLimits()) {
+            exit(1);
+        }
+
+        if (!applySeccomp()) {
             exit(1);
         }
 

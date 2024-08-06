@@ -13,5 +13,6 @@ void reloadAllComponents();
 void scanComponents(const std::string &path);
 void getComponentInfo(const std::string &name);
 void getComponentList();
+void getEmbedComponentList();
 
 #endif

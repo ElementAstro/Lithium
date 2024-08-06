@@ -44,6 +44,13 @@ struct OperatingSystemInfo {
  */
 OperatingSystemInfo getOperatingSystemInfo();
 
+/**
+ * @brief Checks if the operating system is running in a Windows Subsystem for
+ * Linux (WSL) environment.
+ * @return `true` if the operating system is running in a WSL environment,
+ * `false` otherwise.
+ */
+auto isWsl() -> bool;
 }  // namespace atom::system
 
 #endif

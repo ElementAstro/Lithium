@@ -108,14 +108,20 @@ T ModuleLoader::getFunction(const std::string& name,
 }
 
 template <typename T>
-std::shared_ptr<T> ModuleLoader::getInstance(const std::string& name,
-                                             const json& config,
-                                             const std::string& symbolName) {
+auto ModuleLoader::getInstance(const std::string& name, const json& config,
+                               const std::string& symbolName)
+    -> std::shared_ptr<T> {
     if (auto getInstanceFunc =
             getFunction<std::shared_ptr<T> (*)(const json&)>(name, symbolName);
         getInstanceFunc) {
         return getInstanceFunc(config);
     }
+    if (auto getInstanceFunc =
+            getFunction<std::shared_ptr<T> (*)()>(name, symbolName);
+        getInstanceFunc) {
+        return getInstanceFunc();
+    }
+
     return nullptr;
 }
 

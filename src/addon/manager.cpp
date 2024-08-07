@@ -608,12 +608,14 @@ auto ComponentManager::loadSharedComponent(
     }
 
     // Max: 对组件进行初始化，如果存在可以使用的初始化函数
-    auto moduleInitFunc = moduleLoader->getFunction<void (*)()>(
+    auto moduleInitFunc = moduleLoader->getFunction<void()>(
         componentFullName, "initialize_registry");
     if (moduleInitFunc != nullptr) {
         LOG_F(INFO, "Initializing registry for shared component: {}", componentFullName);
         moduleInitFunc();
+        LOG_F(INFO, "Initialized registry for shared component: {}", componentFullName);
     }
+
     if (auto component =
             moduleLoader->getInstance<Component>(componentFullName, {}, entry);
         component) {

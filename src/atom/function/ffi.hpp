@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -32,7 +33,6 @@
 #endif
 
 #include "atom/error/exception.hpp"
-#include "atom/type/noncopyable.hpp"
 
 class FFIException : public atom::error::Exception {
 public:
@@ -42,8 +42,9 @@ public:
 #define THROW_FFI_EXCEPTION(...) \
     throw FFIException(__FILE__, __LINE__, __func__, __VA_ARGS__)
 
+namespace atom::meta {
 template <typename T>
-constexpr ffi_type* getFFIType() {
+constexpr auto getFFIType() -> ffi_type* {
     if constexpr (std::is_same_v<T, int>) {
         return &ffi_type_sint;
     } else if constexpr (std::is_same_v<T, float>) {
@@ -102,7 +103,7 @@ private:
     ffi_type* returnType_;
 };
 
-class DynamicLibrary : public NonCopyable {
+class DynamicLibrary {
 public:
     explicit DynamicLibrary(std::string_view libraryPath) {
 #ifdef _MSC_VER
@@ -115,15 +116,32 @@ public:
         }
     }
 
-    ~DynamicLibrary() {
-        if (handle_ != nullptr) {
-#ifdef _MSC_VER
-            FreeLibrary(static_cast<HMODULE>(handle_));
-#else
-            dlclose(handle_);
-#endif
+    ~DynamicLibrary() { unloadLibrary(); }
+
+    template <typename Func>
+    auto getFunction(std::string_view functionName) -> std::function<Func> {
+        std::lock_guard lock(mutex_);  // Ensure thread-safety
+        if (handle_ == nullptr) {
+            THROW_FFI_EXCEPTION("Library not loaded");
         }
-        functionMap_.clear();
+
+#ifdef _WIN32
+        FARPROC proc =
+            GetProcAddress(static_cast<HMODULE>(handle_), functionName.data());
+#else
+        void* proc = dlsym(handle_, functionName.data());
+#endif
+        if (!proc) {
+            THROW_FFI_EXCEPTION("Failed to load symbol: " +
+                                std::string(functionName));
+        }
+        return std::function<Func>(reinterpret_cast<Func*>(proc));
+    }
+
+    void reload(const std::string& dllName) {
+        std::lock_guard lock(mutex_);
+        unloadLibrary();
+        loadLibrary(dllName);
     }
 
     template <typename FuncType>
@@ -154,14 +172,14 @@ public:
         return ffiWrapper.call(funcPtr, std::forward<Args>(args)...);
     }
 
-    // New methods
     auto hasFunction(std::string_view functionName) const -> bool {
         return functionMap_.find(std::string(functionName)) !=
                functionMap_.end();
     }
 
     template <typename Func>
-    auto getFunction(std::string_view functionName) -> std::function<Func> {
+    auto getBoundFunction(std::string_view functionName)
+        -> std::function<Func> {
         auto findIt = functionMap_.find(std::string(functionName));
         if (findIt == functionMap_.end()) {
             THROW_FFI_EXCEPTION("Function not found.");
@@ -182,8 +200,35 @@ public:
         };
     }
 
+    auto getHandle() const { return handle_; }
+
 private:
-    void* handle_{};
+    void* handle_ = nullptr;
+    std::mutex mutex_;
+
+    void loadLibrary(const std::string& dllName) {
+#ifdef _WIN32
+        handle_ = LoadLibraryA(dllName.c_str());
+#else
+        handle_ = dlopen(dllName.c_str(), RTLD_LAZY);
+#endif
+        if (handle_ == nullptr) {
+            THROW_FFI_EXCEPTION("Failed to load " + dllName);
+        }
+    }
+
+    void unloadLibrary() {
+        if (handle_ != nullptr) {
+#ifdef _WIN32
+            FreeLibrary(static_cast<HMODULE>(handle_));
+#else
+            dlclose(handle_);
+#endif
+            handle_ = nullptr;
+        }
+        functionMap_.clear();
+    }
+
 #if ENABLE_FASTHASH
     emhash8::HashMap<std::string, void*> functionMap_;
 #else
@@ -191,4 +236,21 @@ private:
 #endif
 };
 
-#endif
+template <typename T>
+class LibraryObject {
+public:
+    LibraryObject(DynamicLibrary& library, const std::string& factoryFuncName) {
+        auto factory = library.getFunction<T*(void)>(factoryFuncName);
+        object_.reset(factory());
+    }
+
+    auto operator->() const -> T* { return object_.get(); }
+
+    auto operator*() const -> T& { return *object_; }
+
+private:
+    std::unique_ptr<T> object_;
+};
+}  // namespace atom::meta
+
+#endif  // ATOM_META_FFI_HPP

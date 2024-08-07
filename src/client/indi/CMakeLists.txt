@@ -3,6 +3,8 @@ project(lithium.client.indi_camera)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+include(${CMAKE_SOURCE_DIR}/cmake_modules/ScanModule.cmake)
+
 # Add source files
 set(SOURCE_FILES
     camera.cpp

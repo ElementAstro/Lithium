@@ -83,6 +83,15 @@ auto fbase64Decode(std::span<const char> input) -> std::vector<unsigned char>;
 [[nodiscard("The result of xorDecrypt is not used.")]] auto xorDecrypt(
     std::string_view ciphertext, uint8_t key) -> std::string;
 
+ATOM_INLINE constexpr auto findBase64Char(char c) -> size_t {
+    for (size_t i = 0; i < 64; ++i) {
+        if (detail::BASE64_CHARS[i] == c) {
+            return i;
+        }
+    }
+    return 64;  // Indicates not found, should not happen with valid input
+}
+
 template <size_t N>
 constexpr auto cbase64Encode(const StaticString<N> &input) {
     constexpr size_t ENCODED_SIZE = ((N + 2) / 3) * 4;
@@ -146,8 +155,7 @@ constexpr auto cbase64Decode(const StaticString<N> &input) {
 
     size_t i = 0;
     for (auto it = input.begin(); it != input.end() && *it != '='; ++it) {
-        charArray4[i++] =
-            static_cast<unsigned char>(detail::BASE64_CHARS.find(*it));
+        charArray4[i++] = static_cast<unsigned char>(findBase64Char(*it));
         if (i == 4) {
             charArray3[0] =
                 (charArray4[0] << 2) + ((charArray4[1] & 0x30) >> 4);
@@ -156,7 +164,7 @@ constexpr auto cbase64Decode(const StaticString<N> &input) {
             charArray3[2] = ((charArray4[2] & 0x3) << 6) + charArray4[3];
 
             for (i = 0; i < 3; ++i) {
-                addChar(charArray3[i]);
+                addChar(static_cast<char>(charArray3[i]));
             }
             i = 0;
         }
@@ -172,7 +180,7 @@ constexpr auto cbase64Decode(const StaticString<N> &input) {
             ((charArray4[1] & 0xf) << 4) + ((charArray4[2] & 0x3c) >> 2);
 
         for (size_t j = 0; j < i - 1; ++j) {
-            addChar(charArray3[j]);
+            addChar(static_cast<char>(charArray3[j]));
         }
     }
 

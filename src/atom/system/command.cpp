@@ -152,7 +152,7 @@ auto executeCommandInternal(
 }
 
 auto executeCommandStream(
-    const std::string &command, bool openTerminal,
+    const std::string &command, [[maybe_unused]] bool openTerminal,
     const std::function<void(const std::string &)> &processLine, int &status,
     const std::function<bool()> &terminateCondition) -> std::string {
     if (command.empty()) {

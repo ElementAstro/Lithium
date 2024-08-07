@@ -40,7 +40,7 @@ AstapComponent::AstapComponent(const std::string& name)
         "Get solve result");
 
     addVariable("astap.instance", m_solver, "Astap solver instance");
-    this->defType<AstapSolver>("astap", atom::meta::userType<AstapSolver>());
+    this->defType<AstapSolver>("astap");
 }
 
 AstapComponent::~AstapComponent() { LOG_F(INFO, "AstapComponent Destructed"); }

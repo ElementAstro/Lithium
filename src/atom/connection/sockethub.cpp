@@ -234,7 +234,7 @@ void SocketHubImpl::closeSocket(int socket) { close(socket); }
 void SocketHubImpl::acceptConnections() {
 #ifdef __linux__
     struct epoll_event events[maxConnections];
-    while (running.load()) {
+    while (running_.load()) {
         int n = epoll_wait(epoll_fd, events, maxConnections, -1);
         for (int i = 0; i < n; i++) {
             if (events[i].data.fd == serverSocket) {
@@ -245,7 +245,7 @@ void SocketHubImpl::acceptConnections() {
                     &clientAddressLength);
 
                 if (clientSocket < 0) {
-                    if (running.load()) {
+                    if (running_.load()) {
                         LOG_F(ERROR, "Failed to accept client connection.");
                     }
                     continue;
@@ -264,7 +264,7 @@ void SocketHubImpl::acceptConnections() {
                 std::scoped_lock lock(clientMutex);
                 clients.push_back(clientSocket);
 
-                clientThreads[clientSocket] = std::jthread(
+                clientThreads_[clientSocket] = std::jthread(
                     &SocketHubImpl::handleClientMessages, this, clientSocket);
             } else {
                 handleClientMessages(events[i].data.fd);
@@ -313,7 +313,7 @@ void SocketHubImpl::handleClientMessages(int clientSocket) {
                     clients.end());
             }
 #ifdef __linux__
-            clientThreads.erase(clientSocket);
+            clientThreads_.erase(clientSocket);
 #endif
             break;
         }

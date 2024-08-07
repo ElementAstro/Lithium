@@ -107,7 +107,7 @@ private:
 #ifdef _WIN32
 static void monitorUdisk();
 #else
-static void monitorUdisk(StorageMonitor &monitor);
+void monitorUdisk(atom::system::StorageMonitor& monitor);
 #endif
 
 }  // namespace atom::system

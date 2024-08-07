@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 
 using namespace lithium;
 namespace fs = std::filesystem;

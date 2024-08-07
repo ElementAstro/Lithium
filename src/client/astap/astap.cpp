@@ -11,7 +11,6 @@
 #include <optional>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 AstapSolver::AstapSolver(std::string name) : name_(std::move(name)) {
     DLOG_F(INFO, "Initializing Astap Solver...");
@@ -33,7 +32,7 @@ auto AstapSolver::connect(std::string_view solverPath) -> bool {
     }
     DLOG_F(INFO, "Connecting to Astap Solver...");
     if (!atom::io::isFileNameValid(solverPath.data()) ||
-        !atom::io::isFileExists(solverPath)) {
+        !atom::io::isFileExists(solverPath.data())) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;
@@ -81,9 +80,9 @@ auto AstapSolver::scanSolver() -> bool {
         LOG_F(ERROR, "Failed to execute {}: Astap not installed",
               ATOM_FUNC_NAME);
         return false;
-    } else {
-        solverPath_ = astapCliPath;
     }
+    solverPath_ = astapCliPath;
+
     solverVersion_ = atom::system::getAppVersion(astapCliPath);
     if (solverVersion_.empty()) {
         LOG_F(ERROR, "Failed to execute {}: Astap version not got",
@@ -105,7 +104,7 @@ auto AstapSolver::solveImage(std::string_view image,
         return false;
     }
     if (!atom::io::isFileNameValid(image.data()) ||
-        !atom::io::isFileExists(image)) {
+        !atom::io::isFileExists(image.data())) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;

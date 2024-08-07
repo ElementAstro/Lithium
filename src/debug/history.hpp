@@ -3,7 +3,6 @@
 
 #include <ctime>
 #include <deque>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
 #include "macro.hpp"

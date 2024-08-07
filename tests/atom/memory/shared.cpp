@@ -1,6 +1,6 @@
 #include "atom/memory/shared.hpp"
 #include <gtest/gtest.h>
-
+#include "macro.hpp"
 
 using namespace atom::connection;
 
@@ -8,44 +8,46 @@ struct TestData {
     int a;
     double b;
     char c;
-};
+} ATOM_ALIGNAS(16);
 
 TEST(SharedMemoryTest, BasicWriteRead) {
     SharedMemory<TestData> shm("/test_shm", true);
     TestData data{1, 2.0, 'a'};
     shm.write(data);
 
-    SharedMemory<TestData> shm_reader("/test_shm", false);
-    auto read_data = shm_reader.read();
-    EXPECT_EQ(data.a, read_data.a);
-    EXPECT_EQ(data.b, read_data.b);
-    EXPECT_EQ(data.c, read_data.c);
+    SharedMemory<TestData> shmReader("/test_shm", false);
+    auto readData = shmReader.read();
+    EXPECT_EQ(data.a, readData.a);
+    EXPECT_EQ(data.b, readData.b);
+    EXPECT_EQ(data.c, readData.c);
 }
 
 TEST(SharedMemoryTest, PartialWriteRead) {
     SharedMemory<TestData> shm("/test_shm", true);
-    int new_a = 42;
-    shm.writePartial(new_a, offsetof(TestData, a));
+    int newA = 42;
+    shm.writePartial(newA, offsetof(TestData, a));
 
-    SharedMemory<TestData> shm_reader("/test_shm", false);
-    auto read_a = shm_reader.readPartial<int>(offsetof(TestData, a));
-    EXPECT_EQ(new_a, read_a);
+    SharedMemory<TestData> shmReader("/test_shm", false);
+    auto readA = shmReader.readPartial<int>(offsetof(TestData, a));
+    EXPECT_EQ(newA, readA);
 }
 
 TEST(SharedMemoryTest, SpanWriteRead) {
     SharedMemory<TestData> shm("/test_shm", true);
-    TestData write_data{1, 2.0, 'a'};
-    std::span<const std::byte> write_span(reinterpret_cast<const std::byte*>(&write_data), sizeof(write_data));
-    shm.writeSpan(write_span);
+    TestData writeData{1, 2.0, 'a'};
+    std::span<const std::byte> writeSpan(
+        reinterpret_cast<const std::byte*>(&writeData), sizeof(writeData));
+    shm.writeSpan(writeSpan);
 
-    SharedMemory<TestData> shm_reader("/test_shm", false);
-    TestData read_data;
-    std::span<std::byte> read_span(reinterpret_cast<std::byte*>(&read_data), sizeof(read_data));
-    shm_reader.readSpan(read_span);
+    SharedMemory<TestData> shmReader("/test_shm", false);
+    TestData readData;
+    std::span<std::byte> readSpan(reinterpret_cast<std::byte*>(&readData),
+                                  sizeof(readData));
+    ATOM_UNUSED_RESULT(shmReader.readSpan(readSpan));
 
-    EXPECT_EQ(read_data.a, 1);
-    EXPECT_EQ(read_data.b, 2.0);
-    EXPECT_EQ(read_data.c, 'a');
+    EXPECT_EQ(readData.a, 1);
+    EXPECT_EQ(readData.b, 2.0);
+    EXPECT_EQ(readData.c, 'a');
 }
 
 TEST(SharedMemoryTest, TryRead) {
@@ -53,15 +55,10 @@ TEST(SharedMemoryTest, TryRead) {
     TestData data{1, 2.0, 'a'};
     shm.write(data);
 
-    SharedMemory<TestData> shm_reader("/test_shm", false);
-    auto read_data = shm_reader.tryRead();
-    ASSERT_TRUE(read_data.has_value());
-    EXPECT_EQ(read_data->a, data.a);
-    EXPECT_EQ(read_data->b, data.b);
-    EXPECT_EQ(read_data->c, data.c);
-}
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    SharedMemory<TestData> shmReader("/test_shm", false);
+    auto readData = shmReader.tryRead();
+    ASSERT_TRUE(readData.has_value());
+    EXPECT_EQ(readData->a, data.a);
+    EXPECT_EQ(readData->b, data.b);
+    EXPECT_EQ(readData->c, data.c);
 }

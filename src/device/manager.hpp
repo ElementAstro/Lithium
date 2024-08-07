@@ -2,7 +2,6 @@
 #define LITHIUM_DEVICE_MANAGER_HPP
 
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>

@@ -111,7 +111,6 @@ constexpr auto concat(const char (&str1)[N1], const char (&str2)[N2]) {
 template <std::size_t N>
 constexpr auto trim(const char (&str)[N]) {
     std::array<char, N> result{};
-    std::size_t index = 0;
 
     auto view = std::string_view(str);
 

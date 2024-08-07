@@ -359,7 +359,6 @@ void fwalk(const fs::path &root,
  * @return 如果文件夹存在，则返回true，否则返回false。
  */
 [[nodiscard]] auto isFolderExists(const std::string &folderPath) -> bool;
-[[nodiscard]] auto isFolderExists(const fs::path &folderPath) -> bool;
 
 /**
  * @brief Check if the file exists.
@@ -373,7 +372,6 @@ void fwalk(const fs::path &root,
  * @return 如果文件存在，则返回true，否则返回false。
  */
 [[nodiscard]] auto isFileExists(const std::string &filePath) -> bool;
-[[nodiscard]] auto isFileExists(const fs::path &filePath) -> bool;
 
 /**
  * @brief Check if the folder is empty.

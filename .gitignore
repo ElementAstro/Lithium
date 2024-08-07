@@ -52,3 +52,5 @@ test
 .cache
 
 cmake-build-debug/
+
+.venv/

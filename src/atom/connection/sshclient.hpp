@@ -22,6 +22,7 @@ Description: SSH Client
 #include <string>
 #include <vector>
 
+#if __has_include(<libssh/libssh.h>)
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
 
@@ -161,5 +162,6 @@ private:
     sftp_session m_sftp_session;
 };
 }  // namespace atom::connection
+#endif
 
 #endif

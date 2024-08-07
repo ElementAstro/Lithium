@@ -40,7 +40,6 @@ const std::regex FILE_NAME_REGEX("^[^\\/:*?\"<>|]+$");
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-const std::string PATH_SEPARATOR = "/";
 const std::regex FOLDER_NAME_REGEX("^[^/]+$");
 const std::regex FILE_NAME_REGEX("^[^/]+$");
 #endif
@@ -459,20 +458,12 @@ auto isFolderExists(const std::string &folderName) -> bool {
     return fs::exists(folderName) && fs::is_directory(folderName);
 }
 
-auto isFolderExists(const fs::path &folderName) -> bool {
-    return isFolderExists(folderName.string());
-}
-
 auto isFileExists(const std::string &fileName) -> bool {
     if (!isFileNameValid(fileName)) {
         LOG_F(ERROR, "Invalid file name: {}", fileName);
         return false;
     }
     return fs::exists(fileName) && fs::is_regular_file(fileName);
-}
-
-auto isFileExists(const fs::path &fileName) -> bool {
-    return isFileExists(fileName.string());
 }
 
 auto isFolderEmpty(const std::string &folderName) -> bool {
@@ -596,7 +587,7 @@ auto checkFileTypeInFolder(const std::string &folderPath,
 }
 
 auto isExecutableFile(const std::string &fileName,
-                      const std::string &fileExt) -> bool {
+                      [[maybe_unused]] const std::string &fileExt) -> bool {
 #ifdef _WIN32
     fs::path filePath = fileName + fileExt;
 #else
@@ -610,20 +601,23 @@ auto isExecutableFile(const std::string &fileName,
         return false;
     }
 
+    if (!fs::is_regular_file(filePath)) {
+        DLOG_F(WARNING, "The file '{}' is not a regular file.",
+               filePath.string());
+        return false;
+    }
+
 #ifdef _WIN32
-    if (!fs::is_regular_file(filePath) ||
-        !(GetFileAttributesA(filePath.generic_string().c_str()) &
-          FILE_ATTRIBUTE_DIRECTORY)) {
-        DLOG_F(WARNING,
-               "The file '{}' is not a regular file or is not executable.",
+    if (GetFileAttributesA(filePath.string().c_str()) &
+        FILE_ATTRIBUTE_DIRECTORY) {
+        DLOG_F(WARNING, "The file '{}' is a directory, not an executable file.",
                filePath.string());
         return false;
     }
 #else
-    if (!fs::is_regular_file(filePath) || access(filePath.c_str(), X_OK) != 0) {
-        DLOG_F(WARNING,
-               "The file '{}' is not a regular file or is not executable.",
-               filePath.string());
+    if ((fs::status(filePath).permissions() & fs::perms::owner_exec) ==
+        fs::perms::none) {
+        DLOG_F(WARNING, "The file '{}' is not executable.", filePath.string());
         return false;
     }
 #endif
@@ -631,4 +625,5 @@ auto isExecutableFile(const std::string &fileName,
     DLOG_F(INFO, "The file '{}' exists and is executable.", filePath.string());
     return true;
 }
+
 }  // namespace atom::io

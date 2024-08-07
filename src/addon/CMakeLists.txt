@@ -13,6 +13,8 @@ project(lithium-addons VERSION 1.0.0 LANGUAGES C CXX)
 # Author: Max Qian
 # License: GPL3
 
+find_package(Seccomp REQUIRED)
+
 # Project sources
 set(PROJECT_SOURCES
     addons.cpp
@@ -21,6 +23,7 @@ set(PROJECT_SOURCES
     loader.cpp
     manager.cpp
     sandbox.cpp
+    version.cpp
 
     template/standalone.cpp
 )
@@ -44,6 +47,7 @@ set(PROJECT_LIBS
     loguru
     lithium-utils
     ${CMAKE_THREAD_LIBS_INIT} 
+    ${Seccomp_LIBRARIES}
 )
 
 # Create object library

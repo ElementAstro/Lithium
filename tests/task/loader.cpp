@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 
 #include "atom/type/json.hpp"
 

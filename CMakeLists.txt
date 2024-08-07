@@ -78,9 +78,6 @@ find_package(SQLite3 REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Readline REQUIRED)
 
-# Install Python dependencies
-cmake_policy(SET CMP0140 NEW)
-
 find_package(Python COMPONENTS Interpreter REQUIRED)
 
 # Specify the path to requirements.txt

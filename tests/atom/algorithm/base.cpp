@@ -48,9 +48,9 @@ TEST(FastBase64Test, EncodeDecode) {
 }
 
 TEST(ConstBase64Test, Encode) {
-    constexpr StaticString<13> data("Hello, World!");
-    constexpr auto encoded = atom::algorithm::cbase64Encode(data);
-    EXPECT_STREQ(encoded.cStr(), "SGVsbG8sIFdvcmxkIQ==");
+    constexpr StaticString<13> DATA{"Hello, World!"};
+    constexpr auto ENCODED = atom::algorithm::cbase64Encode(DATA);
+    EXPECT_STREQ(ENCODED.cStr(), "SGVsbG8sIFdvcmxkIQ==");
 }
 
 TEST(ConstBase64Test, Decode) {

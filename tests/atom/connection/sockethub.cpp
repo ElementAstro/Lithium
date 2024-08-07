@@ -1,8 +1,15 @@
 #include <gtest/gtest.h>
+
+#include <mutex>
 #include <thread>
-#include <future>
 #include <chrono>
+
 #include "atom/connection/sockethub.hpp"
+
+#ifdef __linux
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#endif
 
 using namespace atom::connection;
 

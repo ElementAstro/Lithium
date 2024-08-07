@@ -15,6 +15,7 @@
 #include "atom/function/concept.hpp"
 #include "atom/log/loguru.hpp"
 #include "atom/type/noncopyable.hpp"
+#include "macro.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -30,33 +31,33 @@ template <TriviallyCopyable T>
 class SharedMemory : public NonCopyable {
 public:
     explicit SharedMemory(std::string_view name, bool create = true);
-    ~SharedMemory() final;
+    ~SharedMemory() override;
 
     void write(const T& data, std::chrono::milliseconds timeout =
                                   std::chrono::milliseconds(0));
-    [[nodiscard]] auto read(std::chrono::milliseconds timeout =
-                                std::chrono::milliseconds(0)) const -> T;
+    ATOM_NODISCARD auto read(std::chrono::milliseconds timeout =
+                                 std::chrono::milliseconds(0)) const -> T;
     void clear();
-    [[nodiscard]] auto isOccupied() const -> bool;
-    [[nodiscard]] auto getName() const noexcept -> std::string_view;
-    [[nodiscard]] auto getSize() const noexcept -> std::size_t;
-    [[nodiscard]] auto isCreator() const noexcept -> bool;
+    ATOM_NODISCARD auto isOccupied() const -> bool;
+    ATOM_NODISCARD auto getName() const ATOM_NOEXCEPT -> std::string_view;
+    ATOM_NODISCARD auto getSize() const ATOM_NOEXCEPT -> std::size_t;
+    ATOM_NODISCARD auto isCreator() const ATOM_NOEXCEPT -> bool;
 
     template <typename U>
     void writePartial(
         const U& data, std::size_t offset,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
     template <typename U>
-    [[nodiscard]] auto readPartial(std::size_t offset,
-                                   std::chrono::milliseconds timeout =
-                                       std::chrono::milliseconds(0)) const -> U;
-    [[nodiscard]] auto tryRead(
+    ATOM_NODISCARD auto readPartial(
+        std::size_t offset, std::chrono::milliseconds timeout =
+                                std::chrono::milliseconds(0)) const -> U;
+    ATOM_NODISCARD auto tryRead(
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const
         -> std::optional<T>;
     void writeSpan(
         std::span<const std::byte> data,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0));
-    [[nodiscard]] auto readSpan(
+    ATOM_NODISCARD auto readSpan(
         std::span<std::byte> data,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(0)) const
         -> std::size_t;
@@ -197,17 +198,17 @@ auto SharedMemory<T>::isOccupied() const -> bool {
 }
 
 template <TriviallyCopyable T>
-auto SharedMemory<T>::getName() const noexcept -> std::string_view {
+auto SharedMemory<T>::getName() const ATOM_NOEXCEPT -> std::string_view {
     return name_;
 }
 
 template <TriviallyCopyable T>
-auto SharedMemory<T>::getSize() const noexcept -> std::size_t {
+auto SharedMemory<T>::getSize() const ATOM_NOEXCEPT -> std::size_t {
     return sizeof(T);
 }
 
 template <TriviallyCopyable T>
-auto SharedMemory<T>::isCreator() const noexcept -> bool {
+auto SharedMemory<T>::isCreator() const ATOM_NOEXCEPT -> bool {
     return is_creator_;
 }
 

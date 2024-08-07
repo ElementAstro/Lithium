@@ -4,17 +4,18 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
-#include <nlohmann/json.hpp>
 #include <string>
 #include <typeinfo>
 #include <unordered_map>
 #include <vector>
 
 #include "addon/manager.hpp"
-#include "device/template/camera.hpp"
-
 #include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
+#include "device/template/camera.hpp"
 #include "device/template/device.hpp"
+
+using json = nlohmann::json;
 
 namespace lithium {
 auto DeviceManager::createShared() -> std::shared_ptr<DeviceManager> {

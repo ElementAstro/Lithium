@@ -53,16 +53,6 @@
 #include <unistd.h>
 #endif
 
-constexpr int MAX_DRIVERS = 32;
-
-#if defined(_WIN32) || defined(_WIN64)
-constexpr char SEM_NAME[] = "driver_semaphore";
-constexpr char SHM_NAME[] = "driver_shm";
-#else
-constexpr char SEM_NAME[] = "/driver_semaphore";
-constexpr char SHM_NAME[] = "/driver_shm";
-#endif
-
 namespace lithium {
 
 class ComponentManagerImpl {

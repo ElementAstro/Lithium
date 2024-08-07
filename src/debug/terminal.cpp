@@ -257,7 +257,6 @@ void ConsoleTerminal::printHistory() const {
 }
 
 const std::string RESET = "\033[0m";
-const std::string RED = "\033[1;31m";
 const std::string GREEN = "\033[1;32m";
 const std::string BLUE = "\033[1;34m";
 const std::string CYAN = "\033[1;36m";

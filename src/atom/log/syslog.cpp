@@ -45,7 +45,7 @@ SyslogWrapper::SyslogWrapper(LogLevel logLevel, const std::string &target)
     m_logThread = std::thread(&SyslogWrapper::processLogQueue, this);
 }
 
-SyslogWrapper::~SyslogWrapper() {
+SyslogWrapper::~SyslogWrapper() noexcept {
     m_exitThread = true;
     if (m_logThread.joinable()) {
         m_logThread.join();

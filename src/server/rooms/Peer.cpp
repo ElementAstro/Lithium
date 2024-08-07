@@ -233,6 +233,7 @@ auto Peer::handleQTextMessage(const std::string& message)
                              [](int ch) { return !std::isspace(ch); })
                     .base(),
                 s.end());
+        return s;
     };
 
     /*
@@ -499,7 +500,7 @@ auto Peer::handleTextMessage(const oatpp::Object<MessageDto>& message)
                 m_response_["error"] = "Invalid JSON";
                 m_response_["message"] = e.what();
             }
-            yieldTo(&SendMessageCoroutine::send);
+            return yieldTo(&SendMessageCoroutine::send);
         }
 
         auto process() -> Action {
@@ -582,22 +583,25 @@ auto Peer::onPing(const std::shared_ptr<AsyncWebSocket>& socket,
                                      socket->sendPongAsync(message));
 }
 
-auto Peer::onPong(const std::shared_ptr<AsyncWebSocket>& socket,
-                  const oatpp::String& message)
+auto Peer::onPong(
+    [[maybe_unused]] const std::shared_ptr<AsyncWebSocket>& socket,
+    [[maybe_unused]] const oatpp::String& message)
     -> oatpp::async::CoroutineStarter {
     --m_pingPoingCounter_;
     return nullptr;  // do nothing
 }
 
-auto Peer::onClose(const std::shared_ptr<AsyncWebSocket>& socket, v_uint16 code,
-                   const oatpp::String& message)
+auto Peer::onClose(
+    [[maybe_unused]] const std::shared_ptr<AsyncWebSocket>& socket,
+    v_uint16 code, [[maybe_unused]] const oatpp::String& message)
     -> oatpp::async::CoroutineStarter {
     return nullptr;  // do nothing
 }
 
-auto Peer::readMessage(const std::shared_ptr<AsyncWebSocket>& socket,
-                       v_uint8 opcode, p_char8 data, oatpp::v_io_size size)
-    -> oatpp::async::CoroutineStarter {
+auto Peer::readMessage(
+    [[maybe_unused]] const std::shared_ptr<AsyncWebSocket>& socket,
+    [[maybe_unused]] v_uint8 opcode, p_char8 data,
+    oatpp::v_io_size size) -> oatpp::async::CoroutineStarter {
     if (m_messageBuffer_.getCurrentPosition() + size >
         m_appConfig->maxMessageSizeBytes) {
         return onApiError("Message size exceeds max allowed size.");

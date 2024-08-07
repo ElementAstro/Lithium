@@ -21,7 +21,7 @@ bool AstrometrySolver::connect(std::string_view solverPath) {
     }
     DLOG_F(INFO, "Connecting to Astap Solver...");
     if (!atom::io::isFileNameValid(solverPath.data()) ||
-        !atom::io::isFileExists(solverPath)) {
+        !atom::io::isFileExists(solverPath.data())) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters",
               ATOM_FUNC_NAME);
         return false;
@@ -53,20 +53,18 @@ bool AstrometrySolver::reconnect() {
 
 bool AstrometrySolver::isConnected() { return !solverPath_.empty(); }
 
-bool AstrometrySolver::solveImage(std::string_view image,
-                                  std::optional<std::string_view> target_ra,
-                                  std::optional<std::string_view> target_dec,
-                                  std::optional<double> radius,
-                                  std::optional<int> downsample,
-                                  std::optional<int> depth, bool overWrite,
-                                  bool noPlot, int timeout, int debug) {
+bool AstrometrySolver::solveImage(
+    std::string_view image, std::optional<std::string_view> target_ra,
+    std::optional<std::string_view> target_dec, std::optional<double> radius,
+    std::optional<int> downsample, std::optional<int> depth, bool overWrite,
+    bool noPlot, [[maybe_unused]] int timeout, [[maybe_unused]] int debug) {
     DLOG_F(INFO, "Solving Image {}...", image);
     if (!isConnected()) {
         LOG_F(ERROR, "Failed to execute {}: Not Connected", __func__);
         return false;
     }
     if (!atom::io::isFileNameValid(image.data()) ||
-        !atom::io::isFileExists(image)) {
+        !atom::io::isFileExists(image.data())) {
         LOG_F(ERROR, "Failed to execute {}: Invalid Parameters", __func__);
         return false;
     }

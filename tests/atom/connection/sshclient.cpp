@@ -1,4 +1,7 @@
-#include "sshclient.hpp"
+#if __has_include(<libssh/libssh.h>)
+
+#include "atom/connection/sshclient.hpp"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include "sshclient_mock.hpp"
@@ -203,3 +206,4 @@ TEST_F(SSHClientTest, ExecuteCommand_Failure) {
     EXPECT_THROW(future.get(), std::runtime_error);
 }
 
+#endif

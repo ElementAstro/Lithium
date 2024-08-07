@@ -164,8 +164,7 @@ TEST_F(ComponentTest, DefineConstructors) {
 // 类型定义测试
 TEST_F(ComponentTest, DefineTypes) {
     class TestClass {};
-    component->defType<TestClass>("TestClass",
-                                  atom::meta::userType<TestClass>());
+    component->defType<TestClass>("TestClass");
     EXPECT_TRUE(component->hasType("TestClass"));
 }
 
@@ -184,9 +183,7 @@ TEST_F(ComponentTest, DefineClass) {
     };
 
     component->doc("This is a test class");
-    component->defType<TestClass>("TestClass",
-                                  atom::meta::userType<TestClass>(), "MyGroup",
-                                  "Test class");
+    component->defType<TestClass>("TestClass", "MyGroup", "Test class");
     component->defConstructor<TestClass, int>("create_test_class", "MyGroup",
                                               "Create TestClass");
     component->defDefaultConstructor<TestClass>(

@@ -26,8 +26,6 @@ Description: Simple implementation of AES encryption
 #include "atom/io/io.hpp"
 #include "atom/log/loguru.hpp"
 
-const int AES_BLOCK_SIZE = 16;
-
 namespace atom::utils {
 auto encryptAES(std::string_view plaintext, std::string_view key,
                 std::vector<unsigned char> &iv,

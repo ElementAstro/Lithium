@@ -651,10 +651,10 @@ auto getParentProcessId(int processId) -> int {
 #endif
 }
 
-auto _CreateProcessAsUser(const std::string &command,
-                          const std::string &username,
-                          const std::string &domain,
-                          const std::string &password) -> bool {
+auto _CreateProcessAsUser(
+    const std::string &command, const std::string &username,
+    [[maybe_unused]] const std::string &domain,
+    [[maybe_unused]] const std::string &password) -> bool {
 #ifdef _WIN32
     HANDLE hToken = nullptr;
     HANDLE hNewToken = nullptr;
@@ -748,12 +748,14 @@ auto ProcessManager::getProcessHandle(int pid) const -> HANDLE {
     return OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
 }
 #else
-auto ProcessManager::getProcFilePath(int pid, const std::string& file) -> std::string {
+auto ProcessManager::getProcFilePath(int pid,
+                                     const std::string &file) -> std::string {
     return "/proc/" + std::to_string(pid) + "/" + file;
 }
 #endif
 
-auto getNetworkConnections(int pid) -> std::vector<NetworkConnection> {
+auto getNetworkConnections([[maybe_unused]] int pid)
+    -> std::vector<NetworkConnection> {
     std::vector<NetworkConnection> connections;
 #ifdef _WIN32
     MIB_TCPTABLE_OWNER_PID *pTCPInfo;
@@ -781,7 +783,7 @@ auto getNetworkConnections(int pid) -> std::vector<NetworkConnection> {
 #else
     for (const auto &[protocol, path] :
          {std::pair{"TCP", "net/tcp"}, {"UDP", "net/udp"}}) {
-        std::ifstream netFile(ProcessManager::getProcFilePath(getpid(),path));
+        std::ifstream netFile(ProcessManager::getProcFilePath(getpid(), path));
         if (netFile.is_open()) {
             std::string line;
             while (std::getline(netFile, line)) {

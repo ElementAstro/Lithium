@@ -268,7 +268,9 @@ template <typename Iterator>
 auto slice(Iterator begin, Iterator end, size_t start,
            size_t length) -> std::vector<typename Iterator::value_type> {
     std::vector<typename Iterator::value_type> result;
-    if (start >= std::distance(begin, end)) {
+    using distance_type =
+        typename std::iterator_traits<decltype(begin)>::difference_type;
+    if (static_cast<distance_type>(start) >= std::distance(begin, end)) {
         return result;
     }
     std::advance(begin, start);

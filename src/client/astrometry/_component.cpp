@@ -20,10 +20,10 @@ Description: Component wrapper for Astap
 #include "atom/log/loguru.hpp"
 #include "function/type_info.hpp"
 
-AstapComponent::AstapComponent(const std::string& name)
+AstrometryComponent::AstrometryComponent(const std::string& name)
     : Component(name),
       m_solver(std::make_shared<AstrometrySolver>("astrometry")) {
-    LOG_F(INFO, "AstapComponent Constructed");
+    LOG_F(INFO, "AstrometryComponent Constructed");
 
     def("connect", &AstrometrySolver::connect, m_solver, "main",
         "Connect to astrometry solver");
@@ -41,18 +41,19 @@ AstapComponent::AstapComponent(const std::string& name)
         "Get solve result");
 
     addVariable("astrometry.instance", m_solver, "Astap solver instance");
-    this->defType<AstrometrySolver>("astrometry",
-                                    atom::meta::userType<AstrometrySolver>());
+    defType<AstrometrySolver>("astrometry", "device.solver", "Astap solver");
 }
 
-AstapComponent::~AstapComponent() { LOG_F(INFO, "AstapComponent Destructed"); }
+AstrometryComponent::~AstrometryComponent() {
+    LOG_F(INFO, "AstrometryComponent Destructed");
+}
 
-auto AstapComponent::initialize() -> bool {
-    LOG_F(INFO, "AstapComponent Initialized");
+auto AstrometryComponent::initialize() -> bool {
+    LOG_F(INFO, "AstrometryComponent Initialized");
     return true;
 }
 
-auto AstapComponent::destroy() -> bool {
-    LOG_F(INFO, "AstapComponent Destroyed");
+auto AstrometryComponent::destroy() -> bool {
+    LOG_F(INFO, "AstrometryComponent Destroyed");
     return true;
 }

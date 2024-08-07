@@ -20,10 +20,10 @@ Description: Component wrapper for Astrometry
 
 class AstrometrySolver;
 
-class AstapComponent : public Component {
+class AstrometryComponent : public Component {
 public:
-    explicit AstapComponent(const std::string& name);
-     ~AstapComponent() override;
+    explicit AstrometryComponent(const std::string& name);
+    ~AstrometryComponent() override;
 
     auto initialize() -> bool override;
     auto destroy() -> bool override;

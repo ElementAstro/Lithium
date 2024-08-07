@@ -196,7 +196,11 @@ void PidWatcher::monitorThread() {
         CloseHandle(processHandle);
 #else
         int status;
-        pid_t wait_result = waitpid(pid_, &status, 0);
+        pid_t waitResult = waitpid(pid_, &status, 0);
+        if (waitResult == -1) {
+            LOG_F(ERROR, "Failed to wait for process.");
+            break;
+        }
 #endif
 
         if (!running_) {

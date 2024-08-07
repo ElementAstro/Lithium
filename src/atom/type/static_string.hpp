@@ -15,16 +15,13 @@ public:
 
     ATOM_CONSTEXPR StaticString() ATOM_NOEXCEPT : M_SIZE(0) { data_[0] = '\0'; }
 
-    template <size_t M>
-    ATOM_CONSTEXPR explicit StaticString(const char (&str)[M]) ATOM_NOEXCEPT
-        : M_SIZE(M - 1) {
-        std::copy_n(str, M, data_);
+    constexpr StaticString(const char (&str)[N + 1]) : M_SIZE(N) {
+        for (size_t i = 0; i < N; ++i) {
+            data_[i] = str[i];
+        }
+        data_[N] = '\0';
     }
 
-    ATOM_CONSTEXPR StaticString(const char *str) ATOM_NOEXCEPT {
-        M_SIZE = std::strlen(str);
-        std::copy_n(str, M_SIZE + 1, data_);
-    }
 
     ATOM_NODISCARD ATOM_CONSTEXPR auto size() const ATOM_NOEXCEPT -> size_t {
         return M_SIZE;

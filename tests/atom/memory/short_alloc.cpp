@@ -28,8 +28,8 @@ TEST(ArenaTest, Alignment) {
 TEST(ArenaTest, Reset) {
     constexpr size_t N = 1024;
     Arena<N> arena;
-    void* p1 = arena.allocate(128);
-    void* p2 = arena.allocate(128);
+    [[maybe_unused]] void* p1 = arena.allocate(128);
+    [[maybe_unused]] void* p2 = arena.allocate(128);
     arena.reset();
     void* p3 = arena.allocate(128);
     EXPECT_NE(p3, nullptr);

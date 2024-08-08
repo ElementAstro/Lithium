@@ -1,17 +1,31 @@
 #include "dependency.hpp"
+#include "version.hpp"
 
 #include <condition_variable>
 #include <fstream>
 #include <queue>
 #include <thread>
+#include <unordered_map>
+
+#include "atom/error/exception.hpp"
+#include "atom/log/loguru.hpp"
+#include "atom/type/json.hpp"
 
 namespace lithium {
-void DependencyGraph::addNode(const Node& node) {
+void DependencyGraph::addNode(const Node& node, const Version& version) {
     adjList_.try_emplace(node);
     incomingEdges_.try_emplace(node);
+    nodeVersions_[node] = version;
 }
 
-void DependencyGraph::addDependency(const Node& from, const Node& to) {
+void DependencyGraph::addDependency(const Node& from, const Node& to,
+                                    const Version& requiredVersion) {
+    if (nodeVersions_.find(to) != nodeVersions_.end() &&
+        nodeVersions_[to] < requiredVersion) {
+        THROW_INVALID_ARGUMENT(
+            "Version requirement not satisfied for dependency " + from +
+            " -> " + to);
+    }
     adjList_[from].insert(to);
     incomingEdges_[to].insert(from);
 }
@@ -221,37 +235,6 @@ auto DependencyGraph::removeDuplicates(const std::vector<std::string>& input)
     return result;
 }
 
-auto DependencyGraph::parsePackageJson(const std::string& path)
-    -> std::pair<std::string, std::vector<std::string>> {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        // THROW_EXCEPTION("Failed to open " + path);
-    }
-
-    json packageJson;
-    try {
-        file >> packageJson;
-    } catch (const json::exception& e) {
-        // THROW_EXCEPTION("Error parsing JSON in " + path + ": " + e.what());
-    }
-
-    if (!packageJson.contains("name")) {
-        // THROW_EXCEPTION("Missing package name in " + path);
-    }
-
-    std::string packageName = packageJson["name"];
-    std::vector<std::string> deps;
-
-    if (packageJson.contains("dependencies")) {
-        for (const auto& dep : packageJson["dependencies"].items()) {
-            deps.push_back(dep.key());
-        }
-    }
-
-    file.close();
-    return {packageName, deps};
-}
-
 auto DependencyGraph::resolveDependencies(
     const std::vector<std::string>& directories) -> std::vector<std::string> {
     DependencyGraph graph;
@@ -260,25 +243,59 @@ auto DependencyGraph::resolveDependencies(
         std::string packagePath = dir + "/package.json";
         auto [package_name, deps] = parsePackageJson(packagePath);
 
-        graph.addNode(package_name);
+        graph.addNode(package_name, deps.at(package_name));
+
         for (const auto& dep : deps) {
-            graph.addNode(dep);
-            graph.addDependency(
-                dep, package_name);  // Ensure correct order of dependencies
+            if (dep.first != package_name) {
+                graph.addNode(dep.first, dep.second);
+                graph.addDependency(package_name, dep.first, dep.second);
+            }
         }
     }
 
     if (graph.hasCycle()) {
-        // LOG_F(ERROR, "Circular dependency detected.");
+        LOG_F(ERROR, "Circular dependency detected.");
         return {};
     }
 
     auto sortedPackagesOpt = graph.topologicalSort();
     if (!sortedPackagesOpt) {
-        // LOG_F(ERROR, "Failed to sort packages.");
+        LOG_F(ERROR, "Failed to sort packages.");
         return {};
     }
 
     return removeDuplicates(sortedPackagesOpt.value());
+}
+
+auto DependencyGraph::parsePackageJson(const std::string& path)
+    -> std::pair<std::string, std::unordered_map<std::string, Version>> {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        THROW_FAIL_TO_OPEN_FILE("Failed to open " + path);
+    }
+
+    json packageJson;
+    try {
+        file >> packageJson;
+    } catch (const json::exception& e) {
+        THROW_JSON_PARSE_ERROR("Error parsing JSON in " + path + ": " +
+                               e.what());
+    }
+
+    if (!packageJson.contains("name")) {
+        THROW_MISSING_ARGUMENT("Missing package name in " + path);
+    }
+
+    std::string packageName = packageJson["name"];
+    std::unordered_map<std::string, Version> deps;
+
+    if (packageJson.contains("dependencies")) {
+        for (const auto& dep : packageJson["dependencies"].items()) {
+            deps[dep.key()] = Version::parse(dep.value().get<std::string>());
+        }
+    }
+
+    file.close();
+    return {packageName, deps};
 }
 }  // namespace lithium

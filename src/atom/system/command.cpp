@@ -333,6 +333,10 @@ auto executeCommandWithEnv(const std::string &command,
     return result;
 }
 
+auto executeCommandSimple(const std::string &command) -> bool {
+    return executeCommandWithStatus(command).second == 0;
+}
+
 void killProcessByName(const std::string &processName, ATOM_UNUSED int signal) {
 #ifdef _WIN32
     HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);

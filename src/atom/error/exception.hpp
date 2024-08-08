@@ -357,6 +357,28 @@ public:
 #define THROW_FAIL_TO_TERMINATE_PROCESS(...)                                  \
     throw atom::error::FailToTerminateProcess(ATOM_FILE_NAME, ATOM_FILE_LINE, \
                                               ATOM_FUNC_NAME, __VA_ARGS__)
+
+// -------------------------------------------------------------------
+// JSON Error
+// -------------------------------------------------------------------
+
+class JsonParseError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_JSON_PARSE_ERROR(...)                                   \
+    throw atom::error::JsonParseError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                      ATOM_FUNC_NAME, __VA_ARGS__)
+
+class JsonValueError : public Exception {
+public:
+    using Exception::Exception;
+};
+
+#define THROW_JSON_VALUE_ERROR(...)                                   \
+    throw atom::error::JsonValueError(ATOM_FILE_NAME, ATOM_FILE_LINE, \
+                                      ATOM_FUNC_NAME, __VA_ARGS__)
 }  // namespace atom::error
 
 #endif

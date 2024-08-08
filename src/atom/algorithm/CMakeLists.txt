@@ -13,6 +13,7 @@ project(atom-algorithm C CXX)
 set(${PROJECT_NAME}_SOURCES
     algorithm.cpp
     base.cpp
+    bignumber.cpp
     convolve.cpp
     fnmatch.cpp
     fraction.cpp
@@ -26,6 +27,7 @@ set(${PROJECT_NAME}_SOURCES
 set(${PROJECT_NAME}_HEADERS
     algorithm.hpp
     base.hpp
+    bignumber.hpp
     convolve.hpp
     fnmatch.hpp
     fraction.hpp

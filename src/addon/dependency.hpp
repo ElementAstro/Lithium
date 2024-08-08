@@ -8,11 +8,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include "atom/type/json.hpp"
+#include "atom/type/json_fwd.hpp"
 
 using json = nlohmann::json;
 
 namespace lithium {
+class Version;
 /**
  * @brief A class that represents a directed dependency graph.
  *
@@ -29,7 +30,7 @@ public:
      *
      * @param node The name of the node to be added.
      */
-    void addNode(const Node& node);
+    void addNode(const Node& node, const Version& version);
 
     /**
      * @brief Adds a directed dependency from one node to another.
@@ -39,7 +40,8 @@ public:
      * @param from The node that has a dependency.
      * @param to The node that is being depended upon.
      */
-    void addDependency(const Node& from, const Node& to);
+    void addDependency(const Node& from, const Node& to,
+                       const Version& requiredVersion);
 
     /**
      * @brief Removes a node from the dependency graph.
@@ -118,14 +120,16 @@ public:
      * resolve.
      * @return A vector containing resolved dependency paths.
      */
-    auto resolveDependencies(const std::vector<std::string>& directories)
-        -> std::vector<std::string>;
+    auto resolveDependencies(const std::vector<Node>& directories)
+        -> std::vector<Node>;
 
 private:
     std::unordered_map<Node, std::unordered_set<Node>>
         adjList_;  ///< Adjacency list representation of the graph.
     std::unordered_map<Node, std::unordered_set<Node>>
         incomingEdges_;  ///< Map to track incoming edges for each node.
+    std::unordered_map<Node, Version>
+        nodeVersions_;  ///< Map to track node versions.
 
     /**
      * @brief Utility function to check for cycles in the graph using DFS.
@@ -165,8 +169,8 @@ private:
      * @param input The input vector potentially containing duplicates.
      * @return A vector containing unique entries from the input.
      */
-    static auto removeDuplicates(const std::vector<std::string>& input)
-        -> std::vector<std::string>;
+    static auto removeDuplicates(const std::vector<Node>& input)
+        -> std::vector<Node>;
 
     /**
      * @brief Parses a package.json file to extract package name and
@@ -175,8 +179,8 @@ private:
      * @param path The path to the package.json file.
      * @return A pair containing the package name and its dependencies.
      */
-    static auto parsePackageJson(const std::string& path)
-        -> std::pair<std::string, std::vector<std::string>>;
+    static auto parsePackageJson(const Node& path)
+        -> std::pair<Node, std::unordered_map<Node, Version>>;
 };
 
 }  // namespace lithium

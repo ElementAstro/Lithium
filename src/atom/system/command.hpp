@@ -112,6 +112,18 @@ ATOM_NODISCARD auto executeCommandWithEnv(
  */
 ATOM_NODISCARD auto executeCommandWithStatus(const std::string &command)
     -> std::pair<std::string, int>;
+
+/**
+ * @brief Execute a command and return a boolean indicating whether the command
+ * was successful.
+ *
+ * @param command The command to execute.
+ * @return A boolean indicating whether the command was successful.
+ *
+ * @note The function throws a std::runtime_error if the command fails to
+ * execute.
+ */
+ATOM_NODISCARD auto executeCommandSimple(const std::string &command) -> bool;
 }  // namespace atom::system
 
 #endif

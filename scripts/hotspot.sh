@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # hotspot.sh
-# 
+#
 # 用于在 Linux 上管理无线热点的 Shell 脚本
 # 使用 nmcli (NetworkManager 命令行接口)
 #

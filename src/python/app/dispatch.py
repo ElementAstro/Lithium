@@ -20,7 +20,7 @@ class CommandDispatcher:
         self._middleware: List[Callable] = []
         self._events: Dict[str, List[Callable]] = {}
 
-    def register_command(self, command_name: str, handler: Callable[..., Any], description: str = "", 
+    def register_command(self, command_name: str, handler: Callable[..., Any], description: str = "",
                          aliases: List[str] = [], permissions: List[str] = [], cooldown: float = 0.0):
         if command_name in self._commands:
             raise ValueError(f"Command {command_name} is already registered")
@@ -43,19 +43,19 @@ class CommandDispatcher:
     async def execute_command(self, command_name: str, *args, user_permissions: List[str] = [], **kwargs) -> Any:
         if command_name not in self._commands:
             raise ValueError(f"Command {command_name} is not registered")
-        
+
         command = self._commands[command_name]
-        
+
         if not set(command.permissions).issubset(set(user_permissions)):
             raise PermissionError(f"User doesn't have required permissions to execute {command_name}")
-        
+
         current_time = time.time()
         if current_time - command.last_used < command.cooldown:
             raise ValueError(f"Command {command_name} is on cooldown")
-        
+
         for middleware in self._middleware:
             args, kwargs = await self._execute_callable(middleware, *args, **kwargs)
-        
+
         result = await self._execute_callable(command.handler, *args, **kwargs)
         command.last_used = current_time
         logger.info(f"Executed command: {command_name} with result: {result}")
@@ -86,7 +86,7 @@ class CommandDispatcher:
         import inspect
         for name, obj in inspect.getmembers(module):
             if inspect.isfunction(obj) and hasattr(obj, '_is_command'):
-                self.register_command(name, obj, getattr(obj, '_description', ""), 
+                self.register_command(name, obj, getattr(obj, '_description', ""),
                                       getattr(obj, '_aliases', []), getattr(obj, '_permissions', []),getattr(obj, '_cooldown', 0.0))
 
     def add_middleware(self, middleware: Callable):

@@ -177,4 +177,3 @@ TEST_F(PropertyTest, DefineWOPropertyMacro) {
     EXPECT_THROW(static_cast<int>(obj.Value), atom::error::Exception);
     obj.Value = 25;
 }
-

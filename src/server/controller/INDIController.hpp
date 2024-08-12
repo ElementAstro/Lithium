@@ -16,7 +16,7 @@ public:
     INDIController(OATPP_COMPONENT(std::shared_ptr<ObjectMapper>,
                                      objectMapper))
         : oatpp::web::server::api::ApiController(objectMapper) {}
-    
+
 };
 
 #include OATPP_CODEGEN_END(ApiController)  /// <-- End Code-Gen

@@ -97,7 +97,7 @@ function Close-Ports {
 # Function to setup RDP protection (similar to SSH protection)
 function Setup-RDPProtection {
     Write-Host "Setting up RDP protection..."
-    
+
     # Allow RDP access only from specific IPs
     $allowedIPs = "192.168.1.100"
     Write-Host "Allowing RDP access only from: $allowedIPs"

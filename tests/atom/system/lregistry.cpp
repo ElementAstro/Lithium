@@ -112,4 +112,3 @@ TEST_F(RegistryTest, NotifyEvent) {
     registry.setValue(keyName, "ValueName", "Data");  // Check for "ValueSet" event in logs
     registry.deleteKey(keyName);  // Check for "KeyDeleted" event in logs
 }
-

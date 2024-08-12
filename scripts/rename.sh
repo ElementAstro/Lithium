@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # rename.sh
-# 
+#
 # 用于在 Linux 上管理文件和目录的 Shell 脚本
 #
 # 使用方法：

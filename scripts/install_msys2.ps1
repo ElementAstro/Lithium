@@ -1,19 +1,19 @@
 param(
     [Parameter(Mandatory=$false)]
     [string]$InstallPath = "C:\msys64",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Msys2Url = "https://github.com/msys2/msys2-installer/releases/download/2022-06-03/msys2-x86_64-20220603.exe",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Mirror1 = "https://mirrors.tuna.tsinghua.edu.cn/msys2/mingw/x86_64/",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Mirror2 = "https://mirrors.tuna.tsinghua.edu.cn/msys2/mingw/i686/",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Mirror3 = "https://mirrors.tuna.tsinghua.edu.cn/msys2/msys/\$arch/",
-    
+
     [Parameter(Mandatory=$false)]
     [string[]]$Packages = @("mingw-w64-x86_64-toolchain", "mingw-w64-x86_64-dlfcn", "mingw-w64-x86_64-cfitsio", "mingw-w64-x86_64-cmake", "mingw-w64-x86_64-libzip", "mingw-w64-x86_64-zlib", "mingw-w64-x86_64-fmt", "mingw-w64-x86_64-libnova")
 )

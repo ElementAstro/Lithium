@@ -114,7 +114,7 @@ def main() -> None:
             # Create objects types table
             cursor.execute('DROP TABLE IF EXISTS objTypes')
             cursor.execute('''CREATE TABLE IF NOT EXISTS objTypes(
-                                type TEXT PRIMARY KEY NOT NULL, 
+                                type TEXT PRIMARY KEY NOT NULL,
                                 typedesc TEXT NOT NULL)''')
             cursor.executemany(
                 'INSERT INTO objTypes VALUES(?, ?)', objectTypes.items())
@@ -122,45 +122,45 @@ def main() -> None:
             # Create main objects table
             cursor.execute('DROP TABLE IF EXISTS objects')
             cursor.execute('''CREATE TABLE IF NOT EXISTS objects(
-                                id INTEGER PRIMARY KEY NOT NULL, 
-                                name TEXT NOT NULL UNIQUE, 
-                                type TEXT NOT NULL, 
-                                ra REAL, 
-                                dec REAL, 
-                                const TEXT, 
-                                majax REAL, 
-                                minax REAL, 
-                                pa INTEGER, 
-                                bmag REAL, 
-                                vmag REAL, 
-                                jmag REAL, 
-                                hmag REAL, 
-                                kmag REAL, 
-                                sbrightn REAL, 
-                                hubble TEXT, 
-                                parallax REAL, 
-                                pmra REAL, 
-                                pmdec REAL, 
-                                radvel INTEGER, 
-                                redshift REAL, 
-                                cstarumag REAL, 
-                                cstarbmag REAL, 
-                                cstarvmag REAL, 
-                                messier TEXT, 
-                                ngc TEXT, 
-                                ic TEXT, 
-                                cstarnames TEXT, 
-                                identifiers TEXT, 
-                                commonnames TEXT, 
-                                nednotes TEXT, 
-                                ongcnotes TEXT, 
+                                id INTEGER PRIMARY KEY NOT NULL,
+                                name TEXT NOT NULL UNIQUE,
+                                type TEXT NOT NULL,
+                                ra REAL,
+                                dec REAL,
+                                const TEXT,
+                                majax REAL,
+                                minax REAL,
+                                pa INTEGER,
+                                bmag REAL,
+                                vmag REAL,
+                                jmag REAL,
+                                hmag REAL,
+                                kmag REAL,
+                                sbrightn REAL,
+                                hubble TEXT,
+                                parallax REAL,
+                                pmra REAL,
+                                pmdec REAL,
+                                radvel INTEGER,
+                                redshift REAL,
+                                cstarumag REAL,
+                                cstarbmag REAL,
+                                cstarvmag REAL,
+                                messier TEXT,
+                                ngc TEXT,
+                                ic TEXT,
+                                cstarnames TEXT,
+                                identifiers TEXT,
+                                commonnames TEXT,
+                                nednotes TEXT,
+                                ongcnotes TEXT,
                                 notngc BOOL DEFAULT FALSE)''')
 
             # Create object identifiers table
             cursor.execute('DROP TABLE IF EXISTS objIdentifiers')
             cursor.execute('''CREATE TABLE IF NOT EXISTS objIdentifiers(
-                                id INTEGER PRIMARY KEY NOT NULL, 
-                                name TEXT NOT NULL, 
+                                id INTEGER PRIMARY KEY NOT NULL,
+                                name TEXT NOT NULL,
                                 identifier TEXT NOT NULL UNIQUE)''')
 
             columns_maybe_null: List[str] = ['MajAx', 'MinAx', 'PosAng', 'B-Mag', 'V-Mag', 'J-Mag', 'H-Mag', 'K-Mag',
@@ -179,9 +179,9 @@ def main() -> None:
 
                         ra_rad, dec_rad = parse_ra_dec(line['RA'], line['Dec'])
 
-                        cursor.execute('''INSERT INTO objects(name, type, ra, dec, const, majax, minax, pa, bmag, vmag, 
-                                                               jmag, hmag, kmag, sbrightn, hubble, parallax, pmra, 
-                                                               pmdec, radvel, redshift, cstarumag                                                               , cstarbmag, cstarvmag, messier, ngc, ic, cstarnames, 
+                        cursor.execute('''INSERT INTO objects(name, type, ra, dec, const, majax, minax, pa, bmag, vmag,
+                                                               jmag, hmag, kmag, sbrightn, hubble, parallax, pmra,
+                                                               pmdec, radvel, redshift, cstarumag                                                               , cstarbmag, cstarvmag, messier, ngc, ic, cstarnames,
                                                                identifiers, commonnames, nednotes, ongcnotes, notngc)
                                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                                        (line['Name'], line['Type'], ra_rad, dec_rad, line['Const'],

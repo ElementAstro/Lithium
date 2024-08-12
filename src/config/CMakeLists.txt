@@ -26,7 +26,7 @@ set(PROJECT_HEADERS
 # Required libraries for the project
 set(PROJECT_LIBS
     loguru
-    ${CMAKE_THREAD_LIBS_INIT} 
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Create object library

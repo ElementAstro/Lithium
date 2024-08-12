@@ -159,7 +159,7 @@ void TaskInterpreter::setVariable(const std::string& name, const json& value, Va
 
     VariableType currentType = determineType(value);
     if (currentType != type) {
-        THROW_RUNTIME_ERROR("Type mismatch when setting variable '" + name + "'. Expected " + 
+        THROW_RUNTIME_ERROR("Type mismatch when setting variable '" + name + "'. Expected " +
                             std::to_string(static_cast<int>(type)) + ", got " +
                             std::to_string(static_cast<int>(currentType)) + ".");
     }

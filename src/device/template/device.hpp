@@ -37,7 +37,7 @@ public:
     [[nodiscard]] auto getName() const -> std::string;
 
     void setName(const std::string& newName);
-    
+
     [[nodiscard]] auto getType() const -> std::string;
 
     // -------------------------------------------------------------------

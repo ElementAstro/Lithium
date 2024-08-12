@@ -2,7 +2,7 @@
 broadcast.py
 
 This module sets up an HTTP and WebSocket server using FastAPI. The server allows multiple clients to connect
-via WebSocket, exchange messages, and supports file uploads via HTTP. It also manages client connections, 
+via WebSocket, exchange messages, and supports file uploads via HTTP. It also manages client connections,
 broadcasts messages, and performs regular heartbeat checks to ensure clients are still connected.
 
 Dependencies:
@@ -50,10 +50,10 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket) -> str:
         """
         Accepts a WebSocket connection and stores it with a unique client ID.
-        
+
         Args:
             websocket (WebSocket): The WebSocket connection to accept.
-        
+
         Returns:
             str: The unique client ID assigned to the connection.
         """
@@ -68,7 +68,7 @@ class ConnectionManager:
     def disconnect(self, client_id: str):
         """
         Removes a WebSocket connection based on the client ID.
-        
+
         Args:
             client_id (str): The unique client ID to remove.
         """
@@ -78,7 +78,7 @@ class ConnectionManager:
     async def broadcast(self, message: str):
         """
         Sends a message to all connected clients.
-        
+
         Args:
             message (str): The message to broadcast.
         """
@@ -88,7 +88,7 @@ class ConnectionManager:
     def get_online_clients(self) -> List[Dict]:
         """
         Retrieves a list of currently online clients and their connection times.
-        
+
         Returns:
             List[Dict]: A list of dictionaries with client IDs and connection times.
         """
@@ -137,14 +137,14 @@ async def startup_event():
 async def websocket_endpoint(websocket: WebSocket):
     """
     WebSocket endpoint for handling client connections.
-    
+
     Args:
         websocket (WebSocket): The WebSocket connection to handle.
     """
     client_id = await manager.connect(websocket)
     await manager.broadcast(f'{{"type": "Server_msg", "message": "Client {client_id} connected"}}')
     print(f"Client {client_id} connected")
-    
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -185,10 +185,10 @@ async def startup_event():
 async def upload_file(file: UploadFile = File(...)):
     """
     Endpoint for handling file uploads.
-    
+
     Args:
         file (UploadFile): The file to upload.
-    
+
     Returns:
         dict: Information about the saved file.
     """
@@ -202,7 +202,7 @@ async def upload_file(file: UploadFile = File(...)):
 async def get_clients():
     """
     Endpoint for retrieving a list of currently connected clients.
-    
+
     Returns:
         List[Dict]: A list of currently connected clients and their connection times.
     """

@@ -7,11 +7,11 @@ from loguru import logger
 
 class JSONTCPClient:
     def __init__(
-        self, 
-        host: str = '127.0.0.1', 
-        port: int = 8888, 
+        self,
+        host: str = '127.0.0.1',
+        port: int = 8888,
         max_retries: int = 5,
-        connect_timeout: int = 10, 
+        connect_timeout: int = 10,
         read_timeout: int = 10,
         keep_connected: bool = True,
         on_connect: Optional[Callable[[], None]] = None,
@@ -56,7 +56,7 @@ class JSONTCPClient:
 
     async def send_message(self, message: Dict[str, Any], handler: Optional[Callable[[Dict[str, Any]], None]] = None) -> Optional[Dict[str, Any]]:
         await self._connected_event.wait()
-        
+
         try:
             request = json.dumps(message) + '\n'
             logger.debug(f'Sending: {request.strip()}')
@@ -67,12 +67,12 @@ class JSONTCPClient:
             response_str = response.decode().strip()
             logger.debug(f'Received: {response_str}')
             response_data = json.loads(response_str)
-            
+
             if handler:
                 handler(response_data)
             elif 'command' in message and message['command'] in self.message_handlers:
                 self.message_handlers[message['command']](response_data)
-            
+
             return response_data
         except asyncio.TimeoutError:
             logger.error('Read timeout')
@@ -160,10 +160,10 @@ async def main() -> None:
         logger.info(f'Echo handler received: {response}')
 
     client = JSONTCPClient(
-        host='127.0.0.1', 
-        port=4400, 
-        on_connect=on_connect, 
-        on_disconnect=on_disconnect, 
+        host='127.0.0.1',
+        port=4400,
+        on_connect=on_connect,
+        on_disconnect=on_disconnect,
         on_reconnect=on_reconnect
     )
 
@@ -179,7 +179,7 @@ async def main() -> None:
     client_thread.start()
 
     signal.signal(signal.SIGINT, signal_handler(client, client_thread))
-    
+
     async with client:
         responses = await client.send_messages(commands)
         for response in responses:

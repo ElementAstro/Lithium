@@ -18,7 +18,7 @@ auto QHYCamera::watchAdditionalProperty() -> bool {
         if (property.isValid()) {
             auto value = property[0].getValue();
             LOG_F(INFO, "QHYCamera::watchAdditionalProperty()::READ_MODE::value={}", value);
-            
+
         }
     });
     return true;

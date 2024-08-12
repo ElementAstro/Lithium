@@ -115,7 +115,7 @@ target("lithium_server")
     if is_plat("windows") then
         add_packages("dlfcn-win32")
         add_syslinks("pdh", "iphlpapi", "winmm", "crypt32", "wsock32", "ws2_32")
-        
+
     elseif is_plat("linux", "macosx") then
         add_syslinks("dl")
     else

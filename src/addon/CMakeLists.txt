@@ -46,7 +46,7 @@ set(PROJECT_LIBS
     atom-system
     loguru
     lithium-utils
-    ${CMAKE_THREAD_LIBS_INIT} 
+    ${CMAKE_THREAD_LIBS_INIT}
     ${Seccomp_LIBRARIES}
 )
 

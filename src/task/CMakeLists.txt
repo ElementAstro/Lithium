@@ -37,7 +37,7 @@ set(PROJECT_LIBS
     atom-component
     atom-error
     loguru
-    ${CMAKE_THREAD_LIBS_INIT} 
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Create Object Library

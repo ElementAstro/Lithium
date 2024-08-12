@@ -87,13 +87,13 @@ set(REQUIREMENTS_FILE "${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt")
 function(check_python_package package version)
     # Replace hyphens with underscores for the import statement
     string(REPLACE "-" "_" import_name ${package})
-    
+
     # Check if the package can be imported
     execute_process(
         COMMAND ${Python_EXECUTABLE} -c "import ${import_name}"
         RESULT_VARIABLE result
     )
-    
+
     if(NOT result EQUAL 0)
         set(result FALSE PARENT_SCOPE)
         return()
@@ -107,7 +107,7 @@ function(check_python_package package version)
 
     # Extract version information from the output
     string(FIND "${package_info}" "Version:" version_pos)
-    
+
     if(version_pos EQUAL -1)
         set(result FALSE PARENT_SCOPE)
         return() # Return false if version not found
@@ -166,7 +166,7 @@ foreach(requirement ${requirements_list})
         message(WARNING "Could not parse requirement '${trimmed_requirement}'. Skipping...")
         continue()
     endif()
-    
+
     list(GET parts 0 package_name)
     list(GET parts 1 package_version)
 
@@ -201,7 +201,7 @@ endif()
 # Configure config.h
 configure_file(${lithium_src_dir}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-set(BUILD_SHARED_LIBS ON) 
+set(BUILD_SHARED_LIBS ON)
 
 # Add subdirectories
 add_subdirectory(libs)

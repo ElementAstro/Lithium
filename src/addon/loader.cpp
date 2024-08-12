@@ -240,7 +240,7 @@ void ModuleLoader::loadFunctionsUnix(
                     }
                 }
                 */
-                
+
 
                 // If hash-based methods fail, estimate from symbol table size
                 if (!numSymbols && symEntrySize && symtab) {

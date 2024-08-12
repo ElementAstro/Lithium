@@ -23,7 +23,7 @@ Description: Component wrapper for Astap
 AstrometryComponent::AstrometryComponent(const std::string& name)
     : Component(name),
       m_solver(std::make_shared<AstrometrySolver>("astrometry")) {
-    
+
 }
 
 AstrometryComponent::~AstrometryComponent() {

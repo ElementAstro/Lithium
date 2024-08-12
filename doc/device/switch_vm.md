@@ -15,7 +15,7 @@ graph TD
     C -->|SetSwitchValue| F[SetSwitchValue Method]
     C -->|RescanDevices| G[RescanDevices Method]
     C -->|Other| H[Other Methods]
-    
+
     D --> I[Update Switch Info]
     E --> J[Clear Switch Info]
     F --> K[Update Switch Value]

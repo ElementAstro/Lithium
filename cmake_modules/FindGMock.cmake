@@ -22,7 +22,7 @@ endif()
 if (GMOCK_FOUND)
   message(STATUS "Found Google Mock: ${GMOCK_LIBRARY}")
   message(STATUS "Includes: ${GMOCK_INCLUDE_DIR}")
-  
+
   # Set the variables necessary for using GMock
   set(GMOCK_INCLUDE_DIRS ${GMOCK_INCLUDE_DIR} PARENT_SCOPE)
   set(GMOCK_LIBRARIES ${GMOCK_LIBRARY} ${GMOCK_MAIN_LIBRARY} PARENT_SCOPE)

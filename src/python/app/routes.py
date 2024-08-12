@@ -20,7 +20,7 @@ async def list_commands():
 async def register_command(command_name: str, description: str = "", aliases: List[str] = [], permissions: List[str] = [], cooldown: float = 0.0):
     async def dummy_command(*args, **kwargs):
         return "This is a dummy command"
-    
+
     try:
         command_dispatcher.register_command(command_name, dummy_command, description, aliases, permissions, cooldown)
         return {"message": f"Command {command_name} registered successfully"}
@@ -45,7 +45,7 @@ async def load_module(code: str, module_name: str):
         exec(code, new_module.__dict__)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to execute code: {str(e)}")
-    
+
     command_dispatcher.auto_register(new_module)
     return {"message": f"Module {module_name} loaded and commands registered successfully"}
 

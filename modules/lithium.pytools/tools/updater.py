@@ -27,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 class AutoUpdater:
     """
     A class used to represent the AutoUpdater.
-    
+
     Attributes
     ----------
     url : str

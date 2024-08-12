@@ -206,4 +206,6 @@ auto BloomFilter<N>::hash(std::string_view element,
 }
 }  // namespace atom::algorithm
 
+#include "algorithm.inl"
+
 #endif

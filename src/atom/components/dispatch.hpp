@@ -70,6 +70,22 @@ public:
     throw DispatchTimeout(ATOM_FILE_NAME, ATOM_FILE_LINE, ATOM_FUNC_NAME, \
                           __VA_ARGS__);
 
+class Arg {
+public:
+    Arg(const std::string& name) : name(name) {}
+    Arg(const std::string& name, std::any default_value)
+        : name(name), default_value(default_value) {}
+
+    const std::string& getName() const { return name; }
+    const std::optional<std::any>& getDefaultValue() const {
+        return default_value;
+    }
+
+private:
+    std::string name;
+    std::optional<std::any> default_value;
+};
+
 class CommandDispatcher {
 public:
     explicit CommandDispatcher(std::weak_ptr<atom::meta::TypeCaster> typeCaster)

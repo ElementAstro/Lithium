@@ -243,6 +243,29 @@ public:
                                    fromType.name());
         }
     }
+
+    std::any convert_down(const std::any& to) const override {
+        try {
+            const auto& toVec = std::any_cast<const std::vector<To>&>(to);
+            std::vector<From> fromVec;
+            fromVec.reserve(toVec.size());
+
+            for (const auto& elem : toVec) {
+                // Convert each element using dynamic cast
+                auto convertedElem =
+                    std::dynamic_pointer_cast<typename From::element_type>(
+                        elem);
+                if (!convertedElem)
+                    throw std::bad_cast();
+                fromVec.push_back(convertedElem);
+            }
+
+            return std::any(fromVec);
+        }
+        catch (const std::bad_any_cast&) {
+            throw bad_conversion(to_type, from_type);
+        }
+    }
 };
 
 template <template <typename...> class MapType, typename K1, typename V1,
@@ -296,6 +319,24 @@ public:
         } catch (const std::bad_any_cast&) {
             THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
                                    fromType.name());
+        }
+    }
+
+    std::any convert_down(const std::any& to) const override {
+        try {
+            const auto& toMap = std::any_cast<const MapType<K2, V2>&>(to);
+            MapType<K1, V1> fromMap;
+
+            for (const auto& [key, value] : toMap) {
+                // Convert each key and value in the map
+                K1 convertedKey = std::any_cast<K1>(std::any(key));
+                V1 convertedValue = std::any_cast<V1>(std::any(value));
+                fromMap.emplace(convertedKey, convertedValue);
+            }
+
+            return std::any(fromMap);
+        } catch (const std::bad_any_cast&) {
+            throw bad_conversion(to_type, from_type);
         }
     }
 };
@@ -352,6 +393,26 @@ public:
                                    fromType.name());
         }
     }
+
+    std::any convert_down(const std::any& to) const override {
+        try {
+            const auto& toSeq = std::any_cast<const SeqType<To>&>(to);
+            SeqType<From> fromSeq;
+
+            for (const auto& elem : toSeq) {
+                auto convertedElem =
+                    std::dynamic_pointer_cast<typename From::element_type>(
+                        elem);
+                if (!convertedElem)
+                    throw std::bad_cast();
+                fromSeq.push_back(convertedElem);
+            }
+
+            return std::any(fromSeq);
+        } catch (const std::bad_any_cast&) {
+            throw bad_conversion(to_type, from_type);
+        }
+    }
 };
 
 template <template <typename...> class SetType, typename From, typename To>
@@ -403,6 +464,26 @@ public:
         } catch (const std::bad_any_cast&) {
             THROW_CONVERSION_ERROR("Failed to convert ", toType.name(), " to ",
                                    fromType.name());
+        }
+    }
+
+    std::any convert_down(const std::any& to) const override {
+        try {
+            const auto& toSet = std::any_cast<const SetType<To>&>(to);
+            SetType<From> fromSet;
+
+            for (const auto& elem : toSet) {
+                auto convertedElem =
+                    std::dynamic_pointer_cast<typename From::element_type>(
+                        elem);
+                if (!convertedElem)
+                    throw std::bad_cast();
+                fromSet.insert(convertedElem);
+            }
+
+            return std::any(fromSet);
+        } catch (const std::bad_any_cast&) {
+            throw bad_conversion(to_type, from_type);
         }
     }
 };

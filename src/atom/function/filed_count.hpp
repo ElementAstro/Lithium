@@ -13,7 +13,6 @@
 #include <utility>
 
 namespace atom::meta {
-
 struct Any {
     template <typename T>
     operator T() const;

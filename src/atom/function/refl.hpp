@@ -242,7 +242,7 @@ struct ElemList {
     constexpr const auto& Get() const {
         return std::get<N>(elems);
     }
-#define USRefl_ElemList_GetByValue(list, value) \
+#define ATOM_META_ElemList_GetByValue(list, value) \
     list.Get<list.FindValue(value)>()
 };
 
